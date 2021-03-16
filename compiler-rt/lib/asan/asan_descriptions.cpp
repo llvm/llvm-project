@@ -48,7 +48,7 @@ void DescribeThread(AsanThreadContext *context) {
     return;
   }
   context->announced = true;
-  InternalScopedString str(1024);
+  InternalScopedString str;
   str.append("Thread %s", AsanThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
     str.append(" created by unknown thread\n");
@@ -125,7 +125,7 @@ static void GetAccessToHeapChunkInformation(ChunkAccess *descr,
 
 static void PrintHeapChunkAccess(uptr addr, const ChunkAccess &descr) {
   Decorator d;
-  InternalScopedString str(4096);
+  InternalScopedString str;
   str.append("%s", d.Location());
   switch (descr.access_type) {
     case kAccessTypeLeft:
@@ -242,7 +242,7 @@ static void PrintAccessAndVarIntersection(const StackVarDescr &var, uptr addr,
     else if (addr >= prev_var_end && addr - prev_var_end >= var.beg - addr_end)
       pos_descr = "underflows";
   }
-  InternalScopedString str(1024);
+  InternalScopedString str;
   str.append("    [%zd, %zd)", var.beg, var_end);
   // Render variable name.
   str.append(" '");
@@ -275,7 +275,7 @@ bool DescribeAddressIfStack(uptr addr, uptr access_size) {
 // Global descriptions
 static void DescribeAddressRelativeToGlobal(uptr addr, uptr access_size,
                                             const __asan_global &g) {
-  InternalScopedString str(4096);
+  InternalScopedString str;
   Decorator d;
   str.append("%s", d.Location());
   if (addr < g.beg) {

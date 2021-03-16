@@ -606,7 +606,7 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   }
 
   if (info->dlpi_name) {
-    InternalScopedString module_name(kMaxPathLength);
+    InternalScopedString module_name;
     module_name.append("%s", info->dlpi_name);
     return AddModuleSegments(module_name.data(), info, data->modules);
   }

@@ -92,7 +92,7 @@ void *BackgroundThread(void *arg) {
 #endif
 
 void WriteToSyslog(const char *msg) {
-  InternalScopedString msg_copy(kErrorMessageBufferSize);
+  InternalScopedString msg_copy;
   msg_copy.append("%s", msg);
   const char *p = msg_copy.data();
 

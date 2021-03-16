@@ -16,7 +16,7 @@
 namespace __sanitizer {
 
 TEST(SanitizerStacktracePrinter, RenderSourceLocation) {
-  InternalScopedString str(128);
+  InternalScopedString str;
   RenderSourceLocation(&str, "/dir/file.cc", 10, 5, false, "");
   EXPECT_STREQ("/dir/file.cc:10:5", str.data());
 
@@ -50,7 +50,7 @@ TEST(SanitizerStacktracePrinter, RenderSourceLocation) {
 }
 
 TEST(SanitizerStacktracePrinter, RenderModuleLocation) {
-  InternalScopedString str(128);
+  InternalScopedString str;
   RenderModuleLocation(&str, "/dir/exe", 0x123, kModuleArchUnknown, "");
   EXPECT_STREQ("(/dir/exe+0x123)", str.data());
 
@@ -76,7 +76,7 @@ TEST(SanitizerStacktracePrinter, RenderFrame) {
   info.file = internal_strdup("/path/to/my/source");
   info.line = 10;
   info.column = 5;
-  InternalScopedString str(256);
+  InternalScopedString str;
 
   // Dump all the AddressInfo fields.
   RenderFrame(&str,
