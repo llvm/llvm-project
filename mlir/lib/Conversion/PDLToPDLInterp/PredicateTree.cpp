@@ -153,7 +153,7 @@ static void getTreePredicates(std::vector<PositionalPredicate> &predList,
 
 /// Collect all of the predicates related to constraints within the given
 /// pattern operation.
-static void getConstraintPredicates(pdl::ApplyConstraintOp op,
+static void getConstraintPredicates(pdl::ApplyNativeConstraintOp op,
                                     std::vector<PositionalPredicate> &predList,
                                     PredicateBuilder &builder,
                                     DenseMap<Value, Position *> &inputs) {
@@ -192,7 +192,7 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
                                  PredicateBuilder &builder,
                                  DenseMap<Value, Position *> &inputs) {
   for (Operation &op : pattern.body().getOps()) {
-    if (auto constraintOp = dyn_cast<pdl::ApplyConstraintOp>(&op))
+    if (auto constraintOp = dyn_cast<pdl::ApplyNativeConstraintOp>(&op))
       getConstraintPredicates(constraintOp, predList, builder, inputs);
     else if (auto resultOp = dyn_cast<pdl::ResultOp>(&op))
       getResultPredicates(resultOp, predList, builder, inputs);

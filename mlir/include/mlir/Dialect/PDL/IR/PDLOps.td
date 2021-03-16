@@ -29,17 +29,17 @@ class PDL_Op<string mnemonic, list<OpTrait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
-// pdl::ApplyConstraintOp
+// pdl::ApplyNativeConstraintOp
 //===----------------------------------------------------------------------===//
 
-def PDL_ApplyConstraintOp
-    : PDL_Op<"apply_constraint", [HasParent<"pdl::PatternOp">]> {
-  let summary = "Apply a generic constraint to a set of provided entities";
+def PDL_ApplyNativeConstraintOp
+    : PDL_Op<"apply_native_constraint", [HasParent<"pdl::PatternOp">]> {
+  let summary = "Apply a native constraint to a set of provided entities";
   let description = [{
-    `apply_constraint` operations apply a generic constraint, that has been
-    registered externally with the consumer of PDL, to a given set of entities.
-    The constraint is permitted to accept any number of constant valued
-    parameters.
+    `pdl.apply_native_constraint` operations apply a native C++ constraint, that
+    has been registered externally with the consumer of PDL, to a given set of
+    entities. The constraint is permitted to accept any number of constant
+    valued parameters.
 
     Example:
 
@@ -47,7 +47,7 @@ def PDL_ApplyConstraintOp
     // Apply `myConstraint` to the entities defined by `input`, `attr`, and
     // `op`. `42`, `"abc"`, and `i32` are constant parameters passed to the
     // constraint.
-    pdl.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
+    pdl.apply_native_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation)
     ```
   }];
 
@@ -65,6 +65,58 @@ def PDL_ApplyConstraintOp
             params.empty() ? ArrayAttr() : $_builder.getArrayAttr(params));
     }]>,
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::ApplyNativeRewriteOp
+//===----------------------------------------------------------------------===//
+
+def PDL_ApplyNativeRewriteOp
+    : PDL_Op<"apply_native_rewrite", [HasParent<"pdl::RewriteOp">]> {
+  let summary = "Apply a native rewrite method inside of pdl.rewrite region";
+  let description = [{
+    `pdl.apply_native_rewrite` operations apply a native C++ function, that has
+    been registered externally with the consumer of PDL, to perform a rewrite
+    and optionally return a number of values. The native function may accept any
+    number of arguments and constant attribute parameters. This operation is
+    used within a pdl.rewrite region to enable the interleaving of native
+    rewrite methods with other pdl constructs.
+
+    Example:
+
+    ```mlir
+    // Apply a native rewrite method that returns an attribute.
+    %ret = pdl.apply_native_rewrite "myNativeFunc"[42, "gt"](%arg0, %arg1) : !pdl.attribute
+    ```
+
+    ```c++
+    // The native rewrite as defined in C++:
+    static void myNativeFunc(ArrayRef<PDLValue> args, ArrayAttr constantParams,
+                             PatternRewriter &rewriter,
+                             PDLResultList &results) {
+      Value arg0 = args[0].cast<Value>();
+      Value arg1 = args[1].cast<Value>();
+      IntegerAttr param0 = constantParams[0].cast<IntegerAttr>();
+      StringAttr param1 = constantParams[1].cast<StringAttr>();
+
+      // Just push back the first param attribute.
+      results.push_back(param0);
+    }
+
+    void registerNativeRewrite(PDLPatternModule &pdlModule) {
+      pdlModule.registerRewriteFunction("myNativeFunc", myNativeFunc);
+    }
+    ```
+  }];
+
+  let arguments = (ins StrAttr:$name,
+                       Variadic<PDL_AnyType>:$args,
+                       OptionalAttr<ArrayAttr>:$constParams);
+  let results = (outs Variadic<PDL_AnyType>:$results);
+  let assemblyFormat = [{
+    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($results)
+    attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,39 +163,6 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
       build($_builder, $_state, $_builder.getType<AttributeType>(), Value(), attr);
     }]>,
   ];
-}
-
-//===----------------------------------------------------------------------===//
-// pdl::CreateNativeOp
-//===----------------------------------------------------------------------===//
-
-def PDL_CreateNativeOp
-    : PDL_Op<"create_native", [HasParent<"pdl::RewriteOp">]> {
-  let summary = "Call a native creation method to construct an `Attribute`, "
-                "`Operation`, `Type`, or `Value`";
-  let description = [{
-    `pdl.create_native` operations invoke a native C++ function, that has been
-    registered externally with the consumer of PDL, to create an `Attribute`,
-    `Operation`, `Type`, or `Value`. The native function must produce a value
-    of the specified return type, and may accept any number of positional
-    arguments and constant attribute parameters.
-
-    Example:
-
-    ```mlir
-    %ret = pdl.create_native "myNativeFunc"[42, "gt"](%arg0, %arg1) : !pdl.attribute
-    ```
-  }];
-
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_AnyType:$result);
-  let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
-    attr-dict
-  }];
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -233,9 +252,10 @@ def PDL_OperationOp
     `pdl.rewrite`, all of the result types must be "inferable". This means that
     the type must be attributable to either a constant type value or the result
     type of another entity, such as an attribute, the result of a
-    `createNative`, or the result type of another operation. If the result type
-    value does not meet any of these criteria, the operation must provide the
-    `InferTypeOpInterface` to ensure that the result types can be inferred.
+    `apply_native_rewrite`, or the result type of another operation. If the
+    result type value does not meet any of these criteria, the operation must
+    override the `InferTypeOpInterface` to ensure that the result types can be
+    inferred.
 
     Example:
 
@@ -416,13 +436,14 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
   let summary = "Specify the rewrite of a matched pattern";
   let description = [{
     `pdl.rewrite` operations terminate the region of a `pdl.pattern` and specify
-    the rewrite of a `pdl.pattern`, on the specified root operation. The
+    the main rewrite of a `pdl.pattern`, on the specified root operation. The
     rewrite is specified either via a string name (`name`) to an external
     rewrite function, or via the region body. The rewrite region, if specified,
     must contain a single block and terminate via the `pdl.rewrite_end`
     operation. If the rewrite is external, it also takes a set of constant
     parameters and a set of additional positional values defined within the
-    matcher as arguments.
+    matcher as arguments. If the rewrite is external, the root operation is
+    passed to the native function as the first argument.
 
     Example:
 

@@ -64,12 +64,22 @@ verifyHasBindingUseInMatcher(Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
-// pdl::ApplyConstraintOp
+// pdl::ApplyNativeConstraintOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verify(ApplyConstraintOp op) {
+static LogicalResult verify(ApplyNativeConstraintOp op) {
   if (op.getNumOperands() == 0)
     return op.emitOpError("expected at least one argument");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::ApplyNativeRewriteOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(ApplyNativeRewriteOp op) {
+  if (op.getNumOperands() == 0 && op.getNumResults() == 0)
+    return op.emitOpError("expected at least one argument or result");
   return success();
 }
 
@@ -162,9 +172,9 @@ static LogicalResult verifyResultTypesAreInferrable(OperationOp op,
     Operation *resultTypeOp = it.value().getDefiningOp();
     assert(resultTypeOp && "expected valid result type operation");
 
-    // If the op was defined by a `create_native`, it is guaranteed to be
+    // If the op was defined by a `apply_native_rewrite`, it is guaranteed to be
     // usable.
-    if (isa<CreateNativeOp>(resultTypeOp))
+    if (isa<ApplyNativeRewriteOp>(resultTypeOp))
       continue;
 
     // If the type is already constrained, there is nothing to do.

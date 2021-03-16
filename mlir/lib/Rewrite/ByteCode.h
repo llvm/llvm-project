@@ -114,7 +114,6 @@ public:
   /// the PDL interpreter dialect.
   PDLByteCode(ModuleOp module,
               llvm::StringMap<PDLConstraintFunction> constraintFns,
-              llvm::StringMap<PDLCreateFunction> createFns,
               llvm::StringMap<PDLRewriteFunction> rewriteFns);
 
   /// Return the patterns held by the bytecode.
@@ -160,7 +159,6 @@ private:
 
   /// A set of user defined functions invoked via PDL.
   std::vector<PDLConstraintFunction> constraintFunctions;
-  std::vector<PDLCreateFunction> createFunctions;
   std::vector<PDLRewriteFunction> rewriteFunctions;
 
   /// The maximum memory index used by a value.
