@@ -520,8 +520,6 @@ SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
     m_stub = std::make_unique<SwiftLanguageRuntimeStub>(*process);
 }
 
-bool SwiftLanguageRuntime::IsSwiftRuntimeInitialized() { return (bool)m_impl; }
-
 void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
   assert(m_process && "modules loaded without process");
   if (m_impl) {
