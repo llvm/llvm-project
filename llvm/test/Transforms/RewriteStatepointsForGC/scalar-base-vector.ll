@@ -14,10 +14,9 @@ define i32 addrspace(1)* @test1(i8 addrspace(1)* %base1, <2 x i64> %offsets) gc 
 ; CHECK-NEXT:    [[BASE21:%.*]] = call i8 addrspace(1)* @llvm.experimental.gc.result.p1i8(token [[STATEPOINT_TOKEN]])
 ; CHECK-NEXT:    br label [[SECOND]]
 ; CHECK:       second:
-; CHECK-NEXT:    [[PHI_BASE:%.*]] = phi i8 addrspace(1)* [ [[BASE1:%.*]], [[ENTRY:%.*]] ], [ [[BASE21]], [[FIRST]] ], !is_base_value !0
-; CHECK-NEXT:    [[PHI:%.*]] = phi i8 addrspace(1)* [ [[BASE1]], [[ENTRY]] ], [ [[BASE21]], [[FIRST]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i8 addrspace(1)* [ [[BASE1:%.*]], [[ENTRY:%.*]] ], [ [[BASE21]], [[FIRST]] ]
 ; CHECK-NEXT:    [[BASE_I32:%.*]] = bitcast i8 addrspace(1)* [[PHI]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8 addrspace(1)* [[PHI_BASE]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8 addrspace(1)* [[PHI]] to i32 addrspace(1)*
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x i32 addrspace(1)*> zeroinitializer, i32 addrspace(1)* [[CAST]], i32 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i32 addrspace(1)*> poison, i32 addrspace(1)* [[BASE_I32]], i32 0
 ; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x i32 addrspace(1)*> [[DOTSPLATINSERT_BASE]], <2 x i32 addrspace(1)*> zeroinitializer, <2 x i32> zeroinitializer, !is_base_value !0
