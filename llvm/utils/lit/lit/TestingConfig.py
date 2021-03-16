@@ -125,10 +125,6 @@ class TestingConfig(object):
         # require one of the features in this list if this list is non-empty.
         # Configurations can set this list to restrict the set of tests to run.
         self.limit_to_features = set(limit_to_features)
-        # Whether the suite should be tested early in a given run.
-        self.is_early = bool(is_early)
-        # List of tests to run early.
-        self.early_tests = {}
         self.parallelism_group = parallelism_group
         self._recursiveExpansionLimit = None
 
