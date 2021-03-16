@@ -1539,7 +1539,6 @@ private:
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGDim(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
-  bool validateLdsDirect(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateVccOperand(unsigned Reg) const;
   bool validateVOP3Literal(const MCInst &Inst, const OperandVector &Operands);
@@ -1549,6 +1548,7 @@ private:
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
+  Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
   bool usesConstantBus(const MCInst &Inst, unsigned OpIdx);
   bool isInlineConstant(const MCInst &Inst, unsigned OpIdx) const;
@@ -3768,7 +3768,7 @@ static bool IsRevOpcode(const unsigned Opcode)
   }
 }
 
-bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
+Optional<StringRef> AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 
   using namespace SIInstrFlags;
   const unsigned Opcode = Inst.getOpcode();
@@ -3776,33 +3776,29 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 
   // lds_direct register is defined so that it can be used
   // with 9-bit operands only. Ignore encodings which do not accept these.
-  if ((Desc.TSFlags & (VOP1 | VOP2 | VOP3 | VOPC | VOP3P | SIInstrFlags::SDWA)) == 0)
-    return true;
+  const auto Enc = VOP1 | VOP2 | VOP3 | VOPC | VOP3P | SIInstrFlags::SDWA;
+  if ((Desc.TSFlags & Enc) == 0)
+    return None;
 
-  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
-  const int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
-  const int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
-
-  const int SrcIndices[] = { Src1Idx, Src2Idx };
-
-  // lds_direct cannot be specified as either src1 or src2.
-  for (int SrcIdx : SrcIndices) {
-    if (SrcIdx == -1) break;
-    const MCOperand &Src = Inst.getOperand(SrcIdx);
+  for (auto SrcName : {OpName::src0, OpName::src1, OpName::src2}) {
+    auto SrcIdx = getNamedOperandIdx(Opcode, SrcName);
+    if (SrcIdx == -1)
+      break;
+    const auto &Src = Inst.getOperand(SrcIdx);
     if (Src.isReg() && Src.getReg() == LDS_DIRECT) {
-      return false;
+
+      if (isGFX90A())
+        return StringRef("lds_direct is not supported on this GPU");
+
+      if (IsRevOpcode(Opcode) || (Desc.TSFlags & SIInstrFlags::SDWA))
+        return StringRef("lds_direct cannot be used with this instruction");
+
+      if (SrcName != OpName::src0)
+        return StringRef("lds_direct may be used as src0 only");
     }
   }
 
-  if (Src0Idx == -1)
-    return true;
-
-  const MCOperand &Src = Inst.getOperand(Src0Idx);
-  if (!Src.isReg() || Src.getReg() != LDS_DIRECT)
-    return true;
-
-  // lds_direct is specified as src0. Check additional limitations.
-  return (Desc.TSFlags & SIInstrFlags::SDWA) == 0 && !IsRevOpcode(Opcode);
+  return None;
 }
 
 SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
@@ -4133,9 +4129,8 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
                                           const SMLoc &IDLoc,
                                           const OperandVector &Operands) {
-  if (!validateLdsDirect(Inst)) {
-    Error(getRegLoc(AMDGPU::LDS_DIRECT, Operands),
-      "invalid use of lds_direct");
+  if (auto ErrMsg = validateLdsDirect(Inst)) {
+    Error(getRegLoc(LDS_DIRECT, Operands), *ErrMsg);
     return false;
   }
   if (!validateSOPLiteral(Inst)) {
