@@ -11,6 +11,7 @@ add_flang_library(FortranLower
   ComplexExpr.cpp
   ConvertExpr.cpp
   ConvertType.cpp
+  ConvertVariable.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
   IntrinsicCall.cpp
