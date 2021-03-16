@@ -107,8 +107,8 @@ public:
 
   }
 
-  /// If {@code E} is a generic call (to ObjC method /function/block/etc),
-  /// return a constructed {@code AnyCall} object. Return None otherwise.
+  /// If @c E is a generic call (to ObjC method /function/block/etc),
+  /// return a constructed @c AnyCall object. Return None otherwise.
   static Optional<AnyCall> forExpr(const Expr *E) {
     if (const auto *ME = dyn_cast<ObjCMessageExpr>(E)) {
       return AnyCall(ME);
@@ -127,8 +127,8 @@ public:
     }
   }
 
-  /// If {@code D} is a callable (Objective-C method or a function), return
-  /// a constructed {@code AnyCall} object. Return None otherwise.
+  /// If @c D is a callable (Objective-C method or a function), return
+  /// a constructed @c AnyCall object. Return None otherwise.
   // FIXME: block support.
   static Optional<AnyCall> forDecl(const Decl *D) {
     if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
@@ -186,7 +186,7 @@ public:
   }
 
   /// \returns Function identifier if it is a named declaration,
-  /// {@code nullptr} otherwise.
+  /// @c nullptr otherwise.
   const IdentifierInfo *getIdentifier() const {
     if (const auto *ND = dyn_cast_or_null<NamedDecl>(D))
       return ND->getIdentifier();
