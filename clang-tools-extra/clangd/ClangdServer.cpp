@@ -9,6 +9,7 @@
 #include "ClangdServer.h"
 #include "CodeComplete.h"
 #include "Config.h"
+#include "Diagnostics.h"
 #include "DumpAST.h"
 #include "FindSymbols.h"
 #include "Format.h"
@@ -81,7 +82,9 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    std::vector<Diag> Diagnostics = AST.getDiagnostics();
+    assert(AST.getDiagnostics().hasValue() &&
+           "We issue callback only with fresh preambles");
+    std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
@@ -900,6 +903,21 @@ void ClangdServer::getAST(PathRef File, Range R,
 void ClangdServer::customAction(PathRef File, llvm::StringRef Name,
                                 Callback<InputsAndAST> Action) {
   WorkScheduler->runWithAST(Name, File, std::move(Action));
+}
+
+void ClangdServer::diagnostics(PathRef File, Callback<std::vector<Diag>> CB) {
+  auto Action =
+      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
+        if (!InpAST)
+          return CB(InpAST.takeError());
+        if (auto Diags = InpAST->AST.getDiagnostics())
+          return CB(*Diags);
+        // FIXME: Use ServerCancelled error once it is settled in LSP-3.17.
+        return CB(llvm::make_error<LSPError>("server is busy parsing includes",
+                                             ErrorCode::InternalError));
+      };
+
+  WorkScheduler->runWithAST("Diagnostics", File, std::move(Action));
 }
 
 llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
