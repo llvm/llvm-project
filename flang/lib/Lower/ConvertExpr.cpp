@@ -2693,8 +2693,8 @@ public:
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
     return [=](IterSpace iters) -> ExtValue {
-      auto lhs = fir::getBase(lf(iters));
-      auto rhs = fir::getBase(rf(iters));
+      auto lhs = lf(iters);
+      auto rhs = rf(iters);
       return Fortran::lower::genCharCompare(builder, loc, pred, lhs, rhs);
     };
   }
