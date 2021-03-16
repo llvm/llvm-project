@@ -103,6 +103,59 @@ module @inputs {
 
 // -----
 
+// CHECK-LABEL: module @variadic_inputs
+module @variadic_inputs {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG: pdl_interp.check_operand_count of %[[ROOT]] is at_least 2
+
+  // The first operand has a known index.
+  // CHECK-DAG:   %[[INPUT:.*]] = pdl_interp.get_operand 0 of %[[ROOT]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[INPUT]] : !pdl.value
+
+  // The second operand is a group of unknown size, with a type constraint.
+  // CHECK-DAG:   %[[VAR_INPUTS:.*]] = pdl_interp.get_operands 1 of %[[ROOT]] : !pdl.range<value>
+  // CHECK-DAG:   pdl_interp.is_not_null %[[VAR_INPUTS]] : !pdl.range<value>
+
+  // CHECK-DAG:   %[[INPUT_TYPE:.*]] = pdl_interp.get_value_type of %[[VAR_INPUTS]] : !pdl.range<type>
+  // CHECK-DAG:   pdl_interp.check_types %[[INPUT_TYPE]] are [i64]
+
+  // The third operand is at an unknown offset due to operand 2, but is expected
+  // to be of size 1.
+  // CHECK-DAG:  %[[INPUT2:.*]] = pdl_interp.get_operands 2 of %[[ROOT]] : !pdl.value
+  // CHECK-DAG:  pdl_interp.are_equal %[[INPUT]], %[[INPUT2]] : !pdl.value
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i64]
+    %inputs = pdl.operands : %types
+    %input = pdl.operand
+    %root = pdl.operation(%input, %inputs, %input : !pdl.value, !pdl.range<value>, !pdl.value)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @single_operand_range
+module @single_operand_range {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+
+  // Check that the operand range is treated as all of the operands of the
+  // operation.
+  // CHECK-DAG:   %[[RESULTS:.*]] = pdl_interp.get_operands of %[[ROOT]]
+  // CHECK-DAG:   %[[RESULT_TYPES:.*]] = pdl_interp.get_value_type of %[[RESULTS]] : !pdl.range<type>
+  // CHECK-DAG:   pdl_interp.check_types %[[RESULT_TYPES]] are [i64]
+
+  // The operand count is unknown, so there is no need to check for it.
+  // CHECK-NOT: pdl_interp.check_operand_count
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i64]
+    %operands = pdl.operands : %types
+    %root = pdl.operation(%operands : !pdl.range<value>)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
 // CHECK-LABEL: module @results
 module @results {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
@@ -121,6 +174,57 @@ module @results {
     %type1 = pdl.type : i32
     %type2 = pdl.type
     %root = pdl.operation -> (%type1, %type2 : !pdl.type, !pdl.type)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @variadic_results
+module @variadic_results {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG: pdl_interp.check_result_count of %[[ROOT]] is at_least 2
+
+  // The first result has a known index.
+  // CHECK-DAG:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
+  // CHECK-DAG:   pdl_interp.is_not_null %[[RESULT]] : !pdl.value
+
+  // The second result is a group of unknown size, with a type constraint.
+  // CHECK-DAG:   %[[VAR_RESULTS:.*]] = pdl_interp.get_results 1 of %[[ROOT]] : !pdl.range<value>
+  // CHECK-DAG:   pdl_interp.is_not_null %[[VAR_RESULTS]] : !pdl.range<value>
+
+  // CHECK-DAG:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[VAR_RESULTS]] : !pdl.range<type>
+  // CHECK-DAG:   pdl_interp.check_types %[[RESULT_TYPE]] are [i64]
+
+  // The third result is at an unknown offset due to result 1, but is expected
+  // to be of size 1.
+  // CHECK-DAG:  %[[RESULT2:.*]] = pdl_interp.get_results 2 of %[[ROOT]] : !pdl.value
+  // CHECK-DAG:   pdl_interp.is_not_null %[[RESULT2]] : !pdl.value
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i64]
+    %type = pdl.type
+    %root = pdl.operation -> (%type, %types, %type : !pdl.type, !pdl.range<type>, !pdl.type)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @single_result_range
+module @single_result_range {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+
+  // Check that the result range is treated as all of the results of the
+  // operation.
+  // CHECK-DAG:   %[[RESULTS:.*]] = pdl_interp.get_results of %[[ROOT]]
+  // CHECK-DAG:   %[[RESULT_TYPES:.*]] = pdl_interp.get_value_type of %[[RESULTS]] : !pdl.range<type>
+  // CHECK-DAG:   pdl_interp.check_types %[[RESULT_TYPES]] are [i64]
+
+  // The result count is unknown, so there is no need to check for it.
+  // CHECK-NOT: pdl_interp.check_result_count
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i64]
+    %root = pdl.operation -> (%types : !pdl.range<type>)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -160,8 +264,29 @@ module @results_as_operands {
 
 // -----
 
-// CHECK-LABEL: module @switch_result_types
-module @switch_result_types {
+// CHECK-LABEL: module @single_result_range_as_operands
+module @single_result_range_as_operands {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK-DAG:  %[[OPERANDS:.*]] = pdl_interp.get_operands of %[[ROOT]] : !pdl.range<value>
+  // CHECK-DAG:  %[[OP:.*]] = pdl_interp.get_defining_op of %[[OPERANDS]] : !pdl.range<value>
+  // CHECK-DAG:  pdl_interp.is_not_null %[[OP]]
+  // CHECK-DAG:  %[[RESULTS:.*]] = pdl_interp.get_results of %[[OP]] : !pdl.range<value>
+  // CHECK-DAG:  pdl_interp.are_equal %[[RESULTS]], %[[OPERANDS]] : !pdl.range<value>
+
+  pdl.pattern : benefit(1) {
+    %types = pdl.types
+    %inputOp = pdl.operation -> (%types : !pdl.range<type>)
+    %results = pdl.results of %inputOp
+
+    %root = pdl.operation(%results : !pdl.range<value>)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @switch_single_result_type
+module @switch_single_result_type {
   // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
   // CHECK:   %[[RESULT:.*]] = pdl_interp.get_result 0 of %[[ROOT]]
   // CHECK:   %[[RESULT_TYPE:.*]] = pdl_interp.get_value_type of %[[RESULT]]
@@ -177,6 +302,84 @@ module @switch_result_types {
     pdl.rewrite %root with "rewriter"
   }
 }
+
+// -----
+
+// CHECK-LABEL: module @switch_result_types
+module @switch_result_types {
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK:   %[[RESULTS:.*]] = pdl_interp.get_results of %[[ROOT]]
+  // CHECK:   %[[RESULT_TYPES:.*]] = pdl_interp.get_value_type of %[[RESULTS]]
+  // CHECK:   pdl_interp.switch_types %[[RESULT_TYPES]] to {{\[\[}}i32], [i64, i32]]
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i32]
+    %root = pdl.operation -> (%types : !pdl.range<type>)
+    pdl.rewrite %root with "rewriter"
+  }
+  pdl.pattern : benefit(1) {
+    %types = pdl.types : [i64, i32]
+    %root = pdl.operation -> (%types : !pdl.range<type>)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @switch_operand_count_at_least
+module @switch_operand_count_at_least {
+  // Check that when there are multiple "at_least" checks, the failure branch
+  // goes to the next one in increasing order.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: pdl_interp.check_operand_count of %[[ROOT]] is at_least 1 -> ^[[PATTERN_1_NEXT_BLOCK:.*]],
+  // CHECK: ^bb2:
+  // CHECK-NEXT: pdl_interp.check_operand_count of %[[ROOT]] is at_least 2
+  // CHECK: ^[[PATTERN_1_NEXT_BLOCK]]:
+  // CHECK-NEXT: {{.*}} -> ^{{.*}}, ^bb2
+  pdl.pattern : benefit(1) {
+    %operand = pdl.operand
+    %operands = pdl.operands
+    %root = pdl.operation(%operand, %operands : !pdl.value, !pdl.range<value>)
+    pdl.rewrite %root with "rewriter"
+  }
+  pdl.pattern : benefit(1) {
+    %operand = pdl.operand
+    %operand2 = pdl.operand
+    %operands = pdl.operands
+    %root = pdl.operation(%operand, %operand2, %operands : !pdl.value, !pdl.value, !pdl.range<value>)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
+// -----
+
+// CHECK-LABEL: module @switch_result_count_at_least
+module @switch_result_count_at_least {
+  // Check that when there are multiple "at_least" checks, the failure branch
+  // goes to the next one in increasing order.
+
+  // CHECK: func @matcher(%[[ROOT:.*]]: !pdl.operation)
+  // CHECK: pdl_interp.check_result_count of %[[ROOT]] is at_least 1 -> ^[[PATTERN_1_NEXT_BLOCK:.*]],
+  // CHECK: ^[[PATTERN_2_BLOCK:[a-zA-Z_0-9]*]]:
+  // CHECK: pdl_interp.check_result_count of %[[ROOT]] is at_least 2
+  // CHECK: ^[[PATTERN_1_NEXT_BLOCK]]:
+  // CHECK-NEXT: pdl_interp.get_result
+  // CHECK-NEXT: pdl_interp.is_not_null {{.*}} -> ^{{.*}}, ^[[PATTERN_2_BLOCK]]
+  pdl.pattern : benefit(1) {
+    %type = pdl.type
+    %types = pdl.types
+    %root = pdl.operation -> (%type, %types : !pdl.type, !pdl.range<type>)
+    pdl.rewrite %root with "rewriter"
+  }
+  pdl.pattern : benefit(1) {
+    %type = pdl.type
+    %type2 = pdl.type
+    %types = pdl.types
+    %root = pdl.operation -> (%type, %type2, %types : !pdl.type, !pdl.type, !pdl.range<type>)
+    pdl.rewrite %root with "rewriter"
+  }
+}
+
 
 // -----
 

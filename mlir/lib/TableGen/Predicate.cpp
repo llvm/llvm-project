@@ -133,6 +133,23 @@ namespace {
 using Subst = std::pair<StringRef, StringRef>;
 } // end anonymous namespace
 
+/// Perform the given substitutions on 'str' in-place.
+static void performSubstitutions(std::string &str,
+                                 ArrayRef<Subst> substitutions) {
+  // Apply all parent substitutions from innermost to outermost.
+  for (const auto &subst : llvm::reverse(substitutions)) {
+    auto pos = str.find(std::string(subst.first));
+    while (pos != std::string::npos) {
+      str.replace(pos, subst.first.size(), std::string(subst.second));
+      // Skip the newly inserted substring, which itself may consider the
+      // pattern to match.
+      pos += subst.second.size();
+      // Find the next possible match position.
+      pos = str.find(std::string(subst.first), pos);
+    }
+  }
+}
+
 // Build the predicate tree starting from the top-level predicate, which may
 // have children, and perform leaf substitutions inplace.  Note that after
 // substitution, nodes are still pointing to the original TableGen record.
@@ -147,19 +164,7 @@ buildPredicateTree(const Pred &root,
   rootNode->predicate = &root;
   if (!root.isCombined()) {
     rootNode->expr = root.getCondition();
-    // Apply all parent substitutions from innermost to outermost.
-    for (const auto &subst : llvm::reverse(substitutions)) {
-      auto pos = rootNode->expr.find(std::string(subst.first));
-      while (pos != std::string::npos) {
-        rootNode->expr.replace(pos, subst.first.size(),
-                               std::string(subst.second));
-        // Skip the newly inserted substring, which itself may consider the
-        // pattern to match.
-        pos += subst.second.size();
-        // Find the next possible match position.
-        pos = rootNode->expr.find(std::string(subst.first), pos);
-      }
-    }
+    performSubstitutions(rootNode->expr, substitutions);
     return rootNode;
   }
 
@@ -170,12 +175,14 @@ buildPredicateTree(const Pred &root,
     const auto &substPred = static_cast<const SubstLeavesPred &>(root);
     allSubstitutions.push_back(
         {substPred.getPattern(), substPred.getReplacement()});
-  }
-  // If the current predicate is a ConcatPred, record the prefix and suffix.
-  else if (rootNode->kind == PredCombinerKind::Concat) {
+
+    // If the current predicate is a ConcatPred, record the prefix and suffix.
+  } else if (rootNode->kind == PredCombinerKind::Concat) {
     const auto &concatPred = static_cast<const ConcatPred &>(root);
     rootNode->prefix = std::string(concatPred.getPrefix());
+    performSubstitutions(rootNode->prefix, substitutions);
     rootNode->suffix = std::string(concatPred.getSuffix());
+    performSubstitutions(rootNode->suffix, substitutions);
   }
 
   // Build child subtrees.
