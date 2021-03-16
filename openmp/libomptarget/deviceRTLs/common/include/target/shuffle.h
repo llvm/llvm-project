@@ -85,13 +85,13 @@ inline int32_t __kmpc_impl_shfl_down_sync(uint64_t Mask, int32_t Var,
 
 inline int32_t __kmpc_impl_shfl_sync(uint64_t Mask, int32_t Var,
                                      int32_t SrcLane) {
-  return __nvvm_shfl_idx_i32(Var, SrcLane, 0x1f);
+  return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, 0x1f);
 }
 
 inline int32_t __kmpc_impl_shfl_down_sync(uint64_t Mask, int32_t Var,
                                           uint32_t Delta, int32_t Width) {
   int32_t T = ((GetWarpSize() - Width) << 8) | 0x1f;
-  return __nvvm_shfl_down_i32(Var, Delta, T);
+  return __nvvm_shfl_sync_down_i32(Mask, Var, Delta, T);
 }
 
 #pragma omp end declare variant
