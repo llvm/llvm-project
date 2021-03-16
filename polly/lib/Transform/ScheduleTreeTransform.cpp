@@ -533,13 +533,13 @@ isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
   PartialSchedUAff = PartialSchedUAff.intersect_domain(Domain);
   isl::union_map PartialSchedUMap = isl::union_map(PartialSchedUAff);
 
-  // Make consumable for the following code.
-  // Schedule at the beginning so it is at coordinate 0.
-  isl::union_set PartialSchedUSet = PartialSchedUMap.reverse().wrap();
+  // Enumerator only the scatter elements.
+  isl::union_set ScatterList = PartialSchedUMap.range();
 
-  SmallVector<isl::point, 16> Elts;
+  // Enumerate all loop iterations.
   // TODO: Diagnose if not enumerable or depends on a parameter.
-  PartialSchedUSet.foreach_point([&Elts](isl::point P) -> isl::stat {
+  SmallVector<isl::point, 16> Elts;
+  ScatterList.foreach_point([&Elts](isl::point P) -> isl::stat {
     Elts.push_back(P);
     return isl::stat::ok();
   });
@@ -554,12 +554,10 @@ isl::schedule polly::applyFullUnroll(isl::schedule_node BandToUnroll) {
   // Convert the points to a sequence of filters.
   isl::union_set_list List = isl::union_set_list::alloc(Ctx, Elts.size());
   for (isl::point P : Elts) {
-    isl::basic_set AsSet{P};
+    // Determine the domains that map this scatter element.
+    isl::union_set DomainFilter = PartialSchedUMap.intersect_range(P).domain();
 
-    // Throw away the scatter dimension.
-    AsSet = AsSet.unwrap().range();
-
-    List = List.add(AsSet);
+    List = List.add(DomainFilter);
   }
 
   // Replace original band with unrolled sequence.
