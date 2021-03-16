@@ -16,6 +16,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -48,6 +49,14 @@ public:
       Unparse(x);
       Post(x);
       return false; // Walk() does not visit descendents
+    } else if constexpr (HasTypedExpr<T>::value) {
+      // Format the expression representation from semantics
+      if (asFortran_ && x.typedExpr) {
+        asFortran_->expr(out_, *x.typedExpr);
+        return false;
+      } else {
+        return true;
+      }
     } else {
       Before(x);
       return true; // there's no Unparse() defined here, Walk() the descendents
@@ -816,15 +825,6 @@ public:
   }
 
   // R1001 - R1022
-  bool Pre(const Expr &x) {
-    if (asFortran_ && x.typedExpr) {
-      // Format the expression representation from semantics
-      asFortran_->expr(out_, *x.typedExpr);
-      return false;
-    } else {
-      return true;
-    }
-  }
   void Unparse(const Expr::Parentheses &x) { Put('('), Walk(x.v), Put(')'); }
   void Before(const Expr::UnaryPlus &) { Put("+"); }
   void Before(const Expr::Negate &) { Put("-"); }
