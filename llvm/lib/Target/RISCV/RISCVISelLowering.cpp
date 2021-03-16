@@ -4845,6 +4845,19 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
+static MachineInstr *elideCopies(MachineInstr *MI,
+                                 const MachineRegisterInfo &MRI) {
+  while (true) {
+    if (!MI->isFullCopy())
+      return MI;
+    if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
+      return nullptr;
+    MI = MRI.getVRegDef(MI->getOperand(1).getReg());
+    if (!MI)
+      return nullptr;
+  }
+}
+
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
                                     RISCVVLMUL VLMul, bool ForceTailAgnostic) {
@@ -4905,8 +4918,11 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg());
-    if (UseMI && UseMI->isImplicitDef())
-      TailAgnostic = true;
+    if (UseMI) {
+      UseMI = elideCopies(UseMI, MRI);
+      if (UseMI && UseMI->isImplicitDef())
+        TailAgnostic = true;
+    }
   }
 
   // For simplicity we reuse the vtype representation here.
