@@ -881,7 +881,6 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
     else
       OS << "\"\")\n";
   }
-  OS << "\n#undef BUILTIN\n";
   OS << "#undef RISCVV_BUILTIN\n";
 }
 

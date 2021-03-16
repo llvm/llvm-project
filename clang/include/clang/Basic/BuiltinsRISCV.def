@@ -17,3 +17,5 @@
 
 #include "clang/Basic/riscv_vector_builtins.inc"
 
+#undef BUILTIN
+#undef TARGET_BUILTIN
