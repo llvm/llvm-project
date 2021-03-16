@@ -432,15 +432,14 @@ public:
     if (auto b = getUnboxed()) {
       if (*b) {
         auto type = b->getType();
-        auto loc = b->getLoc();
         if (type.template isa<fir::BoxCharType>())
-          fir::emitFatalError(loc, "BoxChar should be unboxed");
+          fir::emitFatalError(b->getLoc(), "BoxChar should be unboxed");
         if (auto refType = type.template dyn_cast<fir::ReferenceType>())
           type = refType.getEleTy();
         if (auto seqType = type.template dyn_cast<fir::SequenceType>())
           type = seqType.getEleTy();
         if (type.template isa<fir::CharacterType>())
-          fir::emitFatalError(loc,
+          fir::emitFatalError(b->getLoc(),
                               "character buffer should be in CharBoxValue");
       }
     }
