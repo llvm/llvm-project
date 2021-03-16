@@ -1135,9 +1135,6 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // investigating, just return it with no recomputation.
   // Don't use cached information for invariant loads since it is valid for
   // non-invariant loads only.
-  //
-  // Don't use cached information for invariant loads since it is valid for
-  // non-invariant loads only.
   if (!IsIncomplete && !isInvariantLoad &&
       CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
     // We have a fully cached result for this query then we can just return the
