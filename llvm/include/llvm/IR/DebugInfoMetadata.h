@@ -3902,6 +3902,84 @@ public:
   void handleChangedOperand(void *Ref, Metadata *New);
 };
 
+/// Represents one lifetime segment of a DIObject.
+class DILifetime : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DILifetime(LLVMContext &C, StorageType Storage, ArrayRef<Metadata *> Ops,
+             ArrayRef<Metadata *> Args)
+      : MDNode(C, DILifetimeKind, Storage, Ops, Args) {
+    assert(Storage != Uniqued);
+  }
+  ~DILifetime() = default;
+
+  static DILifetime *getImpl(LLVMContext &Context, Metadata *Obj, Metadata *Loc,
+                             ArrayRef<Metadata *> Args, StorageType Storage);
+
+  TempDILifetime cloneImpl() const {
+    SmallVector<Metadata *> ArgObjects(argObjectsBegin(), argObjectsEnd());
+    return getTemporary(getContext(), getRawObject(), getRawLocation(),
+                        ArgObjects);
+  }
+
+public:
+  static DILifetime *getDistinct(LLVMContext &Context, Metadata *Obj,
+                                 Metadata *Loc, ArrayRef<Metadata *> Args) {
+    return getImpl(Context, Obj, Loc, Args, Distinct);
+  }
+  static TempDILifetime getTemporary(LLVMContext &Context, Metadata *Obj,
+                                     Metadata *Loc, ArrayRef<Metadata *> Args) {
+    return TempDILifetime(getImpl(Context, Obj, Loc, Args, Temporary));
+  }
+
+  TempDILifetime clone() const { return cloneImpl(); }
+
+  Metadata *getRawObject() const { return getOperand(0); }
+  Metadata *getRawLocation() const { return getOperand(1); }
+  MDNode::op_iterator rawArgObjectsBegin() const { return op_begin() + 2; }
+  MDNode::op_iterator rawArgObjectsEnd() const { return op_end(); }
+  MDNode::op_range rawArgObjects() const {
+    return {rawArgObjectsBegin(), rawArgObjectsEnd()};
+  }
+
+  DIObject *getObject() const { return cast<DIObject>(getRawObject()); }
+  DIExpr *getLocation() const { return cast<DIExpr>(getRawLocation()); }
+  class ArgObjectIterator
+      : public llvm::iterator_facade_base<ArgObjectIterator,
+                                          std::input_iterator_tag, DIObject> {
+    friend DILifetime;
+    MDNode::op_iterator I;
+    explicit ArgObjectIterator(MDNode::op_iterator I) : I(I) {}
+
+  public:
+    ArgObjectIterator() = delete;
+    ArgObjectIterator(const ArgObjectIterator &) = default;
+    bool operator==(const ArgObjectIterator &R) const { return R.I == I; }
+    DIObject *operator*() const { return cast<DIObject>(*I); }
+    ArgObjectIterator &operator++() {
+      ++I;
+      return *static_cast<ArgObjectIterator *>(this);
+    }
+    using iterator_facade_base<ArgObjectIterator, std::input_iterator_tag,
+                               DIObject>::operator++;
+  };
+  using ArgObjectRange = iterator_range<ArgObjectIterator>;
+  ArgObjectIterator argObjectsBegin() const {
+    return ArgObjectIterator(rawArgObjectsBegin());
+  }
+  ArgObjectIterator argObjectsEnd() const {
+    return ArgObjectIterator(rawArgObjectsEnd());
+  }
+  ArgObjectRange argObjects() const {
+    return {argObjectsBegin(), argObjectsEnd()};
+  }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DILifetimeKind;
+  }
+};
+
 /// Identifies a unique instance of a variable.
 ///
 /// Storage for identifying a potentially inlined instance of a variable,

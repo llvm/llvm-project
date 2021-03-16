@@ -5592,6 +5592,21 @@ bool LLParser::parseDIImportedEntity(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDILifetime:
+///   ::= !DILifetime(object: !0, location: !1, argObjects: {...})
+bool LLParser::parseDILifetime(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  REQUIRED(object, MDField, );                                                 \
+  REQUIRED(location, MDField, );                                               \
+  OPTIONAL(argObjects, MDFieldList, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = DILifetime::getDistinct(Context, object.Val, location.Val,
+                                   argObjects.Val);
+  return false;
+}
+
 #undef PARSE_MD_FIELD
 #undef NOP_FIELD
 #undef REQUIRE_FIELD

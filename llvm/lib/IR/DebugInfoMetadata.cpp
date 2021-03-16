@@ -1674,3 +1674,12 @@ void DIArgList::dropAllReferences() {
   Args.clear();
   MDNode::dropAllReferences();
 }
+
+DILifetime *DILifetime::getImpl(LLVMContext &Context, Metadata *Obj,
+                                Metadata *Loc, ArrayRef<Metadata *> Args,
+                                StorageType Storage) {
+  Metadata *Ops[] = {Obj, Loc};
+  return storeImpl(new (array_lengthof(Ops) + Args.size())
+                       DILifetime(Context, Storage, Ops, Args),
+                   Storage);
+}

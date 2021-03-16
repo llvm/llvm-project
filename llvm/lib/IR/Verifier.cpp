@@ -1435,7 +1435,8 @@ void Verifier::visitDIExpression(const DIExpression &N) {
 }
 
 void Verifier::visitDIExpr(const DIExpr &N) {
-  // TODO
+  // TODO: Strictly limit where DIExpr may occur, forbidding it anywhere except
+  // as the `location:` parameter to DILifetime.
 }
 
 void Verifier::visitDIGlobalVariableExpression(
@@ -1466,6 +1467,33 @@ void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
     AssertDI(isa<DIScope>(S), "invalid scope for imported entity", &N, S);
   AssertDI(isDINode(N.getRawEntity()), "invalid imported entity", &N,
            N.getRawEntity());
+}
+
+void Verifier::visitDILifetime(const DILifetime &N) {
+  // TODO: Validate that the the reachable lifetime graph contains no cycles.
+  auto *Obj = N.getRawObject();
+  AssertDI(Obj, "missing object", &N);
+  AssertDI(isa<DIObject>(Obj), "object must be a DIObject", &N, Obj);
+  auto *Loc = N.getRawLocation();
+  AssertDI(Loc, "missing location expression", &N);
+  AssertDI(isa<DIExpr>(Loc), "location expression must be a DIExpr", &N, Loc);
+  unsigned NumArgs = 0;
+  SmallDenseSet<Metadata *> RawArgObjectOperands;
+  for (const MDOperand &Operand : N.rawArgObjects()) {
+    Metadata *A = Operand.get();
+    AssertDI(A, "missing argObject", &N);
+    // FIXME: This should also permit DICode, once that is implemented
+    AssertDI(isa<DIObject>(A), "each argObject must be a DIObject", &N, A);
+    NumArgs++;
+  }
+  for (DIOp::Variant Op : cast<DIExpr>(Loc)->builder()) {
+    if (auto *A = Op.getIf<DIOp::Arg>()) {
+      AssertDI(A->getIndex() < NumArgs,
+               "debug location expression cannot reference an out-of-bounds "
+               "argObjects index",
+               &N);
+    }
+  }
 }
 
 void Verifier::visitComdat(const Comdat &C) {

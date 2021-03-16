@@ -2475,6 +2475,17 @@ static void writeDIImportedEntity(raw_ostream &Out, const DIImportedEntity *N,
   Out << ")";
 }
 
+static void writeDILifetime(raw_ostream &Out, const DILifetime *N,
+                            TypePrinting *TypePrinter, SlotTracker *Machine,
+                            const Module *Context) {
+  Out << "!DILifetime(";
+  MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
+  Printer.printMetadata("object", N->getRawObject());
+  Printer.printMetadata("location", N->getRawLocation());
+  Printer.printMetadataList("argObjects", N->rawArgObjects());
+  Out << ")";
+}
+
 static void WriteMDNodeBodyInternal(raw_ostream &Out, const MDNode *Node,
                                     TypePrinting *TypePrinter,
                                     SlotTracker *Machine,

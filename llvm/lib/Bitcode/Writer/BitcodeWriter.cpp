@@ -366,6 +366,8 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
+  void writeDILifetime(const DILifetime *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   unsigned createNamedMetadataAbbrev();
   void writeNamedMetadata(SmallVectorImpl<uint64_t> &Record);
   unsigned createMetadataStringsAbbrev();
@@ -2123,6 +2125,18 @@ void ModuleBitcodeWriter::writeDIImportedEntity(
   Record.push_back(VE.getMetadataOrNullID(N->getRawFile()));
 
   Stream.EmitRecord(bitc::METADATA_IMPORTED_ENTITY, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDILifetime(const DILifetime *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(VE.getMetadataID(N->getObject()));
+  Record.push_back(VE.getMetadataID(N->getLocation()));
+  for (const auto &I : N->argObjects())
+    Record.push_back(VE.getMetadataID(I));
+
+  Stream.EmitRecord(bitc::METADATA_LIFETIME, Record, Abbrev);
   Record.clear();
 }
 

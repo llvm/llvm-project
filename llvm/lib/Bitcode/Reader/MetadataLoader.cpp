@@ -880,6 +880,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_GENERIC_SUBRANGE:
       case bitc::METADATA_EXPR:
       case bitc::METADATA_FRAGMENT:
+      case bitc::METADATA_LIFETIME:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -2250,6 +2251,19 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LIFETIME: {
+    if (Record.size() < 2)
+      return error("Invalid record");
+    Metadata *Obj = getMD(Record[0]);
+    Metadata *Loc = getMD(Record[1]);
+    SmallVector<Metadata *> Args;
+    for (auto ArgID : ArrayRef<uint64_t>(Record).slice(2))
+      Args.push_back(getMD(ArgID));
+    MetadataList.assignValue(DILifetime::getDistinct(Context, Obj, Loc, Args),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }
