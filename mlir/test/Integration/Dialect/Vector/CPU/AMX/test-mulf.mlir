@@ -38,9 +38,9 @@ func @entry() {
   %c2 = constant 2: index
 
   // Set up memory.
-  %a = alloc() : memref<2x4xbf16>
-  %b = alloc() : memref<2x4xbf16>
-  %c = alloc() : memref<2x2xf32>
+  %a = memref.alloc() : memref<2x4xbf16>
+  %b = memref.alloc() : memref<2x4xbf16>
+  %c = memref.alloc() : memref<2x2xf32>
 
   %0 = std.constant dense<[[1.0, 2.0, 3.0, 4.0 ],
                            [5.0, 6.0, 7.0, 8.0 ]]> : vector<2x4xbf16>
@@ -75,9 +75,9 @@ func @entry() {
   }
 
   // Release resources.
-  dealloc %a : memref<2x4xbf16>
-  dealloc %b : memref<2x4xbf16>
-  dealloc %c : memref<2x2xf32>
+  memref.dealloc %a : memref<2x4xbf16>
+  memref.dealloc %b : memref<2x4xbf16>
+  memref.dealloc %c : memref<2x2xf32>
 
   return
 }
