@@ -345,6 +345,9 @@ bool llvm::stripDebugInfo(Function &F) {
         if (NewLoopID != LoopID)
           I.setMetadata(LLVMContext::MD_loop, NewLoopID);
       }
+      // Strip heapallocsite attachments, they point into the DIType system.
+      if (I.hasMetadataOtherThanDebugLoc())
+        I.setMetadata("heapallocsite", nullptr);
     }
   }
   return Changed;
@@ -658,6 +661,10 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         updateLoopMetadataDebugLocations(I, [&](const DILocation &Loc) {
           return remapDebugLoc(&Loc).get();
         });
+
+        // Strip heapallocsite attachments, they point into the DIType system.
+        if (I.hasMetadataOtherThanDebugLoc())
+          I.setMetadata("heapallocsite", nullptr);
       }
     }
   }
