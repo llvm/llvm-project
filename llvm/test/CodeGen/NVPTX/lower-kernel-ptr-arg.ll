@@ -35,7 +35,7 @@ define void @ptr_in_byval_kernel(%struct.S* byval(%struct.S) %input, i32* %outpu
 ; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_kernel_param_0+8]
 ; CHECK: cvta.to.global.u64 %[[iptr_g:.*]], %[[iptr]];
   %b_ptr = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
-  %b = load i32*, i32** %b_ptr, align 4
+  %b = load i32*, i32** %b_ptr, align 8
   %v = load i32, i32* %b, align 4
 ; CHECK: ld.global.u32 %[[val:.*]], [%[[iptr_g]]]
   store i32 %v, i32* %output, align 4
@@ -51,7 +51,7 @@ define void @ptr_in_byval_func(%struct.S* byval(%struct.S) %input, i32* %output)
 ; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_func_param_1]
 ; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_func_param_0+8]
   %b_ptr = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
-  %b = load i32*, i32** %b_ptr, align 4
+  %b = load i32*, i32** %b_ptr, align 8
   %v = load i32, i32* %b, align 4
 ; CHECK: ld.u32 %[[val:.*]], [%[[iptr]]]
   store i32 %v, i32* %output, align 4

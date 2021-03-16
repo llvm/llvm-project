@@ -68,7 +68,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
   ret i32 %sum.0.lcssa
 }
 
-; FIXME: PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
+; PR43948 - https://bugs.llvm.org/show_bug.cgi?id=43948
 ; The extra use of a non-vectorized element of a reduction must not be killed.
 
 define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
@@ -118,7 +118,7 @@ define i32 @horiz_max_multiple_uses([32 x i32]* %x, i32* %p) {
   ret i32 %t17
 }
 
-; FIXME: This is a miscompile (see the undef operand) and/or test for invalid IR.
+; This is a miscompile (see the undef operand) and/or test for invalid IR.
 
 define i1 @bad_insertpoint_rdx([8 x i32]* %p) #0 {
 ; CHECK-LABEL: @bad_insertpoint_rdx(

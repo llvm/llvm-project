@@ -73,7 +73,7 @@ body:             |
 
   bb.1:
     S_CMP_LT_I32 0, %0:sgpr_32, implicit-def $scc
-    %10:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %3:vgpr_32, %13:sgpr_128, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %10:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %3:vgpr_32, %13:sgpr_128, 0, 0, 0, 0, 0, implicit $exec
     %12:vgpr_32 = V_ADD_CO_U32_e32 %3:vgpr_32, %3:vgpr_32, implicit-def $vcc, implicit $exec
     %5:sgpr_32 = S_CSELECT_B32 %2:sgpr_32, %1:sgpr_32, implicit $scc
     %11:vgpr_32 = V_ADD_CO_U32_e32 %5:sgpr_32, %12:vgpr_32, implicit-def $vcc, implicit $exec
@@ -130,14 +130,14 @@ body:             |
     %6:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %5:sgpr_128 = COPY %6
     %7:sreg_32 = S_MOV_B32 0
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %6, %7, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %6, %7, 0, 0, 0, 0, implicit $exec
     %16:vgpr_32 = COPY %8.sub1
     %11:vgpr_32 = COPY %16
     %10:vgpr_32 = V_SET_INACTIVE_B32 %11, undef %12:sreg_32, implicit $exec, implicit-def $scc
     %14:vgpr_32 = COPY %7
     %13:vgpr_32 = V_MOV_B32_dpp %14, killed %10, 323, 12, 15, 0, implicit $exec
     early-clobber %15:vgpr_32 = STRICT_WWM killed %13, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact killed %15, %6, %7, 4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -162,7 +162,7 @@ body:             |
     %0:sgpr_32 = COPY $sgpr0
     %4:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
     %5:sreg_32 = S_MOV_B32 0
-    %6:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %4, %5, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %6:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET %4, %5, 0, 0, 0, 0, implicit $exec
 
     %8:sreg_64 = COPY $exec
     %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -172,7 +172,7 @@ body:             |
     early-clobber %13:sreg_32 = STRICT_WWM %9:vgpr_32, implicit $exec
 
     %14:vgpr_32 = COPY %13
-    BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact killed %14, %4, %5, 4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -210,20 +210,20 @@ body:             |
     undef %7.sub0:vreg_64 = COPY %2:vgpr_32
     %7.sub1:vreg_64 = COPY %3:vgpr_32
 
-    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %7:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %7:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
     S_CMP_EQ_U32 %8:sgpr_32, 0, implicit-def $scc
 
     undef %5.sub0:vreg_64 = nsz arcp nofpexcept V_ADD_F32_e64 0, %4.sub0:vreg_128, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
     %5.sub1:vreg_64 = nsz arcp nofpexcept V_MUL_F32_e32 %2, %3, implicit $mode, implicit $exec
     %6:vgpr_32 = nsz arcp nofpexcept V_ADD_F32_e64 0, %2:vgpr_32, 0, %3:vgpr_32, 1, 0, implicit $mode, implicit $exec
 
-    %9:vreg_128 = IMAGE_SAMPLE_V4_V2 %5:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
+    %9:vreg_128 = IMAGE_SAMPLE_V4_V2 %5:vreg_64, %100:sgpr_256, %101:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16, align 4, addrspace 4)
 
     S_CBRANCH_SCC0 %bb.2, implicit $scc
 
   bb.1:
     %10:sreg_32 = S_MOV_B32 0
-    BUFFER_STORE_DWORD_OFFSET_exact %6:vgpr_32, %101:sgpr_128, %10:sreg_32, 4, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET_exact %6:vgpr_32, %101:sgpr_128, %10:sreg_32, 4, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
   bb.2:
@@ -251,7 +251,7 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr0
     %0:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:vgpr_32 = COPY $vgpr0
-    %2:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN %1:vgpr_32, %0:sgpr_128, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    %2:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN %1:vgpr_32, %0:sgpr_128, 0, 0, 0, 0, 0, implicit $exec
     %2.sub0:vreg_64 = V_SET_INACTIVE_B32 %2.sub0:vreg_64, 0, implicit $exec, implicit-def $scc
     %2.sub1:vreg_64 = V_SET_INACTIVE_B32 %2.sub1:vreg_64, 0, implicit $exec, implicit-def $scc
     %3:vreg_64 = nnan nsz arcp contract reassoc nofpexcept V_MAX_F64_e64 0, %2:vreg_64, 0, %2:vreg_64, 0, 0, implicit $mode, implicit $exec
@@ -276,7 +276,7 @@ body:             |
     undef %0.sub0:vreg_64 = V_MOV_B32_e32 -10, implicit $exec
     %0.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     %1:sreg_64 = S_GETPC_B64
-    %2:sgpr_256 = S_LOAD_DWORDX8_IMM %1:sreg_64, 32, 0, 0
+    %2:sgpr_256 = S_LOAD_DWORDX8_IMM %1:sreg_64, 32, 0
 
    bb.1:
     $vcc = V_CMP_LT_U32_e64 4, 4, implicit $exec
@@ -293,7 +293,7 @@ body:             |
 
    bb.4:
     %3:sgpr_128 = IMPLICIT_DEF
-    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %2:sgpr_256, %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
+    %4:vreg_128 = IMAGE_SAMPLE_V4_V2 %0:vreg_64, %2:sgpr_256, %3:sgpr_128, 15, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from custom "ImageResource")
     $vgpr0 = COPY %4.sub0:vreg_128
     $vgpr1 = COPY %4.sub1:vreg_128
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1

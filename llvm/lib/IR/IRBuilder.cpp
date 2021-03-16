@@ -992,6 +992,22 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
   return Fn;
 }
 
+Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
+  auto *Ty = cast<VectorType>(V->getType());
+  if (isa<ScalableVectorType>(Ty)) {
+    Module *M = BB->getParent()->getParent();
+    Function *F = Intrinsic::getDeclaration(
+        M, Intrinsic::experimental_vector_reverse, Ty);
+    return Insert(CallInst::Create(F, V), Name);
+  }
+  // Keep the original behaviour for fixed vector
+  SmallVector<int, 8> ShuffleMask;
+  int NumElts = Ty->getElementCount().getKnownMinValue();
+  for (int i = 0; i < NumElts; ++i)
+    ShuffleMask.push_back(NumElts - i - 1);
+  return CreateShuffleVector(V, ShuffleMask, Name);
+}
+
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
                                         const Twine &Name) {
   auto EC = ElementCount::getFixed(NumElts);

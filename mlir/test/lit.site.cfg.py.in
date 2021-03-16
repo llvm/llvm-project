@@ -48,6 +48,7 @@ config.enable_vulkan_runner = @MLIR_VULKAN_RUNNER_ENABLED@
 config.enable_bindings_python = @MLIR_BINDINGS_PYTHON_ENABLED@
 config.mlir_integration_test_dir = "@MLIR_INTEGRATION_TEST_DIR@"
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
+config.mlir_run_amx_tests = "@MLIR_RUN_AMX_TESTS@"
 config.mlir_run_avx512_tests = "@MLIR_RUN_AVX512_TESTS@"
 config.mlir_include_integration_tests = "@MLIR_INCLUDE_INTEGRATION_TESTS@"
 

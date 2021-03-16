@@ -9,7 +9,7 @@ name: hazard_smem_war
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
@@ -23,7 +23,7 @@ name: hazard_smem_war_no_hazard
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $sgpr3 = S_ADD_U32 $sgpr4, $sgpr5, implicit-def $scc
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -39,7 +39,7 @@ name: hazard_smem_war_dependent_salu
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 0
     $sgpr3 = S_ADD_U32 $sgpr2, $sgpr4, implicit-def $scc
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
@@ -56,7 +56,7 @@ name: hazard_smem_war_independent_salu
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 0
     $sgpr3 = S_ADD_U32 $sgpr5, $sgpr4, implicit-def $scc
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
@@ -73,8 +73,8 @@ name: hazard_smem_war_only_smem
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr6, $sgpr7, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
-    $sgpr5 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
+    $sgpr5 = S_LOAD_DWORD_IMM $sgpr6_sgpr7, 0, 0
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
@@ -88,7 +88,7 @@ name: hazard_smem_war_only_waitcnt_0
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 0
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -104,7 +104,7 @@ name: hazard_smem_war_only_vmcnt_0
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 3952
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -120,7 +120,7 @@ name: hazard_smem_war_only_expcnt_0
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 53007
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -135,7 +135,7 @@ name: hazard_smem_war_only_lgkmcnt_0
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT 49279
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -150,7 +150,7 @@ name: hazard_smem_war_only_waitcnt_lgkmcnt_0
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT_LGKMCNT $sgpr_null, 0
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -166,7 +166,7 @@ name: hazard_smem_war_only_waitcnt_lgkmcnt_1
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_WAITCNT_LGKMCNT $sgpr_null, 1
     $sgpr0_sgpr1 = V_CMP_EQ_F32_e64 0, $vgpr0, 0, $vgpr1, 1, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -182,7 +182,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr4, $vgpr0, $vgpr1
     successors: %bb.1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_BRANCH %bb.1
 
   bb.1:
@@ -207,7 +207,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
     successors: %bb.1, %bb.2
     $vcc = S_AND_B64 $sgpr4_sgpr5, $sgpr4_sgpr5, implicit-def $scc
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
   bb.1:
@@ -239,7 +239,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr4, $sgpr5, $vgpr0, $vgpr1
     successors: %bb.1, %bb.2
     $vcc = S_AND_B64 $sgpr4_sgpr5, $sgpr4_sgpr5, implicit-def $scc
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
   bb.1:
@@ -272,7 +272,7 @@ body: |
 
   bb.1:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     S_BRANCH %bb.0
 ...
 
@@ -285,7 +285,7 @@ name: hazard_smem_war_impdef
 body: |
   bb.0:
     liveins: $vcc, $vgpr0
-    $sgpr0 = S_LOAD_DWORD_IMM $vcc, 0, 0, 0
+    $sgpr0 = S_LOAD_DWORD_IMM $vcc, 0, 0
     V_CMP_EQ_F32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
@@ -299,7 +299,7 @@ name: hazard_smem_war_readlane
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr3, $vgpr0
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $sgpr0 = V_READLANE_B32 $vgpr0, $sgpr3
     S_ENDPGM 0
 ...
@@ -313,7 +313,7 @@ name: hazard_smem_war_readfirstlane
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, 0
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     S_ENDPGM 0
 ...

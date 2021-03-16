@@ -34,14 +34,14 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" pre-pruning:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   prune(*G);
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" post-pruning:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Run post-pruning passes.
@@ -58,7 +58,7 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
            << "\" before post-allocation passes:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Run post-allocation passes.
@@ -121,7 +121,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
            << "\" before pre-fixup passes:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   if (auto Err = runPasses(Passes.PreFixupPasses))
@@ -129,7 +129,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" before copy-and-fixup:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Fix up block content.
@@ -138,7 +138,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" after copy-and-fixup:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   if (auto Err = runPasses(Passes.PostFixupPasses))
@@ -413,11 +413,6 @@ void JITLinkerBase::deallocateAndBailOut(Error Err) {
   assert(Err && "Should not be bailing out on success value");
   assert(Alloc && "can not call deallocateAndBailOut before allocation");
   Ctx->notifyFailed(joinErrors(std::move(Err), Alloc->deallocate()));
-}
-
-void JITLinkerBase::dumpGraph(raw_ostream &OS) {
-  assert(G && "Graph is not set yet");
-  G->dump(dbgs(), [this](Edge::Kind K) { return getEdgeKindName(K); });
 }
 
 void prune(LinkGraph &G) {

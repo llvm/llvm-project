@@ -23,7 +23,7 @@ body: |
     ; GFX6: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX6: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX6: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-LABEL: name: load_atomic_global_s32_seq_cst
     ; GFX7: liveins: $vgpr0_vgpr1
@@ -33,17 +33,17 @@ body: |
     ; GFX7: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX7: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_atomic_global_s32_seq_cst
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
     ; GFX7-FLAT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY]], 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
+    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
     ; GFX7-FLAT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
     ; GFX9-LABEL: name: load_atomic_global_s32_seq_cst
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = G_LOAD %0 :: (load seq_cst 4, align 4, addrspace 1)
@@ -144,7 +144,7 @@ body: |
     ; GFX6: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX6: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX6: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX6: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX6: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX6: $vgpr0_vgpr1 = COPY [[BUFFER_LOAD_DWORDX2_ADDR64_]]
     ; GFX7-LABEL: name: load_atomic_global_s64_seq_cst
     ; GFX7: liveins: $vgpr0_vgpr1
@@ -154,17 +154,17 @@ body: |
     ; GFX7: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX7: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX7: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX7: $vgpr0_vgpr1 = COPY [[BUFFER_LOAD_DWORDX2_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_atomic_global_s64_seq_cst
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
     ; GFX7-FLAT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX7-FLAT: [[FLAT_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = FLAT_LOAD_DWORDX2 [[COPY]], 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 8, addrspace 1)
+    ; GFX7-FLAT: [[FLAT_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = FLAT_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 8, addrspace 1)
     ; GFX7-FLAT: $vgpr0_vgpr1 = COPY [[FLAT_LOAD_DWORDX2_]]
     ; GFX9-LABEL: name: load_atomic_global_s64_seq_cst
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX9: $vgpr0_vgpr1 = COPY [[GLOBAL_LOAD_DWORDX2_]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_LOAD %0 :: (load seq_cst 8, align 8, addrspace 1)
@@ -349,7 +349,7 @@ body: |
     ; GFX6: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX6: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX6: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE2]], %subreg.sub2_sub3
-    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-LABEL: name: load_atomic_global_s32_seq_cst_gep_m2048
     ; GFX7: liveins: $vgpr0_vgpr1
@@ -369,7 +369,7 @@ body: |
     ; GFX7: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE2]], %subreg.sub2_sub3
-    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX7: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_atomic_global_s32_seq_cst_gep_m2048
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
@@ -384,12 +384,12 @@ body: |
     ; GFX7-FLAT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY1]], [[COPY2]], 0, implicit $exec
     ; GFX7-FLAT: %9:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 [[COPY3]], [[COPY4]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-FLAT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, %9, %subreg.sub1
-    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
+    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
     ; GFX7-FLAT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
     ; GFX9-LABEL: name: load_atomic_global_s32_seq_cst_gep_m2048
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], -2048, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], -2048, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -2048
@@ -418,7 +418,7 @@ body: |
     ; GFX6: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX6: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX6: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX6: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 4095, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX6: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-LABEL: name: load_atomic_global_s32_seq_cst_gep_4095
     ; GFX7: liveins: $vgpr0_vgpr1
@@ -428,7 +428,7 @@ body: |
     ; GFX7: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE]], %subreg.sub2_sub3
-    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 4095, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX7: [[BUFFER_LOAD_DWORD_ADDR64_:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_ADDR64 [[COPY]], [[REG_SEQUENCE1]], 0, 4095, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX7: $vgpr0 = COPY [[BUFFER_LOAD_DWORD_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_atomic_global_s32_seq_cst_gep_4095
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
@@ -443,12 +443,12 @@ body: |
     ; GFX7-FLAT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY1]], [[COPY2]], 0, implicit $exec
     ; GFX7-FLAT: %9:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 [[COPY3]], [[COPY4]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-FLAT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, %9, %subreg.sub1
-    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
+    ; GFX7-FLAT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 4, addrspace 1)
     ; GFX7-FLAT: $vgpr0 = COPY [[FLAT_LOAD_DWORD]]
     ; GFX9-LABEL: name: load_atomic_global_s32_seq_cst_gep_4095
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4095, 0, 0, 0, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
+    ; GFX9: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4095, 0, implicit $exec :: (load seq_cst 4, addrspace 1)
     ; GFX9: $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 4095
@@ -487,7 +487,7 @@ body: |
     ; GFX6: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX6: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX6: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE2]], %subreg.sub2_sub3
-    ; GFX6: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX6: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX6: $vgpr0_vgpr1 = COPY [[BUFFER_LOAD_DWORDX2_ADDR64_]]
     ; GFX7-LABEL: name: load_atomic_global_s64_seq_cst_gep_m2048
     ; GFX7: liveins: $vgpr0_vgpr1
@@ -507,7 +507,7 @@ body: |
     ; GFX7: [[REG_SEQUENCE2:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
     ; GFX7: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; GFX7: [[REG_SEQUENCE3:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[REG_SEQUENCE2]], %subreg.sub2_sub3
-    ; GFX7: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX7: [[BUFFER_LOAD_DWORDX2_ADDR64_:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64 [[REG_SEQUENCE1]], [[REG_SEQUENCE3]], 0, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX7: $vgpr0_vgpr1 = COPY [[BUFFER_LOAD_DWORDX2_ADDR64_]]
     ; GFX7-FLAT-LABEL: name: load_atomic_global_s64_seq_cst_gep_m2048
     ; GFX7-FLAT: liveins: $vgpr0_vgpr1
@@ -522,12 +522,12 @@ body: |
     ; GFX7-FLAT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY1]], [[COPY2]], 0, implicit $exec
     ; GFX7-FLAT: %9:vgpr_32, dead %11:sreg_64_xexec = V_ADDC_U32_e64 [[COPY3]], [[COPY4]], killed [[V_ADD_CO_U32_e64_1]], 0, implicit $exec
     ; GFX7-FLAT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_ADD_CO_U32_e64_]], %subreg.sub0, %9, %subreg.sub1
-    ; GFX7-FLAT: [[FLAT_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = FLAT_LOAD_DWORDX2 [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 8, addrspace 1)
+    ; GFX7-FLAT: [[FLAT_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = FLAT_LOAD_DWORDX2 [[REG_SEQUENCE1]], 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst 8, addrspace 1)
     ; GFX7-FLAT: $vgpr0_vgpr1 = COPY [[FLAT_LOAD_DWORDX2_]]
     ; GFX9-LABEL: name: load_atomic_global_s64_seq_cst_gep_m2048
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY]], -2048, 0, 0, 0, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
+    ; GFX9: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2 [[COPY]], -2048, 0, implicit $exec :: (load seq_cst 8, addrspace 1)
     ; GFX9: $vgpr0_vgpr1 = COPY [[GLOBAL_LOAD_DWORDX2_]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_CONSTANT i64 -2048

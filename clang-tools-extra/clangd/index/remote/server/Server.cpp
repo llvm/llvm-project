@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Features.inc"
 #include "Index.pb.h"
 #include "Service.grpc.pb.h"
 #include "index/Index.h"
@@ -34,6 +35,10 @@
 #include <grpc++/health_check_service_interface.h>
 #include <memory>
 #include <thread>
+
+#if ENABLE_GRPC_REFLECTION
+#include <grpc++/ext/proto_server_reflection_plugin.h>
+#endif
 
 namespace clang {
 namespace clangd {
@@ -313,6 +318,9 @@ void runServerAndWait(clangd::SymbolIndex &Index, llvm::StringRef ServerAddress,
   RemoteIndexServer Service(Index, IndexRoot);
 
   grpc::EnableDefaultHealthCheckService(true);
+#if ENABLE_GRPC_REFLECTION
+  grpc::reflection::InitProtoReflectionServerBuilderPlugin();
+#endif
   grpc::ServerBuilder Builder;
   Builder.AddListeningPort(ServerAddress.str(),
                            grpc::InsecureServerCredentials());

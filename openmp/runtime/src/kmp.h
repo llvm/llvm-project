@@ -1221,7 +1221,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
   int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
-  int cpu_stackoffset;
   int apic_id;
   int physical_id;
   int logical_id;

@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 // RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s 2>&1 \
 // RUN:   | FileCheck %s
@@ -5,7 +6,7 @@
 // verify the tools invocations
 // CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "c"{{.*}}
 // CHECK: clang{{.*}}"-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-x" "ir"{{.*}}
-// CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906" "-fcuda-is-device" "-emit-llvm-bc" "-mlink-builtin-bitcode"{{.*}}libomptarget-amdgcn-gfx906.bc"{{.*}}
+// CHECK: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906" "-fcuda-is-device" "-mlink-builtin-bitcode"{{.*}}libomptarget-amdgcn-gfx906.bc"{{.*}}
 // CHECK: llvm-link{{.*}}"-o" "{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked-{{.*}}.bc"
 // CHECK: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked-{{.*}}.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-{{.*}}.o"
 // CHECK: lld{{.*}}"-flavor" "gnu" "--no-undefined" "-shared" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}.out" "{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-{{.*}}.o"
@@ -25,18 +26,35 @@
 // CHECK-PHASES: 6: preprocessor, {5}, cpp-output, (device-openmp)
 // CHECK-PHASES: 7: compiler, {6}, ir, (device-openmp)
 // CHECK-PHASES: 8: offload, "host-openmp (x86_64-unknown-linux-gnu)" {2}, "device-openmp (amdgcn-amd-amdhsa)" {7}, ir
-// CHECK-PHASES: 9: backend, {8}, assembler, (device-openmp)
-// CHECK-PHASES: 10: assembler, {9}, object, (device-openmp)
-// CHECK-PHASES: 11: linker, {10}, image, (device-openmp)
-// CHECK-PHASES: 12: offload, "device-openmp (amdgcn-amd-amdhsa)" {11}, image
-// CHECK-PHASES: 13: clang-offload-wrapper, {12}, ir, (host-openmp)
-// CHECK-PHASES: 14: backend, {13}, assembler, (host-openmp)
-// CHECK-PHASES: 15: assembler, {14}, object, (host-openmp)
-// CHECK-PHASES: 16: linker, {4, 15}, image, (host-openmp)
+// CHECK-PHASES: 9: linker, {8}, image, (device-openmp)
+// CHECK-PHASES: 10: offload, "device-openmp (amdgcn-amd-amdhsa)" {9}, image
+// CHECK-PHASES: 11: clang-offload-wrapper, {10}, ir, (host-openmp)
+// CHECK-PHASES: 12: backend, {11}, assembler, (host-openmp)
+// CHECK-PHASES: 13: assembler, {12}, object, (host-openmp)
+// CHECK-PHASES: 14: linker, {4, 13}, image, (host-openmp)
 
 // handling of --libomptarget-amdgcn-bc-path
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 --libomptarget-amdgcn-bc-path=%S/Inputs/hip_dev_lib/libomptarget-amdgcn-gfx803.bc %s 2>&1 | FileCheck %s --check-prefix=CHECK-LIBOMPTARGET
-// CHECK-LIBOMPTARGET: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx803" "-fcuda-is-device" "-emit-llvm-bc" "-mlink-builtin-bitcode"{{.*}}Inputs/hip_dev_lib/libomptarget-amdgcn-gfx803.bc"{{.*}}
+// CHECK-LIBOMPTARGET: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx803" "-fcuda-is-device" "-mlink-builtin-bitcode"{{.*}}Inputs/hip_dev_lib/libomptarget-amdgcn-gfx803.bc"{{.*}}
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOGPULIB
-// CHECK-NOGPULIB-NOT: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx803" "-fcuda-is-device" "-emit-llvm-bc" "-mlink-builtin-bitcode"{{.*}}libomptarget-amdgcn-gfx803.bc"{{.*}}
+// CHECK-NOGPULIB-NOT: clang{{.*}}"-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx803" "-fcuda-is-device" "-mlink-builtin-bitcode"{{.*}}libomptarget-amdgcn-gfx803.bc"{{.*}}
+
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -save-temps -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx803 -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-PRINT-BINDINGS
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.*]]"],
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang",{{.*}} output: "[[HOST_BC:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]"], output: "[[HOST_S:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang::as", inputs: ["[[HOST_S]]"], output: "[[HOST_O:.*]]"
+// CHECK-PRINT-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_I:.*]]"
+// CHECK-PRINT-BINDINGS: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[DEVICE_I]]", "[[HOST_BC]]"], output: "[[DEVICE_BC:.*]]"
+// CHECK-PRINT-BINDINGS: "amdgcn-amd-amdhsa" - "AMDGCN::OpenMPLinker", inputs: ["[[DEVICE_BC]]"], output: "[[DEVICE_OUT:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "offload wrapper", inputs: ["[[DEVICE_OUT]]"], output: "[[OFFLOAD_WRAPPER:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[OFFLOAD_WRAPPER]]"], output: "[[OFFLOAD_S:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "clang::as", inputs: ["[[OFFLOAD_S]]"], output: "[[OFFLOAD_O:.*]]"
+// CHECK-PRINT-BINDINGS: "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["[[HOST_O]]", "[[OFFLOAD_O]]"], output:
+
+// verify the llc is invoked for textual assembly output
+// RUN:   env LIBRARY_PATH=%S/Inputs/hip_dev_lib %clang -### --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 -save-temps %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-SAVE-ASM
+// CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=asm" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.s"
+// CHECK-SAVE-ASM: llc{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906-linked.bc" "-mtriple=amdgcn-amd-amdhsa" "-mcpu=gfx906" "-filetype=obj" "-o"{{.*}}amdgpu-openmp-toolchain-{{.*}}-gfx906.o"

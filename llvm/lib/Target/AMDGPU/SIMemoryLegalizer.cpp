@@ -84,22 +84,6 @@ enum class SIAtomicAddrSpace {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
-/// Sets named bit \p BitName to "true" if present in instruction \p MI.
-/// \returns Returns true if \p MI is modified, false otherwise.
-template <uint16_t BitName>
-bool enableNamedBit(const MachineBasicBlock::iterator &MI) {
-  int BitIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(), BitName);
-  if (BitIdx == -1)
-    return false;
-
-  MachineOperand &Bit = MI->getOperand(BitIdx);
-  if (Bit.getImm() != 0)
-    return false;
-
-  Bit.setImm(1);
-  return true;
-}
-
 class SIMemOpInfo final {
 private:
 
@@ -288,6 +272,11 @@ protected:
 
   SICacheControl(const GCNSubtarget &ST);
 
+  /// Sets named bit \p BitName to "true" if present in instruction \p MI.
+  /// \returns Returns true if \p MI is modified, false otherwise.
+  bool enableNamedBit(const MachineBasicBlock::iterator MI,
+                      AMDGPU::CPol::CPol Bit) const;
+
 public:
 
   /// Create a cache control for the subtarget \p ST.
@@ -369,13 +358,13 @@ protected:
   /// Sets GLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableGLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit<AMDGPU::OpName::glc>(MI);
+    return enableNamedBit(MI, AMDGPU::CPol::GLC);
   }
 
   /// Sets SLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableSLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit<AMDGPU::OpName::slc>(MI);
+    return enableNamedBit(MI, AMDGPU::CPol::SLC);
   }
 
 public:
@@ -436,7 +425,7 @@ protected:
   /// Sets SCC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableSCCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit<AMDGPU::OpName::sccb>(MI);
+    return enableNamedBit(MI, AMDGPU::CPol::SCC);;
   }
 
 public:
@@ -485,7 +474,7 @@ protected:
   /// Sets DLC bit to "true" if present in \p MI. Returns true if \p MI
   /// is modified, false otherwise.
   bool enableDLCBit(const MachineBasicBlock::iterator &MI) const {
-    return enableNamedBit<AMDGPU::OpName::dlc>(MI);
+    return enableNamedBit(MI, AMDGPU::CPol::DLC);
   }
 
 public:
@@ -783,6 +772,16 @@ SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+}
+
+bool SICacheControl::enableNamedBit(const MachineBasicBlock::iterator MI,
+                                    AMDGPU::CPol::CPol Bit) const {
+  MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
+  if (!CPol)
+    return false;
+
+  CPol->setImm(CPol->getImm() | Bit);
+  return true;
 }
 
 /* static */

@@ -77,7 +77,7 @@ body:             |
     %44.sub5:sgpr_256 = COPY %43
     %44.sub6:sgpr_256 = COPY %43
     %44.sub7:sgpr_256 = COPY killed %43
-    %45:vgpr_32 = IMAGE_LOAD_MIP_V1_V4 killed %87, killed %44, 1, -1, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
+    %45:vgpr_32 = IMAGE_LOAD_MIP_V1_V4 killed %87, killed %44, 1, -1, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
     dead %89:vgpr_32 = V_BFE_U32_e64 killed %45, 7, 1, implicit $exec
     %49:sreg_32_xm0 = S_MOV_B32 1
     %50:sgpr_128 = COPY killed %0
@@ -112,7 +112,7 @@ body:             |
     %61.sub5:sgpr_256 = COPY %60
     %61.sub6:sgpr_256 = COPY %60
     %61.sub7:sgpr_256 = COPY killed %60
-    %62:vgpr_32 = IMAGE_LOAD_MIP_V1_V4 killed %107, killed %61, 1, -1, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
+    %62:vgpr_32 = IMAGE_LOAD_MIP_V1_V4 killed %107, killed %61, 1, -1, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load 16 from constant-pool, addrspace 4)
     %109:vgpr_32 = V_AND_B32_e32 24, killed %62, implicit $exec
     %67:sreg_64_xexec = V_CMP_EQ_U32_e64 0, killed %109, implicit $exec
     dead %69:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, %67, implicit $exec

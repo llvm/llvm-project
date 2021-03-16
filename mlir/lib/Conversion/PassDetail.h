@@ -30,7 +30,6 @@ class GPUModuleOp;
 
 namespace LLVM {
 class LLVMArmSVEDialect;
-class LLVMAVX512Dialect;
 class LLVMDialect;
 } // end namespace LLVM
 

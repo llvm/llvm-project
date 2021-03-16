@@ -235,11 +235,87 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
   }
 }
 
+// Utility for dealing with elemental LOGICAL arguments
+static bool IsLogicalElementTrue(
+    const Descriptor &logical, const SubscriptValue at[]) {
+  // A LOGICAL value is false if and only if all of its bytes are zero.
+  const char *p{logical.Element<char>(at)};
+  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
+    if (*p) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// INDEX implementation
+template <typename CHAR>
+inline std::size_t Index(const CHAR *x, std::size_t xLen, const CHAR *want,
+    std::size_t wantLen, bool back) {
+  if (xLen < wantLen) {
+    return 0;
+  }
+  if (xLen == 0) {
+    return 1; // wantLen is also 0, so trivial match
+  }
+  if (back) {
+    // If wantLen==0, returns xLen + 1 per standard (and all other compilers)
+    std::size_t at{xLen - wantLen + 1};
+    for (; at > 0; --at) {
+      std::size_t j{1};
+      for (; j <= wantLen; ++j) {
+        if (x[at + j - 2] != want[j - 1]) {
+          break;
+        }
+      }
+      if (j > wantLen) {
+        return at;
+      }
+    }
+    return 0;
+  }
+  // Non-trivial forward substring search: use a simplified form of
+  // Boyer-Moore substring searching.
+  for (std::size_t at{1}; at + wantLen - 1 <= xLen;) {
+    // Compare x(at:at+wantLen-1) with want(1:wantLen).
+    // The comparison proceeds from the ends of the substrings forward
+    // so that we can skip ahead by multiple positions on a miss.
+    std::size_t j{wantLen};
+    CHAR ch;
+    for (; j > 0; --j) {
+      ch = x[at + j - 2];
+      if (ch != want[j - 1]) {
+        break;
+      }
+    }
+    if (j == 0) {
+      return at; // found a match
+    }
+    // Suppose we have at==2:
+    // "THAT FORTRAN THAT I RAN" <- the string (x) in which we search
+    //   "THAT I RAN"            <- the string (want) for which we search
+    //          ^------------------ j==7, ch=='T'
+    // We can shift ahead 3 positions to at==5 to align the 'T's:
+    // "THAT FORTRAN THAT I RAN"
+    //      "THAT I RAN"
+    std::size_t shift{1};
+    for (; shift < j; ++shift) {
+      if (want[j - shift - 1] == ch) {
+        break;
+      }
+    }
+    at += shift;
+  }
+  return 0;
+}
+
 // SCAN and VERIFY implementation help.  These intrinsic functions
 // do pretty much the same thing, so they're templatized with a
 // distinguishing flag.
 
-template <typename CHAR, bool IS_VERIFY = false>
+enum class CharFunc { Index, Scan, Verify };
+
+template <typename CHAR, CharFunc FUNC>
 inline std::size_t ScanVerify(const CHAR *x, std::size_t xLen, const CHAR *set,
     std::size_t setLen, bool back) {
   std::size_t at{back ? xLen : 1};
@@ -254,7 +330,7 @@ inline std::size_t ScanVerify(const CHAR *x, std::size_t xLen, const CHAR *set,
         break;
       }
     }
-    if (inSet != IS_VERIFY) {
+    if (inSet != (FUNC == CharFunc::Verify)) {
       return at;
     }
   }
@@ -285,35 +361,25 @@ inline std::size_t ScanVerify(const char *x, std::size_t xLen, const char *set,
   return 0;
 }
 
-static bool IsLogicalElementTrue(
-    const Descriptor &logical, const SubscriptValue at[]) {
-  // A LOGICAL value is false if and only if all of its bytes are zero.
-  const char *p{logical.Element<char>(at)};
-  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
-    if (*p) {
-      return true;
-    }
-  }
-  return false;
-}
-
-template <typename INT, typename CHAR, bool IS_VERIFY = false>
-static void ScanVerify(Descriptor &result, const Descriptor &string,
-    const Descriptor &set, const Descriptor *back,
+template <typename INT, typename CHAR, CharFunc FUNC>
+static void GeneralCharFunc(Descriptor &result, const Descriptor &string,
+    const Descriptor &arg, const Descriptor *back,
     const Terminator &terminator) {
   int rank{string.rank() ? string.rank()
-                         : set.rank() ? set.rank() : back ? back->rank() : 0};
-  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank], setAt[maxRank],
+          : arg.rank()   ? arg.rank()
+          : back         ? back->rank()
+                         : 0};
+  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank], argAt[maxRank],
       backAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
     lb[j] = 1;
-    ub[j] = string.rank()
-        ? string.GetDimension(j).Extent()
-        : set.rank() ? set.GetDimension(j).Extent()
-                     : back ? back->GetDimension(j).Extent() : 1;
+    ub[j] = string.rank() ? string.GetDimension(j).Extent()
+        : arg.rank()      ? arg.GetDimension(j).Extent()
+        : back            ? back->GetDimension(j).Extent()
+                          : 1;
     elements *= ub[j];
-    stringAt[j] = setAt[j] = backAt[j] = 1;
+    stringAt[j] = argAt[j] = backAt[j] = 1;
   }
   result.Establish(TypeCategory::Integer, sizeof(INT), nullptr, rank, ub,
       CFI_attribute_allocatable);
@@ -321,44 +387,59 @@ static void ScanVerify(Descriptor &result, const Descriptor &string,
     terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
-  std::size_t setElementChars{set.ElementBytes() >> shift<CHAR>};
+  std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
   for (SubscriptValue resultAt{0}; elements-- > 0; resultAt += sizeof(INT),
-       string.IncrementSubscripts(stringAt), set.IncrementSubscripts(setAt),
+       string.IncrementSubscripts(stringAt), arg.IncrementSubscripts(argAt),
        back && back->IncrementSubscripts(backAt)) {
-    *result.OffsetElement<INT>(resultAt) =
-        ScanVerify<CHAR, IS_VERIFY>(string.Element<CHAR>(stringAt),
-            stringElementChars, set.Element<CHAR>(setAt), setElementChars,
-            back && IsLogicalElementTrue(*back, backAt));
+    if constexpr (FUNC == CharFunc::Index) {
+      *result.OffsetElement<INT>(resultAt) =
+          Index<CHAR>(string.Element<CHAR>(stringAt), stringElementChars,
+              arg.Element<CHAR>(argAt), argElementChars,
+              back && IsLogicalElementTrue(*back, backAt));
+    } else if constexpr (FUNC == CharFunc::Scan) {
+      *result.OffsetElement<INT>(resultAt) =
+          ScanVerify<CHAR, CharFunc::Scan>(string.Element<CHAR>(stringAt),
+              stringElementChars, arg.Element<CHAR>(argAt), argElementChars,
+              back && IsLogicalElementTrue(*back, backAt));
+    } else if constexpr (FUNC == CharFunc::Verify) {
+      *result.OffsetElement<INT>(resultAt) =
+          ScanVerify<CHAR, CharFunc::Verify>(string.Element<CHAR>(stringAt),
+              stringElementChars, arg.Element<CHAR>(argAt), argElementChars,
+              back && IsLogicalElementTrue(*back, backAt));
+    } else {
+      static_assert(FUNC == CharFunc::Index || FUNC == CharFunc::Scan ||
+          FUNC == CharFunc::Verify);
+    }
   }
 }
 
-template <typename CHAR, bool IS_VERIFY = false>
-static void ScanVerifyKind(Descriptor &result, const Descriptor &string,
-    const Descriptor &set, const Descriptor *back, int kind,
+template <typename CHAR, CharFunc FUNC>
+static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
+    const Descriptor &arg, const Descriptor *back, int kind,
     const Terminator &terminator) {
   switch (kind) {
   case 1:
-    ScanVerify<std::int8_t, CHAR, IS_VERIFY>(
-        result, string, set, back, terminator);
+    GeneralCharFunc<std::int8_t, CHAR, FUNC>(
+        result, string, arg, back, terminator);
     break;
   case 2:
-    ScanVerify<std::int16_t, CHAR, IS_VERIFY>(
-        result, string, set, back, terminator);
+    GeneralCharFunc<std::int16_t, CHAR, FUNC>(
+        result, string, arg, back, terminator);
     break;
   case 4:
-    ScanVerify<std::int32_t, CHAR, IS_VERIFY>(
-        result, string, set, back, terminator);
+    GeneralCharFunc<std::int32_t, CHAR, FUNC>(
+        result, string, arg, back, terminator);
     break;
   case 8:
-    ScanVerify<std::int64_t, CHAR, IS_VERIFY>(
-        result, string, set, back, terminator);
+    GeneralCharFunc<std::int64_t, CHAR, FUNC>(
+        result, string, arg, back, terminator);
     break;
   case 16:
-    ScanVerify<common::uint128_t, CHAR, IS_VERIFY>(
-        result, string, set, back, terminator);
+    GeneralCharFunc<common::uint128_t, CHAR, FUNC>(
+        result, string, arg, back, terminator);
     break;
   default:
-    terminator.Crash("SCAN/VERIFY: bad KIND=%d", kind);
+    terminator.Crash("INDEX/SCAN/VERIFY: bad KIND=%d", kind);
   }
 }
 
@@ -750,6 +831,42 @@ void RTNAME(AdjustR)(Descriptor &result, const Descriptor &string,
   AdjustLR<true>(result, string, sourceFile, sourceLine);
 }
 
+std::size_t RTNAME(Index1)(const char *x, std::size_t xLen, const char *set,
+    std::size_t setLen, bool back) {
+  return Index<char>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Index2)(const char16_t *x, std::size_t xLen,
+    const char16_t *set, std::size_t setLen, bool back) {
+  return Index<char16_t>(x, xLen, set, setLen, back);
+}
+std::size_t RTNAME(Index4)(const char32_t *x, std::size_t xLen,
+    const char32_t *set, std::size_t setLen, bool back) {
+  return Index<char32_t>(x, xLen, set, setLen, back);
+}
+
+void RTNAME(Index)(Descriptor &result, const Descriptor &string,
+    const Descriptor &substring, const Descriptor *back, int kind,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  switch (string.raw().type) {
+  case CFI_type_char:
+    GeneralCharFuncKind<char, CharFunc::Index>(
+        result, string, substring, back, kind, terminator);
+    break;
+  case CFI_type_char16_t:
+    GeneralCharFuncKind<char16_t, CharFunc::Index>(
+        result, string, substring, back, kind, terminator);
+    break;
+  case CFI_type_char32_t:
+    GeneralCharFuncKind<char32_t, CharFunc::Index>(
+        result, string, substring, back, kind, terminator);
+    break;
+  default:
+    terminator.Crash(
+        "INDEX: bad string type code %d", static_cast<int>(string.raw().type));
+  }
+}
+
 std::size_t RTNAME(LenTrim1)(const char *x, std::size_t chars) {
   return LenTrim(x, chars);
 }
@@ -781,15 +898,15 @@ void RTNAME(LenTrim)(Descriptor &result, const Descriptor &string, int kind,
 
 std::size_t RTNAME(Scan1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, false>(x, xLen, set, setLen, back);
+  return ScanVerify<char, CharFunc::Scan>(x, xLen, set, setLen, back);
 }
 std::size_t RTNAME(Scan2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
-  return ScanVerify<char16_t, false>(x, xLen, set, setLen, back);
+  return ScanVerify<char16_t, CharFunc::Scan>(x, xLen, set, setLen, back);
 }
 std::size_t RTNAME(Scan4)(const char32_t *x, std::size_t xLen,
     const char32_t *set, std::size_t setLen, bool back) {
-  return ScanVerify<char32_t, false>(x, xLen, set, setLen, back);
+  return ScanVerify<char32_t, CharFunc::Scan>(x, xLen, set, setLen, back);
 }
 
 void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
@@ -798,14 +915,15 @@ void RTNAME(Scan)(Descriptor &result, const Descriptor &string,
   Terminator terminator{sourceFile, sourceLine};
   switch (string.raw().type) {
   case CFI_type_char:
-    ScanVerifyKind<char, false>(result, string, set, back, kind, terminator);
+    GeneralCharFuncKind<char, CharFunc::Scan>(
+        result, string, set, back, kind, terminator);
     break;
   case CFI_type_char16_t:
-    ScanVerifyKind<char16_t, false>(
+    GeneralCharFuncKind<char16_t, CharFunc::Scan>(
         result, string, set, back, kind, terminator);
     break;
   case CFI_type_char32_t:
-    ScanVerifyKind<char32_t, false>(
+    GeneralCharFuncKind<char32_t, CharFunc::Scan>(
         result, string, set, back, kind, terminator);
     break;
   default:
@@ -860,15 +978,15 @@ void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
 
 std::size_t RTNAME(Verify1)(const char *x, std::size_t xLen, const char *set,
     std::size_t setLen, bool back) {
-  return ScanVerify<char, true>(x, xLen, set, setLen, back);
+  return ScanVerify<char, CharFunc::Verify>(x, xLen, set, setLen, back);
 }
 std::size_t RTNAME(Verify2)(const char16_t *x, std::size_t xLen,
     const char16_t *set, std::size_t setLen, bool back) {
-  return ScanVerify<char16_t, true>(x, xLen, set, setLen, back);
+  return ScanVerify<char16_t, CharFunc::Verify>(x, xLen, set, setLen, back);
 }
 std::size_t RTNAME(Verify4)(const char32_t *x, std::size_t xLen,
     const char32_t *set, std::size_t setLen, bool back) {
-  return ScanVerify<char32_t, true>(x, xLen, set, setLen, back);
+  return ScanVerify<char32_t, CharFunc::Verify>(x, xLen, set, setLen, back);
 }
 
 void RTNAME(Verify)(Descriptor &result, const Descriptor &string,
@@ -877,13 +995,16 @@ void RTNAME(Verify)(Descriptor &result, const Descriptor &string,
   Terminator terminator{sourceFile, sourceLine};
   switch (string.raw().type) {
   case CFI_type_char:
-    ScanVerifyKind<char, true>(result, string, set, back, kind, terminator);
+    GeneralCharFuncKind<char, CharFunc::Verify>(
+        result, string, set, back, kind, terminator);
     break;
   case CFI_type_char16_t:
-    ScanVerifyKind<char16_t, true>(result, string, set, back, kind, terminator);
+    GeneralCharFuncKind<char16_t, CharFunc::Verify>(
+        result, string, set, back, kind, terminator);
     break;
   case CFI_type_char32_t:
-    ScanVerifyKind<char32_t, true>(result, string, set, back, kind, terminator);
+    GeneralCharFuncKind<char32_t, CharFunc::Verify>(
+        result, string, set, back, kind, terminator);
     break;
   default:
     terminator.Crash(

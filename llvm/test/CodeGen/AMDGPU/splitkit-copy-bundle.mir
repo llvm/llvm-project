@@ -276,14 +276,14 @@ body:             |
     ; RA:   internal %14.sub13:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub13
     ; RA:   internal %14.sub14:sgpr_512 = COPY [[SI_SPILL_S512_RESTORE]].sub14
     ; RA: }
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub4, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR1:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub5, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR2:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub10, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR3:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub11, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub7, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR5:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub8, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR6:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub13, 0, 0 :: (dereferenceable invariant load 4)
-    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR7:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub14, 0, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub4, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR1:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub5, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR2:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub10, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR3:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub11, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub7, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR5:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub8, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR6:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub13, 0 :: (dereferenceable invariant load 4)
+    ; RA: [[S_BUFFER_LOAD_DWORD_SGPR7:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR [[DEF]], %14.sub14, 0 :: (dereferenceable invariant load 4)
     ; RA: S_NOP 0, implicit [[DEF]], implicit [[DEF1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR]], implicit [[S_BUFFER_LOAD_DWORD_SGPR1]], implicit [[S_BUFFER_LOAD_DWORD_SGPR2]], implicit [[S_BUFFER_LOAD_DWORD_SGPR3]], implicit [[S_BUFFER_LOAD_DWORD_SGPR4]], implicit [[S_BUFFER_LOAD_DWORD_SGPR5]], implicit [[S_BUFFER_LOAD_DWORD_SGPR6]], implicit [[S_BUFFER_LOAD_DWORD_SGPR7]]
     ; VR-LABEL: name: splitkit_copy_unbundle_reorder
     ; VR: renamable $sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23_sgpr24_sgpr25_sgpr26_sgpr27 = IMPLICIT_DEF
@@ -305,15 +305,15 @@ body:             |
     ; VR: renamable $sgpr21 = COPY killed renamable $sgpr25
     ; VR: renamable $sgpr22 = COPY killed renamable $sgpr26
     ; VR: renamable $sgpr4_sgpr5_sgpr6_sgpr7 = IMPLICIT_DEF
-    ; VR: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr12, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr13, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr15, 0, 0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr8 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr12, 0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr9 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr13, 0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr14 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr15, 0 :: (dereferenceable invariant load 4)
     ; VR: renamable $sgpr10_sgpr11 = IMPLICIT_DEF
-    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19, 0, 0 :: (dereferenceable invariant load 4)
-    ; VR: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21, 0, 0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr17 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr22,  0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr15 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr16,  0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr12 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr18,  0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr13 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr19,  0 :: (dereferenceable invariant load 4)
+    ; VR: renamable $sgpr16 = S_BUFFER_LOAD_DWORD_SGPR renamable $sgpr4_sgpr5_sgpr6_sgpr7, killed renamable $sgpr21,  0 :: (dereferenceable invariant load 4)
     ; VR: S_NOP 0, implicit killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, implicit killed renamable $sgpr10_sgpr11, implicit killed renamable $sgpr8, implicit killed renamable $sgpr9, implicit killed renamable $sgpr12, implicit killed renamable $sgpr13, implicit killed renamable $sgpr14, implicit killed renamable $sgpr15, implicit killed renamable $sgpr16, implicit killed renamable $sgpr17
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sreg_64 = IMPLICIT_DEF
@@ -331,14 +331,14 @@ body:             |
     ; Clobber registers
     S_NOP 0, implicit-def $sgpr8, implicit-def $sgpr12, implicit-def $sgpr16, implicit-def $sgpr20, implicit-def $sgpr24, implicit-def $sgpr28, implicit-def $sgpr32, implicit-def $sgpr36, implicit-def $sgpr40, implicit-def $sgpr44, implicit-def $sgpr48, implicit-def $sgpr52, implicit-def $sgpr56, implicit-def $sgpr60, implicit-def $sgpr64, implicit-def $sgpr68, implicit-def $sgpr72, implicit-def $sgpr74, implicit-def $sgpr78, implicit-def $sgpr82, implicit-def $sgpr86, implicit-def $sgpr90, implicit-def $sgpr94, implicit-def $sgpr98
 
-    %5:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub4:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %6:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub5:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %7:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub10:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %8:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub11:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub7:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %10:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub8:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %11:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub13:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
-    %12:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub14:sgpr_512, 0, 0 :: (dereferenceable invariant load 4)
+    %5:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub4:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %6:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub5:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %7:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub10:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %8:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub11:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub7:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %10:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub8:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %11:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub13:sgpr_512, 0 :: (dereferenceable invariant load 4)
+    %12:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR %0:sgpr_128, %2.sub14:sgpr_512, 0 :: (dereferenceable invariant load 4)
 
     S_NOP 0, implicit %0, implicit %1, implicit %5, implicit %6, implicit %7, implicit %8, implicit %9, implicit %10, implicit %11, implicit %12
 

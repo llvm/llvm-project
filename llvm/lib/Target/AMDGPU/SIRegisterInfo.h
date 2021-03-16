@@ -326,6 +326,10 @@ public:
   // \returns \p Reg otherwise.
   MCPhysReg get32BitRegister(MCPhysReg Reg) const;
 
+  // Returns true if a given register class is properly aligned for
+  // the subtarget.
+  bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
+
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;

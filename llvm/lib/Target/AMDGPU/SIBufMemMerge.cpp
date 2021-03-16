@@ -84,8 +84,8 @@ namespace {
     unsigned getSBase(const SIInstrInfo *TII) const {
       return TII->getNamedOperand(*Inst, AMDGPU::OpName::sbase)->getReg();
     }
-    unsigned getGLC(const SIInstrInfo *TII) const {
-      return TII->getNamedOperand(*Inst, AMDGPU::OpName::glc)->getImm();
+    unsigned getCPol(const SIInstrInfo *TII) const {
+      return TII->getNamedOperand(*Inst, AMDGPU::OpName::cpol)->getImm();
     }
     /// Get the offset encoded in the instruction
     unsigned getOffset(const SIInstrInfo *TII) const {
@@ -194,11 +194,11 @@ unsigned DenseMapInfo<SimpleMI>::getHashValue(SimpleMI Val) {
       Inst->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM ||
       Inst->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM) {
     const unsigned SBase = Val.getSBase(TII);
-    const int64_t GLC = Val.getGLC(TII);
+    const int64_t CPol = Val.getCPol(TII);
     const unsigned Size = Val.getSize(TII);
     const unsigned Phase = Val.Phase;
     
-    return hash_combine(Inst->getOpcode(), SBase, GLC, Size, Phase);
+    return hash_combine(Inst->getOpcode(), SBase, CPol, Size, Phase);
   }
   
   llvm_unreachable_internal();
@@ -227,7 +227,7 @@ bool DenseMapInfo<SimpleMI>::isEqual(SimpleMI LHS, SimpleMI RHS) {
       LHSI->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM ||
       LHSI->getOpcode() == AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM) {
     return LHS.getSBase(TII) == RHS.getSBase(TII) &&
-           LHS.getGLC(TII) == RHS.getGLC(TII) &&
+           LHS.getCPol(TII) == RHS.getCPol(TII) &&
            LHS.getSize(TII) == RHS.getSize(TII) &&
            LHS.Phase == RHS.Phase;
   }
@@ -252,7 +252,7 @@ void SIBufMemMerge::processSubSection(const SmallVector<SimpleMI, 8> &Candidates
                                       unsigned int StartIdx, unsigned int EndIdx,
                                       unsigned int Size,
                                       const llvm::MachineOperand &SBase,
-                                      const llvm::MachineOperand &GLC) {
+                                      const llvm::MachineOperand &CPol) {
   
   // Loop through the indices creating the largest size we can from the
   // remaining elements
@@ -321,8 +321,7 @@ void SIBufMemMerge::processSubSection(const SmallVector<SimpleMI, 8> &Candidates
         BuildMI(*MBB, InsertElt->Inst, DL, *MergeInstr, DestReg)
           .addReg(SBase.getReg())                      // addr
           .addImm(Candidates[StartIdx].getOffset(TII)) // offset
-          .addImm(GLC.getImm())                        // glc
-          .addImm(0);                                  // slc
+          .addImm(CPol.getImm());                      // cpol
       
       (void)NewMergeInst;
       
@@ -379,8 +378,8 @@ bool SIBufMemMerge::processList(
     
     const auto *SBase = TII->getNamedOperand(*EachList.front().Inst,
                                              AMDGPU::OpName::sbase);
-    const auto *GLC = TII->getNamedOperand(*EachList.front().Inst,
-                                           AMDGPU::OpName::glc);
+    const auto *CPol = TII->getNamedOperand(*EachList.front().Inst,
+                                            AMDGPU::OpName::cpol);
     
     bool StartingRun = true;
     // Sections is StartIdx, EndIdx, Size
@@ -429,7 +428,7 @@ bool SIBufMemMerge::processList(
       std::tie(StartIdx, EndIdx, Size) = SubSection;
       // Process all subsections with more than one operation
       if (EndIdx > StartIdx) {
-        processSubSection(EachList, StartIdx, EndIdx, Size, *SBase, *GLC);
+        processSubSection(EachList, StartIdx, EndIdx, Size, *SBase, *CPol);
         Modified = true;
       }
     }

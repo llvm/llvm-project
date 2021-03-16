@@ -365,6 +365,10 @@ protected:
   findFunctionSamples(const Instruction &I) const override;
   std::vector<const FunctionSamples *>
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
+  void findExternalInlineCandidate(const FunctionSamples *Samples,
+                                   DenseSet<GlobalValue::GUID> &InlinedGUIDs,
+                                   const StringMap<Function *> &SymbolMap,
+                                   uint64_t Threshold);
   // Attempt to promote indirect call and also inline the promoted call
   bool tryPromoteAndInlineCandidate(
       Function &F, InlineCandidate &Candidate, uint64_t SumOrigin,
@@ -922,6 +926,60 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
   }
 }
 
+void SampleProfileLoader::findExternalInlineCandidate(
+    const FunctionSamples *Samples, DenseSet<GlobalValue::GUID> &InlinedGUIDs,
+    const StringMap<Function *> &SymbolMap, uint64_t Threshold) {
+  assert(Samples && "expect non-null caller profile");
+
+  // For AutoFDO profile, retrieve candidate profiles by walking over
+  // the nested inlinee profiles.
+  if (!ProfileIsCS) {
+    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold);
+    return;
+  }
+
+  ContextTrieNode *Caller =
+      ContextTracker->getContextFor(Samples->getContext());
+  std::queue<ContextTrieNode *> CalleeList;
+  CalleeList.push(Caller);
+  while (!CalleeList.empty()) {
+    ContextTrieNode *Node = CalleeList.front();
+    CalleeList.pop();
+    FunctionSamples *CalleeSample = Node->getFunctionSamples();
+    // For CSSPGO profile, retrieve candidate profile by walking over the
+    // trie built for context profile. Note that also take call targets
+    // even if callee doesn't have a corresponding context profile.
+    if (!CalleeSample || CalleeSample->getEntrySamples() < Threshold)
+      continue;
+
+    StringRef Name = CalleeSample->getFuncName();
+    Function *Func = SymbolMap.lookup(Name);
+    // Add to the import list only when it's defined out of module.
+    if (!Func || Func->isDeclaration())
+      InlinedGUIDs.insert(FunctionSamples::getGUID(Name));
+
+    // Import hot CallTargets, which may not be available in IR because full
+    // profile annotation cannot be done until backend compilation in ThinLTO.
+    for (const auto &BS : CalleeSample->getBodySamples())
+      for (const auto &TS : BS.second.getCallTargets())
+        if (TS.getValue() > Threshold) {
+          StringRef CalleeName = CalleeSample->getFuncName(TS.getKey());
+          const Function *Callee = SymbolMap.lookup(CalleeName);
+          if (!Callee || Callee->isDeclaration())
+            InlinedGUIDs.insert(FunctionSamples::getGUID(CalleeName));
+        }
+
+    // Import hot child context profile associted with callees. Note that this
+    // may have some overlap with the call target loop above, but doing this
+    // based child context profile again effectively allow us to use the max of
+    // entry count and call target count to determine importing.
+    for (auto &Child : Node->getAllChildContext()) {
+      ContextTrieNode *CalleeNode = &Child.second;
+      CalleeList.push(CalleeNode);
+    }
+  }
+}
+
 /// Iteratively inline hot callsites of a function.
 ///
 /// Iteratively traverse all callsites of the function \p F, and find if
@@ -994,8 +1052,8 @@ bool SampleProfileLoader::inlineHotFunctions(
         for (const auto *FS : findIndirectCallFunctionSamples(*I, Sum)) {
           uint64_t SumOrigin = Sum;
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-            FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
-                                     PSI->getOrCompHotCountThreshold());
+            findExternalInlineCandidate(FS, InlinedGUIDs, SymbolMap,
+                                        PSI->getOrCompHotCountThreshold());
             continue;
           }
           if (!callsiteIsHot(FS, PSI, ProfAccForSymsInList))
@@ -1014,9 +1072,9 @@ bool SampleProfileLoader::inlineHotFunctions(
           LocalChanged = true;
         }
       } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-        findCalleeFunctionSamples(*I)->findInlinedFunctions(
-            InlinedGUIDs, F.getParent(), SymbolMap,
-            PSI->getOrCompHotCountThreshold());
+        findExternalInlineCandidate(findCalleeFunctionSamples(*I), InlinedGUIDs,
+                                    SymbolMap,
+                                    PSI->getOrCompHotCountThreshold());
       }
     }
     Changed |= LocalChanged;
@@ -1268,8 +1326,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
       for (const auto *FS : CalleeSamples) {
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-          FS->findInlinedFunctions(InlinedGUIDs, F.getParent(), SymbolMap,
-                                   PSI->getOrCompHotCountThreshold());
+          findExternalInlineCandidate(FS, InlinedGUIDs, SymbolMap,
+                                      PSI->getOrCompHotCountThreshold());
           continue;
         }
         uint64_t EntryCountDistributed =
@@ -1314,9 +1372,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         Changed = true;
       }
     } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
-      findCalleeFunctionSamples(*I)->findInlinedFunctions(
-          InlinedGUIDs, F.getParent(), SymbolMap,
-          PSI->getOrCompHotCountThreshold());
+      findExternalInlineCandidate(Candidate.CalleeSamples, InlinedGUIDs,
+                                  SymbolMap, PSI->getOrCompHotCountThreshold());
     }
   }
 

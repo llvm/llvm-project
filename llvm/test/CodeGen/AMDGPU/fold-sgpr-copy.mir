@@ -4,7 +4,7 @@
 
 # GCN-LABEL: name: fold_sgpr_to_sgpr_copy_full
 # GCN:      %0:sgpr_32 = IMPLICIT_DEF
-# GCN-NEXT: S_STORE_DWORD_IMM %0, undef $sgpr10_sgpr11, 0, 0, 0
+# GCN-NEXT: S_STORE_DWORD_IMM %0, undef $sgpr10_sgpr11, 0, 0
 
 name:            fold_sgpr_to_sgpr_copy_full
 body:             |
@@ -13,13 +13,13 @@ body:             |
     %0:sgpr_32 = IMPLICIT_DEF
     %1:sgpr_32 = COPY %0
     %2:sgpr_32 = COPY %1
-    S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0, 0
+    S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0
 ...
 
 # GCN-LABEL: name: fold_sgpr_to_sgpr_copy_subreg
 # GCN:      %0:sreg_64 = IMPLICIT_DEF
 # GCN-NEXT: %2:sgpr_32 = COPY %0.sub0
-# GCN-NEXT: S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0, 0
+# GCN-NEXT: S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0
 
 name:            fold_sgpr_to_sgpr_copy_subreg
 body:             |
@@ -28,13 +28,13 @@ body:             |
     %0:sreg_64 = IMPLICIT_DEF
     %1:sgpr_32 = COPY %0.sub0
     %2:sgpr_32 = COPY %1
-    S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0, 0
+    S_STORE_DWORD_IMM %2, undef $sgpr10_sgpr11, 0, 0
 ...
 
 # GCN-LABEL: name: fold_sgpr_to_sgpr_copy_subreg2
 # GCN:      %0:sreg_64 = IMPLICIT_DEF
 # GCN-NEXT: %3:sreg_32_xm0_xexec = COPY %0.sub0
-# GCN-NEXT: S_STORE_DWORD_IMM %3, undef $sgpr10_sgpr11, 0, 0, 0
+# GCN-NEXT: S_STORE_DWORD_IMM %3, undef $sgpr10_sgpr11, 0, 0
 
 name:            fold_sgpr_to_sgpr_copy_subreg2
 body:             |
@@ -44,5 +44,5 @@ body:             |
     %1:sgpr_32 = COPY %0.sub0
     %2:sgpr_32 = COPY %1
     %3:sreg_32_xm0_xexec = COPY %2
-    S_STORE_DWORD_IMM %3, undef $sgpr10_sgpr11, 0, 0, 0
+    S_STORE_DWORD_IMM %3, undef $sgpr10_sgpr11, 0, 0
 ...
