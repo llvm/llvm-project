@@ -161,6 +161,11 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   // Each command outputs different files.
   const char *LLVMLinkCommand =
       constructLLVMLinkCommand(C, JA, Inputs, Args, GPUArch, Prefix);
+
+  // Produce readable assembly if save-temps is enabled.
+  if (C.getDriver().isSaveTempsEnabled())
+    constructLlcCommand(C, JA, Inputs, Args, GPUArch, Prefix, LLVMLinkCommand,
+                        /*OutputIsAsm=*/true);
   const char *LlcCommand = constructLlcCommand(C, JA, Inputs, Args, GPUArch,
                                                Prefix, LLVMLinkCommand);
   constructLldCommand(C, JA, Inputs, Output, Args, LlcCommand);
@@ -189,7 +194,6 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   CC1Args.push_back("-target-cpu");
   CC1Args.push_back(DriverArgs.MakeArgStringRef(GpuArch));
   CC1Args.push_back("-fcuda-is-device");
-  CC1Args.push_back("-emit-llvm-bc");
 
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
