@@ -617,6 +617,10 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return *(alloc.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
 
+  if (auto alloca = dyn_cast_or_null<AllocaOp>(definingOp))
+    return *(alloca.getDynamicSizes().begin() +
+             memrefType.getDynamicDimIndex(unsignedIndex));
+
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
