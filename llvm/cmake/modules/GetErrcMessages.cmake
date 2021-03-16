@@ -1,9 +1,8 @@
-
 # This function returns the messages of various POSIX error codes as they are returned by std::error_code.
-# The purpose of this function is to supply those error messages to llvm-lit using the errc_messages config
-# Currently supplied and needed error codes: ENOENT, EISDIR, EINVAL and EACCES
-# Messages are semi colon separated
-# Keep amount, order and tested error codes in sync with llvm/utils/lit/lit/llvm/config.py
+# The purpose of this function is to supply those error messages to llvm-lit using the errc_messages config.
+# Currently supplied and needed error codes: ENOENT, EISDIR, EINVAL and EACCES.
+# Messages are semi colon separated.
+# Keep amount, order and tested error codes in sync with llvm/utils/lit/lit/llvm/config.py.
 function(get_errc_messages outvar)
 
     set(errc_test_code ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/getErrc.cpp)
