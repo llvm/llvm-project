@@ -353,6 +353,28 @@ unified-standalone)
 
     check-cxx-cxxabi
 ;;
+runtimes-build)
+    export CC=clang
+    export CXX=clang++
+
+    clean
+
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+          -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu"
+
+    echo "+++ Running the libc++ and libc++abi tests"
+    ${NINJA} -C "${BUILD_DIR}" check-runtimes
+
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+;;
 legacy-standalone)
     export CC=clang
     export CXX=clang++
