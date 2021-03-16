@@ -1,15 +1,29 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
-// pdl::ApplyConstraintOp
+// pdl::ApplyNativeConstraintOp
 //===----------------------------------------------------------------------===//
 
 pdl.pattern : benefit(1) {
   %op = pdl.operation "foo.op"
 
   // expected-error@below {{expected at least one argument}}
-  "pdl.apply_constraint"() {name = "foo", params = []} : () -> ()
+  "pdl.apply_native_constraint"() {name = "foo", params = []} : () -> ()
   pdl.rewrite %op with "rewriter"
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl::ApplyNativeRewriteOp
+//===----------------------------------------------------------------------===//
+
+pdl.pattern : benefit(1) {
+  %op = pdl.operation "foo.op"
+  pdl.rewrite %op {
+    // expected-error@below {{expected at least one argument}}
+    "pdl.apply_native_rewrite"() {name = "foo", params = []} : () -> ()
+  }
 }
 
 // -----

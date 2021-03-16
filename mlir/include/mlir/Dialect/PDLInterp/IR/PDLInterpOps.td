@@ -130,32 +130,35 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
   let description = [{
     `pdl_interp.apply_rewrite` operations invoke an external rewriter that has
     been registered with the interpreter to perform the rewrite after a
-    successful match. The rewrite is passed the root operation being matched, a
-    set of additional positional arguments generated within the matcher, and a
-    set of constant parameters.
+    successful match. The rewrite is passed a set of positional arguments,
+    and a set of constant parameters. The rewrite function may return any
+    number of results.
 
     Example:
 
     ```mlir
     // Rewriter operating solely on the root operation.
-    pdl_interp.apply_rewrite "rewriter" on %root
+    pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation)
+
+    // Rewriter operating solely on the root operation and return an attribute.
+    %attr = pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation) : !pdl.attribute
 
     // Rewriter operating on the root operation along with additional arguments
     // from the matcher.
-    pdl_interp.apply_rewrite "rewriter"(%value : !pdl.value) on %root
+    pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation, %value : !pdl.value)
 
     // Rewriter operating on the root operation along with additional arguments
     // and constant parameters.
-    pdl_interp.apply_rewrite "rewriter"[42](%value : !pdl.value) on %root
+    pdl_interp.apply_rewrite "rewriter"[42](%root : !pdl.operation, %value : !pdl.value)
     ```
   }];
   let arguments = (ins StrAttr:$name,
-                       PDL_Operation:$root,
                        Variadic<PDL_AnyType>:$args,
                        OptionalAttr<ArrayAttr>:$constParams);
+  let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `on` $root
-    attr-dict
+    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
+    (`:` type($results)^)? attr-dict
   }];
 }
 
@@ -349,38 +352,6 @@ def PDLInterp_CreateAttributeOp
     OpBuilder<(ins "Attribute":$value), [{
       build($_builder, $_state, $_builder.getType<pdl::AttributeType>(), value);
     }]>];
-}
-
-//===----------------------------------------------------------------------===//
-// pdl_interp::CreateNativeOp
-//===----------------------------------------------------------------------===//
-
-def PDLInterp_CreateNativeOp : PDLInterp_Op<"create_native"> {
-  let summary = "Call a native creation method to construct an `Attribute`, "
-                "`Operation`, `Type`, or `Value`";
-  let description = [{
-    `pdl_interp.create_native` operations invoke a native C++ function, that has
-    been registered externally with the consumer of PDL, to create an
-    `Attribute`, `Operation`, `Type`, or `Value`. The native function must
-    produce a value of the specified return type, and may accept any number of
-    positional arguments and constant attribute parameters.
-
-    Example:
-
-    ```mlir
-    %ret = pdl_interp.create_native "myNativeFunc"[42, "gt"](%arg0, %arg1 : !pdl.value, !pdl.value) : !pdl.attribute
-    ```
-  }];
-
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
-  let results = (outs PDL_AnyType:$result);
-  let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)? `:` type($result)
-    attr-dict
-  }];
-  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//

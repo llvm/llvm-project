@@ -24,7 +24,7 @@ module @simple {
 
   // CHECK: module @rewriters
   // CHECK:   func @pdl_generated_rewriter(%[[REWRITE_ROOT:.*]]: !pdl.operation)
-  // CHECK:     pdl_interp.apply_rewrite "rewriter" on %[[REWRITE_ROOT]]
+  // CHECK:     pdl_interp.apply_rewrite "rewriter"(%[[REWRITE_ROOT]]
   // CHECK:     pdl_interp.finalize
   pdl.pattern : benefit(1) {
     %root = pdl.operation "foo.op"()
@@ -72,7 +72,7 @@ module @constraints {
     %root = pdl.operation(%input0, %input1)
     %result0 = pdl.result 0 of %root
 
-    pdl.apply_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
+    pdl.apply_native_constraint "multi_constraint"[true](%input0, %input1, %result0 : !pdl.value, !pdl.value, !pdl.value)
     pdl.rewrite %root with "rewriter"
   }
 }
@@ -194,7 +194,7 @@ module @predicate_ordering  {
 
   pdl.pattern : benefit(1) {
     %resultType = pdl.type
-    pdl.apply_constraint "typeConstraint"[](%resultType : !pdl.type)
+    pdl.apply_native_constraint "typeConstraint"[](%resultType : !pdl.type)
     %root = pdl.operation -> %resultType
     pdl.rewrite %root with "rewriter"
   }
