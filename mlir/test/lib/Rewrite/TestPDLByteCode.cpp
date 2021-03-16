@@ -24,12 +24,37 @@ static LogicalResult customMultiEntityConstraint(ArrayRef<PDLValue> values,
                                                  PatternRewriter &rewriter) {
   return customSingleEntityConstraint(values[1], constantParams, rewriter);
 }
+static LogicalResult
+customMultiEntityVariadicConstraint(ArrayRef<PDLValue> values,
+                                    ArrayAttr constantParams,
+                                    PatternRewriter &rewriter) {
+  if (llvm::any_of(values, [](const PDLValue &value) { return !value; }))
+    return failure();
+  ValueRange operandValues = values[0].cast<ValueRange>();
+  TypeRange typeValues = values[1].cast<TypeRange>();
+  if (operandValues.size() != 2 || typeValues.size() != 2)
+    return failure();
+  return success();
+}
 
 // Custom creator invoked from PDL.
 static void customCreate(ArrayRef<PDLValue> args, ArrayAttr constantParams,
                          PatternRewriter &rewriter, PDLResultList &results) {
   results.push_back(rewriter.createOperation(
       OperationState(args[0].cast<Operation *>()->getLoc(), "test.success")));
+}
+static void customVariadicResultCreate(ArrayRef<PDLValue> args,
+                                       ArrayAttr constantParams,
+                                       PatternRewriter &rewriter,
+                                       PDLResultList &results) {
+  Operation *root = args[0].cast<Operation *>();
+  results.push_back(root->getOperands());
+  results.push_back(root->getOperands().getTypes());
+}
+static void customCreateType(ArrayRef<PDLValue> args, ArrayAttr constantParams,
+                             PatternRewriter &rewriter,
+                             PDLResultList &results) {
+  results.push_back(rewriter.getF32Type());
 }
 
 /// Custom rewriter invoked from PDL.
@@ -63,7 +88,12 @@ struct TestPDLByteCodePass
                                           customMultiEntityConstraint);
     pdlPattern.registerConstraintFunction("single_entity_constraint",
                                           customSingleEntityConstraint);
+    pdlPattern.registerConstraintFunction("multi_entity_var_constraint",
+                                          customMultiEntityVariadicConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);
+    pdlPattern.registerRewriteFunction("var_creator",
+                                       customVariadicResultCreate);
+    pdlPattern.registerRewriteFunction("type_creator", customCreateType);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
 
     OwningRewritePatternList patternList(std::move(pdlPattern));
