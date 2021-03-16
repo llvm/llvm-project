@@ -76,9 +76,6 @@ protected:
   //   3.1: Call OnFinalized callback, handing off allocation.
   void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
 
-  // For debug dumping of the link graph.
-  virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
-
   // Align a JITTargetAddress to conform with block alignment requirements.
   static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
     uint64_t Delta = (B.getAlignmentOffset() - Addr) % B.getAlignment();
@@ -108,8 +105,6 @@ private:
   void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
                                        JITLinkMemoryManager::Allocation &Alloc);
   void deallocateAndBailOut(Error Err);
-
-  void dumpGraph(raw_ostream &OS);
 
   std::unique_ptr<JITLinkContext> Ctx;
   std::unique_ptr<LinkGraph> G;
