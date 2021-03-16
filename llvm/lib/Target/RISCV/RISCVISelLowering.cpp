@@ -207,6 +207,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::UADDO, MVT::i32, Custom);
     setOperationAction(ISD::USUBO, MVT::i32, Custom);
+    setOperationAction(ISD::UADDSAT, MVT::i32, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasStdExtM()) {
@@ -3519,6 +3521,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
     Results.push_back(Overflow);
+    return;
+  }
+  case ISD::UADDSAT:
+  case ISD::USUBSAT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDLoc DL(N);
+    if (Subtarget.hasStdExtZbb()) {
+      // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
+      // sign extend allows overflow of the lower 32 bits to be detected on
+      // the promoted size.
+      SDValue LHS =
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+      SDValue RHS =
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = DAG.getNode(N->getOpcode(), DL, MVT::i64, LHS, RHS);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+
+    // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
+    // promotion for UADDO/USUBO.
+    Results.push_back(expandAddSubSat(N, DAG));
     return;
   }
   case ISD::BITCAST: {

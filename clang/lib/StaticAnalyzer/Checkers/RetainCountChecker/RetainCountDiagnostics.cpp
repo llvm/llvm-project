@@ -89,7 +89,7 @@ static std::string getPrettyTypeName(QualType QT) {
   return QT.getAsString();
 }
 
-/// Write information about the type state change to {@code os},
+/// Write information about the type state change to @c os,
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
                                const RefVal *PrevT,
@@ -164,8 +164,8 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
-/// Finds argument index of the out paramter in the call {@code S}
-/// corresponding to the symbol {@code Sym}.
+/// Finds argument index of the out paramter in the call @c S
+/// corresponding to the symbol @c Sym.
 /// If none found, returns None.
 static Optional<unsigned> findArgIdxOfSymbol(ProgramStateRef CurrSt,
                                              const LocationContext *LCtx,
