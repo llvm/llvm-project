@@ -4349,11 +4349,9 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
       // doesn't truncate the pointers.
       if (Ops[1]->getType()->getScalarSizeInBits() ==
           Q.DL.getPointerSizeInBits(AS)) {
-        auto CanSimplify = [GEPTy, &P]() -> bool {
-          // FIXME: The following transforms are only legal if P and V have the
-          // same provenance (PR44403). Check whether getUnderlyingObject() is
-          // the same?
-          return P->getType() == GEPTy;
+        auto CanSimplify = [GEPTy, &P, V = Ops[0]]() -> bool {
+          return P->getType() == GEPTy &&
+                 getUnderlyingObject(P) == getUnderlyingObject(V);
         };
         // getelementptr V, (sub P, V) -> P if P points to a type of size 1.
         if (TyAllocSize == 1 &&
