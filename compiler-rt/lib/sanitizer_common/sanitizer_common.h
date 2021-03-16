@@ -592,20 +592,26 @@ class InternalMmapVector : public InternalMmapVectorNoCtor<T> {
   InternalMmapVector &operator=(InternalMmapVector &&) = delete;
 };
 
-class InternalScopedString : public InternalMmapVector<char> {
+class InternalScopedString {
  public:
   explicit InternalScopedString(uptr max_length)
-      : InternalMmapVector<char>(max_length), length_(0) {
-    (*this)[0] = '\0';
+      : buffer_(max_length), length_(0) {
+    buffer_[0] = '\0';
   }
-  uptr length() { return length_; }
+  uptr size() const { return buffer_.size(); }
+  uptr length() const { return length_; }
   void clear() {
     (*this)[0] = '\0';
     length_ = 0;
   }
   void append(const char *format, ...);
+  char *data() { return buffer_.data(); }
+  const char *data() const { return buffer_.data(); }
+  char &operator[](uptr i) { return buffer_[i]; }
+  const char &operator[](uptr i) const { return buffer_[i]; }
 
  private:
+  InternalMmapVector<char> buffer_;
   uptr length_;
 };
 
