@@ -71,7 +71,7 @@ def TileZeroOp : AMX_Op<"tile_zero", [NoSideEffect]> {
     Example:
 
     ```mlir
-      %0 = amx.tilezero : vector<16x16xbf16>
+      %0 = amx.tile_zero : vector<16x16xbf16>
     ```
   }];
   let verifier = [{ return ::verify(*this); }];
@@ -100,7 +100,7 @@ def TileLoadOp : AMX_Op<"tile_load", [NoSideEffect]> {
     Example:
 
     ```mlir
-      %0 = amx.tileload %arg0[%c0, %c0] : memref<?x?xi8> into vector<16x64xi8>
+      %0 = amx.tile_load %arg0[%c0, %c0] : memref<?x?xi8> into vector<16x64xi8>
     ```
   }];
   let verifier = [{ return ::verify(*this); }];
@@ -131,7 +131,7 @@ def TileStoreOp : AMX_Op<"tile_store"> {
     Example:
 
     ```mlir
-      amx.tilestore %arg1[%c0, %c0], %0 : memref<?x?xi8>, vector<16x64xi8>
+      amx.tile_store %arg1[%c0, %c0], %0 : memref<?x?xi8>, vector<16x64xi8>
     ```
   }];
   let verifier = [{ return ::verify(*this); }];
@@ -165,7 +165,7 @@ def TileMulFOp : AMX_Op<"tile_mulf", [NoSideEffect, AllTypesMatch<["acc", "res"]
     Example:
 
     ```mlir
-      %0 = amx.tilemulf %a, %b, %c
+      %0 = amx.tile_mulf %a, %b, %c
         : vector<16x32xbf16>, vector<16x32xbf16>, vector<16x16xf32>
     ```
   }];
@@ -203,7 +203,7 @@ def TileMulIOp : AMX_Op<"tile_muli", [NoSideEffect, AllTypesMatch<["acc", "res"]
     Example:
 
     ```mlir
-      %0 = amx.tilemuli %a, %b, %c [true, true]
+      %0 = amx.tile_muli %a, %b, %c [true, true]
         : vector<16x64xi8>, vector<16x64xi8>, vector<16x16xi32>
     ```
   }];
