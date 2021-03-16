@@ -29,7 +29,7 @@ function(get_errc_messages outvar)
             ${errc_test_code}
             RUN_OUTPUT_VARIABLE errc_result
             COMPILE_OUTPUT_VARIABLE errc_compile_errors)
-    if (errc_compiled)
+    if (errc_compiled AND "${errc_exit_code}" STREQUAL "0")
         set(${outvar} ${errc_result} PARENT_SCOPE)
     else()
         set(${outvar} "" PARENT_SCOPE)
