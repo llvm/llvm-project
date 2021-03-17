@@ -1502,8 +1502,8 @@ static Instruction *cloneInstructionInExitBlock(
     }
   }
 
-  // Build LCSSA PHI nodes for any in-loop operands. Note that this is
-  // particularly cheap because we can rip off the PHI node that we're
+  // Build LCSSA PHI nodes for any in-loop operands (if legal).  Note that
+  // this is particularly cheap because we can rip off the PHI node that we're
   // replacing for the number and blocks of the predecessors.
   // OPT: If this shows up in a profile, we can instead finish sinking all
   // invariant instructions, and then walk their operands to re-establish
@@ -1512,7 +1512,7 @@ static Instruction *cloneInstructionInExitBlock(
   for (Use &Op : New->operands())
     if (Instruction *OInst = dyn_cast<Instruction>(Op))
       if (Loop *OLoop = LI->getLoopFor(OInst->getParent()))
-        if (!OLoop->contains(&PN)) {
+        if (!OLoop->contains(&PN) && !Op->getType()->isTokenTy()) {
           PHINode *OpPN =
               PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
                               OInst->getName() + ".lcssa", &ExitBlock.front());
@@ -1856,10 +1856,13 @@ class LoopPromoter : public LoadAndStorePromoter {
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
 
+  // We're about to add a use of V in a loop exit block.  Insert an LCSSA phi
+  // (if legal) if doing so would add an out-of-loop use to an instruction
+  // defined in-loop.
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
     if (Instruction *I = dyn_cast<Instruction>(V))
       if (Loop *L = LI.getLoopFor(I->getParent()))
-        if (!L->contains(BB)) {
+        if (!L->contains(BB) && !I->getType()->isTokenTy()) {
           // We need to create an LCSSA PHI node for the incoming value and
           // store that.
           PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
