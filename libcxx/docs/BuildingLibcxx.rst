@@ -73,7 +73,7 @@ Support for Windows
 -------------------
 
 libcxx supports being built with clang-cl, but not with MSVC's cl.exe, as
-cl doesn't support the `#include_next` extension. Furthermore, VS 2017 or
+cl doesn't support the ``#include_next`` extension. Furthermore, VS 2017 or
 newer (19.14) is required.
 
 libcxx also supports being built with clang targeting MinGW environments.
@@ -102,14 +102,14 @@ Running the tests also requires a Bash shell and Python to be available.
 
 If Git for Windows is available, that can be used to provide the bash
 shell by adding the right bin directory to the path, e.g.
-`set PATH=%PATH%;C:\Program Files\Git\usr\bin`.
+``set PATH=%PATH%;C:\Program Files\Git\usr\bin``.
 
 Alternatively, one can also choose to run the whole build in a MSYS2
 shell. That can be set up e.g. by starting a Visual Studio Tools Command
 Prompt (for getting the environment variables pointing to the headers and
 import libraries), and making sure that clang-cl is available in the
 path. From there, launch an MSYS2 shell via e.g.
-`C:\msys64\msys2_shell.cmd -full-path -mingw64` (preserving the earlier
+``C:\msys64\msys2_shell.cmd -full-path -mingw64`` (preserving the earlier
 environment, allowing the MSVC headers/libraries and clang-cl to be found).
 
 In either case, then run:
@@ -127,10 +127,10 @@ In either case, then run:
 
 If you are running in an MSYS2 shell and you have installed the
 MSYS2-provided clang package (which defaults to a non-MSVC target), you
-should add e.g. `-DLIBCXX_TARGET_TRIPLE=x86_64-windows-msvc` (replacing
-`x86_64` with the architecture you're targeting) to the `cmake` command
-line above. This will instruct `check-cxx` to use the right target triple
-when invoking `clang++`.
+should add e.g. ``-DLIBCXX_TARGET_TRIPLE=x86_64-windows-msvc`` (replacing
+``x86_64`` with the architecture you're targeting) to the ``cmake`` command
+line above. This will instruct ``check-cxx`` to use the right target triple
+when invoking ``clang++``.
 
 Also note that if not building in Release mode, a failed assert in the tests
 pops up a blocking dialog box, making it hard to run a larger number of tests.
@@ -140,7 +140,7 @@ CMake + ninja (MinGW)
 
 libcxx can also be built in MinGW environments, e.g. with the MinGW
 compilers in MSYS2. This requires clang to be available (installed with
-e.g. the `mingw-w64-x86_64-clang` package), together with CMake and ninja.
+e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
 
 .. code-block:: bash
 
