@@ -121,7 +121,7 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
     mlir::emitError(loc, "lowering global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage);
-};
+}
 
 /// Create the global op and its init if it has one
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
