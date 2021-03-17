@@ -40,6 +40,7 @@ add_flang_library(FIROptimizer
 
   LINK_LIBS
   ${dialect_libs}
+  MLIRAffineToStandard
   MLIROpenMPToLLVM
   MLIRTargetLLVMIR
   MLIRTargetLLVMIRModuleTranslation
