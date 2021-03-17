@@ -40,6 +40,8 @@ FormatExpected(const MapType &Accessors) {
   return Result;
 }
 
+#define STRING_LOCATION_PAIR(INSTANCE, LOC) Pair(#LOC, INSTANCE->LOC)
+
 TEST(Introspection, SourceLocations) {
   auto AST = buildASTFromCode("void foo() {} void bar() { foo(); }", "foo.cpp",
                               std::make_shared<PCHContainerOperations>());
@@ -67,14 +69,13 @@ TEST(Introspection, SourceLocations) {
 
   EXPECT_THAT(
       ExpectedLocations,
-      UnorderedElementsAre(Pair("getBeginLoc()", FooCall->getBeginLoc()),
-                           Pair("getEndLoc()", FooCall->getEndLoc()),
-                           Pair("getExprLoc()", FooCall->getExprLoc()),
-                           Pair("getRParenLoc()", FooCall->getRParenLoc())));
+      UnorderedElementsAre(STRING_LOCATION_PAIR(FooCall, getBeginLoc()),
+                           STRING_LOCATION_PAIR(FooCall, getEndLoc()),
+                           STRING_LOCATION_PAIR(FooCall, getExprLoc()),
+                           STRING_LOCATION_PAIR(FooCall, getRParenLoc())));
 
   auto ExpectedRanges = FormatExpected<SourceRange>(Result.RangeAccessors);
 
-  EXPECT_THAT(ExpectedRanges,
-              UnorderedElementsAre(
-                  Pair("getSourceRange()", FooCall->getSourceRange())));
+  EXPECT_THAT(ExpectedRanges, UnorderedElementsAre(STRING_LOCATION_PAIR(
+                                  FooCall, getSourceRange())));
 }
