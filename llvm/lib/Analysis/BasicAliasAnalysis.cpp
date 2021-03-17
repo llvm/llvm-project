@@ -23,7 +23,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PhiValues.h"
@@ -104,7 +103,6 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
       (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)) ||
-      (LI && Inv.invalidate<LoopAnalysis>(Fn, PA)) ||
       (PV && Inv.invalidate<PhiValuesAnalysis>(Fn, PA)))
     return true;
 
@@ -1690,7 +1688,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   // the Values cannot come from different iterations of a potential cycle the
   // phi nodes could be involved in.
   for (auto *P : VisitedPhiBBs)
-    if (isPotentiallyReachable(&P->front(), Inst, nullptr, DT, LI))
+    if (isPotentiallyReachable(&P->front(), Inst, nullptr, DT))
       return false;
 
   return true;
@@ -1804,9 +1802,8 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto *PV = AM.getCachedResult<PhiValuesAnalysis>(F);
-  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT, LI, PV);
+  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT, PV);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1834,13 +1831,11 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &ACT = getAnalysis<AssumptionCacheTracker>();
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   auto *PVWP = getAnalysisIfAvailable<PhiValuesWrapperPass>();
 
   Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F,
                                  TLIWP.getTLI(F), ACT.getAssumptionCache(F),
                                  &DTWP.getDomTree(),
-                                 LIWP ? &LIWP->getLoopInfo() : nullptr,
                                  PVWP ? &PVWP->getResult() : nullptr));
 
   return false;
