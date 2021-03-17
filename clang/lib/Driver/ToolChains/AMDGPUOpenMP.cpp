@@ -148,7 +148,6 @@ const char *AMDGCN::OpenMPLinker::constructOmpExtraCmds(
   // Add libm for Fortran.
   if (C.getDriver().IsFlangMode()) {
     BCLibs.push_back(Args.MakeArgString("libm-amdgcn-" + SubArchName + ".bc"));
-    BCLibs.push_back(Args.MakeArgString("ocml.bc"));
     if (Args.hasArg(options::OPT_cl_finite_math_only))
       BCLibs.push_back(Args.MakeArgString("oclc_finite_only_on.bc"));
     else
