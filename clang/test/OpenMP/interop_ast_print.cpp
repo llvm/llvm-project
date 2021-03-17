@@ -41,6 +41,12 @@ void foo1(int *ap, int dev) {
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
   #pragma omp interop use(I)
 
+  //PRINT: #pragma omp interop destroy(I)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
+  #pragma omp interop destroy(I)
+
   //PRINT: #pragma omp interop init(target : IRef)
   //DUMP: OMPInteropDirective
   //DUMP: OMPInitClause
@@ -52,6 +58,12 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'IRef'
   #pragma omp interop use(IRef)
+
+  //PRINT: #pragma omp interop destroy(IRef)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'IRef'
+  #pragma omp interop destroy(IRef)
 
   const omp_interop_t CI = (omp_interop_t)0;
   //PRINT: #pragma omp interop use(CI)
@@ -79,6 +91,16 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
   #pragma omp interop device(dev) depend(inout:ap) use(I)
+
+  //PRINT: #pragma omp interop device(dev) depend(inout : ap) destroy(I)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDeviceClause
+  //DUMP: DeclRefExpr{{.*}}'dev' 'int'
+  //DUMP: OMPDependClause
+  //DUMP: DeclRefExpr{{.*}}'ap' 'int *'
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
+  #pragma omp interop device(dev) depend(inout:ap) destroy(I)
 
   //PRINT: #pragma omp interop init(prefer_type(1,2,3,4,5,6), targetsync : I)
   //DUMP: OMPInteropDirective
@@ -150,6 +172,30 @@ void foo1(int *ap, int dev) {
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'J'
   #pragma omp interop use(I) use(J)
+
+  //PRINT: #pragma omp interop destroy(I) destroy(J)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'J'
+  #pragma omp interop destroy(I) destroy(J)
+
+  //PRINT: #pragma omp interop init(target : I) destroy(J)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPInitClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'J'
+  #pragma omp interop init(target:I) destroy(J)
+
+  //PRINT: #pragma omp interop destroy(I) use(J)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'I'
+  //DUMP: OMPUseClause
+  //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}Var{{.*}}'J'
+  #pragma omp interop destroy(I) use(J)
 }
 
 //DUMP: FunctionTemplateDecl{{.*}}fooTemp
@@ -200,6 +246,12 @@ void barTemp(T t) {
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
   #pragma omp interop use(t)
 
+  //PRINT: #pragma omp interop destroy(t)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'T'
+  #pragma omp interop destroy(t)
+
   //DUMP: FunctionDecl{{.*}}barTemp 'void (void *)'
   //DUMP: TemplateArgument type 'void *'
   //DUMP: ParmVarDecl{{.*}}t 'void *'
@@ -211,6 +263,10 @@ void barTemp(T t) {
   //DUMP: OMPUseClause
   //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'void *'
   //PRINT: #pragma omp interop use(t)
+  //DUMP: OMPInteropDirective
+  //DUMP: OMPDestroyClause
+  //DUMP: DeclRefExpr{{.*}}ParmVar{{.*}}'t' 'void *'
+  //PRINT: #pragma omp interop destroy(t)
 }
 
 void bar()
