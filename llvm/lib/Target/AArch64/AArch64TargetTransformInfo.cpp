@@ -391,6 +391,23 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE, MVT::v8i8,  MVT::v8i32,  3 },
     { ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 6 },
 
+    // Truncations on nxvmiN
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 2 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5 },
+    { ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 2 },
+    { ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 3 },
+    { ISD::TRUNCATE, MVT::nxv8i32, MVT::nxv8i64, 6 },
+
     // The number of shll instructions for the extension.
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
@@ -472,6 +489,23 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2 },
     { ISD::FP_TO_UINT, MVT::v4i8,  MVT::v4f32, 2 },
 
+    // Lowering scalable
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+
+
+    // Complex, from nxv2f32 legal type is nxv2i32 (no cost) or nxv2i64 (1 ext)
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
+
     // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
     { ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2 },
     { ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2 },
@@ -479,6 +513,75 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2 },
     { ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2 },
     { ISD::FP_TO_UINT, MVT::v2i8,  MVT::v2f64, 2 },
+
+    // Complex, from nxv2f64: legal type is nxv2i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
+
+    // Complex, from nxv4f32 legal type is nxv4i16, 1 narrowing => ~2
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
+
+    // Complex, from nxv8f64: legal type is nxv8i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
+
+    // Complex, from nxv4f64: legal type is nxv4i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
+
+    // Complex, from nxv8f32: legal type is nxv8i32 (no cost) or nxv8i64 (1 ext).
+    { ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
+
+    // Truncate from nxvmf32 to nxvmf16.
+    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f32, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1 },
+    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3 },
+
+    // Truncate from nxvmf64 to nxvmf16.
+    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3 },
+    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7 },
+
+    // Truncate from nxvmf64 to nxvmf32.
+    { ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f32, MVT::nxv4f64, 3 },
+    { ISD::FP_ROUND, MVT::nxv8f32, MVT::nxv8f64, 6 },
+
+    // Extend from nxvmf16 to nxvmf32.
+    { ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
+
+    // Extend from nxvmf16 to nxvmf64.
+    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
+    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
+
+    // Extend from nxvmf32 to nxvmf64.
+    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
+    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
+
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
