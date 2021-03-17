@@ -364,7 +364,7 @@ class MxInst<dag outs, dag ins,
 }
 
 // M68k PSEUDO INSTRUCTION
-class MxPseudo<dag outs, dag ins, string asmStr = "", list<dag> pattern = []>
-    : MxInst<outs, ins, asmStr, pattern> {
+class MxPseudo<dag outs, dag ins, list<dag> pattern = []>
+    : MxInst<outs, ins, "; error: this should not be emitted", pattern> {
   let isPseudo = 1;
 }
