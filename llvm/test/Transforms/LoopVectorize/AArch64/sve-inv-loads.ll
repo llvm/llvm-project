@@ -1,9 +1,4 @@
-; RUN: opt -S -loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu < %s 2>%t | FileCheck %s
-
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -S -loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu < %s | FileCheck %s
 
 define void @invariant_load(i64 %n, i32* noalias nocapture %a, i32* nocapture readonly %b) {
 ; CHECK-LABEL: @invariant_load
