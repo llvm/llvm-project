@@ -50,10 +50,38 @@ static bool isV256I32Ty(Type *Ty) {
   return false;
 }
 
-static BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                              Value *Bound, Value *Step, StringRef Name,
-                              IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
-                              LoopInfo &LI) {
+namespace {
+class X86LowerAMXIntrinsics {
+  Function &Func;
+
+public:
+  X86LowerAMXIntrinsics(Function &F, DomTreeUpdater &DomTU, LoopInfo *LoopI)
+      : Func(F), DTU(DomTU), LI(LoopI) {}
+  bool visit();
+
+private:
+  DomTreeUpdater &DTU;
+  LoopInfo *LI;
+  BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit, Value *Bound,
+                         Value *Step, StringRef Name, IRBuilderBase &B,
+                         Loop *L);
+  template <bool IsTileLoad>
+  Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
+                                  IRBuilderBase &B, Value *Row, Value *Col,
+                                  Value *Ptr, Value *Stride, Value *Tile);
+  Value *createTileDPBSSDLoops(BasicBlock *Start, BasicBlock *End,
+                               IRBuilderBase &B, Value *Row, Value *Col,
+                               Value *K, Value *Acc, Value *LHS, Value *RHS);
+  template <bool IsTileLoad>
+  bool lowerTileLoadStore(Instruction *TileLoadStore);
+  bool lowerTileDPBSSD(Instruction *TileDPBSSD);
+  bool lowerTileZero(Instruction *TileZero);
+};
+
+BasicBlock *X86LowerAMXIntrinsics::createLoop(BasicBlock *Preheader,
+                                              BasicBlock *Exit, Value *Bound,
+                                              Value *Step, StringRef Name,
+                                              IRBuilderBase &B, Loop *L) {
   LLVMContext &Ctx = Preheader->getContext();
   BasicBlock *Header =
       BasicBlock::Create(Ctx, Name + ".header", Preheader->getParent(), Exit);
@@ -86,35 +114,37 @@ static BasicBlock *createLoop(BasicBlock *Preheader, BasicBlock *Exit,
       {DominatorTree::Insert, Latch, Exit},
       {DominatorTree::Insert, Preheader, Header},
   });
-
-  L->addBasicBlockToLoop(Header, LI);
-  L->addBasicBlockToLoop(Body, LI);
-  L->addBasicBlockToLoop(Latch, LI);
+  if (LI) {
+    L->addBasicBlockToLoop(Header, *LI);
+    L->addBasicBlockToLoop(Body, *LI);
+    L->addBasicBlockToLoop(Latch, *LI);
+  }
   return Body;
 }
 
 template <bool IsTileLoad>
-static Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
-                                       IRBuilderBase &B, DomTreeUpdater &DTU,
-                                       LoopInfo &LI, Value *Row, Value *Col,
-                                       Value *Ptr, Value *Stride, Value *Tile) {
+Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
+    BasicBlock *Start, BasicBlock *End, IRBuilderBase &B, Value *Row,
+    Value *Col, Value *Ptr, Value *Stride, Value *Tile) {
   std::string IntrinName = IsTileLoad ? "tileload" : "tilestore";
-  Loop *RowLoop = LI.AllocateLoop();
-  Loop *ColLoop = LI.AllocateLoop();
-  RowLoop->addChildLoop(ColLoop);
-  if (Loop *ParentL = LI.getLoopFor(Start))
-    ParentL->addChildLoop(RowLoop);
-  else
-    LI.addTopLevelLoop(RowLoop);
+  Loop *RowLoop = nullptr;
+  Loop *ColLoop = nullptr;
+  if (LI) {
+    RowLoop = LI->AllocateLoop();
+    ColLoop = LI->AllocateLoop();
+    RowLoop->addChildLoop(ColLoop);
+    if (Loop *ParentL = LI->getLoopFor(Start))
+      ParentL->addChildLoop(RowLoop);
+    else
+      LI->addTopLevelLoop(RowLoop);
+  }
 
-  BasicBlock *RowBody =
-      createLoop(Start, End, Row, B.getInt16(1), IntrinName + ".scalarize.rows",
-                 B, DTU, RowLoop, LI);
+  BasicBlock *RowBody = createLoop(Start, End, Row, B.getInt16(1),
+                                   IntrinName + ".scalarize.rows", B, RowLoop);
   BasicBlock *RowLatch = RowBody->getSingleSuccessor();
 
-  BasicBlock *ColBody =
-      createLoop(RowBody, RowLatch, Col, B.getInt16(1),
-                 IntrinName + ".scalarize.cols", B, DTU, ColLoop, LI);
+  BasicBlock *ColBody = createLoop(RowBody, RowLatch, Col, B.getInt16(1),
+                                   IntrinName + ".scalarize.cols", B, ColLoop);
 
   BasicBlock *ColLoopLatch = ColBody->getSingleSuccessor();
   BasicBlock *ColLoopHeader = ColBody->getSinglePredecessor();
@@ -181,35 +211,36 @@ static Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
   }
 }
 
-static Value *createTileDPBSSDLoops(BasicBlock *Start, BasicBlock *End,
-                                    IRBuilderBase &B, DomTreeUpdater &DTU,
-                                    LoopInfo &LI, Value *Row, Value *Col,
-                                    Value *K, Value *Acc, Value *LHS,
-                                    Value *RHS) {
-  Loop *RowLoop = LI.AllocateLoop();
-  Loop *ColLoop = LI.AllocateLoop();
-  Loop *InnerLoop = LI.AllocateLoop();
-  ColLoop->addChildLoop(InnerLoop);
-  RowLoop->addChildLoop(ColLoop);
-  if (Loop *ParentL = LI.getLoopFor(Start))
-    ParentL->addChildLoop(RowLoop);
-  else
-    LI.addTopLevelLoop(RowLoop);
+Value *X86LowerAMXIntrinsics::createTileDPBSSDLoops(
+    BasicBlock *Start, BasicBlock *End, IRBuilderBase &B, Value *Row,
+    Value *Col, Value *K, Value *Acc, Value *LHS, Value *RHS) {
+  Loop *RowLoop = nullptr;
+  Loop *ColLoop = nullptr;
+  Loop *InnerLoop = nullptr;
+  if (LI) {
+    RowLoop = LI->AllocateLoop();
+    ColLoop = LI->AllocateLoop();
+    InnerLoop = LI->AllocateLoop();
+    ColLoop->addChildLoop(InnerLoop);
+    RowLoop->addChildLoop(ColLoop);
+    if (Loop *ParentL = LI->getLoopFor(Start))
+      ParentL->addChildLoop(RowLoop);
+    else
+      LI->addTopLevelLoop(RowLoop);
+  }
 
-  BasicBlock *RowBody =
-      createLoop(Start, End, Row, B.getInt16(1), "tiledpbssd.scalarize.rows", B,
-                 DTU, RowLoop, LI);
+  BasicBlock *RowBody = createLoop(Start, End, Row, B.getInt16(1),
+                                   "tiledpbssd.scalarize.rows", B, RowLoop);
   BasicBlock *RowLatch = RowBody->getSingleSuccessor();
 
-  BasicBlock *ColBody =
-      createLoop(RowBody, RowLatch, Col, B.getInt16(1),
-                 "tiledpbssd.scalarize.cols", B, DTU, ColLoop, LI);
+  BasicBlock *ColBody = createLoop(RowBody, RowLatch, Col, B.getInt16(1),
+                                   "tiledpbssd.scalarize.cols", B, ColLoop);
   BasicBlock *ColLoopLatch = ColBody->getSingleSuccessor();
 
   B.SetInsertPoint(ColBody->getTerminator());
   BasicBlock *InnerBody =
       createLoop(ColBody, ColLoopLatch, K, B.getInt16(1),
-                 "tiledpbssd.scalarize.inner", B, DTU, InnerLoop, LI);
+                 "tiledpbssd.scalarize.inner", B, InnerLoop);
 
   BasicBlock *ColLoopHeader = ColBody->getSinglePredecessor();
   BasicBlock *RowLoopHeader = RowBody->getSinglePredecessor();
@@ -324,30 +355,11 @@ static Value *createTileDPBSSDLoops(BasicBlock *Start, BasicBlock *End,
   return NewVecD;
 }
 
-namespace {
-class X86LowerAMXIntrinsics {
-  Function &Func;
-
-public:
-  X86LowerAMXIntrinsics(Function &F, DominatorTree *DT, LoopInfo *LI)
-      : Func(F), DT(DT), LI(LI) {}
-  bool visit();
-
-private:
-  DominatorTree *DT;
-  LoopInfo *LI;
-  template <bool IsTileLoad>
-  bool lowerTileLoadStore(Instruction *TileLoadStore);
-  bool lowerTileDPBSSD(Instruction *TileDPBSSD);
-  bool lowerTileZero(Instruction *TileZero);
-};
-
 bool X86LowerAMXIntrinsics::lowerTileDPBSSD(Instruction *TileDPBSSD) {
   Value *M, *N, *K, *C, *A, *B;
   match(TileDPBSSD, m_Intrinsic<Intrinsic::x86_tdpbssd_internal>(
                         m_Value(M), m_Value(N), m_Value(K), m_Value(C),
                         m_Value(A), m_Value(B)));
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Instruction *InsertI = TileDPBSSD;
   IRBuilder<> PreBuilder(TileDPBSSD);
   PreBuilder.SetInsertPoint(TileDPBSSD);
@@ -358,10 +370,10 @@ bool X86LowerAMXIntrinsics::lowerTileDPBSSD(Instruction *TileDPBSSD) {
   Value *KDWord = PreBuilder.CreateLShr(K, PreBuilder.getInt16(2));
   BasicBlock *Start = InsertI->getParent();
   BasicBlock *End =
-      SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
+      SplitBlock(InsertI->getParent(), InsertI, &DTU, LI, nullptr, "continue");
   IRBuilder<> Builder(TileDPBSSD);
-  Value *ResVec = createTileDPBSSDLoops(Start, End, Builder, DTU, *LI, M,
-                                        NDWord, KDWord, C, A, B);
+  Value *ResVec =
+      createTileDPBSSDLoops(Start, End, Builder, M, NDWord, KDWord, C, A, B);
   // we cannot assume there always be bitcast after tiledpbssd. So we need to
   // insert one bitcast as required
   Builder.SetInsertPoint(End->getFirstNonPHI());
@@ -394,7 +406,6 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
                              m_Value(M), m_Value(N), m_Value(Ptr),
                              m_Value(Stride), m_Value(Tile)));
 
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Instruction *InsertI = TileLoadStore;
   IRBuilder<> PreBuilder(TileLoadStore);
   PreBuilder.SetInsertPoint(TileLoadStore);
@@ -402,10 +413,10 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
   Value *StrideDWord = PreBuilder.CreateLShr(Stride, PreBuilder.getInt64(2));
   BasicBlock *Start = InsertI->getParent();
   BasicBlock *End =
-      SplitBlock(InsertI->getParent(), InsertI, DT, LI, nullptr, "continue");
+      SplitBlock(InsertI->getParent(), InsertI, &DTU, LI, nullptr, "continue");
   IRBuilder<> Builder(TileLoadStore);
   Value *ResVec = createTileLoadStoreLoops<IsTileLoad>(
-      Start, End, Builder, DTU, *LI, M, NDWord, Ptr, StrideDWord,
+      Start, End, Builder, M, NDWord, Ptr, StrideDWord,
       IsTileLoad ? nullptr : Tile);
   if (IsTileLoad) {
     // we cannot assume there always be bitcast after tileload. So we need to
@@ -505,18 +516,19 @@ public:
         TM->getOptLevel() != CodeGenOpt::None)
       return false;
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+    auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
+    auto *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-    X86LowerAMXIntrinsics LAT(F, &DT, &LI);
+    X86LowerAMXIntrinsics LAT(F, DTU, LI);
     return LAT.visit();
   }
   StringRef getPassName() const override { return "Lower AMX intrinsics"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
@@ -528,8 +540,6 @@ static const char PassName[] = "Lower AMX intrinsics";
 char X86LowerAMXIntrinsicsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86LowerAMXIntrinsicsLegacyPass, DEBUG_TYPE, PassName,
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(X86LowerAMXIntrinsicsLegacyPass, DEBUG_TYPE, PassName,
                     false, false)
