@@ -576,17 +576,17 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   if (addr >= k_dpu_iram_base &&
       (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
-      return DpuErrorStatus("ReadMemory: Cannot copy from IRAM");
+      return Status("ReadMemory: Cannot copy from IRAM");
   } else if (addr >= k_dpu_mram_base &&
              (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->ReadMRAM(addr - k_dpu_mram_base, buf, size))
-      return DpuErrorStatus("ReadMemory: Cannot copy from MRAM");
+      return Status("ReadMemory: Cannot copy from MRAM");
   } else if (addr >= k_dpu_wram_base &&
              (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->ReadWRAM(addr, buf, size))
-      return DpuErrorStatus("ReadMemory: Cannot copy from WRAM");
+      return Status("ReadMemory: Cannot copy from WRAM");
   } else {
-    return DpuErrorStatus("ReadMemory: Cannot read, unknown address space");
+    return Status("ReadMemory: Cannot read, unknown address space");
   }
   bytes_read = size;
 
@@ -602,17 +602,17 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
   if (addr >= k_dpu_iram_base &&
       (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
-      return DpuErrorStatus("WriteMemory: Cannot copy to IRAM");
+      return Status("WriteMemory: Cannot copy to IRAM");
   } else if (addr >= k_dpu_mram_base &&
              (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->WriteMRAM(addr - k_dpu_mram_base, buf, size))
-      return DpuErrorStatus("WriteMemory: Cannot copy to MRAM");
+      return Status("WriteMemory: Cannot copy to MRAM");
   } else if (addr >= k_dpu_wram_base &&
              (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->WriteWRAM(addr, buf, size))
-      return DpuErrorStatus("WriteMemory: Cannot copy to WRAM");
+      return Status("WriteMemory: Cannot copy to WRAM");
   } else {
-    return DpuErrorStatus("WriteMemory: Cannot write, unknown address space");
+    return Status("WriteMemory: Cannot write, unknown address space");
   }
   bytes_written = size;
 
@@ -698,7 +698,7 @@ void ProcessDpu::SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
 Status ProcessDpu::DpuErrorStatus(const char *message) {
   FILE *stdout = m_rank->GetStdout();
   if (stdout != NULL) {
-    fprintf(stdout, "%s\n", message);
+    fprintf(stdout, "dpu-lldb: %s\n", message);
   }
   return Status("dpu-lldb: %s", message);
 }
