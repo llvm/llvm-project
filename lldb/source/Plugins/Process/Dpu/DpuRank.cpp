@@ -115,7 +115,7 @@ struct dpu_context_t *DpuRank::AllocContext() {
 
 bool DpuRank::ResumeDpus() {
   for (Dpu *dpu : m_dpus) {
-    if (!dpu->ResumeThreads(NULL, false))
+    if (dpu->ResumeThreads(NULL, false) == Dpu::eResumeThreadsError)
       return false;
   }
   return true;

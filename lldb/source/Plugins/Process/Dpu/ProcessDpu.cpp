@@ -416,8 +416,8 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
     }
     SetState(lldb::StateType::eStateRunning, true);
     LLDB_LOG(log, "resuming threads");
-    if (!m_dpu->ResumeThreads(&resume_list))
-      return Status("CNI cannot resume");
+    if (m_dpu->ResumeThreads(&resume_list) != dpu::Dpu::eResumeThreadsSuccess)
+      return Status("Cannot resume threads");
   } else {
     SetState(lldb::StateType::eStateStepping, true);
     for (auto thread_id : resume_list) {

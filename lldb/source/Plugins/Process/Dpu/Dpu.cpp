@@ -260,24 +260,25 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   return result_state;
 }
 
-bool Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
-                        bool allowed_polling) {
+dpu::Dpu::eResumeThreadsType
+Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
+                   bool allowed_polling) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   if (!m_valid) {
-    return false;
+    return eResumeThreadsError;
   }
 
   if (!m_context->ContextReadyForResumeOrStep()) {
-    m_context->RestoreFaultContext();
-    return false;
+    return m_context->RestoreFaultContext() ? eResumeThreadsInFault
+                                            : eResumeThreadsError;
   }
 
   int ret = DPU_OK;
   if (registers_has_been_modified) {
     ret = dpu_restore_context_for_dpu(m_dpu, m_context->Get());
     if (ret != DPU_OK)
-      return false;
-    registers_has_been_modified = false;
+      return eResumeThreadsError;
+    registers_has_been_modified = eResumeThreadsError;
   }
 
   bool status = m_context->ResumeThreads(resume_list);
@@ -285,7 +286,7 @@ bool Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
   if (allowed_polling && status)
     dpu_is_running = true;
 
-  return status;
+  return status ? eResumeThreadsSuccess : eResumeThreadsError;
 }
 
 bool Dpu::PrepareStepOverPrintfBkp(

@@ -55,8 +55,14 @@ public:
   StepOverPrintfSequenceAndContinue(lldb::StateType result_state,
                                     unsigned int *exit_status);
   lldb::StateType PollStatus(unsigned int *exit_status);
-  bool ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
-                     bool allowed_polling = true);
+
+  enum eResumeThreadsType {
+    eResumeThreadsSuccess,
+    eResumeThreadsError,
+    eResumeThreadsInFault, // ie: The threads were in fault before the resume.
+  };
+  eResumeThreadsType ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
+                                   bool allowed_polling = true);
   bool StopThreads(bool force = false);
 
   bool
