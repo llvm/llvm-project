@@ -1219,7 +1219,16 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
         return LT.first * Entry->Cost *
                ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput);
     }
+
+    if (!Mask.empty()) {
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      if (Mask.size() <= LT.second.getVectorNumElements() &&
+          (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
+           isVREVMask(Mask, LT.second, 64)))
+        return ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput) * LT.first;
+    }
   }
+
   int BaseCost = ST->hasMVEIntegerOps() && Tp->isVectorTy()
                      ? ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)
                      : 1;
