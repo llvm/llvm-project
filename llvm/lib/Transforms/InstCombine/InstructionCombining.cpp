@@ -3586,15 +3586,6 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
   llvm::sort(DbgUsersToSink,
              [](auto *A, auto *B) { return B->comesBefore(A); });
 
-  // Update the arguments of a dbg.declare instruction, so that it
-  // does not point into a sunk instruction.
-  auto updateDbgDeclare = [](DbgVariableIntrinsic *DII) {
-    if (!isa<DbgDeclareInst>(DII))
-      return false;
-
-    return true;
-  };
-
   SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
   SmallSet<DebugVariable, 4> SunkVariables;
   for (auto User : DbgUsersToSink) {
@@ -3602,7 +3593,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
     // one per variable fragment. It should be left in the original place
     // because the sunk instruction is not an alloca (otherwise we could not be
     // here).
-    if (updateDbgDeclare(User))
+    if (isa<DbgDeclareInst>(User))
       continue;
 
     DebugVariable DbgUserVariable =
@@ -3613,6 +3604,8 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
       continue;
 
     DIIClones.emplace_back(cast<DbgVariableIntrinsic>(User->clone()));
+    if (isa<DbgDeclareInst>(User) && isa<CastInst>(I))
+      DIIClones.back()->replaceVariableLocationOp(I, I->getOperand(0));
     LLVM_DEBUG(dbgs() << "CLONE: " << *DIIClones.back() << '\n');
   }
 

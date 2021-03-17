@@ -384,11 +384,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // possible or create a clone in the OldPreHeader if not.
     Instruction *LoopEntryBranch = OrigPreheader->getTerminator();
 
-    // Record all debug intrinsics preceding LoopEntryBranch to avoid duplication.
+    // Record all debug intrinsics preceding LoopEntryBranch to avoid
+    // duplication.
     using DbgIntrinsicHash =
-      std::pair<std::pair<Value *, DILocalVariable *>, DIExpression *>;
+        std::pair<std::pair<hash_code, DILocalVariable *>, DIExpression *>;
     auto makeHash = [](DbgVariableIntrinsic *D) -> DbgIntrinsicHash {
-      return {{D->getVariableLocationOp(0), D->getVariable()},
+      auto VarLocOps = D->location_ops();
+      return {{hash_combine_range(VarLocOps.begin(), VarLocOps.end()),
+               D->getVariable()},
               D->getExpression()};
     };
     SmallDenseSet<DbgIntrinsicHash, 8> DbgIntrinsics;
