@@ -98,24 +98,6 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(Value *OldValue,
   setArgOperand(
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
-void DbgVariableIntrinsic::replaceVariableLocationOp(unsigned OpIdx,
-                                                     Value *NewValue) {
-  assert(OpIdx < getNumVariableLocationOps() && "Invalid Operand Index");
-  if (!hasArgList()) {
-    Value *NewOperand = isa<MetadataAsValue>(NewValue)
-                            ? NewValue
-                            : MetadataAsValue::get(
-                                  getContext(), ValueAsMetadata::get(NewValue));
-    return setArgOperand(0, NewOperand);
-  }
-  SmallVector<ValueAsMetadata *, 4> MDs;
-  ValueAsMetadata *NewOperand = getAsMetadata(NewValue);
-  for (unsigned Idx = 0; Idx < getNumVariableLocationOps(); ++Idx)
-    MDs.push_back(Idx == OpIdx ? NewOperand
-                               : getAsMetadata(getVariableLocationOp(Idx)));
-  setArgOperand(
-      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
-}
 
 Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())

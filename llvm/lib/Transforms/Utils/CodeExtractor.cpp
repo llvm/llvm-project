@@ -1511,19 +1511,20 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       continue;
     }
 
-    auto IsInvalidLocation = [&NewFunc](Value *Location) {
-      // Location is invalid if it isn't a constant or an instruction, or is an
-      // instruction but isn't in the new function.
-      if (!Location ||
-          (!isa<Constant>(Location) && !isa<Instruction>(Location)))
-        return true;
-      Instruction *LocationInst = dyn_cast<Instruction>(Location);
-      return LocationInst && LocationInst->getFunction() != &NewFunc;
-    };
-
+    // If the location isn't a constant or an instruction, delete the
+    // intrinsic.
     auto *DVI = cast<DbgVariableIntrinsic>(DII);
-    // If any of the used locations are invalid, delete the intrinsic.
-    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
+    Value *Location = DVI->getVariableLocationOp(0);
+    if (!Location ||
+        (!isa<Constant>(Location) && !isa<Instruction>(Location))) {
+      DebugIntrinsicsToDelete.push_back(DVI);
+      continue;
+    }
+
+    // If the variable location is an instruction but isn't in the new
+    // function, delete the intrinsic.
+    Instruction *LocationInst = dyn_cast<Instruction>(Location);
+    if (LocationInst && LocationInst->getFunction() != &NewFunc) {
       DebugIntrinsicsToDelete.push_back(DVI);
       continue;
     }
