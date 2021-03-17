@@ -307,20 +307,6 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
   return FloatAttr::get(type, isNegative ? -val.getValue() : val.getValue());
 }
 
-/// Construct a float attribute bitwise equivalent to the integer literal.
-static Optional<APFloat> buildHexadecimalFloatLiteral(Parser *p, FloatType type,
-                                                      uint64_t value) {
-  if (type.isF64())
-    return APFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
-
-  APInt apInt(type.getWidth(), value);
-  if (apInt != value) {
-    p->emitError("hexadecimal float constant out of range for type");
-    return llvm::None;
-  }
-  return APFloat(type.getFloatSemantics(), apInt);
-}
-
 /// Construct an APint from a parsed value, a known attribute type and
 /// sign.
 static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
@@ -369,10 +355,9 @@ static Optional<APInt> buildAttributeAPInt(Type type, bool isNegative,
 /// Parse a decimal or a hexadecimal literal, which can be either an integer
 /// or a float attribute.
 Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
-  // Remember if the literal is hexadecimal.
-  StringRef spelling = getToken().getSpelling();
-  auto loc = state.curToken.getLoc();
-  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
+  Token tok = getToken();
+  StringRef spelling = tok.getSpelling();
+  llvm::SMLoc loc = tok.getLoc();
 
   consumeToken(Token::integer);
   if (!type) {
@@ -384,26 +369,12 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = type.dyn_cast<FloatType>()) {
-    if (isNegative)
-      return emitError(
-                 loc,
-                 "hexadecimal float literal should not have a leading minus"),
-             nullptr;
-    if (!isHex) {
-      emitError(loc, "unexpected decimal integer literal for a float attribute")
-              .attachNote()
-          << "add a trailing dot to make the literal a float";
-      return nullptr;
-    }
-
-    auto val = Token::getUInt64IntegerValue(spelling);
-    if (!val.hasValue())
-      return emitError("integer constant out of range for attribute"), nullptr;
-
-    // Construct a float attribute bitwise equivalent to the integer literal.
-    Optional<APFloat> apVal =
-        buildHexadecimalFloatLiteral(this, floatType, *val);
-    return apVal ? FloatAttr::get(floatType, *apVal) : Attribute();
+    Optional<APFloat> result;
+    if (failed(parseFloatFromIntegerLiteral(result, tok, isNegative,
+                                            floatType.getFloatSemantics(),
+                                            floatType.getWidth())))
+      return Attribute();
+    return FloatAttr::get(floatType, *result);
   }
 
   if (!type.isa<IntegerType, IndexType>())
@@ -638,19 +609,13 @@ TensorLiteralParser::getFloatAttrElements(llvm::SMLoc loc, FloatType eltTy,
 
     // Handle hexadecimal float literals.
     if (token.is(Token::integer) && token.getSpelling().startswith("0x")) {
-      if (isNegative) {
-        return p.emitError(token.getLoc())
-               << "hexadecimal float literal should not have a leading minus";
-      }
-      auto val = token.getUInt64IntegerValue();
-      if (!val.hasValue()) {
-        return p.emitError(
-            "hexadecimal float constant out of range for attribute");
-      }
-      Optional<APFloat> apVal = buildHexadecimalFloatLiteral(&p, eltTy, *val);
-      if (!apVal)
+      Optional<APFloat> result;
+      if (failed(p.parseFloatFromIntegerLiteral(result, token, isNegative,
+                                                eltTy.getFloatSemantics(),
+                                                eltTy.getWidth())))
         return failure();
-      floatValues.push_back(*apVal);
+
+      floatValues.push_back(*result);
       continue;
     }
 
