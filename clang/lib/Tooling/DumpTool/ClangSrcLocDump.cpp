@@ -92,7 +92,13 @@ int main(int argc, const char **argv) {
   auto ParsedArgs = Opts.ParseArgs(llvm::makeArrayRef(Argv).slice(1),
                                    MissingArgIndex, MissingArgCount);
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
-  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), &*DiagOpts);
+
+  // Don't output diagnostics, because common scenarios such as
+  // cross-compiling fail with diagnostics.  This is not fatal, but
+  // just causes attempts to use the introspection API to return no data.
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  TextDiagnosticPrinter DiagnosticPrinter(OS, &*DiagOpts);
   DiagnosticsEngine Diagnostics(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
       &DiagnosticPrinter, false);

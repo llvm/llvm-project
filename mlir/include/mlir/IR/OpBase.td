@@ -2673,6 +2673,8 @@ class TypeDef<Dialect dialect, string name,
 class AttrOrTypeParameter<string type, string desc> {
   // Custom memory allocation code for storage constructor.
   code allocator = ?;
+  // Custom comparator used to compare two instances for equality.
+  code comparator = ?;
   // The C++ type of this parameter.
   string cppType = type;
   // One-line human-readable description of the argument.
@@ -2687,6 +2689,12 @@ class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For APFloats, which require comparison.
+class APFloatParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APFloat", desc> {
+  let comparator = "$_lhs.bitwiseIsEqual($_rhs)";
 }
 
 // For standard ArrayRefs, which require allocation.
@@ -2715,7 +2723,8 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`
 // that is also used as the value `Type` of the attribute. Only one parameter
 // of the attribute may be of this type.
-class AttributeSelfTypeParameter<string desc> :
-    AttrOrTypeParameter<"::mlir::Type", desc> {}
+class AttributeSelfTypeParameter<string desc,
+                                 string derivedType = "::mlir::Type"> :
+    AttrOrTypeParameter<derivedType, desc> {}
 
 #endif // OP_BASE
