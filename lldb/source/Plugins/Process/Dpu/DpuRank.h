@@ -62,6 +62,8 @@ public:
 
   uint8_t GetNrCis();
 
+  FILE *GetStdout();
+
 private:
   dpu_rank_t *m_rank;
   dpu_description_t m_desc;
@@ -69,6 +71,7 @@ private:
   std::recursive_mutex
       m_lock; /* protect rank resources including the comm channel */
   std::vector<Dpu *> m_dpus;
+  FILE *stdout_fd;
 };
 
 } // namespace dpu

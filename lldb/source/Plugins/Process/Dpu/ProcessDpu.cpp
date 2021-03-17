@@ -280,7 +280,6 @@ void ProcessDpu::Terminate() {
   PluginManager::UnregisterPlugin(ProcessDpu::CreateInstance);
 }
 
-
 // -----------------------------------------------------------------------------
 // Public Instance Methods
 // -----------------------------------------------------------------------------
@@ -404,7 +403,7 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
       current_thread->SetSteppingMode(true);
       break;
     default:
-      return Status("Unexpected action!");
+      return DpuErrorStatus("Resume: Unexpected action!");
     }
   }
   LLDB_LOG(log, "{0} to resume {1} to step", resume_list.size(),
@@ -412,12 +411,12 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
 
   if (stepping_list.empty()) {
     if (resume_list.empty()) {
-      return Status("No Action to perform");
+      return DpuErrorStatus("Resume: No Action to perform");
     }
     SetState(lldb::StateType::eStateRunning, true);
     LLDB_LOG(log, "resuming threads");
     if (m_dpu->ResumeThreads(&resume_list) != dpu::Dpu::eResumeThreadsSuccess)
-      return Status("Cannot resume threads");
+      return DpuErrorStatus("Resume: Error while resuming threads");
   } else {
     SetState(lldb::StateType::eStateStepping, true);
     for (auto thread_id : resume_list) {
@@ -453,15 +452,15 @@ Status ProcessDpu::Detach() {
 
   success = m_rank->RestoreMuxContext();
   if (!success)
-    return Status("Cannot restore the muxs context");
+    return DpuErrorStatus("Detach: Cannot restore the muxs context");
 
   success = m_rank->ResumeDpus();
   if (!success)
-    return Status("Cannot resume DPUs");
+    return DpuErrorStatus("Detach: Cannot resume DPUs");
 
   success = m_rank->RestoreContext();
   if (!success)
-    return Status("Cannot restore the rank context context");
+    return DpuErrorStatus("Detach: Cannot restore the rank context context");
 
   return error;
 }
@@ -478,7 +477,7 @@ Status ProcessDpu::Signal(int signo) {
 
 Status ProcessDpu::Interrupt() {
   if (!m_dpu->StopThreads())
-    return Status("Cannot interrupt DPU");
+    return DpuErrorStatus("Cannot interrupt DPU");
   SetState(StateType::eStateStopped, true);
   return Status();
 }
@@ -539,11 +538,11 @@ Status ProcessDpu::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
 Status ProcessDpu::AllocateMemory(size_t size, uint32_t permissions,
                                   lldb::addr_t &addr) {
-  return Status("not implemented");
+  return DpuErrorStatus("AllocateMemory: not implemented");
 }
 
 Status ProcessDpu::DeallocateMemory(lldb::addr_t addr) {
-  return Status("not implemented");
+  return DpuErrorStatus("DeallocateMemory: not implemented");
 }
 
 lldb::addr_t ProcessDpu::GetSharedLibraryInfoAddress() {
@@ -577,17 +576,17 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   if (addr >= k_dpu_iram_base &&
       (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
-      return Status("Cannot copy from IRAM");
+      return DpuErrorStatus("ReadMemory: Cannot copy from IRAM");
   } else if (addr >= k_dpu_mram_base &&
              (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->ReadMRAM(addr - k_dpu_mram_base, buf, size))
-      return Status("Cannot copy from MRAM");
+      return DpuErrorStatus("ReadMemory: Cannot copy from MRAM");
   } else if (addr >= k_dpu_wram_base &&
              (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->ReadWRAM(addr, buf, size))
-      return Status("Cannot copy from WRAM");
+      return DpuErrorStatus("ReadMemory: Cannot copy from WRAM");
   } else {
-    return Status("Cannot read, unknown address space");
+    return DpuErrorStatus("ReadMemory: Cannot read, unknown address space");
   }
   bytes_read = size;
 
@@ -603,17 +602,17 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
   if (addr >= k_dpu_iram_base &&
       (addr + size) <= (k_dpu_iram_base + m_iram_size)) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))
-      return Status("Cannot copy to IRAM");
+      return DpuErrorStatus("WriteMemory: Cannot copy to IRAM");
   } else if (addr >= k_dpu_mram_base &&
              (addr + size) <= (k_dpu_mram_base + m_mram_size)) {
     if (!m_dpu->WriteMRAM(addr - k_dpu_mram_base, buf, size))
-      return Status("Cannot copy to MRAM");
+      return DpuErrorStatus("WriteMemory: Cannot copy to MRAM");
   } else if (addr >= k_dpu_wram_base &&
              (addr + size) <= (k_dpu_wram_base + m_wram_size)) {
     if (!m_dpu->WriteWRAM(addr, buf, size))
-      return Status("Cannot copy to WRAM");
+      return DpuErrorStatus("WriteMemory: Cannot copy to WRAM");
   } else {
-    return Status("Cannot write, unknown address space");
+    return DpuErrorStatus("WriteMemory: Cannot write, unknown address space");
   }
   bytes_written = size;
 
@@ -622,12 +621,12 @@ Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
 
 Status ProcessDpu::GetLoadedModuleFileSpec(const char *module_path,
                                            FileSpec &file_spec) {
-  return Status("Not Implemented");
+  return DpuErrorStatus("GetLoadedModuleFileSpec: Not Implemented");
 }
 
 Status ProcessDpu::GetFileLoadAddress(const llvm::StringRef &file_name,
                                       lldb::addr_t &load_addr) {
-  return Status("Not Implemented");
+  return DpuErrorStatus("GetFileLoadAddress: Not Implemented");
 }
 
 ThreadDpu *ProcessDpu::GetThreadByID(lldb::tid_t tid) {
@@ -694,4 +693,12 @@ void ProcessDpu::SetDpuPrintInfo(const uint32_t open_print_sequence_addr,
     SetSoftwareBreakpoint(m_dpu->GetClosePrintfSequenceAddr() | k_dpu_iram_base,
                           8);
   }
+}
+
+Status ProcessDpu::DpuErrorStatus(const char *message) {
+  FILE *stdout = m_rank->GetStdout();
+  if (stdout != NULL) {
+    fprintf(stdout, "%s\n", message);
+  }
+  return Status("dpu-lldb: %s", message);
 }

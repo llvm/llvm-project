@@ -42,7 +42,10 @@ using namespace lldb_private::dpu;
 // DPU rank handling
 // -----------------------------------------------------------------------------
 
-DpuRank::DpuRank() : nr_threads(0), m_lock() { m_rank = NULL; }
+DpuRank::DpuRank() : nr_threads(0), m_lock() {
+  m_rank = NULL;
+  stdout_fd = NULL;
+}
 
 bool DpuRank::Open(char *profile, FILE *stdout_file, bool valid) {
   std::lock_guard<std::recursive_mutex> guard(m_lock);
@@ -61,8 +64,12 @@ bool DpuRank::Open(char *profile, FILE *stdout_file, bool valid) {
     m_dpus.push_back(new Dpu(this, dpu.dpu, stdout_file, valid));
   }
 
+  stdout_fd = stdout_file;
+
   return true;
 }
+
+FILE *DpuRank::GetStdout() { return stdout_fd; }
 
 bool DpuRank::IsValid() { return m_rank ? true : false; }
 

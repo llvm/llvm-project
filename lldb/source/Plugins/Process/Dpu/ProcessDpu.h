@@ -158,6 +158,8 @@ private:
 
   void InterfaceTimerCallback();
 
+  Status DpuErrorStatus(const char *message);
+
   ArchSpec m_arch;
   lldb::IOObjectSP m_timer_fd;
   MainLoop::ReadHandleUP m_timer_handle;
