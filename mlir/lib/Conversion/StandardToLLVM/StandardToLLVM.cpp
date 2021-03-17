@@ -253,8 +253,24 @@ Type LLVMTypeConverter::convertFunctionSignature(
 
 /// Converts the function type to a C-compatible format, in particular using
 /// pointers to memref descriptors for arguments.
-Type LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
+std::pair<Type, bool>
+LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
   SmallVector<Type, 4> inputs;
+  bool resultIsNowArg = false;
+
+  Type resultType = type.getNumResults() == 0
+                        ? LLVM::LLVMVoidType::get(&getContext())
+                        : unwrap(packFunctionResults(type.getResults()));
+  if (!resultType)
+    return {};
+
+  if (auto structType = resultType.dyn_cast<LLVM::LLVMStructType>()) {
+    // Struct types cannot be safely returned via C interface. Make this a
+    // pointer argument, instead.
+    inputs.push_back(LLVM::LLVMPointerType::get(structType));
+    resultType = LLVM::LLVMVoidType::get(&getContext());
+    resultIsNowArg = true;
+  }
 
   for (Type t : type.getInputs()) {
     auto converted = convertType(t);
@@ -265,13 +281,7 @@ Type LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) {
     inputs.push_back(converted);
   }
 
-  Type resultType = type.getNumResults() == 0
-                        ? LLVM::LLVMVoidType::get(&getContext())
-                        : unwrap(packFunctionResults(type.getResults()));
-  if (!resultType)
-    return {};
-
-  return LLVM::LLVMFunctionType::get(resultType, inputs);
+  return {LLVM::LLVMFunctionType::get(resultType, inputs), resultIsNowArg};
 }
 
 static constexpr unsigned kAllocatedPtrPosInMemRefDescriptor = 0;
@@ -1212,8 +1222,11 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
 /// arguments instead of unpacked arguments. This function can be called from C
 /// by passing a pointer to a C struct corresponding to a memref descriptor.
+/// Similarly, returned memrefs are passed via pointers to a C struct that is
+/// passed as additional argument.
 /// Internally, the auxiliary function unpacks the descriptor into individual
-/// components and forwards them to `newFuncOp`.
+/// components and forwards them to `newFuncOp` and forwards the results to
+/// the extra arguments.
 static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    LLVMTypeConverter &typeConverter,
                                    FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
@@ -1221,17 +1234,21 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   SmallVector<NamedAttribute, 4> attributes;
   filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/false,
                        attributes);
+  Type wrapperFuncType;
+  bool resultIsNowArg;
+  std::tie(wrapperFuncType, resultIsNowArg) =
+      typeConverter.convertFunctionTypeCWrapper(type);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
-      typeConverter.convertFunctionTypeCWrapper(type), LLVM::Linkage::External,
-      attributes);
+      wrapperFuncType, LLVM::Linkage::External, attributes);
 
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
 
   SmallVector<Value, 8> args;
+  size_t argOffset = resultIsNowArg ? 1 : 0;
   for (auto &en : llvm::enumerate(type.getInputs())) {
-    Value arg = wrapperFuncOp.getArgument(en.index());
+    Value arg = wrapperFuncOp.getArgument(en.index() + argOffset);
     if (auto memrefType = en.value().dyn_cast<MemRefType>()) {
       Value loaded = rewriter.create<LLVM::LoadOp>(loc, arg);
       MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
@@ -1243,28 +1260,40 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
       continue;
     }
 
-    args.push_back(wrapperFuncOp.getArgument(en.index()));
+    args.push_back(arg);
   }
+
   auto call = rewriter.create<LLVM::CallOp>(loc, newFuncOp, args);
-  rewriter.create<LLVM::ReturnOp>(loc, call.getResults());
+
+  if (resultIsNowArg) {
+    rewriter.create<LLVM::StoreOp>(loc, call.getResult(0),
+                                   wrapperFuncOp.getArgument(0));
+    rewriter.create<LLVM::ReturnOp>(loc, ValueRange{});
+  } else {
+    rewriter.create<LLVM::ReturnOp>(loc, call.getResults());
+  }
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
 /// arguments instead of unpacked arguments. Creates a body for the (external)
 /// `newFuncOp` that allocates a memref descriptor on stack, packs the
 /// individual arguments into this descriptor and passes a pointer to it into
-/// the auxiliary function. This auxiliary external function is now compatible
-/// with functions defined in C using pointers to C structs corresponding to a
-/// memref descriptor.
+/// the auxiliary function. If the result of the function cannot be directly
+/// returned, we write it to a special first argument that provides a pointer
+/// to a corresponding struct. This auxiliary external function is now
+/// compatible with functions defined in C using pointers to C structs
+/// corresponding to a memref descriptor.
 static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVMTypeConverter &typeConverter,
                                  FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
-  Type wrapperType =
+  Type wrapperType;
+  bool resultIsNowArg;
+  std::tie(wrapperType, resultIsNowArg) =
       typeConverter.convertFunctionTypeCWrapper(funcOp.getType());
   // This conversion can only fail if it could not convert one of the argument
-  // types. But since it has been applies to a non-wrapper function before, it
+  // types. But since it has been applied to a non-wrapper function before, it
   // should have failed earlier and not reach this point at all.
   assert(wrapperType && "unexpected type conversion failure");
 
@@ -1284,6 +1313,17 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   SmallVector<Value, 8> args;
   args.reserve(type.getNumInputs());
   ValueRange wrapperArgsRange(newFuncOp.getArguments());
+
+  if (resultIsNowArg) {
+    // Allocate the struct on the stack and pass the pointer.
+    Type resultType =
+        wrapperType.cast<LLVM::LLVMFunctionType>().getParamType(0);
+    Value one = builder.create<LLVM::ConstantOp>(
+        loc, typeConverter.convertType(builder.getIndexType()),
+        builder.getIntegerAttr(builder.getIndexType(), 1));
+    Value result = builder.create<LLVM::AllocaOp>(loc, resultType, one);
+    args.push_back(result);
+  }
 
   // Iterate over the inputs of the original function and pack values into
   // memref descriptors if the original type is a memref.
@@ -1322,7 +1362,13 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   assert(wrapperArgsRange.empty() && "did not map some of the arguments");
 
   auto call = builder.create<LLVM::CallOp>(loc, wrapperFunc, args);
-  builder.create<LLVM::ReturnOp>(loc, call.getResults());
+
+  if (resultIsNowArg) {
+    Value result = builder.create<LLVM::LoadOp>(loc, args.front());
+    builder.create<LLVM::ReturnOp>(loc, ValueRange{result});
+  } else {
+    builder.create<LLVM::ReturnOp>(loc, call.getResults());
+  }
 }
 
 namespace {
