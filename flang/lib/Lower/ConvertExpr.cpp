@@ -2571,12 +2571,12 @@ public:
                   }
                 } else {
                   // A regular scalar index, which does not yield an array
-                  // section. Use a degenerate slice operation
-                  // `(e:undef:undef)` in this dimension as a placeholder.
-                  // This does not necessarily change the rank of the original
-                  // array, so the iteration space must also be extended to
-                  // include this expression in this dimension to adjust to
-                  // the array's declared rank.
+                  // section. Use a degenerate slice operation `(e:undef:undef)`
+                  // in this dimension as a placeholder. This does not
+                  // necessarily change the rank of the original array, so the
+                  // iteration space must also be extended to include this
+                  // expression in this dimension to adjust to the array's
+                  // declared rank.
                   auto base = x.base();
                   ScalarExprLowering sel{loc, converter, symMap, stmtCtx};
                   auto exv = base.IsSymbol() ? sel.gen(base.GetFirstSymbol())
@@ -2730,10 +2730,9 @@ public:
     return [=](IterSpace iters) { return lambda(iters); };
   }
 
-  /// The `Ev::Component` structure is tailmost down to head, so the
-  /// expression <code>a%b%c</code> will be presented as <code>(component
-  /// (dataref (component (dataref (symbol 'a)) (symbol 'b))) (symbol
-  /// 'c))</code>.
+  /// The `Ev::Component` structure is tailmost down to head, so the expression
+  /// <code>a%b%c</code> will be presented as <code>(component (dataref
+  /// (component (dataref (symbol 'a)) (symbol 'b))) (symbol 'c))</code>.
   void buildComponentsPath(llvm::SmallVectorImpl<mlir::Value> &components,
                            mlir::Type &recTy,
                            const Fortran::evaluate::DataRef &dr) {
