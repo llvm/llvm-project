@@ -19,6 +19,7 @@ class TestMultilangFormatterCategories(TestBase):
                         setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
     @skipUnlessDarwin
+    @skipIf(oslist=['windows', 'linux', 'macosx'])
     def test_multilang_formatter_categories(self):
         """Test that formatter categories can work for multiple languages"""
         self.build()
