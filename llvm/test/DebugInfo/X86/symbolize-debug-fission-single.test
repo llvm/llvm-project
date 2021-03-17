@@ -26,9 +26,9 @@
 
 # CHECK:      0x11
 # CHECK-NEXT: f2()
-# CHECK-NEXT: ././splitdwarf-single-issue.cpp:7:3
+# CHECK-NEXT: {{.*}}splitdwarf-single-issue.cpp:7:3
 # CHECK-NEXT: main
-# CHECK-NEXT: ././splitdwarf-single-issue.cpp:13:3
+# CHECK-NEXT: {{.*}}splitdwarf-single-issue.cpp:13:3
 
 	.text
 	.file	"splitdwarf-single-issue.cpp"

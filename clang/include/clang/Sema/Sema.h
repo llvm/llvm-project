@@ -286,14 +286,13 @@ public:
   }
 };
 
-/// Keeps track of expected type during expression parsing. The type is tied to
-/// a particular token, all functions that update or consume the type take a
-/// start location of the token they are looking at as a parameter. This allows
-/// to avoid updating the type on hot paths in the parser.
+/// Tracks expected type during expression parsing, for use in code completion.
+/// The type is tied to a particular token, all functions that update or consume
+/// the type take a start location of the token they are looking at as a
+/// parameter. This avoids updating the type on hot paths in the parser.
 class PreferredTypeBuilder {
 public:
-  PreferredTypeBuilder() = default;
-  explicit PreferredTypeBuilder(QualType Type) : Type(Type) {}
+  PreferredTypeBuilder(bool Enabled) : Enabled(Enabled) {}
 
   void enterCondition(Sema &S, SourceLocation Tok);
   void enterReturn(Sema &S, SourceLocation Tok);
@@ -307,6 +306,9 @@ public:
   /// Clients should be very careful when using this funciton, as it stores a
   /// function_ref, clients should make sure all calls to get() with the same
   /// location happen while function_ref is alive.
+  ///
+  /// The callback should also emit signature help as a side-effect, but only
+  /// if the completion point has been reached.
   void enterFunctionArgument(SourceLocation Tok,
                              llvm::function_ref<QualType()> ComputeType);
 
@@ -319,8 +321,14 @@ public:
   /// Handles all type casts, including C-style cast, C++ casts, etc.
   void enterTypeCast(SourceLocation Tok, QualType CastType);
 
+  /// Get the expected type associated with this location, if any.
+  ///
+  /// If the location is a function argument, determining the expected type
+  /// involves considering all function overloads and the arguments so far.
+  /// In this case, signature help for these function overloads will be reported
+  /// as a side-effect (only if the completion point has been reached).
   QualType get(SourceLocation Tok) const {
-    if (Tok != ExpectedLoc)
+    if (!Enabled || Tok != ExpectedLoc)
       return QualType();
     if (!Type.isNull())
       return Type;
@@ -330,6 +338,7 @@ public:
   }
 
 private:
+  bool Enabled;
   /// Start position of a token for which we store expected type.
   SourceLocation ExpectedLoc;
   /// Expected type for a token starting at ExpectedLoc.
@@ -12216,8 +12225,14 @@ public:
                                       const VirtSpecifiers *VS = nullptr);
   void CodeCompleteBracketDeclarator(Scope *S);
   void CodeCompleteCase(Scope *S);
-  /// Reports signatures for a call to CodeCompleteConsumer and returns the
-  /// preferred type for the current argument. Returned type can be null.
+  /// Determines the preferred type of the current function argument, by
+  /// examining the signatures of all possible overloads.
+  /// Returns null if unknown or ambiguous, or if code completion is off.
+  ///
+  /// If the code completion point has been reached, also reports the function
+  /// signatures that were considered.
+  ///
+  /// FIXME: rename to GuessCallArgumentType to reduce confusion.
   QualType ProduceCallSignatureHelp(Scope *S, Expr *Fn, ArrayRef<Expr *> Args,
                                     SourceLocation OpenParLoc);
   QualType ProduceConstructorSignatureHelp(Scope *S, QualType Type,

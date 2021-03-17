@@ -2909,6 +2909,7 @@ static const struct Extension {
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"rcpc", {AArch64::FeatureRCPC}},
+    {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},

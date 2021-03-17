@@ -6,10 +6,10 @@
 
 # END.
 
-# CHECK: FAIL: ignore-fail :: fail.txt
-# CHECK: UNRESOLVED: ignore-fail :: unresolved.txt
-# CHECK: XFAIL: ignore-fail :: xfail.txt
-# CHECK: XPASS: ignore-fail :: xpass.txt
+# CHECK-DAG: FAIL: ignore-fail :: fail.txt
+# CHECK-DAG: UNRESOLVED: ignore-fail :: unresolved.txt
+# CHECK-DAG: XFAIL: ignore-fail :: xfail.txt
+# CHECK-DAG: XPASS: ignore-fail :: xpass.txt
 
 #      CHECK: Testing Time:
 # CHECK-NEXT:   Expectedly Failed : 1

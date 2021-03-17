@@ -88,7 +88,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     // message about nonstandard usage will have provenance.
     currentCooked_->Put('\n', range.start());
   }
-  currentCooked_->Marshal(allSources);
+  currentCooked_->Marshal(allCooked_);
   if (options.needProvenanceRangeToCharBlockMappings) {
     currentCooked_->CompileProvenanceRangeToOffsetMappings(allSources);
   }

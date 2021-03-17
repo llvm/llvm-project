@@ -120,6 +120,24 @@ protected:
   Liveness liveness;
 };
 
+namespace memref {
+class GlobalOp;
+} // namespace memref
+
+// Support class to create global ops for tensor-valued constants in the
+// program. Globals are created lazily at the top of the `moduleOp` with pretty
+// names. Duplicates are avoided.
+class GlobalCreator {
+public:
+  explicit GlobalCreator(ModuleOp module) : moduleOp(module) {}
+  memref::GlobalOp getGlobalFor(ConstantOp constantOp);
+
+private:
+  ModuleOp moduleOp;
+  // This could use memref::GlobalOp key but we avoid introducing a new
+  // dependence to the memref dialect for this.
+  DenseMap<Attribute, Operation *> globals;
+};
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_BUFFERUTILS_H

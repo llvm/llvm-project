@@ -792,10 +792,13 @@ public:
                                  Section::const_block_iterator, const Block *,
                                  getSectionConstBlocks>;
 
+  using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
+
   LinkGraph(std::string Name, const Triple &TT, unsigned PointerSize,
-            support::endianness Endianness)
+            support::endianness Endianness,
+            GetEdgeKindNameFunction GetEdgeKindName)
       : Name(std::move(Name)), TT(TT), PointerSize(PointerSize),
-        Endianness(Endianness) {}
+        Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   /// Returns the name of this graph (usually the name of the original
   /// underlying MemoryBuffer).
@@ -809,6 +812,8 @@ public:
 
   /// Returns the endianness of content in this graph.
   support::endianness getEndianness() const { return Endianness; }
+
+  const char *getEdgeKindName(Edge::Kind K) const { return GetEdgeKindName(K); }
 
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   /// This can be useful when renaming symbols or adding new content to the
@@ -1055,13 +1060,7 @@ public:
   }
 
   /// Dump the graph.
-  ///
-  /// If supplied, the EdgeKindToName function will be used to name edge
-  /// kinds in the debug output. Otherwise raw edge kind numbers will be
-  /// displayed.
-  void dump(raw_ostream &OS,
-            std::function<StringRef(Edge::Kind)> EdegKindToName =
-                std::function<StringRef(Edge::Kind)>());
+  void dump(raw_ostream &OS);
 
 private:
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
@@ -1072,6 +1071,7 @@ private:
   Triple TT;
   unsigned PointerSize;
   support::endianness Endianness;
+  GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
@@ -1386,6 +1386,10 @@ private:
 /// Marks all symbols in a graph live. This can be used as a default,
 /// conservative mark-live implementation.
 Error markAllSymbolsLive(LinkGraph &G);
+
+/// Create an out of range error for the given edge in the given block.
+Error makeTargetOutOfRangeError(const Block &B, const Edge &E,
+                                const char *(*getEdgeKindName)(Edge::Kind));
 
 /// Create a LinkGraph from the given object buffer.
 ///

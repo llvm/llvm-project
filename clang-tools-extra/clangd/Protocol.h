@@ -475,6 +475,10 @@ struct ClientCapabilities {
   /// window.implicitWorkDoneProgressCreate
   bool ImplicitProgressCreation = false;
 
+  /// Whether the client claims to cancel stale requests.
+  /// general.staleRequestSupport.cancel
+  bool CancelsStaleRequests = false;
+
   /// Whether the client implementation supports a refresh request sent from the
   /// server to the client.
   bool SemanticTokenRefreshSupport = false;
@@ -1052,8 +1056,13 @@ bool operator==(const SymbolDetails &, const SymbolDetails &);
 
 /// The parameters of a Workspace Symbol Request.
 struct WorkspaceSymbolParams {
-  /// A non-empty query string
+  /// A query string to filter symbols by.
+  /// Clients may send an empty string here to request all the symbols.
   std::string query;
+
+  /// Max results to return, overriding global default. 0 means no limit.
+  /// Clangd extension.
+  llvm::Optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceSymbolParams &,
               llvm::json::Path);
@@ -1102,6 +1111,10 @@ bool fromJSON(const llvm::json::Value &, CompletionContext &, llvm::json::Path);
 
 struct CompletionParams : TextDocumentPositionParams {
   CompletionContext context;
+
+  /// Max results to return, overriding global default. 0 means no limit.
+  /// Clangd extension.
+  llvm::Optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, CompletionParams &, llvm::json::Path);
 

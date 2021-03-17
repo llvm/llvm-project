@@ -251,11 +251,7 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
   return NewBlock;
 }
 
-void LinkGraph::dump(raw_ostream &OS,
-                     std::function<StringRef(Edge::Kind)> EdgeKindToName) {
-  if (!EdgeKindToName)
-    EdgeKindToName = [](Edge::Kind K) { return StringRef(); };
-
+void LinkGraph::dump(raw_ostream &OS) {
   OS << "Symbols:\n";
   for (auto *Sym : defined_symbols()) {
     OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
@@ -263,16 +259,7 @@ void LinkGraph::dump(raw_ostream &OS,
     if (Sym->isDefined()) {
       for (auto &E : Sym->getBlock().edges()) {
         OS << "    ";
-        StringRef EdgeName = (E.getKind() < Edge::FirstRelocation
-                                  ? getGenericEdgeKindName(E.getKind())
-                                  : EdgeKindToName(E.getKind()));
-
-        if (!EdgeName.empty())
-          printEdge(OS, Sym->getBlock(), E, EdgeName);
-        else {
-          auto EdgeNumberString = std::to_string(E.getKind());
-          printEdge(OS, Sym->getBlock(), E, EdgeNumberString);
-        }
+        printEdge(OS, Sym->getBlock(), E, getEdgeKindName(E.getKind()));
         OS << "\n";
       }
     }
@@ -320,6 +307,18 @@ Error markAllSymbolsLive(LinkGraph &G) {
   for (auto *Sym : G.defined_symbols())
     Sym->setLive(true);
   return Error::success();
+}
+
+Error makeTargetOutOfRangeError(const Block &B, const Edge &E,
+                                const char *(*getEdgeKindName)(Edge::Kind)) {
+  std::string ErrMsg;
+  {
+    raw_string_ostream ErrStream(ErrMsg);
+    ErrStream << "Relocation target out of range: ";
+    printEdge(ErrStream, B, E, getEdgeKindName(E.getKind()));
+    ErrStream << "\n";
+  }
+  return make_error<JITLinkError>(std::move(ErrMsg));
 }
 
 Expected<std::unique_ptr<LinkGraph>>

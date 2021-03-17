@@ -475,8 +475,8 @@ define <2 x double> @add_pd_010(<2 x double> %x) {
 ; AVX-SLOW-LABEL: add_pd_010:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
-; AVX-SLOW-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: add_pd_010:
@@ -607,9 +607,9 @@ define <4 x float> @add_ps_017(<4 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: add_ps_017:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm0[0,0,2,2]
-; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: add_ps_017:
@@ -931,9 +931,9 @@ define <4 x float> @PR45747_1(<4 x float> %a, <4 x float> %b) nounwind {
 ;
 ; AVX-SLOW-LABEL: PR45747_1:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[2,2,2,2]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: PR45747_1:
@@ -963,9 +963,9 @@ define <4 x float> @PR45747_2(<4 x float> %a, <4 x float> %b) nounwind {
 ;
 ; AVX-SLOW-LABEL: PR45747_2:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm1[1,0]
+; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,3,1,1]
+; AVX-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: PR45747_2:

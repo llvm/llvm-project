@@ -442,11 +442,13 @@ std::optional<CharBlock> CookedSource::GetCharBlock(
 
 std::size_t CookedSource::BufferedBytes() const { return buffer_.bytes(); }
 
-void CookedSource::Marshal(AllSources &allSources) {
+void CookedSource::Marshal(AllCookedSources &allCookedSources) {
   CHECK(provenanceMap_.SizeInBytes() == buffer_.bytes());
-  provenanceMap_.Put(allSources.AddCompilerInsertion("(after end of source)"));
+  provenanceMap_.Put(allCookedSources.allSources().AddCompilerInsertion(
+      "(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
+  allCookedSources.Register(*this);
 }
 
 void CookedSource::CompileProvenanceRangeToOffsetMappings(
@@ -534,6 +536,16 @@ CookedSource &AllCookedSources::NewCookedSource() {
   return cooked_.emplace_back();
 }
 
+const CookedSource *AllCookedSources::Find(CharBlock x) const {
+  auto pair{index_.equal_range(x)};
+  for (auto iter{pair.first}; iter != pair.second; ++iter) {
+    if (iter->second.AsCharBlock().Contains(x)) {
+      return &iter->second;
+    }
+  }
+  return nullptr;
+}
+
 std::optional<ProvenanceRange> AllCookedSources::GetProvenanceRange(
     CharBlock cb) const {
   if (const CookedSource * c{Find(cb)}) {
@@ -587,6 +599,29 @@ void AllCookedSources::Dump(llvm::raw_ostream &o) const {
   for (const auto &c : cooked_) {
     c.Dump(o);
   }
+}
+
+bool AllCookedSources::Precedes(CharBlock x, CharBlock y) const {
+  const CookedSource *ySource{Find(y)};
+  if (const CookedSource * xSource{Find(x)}) {
+    if (ySource) {
+      int xNum{xSource->number()};
+      int yNum{ySource->number()};
+      return xNum < yNum || (xNum == yNum && x.begin() < y.begin());
+    } else {
+      return true; // by fiat, all cooked source < anything outside
+    }
+  } else if (ySource) {
+    return false;
+  } else {
+    // Both names are compiler-created (SaveTempName).
+    return x < y;
+  }
+}
+
+void AllCookedSources::Register(CookedSource &cooked) {
+  index_.emplace(cooked.AsCharBlock(), cooked);
+  cooked.set_number(static_cast<int>(index_.size()));
 }
 
 } // namespace Fortran::parser

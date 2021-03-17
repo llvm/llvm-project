@@ -390,8 +390,9 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_taskred_init                 277
         __kmpc_taskred_modifier_init        278
         __kmpc_omp_target_task_alloc        279
+        __kmpc_error                        281
         __kmpc_masked                       282
-        __kmpc_end_masked      	            283
+        __kmpc_end_masked                   283
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.

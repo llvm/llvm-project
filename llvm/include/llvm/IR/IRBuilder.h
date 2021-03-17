@@ -2504,6 +2504,9 @@ public:
   /// address space before call and casted back to Ptr type after call.
   Value *CreateStripInvariantGroup(Value *Ptr);
 
+  /// Return a vector value that contains the vector V reversed
+  Value *CreateVectorReverse(Value *V, const Twine &Name = "");
+
   /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.
   Value *CreateVectorSplat(unsigned NumElts, Value *V, const Twine &Name = "");

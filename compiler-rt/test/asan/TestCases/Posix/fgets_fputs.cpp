@@ -3,6 +3,8 @@
 // RUN: not %run %t 2 2>&1 | FileCheck %s --check-prefix=CHECK-FPUTS
 // RUN: not %run %t 3 2>&1 | FileCheck %s --check-prefix=CHECK-PUTS
 
+// UNSUPPORTED: aarch64
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

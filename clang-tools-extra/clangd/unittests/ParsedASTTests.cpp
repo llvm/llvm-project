@@ -511,7 +511,7 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
     auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
                                        std::move(CI), {}, BaselinePreamble);
     ASSERT_TRUE(PatchedAST);
-    EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
+    EXPECT_FALSE(PatchedAST->getDiagnostics());
   }
 
   // Then ensure correctness by making sure includes were seen only once.
@@ -526,7 +526,7 @@ TEST(ParsedASTTest, ReplayPreambleForTidyCheckers) {
   auto PatchedAST = ParsedAST::build(testPath(TU.Filename), TU.inputs(FS),
                                      std::move(CI), {}, BaselinePreamble);
   ASSERT_TRUE(PatchedAST);
-  EXPECT_TRUE(PatchedAST->getDiagnostics().empty());
+  EXPECT_FALSE(PatchedAST->getDiagnostics());
   EXPECT_THAT(Includes,
               ElementsAre(WithFileName(testPath("__preamble_patch__.h")),
                           WithFileName("b.h"), WithFileName("a.h")));
@@ -569,7 +569,7 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   auto PatchedAST = ParsedAST::build(testPath("foo.cpp"), Inputs, std::move(CI),
                                      {}, EmptyPreamble);
   ASSERT_TRUE(PatchedAST);
-  ASSERT_TRUE(PatchedAST->getDiagnostics().empty());
+  ASSERT_FALSE(PatchedAST->getDiagnostics());
 
   // Ensure source location information is correct, including resolved paths.
   EXPECT_THAT(PatchedAST->getIncludeStructure().MainFileIncludes,

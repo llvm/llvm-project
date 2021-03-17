@@ -26,10 +26,10 @@ end
 !  real(4)::v
 !  complex(4)::w
 !  real(4)::cb
-!  common//t,w,u,v
 !  common/cb/x,y,z
 !  bind(c, name="CB")::/cb/
 !  common/cb2/a,b,c
 !  bind(c)::/cb2/
 !  common/b/cb
+!  common//t,w,u,v
 !end

@@ -418,45 +418,55 @@ static std::string getNameOfType(Type *T) {
 
 TEST(ConstantsTest, BuildConstantDataArrays) {
   LLVMContext Context;
-  std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   for (Type *T : {Type::getInt8Ty(Context), Type::getInt16Ty(Context),
                   Type::getInt32Ty(Context), Type::getInt64Ty(Context)}) {
     ArrayType *ArrayTy = ArrayType::get(T, 2);
     Constant *Vals[] = {ConstantInt::get(T, 0), ConstantInt::get(T, 1)};
-    Constant *CDV = ConstantArray::get(ArrayTy, Vals);
-    ASSERT_TRUE(dyn_cast<ConstantDataArray>(CDV) != nullptr)
-        << " T = " << getNameOfType(T);
+    Constant *CA = ConstantArray::get(ArrayTy, Vals);
+    ASSERT_TRUE(isa<ConstantDataArray>(CA)) << " T = " << getNameOfType(T);
+    auto *CDA = cast<ConstantDataArray>(CA);
+    Constant *CA2 = ConstantDataArray::getRaw(
+        CDA->getRawDataValues(), CDA->getNumElements(), CDA->getElementType());
+    ASSERT_TRUE(CA == CA2) << " T = " << getNameOfType(T);
   }
 
-  for (Type *T : {Type::getHalfTy(Context), Type::getFloatTy(Context),
-                  Type::getDoubleTy(Context)}) {
+  for (Type *T : {Type::getHalfTy(Context), Type::getBFloatTy(Context),
+                  Type::getFloatTy(Context), Type::getDoubleTy(Context)}) {
     ArrayType *ArrayTy = ArrayType::get(T, 2);
     Constant *Vals[] = {ConstantFP::get(T, 0), ConstantFP::get(T, 1)};
-    Constant *CDV = ConstantArray::get(ArrayTy, Vals);
-    ASSERT_TRUE(dyn_cast<ConstantDataArray>(CDV) != nullptr)
-        << " T = " << getNameOfType(T);
+    Constant *CA = ConstantArray::get(ArrayTy, Vals);
+    ASSERT_TRUE(isa<ConstantDataArray>(CA)) << " T = " << getNameOfType(T);
+    auto *CDA = cast<ConstantDataArray>(CA);
+    Constant *CA2 = ConstantDataArray::getRaw(
+        CDA->getRawDataValues(), CDA->getNumElements(), CDA->getElementType());
+    ASSERT_TRUE(CA == CA2) << " T = " << getNameOfType(T);
   }
 }
 
 TEST(ConstantsTest, BuildConstantDataVectors) {
   LLVMContext Context;
-  std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   for (Type *T : {Type::getInt8Ty(Context), Type::getInt16Ty(Context),
                   Type::getInt32Ty(Context), Type::getInt64Ty(Context)}) {
     Constant *Vals[] = {ConstantInt::get(T, 0), ConstantInt::get(T, 1)};
-    Constant *CDV = ConstantVector::get(Vals);
-    ASSERT_TRUE(dyn_cast<ConstantDataVector>(CDV) != nullptr)
-        << " T = " << getNameOfType(T);
+    Constant *CV = ConstantVector::get(Vals);
+    ASSERT_TRUE(isa<ConstantDataVector>(CV)) << " T = " << getNameOfType(T);
+    auto *CDV = cast<ConstantDataVector>(CV);
+    Constant *CV2 = ConstantDataVector::getRaw(
+        CDV->getRawDataValues(), CDV->getNumElements(), CDV->getElementType());
+    ASSERT_TRUE(CV == CV2) << " T = " << getNameOfType(T);
   }
 
-  for (Type *T : {Type::getHalfTy(Context), Type::getFloatTy(Context),
-                  Type::getDoubleTy(Context)}) {
+  for (Type *T : {Type::getHalfTy(Context), Type::getBFloatTy(Context),
+                  Type::getFloatTy(Context), Type::getDoubleTy(Context)}) {
     Constant *Vals[] = {ConstantFP::get(T, 0), ConstantFP::get(T, 1)};
-    Constant *CDV = ConstantVector::get(Vals);
-    ASSERT_TRUE(dyn_cast<ConstantDataVector>(CDV) != nullptr)
-        << " T = " << getNameOfType(T);
+    Constant *CV = ConstantVector::get(Vals);
+    ASSERT_TRUE(isa<ConstantDataVector>(CV)) << " T = " << getNameOfType(T);
+    auto *CDV = cast<ConstantDataVector>(CV);
+    Constant *CV2 = ConstantDataVector::getRaw(
+        CDV->getRawDataValues(), CDV->getNumElements(), CDV->getElementType());
+    ASSERT_TRUE(CV == CV2) << " T = " << getNameOfType(T);
   }
 }
 

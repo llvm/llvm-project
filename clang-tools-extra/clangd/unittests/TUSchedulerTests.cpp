@@ -121,7 +121,7 @@ protected:
     class CaptureDiags : public ParsingCallbacks {
     public:
       void onMainAST(PathRef File, ParsedAST &AST, PublishFn Publish) override {
-        reportDiagnostics(File, AST.getDiagnostics(), Publish);
+        reportDiagnostics(File, *AST.getDiagnostics(), Publish);
       }
 
       void onFailedAST(PathRef File, llvm::StringRef Version,

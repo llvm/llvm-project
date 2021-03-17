@@ -442,15 +442,15 @@ bool Preprocessor::SetCodeCompletionPoint(const FileEntry *File,
 
 void Preprocessor::CodeCompleteIncludedFile(llvm::StringRef Dir,
                                             bool IsAngled) {
+  setCodeCompletionReached();
   if (CodeComplete)
     CodeComplete->CodeCompleteIncludedFile(Dir, IsAngled);
-  setCodeCompletionReached();
 }
 
 void Preprocessor::CodeCompleteNaturalLanguage() {
+  setCodeCompletionReached();
   if (CodeComplete)
     CodeComplete->CodeCompleteNaturalLanguage();
-  setCodeCompletionReached();
 }
 
 /// getSpelling - This method is used to get the spelling of a token into a

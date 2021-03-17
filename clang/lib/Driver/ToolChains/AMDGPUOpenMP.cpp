@@ -409,15 +409,13 @@ void AMDGCN::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   // Each command outputs different files.
   const char *LLVMLinkCommand =
       constructLLVMLinkCommand( C, JA, Inputs, Args,  GPUArch.str(), Prefix);
-  const char *OptCommand = constructOptCommand(C, JA, Inputs, Args,
-		                               GPUArch.str(),
-                                               Prefix, LLVMLinkCommand);
+
   if (C.getDriver().isSaveTempsEnabled())
-    constructLlcCommand(C, JA, Inputs, Args, GPUArch.str(), Prefix, OptCommand,
-                        /*OutputIsAsm=*/true);
+    constructLlcCommand(C, JA, Inputs, Args, GPUArch.str(), Prefix,
+		    LLVMLinkCommand, /*OutputIsAsm=*/true);
   const char *LlcCommand =
       constructLlcCommand(C, JA, Inputs, Args, GPUArch.str(), Prefix,
-		          OptCommand);
+		          LLVMLinkCommand);
   constructLldCommand(C, JA, Inputs, Output, Args, LlcCommand);
 }
 

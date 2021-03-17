@@ -634,9 +634,7 @@ struct ExceptionChecker {
       additional_msg = opt_message + ": ";
     }
     auto transform_path = [](const fs::path& p) {
-      if (p.native().empty())
-        return std::string("\"\"");
-      return p.string();
+      return "\"" + p.string() + "\"";
     };
     std::string format = [&]() -> std::string {
       switch (num_paths) {

@@ -1153,8 +1153,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (FPSaveIndex && spilledToMemory(MF, *FPSaveIndex)) {
-    const int FI = *FPSaveIndex;
-    assert(!MFI.isDeadObjectIndex(FI));
+    const int FramePtrFI = *FPSaveIndex;
+    assert(!MFI.isDeadObjectIndex(FramePtrFI));
 
     if (!ScratchExecCopy)
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, true);
@@ -1169,11 +1169,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
     int DwordOff = 0;
     buildPrologSpill(ST, LiveRegs, MBB, MBBI, TII, TmpVGPR,
-                     FuncInfo->getScratchRSrcReg(), StackPtrReg, FI, DwordOff);
+                     FuncInfo->getScratchRSrcReg(), StackPtrReg, FramePtrFI,
+		     DwordOff);
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createOffset(
                  nullptr, MCRI->getDwarfRegNum(FramePtrReg, false),
-                 MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+                 MFI.getObjectOffset(FramePtrFI) * ST.getWavefrontSize()));
   }
 
   if (BPSaveIndex && spilledToMemory(MF, *BPSaveIndex)) {
@@ -1218,12 +1219,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // In this case, spill the FP to a reserved VGPR.
   if (FPSaveIndex && !spilledToMemory(MF, *FPSaveIndex)) {
-    const int FI = *FPSaveIndex;
-    assert(!MFI.isDeadObjectIndex(FI));
+    const int FramePtrFI = *FPSaveIndex;
+    assert(!MFI.isDeadObjectIndex(FramePtrFI));
 
-    assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
+    assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
     ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
-        FuncInfo->getSGPRToVGPRSpills(FI);
+        FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
     assert(Spill.size() == 1);
 
     // Save FP before setting it up.
@@ -1421,9 +1422,9 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
   Register ScratchExecCopy;
   if (FPSaveIndex) {
-    const int FI = *FPSaveIndex;
-    assert(!MFI.isDeadObjectIndex(FI));
-    if (spilledToMemory(MF, *FPSaveIndex)) {
+    const int FramePtrFI = *FPSaveIndex;
+    assert(!MFI.isDeadObjectIndex(FramePtrFI));
+    if (spilledToMemory(MF, FramePtrFI)) {
       if (!ScratchExecCopy)
         ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, false);
 
@@ -1432,14 +1433,14 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
       if (!TempVGPR)
         report_fatal_error("failed to find free scratch register");
       buildEpilogReload(ST, LiveRegs, MBB, MBBI, TII, TempVGPR,
-                        FuncInfo->getScratchRSrcReg(), StackPtrReg, FI);
+                        FuncInfo->getScratchRSrcReg(), StackPtrReg, FramePtrFI);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), FramePtrReg)
           .addReg(TempVGPR, RegState::Kill);
     } else {
       // Reload from VGPR spill.
-      assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
+      assert(MFI.getStackID(FramePtrFI) == TargetStackID::SGPRSpill);
       ArrayRef<SIMachineFunctionInfo::SpilledReg> Spill =
-          FuncInfo->getSGPRToVGPRSpills(FI);
+          FuncInfo->getSGPRToVGPRSpills(FramePtrFI);
       assert(Spill.size() == 1);
       BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_READLANE_B32), FramePtrReg)
           .addReg(Spill[0].VGPR)
@@ -1455,7 +1456,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   if (BPSaveIndex) {
     const int BasePtrFI = *BPSaveIndex;
     assert(!MFI.isDeadObjectIndex(BasePtrFI));
-    if (spilledToMemory(MF, *BPSaveIndex)) {
+    if (spilledToMemory(MF, BasePtrFI)) {
       if (!ScratchExecCopy)
         ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, false);
 

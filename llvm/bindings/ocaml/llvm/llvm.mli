@@ -77,6 +77,9 @@ module TypeKind : sig
   | Metadata
   | X86_mmx
   | Token
+  | ScalableVector
+  | BFloat
+  | X86_amx
 end
 
 (** The linkage of a global value, accessed with {!linkage} and
@@ -268,6 +271,7 @@ module Opcode : sig
   | CatchSwitch
   | FNeg
   | CallBr
+  | Freeze
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -319,6 +323,8 @@ module AtomicRMWBinOp : sig
   | Min
   | UMax
   | UMin
+  | FAdd
+  | FSub
 end
 
 (** The kind of an [llvalue], the result of [classify_value v].

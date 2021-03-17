@@ -207,6 +207,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::UADDO, MVT::i32, Custom);
     setOperationAction(ISD::USUBO, MVT::i32, Custom);
+    setOperationAction(ISD::UADDSAT, MVT::i32, Custom);
+    setOperationAction(ISD::USUBSAT, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasStdExtM()) {
@@ -3521,6 +3523,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Overflow);
     return;
   }
+  case ISD::UADDSAT:
+  case ISD::USUBSAT: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    SDLoc DL(N);
+    if (Subtarget.hasStdExtZbb()) {
+      // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
+      // sign extend allows overflow of the lower 32 bits to be detected on
+      // the promoted size.
+      SDValue LHS =
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(0));
+      SDValue RHS =
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = DAG.getNode(N->getOpcode(), DL, MVT::i64, LHS, RHS);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+
+    // Without Zbb, expand to UADDO/USUBO+select which will trigger our custom
+    // promotion for UADDO/USUBO.
+    Results.push_back(expandAddSubSat(N, DAG));
+    return;
+  }
   case ISD::BITCAST: {
     assert(((N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
              Subtarget.hasStdExtF()) ||
@@ -4820,6 +4845,19 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
+static MachineInstr *elideCopies(MachineInstr *MI,
+                                 const MachineRegisterInfo &MRI) {
+  while (true) {
+    if (!MI->isFullCopy())
+      return MI;
+    if (!Register::isVirtualRegister(MI->getOperand(1).getReg()))
+      return nullptr;
+    MI = MRI.getVRegDef(MI->getOperand(1).getReg());
+    if (!MI)
+      return nullptr;
+  }
+}
+
 static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
                                     int VLIndex, unsigned SEWIndex,
                                     RISCVVLMUL VLMul, bool ForceTailAgnostic) {
@@ -4880,8 +4918,11 @@ static MachineBasicBlock *addVSetVL(MachineInstr &MI, MachineBasicBlock *BB,
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg());
-    if (UseMI && UseMI->isImplicitDef())
-      TailAgnostic = true;
+    if (UseMI) {
+      UseMI = elideCopies(UseMI, MRI);
+      if (UseMI && UseMI->isImplicitDef())
+        TailAgnostic = true;
+    }
   }
 
   // For simplicity we reuse the vtype representation here.

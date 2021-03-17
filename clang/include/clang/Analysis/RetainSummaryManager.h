@@ -613,8 +613,8 @@ class RetainSummaryManager {
     const FunctionType *FT,
     bool &AllowAnnotations);
 
-  /// Apply the annotation of {@code pd} in function {@code FD}
-  /// to the resulting summary stored in out-parameter {@code Template}.
+  /// Apply the annotation of @c pd in function @c FD
+  /// to the resulting summary stored in out-parameter @c Template.
   /// \return whether an annotation was applied.
   bool applyParamAnnotationEffect(const ParmVarDecl *pd, unsigned parm_idx,
                                   const NamedDecl *FD,
@@ -715,8 +715,8 @@ private:
   /// Set argument types for arguments which are not doing anything.
   void updateSummaryForArgumentTypes(const AnyCall &C, const RetainSummary *&RS);
 
-  /// Determine whether a declaration {@code D} of correspondent type (return
-  /// type for functions/methods) {@code QT} has any of the given attributes,
+  /// Determine whether a declaration @c D of correspondent type (return
+  /// type for functions/methods) @c QT has any of the given attributes,
   /// provided they pass necessary validation checks AND tracking the given
   /// attribute is enabled.
   /// Returns the object kind corresponding to the present attribute, or None,

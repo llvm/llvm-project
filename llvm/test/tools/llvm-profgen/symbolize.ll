@@ -1,18 +1,29 @@
 ; REQUIRES: x86-registered-target
 ; RUN: llc -filetype=obj %s -o %t
 ; RUN: llvm-profgen --binary=%t --perfscript=%s --output=%t1 --show-disassembly-only -x86-asm-syntax=intel --show-source-locations | FileCheck %s --match-full-lines
+; RUN: llvm-profgen --binary=%t --perfscript=%s --output=%t2 --show-disassembly-only -x86-asm-syntax=intel --show-source-locations --show-canonical-fname | FileCheck %s --match-full-lines  --check-prefix=CHECK-CANO
 
 ; CHECK: Disassembly of section .text [0x0, 0x4a]:
-; CHECK: <funcA>:
-; CHECK:        0:	mov	eax, edi                         funcA:0
-; CHECK:        2:	mov	ecx, dword ptr [rip]             funcLeaf:2 @ funcA:1
-; CHECK:        8:	lea	edx, [rcx + 3]                   fib:2 @ funcLeaf:2 @ funcA:1
-; CHECK:        b:	cmp	ecx, 3                           fib:2 @ funcLeaf:2 @ funcA:1
-; CHECK:        e:	cmovl	edx, ecx                       fib:2 @ funcLeaf:2 @ funcA:1
-; CHECK:       11:	sub	eax, edx                         funcLeaf:2 @ funcA:1
-; CHECK:       13:	ret                                  funcA:2
+; CHECK: <funcA.llvm.1000>:
+; CHECK:        0:	mov	eax, edi                         funcA.llvm.1000:0
+; CHECK:        2:	mov	ecx, dword ptr [rip]             funcLeaf:2 @ funcA.llvm.1000:1
+; CHECK:        8:	lea	edx, [rcx + 3]                   fib:2 @ funcLeaf:2 @ funcA.llvm.1000:1
+; CHECK:        b:	cmp	ecx, 3                           fib:2 @ funcLeaf:2 @ funcA.llvm.1000:1
+; CHECK:        e:	cmovl	edx, ecx                       fib:2 @ funcLeaf:2 @ funcA.llvm.1000:1
+; CHECK:       11:	sub	eax, edx                         funcLeaf:2 @ funcA.llvm.1000:1
+; CHECK:       13:	ret                                  funcA.llvm.1000:2
 ; CHECK:       14:	nop	word ptr cs:[rax + rax]
 ; CHECK:       1e:	nop
+; CHECK-CANO: <funcA>:
+; CHECK-CANO:        0:	mov	eax, edi                         funcA:0
+; CHECK-CANO:        2:	mov	ecx, dword ptr [rip]             funcLeaf:2 @ funcA:1
+; CHECK-CANO:        8:	lea	edx, [rcx + 3]                   fib:2 @ funcLeaf:2 @ funcA:1
+; CHECK-CANO:        b:	cmp	ecx, 3                           fib:2 @ funcLeaf:2 @ funcA:1
+; CHECK-CANO:        e:	cmovl	edx, ecx                       fib:2 @ funcLeaf:2 @ funcA:1
+; CHECK-CANO:       11:	sub	eax, edx                         funcLeaf:2 @ funcA:1
+; CHECK-CANO:       13:	ret                                  funcA:2
+; CHECK-CANO:       14:	nop	word ptr cs:[rax + rax]
+; CHECK-CANO:       1e:	nop
 ; CHECK: <funcLeaf>:
 ; CHECK:      20:	mov	eax, edi                           funcLeaf:1
 ; CHECK:      22:	mov	ecx, dword ptr [rip]               funcLeaf:2
@@ -34,7 +45,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @factor = dso_local global i32 3
 
-define dso_local i32 @funcA(i32 %x) !dbg !12 {
+define dso_local i32 @funcA.llvm.1000(i32 %x) !dbg !12 {
 entry:
   call void @llvm.dbg.value(metadata i32 %x, metadata !16, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i32 %x, metadata !19, metadata !DIExpression()), !dbg !22
@@ -85,7 +96,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 !8 = !{i32 7, !"Dwarf Version", i32 4}
 !9 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{i32 1, !"wchar_size", i32 4}
-!12 = distinct !DISubprogram(name: "funcA", scope: !3, file: !3, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !15)
+!12 = distinct !DISubprogram(name: "funcA.llvm.1000", scope: !3, file: !3, line: 6, type: !13, scopeLine: 6, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !15)
 !13 = !DISubroutineType(types: !14)
 !14 = !{!7, !7}
 !15 = !{!16, !17}

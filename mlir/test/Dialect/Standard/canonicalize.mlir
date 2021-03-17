@@ -134,6 +134,34 @@ func @cmpi_equal_operands(%arg0: i64)
 
 // -----
 
+// Test case: Folding of memref.dim(memref.alloca(%size), %idx) -> %size
+// CHECK-LABEL: func @dim_of_alloca(
+//  CHECK-SAME:     %[[SIZE:[0-9a-z]+]]: index
+//  CHECK-NEXT:   return %[[SIZE]] : index
+func @dim_of_alloca(%size: index) -> index {
+  %0 = memref.alloca(%size) : memref<?xindex>
+  %c0 = constant 0 : index
+  %1 = memref.dim %0, %c0 : memref<?xindex>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.alloca(rank(%v)), %idx) -> rank(%v)
+// CHECK-LABEL: func @dim_of_alloca_with_dynamic_size(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>
+//  CHECK-NEXT:   %[[RANK:.*]] = rank %[[MEM]] : memref<*xf32>
+//  CHECK-NEXT:   return %[[RANK]] : index
+func @dim_of_alloca_with_dynamic_size(%arg0: memref<*xf32>) -> index {
+  %0 = rank %arg0 : memref<*xf32>
+  %1 = memref.alloca(%0) : memref<?xindex>
+  %c0 = constant 0 : index
+  %2 = memref.dim %1, %c0 : memref<?xindex>
+  return %2 : index
+}
+
+// -----
+
 // Test case: Folding of memref.dim(memref.reshape %v %shp, %idx) -> memref.load %shp[%idx]
 // CHECK-LABEL: func @dim_of_memref_reshape(
 //  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,

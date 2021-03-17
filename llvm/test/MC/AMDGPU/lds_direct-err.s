@@ -12,46 +12,46 @@ s_and_b32 s2, lds_direct, s1
 //---------------------------------------------------------------------------//
 
 v_ashrrev_i16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_ashrrev_i32 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_lshlrev_b16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_lshlrev_b32 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_lshrrev_b16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_lshrrev_b32 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_pk_ashrrev_i16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_pk_lshlrev_b16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_pk_lshrrev_b16 v0, lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_subbrev_co_u32 v0, vcc, src_lds_direct, v0, vcc
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_subrev_co_u32 v0, vcc, src_lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_subrev_f16 v0, src_lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_subrev_u16 v0, src_lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 v_subrev_u32 v0, src_lds_direct, v0
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct cannot be used with this instruction
 
 //---------------------------------------------------------------------------//
 // lds_direct may not be used with v_writelane_b32 for VI/GFX9
@@ -72,10 +72,10 @@ v_add_f64 v[0:1], lds_direct, v[0:1]
 //---------------------------------------------------------------------------//
 
 v_add_i32 v0, v0, lds_direct
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct may be used as src0 only
 
 v_add_i32 lds_direct, v0, v0
 // NOGFX9: error: invalid operand for instruction
 
 v_fma_f32 v0, v0, v0, lds_direct
-// NOGFX9: error: invalid use of lds_direct
+// NOGFX9: error: lds_direct may be used as src0 only

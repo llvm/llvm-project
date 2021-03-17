@@ -126,6 +126,9 @@ public:
   /// Returns textual patch contents.
   llvm::StringRef text() const { return PatchContents; }
 
+  /// Whether diagnostics generated using this patch are trustable.
+  bool preserveDiagnostics() const { return PatchContents.empty(); }
+
 private:
   PreamblePatch() = default;
   std::string PatchContents;

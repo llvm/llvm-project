@@ -793,7 +793,7 @@ protected:
   template <typename T> std::string AsFortran(const T &x) {
     std::string buf;
     llvm::raw_string_ostream ss{buf};
-    if constexpr (std::is_same_v<T, Expr>) {
+    if constexpr (HasTypedExpr<T>::value) {
       if (asFortran_ && x.typedExpr) {
         asFortran_->expr(ss, *x.typedExpr);
       }

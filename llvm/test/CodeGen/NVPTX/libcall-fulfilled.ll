@@ -1,6 +1,9 @@
 ; RUN: llc < %s -march=nvptx 2>&1 | FileCheck %s
 ; Allow to make libcalls that are defined in the current module
 
+declare i8* @malloc(i64)
+declare void @free(i8*)
+
 ; Underlying libcall declaration
 ; CHECK: .visible .func  (.param .align 16 .b8 func_retval0[16]) __umodti3
 
@@ -28,4 +31,15 @@ bb1:
 ; CHECK: .visible .func  (.param .align 16 .b8 func_retval0[16]) __umodti3(
 define i128 @__umodti3(i128, i128) {
   ret i128 0
+}
+
+define void @malloc_then_free() {
+; CHECK:  call.uni (retval0),
+; CHECK:  malloc,
+; CHECK:  call.uni
+; CHECK:  free,
+  %a = call i8* @malloc(i64 4)
+  store i8 0, i8* %a
+  call void @free(i8* %a)
+  ret void
 }

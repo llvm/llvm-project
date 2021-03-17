@@ -33,7 +33,7 @@ public:
 
     for (auto *B : Blocks)
       for (auto &E : B->edges())
-        if (impl().isGOTEdge(E)) {
+        if (impl().isGOTEdgeToFix(E)) {
           LLVM_DEBUG({
             dbgs() << "  Updating GOT edge ";
             printEdge(dbgs(), *B, E, "<target GOT>");

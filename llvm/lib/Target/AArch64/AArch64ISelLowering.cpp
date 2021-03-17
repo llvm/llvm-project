@@ -14400,6 +14400,63 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static SDValue performGLD1Combine(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+
+  assert(((Opc >= AArch64ISD::GLD1_MERGE_ZERO && // unsigned gather loads
+           Opc <= AArch64ISD::GLD1_IMM_MERGE_ZERO) ||
+          (Opc >= AArch64ISD::GLD1S_MERGE_ZERO && // signed gather loads
+           Opc <= AArch64ISD::GLD1S_IMM_MERGE_ZERO)) &&
+         "Invalid opcode.");
+
+  const bool Scaled = Opc == AArch64ISD::GLD1_SCALED_MERGE_ZERO ||
+                      Opc == AArch64ISD::GLD1S_SCALED_MERGE_ZERO;
+  const bool Signed = Opc == AArch64ISD::GLD1S_MERGE_ZERO ||
+                      Opc == AArch64ISD::GLD1S_SCALED_MERGE_ZERO;
+  const bool Extended = Opc == AArch64ISD::GLD1_SXTW_MERGE_ZERO ||
+                        Opc == AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO ||
+                        Opc == AArch64ISD::GLD1_UXTW_MERGE_ZERO ||
+                        Opc == AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO;
+
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue Pg = N->getOperand(1);
+  SDValue Base = N->getOperand(2);
+  SDValue Offset = N->getOperand(3);
+  SDValue Ty = N->getOperand(4);
+
+  EVT ResVT = N->getValueType(0);
+
+  const auto OffsetOpc = Offset.getOpcode();
+  const bool OffsetIsZExt =
+      OffsetOpc == AArch64ISD::ZERO_EXTEND_INREG_MERGE_PASSTHRU;
+  const bool OffsetIsSExt =
+      OffsetOpc == AArch64ISD::SIGN_EXTEND_INREG_MERGE_PASSTHRU;
+
+  // Fold sign/zero extensions of vector offsets into GLD1 nodes where possible.
+  if (!Extended && (OffsetIsSExt || OffsetIsZExt)) {
+    SDValue ExtPg = Offset.getOperand(0);
+    VTSDNode *ExtFrom = cast<VTSDNode>(Offset.getOperand(2).getNode());
+    EVT ExtFromEVT = ExtFrom->getVT().getVectorElementType();
+
+    // If the predicate for the sign- or zero-extended offset is the
+    // same as the predicate used for this load and the sign-/zero-extension
+    // was from a 32-bits...
+    if (ExtPg == Pg && ExtFromEVT == MVT::i32) {
+      SDValue UnextendedOffset = Offset.getOperand(1);
+
+      unsigned NewOpc = getGatherVecOpcode(Scaled, OffsetIsSExt, true);
+      if (Signed)
+        NewOpc = getSignExtendedGatherOpcode(NewOpc);
+
+      return DAG.getNode(NewOpc, DL, {ResVT, MVT::Other},
+                         {Chain, Pg, Base, UnextendedOffset, Ty});
+    }
+  }
+
+  return SDValue();
+}
+
 /// Target-specific DAG combine function for post-increment LD1 (lane) and
 /// post-increment LD1R.
 static SDValue performPostLD1Combine(SDNode *N,
@@ -15777,6 +15834,21 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performNVCASTCombine(N);
   case AArch64ISD::UZP1:
     return performUzpCombine(N, DAG);
+  case AArch64ISD::GLD1_MERGE_ZERO:
+  case AArch64ISD::GLD1_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_UXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1_SXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1_UXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_SXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1_IMM_MERGE_ZERO:
+  case AArch64ISD::GLD1S_MERGE_ZERO:
+  case AArch64ISD::GLD1S_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1S_UXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1S_SXTW_MERGE_ZERO:
+  case AArch64ISD::GLD1S_UXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1S_SXTW_SCALED_MERGE_ZERO:
+  case AArch64ISD::GLD1S_IMM_MERGE_ZERO:
+    return performGLD1Combine(N, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return performPostLD1Combine(N, DCI, true);
   case ISD::EXTRACT_VECTOR_ELT:
