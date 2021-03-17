@@ -356,24 +356,19 @@ class LLVMConfig(object):
         return True
 
     def add_err_msg_substitutions(self):
-        # Python's strerror may not supply the same message
-        # as C++ std::error_code. One example of such a platform is
-        # Visual Studio. errc_messages may be supplied which contains the error
-        # messages for ENOENT, EISDIR, EINVAL and EACCES as a semi colon
-        # separated string. LLVM testsuites can use get_errc_messages in cmake
-        # to automatically get the messages and pass them into lit.
-        errc_messages = getattr(self.config, 'errc_messages', '')
-        if len(errc_messages) != 0:
-            (errc_enoent, errc_eisdir,
-             errc_einval, errc_eacces) = errc_messages.split(';')
+        host_cxx = getattr(self.config, 'host_cxx', '')
+        # On Windows, python's os.strerror() does not emit the same spelling as
+        # the C++ std::error_code.  As a workaround, hardcode the Windows error
+        # message.
+        if (sys.platform == 'win32' and 'MSYS' not in host_cxx):
             self.config.substitutions.append(
-                ('%errc_ENOENT', '\'' + errc_enoent + '\''))
+                ('%errc_ENOENT', '\'no such file or directory\''))
             self.config.substitutions.append(
-                ('%errc_EISDIR', '\'' + errc_eisdir + '\''))
+                ('%errc_EISDIR', '\'is a directory\''))
             self.config.substitutions.append(
-                ('%errc_EINVAL', '\'' + errc_einval + '\''))
+                ('%errc_EINVAL', '\'invalid argument\''))
             self.config.substitutions.append(
-                ('%errc_EACCES', '\'' + errc_eacces + '\''))
+                ('%errc_EACCES', '\'permission denied\''))
         else:
             self.config.substitutions.append(
                 ('%errc_ENOENT', '\'' + os.strerror(errno.ENOENT) + '\''))
