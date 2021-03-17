@@ -46,9 +46,6 @@ volatile int __kmp_init_gtid = FALSE;
 volatile int __kmp_init_common = FALSE;
 volatile int __kmp_init_middle = FALSE;
 volatile int __kmp_init_parallel = FALSE;
-volatile int __kmp_init_hidden_helper = FALSE;
-volatile int __kmp_init_hidden_helper_threads = FALSE;
-volatile int __kmp_hidden_helper_team_done = FALSE;
 #if KMP_USE_MONITOR
 volatile int __kmp_init_monitor =
     0; /* 1 - launched, 2 - actually started (Windows* OS only) */
