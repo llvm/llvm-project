@@ -428,9 +428,14 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
   }
 
   BandAttr *ChildLoopAttr = getLoopAttr(isl::manage_copy(Id));
+  BandAttr *AncestorLoopAttr;
   if (ChildLoopAttr) {
-    assert(!Annotator.getStagingAttrEnv() &&
-           "conflicting loop attr environments");
+    // Save current LoopAttr environment to restore again when leaving this
+    // subtree. This means there was no loop between the ancestor LoopAttr and
+    // this mark, i.e. the ancestor LoopAttr did not directly mark a loop. This
+    // can happen e.g. if the AST build peeled or unrolled the loop.
+    AncestorLoopAttr = Annotator.getStagingAttrEnv();
+
     Annotator.getStagingAttrEnv() = ChildLoopAttr;
   }
 
@@ -438,8 +443,8 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
 
   if (ChildLoopAttr) {
     assert(Annotator.getStagingAttrEnv() == ChildLoopAttr &&
-           "Nest  must not overwrite loop attr environment");
-    Annotator.getStagingAttrEnv() = nullptr;
+           "Nest must not overwrite loop attr environment");
+    Annotator.getStagingAttrEnv() = AncestorLoopAttr;
   }
 
   isl_id_free(Id);
