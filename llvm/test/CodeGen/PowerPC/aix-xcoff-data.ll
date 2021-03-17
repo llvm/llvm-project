@@ -162,7 +162,7 @@
 
 ; OBJ:      Sections [
 ; OBJ:        Section {
-; OBJ-NEXT:     Index: 1
+; OBJ-NEXT:     Index: [[#OBJ_INDX:]]
 ; OBJ-NEXT:     Name: .text
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
@@ -176,7 +176,7 @@
 ; OBJ-NEXT:   }
 
 ; OBJ:        Section {
-; OBJ-NEXT:     Index: 2
+; OBJ-NEXT:     Index: [[#OBJ_INDX+1]]
 ; OBJ-NEXT:     Name: .data
 ; OBJ-NEXT:     PhysicalAddress: 0x0
 ; OBJ-NEXT:     VirtualAddress: 0x0
@@ -190,7 +190,7 @@
 ; OBJ-NEXT:   }
 
 ; OBJ:        Section {
-; OBJ-NEXT:     Index: 3
+; OBJ-NEXT:     Index: [[#OBJ_INDX+2]]
 ; OBJ-NEXT:     Name: .bss
 ; OBJ-NEXT:     PhysicalAddress: 0x80
 ; OBJ-NEXT:     VirtualAddress: 0x80
