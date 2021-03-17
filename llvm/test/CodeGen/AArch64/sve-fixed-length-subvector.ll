@@ -32,6 +32,61 @@ target triple = "aarch64-unknown-linux-gnu"
 ; Don't use SVE when its registers are no bigger than NEON.
 ; NO_SVE-NOT: ptrue
 
+define void @subvector_v8i16(<8 x i16> *%in, <8 x i16>* %out) #0 {
+; CHECK-LABEL: subvector_v8i16:
+; CHECK: ldr [[DATA:q[0-9]+]], [x0]
+; CHECK: str [[DATA]], [x1]
+; CHECK: ret
+  %a = load <8 x i16>, <8 x i16>* %in
+  br label %bb1
+
+bb1:
+  store <8 x i16> %a, <8 x i16>* %out
+  ret void
+}
+
+define void @subvector_v16i16(<16 x i16> *%in, <16 x i16>* %out) #0 {
+; CHECK-LABEL: subvector_v16i16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; CHECK: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <16 x i16>, <16 x i16>* %in
+  br label %bb1
+
+bb1:
+  store <16 x i16> %a, <16 x i16>* %out
+  ret void
+}
+
+define void @subvector_v32i16(<32 x i16> *%in, <32 x i16>* %out) #0 {
+; CHECK-LABEL: subvector_v32i16:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; VBITS_GE_512: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <32 x i16>, <32 x i16>* %in
+  br label %bb1
+
+bb1:
+  store <32 x i16> %a, <32 x i16>* %out
+  ret void
+}
+
+define void @subvector_v64i16(<64 x i16> *%in, <64 x i16>* %out) #0 {
+; CHECK-LABEL: subvector_v64i16:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; VBITS_GE_1024: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <64 x i16>, <64 x i16>* %in
+  br label %bb1
+
+bb1:
+  store <64 x i16> %a, <64 x i16>* %out
+  ret void
+}
+
 define void @subvector_v8i32(<8 x i32> *%in, <8 x i32>* %out) #0 {
 ; CHECK-LABEL: subvector_v8i32:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
@@ -51,7 +106,7 @@ define void @subvector_v16i32(<16 x i32> *%in, <16 x i32>* %out) #0 {
 ; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
 ; VBITS_GE_512: ld1w { [[DATA:z[0-9]+.s]] }, [[PG]]/z, [x0]
 ; VBITS_GE_512: st1w { [[DATA]] }, [[PG]], [x1]
-; CHECKT: ret
+; CHECK: ret
   %a = load <16 x i32>, <16 x i32>* %in
   br label %bb1
 
@@ -88,6 +143,201 @@ bb1:
   ret void
 }
 
+
+define void @subvector_v8i64(<8 x i64> *%in, <8 x i64>* %out) #0 {
+; CHECK-LABEL: subvector_v8i64:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_512: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <8 x i64>, <8 x i64>* %in
+  br label %bb1
+
+bb1:
+  store <8 x i64> %a, <8 x i64>* %out
+  ret void
+}
+
+define void @subvector_v16i64(<16 x i64> *%in, <16 x i64>* %out) #0 {
+; CHECK-LABEL: subvector_v16i64:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_1024: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <16 x i64>, <16 x i64>* %in
+  br label %bb1
+
+bb1:
+  store <16 x i64> %a, <16 x i64>* %out
+  ret void
+}
+
+define void @subvector_v32i64(<32 x i64> *%in, <32 x i64>* %out) #0 {
+; CHECK-LABEL: subvector_v32i64:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_2048: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <32 x i64>, <32 x i64>* %in
+  br label %bb1
+
+bb1:
+  store <32 x i64> %a, <32 x i64>* %out
+  ret void
+}
+
+define void @subvector_v8f16(<8 x half> *%in, <8 x half>* %out) #0 {
+; CHECK-LABEL: subvector_v8f16:
+; CHECK: ldr [[DATA:q[0-9]+]], [x0]
+; CHECK: str [[DATA]], [x1]
+; CHECK: ret
+  %a = load <8 x half>, <8 x half>* %in
+  br label %bb1
+
+bb1:
+  store <8 x half> %a, <8 x half>* %out
+  ret void
+}
+
+define void @subvector_v16f16(<16 x half> *%in, <16 x half>* %out) #0 {
+; CHECK-LABEL: subvector_v16f16:
+; CHECK: ptrue [[PG:p[0-9]+]].h, vl16
+; CHECK: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; CHECK: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <16 x half>, <16 x half>* %in
+  br label %bb1
+
+bb1:
+  store <16 x half> %a, <16 x half>* %out
+  ret void
+}
+
+define void @subvector_v32f16(<32 x half> *%in, <32 x half>* %out) #0 {
+; CHECK-LABEL: subvector_v32f16:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].h, vl32
+; VBITS_GE_512: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; VBITS_GE_512: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <32 x half>, <32 x half>* %in
+  br label %bb1
+
+bb1:
+  store <32 x half> %a, <32 x half>* %out
+  ret void
+}
+
+define void @subvector_v64f16(<64 x half> *%in, <64 x half>* %out) #0 {
+; CHECK-LABEL: subvector_v64f16:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].h, vl64
+; VBITS_GE_1024: ld1h { [[DATA:z[0-9]+.h]] }, [[PG]]/z, [x0]
+; VBITS_GE_1024: st1h { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <64 x half>, <64 x half>* %in
+  br label %bb1
+
+bb1:
+  store <64 x half> %a, <64 x half>* %out
+  ret void
+}
+
+define void @subvector_v8f32(<8 x float> *%in, <8 x float>* %out) #0 {
+; CHECK-LABEL: subvector_v8f32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
+; CHECK: ld1w { [[DATA:z[0-9]+.s]] }, [[PG]]/z, [x0]
+; CHECK: st1w { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <8 x float>, <8 x float>* %in
+  br label %bb1
+
+bb1:
+  store <8 x float> %a, <8 x float>* %out
+  ret void
+}
+
+define void @subvector_v16f32(<16 x float> *%in, <16 x float>* %out) #0 {
+; CHECK-LABEL: subvector_v16f32:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].s, vl16
+; VBITS_GE_512: ld1w { [[DATA:z[0-9]+.s]] }, [[PG]]/z, [x0]
+; VBITS_GE_512: st1w { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <16 x float>, <16 x float>* %in
+  br label %bb1
+
+bb1:
+  store <16 x float> %a, <16 x float>* %out
+  ret void
+}
+
+define void @subvector_v32f32(<32 x float> *%in, <32 x float>* %out) #0 {
+; CHECK-LABEL: subvector_v32f32:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].s, vl32
+; VBITS_GE_1024: ld1w { [[DATA:z[0-9]+.s]] }, [[PG]]/z, [x0]
+; VBITS_GE_1024: st1w { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <32 x float>, <32 x float>* %in
+  br label %bb1
+
+bb1:
+  store <32 x float> %a, <32 x float>* %out
+  ret void
+}
+
+define void @subvector_v64f32(<64 x float> *%in, <64 x float>* %out) #0 {
+; CHECK-LABEL: subvector_v64f32:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].s, vl64
+; VBITS_GE_2048: ld1w { [[DATA:z[0-9]+.s]] }, [[PG]]/z, [x0]
+; VBITS_GE_2048: st1w { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <64 x float>, <64 x float>* %in
+  br label %bb1
+
+bb1:
+  store <64 x float> %a, <64 x float>* %out
+  ret void
+}
+define void @subvector_v8f64(<8 x double> *%in, <8 x double>* %out) #0 {
+; CHECK-LABEL: subvector_v8f64:
+; VBITS_GE_512: ptrue [[PG:p[0-9]+]].d, vl8
+; VBITS_GE_512: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_512: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <8 x double>, <8 x double>* %in
+  br label %bb1
+
+bb1:
+  store <8 x double> %a, <8 x double>* %out
+  ret void
+}
+
+define void @subvector_v16f64(<16 x double> *%in, <16 x double>* %out) #0 {
+; CHECK-LABEL: subvector_v16f64:
+; VBITS_GE_1024: ptrue [[PG:p[0-9]+]].d, vl16
+; VBITS_GE_1024: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_1024: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <16 x double>, <16 x double>* %in
+  br label %bb1
+
+bb1:
+  store <16 x double> %a, <16 x double>* %out
+  ret void
+}
+
+define void @subvector_v32f64(<32 x double> *%in, <32 x double>* %out) #0 {
+; CHECK-LABEL: subvector_v32f64:
+; VBITS_GE_2048: ptrue [[PG:p[0-9]+]].d, vl32
+; VBITS_GE_2048: ld1d { [[DATA:z[0-9]+.d]] }, [[PG]]/z, [x0]
+; VBITS_GE_2048: st1d { [[DATA]] }, [[PG]], [x1]
+; CHECK: ret
+  %a = load <32 x double>, <32 x double>* %in
+  br label %bb1
+
+bb1:
+  store <32 x double> %a, <32 x double>* %out
+  ret void
+}
+
 define <8 x i1> @no_warn_dropped_scalable(<8 x i32>* %in) #0 {
 ; CHECK-LABEL: no_warn_dropped_scalable:
 ; CHECK: ptrue [[PG:p[0-9]+]].s, vl8
@@ -112,11 +362,11 @@ define void @no_subvector_binop_hang(<8 x i32>* %in, <8 x i32>* %out, i1 %cond) 
 ; CHECK-NEXT:    ptrue [[PG:p[0-9]+]].s, vl8
 ; CHECK-NEXT:    ld1w { [[A:z[0-9]+]].s }, [[PG]]/z, [x0]
 ; CHECK-NEXT:    ld1w { [[B:z[0-9]+]].s }, [[PG]]/z, [x1]
-; CHECK-NEXT:    tbz w2, #0, .LBB5_2
+; CHECK-NEXT:    tbz w2, #0, [[LABEL:\.[A-z0-9_]+]]
 ; CHECK-NEXT:  // %bb.1: // %bb.1
 ; CHECK-NEXT:    orr [[OR:z[0-9]+]].d, [[A]].d, [[B]].d
 ; CHECK-NEXT:    st1w { [[OR]].s }, [[PG]], [x1]
-; CHECK-NEXT:  .LBB5_2: // %bb.2
+; CHECK-NEXT:  [[LABEL]]: // %bb.2
 ; CHECK-NEXT:    ret
   %a = load <8 x i32>, <8 x i32>* %in
   %b = load <8 x i32>, <8 x i32>* %out
