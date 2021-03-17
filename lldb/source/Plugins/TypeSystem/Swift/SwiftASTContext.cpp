@@ -8314,8 +8314,8 @@ bool SwiftASTContext::GetImplicitImports(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
-  if (!swift_ast_context.GetCompileUnitImports(sc, stack_frame_wp, &modules,
-                                               error)) {
+  if (!GetCompileUnitImports(swift_ast_context, sc, stack_frame_wp, modules,
+                             error)) {
     return false;
   }
 
@@ -8386,37 +8386,23 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
   return true;
 }
 
-namespace {
-struct CUSignature : public std::pair<Module *, lldb::user_id_t> {
-  CUSignature(CompileUnit &compile_unit)
-      : std::pair<Module *, lldb::user_id_t>(compile_unit.GetModule().get(),
-                                             compile_unit.GetID()) {}
-};
-} // namespace
-
 bool SwiftASTContext::GetCompileUnitImports(
-    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+    SwiftASTContext &swift_ast_context, SymbolContext &sc,
+    lldb::StackFrameWP &stack_frame_wp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-        *modules,
+        &modules,
     Status &error) {
-  CompileUnit *compile_unit = sc.comp_unit;
-  if (compile_unit)
-    if (m_cu_imports.insert(CUSignature(*compile_unit)).second)
-      // List of imports isn't requested and we already processes this CU?
-      if (!modules)
-        return true;
-
   // Import the Swift standard library and its dependencies.
   SourceModule swift_module;
   swift_module.path.emplace_back("Swift");
   auto *stdlib =
-      LoadOneModule(swift_module, *this, stack_frame_wp, error);
+      LoadOneModule(swift_module, swift_ast_context, stack_frame_wp, error);
   if (!stdlib)
     return false;
 
-  if (modules)
-    modules->emplace_back(swift::ImportedModule(stdlib));
+  modules.emplace_back(swift::ImportedModule(stdlib));
 
+  CompileUnit *compile_unit = sc.comp_unit;
   if (!compile_unit || compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
     return true;
 
@@ -8431,12 +8417,11 @@ bool SwiftASTContext::GetCompileUnitImports(
       continue;
 
     auto *loaded_module =
-        LoadOneModule(module, *this, stack_frame_wp, error);
+        LoadOneModule(module, swift_ast_context, stack_frame_wp, error);
     if (!loaded_module)
       return false;
 
-    if (modules)
-      modules->emplace_back(swift::ImportedModule(loaded_module));
+    modules.emplace_back(swift::ImportedModule(loaded_module));
   }
   return true;
 }
