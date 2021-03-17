@@ -422,7 +422,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++20": 201907 },
     "headers": ["numbers"],
     "depends": "defined(__cpp_concepts) && __cpp_concepts >= 201907L",
-    "internal_depends": "defined(__cpp_concepts) && __cpp_concepts >= 201907L",
+    "internal_depends": "!defined(_LIBCPP_HAS_NO_CONCEPTS)",
   }, {
     "name": "__cpp_lib_math_special_functions",
     "values": { "c++17": 201603 },
