@@ -6488,8 +6488,7 @@ class HorizontalReduction {
       // in this case.
       // Do not perform analysis of remaining operands of ParentStackElem.first
       // instruction, this whole instruction is an extra argument.
-      RecurKind ParentRdxKind = getRdxKind(ParentStackElem.first);
-      ParentStackElem.second = getNumberOfOperands(ParentRdxKind);
+      ParentStackElem.second = getNumberOfOperands(ParentStackElem.first);
     } else {
       // We ran into something like:
       // ParentStackElem.first += ... + ExtraArg + ...
@@ -6590,7 +6589,6 @@ class HorizontalReduction {
     if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
       return RecurKind::FMin;
 
-
     if (auto *Select = dyn_cast<SelectInst>(I)) {
       // These would also match llvm.{u,s}{min,max} intrinsic call
       // if were not guarded by the SelectInst check above.
@@ -6660,64 +6658,54 @@ class HorizontalReduction {
     return RecurKind::None;
   }
 
-  /// Return true if this operation is a cmp+select idiom.
-  static bool isCmpSel(RecurKind Kind) {
-    return RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind);
-  }
-
   /// Get the index of the first operand.
-  static unsigned getFirstOperandIndex(RecurKind Kind) {
-    // We allow calling this before 'Kind' is set, so handle that specially.
-    if (Kind == RecurKind::None)
-      return 0;
-    return isCmpSel(Kind) ? 1 : 0;
+  static unsigned getFirstOperandIndex(Instruction *I) {
+    return isa<SelectInst>(I) ? 1 : 0;
   }
 
   /// Total number of operands in the reduction operation.
-  static unsigned getNumberOfOperands(RecurKind Kind) {
-    return isCmpSel(Kind) ? 3 : 2;
+  static unsigned getNumberOfOperands(Instruction *I) {
+    return isa<SelectInst>(I) ? 3 : 2;
   }
 
   /// Checks if the instruction is in basic block \p BB.
   /// For a min/max reduction check that both compare and select are in \p BB.
-  static bool hasSameParent(RecurKind Kind, Instruction *I, BasicBlock *BB,
-                            bool IsRedOp) {
-    if (IsRedOp && isCmpSel(Kind)) {
-      auto *Cmp = cast<Instruction>(cast<SelectInst>(I)->getCondition());
-      return I->getParent() == BB && Cmp->getParent() == BB;
+  static bool hasSameParent(Instruction *I, BasicBlock *BB, bool IsRedOp) {
+    auto *Sel = dyn_cast<SelectInst>(I);
+    if (IsRedOp && Sel) {
+      auto *Cmp = cast<Instruction>(Sel->getCondition());
+      return Sel->getParent() == BB && Cmp->getParent() == BB;
     }
     return I->getParent() == BB;
   }
 
   /// Expected number of uses for reduction operations/reduced values.
-  static bool hasRequiredNumberOfUses(RecurKind Kind, Instruction *I,
-                                      bool IsReductionOp) {
-    assert(Kind != RecurKind::None && "Reduction type not set");
+  static bool hasRequiredNumberOfUses(bool MatchCmpSel, Instruction *I) {
     // SelectInst must be used twice while the condition op must have single
     // use only.
-    if (isCmpSel(Kind))
-      return I->hasNUses(2) &&
-             (!IsReductionOp ||
-              cast<SelectInst>(I)->getCondition()->hasOneUse());
+    if (MatchCmpSel) {
+      if (auto *Sel = dyn_cast<SelectInst>(I))
+        return Sel->hasNUses(2) && Sel->getCondition()->hasOneUse();
+      return I->hasNUses(2);
+    }
 
     // Arithmetic reduction operation must be used once only.
     return I->hasOneUse();
   }
 
   /// Initializes the list of reduction operations.
-  void initReductionOps(RecurKind Kind) {
-    if (isCmpSel(Kind))
+  void initReductionOps(Instruction *I) {
+    if (isa<SelectInst>(I))
       ReductionOps.assign(2, ReductionOpsType());
     else
       ReductionOps.assign(1, ReductionOpsType());
   }
 
   /// Add all reduction operations for the reduction instruction \p I.
-  void addReductionOps(RecurKind Kind, Instruction *I) {
-    assert(Kind != RecurKind::None && "Expected reduction operation.");
-    if (isCmpSel(Kind)) {
-      ReductionOps[0].emplace_back(cast<SelectInst>(I)->getCondition());
-      ReductionOps[1].emplace_back(I);
+  void addReductionOps(Instruction *I) {
+    if (auto *Sel = dyn_cast<SelectInst>(I)) {
+      ReductionOps[0].emplace_back(Sel->getCondition());
+      ReductionOps[1].emplace_back(Sel);
     } else {
       ReductionOps[0].emplace_back(I);
     }
@@ -6726,12 +6714,12 @@ class HorizontalReduction {
   static Value *getLHS(RecurKind Kind, Instruction *I) {
     if (Kind == RecurKind::None)
       return nullptr;
-    return I->getOperand(getFirstOperandIndex(Kind));
+    return I->getOperand(getFirstOperandIndex(I));
   }
   static Value *getRHS(RecurKind Kind, Instruction *I) {
     if (Kind == RecurKind::None)
       return nullptr;
-    return I->getOperand(getFirstOperandIndex(Kind) + 1);
+    return I->getOperand(getFirstOperandIndex(I) + 1);
   }
 
 public:
@@ -6783,8 +6771,8 @@ public:
     // Post order traverse the reduction tree starting at B. We only handle true
     // trees containing only binary operators.
     SmallVector<std::pair<Instruction *, unsigned>, 32> Stack;
-    Stack.push_back(std::make_pair(B, getFirstOperandIndex(RdxKind)));
-    initReductionOps(RdxKind);
+    Stack.push_back(std::make_pair(B, getFirstOperandIndex(B)));
+    initReductionOps(B);
     while (!Stack.empty()) {
       Instruction *TreeN = Stack.back().first;
       unsigned EdgeToVisit = Stack.back().second++;
@@ -6792,7 +6780,7 @@ public:
       bool IsReducedValue = TreeRdxKind != RdxKind;
 
       // Postorder visit.
-      if (IsReducedValue || EdgeToVisit == getNumberOfOperands(TreeRdxKind)) {
+      if (IsReducedValue || EdgeToVisit == getNumberOfOperands(TreeN)) {
         if (IsReducedValue)
           ReducedVals.push_back(TreeN);
         else {
@@ -6810,7 +6798,7 @@ public:
             markExtraArg(Stack[Stack.size() - 2], TreeN);
             ExtraArgs.erase(TreeN);
           } else
-            addReductionOps(RdxKind, TreeN);
+            addReductionOps(TreeN);
         }
         // Retract.
         Stack.pop_back();
@@ -6836,8 +6824,8 @@ public:
       // ultimate reduction.
       const bool IsRdxInst = EdgeRdxKind == RdxKind;
       if (EdgeInst != Phi && EdgeInst != B &&
-          hasSameParent(RdxKind, EdgeInst, B->getParent(), IsRdxInst) &&
-          hasRequiredNumberOfUses(RdxKind, EdgeInst, IsRdxInst) &&
+          hasSameParent(EdgeInst, B->getParent(), IsRdxInst) &&
+          hasRequiredNumberOfUses(isa<SelectInst>(B), EdgeInst) &&
           (!LeafOpcode || LeafOpcode == EdgeInst->getOpcode() || IsRdxInst)) {
         if (IsRdxInst) {
           // We need to be able to reassociate the reduction operations.
@@ -6850,7 +6838,7 @@ public:
           LeafOpcode = EdgeInst->getOpcode();
         }
         Stack.push_back(
-            std::make_pair(EdgeInst, getFirstOperandIndex(EdgeRdxKind)));
+            std::make_pair(EdgeInst, getFirstOperandIndex(EdgeInst)));
         continue;
       }
       // I is an extra argument for TreeN (its parent operation).
@@ -6997,7 +6985,7 @@ public:
       // Emit a reduction. If the root is a select (min/max idiom), the insert
       // point is the compare condition of that select.
       Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
-      if (isCmpSel(RdxKind))
+      if (isa<SelectInst>(RdxRootInst))
         Builder.SetInsertPoint(getCmpForMinMaxReduction(RdxRootInst));
       else
         Builder.SetInsertPoint(RdxRootInst);
@@ -7039,7 +7027,7 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (isCmpSel(RdxKind)) {
+      if (isa<SelectInst>(ReductionRoot)) {
         if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
           Instruction *ScalarCmp =
               getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
