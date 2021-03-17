@@ -32,9 +32,28 @@ public:
   }
 };
 
+class SliceOpConverter : public OpRewritePattern<tosa::SliceOp> {
+public:
+  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const final {
+    Value input = sliceOp.input();
+    SmallVector<int64_t> strides;
+    strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
+
+    rewriter.replaceOpWithNewOp<SubTensorOp>(
+        sliceOp, sliceOp.getType(), input, ValueRange({}), ValueRange({}),
+        ValueRange({}), sliceOp.start(), sliceOp.size(),
+        rewriter.getI64ArrayAttr(strides));
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToStandardConversionPatterns(
     MLIRContext *context, OwningRewritePatternList *patterns) {
-  patterns->insert<ConstOpConverter>(context);
+  patterns->insert<ConstOpConverter, SliceOpConverter>(context);
 }
