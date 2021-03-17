@@ -53,7 +53,8 @@ public:
                         bool isPrivateExtern, bool isLinkerInternal);
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
-  Symbol *find(StringRef name);
+  Symbol *find(llvm::CachedHashStringRef name);
+  Symbol *find(StringRef name) { return find(llvm::CachedHashStringRef(name)); }
 
 private:
   std::pair<Symbol *, bool> insert(StringRef name);

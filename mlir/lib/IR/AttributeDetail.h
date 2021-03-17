@@ -27,113 +27,6 @@
 namespace mlir {
 namespace detail {
 
-/// An attribute representing a floating point value.
-struct FloatAttributeStorage final
-    : public AttributeStorage,
-      public llvm::TrailingObjects<FloatAttributeStorage, uint64_t> {
-  using KeyTy = std::pair<Type, APFloat>;
-
-  FloatAttributeStorage(const llvm::fltSemantics &semantics, Type type,
-                        size_t numObjects)
-      : AttributeStorage(type), semantics(semantics), numObjects(numObjects) {}
-
-  /// Key equality and hash functions.
-  bool operator==(const KeyTy &key) const {
-    return key.first == getType() && key.second.bitwiseIsEqual(getValue());
-  }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_combine(key.first, llvm::hash_value(key.second));
-  }
-
-  /// Construct a key with a type and double.
-  static KeyTy getKey(Type type, double value) {
-    if (type.isF64())
-      return KeyTy(type, APFloat(value));
-
-    // This handles, e.g., F16 because there is no APFloat constructor for it.
-    bool unused;
-    APFloat val(value);
-    val.convert(type.cast<FloatType>().getFloatSemantics(),
-                APFloat::rmNearestTiesToEven, &unused);
-    return KeyTy(type, val);
-  }
-
-  /// Construct a new storage instance.
-  static FloatAttributeStorage *construct(AttributeStorageAllocator &allocator,
-                                          const KeyTy &key) {
-    const auto &apint = key.second.bitcastToAPInt();
-
-    // Here one word's bitwidth equals to that of uint64_t.
-    auto elements = ArrayRef<uint64_t>(apint.getRawData(), apint.getNumWords());
-
-    auto byteSize =
-        FloatAttributeStorage::totalSizeToAlloc<uint64_t>(elements.size());
-    auto rawMem = allocator.allocate(byteSize, alignof(FloatAttributeStorage));
-    auto result = ::new (rawMem) FloatAttributeStorage(
-        key.second.getSemantics(), key.first, elements.size());
-    std::uninitialized_copy(elements.begin(), elements.end(),
-                            result->getTrailingObjects<uint64_t>());
-    return result;
-  }
-
-  /// Returns an APFloat representing the stored value.
-  APFloat getValue() const {
-    auto val = APInt(APFloat::getSizeInBits(semantics),
-                     {getTrailingObjects<uint64_t>(), numObjects});
-    return APFloat(semantics, val);
-  }
-
-  const llvm::fltSemantics &semantics;
-  size_t numObjects;
-};
-
-/// An attribute representing an integral value.
-struct IntegerAttributeStorage final
-    : public AttributeStorage,
-      public llvm::TrailingObjects<IntegerAttributeStorage, uint64_t> {
-  using KeyTy = std::pair<Type, APInt>;
-
-  IntegerAttributeStorage(Type type, size_t numObjects)
-      : AttributeStorage(type), numObjects(numObjects) {
-    assert((type.isIndex() || type.isa<IntegerType>()) && "invalid type");
-  }
-
-  /// Key equality and hash functions.
-  bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getType(), getValue());
-  }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_combine(key.first, llvm::hash_value(key.second));
-  }
-
-  /// Construct a new storage instance.
-  static IntegerAttributeStorage *
-  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
-    Type type;
-    APInt value;
-    std::tie(type, value) = key;
-
-    auto elements = ArrayRef<uint64_t>(value.getRawData(), value.getNumWords());
-    auto size =
-        IntegerAttributeStorage::totalSizeToAlloc<uint64_t>(elements.size());
-    auto rawMem = allocator.allocate(size, alignof(IntegerAttributeStorage));
-    auto result = ::new (rawMem) IntegerAttributeStorage(type, elements.size());
-    std::uninitialized_copy(elements.begin(), elements.end(),
-                            result->getTrailingObjects<uint64_t>());
-    return result;
-  }
-
-  /// Returns an APInt representing the stored value.
-  APInt getValue() const {
-    if (getType().isIndex())
-      return APInt(64, {getTrailingObjects<uint64_t>(), numObjects});
-    return APInt(getType().getIntOrFloatBitWidth(),
-                 {getTrailingObjects<uint64_t>(), numObjects});
-  }
-
-  size_t numObjects;
-};
-
 //===----------------------------------------------------------------------===//
 // Elements Attributes
 //===----------------------------------------------------------------------===//
@@ -158,10 +51,9 @@ public:
 };
 
 /// An attribute representing a reference to a dense vector or tensor object.
-struct DenseIntOrFPElementsAttributeStorage
-    : public DenseElementsAttributeStorage {
-  DenseIntOrFPElementsAttributeStorage(ShapedType ty, ArrayRef<char> data,
-                                       bool isSplat = false)
+struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
+  DenseIntOrFPElementsAttrStorage(ShapedType ty, ArrayRef<char> data,
+                                  bool isSplat = false)
       : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
 
   struct KeyTy {
@@ -287,7 +179,7 @@ struct DenseIntOrFPElementsAttributeStorage
   }
 
   /// Construct a new storage instance.
-  static DenseIntOrFPElementsAttributeStorage *
+  static DenseIntOrFPElementsAttrStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
     // If the data buffer is non-empty, we copy it into the allocator with a
     // 64-bit alignment.
@@ -303,8 +195,8 @@ struct DenseIntOrFPElementsAttributeStorage
       copy = ArrayRef<char>(rawData, data.size());
     }
 
-    return new (allocator.allocate<DenseIntOrFPElementsAttributeStorage>())
-        DenseIntOrFPElementsAttributeStorage(key.type, copy, key.isSplat);
+    return new (allocator.allocate<DenseIntOrFPElementsAttrStorage>())
+        DenseIntOrFPElementsAttrStorage(key.type, copy, key.isSplat);
   }
 
   ArrayRef<char> data;
@@ -312,10 +204,9 @@ struct DenseIntOrFPElementsAttributeStorage
 
 /// An attribute representing a reference to a dense vector or tensor object
 /// containing strings.
-struct DenseStringElementsAttributeStorage
-    : public DenseElementsAttributeStorage {
-  DenseStringElementsAttributeStorage(ShapedType ty, ArrayRef<StringRef> data,
-                                      bool isSplat = false)
+struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
+  DenseStringElementsAttrStorage(ShapedType ty, ArrayRef<StringRef> data,
+                                 bool isSplat = false)
       : DenseElementsAttributeStorage(ty, isSplat), data(data) {}
 
   struct KeyTy {
@@ -385,14 +276,14 @@ struct DenseStringElementsAttributeStorage
   }
 
   /// Construct a new storage instance.
-  static DenseStringElementsAttributeStorage *
+  static DenseStringElementsAttrStorage *
   construct(AttributeStorageAllocator &allocator, KeyTy key) {
     // If the data buffer is non-empty, we copy it into the allocator with a
     // 64-bit alignment.
     ArrayRef<StringRef> copy, data = key.data;
     if (data.empty()) {
-      return new (allocator.allocate<DenseStringElementsAttributeStorage>())
-          DenseStringElementsAttributeStorage(key.type, copy, key.isSplat);
+      return new (allocator.allocate<DenseStringElementsAttrStorage>())
+          DenseStringElementsAttrStorage(key.type, copy, key.isSplat);
     }
 
     int numEntries = key.isSplat ? 1 : data.size();
@@ -421,72 +312,13 @@ struct DenseStringElementsAttributeStorage
     copy =
         ArrayRef<StringRef>(reinterpret_cast<StringRef *>(rawData), numEntries);
 
-    return new (allocator.allocate<DenseStringElementsAttributeStorage>())
-        DenseStringElementsAttributeStorage(key.type, copy, key.isSplat);
+    return new (allocator.allocate<DenseStringElementsAttrStorage>())
+        DenseStringElementsAttrStorage(key.type, copy, key.isSplat);
   }
 
   ArrayRef<StringRef> data;
 };
 
-/// An attribute representing a reference to a tensor constant with opaque
-/// content.
-struct OpaqueElementsAttributeStorage : public AttributeStorage {
-  using KeyTy = std::tuple<Type, Dialect *, StringRef>;
-
-  OpaqueElementsAttributeStorage(Type type, Dialect *dialect, StringRef bytes)
-      : AttributeStorage(type), dialect(dialect), bytes(bytes) {}
-
-  /// Key equality and hash functions.
-  bool operator==(const KeyTy &key) const {
-    return key == std::make_tuple(getType(), dialect, bytes);
-  }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
-                              std::get<2>(key));
-  }
-
-  /// Construct a new storage instance.
-  static OpaqueElementsAttributeStorage *
-  construct(AttributeStorageAllocator &allocator, KeyTy key) {
-    // TODO: Provide a way to avoid copying content of large opaque
-    // tensors This will likely require a new reference attribute kind.
-    return new (allocator.allocate<OpaqueElementsAttributeStorage>())
-        OpaqueElementsAttributeStorage(std::get<0>(key), std::get<1>(key),
-                                       allocator.copyInto(std::get<2>(key)));
-  }
-
-  Dialect *dialect;
-  StringRef bytes;
-};
-
-/// An attribute representing a reference to a sparse vector or tensor object.
-struct SparseElementsAttributeStorage : public AttributeStorage {
-  using KeyTy = std::tuple<Type, DenseIntElementsAttr, DenseElementsAttr>;
-
-  SparseElementsAttributeStorage(Type type, DenseIntElementsAttr indices,
-                                 DenseElementsAttr values)
-      : AttributeStorage(type), indices(indices), values(values) {}
-
-  /// Key equality and hash functions.
-  bool operator==(const KeyTy &key) const {
-    return key == std::make_tuple(getType(), indices, values);
-  }
-  static unsigned hashKey(const KeyTy &key) {
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
-                              std::get<2>(key));
-  }
-
-  /// Construct a new storage instance.
-  static SparseElementsAttributeStorage *
-  construct(AttributeStorageAllocator &allocator, KeyTy key) {
-    return new (allocator.allocate<SparseElementsAttributeStorage>())
-        SparseElementsAttributeStorage(std::get<0>(key), std::get<1>(key),
-                                       std::get<2>(key));
-  }
-
-  DenseIntElementsAttr indices;
-  DenseElementsAttr values;
-};
 } // namespace detail
 } // namespace mlir
 

@@ -73,15 +73,15 @@ module m
   end function
   subroutine s11
     real, target, save :: arr(3,4) ! CHECK: arr, SAVE, TARGET size=48 offset=0: ObjectEntity type: REAL(4) shape: 1_8:3_8,1_8:4_8
-    type(t1) :: d1 = t1(1,reshape([1,2,3,4],[2,2]),(6.,7.),.false.,'ab',arr,ifunc2,rfunc,extrfunc) ! CHECK: d1 size=192 offset=48: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(c=[CHARACTER(KIND=1,LEN=1)::"a","a"],ifptr=ifunc2,j=1_4,rp=rfunc,t=.false._4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),xp=arr,xrp=extrfunc,z=(6._4,7._4))
+    type(t1) :: d1 = t1(1,reshape([1,2,3,4],[2,2]),(6.,7.),.false.,'ab',arr,ifunc2,rfunc,extrfunc) ! CHECK: d1 size=184 offset=48: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(j=1_4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),z=(6._4,7._4),t=.false._4,c=[CHARACTER(KIND=1,LEN=1)::"a","a"],xp=arr,ifptr=ifunc2,rp=rfunc,xrp=extrfunc)
     type(t1(4,len=1)) :: d2 = t1(4)(xrp=extrfunc,rp=rfunc,ifptr=ifunc2,xp=arr,c='a&
-      &b',t=.false.,z=(6.,7.),x=reshape([1,2,3,4],[2,2]),j=1) ! CHECK: d2 size=192 offset=240: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(c=[CHARACTER(KIND=1,LEN=1)::"a","a"],ifptr=ifunc2,j=1_4,rp=rfunc,t=.false._4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),xp=arr,xrp=extrfunc,z=(6._4,7._4))
-    type(t1(2+2)) :: d3 ! CHECK: d3 (InDataStmt) size=192 offset=432: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(c=[CHARACTER(KIND=1,LEN=1)::"a","a"],ifptr=ifunc2,j=1_4,rp=rfunc,t=.false._4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),xp=arr,xrp=extrfunc,z=(6._4,7._4))
+      &b',t=.false.,z=(6.,7.),x=reshape([1,2,3,4],[2,2]),j=1) ! CHECK: d2 size=184 offset=232: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(j=1_4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),z=(6._4,7._4),t=.false._4,c=[CHARACTER(KIND=1,LEN=1)::"a","a"],xp=arr,ifptr=ifunc2,rp=rfunc,xrp=extrfunc)
+    type(t1(2+2)) :: d3 ! CHECK: d3 (InDataStmt) size=184 offset=416: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(j=1_4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),z=(6._4,7._4),t=.false._4,c=[CHARACTER(KIND=1,LEN=1)::"a","a"],xp=arr,ifptr=ifunc2,rp=rfunc,xrp=extrfunc)
     data d3/t1(1,reshape([1,2,3,4],[2,2]),(6.,7.),.false.,'ab',arr,ifunc2,rfunc,extrfunc)/
-    type(t1) :: d4 ! CHECK: d4 (InDataStmt) size=192 offset=624: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(c=[CHARACTER(KIND=1,LEN=1)::"a","a"],ifptr=ifunc2,j=1_4,rp=rfunc,t=.false._4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),xp=arr,xrp=extrfunc,z=(6._4,7._4))
+    type(t1) :: d4 ! CHECK: d4 (InDataStmt) size=184 offset=600: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(j=1_4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),z=(6._4,7._4),t=.false._4,c=[CHARACTER(KIND=1,LEN=1)::"a","a"],xp=arr,ifptr=ifunc2,rp=rfunc,xrp=extrfunc)
     data d4/t1(4)(xrp=extrfunc,rp=rfunc,ifptr=ifunc2,xp=arr,c='ab',t=.false.,z=(6&
       &.,7.),x=reshape([1,2,3,4],[2,2]),j=1)/
-    type(t1) :: d5 ! CHECK: d5 (InDataStmt) size=192 offset=816: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(c=[CHARACTER(KIND=1,LEN=1)::"a","b"],ifptr=ifunc2,j=1_4,rp=rfunc,t=.false._4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),xp=arr,xrp=extrfunc,z=(6._4,7._4))
+    type(t1) :: d5 ! CHECK: d5 (InDataStmt) size=184 offset=784: ObjectEntity type: TYPE(t1(kind=4_1,len=1_2)) init:t1(kind=4_1,len=1_2)(j=1_4,x=reshape([REAL(4)::1._4,2._4,3._4,4._4],shape=[2,2]),z=(6._4,7._4),t=.false._4,c=[CHARACTER(KIND=1,LEN=1)::"a","b"],xp=arr,ifptr=ifunc2,rp=rfunc,xrp=extrfunc)
     data d5%j/1/,d5%x/1,2,3,4/,d5%z%re/6./,d5%z%im/7./,d5%t/.false./,d5%c(1:1)/'a'/,d5%c(2:&
       &2)/'b'/,d5%xp/arr/,d5%ifptr/ifunc2/,d5%rp/rfunc/,d5%xrp/extrfunc/
   end subroutine

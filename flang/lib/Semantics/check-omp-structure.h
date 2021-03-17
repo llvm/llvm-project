@@ -153,6 +153,13 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
+  // Get the OpenMP Clause Kind for the corresponding Parser class
+  template <typename A>
+  llvm::omp::Clause GetClauseKindForParserClass(const A &) {
+#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+  }
+
 private:
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
@@ -197,6 +204,7 @@ private:
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckMultipleAppearanceAcrossContext(
       const parser::OmpObjectList &ompObjectList);
+  const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

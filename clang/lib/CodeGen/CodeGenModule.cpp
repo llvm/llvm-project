@@ -6265,9 +6265,8 @@ CodeGenModule::createOpenCLIntToSamplerConversion(const Expr *E,
   llvm::Constant *C = ConstantEmitter(CGF).emitAbstract(E, E->getType());
   auto *SamplerT = getOpenCLRuntime().getSamplerType(E->getType().getTypePtr());
   auto *FTy = llvm::FunctionType::get(SamplerT, {C->getType()}, false);
-  auto *Call = CGF.Builder.CreateCall(
+  auto *Call = CGF.EmitRuntimeCall(
       CreateRuntimeFunction(FTy, "__translate_sampler_initializer"), {C});
-  Call->setCallingConv(Call->getCalledFunction()->getCallingConv());
   return Call;
 }
 

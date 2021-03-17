@@ -83,8 +83,8 @@ dfsan_label i_j_label = 0;
   for (int i = 0; i < size; ++i) {                                \
     assert(origin == dfsan_get_origin((long)(((char *)ptr)[i]))); \
   }
-#define ASSERT_ORIGINS(ptr, size, origin)
 #else
+#define ASSERT_ORIGINS(ptr, size, origin)
 #endif
 
 #ifdef ORIGIN_TRACKING
@@ -142,27 +142,26 @@ dfsan_label i_j_label = 0;
 #define ASSERT_SAVED_ORIGINS(val)
 #endif
 
-#ifdef ORIGIN_TRACKING
-#define ASSERT_SAVED_N_ORIGINS(val, n) \
-  for (int i = 0; i < n; ++i)          \
-    ASSERT_ORIGIN(val[i], val##_o[i]);
-#else
-#define ASSERT_SAVED_N_ORIGINS(val, n)
-#endif
-
-#if !defined(ORIGIN_TRACKING)
 void test_stat() {
   int i = 1;
   dfsan_set_label(i_label, &i, sizeof(i));
 
   struct stat s;
   s.st_dev = i;
-  assert(0 == stat("/", &s));
+  DEFINE_AND_SAVE_ORIGINS(s)
+  int ret = stat("/", &s);
+  assert(0 == ret);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_ZERO_LABEL(s.st_dev);
+  ASSERT_SAVED_ORIGINS(s)
 
   s.st_dev = i;
-  assert(-1 == stat("/nonexistent", &s));
+  SAVE_ORIGINS(s)
+  ret = stat("/nonexistent", &s);
+  assert(-1 == ret);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_LABEL(s.st_dev, i_label);
+  ASSERT_SAVED_ORIGINS(s)
 }
 
 void test_fstat() {
@@ -172,9 +171,12 @@ void test_fstat() {
   struct stat s;
   int fd = open("/dev/zero", O_RDONLY);
   s.st_dev = i;
+  DEFINE_AND_SAVE_ORIGINS(s)
   int rv = fstat(fd, &s);
   assert(0 == rv);
+  ASSERT_ZERO_LABEL(rv);
   ASSERT_ZERO_LABEL(s.st_dev);
+  ASSERT_SAVED_ORIGINS(s)
 }
 
 void test_memcmp() {
@@ -188,7 +190,12 @@ void test_memcmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, i_j_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
+
+  rv = memcmp(str1, str2, sizeof(str1) - 2);
+  assert(rv == 0);
+  ASSERT_ZERO_LABEL(rv);
 }
 
 void test_bcmp() {
@@ -202,6 +209,7 @@ void test_bcmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, i_j_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 
   rv = bcmp(str1, str2, sizeof(str1) - 2);
@@ -209,6 +217,7 @@ void test_bcmp() {
   ASSERT_ZERO_LABEL(rv);
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_memcpy() {
   char str1[] = "str1";
   char str2[sizeof(str1)];
@@ -242,6 +251,7 @@ void test_memset() {
     assert(buf[i] == 'a');
   }
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_strcmp() {
   char str1[] = "str1", str2[] = "str2";
@@ -254,9 +264,21 @@ void test_strcmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, i_j_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
+
+  rv = strcmp(str1, str1);
+  assert(rv == 0);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+  ASSERT_ZERO_ORIGIN(rv);
+#else
+  ASSERT_LABEL(rv, i_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_strcat() {
   char src[] = "world";
   char dst[] = "hello \0    ";
@@ -326,6 +348,7 @@ void test_strncpy() {
   ASSERT_ZERO_LABEL(strd[1]);
   ASSERT_ZERO_LABEL(strd[2]);
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_strncmp() {
   char str1[] = "str1", str2[] = "str2";
@@ -338,11 +361,25 @@ void test_strncmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
+
+  rv = strncmp(str1, str2, 0);
+  assert(rv == 0);
+  ASSERT_ZERO_LABEL(rv);
 
   rv = strncmp(str1, str2, 3);
   assert(rv == 0);
   ASSERT_ZERO_LABEL(rv);
+
+  rv = strncmp(str1, str1, 4);
+  assert(rv == 0);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, i_label);
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
+#endif
 }
 
 void test_strcasecmp() {
@@ -357,6 +394,7 @@ void test_strcasecmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 
   rv = strcasecmp(str1, str3);
@@ -365,6 +403,7 @@ void test_strcasecmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 
   char s1[] = "AbZ";
@@ -378,6 +417,7 @@ void test_strcasecmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, s1[2]);
 #endif
 }
 
@@ -392,6 +432,7 @@ void test_strncasecmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, str1[3]);
 #endif
 
   rv = strncasecmp(str1, str2, 3);
@@ -421,6 +462,7 @@ void test_strncasecmp() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, dfsan_union(i_label, j_label));
+  ASSERT_EQ_ORIGIN(rv, s1[2]);
 #endif
 }
 
@@ -428,38 +470,60 @@ void test_strchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
 
-  char *crv = strchr(str1, 'r');
-  assert(crv == &str1[2]);
-  ASSERT_ZERO_LABEL(crv);
+  char *p1 = str1;
+  char c = 'r';
+  dfsan_set_label(k_label, &c, sizeof(c));
 
-  crv = strchr(str1, '1');
-  assert(crv == &str1[3]);
+  char *crv = strchr(p1, c);
+  assert(crv == &str1[2]);
 #ifdef STRICT_DATA_DEPENDENCIES
   ASSERT_ZERO_LABEL(crv);
 #else
-  ASSERT_LABEL(crv, i_label);
+  ASSERT_LABEL(crv, k_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, c);
 #endif
 
-  crv = strchr(str1, 'x');
+  dfsan_set_label(j_label, &p1, sizeof(p1));
+  crv = strchr(p1, 'r');
+  assert(crv == &str1[2]);
+  ASSERT_LABEL(crv, j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, p1);
+
+  crv = strchr(p1, '1');
+  assert(crv == &str1[3]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(crv, j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, p1);
+#else
+  ASSERT_LABEL(crv, i_j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, str1[3]);
+#endif
+
+  crv = strchr(p1, 'x');
   assert(!crv);
 #ifdef STRICT_DATA_DEPENDENCIES
-  ASSERT_ZERO_LABEL(crv);
+  ASSERT_LABEL(crv, j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, p1);
 #else
-  ASSERT_LABEL(crv, i_label);
+  ASSERT_LABEL(crv, i_j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, str1[3]);
 #endif
 
   // `man strchr` says:
   // The terminating null byte is considered part of the string, so that if c
   // is specified as '\0', these functions return a pointer to the terminator.
-  crv = strchr(str1, '\0');
+  crv = strchr(p1, '\0');
   assert(crv == &str1[4]);
 #ifdef STRICT_DATA_DEPENDENCIES
-  ASSERT_ZERO_LABEL(crv);
+  ASSERT_LABEL(crv, j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, p1);
 #else
-  ASSERT_LABEL(crv, i_label);
+  ASSERT_LABEL(crv, i_j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&crv, str1[3]);
 #endif
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_calloc() {
   // With any luck this sequence of calls will cause calloc to return the same
   // pointer both times.  This is probably the best we can do to test this
@@ -1126,19 +1190,48 @@ void test_strstr() {
   ASSERT_LABEL(rv, i_j_label);
 #endif
 }
+#endif // !defined(ORIGIN_TRACKING)
 
 void test_strpbrk() {
   char s[] = "abcdefg";
   char accept[] = "123fd";
+
+  char *p_s = s;
+  char *p_accept = accept;
+
+  dfsan_set_label(n_label, &p_accept, sizeof(p_accept));
+
+  char *rv = strpbrk(p_s, p_accept);
+  assert(rv == &s[3]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_ZERO_LABEL(rv);
+#else
+  ASSERT_LABEL(rv, n_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, p_accept);
+#endif
+
+  dfsan_set_label(m_label, &p_s, sizeof(p_s));
+
+  rv = strpbrk(p_s, p_accept);
+  assert(rv == &s[3]);
+#ifdef STRICT_DATA_DEPENDENCIES
+  ASSERT_LABEL(rv, m_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, p_s);
+#else
+  ASSERT_LABEL(rv, dfsan_union(m_label, n_label));
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, p_s);
+#endif
+
   dfsan_set_label(i_label, &s[5], 1);
   dfsan_set_label(j_label, &accept[1], 1);
 
-  char *rv = strpbrk(s, accept);
+  rv = strpbrk(s, accept);
   assert(rv == &s[3]);
 #ifdef STRICT_DATA_DEPENDENCIES
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, accept[1]);
 #endif
 
   char *ps = s;
@@ -1150,6 +1243,7 @@ void test_strpbrk() {
   ASSERT_LABEL(rv, j_label);
 #else
   ASSERT_LABEL(rv, i_j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, s[5]);
 #endif
 
   rv = strpbrk(ps, "123");
@@ -1158,9 +1252,11 @@ void test_strpbrk() {
   ASSERT_ZERO_LABEL(rv);
 #else
   ASSERT_LABEL(rv, i_j_label);
+  ASSERT_INIT_ORIGIN_EQ_ORIGIN(&rv, s[5]);
 #endif
 }
 
+#if !defined(ORIGIN_TRACKING)
 void test_memchr() {
   char str1[] = "str1";
   dfsan_set_label(i_label, &str1[3], 1);
@@ -1465,7 +1561,9 @@ int main(void) {
 
 #if !defined(ORIGIN_TRACKING)
   test__dl_get_tls_static_info();
+#endif // !defined(ORIGIN_TRACKING)
   test_bcmp();
+#if !defined(ORIGIN_TRACKING)
   test_calloc();
   test_clock_gettime();
   test_ctime_r();
@@ -1474,7 +1572,10 @@ int main(void) {
   test_dlopen();
   test_epoll_wait();
   test_fgets();
+#endif // !defined(ORIGIN_TRACKING)
+  test_fork();
   test_fstat();
+#if !defined(ORIGIN_TRACKING)
   test_get_current_dir_name();
   test_getcwd();
   test_gethostname();
@@ -1488,7 +1589,9 @@ int main(void) {
   test_inet_pton();
   test_localtime_r();
   test_memchr();
+#endif // !defined(ORIGIN_TRACKING)
   test_memcmp();
+#if !defined(ORIGIN_TRACKING)
   test_memcpy();
   test_memmove();
   test_memset();
@@ -1513,20 +1616,24 @@ int main(void) {
   test_snprintf();
   test_socketpair();
   test_sprintf();
+#endif // !defined(ORIGIN_TRACKING)
   test_stat();
   test_strcasecmp();
   test_strchr();
   test_strcmp();
+#if !defined(ORIGIN_TRACKING)
   test_strcat();
   test_strcpy();
   test_strdup();
 #endif // !defined(ORIGIN_TRACKING)
   test_strlen();
-#if !defined(ORIGIN_TRACKING)
   test_strncasecmp();
   test_strncmp();
+#if !defined(ORIGIN_TRACKING)
   test_strncpy();
+#endif // !defined(ORIGIN_TRACKING)
   test_strpbrk();
+#if !defined(ORIGIN_TRACKING)
   test_strrchr();
   test_strstr();
   test_strtod();
@@ -1537,5 +1644,4 @@ int main(void) {
   test_time();
 #endif // !defined(ORIGIN_TRACKING)
   test_write();
-  test_fork();
 }

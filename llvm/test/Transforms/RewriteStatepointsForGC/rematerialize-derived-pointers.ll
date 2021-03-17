@@ -375,13 +375,12 @@ define void @contains_basephi(i1 %cond) gc "statepoint-example" {
 ; CHECK:       there:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[BASEPHI_BASE:%.*]] = phi i32 addrspace(1)* [ [[BASE1]], [[HERE]] ], [ [[BASE2]], [[THERE]] ], !is_base_value !0
 ; CHECK-NEXT:    [[BASEPHI:%.*]] = phi i32 addrspace(1)* [ [[BASE1]], [[HERE]] ], [ [[BASE2]], [[THERE]] ]
 ; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI]], i32 15
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i32 addrspace(1)* [[BASEPHI_BASE]]) ]
-; CHECK-NEXT:    [[BASEPHI_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
-; CHECK-NEXT:    [[BASEPHI_BASE_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[BASEPHI_BASE_RELOCATED]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_BASE_RELOCATED_CASTED]], i32 15
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i32 addrspace(1)* [[BASEPHI]]) ]
+; CHECK-NEXT:    [[BASEPHI_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[BASEPHI_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[BASEPHI_RELOCATED]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_RELOCATED_CASTED]], i32 15
 ; CHECK-NEXT:    call void @use_obj32(i32 addrspace(1)* [[PTR_GEP_REMAT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -419,17 +418,16 @@ define void @test_intersecting_chains_with_phi(i1 %cond) gc "statepoint-example"
 ; CHECK:       there:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[BASEPHI_BASE:%.*]] = phi i32 addrspace(1)* [ [[BASE1]], [[HERE]] ], [ [[BASE2]], [[THERE]] ], !is_base_value !0
 ; CHECK-NEXT:    [[BASEPHI:%.*]] = phi i32 addrspace(1)* [ [[BASE1]], [[HERE]] ], [ [[BASE2]], [[THERE]] ]
 ; CHECK-NEXT:    [[PTR_GEP:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI]], i32 15
 ; CHECK-NEXT:    [[PTR_CAST:%.*]] = bitcast i32 addrspace(1)* [[PTR_GEP]] to i64 addrspace(1)*
 ; CHECK-NEXT:    [[PTR_CAST2:%.*]] = bitcast i32 addrspace(1)* [[PTR_GEP]] to i16 addrspace(1)*
-; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i32 addrspace(1)* [[BASEPHI_BASE]]) ]
-; CHECK-NEXT:    [[BASEPHI_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
-; CHECK-NEXT:    [[BASEPHI_BASE_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[BASEPHI_BASE_RELOCATED]] to i32 addrspace(1)*
-; CHECK-NEXT:    [[PTR_GEP_REMAT1:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_BASE_RELOCATED_CASTED]], i32 15
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, void ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 2882400000, i32 0, void ()* @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(), "gc-live"(i32 addrspace(1)* [[BASEPHI]]) ]
+; CHECK-NEXT:    [[BASEPHI_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[BASEPHI_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[BASEPHI_RELOCATED]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[PTR_GEP_REMAT1:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_RELOCATED_CASTED]], i32 15
 ; CHECK-NEXT:    [[PTR_CAST_REMAT:%.*]] = bitcast i32 addrspace(1)* [[PTR_GEP_REMAT1]] to i64 addrspace(1)*
-; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_BASE_RELOCATED_CASTED]], i32 15
+; CHECK-NEXT:    [[PTR_GEP_REMAT:%.*]] = getelementptr i32, i32 addrspace(1)* [[BASEPHI_RELOCATED_CASTED]], i32 15
 ; CHECK-NEXT:    [[PTR_CAST2_REMAT:%.*]] = bitcast i32 addrspace(1)* [[PTR_GEP_REMAT]] to i16 addrspace(1)*
 ; CHECK-NEXT:    call void @use_obj64(i64 addrspace(1)* [[PTR_CAST_REMAT]])
 ; CHECK-NEXT:    call void @use_obj16(i16 addrspace(1)* [[PTR_CAST2_REMAT]])

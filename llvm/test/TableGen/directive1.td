@@ -256,3 +256,23 @@ def TDL_DirA : Directive<"dira"> {
 // GEN-NEXT:  }
 // GEN-EMPTY:
 // GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_CHECK_ENTER
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_CHECK_ENTER
+// GEN-EMPTY:
+// GEN-NEXT:  void Enter(const parser::TdlClause::Clausea &);
+// GEN-NEXT:  void Enter(const parser::TdlClause::Clauseb &);
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_CHECK_ENTER
+// GEN-EMPTY:
+// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// GEN-EMPTY:
+// GEN-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clausea>)
+// GEN-NEXT:    return llvm::tdl::Clause::TDLC_clausea;
+// GEN-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clauseb>)
+// GEN-NEXT:    return llvm::tdl::Clause::TDLC_clauseb;
+// GEN-NEXT:  llvm_unreachable("Invalid Tdl Parser clause");
+// GEN-EMPTY:
+// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// GEN-EMPTY:

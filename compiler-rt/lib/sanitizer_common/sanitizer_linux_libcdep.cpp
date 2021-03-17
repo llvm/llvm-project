@@ -574,20 +574,12 @@ struct DlIteratePhdrData {
   bool first;
 };
 
-static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
-  DlIteratePhdrData *data = (DlIteratePhdrData*)arg;
-  InternalScopedString module_name(kMaxPathLength);
-  if (data->first) {
-    data->first = false;
-    // First module is the binary itself.
-    ReadBinaryNameCached(module_name.data(), module_name.size());
-  } else if (info->dlpi_name) {
-    module_name.append("%s", info->dlpi_name);
-  }
+static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
+                             InternalMmapVectorNoCtor<LoadedModule> *modules) {
   if (module_name[0] == '\0')
     return 0;
   LoadedModule cur_module;
-  cur_module.set(module_name.data(), info->dlpi_addr);
+  cur_module.set(module_name, info->dlpi_addr);
   for (int i = 0; i < (int)info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
     if (phdr->p_type == PT_LOAD) {
@@ -599,7 +591,26 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
                                  writable);
     }
   }
-  data->modules->push_back(cur_module);
+  modules->push_back(cur_module);
+  return 0;
+}
+
+static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
+  DlIteratePhdrData *data = (DlIteratePhdrData *)arg;
+  if (data->first) {
+    InternalMmapVector<char> module_name(kMaxPathLength);
+    data->first = false;
+    // First module is the binary itself.
+    ReadBinaryNameCached(module_name.data(), module_name.size());
+    return AddModuleSegments(module_name.data(), info, data->modules);
+  }
+
+  if (info->dlpi_name) {
+    InternalScopedString module_name(kMaxPathLength);
+    module_name.append("%s", info->dlpi_name);
+    return AddModuleSegments(module_name.data(), info, data->modules);
+  }
+
   return 0;
 }
 

@@ -20,10 +20,10 @@ func @entry() {
   %c19 = constant 19: index
 
   // Set up memory.
-  %a = alloc(%c19, %c19) : memref<?x?xi32>
+  %a = memref.alloc(%c19, %c19) : memref<?x?xi32>
   scf.for %i = %c0 to %c19 step %c1 {
     scf.for %j = %c0 to %c19 step %c1 {
-      store %i1, %a[%i, %j] : memref<?x?xi32>
+      memref.store %i1, %a[%i, %j] : memref<?x?xi32>
     }
   }
 
@@ -90,7 +90,7 @@ func @entry() {
   }
 
   // Release resources.
-  dealloc %a : memref<?x?xi32>
+  memref.dealloc %a : memref<?x?xi32>
 
   return
 }

@@ -129,28 +129,39 @@ LogicalResult PatternApplicator::matchAndRewrite(
 
   // Process the patterns for that match the specific operation type, and any
   // operation type in an interleaved fashion.
-  auto opIt = opPatterns.begin(), opE = opPatterns.end();
-  auto anyIt = anyOpPatterns.begin(), anyE = anyOpPatterns.end();
-  auto pdlIt = pdlMatches.begin(), pdlE = pdlMatches.end();
-  while (true) {
+  unsigned opIt = 0, opE = opPatterns.size();
+  unsigned anyIt = 0, anyE = anyOpPatterns.size();
+  unsigned pdlIt = 0, pdlE = pdlMatches.size();
+  LogicalResult result = failure();
+  do {
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
+    unsigned *bestPatternIt = &opIt;
     const PDLByteCode::MatchResult *pdlMatch = nullptr;
+
     /// Operation specific patterns.
-    if (opIt != opE)
-      bestPattern = *(opIt++);
+    if (opIt < opE)
+      bestPattern = opPatterns[opIt];
     /// Operation agnostic patterns.
-    if (anyIt != anyE &&
-        (!bestPattern || bestPattern->getBenefit() < (*anyIt)->getBenefit()))
-      bestPattern = *(anyIt++);
+    if (anyIt < anyE &&
+        (!bestPattern ||
+         bestPattern->getBenefit() < anyOpPatterns[anyIt]->getBenefit())) {
+      bestPatternIt = &anyIt;
+      bestPattern = anyOpPatterns[anyIt];
+    }
     /// PDL patterns.
-    if (pdlIt != pdlE &&
-        (!bestPattern || bestPattern->getBenefit() < pdlIt->benefit)) {
-      pdlMatch = pdlIt;
-      bestPattern = (pdlIt++)->pattern;
+    if (pdlIt < pdlE && (!bestPattern || bestPattern->getBenefit() <
+                                             pdlMatches[pdlIt].benefit)) {
+      bestPatternIt = &pdlIt;
+      pdlMatch = &pdlMatches[pdlIt];
+      bestPattern = pdlMatch->pattern;
     }
     if (!bestPattern)
       break;
+
+    // Update the pattern iterator on failure so that this pattern isn't
+    // attempted again.
+    ++(*bestPatternIt);
 
     // Check that the pattern can be applied.
     if (canApply && !canApply(*bestPattern))
@@ -160,19 +171,25 @@ LogicalResult PatternApplicator::matchAndRewrite(
     // benefit, so if we match we can immediately rewrite. For PDL patterns, the
     // match has already been performed, we just need to rewrite.
     rewriter.setInsertionPoint(op);
-    LogicalResult result = success();
     if (pdlMatch) {
       bytecode->rewrite(rewriter, *pdlMatch, *mutableByteCodeState);
+      result = success(!onSuccess || succeeded(onSuccess(*bestPattern)));
+
     } else {
-      result = static_cast<const RewritePattern *>(bestPattern)
-                   ->matchAndRewrite(op, rewriter);
+      const auto *pattern = static_cast<const RewritePattern *>(bestPattern);
+      result = pattern->matchAndRewrite(op, rewriter);
+      if (succeeded(result) && onSuccess && failed(onSuccess(*pattern)))
+        result = failure();
     }
-    if (succeeded(result) && (!onSuccess || succeeded(onSuccess(*bestPattern))))
-      return success();
+    if (succeeded(result))
+      break;
 
     // Perform any necessary cleanups.
     if (onFailure)
       onFailure(*bestPattern);
-  }
-  return failure();
+  } while (true);
+
+  if (mutableByteCodeState)
+    mutableByteCodeState->cleanupAfterMatchAndRewrite();
+  return result;
 }

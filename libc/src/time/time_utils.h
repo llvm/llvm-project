@@ -59,6 +59,10 @@ static inline time_t OutOfRange() {
   return static_cast<time_t>(-1);
 }
 
+// Update the "tm" structure's year, month, etc. members from seconds.
+// "total_seconds" is the number of seconds since January 1st, 1970.
+extern int64_t UpdateFromSeconds(int64_t total_seconds, struct tm *tm);
+
 } // namespace time_utils
 } // namespace __llvm_libc
 
