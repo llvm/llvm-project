@@ -1103,7 +1103,8 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 }
 
 unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
-                                    int Index, VectorType *SubTp) {
+                                    ArrayRef<int> Mask, int Index,
+                                    VectorType *SubTp) {
   if (ST->hasVOP3PInsts()) {
     if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&
         DL.getTypeSizeInBits(VT->getElementType()) == 16) {
@@ -1121,7 +1122,7 @@ unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, VT, Mask, Index, SubTp);
 }
 
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,

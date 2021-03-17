@@ -984,8 +984,8 @@ int PPCTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
   return vectorCostAdjustment(Cost, Opcode, Ty, nullptr);
 }
 
-int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-                               Type *SubTp) {
+int PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
+                               ArrayRef<int> Mask, int Index, Type *SubTp) {
   // Legalize the type.
   std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
 
