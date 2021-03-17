@@ -575,6 +575,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
         PM.addPass(AMDGPUPrintfRuntimeBindingPass());
 
         if (InternalizeSymbols) {
+          // Global variables may have dead uses which need to be removed.
+          // Otherwise these useless global variables will not get internalized.
+          PM.addPass(GlobalDCEPass());
           PM.addPass(InternalizePass(mustPreserveGV));
         }
         PM.addPass(AMDGPUPropagateAttributesLatePass(*this));
