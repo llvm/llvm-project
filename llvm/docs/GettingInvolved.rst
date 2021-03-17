@@ -135,6 +135,52 @@ lists.
 
   .. __: http://lists.llvm.org/mailman/listinfo/llvm-announce
 
+Online Sync-Ups
+---------------
+
+A number of regular calls are organized on specific topics. It should be
+expected that the range of topics will change over time. At the time of
+writing, the following sync-ups are organized:
+
+.. list-table:: LLVM regular sync-up calls
+   :widths: 25 25 25 25
+   :header-rows: 1
+
+   * - Topic
+     - Frequency
+     - Calendar link
+     - Minutes/docs link
+   * - RISC-V
+     - Every 2 weeks on Thursday
+     - `ics <https://calendar.google.com/calendar/ical/lowrisc.org_0n5pkesfjcnp0bh5hps1p0bd80%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/b/1?cid=bG93cmlzYy5vcmdfMG41cGtlc2ZqY25wMGJoNWhwczFwMGJkODBAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     - 
+   * - Scalable Vectors and Arm SVE
+     - Monthly, every 3rd Tuesday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
+   * - ML Guided Compiler Optimizations
+     - Monthly
+     -
+     - `Minutes/docs <https://docs.google.com/document/d/1JecbplF09l3swTjze-UVeLh4L48svJxGVy4mz_e9Rhs/edit?usp=gmail#heading=h.ts9cmcjbir1j>`__
+   * - `LLVM security group <https://llvm.org/docs/Security.html>`__
+     - Monthly, every 3rd Tuesday
+     - `ics <https://calendar.google.com/calendar/ical/eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=eoh3m9k1l6vqbd1fkp94fv5q74%40group.calendar.google.com>`__
+     - `Minutes/docs <https://docs.google.com/document/d/1GLCE8cl7goCaLSiM9j1eIq5IqeXt6_YTY2UEcC4jmsg/edit?usp=sharing>`__
+   * - `CIRCT <https://github.com/llvm/circt>`__
+     - Weekly, on Wednesday
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1fOSRdyZR2w75D87yU2Ma9h2-_lEPL4NxvhJGJd-s5pk/edit#heading=h.mulvhjtr8dk9>`__
+   * - `MLIR <https://mlir.llvm.org>`__ design meetings
+     - Weekly, on Thursdays
+     - 
+     - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
+   * - flang and openmp
+     - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
+     - 
+     - 
+
 IRC
 ---
 
