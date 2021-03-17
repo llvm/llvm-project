@@ -7489,6 +7489,77 @@ public:
   }
 };
 
+/// This represents the 'use' clause in '#pragma omp ...' directives.
+///
+/// \code
+/// #pragma omp interop use(obj)
+/// \endcode
+class OMPUseClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Location of interop variable.
+  SourceLocation VarLoc;
+
+  /// The interop variable.
+  Stmt *InteropVar = nullptr;
+
+  /// Set the interop variable.
+  void setInteropVar(Expr *E) { InteropVar = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Sets the location of the interop variable.
+  void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
+
+public:
+  /// Build 'use' clause with and interop variable expression \a InteropVar.
+  ///
+  /// \param InteropVar The interop variable.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param VarLoc Location of the interop variable.
+  /// \param EndLoc Ending location of the clause.
+  OMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
+               SourceLocation LParenLoc, SourceLocation VarLoc,
+               SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_use, StartLoc, EndLoc), LParenLoc(LParenLoc),
+        VarLoc(VarLoc), InteropVar(InteropVar) {}
+
+  /// Build an empty clause.
+  OMPUseClause()
+      : OMPClause(llvm::omp::OMPC_use, SourceLocation(), SourceLocation()) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the location of the interop variable.
+  SourceLocation getVarLoc() const { return VarLoc; }
+
+  /// Returns the interop variable.
+  Expr *getInteropVar() const { return cast<Expr>(InteropVar); }
+
+  child_range children() { return child_range(&InteropVar, &InteropVar + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&InteropVar, &InteropVar + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_use;
+  }
+};
+
 /// This represents 'destroy' clause in the '#pragma omp depobj'
 /// directive.
 ///
