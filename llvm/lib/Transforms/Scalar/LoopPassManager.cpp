@@ -291,15 +291,8 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     else
       PI.runAfterPass<Loop>(*Pass, *L, PassPA);
 
-#ifndef NDEBUG
-    // LoopAnalysisResults should always be valid.
-    // Note that we don't LAR.SE.verify() because that can change observed SE
-    // queries. See PR44815.
-    LAR.DT.verify();
-    LAR.LI.verify(LAR.DT);
-    if (LAR.MSSA)
-      LAR.MSSA->verifyMemorySSA();
-#endif
+    // FIXME: We should verify the set of analyses relevant to Loop passes
+    // are preserved.
 
     // If the loop hasn't been deleted, we need to handle invalidation here.
     if (!Updater.skipCurrentLoop())
