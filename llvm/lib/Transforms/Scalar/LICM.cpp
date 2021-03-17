@@ -1510,16 +1510,15 @@ static Instruction *cloneInstructionInExitBlock(
   // LCSSA. That will eliminate creating PHI nodes just to nuke them when
   // sinking bottom-up.
   for (Use &Op : New->operands())
-    if (Instruction *OInst = dyn_cast<Instruction>(Op))
-      if (Loop *OLoop = LI->getLoopFor(OInst->getParent()))
-        if (!OLoop->contains(&PN) && !Op->getType()->isTokenTy()) {
-          PHINode *OpPN =
-              PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
-                              OInst->getName() + ".lcssa", &ExitBlock.front());
-          for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
-            OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
-          Op = OpPN;
-        }
+    if (LI->wouldBeOutOfLoopUseRequiringLCSSA(Op.get(), PN.getParent())) {
+      auto *OInst = cast<Instruction>(Op.get());
+      PHINode *OpPN =
+        PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
+                        OInst->getName() + ".lcssa", &ExitBlock.front());
+      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
+        OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
+      Op = OpPN;
+    }
   return New;
 }
 
@@ -1860,18 +1859,17 @@ class LoopPromoter : public LoadAndStorePromoter {
   // (if legal) if doing so would add an out-of-loop use to an instruction
   // defined in-loop.
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      if (Loop *L = LI.getLoopFor(I->getParent()))
-        if (!L->contains(BB) && !I->getType()->isTokenTy()) {
-          // We need to create an LCSSA PHI node for the incoming value and
-          // store that.
-          PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
-                                        I->getName() + ".lcssa", &BB->front());
-          for (BasicBlock *Pred : PredCache.get(BB))
-            PN->addIncoming(I, Pred);
-          return PN;
-        }
-    return V;
+    if (!LI.wouldBeOutOfLoopUseRequiringLCSSA(V, BB))
+      return V;
+
+    Instruction *I = cast<Instruction>(V);
+    // We need to create an LCSSA PHI node for the incoming value and
+    // store that.
+    PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
+                                  I->getName() + ".lcssa", &BB->front());
+    for (BasicBlock *Pred : PredCache.get(BB))
+      PN->addIncoming(I, Pred);
+    return PN;
   }
 
 public:
