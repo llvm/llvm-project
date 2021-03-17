@@ -48,7 +48,8 @@ CAMLprim value cstr_to_string(const unsigned char *Str, unsigned Len) {
   CAMLparam0();
   CAMLlocal1(String);
   if (Str) {
-    String = caml_alloc_initialized_string(Len, Str);
+    String = caml_alloc_string(Len);
+    memcpy(String_val(Str), Str, Len);
   } else {
     String = caml_alloc_string(0);
   }

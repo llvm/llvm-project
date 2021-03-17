@@ -2684,11 +2684,13 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // don't know how to split those exit blocks.
   // FIXME: We should teach SplitBlock to handle this and remove this
   // restriction.
-  for (auto *ExitBB : ExitBlocks)
+  for (auto *ExitBB : ExitBlocks) {
     if (isa<CleanupPadInst>(ExitBB->getFirstNonPHI())) {
-      dbgs() << "Cannot unswitch because of cleanuppad in exit block\n";
+      LLVM_DEBUG(
+          dbgs() << "Cannot unswitch because of cleanuppad in exit block\n");
       return false;
     }
+  }
 
   LLVM_DEBUG(
       dbgs() << "Considering " << UnswitchCandidates.size()

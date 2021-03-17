@@ -54,11 +54,10 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->privateExtern &= isPrivateExtern;
         return defined;
       }
-      if (!defined->isWeakDef()) {
+      if (!defined->isWeakDef())
         error("duplicate symbol: " + name + "\n>>> defined in " +
               toString(defined->getFile()) + "\n>>> defined in " +
               toString(file));
-      }
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
     }
