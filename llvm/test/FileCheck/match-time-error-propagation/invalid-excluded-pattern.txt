@@ -1,0 +1,75 @@
+; Check handling of match-time diagnostics for invalid patterns (e.g.,
+; substitution overflow) in the case of excluded patterns (e.g., CHECK-NOT).
+;
+; At one time, FileCheck's exit status was zero for this case.  Moreover, it
+; printed the error diagnostic only if -vv was specified and input dumps were
+; disabled.  Test every combination as the logic is hard to get right.
+;
+; FIXME: We shouldn't have: (1) the blank note at the end of the trace, and
+; (2) the redundant error in the middle of the dump.  These will be fixed in a
+; subsequent patch.
+
+RUN: echo > %t.chk \
+RUN:      'CHECK-NOT: [[#0x8000000000000000+0x8000000000000000]] [[UNDEFVAR]]'
+RUN: echo > %t.in '10000000000000000'
+
+     ERR-NOT:{{.}}
+      ERR-VV:{{.*}}: remark: implicit EOF: expected string found in input
+ ERR-VV-NEXT:CHECK-NOT: {{.*}}
+ ERR-VV-NEXT:{{ *}}^
+ ERR-VV-NEXT:{{.*}}: note: found here
+ERR-VV-EMPTY:
+ ERR-VV-NEXT:^
+     ERR-NOT:{{.}}
+         ERR:{{.*}}: error: unable to substitute variable or numeric expression: overflow error
+    ERR-NEXT:CHECK-NOT: {{.*}}
+    ERR-NEXT:{{ *}}^
+    ERR-NEXT:{{.*}}: note: 
+    ERR-NEXT:10000000000000000
+    ERR-NEXT:^
+    ERR-NEXT:<stdin>:1:1: note: uses undefined variable(s): "UNDEFVAR"
+    ERR-NEXT:10000000000000000
+    ERR-NEXT:^
+     ERR-NOT:{{error|note|remark}}:
+
+        DUMP:<<<<<<
+   DUMP-NEXT:         1: 10000000000000000 
+   DUMP-NEXT:not:1'0     X~~~~~~~~~~~~~~~~~ error: match failed for invalid pattern
+   DUMP-NEXT:not:1'1                        unable to substitute variable or numeric expression: overflow error
+   DUMP-NEXT:not:1'2     X                  error: match failed for invalid pattern
+   DUMP-NEXT:not:1'3                        uses undefined variable(s): "UNDEFVAR"
+DUMP-VV-NEXT:         2: 
+DUMP-VV-NEXT:eof:1       ^
+   DUMP-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check -dump-input=never cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,ERR-VV
+
+;--------------------------------------------------
+; Check -dump-input=fail cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP,DUMP-VV

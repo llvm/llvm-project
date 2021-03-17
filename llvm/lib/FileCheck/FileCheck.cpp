@@ -476,6 +476,7 @@ char OverflowError::ID = 0;
 char UndefVarError::ID = 0;
 char ErrorDiagnostic::ID = 0;
 char NotFoundError::ID = 0;
+char ErrorReported::ID = 0;
 
 Expected<NumericVariable *> Pattern::parseNumericVariableDefinition(
     StringRef &Expr, FileCheckPatternContext *Context,
@@ -1212,22 +1213,19 @@ void Pattern::AddBackrefToRegEx(unsigned BackrefNum) {
   RegExStr += Backref;
 }
 
-Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
-                                const SourceMgr &SM) const {
+Pattern::MatchResult Pattern::match(StringRef Buffer,
+                                    const SourceMgr &SM) const {
   // If this is the EOF pattern, match it immediately.
-  if (CheckTy == Check::CheckEOF) {
-    MatchLen = 0;
-    return Buffer.size();
-  }
+  if (CheckTy == Check::CheckEOF)
+    return MatchResult(Buffer.size(), 0, Error::success());
 
   // If this is a fixed string pattern, just match it now.
   if (!FixedStr.empty()) {
-    MatchLen = FixedStr.size();
     size_t Pos =
         IgnoreCase ? Buffer.find_lower(FixedStr) : Buffer.find(FixedStr);
     if (Pos == StringRef::npos)
       return make_error<NotFoundError>();
-    return Pos;
+    return MatchResult(Pos, /*MatchLen=*/FixedStr.size(), Error::success());
   }
 
   // Regex match.
@@ -1250,7 +1248,7 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
       Expected<std::string> Value = Substitution->getResult();
       if (!Value) {
         // Convert to an ErrorDiagnostic to get location information. This is
-        // done here rather than PrintNoMatch since now we know which
+        // done here rather than printMatch/printNoMatch since now we know which
         // substitution block caused the overflow.
         Error Err =
             handleErrors(Value.takeError(), [&](const OverflowError &E) {
@@ -1289,6 +1287,14 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
         MatchInfo[VariableDef.second];
   }
 
+  // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
+  // the required preceding newline, which is consumed by the pattern in the
+  // case of CHECK-EMPTY but not CHECK-NEXT.
+  size_t MatchStartSkip = CheckTy == Check::CheckEmpty;
+  Match TheMatch;
+  TheMatch.Pos = FullMatch.data() - Buffer.data() + MatchStartSkip;
+  TheMatch.Len = FullMatch.size() - MatchStartSkip;
+
   // If this defines any numeric variables, remember their values.
   for (const auto &NumericVariableDef : NumericVariableDefs) {
     const NumericVariableMatch &NumericVariableMatch =
@@ -1303,16 +1309,11 @@ Expected<size_t> Pattern::match(StringRef Buffer, size_t &MatchLen,
     Expected<ExpressionValue> Value =
         Format.valueFromStringRepr(MatchedValue, SM);
     if (!Value)
-      return Value.takeError();
+      return MatchResult(TheMatch, Value.takeError());
     DefinedNumericVariable->setValue(*Value, MatchedValue);
   }
 
-  // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after
-  // the required preceding newline, which is consumed by the pattern in the
-  // case of CHECK-EMPTY but not CHECK-NEXT.
-  size_t MatchStartSkip = CheckTy == Check::CheckEmpty;
-  MatchLen = FullMatch.size() - MatchStartSkip;
-  return FullMatch.data() - Buffer.data() + MatchStartSkip;
+  return MatchResult(TheMatch, Error::success());
 }
 
 unsigned Pattern::computeMatchDistance(StringRef Buffer) const {
@@ -1349,7 +1350,7 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
         bool UndefSeen = false;
         handleAllErrors(
             MatchedValue.takeError(), [](const NotFoundError &E) {},
-            // Handled in PrintNoMatch().
+            // Handled in printMatch and printNoMatch().
             [](const ErrorDiagnostic &E) {},
             // Handled in match().
             [](const OverflowError &E) {},
@@ -1404,11 +1405,12 @@ void Pattern::printVariableDefs(const SourceMgr &SM,
   for (const auto &VariableDef : NumericVariableDefs) {
     VarCapture VC;
     VC.Name = VariableDef.getKey();
-    StringRef StrValue = VariableDef.getValue()
-                             .DefinedNumericVariable->getStringValue()
-                             .getValue();
-    SMLoc Start = SMLoc::getFromPointer(StrValue.data());
-    SMLoc End = SMLoc::getFromPointer(StrValue.data() + StrValue.size());
+    Optional<StringRef> StrValue =
+        VariableDef.getValue().DefinedNumericVariable->getStringValue();
+    if (!StrValue)
+      continue;
+    SMLoc Start = SMLoc::getFromPointer(StrValue->data());
+    SMLoc End = SMLoc::getFromPointer(StrValue->data() + StrValue->size());
     VC.Range = SMRange(Start, End);
     VarCaptures.push_back(VC);
   }
@@ -2036,123 +2038,179 @@ bool FileCheck::readCheckFile(
   return false;
 }
 
-static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
-                       StringRef Prefix, SMLoc Loc, const Pattern &Pat,
-                       int MatchedCount, StringRef Buffer, size_t MatchPos,
-                       size_t MatchLen, const FileCheckRequest &Req,
-                       std::vector<FileCheckDiag> *Diags) {
+/// Returns either (1) \c ErrorSuccess if there was no error or (2)
+/// \c ErrorReported if an error was reported, such as an unexpected match.
+static Error printMatch(bool ExpectedMatch, const SourceMgr &SM,
+                        StringRef Prefix, SMLoc Loc, const Pattern &Pat,
+                        int MatchedCount, StringRef Buffer,
+                        Pattern::MatchResult MatchResult,
+                        const FileCheckRequest &Req,
+                        std::vector<FileCheckDiag> *Diags) {
+  // Suppress some verbosity if there's no error.
+  bool HasError = !ExpectedMatch || MatchResult.TheError;
   bool PrintDiag = true;
-  if (ExpectedMatch) {
+  if (!HasError) {
     if (!Req.Verbose)
-      return;
+      return ErrorReported::reportedOrSuccess(HasError);
     if (!Req.VerboseVerbose && Pat.getCheckTy() == Check::CheckEOF)
-      return;
+      return ErrorReported::reportedOrSuccess(HasError);
     // Due to their verbosity, we don't print verbose diagnostics here if we're
-    // gathering them for a different rendering, but we always print other
-    // diagnostics.
+    // gathering them for Diags to be rendered elsewhere, but we always print
+    // other diagnostics.
     PrintDiag = !Diags;
   }
+
+  // Add "found" diagnostic, substitutions, and variable definitions to Diags.
   FileCheckDiag::MatchType MatchTy = ExpectedMatch
                                          ? FileCheckDiag::MatchFoundAndExpected
                                          : FileCheckDiag::MatchFoundButExcluded;
   SMRange MatchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
-                                          Buffer, MatchPos, MatchLen, Diags);
+                                          Buffer, MatchResult.TheMatch->Pos,
+                                          MatchResult.TheMatch->Len, Diags);
   if (Diags) {
     Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, Diags);
     Pat.printVariableDefs(SM, MatchTy, Diags);
   }
-  if (!PrintDiag)
-    return;
+  if (!PrintDiag) {
+    assert(!HasError && "expected to report more diagnostics for error");
+    return ErrorReported::reportedOrSuccess(HasError);
+  }
 
+  // Print the match.
   std::string Message = formatv("{0}: {1} string found in input",
                                 Pat.getCheckTy().getDescription(Prefix),
                                 (ExpectedMatch ? "expected" : "excluded"))
                             .str();
   if (Pat.getCount() > 1)
     Message += formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
-
   SM.PrintMessage(
       Loc, ExpectedMatch ? SourceMgr::DK_Remark : SourceMgr::DK_Error, Message);
   SM.PrintMessage(MatchRange.Start, SourceMgr::DK_Note, "found here",
                   {MatchRange});
+
+  // Print additional information, which can be useful even if there are errors.
   Pat.printSubstitutions(SM, Buffer, MatchRange, MatchTy, nullptr);
   Pat.printVariableDefs(SM, MatchTy, nullptr);
+
+  // Print errors and add them to Diags.  We report these errors after the match
+  // itself because we found them after the match.  If we had found them before
+  // the match, we'd be in printNoMatch.
+  handleAllErrors(std::move(MatchResult.TheError),
+                  [&](const ErrorDiagnostic &E) {
+                    E.log(errs());
+                    if (Diags) {
+                      Diags->emplace_back(SM, Pat.getCheckTy(), Loc,
+                                          FileCheckDiag::MatchFoundErrorNote,
+                                          E.getRange(), E.getMessage().str());
+                    }
+                  });
+  return ErrorReported::reportedOrSuccess(HasError);
 }
 
-static void PrintMatch(bool ExpectedMatch, const SourceMgr &SM,
-                       const FileCheckString &CheckStr, int MatchedCount,
-                       StringRef Buffer, size_t MatchPos, size_t MatchLen,
-                       FileCheckRequest &Req,
-                       std::vector<FileCheckDiag> *Diags) {
-  PrintMatch(ExpectedMatch, SM, CheckStr.Prefix, CheckStr.Loc, CheckStr.Pat,
-             MatchedCount, Buffer, MatchPos, MatchLen, Req, Diags);
-}
-
-static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
-                         StringRef Prefix, SMLoc Loc, const Pattern &Pat,
-                         int MatchedCount, StringRef Buffer,
-                         bool VerboseVerbose, std::vector<FileCheckDiag> *Diags,
-                         Error MatchErrors) {
-  assert(MatchErrors && "Called on successful match");
-  bool PrintDiag = true;
-  if (!ExpectedMatch) {
-    if (!VerboseVerbose) {
-      consumeError(std::move(MatchErrors));
-      return;
-    }
-    // Due to their verbosity, we don't print verbose diagnostics here if we're
-    // gathering them for a different rendering, but we always print other
-    // diagnostics.
-    PrintDiag = !Diags;
-  }
-
+/// Returns either (1) \c ErrorSuccess if there was no error, or (2)
+/// \c ErrorReported if an error was reported, such as an expected match not
+/// found.
+static Error printNoMatch(bool ExpectedMatch, const SourceMgr &SM,
+                          StringRef Prefix, SMLoc Loc, const Pattern &Pat,
+                          int MatchedCount, StringRef Buffer, Error MatchError,
+                          bool VerboseVerbose,
+                          std::vector<FileCheckDiag> *Diags) {
+  // Print any pattern errors, and record them to be added to Diags later.
+  bool HasError = ExpectedMatch;
+  bool HasPatternError = false;
   FileCheckDiag::MatchType MatchTy = ExpectedMatch
                                          ? FileCheckDiag::MatchNoneButExpected
                                          : FileCheckDiag::MatchNoneAndExcluded;
-  SMRange SearchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
-                                           Buffer, 0, Buffer.size(), Diags);
-  if (Diags)
-    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
-  if (!PrintDiag) {
-    consumeError(std::move(MatchErrors));
-    return;
+  SmallVector<std::string, 4> ErrorMsgs;
+  handleAllErrors(
+      std::move(MatchError),
+      [&](const ErrorDiagnostic &E) {
+        HasError = HasPatternError = true;
+        MatchTy = FileCheckDiag::MatchNoneForInvalidPattern;
+        E.log(errs());
+        if (Diags)
+          ErrorMsgs.push_back(E.getMessage().str());
+      },
+      // UndefVarError is reported in printSubstitutions below.
+      // FIXME: It probably should be handled as a pattern error and actually
+      // change the exit status to 1, even if !ExpectedMatch.  To do so, we
+      // could stop calling printSubstitutions and actually report the error
+      // here as we do ErrorDiagnostic above.
+      [](const UndefVarError &E) {},
+      // NotFoundError is why printNoMatch was invoked.
+      [](const NotFoundError &E) {});
+
+  // Suppress some verbosity if there's no error.
+  bool PrintDiag = true;
+  if (!HasError) {
+    if (!VerboseVerbose)
+      return ErrorReported::reportedOrSuccess(HasError);
+    // Due to their verbosity, we don't print verbose diagnostics here if we're
+    // gathering them for Diags to be rendered elsewhere, but we always print
+    // other diagnostics.
+    PrintDiag = !Diags;
   }
 
-  MatchErrors = handleErrors(std::move(MatchErrors),
-                             [](const ErrorDiagnostic &E) { E.log(errs()); });
+  // Add "not found" diagnostic, substitutions, and pattern errors to Diags.
+  //
+  // We handle Diags a little differently than the errors we print directly:
+  // we add the "not found" diagnostic to Diags even if there are pattern
+  // errors.  The reason is that we need to attach pattern errors as notes
+  // somewhere in the input, and the input search range from the "not found"
+  // diagnostic is all we have to anchor them.
+  SMRange SearchRange = ProcessMatchResult(MatchTy, SM, Loc, Pat.getCheckTy(),
+                                           Buffer, 0, Buffer.size(), Diags);
+  if (Diags) {
+    SMRange NoteRange = SMRange(SearchRange.Start, SearchRange.Start);
+    for (StringRef ErrorMsg : ErrorMsgs)
+      Diags->emplace_back(SM, Pat.getCheckTy(), Loc, MatchTy, NoteRange,
+                          ErrorMsg);
+    Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, Diags);
+  }
+  if (!PrintDiag) {
+    assert(!HasError && "expected to report more diagnostics for error");
+    return ErrorReported::reportedOrSuccess(HasError);
+  }
 
-  // No problem matching the string per se.
-  if (!MatchErrors)
-    return;
-  consumeError(std::move(MatchErrors));
+  // Print "not found" diagnostic, except that's implied if we already printed a
+  // pattern error.
+  if (!HasPatternError) {
+    std::string Message = formatv("{0}: {1} string not found in input",
+                                  Pat.getCheckTy().getDescription(Prefix),
+                                  (ExpectedMatch ? "expected" : "excluded"))
+                              .str();
+    if (Pat.getCount() > 1)
+      Message +=
+          formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
+    SM.PrintMessage(Loc,
+                    ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark,
+                    Message);
+    SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note,
+                    "scanning from here");
+  }
 
-  // Print "not found" diagnostic.
-  std::string Message = formatv("{0}: {1} string not found in input",
-                                Pat.getCheckTy().getDescription(Prefix),
-                                (ExpectedMatch ? "expected" : "excluded"))
-                            .str();
-  if (Pat.getCount() > 1)
-    Message += formatv(" ({0} out of {1})", MatchedCount, Pat.getCount()).str();
-  SM.PrintMessage(
-      Loc, ExpectedMatch ? SourceMgr::DK_Error : SourceMgr::DK_Remark, Message);
-
-  // Print the "scanning from here" line.
-  SM.PrintMessage(SearchRange.Start, SourceMgr::DK_Note, "scanning from here");
-
-  // Allow the pattern to print additional information if desired.
+  // Print additional information, which can be useful even after a pattern
+  // error.
   Pat.printSubstitutions(SM, Buffer, SearchRange, MatchTy, nullptr);
-
   if (ExpectedMatch)
     Pat.printFuzzyMatch(SM, Buffer, Diags);
+  return ErrorReported::reportedOrSuccess(HasError);
 }
 
-static void PrintNoMatch(bool ExpectedMatch, const SourceMgr &SM,
-                         const FileCheckString &CheckStr, int MatchedCount,
-                         StringRef Buffer, bool VerboseVerbose,
-                         std::vector<FileCheckDiag> *Diags, Error MatchErrors) {
-  PrintNoMatch(ExpectedMatch, SM, CheckStr.Prefix, CheckStr.Loc, CheckStr.Pat,
-               MatchedCount, Buffer, VerboseVerbose, Diags,
-               std::move(MatchErrors));
+/// Returns either (1) \c ErrorSuccess if there was no error, or (2)
+/// \c ErrorReported if an error was reported.
+static Error reportMatchResult(bool ExpectedMatch, const SourceMgr &SM,
+                               StringRef Prefix, SMLoc Loc, const Pattern &Pat,
+                               int MatchedCount, StringRef Buffer,
+                               Pattern::MatchResult MatchResult,
+                               const FileCheckRequest &Req,
+                               std::vector<FileCheckDiag> *Diags) {
+  if (MatchResult.TheMatch)
+    return printMatch(ExpectedMatch, SM, Prefix, Loc, Pat, MatchedCount, Buffer,
+                      std::move(MatchResult), Req, Diags);
+  return printNoMatch(ExpectedMatch, SM, Prefix, Loc, Pat, MatchedCount, Buffer,
+                      std::move(MatchResult.TheError), Req.VerboseVerbose,
+                      Diags);
 }
 
 /// Counts the number of newlines in the specified range.
@@ -2204,24 +2262,23 @@ size_t FileCheckString::Check(const SourceMgr &SM, StringRef Buffer,
   assert(Pat.getCount() != 0 && "pattern count can not be zero");
   for (int i = 1; i <= Pat.getCount(); i++) {
     StringRef MatchBuffer = Buffer.substr(LastMatchEnd);
-    size_t CurrentMatchLen;
     // get a match at current start point
-    Expected<size_t> MatchResult = Pat.match(MatchBuffer, CurrentMatchLen, SM);
+    Pattern::MatchResult MatchResult = Pat.match(MatchBuffer, SM);
 
     // report
-    if (!MatchResult) {
-      PrintNoMatch(true, SM, *this, i, MatchBuffer, Req.VerboseVerbose, Diags,
-                   MatchResult.takeError());
+    if (Error Err = reportMatchResult(/*ExpectedMatch=*/true, SM, Prefix, Loc,
+                                      Pat, i, MatchBuffer,
+                                      std::move(MatchResult), Req, Diags)) {
+      cantFail(handleErrors(std::move(Err), [&](const ErrorReported &E) {}));
       return StringRef::npos;
     }
-    size_t MatchPos = *MatchResult;
-    PrintMatch(true, SM, *this, i, MatchBuffer, MatchPos, CurrentMatchLen, Req,
-               Diags);
+
+    size_t MatchPos = MatchResult.TheMatch->Pos;
     if (i == 1)
       FirstMatchPos = LastPos + MatchPos;
 
     // move start point after the match
-    LastMatchEnd += MatchPos + CurrentMatchLen;
+    LastMatchEnd += MatchPos + MatchResult.TheMatch->Len;
   }
   // Full match len counts from first match pos.
   MatchLen = LastMatchEnd - FirstMatchPos;
@@ -2328,22 +2385,15 @@ bool FileCheckString::CheckNot(const SourceMgr &SM, StringRef Buffer,
   bool DirectiveFail = false;
   for (const Pattern *Pat : NotStrings) {
     assert((Pat->getCheckTy() == Check::CheckNot) && "Expect CHECK-NOT!");
-
-    size_t MatchLen = 0;
-    Expected<size_t> MatchResult = Pat->match(Buffer, MatchLen, SM);
-
-    if (!MatchResult) {
-      PrintNoMatch(false, SM, Prefix, Pat->getLoc(), *Pat, 1, Buffer,
-                   Req.VerboseVerbose, Diags, MatchResult.takeError());
+    Pattern::MatchResult MatchResult = Pat->match(Buffer, SM);
+    if (Error Err = reportMatchResult(/*ExpectedMatch=*/false, SM, Prefix,
+                                      Pat->getLoc(), *Pat, 1, Buffer,
+                                      std::move(MatchResult), Req, Diags)) {
+      cantFail(handleErrors(std::move(Err), [&](const ErrorReported &E) {}));
+      DirectiveFail = true;
       continue;
     }
-    size_t Pos = *MatchResult;
-
-    PrintMatch(false, SM, Prefix, Pat->getLoc(), *Pat, 1, Buffer, Pos, MatchLen,
-               Req, Diags);
-    DirectiveFail = true;
   }
-
   return DirectiveFail;
 }
 
@@ -2389,20 +2439,22 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
     // CHECK-DAG group.
     for (auto MI = MatchRanges.begin(), ME = MatchRanges.end(); true; ++MI) {
       StringRef MatchBuffer = Buffer.substr(MatchPos);
-      Expected<size_t> MatchResult = Pat.match(MatchBuffer, MatchLen, SM);
+      Pattern::MatchResult MatchResult = Pat.match(MatchBuffer, SM);
       // With a group of CHECK-DAGs, a single mismatching means the match on
       // that group of CHECK-DAGs fails immediately.
-      if (!MatchResult) {
-        PrintNoMatch(true, SM, Prefix, Pat.getLoc(), Pat, 1, MatchBuffer,
-                     Req.VerboseVerbose, Diags, MatchResult.takeError());
-        return StringRef::npos;
+      if (MatchResult.TheError || Req.VerboseVerbose) {
+        if (Error Err = reportMatchResult(/*ExpectedMatch=*/true, SM, Prefix,
+                                          Pat.getLoc(), Pat, 1, MatchBuffer,
+                                          std::move(MatchResult), Req, Diags)) {
+          cantFail(
+              handleErrors(std::move(Err), [&](const ErrorReported &E) {}));
+          return StringRef::npos;
+        }
       }
-      size_t MatchPosBuf = *MatchResult;
-      // Re-calc it as the offset relative to the start of the original string.
-      MatchPos += MatchPosBuf;
-      if (Req.VerboseVerbose)
-        PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, 1, Buffer, MatchPos,
-                   MatchLen, Req, Diags);
+      MatchLen = MatchResult.TheMatch->Len;
+      // Re-calc it as the offset relative to the start of the original
+      // string.
+      MatchPos += MatchResult.TheMatch->Pos;
       MatchRange M{MatchPos, MatchPos + MatchLen};
       if (Req.AllowDeprecatedDagOverlap) {
         // We don't need to track all matches in this mode, so we just maintain
@@ -2453,8 +2505,10 @@ size_t FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
       MatchPos = MI->End;
     }
     if (!Req.VerboseVerbose)
-      PrintMatch(true, SM, Prefix, Pat.getLoc(), Pat, 1, Buffer, MatchPos,
-                 MatchLen, Req, Diags);
+      cantFail(printMatch(
+          /*ExpectedMatch=*/true, SM, Prefix, Pat.getLoc(), Pat, 1, Buffer,
+          Pattern::MatchResult(MatchPos, MatchLen, Error::success()), Req,
+          Diags));
 
     // Handle the end of a CHECK-DAG group.
     if (std::next(PatItr) == PatEnd ||
