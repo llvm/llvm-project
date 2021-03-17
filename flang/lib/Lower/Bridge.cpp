@@ -1250,8 +1250,11 @@ private:
                           sym, value.getAddr(), value.getLen(),
                           value.getExtents(), value.getLBounds());
                   },
-                  [&](const fir::BoxValue &) {
-                    TODO(toLocation(), "association selector of derived type");
+                  [&](const fir::BoxValue &value) {
+                    localSymbols.addBoxSymbol(sym, value.getAddr(),
+                                              value.getLBounds(),
+                                              value.getExplicitParameters(),
+                                              value.getExplicitExtents());
                   },
                   [&](const auto &) {
                     mlir::emitError(toLocation(),

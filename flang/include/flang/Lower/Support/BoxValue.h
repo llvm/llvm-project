@@ -27,18 +27,16 @@ namespace fir {
 class CharBoxValue;
 class ArrayBoxValue;
 class CharArrayBoxValue;
-class BoxValue;
 class ProcBoxValue;
 class MutableBoxValue;
-class IrBoxValue;
+class BoxValue;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArrayBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharArrayBoxValue &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const MutableBoxValue &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const IrBoxValue &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
 
 //===----------------------------------------------------------------------===//
 //
@@ -184,47 +182,13 @@ protected:
   mlir::Value hostContext;
 };
 
-/// In the generalized form, a boxed value can have a dynamic size, be an array
-/// with dynamic extents and lbounds, and take dynamic type parameters.
-class BoxValue : public AbstractBox, public AbstractArrayBox {
-public:
-  BoxValue(mlir::Value addr) : AbstractBox{addr}, AbstractArrayBox{} {}
-  BoxValue(mlir::Value addr, mlir::Value len)
-      : AbstractBox{addr}, AbstractArrayBox{}, len{len} {}
-  BoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> extents,
-           llvm::ArrayRef<mlir::Value> lbounds = {})
-      : AbstractBox{addr}, AbstractArrayBox{extents, lbounds} {}
-  BoxValue(mlir::Value addr, mlir::Value len,
-           llvm::ArrayRef<mlir::Value> params,
-           llvm::ArrayRef<mlir::Value> extents,
-           llvm::ArrayRef<mlir::Value> lbounds = {})
-      : AbstractBox{addr}, AbstractArrayBox{extents, lbounds}, len{len},
-        params{params.begin(), params.end()} {}
-
-  BoxValue clone(mlir::Value newBase) const {
-    return {newBase, len, params, extents, lbounds};
-  }
-
-  BoxValue cloneElement(mlir::Value newBase) const {
-    return {newBase, len, params, {}, {}};
-  }
-
-  mlir::Value getLen() const { return len; }
-
-  llvm::ArrayRef<mlir::Value> getLenTypeParams() const { return params; }
-
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
-  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
-
-protected:
-  mlir::Value len;                          // box is CHARACTER
-  llvm::SmallVector<mlir::Value, 2> params; // LENs, box is derived type
-};
-
 /// Base class for values associated to a fir.box or fir.ref<fir.box>.
-class AbstractIrBox : public AbstractBox {
+class AbstractIrBox : public AbstractBox, public AbstractArrayBox {
 public:
   AbstractIrBox(mlir::Value addr) : AbstractBox{addr} {}
+  AbstractIrBox(mlir::Value addr, llvm::ArrayRef<mlir::Value> lbounds,
+                llvm::ArrayRef<mlir::Value> extents)
+      : AbstractBox{addr}, AbstractArrayBox(extents, lbounds) {}
   /// Get the fir.box<type> part of the address type.
   fir::BoxType getBoxTy() const {
     auto type = getAddr().getType();
@@ -255,8 +219,7 @@ public:
   /// Returns the rank of the entity. Beware that zero will be returned for
   /// both scalars and assumed rank.
   unsigned rank() const {
-    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
-    if (seqTy)
+    if (auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>())
       return seqTy.getDimension();
     return 0;
   }
@@ -271,33 +234,39 @@ public:
 };
 
 /// An entity described by a fir.box value that cannot be read into
-/// another BoxValue category, either because the fir.box may be an
+/// another ExtendedValue category, either because the fir.box may be an
 /// absent optional and we need to wait until the user is referencing it
 /// to read it, or because it contains important information that cannot
 /// be exposed in FIR (e.g. non contiguous byte stride).
 /// It may also store explicit bounds or length parameters that were specified
 /// for the entity.
-class IrBoxValue : public AbstractIrBox {
+class BoxValue : public AbstractIrBox {
 public:
-  IrBoxValue(mlir::Value addr) : AbstractIrBox{addr} { assert(verify()); }
-  IrBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> lbounds,
-             llvm::ArrayRef<mlir::Value> explicitParams,
-             llvm::ArrayRef<mlir::Value> explicitExtents = {})
-      : AbstractIrBox{addr}, lbounds{lbounds.begin(), lbounds.end()},
-        explicitParams{explicitParams.begin(), explicitParams.end()},
-        explicitExtents{explicitExtents.begin(), explicitExtents.end()} {
+  BoxValue(mlir::Value addr) : AbstractIrBox{addr} { assert(verify()); }
+  BoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> lbounds,
+           llvm::ArrayRef<mlir::Value> explicitParams,
+           llvm::ArrayRef<mlir::Value> explicitExtents = {})
+      : AbstractIrBox{addr, lbounds, explicitExtents},
+        explicitParams{explicitParams.begin(), explicitParams.end()} {
     assert(verify());
   }
   // TODO: check contiguous attribute of addr
   bool isContiguous() const { return false; }
 
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const IrBoxValue &);
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
 
   llvm::ArrayRef<mlir::Value> getLBounds() const { return lbounds; }
-  llvm::ArrayRef<mlir::Value> getExplicitExtents() const {
-    return explicitExtents;
-  }
+
+  // The extents member is not guaranteed to be field for arrays. It is only
+  // guaranteed to be field for explicit shape arrays. In general,
+  // explicit-shape will not come as descriptors, so this field will be empty in
+  // most cases. The exception are derived types with length parameters and
+  // polymorphic dummy argument arrays. It may be possible for the explicit
+  // extents to conflict with the shape information that is in the box according
+  // to 15.5.2.11 sequence association rules.
+  llvm::ArrayRef<mlir::Value> getExplicitExtents() const { return extents; }
+
   llvm::ArrayRef<mlir::Value> getExplicitParameters() const {
     return explicitParams;
   }
@@ -305,26 +274,11 @@ public:
 protected:
   // Verify constructor invariants.
   bool verify() const;
-  // Always field when the IrBoxValue has lower bounds other than one.
-  llvm::SmallVector<mlir::Value, 4> lbounds;
 
-  // Only field when the IrBoxValue has explicit length parameters.
+  // Only field when the BoxValue has explicit length parameters.
   // Otherwise, the length parameters are in the fir.box.
   llvm::SmallVector<mlir::Value, 2> explicitParams;
-
-  // Only field with the explicit length parameters
-  // Otherwise, the extents are in the fir.box.
-  llvm::SmallVector<mlir::Value, 4> explicitExtents;
-  // Note about explicitExtents: In general, explicit-shape will not come as
-  // descriptors, so this field will be empty in most cases. The exception are
-  // derived types with length parameters and polymorphic dummy argument arrays.
-  // It may be possible for the explicit extents to conflict with
-  // the shape information that is in the box according to 15.5.2.11
-  // sequence association rules.
 };
-
-/// Used for triple notation (array slices)
-using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
 
 /// Set of variables (addresses) holding the allocatable properties. These may
 /// be empty in case it is not deemed safe to duplicate the descriptor
@@ -404,6 +358,9 @@ protected:
   MutableProperties mutableProperties;
 };
 
+/// Used for triple notation (array slices)
+using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
+
 class ExtendedValue;
 
 mlir::Value getBase(const ExtendedValue &exv);
@@ -419,9 +376,8 @@ bool isArray(const ExtendedValue &exv);
 /// indices if it is an array entity.
 class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
-  using VT =
-      std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
-                   BoxValue, ProcBoxValue, IrBoxValue>;
+  using VT = std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue,
+                          CharArrayBoxValue, ProcBoxValue, BoxValue>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   ExtendedValue(const ExtendedValue &) = default;
