@@ -136,8 +136,6 @@ static void HWAsanCheckFailed(const char *file, int line, const char *cond,
   Die();
 }
 
-static constexpr uptr kMemoryUsageBufferSize = 4096;
-
 static void HwasanFormatMemoryUsage(InternalScopedString &s) {
   HwasanThreadList &thread_list = hwasanThreadList();
   auto thread_stats = thread_list.GetThreadStats();
@@ -155,6 +153,8 @@ static void HwasanFormatMemoryUsage(InternalScopedString &s) {
 }
 
 #if SANITIZER_ANDROID
+static constexpr uptr kMemoryUsageBufferSize = 4096;
+
 static char *memory_usage_buffer = nullptr;
 
 static void InitMemoryUsage() {
@@ -171,7 +171,7 @@ void UpdateMemoryUsage() {
     return;
   if (!memory_usage_buffer)
     InitMemoryUsage();
-  InternalScopedString s(kMemoryUsageBufferSize);
+  InternalScopedString s;
   HwasanFormatMemoryUsage(s);
   internal_strncpy(memory_usage_buffer, s.data(), kMemoryUsageBufferSize - 1);
   memory_usage_buffer[kMemoryUsageBufferSize - 1] = '\0';
@@ -493,7 +493,7 @@ extern "C" void *__hwasan_extra_spill_area() {
 }
 
 void __hwasan_print_memory_usage() {
-  InternalScopedString s(kMemoryUsageBufferSize);
+  InternalScopedString s;
   HwasanFormatMemoryUsage(s);
   Printf("%s\n", s.data());
 }

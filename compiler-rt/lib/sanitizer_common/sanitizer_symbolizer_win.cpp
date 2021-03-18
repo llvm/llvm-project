@@ -224,7 +224,7 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   // Compute the command line. Wrap double quotes around everything.
   const char *argv[kArgVMax];
   GetArgV(path_, argv);
-  InternalScopedString command_line(kMaxPathLength * 3);
+  InternalScopedString command_line;
   for (int i = 0; argv[i]; i++) {
     const char *arg = argv[i];
     int arglen = internal_strlen(arg);

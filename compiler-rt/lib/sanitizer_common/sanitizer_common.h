@@ -44,7 +44,7 @@ const uptr kMaxPathLength = 4096;
 
 const uptr kMaxThreadStackSize = 1 << 30;  // 1Gb
 
-static const uptr kErrorMessageBufferSize = 1 << 16;
+const uptr kErrorMessageBufferSize = 1 << 16;
 
 // Denotes fake PC values that come from JIT/JAVA/etc.
 // For such PC values __tsan_symbolize_external_ex() will be called.
@@ -344,8 +344,6 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
 void SetAlternateSignalStack();
 void UnsetAlternateSignalStack();
 
-// We don't want a summary too long.
-const int kMaxSummaryLength = 1024;
 // Construct a one-line string:
 //   SUMMARY: SanitizerToolName: error_message
 // and pass it to __sanitizer_report_error_summary.
@@ -594,14 +592,12 @@ class InternalMmapVector : public InternalMmapVectorNoCtor<T> {
 
 class InternalScopedString {
  public:
-  explicit InternalScopedString(uptr max_length)
-      : buffer_(max_length), length_(0) {
-    buffer_[0] = '\0';
-  }
-  uptr length() const { return length_; }
+  explicit InternalScopedString() : buffer_(1) { buffer_[0] = '\0'; }
+
+  uptr length() const { return buffer_.size() - 1; }
   void clear() {
+    buffer_.resize(1);
     buffer_[0] = '\0';
-    length_ = 0;
   }
   void append(const char *format, ...);
   const char *data() const { return buffer_.data(); }
@@ -609,7 +605,6 @@ class InternalScopedString {
 
  private:
   InternalMmapVector<char> buffer_;
-  uptr length_;
 };
 
 template <class T>
