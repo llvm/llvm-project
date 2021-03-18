@@ -2050,19 +2050,23 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 static bool isSwiftAsyncContext(const MachineInstr &MI) {
   const llvm::MachineFunction *MF = MI.getParent()->getParent();
   const llvm::Function &F = MF->getFunction();
-  if (F.arg_size() != 3 || !F.hasParamAttribute(2, Attribute::SwiftAsync))
-    return false;
+  // FIXME: Missing patch.
+  //if (F.getCallingConv() != CallingConv::SwiftTail)
+  //  return false;
   for (const MachineOperand &Op : MI.debug_operands()) {
     if (!Op.isReg())
       return false;
     bool found = false;
     unsigned Reg = Op.getReg();
     auto &EntryMBB = MF->front();
-    for (auto R : EntryMBB.liveins())
-      if (R.PhysReg == Reg) {
+    unsigned I = 0;
+    for (auto R : EntryMBB.liveins()) {
+      if (R.PhysReg == Reg && F.hasParamAttribute(I, Attribute::SwiftAsync)) {
         found = true;
         break;
       }
+      ++I;
+    }
     if (!found)
       return false;
   }
