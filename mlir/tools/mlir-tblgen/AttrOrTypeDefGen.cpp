@@ -432,22 +432,16 @@ static ::mlir::LogicalResult generated{0}Printer(
 /// {1}: Storage class c++ name.
 /// {2}: Parameters parameters.
 /// {3}: Parameter initializer string.
-/// {4}: Parameter name list.
-/// {5}: Parameter types.
-/// {6}: The name of the base value type, e.g. Attribute or Type.
+/// {4}: Parameter types.
+/// {5}: The name of the base value type, e.g. Attribute or Type.
 static const char *const defStorageClassBeginStr = R"(
 namespace {0} {{
-  struct {1} : public ::mlir::{6}Storage {{
+  struct {1} : public ::mlir::{5}Storage {{
     {1} ({2})
       : {3} {{ }
 
     /// The hash key is a tuple of the parameter types.
-    using KeyTy = std::tuple<{5}>;
-
-    /// Define the comparison function for the key type.
-    bool operator==(const KeyTy &key) const {{
-      return key == KeyTy({4});
-    }
+    using KeyTy = std::tuple<{4}>;
 )";
 
 /// The storage class' constructor template.
@@ -555,23 +549,34 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
     });
   }
 
-  // Construct the parameter list that is used when a concrete instance of the
-  // storage exists.
-  auto nonStaticParameterNames = llvm::map_range(params, [](const auto &param) {
-    return isa<AttributeSelfTypeParameter>(param) ? "getType()"
-                                                  : param.getName();
-  });
-
-  // 1) Emit most of the storage class up until the hashKey body.
+  // * Emit most of the storage class up until the hashKey body.
   os << formatv(
       defStorageClassBeginStr, def.getStorageNamespace(),
       def.getStorageClassName(),
       ParamCommaFormatter(ParamCommaFormatter::EmitFormat::TypeNamePairs,
                           params, /*prependComma=*/false),
-      paramInitializer, llvm::join(nonStaticParameterNames, ", "),
-      parameterTypeList, valueType);
+      paramInitializer, parameterTypeList, valueType);
 
-  // 2) Emit the haskKey method.
+  // * Emit the comparison method.
+  os << "  bool operator==(const KeyTy &key) const {\n";
+  for (auto it : llvm::enumerate(params)) {
+    os << "    if (!(";
+
+    // Build the comparator context.
+    bool isSelfType = isa<AttributeSelfTypeParameter>(it.value());
+    FmtContext context;
+    context.addSubst("_lhs", isSelfType ? "getType()" : it.value().getName())
+        .addSubst("_rhs", "std::get<" + Twine(it.index()) + ">(key)");
+
+    // Use the parameter specified comparator if possible, otherwise default to
+    // operator==.
+    Optional<StringRef> comparator = it.value().getComparator();
+    os << tgfmt(comparator ? *comparator : "$_lhs == $_rhs", &context);
+    os << "))\n      return false;\n";
+  }
+  os << "    return true;\n  }\n";
+
+  // * Emit the haskKey method.
   os << "  static ::llvm::hash_code hashKey(const KeyTy &key) {\n";
 
   // Extract each parameter from the key.
@@ -581,7 +586,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
       [&](unsigned it) { os << "std::get<" << it << ">(key)"; });
   os << ");\n    }\n";
 
-  // 3) Emit the construct method.
+  // * Emit the construct method.
 
   // If user wants to build the storage constructor themselves, declare it
   // here and then they can write the definition elsewhere.
@@ -611,7 +616,7 @@ void DefGenerator::emitStorageClass(const AttrOrTypeDef &def) {
                   llvm::join(parameterNames, ", "));
   }
 
-  // 4) Emit the parameters as storage class members.
+  // * Emit the parameters as storage class members.
   for (const AttrOrTypeParameter &parameter : params) {
     // Attribute value types are not stored as fields in the storage.
     if (!isa<AttributeSelfTypeParameter>(parameter))

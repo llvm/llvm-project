@@ -53,7 +53,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
       ins
       "int":$widthOfSomething,
       "::mlir::test::SimpleTypeA": $exampleTdType,
-      "SomeCppStruct": $exampleCppType,
+      APFloatParameter<"">: $apFloat,
       ArrayRefParameter<"int", "Matrix dimensions">:$dims,
       AttributeSelfTypeParameter<"">:$inner
   );
@@ -61,8 +61,8 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
   let genVerifyDecl = 1;
 
 // DECL-LABEL: class CompoundAAttr : public ::mlir::Attribute
-// DECL: static CompoundAAttr getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
-// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, SomeCppStruct exampleCppType, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static CompoundAAttr getChecked(llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::MLIRContext *context, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
+// DECL: static ::mlir::LogicalResult verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, int widthOfSomething, ::mlir::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner);
 // DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
 // DECL:   return ::llvm::StringLiteral("cmpnd_a");
 // DECL: }
@@ -71,7 +71,7 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DECL: void print(::mlir::DialectAsmPrinter &printer) const;
 // DECL: int getWidthOfSomething() const;
 // DECL: ::mlir::test::SimpleTypeA getExampleTdType() const;
-// DECL: SomeCppStruct getExampleCppType() const;
+// DECL: ::llvm::APFloat getApFloat() const;
 
 // Check that AttributeSelfTypeParameter is handled properly.
 // DEF-LABEL: struct CompoundAAttrStorage
@@ -79,11 +79,21 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DEF-NEXT: : ::mlir::AttributeStorage(inner),
 
 // DEF: bool operator==(const KeyTy &key) const {
-// DEF-NEXT: return key == KeyTy(widthOfSomething, exampleTdType, exampleCppType, dims, getType());
+// DEF-NEXT: if (!(widthOfSomething == std::get<0>(key)))
+// DEF-NEXT:   return false;
+// DEF-NEXT: if (!(exampleTdType == std::get<1>(key)))
+// DEF-NEXT:   return false;
+// DEF-NEXT: if (!(apFloat.bitwiseIsEqual(std::get<2>(key))))
+// DEF-NEXT:   return false;
+// DEF-NEXT: if (!(dims == std::get<3>(key)))
+// DEF-NEXT:   return false;
+// DEF-NEXT: if (!(getType() == std::get<4>(key)))
+// DEF-NEXT:   return false;
+// DEF-NEXT: return true;
 
 // DEF: static CompoundAAttrStorage *construct
 // DEF: return new (allocator.allocate<CompoundAAttrStorage>())
-// DEF-NEXT: CompoundAAttrStorage(widthOfSomething, exampleTdType, exampleCppType, dims, inner);
+// DEF-NEXT: CompoundAAttrStorage(widthOfSomething, exampleTdType, apFloat, dims, inner);
 
 // DEF: ::mlir::Type CompoundAAttr::getInner() const { return getImpl()->getType(); }
 }
