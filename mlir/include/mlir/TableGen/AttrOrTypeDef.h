@@ -183,6 +183,9 @@ public:
   // If specified, get the custom allocator code for this parameter.
   Optional<StringRef> getAllocator() const;
 
+  // If specified, get the custom comparator code for this parameter.
+  Optional<StringRef> getComparator() const;
+
   // Get the C++ type of this parameter.
   StringRef getCppType() const;
 

@@ -471,10 +471,6 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_fcvtzs : AdvSIMD_FPToIntRounding_Intrinsic;
   def int_aarch64_neon_fcvtzu : AdvSIMD_FPToIntRounding_Intrinsic;
 
-  // Vector FP Rounding: only ties to even is unrepresented by a normal
-  // intrinsic.
-  def int_aarch64_neon_frintn : AdvSIMD_1FloatArg_Intrinsic;
-
   // v8.5-A Vector FP Rounding
   def int_aarch64_neon_frint32x : AdvSIMD_1FloatArg_Intrinsic;
   def int_aarch64_neon_frint32z : AdvSIMD_1FloatArg_Intrinsic;

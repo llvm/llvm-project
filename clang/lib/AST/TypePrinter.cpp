@@ -1235,8 +1235,7 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
     // Only suppress an inline namespace if the name has the same lookup
     // results in the enclosing namespace.
     if (Policy.SuppressInlineNamespace && NS->isInline() && NameInScope &&
-        DC->getParent()->lookup(NameInScope).size() ==
-            DC->lookup(NameInScope).size())
+        NS->isRedundantInlineQualifierFor(NameInScope))
       return AppendScope(DC->getParent(), OS, NameInScope);
 
     AppendScope(DC->getParent(), OS, NS->getDeclName());

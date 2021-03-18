@@ -253,22 +253,30 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 // Name of this warning in GCC.
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
-// Warnings for C2x code which is not compatible with prior C standards.
+// Warnings for C code which is not compatible with previous C standards.
 def CPre2xCompat : DiagGroup<"pre-c2x-compat">;
 def CPre2xCompatPedantic : DiagGroup<"pre-c2x-compat-pedantic",
                                      [CPre2xCompat]>;
 
-// Warnings for C++1y code which is not compatible with prior C++ standards.
-def CXXPre14Compat : DiagGroup<"c++98-c++11-compat">;
-def CXXPre14CompatPedantic : DiagGroup<"c++98-c++11-compat-pedantic",
+// Warnings for C++ code which is not compatible with previous C++ standards.
+def CXXPre14Compat : DiagGroup<"pre-c++14-compat">;
+def : DiagGroup<"c++98-c++11-compat", [CXXPre14Compat]>;
+def CXXPre14CompatPedantic : DiagGroup<"pre-c++14-compat-pedantic",
                                        [CXXPre14Compat,
                                         CXXPre14CompatBinaryLiteral]>;
-def CXXPre17Compat : DiagGroup<"c++98-c++11-c++14-compat">;
-def CXXPre17CompatPedantic : DiagGroup<"c++98-c++11-c++14-compat-pedantic",
+def : DiagGroup<"c++98-c++11-compat-pedantic", [CXXPre14CompatPedantic]>;
+def CXXPre17Compat : DiagGroup<"pre-c++17-compat">;
+def : DiagGroup<"c++98-c++11-c++14-compat", [CXXPre17Compat]>;
+def CXXPre17CompatPedantic : DiagGroup<"pre-c++17-compat-pedantic",
                                        [CXXPre17Compat]>;
-def CXXPre20Compat : DiagGroup<"c++98-c++11-c++14-c++17-compat">;
-def CXXPre20CompatPedantic : DiagGroup<"c++98-c++11-c++14-c++17-compat-pedantic",
+def : DiagGroup<"c++98-c++11-c++14-compat-pedantic",
+                [CXXPre17CompatPedantic]>;
+def CXXPre20Compat : DiagGroup<"pre-c++20-compat">;
+def : DiagGroup<"c++98-c++11-c++14-c++17-compat", [CXXPre20Compat]>;
+def CXXPre20CompatPedantic : DiagGroup<"pre-c++20-compat-pedantic",
                                        [CXXPre20Compat]>;
+def : DiagGroup<"c++98-c++11-c++14-c++17-compat-pedantic",
+                [CXXPre20CompatPedantic]>;
 def CXXPre2bCompat : DiagGroup<"pre-c++2b-compat">;
 def CXXPre2bCompatPedantic :
   DiagGroup<"pre-c++2b-compat-pedantic", [CXXPre2bCompat]>;

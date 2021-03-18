@@ -548,6 +548,11 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    if (Name.startswith("aarch64.neon.frintn")) {
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::roundeven,
+                                        F->arg_begin()->getType());
+      return true;
+    }
     if (Name.startswith("arm.neon.vclz")) {
       Type* args[2] = {
         F->arg_begin()->getType(),

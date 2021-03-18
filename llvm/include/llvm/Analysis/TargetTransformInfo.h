@@ -1039,11 +1039,13 @@ public:
       const Instruction *CxtI = nullptr) const;
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
+  /// The exact mask may be passed as Mask, or else the array will be empty.
   /// The index and subtype parameters are used by the subvector insertion and
   /// extraction shuffle kinds to show the insert/extract point and the type of
   /// the subvector being inserted/extracted.
   /// NOTE: For subvector extractions Tp represents the source type.
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index = 0,
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                     ArrayRef<int> Mask = None, int Index = 0,
                      VectorType *SubTp = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
@@ -1555,7 +1557,8 @@ public:
       OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
       OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) = 0;
-  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
+  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                             ArrayRef<int> Mask, int Index,
                              VectorType *SubTp) = 0;
   virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                CastContextHint CCH,
@@ -2013,9 +2016,9 @@ public:
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp) override {
-    return Impl.getShuffleCost(Kind, Tp, Index, SubTp);
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                     int Index, VectorType *SubTp) override {
+    return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp);
   }
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        CastContextHint CCH, TTI::TargetCostKind CostKind,

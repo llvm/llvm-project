@@ -173,32 +173,6 @@ static Error makeStringError(std::error_code EC, const Twine &Msg,
   return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
 }
 
-static Error splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
-                            StringRef File, ElfType OutputElfType) {
-  Expected<std::unique_ptr<Object>> DWOFile = Reader.create(false);
-  if (!DWOFile)
-    return DWOFile.takeError();
-
-  auto OnlyKeepDWOPred = [&DWOFile](const SectionBase &Sec) {
-    return onlyKeepDWOPred(**DWOFile, Sec);
-  };
-  if (Error E =
-          (*DWOFile)->removeSections(Config.AllowBrokenLinks, OnlyKeepDWOPred))
-    return E;
-  if (Config.OutputArch) {
-    (*DWOFile)->Machine = Config.OutputArch.getValue().EMachine;
-    (*DWOFile)->OSABI = Config.OutputArch.getValue().OSABI;
-  }
-
-  return writeToFile(File, [&](raw_ostream &OutFile) -> Error {
-    std::unique_ptr<Writer> Writer =
-        createWriter(Config, **DWOFile, OutFile, OutputElfType);
-    if (Error E = Writer->finalize())
-      return E;
-    return Writer->write();
-  });
-}
-
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {
@@ -374,7 +348,7 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
     };
   }
 
-  if (Config.StripDWO || !Config.SplitDWO.empty())
+  if (Config.StripDWO)
     RemovePred = [RemovePred](const SectionBase &Sec) {
       return isDWOSection(Sec) || RemovePred(Sec);
     };
@@ -532,19 +506,20 @@ static Error replaceAndRemoveSections(const CopyConfig &Config, Object &Obj) {
 // any previous removals. Lastly whether or not something is removed shouldn't
 // depend a) on the order the options occur in or b) on some opaque priority
 // system. The only priority is that keeps/copies overrule removes.
-static Error handleArgs(const CopyConfig &Config, Object &Obj,
-                        const Reader &Reader, ElfType OutputElfType) {
+static Error handleArgs(const CopyConfig &Config, Object &Obj) {
   if (Config.StripSwiftSymbols || Config.KeepUndefined)
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for ELF");
-  if (!Config.SplitDWO.empty())
-    if (Error E =
-            splitDWOToFile(Config, Reader, Config.SplitDWO, OutputElfType))
-      return E;
 
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch.getValue().EMachine;
     Obj.OSABI = Config.OutputArch.getValue().OSABI;
+  }
+
+  if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
+    return Obj.removeSections(
+        Config.AllowBrokenLinks,
+        [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); });
   }
 
   // Dump sections before add/remove for compatibility with GNU objcopy.
@@ -706,7 +681,7 @@ Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj, Reader, OutputElfType))
+  if (Error E = handleArgs(Config, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -724,7 +699,7 @@ Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
   // (-B<arch>).
   const ElfType OutputElfType =
       getOutputElfType(Config.OutputArch.getValueOr(MachineInfo()));
-  if (Error E = handleArgs(Config, **Obj, Reader, OutputElfType))
+  if (Error E = handleArgs(Config, **Obj))
     return E;
   return writeOutput(Config, **Obj, Out, OutputElfType);
 }
@@ -741,7 +716,7 @@ Error executeObjcopyOnBinary(const CopyConfig &Config,
       Config.OutputArch ? getOutputElfType(Config.OutputArch.getValue())
                         : getOutputElfType(In);
 
-  if (Error E = handleArgs(Config, **Obj, Reader, OutputElfType))
+  if (Error E = handleArgs(Config, **Obj))
     return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))

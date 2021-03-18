@@ -826,6 +826,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   for (const Arg *arg : args.filtered(OPT_U))
     symtab->addDynamicLookup(arg->getValue());
 
+  config->mapFile = args.getLastArgValue(OPT_map);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
@@ -1029,6 +1030,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
               "\n>>> referenced by flag -u " + toString(*undefined));
         return false;
       }
+    }
+    // Literal exported-symbol names must be defined, but glob
+    // patterns need not match.
+    for (const CachedHashStringRef &cachedName :
+         config->exportedSymbols.literals) {
+      if (const Symbol *sym = symtab->find(cachedName))
+        if (isa<Defined>(sym))
+          continue;
+      error("undefined symbol " + cachedName.val() +
+            "\n>>> referenced from option -exported_symbo(s_list)");
     }
 
     createSyntheticSections();

@@ -16,6 +16,7 @@
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "flang/Parser/unparse.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "llvm/ADT/StringRef.h"
@@ -312,6 +313,15 @@ void DebugDumpParsingLogAction::ExecuteAction() {
 
   ci.parsing().Parse(llvm::errs());
   ci.parsing().DumpParsingLog(llvm::outs());
+}
+
+void GetSymbolsSourcesAction::ExecuteAction() {
+  // Report and exit if fatal semantic errors are present
+  if (reportFatalSemanticErrors(semantics(), this->instance().diagnostics(),
+          GetCurrentFileOrBufferName()))
+    return;
+
+  semantics().DumpSymbolsSources(llvm::outs());
 }
 
 void EmitObjAction::ExecuteAction() {

@@ -290,7 +290,6 @@ public:
 private:
   AllSources &allSources_;
   std::list<CookedSource> cooked_; // owns all CookedSource instances
-  int counter_{0};
   std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
 };
 

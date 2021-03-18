@@ -124,6 +124,21 @@ macro(set_output_name output name arch)
   else()
     if(ANDROID AND ${arch} STREQUAL "i386")
       set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
+    elseif("${arch}" MATCHES "^arm")
+      if(COMPILER_RT_DEFAULT_TARGET_ONLY)
+        set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+      else()
+        set(triple "${TARGET_TRIPLE}")
+      endif()
+      # When using arch-suffixed runtime library names, clang only looks for
+      # libraries named "arm" or "armhf", see getArchNameForCompilerRTLib in
+      # clang. Therefore, try to inspect both the arch name and the triple
+      # if it seems like we're building an armhf target.
+      if ("${arch}" MATCHES "hf$" OR "${triple}" MATCHES "hf$")
+        set(${output} "${name}-armhf${COMPILER_RT_OS_SUFFIX}")
+      else()
+        set(${output} "${name}-arm${COMPILER_RT_OS_SUFFIX}")
+      endif()
     else()
       set(${output} "${name}-${arch}${COMPILER_RT_OS_SUFFIX}")
     endif()

@@ -175,4 +175,11 @@ TEST(SlowUnwindTest, ShortStackTrace) {
   EXPECT_EQ(bp, stack.top_frame_bp);
 }
 
+// Dummy implementation. This should never be called, but is required to link
+// non-optimized builds of this test.
+void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
+                                    bool request_fast, u32 max_depth) {
+  UNIMPLEMENTED();
+}
+
 }  // namespace __sanitizer

@@ -19,3 +19,65 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
   store <4 x float> <float 0.0, float 4.0, float 0.0, float 2.0>, <4 x float>* %x
   ret void
 }
+
+define void @buildvec_dominant0_v4f32(<4 x float>* %x) {
+; CHECK-LABEL: buildvec_dominant0_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x ft0, zero
+; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
+; CHECK-NEXT:    flw ft1, %lo(.LCPI1_0)(a1)
+; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.s.f v25, ft0
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.v.f v26, ft1
+; CHECK-NEXT:    vsetivli a1, 3, e32,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v26, v25, 2
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vse32.v v26, (a0)
+; CHECK-NEXT:    ret
+  store <4 x float> <float 2.0, float 2.0, float 0.0, float 2.0>, <4 x float>* %x
+  ret void
+}
+
+define void @buildvec_dominant1_v4f32(<4 x float>* %x, float %f) {
+; CHECK-LABEL: buildvec_dominant1_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x ft0, zero
+; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.s.f v25, ft0
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.v.f v26, fa0
+; CHECK-NEXT:    vsetivli a1, 2, e32,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v26, v25, 1
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vse32.v v26, (a0)
+; CHECK-NEXT:    ret
+  %v0 = insertelement <4 x float> undef, float %f, i32 0
+  %v1 = insertelement <4 x float> %v0, float 0.0, i32 1
+  %v2 = insertelement <4 x float> %v1, float %f, i32 2
+  %v3 = insertelement <4 x float> %v2, float %f, i32 3
+  store <4 x float> %v3, <4 x float>* %x
+  ret void
+}
+
+define void @buildvec_dominant2_v4f32(<4 x float>* %x, float %f) {
+; CHECK-LABEL: buildvec_dominant2_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
+; CHECK-NEXT:    flw ft0, %lo(.LCPI3_0)(a1)
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.v.f v25, fa0
+; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vfmv.s.f v26, ft0
+; CHECK-NEXT:    vsetivli a1, 2, e32,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v25, v26, 1
+; CHECK-NEXT:    vsetivli a1, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vse32.v v25, (a0)
+; CHECK-NEXT:    ret
+  %v0 = insertelement <4 x float> undef, float %f, i32 0
+  %v1 = insertelement <4 x float> %v0, float 2.0, i32 1
+  %v2 = insertelement <4 x float> %v1, float %f, i32 2
+  %v3 = insertelement <4 x float> %v2, float %f, i32 3
+  store <4 x float> %v3, <4 x float>* %x
+  ret void
+}

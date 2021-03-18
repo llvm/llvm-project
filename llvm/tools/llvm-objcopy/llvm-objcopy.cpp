@@ -58,8 +58,7 @@ namespace llvm {
 namespace objcopy {
 
 Error writeToFile(StringRef OutputFileName,
-                  std::function<Error(raw_ostream &)> Write, bool KeepOwnership,
-                  unsigned UserID, unsigned GroupID) {
+                  std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")
     return Write(outs());
 
@@ -73,15 +72,6 @@ Error writeToFile(StringRef OutputFileName,
       sys::fs::TempFile::create(OutputFileName + ".temp-objcopy-%%%%%%", Mode);
   if (!Temp)
     return createFileError(OutputFileName, Temp.takeError());
-
-#ifndef _WIN32
-  // Try to preserve file ownership if requested.
-  if (KeepOwnership) {
-    sys::fs::file_status Stat;
-    if (!sys::fs::status(Temp->FD, Stat) && Stat.getUser() == 0)
-      sys::fs::changeFileOwnership(Temp->FD, UserID, GroupID);
-  }
-#endif
 
   raw_fd_ostream Out(Temp->FD, false);
 
@@ -156,9 +146,9 @@ static Error deepWriteArchive(StringRef ArcName,
     // now in-memory buffers can not be completely avoided since
     // NewArchiveMember still requires them even though writeArchive does not
     // write them on disk.
-    Expected<std::unique_ptr<FileOutputBuffer>> FB = FileOutputBuffer::create(
-        Member.MemberName, Member.Buf->getBufferSize(),
-        FileOutputBuffer::F_executable | FileOutputBuffer::F_keep_ownership);
+    Expected<std::unique_ptr<FileOutputBuffer>> FB =
+        FileOutputBuffer::create(Member.MemberName, Member.Buf->getBufferSize(),
+                                 FileOutputBuffer::F_executable);
     if (!FB)
       return FB.takeError();
     std::copy(Member.Buf->getBufferStart(), Member.Buf->getBufferEnd(),
@@ -306,6 +296,12 @@ static Error restoreStatOnFile(StringRef Filename,
     if (auto EC = sys::fs::setPermissions(FD, Perm))
 #endif
       return createFileError(Filename, EC);
+
+#ifndef _WIN32
+    // Keep ownership if llvm-objcopy is called under root.
+    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
+      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
+#endif
   }
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
@@ -326,48 +322,68 @@ static Error executeObjcopy(CopyConfig &Config) {
     Stat.permissions(static_cast<sys::fs::perms>(0777));
   }
 
-  using ProcessRawFn = Error (*)(CopyConfig &, MemoryBuffer &, raw_ostream &);
-  ProcessRawFn ProcessRaw;
-  switch (Config.InputFormat) {
-  case FileFormat::Binary:
-    ProcessRaw = executeObjcopyOnRawBinary;
-    break;
-  case FileFormat::IHex:
-    ProcessRaw = executeObjcopyOnIHex;
-    break;
-  default:
-    ProcessRaw = nullptr;
-  }
+  std::function<Error(raw_ostream & OutFile)> ObjcopyFunc;
 
-  if (ProcessRaw) {
-    auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
+  OwningBinary<llvm::object::Binary> BinaryHolder;
+  std::unique_ptr<MemoryBuffer> MemoryBufferHolder;
+
+  if (Config.InputFormat == FileFormat::Binary ||
+      Config.InputFormat == FileFormat::IHex) {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
     if (!BufOrErr)
       return createFileError(Config.InputFilename, BufOrErr.getError());
+    MemoryBufferHolder = std::move(*BufOrErr);
 
-    if (Error E = writeToFile(
-            Config.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-              return ProcessRaw(Config, *BufOrErr->get(), OutFile);
-            }))
-      return E;
+    if (Config.InputFormat == FileFormat::Binary)
+      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+        // Handle FileFormat::Binary.
+        return executeObjcopyOnRawBinary(Config, *MemoryBufferHolder, OutFile);
+      };
+    else
+      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+        // Handle FileFormat::IHex.
+        return executeObjcopyOnIHex(Config, *MemoryBufferHolder, OutFile);
+      };
   } else {
     Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
         createBinary(Config.InputFilename);
     if (!BinaryOrErr)
       return createFileError(Config.InputFilename, BinaryOrErr.takeError());
+    BinaryHolder = std::move(*BinaryOrErr);
 
-    if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
+    if (Archive *Ar = dyn_cast<Archive>(BinaryHolder.getBinary())) {
+      // Handle Archive.
       if (Error E = executeObjcopyOnArchive(Config, *Ar))
         return E;
     } else {
-      if (Error E = writeToFile(
-              Config.OutputFilename,
-              [&](raw_ostream &OutFile) -> Error {
-                return executeObjcopyOnBinary(
-                    Config, *BinaryOrErr.get().getBinary(), OutFile);
-              },
-              Config.InputFilename != "-" &&
-                  Config.InputFilename == Config.OutputFilename,
-              Stat.getUser(), Stat.getGroup()))
+      // Handle llvm::object::Binary.
+      ObjcopyFunc = [&](raw_ostream &OutFile) -> Error {
+        return executeObjcopyOnBinary(Config, *BinaryHolder.getBinary(),
+                                      OutFile);
+      };
+    }
+  }
+
+  if (ObjcopyFunc) {
+    if (Config.SplitDWO.empty()) {
+      // Apply transformations described by Config and store result into
+      // Config.OutputFilename using specified ObjcopyFunc function.
+      if (Error E = writeToFile(Config.OutputFilename, ObjcopyFunc))
+        return E;
+    } else {
+      Config.ExtractDWO = true;
+      Config.StripDWO = false;
+      // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
+      // file using specified ObjcopyFunc function.
+      if (Error E = writeToFile(Config.SplitDWO, ObjcopyFunc))
+        return E;
+      Config.ExtractDWO = false;
+      Config.StripDWO = true;
+      // Apply transformations described by Config, remove .dwo tables and
+      // store result into Config.OutputFilename using specified ObjcopyFunc
+      // function.
+      if (Error E = writeToFile(Config.OutputFilename, ObjcopyFunc))
         return E;
     }
   }

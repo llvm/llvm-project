@@ -1301,8 +1301,15 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
   for (int &prio : priorities)
     prio = curPrio++;
   uint32_t seed = *config->shuffleSectionSeed;
-  std::mt19937 g(seed ? seed : std::random_device()());
-  llvm::shuffle(priorities.begin(), priorities.end(), g);
+  if (seed == UINT32_MAX) {
+    // If --shuffle-sections=-1, reverse the section order. The section order is
+    // stable even if the number of sections changes. This is useful to catch
+    // issues like static initialization order fiasco reliably.
+    std::reverse(priorities.begin(), priorities.end());
+  } else {
+    std::mt19937 g(seed ? seed : std::random_device()());
+    llvm::shuffle(priorities.begin(), priorities.end(), g);
+  }
   int prioIndex = 0;
   for (InputSectionBase *sec : inputSections) {
     if (order.try_emplace(sec, priorities[prioIndex]).second)

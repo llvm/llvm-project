@@ -163,7 +163,6 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
           if (name.getNameKind() == clang::DeclarationName::CXXDestructorName)
             if (auto *baseDtorDecl = base_record->getDestructor()) {
               if (baseDtorDecl->isVirtual()) {
-                path.Decls = baseDtorDecl;
                 decls.push_back(baseDtorDecl);
                 return true;
               } else
@@ -171,12 +170,11 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
             }
 
           // Otherwise, search for name in the base class.
-          for (path.Decls = base_record->lookup(name); !path.Decls.empty();
-               path.Decls = path.Decls.slice(1)) {
+          for (path.Decls = base_record->lookup(name).begin();
+               path.Decls != path.Decls.end(); ++path.Decls) {
             if (auto *method_decl =
-                    llvm::dyn_cast<clang::CXXMethodDecl>(path.Decls.front()))
+                    llvm::dyn_cast<clang::CXXMethodDecl>(*path.Decls))
               if (method_decl->isVirtual() && !isOverload(decl, method_decl)) {
-                path.Decls = method_decl;
                 decls.push_back(method_decl);
                 return true;
               }
@@ -6605,10 +6603,11 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
           if (cxx_record_decl->lookupInBases(
                   [decl_name](const clang::CXXBaseSpecifier *specifier,
                               clang::CXXBasePath &path) {
-                    path.Decls =
-                        specifier->getType()->getAsCXXRecordDecl()->lookup(
-                            decl_name);
-                    return !path.Decls.empty();
+                    CXXRecordDecl *record =
+                      specifier->getType()->getAsCXXRecordDecl();
+                    auto r = record->lookup(decl_name);
+                    path.Decls = r.begin();
+                    return !r.empty();
                   },
                   paths)) {
             clang::CXXBasePaths::const_paths_iterator path,
@@ -6631,9 +6630,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                           ->getDecl());
                 }
               }
-              for (clang::NamedDecl *path_decl : path->Decls) {
+              for (clang::DeclContext::lookup_iterator I = path->Decls, E;
+                   I != E; ++I) {
                 child_idx = GetIndexForRecordChild(
-                    parent_record_decl, path_decl, omit_empty_base_classes);
+                    parent_record_decl, *I, omit_empty_base_classes);
                 if (child_idx == UINT32_MAX) {
                   child_indexes.clear();
                   return 0;

@@ -10893,6 +10893,9 @@ void ASTContext::forEachMultiversionedFunctionVersion(
   assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
   llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
   FD = FD->getMostRecentDecl();
+  // FIXME: The order of traversal here matters and depends on the order of
+  // lookup results, which happens to be (mostly) oldest-to-newest, but we
+  // shouldn't rely on that.
   for (auto *CurDecl :
        FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
     FunctionDecl *CurFD = CurDecl->getAsFunction()->getMostRecentDecl();

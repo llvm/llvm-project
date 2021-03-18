@@ -2162,6 +2162,11 @@ def : Pat<(AArch64csel (i32 -1), GPR32:$fval, (i32 imm:$cc), NZCV),
 def : Pat<(AArch64csel (i64 -1), GPR64:$fval, (i32 imm:$cc), NZCV),
           (CSINVXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 
+def : Pat<(add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+          (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
+def : Pat<(add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+          (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
+
 // The inverse of the condition code from the alias instruction is what is used
 // in the aliased instruction. The parser all ready inverts the condition code
 // for these aliases.
@@ -3796,11 +3801,8 @@ defm FNEG   : SingleOperandFPData<0b0010, "fneg", fneg>;
 defm FRINTA : SingleOperandFPData<0b1100, "frinta", fround>;
 defm FRINTI : SingleOperandFPData<0b1111, "frinti", fnearbyint>;
 defm FRINTM : SingleOperandFPData<0b1010, "frintm", ffloor>;
-defm FRINTN : SingleOperandFPData<0b1000, "frintn", int_aarch64_neon_frintn>;
+defm FRINTN : SingleOperandFPData<0b1000, "frintn", froundeven>;
 defm FRINTP : SingleOperandFPData<0b1001, "frintp", fceil>;
-
-def : Pat<(v1f64 (int_aarch64_neon_frintn (v1f64 FPR64:$Rn))),
-          (FRINTNDr FPR64:$Rn)>;
 
 defm FRINTX : SingleOperandFPData<0b1110, "frintx", frint>;
 defm FRINTZ : SingleOperandFPData<0b1011, "frintz", ftrunc>;
@@ -4090,7 +4092,7 @@ defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
 defm FRINTA : SIMDTwoVectorFP<1, 0, 0b11000, "frinta", fround>;
 defm FRINTI : SIMDTwoVectorFP<1, 1, 0b11001, "frinti", fnearbyint>;
 defm FRINTM : SIMDTwoVectorFP<0, 0, 0b11001, "frintm", ffloor>;
-defm FRINTN : SIMDTwoVectorFP<0, 0, 0b11000, "frintn", int_aarch64_neon_frintn>;
+defm FRINTN : SIMDTwoVectorFP<0, 0, 0b11000, "frintn", froundeven>;
 defm FRINTP : SIMDTwoVectorFP<0, 1, 0b11000, "frintp", fceil>;
 defm FRINTX : SIMDTwoVectorFP<1, 0, 0b11001, "frintx", frint>;
 defm FRINTZ : SIMDTwoVectorFP<0, 1, 0b11001, "frintz", ftrunc>;

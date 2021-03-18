@@ -1039,7 +1039,7 @@ mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
   }
   assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
   auto zero = builder.createRealZeroConstant(loc, resultType);
-  auto diff = builder.create<fir::SubfOp>(loc, args[0], args[1]);
+  auto diff = builder.create<mlir::SubFOp>(loc, args[0], args[1]);
   auto cmp =
       builder.create<fir::CmpfOp>(loc, mlir::CmpFPredicate::OGT, diff, zero);
   return builder.create<mlir::SelectOp>(loc, cmp, diff, zero);
@@ -1053,7 +1053,7 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
          "Result must be double precision in DPROD");
   auto a = builder.createConvert(loc, resultType, args[0]);
   auto b = builder.createConvert(loc, resultType, args[1]);
-  return builder.create<fir::MulfOp>(loc, a, b);
+  return builder.create<mlir::MulFOp>(loc, a, b);
 }
 
 // FLOOR

@@ -287,10 +287,11 @@ static bool isCommutative(Instruction *I) {
 /// %ins4 = insertelement <4 x i8> %ins3, i8 %9, i32 3
 /// ret <4 x i8> %ins4
 /// InstCombiner transforms this into a shuffle and vector mul
+/// Mask will return the Shuffle Mask equivalent to the extracted elements.
 /// TODO: Can we split off and reuse the shuffle mask detection from
 /// TargetTransformInfo::getInstructionThroughput?
 static Optional<TargetTransformInfo::ShuffleKind>
-isShuffle(ArrayRef<Value *> VL) {
+isShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   auto *EI0 = cast<ExtractElementInst>(VL[0]);
   unsigned Size =
       cast<FixedVectorType>(EI0->getVectorOperandType())->getNumElements();
@@ -308,9 +309,12 @@ isShuffle(ArrayRef<Value *> VL) {
     if (!Idx)
       return None;
     // Undefined behavior if Idx is negative or >= Size.
-    if (Idx->getValue().uge(Size))
+    if (Idx->getValue().uge(Size)) {
+      Mask.push_back(UndefMaskElem);
       continue;
+    }
     unsigned IntIdx = Idx->getValue().getZExtValue();
+    Mask.push_back(IntIdx);
     // We can extractelement from undef or poison vector.
     if (isa<UndefValue>(Vec))
       continue;
@@ -3467,21 +3471,25 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
   InstructionCost ReuseShuffleCost = 0;
   if (NeedToShuffleReuses) {
     ReuseShuffleCost =
-        TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+        TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, VecTy,
+                            E->ReuseShuffleIndices);
   }
   if (E->State == TreeEntry::NeedToGather) {
     if (allConstant(VL))
       return 0;
     if (isSplat(VL)) {
       return ReuseShuffleCost +
-             TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, 0);
+             TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, None,
+                                 0);
     }
     if (E->getOpcode() == Instruction::ExtractElement &&
         allSameType(VL) && allSameBlock(VL)) {
-      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind = isShuffle(VL);
+      SmallVector<int> Mask;
+      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind =
+          isShuffle(VL, Mask);
       if (ShuffleKind.hasValue()) {
         InstructionCost Cost =
-            TTI->getShuffleCost(ShuffleKind.getValue(), VecTy);
+            TTI->getShuffleCost(ShuffleKind.getValue(), VecTy, Mask);
         for (auto *V : VL) {
           // If all users of instruction are going to be vectorized and this
           // instruction itself is not going to be vectorized, consider this
@@ -3545,8 +3553,10 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
         }
         CommonCost = ReuseShuffleCost;
       } else if (!E->ReorderIndices.empty()) {
+        SmallVector<int> NewMask;
+        inversePermutation(E->ReorderIndices, NewMask);
         CommonCost = TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy, NewMask);
       }
       for (unsigned I = 0, E = VL.size(); I < E; ++I) {
         Instruction *EI = cast<Instruction>(VL[I]);
@@ -3770,9 +3780,12 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
             Instruction::Load, VecTy, cast<LoadInst>(VL0)->getPointerOperand(),
             /*VariableMask=*/false, alignment, CostKind, VL0);
       }
-      if (!NeedToShuffleReuses && !E->ReorderIndices.empty())
+      if (!NeedToShuffleReuses && !E->ReorderIndices.empty()) {
+        SmallVector<int> NewMask;
+        inversePermutation(E->ReorderIndices, NewMask);
         VecLdCost += TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy, NewMask);
+      }
       LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecLdCost, ScalarLdCost));
       return ReuseShuffleCost + VecLdCost - ScalarLdCost;
     }
@@ -3787,9 +3800,12 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
       InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
       InstructionCost VecStCost = TTI->getMemoryOpCost(
           Instruction::Store, VecTy, Alignment, 0, CostKind, VL0);
-      if (IsReorder)
+      if (IsReorder) {
+        SmallVector<int> NewMask;
+        inversePermutation(E->ReorderIndices, NewMask);
         VecStCost += TTI->getShuffleCost(
-            TargetTransformInfo::SK_PermuteSingleSrc, VecTy);
+            TargetTransformInfo::SK_PermuteSingleSrc, VecTy, NewMask);
+      }
       LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecStCost, ScalarStCost));
       return VecStCost - ScalarStCost;
     }
@@ -3856,7 +3872,15 @@ InstructionCost BoUpSLP::getEntryCost(TreeEntry *E) {
         VecCost += TTI->getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
                                          TTI::CastContextHint::None, CostKind);
       }
-      VecCost += TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, 0);
+
+      SmallVector<int> Mask(E->Scalars.size());
+      for (unsigned I = 0, End = E->Scalars.size(); I < End; ++I) {
+        auto *OpInst = cast<Instruction>(E->Scalars[I]);
+        assert(E->isOpcodeOrAlt(OpInst) && "Unexpected main/alternate opcode");
+        Mask[I] = I + (OpInst->getOpcode() == E->getAltOpcode() ? End : 0);
+      }
+      VecCost +=
+          TTI->getShuffleCost(TargetTransformInfo::SK_Select, VecTy, Mask, 0);
       LLVM_DEBUG(dumpTreeCosts(E, ReuseShuffleCost, VecCost, ScalarCost));
       return ReuseShuffleCost + VecCost - ScalarCost;
     }
@@ -4909,8 +4933,14 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   // sign extend the extracted values below.
   auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
   if (MinBWs.count(ScalarRoot)) {
-    if (auto *I = dyn_cast<Instruction>(VectorRoot))
-      Builder.SetInsertPoint(&*++BasicBlock::iterator(I));
+    if (auto *I = dyn_cast<Instruction>(VectorRoot)) {
+      // If current instr is a phi and not the last phi, insert it after the
+      // last phi node.
+      if (isa<PHINode>(I))
+        Builder.SetInsertPoint(&*I->getParent()->getFirstInsertionPt());
+      else
+        Builder.SetInsertPoint(&*++BasicBlock::iterator(I));
+    }
     auto BundleWidth = VectorizableTree[0]->Scalars.size();
     auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
     auto *VecTy = FixedVectorType::get(MinTy, BundleWidth);
@@ -5149,11 +5179,53 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   bool ReSchedule = false;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.OpValue << "\n");
 
+  auto &&TryScheduleBundle = [this, OldScheduleEnd, SLP](bool ReSchedule,
+                                                         ScheduleData *Bundle) {
+    // The scheduling region got new instructions at the lower end (or it is a
+    // new region for the first bundle). This makes it necessary to
+    // recalculate all dependencies.
+    // It is seldom that this needs to be done a second time after adding the
+    // initial bundle to the region.
+    if (ScheduleEnd != OldScheduleEnd) {
+      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
+        doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
+      ReSchedule = true;
+    }
+    if (ReSchedule) {
+      resetSchedule();
+      initialFillReadyList(ReadyInsts);
+    }
+    if (Bundle) {
+      LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
+                        << " in block " << BB->getName() << "\n");
+      calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    }
+
+    // Now try to schedule the new bundle or (if no bundle) just calculate
+    // dependencies. As soon as the bundle is "ready" it means that there are no
+    // cyclic dependencies and we can schedule it. Note that's important that we
+    // don't "schedule" the bundle yet (see cancelScheduling).
+    while (((!Bundle && ReSchedule) || (Bundle && !Bundle->isReady())) &&
+           !ReadyInsts.empty()) {
+      ScheduleData *Picked = ReadyInsts.pop_back_val();
+      if (Picked->isSchedulingEntity() && Picked->isReady())
+        schedule(Picked, ReadyInsts);
+    }
+  };
+
   // Make sure that the scheduling region contains all
   // instructions of the bundle.
   for (Value *V : VL) {
-    if (!extendSchedulingRegion(V, S))
+    if (!extendSchedulingRegion(V, S)) {
+      // If the scheduling region got new instructions at the lower end (or it
+      // is a new region for the first bundle). This makes it necessary to
+      // recalculate all dependencies.
+      // Otherwise the compiler may crash trying to incorrectly calculate
+      // dependencies and emit instruction in the wrong order at the actual
+      // scheduling.
+      TryScheduleBundle(/*ReSchedule=*/false, nullptr);
       return None;
+    }
   }
 
   for (Value *V : VL) {
@@ -5182,42 +5254,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     BundleMember->FirstInBundle = Bundle;
     PrevInBundle = BundleMember;
   }
-  if (ScheduleEnd != OldScheduleEnd) {
-    // The scheduling region got new instructions at the lower end (or it is a
-    // new region for the first bundle). This makes it necessary to
-    // recalculate all dependencies.
-    // It is seldom that this needs to be done a second time after adding the
-    // initial bundle to the region.
-    for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-      doForAllOpcodes(I, [](ScheduleData *SD) {
-        SD->clearDependencies();
-      });
-    }
-    ReSchedule = true;
-  }
-  if (ReSchedule) {
-    resetSchedule();
-    initialFillReadyList(ReadyInsts);
-  }
   assert(Bundle && "Failed to find schedule bundle");
-
-  LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle << " in block "
-                    << BB->getName() << "\n");
-
-  calculateDependencies(Bundle, true, SLP);
-
-  // Now try to schedule the new bundle. As soon as the bundle is "ready" it
-  // means that there are no cyclic dependencies and we can schedule it.
-  // Note that's important that we don't "schedule" the bundle yet (see
-  // cancelScheduling).
-  while (!Bundle->isReady() && !ReadyInsts.empty()) {
-
-    ScheduleData *pickedSD = ReadyInsts.pop_back_val();
-
-    if (pickedSD->isSchedulingEntity() && pickedSD->isReady()) {
-      schedule(pickedSD, ReadyInsts);
-    }
-  }
+  TryScheduleBundle(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
     cancelScheduling(VL, S.OpValue);
     return None;
@@ -7442,10 +7480,11 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
                                                    BasicBlock *BB, BoUpSLP &R) {
   SmallVector<Value *, 16> BuildVectorInsts;
   SmallVector<Value *, 16> BuildVectorOpds;
+  SmallVector<int> Mask;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts) ||
       (llvm::all_of(BuildVectorOpds,
                     [](Value *V) { return isa<ExtractElementInst>(V); }) &&
-       isShuffle(BuildVectorOpds)))
+       isShuffle(BuildVectorOpds, Mask)))
     return false;
 
   // Vectorize starting with the build vector operands ignoring the BuildVector

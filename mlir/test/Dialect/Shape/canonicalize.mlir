@@ -1119,3 +1119,15 @@ func @broadcast_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
       !shape.shape, !shape.shape, !shape.shape, !shape.shape -> !shape.shape
   return %0 : !shape.shape
 }
+
+// -----
+
+// CHECK-LABEL: @broadcast_on_single_operand
+// CHECK-SAME: (%[[A:.*]]: tensor<3xindex>)
+func @broadcast_on_single_operand(%a : tensor<3xindex>) {
+  // CHECK-NOT: broadcast
+  // CHECK: "use"(%[[A]])
+  %0 = shape.broadcast %a : tensor<3xindex> -> tensor<?xindex>
+  "use"(%0) : (tensor<?xindex>) -> ()
+  return
+}
