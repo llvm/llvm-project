@@ -112,6 +112,41 @@ OptionalParseResult Parser::parseOptionalInteger(uint64_t &result) {
   return success();
 }
 
+/// Parse a floating point value from an integer literal token.
+ParseResult Parser::parseFloatFromIntegerLiteral(
+    Optional<APFloat> &result, const Token &tok, bool isNegative,
+    const llvm::fltSemantics &semantics, size_t typeSizeInBits) {
+  llvm::SMLoc loc = tok.getLoc();
+  StringRef spelling = tok.getSpelling();
+  bool isHex = spelling.size() > 1 && spelling[1] == 'x';
+  if (!isHex) {
+    return emitError(loc, "unexpected decimal integer literal for a "
+                          "floating point value")
+               .attachNote()
+           << "add a trailing dot to make the literal a float";
+  }
+  if (isNegative) {
+    return emitError(loc, "hexadecimal float literal should not have a "
+                          "leading minus");
+  }
+
+  Optional<uint64_t> value = tok.getUInt64IntegerValue();
+  if (!value.hasValue())
+    return emitError(loc, "hexadecimal float constant out of range for type");
+
+  if (&semantics == &APFloat::IEEEdouble()) {
+    result = APFloat(semantics, APInt(typeSizeInBits, *value));
+    return success();
+  }
+
+  APInt apInt(typeSizeInBits, *value);
+  if (apInt != *value)
+    return emitError(loc, "hexadecimal float constant out of range for type");
+  result = APFloat(semantics, apInt);
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // OperationParser
 //===----------------------------------------------------------------------===//

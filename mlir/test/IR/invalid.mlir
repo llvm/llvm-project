@@ -1191,7 +1191,7 @@ func @hexadecimal_float_literal_overflow() {
 // -----
 
 func @decimal_float_literal() {
-  // expected-error @+2 {{unexpected decimal integer literal for a float attribute}}
+  // expected-error @+2 {{unexpected decimal integer literal for a floating point value}}
   // expected-note @+1 {{add a trailing dot to make the literal a float}}
   "foo"() {value = 42 : f32} : () -> ()
 }
@@ -1244,7 +1244,7 @@ func @hexadecimal_float_too_wide_for_type_in_tensor() {
 
 // Check that we report an error when a value is too wide to be parsed.
 func @hexadecimal_float_too_wide_in_tensor() {
-  // expected-error @+1 {{hexadecimal float constant out of range for attribute}}
+  // expected-error @+1 {{hexadecimal float constant out of range for type}}
   "foo"() {bar = dense<0x7FFFFFF0000000000000> : tensor<2xf32>} : () -> ()
 }
 
