@@ -200,6 +200,10 @@ bool llvm::isTriviallyDead(const MachineInstr &MI,
   // Don't delete frame allocation labels.
   if (MI.getOpcode() == TargetOpcode::LOCAL_ESCAPE)
     return false;
+  // LIFETIME markers should be preserved even if they seem dead.
+  if (MI.getOpcode() == TargetOpcode::LIFETIME_START ||
+      MI.getOpcode() == TargetOpcode::LIFETIME_END)
+    return false;
 
   // If we can move an instruction, we can remove it.  Otherwise, it has
   // a side-effect of some sort.
