@@ -715,8 +715,8 @@ public:
     return OpCost;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                          VectorType *SubTp) {
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                          ArrayRef<int> Mask, int Index, VectorType *SubTp) {
 
     switch (Kind) {
     case TTI::SK_Broadcast:
@@ -1256,7 +1256,7 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[1])->getZExtValue();
       return thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                     cast<VectorType>(Args[0]->getType()),
+                                     cast<VectorType>(Args[0]->getType()), None,
                                      Index, cast<VectorType>(RetTy));
     }
     case Intrinsic::experimental_vector_insert: {
@@ -1266,13 +1266,13 @@ public:
         return BaseT::getIntrinsicInstrCost(ICA, CostKind);
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
-          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), Index,
-          cast<VectorType>(Args[1]->getType()));
+          TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()), None,
+          Index, cast<VectorType>(Args[1]->getType()));
     }
     case Intrinsic::experimental_vector_reverse: {
       return thisT()->getShuffleCost(TTI::SK_Reverse,
-                                     cast<VectorType>(Args[0]->getType()), 0,
-                                     cast<VectorType>(RetTy));
+                                     cast<VectorType>(Args[0]->getType()), None,
+                                     0, cast<VectorType>(RetTy));
     }
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_mul:
@@ -1907,9 +1907,9 @@ public:
       NumVecElts /= 2;
       VectorType *SubTy = FixedVectorType::get(ScalarTy, NumVecElts);
       // Assume the pairwise shuffles add a cost.
-      ShuffleCost +=
-          (IsPairwise + 1) * thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                                     Ty, NumVecElts, SubTy);
+      ShuffleCost += (IsPairwise + 1) *
+                     thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
+                                             NumVecElts, SubTy);
       ArithCost += thisT()->getArithmeticInstrCost(Opcode, SubTy, CostKind);
       Ty = SubTy;
       ++LongVectorCount;
@@ -1928,8 +1928,8 @@ public:
     unsigned NumShuffles = NumReduxLevels;
     if (IsPairwise && NumReduxLevels >= 1)
       NumShuffles += NumReduxLevels - 1;
-    ShuffleCost += NumShuffles *
-                   thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, 0, Ty);
+    ShuffleCost += NumShuffles * thisT()->getShuffleCost(
+                                     TTI::SK_PermuteSingleSrc, Ty, None, 0, Ty);
     ArithCost += NumReduxLevels * thisT()->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost +
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
@@ -1965,9 +1965,9 @@ public:
       CondTy = FixedVectorType::get(ScalarCondTy, NumVecElts);
 
       // Assume the pairwise shuffles add a cost.
-      ShuffleCost +=
-          (IsPairwise + 1) * thisT()->getShuffleCost(TTI::SK_ExtractSubvector,
-                                                     Ty, NumVecElts, SubTy);
+      ShuffleCost += (IsPairwise + 1) *
+                     thisT()->getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
+                                             NumVecElts, SubTy);
       MinMaxCost +=
           thisT()->getCmpSelInstrCost(CmpOpcode, SubTy, CondTy,
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind) +
@@ -1990,8 +1990,8 @@ public:
     unsigned NumShuffles = NumReduxLevels;
     if (IsPairwise && NumReduxLevels >= 1)
       NumShuffles += NumReduxLevels - 1;
-    ShuffleCost += NumShuffles *
-                   thisT()->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty, 0, Ty);
+    ShuffleCost += NumShuffles * thisT()->getShuffleCost(
+                                     TTI::SK_PermuteSingleSrc, Ty, None, 0, Ty);
     MinMaxCost +=
         NumReduxLevels *
         (thisT()->getCmpSelInstrCost(CmpOpcode, Ty, CondTy,
