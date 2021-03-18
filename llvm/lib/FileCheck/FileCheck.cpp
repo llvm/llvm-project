@@ -1362,6 +1362,8 @@ void Pattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
               OS << " ";
               E.log(OS);
             });
+        if (!OS.tell())
+          continue;
       } else {
         // Substitution succeeded. Print substituted value.
         OS << "with \"";
