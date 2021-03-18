@@ -94,7 +94,8 @@ static void getOperandTreePredicates(std::vector<PositionalPredicate> &predList,
         predList.emplace_back(resultPos, builder.getEqualTo(pos));
 
         // Collect the predicates of the parent operation.
-        getTreePredicates(predList, op.parent(), builder, inputs, parentPos);
+        getTreePredicates(predList, op.parent(), builder, inputs,
+                          (Position *)parentPos);
       });
 }
 
