@@ -262,8 +262,8 @@ class Test:
         # The previous test elapsed time, if applicable.
         self.previous_elapsed = 0.0
 
-        if os.sep.join(path_in_suite) in suite.test_times:
-            time = suite.test_times[os.sep.join(path_in_suite)]
+        if '/'.join(path_in_suite) in suite.test_times:
+            time = suite.test_times['/'.join(path_in_suite)]
             self.previous_elapsed = abs(time)
             self.previous_failure = time < 0
 
