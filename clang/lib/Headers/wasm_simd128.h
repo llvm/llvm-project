@@ -616,14 +616,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_add(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i8x16_add_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_add_saturate_s_i8x16((__i8x16)__a,
-                                                     (__i8x16)__b);
+  return (v128_t)__builtin_wasm_add_sat_s_i8x16((__i8x16)__a, (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u8x16_add_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_add_saturate_u_i8x16((__u8x16)__a,
-                                                     (__u8x16)__b);
+  return (v128_t)__builtin_wasm_add_sat_u_i8x16((__u8x16)__a, (__u8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_sub(v128_t __a,
@@ -633,14 +631,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_sub(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i8x16_sub_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_sub_saturate_s_i8x16((__i8x16)__a,
-                                                     (__i8x16)__b);
+  return (v128_t)__builtin_wasm_sub_sat_s_i8x16((__i8x16)__a, (__i8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u8x16_sub_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_sub_saturate_u_i8x16((__u8x16)__a,
-                                                     (__u8x16)__b);
+  return (v128_t)__builtin_wasm_sub_sat_u_i8x16((__u8x16)__a, (__u8x16)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i8x16_min(v128_t __a,
@@ -706,14 +702,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_add(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i16x8_add_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_add_saturate_s_i16x8((__i16x8)__a,
-                                                     (__i16x8)__b);
+  return (v128_t)__builtin_wasm_add_sat_s_i16x8((__i16x8)__a, (__i16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u16x8_add_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_add_saturate_u_i16x8((__u16x8)__a,
-                                                     (__u16x8)__b);
+  return (v128_t)__builtin_wasm_add_sat_u_i16x8((__u16x8)__a, (__u16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_sub(v128_t __a,
@@ -723,14 +717,12 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_sub(v128_t __a,
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_i16x8_sub_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_sub_saturate_s_i16x8((__i16x8)__a,
-                                                     (__i16x8)__b);
+  return (v128_t)__builtin_wasm_sub_sat_s_i16x8((__i16x8)__a, (__i16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS
 wasm_u16x8_sub_saturate(v128_t __a, v128_t __b) {
-  return (v128_t)__builtin_wasm_sub_saturate_u_i16x8((__u16x8)__a,
-                                                     (__u16x8)__b);
+  return (v128_t)__builtin_wasm_sub_sat_u_i16x8((__u16x8)__a, (__u16x8)__b);
 }
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i16x8_mul(v128_t __a,

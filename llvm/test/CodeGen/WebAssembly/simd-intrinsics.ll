@@ -23,7 +23,7 @@ define <16 x i8> @swizzle_v16i8(<16 x i8> %x, <16 x i8> %y) {
 
 ; CHECK-LABEL: add_sat_s_v16i8:
 ; CHECK-NEXT: .functype add_sat_s_v16i8 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i8x16.add_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i8x16.add_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @add_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
@@ -33,7 +33,7 @@ define <16 x i8> @add_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
 
 ; CHECK-LABEL: add_sat_u_v16i8:
 ; CHECK-NEXT: .functype add_sat_u_v16i8 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i8x16.add_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i8x16.add_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @add_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
@@ -43,11 +43,11 @@ define <16 x i8> @add_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
 
 ; CHECK-LABEL: sub_sat_s_v16i8:
 ; CHECK-NEXT: .functype sub_sat_s_v16i8 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i8x16.sub_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i8x16.sub_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.sub.saturate.signed.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @sub_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.sub.saturate.signed.v16i8(
+  %a = call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(
     <16 x i8> %x, <16 x i8> %y
   )
   ret <16 x i8> %a
@@ -55,11 +55,11 @@ define <16 x i8> @sub_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
 
 ; CHECK-LABEL: sub_sat_u_v16i8:
 ; CHECK-NEXT: .functype sub_sat_u_v16i8 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i8x16.sub_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i8x16.sub_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.sub.saturate.unsigned.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @sub_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.sub.saturate.unsigned.v16i8(
+  %a = call <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(
     <16 x i8> %x, <16 x i8> %y
   )
   ret <16 x i8> %a
@@ -186,7 +186,7 @@ define <16 x i8> @shuffle_undef_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; ==============================================================================
 ; CHECK-LABEL: add_sat_s_v8i16:
 ; CHECK-NEXT: .functype add_sat_s_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.add_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i16x8.add_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @add_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
@@ -196,7 +196,7 @@ define <8 x i16> @add_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
 
 ; CHECK-LABEL: add_sat_u_v8i16:
 ; CHECK-NEXT: .functype add_sat_u_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.add_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i16x8.add_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @add_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
@@ -206,11 +206,11 @@ define <8 x i16> @add_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
 
 ; CHECK-LABEL: sub_sat_s_v8i16:
 ; CHECK-NEXT: .functype sub_sat_s_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.sub_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i16x8.sub_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.sub.saturate.signed.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @sub_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.sub.saturate.signed.v8i16(
+  %a = call <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(
     <8 x i16> %x, <8 x i16> %y
   )
   ret <8 x i16> %a
@@ -218,11 +218,11 @@ define <8 x i16> @sub_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
 
 ; CHECK-LABEL: sub_sat_u_v8i16:
 ; CHECK-NEXT: .functype sub_sat_u_v8i16 (v128, v128) -> (v128){{$}}
-; CHECK-NEXT: i16x8.sub_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
+; CHECK-NEXT: i16x8.sub_sat_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.sub.saturate.unsigned.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @sub_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.sub.saturate.unsigned.v8i16(
+  %a = call <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(
     <8 x i16> %x, <8 x i16> %y
   )
   ret <8 x i16> %a
@@ -242,9 +242,9 @@ define <8 x i16> @avgr_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-NEXT: .functype q15mulr_sat_s_v8i16 (v128, v128) -> (v128){{$}}
 ; CHECK-NEXT: i16x8.q15mulr_sat_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.wasm.q15mulr.sat.signed(<8 x i16>, <8 x i16>)
 define <8 x i16> @q15mulr_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.q15mulr.saturate.signed(<8 x i16> %x,
+  %a = call <8 x i16> @llvm.wasm.q15mulr.sat.signed(<8 x i16> %x,
                                                          <8 x i16> %y)
   ret <8 x i16> %a
 }
@@ -534,9 +534,9 @@ define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
 ; CHECK-NEXT: .functype trunc_sat_zero_signed_v4i32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: i32x4.trunc_sat_zero_f64x2_s $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.trunc.saturate.zero.signed(<2 x double>)
+declare <4 x i32> @llvm.wasm.trunc.sat.zero.signed(<2 x double>)
 define <4 x i32> @trunc_sat_zero_signed_v4i32(<2 x double> %a) {
-  %v = call <4 x i32> @llvm.wasm.trunc.saturate.zero.signed(<2 x double> %a)
+  %v = call <4 x i32> @llvm.wasm.trunc.sat.zero.signed(<2 x double> %a)
   ret <4 x i32> %v
 }
 
@@ -544,9 +544,9 @@ define <4 x i32> @trunc_sat_zero_signed_v4i32(<2 x double> %a) {
 ; CHECK-NEXT: .functype trunc_sat_zero_unsigned_v4i32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: i32x4.trunc_sat_zero_f64x2_u $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.trunc.saturate.zero.unsigned(<2 x double>)
+declare <4 x i32> @llvm.wasm.trunc.sat.zero.unsigned(<2 x double>)
 define <4 x i32> @trunc_sat_zero_unsigned_v4i32(<2 x double> %a) {
-  %v = call <4 x i32> @llvm.wasm.trunc.saturate.zero.unsigned(<2 x double> %a)
+  %v = call <4 x i32> @llvm.wasm.trunc.sat.zero.unsigned(<2 x double> %a)
   ret <4 x i32> %v
 }
 
@@ -563,43 +563,43 @@ define <2 x i64> @eq_v2i64(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %a
 }
 
-; CHECK-LABEL: widen_low_s_v2i64:
-; CHECK-NEXT: .functype widen_low_s_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.widen_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: extend_low_s_v2i64:
+; CHECK-NEXT: .functype extend_low_s_v2i64 (v128) -> (v128){{$}}
+; CHECK-NEXT: i64x2.extend_low_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32>)
-define <2 x i64> @widen_low_s_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32> %x)
+declare <2 x i64> @llvm.wasm.extend.low.signed(<4 x i32>)
+define <2 x i64> @extend_low_s_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.extend.low.signed(<4 x i32> %x)
   ret <2 x i64> %a
 }
 
-; CHECK-LABEL: widen_high_s_v2i64:
-; CHECK-NEXT: .functype widen_high_s_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.widen_high_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: extend_high_s_v2i64:
+; CHECK-NEXT: .functype extend_high_s_v2i64 (v128) -> (v128){{$}}
+; CHECK-NEXT: i64x2.extend_high_i32x4_s $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32>)
-define <2 x i64> @widen_high_s_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32> %x)
+declare <2 x i64> @llvm.wasm.extend.high.signed(<4 x i32>)
+define <2 x i64> @extend_high_s_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.extend.high.signed(<4 x i32> %x)
   ret <2 x i64> %a
 }
 
-; CHECK-LABEL: widen_low_u_v2i64:
-; CHECK-NEXT: .functype widen_low_u_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.widen_low_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: extend_low_u_v2i64:
+; CHECK-NEXT: .functype extend_low_u_v2i64 (v128) -> (v128){{$}}
+; CHECK-NEXT: i64x2.extend_low_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32>)
-define <2 x i64> @widen_low_u_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32> %x)
+declare <2 x i64> @llvm.wasm.extend.low.unsigned(<4 x i32>)
+define <2 x i64> @extend_low_u_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.extend.low.unsigned(<4 x i32> %x)
   ret <2 x i64> %a
 }
 
-; CHECK-LABEL: widen_high_u_v2i64:
-; CHECK-NEXT: .functype widen_high_u_v2i64 (v128) -> (v128){{$}}
-; CHECK-NEXT: i64x2.widen_high_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: extend_high_u_v2i64:
+; CHECK-NEXT: .functype extend_high_u_v2i64 (v128) -> (v128){{$}}
+; CHECK-NEXT: i64x2.extend_high_i32x4_u $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32>)
-define <2 x i64> @widen_high_u_v2i64(<4 x i32> %x) {
-  %a = call <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32> %x)
+declare <2 x i64> @llvm.wasm.extend.high.unsigned(<4 x i32>)
+define <2 x i64> @extend_high_u_v2i64(<4 x i32> %x) {
+  %a = call <2 x i64> @llvm.wasm.extend.high.unsigned(<4 x i32> %x)
   ret <2 x i64> %a
 }
 
