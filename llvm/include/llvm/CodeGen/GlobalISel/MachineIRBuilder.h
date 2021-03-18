@@ -1810,6 +1810,27 @@ public:
   MachineInstrBuilder buildVecReduceUMin(const DstOp &Dst, const SrcOp &Src) {
     return buildInstr(TargetOpcode::G_VECREDUCE_UMIN, {Dst}, {Src});
   }
+
+  /// Build and insert G_MEMCPY or G_MEMMOVE
+  MachineInstrBuilder buildMemTransferInst(unsigned Opcode, const SrcOp &DstPtr,
+                                           const SrcOp &SrcPtr,
+                                           const SrcOp &Size,
+                                           MachineMemOperand &DstMMO,
+                                           MachineMemOperand &SrcMMO) {
+    auto MIB = buildInstr(
+        Opcode, {}, {DstPtr, SrcPtr, Size, SrcOp(INT64_C(0) /*isTailCall*/)});
+    MIB.addMemOperand(&DstMMO);
+    MIB.addMemOperand(&SrcMMO);
+    return MIB;
+  }
+
+  MachineInstrBuilder buildMemCpy(const SrcOp &DstPtr, const SrcOp &SrcPtr,
+                                  const SrcOp &Size, MachineMemOperand &DstMMO,
+                                  MachineMemOperand &SrcMMO) {
+    return buildMemTransferInst(TargetOpcode::G_MEMCPY, DstPtr, SrcPtr, Size,
+                                DstMMO, SrcMMO);
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

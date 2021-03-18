@@ -187,6 +187,14 @@ public:
       llvm_unreachable("Custom values not supported");
     }
 
+    /// Do a memory copy of \p MemSize bytes from \p SrcPtr to \p DstPtr. This
+    /// is necessary for outgoing stack-passed byval arguments.
+    void
+    copyArgumentMemory(const ArgInfo &Arg, Register DstPtr, Register SrcPtr,
+                       const MachinePointerInfo &DstPtrInfo, Align DstAlign,
+                       const MachinePointerInfo &SrcPtrInfo, Align SrcAlign,
+                       uint64_t MemSize, CCValAssign &VA) const;
+
     /// Extend a register to the location type given in VA, capped at extending
     /// to at most MaxSize bits. If MaxSizeBits is 0 then no maximum is set.
     Register extendRegister(Register ValReg, CCValAssign &VA,
