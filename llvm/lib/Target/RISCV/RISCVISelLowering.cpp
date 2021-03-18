@@ -569,6 +569,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
 
+        setOperationAction(ISD::MLOAD, VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SUB, VT, Custom);
@@ -640,6 +642,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
+        setOperationAction(ISD::MLOAD, VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FSUB, VT, Custom);
         setOperationAction(ISD::FMUL, VT, Custom);
@@ -1638,6 +1642,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
     return lowerFixedLengthVectorStoreToRVV(Op, DAG);
+  case ISD::MLOAD:
+    return lowerFixedLengthVectorMaskedLoadToRVV(Op, DAG);
+  case ISD::MSTORE:
+    return lowerFixedLengthVectorMaskedStoreToRVV(Op, DAG);
   case ISD::SETCC:
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   case ISD::ADD:
@@ -3168,6 +3176,58 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   return DAG.getMemIntrinsicNode(
       RISCVISD::VSE_VL, DL, DAG.getVTList(MVT::Other),
       {Store->getChain(), NewValue, Store->getBasePtr(), VL},
+      Store->getMemoryVT(), Store->getMemOperand());
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorMaskedLoadToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto *Load = cast<MaskedLoadSDNode>(Op);
+
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Mask =
+      convertToScalableVector(MaskVT, Load->getMask(), DAG, Subtarget);
+  SDValue PassThru =
+      convertToScalableVector(ContainerVT, Load->getPassThru(), DAG, Subtarget);
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+
+  SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
+  SDValue Ops[] = {Load->getChain(),   IntID, PassThru,
+                   Load->getBasePtr(), Mask,  VL};
+  SDValue NewLoad =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                              Load->getMemoryVT(), Load->getMemOperand());
+
+  SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
+  return DAG.getMergeValues({Result, Load->getChain()}, DL);
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorMaskedStoreToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto *Store = cast<MaskedStoreSDNode>(Op);
+
+  SDLoc DL(Op);
+  SDValue Val = Store->getValue();
+  MVT VT = Val.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
+  SDValue Mask =
+      convertToScalableVector(MaskVT, Store->getMask(), DAG, Subtarget);
+
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vse_mask, DL, XLenVT);
+  return DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other),
+      {Store->getChain(), IntID, Val, Store->getBasePtr(), Mask, VL},
       Store->getMemoryVT(), Store->getMemOperand());
 }
 
