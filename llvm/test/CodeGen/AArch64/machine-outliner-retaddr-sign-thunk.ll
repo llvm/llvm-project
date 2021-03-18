@@ -67,7 +67,7 @@ entry:
 
 attributes #0 = { "sign-return-address"="non-leaf" }
 
-; CHECK-NOT:        [[OUTLINED_FUNCTION_{{.*}}]]
+; CHECK-NOT:        OUTLINED_FUNCTION_{{.*}}
 ; CHECK-NOT:         .cfi_b_key_frame
 ; CHECK-NOT:         paci{{[a,b]}}sp
 ; CHECK-NOT:         hint #2{{[5,7]}}
