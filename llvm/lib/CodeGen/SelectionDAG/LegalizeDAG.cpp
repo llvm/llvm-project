@@ -133,10 +133,6 @@ private:
                                      SDValue N1, SDValue N2,
                                      ArrayRef<int> Mask) const;
 
-  bool LegalizeSetCCCondCode(EVT VT, SDValue &LHS, SDValue &RHS, SDValue &CC,
-                             bool &NeedInvert, const SDLoc &dl, SDValue &Chain,
-                             bool IsSignaling = false);
-
   SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
 
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall Call_F32,
@@ -1683,152 +1679,6 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
 
   Results.push_back(Tmp1);
   Results.push_back(Tmp2);
-}
-
-/// Legalize a SETCC with given LHS and RHS and condition code CC on the current
-/// target.
-///
-/// If the SETCC has been legalized using AND / OR, then the legalized node
-/// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
-/// will be set to false.
-///
-/// If the SETCC has been legalized by using getSetCCSwappedOperands(),
-/// then the values of LHS and RHS will be swapped, CC will be set to the
-/// new condition, and NeedInvert will be set to false.
-///
-/// If the SETCC has been legalized using the inverse condcode, then LHS and
-/// RHS will be unchanged, CC will set to the inverted condcode, and NeedInvert
-/// will be set to true. The caller must invert the result of the SETCC with
-/// SelectionDAG::getLogicalNOT() or take equivalent action to swap the effect
-/// of a true/false result.
-///
-/// \returns true if the SetCC has been legalized, false if it hasn't.
-bool SelectionDAGLegalize::LegalizeSetCCCondCode(
-    EVT VT, SDValue &LHS, SDValue &RHS, SDValue &CC, bool &NeedInvert,
-    const SDLoc &dl, SDValue &Chain, bool IsSignaling) {
-  MVT OpVT = LHS.getSimpleValueType();
-  ISD::CondCode CCCode = cast<CondCodeSDNode>(CC)->get();
-  NeedInvert = false;
-  switch (TLI.getCondCodeAction(CCCode, OpVT)) {
-  default: llvm_unreachable("Unknown condition code action!");
-  case TargetLowering::Legal:
-    // Nothing to do.
-    break;
-  case TargetLowering::Expand: {
-    ISD::CondCode InvCC = ISD::getSetCCSwappedOperands(CCCode);
-    if (TLI.isCondCodeLegalOrCustom(InvCC, OpVT)) {
-      std::swap(LHS, RHS);
-      CC = DAG.getCondCode(InvCC);
-      return true;
-    }
-    // Swapping operands didn't work. Try inverting the condition.
-    bool NeedSwap = false;
-    InvCC = getSetCCInverse(CCCode, OpVT);
-    if (!TLI.isCondCodeLegalOrCustom(InvCC, OpVT)) {
-      // If inverting the condition is not enough, try swapping operands
-      // on top of it.
-      InvCC = ISD::getSetCCSwappedOperands(InvCC);
-      NeedSwap = true;
-    }
-    if (TLI.isCondCodeLegalOrCustom(InvCC, OpVT)) {
-      CC = DAG.getCondCode(InvCC);
-      NeedInvert = true;
-      if (NeedSwap)
-        std::swap(LHS, RHS);
-      return true;
-    }
-
-    ISD::CondCode CC1 = ISD::SETCC_INVALID, CC2 = ISD::SETCC_INVALID;
-    unsigned Opc = 0;
-    switch (CCCode) {
-    default: llvm_unreachable("Don't know how to expand this condition!");
-    case ISD::SETUO:
-        if (TLI.isCondCodeLegal(ISD::SETUNE, OpVT)) {
-          CC1 = ISD::SETUNE; CC2 = ISD::SETUNE; Opc = ISD::OR;
-          break;
-        }
-        assert(TLI.isCondCodeLegal(ISD::SETOEQ, OpVT) &&
-               "If SETUE is expanded, SETOEQ or SETUNE must be legal!");
-        NeedInvert = true;
-        LLVM_FALLTHROUGH;
-    case ISD::SETO:
-        assert(TLI.isCondCodeLegal(ISD::SETOEQ, OpVT)
-            && "If SETO is expanded, SETOEQ must be legal!");
-        CC1 = ISD::SETOEQ; CC2 = ISD::SETOEQ; Opc = ISD::AND; break;
-    case ISD::SETONE:
-    case ISD::SETUEQ:
-        // If the SETUO or SETO CC isn't legal, we might be able to use
-        // SETOGT || SETOLT, inverting the result for SETUEQ. We only need one
-        // of SETOGT/SETOLT to be legal, the other can be emulated by swapping
-        // the operands.
-        CC2 = ((unsigned)CCCode & 0x8U) ? ISD::SETUO : ISD::SETO;
-        if (!TLI.isCondCodeLegal(CC2, OpVT) &&
-            (TLI.isCondCodeLegal(ISD::SETOGT, OpVT) ||
-             TLI.isCondCodeLegal(ISD::SETOLT, OpVT))) {
-          CC1 = ISD::SETOGT;
-          CC2 = ISD::SETOLT;
-          Opc = ISD::OR;
-          NeedInvert = ((unsigned)CCCode & 0x8U);
-          break;
-        }
-        LLVM_FALLTHROUGH;
-    case ISD::SETOEQ:
-    case ISD::SETOGT:
-    case ISD::SETOGE:
-    case ISD::SETOLT:
-    case ISD::SETOLE:
-    case ISD::SETUNE:
-    case ISD::SETUGT:
-    case ISD::SETUGE:
-    case ISD::SETULT:
-    case ISD::SETULE:
-        // If we are floating point, assign and break, otherwise fall through.
-        if (!OpVT.isInteger()) {
-          // We can use the 4th bit to tell if we are the unordered
-          // or ordered version of the opcode.
-          CC2 = ((unsigned)CCCode & 0x8U) ? ISD::SETUO : ISD::SETO;
-          Opc = ((unsigned)CCCode & 0x8U) ? ISD::OR : ISD::AND;
-          CC1 = (ISD::CondCode)(((int)CCCode & 0x7) | 0x10);
-          break;
-        }
-        // Fallthrough if we are unsigned integer.
-        LLVM_FALLTHROUGH;
-    case ISD::SETLE:
-    case ISD::SETGT:
-    case ISD::SETGE:
-    case ISD::SETLT:
-    case ISD::SETNE:
-    case ISD::SETEQ:
-      // If all combinations of inverting the condition and swapping operands
-      // didn't work then we have no means to expand the condition.
-      llvm_unreachable("Don't know how to expand this condition!");
-    }
-
-    SDValue SetCC1, SetCC2;
-    if (CCCode != ISD::SETO && CCCode != ISD::SETUO) {
-      // If we aren't the ordered or unorder operation,
-      // then the pattern is (LHS CC1 RHS) Opc (LHS CC2 RHS).
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, RHS, CC1, Chain,
-                            IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, LHS, RHS, CC2, Chain,
-                            IsSignaling);
-    } else {
-      // Otherwise, the pattern is (LHS CC1 LHS) Opc (RHS CC2 RHS)
-      SetCC1 = DAG.getSetCC(dl, VT, LHS, LHS, CC1, Chain,
-                            IsSignaling);
-      SetCC2 = DAG.getSetCC(dl, VT, RHS, RHS, CC2, Chain,
-                            IsSignaling);
-    }
-    if (Chain)
-      Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, SetCC1.getValue(1),
-                          SetCC2.getValue(1));
-    LHS = DAG.getNode(Opc, dl, VT, SetCC1, SetCC2);
-    RHS = SDValue();
-    CC  = SDValue();
-    return true;
-  }
-  }
-  return false;
 }
 
 /// Emit a store/load combination to the stack.  This stores
@@ -3729,8 +3579,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp2 = Node->getOperand(1 + Offset);
     Tmp3 = Node->getOperand(2 + Offset);
     bool Legalized =
-        LegalizeSetCCCondCode(Node->getValueType(0), Tmp1, Tmp2, Tmp3,
-                              NeedInvert, dl, Chain, IsSignaling);
+        TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3,
+                                  NeedInvert, dl, Chain, IsSignaling);
 
     if (Legalized) {
       // If we expanded the SETCC by swapping LHS and RHS, or by inverting the
@@ -3825,8 +3675,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
 
     if (!Legalized) {
-      Legalized = LegalizeSetCCCondCode(getSetCCResultType(Tmp1.getValueType()),
-                                        Tmp1, Tmp2, CC, NeedInvert, dl, Chain);
+      Legalized = TLI.LegalizeSetCCCondCode(
+          DAG, getSetCCResultType(Tmp1.getValueType()), Tmp1, Tmp2, CC,
+          NeedInvert, dl, Chain);
 
       assert(Legalized && "Can't legalize SELECT_CC with legal condition!");
 
@@ -3860,8 +3711,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp4 = Node->getOperand(1);              // CC
 
     bool Legalized =
-        LegalizeSetCCCondCode(getSetCCResultType(Tmp2.getValueType()), Tmp2,
-                              Tmp3, Tmp4, NeedInvert, dl, Chain);
+        TLI.LegalizeSetCCCondCode(DAG, getSetCCResultType(Tmp2.getValueType()),
+                                  Tmp2, Tmp3, Tmp4, NeedInvert, dl, Chain);
     (void)Legalized;
     assert(Legalized && "Can't legalize BR_CC with legal condition!");
 
