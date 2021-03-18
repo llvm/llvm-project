@@ -480,7 +480,7 @@ def FeatureDot1Insts : SubtargetFeature<"dot1-insts",
 def FeatureDot2Insts : SubtargetFeature<"dot2-insts",
   "HasDot2Insts",
   "true",
-  "Has v_dot2_f32_f16, v_dot2_i32_i16, v_dot2_u32_u16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
+  "Has v_dot2_i32_i16, v_dot2_u32_u16 instructions"
 >;
 
 def FeatureDot3Insts : SubtargetFeature<"dot3-insts",
@@ -505,6 +505,12 @@ def FeatureDot6Insts : SubtargetFeature<"dot6-insts",
   "HasDot6Insts",
   "true",
   "Has v_dot4c_i32_i8 instruction"
+>;
+
+def FeatureDot7Insts : SubtargetFeature<"dot7-insts",
+  "HasDot7Insts",
+  "true",
+  "Has v_dot2_f32_f16, v_dot4_u32_u8, v_dot8_u32_u4 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -902,6 +908,7 @@ def FeatureISAVersion9_0_6 : FeatureSet<
    FeatureDLInsts,
    FeatureDot1Insts,
    FeatureDot2Insts,
+   FeatureDot7Insts,
    FeatureSupportsSRAMECC,
    FeatureImageGather4D16Bug]>;
 
@@ -920,6 +927,7 @@ def FeatureISAVersion9_0_8 : FeatureSet<
    FeatureDot4Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureMAIInsts,
    FeaturePkFmacF16Inst,
    FeatureAtomicFaddInsts,
@@ -948,6 +956,7 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureDot4Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    Feature64BitDPP,
    FeaturePackedFP32Ops,
    FeatureMAIInsts,
@@ -1008,6 +1017,7 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureDot2Insts,
      FeatureDot5Insts,
      FeatureDot6Insts,
+     FeatureDot7Insts,
      FeatureNSAEncoding,
      FeatureWavefrontSize32,
      FeatureScalarStores,
@@ -1028,6 +1038,7 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureDot2Insts,
      FeatureDot5Insts,
      FeatureDot6Insts,
+     FeatureDot7Insts,
      FeatureNSAEncoding,
      FeatureWavefrontSize32,
      FeatureScalarStores,
@@ -1049,6 +1060,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureDot2Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister]>;
@@ -1372,6 +1384,9 @@ def HasDot5Insts : Predicate<"Subtarget->hasDot5Insts()">,
 
 def HasDot6Insts : Predicate<"Subtarget->hasDot6Insts()">,
   AssemblerPredicate<(all_of FeatureDot6Insts)>;
+
+def HasDot7Insts : Predicate<"Subtarget->hasDot7Insts()">,
+  AssemblerPredicate<(all_of FeatureDot7Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
