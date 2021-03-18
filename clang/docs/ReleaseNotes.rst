@@ -193,6 +193,13 @@ Windows Support
   exception. To workaround (with reduced security), compile with
   /guard:cf,nolongjmp.
 
+- Windows on Arm64: LLVM 12 adds official binary release hosted on
+  Windows on Arm64.  The binary is built and tested by Linaro alongside
+  AArch64 and ARM 32-bit Linux binary releases.  This first WoA release
+  includes Clang compiler, LLD Linker, and compiler-rt runtime libraries.
+  Work on LLDB, sanitizer support, OpenMP, and other features is in progress
+  and will be included in future Windows on Arm64 LLVM releases.
+
 C Language Changes in Clang
 ---------------------------
 
