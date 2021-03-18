@@ -6756,11 +6756,19 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // we might create due to scalarization.
   Cost += getScalarizationOverhead(I, VF);
 
-  // If we have a predicated store, it may not be executed for each vector
-  // lane. Scale the cost by the probability of executing the predicated
-  // block.
+  // If we have a predicated load/store, it will need extra i1 extracts and
+  // conditional branches, but may not be executed for each vector lane. Scale
+  // the cost by the probability of executing the predicated block.
   if (isPredicatedInst(I)) {
     Cost /= getReciprocalPredBlockProb();
+
+    // Add the cost of an i1 extract and a branch
+    auto *Vec_i1Ty =
+        VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
+    Cost += TTI.getScalarizationOverhead(
+        Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
+        /*Insert=*/false, /*Extract=*/true);
+    Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
 
     if (useEmulatedMaskMemRefHack(I))
       // Artificially setting to a high enough value to practically disable
