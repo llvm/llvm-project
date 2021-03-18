@@ -36,13 +36,12 @@ for.end:
 }
 
 ; Check for crash exposed by D76992.
-; CHECK:      VPlan {
-; CHECK-NEXT: loop:
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 0, %iv.next
-; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>
-; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
-; CHECK-NEXT: No successor
-; CHECK-NEXT: }
+; CHECK:       N0 [label =
+; CHECK-NEXT:    "loop:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi 0, %iv.next\l" +
+; CHECK-NEXT:      "WIDEN ir<%cond0> = icmp ir<%iv>, ir<13>\l" +
+; CHECK-NEXT:      "WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>\l"
+; CHECK-NEXT:  ]
 define void @test() {
 entry:
   br label %loop
