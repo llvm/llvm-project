@@ -4,6 +4,9 @@
 // RUN: %clang_cc1 -triple i486-unknown-linux-gnu -mrtd -emit-llvm -o - %s | FileCheck %s --check-prefix=STDCALL --check-prefix=ALL
 // RUN: %clang_cc1 -triple i986-unknown-linux-gnu -fdefault-calling-conv=vectorcall -emit-llvm -o - %s | FileCheck %s --check-prefix=VECTORCALL --check-prefix=ALL
 // RUN: %clang_cc1 -triple i986-unknown-linux-gnu -fdefault-calling-conv=regcall -emit-llvm -o - %s | FileCheck %s --check-prefix=REGCALL --check-prefix=ALL
+// RUN: %clang_cc1 -triple i686-pc-win32 -fdefault-calling-conv=vectorcall -emit-llvm -o - %s -DWINDOWS | FileCheck %s --check-prefix=WIN32
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -fdefault-calling-conv=vectorcall -emit-llvm -o - %s -DWINDOWS | FileCheck %s --check-prefix=WIN64
+// RUN: %clang_cc1 -triple i686-pc-win32 -emit-llvm -o - %s -DEXPLICITCC | FileCheck %s --check-prefix=EXPLICITCC
 
 // CDECL: define{{.*}} void @_Z5test1v
 // FASTCALL: define{{.*}} x86_fastcallcc void @_Z5test1v
@@ -50,3 +53,45 @@ void test() {
 int main() {
   return 1;
 }
+
+#ifdef WINDOWS
+// WIN32: define dso_local i32 @wmain
+// WIN64: define dso_local i32 @wmain
+int wmain() {
+  return 1;
+}
+// WIN32: define dso_local x86_stdcallcc i32 @WinMain
+// WIN64: define dso_local i32 @WinMain
+int WinMain() {
+  return 1;
+}
+// WIN32: define dso_local x86_stdcallcc i32 @wWinMain
+// WIN64: define dso_local i32 @wWinMain
+int wWinMain() {
+  return 1;
+}
+// WIN32: define dso_local x86_stdcallcc i32 @DllMain
+// WIN64: define dso_local i32 @DllMain
+int DllMain() {
+  return 1;
+}
+#endif // Windows
+
+#ifdef EXPLICITCC
+// EXPLICITCC: define dso_local x86_fastcallcc i32 @wmain
+int __fastcall wmain() {
+  return 1;
+}
+// EXPLICITCC: define dso_local x86_fastcallcc i32 @WinMain
+int __fastcall WinMain() {
+  return 1;
+}
+// EXPLICITCC: define dso_local x86_fastcallcc i32 @wWinMain
+int __fastcall wWinMain() {
+  return 1;
+}
+// EXPLICITCC: define dso_local x86_fastcallcc i32 @DllMain
+int __fastcall DllMain() {
+  return 1;
+}
+#endif // ExplicitCC
