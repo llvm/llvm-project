@@ -27,9 +27,11 @@ program wsloop
 !FIRDialect:     %[[WS_LB:.*]] = constant 1 : i32
 !FIRDialect:     %[[WS_UB:.*]] = constant 9 : i32
 !FIRDialect:     %[[WS_STEP:.*]] = constant 1 : i32
-!FIRDialect:    "omp.wsloop"(%[[WS_LB]], %[[WS_UB]], %[[WS_STEP]]) ( {
+!FIRDialect:     omp.wsloop (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) step (%[[WS_STEP]]) schedule(static) nowait inclusive
 
-!LLVMIRDialect: "omp.wsloop"(%{{.*}}, %{{.*}}, %{{.*}}) ( {
+!LLVMIRDialect:  %[[WS_UB:.*]] = llvm.mlir.constant(9 : i32) : i32
+!LLVMIRDialect:  %[[WS_LB_STEP:.*]] = llvm.mlir.constant(1 : i32) : i32
+!LLVMIRDialect:  omp.wsloop (%[[I:.*]]) : i32 = (%[[WS_LB_STEP]]) to (%[[WS_UB]]) step (%[[WS_LB_STEP]]) schedule(static) nowait inclusive
 
 !LLVMIR:  define internal void @_QQmain..omp_par
 !LLVMIR:  omp.par.entry:
@@ -48,7 +50,6 @@ program wsloop
 !LLVMIR:    %omp_loop.iv = phi i32 [ 0, %omp_loop.preheader ], [ %omp_loop.next, %omp_loop.inc ]
 
 do i=1, 9
-!FIRDialect:    ^bb0(%[[I:.*]]: i32):  // no predecessors
 print*, i
 !FIRDialect:    %[[RTBEGIN:.*]] = fir.call @_FortranAioBeginExternalListOutput
 !FIRDialect:    %[[CONVERTED:.*]] = fir.convert %[[I]] : (i32) -> i64
@@ -56,9 +57,8 @@ print*, i
 !FIRDialect:    fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) : (!fir.ref<i8>) -> i32
 
 
-!LLVMIRDialect:  ^bb0(%arg0: i32):  // no predecessors
 !LLVMIRDialect:     llvm.call @_FortranAioBeginExternalListOutput(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !llvm.ptr<i8>, i32) -> !llvm.ptr<i8>
-!LLVMIRDialect:     %{{.*}} = llvm.sext %arg0 : i32 to i64
+!LLVMIRDialect:     %{{.*}} = llvm.sext %[[I]] : i32 to i64
 !LLVMIRDialect:     llvm.call @_FortranAioOutputInteger64(%{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, i64) -> i1
 !LLVMIRDialect:     llvm.call @_FortranAioEndIoStatement(%{{.*}}) : (!llvm.ptr<i8>) -> i32
 
@@ -81,12 +81,10 @@ print*, i
 
 end do
 !FIRDialect:       omp.yield
-!FIRDialect:         }) {inclusive, nowait, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>, schedule_val = "Static"} : (i32, i32, i32) -> ()
 !FIRDialect:       omp.terminator
 !FIRDialect:     }
 
 !LLVMIRDialect:    omp.yield
-!LLVMIRDialect:      }) {inclusive, nowait, operand_segment_sizes = dense<[1, 1, 1, 0, 0, 0, 0, 0, 0]> : vector<9xi32>, schedule_val = "Static"} : (i32, i32, i32) -> ()
 !LLVMIRDialect:    omp.terminator
 !LLVMIRDialect:  }
 !LLVMIRDialect:  llvm.return
