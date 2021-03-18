@@ -867,16 +867,14 @@ private:
     // Let's check if any of the call arguments is a point of interest.
     for (const auto &Argument : llvm::enumerate(Arguments)) {
       if (auto Index = getIndexOfExpression(Argument.value())) {
-        ParameterStatus &CurrentParamStatus = CurrentState.getStatusFor(*Index);
-
         if (shouldBeCalledOnce(CallOrMessage, Argument.index())) {
           // If the corresponding parameter is marked as 'called_once' we should
           // consider it as a call.
           processCallFor(*Index, CallOrMessage);
-        } else if (CurrentParamStatus.getKind() == ParameterStatus::NotCalled) {
+        } else {
           // Otherwise, we mark this parameter as escaped, which can be
           // interpreted both as called or not called depending on the context.
-          CurrentParamStatus = ParameterStatus::Escaped;
+          processEscapeFor(*Index);
         }
         // Otherwise, let's keep the state as it is.
       }
@@ -907,6 +905,16 @@ private:
       // as called.
       ParameterStatus Called(ParameterStatus::DefinitelyCalled, Call);
       CurrentParamStatus = Called;
+    }
+  }
+
+  /// Process escape of the parameter with the given index
+  void processEscapeFor(unsigned Index) {
+    ParameterStatus &CurrentParamStatus = CurrentState.getStatusFor(Index);
+
+    // Escape overrides whatever error we think happened.
+    if (CurrentParamStatus.isErrorStatus()) {
+      CurrentParamStatus = ParameterStatus::Escaped;
     }
   }
 
@@ -1365,11 +1373,7 @@ private:
   /// Check given parameter that was discovered to escape.
   void checkEscapee(const ParmVarDecl &Parameter) {
     if (auto Index = getIndex(Parameter)) {
-      ParameterStatus &CurrentParamStatus = CurrentState.getStatusFor(*Index);
-
-      if (CurrentParamStatus.getKind() == ParameterStatus::NotCalled) {
-        CurrentParamStatus = ParameterStatus::Escaped;
-      }
+      processEscapeFor(*Index);
     }
   }
 
