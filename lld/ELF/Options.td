@@ -587,7 +587,8 @@ defm lto_unique_basic_block_section_names: BB<"lto-unique-basic-block-section-na
     "Give unique names to every basic block section for LTO",
     "Do not give unique names to every basic block section for LTO (default)">;
 def shuffle_sections: JJ<"shuffle-sections=">, MetaVarName<"<seed>">,
-  HelpText<"Shuffle input sections using the given seed. If 0, use a random seed">;
+  HelpText<"Shuffle input sections using the given seed. "
+  "If -1, reverse the section order. If 0, use a random seed">;
 def thinlto_cache_dir: JJ<"thinlto-cache-dir=">,
   HelpText<"Path to ThinLTO cached object file directory">;
 defm thinlto_cache_policy: EEq<"thinlto-cache-policy", "Pruning policy for the ThinLTO cache">;

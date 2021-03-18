@@ -26,6 +26,12 @@
 # SHUFFLE3: Hex dump of section '.text':
 # SHUFFLE3-NEXT: 02cccccc 010403
 
+## As a special case, -1 reverses sections as a stable transform.
+# RUN: ld.lld --shuffle-sections=-1 %t.o -o %t-1.out
+# RUN: llvm-readelf -x .text %t-1.out | FileCheck %s --check-prefix=SHUFFLE-1
+# SHUFFLE-1: Hex dump of section '.text':
+# SHUFFLE-1-NEXT: 040302cc 01
+
 ## .text has an alignment of 4.
 .global _start
 _start:
