@@ -35,7 +35,7 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT:  1      4     1.00           *            str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      10  (47.6%)
+# CHECK-NEXT: RAT     - Register unavailable:                      8  (38.1%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
