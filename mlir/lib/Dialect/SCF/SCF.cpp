@@ -412,6 +412,8 @@ namespace {
 // 1) The op yields the iter arguments.
 // 2) The iter arguments have no use and the corresponding outer region
 // iterators (inputs) are yielded.
+// 3) The iter arguments have no use and the corresponding (operation) results
+// have no use.
 //
 // These arguments must be defined outside of
 // the ForOp region and can just be forwarded after simplifying the op inits,
@@ -444,15 +446,19 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newResultValues.reserve(forOp.getNumResults());
     for (auto it : llvm::zip(forOp.getIterOperands(),   // iter from outside
                              forOp.getRegionIterArgs(), // iter inside region
+                             forOp.getResults(),        // op results
                              yieldOp.getOperands()      // iter yield
                              )) {
       // Forwarded is `true` when:
       // 1) The region `iter` argument is yielded.
-      // 2) The region `iter` argument has zero use, and the corresponding iter
+      // 2) The region `iter` argument has no use, and the corresponding iter
       // operand (input) is yielded.
-      bool forwarded =
-          ((std::get<1>(it) == std::get<2>(it)) ||
-           (std::get<1>(it).use_empty() && std::get<0>(it) == std::get<2>(it)));
+      // 3) The region `iter` argument has no use, and the corresponding op
+      // result has no use.
+      bool forwarded = ((std::get<1>(it) == std::get<3>(it)) ||
+                        (std::get<1>(it).use_empty() &&
+                         (std::get<0>(it) == std::get<3>(it) ||
+                          std::get<2>(it).use_empty())));
       keepMask.push_back(!forwarded);
       canonicalize |= forwarded;
       if (forwarded) {
@@ -461,7 +467,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
         continue;
       }
       newIterArgs.push_back(std::get<0>(it));
-      newYieldValues.push_back(std::get<2>(it));
+      newYieldValues.push_back(std::get<3>(it));
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
       newResultValues.push_back(Value());      // placeholder with null value
     }
