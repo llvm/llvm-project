@@ -15,7 +15,7 @@
   ; CHECK-NEXT:    slli a1, a1, 1
   ; CHECK-NEXT:    sub sp, sp, a1
   ; CHECK-NEXT:    sd a0, 16(sp) # 8-byte Folded Spill
-  ; CHECK-NEXT:    addi a0, sp, 16
+  ; CHECK-NEXT:    addi a0, sp, 24
   ; CHECK-NEXT:    vs2r.v v30, (a0) # Unknown-size Folded Spill
   ; CHECK-NEXT:    csrr a0, vlenb
   ; CHECK-NEXT:    slli a0, a0, 1

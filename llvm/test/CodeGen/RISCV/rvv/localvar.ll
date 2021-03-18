@@ -256,15 +256,15 @@ define void @local_var_m2_with_bp(i64 %n) {
 ; RV64IV-NEXT:    csrr a2, vlenb
 ; RV64IV-NEXT:    slli a2, a2, 1
 ; RV64IV-NEXT:    add a2, s1, a2
-; RV64IV-NEXT:    addi a2, a2, 224
+; RV64IV-NEXT:    addi a2, a2, 232
 ; RV64IV-NEXT:    call notdead2@plt
 ; RV64IV-NEXT:    lw a0, 124(s1)
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    add a0, s1, a0
-; RV64IV-NEXT:    addi a0, a0, 224
+; RV64IV-NEXT:    addi a0, a0, 232
 ; RV64IV-NEXT:    vl2r.v v26, (a0)
-; RV64IV-NEXT:    addi a0, s1, 224
+; RV64IV-NEXT:    addi a0, s1, 232
 ; RV64IV-NEXT:    vl2r.v v26, (a0)
 ; RV64IV-NEXT:    lw a0, 120(s1)
 ; RV64IV-NEXT:    addi sp, s0, -256
