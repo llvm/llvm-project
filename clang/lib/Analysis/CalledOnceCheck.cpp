@@ -812,8 +812,12 @@ private:
       }
     }
 
-    // Early exit if we don't have parameters for extra analysis.
-    if (NotCalledOnEveryPath.none() && NotUsedOnEveryPath.none())
+    // Early exit if we don't have parameters for extra analysis...
+    if (NotCalledOnEveryPath.none() && NotUsedOnEveryPath.none() &&
+        // ... or if we've seen variables with cleanup functions.
+        // We can't reason that we've seen every path in this case,
+        // and thus abandon reporting any warnings that imply that.
+        !FunctionHasCleanupVars)
       return;
 
     // We are looking for a pair of blocks A, B so that the following is true:
@@ -1601,6 +1605,10 @@ public:
         if (Var->getInit()) {
           checkEscapee(Var->getInit());
         }
+
+        if (Var->hasAttr<CleanupAttr>()) {
+          FunctionHasCleanupVars = true;
+        }
       }
     }
   }
@@ -1668,6 +1676,13 @@ private:
   // It can be turned back on if we decide that we want to have the other way
   // around.
   bool SuppressOnConventionalErrorPaths = false;
+
+  // The user can annotate variable declarations with cleanup functions, which
+  // essentially imposes a custom destructor logic on that variable.
+  // It is possible to use it, however, to call tracked parameters on all exits
+  // from the function.  For this reason, we track the fact that the function
+  // actually has these.
+  bool FunctionHasCleanupVars = false;
 
   State CurrentState;
   ParamSizedVector<const ParmVarDecl *> TrackedParams;
