@@ -122,13 +122,9 @@ protected:
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
 
-  /// This indicates the comment string used by the assembler.  Defaults to
+  /// This indicates the comment character used by the assembler.  Defaults to
   /// "#"
   StringRef CommentString;
-
-  /// This indicates whether the comment string is only accepted as a comment
-  /// at the beginning of statements. Defaults to false.
-  bool RestrictCommentStringToStartOfStatement = false;
 
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
@@ -561,9 +557,6 @@ public:
   unsigned getCommentColumn() const { return 40; }
 
   StringRef getCommentString() const { return CommentString; }
-  bool getRestrictCommentStringToStartOfStatement() const {
-    return RestrictCommentStringToStartOfStatement;
-  }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }

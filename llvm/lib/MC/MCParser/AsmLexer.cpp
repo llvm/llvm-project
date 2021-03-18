@@ -659,9 +659,6 @@ size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
 }
 
 bool AsmLexer::isAtStartOfComment(const char *Ptr) {
-  if (MAI.getRestrictCommentStringToStartOfStatement() && !IsAtStartOfStatement)
-    return false;
-
   StringRef CommentString = MAI.getCommentString();
 
   if (CommentString.size() == 1)
