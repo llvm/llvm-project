@@ -452,6 +452,17 @@ isOverwrite(const Instruction *LaterI, const Instruction *EarlierI,
   // FIXME: Vet that this works for size upper-bounds. Seems unlikely that we'll
   // get imprecise values here, though (except for unknown sizes).
   if (!Later.Size.isPrecise() || !Earlier.Size.isPrecise()) {
+    // In case no constant size is known, try to an IR values for the number
+    // of bytes written and check if they match.
+    const auto *LaterMemI = dyn_cast<MemIntrinsic>(LaterI);
+    const auto *EarlierMemI = dyn_cast<MemIntrinsic>(EarlierI);
+    if (LaterMemI && EarlierMemI) {
+      const Value *LaterV = LaterMemI->getLength();
+      const Value *EarlierV = EarlierMemI->getLength();
+      if (LaterV == EarlierV && AA.isMustAlias(Earlier, Later))
+        return OW_Complete;
+    }
+
     // Masked stores have imprecise locations, but we can reason about them
     // to some extent.
     return isMaskedStoreOverwrite(LaterI, EarlierI, AA);

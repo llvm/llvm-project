@@ -53,7 +53,7 @@ let Definition = "target" in {
     DefaultTrue,
     Desc<"Automatically load Clang modules referred to by the program.">;
   def ImportStdModule: Property<"import-std-module", "Enum">,
-    DefaultEnumValue<"eImportStdModuleFalse">,
+    DefaultEnumValue<"eImportStdModuleFallback">,
     EnumValues<"OptionEnumValues(g_import_std_module_value_types)">,
     Desc<"Import the 'std' C++ module to improve expression parsing involving "
          " C++ standard library types.">;

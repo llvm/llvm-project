@@ -40,7 +40,7 @@
   ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
   
-  define hidden swiftcc void @"$s1M14withGenericArgyyxYlF.resume.0"(i8* %0, i8* %1, i8* swiftasync %2) !dbg !42 {
+  define hidden swifttailcc void @"$s1M14withGenericArgyyxYlF.resume.0"(i8* %0, i8* %1, i8* swiftasync %2) !dbg !42 {
     %4 = bitcast i8* %2 to i8**, !dbg !47
     %5 = load i8*, i8** %4, align 8, !dbg !47
     %6 = getelementptr inbounds i8, i8* %5, i32 64

@@ -12,7 +12,7 @@ define swifttailcc void @swifttail() {
 
 define void @has_swiftasync(i8* swiftasync %in) {
 ; CHECK-LABEL: has_swiftasync:
-; CHECK-NOT: ld{{.*}}x22
+; CHECK: ld{{.*}}x22
   call void asm "","~{x22}"()
   ret void
 }
