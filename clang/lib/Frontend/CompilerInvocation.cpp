@@ -466,6 +466,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.NewAlignOverride = 0;
   }
 
+  // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
+  if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
+    Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
+                                                          << "-fsycl-is-host";
+
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fgnu89-inline" << GetInputKindName(IK);
