@@ -18,6 +18,8 @@ namespace clang {
   class ASTContext;
   class Decl;
   class DeclarationName;
+  class IdentifierInfo;
+  class MacroInfo;
   class NestedNameSpecifier;
   class QualType;
   class Type;
@@ -37,6 +39,7 @@ public:
 
   llvm::hash_code hashRecord(const FileIndexRecord &Record);
   llvm::hash_code hash(const Decl *D);
+  llvm::hash_code hash(const IdentifierInfo *Name, const MacroInfo *M);
   llvm::hash_code hash(QualType Ty);
   llvm::hash_code hash(CanQualType Ty);
   llvm::hash_code hash(DeclarationName Name);
@@ -46,7 +49,13 @@ private:
   template <typename T>
   llvm::hash_code tryCache(const void *Ptr, T Obj);
 
+  struct MacroDef {
+    const IdentifierInfo *Name;
+    const MacroInfo *MI;
+  };
+
   llvm::hash_code hashImpl(const Decl *D);
+  llvm::hash_code hashImpl(MacroDef MD);
   llvm::hash_code hashImpl(CanQualType Ty);
   llvm::hash_code hashImpl(DeclarationName Name);
   llvm::hash_code hashImpl(const NestedNameSpecifier *NNS);
