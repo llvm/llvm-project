@@ -17,7 +17,7 @@ using namespace __ubsan;
 UndefinedBehaviorReport::UndefinedBehaviorReport(const char *IssueKind,
                                                  Location &Loc,
                                                  InternalScopedString &Msg)
-    : IssueKind(IssueKind), Loc(Loc), Buffer(Msg.length() + 1) {
+    : IssueKind(IssueKind), Loc(Loc) {
   // We have the common sanitizer reporting lock, so it's safe to register a
   // new UB report.
   RegisterUndefinedBehaviorReport(this);

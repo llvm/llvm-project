@@ -346,13 +346,24 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
 
 FORMAT(2, 3)
 void InternalScopedString::append(const char *format, ...) {
-  CHECK_LT(length_, buffer_.size());
-  va_list args;
-  va_start(args, format);
-  VSNPrintf(buffer_.data() + length_, buffer_.size() - length_, format, args);
-  va_end(args);
-  length_ += internal_strlen(data() + length_);
-  CHECK_LT(length_, buffer_.size());
+  uptr prev_len = length();
+
+  while (true) {
+    buffer_.resize(buffer_.capacity());
+
+    va_list args;
+    va_start(args, format);
+    uptr sz = VSNPrintf(buffer_.data() + prev_len, buffer_.size() - prev_len,
+                        format, args);
+    va_end(args);
+    if (sz < buffer_.size() - prev_len) {
+      buffer_.resize(prev_len + sz + 1);
+      break;
+    }
+
+    buffer_.reserve(buffer_.capacity() * 2);
+  }
+  CHECK_EQ(buffer_[length()], '\0');
 }
 
 } // namespace __sanitizer
