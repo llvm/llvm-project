@@ -2926,7 +2926,9 @@ public:
 struct LLVMIRLoweringPass
     : public mlir::PassWrapper<LLVMIRLoweringPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
-  LLVMIRLoweringPass(raw_ostream &output) : output{output} {}
+  using Printer = fir::LLVMIRLoweringPrinter;
+  LLVMIRLoweringPass(raw_ostream &output, Printer p)
+      : output{output}, printer{p} {}
 
   mlir::ModuleOp getModule() { return getOperation(); }
 
@@ -2936,7 +2938,7 @@ struct LLVMIRLoweringPass
     LLVMContext llvmCtx;
     if (auto llvmModule = mlir::translateModuleToLLVMIR(
             getModule(), llvmCtx, optName ? *optName : "FIRModule")) {
-      llvmModule->print(output, nullptr);
+      printer(*llvmModule, output);
       return;
     }
 
@@ -2946,6 +2948,7 @@ struct LLVMIRLoweringPass
 
 private:
   raw_ostream &output;
+  Printer printer;
 };
 
 } // namespace
@@ -2955,6 +2958,7 @@ std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
 }
 
 std::unique_ptr<mlir::Pass>
-fir::createLLVMDialectToLLVMPass(raw_ostream &output) {
-  return std::make_unique<LLVMIRLoweringPass>(output);
+fir::createLLVMDialectToLLVMPass(raw_ostream &output,
+                                 fir::LLVMIRLoweringPrinter printer) {
+  return std::make_unique<LLVMIRLoweringPass>(output, printer);
 }
