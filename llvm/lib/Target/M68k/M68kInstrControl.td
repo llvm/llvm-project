@@ -264,7 +264,7 @@ let isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1 in {
 def RTS : MxInst<(outs), (ins), "rts", [], MxEncFixed<0x4E75>>;
 
 let isCodeGenOnly = 1 in
-def RET : MxPseudo<(outs), (ins i32imm:$adj, variable_ops), "",
+def RET : MxPseudo<(outs), (ins i32imm:$adj, variable_ops),
                    [(MxRet timm:$adj)]>;
 } // isTerminator = 1, isReturn = 1, isBarrier = 1, hasCtrlDep = 1
 
@@ -277,11 +277,11 @@ let Uses = [CCR], Defs = [CCR], isPseudo = 1 in {
 // FIXME These are pseudo ops that should be replaced with Pat<> patterns.
 // However, Pat<> can't replicate the destination reg into the inputs of the
 // result.
-def SETCS_C8d : MxPseudo<(outs MxDRD8:$dst), (ins), "",
+def SETCS_C8d : MxPseudo<(outs MxDRD8:$dst), (ins),
                          [(set MxDRD8:$dst, (MxSetCC_C MxCONDcs, CCR))]>;
-def SETCS_C16d : MxPseudo<(outs MxDRD16:$dst), (ins), "",
+def SETCS_C16d : MxPseudo<(outs MxDRD16:$dst), (ins),
                           [(set MxDRD16:$dst, (MxSetCC_C MxCONDcs, CCR))]>;
-def SETCS_C32d : MxPseudo<(outs MxXRD32:$dst), (ins), "",
+def SETCS_C32d : MxPseudo<(outs MxXRD32:$dst), (ins),
                           [(set MxXRD32:$dst, (MxSetCC_C MxCONDcs, CCR))]>;
 } // Uses = [CCR], Defs = [CCR], isPseudo = 1
 

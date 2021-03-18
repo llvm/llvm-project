@@ -4673,7 +4673,6 @@ public:
 
   struct MultiVersionResolverOption {
     llvm::Function *Function;
-    FunctionDecl *FD;
     struct Conds {
       StringRef Architecture;
       llvm::SmallVector<StringRef, 8> Features;

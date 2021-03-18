@@ -335,23 +335,22 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
   struct PhiEntry {
     const VNInfo *Phi;
     unsigned PredIdx;
-    unsigned VisitIdx;
     LaneBitmask DefinedLanes;
 
-    PhiEntry(const VNInfo *Phi, unsigned PredIdx, unsigned VisitIdx,
-             LaneBitmask DefinedLanes)
-        : Phi(Phi), PredIdx(PredIdx), VisitIdx(VisitIdx),
-          DefinedLanes(DefinedLanes) {}
+    PhiEntry(const VNInfo *Phi, unsigned PredIdx, LaneBitmask DefinedLanes)
+        : Phi(Phi), PredIdx(PredIdx), DefinedLanes(DefinedLanes) {}
   };
-  SmallSetVector<const VNInfo *, 4> Visited;
+  using VisitKey = std::pair<const VNInfo *, LaneBitmask>;
   SmallVector<PhiEntry, 2> PhiStack;
+  SmallSet<VisitKey, 4> Visited;
   LaneBitmask DefinedLanes;
-  unsigned NextPredIdx; // Only used for processing phi nodes
+  unsigned NextPredIdx = 0; // Only used for processing phi nodes
   do {
     const VNInfo *NextValue = nullptr;
+    const VisitKey Key(Value, DefinedLanes);
 
-    if (!Visited.count(Value)) {
-      Visited.insert(Value);
+    if (!Visited.count(Key)) {
+      Visited.insert(Key);
       // On first visit to a phi then start processing first predecessor
       NextPredIdx = 0;
     }
@@ -367,14 +366,14 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
       auto PE = MBB->pred_end();
       for (; PI != PE && !NextValue; ++PI, ++Idx) {
         if (const VNInfo *VN = LR.getVNInfoBefore(LIS->getMBBEndIdx(*PI))) {
-          if (!Visited.count(VN))
+          if (!Visited.count(VisitKey(VN, DefinedLanes)))
             NextValue = VN;
         }
       }
 
       // If there are more predecessors to process; add phi to stack
       if (PI != PE)
-        PhiStack.emplace_back(Value, Idx, Visited.size(), DefinedLanes);
+        PhiStack.emplace_back(Value, Idx, DefinedLanes);
     } else {
       MachineInstr *MI = LIS->getInstructionFromIndex(Value->def);
       assert(MI && "Def has no defining instruction");
@@ -404,7 +403,7 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
           // Definition not complete; need to process input value
           LiveQueryResult LRQ = LR.Query(LIS->getInstructionIndex(*MI));
           if (const VNInfo *VN = LRQ.valueIn()) {
-            if (!Visited.count(VN))
+            if (!Visited.count(VisitKey(VN, DefinedLanes)))
               NextValue = VN;
           }
         }
@@ -424,9 +423,6 @@ void SIWholeQuadMode::markDefs(const MachineInstr &UseMI, LiveRange &LR,
       NextValue = Entry.Phi;
       NextPredIdx = Entry.PredIdx;
       DefinedLanes = Entry.DefinedLanes;
-      // Rewind visited set to correct state
-      while (Visited.size() > Entry.VisitIdx)
-        Visited.pop_back();
       PhiStack.pop_back();
     }
 

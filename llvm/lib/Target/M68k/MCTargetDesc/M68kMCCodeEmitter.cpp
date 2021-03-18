@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/M68kMCCodeEmitter.h"
 #include "MCTargetDesc/M68kBaseInfo.h"
 #include "MCTargetDesc/M68kFixupKinds.h"
 #include "MCTargetDesc/M68kMCTargetDesc.h"
@@ -26,13 +27,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
-
-namespace llvm {
-namespace M68k {
-// Forward declarations
-const uint8_t *getMCInstrBeads(unsigned);
-} // end namespace M68k
-} // end namespace llvm
 
 using namespace llvm;
 

@@ -569,6 +569,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
         setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
 
+        setOperationAction(ISD::MLOAD, VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::ADD, VT, Custom);
         setOperationAction(ISD::MUL, VT, Custom);
         setOperationAction(ISD::SUB, VT, Custom);
@@ -640,6 +642,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::LOAD, VT, Custom);
         setOperationAction(ISD::STORE, VT, Custom);
+        setOperationAction(ISD::MLOAD, VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FSUB, VT, Custom);
         setOperationAction(ISD::FMUL, VT, Custom);
@@ -1130,19 +1134,70 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
   }
 
+  unsigned NumElts = Op.getNumOperands();
+
   // Try and match an index sequence, which we can lower directly to the vid
   // instruction. An all-undef vector is matched by getSplatValue, above.
   if (VT.isInteger()) {
     bool IsVID = true;
-    for (unsigned i = 0, e = Op.getNumOperands(); i < e && IsVID; i++)
-      IsVID &= Op.getOperand(i).isUndef() ||
-               (isa<ConstantSDNode>(Op.getOperand(i)) &&
-                Op.getConstantOperandVal(i) == i);
+    for (unsigned I = 0; I < NumElts && IsVID; I++)
+      IsVID &= Op.getOperand(I).isUndef() ||
+               (isa<ConstantSDNode>(Op.getOperand(I)) &&
+                Op.getConstantOperandVal(I) == I);
 
     if (IsVID) {
       SDValue VID = DAG.getNode(RISCVISD::VID_VL, DL, ContainerVT, Mask, VL);
       return convertFromScalableVector(VT, VID, DAG, Subtarget);
     }
+  }
+
+  // Try and optimize BUILD_VECTORs with "dominant values" - these are values
+  // which constitute a large proportion of the elements. In such cases we can
+  // splat a vector with the dominant element and make up the shortfall with
+  // INSERT_VECTOR_ELTs.
+  // Note that this includes vectors of 2 elements by association. The
+  // upper-most element is the "dominant" one, allowing us to use a splat to
+  // "insert" the upper element, and an insert of the lower element at position
+  // 0, which improves codegen.
+  SDValue DominantValue;
+  DenseMap<SDValue, unsigned> ValueCounts;
+  // Use a fairly conservative threshold. A future optimization could be to use
+  // multiple vmerge.vi/vmerge.vx instructions on "partially-dominant"
+  // elements with more relaxed thresholds.
+  unsigned NumUndefElts =
+      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
+
+  for (SDValue V : Op->op_values()) {
+    if (V.isUndef())
+      continue;
+
+    ValueCounts.insert(std::make_pair(V, 0));
+    unsigned &Count = ValueCounts[V];
+
+    // Is this value dominant?
+    if (++Count > DominantValueCountThreshold)
+      DominantValue = V;
+  }
+
+  // Don't perform this optimization when optimizing for size, since
+  // materializing elements and inserting them tends to cause code bloat.
+  if (DominantValue && !DAG.shouldOptForSize()) {
+    unsigned Opc =
+        VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
+    SDValue Vec = DAG.getNode(Opc, DL, ContainerVT, DominantValue, VL);
+
+    if (ValueCounts.size() != 1) {
+      MVT XLenVT = Subtarget.getXLenVT();
+      for (unsigned I = 0; I < NumElts; ++I) {
+        if (!Op.getOperand(I).isUndef() && Op.getOperand(I) != DominantValue)
+          Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ContainerVT, Vec,
+                            Op.getOperand(I), DAG.getConstant(I, DL, XLenVT));
+      }
+    }
+
+    return convertFromScalableVector(VT, Vec, DAG, Subtarget);
   }
 
   return SDValue();
@@ -1587,6 +1642,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFixedLengthVectorLoadToRVV(Op, DAG);
   case ISD::STORE:
     return lowerFixedLengthVectorStoreToRVV(Op, DAG);
+  case ISD::MLOAD:
+    return lowerFixedLengthVectorMaskedLoadToRVV(Op, DAG);
+  case ISD::MSTORE:
+    return lowerFixedLengthVectorMaskedStoreToRVV(Op, DAG);
   case ISD::SETCC:
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   case ISD::ADD:
@@ -3117,6 +3176,58 @@ RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
   return DAG.getMemIntrinsicNode(
       RISCVISD::VSE_VL, DL, DAG.getVTList(MVT::Other),
       {Store->getChain(), NewValue, Store->getBasePtr(), VL},
+      Store->getMemoryVT(), Store->getMemOperand());
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorMaskedLoadToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto *Load = cast<MaskedLoadSDNode>(Op);
+
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  SDValue Mask =
+      convertToScalableVector(MaskVT, Load->getMask(), DAG, Subtarget);
+  SDValue PassThru =
+      convertToScalableVector(ContainerVT, Load->getPassThru(), DAG, Subtarget);
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+
+  SDVTList VTs = DAG.getVTList({ContainerVT, MVT::Other});
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vle_mask, DL, XLenVT);
+  SDValue Ops[] = {Load->getChain(),   IntID, PassThru,
+                   Load->getBasePtr(), Mask,  VL};
+  SDValue NewLoad =
+      DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs, Ops,
+                              Load->getMemoryVT(), Load->getMemOperand());
+
+  SDValue Result = convertFromScalableVector(VT, NewLoad, DAG, Subtarget);
+  return DAG.getMergeValues({Result, Load->getChain()}, DL);
+}
+
+SDValue RISCVTargetLowering::lowerFixedLengthVectorMaskedStoreToRVV(
+    SDValue Op, SelectionDAG &DAG) const {
+  auto *Store = cast<MaskedStoreSDNode>(Op);
+
+  SDLoc DL(Op);
+  SDValue Val = Store->getValue();
+  MVT VT = Val.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(VT);
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  Val = convertToScalableVector(ContainerVT, Val, DAG, Subtarget);
+  SDValue Mask =
+      convertToScalableVector(MaskVT, Store->getMask(), DAG, Subtarget);
+
+  SDValue VL = DAG.getConstant(VT.getVectorNumElements(), DL, XLenVT);
+
+  SDValue IntID = DAG.getTargetConstant(Intrinsic::riscv_vse_mask, DL, XLenVT);
+  return DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other),
+      {Store->getChain(), IntID, Val, Store->getBasePtr(), Mask, VL},
       Store->getMemoryVT(), Store->getMemOperand());
 }
 

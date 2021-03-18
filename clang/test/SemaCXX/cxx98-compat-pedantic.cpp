@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wc++98-compat -Werror %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -Werror %s -DCXX98
 
-// RUN: %clang_cc1 -fsyntax-only -std=c++1y -Wc++98-compat-pedantic -verify %s -Wno-c++98-c++11-compat-pedantic -DCXX1Y2
+// RUN: %clang_cc1 -fsyntax-only -std=c++1y -Wc++98-compat-pedantic -verify %s -Wno-pre-c++14-compat-pedantic -DCXX1Y2
 
 // -Wc++98-compat-pedantic warns on C++11 features which we accept without a
 // warning in C++98 mode.

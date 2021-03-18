@@ -10620,17 +10620,23 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
   case NEON::BI__builtin_neon_vrndnh_f16: {
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
-    Int = Intrinsic::aarch64_neon_frintn;
+    Int = Builder.getIsFPConstrained()
+              ? Intrinsic::experimental_constrained_roundeven
+              : Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, HalfTy), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndn_v:
   case NEON::BI__builtin_neon_vrndnq_v: {
-    Int = Intrinsic::aarch64_neon_frintn;
+    Int = Builder.getIsFPConstrained()
+              ? Intrinsic::experimental_constrained_roundeven
+              : Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, Ty), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndns_f32: {
     Ops.push_back(EmitScalarExpr(E->getArg(0)));
-    Int = Intrinsic::aarch64_neon_frintn;
+    Int = Builder.getIsFPConstrained()
+              ? Intrinsic::experimental_constrained_roundeven
+              : Intrinsic::roundeven;
     return EmitNeonCall(CGM.getIntrinsic(Int, FloatTy), Ops, "vrndn");
   }
   case NEON::BI__builtin_neon_vrndph_f16: {

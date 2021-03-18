@@ -232,29 +232,40 @@ struct MemRefDescriptor {
 };
 ```
 
+Furthermore, we also rewrite function results to pointer parameters if the
+rewritten function result has a struct type. The special result parameter is
+added as the first parameter and is of pointer-to-struct type.
+
 If enabled, the option will do the following. For _external_ functions declared
 in the MLIR module.
 
 1.  Declare a new function `_mlir_ciface_<original name>` where memref arguments
     are converted to pointer-to-struct and the remaining arguments are converted
-    as usual.
-1.  Add a body to the original function (making it non-external) that
-    1.  allocates a memref descriptor,
-    1.  populates it, and
-    1.  passes the pointer to it into the newly declared interface function,
+    as usual. Results are converted to a special argument if they are of struct
+    type.
+2.  Add a body to the original function (making it non-external) that
+    1.  allocates memref descriptors,
+    2.  populates them,
+    3.  potentially allocates space for the result struct, and
+    4.  passes the pointers to these into the newly declared interface function,
         then
-    1.  collects the result of the call and returns it to the caller.
+    5.  collects the result of the call (potentially from the result struct),
+        and
+    6.  returns it to the caller.
 
 For (non-external) functions defined in the MLIR module.
 
 1.  Define a new function `_mlir_ciface_<original name>` where memref arguments
     are converted to pointer-to-struct and the remaining arguments are converted
-    as usual.
-1.  Populate the body of the newly defined function with IR that
+    as usual. Results are converted to a special argument if they are of struct
+    type.
+2.  Populate the body of the newly defined function with IR that
     1.  loads descriptors from pointers;
-    1.  unpacks descriptor into individual non-aggregate values;
-    1.  passes these values into the original function;
-    1.  collects the result of the call and returns it to the caller.
+    2.  unpacks descriptor into individual non-aggregate values;
+    3.  passes these values into the original function;
+    4.  collects the results of the call and
+    5.  either copies the results into the result struct or returns them to the
+        caller.
 
 Examples:
 
@@ -341,6 +352,49 @@ llvm.func @_mlir_ciface_foo(%arg0: !llvm.memref_2d_ptr) {
   llvm.return
 }
 ```
+
+```mlir
+func @foo(%arg0: memref<?x?xf32>) -> memref<?x?xf32> {
+  return %arg0 : memref<?x?xf32>
+}
+
+// Gets converted into the following
+// (using type alias for brevity):
+!llvm.memref_2d = type !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                     array<2xi64>, array<2xi64>)>
+!llvm.memref_2d_ptr = type !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64,
+                                             array<2xi64>, array<2xi64>)>>
+
+// Function with unpacked arguments.
+llvm.func @foo(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>, %arg2: i64,
+               %arg3: i64, %arg4: i64, %arg5: i64, %arg6: i64)
+    -> !llvm.memref_2d {
+  %0 = llvm.mlir.undef : !llvm.memref_2d
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm.memref_2d
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm.memref_2d
+  %3 = llvm.insertvalue %arg2, %2[2] : !llvm.memref_2d
+  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm.memref_2d
+  %5 = llvm.insertvalue %arg5, %4[4, 0] : !llvm.memref_2d
+  %6 = llvm.insertvalue %arg4, %5[3, 1] : !llvm.memref_2d
+  %7 = llvm.insertvalue %arg6, %6[4, 1] : !llvm.memref_2d
+  llvm.return %7 : !llvm.memref_2d
+}
+
+// Interface function callable from C.
+llvm.func @_mlir_ciface_foo(%arg0: !llvm.memref_2d_ptr, %arg1: !llvm.memref_2d_ptr) {
+  %0 = llvm.load %arg1 : !llvm.memref_2d_ptr
+  %1 = llvm.extractvalue %0[0] : !llvm.memref_2d
+  %2 = llvm.extractvalue %0[1] : !llvm.memref_2d
+  %3 = llvm.extractvalue %0[2] : !llvm.memref_2d
+  %4 = llvm.extractvalue %0[3, 0] : !llvm.memref_2d
+  %5 = llvm.extractvalue %0[3, 1] : !llvm.memref_2d
+  %6 = llvm.extractvalue %0[4, 0] : !llvm.memref_2d
+  %7 = llvm.extractvalue %0[4, 1] : !llvm.memref_2d
+  %8 = llvm.call @foo(%1, %2, %3, %4, %5, %6, %7)
+    : (!llvm.ptr<f32>, !llvm.ptr<f32>, i64, i64, i64, i64, i64) -> !llvm.memref_2d
+  llvm.store %8, %arg0 : !llvm.memref_2d_ptr
+  llvm.return
+}
 
 Rationale: Introducing auxiliary functions for C-compatible interfaces is
 preferred to modifying the calling convention since it will minimize the effect

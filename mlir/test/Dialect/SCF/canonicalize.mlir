@@ -402,3 +402,21 @@ func @fold_away_iter_with_no_use_and_yielded_input(%arg0 : i32,
   // CHECK: return %[[FOR_RES]], %[[C32]] : i32, i32
   return %0#0, %0#1 : i32, i32
 }
+
+// -----
+
+// CHECK-LABEL: fold_away_iter_and_result_with_no_use
+//  CHECK-SAME:   %[[A0:[0-9a-z]*]]: i32
+func @fold_away_iter_and_result_with_no_use(%arg0 : i32,
+                    %ub : index, %lb : index, %step : index) -> (i32) {
+  %cst = constant 32 : i32
+  // CHECK: %[[FOR_RES:.*]] = scf.for {{.*}} iter_args({{.*}} = %[[A0]]) -> (i32) {
+  %0:2 = scf.for %arg1 = %lb to %ub step %step iter_args(%arg2 = %arg0, %arg3 = %cst)
+    -> (i32, i32) {
+    %1 = addi %arg2, %cst : i32
+    scf.yield %1, %1 : i32, i32
+  }
+  
+  // CHECK: return %[[FOR_RES]] : i32
+  return %0#0 : i32
+}

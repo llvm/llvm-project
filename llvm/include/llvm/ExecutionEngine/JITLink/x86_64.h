@@ -245,7 +245,8 @@ enum EdgeKind_x86_64 : Edge::Kind {
 const char *getEdgeKindName(Edge::Kind K);
 
 /// Apply fixup expression for edge to block content.
-inline Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) {
+inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
+                        char *BlockWorkingMem) {
   using namespace support;
 
   char *FixupPtr = BlockWorkingMem + E.getOffset();
@@ -262,7 +263,7 @@ inline Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) {
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress() + E.getAddend();
     if (Value > std::numeric_limits<uint32_t>::max())
-      return makeTargetOutOfRangeError(B, E, getEdgeKindName);
+      return makeTargetOutOfRangeError(G, B, E);
     *(ulittle32_t *)FixupPtr = Value;
     break;
   }
@@ -276,7 +277,7 @@ inline Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) {
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
     if (Value < std::numeric_limits<int32_t>::min() ||
         Value > std::numeric_limits<int32_t>::max())
-      return makeTargetOutOfRangeError(B, E, getEdgeKindName);
+      return makeTargetOutOfRangeError(G, B, E);
     *(little32_t *)FixupPtr = Value;
     break;
   }
@@ -291,7 +292,7 @@ inline Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) {
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
     if (Value < std::numeric_limits<int32_t>::min() ||
         Value > std::numeric_limits<int32_t>::max())
-      return makeTargetOutOfRangeError(B, E, getEdgeKindName);
+      return makeTargetOutOfRangeError(G, B, E);
     *(little32_t *)FixupPtr = Value;
     break;
   }
@@ -306,7 +307,7 @@ inline Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) {
     int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
     if (Value < std::numeric_limits<int32_t>::min() ||
         Value > std::numeric_limits<int32_t>::max())
-      return makeTargetOutOfRangeError(B, E, getEdgeKindName);
+      return makeTargetOutOfRangeError(G, B, E);
     *(little32_t *)FixupPtr = Value;
     break;
   }

@@ -144,7 +144,7 @@ func @return_var_memref_caller(%arg0: memref<4x3xf32>) {
 }
 
 // CHECK-LABEL: llvm.func @return_var_memref
-func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
+func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> attributes { llvm.emit_c_interface } {
   // Match the construction of the unranked descriptor.
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
@@ -177,6 +177,10 @@ func @return_var_memref(%arg0: memref<4x3xf32>) -> memref<*xf32> {
   return %0 : memref<*xf32>
 }
 
+// Check that the result memref is passed as parameter
+// CHECK-LABEL: @_mlir_ciface_return_var_memref
+// CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(i64, ptr<i8>)>>, %{{.*}}: !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>>)
+
 // CHECK-LABEL: llvm.func @return_two_var_memref_caller
 func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
   // Only check that we create two different descriptors using different
@@ -206,7 +210,7 @@ func @return_two_var_memref_caller(%arg0: memref<4x3xf32>) {
 }
 
 // CHECK-LABEL: llvm.func @return_two_var_memref
-func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) {
+func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*xf32>) attributes { llvm.emit_c_interface } {
   // Match the construction of the unranked descriptor.
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca
   // CHECK: %[[MEMORY:.*]] = llvm.bitcast %[[ALLOCA]]
@@ -239,4 +243,9 @@ func @return_two_var_memref(%arg0: memref<4x3xf32>) -> (memref<*xf32>, memref<*x
   // CHECK: llvm.return %[[RESULTS_2]]
   return %0, %0 : memref<*xf32>, memref<*xf32>
 }
+
+// Check that the result memrefs are passed as parameter
+// CHECK-LABEL: @_mlir_ciface_return_two_var_memref
+// CHECK-SAME: (%{{.*}}: !llvm.ptr<struct<(struct<(i64, ptr<i8>)>, struct<(i64, ptr<i8>)>)>>,
+// CHECK-SAME: %{{.*}}: !llvm.ptr<struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>>)
 

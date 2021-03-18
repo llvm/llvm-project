@@ -230,10 +230,9 @@ entry:
 
 ; THUMB1-LABEL: t9:
 ; THUMB1: bl f
-; THUMB1: sxtb r1, r4
-; THUMB1: uxtb r0, r1
+; THUMB1: uxtb r0, r4
 ; THUMB1: cmp  r0, r0
-; THUMB1: adds r1, r1, #1
+; THUMB1: adds r1, r4, #1
 ; THUMB1: mov  r2, r0
 ; THUMB1: adds r1, r1, #1
 ; THUMB1: adds r2, r2, #1

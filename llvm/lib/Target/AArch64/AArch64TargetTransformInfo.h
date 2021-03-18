@@ -275,8 +275,8 @@ public:
                                  bool IsPairwiseForm,
                                  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
-  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                     int Index, VectorType *SubTp);
   /// @}
 };
 

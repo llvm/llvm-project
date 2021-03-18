@@ -842,7 +842,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     llvm::Optional<QualType> operator()(StringRef Name) {
       IdentifierInfo &II = ACtx.Idents.get(Name);
       auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
-      if (LookupRes.size() == 0)
+      if (LookupRes.empty())
         return None;
 
       // Prioritze typedef declarations.
@@ -994,7 +994,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         return false;
       IdentifierInfo &II = ACtx.Idents.get(Name);
       auto LookupRes = ACtx.getTranslationUnitDecl()->lookup(&II);
-      if (LookupRes.size() == 0)
+      if (LookupRes.empty())
         return false;
       for (Decl *D : LookupRes) {
         if (auto *FD = dyn_cast<FunctionDecl>(D)) {

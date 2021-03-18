@@ -36,34 +36,30 @@ private:
   APInt AP;
 
 public:
-  static const unsigned max_size_in_bits = Size;
   DecoderBigInt() { AP = APInt(Size, 0); }
   DecoderBigInt(uint64_t Val) {
     assert(Size >= 64 && "DecoderBigInt must be >= 64 bits");
     AP = APInt(Size, Val);
   }
-  DecoderBigInt(APInt Val) {
-    assert(Val.getBitWidth() <= Size &&
-           "Passed in too big APInt for DecoderBigInt of given size");
-    AP = Val.zextOrSelf(Size);
+  DecoderBigInt(const APInt &Val) : AP(Val) {
+    assert(AP.getBitWidth() == Size);
   }
-  operator uint64_t() const { return AP.getLimitedValue(); }
-  static DecoderBigInt getBitsSet(unsigned LoBit, unsigned HiBit) {
-    return DecoderBigInt(APInt::getBitsSet(max_size_in_bits, LoBit, HiBit));
+  operator bool() const { return AP.getBoolValue(); }
+  void insertBits(uint64_t SubBits, unsigned bitPosition, unsigned numBits) {
+    AP.insertBits(SubBits, bitPosition, numBits);
   }
-  DecoderBigInt operator>>(unsigned Bits) const {
-    return DecoderBigInt(AP.lshr(Bits));
+  uint64_t extractBitsAsZExtValue(unsigned numBits,
+                                  unsigned bitPosition) const {
+    return AP.extractBitsAsZExtValue(numBits, bitPosition);
   }
   DecoderBigInt operator&(const DecoderBigInt &RHS) const {
-    assert(max_size_in_bits == RHS.max_size_in_bits &&
-           "Size of LHS and RHS must match");
     return DecoderBigInt(AP & RHS.AP);
   }
-  DecoderBigInt &operator|=(const DecoderBigInt &RHS) {
-    assert(max_size_in_bits == RHS.max_size_in_bits &&
-           "Size of LHS and RHS must match");
-    AP = AP | RHS.AP;
-    return *this;
+  DecoderBigInt operator~() const { return DecoderBigInt(~AP); }
+  bool operator==(const DecoderBigInt &RHS) { return AP == RHS.AP; }
+  bool operator!=(const DecoderBigInt &RHS) { return AP != RHS.AP; }
+  friend raw_ostream &operator<<(raw_ostream &OS, const DecoderBigInt &RHS) {
+    return OS << RHS.AP;
   }
 };
 

@@ -159,11 +159,21 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin is valid for the given Log2LMULs.
   list<int> Log2LMUL = [0, 1, 2, 3, -1, -2, -3];
 
-  // Emit the automatic clang codegen. It describes what types we have to use
+  // Manual code in clang codegen riscv_vector_builtin_cg.inc
+  code ManualCodegen = [{}];
+  code ManualCodegenMask = [{}];
+
+  // When emit the automatic clang codegen, it describes what types we have to use
   // to obtain the specific LLVM intrinsic. -1 means the return type, otherwise,
   // k >= 0 meaning the k-th operand (counting from zero) of the codegen'd
   // parameter of the unmasked version. k can't be the mask operand's position.
   list<int> IntrinsicTypes = [];
+
+  // When the order of the parameters of clang builtin do not match the order of
+  // C/C++ api, we use permutation index to mapping the operand from clang
+  // builtin to C/C++. It is parameter of the unmasked version without VL
+  // operand. If empty, the default permutation is [0, 1, 2, ...].
+  list<int> PermuteOperands = [];
 
   // If these names are not empty, this is the ID of the LLVM intrinsic
   // we want to lower to.
@@ -171,6 +181,11 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 
   // If HasMask, this is the ID of the LLVM intrinsic we want to lower to.
   string IRNameMask = NAME #"_mask";
+
+  // If non empty, this is the code emitted in the header, otherwise
+  // an automatic definition in header is emitted.
+  string HeaderCode = "";
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -194,6 +209,141 @@ multiclass RVVBinBuiltinSet<string intrinsic_name, string type_range,
     }
   }
 }
+
+class IsFloat<string type> {
+  bit val = !or(!eq(type, "h"), !eq(type, "f"), !eq(type, "d"));
+}
+
+multiclass RVVVLEBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vle",
+      IRNameMask ="vle_mask",
+      HasGeneric = false,
+      ManualCodegen = [{
+        IntrinsicTypes = {ResultType, Ops[1]->getType()};
+        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+      }],
+      ManualCodegenMask= [{
+        IntrinsicTypes = {ResultType, Ops[3]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "vPCe", type>;
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "UvPCUe", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVVSEBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vse",
+      IRNameMask = "vse_mask",
+      HasMaskedOffOperand = false,
+      PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
+      HasGeneric = false,
+      ManualCodegen = [{
+        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
+      }],
+      ManualCodegenMask= [{
+        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "0vPe", type>;
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "0UvPUe", type>;
+      }
+    }
+  }
+}
+
+// 6. Configuration-Setting Instructions
+// 6.1. vsetvli/vsetvl instructions
+let HasVL = false,
+    HasMask = false,
+    HasSideEffects = true,
+    HasGeneric = false,
+    Log2LMUL = [0],
+    ManualCodegen = [{IntrinsicTypes = {ResultType};}] in // Set XLEN type
+{
+  // vsetvl is a macro because for it require constant integers in SEW and LMUL.
+  let HeaderCode =
+[{
+#define vsetvl_e8mf8(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 5)
+#define vsetvl_e8mf4(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 6)
+#define vsetvl_e8mf2(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 7)
+#define vsetvl_e8m1(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 0)
+#define vsetvl_e8m2(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 1)
+#define vsetvl_e8m4(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 2)
+#define vsetvl_e8m8(avl) __builtin_rvv_vsetvli((size_t)(avl), 0, 3)
+
+#define vsetvl_e16mf4(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 6)
+#define vsetvl_e16mf2(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 7)
+#define vsetvl_e16m1(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 0)
+#define vsetvl_e16m2(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 1)
+#define vsetvl_e16m4(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 2)
+#define vsetvl_e16m8(avl) __builtin_rvv_vsetvli((size_t)(avl), 1, 3)
+
+#define vsetvl_e32mf2(avl) __builtin_rvv_vsetvli((size_t)(avl), 2, 7)
+#define vsetvl_e32m1(avl) __builtin_rvv_vsetvli((size_t)(avl), 2, 0)
+#define vsetvl_e32m2(avl) __builtin_rvv_vsetvli((size_t)(avl), 2, 1)
+#define vsetvl_e32m4(avl) __builtin_rvv_vsetvli((size_t)(avl), 2, 2)
+#define vsetvl_e32m8(avl) __builtin_rvv_vsetvli((size_t)(avl), 2, 3)
+
+#define vsetvl_e64m1(avl) __builtin_rvv_vsetvli((size_t)(avl), 3, 0)
+#define vsetvl_e64m2(avl) __builtin_rvv_vsetvli((size_t)(avl), 3, 1)
+#define vsetvl_e64m4(avl) __builtin_rvv_vsetvli((size_t)(avl), 3, 2)
+#define vsetvl_e64m8(avl) __builtin_rvv_vsetvli((size_t)(avl), 3, 3)
+
+}] in
+  def vsetvli : RVVBuiltin<"", "zzKzKz", "i">;
+
+  let HeaderCode =
+[{
+#define vsetvlmax_e8mf8() __builtin_rvv_vsetvlimax(0, 5)
+#define vsetvlmax_e8mf4() __builtin_rvv_vsetvlimax(0, 6)
+#define vsetvlmax_e8mf2() __builtin_rvv_vsetvlimax(0, 7)
+#define vsetvlmax_e8m1() __builtin_rvv_vsetvlimax(0, 0)
+#define vsetvlmax_e8m2() __builtin_rvv_vsetvlimax(0, 1)
+#define vsetvlmax_e8m4() __builtin_rvv_vsetvlimax(0, 2)
+#define vsetvlmax_e8m8() __builtin_rvv_vsetvlimax(0, 3)
+
+#define vsetvlmax_e16mf4() __builtin_rvv_vsetvlimax(1, 6)
+#define vsetvlmax_e16mf2() __builtin_rvv_vsetvlimax(1, 7)
+#define vsetvlmax_e16m1() __builtin_rvv_vsetvlimax(1, 0)
+#define vsetvlmax_e16m2() __builtin_rvv_vsetvlimax(1, 1)
+#define vsetvlmax_e16m4() __builtin_rvv_vsetvlimax(1, 2)
+#define vsetvlmax_e16m8() __builtin_rvv_vsetvlimax(1, 3)
+
+#define vsetvlmax_e32mf2() __builtin_rvv_vsetvlimax(2, 7)
+#define vsetvlmax_e32m1() __builtin_rvv_vsetvlimax(2, 0)
+#define vsetvlmax_e32m2() __builtin_rvv_vsetvlimax(2, 1)
+#define vsetvlmax_e32m4() __builtin_rvv_vsetvlimax(2, 2)
+#define vsetvlmax_e32m8() __builtin_rvv_vsetvlimax(2, 3)
+
+#define vsetvlmax_e64m1() __builtin_rvv_vsetvlimax(3, 0)
+#define vsetvlmax_e64m2() __builtin_rvv_vsetvlimax(3, 1)
+#define vsetvlmax_e64m4() __builtin_rvv_vsetvlimax(3, 2)
+#define vsetvlmax_e64m8() __builtin_rvv_vsetvlimax(3, 3)
+
+}] in
+  def vsetvlimax : RVVBuiltin<"", "zKzKz", "i">;
+}
+
+// 7. Vector Loads and Stores
+// 7.4. Vector Unit-Stride Instructions
+defm vle8: RVVVLEBuiltin<["c"]>;
+defm vle16: RVVVLEBuiltin<["s"]>;
+defm vle32: RVVVLEBuiltin<["i","f"]>;
+defm vle64: RVVVLEBuiltin<["l","d"]>;
+
+defm vse8 : RVVVSEBuiltin<["c"]>;
+defm vse16: RVVVSEBuiltin<["s"]>;
+defm vse32: RVVVSEBuiltin<["i","f"]>;
+defm vse64: RVVVSEBuiltin<["l","d"]>;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract

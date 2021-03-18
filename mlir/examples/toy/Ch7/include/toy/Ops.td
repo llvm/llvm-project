@@ -23,6 +23,10 @@ include "toy/ShapeInferenceInterface.td"
 def Toy_Dialect : Dialect {
   let name = "toy";
   let cppNamespace = "::mlir::toy";
+
+  // We set this bit to generate a declaration of the `materializeConstant`
+  // method so that we can materialize constants for our toy operations.
+  let hasConstantMaterializer = 1;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base
@@ -34,9 +38,11 @@ class Toy_Op<string mnemonic, list<OpTrait> traits = []> :
     Op<Toy_Dialect, mnemonic, traits>;
 
 // Provide a definition for the Toy StructType for use in ODS. This allows for
-// using StructType in a similar way to Tensor or MemRef.
+// using StructType in a similar way to Tensor or MemRef. We use `DialectType`
+// to demarcate the StructType as belonging to the Toy dialect.
 def Toy_StructType :
-    Type<CPred<"$_self.isa<StructType>()">, "Toy struct type">;
+    DialectType<Toy_Dialect, CPred<"$_self.isa<StructType>()">,
+                "Toy struct type">;
 
 // Provide a definition of the types that are used within the Toy dialect.
 def Toy_Type : AnyTypeOf<[F64Tensor, Toy_StructType]>;

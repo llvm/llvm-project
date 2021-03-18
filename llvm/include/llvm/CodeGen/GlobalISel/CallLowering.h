@@ -17,6 +17,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/Attributes.h"
@@ -407,7 +408,9 @@ public:
     return false;
   }
 
-  virtual bool fallBackToDAGISel(const Function &F) const { return false; }
+  virtual bool fallBackToDAGISel(const MachineFunction &MF) const {
+    return false;
+  }
 
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p VRegs, for GlobalISel. Each argument

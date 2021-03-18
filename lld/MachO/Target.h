@@ -67,11 +67,6 @@ public:
     return getRelocAttrs(type).hasAttr(bit);
   }
 
-  bool validateRelocationInfo(llvm::MemoryBufferRef,
-                              const llvm::MachO::section_64 &sec,
-                              llvm::MachO::relocation_info);
-  void prepareSymbolRelocation(Symbol *, const InputSection *, const Reloc &);
-
   uint32_t cpuType;
   uint32_t cpuSubtype;
 

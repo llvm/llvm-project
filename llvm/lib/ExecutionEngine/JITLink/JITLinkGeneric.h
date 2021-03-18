@@ -154,7 +154,7 @@ private:
 
         // Dispatch to LinkerImpl for fixup.
         auto *BlockData = const_cast<char *>(B->getContent().data());
-        if (auto Err = impl().applyFixup(*B, E, BlockData))
+        if (auto Err = impl().applyFixup(G, *B, E, BlockData))
           return Err;
       }
     }
