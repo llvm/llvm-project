@@ -197,8 +197,8 @@ public:
 
   unsigned getVectorSplitCost() { return 0; }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                          VectorType *SubTp);
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
+                          ArrayRef<int> Mask, int Index, VectorType *SubTp);
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const;

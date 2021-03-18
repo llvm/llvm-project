@@ -548,7 +548,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 }
 
 int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                   int Index, VectorType *SubTp) {
+                                   ArrayRef<int> Mask, int Index,
+                                   VectorType *SubTp) {
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 
@@ -581,7 +582,7 @@ int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 
 // Return the log2 difference of the element sizes of the two vector types.

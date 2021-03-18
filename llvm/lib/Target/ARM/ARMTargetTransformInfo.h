@@ -183,8 +183,8 @@ public:
 
   int getNumMemOps(const IntrinsicInst *I) const;
 
-  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                     int Index, VectorType *SubTp);
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
                              TTI::ReductionFlags Flags) const;

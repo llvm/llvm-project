@@ -1131,7 +1131,8 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
 }
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                               int Index, VectorType *SubTp) {
+                               ArrayRef<int> Mask, int Index,
+                               VectorType *SubTp) {
   if (ST->hasNEON()) {
     if (Kind == TTI::SK_Broadcast) {
       static const CostTblEntry NEONDupTbl[] = {
@@ -1222,7 +1223,7 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
   int BaseCost = ST->hasMVEIntegerOps() && Tp->isVectorTy()
                      ? ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)
                      : 1;
-  return BaseCost * BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseCost * BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 
 int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,

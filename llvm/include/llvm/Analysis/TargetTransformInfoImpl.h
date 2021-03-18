@@ -451,7 +451,8 @@ public:
     return 1;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, int Index,
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty,
+                          ArrayRef<int> Mask, int Index,
                           VectorType *SubTp) const {
     return 1;
   }
@@ -1043,25 +1044,30 @@ public:
       int SubIndex;
       if (Shuffle->isExtractSubvectorMask(SubIndex))
         return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                         SubIndex, VecTy);
+                                         Shuffle->getShuffleMask(), SubIndex,
+                                         VecTy);
       else if (Shuffle->changesLength())
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       else if (Shuffle->isIdentity())
         return 0;
       else if (Shuffle->isReverse())
-        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isTranspose())
-        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isZeroEltSplat())
-        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSingleSource())
-        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, 0,
-                                         nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
 
-      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, 0,
-                                       nullptr);
+      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
+                                       Shuffle->getShuffleMask(), 0, nullptr);
     }
     case Instruction::ExtractElement: {
       unsigned Idx = -1;
