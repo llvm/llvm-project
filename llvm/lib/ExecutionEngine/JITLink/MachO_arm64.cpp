@@ -509,17 +509,6 @@ public:
 
 private:
 
-  static Error targetOutOfRangeError(const Block &B, const Edge &E) {
-    std::string ErrMsg;
-    {
-      raw_string_ostream ErrStream(ErrMsg);
-      ErrStream << "Relocation target out of range: ";
-      printEdge(ErrStream, B, E, getMachOARM64RelocationKindName(E.getKind()));
-      ErrStream << "\n";
-    }
-    return make_error<JITLinkError>(std::move(ErrMsg));
-  }
-
   static unsigned getPageOffset12Shift(uint32_t Instr) {
     constexpr uint32_t LoadStoreImm12Mask = 0x3b000000;
     constexpr uint32_t Vec128Mask = 0x04800000;
@@ -536,7 +525,8 @@ private:
     return 0;
   }
 
-  Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
+  Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
+                   char *BlockWorkingMem) const {
     using namespace support;
 
     char *FixupPtr = BlockWorkingMem + E.getOffset();
@@ -553,7 +543,7 @@ private:
                                         "aligned");
 
       if (Value < -(1 << 27) || Value > ((1 << 27) - 1))
-        return targetOutOfRangeError(B, E);
+        return makeTargetOutOfRangeError(G, B, E);
 
       uint32_t RawInstr = *(little32_t *)FixupPtr;
       assert((RawInstr & 0x7fffffff) == 0x14000000 &&
@@ -566,7 +556,7 @@ private:
     case Pointer32: {
       uint64_t Value = E.getTarget().getAddress() + E.getAddend();
       if (Value > std::numeric_limits<uint32_t>::max())
-        return targetOutOfRangeError(B, E);
+        return makeTargetOutOfRangeError(G, B, E);
       *(ulittle32_t *)FixupPtr = Value;
       break;
     }
@@ -587,7 +577,7 @@ private:
 
       int64_t PageDelta = TargetPage - PCPage;
       if (PageDelta < -(1 << 30) || PageDelta > ((1 << 30) - 1))
-        return targetOutOfRangeError(B, E);
+        return makeTargetOutOfRangeError(G, B, E);
 
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       assert((RawInstr & 0xffffffe0) == 0x90000000 &&
@@ -637,7 +627,7 @@ private:
         return make_error<JITLinkError>("LDR literal target is not 32-bit "
                                         "aligned");
       if (Delta < -(1 << 20) || Delta > ((1 << 20) - 1))
-        return targetOutOfRangeError(B, E);
+        return makeTargetOutOfRangeError(G, B, E);
 
       uint32_t EncodedImm = (static_cast<uint32_t>(Delta) >> 2) << 5;
       uint32_t FixedInstr = RawInstr | EncodedImm;
@@ -657,7 +647,7 @@ private:
       if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
         if (Value < std::numeric_limits<int32_t>::min() ||
             Value > std::numeric_limits<int32_t>::max())
-          return targetOutOfRangeError(B, E);
+          return makeTargetOutOfRangeError(G, B, E);
         *(little32_t *)FixupPtr = Value;
       } else
         *(little64_t *)FixupPtr = Value;
