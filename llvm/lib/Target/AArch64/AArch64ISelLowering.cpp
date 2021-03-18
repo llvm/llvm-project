@@ -13405,6 +13405,13 @@ static SDValue performSetccAddFolding(SDNode *Op, SelectionDAG &DAG) {
   SDValue RHS = Op->getOperand(1);
   SetCCInfoAndKind InfoAndKind;
 
+  // If both operands are a SET_CC, then we don't want to perform this
+  // folding and create another csel as this results in more instructions
+  // (and higher register usage).
+  if (isSetCCOrZExtSetCC(LHS, InfoAndKind) &&
+      isSetCCOrZExtSetCC(RHS, InfoAndKind))
+    return SDValue();
+
   // If neither operand is a SET_CC, give up.
   if (!isSetCCOrZExtSetCC(LHS, InfoAndKind)) {
     std::swap(LHS, RHS);
