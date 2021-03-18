@@ -210,6 +210,20 @@ define <vscale x 4 x i8> @mgather_truemask_nxv4i8(<vscale x 4 x i8*> %ptrs, <vsc
   ret <vscale x 4 x i8> %v
 }
 
+define <vscale x 4 x i8> @mgather_falsemask_nxv4i8(<vscale x 4 x i8*> %ptrs, <vscale x 4 x i8> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv1r.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv1r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x i8> @llvm.masked.gather.nxv4i8.nxv4p0i8(<vscale x 4 x i8*> %ptrs, i32 1, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i8> %passthru)
+  ret <vscale x 4 x i8> %v
+}
+
 declare <vscale x 8 x i8> @llvm.masked.gather.nxv8i8.nxv8p0i8(<vscale x 8 x i8*>, i32, <vscale x 8 x i1>, <vscale x 8 x i8>)
 
 define <vscale x 8 x i8> @mgather_nxv8i8(<vscale x 8 x i8*> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x i8> %passthru) {
@@ -414,6 +428,20 @@ define <vscale x 4 x i16> @mgather_truemask_nxv4i16(<vscale x 4 x i16*> %ptrs, <
   %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> %ptrs, i32 2, <vscale x 4 x i1> %mtrue, <vscale x 4 x i16> %passthru)
+  ret <vscale x 4 x i16> %v
+}
+
+define <vscale x 4 x i16> @mgather_falsemask_nxv4i16(<vscale x 4 x i16*> %ptrs, <vscale x 4 x i16> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv1r.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv1r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i16> %passthru)
   ret <vscale x 4 x i16> %v
 }
 
@@ -658,6 +686,20 @@ define <vscale x 4 x i32> @mgather_truemask_nxv4i32(<vscale x 4 x i32*> %ptrs, <
   %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> %mtrue, <vscale x 4 x i32> %passthru)
+  ret <vscale x 4 x i32> %v
+}
+
+define <vscale x 4 x i32> @mgather_falsemask_nxv4i32(<vscale x 4 x i32*> %ptrs, <vscale x 4 x i32> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv2r.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv2r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> %passthru)
   ret <vscale x 4 x i32> %v
 }
 
@@ -934,6 +976,20 @@ define <vscale x 4 x i64> @mgather_truemask_nxv4i64(<vscale x 4 x i64*> %ptrs, <
   %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0i64(<vscale x 4 x i64*> %ptrs, i32 8, <vscale x 4 x i1> %mtrue, <vscale x 4 x i64> %passthru)
+  ret <vscale x 4 x i64> %v
+}
+
+define <vscale x 4 x i64> @mgather_falsemask_nxv4i64(<vscale x 4 x i64*> %ptrs, <vscale x 4 x i64> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x i64> @llvm.masked.gather.nxv4i64.nxv4p0i64(<vscale x 4 x i64*> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i64> %passthru)
   ret <vscale x 4 x i64> %v
 }
 
@@ -1354,6 +1410,20 @@ define <vscale x 4 x half> @mgather_truemask_nxv4f16(<vscale x 4 x half*> %ptrs,
   ret <vscale x 4 x half> %v
 }
 
+define <vscale x 4 x half> @mgather_falsemask_nxv4f16(<vscale x 4 x half*> %ptrs, <vscale x 4 x half> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv1r.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv1r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x half> @llvm.masked.gather.nxv4f16.nxv4p0f16(<vscale x 4 x half*> %ptrs, i32 2, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x half> %passthru)
+  ret <vscale x 4 x half> %v
+}
+
 declare <vscale x 8 x half> @llvm.masked.gather.nxv8f16.nxv8p0f16(<vscale x 8 x half*>, i32, <vscale x 8 x i1>, <vscale x 8 x half>)
 
 define <vscale x 8 x half> @mgather_nxv8f16(<vscale x 8 x half*> %ptrs, <vscale x 8 x i1> %m, <vscale x 8 x half> %passthru) {
@@ -1551,6 +1621,20 @@ define <vscale x 4 x float> @mgather_truemask_nxv4f32(<vscale x 4 x float*> %ptr
   %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> %ptrs, i32 4, <vscale x 4 x i1> %mtrue, <vscale x 4 x float> %passthru)
+  ret <vscale x 4 x float> %v
+}
+
+define <vscale x 4 x float> @mgather_falsemask_nxv4f32(<vscale x 4 x float*> %ptrs, <vscale x 4 x float> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv2r.v v8, v10
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv2r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0f32(<vscale x 4 x float*> %ptrs, i32 4, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x float> %passthru)
   ret <vscale x 4 x float> %v
 }
 
@@ -1827,6 +1911,20 @@ define <vscale x 4 x double> @mgather_truemask_nxv4f64(<vscale x 4 x double*> %p
   %mhead = insertelement <vscale x 4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <vscale x 4 x i1> %mhead, <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0f64(<vscale x 4 x double*> %ptrs, i32 8, <vscale x 4 x i1> %mtrue, <vscale x 4 x double> %passthru)
+  ret <vscale x 4 x double> %v
+}
+
+define <vscale x 4 x double> @mgather_falsemask_nxv4f64(<vscale x 4 x double*> %ptrs, <vscale x 4 x double> %passthru) {
+; RV32-LABEL: mgather_falsemask_nxv4f64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vmv4r.v v8, v12
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mgather_falsemask_nxv4f64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vmv4r.v v8, v12
+; RV64-NEXT:    ret
+  %v = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0f64(<vscale x 4 x double*> %ptrs, i32 8, <vscale x 4 x i1> zeroinitializer, <vscale x 4 x double> %passthru)
   ret <vscale x 4 x double> %v
 }
 
