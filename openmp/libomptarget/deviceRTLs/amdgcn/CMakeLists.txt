@@ -154,6 +154,6 @@ foreach(mcpu ${mcpus})
   add_custom_target(lib${libname}-${mcpu} ALL DEPENDS ${bc_libname})
 
   install(FILES ${OUTPUTDIR}/${bc_libname}
-     DESTINATION "${OPENMP_INSTALL_LIBDIR}"
+     DESTINATION "${OPENMP_INSTALL_LIBDIR}/libdevice"
   )
 endforeach()
