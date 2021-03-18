@@ -203,7 +203,6 @@ public:
   Value *getVariableLocationOp(unsigned OpIdx) const;
 
   void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
-  void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
 
   void setVariable(DILocalVariable *NewVar) {
     setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));

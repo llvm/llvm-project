@@ -554,14 +554,13 @@ bool diagnoseMisSizedDbgValue(Module &M, DbgValueInst *DVI) {
   //
   // TODO: This, along with a check for non-null value operands, should be
   // promoted to verifier failures.
+  Value *V = DVI->getValue();
+  if (!V)
+    return false;
 
   // For now, don't try to interpret anything more complicated than an empty
   // DIExpression. Eventually we should try to handle OP_deref and fragments.
   if (DVI->getExpression()->getNumElements())
-    return false;
-
-  Value *V = DVI->getVariableLocationOp(0);
-  if (!V)
     return false;
 
   Type *Ty = V->getType();

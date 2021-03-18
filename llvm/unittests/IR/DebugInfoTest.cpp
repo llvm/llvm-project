@@ -183,8 +183,7 @@ TEST(MetadataTest, DeleteInstUsedByDbgValue) {
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
-  EXPECT_EQ(DVIs[0]->getNumVariableLocationOps(), 1u);
-  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue(0)));
+  EXPECT_TRUE(isa<UndefValue>(DVIs[0]->getValue()));
 }
 
 TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
