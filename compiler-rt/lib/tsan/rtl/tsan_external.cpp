@@ -111,12 +111,12 @@ void __tsan_external_assign_tag(void *addr, void *tag) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_read(void *addr, void *caller_pc, void *tag) {
-  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), tag, MemoryRead);
+  ExternalAccess(addr, STRIP_PC(caller_pc), tag, MemoryRead);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __tsan_external_write(void *addr, void *caller_pc, void *tag) {
-  ExternalAccess(addr, STRIP_PAC_PC(caller_pc), tag, MemoryWrite);
+  ExternalAccess(addr, STRIP_PC(caller_pc), tag, MemoryWrite);
 }
 }  // extern "C"
 
