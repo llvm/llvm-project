@@ -504,9 +504,10 @@ int __kmp_initial_threads_capacity(int req_nproc) {
     nth = (4 * __kmp_xproc);
 
   // If hidden helper task is enabled, we initialize the thread capacity with
-  // extra
-  // __kmp_hidden_helper_threads_num.
-  nth += __kmp_hidden_helper_threads_num;
+  // extra __kmp_hidden_helper_threads_num.
+  if (__kmp_enable_hidden_helper) {
+    nth += __kmp_hidden_helper_threads_num;
+  }
 
   if (nth > __kmp_max_nth)
     nth = __kmp_max_nth;
