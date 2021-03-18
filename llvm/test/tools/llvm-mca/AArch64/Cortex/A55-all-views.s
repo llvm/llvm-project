@@ -35,7 +35,7 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT:  1      4     1.00           *            str	w0, [x21, x18, lsl #2]
 
 # CHECK:      Dynamic Dispatch Stall Cycles:
-# CHECK-NEXT: RAT     - Register unavailable:                      10  (47.6%)
+# CHECK-NEXT: RAT     - Register unavailable:                      8  (38.1%)
 # CHECK-NEXT: RCU     - Retire tokens unavailable:                 0
 # CHECK-NEXT: SCHEDQ  - Scheduler full:                            0
 # CHECK-NEXT: LQ      - Load queue full:                           0
@@ -106,13 +106,13 @@ str	w0, [x21, x18, lsl #2]
 # CHECK:      [0,0]     DeeER.    .    .    .   ldr	w4, [x2], #4
 # CHECK-NEXT: [0,1]     .DeeER    .    .    .   ldr	w5, [x3]
 # CHECK-NEXT: [0,2]     .   DeeeER.    .    .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [0,3]     .   DeeE-R.    .    .   add	x3, x3, x13
+# CHECK-NEXT: [0,3]     .    DeeER.    .    .   add	x3, x3, x13
 # CHECK-NEXT: [0,4]     .    DeeER.    .    .   subs	x1, x1, #1
 # CHECK-NEXT: [0,5]     .    . DeeeER  .    .   str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT: [1,0]     .    .  DeeER  .    .   ldr	w4, [x2], #4
 # CHECK-NEXT: [1,1]     .    .   DeeER .    .   ldr	w5, [x3]
 # CHECK-NEXT: [1,2]     .    .    . DeeeER  .   madd	w0, w5, w4, w0
-# CHECK-NEXT: [1,3]     .    .    . DeeE-R  .   add	x3, x3, x13
+# CHECK-NEXT: [1,3]     .    .    .  DeeER  .   add	x3, x3, x13
 # CHECK-NEXT: [1,4]     .    .    .  DeeER  .   subs	x1, x1, #1
 # CHECK-NEXT: [1,5]     .    .    .    DeeeER   str	w0, [x21, x18, lsl #2]
 
@@ -126,7 +126,7 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT: 0.     2     0.0    0.0    0.0       ldr	w4, [x2], #4
 # CHECK-NEXT: 1.     2     0.0    0.0    0.0       ldr	w5, [x3]
 # CHECK-NEXT: 2.     2     0.0    0.0    0.0       madd	w0, w5, w4, w0
-# CHECK-NEXT: 3.     2     0.0    0.0    1.0       add	x3, x3, x13
+# CHECK-NEXT: 3.     2     0.0    0.0    0.0       add	x3, x3, x13
 # CHECK-NEXT: 4.     2     0.0    0.0    0.0       subs	x1, x1, #1
 # CHECK-NEXT: 5.     2     0.0    0.0    0.0       str	w0, [x21, x18, lsl #2]
-# CHECK-NEXT:        2     0.0    0.0    0.2       <total>
+# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
