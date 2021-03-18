@@ -123,6 +123,105 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage);
 }
 
+/// Temporary helper to catch todos in initial data target lowering.
+static bool
+hasDerivedTypeWithLengthParameters(const Fortran::semantics::Symbol &sym) {
+  if (const auto *declTy = sym.GetType())
+    if (const auto *derived = declTy->AsDerived())
+      return Fortran::semantics::CountLenParameters(*derived) > 0;
+  return false;
+}
+
+static mlir::Type unwrapElementType(mlir::Type type) {
+  if (auto ty = fir::dyn_cast_ptrOrBoxEleTy(type))
+    type = ty;
+  if (auto seqType = type.dyn_cast<fir::SequenceType>())
+    type = seqType.getEleTy();
+  return type;
+}
+
+/// Helper to create initial-data-target fir.box in a global initializer region.
+static mlir::Value
+genInitialDataTarget(Fortran::lower::AbstractConverter &converter,
+                     mlir::Location loc, mlir::Type boxType,
+                     const Fortran::lower::SomeExpr &initialTarget) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::lower::AggregateStoreMap storeMap;
+  Fortran::lower::StatementContext stmtCtx;
+  auto &builder = converter.getFirOpBuilder();
+  if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(initialTarget))
+    return Fortran::lower::createUnallocatedBox(
+        builder, loc, boxType, /*nonDeferredParams*/ llvm::None);
+  // Pointer initial data target, and NULL(mold).
+  if (const auto *sym = Fortran::evaluate::GetFirstSymbol(initialTarget)) {
+    // Length parameters processing will need care in global initializer
+    // context.
+    if (hasDerivedTypeWithLengthParameters(*sym))
+      TODO(loc, "initial-data-target with derived type length parameters");
+
+    auto var = Fortran::lower::pft::Variable(*sym, /*global*/ true);
+    Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
+                                        storeMap);
+  }
+  mlir::Value box;
+  if (initialTarget.Rank() > 0) {
+    box = fir::getBase(Fortran::lower::createSomeArrayBox(
+        converter, initialTarget, globalOpSymMap, stmtCtx));
+  } else {
+    auto addr = Fortran::lower::createSomeExtendedAddress(
+        loc, converter, initialTarget, globalOpSymMap, stmtCtx);
+    box = builder.createBox(loc, addr);
+  }
+  // box is a fir.box<T>, not a fir.box<fir.ptr<T>> as it should to be used
+  // for pointers. A fir.convert should not be used here, because it would
+  // not actually set the pointer attribute in the descriptor.
+  // In a normal context, fir.rebox would be used to set the pointer attribute
+  // while copying the projection from another fir.box. But fir.rebox cannot be
+  // used in initializer because its current codegen expects that the input
+  // fir.box is in memory, which is not the case in initializers.
+  // So, just replace the fir.embox that created addr with one with
+  // fir.box<fir.ptr<T>> result type.
+  // Note that the descriptor cannot have been created with fir.rebox because
+  // the initial-data-target cannot be a fir.box itself (it cannot be
+  // assumed-shape, deferred-shape, or polymorphic as per C765). However the
+  // case where the initial data target is a derived type with length parameters
+  // will most likely be a bit trickier, hence the TODO above.
+
+  auto *op = box.getDefiningOp();
+  if (!op || !mlir::isa<fir::EmboxOp>(*op))
+    fir::emitFatalError(
+        loc, "fir.box must be created with embox in global initializers");
+  auto targetEleTy = unwrapElementType(box.getType());
+  if (!targetEleTy.isa<fir::CharacterType>())
+    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
+                                        op->getAttrs());
+
+  // Handle the character case length particularities: embox takes a length
+  // value argument when the result type has unknown length, but not when the
+  // result type has constant length. The type of the initial target must be
+  // constant length, but the one of the pointer may not be. In this case, a
+  // length operand must be added.
+  auto targetLen = targetEleTy.cast<fir::CharacterType>().getLen();
+  auto ptrLen = unwrapElementType(boxType).cast<fir::CharacterType>().getLen();
+  if (ptrLen == targetLen)
+    // Nothing to do
+    return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
+                                        op->getAttrs());
+  auto embox = mlir::cast<fir::EmboxOp>(*op);
+  auto ptrType = boxType.cast<fir::BoxType>().getEleTy();
+  auto memref = builder.createConvert(loc, ptrType, embox.memref());
+  if (targetLen == fir::CharacterType::unknownLen())
+    // Drop the length argument.
+    return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.shape(),
+                                        embox.slice());
+  // targetLen is constant and ptrLen is unknown. Add a length argument.
+  auto targetLenValue =
+      builder.createIntegerConstant(loc, builder.getIndexType(), targetLen);
+  return builder.create<fir::EmboxOp>(loc, boxType, memref, embox.shape(),
+                                      embox.slice(),
+                                      mlir::ValueRange{targetLenValue});
+}
+
 /// Create the global op and its init if it has one
 static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
                                   const Fortran::lower::pft::Variable &var,
@@ -135,20 +234,27 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global;
   if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
     auto symTy = converter.genType(var);
-    // Pointers may have an initial target
-    if (Fortran::semantics::IsPointer(sym)) {
-      const auto *details =
-          sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-      if (details && details->init())
-        mlir::emitError(loc, "TODO: global pointer initialization");
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && details->init()) {
+      auto expr = *details->init();
+      auto init = [&](Fortran::lower::FirOpBuilder &b) {
+        auto box = genInitialDataTarget(converter, loc, symTy, expr);
+        b.create<fir::HasValueOp>(loc, box);
+      };
+      global =
+          builder.createGlobal(loc, symTy, globalName, isConst, init, linkage);
+    } else {
+      // Create unallocated/disassociated descriptor if no explicit init
+      auto init = [&](Fortran::lower::FirOpBuilder &b) {
+        auto box =
+            Fortran::lower::createUnallocatedBox(b, loc, symTy, llvm::None);
+        b.create<fir::HasValueOp>(loc, box);
+      };
+      global =
+          builder.createGlobal(loc, symTy, globalName, isConst, init, linkage);
     }
-    auto init = [&](Fortran::lower::FirOpBuilder &b) {
-      auto box =
-          Fortran::lower::createUnallocatedBox(b, loc, symTy, llvm::None);
-      b.create<fir::HasValueOp>(loc, box);
-    };
-    global =
-        builder.createGlobal(loc, symTy, globalName, isConst, init, linkage);
+
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
@@ -621,8 +727,12 @@ defineCommonBlock(Fortran::lower::AbstractConverter &converter,
           LLVM_DEBUG(llvm::dbgs()
                      << "offset: " << mem->offset() << " is " << *mem << '\n');
           Fortran::lower::StatementContext stmtCtx;
-          auto initVal = genInitializerExprValue(
-              converter, loc, memDet->init().value(), stmtCtx);
+          auto initExpr = memDet->init().value();
+          auto initVal =
+              Fortran::semantics::IsPointer(*mem)
+                  ? genInitialDataTarget(converter, loc,
+                                         converter.genType(*mem), initExpr)
+                  : genInitializerExprValue(converter, loc, initExpr, stmtCtx);
           auto offVal = builder.createIntegerConstant(loc, idxTy, tupIdx);
           auto castVal = builder.createConvert(loc, commonTy.getType(tupIdx),
                                                fir::getBase(initVal));
