@@ -25,6 +25,38 @@ should implement the `ReturnLike` trait to represent logical “value returns”
 Example dialects that are fully compatible are the “std” and “scf” dialects
 with respect to all implemented interfaces.
 
+During Bufferization, we convert immutable value types (tensors) to mutable
+types (memref). This conversion is done in several steps and in all of these
+steps the IR has to fulfill SSA like properties. The usage of memref has
+to be in the following consecutive order: allocation, write-buffer, read-
+buffer.
+In this case, there are only buffer reads allowed after the initial full
+buffer write is done. In particular, there must be no partial write to a
+buffer after the initial write has been finished. However, partial writes in
+the initializing is allowed (fill buffer step by step in a loop e.g.). This
+means, all buffer writes needs to dominate all buffer reads.
+
+Example for breaking the invariant:
+
+```mlir
+func @condBranch(%arg0: i1, %arg1: memref<2xf32>) {
+  %0 = memref.alloc() : memref<2xf32>
+  cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  br ^bb3()
+^bb2:
+  partial_write(%0, %0)
+  br ^bb3()
+^bb3():
+  "linalg.copy"(%0, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
+  return
+}
+```
+
+The maintenance of the SSA like properties is only needed in the bufferization
+process. Afterwards, for example in optimization processes, the property is no
+longer needed.
+
 ## Detection of Buffer Allocations
 
 The first step of the BufferDeallocation transformation is to identify
