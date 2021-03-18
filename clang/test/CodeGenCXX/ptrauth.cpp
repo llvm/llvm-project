@@ -6,7 +6,7 @@ void test_terminate() noexcept {
   foo1();
 }
 
-// CHECK: define {{.*}} void @_ZSt9terminatev() #[[ATTR4:.*]] {
+// CHECK: define void @_ZSt9terminatev() #[[ATTR4:.*]] {
 
 namespace std {
   void terminate() noexcept {
