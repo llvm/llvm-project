@@ -1043,9 +1043,9 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     if (&TargetRC == RC)
       return false;
 
-    RC->removeOutgoingEdge(N, *TargetN);
     LLVM_DEBUG(dbgs() << "Deleting outgoing edge from '" << N << "' to '"
-                      << TargetN << "'\n");
+                      << *TargetN << "'\n");
+    RC->removeOutgoingEdge(N, *TargetN);
     return true;
   });
 
