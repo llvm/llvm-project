@@ -6,7 +6,7 @@ void (^blockptr)(void);
 // CHECK: [[GLOBAL_BLOCK_1]] = internal constant { i8**, i32, i32, i8*, %struct.__block_descriptor* } { i8** @_NSConcreteGlobalBlock, i32 1342177280, i32 0, i8* bitcast ({ i8*, i32, i64, i64 }* [[INVOCATION_1]] to i8*),
 void (^globalblock)(void) = ^{};
 
-// CHECK-LABEL: define {{.*}} void @test_block_call()
+// CHECK-LABEL: define void @test_block_call()
 void test_block_call() {
   // CHECK:      [[T0:%.*]] = load void ()*, void ()** @blockptr,
   // CHECK-NEXT: [[BLOCK:%.*]] = bitcast void ()* [[T0]] to [[BLOCK_T:%.*]]*{{$}}
@@ -21,7 +21,7 @@ void test_block_call() {
 
 void use_block(int (^)(void));
 
-// CHECK-LABEL: define {{.*}} void @test_block_literal(
+// CHECK-LABEL: define void @test_block_literal(
 void test_block_literal(int i) {
   // CHECK:      [[I:%.*]] = alloca i32,
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align

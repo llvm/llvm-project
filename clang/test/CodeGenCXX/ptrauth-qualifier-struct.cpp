@@ -24,12 +24,12 @@ struct __attribute__((trivial_abi)) TrivialSA {
 // Check that TrivialSA is passed indirectly despite being annotated with
 // 'trivial_abi'.
 
-// CHECK: define {{.*}} void @_Z18testParamTrivialSA9TrivialSA(%[[STRUCT_TRIVIALSA]]* %{{.*}})
+// CHECK: define void @_Z18testParamTrivialSA9TrivialSA(%[[STRUCT_TRIVIALSA]]* %{{.*}})
 
 void testParamTrivialSA(TrivialSA a) {
 }
 
-// CHECK: define {{.*}} void @_Z19testCopyConstructor2SA(%[[STRUCT_SA]]*
+// CHECK: define void @_Z19testCopyConstructor2SA(%[[STRUCT_SA]]*
 // CHECK: call %[[STRUCT_SA]]* @_ZN2SAC1ERKS_(
 
 // CHECK: define linkonce_odr %[[STRUCT_SA]]* @_ZN2SAC1ERKS_(
@@ -39,7 +39,7 @@ void testCopyConstructor(SA a) {
   SA t = a;
 }
 
-// CHECK: define {{.*}} void @_Z19testMoveConstructor2SA(%[[STRUCT_SA]]*
+// CHECK: define void @_Z19testMoveConstructor2SA(%[[STRUCT_SA]]*
 // CHECK: call %[[STRUCT_SA]]* @_ZN2SAC1EOS_(
 
 // CHECK: define linkonce_odr %[[STRUCT_SA]]* @_ZN2SAC1EOS_(
@@ -49,7 +49,7 @@ void testMoveConstructor(SA a) {
   SA t = static_cast<SA &&>(a);
 }
 
-// CHECK: define {{.*}} void @_Z18testCopyAssignment2SA(%[[STRUCT_SA]]*
+// CHECK: define void @_Z18testCopyAssignment2SA(%[[STRUCT_SA]]*
 // CHECK: call nonnull align 8 dereferenceable(16) %[[STRUCT_SA]]* @_ZN2SAaSERKS_(
 
 // CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSERKS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
@@ -74,7 +74,7 @@ void testCopyAssignment(SA a) {
   t = a;
 }
 
-// CHECK: define {{.*}} void @_Z18testMoveAssignment2SA(%[[STRUCT_SA]]*
+// CHECK: define void @_Z18testMoveAssignment2SA(%[[STRUCT_SA]]*
 // CHECK: call nonnull align 8 dereferenceable(16) %[[STRUCT_SA]]* @_ZN2SAaSEOS_(
 
 // CHECK: define linkonce_odr nonnull align 8 dereferenceable(16) %[[STRUCT_SA:.*]]* @_ZN2SAaSEOS_(%[[STRUCT_SA]]* nonnull dereferenceable(16) %[[THIS:.*]], %[[STRUCT_SA]]* nonnull align 8 dereferenceable(16) %0)
@@ -99,21 +99,21 @@ void testMoveAssignment(SA a) {
   t = static_cast<SA &&>(a);
 }
 
-// CHECK: define {{.*}} void @_Z19testCopyConstructor2SI(i
+// CHECK: define void @_Z19testCopyConstructor2SI(i
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 void testCopyConstructor(SI a) {
   SI t = a;
 }
 
-// CHECK: define {{.*}} void @_Z19testMoveConstructor2SI(
+// CHECK: define void @_Z19testMoveConstructor2SI(
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 void testMoveConstructor(SI a) {
   SI t = static_cast<SI &&>(a);
 }
 
-// CHECK: define {{.*}} void @_Z18testCopyAssignment2SI(
+// CHECK: define void @_Z18testCopyAssignment2SI(
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 void testCopyAssignment(SI a) {
@@ -121,7 +121,7 @@ void testCopyAssignment(SI a) {
   t = a;
 }
 
-// CHECK: define {{.*}} void @_Z18testMoveAssignment2SI(
+// CHECK: define void @_Z18testMoveAssignment2SI(
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 
 void testMoveAssignment(SI a) {
