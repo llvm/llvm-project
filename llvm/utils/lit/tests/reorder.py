@@ -3,7 +3,6 @@
 # RUN: cp %{inputs}/reorder/.lit_test_times.txt %{inputs}/reorder/.lit_test_times.txt.orig
 # RUN: %{lit} -j1 %{inputs}/reorder | FileCheck %s
 # RUN: not diff %{inputs}/reorder/.lit_test_times.txt %{inputs}/reorder/.lit_test_times.txt.orig
-# UNSUPPORTED: system-windows
 # END.
 
 # CHECK:     -- Testing: 3 tests, 1 workers --

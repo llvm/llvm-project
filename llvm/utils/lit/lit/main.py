@@ -264,7 +264,12 @@ def record_test_times(tests, lit_config):
         if not t.suite.exec_root in times_by_suite:
             times_by_suite[t.suite.exec_root] = []
         time = -t.result.elapsed if t.isFailure() else t.result.elapsed
-        times_by_suite[t.suite.exec_root].append((os.sep.join(t.path_in_suite), t.result.elapsed))
+        # The "path" here is only used as a key into a dictionary. It is never
+        # used as an actual path to a filesystem API, therefore we use '/' as
+        # the canonical separator so that Unix and Windows machines can share
+        # timing data.
+        times_by_suite[t.suite.exec_root].append(('/'.join(t.path_in_suite),
+          t.result.elapsed))
 
     for s, value in times_by_suite.items():
         try:
