@@ -183,6 +183,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot2-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
+      Features["dot7-insts"] = true;
       Features["dl-insts"] = true;
       Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
@@ -200,6 +201,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot2-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
+      Features["dot7-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX1010:
       Features["dl-insts"] = true;
@@ -227,6 +229,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dl-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
+      Features["dot7-insts"] = true;
       LLVM_FALLTHROUGH;
     case GK_GFX90C:
     case GK_GFX909:
