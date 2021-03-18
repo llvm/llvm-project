@@ -31,6 +31,16 @@ typedef struct {
 @class NSString, Protocol;
 extern void NSLog(NSString *format, ...);
 
+typedef int group_t;
+typedef struct dispatch_queue_s *dispatch_queue_t;
+typedef void (^dispatch_block_t)(void);
+extern dispatch_queue_t queue;
+
+void dispatch_group_async(dispatch_queue_t queue,
+                          group_t group,
+                          dispatch_block_t block);
+void dispatch_async(dispatch_queue_t queue, dispatch_block_t block);
+
 void escape(void (^callback)(void));
 void escape_void(void *);
 void indirect_call(void (^callback)(void) CALLED_ONCE);
@@ -225,11 +235,11 @@ void indirect_call_within_direct_call(void (^callback)(void) CALLED_ONCE,
 }
 
 void block_call_1(void (^callback)(void) CALLED_ONCE) {
-  indirect_call(^{
-    callback();
-  });
-  callback();
-  // no-warning
+  indirect_call( // expected-note{{previous call is here}}
+      ^{
+        callback();
+      });
+  callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
 }
 
 void block_call_2(void (^callback)(void) CALLED_ONCE) {
@@ -255,7 +265,7 @@ void block_call_4(int cond, void (^callback)(void) CALLED_ONCE) {
       // expected-warning@-1{{'callback' parameter marked 'called_once' is never used when taking false branch}}
       escape(callback);
     }
-  }();
+  }(); // no-warning
 }
 
 void block_call_5(void (^outer)(void) CALLED_ONCE) {
@@ -271,6 +281,32 @@ void block_with_called_once(void (^outer)(void) CALLED_ONCE) {
   });
   outer(); // expected-note{{previous call is here}}
   outer(); // expected-warning{{'outer' parameter marked 'called_once' is called twice}}
+}
+
+void block_dispatch_call(int cond, void (^callback)(void) CALLED_ONCE) {
+  dispatch_async(queue, ^{
+    if (cond) // expected-warning{{'callback' parameter marked 'called_once' is never called when taking false branch}}
+      callback();
+  });
+}
+
+void block_escape_call_1(int cond, void (^callback)(void) CALLED_ONCE) {
+  escape_void((__bridge void *)^{
+    if (cond) {
+      // no-warning
+      callback();
+    }
+  });
+}
+
+void block_escape_call_2(int cond, void (^callback)(void) CALLED_ONCE) {
+  escape_void((__bridge void *)^{
+    if (cond) {
+      callback(); // expected-note{{previous call is here}}
+    }
+    // Double call can still be reported.
+    callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
+  });
 }
 
 void never_called_one_exit(int cond, void (^callback)(void) CALLED_ONCE) {
@@ -822,11 +858,10 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
 
 - (void)block_call_1:(void (^)(void))CALLED_ONCE callback {
   // We consider captures by blocks as escapes
-  [self indirect_call:(^{
+  [self indirect_call:(^{ // expected-note{{previous call is here}}
           callback();
         })];
-  callback();
-  // no-warning
+  callback(); // expected-warning{{'callback' parameter marked 'called_once' is called twice}}
 }
 
 - (void)block_call_2:(int)cond callback:(void (^)(void))CALLED_ONCE callback {
