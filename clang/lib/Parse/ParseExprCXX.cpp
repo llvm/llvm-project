@@ -1987,11 +1987,30 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 /// \param FRI If non-null, a for range declaration is permitted, and if
 /// present will be parsed and stored here, and a null result will be returned.
 ///
+/// \param EnterForConditionScope If true, enter a continue/break scope at the
+/// appropriate moment for a 'for' loop.
+///
 /// \returns The parsed condition.
 Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
                                                 SourceLocation Loc,
                                                 Sema::ConditionKind CK,
-                                                ForRangeInfo *FRI) {
+                                                ForRangeInfo *FRI,
+                                                bool EnterForConditionScope) {
+  // Helper to ensure we always enter a continue/break scope if requested.
+  struct ForConditionScopeRAII {
+    Scope *S;
+    void enter(bool IsConditionVariable) {
+      if (S) {
+        S->AddFlags(Scope::BreakScope | Scope::ContinueScope);
+        S->setIsConditionVarScope(IsConditionVariable);
+      }
+    }
+    ~ForConditionScopeRAII() {
+      if (S)
+        S->setIsConditionVarScope(false);
+    }
+  } ForConditionScope{EnterForConditionScope ? getCurScope() : nullptr};
+
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
   PreferredType.enterCondition(Actions, Tok.getLocation());
 
@@ -2014,6 +2033,9 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   // Determine what kind of thing we have.
   switch (isCXXConditionDeclarationOrInitStatement(InitStmt, FRI)) {
   case ConditionOrInitStatement::Expression: {
+    // If this is a for loop, we're entering its condition.
+    ForConditionScope.enter(/*IsConditionVariable=*/false);
+
     ProhibitAttributes(attrs);
 
     // We can have an empty expression here.
@@ -2056,6 +2078,9 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   }
 
   case ConditionOrInitStatement::ForRangeDecl: {
+    // This is 'for (init-stmt; for-range-decl : range-expr)'.
+    // We're not actually in a for loop yet, so 'break' and 'continue' aren't
+    // permitted here.
     assert(FRI && "should not parse a for range declaration here");
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     DeclGroupPtrTy DG = ParseSimpleDeclaration(DeclaratorContext::ForInit,
@@ -2068,6 +2093,9 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   case ConditionOrInitStatement::Error:
     break;
   }
+
+  // If this is a for loop, we're entering its condition.
+  ForConditionScope.enter(/*IsConditionVariable=*/true);
 
   // type-specifier-seq
   DeclSpec DS(AttrFactory);
