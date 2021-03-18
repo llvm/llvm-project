@@ -45,10 +45,6 @@ AttrOrTypeDef::AttrOrTypeDef(const llvm::Record *def) : def(def) {
       }
       builders.emplace_back(builder);
     }
-  } else if (skipDefaultBuilders()) {
-    PrintFatalError(
-        def->getLoc(),
-        "default builders are skipped and no custom builders provided");
   }
 }
 

@@ -2723,7 +2723,8 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`
 // that is also used as the value `Type` of the attribute. Only one parameter
 // of the attribute may be of this type.
-class AttributeSelfTypeParameter<string desc> :
-    AttrOrTypeParameter<"::mlir::Type", desc> {}
+class AttributeSelfTypeParameter<string desc,
+                                 string derivedType = "::mlir::Type"> :
+    AttrOrTypeParameter<derivedType, desc> {}
 
 #endif // OP_BASE

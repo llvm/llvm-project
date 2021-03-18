@@ -776,15 +776,19 @@ void DefGenerator::emitDefDef(const AttrOrTypeDef &def) {
     // Generate accessor definitions only if we also generate the storage class.
     // Otherwise, let the user define the exact accessor definition.
     if (def.genAccessors() && def.genStorageClass()) {
-      for (const AttrOrTypeParameter &parameter : parameters) {
-        StringRef paramStorageName = isa<AttributeSelfTypeParameter>(parameter)
-                                         ? "getType()"
-                                         : parameter.getName();
+      for (const AttrOrTypeParameter &param : parameters) {
+        SmallString<32> paramStorageName;
+        if (isa<AttributeSelfTypeParameter>(param)) {
+          Twine("getType().cast<" + param.getCppType() + ">()")
+              .toVector(paramStorageName);
+        } else {
+          paramStorageName = param.getName();
+        }
 
-        SmallString<16> name = parameter.getName();
+        SmallString<16> name = param.getName();
         name[0] = llvm::toUpper(name[0]);
         os << formatv("{0} {3}::get{1}() const {{ return getImpl()->{2}; }\n",
-                      parameter.getCppType(), name, paramStorageName,
+                      param.getCppType(), name, paramStorageName,
                       def.getCppClassName());
       }
     }
