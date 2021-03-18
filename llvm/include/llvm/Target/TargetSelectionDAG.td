@@ -152,10 +152,10 @@ def SDTIntTruncOp  : SDTypeProfile<1, 1, [  // trunc
 def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
   SDTCisSameAs<0, 1>, SDTCisFP<0>
 ]>;
-def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fround
+def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
-def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fextend
+def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
@@ -486,6 +486,7 @@ def fceil      : SDNode<"ISD::FCEIL"      , SDTFPUnaryOp>;
 def ffloor     : SDNode<"ISD::FFLOOR"     , SDTFPUnaryOp>;
 def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp>;
 def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
+def froundeven : SDNode<"ISD::FROUNDEVEN" , SDTFPUnaryOp>;
 
 def lround     : SDNode<"ISD::LROUND"     , SDTFPToIntOp>;
 def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
@@ -546,6 +547,8 @@ def strict_lround     : SDNode<"ISD::STRICT_LROUND",
 def strict_llround    : SDNode<"ISD::STRICT_LLROUND",
                                SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fround     : SDNode<"ISD::STRICT_FROUND",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_froundeven : SDNode<"ISD::STRICT_FROUNDEVEN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ftrunc     : SDNode<"ISD::STRICT_FTRUNC",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -1414,6 +1417,9 @@ def any_llround    : PatFrags<(ops node:$src),
 def any_fround     : PatFrags<(ops node:$src),
                               [(strict_fround node:$src),
                                (fround node:$src)]>;
+def any_froundeven : PatFrags<(ops node:$src),
+                              [(strict_froundeven node:$src),
+                               (froundeven node:$src)]>;
 def any_ftrunc     : PatFrags<(ops node:$src),
                               [(strict_ftrunc node:$src),
                                (ftrunc node:$src)]>;
