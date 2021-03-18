@@ -81,8 +81,8 @@ private:
   const Scope &scope_;
   bool isInterface_{false};
   SymbolVector need_; // symbols that are needed
-  SymbolSet needSet_; // symbols already in need_
-  SymbolSet useSet_; // use-associations that might be needed
+  UnorderedSymbolSet needSet_; // symbols already in need_
+  UnorderedSymbolSet useSet_; // use-associations that might be needed
   std::set<SourceName> imports_; // imports from host that are needed
 
   void DoSymbol(const Symbol &);
@@ -498,7 +498,8 @@ void CollectSymbols(
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
   }
-  std::sort(sorted.end() - commonSize, sorted.end());
+  std::sort(
+      sorted.end() - commonSize, sorted.end(), SymbolSourcePositionCompare{});
 }
 
 void PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
