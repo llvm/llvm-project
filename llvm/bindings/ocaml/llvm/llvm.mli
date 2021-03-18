@@ -24,6 +24,9 @@ type llcontext
     objects. See the [llvm::Module] class. *)
 type llmodule
 
+(** Opaque representation of Metadata nodes. See the [llvm::Metadata] class. *)
+type llmetadata
+
 (** Each value in the LLVM IR has a type, an instance of [lltype]. See the
     [llvm::Type] class. *)
 type lltype
@@ -367,6 +370,15 @@ module DiagnosticSeverity : sig
   | Note
 end
 
+module ModuleFlagBehavior :sig
+  type t =
+  | Error
+  | Warning
+  | Require
+  | Override
+  | Append
+  | AppendUnique
+end
 
 (** {6 Iteration} *)
 
@@ -531,7 +543,16 @@ val set_module_inline_asm : llmodule -> string -> unit
     See the method [llvm::Module::getContext] *)
 val module_context : llmodule -> llcontext
 
+(** [get_module_flag m k] Return the corresponding value if key [k] appears in
+    the module flags of [m], otherwise return None
+    See the method [llvm::Module::getModuleFlag] *)
+val get_module_flag : llmodule -> string -> llmetadata option
 
+(** [add_module_flag m b k v] Add a module-level flag b, with key [k] and
+    value [v] to the flags metadata of module [m]. It will create the 
+    module-level flags named metadata if it doesn't already exist. *)
+val add_module_flag : llmodule -> ModuleFlagBehavior.t ->
+                        string -> llmetadata -> unit
 (** {6 Types} *)
 
 (** [classify_type ty] returns the {!TypeKind.t} corresponding to the type [ty].
@@ -925,6 +946,13 @@ val get_named_metadata : llmodule -> string -> llvalue array
     [llvm::MDNode::addOperand()]. *)
 val add_named_metadata_operand : llmodule -> string -> llvalue -> unit
 
+(** Obtain a Metadata as a Value.
+    See the method [llvm::ValueAsMetadata::get()]. *)
+val value_as_metadata : llvalue -> llmetadata
+
+(** Obtain a Value as a Metadata.
+    See the method [llvm::MetadataAsValue::get()]. *)
+val metadata_as_value : llcontext -> llmetadata -> llvalue
 
 (** {7 Operations on scalar constants} *)
 
@@ -1383,6 +1411,12 @@ val alignment : llvalue -> int
 (** [set_alignment n g] sets the required alignment of the global value [g] to
     [n] bytes. See the method [llvm::GlobalValue::setAlignment]. *)
 val set_alignment : int -> llvalue -> unit
+
+(** [global_copy_all_metadata g] returns all the metadata associated with [g],
+    which must be an [Instruction] or [GlobalObject].
+    See the [llvm::Instruction::getAllMetadata()] and
+    [llvm::GlobalObject::getAllMetadata()] methods. *)
+val global_copy_all_metadata : llvalue -> (llmdkind * llmetadata) array
 
 
 (** {7 Operations on global variables} *)
