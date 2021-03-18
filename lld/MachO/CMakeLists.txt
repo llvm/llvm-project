@@ -24,6 +24,7 @@ add_lld_library(lldMachO2
   Symbols.cpp
   SyntheticSections.cpp
   Target.cpp
+  MapFile.cpp
   Writer.cpp
 
   LINK_COMPONENTS
