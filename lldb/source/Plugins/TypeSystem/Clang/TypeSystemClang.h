@@ -265,7 +265,7 @@ public:
       clang::DeclContext::lookup_result result = decl_context->lookup(myName);
 
       if (!result.empty()) {
-        clang::NamedDecl *named_decl = result[0];
+        clang::NamedDecl *named_decl = *result.begin();
         if (const RecordDeclType *record_decl =
                 llvm::dyn_cast<RecordDeclType>(named_decl))
           compiler_type.SetCompilerType(
