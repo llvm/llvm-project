@@ -63,14 +63,14 @@ struct KnownCalledOnceParameter {
   unsigned ParamIndex;
 };
 constexpr KnownCalledOnceParameter KNOWN_CALLED_ONCE_PARAMETERS[] = {
-    {"dispatch_async", 1},
-    {"dispatch_async_and_wait", 1},
-    {"dispatch_after", 2},
-    {"dispatch_sync", 1},
-    {"dispatch_once", 1},
-    {"dispatch_barrier_async", 1},
-    {"dispatch_barrier_async_and_wait", 1},
-    {"dispatch_barrier_sync", 1}};
+    {llvm::StringLiteral{"dispatch_async"}, 1},
+    {llvm::StringLiteral{"dispatch_async_and_wait"}, 1},
+    {llvm::StringLiteral{"dispatch_after"}, 2},
+    {llvm::StringLiteral{"dispatch_sync"}, 1},
+    {llvm::StringLiteral{"dispatch_once"}, 1},
+    {llvm::StringLiteral{"dispatch_barrier_async"}, 1},
+    {llvm::StringLiteral{"dispatch_barrier_async_and_wait"}, 1},
+    {llvm::StringLiteral{"dispatch_barrier_sync"}, 1}};
 
 class ParameterStatus {
 public:
