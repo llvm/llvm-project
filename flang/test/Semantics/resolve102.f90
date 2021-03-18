@@ -68,7 +68,6 @@ program twoCycle
   !ERROR: The interface for procedure 'p1' is recursively defined
   !ERROR: The interface for procedure 'p2' is recursively defined
   procedure(p1) p2
-  !ERROR: 'p2' must be an abstract interface or a procedure with an explicit interface
   procedure(p2) p1
   call p1
   call p2
@@ -76,10 +75,8 @@ end program
 
 program threeCycle
   !ERROR: The interface for procedure 'p1' is recursively defined
-  !ERROR: 'p1' must be an abstract interface or a procedure with an explicit interface
   !ERROR: The interface for procedure 'p2' is recursively defined
   procedure(p1) p2
-  !ERROR: 'p2' must be an abstract interface or a procedure with an explicit interface
   !ERROR: The interface for procedure 'p3' is recursively defined
   procedure(p2) p3
   procedure(p3) p1

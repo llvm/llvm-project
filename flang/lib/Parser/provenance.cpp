@@ -602,16 +602,15 @@ void AllCookedSources::Dump(llvm::raw_ostream &o) const {
 }
 
 bool AllCookedSources::Precedes(CharBlock x, CharBlock y) const {
-  const CookedSource *ySource{Find(y)};
   if (const CookedSource * xSource{Find(x)}) {
-    if (ySource) {
-      int xNum{xSource->number()};
-      int yNum{ySource->number()};
-      return xNum < yNum || (xNum == yNum && x.begin() < y.begin());
+    if (xSource->AsCharBlock().Contains(y)) {
+      return x.begin() < y.begin();
+    } else if (const CookedSource * ySource{Find(y)}) {
+      return xSource->number() < ySource->number();
     } else {
       return true; // by fiat, all cooked source < anything outside
     }
-  } else if (ySource) {
+  } else if (Find(y)) {
     return false;
   } else {
     // Both names are compiler-created (SaveTempName).

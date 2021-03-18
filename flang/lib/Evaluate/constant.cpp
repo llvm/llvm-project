@@ -315,5 +315,9 @@ std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
   return Base::CopyFrom(source, count, resultSubscripts, dimOrder);
 }
 
+bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
+  return semantics::SymbolSourcePositionCompare{}(x, y);
+}
+
 INSTANTIATE_CONSTANT_TEMPLATES
 } // namespace Fortran::evaluate

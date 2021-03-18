@@ -2690,7 +2690,7 @@ void InterfaceVisitor::AddSpecificProcs(
 // this generic interface. Resolve those names to symbols.
 void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
-  SymbolSet symbolsSeen;
+  UnorderedSymbolSet symbolsSeen;
   for (const Symbol &symbol : details.specificProcs()) {
     symbolsSeen.insert(symbol);
   }
@@ -3651,7 +3651,7 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
 
 bool DeclarationVisitor::HasCycle(
     const Symbol &procSymbol, const ProcInterface &interface) {
-  SymbolSet procsInCycle;
+  OrderedSymbolSet procsInCycle;
   procsInCycle.insert(procSymbol);
   const ProcInterface *thisInterface{&interface};
   bool haveInterface{true};
