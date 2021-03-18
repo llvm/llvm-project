@@ -61,6 +61,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case DebugPreFIRTree:
     return std::make_unique<DebugPreFIRTreeAction>();
     break;
+  case GetSymbolsSources:
+    return std::make_unique<GetSymbolsSourcesAction>();
+    break;
   default:
     break;
     // TODO:

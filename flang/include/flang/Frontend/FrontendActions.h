@@ -100,6 +100,10 @@ class DebugPreFIRTreeAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
 
+class GetSymbolsSourcesAction : public PrescanAndSemaAction {
+  void ExecuteAction() override;
+};
+
 class ParseSyntaxOnlyAction : public PrescanAndSemaAction {
   void ExecuteAction() override;
 };
