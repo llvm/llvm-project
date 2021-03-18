@@ -53,7 +53,12 @@ SyntheticSection::SyntheticSection(const char *segname, const char *name)
 // dyld3's MachOLoaded::getSlide() assumes that the __TEXT segment starts
 // from the beginning of the file (i.e. the header).
 MachHeaderSection::MachHeaderSection()
-    : SyntheticSection(segment_names::text, section_names::header) {}
+    : SyntheticSection(segment_names::text, section_names::header) {
+  // XXX: This is a hack. (See D97007)
+  // Setting the index to 1 to pretend that this section is the text
+  // section.
+  index = 1;
+}
 
 void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
   loadCommands.push_back(lc);
@@ -754,7 +759,7 @@ void SymtabSection::finalizeContents() {
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->linkerInternal)
+      if (!defined->includeInSymtab)
         continue;
       assert(defined->isExternal());
       addSymbol(externalSymbols, defined);
@@ -992,4 +997,57 @@ void CodeSignatureSection::writeTo(uint8_t *buf) const {
   auto *id = reinterpret_cast<char *>(&codeDirectory[1]);
   memcpy(id, fileName.begin(), fileName.size());
   memset(id + fileName.size(), 0, fileNamePad);
+}
+
+void macho::createSyntheticSymbols() {
+  auto addHeaderSymbol = [](const char *name) {
+    symtab->addSynthetic(name, in.header->isec, 0,
+                         /*privateExtern=*/true,
+                         /*includeInSymtab*/ false);
+  };
+
+  switch (config->outputType) {
+    // FIXME: Assign the right addresse value for these symbols
+    // (rather than 0). But we need to do that after assignAddresses().
+  case MH_EXECUTE:
+    // If linking PIE, __mh_execute_header is a defined symbol in
+    //  __TEXT, __text)
+    // Otherwise, it's an absolute symbol.
+    if (config->isPic)
+      symtab->addSynthetic("__mh_execute_header", in.header->isec, 0,
+                           /*privateExtern*/ false,
+                           /*includeInSymbtab*/ true);
+    else
+      symtab->addSynthetic("__mh_execute_header",
+                           /*isec*/ nullptr, 0,
+                           /*privateExtern*/ false,
+                           /*includeInSymbtab*/ true);
+    break;
+
+    // The following symbols are  N_SECT symbols, even though the header is not
+    // part of any section and that they are private to the bundle/dylib/object
+    // they are part of.
+  case MH_BUNDLE:
+    addHeaderSymbol("__mh_bundle_header");
+    break;
+  case MH_DYLIB:
+    addHeaderSymbol("__mh_dylib_header");
+    break;
+  case MH_DYLINKER:
+    addHeaderSymbol("__mh_dylinker_header");
+    break;
+  case MH_OBJECT:
+    addHeaderSymbol("__mh_object_header");
+    break;
+  default:
+    llvm_unreachable("unexpected outputType");
+    break;
+  }
+
+  // The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit
+  // which does e.g. cleanup of static global variables. The ABI document
+  // says that the pointer can point to any address in one of the dylib's
+  // segments, but in practice ld64 seems to set it to point to the header,
+  // so that's what's implemented here.
+  addHeaderSymbol("___dso_handle");
 }
