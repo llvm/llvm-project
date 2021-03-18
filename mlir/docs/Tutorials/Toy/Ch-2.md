@@ -168,19 +168,49 @@ provide an easy avenue for high-level analysis and transformation.
 /// constructor). It can also override virtual methods to change some general
 /// behavior, which will be demonstrated in later chapters of the tutorial.
 class ToyDialect : public mlir::Dialect {
- public:
+public:
   explicit ToyDialect(mlir::MLIRContext *ctx);
 
   /// Provide a utility accessor to the dialect namespace. This is used by
   /// several utilities.
   static llvm::StringRef getDialectNamespace() { return "toy"; }
+
+  /// An initializer called from the constructor of ToyDialect that is used to
+  /// register operations, types, and more within the Toy dialect.
+  void initialize();
 };
 ```
 
-The dialect can now be registered in the global registry:
+This is the C++ definition of a dialect, but MLIR also supports defining
+dialects declaratively via tablegen. Using the declarative specification is much
+cleaner as it removes the need for a large portion of the boilerplate when
+defining a new dialect. In the declarative format, the toy dialect would be
+specified as:
+
+```tablegen
+// Provide a definition of the 'toy' dialect in the ODS framework so that we
+// can define our operations.
+def Toy_Dialect : Dialect {
+  // The namespace of our dialect, this corresponds 1-1 with the string we
+  // provided in `ToyDialect::getDialectNamespace`.
+  let name = "toy";
+
+  // The C++ namespace that the dialect class definition resides in.
+  let cppNamespace = "toy";
+}
+```
+
+To see what this generates, we can run the `mlir-tblgen` command with the
+`gen-dialect-decls` action like so:
+
+```shell
+${build_root}/bin/mlir-tblgen -gen-dialect-decls ${mlir_src_root}/examples/toy/Ch2/include/toy/Ops.td -I ${mlir_src_root}/include/
+```
+
+The dialect can now be loaded into an MLIRContext:
 
 ```c++
-  mlir::registerDialect<ToyDialect>();
+  context.loadDialect<ToyDialect>();
 ```
 
 Any new `MLIRContext` created from now on will contain an instance of the Toy
@@ -249,11 +279,10 @@ class ConstantOp : public mlir::Op<ConstantOp,
 };
 ```
 
-and we register this operation in the `ToyDialect` constructor:
+and we register this operation in the `ToyDialect` initializer:
 
 ```c++
-ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect(getDialectNamespace(), ctx) {
+void ToyDialect::initialize() {
   addOperations<ConstantOp>();
 }
 ```
@@ -311,27 +340,9 @@ C++ API changes.
 
 Lets see how to define the ODS equivalent of our ConstantOp:
 
-The first thing to do is to define a link to the Toy dialect that we defined in
-C++. This is used to link all of the operations that we will define to our
-dialect:
-
-```tablegen
-// Provide a definition of the 'toy' dialect in the ODS framework so that we
-// can define our operations.
-def Toy_Dialect : Dialect {
-  // The namespace of our dialect, this corresponds 1-1 with the string we
-  // provided in `ToyDialect::getDialectNamespace`.
-  let name = "toy";
-
-  // The C++ namespace that the dialect class definition resides in.
-  let cppNamespace = "toy";
-}
-```
-
-Now that we have defined a link to the Toy dialect, we can start defining
-operations. Operations in ODS are defined by inheriting from the `Op` class. To
-simplify our operation definitions, we will define a base class for operations
-in the Toy dialect.
+Operations in ODS are defined by inheriting from the `Op` class. To simplify our
+operation definitions, we will define a base class for operations in the Toy
+dialect.
 
 ```tablegen
 // Base class for toy dialect operations. This operation inherits from the base
