@@ -58,8 +58,7 @@ namespace llvm {
 namespace objcopy {
 
 Error writeToFile(StringRef OutputFileName,
-                  std::function<Error(raw_ostream &)> Write, bool KeepOwnership,
-                  unsigned UserID, unsigned GroupID) {
+                  std::function<Error(raw_ostream &)> Write) {
   if (OutputFileName == "-")
     return Write(outs());
 
@@ -73,15 +72,6 @@ Error writeToFile(StringRef OutputFileName,
       sys::fs::TempFile::create(OutputFileName + ".temp-objcopy-%%%%%%", Mode);
   if (!Temp)
     return createFileError(OutputFileName, Temp.takeError());
-
-#ifndef _WIN32
-  // Try to preserve file ownership if requested.
-  if (KeepOwnership) {
-    sys::fs::file_status Stat;
-    if (!sys::fs::status(Temp->FD, Stat) && Stat.getUser() == 0)
-      sys::fs::changeFileOwnership(Temp->FD, UserID, GroupID);
-  }
-#endif
 
   raw_fd_ostream Out(Temp->FD, false);
 
@@ -156,9 +146,9 @@ static Error deepWriteArchive(StringRef ArcName,
     // now in-memory buffers can not be completely avoided since
     // NewArchiveMember still requires them even though writeArchive does not
     // write them on disk.
-    Expected<std::unique_ptr<FileOutputBuffer>> FB = FileOutputBuffer::create(
-        Member.MemberName, Member.Buf->getBufferSize(),
-        FileOutputBuffer::F_executable | FileOutputBuffer::F_keep_ownership);
+    Expected<std::unique_ptr<FileOutputBuffer>> FB =
+        FileOutputBuffer::create(Member.MemberName, Member.Buf->getBufferSize(),
+                                 FileOutputBuffer::F_executable);
     if (!FB)
       return FB.takeError();
     std::copy(Member.Buf->getBufferStart(), Member.Buf->getBufferEnd(),
@@ -306,6 +296,12 @@ static Error restoreStatOnFile(StringRef Filename,
     if (auto EC = sys::fs::setPermissions(FD, Perm))
 #endif
       return createFileError(Filename, EC);
+
+#ifndef _WIN32
+    // Keep ownership if llvm-objcopy is called under root.
+    if (Config.InputFilename == Config.OutputFilename && OStat.getUser() == 0)
+      sys::fs::changeFileOwnership(FD, Stat.getUser(), Stat.getGroup());
+#endif
   }
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
@@ -360,14 +356,10 @@ static Error executeObjcopy(CopyConfig &Config) {
         return E;
     } else {
       if (Error E = writeToFile(
-              Config.OutputFilename,
-              [&](raw_ostream &OutFile) -> Error {
+              Config.OutputFilename, [&](raw_ostream &OutFile) -> Error {
                 return executeObjcopyOnBinary(
                     Config, *BinaryOrErr.get().getBinary(), OutFile);
-              },
-              Config.InputFilename != "-" &&
-                  Config.InputFilename == Config.OutputFilename,
-              Stat.getUser(), Stat.getGroup()))
+              }))
         return E;
     }
   }
