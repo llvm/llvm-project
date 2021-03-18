@@ -263,6 +263,100 @@ define dso_local i32 @test_loop(i32 %0) nounwind {
   ret i32 %20
 }
 
+define dso_local void @test_loop2(i32 %0) nounwind {
+; CHECK-LABEL: test_loop2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    subq $3024, %rsp # imm = 0xBD0
+; CHECK-NEXT:    movl %edi, %ebx
+; CHECK-NEXT:    movl $buf, %r14d
+; CHECK-NEXT:    movl $32, %r15d
+; CHECK-NEXT:    movw $8, %bp
+; CHECK-NEXT:    movl $buf+2048, %r12d
+; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    testl %ebx, %ebx
+; CHECK-NEXT:    jle .LBB3_3
+; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
+; CHECK-NEXT:    movabsq $64, %rax
+; CHECK-NEXT:    tilestored %tmm0, 1024(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $64, %rax
+; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm0 # 1024-byte Folded Reload
+; CHECK-NEXT:    tilestored %tmm0, (%r12,%r15)
+; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    jmp .LBB3_1
+; CHECK-NEXT:  .LBB3_3:
+; CHECK-NEXT:    addq $3024, %rsp # imm = 0xBD0
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    tilerelease
+; CHECK-NEXT:    retq
+;
+; IPRA-LABEL: test_loop2:
+; IPRA:       # %bb.0:
+; IPRA-NEXT:    subq $72, %rsp
+; IPRA-NEXT:    movl $buf, %eax
+; IPRA-NEXT:    movl $32, %ecx
+; IPRA-NEXT:    movw $8, %dx
+; IPRA-NEXT:    movl $buf+2048, %esi
+; IPRA-NEXT:    .p2align 4, 0x90
+; IPRA-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
+; IPRA-NEXT:    callq foo
+; IPRA-NEXT:    testl %edi, %edi
+; IPRA-NEXT:    jle .LBB3_3
+; IPRA-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
+; IPRA-NEXT:    vpxord %zmm0, %zmm0, %zmm0
+; IPRA-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    movw $8, {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; IPRA-NEXT:    tileloadd (%rax,%rcx), %tmm0
+; IPRA-NEXT:    callq foo
+; IPRA-NEXT:    tilestored %tmm0, (%rsi,%rcx)
+; IPRA-NEXT:    callq foo
+; IPRA-NEXT:    jmp .LBB3_1
+; IPRA-NEXT:  .LBB3_3:
+; IPRA-NEXT:    addq $72, %rsp
+; IPRA-NEXT:    tilerelease
+; IPRA-NEXT:    vzeroupper
+; IPRA-NEXT:    retq
+  br label %2
+2:
+  %3 = phi i32 [ 0, %1 ], [ %7, %5 ]
+  call void @foo()
+  %4 = icmp sgt i32 %0, 0
+  br i1 %4, label %5, label %8
+5:
+  %6 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 0), i64 32)
+  call void @foo()
+  tail call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* getelementptr inbounds ([3072 x i8], [3072 x i8]* @buf, i64 0, i64 2048), i64 32, x86_amx %6)
+  call void @foo()
+  %7 = add i32 %3, 1
+  br label %2
+8:
+  ret void
+}
+
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
