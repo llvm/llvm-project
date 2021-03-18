@@ -263,12 +263,8 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
 
   // If the condition is always true or always false, replace it with
   // a constant value.
-  if (SE->isKnownPredicate(Pred, S, X)) {
-    ICmp->replaceAllUsesWith(ConstantInt::getTrue(ICmp->getContext()));
-    DeadInsts.emplace_back(ICmp);
-    LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
-  } else if (SE->isKnownPredicate(ICmpInst::getInversePredicate(Pred), S, X)) {
-    ICmp->replaceAllUsesWith(ConstantInt::getFalse(ICmp->getContext()));
+  if (auto Ev = SE->evaluatePredicate(Pred, S, X)) {
+    ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
   } else if (makeIVComparisonInvariant(ICmp, IVOperand)) {
