@@ -116,8 +116,10 @@ public:
                                    OpBuilder &builder);
 
   /// Converts the function type to a C-compatible format, in particular using
-  /// pointers to memref descriptors for arguments.
-  Type convertFunctionTypeCWrapper(FunctionType type);
+  /// pointers to memref descriptors for arguments. Also converts the return
+  /// type to a pointer argument if it is a struct. Returns true if this
+  /// was the case.
+  std::pair<Type, bool> convertFunctionTypeCWrapper(FunctionType type);
 
   /// Returns the data layout to use during and after conversion.
   const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
