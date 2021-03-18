@@ -62,9 +62,10 @@ public:
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
-  Scope() : Scope{*this, Kind::Global, nullptr} {}
-  Scope(Scope &parent, Kind kind, Symbol *symbol)
-      : parent_{parent}, kind_{kind}, symbol_{symbol} {
+  explicit Scope(SemanticsContext &context)
+      : Scope{*this, Kind::Global, nullptr, context} {}
+  Scope(Scope &parent, Kind kind, Symbol *symbol, SemanticsContext &context)
+      : parent_{parent}, kind_{kind}, symbol_{symbol}, context_{context} {
     if (symbol) {
       symbol->set_scope(this);
     }
@@ -99,6 +100,7 @@ public:
   }
   Symbol *symbol() { return symbol_; }
   const Symbol *symbol() const { return symbol_; }
+  SemanticsContext &context() const { return context_; }
 
   inline const Symbol *GetSymbol() const;
   const Scope *GetDerivedTypeParent() const;
@@ -107,6 +109,9 @@ public:
   bool Contains(const Scope &) const;
   /// Make a scope nested in this one
   Scope &MakeScope(Kind kind, Symbol *symbol = nullptr);
+  SemanticsContext &GetMutableSemanticsContext() const {
+    return const_cast<SemanticsContext &>(context());
+  }
 
   using size_type = mapType::size_type;
   using iterator = mapType::iterator;
@@ -244,7 +249,7 @@ public:
         symbol_->test(Symbol::Flag::ModFile);
   }
 
-  void InstantiateDerivedTypes(SemanticsContext &);
+  void InstantiateDerivedTypes();
 
   const Symbol *runtimeDerivedTypeDescription() const {
     return runtimeDerivedTypeDescription_;
@@ -273,8 +278,9 @@ private:
   parser::Message::Reference instantiationContext_;
   bool hasSAVE_{false}; // scope has a bare SAVE statement
   const Symbol *runtimeDerivedTypeDescription_{nullptr};
+  SemanticsContext &context_;
   // When additional data members are added to Scope, remember to
-  // copy them, if appropriate, in InstantiateDerivedType().
+  // copy them, if appropriate, in FindOrInstantiateDerivedType().
 
   // Storage for all Symbols. Every Symbol is in allSymbols and every Symbol*
   // or Symbol& points to one in there.

@@ -47,6 +47,7 @@ namespace Fortran::parser {
 // necessary.)
 
 class AllSources;
+class AllCookedSources;
 
 class Provenance {
 public:
@@ -219,6 +220,9 @@ private:
 // single instances of CookedSource.
 class CookedSource {
 public:
+  int number() const { return number_; }
+  void set_number(int n) { number_ = n; }
+
   CharBlock AsCharBlock() const { return CharBlock{data_}; }
   std::optional<ProvenanceRange> GetProvenanceRange(CharBlock) const;
   std::optional<CharBlock> GetCharBlock(ProvenanceRange) const;
@@ -242,11 +246,12 @@ public:
   }
 
   std::size_t BufferedBytes() const;
-  void Marshal(AllSources &); // marshals text into one contiguous block
+  void Marshal(AllCookedSources &); // marshals text into one contiguous block
   void CompileProvenanceRangeToOffsetMappings(AllSources &);
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
+  int number_{0}; // for sorting purposes
   CharBuffer buffer_; // before Marshal()
   std::string data_; // all of it, prescanned and preprocessed
   OffsetToProvenanceMappings provenanceMap_;
@@ -263,15 +268,8 @@ public:
 
   CookedSource &NewCookedSource();
 
-  template <typename A> // const char * or CharBlock
-  const CookedSource *Find(A x) const {
-    for (const auto &c : cooked_) {
-      if (c.AsCharBlock().Contains(x)) {
-        return &c;
-      }
-    }
-    return nullptr;
-  }
+  const CookedSource *Find(CharBlock) const;
+  const CookedSource *Find(const char *p) const { return Find(CharBlock{p}); }
 
   bool IsValid(ProvenanceRange r) const { return allSources_.IsValid(r); }
 
@@ -283,9 +281,30 @@ public:
   std::optional<CharBlock> GetCharBlock(ProvenanceRange) const;
   void Dump(llvm::raw_ostream &) const;
 
+  // For sorting symbol names without being dependent on pointer values
+  bool Precedes(CharBlock, CharBlock) const;
+
+  // Once a CookedSource is complete, add it to index_ and assign its number_
+  void Register(CookedSource &);
+
 private:
   AllSources &allSources_;
   std::list<CookedSource> cooked_; // owns all CookedSource instances
+  int counter_{0};
+  std::map<CharBlock, const CookedSource &, CharBlockPointerComparator> index_;
 };
+
+// For use as a Comparator for maps, sets, sorting, &c.
+class CharBlockComparator {
+public:
+  explicit CharBlockComparator(const AllCookedSources &all) : all_{all} {}
+  bool operator()(CharBlock x, CharBlock y) const {
+    return all_.Precedes(x, y);
+  }
+
+private:
+  const AllCookedSources &all_;
+};
+
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PROVENANCE_H_
