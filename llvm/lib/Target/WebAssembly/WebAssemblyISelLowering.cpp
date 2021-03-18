@@ -1705,18 +1705,14 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
   std::function<bool(size_t, const SDValue &)> IsLaneConstructed;
   SDValue Result;
   // Prefer swizzles over vector consts over splats
-  if (NumSwizzleLanes >= NumSplatLanes &&
-      (!Subtarget->hasUnimplementedSIMD128() ||
-       NumSwizzleLanes >= NumConstantLanes)) {
+  if (NumSwizzleLanes >= NumSplatLanes && NumSwizzleLanes >= NumConstantLanes) {
     Result = DAG.getNode(WebAssemblyISD::SWIZZLE, DL, VecT, SwizzleSrc,
                          SwizzleIndices);
     auto Swizzled = std::make_pair(SwizzleSrc, SwizzleIndices);
     IsLaneConstructed = [&, Swizzled](size_t I, const SDValue &Lane) {
       return Swizzled == GetSwizzleSrcs(I, Lane);
     };
-  } else if (NumConstantLanes >= NumSplatLanes &&
-             Subtarget->hasUnimplementedSIMD128()) {
-    // If we support v128.const, emit it directly
+  } else if (NumConstantLanes >= NumSplatLanes) {
     SmallVector<SDValue, 16> ConstLanes;
     for (const SDValue &Lane : Op->op_values()) {
       if (IsConstant(Lane)) {
@@ -1728,55 +1724,6 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       }
     }
     Result = DAG.getBuildVector(VecT, DL, ConstLanes);
-    IsLaneConstructed = [&IsConstant](size_t _, const SDValue &Lane) {
-      return IsConstant(Lane);
-    };
-  } else if (NumConstantLanes >= NumSplatLanes && VecT.isInteger()) {
-    // Otherwise, if this is an integer vector, pack the lane values together so
-    // we can construct the 128-bit constant from a pair of i64s using a splat
-    // followed by at most one i64x2.replace_lane. Also keep track of the lanes
-    // that actually matter so we can avoid the replace_lane in more cases.
-    std::array<uint64_t, 2> I64s{{0, 0}};
-    std::array<uint64_t, 2> ConstLaneMasks{{0, 0}};
-    size_t LaneBits = 128 / Lanes;
-    size_t HalfLanes = Lanes / 2;
-    for (size_t I = 0; I < Lanes; ++I) {
-      const SDValue &Lane = Op.getOperand(I);
-      if (IsConstant(Lane)) {
-        // How much we need to shift Val to position it in an i64
-        auto Shift = LaneBits * (I % HalfLanes);
-        auto Mask = maskTrailingOnes<uint64_t>(LaneBits);
-        auto Val = cast<ConstantSDNode>(Lane.getNode())->getZExtValue() & Mask;
-        I64s[I / HalfLanes] |= Val << Shift;
-        ConstLaneMasks[I / HalfLanes] |= Mask << Shift;
-      }
-    }
-    // Check whether all constant lanes in the second half of the vector are
-    // equivalent in the first half or vice versa to determine whether splatting
-    // either side will be sufficient to materialize the constant. As a special
-    // case, if the first and second halves have no constant lanes in common, we
-    // can just combine them.
-    bool FirstHalfSufficient = (I64s[0] & ConstLaneMasks[1]) == I64s[1];
-    bool SecondHalfSufficient = (I64s[1] & ConstLaneMasks[0]) == I64s[0];
-    bool CombinedSufficient = (ConstLaneMasks[0] & ConstLaneMasks[1]) == 0;
-
-    uint64_t Splatted;
-    if (SecondHalfSufficient) {
-      Splatted = I64s[1];
-    } else if (CombinedSufficient) {
-      Splatted = I64s[0] | I64s[1];
-    } else {
-      Splatted = I64s[0];
-    }
-
-    Result = DAG.getSplatBuildVector(MVT::v2i64, DL,
-                                     DAG.getConstant(Splatted, DL, MVT::i64));
-    if (!FirstHalfSufficient && !SecondHalfSufficient && !CombinedSufficient) {
-      Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v2i64, Result,
-                           DAG.getConstant(I64s[1], DL, MVT::i64),
-                           DAG.getConstant(1, DL, MVT::i32));
-    }
-    Result = DAG.getBitcast(VecT, Result);
     IsLaneConstructed = [&IsConstant](size_t _, const SDValue &Lane) {
       return IsConstant(Lane);
     };
