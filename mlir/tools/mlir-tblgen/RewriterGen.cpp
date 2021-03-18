@@ -251,12 +251,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
 
   // TODO(suderman): iterate through arguments, determine their types, output
   // names.
-  SmallVector<std::string, 8> capture(8);
-  if (tree.getNumArgs() > 8) {
-    PrintFatalError(loc,
-                    "unsupported NativeCodeCall matcher argument numbers: " +
-                        Twine(tree.getNumArgs()));
-  }
+  SmallVector<std::string, 8> capture;
+  capture.push_back(opName.str());
 
   raw_indented_ostream::DelimitedScope scope(os);
 
@@ -274,7 +270,7 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       }
     }
 
-    capture[i] = std::move(argName);
+    capture.push_back(std::move(argName));
   }
 
   bool hasLocationDirective;
@@ -282,21 +278,20 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   auto fmt = tree.getNativeCodeTemplate();
-  auto nativeCodeCall = std::string(tgfmt(
-      fmt, &fmtCtx.addSubst("_loc", locToUse), opName, capture[0], capture[1],
-      capture[2], capture[3], capture[4], capture[5], capture[6], capture[7]));
+  auto nativeCodeCall =
+      std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), capture));
 
   os << "if (failed(" << nativeCodeCall << ")) return ::mlir::failure();\n";
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     auto name = tree.getArgName(i);
     if (!name.empty() && name != "_") {
-      os << formatv("{0} = {1};\n", name, capture[i]);
+      os << formatv("{0} = {1};\n", name, capture[i + 1]);
     }
   }
 
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
-    std::string argName = capture[i];
+    std::string argName = capture[i + 1];
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
@@ -915,29 +910,26 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
   LLVM_DEBUG(llvm::dbgs() << '\n');
 
   auto fmt = tree.getNativeCodeTemplate();
-  // TODO: replace formatv arguments with the exact specified args.
-  SmallVector<std::string, 8> attrs(8);
-  if (tree.getNumArgs() > 8) {
-    PrintFatalError(loc,
-                    "unsupported NativeCodeCall replace argument numbers: " +
-                        Twine(tree.getNumArgs()));
-  }
+
+  SmallVector<std::string, 16> attrs;
+
   bool hasLocationDirective;
   std::string locToUse;
   std::tie(hasLocationDirective, locToUse) = getLocation(tree);
 
   for (int i = 0, e = tree.getNumArgs() - hasLocationDirective; i != e; ++i) {
     if (tree.isNestedDagArg(i)) {
-      attrs[i] = handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1);
+      attrs.push_back(
+          handleResultPattern(tree.getArgAsNestedDag(i), i, depth + 1));
     } else {
-      attrs[i] = handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i));
+      attrs.push_back(
+          handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i)));
     }
     LLVM_DEBUG(llvm::dbgs() << "NativeCodeCall argument #" << i
                             << " replacement: " << attrs[i] << "\n");
   }
-  return std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs[0],
-                           attrs[1], attrs[2], attrs[3], attrs[4], attrs[5],
-                           attrs[6], attrs[7]));
+
+  return std::string(tgfmt(fmt, &fmtCtx.addSubst("_loc", locToUse), attrs));
 }
 
 int PatternEmitter::getNodeValueCount(DagNode node) {
