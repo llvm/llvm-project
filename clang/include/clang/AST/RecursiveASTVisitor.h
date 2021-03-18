@@ -3210,7 +3210,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPUseClause(OMPUseClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPDestroyClause(OMPDestroyClause *) {
+bool RecursiveASTVisitor<Derived>::VisitOMPDestroyClause(OMPDestroyClause *C) {
+  TRY_TO(TraverseStmt(C->getInteropVar()));
   return true;
 }
 

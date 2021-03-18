@@ -552,7 +552,10 @@ void OMPClauseProfiler::VisitOMPUseClause(const OMPUseClause *C) {
     Profiler->VisitStmt(C->getInteropVar());
 }
 
-void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
+void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *C) {
+  if (C->getInteropVar())
+    Profiler->VisitStmt(C->getInteropVar());
+}
 
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {

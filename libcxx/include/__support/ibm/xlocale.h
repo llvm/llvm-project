@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_SUPPORT_IBM_XLOCALE_H
 #define _LIBCPP_SUPPORT_IBM_XLOCALE_H
 
+#include <stdarg.h>
 #include <__support/ibm/locale_mgmt_aix.h>
 #include <__support/ibm/locale_mgmt_zos.h>
 
@@ -268,18 +269,19 @@ unsigned long strtoul_l(const char *__nptr, char **__endptr,
 }
 
 static inline
-int vasprintf(char **strp, const char *fmt, va_list ap)
-{
+int vasprintf(char **strp, const char *fmt, va_list ap) {
   const size_t buff_size = 256;
-  int str_size;
-  if ((*strp = (char *)malloc(buff_size)) == NULL)
-  {
+  if ((*strp = (char *)malloc(buff_size)) == NULL) {
     return -1;
   }
-  if ((str_size = vsnprintf(*strp, buff_size, fmt,  ap)) >= buff_size)
-  {
-    if ((*strp = (char *)realloc(*strp, str_size + 1)) == NULL)
-    {
+
+  va_list ap_copy;
+  va_copy(ap_copy, ap);
+  int str_size = vsnprintf(*strp, buff_size, fmt,  ap_copy);
+  va_end(ap_copy);
+
+  if ((size_t) str_size >= buff_size) {
+    if ((*strp = (char *)realloc(*strp, str_size + 1)) == NULL) {
       return -1;
     }
     str_size = vsnprintf(*strp, str_size + 1, fmt,  ap);

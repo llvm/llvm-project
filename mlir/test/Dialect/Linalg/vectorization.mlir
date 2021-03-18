@@ -341,6 +341,42 @@ func @generic_vectorize_tensor(%arg0: tensor<4x256xf32>,
 
 // -----
 
+// Test different input maps.
+#matmul_trait = {
+  indexing_maps = [
+    affine_map<(d0, d1, d2, d3) -> (d1, d0)>,
+    affine_map<(d0, d1, d2, d3) -> (d3, d1)>,
+    affine_map<(d0, d1, d2, d3) -> (d3, d1, d0, d2)>,
+    affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+  ],
+  iterator_types = ["parallel", "parallel", "parallel", "parallel"]
+}
+
+// CHECK-DAG: #[[MAP0:.*]] = affine_map<(d0, d1) -> (d1, d0, 0, 0)>
+// CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1) -> (0, d1, 0, d0)>
+// CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>
+//       CHECK: func @vectorization_transpose
+//       CHECK: vector.transfer_read {{.*}}{permutation_map = #[[MAP0]]} : memref<14x7xf32>, vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_read {{.*}}{permutation_map = #[[MAP1]]} : memref<16x14xf32>, vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_read {{.*}}{permutation_map = #[[MAP2]]} : memref<16x14x7x8xf32>, vector<7x14x8x16xf32>
+//       CHECK: addf {{.*}} : vector<7x14x8x16xf32>
+//       CHECK: addf {{.*}} : vector<7x14x8x16xf32>
+//       CHECK: vector.transfer_write {{.*}} : vector<7x14x8x16xf32>, memref<7x14x8x16xf32>
+func @vectorization_transpose(%A: memref<14x7xf32>, %B: memref<16x14xf32>,
+                         %C: memref<16x14x7x8xf32>, %D: memref<7x14x8x16xf32>) {
+  linalg.generic #matmul_trait
+    ins(%A, %B, %C : memref<14x7xf32>, memref<16x14xf32>, memref<16x14x7x8xf32>)
+   outs(%D : memref<7x14x8x16xf32>) {
+    ^bb(%a: f32, %b: f32, %c: f32, %d: f32) :
+      %e = addf %a, %b: f32
+      %f = addf %e, %c: f32
+      linalg.yield %f : f32
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @matmul_tensors
 //  CHECK-SAME: (%[[ARG0:.*]]: tensor<8x4xf32>, %[[ARG1:.*]]: tensor<4x12xf32>,
 //  CHECK-SAME:  %[[ARG2:.*]]: tensor<8x12xf32>) -> tensor<8x12xf32>

@@ -1744,7 +1744,7 @@ static LogicalResult verify(linalg::YieldOp op) {
 void TiledLoopOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps, ValueRange inputs,
-    ValueRange outputs, ArrayRef<StringRef> iteratorTypes,
+    ValueRange outputs, ArrayAttr iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
@@ -1758,9 +1758,14 @@ void TiledLoopOp::build(
                                 static_cast<int32_t>(steps.size()),
                                 static_cast<int32_t>(inputs.size()),
                                 static_cast<int32_t>(outputs.size())}));
-  result.addAttribute(getIteratorTypesAttrName(),
-                      builder.getStrArrayAttr(iteratorTypes));
-  result.addTypes(outputs.getTypes());
+  result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
+
+  // Add output types for `RankedTensorType` output arguments.
+  for (Value output : outputs) {
+    Type outputType = output.getType();
+    if (outputType.isa<RankedTensorType>())
+      result.addTypes(outputType);
+  }
 
   OpBuilder::InsertionGuard guard(builder);
   unsigned numIVs = steps.size();
@@ -1771,8 +1776,8 @@ void TiledLoopOp::build(
   if (bodyBuilderFn) {
     builder.setInsertionPointToStart(bodyBlock);
     bodyBuilderFn(builder, result.location, bodyBlock->getArguments());
+    TiledLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
   }
-  TiledLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
 }
 
 static void print(OpAsmPrinter &p, TiledLoopOp op) {

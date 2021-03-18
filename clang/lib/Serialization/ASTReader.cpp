@@ -12156,7 +12156,11 @@ void OMPClauseReader::VisitOMPUseClause(OMPUseClause *C) {
   C->setVarLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *) {}
+void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *C) {
+  C->setInteropVar(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setVarLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}
 

@@ -46,7 +46,6 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
-      .Case("unimplemented-simd128", SIMDLevel >= UnimplementedSIMD128)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
       .Case("exception-handling", HasExceptionHandling)
@@ -73,8 +72,6 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
   if (SIMDLevel >= SIMD128)
     Builder.defineMacro("__wasm_simd128__");
-  if (SIMDLevel >= UnimplementedSIMD128)
-    Builder.defineMacro("__wasm_unimplemented_simd128__");
   if (HasNontrappingFPToInt)
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
   if (HasSignExt)
@@ -99,9 +96,6 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
                                          SIMDEnum Level, bool Enabled) {
   if (Enabled) {
     switch (Level) {
-    case UnimplementedSIMD128:
-      Features["unimplemented-simd128"] = true;
-      LLVM_FALLTHROUGH;
     case SIMD128:
       Features["simd128"] = true;
       LLVM_FALLTHROUGH;
@@ -115,9 +109,6 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
   case NoSIMD:
   case SIMD128:
     Features["simd128"] = false;
-    LLVM_FALLTHROUGH;
-  case UnimplementedSIMD128:
-    Features["unimplemented-simd128"] = false;
     break;
   }
 }
@@ -127,8 +118,6 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
                                               bool Enabled) const {
   if (Name == "simd128")
     setSIMDLevel(Features, SIMD128, Enabled);
-  else if (Name == "unimplemented-simd128")
-    setSIMDLevel(Features, UnimplementedSIMD128, Enabled);
   else
     Features[Name] = Enabled;
 }
@@ -158,14 +147,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-simd128") {
       SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
-      continue;
-    }
-    if (Feature == "+unimplemented-simd128") {
-      SIMDLevel = std::max(SIMDLevel, SIMDEnum(UnimplementedSIMD128));
-      continue;
-    }
-    if (Feature == "-unimplemented-simd128") {
-      SIMDLevel = std::min(SIMDLevel, SIMDEnum(UnimplementedSIMD128 - 1));
       continue;
     }
     if (Feature == "+nontrapping-fptoint") {

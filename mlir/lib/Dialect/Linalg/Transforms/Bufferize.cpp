@@ -32,8 +32,7 @@ static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
 }
 
 static LogicalResult
-allocateBuffersForResults(Location loc, LinalgOp linalgOp,
-                          linalg::GenericOpAdaptor &adaptor,
+allocateBuffersForResults(Location loc, LinalgOp linalgOp, ValueRange outputs,
                           SmallVectorImpl<Value> &resultBuffers, OpBuilder &b) {
   // Lazily compute loopRanges.
   SmallVector<Range, 4> loopRanges;
@@ -52,7 +51,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
     }
     auto tensorShape = tensorType.getShape();
     auto memrefType = MemRefType::get(tensorShape, tensorType.getElementType());
-    Value resultTensor = adaptor.outputs()[resultIndex];
+    Value resultTensor = outputs[resultIndex];
 
     // Clone output buffers whose value is actually used.
     if (linalgOp.payloadUsesValueFromOutputOperandIndex(resultIndex)) {
@@ -138,8 +137,7 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
 
 namespace {
 
-/// Generic conversion pattern that matches any LinalgOp. This avoids template
-/// instantiating one pattern for each LinalgOp.
+/// Conversion pattern that replaces `linalg.init_tensor` with allocation.
 class BufferizeInitTensorOp : public OpConversionPattern<InitTensorOp> {
 public:
   using OpConversionPattern<InitTensorOp>::OpConversionPattern;
@@ -151,6 +149,26 @@ public:
     rewriter.replaceOpWithNewOp<memref::AllocOp>(
         op, getTypeConverter()->convertType(op.getType()).cast<MemRefType>(),
         adaptor.sizes());
+    return success();
+  }
+};
+
+/// Conversion pattern that bufferizes `linalg.fill` operation.
+class BufferizeFillOp : public OpConversionPattern<FillOp> {
+public:
+  using OpConversionPattern<FillOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(FillOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    linalg::FillOpAdaptor adaptor(operands, op->getAttrDictionary());
+    if (!op.output().getType().isa<TensorType>())
+      return rewriter.notifyMatchFailure(op,
+                                         "operand must be of a tensor type");
+
+    rewriter.create<FillOp>(op.getLoc(), adaptor.output(), adaptor.value());
+    rewriter.replaceOp(op, adaptor.output());
+
     return success();
   }
 };
@@ -178,7 +196,7 @@ public:
     Location loc = linalgOp.getLoc();
     SmallVector<Value, 2> newOutputBuffers;
 
-    if (failed(allocateBuffersForResults(loc, linalgOp, adaptor,
+    if (failed(allocateBuffersForResults(loc, linalgOp, adaptor.outputs(),
                                          newOutputBuffers, rewriter))) {
       linalgOp.emitOpError()
           << "Failed to allocate buffers for tensor results.";
@@ -325,6 +343,7 @@ void mlir::linalg::populateLinalgBufferizePatterns(
   // TODO: Drop this once tensor constants work in standard.
   // clang-format off
   patterns.insert<
+      BufferizeFillOp,
       BufferizeInitTensorOp,
       SubTensorOpConverter,
       SubTensorInsertOpConverter
