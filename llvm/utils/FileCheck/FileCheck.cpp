@@ -212,10 +212,19 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
   case FileCheckDiag::MatchFoundButDiscarded:
     return MarkerStyle('!', raw_ostream::CYAN,
                        "discard: overlaps earlier match");
+  case FileCheckDiag::MatchFoundErrorNote:
+    // Note should always be overridden within the FileCheckDiag.
+    return MarkerStyle('!', raw_ostream::RED,
+                       "error: unknown error after match",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchNoneAndExcluded:
     return MarkerStyle('X', raw_ostream::GREEN);
   case FileCheckDiag::MatchNoneButExpected:
     return MarkerStyle('X', raw_ostream::RED, "error: no match found",
+                       /*FiltersAsError=*/true);
+  case FileCheckDiag::MatchNoneForInvalidPattern:
+    return MarkerStyle('X', raw_ostream::RED,
+                       "error: match failed for invalid pattern",
                        /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFuzzy:
     return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
@@ -420,6 +429,11 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       if (DiagItr->InputStartLine == DiagItr->InputEndLine &&
           DiagItr->InputStartCol == DiagItr->InputEndCol)
         A.Marker.Lead = ' ';
+    }
+    if (DiagItr->MatchTy == FileCheckDiag::MatchFoundErrorNote) {
+      assert(!DiagItr->Note.empty() &&
+             "expected custom note for MatchFoundErrorNote");
+      A.Marker.Note = "error: " + A.Marker.Note;
     }
     A.FoundAndExpectedMatch =
         DiagItr->MatchTy == FileCheckDiag::MatchFoundAndExpected;
