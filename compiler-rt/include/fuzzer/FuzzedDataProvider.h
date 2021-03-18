@@ -390,7 +390,7 @@ TS FuzzedDataProvider::ConvertUnsignedToSigned(TU value) {
     return static_cast<TS>(value);
   } else {
     constexpr auto TS_min = std::numeric_limits<TS>::min();
-    return TS_min + static_cast<char>(value - TS_min);
+    return TS_min + static_cast<TS>(value - TS_min);
   }
 }
 
