@@ -227,6 +227,22 @@ enum NodeType : unsigned {
   VSEXT_VL,
   VZEXT_VL,
 
+  // Reads value of CSR.
+  // The first operand is a chain pointer. The second specifies address of the
+  // required CSR. Two results are produced, the read value and the new chain
+  // pointer.
+  READ_CSR,
+  // Write value to CSR.
+  // The first operand is a chain pointer, the second specifies address of the
+  // required CSR and the third is the value to write. The result is the new
+  // chain pointer.
+  WRITE_CSR,
+  // Read and write value of CSR.
+  // The first operand is a chain pointer, the second specifies address of the
+  // required CSR and the third is the value to write. Two results are produced,
+  // the value read before the modification and the new chain pointer.
+  SWAP_CSR,
+
   // Memory opcodes start here.
   VLE_VL = ISD::FIRST_TARGET_MEMORY_OPCODE,
   VSE_VL,
