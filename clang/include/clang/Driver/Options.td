@@ -1279,7 +1279,9 @@ def fconstexpr_backtrace_limit_EQ : Joined<["-"], "fconstexpr-backtrace-limit=">
                                     Group<f_Group>;
 def fno_crash_diagnostics : Flag<["-"], "fno-crash-diagnostics">, Group<f_clang_Group>, Flags<[NoArgumentUnused, CoreOption]>,
   HelpText<"Disable auto-generation of preprocessed source files and a script for reproduction during a clang crash">;
-def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">, Group<f_clang_Group>, Flags<[NoArgumentUnused, CoreOption]>;
+def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
+  Group<f_clang_Group>, Flags<[NoArgumentUnused, CoreOption]>,
+  HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
