@@ -739,7 +739,7 @@ external define_qualified_global : string -> llvalue -> int -> llmodule ->
 external lookup_global : string -> llmodule -> llvalue option
                        = "llvm_lookup_global"
 external delete_global : llvalue -> unit = "llvm_delete_global"
-external global_initializer : llvalue -> llvalue = "LLVMGetInitializer"
+external global_initializer : llvalue -> llvalue option = "llvm_global_initializer"
 external set_initializer : llvalue -> llvalue -> unit = "llvm_set_initializer"
 external remove_initializer : llvalue -> unit = "llvm_remove_initializer"
 external is_thread_local : llvalue -> bool = "llvm_is_thread_local"
