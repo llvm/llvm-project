@@ -271,6 +271,9 @@ def OMPC_Order : Clause<"order"> {
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
 }
+def OMPC_Use : Clause<"use"> {
+  let clangClass = "OMPUseClause";
+}
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
 }
@@ -1649,6 +1652,7 @@ def OMP_interop : Directive<"interop"> {
     VersionedClause<OMPC_Depend>,
     VersionedClause<OMPC_Init>,
     VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Use>,
   ];
 }
 def OMP_Unknown : Directive<"unknown"> {

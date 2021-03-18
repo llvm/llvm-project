@@ -14610,8 +14610,8 @@ StmtResult Sema::ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
 
   // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
   // At least one action-clause must appear on a directive.
-  // TODO: also add 'use' and 'destroy' here.
-  if (!hasClauses(Clauses, OMPC_init, OMPC_nowait)) {
+  // TODO: also add 'destroy' here.
+  if (!hasClauses(Clauses, OMPC_init, OMPC_use, OMPC_nowait)) {
     StringRef Expected = "'init', 'use', 'destroy', or 'nowait'";
     Diag(StartLoc, diag::err_omp_no_clause_for_directive)
         << Expected << getOpenMPDirectiveName(OMPD_interop);
@@ -14627,16 +14627,20 @@ StmtResult Sema::ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
   // interop-type of 'targetsync'. Cases involving other directives cannot be
   // diagnosed.
   const OMPDependClause *DependClause = nullptr;
+  bool HasInitClause = false;
   bool IsTargetSync = false;
   for (const OMPClause *C : Clauses) {
     if (IsTargetSync)
       break;
-    if (const auto *InitClause = dyn_cast<OMPInitClause>(C))
-      IsTargetSync = InitClause->getIsTargetSync();
-    else if (const auto *DC = dyn_cast<OMPDependClause>(C))
+    if (const auto *InitClause = dyn_cast<OMPInitClause>(C)) {
+      HasInitClause = true;
+      if (InitClause->getIsTargetSync())
+        IsTargetSync = true;
+    } else if (const auto *DC = dyn_cast<OMPDependClause>(C)) {
       DependClause = DC;
+    }
   }
-  if (DependClause && !IsTargetSync) {
+  if (DependClause && HasInitClause && !IsTargetSync) {
     Diag(DependClause->getBeginLoc(), diag::err_omp_interop_bad_depend_clause);
     return StmtError();
   }
@@ -14654,8 +14658,12 @@ StmtResult Sema::ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
       const auto *IC = cast<OMPInitClause>(C);
       VarLoc = IC->getVarLoc();
       DRE = dyn_cast_or_null<DeclRefExpr>(IC->getInteropVar());
+    } else if (ClauseKind == OMPC_use) {
+      const auto *UC = cast<OMPUseClause>(C);
+      VarLoc = UC->getVarLoc();
+      DRE = dyn_cast_or_null<DeclRefExpr>(UC->getInteropVar());
     }
-    // TODO: 'use' and 'destroy' clauses to be added here.
+    // TODO: 'destroy' clause to be added here.
 
     if (!DRE)
       continue;
@@ -14751,6 +14759,18 @@ Sema::ActOnOpenMPInitClause(Expr *InteropVar, ArrayRef<Expr *> PrefExprs,
   return OMPInitClause::Create(Context, InteropVar, PrefExprs, IsTarget,
                                IsTargetSync, StartLoc, LParenLoc, VarLoc,
                                EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation VarLoc,
+                                      SourceLocation EndLoc) {
+
+  if (!isValidInteropVariable(*this, InteropVar, VarLoc, OMPC_use))
+    return nullptr;
+
+  return new (Context)
+      OMPUseClause(InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPVarListClause(
