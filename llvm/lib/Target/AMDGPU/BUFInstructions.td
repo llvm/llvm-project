@@ -6,14 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-def MUBUFAddr64 : ComplexPattern<i64, 7, "SelectMUBUFAddr64">;
-def MUBUFAddr64Atomic : ComplexPattern<i64, 4, "SelectMUBUFAddr64">;
+def MUBUFAddr64 : ComplexPattern<i64, 4, "SelectMUBUFAddr64">;
+def MUBUFOffset : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 
 def MUBUFScratchOffen : ComplexPattern<i64, 4, "SelectMUBUFScratchOffen", [], [SDNPWantParent]>;
 def MUBUFScratchOffset : ComplexPattern<i64, 3, "SelectMUBUFScratchOffset", [], [SDNPWantParent], 20>;
-
-def MUBUFOffset : ComplexPattern<i64, 6, "SelectMUBUFOffset">;
-def MUBUFOffsetAtomic : ComplexPattern<i64, 3, "SelectMUBUFOffset">;
 
 def BUFAddrKind {
   int Offset = 0;
@@ -402,19 +399,19 @@ class getMUBUFInsDA<list<RegisterClass> vdataList,
   RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret;
   dag InsNoData = !if(!empty(vaddrList),
     (ins                    SReg_128:$srsrc, SCSrc_b32:$soffset,
-         offset:$offset, CPol:$cpol),
+         offset:$offset, CPol_0:$cpol),
     (ins vaddrClass:$vaddr, SReg_128:$srsrc, SCSrc_b32:$soffset,
-         offset:$offset, CPol:$cpol)
+         offset:$offset, CPol_0:$cpol)
   );
   dag InsData = !if(!empty(vaddrList),
     (ins vdata_op:$vdata,                    SReg_128:$srsrc,
-         SCSrc_b32:$soffset, offset:$offset, CPol:$cpol),
+         SCSrc_b32:$soffset, offset:$offset, CPol_0:$cpol),
     (ins vdata_op:$vdata, vaddrClass:$vaddr, SReg_128:$srsrc,
-         SCSrc_b32:$soffset, offset:$offset, CPol:$cpol)
+         SCSrc_b32:$soffset, offset:$offset, CPol_0:$cpol)
   );
   dag ret = !con(
               !if(!empty(vdataList), InsNoData, InsData),
-              !if(isLds, (ins SWZ:$swz), (ins TFE:$tfe, SWZ:$swz))
+              !if(isLds, (ins SWZ_0:$swz), (ins TFE_0:$tfe, SWZ_0:$swz))
              );
 }
 
@@ -506,15 +503,15 @@ class MUBUF_Load_Pseudo <string opName,
 }
 
 class MUBUF_Offset_Load_Pat <Instruction inst, ValueType load_vt = i32, SDPatternOperator ld = null_frag> : Pat <
-  (load_vt (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))),
-  (load_vt (inst v4i32:$srsrc, i32:$soffset, i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))
+  (load_vt (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset))),
+  (load_vt (inst v4i32:$srsrc, i32:$soffset, i16:$offset))
 >;
 
 class MUBUF_Addr64_Load_Pat <Instruction inst,
                             ValueType load_vt = i32,
                             SDPatternOperator ld = null_frag> : Pat <
-  (load_vt (ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))),
-  (load_vt (inst i64:$vaddr, v4i32:$srsrc, i32:$soffset, i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))
+  (load_vt (ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset))),
+  (load_vt (inst i64:$vaddr, v4i32:$srsrc, i32:$soffset, i16:$offset))
 >;
 
 multiclass MUBUF_Pseudo_Load_Pats<string BaseInst, ValueType load_vt = i32, SDPatternOperator ld = null_frag> {
@@ -585,12 +582,12 @@ multiclass MUBUF_Pseudo_Stores<string opName,
 
   def _OFFSET : MUBUF_Store_Pseudo <opName, BUFAddrKind.Offset, legal_store_vt,
     [(st legal_store_vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                                             i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))]>,
+                                             i16:$offset))]>,
     MUBUFAddr64Table<0, NAME>;
 
   def _ADDR64 : MUBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, legal_store_vt,
     [(st legal_store_vt:$vdata, (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset,
-                                             i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))]>,
+                                             i16:$offset))]>,
     MUBUFAddr64Table<1, NAME>;
 
   def _OFFEN  : MUBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, legal_store_vt>;
@@ -757,14 +754,14 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
   let FPAtomic = isFP in
   def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass,
     [(set vdataType:$vdata,
-     (atomic (MUBUFOffsetAtomic v4i32:$srsrc, i32:$soffset, i16:$offset),
+     (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset),
              vdataType:$vdata_in))]>,
     MUBUFAddr64Table <0, NAME # "_RTN">;
 
   let FPAtomic = isFP in
   def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass,
     [(set vdataType:$vdata,
-     (atomic (MUBUFAddr64Atomic v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
+     (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
               vdataType:$vdata_in))]>,
     MUBUFAddr64Table <1, NAME # "_RTN">;
 
@@ -1539,20 +1536,20 @@ def : GCNPat<
 class MUBUFLoad_PatternADDR64 <MUBUF_Pseudo Instr_ADDR64, ValueType vt,
                               PatFrag constant_ld> : GCNPat <
      (vt (constant_ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset,
-                                   i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))),
-     (Instr_ADDR64 $vaddr, $srsrc, $soffset, $offset, CPol:$cpol, $tfe, $swz)
+                                   i16:$offset))),
+     (Instr_ADDR64 $vaddr, $srsrc, $soffset, $offset)
   >;
 
 multiclass MUBUFLoad_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                      ValueType vt, PatFrag atomic_ld> {
   def : GCNPat <
      (vt (atomic_ld (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset))),
-     (Instr_ADDR64 $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+     (Instr_ADDR64 $vaddr, $srsrc, $soffset, $offset)
   >;
 
   def : GCNPat <
-    (vt (atomic_ld (MUBUFOffsetAtomic v4i32:$rsrc, i32:$soffset, i16:$offset))),
-    (Instr_OFFSET $rsrc, $soffset, (as_i16imm $offset), 0, 0, 0)
+    (vt (atomic_ld (MUBUFOffset v4i32:$rsrc, i32:$soffset, i16:$offset))),
+    (Instr_OFFSET $rsrc, $soffset, (as_i16imm $offset))
   >;
 }
 
@@ -1572,9 +1569,8 @@ multiclass MUBUFLoad_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
                                PatFrag ld> {
 
   def : GCNPat <
-    (vt (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                         i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz))),
-    (Instr_OFFSET $srsrc, $soffset, $offset, CPol:$cpol, $tfe, $swz)
+    (vt (ld (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset))),
+    (Instr_OFFSET $srsrc, $soffset, $offset)
   >;
 }
 
@@ -1612,12 +1608,12 @@ multiclass MUBUFScratchLoadPat_D16 <MUBUF_Pseudo InstrOffen,
                                 ValueType vt, PatFrag ld_frag> {
   def : GCNPat <
     (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, u16imm:$offset), vt:$in),
-    (InstrOffen $vaddr, $srsrc, $soffset, $offset, 0, 0, 0, $in)
+    (InstrOffen $vaddr, $srsrc, $soffset, $offset, $in)
   >;
 
   def : GCNPat <
     (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, u16imm:$offset), vt:$in),
-    (InstrOffset $srsrc, $soffset, $offset, 0, 0, 0, $in)
+    (InstrOffset $srsrc, $soffset, $offset, $in)
   >;
 }
 
@@ -1663,12 +1659,12 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
   // Store follows atomic op convention so address is first
   def : GCNPat <
      (atomic_st (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset), vt:$val),
-     (Instr_ADDR64 $val, $vaddr, $srsrc, $soffset, $offset, 0, 0, 0)
+     (Instr_ADDR64 $val, $vaddr, $srsrc, $soffset, $offset)
   >;
 
   def : GCNPat <
-    (atomic_st (MUBUFOffsetAtomic v4i32:$rsrc, i32:$soffset, i16:$offset), vt:$val),
-    (Instr_OFFSET $val, $rsrc, $soffset, (as_i16imm $offset), 0, 0, 0)
+    (atomic_st (MUBUFOffset v4i32:$rsrc, i32:$soffset, i16:$offset), vt:$val),
+    (Instr_OFFSET $val, $rsrc, $soffset, (as_i16imm $offset))
   >;
 }
 let SubtargetPredicate = isGFX6GFX7 in {
@@ -1681,9 +1677,8 @@ multiclass MUBUFStore_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
                                PatFrag st> {
 
   def : GCNPat <
-    (st vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset,
-                                i16:$offset, CPol:$cpol, i1:$tfe, i1:$swz)),
-    (Instr_OFFSET $vdata, $srsrc, $soffset, $offset, CPol:$cpol, $tfe, $swz)
+    (st vt:$vdata, (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset)),
+    (Instr_OFFSET $vdata, $srsrc, $soffset, $offset)
   >;
 }
 
