@@ -57,6 +57,32 @@ static bool hasResourceHazard(const ResourceManager &RM, const InstRef &IR) {
   return false;
 }
 
+static unsigned findLastWriteBackCycle(const InstRef &IR) {
+  unsigned LastWBCycle = 0;
+  for (const WriteState &WS : IR.getInstruction()->getDefs()) {
+    int CyclesLeft = WS.getCyclesLeft();
+    if (CyclesLeft == UNKNOWN_CYCLES)
+      CyclesLeft = WS.getLatency();
+    if (CyclesLeft < 0)
+      CyclesLeft = 0;
+    LastWBCycle = std::max(LastWBCycle, (unsigned)CyclesLeft);
+  }
+  return LastWBCycle;
+}
+
+static unsigned findFirstWriteBackCycle(const InstRef &IR) {
+  unsigned FirstWBCycle = ~0U;
+  for (const WriteState &WS : IR.getInstruction()->getDefs()) {
+    int CyclesLeft = WS.getCyclesLeft();
+    if (CyclesLeft == UNKNOWN_CYCLES)
+      CyclesLeft = WS.getLatency();
+    if (CyclesLeft < 0)
+      CyclesLeft = 0;
+    FirstWBCycle = std::min(FirstWBCycle, (unsigned)CyclesLeft);
+  }
+  return FirstWBCycle;
+}
+
 /// Return a number of cycles left until register requirements of the
 /// instructions are met.
 static unsigned checkRegisterHazard(const RegisterFile &PRF,
@@ -116,6 +142,14 @@ bool InOrderIssueStage::canExecute(const InstRef &IR,
         HWStallEvent(HWStallEvent::DispatchGroupStall, IR));
     notifyEvent<HWPressureEvent>(
         HWPressureEvent(HWPressureEvent::RESOURCES, IR));
+  } else if (LastWriteBackCycle) {
+    if (!IR.getInstruction()->getDesc().RetireOOO) {
+      unsigned NextWriteBackCycle = findFirstWriteBackCycle(IR);
+      // Delay the instruction to ensure that writes occur in program order
+      if (NextWriteBackCycle < LastWriteBackCycle) {
+        *StallCycles = LastWriteBackCycle - NextWriteBackCycle;
+      }
+    }
   }
 
   return *StallCycles == 0;
@@ -213,6 +247,9 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR, unsigned *StallCycles) {
   IssuedInst.push_back(IR);
   ++NumIssued;
 
+  if (!IR.getInstruction()->getDesc().RetireOOO)
+    LastWriteBackCycle = findLastWriteBackCycle(IR);
+
   return llvm::ErrorSuccess();
 }
 
@@ -285,6 +322,10 @@ llvm::Error InOrderIssueStage::cycleStart() {
 llvm::Error InOrderIssueStage::cycleEnd() {
   if (StallCyclesLeft > 0)
     --StallCyclesLeft;
+
+  if (LastWriteBackCycle > 0)
+    --LastWriteBackCycle;
+
   return llvm::ErrorSuccess();
 }
 

@@ -5179,11 +5179,53 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   bool ReSchedule = false;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.OpValue << "\n");
 
+  auto &&TryScheduleBundle = [this, OldScheduleEnd, SLP](bool ReSchedule,
+                                                         ScheduleData *Bundle) {
+    // The scheduling region got new instructions at the lower end (or it is a
+    // new region for the first bundle). This makes it necessary to
+    // recalculate all dependencies.
+    // It is seldom that this needs to be done a second time after adding the
+    // initial bundle to the region.
+    if (ScheduleEnd != OldScheduleEnd) {
+      for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode())
+        doForAllOpcodes(I, [](ScheduleData *SD) { SD->clearDependencies(); });
+      ReSchedule = true;
+    }
+    if (ReSchedule) {
+      resetSchedule();
+      initialFillReadyList(ReadyInsts);
+    }
+    if (Bundle) {
+      LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle
+                        << " in block " << BB->getName() << "\n");
+      calculateDependencies(Bundle, /*InsertInReadyList=*/true, SLP);
+    }
+
+    // Now try to schedule the new bundle or (if no bundle) just calculate
+    // dependencies. As soon as the bundle is "ready" it means that there are no
+    // cyclic dependencies and we can schedule it. Note that's important that we
+    // don't "schedule" the bundle yet (see cancelScheduling).
+    while (((!Bundle && ReSchedule) || (Bundle && !Bundle->isReady())) &&
+           !ReadyInsts.empty()) {
+      ScheduleData *Picked = ReadyInsts.pop_back_val();
+      if (Picked->isSchedulingEntity() && Picked->isReady())
+        schedule(Picked, ReadyInsts);
+    }
+  };
+
   // Make sure that the scheduling region contains all
   // instructions of the bundle.
   for (Value *V : VL) {
-    if (!extendSchedulingRegion(V, S))
+    if (!extendSchedulingRegion(V, S)) {
+      // If the scheduling region got new instructions at the lower end (or it
+      // is a new region for the first bundle). This makes it necessary to
+      // recalculate all dependencies.
+      // Otherwise the compiler may crash trying to incorrectly calculate
+      // dependencies and emit instruction in the wrong order at the actual
+      // scheduling.
+      TryScheduleBundle(/*ReSchedule=*/false, nullptr);
       return None;
+    }
   }
 
   for (Value *V : VL) {
@@ -5212,42 +5254,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
     BundleMember->FirstInBundle = Bundle;
     PrevInBundle = BundleMember;
   }
-  if (ScheduleEnd != OldScheduleEnd) {
-    // The scheduling region got new instructions at the lower end (or it is a
-    // new region for the first bundle). This makes it necessary to
-    // recalculate all dependencies.
-    // It is seldom that this needs to be done a second time after adding the
-    // initial bundle to the region.
-    for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
-      doForAllOpcodes(I, [](ScheduleData *SD) {
-        SD->clearDependencies();
-      });
-    }
-    ReSchedule = true;
-  }
-  if (ReSchedule) {
-    resetSchedule();
-    initialFillReadyList(ReadyInsts);
-  }
   assert(Bundle && "Failed to find schedule bundle");
-
-  LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << *Bundle << " in block "
-                    << BB->getName() << "\n");
-
-  calculateDependencies(Bundle, true, SLP);
-
-  // Now try to schedule the new bundle. As soon as the bundle is "ready" it
-  // means that there are no cyclic dependencies and we can schedule it.
-  // Note that's important that we don't "schedule" the bundle yet (see
-  // cancelScheduling).
-  while (!Bundle->isReady() && !ReadyInsts.empty()) {
-
-    ScheduleData *pickedSD = ReadyInsts.pop_back_val();
-
-    if (pickedSD->isSchedulingEntity() && pickedSD->isReady()) {
-      schedule(pickedSD, ReadyInsts);
-    }
-  }
+  TryScheduleBundle(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
     cancelScheduling(VL, S.OpValue);
     return None;

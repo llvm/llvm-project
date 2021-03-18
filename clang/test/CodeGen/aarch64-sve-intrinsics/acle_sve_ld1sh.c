@@ -114,7 +114,7 @@ svint32_t test_svld1sh_gather_u32base_s32(svbool_t pg, svuint32_t bases) {
 
 svint64_t test_svld1sh_gather_u64base_s64(svbool_t pg, svuint64_t bases) {
   // CHECK-LABEL: test_svld1sh_gather_u64base_s64
-  // CHECK: %[[PG.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
+  // CHECK: %[[PG:.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %pg)
   // CHECK: %[[LOAD:.*]] = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.scalar.offset.nxv2i16.nxv2i64(<vscale x 2 x i1> %[[PG]], <vscale x 2 x i64> %bases, i64 0)
   // CHECK: %[[SEXT:.*]] = sext <vscale x 2 x i16> %[[LOAD]] to <vscale x 2 x i64>
   // CHECK: ret <vscale x 2 x i64> %[[SEXT]]

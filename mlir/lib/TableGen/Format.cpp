@@ -173,3 +173,22 @@ void FmtObjectBase::format(raw_ostream &s) const {
     adapters[repl.index]->format(s, /*Options=*/"");
   }
 }
+
+FmtStrVecObject::FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
+                                 ArrayRef<std::string> params)
+    : FmtObjectBase(fmt, ctx, params.size()) {
+  parameters.reserve(params.size());
+  for (std::string p : params)
+    parameters.push_back(llvm::detail::build_format_adapter(std::move(p)));
+
+  adapters.reserve(parameters.size());
+  for (auto &p : parameters)
+    adapters.push_back(&p);
+}
+
+FmtStrVecObject::FmtStrVecObject(FmtStrVecObject &&that)
+    : FmtObjectBase(std::move(that)), parameters(std::move(that.parameters)) {
+  adapters.reserve(parameters.size());
+  for (auto &p : parameters)
+    adapters.push_back(&p);
+}

@@ -552,6 +552,11 @@ Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                            MPO.Offset);
   }
 
+  if (const Value *V = MPO.V.dyn_cast<const Value *>()) {
+    const Module *M = MF.getFunction().getParent();
+    return V->getPointerAlignment(M->getDataLayout());
+  }
+
   return Align(1);
 }
 
