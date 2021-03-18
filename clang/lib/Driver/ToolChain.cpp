@@ -571,8 +571,8 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD,
 
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
-  const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  StringRef UseLinker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+					     CLANG_DEFAULT_LINKER);
 
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
   // name. -B, COMPILER_PATH and PATH and consulted if the value does not
