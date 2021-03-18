@@ -340,44 +340,44 @@ void store64_lane(long long *p, i64x2 v) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 add_saturate_s_i8x16(i8x16 x, i8x16 y) {
-  return __builtin_wasm_add_saturate_s_i8x16(x, y);
+i8x16 add_sat_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_add_sat_s_i8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.sadd.sat.v16i8(
   // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-u8x16 add_saturate_u_i8x16(u8x16 x, u8x16 y) {
-  return __builtin_wasm_add_saturate_u_i8x16(x, y);
+u8x16 add_sat_u_i8x16(u8x16 x, u8x16 y) {
+  return __builtin_wasm_add_sat_u_i8x16(x, y);
   // WEBASSEMBLY: call <16 x i8> @llvm.uadd.sat.v16i8(
   // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-i16x8 add_saturate_s_i16x8(i16x8 x, i16x8 y) {
-  return __builtin_wasm_add_saturate_s_i16x8(x, y);
+i16x8 add_sat_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_add_sat_s_i16x8(x, y);
   // WEBASSEMBLY: call <8 x i16> @llvm.sadd.sat.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-u16x8 add_saturate_u_i16x8(u16x8 x, u16x8 y) {
-  return __builtin_wasm_add_saturate_u_i16x8(x, y);
+u16x8 add_sat_u_i16x8(u16x8 x, u16x8 y) {
+  return __builtin_wasm_add_sat_u_i16x8(x, y);
   // WEBASSEMBLY: call <8 x i16> @llvm.uadd.sat.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-i8x16 sub_saturate_s_i8x16(i8x16 x, i8x16 y) {
-  return __builtin_wasm_sub_saturate_s_i8x16(x, y);
-  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.sub.saturate.signed.v16i8(
+i8x16 sub_sat_s_i8x16(i8x16 x, i8x16 y) {
+  return __builtin_wasm_sub_sat_s_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(
   // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-u8x16 sub_saturate_u_i8x16(u8x16 x, u8x16 y) {
-  return __builtin_wasm_sub_saturate_u_i8x16(x, y);
-  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.sub.saturate.unsigned.v16i8(
+u8x16 sub_sat_u_i8x16(u8x16 x, u8x16 y) {
+  return __builtin_wasm_sub_sat_u_i8x16(x, y);
+  // WEBASSEMBLY: call <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(
   // WEBASSEMBLY-SAME: <16 x i8> %x, <16 x i8> %y)
   // WEBASSEMBLY-NEXT: ret
 }
@@ -484,16 +484,16 @@ u32x4 max_u_i32x4(u32x4 x, u32x4 y) {
   // WEBASSEMBLY-NEXT: ret <4 x i32> %1
 }
 
-i16x8 sub_saturate_s_i16x8(i16x8 x, i16x8 y) {
-  return __builtin_wasm_sub_saturate_s_i16x8(x, y);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.sub.saturate.signed.v8i16(
+i16x8 sub_sat_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_sub_sat_s_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
   // WEBASSEMBLY-NEXT: ret
 }
 
-u16x8 sub_saturate_u_i16x8(u16x8 x, u16x8 y) {
-  return __builtin_wasm_sub_saturate_u_i16x8(x, y);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.sub.saturate.unsigned.v8i16(
+u16x8 sub_sat_u_i16x8(u16x8 x, u16x8 y) {
+  return __builtin_wasm_sub_sat_u_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(
   // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
   // WEBASSEMBLY-NEXT: ret
 }
@@ -512,9 +512,9 @@ u16x8 avgr_u_i16x8(u16x8 x, u16x8 y) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i16x8 q15mulr_saturate_s_i16x8(i16x8 x, i16x8 y) {
-  return __builtin_wasm_q15mulr_saturate_s_i16x8(x, y);
-  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.q15mulr.saturate.signed(
+i16x8 q15mulr_sat_s_i16x8(i16x8 x, i16x8 y) {
+  return __builtin_wasm_q15mulr_sat_s_i16x8(x, y);
+  // WEBASSEMBLY: call <8 x i16> @llvm.wasm.q15mulr.sat.signed(
   // WEBASSEMBLY-SAME: <8 x i16> %x, <8 x i16> %y)
   // WEBASSEMBLY-NEXT: ret
 }
@@ -896,27 +896,27 @@ u16x8 narrow_u_i16x8_i32x4(u32x4 low, u32x4 high) {
   // WEBASSEMBLY: ret
 }
 
-i64x2 widen_low_s_i32x4_i64x2(i32x4 x) {
-  return __builtin_wasm_widen_low_s_i32x4_i64x2(x);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.low.signed(<4 x i32> %x)
+i64x2 extend_low_s_i32x4_i64x2(i32x4 x) {
+  return __builtin_wasm_extend_low_s_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.extend.low.signed(<4 x i32> %x)
   // WEBASSEMBLY: ret
 }
 
-i64x2 widen_high_s_i32x4_i64x2(i32x4 x) {
-  return __builtin_wasm_widen_high_s_i32x4_i64x2(x);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.high.signed(<4 x i32> %x)
+i64x2 extend_high_s_i32x4_i64x2(i32x4 x) {
+  return __builtin_wasm_extend_high_s_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.extend.high.signed(<4 x i32> %x)
   // WEBASSEMBLY: ret
 }
 
-u64x2 widen_low_u_i32x4_i64x2(u32x4 x) {
-  return __builtin_wasm_widen_low_u_i32x4_i64x2(x);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.low.unsigned(<4 x i32> %x)
+u64x2 extend_low_u_i32x4_i64x2(u32x4 x) {
+  return __builtin_wasm_extend_low_u_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.extend.low.unsigned(<4 x i32> %x)
   // WEBASSEMBLY: ret
 }
 
-u64x2 widen_high_u_i32x4_i64x2(u32x4 x) {
-  return __builtin_wasm_widen_high_u_i32x4_i64x2(x);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.widen.high.unsigned(<4 x i32> %x)
+u64x2 extend_high_u_i32x4_i64x2(u32x4 x) {
+  return __builtin_wasm_extend_high_u_i32x4_i64x2(x);
+  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.extend.high.unsigned(<4 x i32> %x)
   // WEBASSEMBLY: ret
 }
 
@@ -932,15 +932,15 @@ f64x2 convert_low_u_i32x4_f64x2(u32x4 x) {
   // WEBASSEMBLY: ret
 }
 
-i32x4 trunc_saturate_zero_s_f64x2_i32x4(f64x2 x) {
-  return __builtin_wasm_trunc_saturate_zero_s_f64x2_i32x4(x);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.trunc.saturate.zero.signed(<2 x double> %x)
+i32x4 trunc_sat_zero_s_f64x2_i32x4(f64x2 x) {
+  return __builtin_wasm_trunc_sat_zero_s_f64x2_i32x4(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.trunc.sat.zero.signed(<2 x double> %x)
   // WEBASSEMBLY: ret
 }
 
-u32x4 trunc_saturate_zero_u_f64x2_i32x4(f64x2 x) {
-  return __builtin_wasm_trunc_saturate_zero_u_f64x2_i32x4(x);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.trunc.saturate.zero.unsigned(<2 x double> %x)
+u32x4 trunc_sat_zero_u_f64x2_i32x4(f64x2 x) {
+  return __builtin_wasm_trunc_sat_zero_u_f64x2_i32x4(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.trunc.sat.zero.unsigned(<2 x double> %x)
   // WEBASSEMBLY: ret
 }
 
