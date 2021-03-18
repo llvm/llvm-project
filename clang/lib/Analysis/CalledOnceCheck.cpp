@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -56,6 +57,20 @@ constexpr llvm::StringLiteral CONVENTIONAL_SUFFIXES[] = {
     "WithReplyTo", "WithReply"};
 constexpr llvm::StringLiteral CONVENTIONAL_CONDITIONS[] = {
     "error", "cancel", "shouldCall", "done", "OK", "success"};
+
+struct KnownCalledOnceParameter {
+  llvm::StringLiteral FunctionName;
+  unsigned ParamIndex;
+};
+constexpr KnownCalledOnceParameter KNOWN_CALLED_ONCE_PARAMETERS[] = {
+    {"dispatch_async", 1},
+    {"dispatch_async_and_wait", 1},
+    {"dispatch_after", 2},
+    {"dispatch_sync", 1},
+    {"dispatch_once", 1},
+    {"dispatch_barrier_async", 1},
+    {"dispatch_barrier_async_and_wait", 1},
+    {"dispatch_barrier_sync", 1}};
 
 class ParameterStatus {
 public:
@@ -929,9 +944,9 @@ private:
                "Block should have at least two successors at this point");
         if (auto Clarification = NotCalledClarifier::clarify(Parent, Succ)) {
           const ParmVarDecl *Parameter = getParameter(Index);
-          Handler.handleNeverCalled(Parameter, Clarification->Location,
-                                    Clarification->Reason, !IsEscape,
-                                    !isExplicitlyMarked(Parameter));
+          Handler.handleNeverCalled(
+              Parameter, AC.getDecl(), Clarification->Location,
+              Clarification->Reason, !IsEscape, !isExplicitlyMarked(Parameter));
         }
       }
     }
@@ -1089,6 +1104,91 @@ private:
       return Block->capturesVariable(Parameter);
     }
     return false;
+  }
+
+  // Return a call site where the block is called exactly once or null otherwise
+  const Expr *getBlockGuaraneedCallSite(const BlockExpr *Block) const {
+    ParentMap &PM = AC.getParentMap();
+
+    // We don't want to track the block through assignments and so on, instead
+    // we simply see how the block used and if it's used directly in a call,
+    // we decide based on call to what it is.
+    //
+    // In order to do this, we go up the parents of the block looking for
+    // a call or a message expressions.  These might not be immediate parents
+    // of the actual block expression due to casts and parens, so we skip them.
+    for (const Stmt *Prev = Block, *Current = PM.getParent(Block);
+         Current != nullptr; Prev = Current, Current = PM.getParent(Current)) {
+      // Skip no-op (for our case) operations.
+      if (isa<CastExpr>(Current) || isa<ParenExpr>(Current))
+        continue;
+
+      // At this point, Prev represents our block as an immediate child of the
+      // call.
+      if (const auto *Call = dyn_cast<CallExpr>(Current)) {
+        // It might be the call of the Block itself...
+        if (Call->getCallee() == Prev)
+          return Call;
+
+        // ...or it can be an indirect call of the block.
+        return shouldBlockArgumentBeCalledOnce(Call, Prev) ? Call : nullptr;
+      }
+      if (const auto *Message = dyn_cast<ObjCMessageExpr>(Current)) {
+        return shouldBlockArgumentBeCalledOnce(Message, Prev) ? Message
+                                                              : nullptr;
+      }
+
+      break;
+    }
+
+    return nullptr;
+  }
+
+  template <class CallLikeExpr>
+  bool shouldBlockArgumentBeCalledOnce(const CallLikeExpr *CallOrMessage,
+                                       const Stmt *BlockArgument) const {
+    // CallExpr::arguments does not interact nicely with llvm::enumerate.
+    llvm::ArrayRef<const Expr *> Arguments = llvm::makeArrayRef(
+        CallOrMessage->getArgs(), CallOrMessage->getNumArgs());
+
+    for (const auto &Argument : llvm::enumerate(Arguments)) {
+      if (Argument.value() == BlockArgument) {
+        return shouldBlockArgumentBeCalledOnce(CallOrMessage, Argument.index());
+      }
+    }
+
+    return false;
+  }
+
+  bool shouldBlockArgumentBeCalledOnce(const CallExpr *Call,
+                                       unsigned ParamIndex) const {
+    const FunctionDecl *Function = Call->getDirectCallee();
+    return shouldBlockArgumentBeCalledOnce(Function, ParamIndex) ||
+           shouldBeCalledOnce(Call, ParamIndex);
+  }
+
+  bool shouldBlockArgumentBeCalledOnce(const ObjCMessageExpr *Message,
+                                       unsigned ParamIndex) const {
+    // At the moment, we don't have any Obj-C methods we want to specifically
+    // check in here.
+    return shouldBeCalledOnce(Message, ParamIndex);
+  }
+
+  static bool shouldBlockArgumentBeCalledOnce(const FunctionDecl *Function,
+                                              unsigned ParamIndex) {
+    // There is a list of important API functions that while not following
+    // conventions nor being directly annotated, still guarantee that the
+    // callback parameter will be called exactly once.
+    //
+    // Here we check if this is the case.
+    return Function &&
+           llvm::any_of(KNOWN_CALLED_ONCE_PARAMETERS,
+                        [Function, ParamIndex](
+                            const KnownCalledOnceParameter &Reference) {
+                          return Reference.FunctionName ==
+                                     Function->getName() &&
+                                 Reference.ParamIndex == ParamIndex;
+                        });
   }
 
   /// Return true if the analyzed function is actually a default implementation
@@ -1437,17 +1537,44 @@ public:
   }
 
   void VisitBlockExpr(const BlockExpr *Block) {
+    // Block expressions are tricky.  It is a very common practice to capture
+    // completion handlers by blocks and use them there.
+    // For this reason, it is important to analyze blocks and report warnings
+    // for completion handler misuse in blocks.
+    //
+    // However, it can be quite difficult to track how the block itself is being
+    // used.  The full precise anlysis of that will be similar to alias analysis
+    // for completion handlers and can be too heavyweight for a compile-time
+    // diagnostic.  Instead, we judge about the immediate use of the block.
+    //
+    // Here, we try to find a call expression where we know due to conventions,
+    // annotations, or other reasons that the block is called once and only
+    // once.
+    const Expr *CalledOnceCallSite = getBlockGuaraneedCallSite(Block);
+
+    // We need to report this information to the handler because in the
+    // situation when we know that the block is called exactly once, we can be
+    // stricter in terms of reported diagnostics.
+    if (CalledOnceCallSite) {
+      Handler.handleBlockThatIsGuaranteedToBeCalledOnce(Block->getBlockDecl());
+    } else {
+      Handler.handleBlockWithNoGuarantees(Block->getBlockDecl());
+    }
+
     for (const auto &Capture : Block->getBlockDecl()->captures()) {
-      // If a block captures a tracked parameter, it should be
-      // considered escaped.
-      // On one hand, blocks that do that should definitely call it on
-      // every path.  However, it is not guaranteed that the block
-      // itself gets called whenever it gets created.
-      //
-      // Because we don't want to track blocks and whether they get called,
-      // we consider such parameters simply escaped.
       if (const auto *Param = dyn_cast<ParmVarDecl>(Capture.getVariable())) {
-        checkEscapee(*Param);
+        if (auto Index = getIndex(*Param)) {
+          if (CalledOnceCallSite) {
+            // The call site of a block can be considered a call site of the
+            // captured parameter we track.
+            processCallFor(*Index, CalledOnceCallSite);
+          } else {
+            // We still should consider this block as an escape for parameter,
+            // if we don't know about its call site or the number of time it
+            // can be invoked.
+            processEscapeFor(*Index);
+          }
+        }
       }
     }
   }
