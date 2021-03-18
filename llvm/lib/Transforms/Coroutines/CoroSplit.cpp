@@ -1586,8 +1586,23 @@ static void splitAsyncCoroutine(Function &F, coro::Shape &Shape,
     auto *Suspend = cast<CoroSuspendAsyncInst>(Shape.CoroSuspends[Idx]);
 
     // Create the clone declaration.
+    auto resumeNameSuffix = ".resume.";
+    auto projectionFunctionName =
+        Suspend->getAsyncContextProjectionFunction()->getName();
+    bool useSwiftMangling = false;
+    if (projectionFunctionName.equals("__swift_async_resume_project_context")) {
+      resumeNameSuffix = "TQ";
+      useSwiftMangling = true;
+    } else if (projectionFunctionName.equals(
+                   "__swift_async_resume_get_context")) {
+      resumeNameSuffix = "TY";
+      useSwiftMangling = true;
+    }
     auto *Continuation = createCloneDeclaration(
-        F, Shape, ".resume." + Twine(Idx), NextF, Suspend);
+        F, Shape,
+        useSwiftMangling ? resumeNameSuffix + Twine(Idx) + "_"
+                         : resumeNameSuffix + Twine(Idx),
+        NextF, Suspend);
     Clones.push_back(Continuation);
 
     // Insert a branch to a new return block immediately before the suspend
