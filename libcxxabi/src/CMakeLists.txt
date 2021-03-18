@@ -302,6 +302,7 @@ if (LIBCXXABI_ENABLE_STATIC)
         "$<TARGET_LINKER_FILE:cxxabi_static>"
         "$<TARGET_LINKER_FILE:unwind_static>"
       WORKING_DIRECTORY ${LIBCXXABI_BUILD_DIR}
+      DEPENDS unwind_static
     )
   endif()
 endif()
