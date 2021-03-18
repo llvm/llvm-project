@@ -49,6 +49,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
                       for x in range(1, len(threads)+1))
         self.assertEqual(tids, sorted(threads))
 
+    @skipIfWindows
     @expectedFailureNetBSD
     def test_signal_process_without_tid(self):
         self.build()
@@ -71,6 +72,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
             "C{0:x}:{1:x};c".format(lldbutil.get_signal_number('SIGUSR1')),
             threads[:1])
 
+    @skipIfWindows
     @expectedFailureNetBSD
     def test_signal_all_threads(self):
         self.build()
