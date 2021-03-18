@@ -1193,4 +1193,46 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   escape(handler);
 }
 
+// rdar://74441906
+typedef void (^DeferredBlock)(void);
+static inline void DefferedCallback(DeferredBlock *inBlock) { (*inBlock)(); }
+#define _DEFERCONCAT(a, b) a##b
+#define _DEFERNAME(a) _DEFERCONCAT(__DeferredVar_, a)
+#define DEFER __extension__ __attribute__((cleanup(DefferedCallback), unused)) \
+                  DeferredBlock _DEFERNAME(__COUNTER__) = ^
+
+- (void)test_cleanup_1:(int)cond
+        withCompletion:(void (^)(void))handler {
+  int error = 0;
+  DEFER {
+    if (error)
+      handler();
+  };
+
+  if (cond) {
+    error = 1;
+  } else {
+    // no-warning
+    handler();
+  }
+}
+
+- (void)test_cleanup_2:(int)cond
+        withCompletion:(void (^)(void))handler {
+  int error = 0;
+  DEFER {
+    if (error)
+      handler();
+  };
+
+  if (cond) {
+    error = 1;
+  } else {
+    handler(); // expected-note{{previous call is here}}
+  }
+
+  // We still can warn about double call even in this case.
+  handler(); // expected-warning{{completion handler is called twice}}
+}
+
 @end
