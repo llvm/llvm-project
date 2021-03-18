@@ -751,15 +751,59 @@ amd_comgr_status_t AMDGPUCompiler::createTmpDirs() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+// On windows fs::remove_directories takes huge time so use fs::remove.
+amd_comgr_status_t RemoveDirectory(const StringRef DirName) {
+  std::error_code EC;
+  for (fs::directory_iterator Dir(DirName, EC), DirEnd;
+       Dir != DirEnd && !EC; Dir.increment(EC)) {
+    const StringRef Path = Dir->path();
+
+    fs::file_status Status;
+    EC = fs::status(Path, Status);
+    if (EC) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    switch (Status.type()) {
+    case fs::file_type::regular_file:
+      if (fs::remove(Path)) {
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      break;
+    case fs::file_type::directory_file:
+      if (RemoveDirectory(Path)) {
+        return AMD_COMGR_STATUS_ERROR;
+      }
+
+      if (fs::remove(Path)) {
+        return AMD_COMGR_STATUS_ERROR;
+      }
+      break;
+    default:
+      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    }
+  }
+
+  if (fs::remove(DirName)) {
+    return AMD_COMGR_STATUS_ERROR;
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
   if (TmpDir.empty()) {
     return AMD_COMGR_STATUS_SUCCESS;
   }
   ProfilePoint Point("RemoveDir");
+#ifndef _WIN32
   if (fs::remove_directories(TmpDir)) {
     return AMD_COMGR_STATUS_ERROR;
   }
   return AMD_COMGR_STATUS_SUCCESS;
+#else
+  return RemoveDirectory(TmpDir);
+#endif
 }
 
 amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
