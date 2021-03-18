@@ -207,6 +207,24 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
+void macho::addNonLazyBindingEntries(const Symbol *sym,
+                                     const InputSection *isec, uint64_t offset,
+                                     int64_t addend) {
+  if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    in.binding->addEntry(dysym, isec, offset, addend);
+    if (dysym->isWeakDef())
+      in.weakBinding->addEntry(sym, isec, offset, addend);
+  } else if (const auto *defined = dyn_cast<Defined>(sym)) {
+    in.rebase->addEntry(isec, offset);
+    if (defined->isExternalWeakDef())
+      in.weakBinding->addEntry(sym, isec, offset, addend);
+  } else {
+    // Undefined symbols are filtered out in scanRelocations(); we should never
+    // get here
+    llvm_unreachable("cannot bind to an undefined symbol");
+  }
+}
+
 void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
     assert(!sym->isInGot());
@@ -370,32 +388,6 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-bool macho::needsBinding(const Symbol *sym) {
-  if (isa<DylibSymbol>(sym))
-    return true;
-  if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef();
-  return false;
-}
-
-void macho::addNonLazyBindingEntries(const Symbol *sym,
-                                     const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    in.binding->addEntry(dysym, isec, offset, addend);
-    if (dysym->isWeakDef())
-      in.weakBinding->addEntry(sym, isec, offset, addend);
-  } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    in.rebase->addEntry(isec, offset);
-    if (defined->isExternalWeakDef())
-      in.weakBinding->addEntry(sym, isec, offset, addend);
-  } else {
-    // Undefined symbols are filtered out in scanRelocations(); we should never
-    // get here
-    llvm_unreachable("cannot bind to an undefined symbol");
-  }
-}
-
 StubsSection::StubsSection()
     : SyntheticSection(segment_names::text, "__stubs") {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
@@ -547,29 +539,6 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
      << static_cast<uint8_t>(BIND_OPCODE_DO_BIND)
      << static_cast<uint8_t>(BIND_OPCODE_DONE);
   return opstreamOffset;
-}
-
-void macho::prepareBranchTarget(Symbol *sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    if (in.stubs->addEntry(dysym)) {
-      if (sym->isWeakDef()) {
-        in.binding->addEntry(dysym, in.lazyPointers->isec,
-                             sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * WordSize);
-      } else {
-        in.lazyBinding->addEntry(dysym);
-      }
-    }
-  } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    if (defined->isExternalWeakDef()) {
-      if (in.stubs->addEntry(sym)) {
-        in.rebase->addEntry(in.lazyPointers->isec, sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * WordSize);
-      }
-    }
-  }
 }
 
 ExportSection::ExportSection()

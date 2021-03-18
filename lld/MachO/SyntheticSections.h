@@ -243,13 +243,6 @@ private:
   SmallVector<char, 128> contents;
 };
 
-// Whether a given symbol's address can only be resolved at runtime.
-bool needsBinding(const Symbol *);
-
-// Add bindings for symbols that need weak or non-lazy bindings.
-void addNonLazyBindingEntries(const Symbol *, const InputSection *,
-                              uint64_t offset, int64_t addend = 0);
-
 // The following sections implement lazy symbol binding -- very similar to the
 // PLT mechanism in ELF.
 //
@@ -348,10 +341,6 @@ private:
   SmallVector<char, 128> contents;
   llvm::raw_svector_ostream os{contents};
 };
-
-// Adds stubs and bindings where necessary (e.g. if the symbol is a
-// DylibSymbol.)
-void prepareBranchTarget(Symbol *);
 
 // Stores a trie that describes the set of exported symbols.
 class ExportSection : public LinkEditSection {
