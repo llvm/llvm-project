@@ -519,6 +519,7 @@ private:
   void visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI);
   void visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII);
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
+  void visitDbgDefKillIntrinsic(StringRef Kind, DbgDefKillIntrinsic &DDI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
   void visitFenceInst(FenceInst &FI);
@@ -4781,6 +4782,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::dbg_label: // llvm.dbg.label
     visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
     break;
+  case Intrinsic::dbg_def: // llvm.dbg.def
+    visitDbgDefKillIntrinsic("def", cast<DbgDefKillIntrinsic>(Call));
+    break;
+  case Intrinsic::dbg_kill: // llvm.dbg.kill
+    visitDbgDefKillIntrinsic("kill", cast<DbgDefKillIntrinsic>(Call));
+    break;
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
@@ -5684,6 +5691,16 @@ void Verifier::verifyFragmentExpression(const DIVariable &V,
   AssertDI(FragSize + FragOffset <= *VarSize,
          "fragment is larger than or outside of variable", Desc, &V);
   AssertDI(FragSize != *VarSize, "fragment covers entire variable", Desc, &V);
+}
+
+void Verifier::visitDbgDefKillIntrinsic(StringRef Kind,
+                                        DbgDefKillIntrinsic &DDI) {
+  AssertDI(isa<DILifetime>(DDI.getRawLifetime()),
+           "invalid llvm.dbg." + Kind + " intrinsic lifetime", &DDI,
+           DDI.getRawLifetime());
+  if (DbgDefInst *D = dyn_cast<DbgDefInst>(&DDI))
+    AssertDI(isa<ValueAsMetadata>(D->getRawReferrer()),
+             "invalid llvm.dbg.def intrinsic referrer", D, D->getRawReferrer());
 }
 
 void Verifier::verifyFnArgs(const DbgVariableIntrinsic &I) {
