@@ -1898,8 +1898,8 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   return DAG.getBitcast(DstType, NewShuffle);
 }
 
-static SDValue performVectorWidenCombine(SDNode *N,
-                                         TargetLowering::DAGCombinerInfo &DCI) {
+static SDValue
+performVectorExtendCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::SIGN_EXTEND ||
          N->getOpcode() == ISD::ZERO_EXTEND);
@@ -1933,10 +1933,10 @@ static SDValue performVectorWidenCombine(SDNode *N,
   bool IsSext = N->getOpcode() == ISD::SIGN_EXTEND;
   bool IsLow = Index == 0;
 
-  unsigned Op = IsSext ? (IsLow ? WebAssemblyISD::WIDEN_LOW_S
-                                : WebAssemblyISD::WIDEN_HIGH_S)
-                       : (IsLow ? WebAssemblyISD::WIDEN_LOW_U
-                                : WebAssemblyISD::WIDEN_HIGH_U);
+  unsigned Op = IsSext ? (IsLow ? WebAssemblyISD::EXTEND_LOW_S
+                                : WebAssemblyISD::EXTEND_HIGH_S)
+                       : (IsLow ? WebAssemblyISD::EXTEND_LOW_U
+                                : WebAssemblyISD::EXTEND_HIGH_U);
 
   return DAG.getNode(Op, SDLoc(N), ResVT, Source);
 }
@@ -1951,6 +1951,6 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVECTOR_SHUFFLECombine(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-    return performVectorWidenCombine(N, DCI);
+    return performVectorExtendCombine(N, DCI);
   }
 }
