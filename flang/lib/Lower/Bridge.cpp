@@ -17,6 +17,7 @@
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/CharacterExpr.h"
+#include "flang/Lower/CharacterRuntime.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertType.h"
@@ -393,6 +394,14 @@ private:
   }
   bool isDerivedCategory(Fortran::common::TypeCategory cat) {
     return cat == Fortran::common::TypeCategory::Derived;
+  }
+
+  /// Insert a new block before \p block.  Leave the insertion point unchanged.
+  mlir::Block *insertBlock(mlir::Block *block) {
+    auto insertPt = builder->saveInsertionPoint();
+    auto newBlock = builder->createBlock(block);
+    builder->restoreInsertionPoint(insertPt);
+    return newBlock;
   }
 
   mlir::Block *blockOfLabel(Fortran::lower::pft::Evaluation &eval,
@@ -791,10 +800,7 @@ private:
           // exit block of the immediately enclosed dimension.
           auto createNextExitBlock = [&]() {
             // Create unstructured loop exit blocks, outermost to innermost.
-            auto insertPt = builder->saveInsertionPoint();
-            exitBlock = builder->createBlock(exitBlock);
-            builder->restoreInsertionPoint(insertPt);
-            return exitBlock;
+            return exitBlock = insertBlock(exitBlock);
           };
           auto isInnermost = &info == &incrementLoopNestInfo.back();
           auto isOutermost = &info == &incrementLoopNestInfo.front();
@@ -1130,6 +1136,8 @@ private:
     builder->restoreInsertionPoint(insertPt);
   }
 
+  /// Generate FIR for a SELECT CASE statement.
+  /// The type may be CHARACTER, INTEGER, or LOGICAL.
   void genFIR(const Fortran::parser::SelectCaseStmt &stmt) {
     auto &eval = getEval();
     auto *context = builder->getContext();
@@ -1137,29 +1145,44 @@ private:
     Fortran::lower::StatementContext stmtCtx;
     const auto *expr = Fortran::semantics::GetExpr(
         std::get<Fortran::parser::Scalar<Fortran::parser::Expr>>(stmt.t));
-    auto exprType = expr->GetType();
-    mlir::Value selectExpr;
-    if (isCharacterCategory(exprType->category())) {
-      TODO(loc, "Select Case selector of type Character");
+    bool isCharSelector = isCharacterCategory(expr->GetType()->category());
+    bool isLogicalSelector = isLogicalCategory(expr->GetType()->category());
+    auto charValue = [&](const Fortran::lower::SomeExpr *expr) {
+      fir::ExtendedValue exv = genExprAddr(*expr, stmtCtx, &loc);
+      return exv.match(
+          [&](const fir::CharBoxValue &cbv) {
+            return Fortran::lower::CharacterExprHelper{*builder, loc}
+                .createEmboxChar(cbv.getAddr(), cbv.getLen());
+          },
+          [&](auto) {
+            fir::emitFatalError(loc, "not a character");
+            return mlir::Value{};
+          });
+    };
+    mlir::Value selector;
+    if (isCharSelector) {
+      selector = charValue(expr);
     } else {
-      selectExpr = createFIRExpr(loc, expr, stmtCtx);
-      if (isLogicalCategory(exprType->category()))
-        selectExpr =
-            builder->createConvert(loc, builder->getI1Type(), selectExpr);
+      selector = createFIRExpr(loc, expr, stmtCtx);
+      if (isLogicalSelector)
+        selector = builder->createConvert(loc, builder->getI1Type(), selector);
     }
-    auto selectType = selectExpr.getType();
-    llvm::SmallVector<mlir::Attribute, 10> attrList;
-    llvm::SmallVector<mlir::Value, 10> valueList;
-    llvm::SmallVector<mlir::Block *, 10> blockList;
+    auto selectType = selector.getType();
+    llvm::SmallVector<mlir::Attribute> attrList;
+    llvm::SmallVector<mlir::Value> valueList;
+    llvm::SmallVector<mlir::Block *> blockList;
     auto *defaultBlock = eval.parentConstruct->constructExit->block;
     using CaseValue = Fortran::parser::Scalar<Fortran::parser::ConstantExpr>;
     auto addValue = [&](const CaseValue &caseValue) {
       const auto *expr = Fortran::semantics::GetExpr(caseValue.thing);
-      const auto v = Fortran::evaluate::ToInt64(*expr);
-      valueList.push_back(
-          v ? builder->createIntegerConstant(loc, selectType, *v)
-            : builder->createConvert(
-                  loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
+      if (isCharSelector)
+        valueList.push_back(charValue(expr));
+      else if (isLogicalSelector)
+        valueList.push_back(builder->createConvert(
+            loc, selectType, createFIRExpr(toLocation(), expr, stmtCtx)));
+      else
+        valueList.push_back(builder->createIntegerConstant(
+            loc, selectType, *Fortran::evaluate::ToInt64(*expr)));
     };
     for (Fortran::lower::pft::Evaluation *e = eval.controlSuccessor; e;
          e = e->controlSuccessor) {
@@ -1197,13 +1220,65 @@ private:
       }
     }
     // Skip a logical default block that can never be referenced.
-    if (selectType == builder->getI1Type() && attrList.size() == 2)
+    if (isLogicalSelector && attrList.size() == 2)
       defaultBlock = eval.parentConstruct->constructExit->block;
     attrList.push_back(mlir::UnitAttr::get(context));
     blockList.push_back(defaultBlock);
     stmtCtx.finalize();
-    builder->create<fir::SelectCaseOp>(toLocation(), selectExpr, attrList,
-                                       valueList, blockList);
+
+    // Generate a fir::SelectCaseOp.
+    // Explicit branch code is better for the LOGICAL type.  The CHARACTER type
+    // does not yet have downstream support, and also uses explicit branch code.
+    // The -no-structured-fir option can be used to force generation of INTEGER
+    // type branch code.
+    if (!isLogicalSelector && !isCharSelector && eval.lowerAsStructured()) {
+      builder->create<fir::SelectCaseOp>(loc, selector, attrList, valueList,
+                                         blockList);
+      return;
+    }
+
+    // Generate a sequence of case value comparisons and branches.
+    auto caseValue = valueList.begin();
+    auto caseBlock = blockList.begin();
+    for (auto attr : attrList) {
+      if (attr.isa<mlir::UnitAttr>()) {
+        genFIRBranch(*caseBlock++);
+        break;
+      }
+      auto genCond = [&](mlir::Value rhs,
+                         mlir::CmpIPredicate pred) -> mlir::Value {
+        if (!isCharSelector)
+          return builder->create<mlir::CmpIOp>(loc, pred, selector, rhs);
+        Fortran::lower::CharacterExprHelper charHelper{*builder, loc};
+        auto [lhsAddr, lhsLen] = charHelper.createUnboxChar(selector);
+        auto [rhsAddr, rhsLen] = charHelper.createUnboxChar(rhs);
+        return Fortran::lower::genRawCharCompare(*builder, loc, pred, lhsAddr,
+                                                 lhsLen, rhsAddr, rhsLen);
+      };
+      auto *newBlock = insertBlock(*caseBlock);
+      if (attr.isa<fir::ClosedIntervalAttr>()) {
+        auto *newBlock2 = insertBlock(*caseBlock);
+        auto cond = genCond(*caseValue++, mlir::CmpIPredicate::sge);
+        genFIRConditionalBranch(cond, newBlock, newBlock2);
+        builder->setInsertionPointToEnd(newBlock);
+        auto cond2 = genCond(*caseValue++, mlir::CmpIPredicate::sle);
+        genFIRConditionalBranch(cond2, *caseBlock++, newBlock2);
+        builder->setInsertionPointToEnd(newBlock2);
+        continue;
+      }
+      mlir::CmpIPredicate pred;
+      if (attr.isa<fir::PointIntervalAttr>())
+        pred = mlir::CmpIPredicate::eq;
+      else if (attr.isa<fir::LowerBoundAttr>())
+        pred = mlir::CmpIPredicate::sge;
+      else if (attr.isa<fir::UpperBoundAttr>())
+        pred = mlir::CmpIPredicate::sle;
+      auto cond = genCond(*caseValue++, pred);
+      genFIRConditionalBranch(cond, *caseBlock++, newBlock);
+      builder->setInsertionPointToEnd(newBlock);
+    }
+    assert(caseValue == valueList.end() && caseBlock == blockList.end() &&
+           "select case list mismatch");
   }
 
   void genFIR(const Fortran::parser::AssociateConstruct &) {
