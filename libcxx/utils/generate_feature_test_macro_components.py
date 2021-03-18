@@ -720,7 +720,7 @@ def get_std_number(std):
 
 def produce_macros_definition_for_std(std):
   result = ""
-  indent = 56
+  indent = 55
   for tc in feature_test_macros:
     if std not in tc["values"]:
       continue
@@ -734,7 +734,7 @@ def produce_macros_definition_for_std(std):
       result += "# undef  %s\n" % tc["name"]
     line = "#%sdefine %s" % ((" " * inner_indent), tc["name"])
     line += " " * (indent - len(line))
-    line += "%sL" % tc["values"][std]
+    line += " %sL" % tc["values"][std]
     if 'unimplemented' in tc.keys():
       line = "// " + line
     result += line
