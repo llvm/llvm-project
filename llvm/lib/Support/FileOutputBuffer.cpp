@@ -125,8 +125,7 @@ createInMemoryBuffer(StringRef Path, size_t Size, unsigned Mode) {
 }
 
 static Expected<std::unique_ptr<FileOutputBuffer>>
-createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode,
-                   bool KeepOwnership, unsigned UserID, unsigned GroupID) {
+createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   Expected<fs::TempFile> FileOrErr =
       fs::TempFile::create(Path + ".tmp%%%%%%%", Mode);
   if (!FileOrErr)
@@ -134,13 +133,6 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode,
   fs::TempFile File = std::move(*FileOrErr);
 
 #ifndef _WIN32
-  // Try to preserve file ownership if requested.
-  if (KeepOwnership) {
-    fs::file_status Stat;
-    if (!fs::status(File.FD, Stat) && Stat.getUser() == 0)
-      fs::changeFileOwnership(File.FD, UserID, GroupID);
-  }
-
   // On Windows, CreateFileMapping (the mmap function on Windows)
   // automatically extends the underlying file. We don't need to
   // extend the file beforehand. _chsize (ftruncate on Windows) is
@@ -171,8 +163,7 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode,
 
 // Create an instance of FileOutputBuffer.
 Expected<std::unique_ptr<FileOutputBuffer>>
-FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags,
-                         unsigned UserID, unsigned GroupID) {
+FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   // Handle "-" as stdout just like llvm::raw_ostream does.
   if (Path == "-")
     return createInMemoryBuffer("-", Size, /*Mode=*/0);
@@ -205,8 +196,7 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags,
     if (Flags & F_no_mmap)
       return createInMemoryBuffer(Path, Size, Mode);
     else
-      return createOnDiskBuffer(Path, Size, Mode, Flags & F_keep_ownership,
-                                UserID, GroupID);
+      return createOnDiskBuffer(Path, Size, Mode);
   default:
     return createInMemoryBuffer(Path, Size, Mode);
   }
