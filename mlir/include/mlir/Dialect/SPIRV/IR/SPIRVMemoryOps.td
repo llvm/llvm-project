@@ -184,7 +184,7 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
 
   let builders = [
     OpBuilder<(ins "Value":$basePtr,
-      CArg<"IntegerAttr", "{}">:$memory_access,
+      CArg<"MemoryAccessAttr", "{}">:$memory_access,
       CArg<"IntegerAttr", "{}">:$alignment)>
   ];
 }

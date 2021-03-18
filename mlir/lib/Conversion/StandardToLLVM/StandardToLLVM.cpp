@@ -3069,8 +3069,7 @@ struct CmpIOpLowering : public ConvertOpToLLVMPattern<CmpIOp> {
 
     rewriter.replaceOpWithNewOp<LLVM::ICmpOp>(
         cmpiOp, typeConverter->convertType(cmpiOp.getResult().getType()),
-        rewriter.getI64IntegerAttr(static_cast<int64_t>(
-            convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()))),
+        convertCmpPredicate<LLVM::ICmpPredicate>(cmpiOp.getPredicate()),
         transformed.lhs(), transformed.rhs());
 
     return success();
@@ -3085,12 +3084,10 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
                   ConversionPatternRewriter &rewriter) const override {
     CmpFOpAdaptor transformed(operands);
 
-    auto fmf = LLVM::FMFAttr::get(cmpfOp.getContext(), {});
     rewriter.replaceOpWithNewOp<LLVM::FCmpOp>(
         cmpfOp, typeConverter->convertType(cmpfOp.getResult().getType()),
-        rewriter.getI64IntegerAttr(static_cast<int64_t>(
-            convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()))),
-        transformed.lhs(), transformed.rhs(), fmf);
+        convertCmpPredicate<LLVM::FCmpPredicate>(cmpfOp.getPredicate()),
+        transformed.lhs(), transformed.rhs());
 
     return success();
   }

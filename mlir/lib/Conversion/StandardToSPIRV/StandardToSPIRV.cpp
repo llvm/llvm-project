@@ -1017,7 +1017,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
                                                    srcBits, dstBits, rewriter);
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(
       loc, dstType, adjustedPtr,
-      loadOp->getAttrOfType<IntegerAttr>(
+      loadOp->getAttrOfType<spirv::MemoryAccessAttr>(
           spirv::attributeName<spirv::MemoryAccess>()),
       loadOp->getAttrOfType<IntegerAttr>("alignment"));
 

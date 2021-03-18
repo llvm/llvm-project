@@ -53,6 +53,7 @@ def CombiningKind : BitEnumAttr<
      COMBINING_KIND_MAX, COMBINING_KIND_AND, COMBINING_KIND_OR,
      COMBINING_KIND_XOR]> {
   let cppNamespace = "::mlir::vector";
+  let genSpecializedAttr = 0;
 }
 
 def Vector_CombiningKindAttr : DialectAttr<
