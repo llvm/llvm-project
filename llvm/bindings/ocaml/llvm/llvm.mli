@@ -960,8 +960,9 @@ val metadata_as_value : llcontext -> llmetadata -> llvalue
     See the method [llvm::ConstantInt::get]. *)
 val const_int : lltype -> int -> llvalue
 
-(** [const_of_int64 ty i] returns the integer constant of type [ty] and value
-    [i]. See the method [llvm::ConstantInt::get]. *)
+(** [const_of_int64 ty i s] returns the integer constant of type [ty] and value
+    [i]. [s] indicates whether the integer is signed or not.
+    See the method [llvm::ConstantInt::get]. *)
 val const_of_int64 : lltype -> Int64.t -> bool -> llvalue
 
 (** [int64_of_const c] returns the int64 value of the [c] constant integer.
