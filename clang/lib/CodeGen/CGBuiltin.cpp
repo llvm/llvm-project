@@ -17366,17 +17366,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_bitselect, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {V1, V2, C});
   }
-  case WebAssembly::BI__builtin_wasm_signselect_i8x16:
-  case WebAssembly::BI__builtin_wasm_signselect_i16x8:
-  case WebAssembly::BI__builtin_wasm_signselect_i32x4:
-  case WebAssembly::BI__builtin_wasm_signselect_i64x2: {
-    Value *V1 = EmitScalarExpr(E->getArg(0));
-    Value *V2 = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
-    Function *Callee =
-        CGM.getIntrinsic(Intrinsic::wasm_signselect, ConvertType(E->getType()));
-    return Builder.CreateCall(Callee, {V1, V2, C});
-  }
   case WebAssembly::BI__builtin_wasm_dot_s_i32x4_i16x8: {
     Value *LHS = EmitScalarExpr(E->getArg(0));
     Value *RHS = EmitScalarExpr(E->getArg(1));
@@ -17444,29 +17433,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::sqrt, Vec->getType());
     return Builder.CreateCall(Callee, {Vec});
   }
-  case WebAssembly::BI__builtin_wasm_qfma_f32x4:
-  case WebAssembly::BI__builtin_wasm_qfms_f32x4:
-  case WebAssembly::BI__builtin_wasm_qfma_f64x2:
-  case WebAssembly::BI__builtin_wasm_qfms_f64x2: {
-    Value *A = EmitScalarExpr(E->getArg(0));
-    Value *B = EmitScalarExpr(E->getArg(1));
-    Value *C = EmitScalarExpr(E->getArg(2));
-    unsigned IntNo;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_qfma_f32x4:
-    case WebAssembly::BI__builtin_wasm_qfma_f64x2:
-      IntNo = Intrinsic::wasm_qfma;
-      break;
-    case WebAssembly::BI__builtin_wasm_qfms_f32x4:
-    case WebAssembly::BI__builtin_wasm_qfms_f64x2:
-      IntNo = Intrinsic::wasm_qfms;
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    Function *Callee = CGM.getIntrinsic(IntNo, A->getType());
-    return Builder.CreateCall(Callee, {A, B, C});
-  }
   case WebAssembly::BI__builtin_wasm_narrow_s_i8x16_i16x8:
   case WebAssembly::BI__builtin_wasm_narrow_u_i8x16_i16x8:
   case WebAssembly::BI__builtin_wasm_narrow_s_i16x8_i32x4:
@@ -17514,26 +17480,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     }
     Function *Callee = CGM.getIntrinsic(IntNo);
     return Builder.CreateCall(Callee, Vec);
-  }
-  case WebAssembly::BI__builtin_wasm_widen_s_i8x16_i32x4:
-  case WebAssembly::BI__builtin_wasm_widen_u_i8x16_i32x4: {
-    Value *Vec = EmitScalarExpr(E->getArg(0));
-    llvm::APSInt SubVecConst =
-        *E->getArg(1)->getIntegerConstantExpr(getContext());
-    Value *SubVec = llvm::ConstantInt::get(getLLVMContext(), SubVecConst);
-    unsigned IntNo;
-    switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_widen_s_i8x16_i32x4:
-      IntNo = Intrinsic::wasm_widen_signed;
-      break;
-    case WebAssembly::BI__builtin_wasm_widen_u_i8x16_i32x4:
-      IntNo = Intrinsic::wasm_widen_unsigned;
-      break;
-    default:
-      llvm_unreachable("unexpected builtin ID");
-    }
-    Function *Callee = CGM.getIntrinsic(IntNo);
-    return Builder.CreateCall(Callee, {Vec, SubVec});
   }
   case WebAssembly::BI__builtin_wasm_convert_low_s_i32x4_f64x2:
   case WebAssembly::BI__builtin_wasm_convert_low_u_i32x4_f64x2: {
@@ -17648,16 +17594,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     }
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_shuffle);
     return Builder.CreateCall(Callee, Ops);
-  }
-  case WebAssembly::BI__builtin_wasm_prefetch_t: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_prefetch_t);
-    return Builder.CreateCall(Callee, Ptr);
-  }
-  case WebAssembly::BI__builtin_wasm_prefetch_nt: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_prefetch_nt);
-    return Builder.CreateCall(Callee, Ptr);
   }
   default:
     return nullptr;

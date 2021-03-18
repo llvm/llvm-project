@@ -664,18 +664,6 @@ main:
     # CHECK: v128.load64_zero 32 # encoding: [0xfd,0xfd,0x01,0x03,0x20]
     v128.load64_zero 32
 
-    # CHECK: f32x4.qfma # encoding: [0xfd,0xb4,0x01]
-    f32x4.qfma
-
-    # CHECK: f32x4.qfms # encoding: [0xfd,0xd4,0x01]
-    f32x4.qfms
-
-    # CHECK: f64x2.qfma # encoding: [0xfd,0xfe,0x01]
-    f64x2.qfma
-
-    # CHECK: f64x2.qfms # encoding: [0xfd,0xff,0x01]
-    f64x2.qfms
-
     # CHECK: i16x8.extmul_low_i8x16_s # encoding: [0xfd,0x9a,0x01]
     i16x8.extmul_low_i8x16_s
 
@@ -712,18 +700,6 @@ main:
     # CHECK: i64x2.extmul_high_i32x4_u # encoding: [0xfd,0xd7,0x01]
     i64x2.extmul_high_i32x4_u
 
-    # CHECK: i8x16.signselect # encoding: [0xfd,0x7d]
-    i8x16.signselect
-
-    # CHECK: i16x8.signselect # encoding: [0xfd,0x7e]
-    i16x8.signselect
-
-    # CHECK: i32x4.signselect # encoding: [0xfd,0x7f]
-    i32x4.signselect
-
-    # CHECK: i64x2.signselect # encoding: [0xfd,0x94,0x01]
-    i64x2.signselect
-
     # CHECK: i16x8.extadd_pairwise_i8x16_s # encoding: [0xfd,0xc2,0x01]
     i16x8.extadd_pairwise_i8x16_s
 
@@ -735,12 +711,6 @@ main:
 
     # CHECK: i32x4.extadd_pairwise_i16x8_u # encoding: [0xfd,0xa6,0x01]
     i32x4.extadd_pairwise_i16x8_u
-
-    # CHECK: prefetch.t 16 # encoding: [0xfd,0xc5,0x01,0x00,0x10]
-    prefetch.t 16
-
-    # CHECK: prefetch.nt 16 # encoding: [0xfd,0xc6,0x01,0x00,0x10]
-    prefetch.nt 16
 
     # CHECK: f64x2.convert_low_i32x4_s # encoding: [0xfd,0x53]
     f64x2.convert_low_i32x4_s
@@ -759,11 +729,5 @@ main:
 
     # CHECK: f64x2.promote_low_f32x4 # encoding: [0xfd,0x69]
     f64x2.promote_low_f32x4
-
-    # CHECK: i32x4.widen_i8x16_s 3 # encoding: [0xfd,0x67,0x03]
-    i32x4.widen_i8x16_s 3
-
-    # CHECK: i32x4.widen_i8x16_u 3 # encoding: [0xfd,0x68,0x03]
-    i32x4.widen_i8x16_u 3
 
     end_function

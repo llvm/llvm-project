@@ -791,22 +791,6 @@ def : Pat<(select
           (SELECT_V128 $rhs, $lhs, $cond)>;
 } // foreach vec
 
-// Sign select
-multiclass SIMDSignSelect<Vec vec, bits<32> simdop> {
-  defm SIGNSELECT_#vec :
-    SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins),
-           [(set (vec.vt V128:$dst),
-             (vec.vt (int_wasm_signselect
-               (vec.vt V128:$v1), (vec.vt V128:$v2), (vec.vt V128:$c))))],
-           vec.prefix#".signselect\t$dst, $v1, $v2, $c",
-           vec.prefix#".signselect", simdop>;
-}
-
-defm : SIMDSignSelect<I8x16, 125>;
-defm : SIMDSignSelect<I16x8, 126>;
-defm : SIMDSignSelect<I32x4, 127>;
-defm : SIMDSignSelect<I64x2, 148>;
-
 //===----------------------------------------------------------------------===//
 // Integer unary arithmetic
 //===----------------------------------------------------------------------===//
@@ -1270,90 +1254,9 @@ defm "" : SIMDConvert<F32x4, F64x2, int_wasm_demote_zero,
 defm "" : SIMDConvert<F64x2, F32x4, int_wasm_promote_low,
                       "promote_low_f32x4", 0x69>;
 
-// Prototype i8x16 to i32x4 widening
-defm WIDEN_I8x16_TO_I32x4_S :
-  SIMD_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
-         (outs), (ins vec_i8imm_op:$idx),
-         [(set (I32x4.vt V128:$dst),
-            (I32x4.vt (int_wasm_widen_signed
-              (I8x16.vt V128:$vec), (i32 timm:$idx))))],
-         "i32x4.widen_i8x16_s\t$dst, $vec, $idx",
-         "i32x4.widen_i8x16_s\t$idx", 0x67>;
-defm WIDEN_I8x16_TO_I32x4_U :
-  SIMD_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx),
-         (outs), (ins vec_i8imm_op:$idx),
-         [(set (I32x4.vt V128:$dst),
-            (I32x4.vt (int_wasm_widen_unsigned
-              (I8x16.vt V128:$vec), (i32 timm:$idx))))],
-         "i32x4.widen_i8x16_u\t$dst, $vec, $idx",
-         "i32x4.widen_i8x16_u\t$idx", 0x68>;
-
-
-//===----------------------------------------------------------------------===//
-// Quasi-Fused Multiply- Add and Subtract (QFMA/QFMS)
-//===----------------------------------------------------------------------===//
-
-multiclass SIMDQFM<Vec vec, bits<32> simdopA, bits<32> simdopS> {
-  defm QFMA_#vec :
-    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
-           (outs), (ins),
-           [(set (vec.vt V128:$dst), (int_wasm_qfma
-              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-           vec.prefix#".qfma\t$dst, $a, $b, $c", vec.prefix#".qfma", simdopA>;
-  defm QFMS_#vec :
-    SIMD_I<(outs V128:$dst), (ins V128:$a, V128:$b, V128:$c),
-           (outs), (ins),
-           [(set (vec.vt V128:$dst), (int_wasm_qfms
-              (vec.vt V128:$a), (vec.vt V128:$b), (vec.vt V128:$c)))],
-           vec.prefix#".qfms\t$dst, $a, $b, $c", vec.prefix#".qfms", simdopS>;
-}
-
-defm "" : SIMDQFM<F32x4, 180, 212>;
-defm "" : SIMDQFM<F64x2, 254, 255>;
-
 //===----------------------------------------------------------------------===//
 // Saturating Rounding Q-Format Multiplication
 //===----------------------------------------------------------------------===//
 
 defm Q15MULR_SAT_S :
   SIMDBinary<I16x8, int_wasm_q15mulr_saturate_signed, "q15mulr_sat_s", 156>;
-
-//===----------------------------------------------------------------------===//
-// Experimental prefetch instructions: prefetch.t, prefetch.nt
-//===----------------------------------------------------------------------===//
-
-let mayLoad = true, UseNamedOperandTable = true in {
-defm PREFETCH_T_A32 :
-  SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-         "prefetch.t\t${off}(${addr})$p2align",
-         "prefetch.t\t$off$p2align", 0xc5>;
-defm PREFETCH_T_A64 :
-  SIMD_I<(outs), (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
-         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-         "prefetch.t\t${off}(${addr})$p2align",
-         "prefetch.t\t$off$p2align", 0xc5>;
-defm PREFETCH_NT_A32 :
-  SIMD_I<(outs), (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
-         (outs), (ins P2Align:$p2align, offset32_op:$off), [],
-         "prefetch.nt\t${off}(${addr})$p2align",
-         "prefetch.nt\t$off$p2align", 0xc6>;
-defm PREFETCH_NT_A64 :
-  SIMD_I<(outs), (ins P2Align:$p2align, offset64_op:$off, I64:$addr),
-         (outs), (ins P2Align:$p2align, offset64_op:$off), [],
-         "prefetch.nt\t${off}(${addr})$p2align",
-         "prefetch.nt\t$off$p2align", 0xc6>;
-} // mayLoad, UseNamedOperandTable
-
-multiclass PrefetchPatNoOffset<Intrinsic kind, string inst> {
-  def : Pat<(kind I32:$addr), (!cast<NI>(inst # "_A32") 0, 0, $addr)>,
-        Requires<[HasAddr32]>;
-  def : Pat<(kind I64:$addr), (!cast<NI>(inst # "_A64") 0, 0, $addr)>,
-        Requires<[HasAddr64]>;
-}
-
-foreach inst = [["PREFETCH_T", "int_wasm_prefetch_t"],
-                ["PREFETCH_NT", "int_wasm_prefetch_nt"]] in {
-defvar node = !cast<Intrinsic>(inst[1]);
-defm : PrefetchPatNoOffset<node, inst[0]>;
-}
