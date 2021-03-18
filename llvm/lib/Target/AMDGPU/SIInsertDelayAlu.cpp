@@ -317,6 +317,13 @@ public:
                     ? VALU
                     : (TSFlags & SIInstrFlags::SALU) ? SALU : OTHER;
 
+      // Avoid putting s_delay_alu in the middle of an SI_PC_ADD_REL_OFFSET
+      // sequence. These should be bundled, but currently SIMemoryLegalizer
+      // unbundles them.
+      // TODO-GFX11: Fix this in a better way.
+      if (MI.getOpcode() == AMDGPU::S_GETPC_B64)
+        Type = OTHER;
+
       if (Type != OTHER) {
         DelayInfo Delay;
         // TODO: Scan implicit uses too?
