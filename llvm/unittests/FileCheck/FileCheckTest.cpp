@@ -1027,8 +1027,10 @@ public:
 
   Expected<size_t> match(StringRef Buffer) {
     StringRef BufferRef = bufferize(SM, Buffer);
-    size_t MatchLen;
-    return P.match(BufferRef, MatchLen, SM);
+    Pattern::MatchResult Res = P.match(BufferRef, SM);
+    if (Res.TheError)
+      return std::move(Res.TheError);
+    return Res.TheMatch->Pos;
   }
 
   void printVariableDefs(FileCheckDiag::MatchType MatchTy,
@@ -1640,8 +1642,8 @@ TEST_F(FileCheckTest, FileCheckContext) {
   FileCheckRequest Req;
   Cxt.createLineVariable();
   ASSERT_FALSE(P.parsePattern("[[@LINE]]", "CHECK", SM, Req));
-  size_t MatchLen;
-  ASSERT_THAT_EXPECTED(P.match("1", MatchLen, SM), Succeeded());
+  Pattern::MatchResult Res = P.match("1", SM);
+  ASSERT_THAT_ERROR(std::move(Res.TheError), Succeeded());
 
 #ifndef NDEBUG
   // Recreating @LINE pseudo numeric variable fails.

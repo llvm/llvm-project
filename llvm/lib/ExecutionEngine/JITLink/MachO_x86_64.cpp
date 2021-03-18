@@ -601,9 +601,9 @@ public:
       : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
 
 private:
-
-  Error applyFixup(Block &B, const Edge &E, char *BlockWorkingMem) const {
-    return x86_64::applyFixup(B, E, BlockWorkingMem);
+  Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
+                   char *BlockWorkingMem) const {
+    return x86_64::applyFixup(G, B, E, BlockWorkingMem);
   }
 };
 

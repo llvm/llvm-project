@@ -988,10 +988,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return ReplaceNode(Node, NewNode);
     }
 
-    SDNode *NewNode = CurDAG->getMachineNode(
-        TargetOpcode::INSERT_SUBREG, DL, VT, V, SubV,
-        CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
-    return ReplaceNode(Node, NewNode);
+    SDValue Insert = CurDAG->getTargetInsertSubreg(SubRegIdx, DL, VT, V, SubV);
+    return ReplaceNode(Node, Insert.getNode());
   }
   case ISD::EXTRACT_SUBVECTOR: {
     SDValue V = Node->getOperand(0);
@@ -1033,10 +1031,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       return ReplaceNode(Node, NewNode);
     }
 
-    SDNode *NewNode = CurDAG->getMachineNode(
-        TargetOpcode::EXTRACT_SUBREG, DL, VT, V,
-        CurDAG->getTargetConstant(SubRegIdx, DL, XLenVT));
-    return ReplaceNode(Node, NewNode);
+    SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
+    return ReplaceNode(Node, Extract.getNode());
   }
   }
 

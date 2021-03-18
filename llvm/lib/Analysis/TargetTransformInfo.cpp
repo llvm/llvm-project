@@ -706,8 +706,9 @@ int TargetTransformInfo::getArithmeticInstrCost(
 }
 
 int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, VectorType *Ty,
-                                        int Index, VectorType *SubTp) const {
-  int Cost = TTIImpl->getShuffleCost(Kind, Ty, Index, SubTp);
+                                        ArrayRef<int> Mask, int Index,
+                                        VectorType *SubTp) const {
+  int Cost = TTIImpl->getShuffleCost(Kind, Ty, Mask, Index, SubTp);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

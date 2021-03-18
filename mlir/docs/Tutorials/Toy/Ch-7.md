@@ -177,12 +177,11 @@ public:
 };
 ```
 
-We register this type in the `ToyDialect` constructor in a similar way to how we
+We register this type in the `ToyDialect` initializer in a similar way to how we
 did with operations:
 
 ```c++
-ToyDialect::ToyDialect(mlir::MLIRContext *ctx)
-    : mlir::Dialect(getDialectNamespace(), ctx) {
+void ToyDialect::initialize() {
   addTypes<StructType>();
 }
 ```
@@ -193,12 +192,32 @@ storage class must be visible.)
 With this we can now use our `StructType` when generating MLIR from Toy. See
 examples/toy/Ch7/mlir/MLIRGen.cpp for more details.
 
+### Exposing to ODS
+
+After defining a new type, we should make the ODS framework aware of our Type so
+that we can use it in the operation definitions and auto-generate utilities
+within the Dialect. A simple example is shown below:
+
+```tablegen
+// Provide a definition for the Toy StructType for use in ODS. This allows for
+// using StructType in a similar way to Tensor or MemRef. We use `DialectType`
+// to demarcate the StructType as belonging to the Toy dialect.
+def Toy_StructType :
+    DialectType<Toy_Dialect, CPred<"$_self.isa<StructType>()">,
+                "Toy struct type">;
+
+// Provide a definition of the types that are used within the Toy dialect.
+def Toy_Type : AnyTypeOf<[F64Tensor, Toy_StructType]>;
+```
+
 ### Parsing and Printing
 
 At this point we can use our `StructType` during MLIR generation and
 transformation, but we can't output or parse `.mlir`. For this we need to add
 support for parsing and printing instances of the `StructType`. This can be done
 by overriding the `parseType` and `printType` methods on the `ToyDialect`.
+Declarations for these methods are automatically provided when the type is
+exposed to ODS as detailed in the previous section.
 
 ```c++
 class ToyDialect : public mlir::Dialect {
@@ -321,22 +340,8 @@ the IR. The next step is to add support for using it within our operations.
 
 #### Updating Existing Operations
 
-A few of our existing operations will need to be updated to handle `StructType`.
-The first step is to make the ODS framework aware of our Type so that we can use
-it in the operation definitions. A simple example is shown below:
-
-```tablegen
-// Provide a definition for the Toy StructType for use in ODS. This allows for
-// using StructType in a similar way to Tensor or MemRef.
-def Toy_StructType :
-    Type<CPred<"$_self.isa<StructType>()">, "Toy struct type">;
-
-// Provide a definition of the types that are used within the Toy dialect.
-def Toy_Type : AnyTypeOf<[F64Tensor, Toy_StructType]>;
-```
-
-We can then update our operations, e.g. `ReturnOp`, to also accept the
-`Toy_StructType`:
+A few of our existing operations, e.g. `ReturnOp`, will need to be updated to
+handle `Toy_StructType`.
 
 ```tablegen
 def ReturnOp : Toy_Op<"return", [Terminator, HasParent<"FuncOp">]> {

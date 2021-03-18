@@ -386,9 +386,9 @@ static bool isOrdinaryMember(const NamedDecl *ND) {
 
 static bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
                                DeclarationName Name) {
-  Path.Decls = RD->lookup(Name);
-  for (NamedDecl *ND : Path.Decls)
-    if (isOrdinaryMember(ND))
+  Path.Decls = RD->lookup(Name).begin();
+  for (DeclContext::lookup_iterator I = Path.Decls, E = I.end(); I != E; ++I)
+    if (isOrdinaryMember(*I))
       return true;
 
   return false;
@@ -453,9 +453,10 @@ std::vector<const NamedDecl *> CXXRecordDecl::lookupDependentName(
           },
           Paths, /*LookupInDependent=*/true))
     return Results;
-  for (const NamedDecl *ND : Paths.front().Decls) {
-    if (isOrdinaryMember(ND) && Filter(ND))
-      Results.push_back(ND);
+  for (DeclContext::lookup_iterator I = Paths.front().Decls, E = I.end();
+       I != E; ++I) {
+    if (isOrdinaryMember(*I) && Filter(*I))
+      Results.push_back(*I);
   }
   return Results;
 }

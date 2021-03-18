@@ -960,8 +960,9 @@ val metadata_as_value : llcontext -> llmetadata -> llvalue
     See the method [llvm::ConstantInt::get]. *)
 val const_int : lltype -> int -> llvalue
 
-(** [const_of_int64 ty i] returns the integer constant of type [ty] and value
-    [i]. See the method [llvm::ConstantInt::get]. *)
+(** [const_of_int64 ty i s] returns the integer constant of type [ty] and value
+    [i]. [s] indicates whether the integer is signed or not.
+    See the method [llvm::ConstantInt::get]. *)
 val const_of_int64 : lltype -> Int64.t -> bool -> llvalue
 
 (** [int64_of_const c] returns the int64 value of the [c] constant integer.
@@ -1503,9 +1504,9 @@ val is_global_constant : llvalue -> bool
     See the method [llvm::GlobalVariable::setConstant]. *)
 val set_global_constant : bool -> llvalue -> unit
 
-(** [global_initializer gv] returns the initializer for the global variable
-    [gv]. See the method [llvm::GlobalVariable::getInitializer]. *)
-val global_initializer : llvalue -> llvalue
+(** [global_initializer gv] If global variable [gv] has an initializer it is returned,
+    otherwise returns [None]. See the method [llvm::GlobalVariable::getInitializer]. *)
+val global_initializer : llvalue -> llvalue option
 
 (** [set_initializer c gv] sets the initializer for the global variable
     [gv] to the constant [c].

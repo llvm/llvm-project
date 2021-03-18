@@ -382,7 +382,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;x&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -450,7 +450,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;obj1&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -518,7 +518,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;obj4&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -586,7 +586,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;obj5&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -654,7 +654,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;obj6&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -1064,7 +1064,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;cf1&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -1132,7 +1132,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;cf2&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -1200,7 +1200,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;cf3&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->
@@ -1268,7 +1268,7 @@
     </dict>
    </array>
    <key>description</key><string>Value stored to &apos;cf4&apos; during its initialization is never read</string>
-   <key>category</key><string>Dead store</string>
+   <key>category</key><string>Unused code</string>
    <key>type</key><string>Dead initialization</string>
    <key>check_name</key><string>deadcode.DeadStores</string>
    <!-- This hash is experimental and going to change! -->

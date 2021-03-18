@@ -43,20 +43,18 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    addi a3, a0, 16
-; RV32-NEXT:    vsetivli a4, 2, e32,m1,ta,mu
-; RV32-NEXT:    vle32.v v25, (a3)
-; RV32-NEXT:    vse32.v v25, (sp)
 ; RV32-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v26, (a0)
 ; RV32-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.v.i v28, 0
 ; RV32-NEXT:    vsetivli a3, 2, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 0
-; RV32-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
-; RV32-NEXT:    vle32.v v26, (sp)
+; RV32-NEXT:    lw a3, 20(a0)
+; RV32-NEXT:    vsetivli a4, 4, e32,m1,ta,mu
+; RV32-NEXT:    lw a4, 16(a0)
+; RV32-NEXT:    vmv.v.x v26, a3
+; RV32-NEXT:    vsetvli a3, zero, e32,m1,ta,mu
+; RV32-NEXT:    vmv.s.x v26, a4
 ; RV32-NEXT:    vsetivli a3, 4, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 2
 ; RV32-NEXT:    vsetivli a3, 2, e32,m2,ta,mu
@@ -69,7 +67,6 @@ define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    vse64.v v28, (a0)
 ; RV32-NEXT:    sw a1, 16(a0)
 ; RV32-NEXT:    sw a2, 20(a0)
-; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v3i64:

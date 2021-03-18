@@ -12,4 +12,4 @@ int test1() {
 
 // NOSLH: @{{.*}}test1{{.*}}[[NOSLH:#[0-9]+]]
 
-// NOSLH-NOT: attributes [[SLH]] = { {{.*}}speculative_load_hardening{{.*}} }
+// NOSLH-NOT: attributes [[NOSLH]] = { {{.*}}speculative_load_hardening{{.*}} }

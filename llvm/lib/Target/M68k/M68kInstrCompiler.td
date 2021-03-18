@@ -57,7 +57,6 @@ def : Pat<(i32 (MxWrapperPC tblockaddress :$src)), (LEA32q tblockaddress :$src)>
 let usesCustomInserter = 1, Uses = [CCR] in
 class MxCMove<MxType TYPE>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$t, TYPE.ROp:$f, i8imm:$cond),
-               "",
                [(set TYPE.VT:$dst,
                      (TYPE.VT (MxCmov TYPE.VT:$t, TYPE.VT:$f, imm:$cond, CCR)))]>;
 
@@ -78,11 +77,11 @@ def CMOV32r : MxCMove<MxType32r>;
 let Defs = [SP, CCR], Uses = [SP] in {
 
   def ADJCALLSTACKDOWN
-    : MxPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2), "#ADJCALLSTACKDOWN",
+    : MxPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                [(MxCallSeqStart timm:$amt1, timm:$amt2)]>;
 
   def ADJCALLSTACKUP
-    : MxPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2), "#ADJCALLSTACKUP",
+    : MxPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                [(MxCallSeqEnd timm:$amt1, timm:$amt2)]>;
 
 } // Defs
@@ -124,5 +123,4 @@ def : Pat<(MxTCRet (i32 texternalsym:$dst), imm:$adj),
 let Defs = [SP, CCR], Uses = [SP] in
 let usesCustomInserter = 1 in
 def SALLOCA : MxPseudo<(outs MxARD32:$dst), (ins MxARD32:$size),
-                       "# variable sized alloca for segmented stacks",
                        [(set iPTR:$dst, (MxSegAlloca iPTR:$size))]>;

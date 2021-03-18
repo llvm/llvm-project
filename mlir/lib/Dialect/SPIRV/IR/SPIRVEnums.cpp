@@ -12,6 +12,8 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 
+#include "mlir/IR/BuiltinTypes.h"
+
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
