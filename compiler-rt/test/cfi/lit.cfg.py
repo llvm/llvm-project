@@ -13,7 +13,11 @@ clangxx = build_invocation([config.target_cflags] + config.cxx_mode_flags)
 
 config.substitutions.append((r"%clang ", clang + ' '))
 config.substitutions.append((r"%clangxx ", clangxx + ' '))
-if config.lto_supported:
+
+if 'darwin' in config.available_features:
+  # -fsanitize=cfi is not supported on Darwin hosts
+  config.unsupported = True
+elif config.lto_supported:
   clang_cfi = clang + '-fsanitize=cfi '
 
   if config.cfi_lit_test_mode == "Devirt":
