@@ -37,4 +37,5 @@ add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   MLIRPass
   MLIRSupport
   MLIRStandardToLLVM
+  MLIRVectorToLLVM
 )
