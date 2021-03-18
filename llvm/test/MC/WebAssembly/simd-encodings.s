@@ -1,4 +1,4 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+unimplemented-simd128 < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+simd128 < %s | FileCheck %s
 
 main:
     .functype main () -> ()

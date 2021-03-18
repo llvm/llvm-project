@@ -404,8 +404,7 @@ defm : StoreLanePatNoOffset<I64x2, int_wasm_store64_lane>;
 
 // Constant: v128.const
 multiclass ConstVec<Vec vec, dag ops, dag pat, string args> {
-  let isMoveImm = 1, isReMaterializable = 1,
-      Predicates = [HasUnimplementedSIMD128] in
+  let isMoveImm = 1, isReMaterializable = 1 in
   defm CONST_V128_#vec : SIMD_I<(outs V128:$dst), ops, (outs), ops,
                                  [(set V128:$dst, (vec.vt pat))],
                                  "v128.const\t$dst, "#args,
