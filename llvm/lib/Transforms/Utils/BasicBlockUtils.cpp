@@ -407,8 +407,7 @@ static bool removeRedundantDbgInstrsUsingBackwardScan(BasicBlock *BB) {
 /// - Keep track of non-overlapping fragments.
 static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
   SmallVector<DbgValueInst *, 8> ToBeRemoved;
-  DenseMap<DebugVariable, std::pair<SmallVector<Value *, 4>, DIExpression *>>
-      VariableMap;
+  DenseMap<DebugVariable, std::pair<Value *, DIExpression *> > VariableMap;
   for (auto &I : *BB) {
     if (DbgValueInst *DVI = dyn_cast<DbgValueInst>(&I)) {
       DebugVariable Key(DVI->getVariable(),
@@ -417,10 +416,10 @@ static bool removeRedundantDbgInstrsUsingForwardScan(BasicBlock *BB) {
       auto VMI = VariableMap.find(Key);
       // Update the map if we found a new value/expression describing the
       // variable, or if the variable wasn't mapped already.
-      SmallVector<Value *, 4> Values(DVI->getValues());
-      if (VMI == VariableMap.end() || VMI->second.first != Values ||
+      if (VMI == VariableMap.end() ||
+          VMI->second.first != DVI->getValue() ||
           VMI->second.second != DVI->getExpression()) {
-        VariableMap[Key] = {Values, DVI->getExpression()};
+        VariableMap[Key] = { DVI->getValue(), DVI->getExpression() };
         continue;
       }
       // Found an identical mapping. Remember the instruction for later removal.

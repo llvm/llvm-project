@@ -5829,71 +5829,57 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MemorySSAWrapperPass>();
 }
 
-using EqualValues = SmallVector<std::tuple<WeakVH, int64_t>, 4>;
-using EqualValuesMap =
-    DenseMap<std::pair<DbgValueInst *, unsigned>, EqualValues>;
-using ExpressionMap = DenseMap<DbgValueInst *, DIExpression *>;
+using EqualValues = SmallVector<std::tuple<WeakVH, int64_t, DIExpression *>, 4>;
+using EqualValuesMap = DenseMap<DbgValueInst *, EqualValues>;
 
 static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
-                                 EqualValuesMap &DbgValueToEqualSet,
-                                 ExpressionMap &DbgValueToExpression) {
+                                 EqualValuesMap &DbgValueToEqualSet) {
   for (auto &B : L->getBlocks()) {
     for (auto &I : *B) {
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
         continue;
-      for (unsigned Idx = 0; Idx < DVI->getNumVariableLocationOps(); ++Idx) {
-        // TODO: We can duplicate results if the same arg appears more than
-        // once.
-        Value *V = DVI->getVariableLocationOp(Idx);
-        if (!V || !SE.isSCEVable(V->getType()))
+      auto V = DVI->getVariableLocationOp(0);
+      if (!V || !SE.isSCEVable(V->getType()))
+        continue;
+      auto DbgValueSCEV = SE.getSCEV(V);
+      EqualValues EqSet;
+      for (PHINode &Phi : L->getHeader()->phis()) {
+        if (V->getType() != Phi.getType())
           continue;
-        auto DbgValueSCEV = SE.getSCEV(V);
-        EqualValues EqSet;
-        for (PHINode &Phi : L->getHeader()->phis()) {
-          if (V->getType() != Phi.getType())
-            continue;
-          if (!SE.isSCEVable(Phi.getType()))
-            continue;
-          auto PhiSCEV = SE.getSCEV(&Phi);
-          Optional<APInt> Offset =
-              SE.computeConstantDifference(DbgValueSCEV, PhiSCEV);
-          if (Offset && Offset->getMinSignedBits() <= 64)
-            EqSet.emplace_back(
-                std::make_tuple(&Phi, Offset.getValue().getSExtValue()));
-        }
-        DbgValueToEqualSet[{DVI, Idx}] = std::move(EqSet);
-        DbgValueToExpression[DVI] = DVI->getExpression();
+        if (!SE.isSCEVable(Phi.getType()))
+          continue;
+        auto PhiSCEV = SE.getSCEV(&Phi);
+        Optional<APInt> Offset =
+                SE.computeConstantDifference(DbgValueSCEV, PhiSCEV);
+        if (Offset && Offset->getMinSignedBits() <= 64)
+          EqSet.emplace_back(std::make_tuple(
+              &Phi, Offset.getValue().getSExtValue(), DVI->getExpression()));
       }
+      DbgValueToEqualSet[DVI] = std::move(EqSet);
     }
   }
 }
 
-static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet,
-                                ExpressionMap &DbgValueToExpression) {
+static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet) {
   for (auto A : DbgValueToEqualSet) {
-    auto DVI = A.first.first;
-    auto Idx = A.first.second;
+    auto DVI = A.first;
     // Only update those that are now undef.
-    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocationOp(Idx)))
+    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocationOp(0)))
       continue;
     for (auto EV : A.second) {
-      auto EVHandle = std::get<WeakVH>(EV);
-      if (!EVHandle)
+      auto V = std::get<WeakVH>(EV);
+      if (!V)
         continue;
-      // The dbg.value may have had its value changed by LSR; refresh it from
-      // the map, but continue to update the mapped expression as it may be
-      // updated multiple times in this function.
-      auto DbgDIExpr = DbgValueToExpression[DVI];
+      auto DbgDIExpr = std::get<DIExpression *>(EV);
       auto Offset = std::get<int64_t>(EV);
-      DVI->replaceVariableLocationOp(Idx, EVHandle);
+      DVI->replaceVariableLocationOp(DVI->getVariableLocationOp(0), V);
       if (Offset) {
         SmallVector<uint64_t, 8> Ops;
         DIExpression::appendOffset(Ops, Offset);
-        DbgDIExpr = DIExpression::appendOpsToArg(DbgDIExpr, Ops, Idx, true);
+        DbgDIExpr = DIExpression::prependOpcodes(DbgDIExpr, Ops, true);
       }
       DVI->setExpression(DbgDIExpr);
-      DbgValueToExpression[DVI] = DbgDIExpr;
       break;
     }
   }
@@ -5917,8 +5903,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // Debug preservation - before we start removing anything create equivalence
   // sets for the llvm.dbg.value intrinsics.
   EqualValuesMap DbgValueToEqualSet;
-  ExpressionMap DbgValueToExpression;
-  DbgGatherEqualValues(L, SE, DbgValueToEqualSet, DbgValueToExpression);
+  DbgGatherEqualValues(L, SE, DbgValueToEqualSet);
 
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
@@ -5938,7 +5923,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     }
   }
 
-  DbgApplyEqualValues(DbgValueToEqualSet, DbgValueToExpression);
+  DbgApplyEqualValues(DbgValueToEqualSet);
 
   return Changed;
 }
