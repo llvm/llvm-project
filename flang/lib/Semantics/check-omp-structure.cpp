@@ -717,6 +717,7 @@ CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
 CHECK_SIMPLE_CLAUSE(Update, OMPC_update)
 CHECK_SIMPLE_CLAUSE(UseDeviceAddr, OMPC_use_device_addr)
 CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
+CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)

@@ -5086,6 +5086,59 @@ public:
   }
 };
 
+/// This represents '#pragma omp interop' directive.
+///
+/// \code
+/// #pragma omp interop init(target:obj) device(x) depend(inout:y) nowait
+/// \endcode
+/// In this example directive '#pragma omp interop' has
+/// clauses 'init', 'device', 'depend' and 'nowait'.
+///
+class OMPInteropDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPInteropDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPInteropDirectiveClass,
+                               llvm::omp::OMPD_interop, StartLoc, EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPInteropDirective()
+      : OMPExecutableDirective(OMPInteropDirectiveClass,
+                               llvm::omp::OMPD_interop, SourceLocation(),
+                               SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param Clauses The directive's clauses.
+  ///
+  static OMPInteropDirective *Create(const ASTContext &C,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     ArrayRef<OMPClause *> Clauses);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  ///
+  static OMPInteropDirective *CreateEmpty(const ASTContext &C,
+                                          unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPInteropDirectiveClass;
+  }
+};
+
 } // end namespace clang
 
 #endif

@@ -268,6 +268,9 @@ def OMPC_Order : Clause<"order"> {
     OMP_ORDER_concurrent
   ];
 }
+def OMPC_Init : Clause<"init"> {
+  let clangClass = "OMPInitClause";
+}
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
 }
@@ -1638,6 +1641,14 @@ def OMP_EndSingle : Directive<"end single"> {
 def OMP_EndWorkshare : Directive<"end workshare"> {
   let allowedClauses = [
     VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_interop : Directive<"interop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Init>,
+    VersionedClause<OMPC_NoWait>,
   ];
 }
 def OMP_Unknown : Directive<"unknown"> {

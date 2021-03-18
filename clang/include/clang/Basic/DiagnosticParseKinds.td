@@ -1400,6 +1400,13 @@ def err_omp_variant_ctx_second_match_extension : Error<
   "only a single match extension allowed per OpenMP context selector">;
 def err_omp_invalid_dsa: Error<
   "data-sharing attribute '%0' in '%1' clause requires OpenMP version %2 or above">;
+def err_omp_expected_punc_after_interop_mod : Error<
+  "expected ',' after interop modifier">;
+def err_omp_expected_interop_type : Error<
+  "expected interop type: 'target' and/or 'targetsync'">;
+def warn_omp_more_one_interop_type
+  : Warning<"interop type '%0' cannot be specified more than once">,
+    InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

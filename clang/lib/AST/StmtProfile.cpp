@@ -543,6 +543,10 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
+void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
+  VisitOMPClauseList(C);
+}
+
 void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
 
 template<typename T>
@@ -1126,6 +1130,10 @@ void StmtProfiler::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
 void StmtProfiler::VisitOMPTargetTeamsDistributeSimdDirective(
     const OMPTargetTeamsDistributeSimdDirective *S) {
   VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPInteropDirective(const OMPInteropDirective *S) {
+  VisitOMPExecutableDirective(S);
 }
 
 void StmtProfiler::VisitExpr(const Expr *S) {

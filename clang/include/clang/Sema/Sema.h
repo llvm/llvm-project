@@ -10838,6 +10838,10 @@ public:
   StmtResult ActOnOpenMPTargetTeamsDistributeSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp interop'.
+  StmtResult ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
+                                         SourceLocation StartLoc,
+                                         SourceLocation EndLoc);
 
   /// Checks correctness of linear modifiers.
   bool CheckOpenMPLinearModifier(OpenMPLinearClauseKind LinKind,
@@ -11027,6 +11031,15 @@ public:
   /// Called on well-formed 'relaxed' clause.
   OMPClause *ActOnOpenMPRelaxedClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+
+  /// Called on well-formed 'init' clause.
+  OMPClause *ActOnOpenMPInitClause(Expr *InteropVar, ArrayRef<Expr *> PrefExprs,
+                                   bool IsTarget, bool IsTargetSync,
+                                   SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation VarLoc,
+                                   SourceLocation EndLoc);
+
   /// Called on well-formed 'destroy' clause.
   OMPClause *ActOnOpenMPDestroyClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);
