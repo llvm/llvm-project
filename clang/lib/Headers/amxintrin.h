@@ -267,8 +267,8 @@ _tile_stored_internal(unsigned short m, unsigned short n, void *base,
 }
 
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_BF16
-_tile_tdpbf16ps_internal(unsigned short m, unsigned short n, unsigned short k,
-                         _tile1024i dst, _tile1024i src1, _tile1024i src2) {
+_tile_dpbf16ps_internal(unsigned short m, unsigned short n, unsigned short k,
+                        _tile1024i dst, _tile1024i src1, _tile1024i src2) {
   return __builtin_ia32_tdpbf16ps_internal(m, n, k, dst, src1, src2);
 }
 
@@ -323,10 +323,10 @@ static void __tile_zero(__tile1024i *dst) {
 }
 
 __DEFAULT_FN_ATTRS_BF16
-static void __tile_tdpbf16ps(__tile1024i *dst, __tile1024i src1,
-                             __tile1024i src2) {
-  dst->tile = _tile_tdpbf16ps_internal(src1.row, src2.col, src1.col, dst->tile,
-                                       src1.tile, src2.tile);
+static void __tile_dpbf16ps(__tile1024i *dst, __tile1024i src1,
+                            __tile1024i src2) {
+  dst->tile = _tile_dpbf16ps_internal(src1.row, src2.col, src1.col, dst->tile,
+                                      src1.tile, src2.tile);
 }
 
 #undef __DEFAULT_FN_ATTRS_TILE
