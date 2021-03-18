@@ -735,6 +735,12 @@ TEST_P(ImportDecl, ImportRecordDeclInFunc) {
                  has(declStmt(hasSingleDecl(varDecl(hasName("d")))))))));
 }
 
+TEST_P(ImportDecl, ImportedVarDeclPreservesThreadLocalStorage) {
+  MatchVerifier<Decl> Verifier;
+  testImport("thread_local int declToImport;", Lang_CXX11, "", Lang_CXX11,
+             Verifier, varDecl(hasThreadStorageDuration()));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportRecordTypeInFunc) {
   Decl *FromTU = getTuDecl("int declToImport() { "
                            "  struct data_t {int a;int b;};"
