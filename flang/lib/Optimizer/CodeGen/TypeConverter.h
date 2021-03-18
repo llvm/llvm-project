@@ -79,8 +79,14 @@ public:
       llvm::SmallVector<mlir::Type, 8> inMembers;
       tuple.getFlattenedTypes(inMembers);
       llvm::SmallVector<mlir::Type, 8> members;
-      for (auto mem : inMembers)
-        members.push_back(convertType(mem).cast<mlir::Type>());
+      for (auto mem : inMembers) {
+        // Prevent fir.box from degenerating to a pointer to a descriptor in the
+        // context of a tuple type.
+        if (auto box = mem.dyn_cast<fir::BoxType>())
+          members.push_back(convertBoxTypeAsStruct(box));
+        else
+          members.push_back(convertType(mem).cast<mlir::Type>());
+      }
       return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                     /*isPacked=*/false);
     });
@@ -170,6 +176,13 @@ public:
     return mlir::LLVM::LLVMPointerType::get(
         mlir::LLVM::LLVMStructType::getLiteral(&getContext(), parts,
                                                /*isPacked=*/false));
+  }
+  /// Convert fir.box type to the corresponding llvm struct type instead of a
+  /// pointer to this struct type.
+  mlir::Type convertBoxTypeAsStruct(BoxType box) {
+    return convertBoxType(box)
+        .cast<mlir::LLVM::LLVMPointerType>()
+        .getElementType();
   }
 
   // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
@@ -269,8 +282,14 @@ public:
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     identStructCache[name] = st;
     llvm::SmallVector<mlir::Type, 8> members;
-    for (auto mem : derived.getTypeList())
-      members.push_back(convertType(mem.second).cast<mlir::Type>());
+    for (auto mem : derived.getTypeList()) {
+      // Prevent fir.box from degenerating to a pointer to a descriptor in the
+      // context of a record type.
+      if (auto box = mem.second.dyn_cast<fir::BoxType>())
+        members.push_back(convertBoxTypeAsStruct(box));
+      else
+        members.push_back(convertType(mem.second).cast<mlir::Type>());
+    }
     (void)st.setBody(members, /*isPacked=*/false);
     return st;
   }
