@@ -282,6 +282,35 @@ public:
   /// @}
 };
 
+/// isVREVMask - Check if a vector shuffle corresponds to a VREV
+/// instruction with the specified blocksize.  (The order of the elements
+/// within each block of the vector is reversed.)
+inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
+  assert((BlockSize == 16 || BlockSize == 32 || BlockSize == 64) &&
+         "Only possible block sizes for VREV are: 16, 32, 64");
+
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz != 8 && EltSz != 16 && EltSz != 32)
+    return false;
+
+  unsigned BlockElts = M[0] + 1;
+  // If the first shuffle index is UNDEF, be optimistic.
+  if (M[0] < 0)
+    BlockElts = BlockSize / EltSz;
+
+  if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
+    return false;
+
+  for (unsigned i = 0, e = M.size(); i < e; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != (i - i % BlockElts) + (BlockElts - 1 - i % BlockElts))
+      return false;
+  }
+
+  return true;
+}
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMTARGETTRANSFORMINFO_H
