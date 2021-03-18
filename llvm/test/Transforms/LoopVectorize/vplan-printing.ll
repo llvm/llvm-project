@@ -7,17 +7,16 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Tests for printing VPlans.
 
 define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x) nounwind uwtable {
-; CHECK:      VPlan {
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
-; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)
-; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>
-; CHECK-NEXT:   WIDEN store ir<%arrayidx2>, ir<%call>
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-;
+; CHECK: N0 [label =
+; CHECK-NEXT: "for.body:\n" +
+; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
+; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
+; CHECK-NEXT:       "WIDEN-CALL ir<%call> = call @llvm.sqrt.f32(ir<%lv>)\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>\l" +
+; CHECK-NEXT:       "WIDEN store ir<%arrayidx2>, ir<%call>\l"
+; CHECK-NEXT:   ]
+
 entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
@@ -38,19 +37,18 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalias %x, float* %z) nounwind uwtable {
-; CHECK:      VPlan {
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
-; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%arrayidx>, ir<%z>
-; CHECK-NEXT:   WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
-; CHECK-NEXT:   WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>
-; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>
-; CHECK-NEXT:   WIDEN store ir<%arrayidx2>, ir<%add>
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-;
+; CHECK: N0 [label =
+; CHECK-NEXT: "for.body:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:      "WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
+; CHECK-NEXT:      "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
+; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%arrayidx>, ir<%z>\l" +
+; CHECK-NEXT:      "WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>\l" +
+; CHECK-NEXT:      "WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>\l" +
+; CHECK-NEXT:      "CLONE ir<%arrayidx2> = getelementptr ir<%x>, ir<%iv>\l" +
+; CHECK-NEXT:      "WIDEN store ir<%arrayidx2>, ir<%add>\l"
+; CHECK-NEXT:   ]
+
 entry:
   %cmp6 = icmp sgt i64 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
@@ -73,16 +71,15 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define float @print_reduction(i64 %n, float* noalias %y) {
-; CHECK:      VPlan {
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
-; CHECK-NEXT:   WIDEN-PHI %red = phi %red.next, 0.000000e+00
-; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
-; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
-;
+; CHECK: N0 [label =
+; CHECK-NEXT: "for.body:\n" +
+; CHECK-NEXT:       "WIDEN-INDUCTION %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:       "WIDEN-PHI %red = phi %red.next, 0.000000e+00\l" +
+; CHECK-NEXT:       "CLONE ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>\l" +
+; CHECK-NEXT:       "WIDEN ir<%lv> = load ir<%arrayidx>\l" +
+; CHECK-NEXT:       "REDUCE ir<%red.next> = ir<%red> + reduce.fadd (ir<%lv>)\l"
+; CHECK-NEXT:   ]
+
 entry:
   br label %for.body
 
@@ -101,40 +98,36 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
-; CHECK:      VPlan {
-; CHECK-NEXT: for.body:
-; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next
-; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%i>, ir<5>
-; CHECK-NEXT: Successor(s): if.then
-; CHECK-EMPTY:
-; CHECK-NEXT: if.then:
-; CHECK-NEXT: Successor(s): pred.udiv
-; CHECK-EMPTY:
-; CHECK-NEXT: <xVFxUF> pred.udiv: {
-; CHECK-NEXT:   pred.udiv.entry:
-; CHECK-NEXT:     BRANCH-ON-MASK ir<%cmp>
-; CHECK-NEXT:   Successor(s): pred.udiv.if, pred.udiv.continue
-; CHECK-NEXT:   CondBit: ir<%cmp>
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.udiv.if:
-; CHECK-NEXT:     REPLICATE ir<%tmp4> = udiv ir<%n>, ir<%i> (S->V)
-; CHECK-NEXT:   Successor(s): pred.udiv.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:   pred.udiv.continue:
-; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%3> = ir<%tmp4>
-; CHECK-NEXT:   No successors
-; CHECK-NEXT: }
-; CHECK-EMPTY:
-; CHECK-NEXT: if.then.0:
-; CHECK-NEXT: Successor(s): for.inc
-; CHECK-EMPTY:
-; CHECK-NEXT: for.inc:
-; CHECK-NEXT:   EMIT vp<%4> = not ir<%cmp>
-; CHECK-NEXT:   BLEND %d = ir<0>/vp<%4> vp<%3>/ir<%cmp>
-; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>
-; CHECK-NEXT:   WIDEN store ir<%idx>, ir<%d>
-; CHECK-NEXT: No successors
-; CHECK-NEXT: }
+; CHECK:       N0 [label =
+; CHECK-NEXT:    "for.body:\n" +
+; CHECK-NEXT:      "WIDEN-INDUCTION %i = phi 0, %i.next\l" +
+; CHECK-NEXT:      "WIDEN ir<%cmp> = icmp ir<%i>, ir<5>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N2 [label =
+; CHECK-NEXT:    "pred.udiv.entry:\n" +
+; CHECK-NEXT:      +
+; CHECK-NEXT:      "BRANCH-ON-MASK ir<%cmp>\l"\l
+; CHECK-NEXT:         "CondBit: ir<%cmp>"
+; CHECK-NEXT:    ]
+;
+; CHECK:       N4 [label =
+; CHECK-NEXT:    "pred.udiv.if:\n" +
+; CHECK-NEXT:      "REPLICATE ir<%tmp4> = udiv ir<%n>, ir<%i> (S->V)\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N5 [label =
+; CHECK-NEXT:    "pred.udiv.continue:\n" +
+; CHECK-NEXT:      "PHI-PREDICATED-INSTRUCTION vp<%3> = ir<%tmp4>\l"
+; CHECK-NEXT:  ]
+;
+; CHECK:       N7 [label =
+; CHECK-NEXT:    "for.inc:\n" +
+; CHECK-NEXT:      "EMIT vp<%4> = not ir<%cmp>\l" +
+; CHECK-NEXT:      "BLEND %d = ir<0>/vp<%4> vp<%3>/ir<%cmp>\l" +
+; CHECK-NEXT:      "CLONE ir<%idx> = getelementptr ir<%x>, ir<%i>\l" +
+; CHECK-NEXT:      "WIDEN store ir<%idx>, ir<%d>\l"
+; CHECK-NEXT:  ]
 ;
 entry:
   br label %for.body

@@ -256,7 +256,10 @@ public:
   /// best selected VPlan.
   void executePlan(InnerLoopVectorizer &LB, DominatorTree *DT);
 
-  void printPlans(raw_ostream &O);
+  void printPlans(raw_ostream &O) {
+    for (const auto &Plan : VPlans)
+      O << *Plan;
+  }
 
   /// Look through the existing plans and return true if we have one with all
   /// the vectorization factors in question.

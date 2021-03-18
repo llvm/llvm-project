@@ -333,14 +333,12 @@ TEST(VPBasicBlockTest, print) {
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(I2);
   VPBB1->appendRecipe(I3);
-  VPBB1->setName("bb1");
 
   VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
   VPInstruction *I5 = new VPInstruction(Instruction::Ret, {I4});
   VPBasicBlock *VPBB2 = new VPBasicBlock();
   VPBB2->appendRecipe(I4);
   VPBB2->appendRecipe(I5);
-  VPBB2->setName("bb2");
 
   VPBlockUtils::connectBlocks(VPBB1, VPBB2);
 
@@ -357,8 +355,7 @@ TEST(VPBasicBlockTest, print) {
   VPlan Plan;
   Plan.setEntry(VPBB1);
   std::string FullDump;
-  raw_string_ostream OS(FullDump);
-  Plan.printDOT(OS);
+  raw_string_ostream(FullDump) << Plan;
 
   const char *ExpectedStr = R"(digraph VPlan {
 graph [labelloc=t, fontsize=30; label="Vectorization Plan"]
@@ -366,44 +363,20 @@ node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
-    "bb1:\l" +
-    "  EMIT vp\<%0\> = add\l" +
-    "  EMIT vp\<%1\> = sub vp\<%0\>\l" +
-    "  EMIT br vp\<%0\> vp\<%1\>\l" +
-    "Successor(s): bb2\l"
+    ":\n" +
+      "EMIT vp<%0> = add\l" +
+      "EMIT vp<%1> = sub vp<%0>\l" +
+      "EMIT br vp<%0> vp<%1>\l"
   ]
   N0 -> N1 [ label=""]
   N1 [label =
-    "bb2:\l" +
-    "  EMIT vp\<%3\> = mul vp\<%1\> vp\<%0\>\l" +
-    "  EMIT ret vp\<%3\>\l" +
-    "No successors\l"
+    ":\n" +
+      "EMIT vp<%3> = mul vp<%1> vp<%0>\l" +
+      "EMIT ret vp<%3>\l"
   ]
 }
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
-
-  const char *ExpectedBlock1Str = R"(bb1:
-  EMIT vp<%0> = add
-  EMIT vp<%1> = sub vp<%0>
-  EMIT br vp<%0> vp<%1>
-Successor(s): bb2
-)";
-  std::string Block1Dump;
-  raw_string_ostream OS1(Block1Dump);
-  VPBB1->print(OS1);
-  EXPECT_EQ(ExpectedBlock1Str, Block1Dump);
-
-  // Ensure that numbering is good when dumping the second block in isolation.
-  const char *ExpectedBlock2Str = R"(bb2:
-  EMIT vp<%3> = mul vp<%1> vp<%0>
-  EMIT ret vp<%3>
-No successors
-)";
-  std::string Block2Dump;
-  raw_string_ostream OS2(Block2Dump);
-  VPBB2->print(OS2);
-  EXPECT_EQ(ExpectedBlock2Str, Block2Dump);
 
   {
     std::string I3Dump;
