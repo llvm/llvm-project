@@ -110,7 +110,8 @@ private:
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
   // Cache of calls to Procedure::Characterize(Symbol)
-  std::map<SymbolRef, std::optional<Procedure>> characterizeCache_;
+  std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
+      characterizeCache_;
 };
 
 class DistinguishabilityHelper {
