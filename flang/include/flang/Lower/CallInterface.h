@@ -108,7 +108,8 @@ public:
     /// implied by Fortran Value attribute.
     Value,
     /// ValueAttribute means dummy has the the Fortran VALUE attribute.
-    ValueAttribute
+    BaseAddressValueAttribute,
+    CharBoxValueAttribute // BoxChar with VALUE
   };
   /// Different properties of an entity that can be passed/returned.
   /// One-to-One mapping with PassEntityBy but for
