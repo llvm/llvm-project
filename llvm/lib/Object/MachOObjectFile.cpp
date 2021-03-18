@@ -1836,6 +1836,8 @@ MachOObjectFile::getSymbolType(DataRefImpl Symb) const {
       if (!SecOrError)
         return SecOrError.takeError();
       section_iterator Sec = *SecOrError;
+      if (Sec == section_end())
+        return SymbolRef::ST_Other;
       if (Sec->isData() || Sec->isBSS())
         return SymbolRef::ST_Data;
       return SymbolRef::ST_Function;
