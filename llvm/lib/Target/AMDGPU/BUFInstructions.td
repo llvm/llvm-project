@@ -2303,7 +2303,7 @@ multiclass MUBUF_Real_vi_gfx90a<bits<7> op, MUBUF_Pseudo ps> {
   def _gfx90a : MUBUF_Real_gfx90a<op, ps>;
 }
 
-multiclass MUBUF_Real_AllAddr_vi<bits<7> op, bit isAtomic = 0, bit isAtomicRet = 0> {
+multiclass MUBUF_Real_AllAddr_vi<bits<7> op> {
   defm _OFFSET : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET")>;
   defm _OFFEN  : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN")>;
   defm _IDXEN  : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN")>;
@@ -2379,7 +2379,7 @@ multiclass MUBUF_Real_AllAddr_gfx80<bits<7> op> {
 }
 
 multiclass MUBUF_Real_Atomic_vi<bits<7> op> :
-  MUBUF_Real_AllAddr_vi<op, 1, 0> {
+  MUBUF_Real_AllAddr_vi<op> {
   defm _OFFSET_RTN : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_OFFSET_RTN")>;
   defm _OFFEN_RTN  : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_OFFEN_RTN")>;
   defm _IDXEN_RTN  : MUBUF_Real_vi_gfx90a <op, !cast<MUBUF_Pseudo>(NAME#"_IDXEN_RTN")>;
