@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s -Wc++98-c++11-c++14-compat
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s -Wpre-c++17-compat
 
 // Check that we don't allow illegal uses of inline
 // (checking C++-only constructs here)
