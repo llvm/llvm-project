@@ -16,7 +16,7 @@
 // RUN: %clang_cc1 -triple arm64e-apple-ios -fptrauth-auth-traps -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,TRAPS
 // RUN: %clang_cc1 -triple arm64e-apple-ios                      -emit-llvm %s -o - | FileCheck %s --check-prefixes=ALL,OFF
 
-// ALL-LABEL: define {{.*}} void @test() #0
+// ALL-LABEL: define void @test() #0
 void test() {
 }
 
