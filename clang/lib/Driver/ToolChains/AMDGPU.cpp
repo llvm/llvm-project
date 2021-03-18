@@ -186,6 +186,12 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     ROCmSearchDirs.emplace_back(RocmPathArg.str());
     DoPrintROCmSearchDirs();
     return ROCmSearchDirs;
+  } else if (const char *RocmPathEnv = ::getenv("ROCM_PATH")) {
+    if (!StringRef(RocmPathEnv).empty()) {
+      ROCmSearchDirs.emplace_back(RocmPathEnv);
+      DoPrintROCmSearchDirs();
+      return ROCmSearchDirs;
+    }
   }
 
   // Try to find relative to the compiler binary.
@@ -247,6 +253,43 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
   ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/rocm",
                               /*StrictChecking=*/true);
+
+  // Find the latest /opt/rocm-{release} directory.
+  std::error_code EC;
+  std::string LatestROCm;
+  llvm::VersionTuple LatestVer;
+  // Get ROCm version from ROCm directory name.
+  auto GetROCmVersion = [](StringRef DirName) {
+    llvm::VersionTuple V;
+    std::string VerStr = DirName.drop_front(strlen("rocm-")).str();
+    // The ROCm directory name follows the format of
+    // rocm-{major}.{minor}.{subMinor}[-{build}]
+    std::replace(VerStr.begin(), VerStr.end(), '-', '.');
+    V.tryParse(VerStr);
+    return V;
+  };
+  for (llvm::vfs::directory_iterator
+           File = D.getVFS().dir_begin(D.SysRoot + "/opt", EC),
+           FileEnd;
+       File != FileEnd && !EC; File.increment(EC)) {
+    llvm::StringRef FileName = llvm::sys::path::filename(File->path());
+    if (!FileName.startswith("rocm-"))
+      continue;
+    if (LatestROCm.empty()) {
+      LatestROCm = FileName.str();
+      LatestVer = GetROCmVersion(LatestROCm);
+      continue;
+    }
+    auto Ver = GetROCmVersion(FileName);
+    if (LatestVer < Ver) {
+      LatestROCm = FileName.str();
+      LatestVer = Ver;
+    }
+  }
+  if (!LatestROCm.empty())
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
+                                /*StrictChecking=*/true);
+
   DoPrintROCmSearchDirs();
   return ROCmSearchDirs;
 }
