@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/XCOFFObjectFile.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/DataExtractor.h"
 #include <cstddef>
@@ -296,9 +297,7 @@ uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
 }
 
 bool XCOFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
-  bool Result = false;
-  llvm_unreachable("Not yet implemented!");
-  return Result;
+  return false;
 }
 
 bool XCOFFObjectFile::isSectionText(DataRefImpl Sec) const {
@@ -456,6 +455,22 @@ Expected<uint64_t> XCOFFObjectFile::getStartAddress() const {
   // TODO FIXME Should get from auxiliary_header->o_entry when support for the
   // auxiliary_header is added.
   return 0;
+}
+
+StringRef XCOFFObjectFile::mapDebugSectionName(StringRef Name) const {
+  return StringSwitch<StringRef>(Name)
+      .Case("dwinfo", "debug_info")
+      .Case("dwline", "debug_line")
+      .Case("dwpbnms", "debug_pubnames")
+      .Case("dwpbtyp", "debug_pubtypes")
+      .Case("dwarnge", "debug_aranges")
+      .Case("dwabrev", "debug_abbrev")
+      .Case("dwstr", "debug_str")
+      .Case("dwrnges", "debug_ranges")
+      .Case("dwloc", "debug_loc")
+      .Case("dwframe", "debug_frame")
+      .Case("dwmac", "debug_macinfo")
+      .Default(Name);
 }
 
 size_t XCOFFObjectFile::getFileHeaderSize() const {
