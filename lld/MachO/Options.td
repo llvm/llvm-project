@@ -500,7 +500,6 @@ def order_file_statistics : Flag<["-"], "order_file_statistics">,
 def map : Separate<["-"], "map">,
      MetaVarName<"<path>">,
      HelpText<"Writes all symbols and their addresses to <path>">,
-     Flags<[HelpHidden]>,
      Group<grp_introspect>;
 def dependency_info : Separate<["-"], "dependency_info">,
      MetaVarName<"<path>">,

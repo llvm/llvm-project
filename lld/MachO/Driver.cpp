@@ -826,6 +826,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   for (const Arg *arg : args.filtered(OPT_U))
     symtab->addDynamicLookup(arg->getValue());
 
+  config->mapFile = args.getLastArgValue(OPT_map);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
