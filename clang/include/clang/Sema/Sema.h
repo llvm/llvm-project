@@ -11040,6 +11040,11 @@ public:
                                    SourceLocation VarLoc,
                                    SourceLocation EndLoc);
 
+  /// Called on well-formed 'use' clause.
+  OMPClause *ActOnOpenMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
+                                  SourceLocation LParenLoc,
+                                  SourceLocation VarLoc, SourceLocation EndLoc);
+
   /// Called on well-formed 'destroy' clause.
   OMPClause *ActOnOpenMPDestroyClause(SourceLocation StartLoc,
                                       SourceLocation EndLoc);

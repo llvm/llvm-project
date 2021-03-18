@@ -14,6 +14,9 @@ void foo(int *Ap) {
   //expected-error@+1 {{use of undeclared identifier 'NoDeclVar'}}
   #pragma omp interop init(target:NoDeclVar) init(target:Another)
 
+  //expected-error@+1 {{use of undeclared identifier 'NoDeclVar'}}
+  #pragma omp interop use(NoDeclVar) use(Another)
+
   //expected-error@+2 {{expected interop type: 'target' and/or 'targetsync'}}
   //expected-error@+1 {{expected expression}}
   #pragma omp interop init(InteropVar) init(target:Another)
@@ -33,12 +36,21 @@ void foo(int *Ap) {
                       init(target:Another)
 
   //expected-error@+1 {{interop variable must be of type 'omp_interop_t'}}
+  #pragma omp interop use(IntVar) use(Another)
+
+  //expected-error@+1 {{interop variable must be of type 'omp_interop_t'}}
   #pragma omp interop init(prefer_type(1,"sycl",3),target:SVar) \
                       init(target:Another)
+
+  //expected-error@+1 {{interop variable must be of type 'omp_interop_t'}}
+  #pragma omp interop use(SVar) use(Another)
 
   int a, b;
   //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
   #pragma omp interop init(target:a+b) init(target:Another)
+
+  //expected-error@+1 {{expected variable of type 'omp_interop_t'}}
+  #pragma omp interop use(a+b) use(Another)
 
   const omp_interop_t C = (omp_interop_t)5;
   //expected-error@+1 {{expected non-const variable of type 'omp_interop_t'}}
@@ -64,6 +76,12 @@ void foo(int *Ap) {
   //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
   #pragma omp interop init(target:InteropVar) init(target:InteropVar)
 
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop use(InteropVar) use(InteropVar)
+
+  //expected-error@+1 {{interop variable 'InteropVar' used in multiple action clauses}}
+  #pragma omp interop init(target:InteropVar) use(InteropVar)
+
   //expected-error@+1 {{directive '#pragma omp interop' cannot contain more than one 'device' clause}}
   #pragma omp interop init(target:InteropVar) device(0) device(1)
 
@@ -79,5 +97,7 @@ void foo() {
   int InteropVar;
   //expected-error@+1 {{'omp_interop_t' type not found; include <omp.h>}}
   #pragma omp interop init(prefer_type(1,"sycl",3),target:InteropVar) nowait
+  //expected-error@+1 {{'omp_interop_t' type not found; include <omp.h>}}
+  #pragma omp interop use(InteropVar) nowait
 }
 #endif
