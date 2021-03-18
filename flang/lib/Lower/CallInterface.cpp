@@ -604,13 +604,15 @@ private:
       // Pass as fir.box_char
       auto boxCharTy = fir::BoxCharType::get(&mlirContext, dynamicType.kind());
       addFirInput(boxCharTy, nextPassedArgPosition(), Property::BoxChar, attrs);
-      addPassedArg(PassEntityBy::BoxChar, entity, isOptional);
+      addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
+                               : PassEntityBy::BoxChar,
+                   entity, isOptional);
     } else {
       // Pass as fir.ref
       auto refType = fir::ReferenceType::get(type);
       addFirInput(refType, nextPassedArgPosition(), Property::BaseAddress,
                   attrs);
-      addPassedArg(isValueAttr ? PassEntityBy::ValueAttribute
+      addPassedArg(isValueAttr ? PassEntityBy::BaseAddressValueAttribute
                                : PassEntityBy::BaseAddress,
                    entity, isOptional);
     }

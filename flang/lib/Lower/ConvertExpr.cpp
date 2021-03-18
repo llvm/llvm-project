@@ -1844,7 +1844,8 @@ private:
 // Helper for changing the semantics in a given context. Preserves the current
 // semantics which is resumed when the "push" goes out of scope.
 #define PushSemantics(PushVal)                                                 \
-  [[maybe_unused]] PushSemant pushSemanticsLocalVariable97201(PushVal, semant);
+  [[maybe_unused]] auto pushSemanticsLocalVariable97201 =                      \
+      Fortran::common::ScopedSet(semant, PushVal);
 
 namespace {
 class ArrayExprLowering {
@@ -2063,7 +2064,7 @@ public:
   }
 
   // A procedure reference to a Fortran elemental intrinsic procedure.
-  CC genIntrinsicProcRef(
+  CC genElementalIntrinsicProcRef(
       const Fortran::evaluate::ProcedureRef &procRef,
       llvm::Optional<mlir::Type> retTy,
       const Fortran::evaluate::SpecificIntrinsic &intrinsic) {
@@ -2118,8 +2119,9 @@ public:
   }
 
   // A procedure reference to a user-defined elemental procedure.
-  CC genUDProcRef(const Fortran::evaluate::ProcedureRef &procRef,
-                  llvm::Optional<mlir::Type> retTy) {
+  CC genElementalUserDefinedProcRef(
+      const Fortran::evaluate::ProcedureRef &procRef,
+      llvm::Optional<mlir::Type> retTy) {
     using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
 
     Fortran::lower::CallerInterface caller(procRef, converter);
@@ -2151,7 +2153,7 @@ public:
           return lambda(iters);
         };
       } break;
-      case PassBy::ValueAttribute: {
+      case PassBy::BaseAddressValueAttribute: {
         // VALUE attribute or pass-by-reference to a copy semantics. (byval*)
         PushSemantics(ConstituentSemantics::ByValueArg);
         auto lambda = genarr(*expr);
@@ -2166,8 +2168,11 @@ public:
           return lambda(iters);
         };
       } break;
+      case PassBy::CharBoxValueAttribute:
+        TODO(loc, "CHARACTER, VALUE");
+        break;
       case PassBy::BoxChar:
-        TODO(loc, "character");
+        TODO(loc, "CHARACTER");
         break;
       case PassBy::AddressAndLength:
         TODO(loc, "address and length argument");
@@ -2177,18 +2182,18 @@ public:
         // See C15100 and C15101
         fir::emitFatalError(loc, "cannot be POINTER, ALLOCATABLE");
       default:
-        llvm_unreachable("pass by value not handled here");
+        llvm_unreachable("pass by ? not handled here");
         break;
       }
     }
 
     if (caller.getIfIndirectCallSymbol())
-      TODO(loc, "indirect call");
+      fir::emitFatalError(loc, "cannot be indirect call");
     auto funcSym = builder.getSymbolRefAttr(caller.getMangledName());
     auto resTys = caller.getFuncOp().getType().getResults();
     if (caller.getFuncOp().getType().getResults() !=
         caller.genFunctionType().getResults())
-      TODO(loc, "type adaption");
+      fir::emitFatalError(loc, "type mismatch on declared function");
     return [=](IterSpace iters) -> ExtValue {
       llvm::SmallVector<mlir::Value> args;
       for (const auto &cc : operands)
@@ -2206,14 +2211,14 @@ public:
       if (const auto *intrin = procRef.proc().GetSpecificIntrinsic()) {
         // Elemental intrinsic call.
         // The intrinsic procedure is called once per element of the array.
-        return genIntrinsicProcRef(procRef, retTy, *intrin);
+        return genElementalIntrinsicProcRef(procRef, retTy, *intrin);
       }
       if (ScalarExprLowering::isStatementFunctionCall(procRef))
         fir::emitFatalError(loc, "statement function cannot be elemental");
 
       // Elemental call.
       // The procedure is called once per element of the array argument(s).
-      return genUDProcRef(procRef, retTy);
+      return genElementalUserDefinedProcRef(procRef, retTy);
     }
 
     // Transformational call.
@@ -2685,14 +2690,12 @@ public:
       return [=](IterSpace iters) -> ExtValue {
         auto arrFetch = builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd,
                                                           iters.iterVec());
-        auto exv =
-            arrayElementToExtendedValue(builder, loc, extMemref, arrFetch);
-        auto base = fir::getBase(exv);
+        auto base = arrFetch.getResult();
         auto temp = builder.createTemporary(
             loc, base.getType(),
             llvm::ArrayRef<mlir::NamedAttribute>{getAdaptToByRefAttr()});
         builder.create<fir::StoreOp>(loc, base, temp);
-        return temp;
+        return arrayElementToExtendedValue(builder, loc, extMemref, temp);
       };
     return [=](IterSpace iters) -> ExtValue {
       auto arrFetch =
@@ -2957,17 +2960,6 @@ public:
   }
 
 private:
-  struct PushSemant {
-    PushSemant(ConstituentSemantics newVal, ConstituentSemantics &oldVal)
-        : ref{oldVal} {
-      saved = oldVal;
-      oldVal = newVal;
-    }
-    ~PushSemant() { ref = saved; }
-    ConstituentSemantics saved;
-    ConstituentSemantics &ref;
-  };
-
   explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
                              Fortran::lower::StatementContext &stmtCtx,
                              Fortran::lower::SymMap &symMap,
