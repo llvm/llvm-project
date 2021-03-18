@@ -1820,15 +1820,18 @@ void VarLocBasedLDV::recordEntryValue(const MachineInstr &MI,
 static bool isSwiftAsyncContext(const MachineInstr &MI) {
   const llvm::MachineFunction *MF = MI.getParent()->getParent();
   const llvm::Function &F = MF->getFunction();
-  if (F.arg_size() != 3 || !F.hasParamAttribute(2, Attribute::SwiftAsync))
+  if (F.getCallingConv() != CallingConv::SwiftTail)
     return false;
   unsigned Reg = isDbgValueDescribedByReg(MI);
   if (!Reg)
     return false;
   auto &EntryMBB = MF->front();
-  for (auto R : EntryMBB.liveins())
-    if (R.PhysReg == Reg)
+  unsigned I = 0;
+  for (auto R : EntryMBB.liveins()) {
+    if (R.PhysReg == Reg && F.hasParamAttribute(I, Attribute::SwiftAsync))
       return true;
+    ++I;
+  }
   return false;
 }
 
