@@ -14,16 +14,16 @@ define i32 @test_minmax_i32(i32 %a, i32 %b, i32 %c) {
   ret i32 %sminmax
 }
 
-; TODO: GlobalISel: Don't use v_maxmin for scalar inputs.
 define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 addrspace(1)* inreg %out) {
 ; SDAG-LABEL: s_test_minmax_i32:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    s_max_i32 s0, s0, s1
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_min_i32 s0, s0, s2
 ; SDAG-NEXT:    s_mov_b32 s5, s4
+; SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
-; SDAG-NEXT:    v_maxmin_i32 v0, s0, s1, v0
-; SDAG-NEXT:    global_store_b32 v1, v0, s[4:5]
+; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_test_minmax_i32:
@@ -110,12 +110,13 @@ define i32 @test_minmax_u32(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %c, i32 addrspace(1)* inreg %out) {
 ; SDAG-LABEL: s_test_minmax_u32:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; SDAG-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-NEXT:    s_max_u32 s0, s0, s1
+; SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-NEXT:    s_min_u32 s0, s0, s2
 ; SDAG-NEXT:    s_mov_b32 s5, s4
+; SDAG-NEXT:    v_mov_b32_e32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
-; SDAG-NEXT:    v_maxmin_u32 v0, s0, s1, v0
-; SDAG-NEXT:    global_store_b32 v1, v0, s[4:5]
+; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_test_minmax_u32:

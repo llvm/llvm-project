@@ -2557,7 +2557,8 @@ def : FPMed3Pat<f32, V_MED3_F32_e64>;
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
              SDPatternOperator max_or_min_oneuse> : AMDGPUPat <
-  (min_or_max (max_or_min_oneuse i32:$src0, i32:$src1), i32:$src2),
+  (DivergentBinFrag<min_or_max> (max_or_min_oneuse i32:$src0, i32:$src1),
+                                i32:$src2),
   (minmaxInst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
 >;
 
