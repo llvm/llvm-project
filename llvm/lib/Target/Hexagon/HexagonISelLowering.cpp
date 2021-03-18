@@ -308,6 +308,8 @@ Register HexagonTargetLowering::getRegisterByName(
                      .Case("m1", Hexagon::M1)
                      .Case("usr", Hexagon::USR)
                      .Case("ugp", Hexagon::UGP)
+                     .Case("cs0", Hexagon::CS0)
+                     .Case("cs1", Hexagon::CS1)
                      .Default(Register());
   if (Reg)
     return Reg;
