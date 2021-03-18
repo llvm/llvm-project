@@ -647,6 +647,29 @@ void GenerateFlangClauseCheckPrototypes(const DirectiveLanguage &DirLang,
   }
 }
 
+// Generate the mapping for clauses between the parser class and the
+// corresponding clause Kind
+void GenerateFlangClauseParserKindMap(const DirectiveLanguage &DirLang,
+                                      raw_ostream &OS) {
+
+  IfDefScope Scope("GEN_FLANG_CLAUSE_PARSER_KIND_MAP", OS);
+
+  OS << "\n";
+  for (const auto &C : DirLang.getClauses()) {
+    Clause Clause{C};
+    OS << "if constexpr (std::is_same_v<A, parser::"
+       << DirLang.getFlangClauseBaseClass()
+       << "::" << Clause.getFormattedParserClassName();
+    OS << ">)\n";
+    OS << "  return llvm::" << DirLang.getCppNamespace()
+       << "::Clause::" << DirLang.getClausePrefix() << Clause.getFormattedName()
+       << ";\n";
+  }
+
+  OS << "llvm_unreachable(\"Invalid " << DirLang.getName()
+     << " Parser clause\");\n";
+}
+
 // Generate the implementation section for the enumeration in the directive
 // language
 void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
@@ -665,6 +688,8 @@ void EmitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
   GenerateFlangClauseUnparse(DirLang, OS);
 
   GenerateFlangClauseCheckPrototypes(DirLang, OS);
+
+  GenerateFlangClauseParserKindMap(DirLang, OS);
 }
 
 void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
