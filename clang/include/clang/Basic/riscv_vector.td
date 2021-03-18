@@ -169,6 +169,12 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // parameter of the unmasked version. k can't be the mask operand's position.
   list<int> IntrinsicTypes = [];
 
+  // When the order of the parameters of clang builtin do not match the order of
+  // C/C++ api, we use permutation index to mapping the operand from clang
+  // builtin to C/C++. It is parameter of the unmasked version without VL
+  // operand. If empty, the default permutation is [0, 1, 2, ...].
+  list<int> PermuteOperands = [];
+
   // If these names are not empty, this is the ID of the LLVM intrinsic
   // we want to lower to.
   string IRName = NAME;
@@ -204,6 +210,55 @@ multiclass RVVBinBuiltinSet<string intrinsic_name, string type_range,
   }
 }
 
+class IsFloat<string type> {
+  bit val = !or(!eq(type, "h"), !eq(type, "f"), !eq(type, "d"));
+}
+
+multiclass RVVVLEBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vle",
+      IRNameMask ="vle_mask",
+      HasGeneric = false,
+      ManualCodegen = [{
+        IntrinsicTypes = {ResultType, Ops[1]->getType()};
+        Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
+      }],
+      ManualCodegenMask= [{
+        IntrinsicTypes = {ResultType, Ops[3]->getType()};
+        Ops[1] = Builder.CreateBitCast(Ops[1], ResultType->getPointerTo());
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "vPCe", type>;
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "UvPCUe", type>;
+      }
+    }
+  }
+}
+
+multiclass RVVVSEBuiltin<list<string> types> {
+  let Name = NAME # "_v",
+      IRName = "vse",
+      IRNameMask = "vse_mask",
+      HasMaskedOffOperand = false,
+      PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
+      HasGeneric = false,
+      ManualCodegen = [{
+        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
+      }],
+      ManualCodegenMask= [{
+        Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
+        IntrinsicTypes = {Ops[0]->getType(), Ops[3]->getType()};
+      }] in {
+    foreach type = types in {
+      def : RVVBuiltin<"v", "0vPe", type>;
+      if !not(IsFloat<type>.val) then {
+        def : RVVBuiltin<"Uv", "0UvPUe", type>;
+      }
+    }
+  }
+}
 
 // 6. Configuration-Setting Instructions
 // 6.1. vsetvli/vsetvl instructions
@@ -277,6 +332,18 @@ let HasVL = false,
 }] in
   def vsetvlimax : RVVBuiltin<"", "zKzKz", "i">;
 }
+
+// 7. Vector Loads and Stores
+// 7.4. Vector Unit-Stride Instructions
+defm vle8: RVVVLEBuiltin<["c"]>;
+defm vle16: RVVVLEBuiltin<["s"]>;
+defm vle32: RVVVLEBuiltin<["i","f"]>;
+defm vle64: RVVVLEBuiltin<["l","d"]>;
+
+defm vse8 : RVVVSEBuiltin<["c"]>;
+defm vse16: RVVVSEBuiltin<["s"]>;
+defm vse32: RVVVSEBuiltin<["i","f"]>;
+defm vse64: RVVVSEBuiltin<["l","d"]>;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
