@@ -135,6 +135,8 @@ int main(int argc, const char **argv) {
   if (!Compiler.hasDiagnostics())
     return 1;
 
+  // Suppress "2 errors generated" or similar messages
+  Compiler.getDiagnosticOpts().ShowCarets = false;
   Compiler.createSourceManager(Files);
 
   ASTSrcLocGenerationAction ScopedToolAction;
