@@ -862,16 +862,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   if (getToken().isNot(Token::string))
     return (emitError("expected dialect namespace"), nullptr);
 
-  auto name = getToken().getStringValue();
-  // Lazy load a dialect in the context if there is a possible namespace.
-  Dialect *dialect = builder.getContext()->getOrLoadDialect(name);
-
-  // TODO: Allow for having an unknown dialect on an opaque
-  // attribute. Otherwise, it can't be roundtripped without having the dialect
-  // registered.
-  if (!dialect)
-    return (emitError("no registered dialect with namespace '" + name + "'"),
-            nullptr);
+  std::string name = getToken().getStringValue();
   consumeToken(Token::string);
 
   if (parseToken(Token::comma, "expected ','"))
@@ -888,7 +879,7 @@ Attribute Parser::parseOpaqueElementsAttr(Type attrType) {
   std::string data;
   if (parseElementAttrHexValues(*this, hexTok, data))
     return nullptr;
-  return OpaqueElementsAttr::get(dialect, type, data);
+  return OpaqueElementsAttr::get(builder.getIdentifier(name), type, data);
 }
 
 /// Shaped type for elements attribute.

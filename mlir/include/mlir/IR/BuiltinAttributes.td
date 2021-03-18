@@ -22,7 +22,8 @@ include "mlir/IR/BuiltinDialect.td"
 // to this file instead.
 
 // Base class for Builtin dialect attributes.
-class Builtin_Attr<string name> : AttrDef<Builtin_Dialect, name> {
+class Builtin_Attr<string name, string baseCppClass = "::mlir::Attribute">
+    : AttrDef<Builtin_Dialect, name, baseCppClass> {
   let mnemonic = ?;
 }
 
@@ -128,6 +129,151 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DenseIntOrFPElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_DenseIntOrFPElementsAttr
+    : Builtin_Attr<"DenseIntOrFPElements", "DenseElementsAttr"> {
+  let summary = "An Attribute containing a dense multi-dimensional array of "
+                "integer or floating-point values";
+  let description = [{
+    Syntax:
+
+    ```
+    dense-intorfloat-elements-attribute ::= `dense` `<` attribute-value `>` `:`
+                                            ( tensor-type | vector-type )
+    ```
+
+    A dense int-or-float elements attribute is an elements attribute containing
+    a densely packed vector or tensor of integer or floating-point values. The
+    element type of this attribute is required to be either an `IntegerType` or
+    a `FloatType`.
+
+    Examples:
+
+    ```
+    // A splat tensor of integer values.
+    dense<10> : tensor<2xi32>
+    // A tensor of 2 float32 elements.
+    dense<[10.0, 11.0]> : tensor<2xf32>
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
+                        "ArrayRef<char>":$rawData);
+  let extraClassDeclaration = [{
+    /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
+    /// the elements of `inRawData` has `type`. If `inRawData` is little endian
+    /// (LE), it is converted to big endian (BE). Conversely, if `inRawData` is
+    /// BE, converted to LE.
+    static void
+    convertEndianOfArrayRefForBEmachine(ArrayRef<char> inRawData,
+                                        MutableArrayRef<char> outRawData,
+                                        ShapedType type);
+
+    /// Convert endianess of input for big-endian(BE) machines. The number of
+    /// elements of `inRawData` is `numElements`, and each element has
+    /// `elementBitWidth` bits. If `inRawData` is little endian (LE), it is
+    /// converted to big endian (BE) and saved in `outRawData`. Conversely, if
+    /// `inRawData` is BE, converted to LE.
+    static void convertEndianOfCharForBEmachine(const char *inRawData,
+                                                char *outRawData,
+                                                size_t elementBitWidth,
+                                                size_t numElements);
+
+  protected:
+    friend DenseElementsAttr;
+
+    /// Constructs a dense elements attribute from an array of raw APFloat
+    /// values. Each APFloat value is expected to have the same bitwidth as the
+    /// element type of 'type'. 'type' must be a vector or tensor with static
+    /// shape.
+    static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                    ArrayRef<APFloat> values, bool isSplat);
+
+    /// Constructs a dense elements attribute from an array of raw APInt values.
+    /// Each APInt value is expected to have the same bitwidth as the element
+    /// type of 'type'. 'type' must be a vector or tensor with static shape.
+    static DenseElementsAttr getRaw(ShapedType type, size_t storageWidth,
+                                    ArrayRef<APInt> values, bool isSplat);
+
+    /// Get or create a new dense elements attribute instance with the given raw
+    /// data buffer. 'type' must be a vector or tensor with static shape.
+    static DenseElementsAttr getRaw(ShapedType type, ArrayRef<char> data,
+                                    bool isSplat);
+
+    /// Overload of the raw 'get' method that asserts that the given type is of
+    /// complex type. This method is used to verify type invariants that the
+    /// templatized 'get' method cannot.
+    static DenseElementsAttr getRawComplex(ShapedType type, ArrayRef<char> data,
+                                           int64_t dataEltSize, bool isInt,
+                                           bool isSigned);
+
+    /// Overload of the raw 'get' method that asserts that the given type is of
+    /// integer or floating-point type. This method is used to verify type
+    /// invariants that the templatized 'get' method cannot.
+    static DenseElementsAttr getRawIntOrFloat(ShapedType type,
+                                              ArrayRef<char> data,
+                                              int64_t dataEltSize, bool isInt,
+                                              bool isSigned);
+
+  public:
+  }];
+  let genAccessors = 0;
+  let genStorageClass = 0;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DenseStringElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_DenseStringElementsAttr
+    : Builtin_Attr<"DenseStringElements", "DenseElementsAttr"> {
+  let summary = "An Attribute containing a dense multi-dimensional array of "
+                "strings";
+  let description = [{
+    Syntax:
+
+    ```
+    dense-string-elements-attribute ::= `dense` `<` attribute-value `>` `:`
+                                        ( tensor-type | vector-type )
+    ```
+
+    A dense string elements attribute is an elements attribute containing a
+    densely packed vector or tensor of string values. There are no restrictions
+    placed on the element type of this attribute, enabling the use of dialect
+    specific string types.
+
+    Examples:
+
+    ```
+    // A splat tensor of strings.
+    dense<"example"> : tensor<2x!foo.string>
+    // A tensor of 2 string elements.
+    dense<["example1", "example2"]> : tensor<2x!foo.string>
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
+                        "ArrayRef<StringRef>":$value);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "ShapedType":$type,
+                                        "ArrayRef<StringRef>":$values), [{
+      return $_get(type.getContext(), type, values,
+                   /* isSplat */(values.size() == 1));
+    }]>,
+  ];
+  let extraClassDeclaration = [{
+  protected:
+    friend DenseElementsAttr;
+
+  public:
+  }];
+  let genAccessors = 0;
+  let genStorageClass = 0;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
@@ -221,6 +367,147 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FloatAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_FloatAttr : Builtin_Attr<"Float"> {
+  let summary = "An Attribute containing a floating-point value";
+  let description = [{
+    Syntax:
+
+    ```
+    float-attribute ::= (float-literal (`:` float-type)?)
+                      | (hexadecimal-literal `:` float-type)
+    ```
+
+    A float attribute is a literal attribute that represents a floating point
+    value of the specified [float type](#floating-point-types). It can be
+    represented in the hexadecimal form where the hexadecimal value is
+    interpreted as bits of the underlying binary representation. This form is
+    useful for representing infinity and NaN floating point values. To avoid
+    confusion with integer attributes, hexadecimal literals _must_ be followed
+    by a float type to define a float attribute.
+
+    Examples:
+
+    ```
+    42.0         // float attribute defaults to f64 type
+    42.0 : f32   // float attribute of f32 type
+    0x7C00 : f16 // positive infinity
+    0x7CFF : f16 // NaN (one of possible values)
+    42 : f32     // Error: expected integer type
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        APFloatParameter<"">:$value);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const APFloat &":$value), [{
+      return $_get(type.getContext(), type, value);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type, "double":$value), [{
+      if (type.isF64())
+        return $_get(type.getContext(), type, APFloat(value));
+
+      // This handles, e.g., F16 because there is no APFloat constructor for it.
+      bool unused;
+      APFloat val(value);
+      val.convert(type.cast<FloatType>().getFloatSemantics(),
+                  APFloat::rmNearestTiesToEven, &unused);
+      return $_get(type.getContext(), type, val);
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    using ValueType = APFloat;
+
+    /// This function is used to convert the value to a double, even if it loses
+    /// precision.
+    double getValueAsDouble() const;
+    static double getValueAsDouble(APFloat val);
+  }];
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
+  let summary = "An Attribute containing a integer value";
+  let description = [{
+    Syntax:
+
+    ```
+    integer-attribute ::= (integer-literal ( `:` (index-type | integer-type) )?)
+                          | `true` | `false`
+    ```
+
+    An integer attribute is a literal attribute that represents an integral
+    value of the specified integer or index type. `i1` integer attributes are
+    treated as `boolean` attributes, and use a unique assembly format of either
+    `true` or `false` depending on the value. The default type for non-boolean
+    integer attributes, if a type is not specified, is signless 64-bit integer.
+
+    Examples:
+
+    ```mlir
+    10 : i32
+    10    // : i64 is implied here.
+    true  // A bool, i.e. i1, value.
+    false // A bool, i.e. i1, value.
+    ```
+  }];
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type,
+                                        "const APInt &":$value), [{
+      if (type.isSignlessInteger(1))
+        return BoolAttr::get(type.getContext(), value.getBoolValue());
+      return $_get(type.getContext(), type, value);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Type":$type, "int64_t":$value), [{
+      // `index` has a defined internal storage width.
+      if (type.isIndex()) {
+        APInt apValue(IndexType::kInternalStorageBitWidth, value);
+        return $_get(type.getContext(), type, apValue);
+      }
+
+      IntegerType intTy = type.cast<IntegerType>();
+      APInt apValue(intTy.getWidth(), value, intTy.isSignedInteger());
+      return $_get(type.getContext(), type, apValue);
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    using ValueType = APInt;
+
+    /// Return the integer value as a 64-bit int. The attribute must be a
+    /// signless integer.
+    // TODO: Change callers to use getValue instead.
+    int64_t getInt() const;
+    /// Return the integer value as a signed 64-bit int. The attribute must be
+    /// a signed integer.
+    int64_t getSInt() const;
+    /// Return the integer value as a unsigned 64-bit int. The attribute must be
+    /// an unsigned integer.
+    uint64_t getUInt() const;
+
+  private:
+    /// Return a boolean attribute. This is a special variant of the `get`
+    /// method that is used by the MLIRContext to cache the boolean IntegerAttr
+    /// instances.
+    static BoolAttr getBoolAttrUnchecked(IntegerType type, bool value);
+
+    /// Allow access to `getBoolAttrUnchecked`.
+    friend MLIRContext;
+
+  public:
+  }];
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // IntegerSetAttr
 //===----------------------------------------------------------------------===//
 
@@ -282,8 +569,212 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
       return $_get(dialect.getContext(), dialect, attrData, type);
     }]>
   ];
-  bit genVerifyDecl = 1;
-  // let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// OpaqueElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_OpaqueElementsAttr
+    : Builtin_Attr<"OpaqueElements", "ElementsAttr"> {
+  let summary = "An opaque representation of a multi-dimensional array";
+  let description = [{
+    Syntax:
+
+    ```
+    opaque-elements-attribute ::= `opaque` `<` dialect-namespace  `,`
+                                  hex-string-literal `>` `:`
+                                  ( tensor-type | vector-type )
+    ```
+
+    An opaque elements attribute is an elements attribute where the content of
+    the value is opaque. The representation of the constant stored by this
+    elements attribute is only understood, and thus decodable, by the dialect
+    that created it.
+
+    Note: The parsed string literal must be in hexadecimal form.
+
+    Examples:
+
+    ```mlir
+    opaque<"foo_dialect", "0xDEADBEEF"> : tensor<10xi32>
+    ```
+  }];
+
+  // TODO: Provide a way to avoid copying content of large opaque
+  // tensors This will likely require a new reference attribute kind.
+  let parameters = (ins "Identifier":$dialect,
+                        StringRefParameter<"">:$value,
+                        AttributeSelfTypeParameter<"", "ShapedType">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Identifier":$dialect,
+                                        "ShapedType":$type,
+                                        "StringRef":$value), [{
+      return $_get(dialect.getContext(), dialect, value, type);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "Dialect *":$dialect,
+                                        "ShapedType":$type,
+                                        "StringRef":$value), [{
+      MLIRContext *ctxt = dialect->getContext();
+      Identifier dialectName = Identifier::get(dialect->getNamespace(), ctxt);
+      return $_get(ctxt, dialectName, value, type);
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    using ValueType = StringRef;
+
+    /// Return the value at the given index. The 'index' is expected to refer to
+    /// a valid element.
+    Attribute getValue(ArrayRef<uint64_t> index) const;
+
+    /// Decodes the attribute value using dialect-specific decoding hook.
+    /// Returns false if decoding is successful. If not, returns true and leaves
+    /// 'result' argument unspecified.
+    bool decode(ElementsAttr &result);
+
+  }];
+  let genVerifyDecl = 1;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SparseElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_SparseElementsAttr
+    : Builtin_Attr<"SparseElements", "ElementsAttr"> {
+  let summary = "An opaque representation of a multi-dimensional array";
+  let description = [{
+    Syntax:
+
+    ```
+    sparse-elements-attribute ::= `sparse` `<` attribute-value `,`
+                                  attribute-value `>` `:`
+                                  ( tensor-type | vector-type )
+    ```
+
+    A sparse elements attribute is an elements attribute that represents a
+    sparse vector or tensor object. This is where very few of the elements are
+    non-zero.
+
+    The attribute uses COO (coordinate list) encoding to represent the sparse
+    elements of the elements attribute. The indices are stored via a 2-D tensor
+    of 64-bit integer elements with shape [N, ndims], which specifies the
+    indices of the elements in the sparse tensor that contains non-zero values.
+    The element values are stored via a 1-D tensor with shape [N], that supplies
+    the corresponding values for the indices.
+
+    Example:
+
+    ```mlir
+    sparse<[[0, 0], [1, 2]], [1, 5]> : tensor<3x4xi32>
+
+    // This represents the following tensor:
+    ///  [[1, 0, 0, 0],
+    ///   [0, 0, 5, 0],
+    ///   [0, 0, 0, 0]]
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
+                        "DenseIntElementsAttr":$indices,
+                        "DenseElementsAttr":$values);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "ShapedType":$type,
+                                        "DenseElementsAttr":$indices,
+                                        "DenseElementsAttr":$values), [{
+      assert(indices.getType().getElementType().isInteger(64) &&
+             "expected sparse indices to be 64-bit integer values");
+      assert((type.isa<RankedTensorType, VectorType>()) &&
+             "type must be ranked tensor or vector");
+      assert(type.hasStaticShape() && "type must have static shape");
+      return $_get(type.getContext(), type,
+                   indices.cast<DenseIntElementsAttr>(), values);
+    }]>,
+  ];
+  let extraClassDeclaration = [{
+    template <typename T>
+    using iterator =
+        llvm::mapped_iterator<llvm::detail::value_sequence_iterator<ptrdiff_t>,
+                              std::function<T(ptrdiff_t)>>;
+
+    /// Return the values of this attribute in the form of the given type 'T'.
+    /// 'T'  may be any of Attribute, APInt, APFloat, c++ integer/float types,
+    /// etc.
+    template <typename T> llvm::iterator_range<iterator<T>> getValues() const;
+
+    /// Return the value of the element at the given index. The 'index' is
+    /// expected to refer to a valid element.
+    Attribute getValue(ArrayRef<uint64_t> index) const;
+
+  private:
+    /// Get a zero APFloat for the given sparse attribute.
+    APFloat getZeroAPFloat() const;
+
+    /// Get a zero APInt for the given sparse attribute.
+    APInt getZeroAPInt() const;
+
+    /// Get a zero attribute for the given sparse attribute.
+    Attribute getZeroAttr() const;
+
+    /// Utility methods to generate a zero value of some type 'T'. This is used
+    /// by the 'iterator' class.
+    /// Get a zero for a given attribute type.
+    template <typename T>
+    typename std::enable_if<std::is_base_of<Attribute, T>::value, T>::type
+    getZeroValue() const {
+      return getZeroAttr().template cast<T>();
+    }
+    /// Get a zero for an APInt.
+    template <typename T>
+    typename std::enable_if<std::is_same<APInt, T>::value, T>::type
+    getZeroValue() const {
+      return getZeroAPInt();
+    }
+    template <typename T>
+    typename std::enable_if<std::is_same<std::complex<APInt>, T>::value,
+                            T>::type
+    getZeroValue() const {
+      APInt intZero = getZeroAPInt();
+      return {intZero, intZero};
+    }
+    /// Get a zero for an APFloat.
+    template <typename T>
+    typename std::enable_if<std::is_same<APFloat, T>::value, T>::type
+    getZeroValue() const {
+      return getZeroAPFloat();
+    }
+    template <typename T>
+    typename std::enable_if<std::is_same<std::complex<APFloat>, T>::value,
+                            T>::type
+    getZeroValue() const {
+      APFloat floatZero = getZeroAPFloat();
+      return {floatZero, floatZero};
+    }
+
+    /// Get a zero for an C++ integer, float, StringRef, or complex type.
+    template <typename T>
+    typename std::enable_if<
+        std::numeric_limits<T>::is_integer ||
+            DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
+            std::is_same<T, StringRef>::value ||
+            (detail::is_complex_t<T>::value &&
+             !llvm::is_one_of<T, std::complex<APInt>,
+                              std::complex<APFloat>>::value),
+        T>::type
+    getZeroValue() const {
+      return T();
+    }
+
+    /// Flatten, and return, all of the sparse indices in this attribute in
+    /// row-major order.
+    std::vector<ptrdiff_t> getFlattenedSparseIndices() const;
+
+  public:
+  }];
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//
