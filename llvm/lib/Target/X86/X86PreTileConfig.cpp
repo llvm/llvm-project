@@ -1,4 +1,4 @@
-//===-- X86PreTileConfig.cpp - Tile Register Configure---------------------===//
+//===-- X86PreTileConfig.cpp - Tile Register Pre-configure-----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -87,10 +87,10 @@ public:
 char X86PreTileConfig::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
-                      "Tile Register Configure", false, false)
+                      "Tile Register Pre-configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
 INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
-                    "Tile Register Configure", false, false)
+                    "Tile Register Pre-configure", false, false)
 
 void X86PreTileConfig::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
