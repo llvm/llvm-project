@@ -1130,4 +1130,32 @@ void suppression_3(int cond, void (^callback)(void) CALLED_ONCE) {
   }
 }
 
+- (void)test_escape_before_branch:(int)cond
+                   withCompletion:(void (^)(void))handler {
+  if (cond) {
+    filler();
+  }
+
+  void (^copiedHandler)(void) = ^{
+    handler();
+  };
+
+  if (cond) {
+    // no-warning
+    handler();
+  } else {
+    copiedHandler();
+  }
+}
+
+- (void)test_escape_after_branch:(int)cond
+                  withCompletion:(void (^)(void))handler {
+  if (cond) {
+    // no-warning
+    handler();
+  }
+
+  escape(handler);
+}
+
 @end
