@@ -31,6 +31,34 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.reset_test_sequence()
         return threads
 
+    def send_and_check_signal(self, vCont_data, threads):
+        self.test_sequence.add_log_lines([
+            "read packet: $vCont;{0}#00".format(vCont_data),
+            {"type": "output_match",
+             "regex": self.maybe_strict_output_regex(
+                 len(threads) *
+                 r"received SIGUSR1 on thread id: ([0-9a-f]+)\r\n"),
+             "capture": dict((i, "tid{0}".format(i)) for i
+                             in range(1, len(threads)+1)),
+             },
+        ], True)
+
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        tids = sorted(int(context["tid{0}".format(x)], 16)
+                      for x in range(1, len(threads)+1))
+        self.assertEqual(tids, sorted(threads))
+
+    @expectedFailureNetBSD
+    def test_signal_process_without_tid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}".format(lldbutil.get_signal_number('SIGUSR1')),
+            threads)
+
     @skipUnlessPlatform(["netbsd"])
     @expectedFailureNetBSD
     def test_signal_one_thread(self):
@@ -39,16 +67,10 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         threads = self.start_threads(1)
         # try sending a signal to one of the two threads
-        self.test_sequence.add_log_lines([
-            "read packet: $vCont;C{0:x}:{1:x};c#00".format(
-                lldbutil.get_signal_number('SIGUSR1'), threads[0]),
-            {"direction": "send", "regex": r"^\$W00#b7$"},
-        ], True)
+        self.send_and_check_signal(
+            "C{0:x}:{1:x};c".format(lldbutil.get_signal_number('SIGUSR1')),
+            threads[:1])
 
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
-
-    @skipUnlessPlatform(["netbsd"])
     @expectedFailureNetBSD
     def test_signal_all_threads(self):
         self.build()
@@ -56,15 +78,11 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         threads = self.start_threads(1)
         # try sending a signal to two threads (= the process)
-        self.test_sequence.add_log_lines([
-            "read packet: $vCont;C{0:x}:{1:x};C{0:x}:{2:x}#00".format(
+        self.send_and_check_signal(
+            "C{0:x}:{1:x};C{0:x}:{2:x}".format(
                 lldbutil.get_signal_number('SIGUSR1'),
-                threads[0], threads[1]),
-            {"direction": "send", "regex": r"^\$W00#b7$"},
-        ], True)
-
-        context = self.expect_gdbremote_sequence()
-        self.assertIsNotNone(context)
+                *threads),
+            threads)
 
     @skipUnlessPlatform(["netbsd"])
     def test_signal_two_of_three_threads(self):
