@@ -1388,8 +1388,8 @@ private:
 Error markAllSymbolsLive(LinkGraph &G);
 
 /// Create an out of range error for the given edge in the given block.
-Error makeTargetOutOfRangeError(const Block &B, const Edge &E,
-                                const char *(*getEdgeKindName)(Edge::Kind));
+Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
+                                const Edge &E);
 
 /// Create a LinkGraph from the given object buffer.
 ///
