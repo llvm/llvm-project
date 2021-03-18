@@ -282,7 +282,11 @@ const char *getLinkageName(Linkage L);
 ///   Default -- Visible in the public interface of the linkage unit.
 ///   Hidden -- Visible within the linkage unit, but not exported from it.
 ///   Local -- Visible only within the LinkGraph.
-enum class Scope : uint8_t { Default, Hidden, Local };
+enum class Scope : uint8_t {
+  Default,
+  Hidden,
+  Local
+};
 
 /// For debugging output.
 const char *getScopeName(Scope S);
