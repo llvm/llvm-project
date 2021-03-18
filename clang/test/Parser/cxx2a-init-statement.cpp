@@ -31,4 +31,12 @@ void f() {
 
   for (int n = 0; static int m = 0; ++n) {} // expected-error {{type name does not allow storage class}}
   for (int n = 0; static int m : arr1) {} // expected-error {{loop variable 'm' may not be declared 'static'}}
+
+  // The init-statement and range are not break / continue scopes. (But the body is.)
+  for (int n = ({ break; 0; }); int m : arr1) {} // expected-error {{not in loop}}
+  for (int n = ({ continue; 0; }); int m : arr1) {} // expected-error {{not in loop}}
+  for (int arr[3]; int n : *({ break; &arr; })) {} // expected-error {{not in loop}}
+  for (int arr[3]; int n : *({ continue; &arr; })) {} // expected-error {{not in loop}}
+  for (int n = 0; int m : arr1) { break; }
+  for (int n = 0; int m : arr1) { continue; }
 }
