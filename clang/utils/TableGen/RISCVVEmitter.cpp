@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -162,7 +163,8 @@ public:
                StringRef IRName, bool HasSideEffects, bool IsMask,
                bool HasMaskedOffOperand, bool HasVL, bool HasGeneric,
                bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
-               const std::vector<int64_t> &IntrinsicTypes);
+               const std::vector<int64_t> &IntrinsicTypes,
+               const std::vector<int64_t> &PermuteOperands);
   ~RVVIntrinsic() = default;
 
   StringRef getName() const { return Name; }
@@ -644,7 +646,8 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            bool HasMaskedOffOperand, bool HasVL,
                            bool HasGeneric, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
-                           const std::vector<int64_t> &NewIntrinsicTypes)
+                           const std::vector<int64_t> &NewIntrinsicTypes,
+                           const std::vector<int64_t> &PermuteOperands)
     : IRName(IRName), HasSideEffects(HasSideEffects),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
       HasGeneric(HasGeneric), HasAutoDef(HasAutoDef),
@@ -677,6 +680,29 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   InputTypes.assign(OutInTypes.begin() + 1, OutInTypes.end());
   CTypeOrder.resize(InputTypes.size());
   std::iota(CTypeOrder.begin(), CTypeOrder.end(), 0);
+  // Update default order if we need permutate.
+  if (!PermuteOperands.empty()) {
+    // PermuteOperands is nonmasked version index. Update index when there is
+    // maskedoff operand which is always in first operand.
+
+    unsigned Skew = HasMaskedOffOperand ? 1 : 0;
+    for (unsigned i = 0; i < PermuteOperands.size(); ++i) {
+      if (i != PermuteOperands[i])
+        CTypeOrder[i] = PermuteOperands[i] + Skew;
+    }
+    // Verify the result of CTypeOrder has legal value.
+    if (*std::max_element(CTypeOrder.begin(), CTypeOrder.end()) >=
+        CTypeOrder.size())
+      PrintFatalError(
+          "The index of PermuteOperand is bigger than the operand number");
+    SmallSet<unsigned, 8> Seen;
+    for (auto Idx : CTypeOrder) {
+      if (!Seen.insert(Idx).second)
+        PrintFatalError(
+            "The different element in PermuteOperand could not be equal");
+    }
+  }
+
   if (IsMask) {
     if (HasVL)
       // Builtin type order: op0, op1, ..., mask, vl
@@ -945,6 +971,8 @@ void RVVEmitter::createRVVIntrinsics(
     StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
+    std::vector<int64_t> PermuteOperands =
+        R->getValueAsListOfInts("PermuteOperands");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
 
@@ -993,7 +1021,8 @@ void RVVEmitter::createRVVIntrinsics(
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasGeneric,
-            HasAutoDef, ManualCodegen, Types.getValue(), IntrinsicTypes));
+            HasAutoDef, ManualCodegen, Types.getValue(), IntrinsicTypes,
+            PermuteOperands));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -1002,7 +1031,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasGeneric,
               HasAutoDef, ManualCodegenMask, MaskTypes.getValue(),
-              IntrinsicTypes));
+              IntrinsicTypes, PermuteOperands));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
