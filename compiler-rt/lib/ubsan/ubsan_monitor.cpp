@@ -54,7 +54,7 @@ void __ubsan::__ubsan_get_current_report_data(const char **OutIssueKind,
   // lowercase letter.
   char FirstChar = *Buf.data();
   if (FirstChar >= 'a' && FirstChar <= 'z')
-    *const_cast<char *>(Buf.data()) += 'A' - 'a';
+    *Buf.data() += 'A' - 'a';
 
   *OutIssueKind = CurrentUBR->IssueKind;
   *OutMessage = Buf.data();
