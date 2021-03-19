@@ -951,11 +951,9 @@ define i32 @func_25(i32 %start) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
 ; CHECK:       checked.1:
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 [[IV]], 0
-; CHECK-NEXT:    br i1 [[C2]], label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK-NEXT:    br i1 true, label [[CHECKED_2:%.*]], label [[FAIL]]
 ; CHECK:       checked.2:
-; CHECK-NEXT:    [[C3:%.*]] = icmp ne i32 [[IV]], 0
-; CHECK-NEXT:    br i1 [[C3]], label [[BACKEDGE]], label [[FAIL]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
@@ -1003,11 +1001,9 @@ define i32 @func_26(i32 %start) {
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[C1]], label [[CHECKED_1:%.*]], label [[FAIL:%.*]]
 ; CHECK:       checked.1:
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[IV]], 1
-; CHECK-NEXT:    br i1 [[C2]], label [[CHECKED_2:%.*]], label [[FAIL]]
+; CHECK-NEXT:    br i1 true, label [[CHECKED_2:%.*]], label [[FAIL]]
 ; CHECK:       checked.2:
-; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[IV]], 2
-; CHECK-NEXT:    br i1 [[C3]], label [[BACKEDGE]], label [[FAIL]]
+; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAIL]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 758394
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = call i1 @cond_func()
