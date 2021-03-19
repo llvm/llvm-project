@@ -38,7 +38,7 @@
 ///             |         |         | EFFECTIVE ADDRESS
 ///  x  x  x  x |   REG   | OP MODE |   MODE  |   REG
 /// ----------------------------------------------------
-class MxArithEncoding<MxBead4Bits CMD, MxEncOpMode OPMODE, MxBeadReg REG,
+class MxArithEncoding<MxBead4Bits CMD, MxEncOpMode OPMODE, MxBead REG,
                       MxEncEA EA, MxEncExt EXT>
     : MxEncoding<EA.Reg, EA.DA, EA.Mode, OPMODE.B0, OPMODE.B1, OPMODE.B2, REG,
                  CMD,EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>;
@@ -53,7 +53,7 @@ class MxArithEncoding<MxBead4Bits CMD, MxEncOpMode OPMODE, MxBeadReg REG,
 /// Ry - source
 /// M  - address mode switch
 class MxArithXEncoding<MxBead4Bits CMD, MxEncSize SIZE, MxBead1Bit MODE,
-                       MxBeadReg SRC, MxBeadReg DST>
+                       MxBeadDReg SRC, MxBeadDReg DST>
     : MxEncoding<SRC, MODE, MxBead2Bits<0b00>, SIZE, MxBead1Bit<0b1>, DST, CMD>;
 
 /// Encoding for Immediate forms
@@ -88,13 +88,13 @@ let Defs = [CCR] in {
 let Constraints = "$src = $dst" in {
 
 // $reg, $ccr <- $reg op $reg
-class MxBiArOp_RFRR_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
+class MxBiArOp_RFRR_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD, MxBead REG>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.ROp:$opd),
            MN#"."#TYPE.Prefix#"\t$opd, $dst",
            [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
            MxArithEncoding<MxBead4Bits<CMD>,
                            !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                           MxBeadReg<0>,
+                           REG,
                            !cast<MxEncEA>("MxEncEA"#TYPE.RLet#"_2"),
                            MxExtEmpty>>;
 
@@ -110,7 +110,7 @@ class MxBiArOp_RFRR_EAd<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
            [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
            MxArithEncoding<MxBead4Bits<CMD>,
                            !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EAd"),
-                           MxBeadReg<2>, MxEncEAd_0, MxExtEmpty>>;
+                           MxBeadDReg<2>, MxEncEAd_0, MxExtEmpty>>;
 
 // $reg <- $reg op $imm
 class MxBiArOp_RFRI_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
@@ -119,7 +119,7 @@ class MxBiArOp_RFRI_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
               [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))],
               MxArithEncoding<MxBead4Bits<CMD>,
                               !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                              MxBeadReg<0>, MxEncEAi,
+                              MxBeadDReg<0>, MxEncEAi,
                               !cast<MxEncExt>("MxExtI"#TYPE.Size#"_2")>>;
 
 // Again, there are two ways to write an immediate to Dn register either dEA
@@ -141,7 +141,7 @@ class MxBiArOp_RFRM<string MN, SDNode NODE, MxType TYPE, MxOperand OPD, ComplexP
            [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, (TYPE.Load PAT:$opd)))],
            MxArithEncoding<MxBead4Bits<CMD>,
                            !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                           MxBeadReg<0>, EA, EXT>>;
+                           MxBeadDReg<0>, EA, EXT>>;
 
 } // Constraints
 
@@ -157,7 +157,7 @@ class MxBiArOp_FMR<string MN, SDNode NODE, MxType TYPE,
         [],
         MxArithEncoding<MxBead4Bits<CMD>,
                         !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EA"#TYPE.RLet),
-                        MxBeadReg<1>, EA, EXT>>;
+                        MxBeadDReg<1>, EA, EXT>>;
 
 class MxBiArOp_FMI<string MN, SDNode NODE, MxType TYPE,
                    MxOperand MEMOpd, ComplexPattern MEMPat,
@@ -262,9 +262,9 @@ multiclass MxBiArOp_DF<string MN, SDNode NODE, bit isComm,
 
   let isCommutable = isComm in {
 
-    def NAME#"8dd"  : MxBiArOp_RFRR_xEA<MN, NODE, MxType8d,  CMD>;
-    def NAME#"16dd" : MxBiArOp_RFRR_xEA<MN, NODE, MxType16d, CMD>;
-    def NAME#"32dd" : MxBiArOp_RFRR_xEA<MN, NODE, MxType32d, CMD>;
+    def NAME#"8dd"  : MxBiArOp_RFRR_xEA<MN, NODE, MxType8d,  CMD, MxBeadDReg<0>>;
+    def NAME#"16dd" : MxBiArOp_RFRR_xEA<MN, NODE, MxType16d, CMD, MxBeadDReg<0>>;
+    def NAME#"32dd" : MxBiArOp_RFRR_xEA<MN, NODE, MxType32d, CMD, MxBeadDReg<0>>;
 
   } // isComm
 
@@ -291,7 +291,7 @@ multiclass MxBiArOp_AF<string MN, SDNode NODE, bit isComm,
   def NAME#"32ri" : MxBiArOp_RFRI_xEA<MN, NODE, MxType32r, CMD>;
 
   let isCommutable = isComm in
-  def NAME#"32rr" : MxBiArOp_RFRR_xEA<MN, NODE, MxType32r, CMD>;
+  def NAME#"32rr" : MxBiArOp_RFRR_xEA<MN, NODE, MxType32r, CMD, MxBeadReg<0>>;
 
 } // MxBiArOp_AF
 
@@ -313,7 +313,7 @@ class MxBiArOp_RFRRF<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
              [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd, CCR))],
              MxArithXEncoding<MxBead4Bits<CMD>,
                               !cast<MxEncSize>("MxEncSize"#TYPE.Size),
-                              MxBead1Bit<0>, MxBeadReg<2>, MxBeadReg<0>>>;
+                              MxBead1Bit<0>, MxBeadDReg<2>, MxBeadDReg<0>>>;
 
 } // Constraints
 } // Uses, Defs
@@ -372,7 +372,7 @@ class MxCmp_RR<MxType TYPE>
              [(set CCR, (MxCmp TYPE.VT:$lhs, TYPE.VT:$rhs))],
              MxArithEncoding<MxBead4Bits<0xB>,
                              !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"dEA"),
-                             MxBeadReg<1>, MxEncEAd_0, MxExtEmpty>>;
+                             MxBeadDReg<1>, MxEncEAd_0, MxExtEmpty>>;
 
 class MxCmp_RI<MxType TYPE>
     : MxInst<(outs), (ins TYPE.IOp:$imm, TYPE.ROp:$reg),
@@ -412,7 +412,7 @@ class MxCmp_RM<MxType TYPE, MxOperand MEMOpd, ComplexPattern MEMPat,
              [(set CCR, (MxCmp (load MEMPat:$mem), TYPE.ROp:$reg))],
              MxArithEncoding<MxBead4Bits<0xB>,
                              !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"dEA"),
-                             MxBeadReg<0>, EA, EXT>>;
+                             MxBeadDReg<0>, EA, EXT>>;
 } // let mayLoad = 1
 
 } // let Defs = [CCR]
@@ -474,7 +474,7 @@ def MxExtOpmode_lb : MxBead3Bits<0b111>;
 ///  0  1  0  0  1  0  0 |  OPMODE | 0  0  0 |   REG
 /// ---------------------------------------------------
 class MxExtEncoding<MxBead3Bits OPMODE>
-    : MxEncoding<MxBeadReg<0>, MxBead3Bits<0b000>, OPMODE,
+    : MxEncoding<MxBeadDReg<0>, MxBead3Bits<0b000>, OPMODE,
                  MxBead3Bits<0b100>, MxBead4Bits<0b0100>>;
 
 let Defs = [CCR] in
@@ -508,7 +508,7 @@ def MxUDiMuOpmode : MxBead3Bits<0b011>;
 ///  x  x  x  x |   REG   | OP MODE |   MODE  |   REG
 /// ----------------------------------------------------
 class MxDiMuEncoding<MxBead4Bits CMD, MxBead3Bits OPMODE, MxEncEA EA, MxEncExt EXT>
-    : MxEncoding<EA.Reg, EA.DA, EA.Mode, OPMODE, MxBeadReg<0>, CMD,
+    : MxEncoding<EA.Reg, EA.DA, EA.Mode, OPMODE, MxBeadDReg<0>, CMD,
                  EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>;
 
 let Defs = [CCR] in {
