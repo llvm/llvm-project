@@ -65,7 +65,7 @@ void registerTestCallGraphPass();
 void registerTestConstantFold();
 void registerTestConvVectorization();
 void registerTestGpuSerializeToCubinPass();
-void registerTestConvertGPUKernelToHsacoPass();
+void registerTestGpuSerializeToHsacoPass();
 void registerTestDataLayoutQuery();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDialect(DialectRegistry &);
@@ -140,7 +140,7 @@ void registerTestPasses() {
   test::registerTestGpuSerializeToCubinPass();
 #endif
 #if MLIR_ROCM_CONVERSIONS_ENABLED
-  test::registerTestConvertGPUKernelToHsacoPass();
+  test::registerTestGpuSerializeToHsacoPass();
 #endif
   test::registerTestConvVectorization();
   test::registerTestDecomposeCallGraphTypes();

@@ -77,7 +77,6 @@ tools.extend([
     ToolSubst('toy-ch5', unresolved='ignore'),
     ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
-    ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%spirv_wrapper_library_dir', config.spirv_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%mlir_integration_test_dir', config.mlir_integration_test_dir, unresolved='ignore'),
