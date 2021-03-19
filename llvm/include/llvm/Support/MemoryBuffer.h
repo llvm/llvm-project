@@ -82,9 +82,13 @@ public:
   /// \param IsVolatile Set to true to indicate that the contents of the file
   /// can change outside the user's control, e.g. when libclang tries to parse
   /// while the user is editing/updating the file or if the file is on an NFS.
+  ///
+  /// \param IsText Set to true to indicate that the file should be read in
+  /// text mode.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFile(const Twine &Filename, int64_t FileSize = -1,
-          bool RequiresNullTerminator = true, bool IsVolatile = false);
+          bool RequiresNullTerminator = true, bool IsVolatile = false,
+          bool IsText = false);
 
   /// Read all of the specified file into a MemoryBuffer as a stream
   /// (i.e. until EOF reached). This is useful for special files that
@@ -130,7 +134,7 @@ public:
   /// is "-".
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
   getFileOrSTDIN(const Twine &Filename, int64_t FileSize = -1,
-                 bool RequiresNullTerminator = true);
+                 bool RequiresNullTerminator = true, bool IsText = false);
 
   /// Map a subrange of the specified file as a MemoryBuffer.
   static ErrorOr<std::unique_ptr<MemoryBuffer>>
