@@ -13,6 +13,7 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/Matchers.h"
@@ -657,6 +658,53 @@ public:
   }
 };
 
+struct ConcatOpConversion : public OpConversionPattern<tosa::ConcatOp> {
+  using OpConversionPattern<tosa::ConcatOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::ConcatOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resultType = op.getType().dyn_cast<RankedTensorType>();
+    if (!resultType || !resultType.hasStaticShape()) {
+      return rewriter.notifyMatchFailure(op,
+                                         "expected static shaped tensor type");
+    }
+
+    Location loc = op.getLoc();
+    int axis = op.axis();
+    Value axisValue =
+        rewriter.create<ConstantOp>(loc, rewriter.getIndexAttr(axis));
+    int rank = resultType.getRank();
+    SmallVector<Value, 3> offsets, sizes, strides;
+    sizes.reserve(rank);
+    strides.resize(rank, rewriter.create<ConstantIndexOp>(loc, 1));
+    offsets.resize(rank, rewriter.create<ConstantIndexOp>(loc, 0));
+
+    for (int i = 0; i < rank; ++i) {
+      sizes.push_back(rewriter.create<memref::DimOp>(loc, args[0], i));
+    }
+
+    Value resultDimSize = sizes[axis];
+    for (auto arg : args.drop_front()) {
+      auto size = rewriter.create<memref::DimOp>(loc, arg, axisValue);
+      resultDimSize = rewriter.create<AddIOp>(loc, resultDimSize, size);
+    }
+    sizes[axis] = resultDimSize;
+
+    Value result = rewriter.create<linalg::InitTensorOp>(
+        loc, resultType.getShape(), resultType.getElementType());
+
+    for (auto arg : args) {
+      sizes[axis] = rewriter.create<memref::DimOp>(loc, arg, axisValue);
+      result = rewriter.create<SubTensorInsertOp>(loc, arg, result, offsets,
+                                                  sizes, strides);
+      offsets[axis] = rewriter.create<AddIOp>(loc, offsets[axis], sizes[axis]);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -680,6 +728,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityOp>,
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>, ReshapeOpConverter,
-      TransposeConverter>(context);
+      ReduceConverter<tosa::ReduceProdOp>, ConcatOpConversion,
+      ReshapeOpConverter, TransposeConverter>(context);
 }

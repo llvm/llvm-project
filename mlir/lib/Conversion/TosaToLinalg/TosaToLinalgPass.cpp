@@ -14,6 +14,7 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
@@ -31,14 +32,15 @@ struct TosaToLinalgOnTensors
     : public TosaToLinalgOnTensorsBase<TosaToLinalgOnTensors> {
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<linalg::LinalgDialect, math::MathDialect, StandardOpsDialect>();
+    registry.insert<linalg::LinalgDialect, math::MathDialect,
+                    memref::MemRefDialect, StandardOpsDialect>();
   }
 
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     ConversionTarget target(getContext());
-    target.addLegalDialect<linalg::LinalgDialect, StandardOpsDialect>();
+    target.addLegalDialect<linalg::LinalgDialect, memref::MemRefDialect,
+                           StandardOpsDialect>();
     target.addIllegalDialect<tosa::TosaDialect>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
