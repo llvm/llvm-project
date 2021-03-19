@@ -88,6 +88,39 @@ mlir::Location Fortran::lower::CallerInterface::getCalleeLocation() const {
   return converter.genLocation();
 }
 
+// Get dummy argument characteristic for a procedure with implicit interface
+// from the actual argument characteristic. The actual argument may not be a F77
+// entity. The attribute must be dropped and the shape, if any, must be made
+// explicit.
+static Fortran::evaluate::characteristics::DummyDataObject
+asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
+  Fortran::evaluate::Shape shape =
+      dummy.type.attrs().none() ? dummy.type.shape()
+                                : Fortran::evaluate::Shape(dummy.type.Rank());
+  return Fortran::evaluate::characteristics::DummyDataObject(
+      Fortran::evaluate::characteristics::TypeAndShape(dummy.type.type(),
+                                                       std::move(shape)));
+}
+
+static Fortran::evaluate::characteristics::DummyArgument
+asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
+  return std::visit(
+      Fortran::common::visitors{
+          [&](Fortran::evaluate::characteristics::DummyDataObject &obj) {
+            return Fortran::evaluate::characteristics::DummyArgument(
+                std::move(dummy.name), asImplicitArg(std::move(obj)));
+          },
+          [&](Fortran::evaluate::characteristics::DummyProcedure &proc) {
+            return Fortran::evaluate::characteristics::DummyArgument(
+                std::move(dummy.name), std::move(proc));
+          },
+          [](Fortran::evaluate::characteristics::AlternateReturn &x) {
+            return Fortran::evaluate::characteristics::DummyArgument(
+                std::move(x));
+          }},
+      dummy.u);
+}
+
 Fortran::evaluate::characteristics::Procedure
 Fortran::lower::CallerInterface::characterize() const {
   auto &foldingContext = converter.getFoldingContext();
@@ -114,7 +147,7 @@ Fortran::lower::CallerInterface::characterize() const {
         assert(argCharacteristic &&
                "failed to characterize argument in implicit call");
         characteristic->dummyArguments.emplace_back(
-            std::move(*argCharacteristic));
+            asImplicitArg(std::move(*argCharacteristic)));
       }
     }
   }

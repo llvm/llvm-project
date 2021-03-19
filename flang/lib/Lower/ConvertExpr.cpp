@@ -1539,7 +1539,10 @@ public:
 
       auto helper = Fortran::lower::CharacterExprHelper{builder, loc};
       if (arg.passBy == PassBy::BaseAddress) {
-        caller.placeInput(arg, fir::getBase(argRef));
+        auto baseAddr = fir::getBase(argRef);
+        if (baseAddr.getType().isa<fir::BoxType>())
+          TODO(loc, "copy-in copy-out around F77 calls");
+        caller.placeInput(arg, baseAddr);
       } else if (arg.passBy == PassBy::BoxChar) {
         auto boxChar = argRef.match(
             [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
