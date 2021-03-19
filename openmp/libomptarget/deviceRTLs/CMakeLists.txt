@@ -10,5 +10,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-add_subdirectory(amdgcn)
+if (OPENMP_ENABLE_LIBOMPTARGET_HSA)
+  add_subdirectory(amdgcn)
+endif()
 add_subdirectory(nvptx)
