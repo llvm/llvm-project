@@ -10137,6 +10137,11 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS,
                                     const Value *FoundCondValue, bool Inverse,
                                     const Instruction *Context) {
+  // False conditions implies anything. Do not bother analyzing it further.
+  if (FoundCondValue ==
+      ConstantInt::getBool(FoundCondValue->getContext(), Inverse))
+    return true;
+
   if (!PendingLoopPredicates.insert(FoundCondValue).second)
     return false;
 
