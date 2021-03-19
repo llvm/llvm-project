@@ -453,12 +453,9 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                           : nullptr,
                       context, break_id, break_loc_id);
     } else if (IsCallbackSynchronous()) {
-      // If a synchronous callback is called at async time, we will say we
-      // should stop, we're really expression no opinion about stopping, and
-      // the StopInfoBreakpoint::PerformAction will note whether an async
-      // callback had already made a claim to stop or not based on the incoming
-      // values of m_should_stop & m_should_stop_is_valid.
-      return true;
+      // If a synchronous callback is called at async time, it should not say
+      // to stop.
+      return false;
     }
   }
   return true;
