@@ -1,4 +1,4 @@
-//===- rocm-runtime-wrappers.cpp - MLIR ROCM runner wrapper library -------===//
+//===- RocmRuntimeWrappers.cpp - MLIR ROCM runtime wrapper library --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,29 +30,25 @@
     fprintf(stderr, "'%s' failed with '%s'\n", #expr, name);                   \
   }(expr)
 
-// Static reference to HIP primary context for device ordinal 0.
-static hipCtx_t Context = [] {
-  HIP_REPORT_IF_ERROR(hipInit(/*flags=*/0));
-  hipDevice_t device;
-  HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/0));
-  hipCtx_t context;
-  HIP_REPORT_IF_ERROR(hipDevicePrimaryCtxRetain(&context, device));
-  return context;
-}();
-
 // Sets the `Context` for the duration of the instance and restores the previous
 // context on destruction.
 class ScopedContext {
 public:
   ScopedContext() {
-    HIP_REPORT_IF_ERROR(hipCtxGetCurrent(&previous));
-    HIP_REPORT_IF_ERROR(hipCtxSetCurrent(Context));
+    // Static reference to HIP primary context for device ordinal 0.
+    static hipCtx_t context = [] {
+      HIP_REPORT_IF_ERROR(hipInit(/*flags=*/0));
+      hipDevice_t device;
+      HIP_REPORT_IF_ERROR(hipDeviceGet(&device, /*ordinal=*/0));
+      hipCtx_t ctx;
+      HIP_REPORT_IF_ERROR(hipDevicePrimaryCtxRetain(&ctx, device));
+      return ctx;
+    }();
+
+    HIP_REPORT_IF_ERROR(hipCtxPushCurrent(context));
   }
 
-  ~ScopedContext() { HIP_REPORT_IF_ERROR(hipCtxSetCurrent(previous)); }
-
-private:
-  hipCtx_t previous;
+  ~ScopedContext() { HIP_REPORT_IF_ERROR(hipCtxPopCurrent(nullptr)); }
 };
 
 extern "C" hipModule_t mgpuModuleLoad(void *data) {

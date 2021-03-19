@@ -6,6 +6,16 @@ if (MLIR_CUDA_CONVERSIONS_ENABLED)
   )
 endif()
 
+if (MLIR_ROCM_CONVERSIONS_ENABLED)
+  set(AMDGPU_LIBS
+    MCParser
+    AMDGPUAsmParser
+    AMDGPUCodeGen
+    AMDGPUDesc
+    AMDGPUInfo
+  )
+endif()
+
 add_mlir_dialect_library(MLIRGPU
   IR/GPUDialect.cpp
   Transforms/AllReduceLowering.cpp
@@ -15,6 +25,7 @@ add_mlir_dialect_library(MLIRGPU
   Transforms/ParallelLoopMapper.cpp
   Transforms/SerializeToBlob.cpp
   Transforms/SerializeToCubin.cpp
+  Transforms/SerializeToHsaco.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
@@ -23,6 +34,7 @@ add_mlir_dialect_library(MLIRGPU
   Core
   MC
   ${NVPTX_LIBS}
+  ${AMDGPU_LIBS}
 
   DEPENDS
   MLIRGPUOpsIncGen
@@ -82,5 +94,60 @@ if(MLIR_CUDA_RUNNER_ENABLED)
     MLIRNVVMToLLVMIRTranslation
     ${CUDA_DRIVER_LIBRARY}
   )
+
+endif()
+
+if(MLIR_ROCM_RUNNER_ENABLED)
+  if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
+    message(SEND_ERROR
+      "Building mlir with ROCm support requires the AMDGPU backend")
+  endif()
+
+  # Ensure lld is enabled.
+  if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+    message(SEND_ERROR "lld is not enabled. Please revise LLVM_ENABLE_PROJECTS")
+  endif()
+
+  # Configure ROCm support.
+  if (NOT DEFINED ROCM_PATH)
+    if (NOT DEFINED ENV{ROCM_PATH})
+      set(ROCM_PATH "/opt/rocm" CACHE PATH "Path to which ROCm has been installed")
+    else()
+      set(ROCM_PATH $ENV{ROCM_PATH} CACHE PATH "Path to which ROCm has been installed")
+    endif()
+    set(HIP_PATH "${ROCM_PATH}/hip" CACHE PATH " Path to which HIP has been installed")
+  endif()
+  set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+  find_package(HIP)
+  if (NOT HIP_FOUND)
+    message(SEND_ERROR "Building mlir with ROCm support requires a working ROCm and HIP install")
+  else()
+    message(STATUS "ROCm HIP version: ${HIP_VERSION}")
+  endif()
+
+  target_compile_definitions(obj.MLIRGPU
+    PRIVATE
+    __HIP_PLATFORM_HCC__
+    __ROCM_PATH__="${ROCM_PATH}"
+    MLIR_GPU_TO_HSACO_PASS_ENABLE=1
+  )
+
+  target_include_directories(obj.MLIRGPU
+    PRIVATE
+    ${MLIR_SOURCE_DIR}/../lld/include
+    ${HIP_PATH}/include
+    ${ROCM_PATH}/include
+  )
+
+  target_link_libraries(MLIRGPU
+    PRIVATE
+    lldELF
+    MLIRROCDLToLLVMIRTranslation
+  )
+
+  # Link lldELF also to libmlir.so. Create an alias that starts with LLVM
+  # because LINK_COMPONENTS elements are implicitly prefixed with LLVM.
+  add_library(LLVMAliasTolldELF ALIAS lldELF)
+  set_property(GLOBAL APPEND PROPERTY MLIR_LLVM_LINK_COMPONENTS AliasTolldELF)
 
 endif()
