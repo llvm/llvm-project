@@ -1007,7 +1007,7 @@ void macho::createSyntheticSymbols() {
   };
 
   switch (config->outputType) {
-    // FIXME: Assign the right addresse value for these symbols
+    // FIXME: Assign the right address value for these symbols
     // (rather than 0). But we need to do that after assignAddresses().
   case MH_EXECUTE:
     // If linking PIE, __mh_execute_header is a defined symbol in
