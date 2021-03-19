@@ -3032,10 +3032,39 @@ is retained by the return value of the annotated function
 (or, for a parameter of a constructor, in the value of the constructed object).
 It is only supported in C++.
 
-This attribute provides an experimental implementation of the facility
-described in the C++ committee paper `P0936R0 <http://wg21.link/p0936r0>`_,
-and is subject to change as the design of the corresponding functionality
-changes.
+This attribute causes warnings to be produced if a temporary object does not
+live long enough. For example:
+
+.. code-block:: c++
+
+    template<typename T, typename U>
+    const U &get_or_default(std::map<T, U> &m, const T &key,
+                            const U &default_value [[clang::lifetimebound]]);
+
+    std::map<std::string, std::string> m;
+    // warning: temporary "bar"s that might be bound to local reference 'val'
+    // will be destroyed at the end of the full-expression
+    const std::string &val = get_or_default(m, "foo"s, "bar"s);
+
+When applied to a reference parameter, the referenced object is assumed to be
+retained by the return value of the function. When applied to a non-reference
+parameter (for example, a pointer or a class type), all temporaries referenced
+by the parameter are assumed to be retained by the return value of the
+function.
+
+The attribute can be applied to the implicit ``this`` parameter of a member
+function by writing the attribute after the function type:
+
+.. code-block:: c++
+
+    struct string_view {
+      // ...
+      const char *data() const [[clang::lifetimebound]];
+    };
+
+This attribute is inspired by the C++ committee paper `P0936R0
+<http://wg21.link/p0936r0>`_, but does not affect whether temporary objects
+have their lifetimes extended.
   }];
 }
 
