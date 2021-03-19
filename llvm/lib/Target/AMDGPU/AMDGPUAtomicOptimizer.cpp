@@ -497,25 +497,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     // each active lane in the wavefront. This will be our new value which we
     // will provide to the atomic operation.
     Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-    if (TyBitWidth == 64) {
-      Value *const ExtractLo = B.CreateTrunc(NewV, B.getInt32Ty());
-      Value *const ExtractHi =
-          B.CreateTrunc(B.CreateLShr(NewV, 32), B.getInt32Ty());
-      CallInst *const ReadLaneLo = B.CreateIntrinsic(
-          Intrinsic::amdgcn_readlane, {}, {ExtractLo, LastLaneIdx});
-      CallInst *const ReadLaneHi = B.CreateIntrinsic(
-          Intrinsic::amdgcn_readlane, {}, {ExtractHi, LastLaneIdx});
-      Value *const PartialInsert = B.CreateInsertElement(
-          UndefValue::get(VecTy), ReadLaneLo, B.getInt32(0));
-      Value *const Insert =
-          B.CreateInsertElement(PartialInsert, ReadLaneHi, B.getInt32(1));
-      NewV = B.CreateBitCast(Insert, Ty);
-    } else if (TyBitWidth == 32) {
-      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
-                               {NewV, LastLaneIdx});
-    } else {
-      llvm_unreachable("Unhandled atomic bit width");
-    }
+    assert(TyBitWidth == 32);
+    NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {}, {NewV, LastLaneIdx});
 
     // Finally mark the readlanes in the WWM section.
     NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
