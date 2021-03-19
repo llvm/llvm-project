@@ -1267,12 +1267,14 @@ private:
         continue;
       }
       mlir::CmpIPredicate pred;
-      if (attr.isa<fir::PointIntervalAttr>())
+      if (attr.isa<fir::PointIntervalAttr>()) {
         pred = mlir::CmpIPredicate::eq;
-      else if (attr.isa<fir::LowerBoundAttr>())
+      } else if (attr.isa<fir::LowerBoundAttr>()) {
         pred = mlir::CmpIPredicate::sge;
-      else if (attr.isa<fir::UpperBoundAttr>())
+      } else {
+        assert(attr.isa<fir::UpperBoundAttr>() && "unexpected predicate");
         pred = mlir::CmpIPredicate::sle;
+      }
       auto cond = genCond(*caseValue++, pred);
       genFIRConditionalBranch(cond, *caseBlock++, newBlock);
       builder->setInsertionPointToEnd(newBlock);
