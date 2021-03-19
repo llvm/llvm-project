@@ -78,9 +78,9 @@ def : SysReg<"uip", 0x044>;
 // User Floating-Point CSRs
 //===--------------------------
 
-def FFLAGS : SysReg<"fflags", 0x001>;
-def FRM    : SysReg<"frm", 0x002>;
-def FCSR   : SysReg<"fcsr", 0x003>;
+def SysRegFFLAGS : SysReg<"fflags", 0x001>;
+def SysRegFRM    : SysReg<"frm", 0x002>;
+def SysRegFCSR   : SysReg<"fcsr", 0x003>;
 
 //===--------------------------
 // User Counter/Timers
