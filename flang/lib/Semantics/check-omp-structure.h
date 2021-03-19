@@ -73,6 +73,9 @@ static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
+static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
+    Directive::OMPD_ordered, Directive::OMPD_atomic, Directive::OMPD_task,
+    Directive::OMPD_taskloop};
 static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
