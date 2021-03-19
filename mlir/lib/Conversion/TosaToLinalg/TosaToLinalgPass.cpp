@@ -42,6 +42,13 @@ public:
     target.addLegalDialect<linalg::LinalgDialect, memref::MemRefDialect,
                            StandardOpsDialect>();
     target.addIllegalDialect<tosa::TosaDialect>();
+
+    // Not every TOSA op can be legalized to linalg.
+    target.addLegalOp<tosa::ApplyScaleOp>();
+    target.addLegalOp<tosa::IfOp>();
+    target.addLegalOp<tosa::ConstOp>();
+    target.addLegalOp<tosa::WhileOp>();
+
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FuncOp func = getFunction();
