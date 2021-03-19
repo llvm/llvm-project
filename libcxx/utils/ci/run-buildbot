@@ -402,35 +402,23 @@ aarch64-noexceptions)
 # Aka Armv8 32 bit
 armv8)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8.cmake" \
-    -DCMAKE_CXX_FLAGS="-marm" \
-    -DCMAKE_C_FLAGS="-marm"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv8-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8.cmake" \
-    -DCMAKE_CXX_FLAGS="-mthumb" \
-    -DCMAKE_C_FLAGS="-mthumb" \
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7.cmake" \
-    -DCMAKE_CXX_FLAGS="-marm" \
-    -DCMAKE_C_FLAGS="-marm"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv7-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7.cmake" \
-    -DCMAKE_CXX_FLAGS="-mthumb" \
-    -DCMAKE_C_FLAGS="-mthumb" \
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 *)

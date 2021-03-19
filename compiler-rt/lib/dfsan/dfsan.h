@@ -48,6 +48,10 @@ void dfsan_clear_thread_local_state();
 // from the address addr.
 dfsan_origin dfsan_read_origin_of_first_taint(const void *addr, uptr size);
 
+// Set the data within [addr, addr+size) with label and origin.
+void dfsan_set_label_origin(dfsan_label label, dfsan_origin origin, void *addr,
+                            uptr size);
+
 // Copy or move the origins of the len bytes from src to dst.
 void dfsan_mem_origin_transfer(const void *dst, const void *src, uptr len);
 }  // extern "C"

@@ -44,7 +44,6 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) {
 ; CHECK-NEXT:    lsr.l #8, %d0
 ; CHECK-NEXT:    lsr.w #1, %d0
 ; CHECK-NEXT:    and.l #65535, %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    rts
 entry:
   %div = udiv i8 %c, 3

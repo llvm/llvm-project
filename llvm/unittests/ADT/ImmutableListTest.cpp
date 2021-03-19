@@ -245,7 +245,6 @@ TEST_F(ImmutableListTest, LongListOrderingTest) {
   int i = 0;
   for (ImmutableList<Wrapper<long>>::iterator I = L.begin(), E = L.end();
        I != E; ++I) {
-    ASSERT_EQ(i, *I);
     i++;
   }
   ASSERT_EQ(0, i);

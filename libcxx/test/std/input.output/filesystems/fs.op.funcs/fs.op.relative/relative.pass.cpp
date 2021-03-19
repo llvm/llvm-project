@@ -95,7 +95,17 @@ TEST_CASE(test_signature_9) {
   static_test_env static_env;
   fs::path p(static_env.SymlinkToDir / "dir2/../dir2/DNE/..");
   const fs::path output = fs::weakly_canonical(p);
+  // weakly_canonical has a quirk - if the path is considered to exist,
+  // it's returned without a trailing slash, otherwise it's returned with
+  // one (see a note in fs.op.weakly_canonical/weakly_canonical.pass.cpp).
+  // On Windows, a path like existent/nonexistentsubdir/.. is considered
+  // to exist, on posix it's considered to not exist. Therefore, the
+  // result here differs in the trailing slash.
+#ifdef _WIN32
+  TEST_CHECK(output == fs::path::string_type(static_env.Dir2));
+#else
   TEST_CHECK(output == fs::path::string_type(static_env.Dir2 / ""));
+#endif
 }
 
 TEST_CASE(test_signature_10) {
