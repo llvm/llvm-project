@@ -32,7 +32,7 @@
 /// ------------+---------+---------+---------+---------
 ///  0  0  0  0 |   REG   | 1  0  0 |   MODE  |   REG
 /// ------------+---------+---------+---------+---------
-class MxBTSTEnc_R<MxBeadReg REG, MxEncEA EA, MxEncExt EXT>
+class MxBTSTEnc_R<MxBeadDReg REG, MxEncEA EA, MxEncExt EXT>
     : MxEncoding<EA.Reg, EA.DA, EA.Mode, MxBead3Bits<0b100>, REG, MxBead4Bits<0b0000>,
                  EXT.Imm, EXT.B8, EXT.Scale, EXT.WL, EXT.DAReg>;
 
@@ -52,7 +52,7 @@ let Defs = [CCR] in {
 class MxBTST_RR<MxType TYPE>
     : MxInst<(outs), (ins TYPE.ROp:$dst, TYPE.ROp:$bitno), "btst\t$bitno, $dst",
              [(set CCR, (MxBt TYPE.VT:$dst, TYPE.VT:$bitno))],
-             MxBTSTEnc_R<MxBeadReg<1>, MxEncEAd_0, MxExtEmpty>>;
+             MxBTSTEnc_R<MxBeadDReg<1>, MxEncEAd_0, MxExtEmpty>>;
 
 class MxBTST_RI<MxType TYPE>
     : MxInst<(outs), (ins TYPE.ROp:$dst, TYPE.IOp:$bitno), "btst\t$bitno, $dst",
@@ -63,7 +63,7 @@ class MxBTST_MR<MxType TYPE, MxOperand MEMOpd, ComplexPattern MEMPat,
                 MxEncEA EA, MxEncExt EXT>
     : MxInst<(outs), (ins MEMOpd:$dst, TYPE.ROp:$bitno), "btst\t$bitno, $dst",
              [(set CCR, (MxBt (TYPE.Load MEMPat:$dst), TYPE.VT:$bitno))],
-             MxBTSTEnc_R<MxBeadReg<1>, EA, EXT>>;
+             MxBTSTEnc_R<MxBeadDReg<1>, EA, EXT>>;
 
 class MxBTST_MI<MxType TYPE, MxOperand MEMOpd, ComplexPattern MEMPat,
                 MxEncEA EA, MxEncExt EXT>

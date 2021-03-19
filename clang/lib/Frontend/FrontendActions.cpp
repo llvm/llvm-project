@@ -795,7 +795,7 @@ void PreprocessOnlyAction::ExecuteAction() {
 void PrintPreprocessedAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   // Output file may need to be set to 'Binary', to avoid converting Unix style
-  // line feeds (<LF>) to Microsoft style line feeds (<CR><LF>).
+  // line feeds (<LF>) to Microsoft style line feeds (<CR><LF>) on Windows.
   //
   // Look to see what type of line endings the file uses. If there's a
   // CRLF, then we won't open the file up in binary mode. If there is
@@ -807,30 +807,35 @@ void PrintPreprocessedAction::ExecuteAction() {
   // all of their source code on a single line. However, that is still a
   // concern, so if we scan for too long, we'll just assume the file should
   // be opened in binary mode.
-  bool BinaryMode = true;
-  const SourceManager& SM = CI.getSourceManager();
-  if (llvm::Optional<llvm::MemoryBufferRef> Buffer =
-          SM.getBufferOrNone(SM.getMainFileID())) {
-    const char *cur = Buffer->getBufferStart();
-    const char *end = Buffer->getBufferEnd();
-    const char *next = (cur != end) ? cur + 1 : end;
 
-    // Limit ourselves to only scanning 256 characters into the source
-    // file.  This is mostly a sanity check in case the file has no
-    // newlines whatsoever.
-    if (end - cur > 256) end = cur + 256;
+  bool BinaryMode = false;
+  if (llvm::Triple(LLVM_HOST_TRIPLE).isOSWindows()) {
+    BinaryMode = true;
+    const SourceManager &SM = CI.getSourceManager();
+    if (llvm::Optional<llvm::MemoryBufferRef> Buffer =
+            SM.getBufferOrNone(SM.getMainFileID())) {
+      const char *cur = Buffer->getBufferStart();
+      const char *end = Buffer->getBufferEnd();
+      const char *next = (cur != end) ? cur + 1 : end;
 
-    while (next < end) {
-      if (*cur == 0x0D) {  // CR
-        if (*next == 0x0A)  // CRLF
-          BinaryMode = false;
+      // Limit ourselves to only scanning 256 characters into the source
+      // file.  This is mostly a sanity check in case the file has no
+      // newlines whatsoever.
+      if (end - cur > 256)
+        end = cur + 256;
 
-        break;
-      } else if (*cur == 0x0A)  // LF
-        break;
+      while (next < end) {
+        if (*cur == 0x0D) {  // CR
+          if (*next == 0x0A) // CRLF
+            BinaryMode = false;
 
-      ++cur;
-      ++next;
+          break;
+        } else if (*cur == 0x0A) // LF
+          break;
+
+        ++cur;
+        ++next;
+      }
     }
   }
 
