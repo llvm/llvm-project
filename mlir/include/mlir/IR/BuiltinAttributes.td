@@ -406,7 +406,7 @@ def Builtin_FloatAttr : Builtin_Attr<"Float"> {
       return $_get(type.getContext(), type, value);
     }]>,
     AttrBuilderWithInferredContext<(ins "Type":$type, "double":$value), [{
-      if (type.isF64())
+      if (type.isF64() || !type.isa<FloatType>())
         return $_get(type.getContext(), type, APFloat(value));
 
       // This handles, e.g., F16 because there is no APFloat constructor for it.
