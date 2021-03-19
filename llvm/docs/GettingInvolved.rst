@@ -157,7 +157,8 @@ writing, the following sync-ups are organized:
      - 
    * - Scalable Vectors and Arm SVE
      - Monthly, every 3rd Tuesday
-     - 
+     - `ics <https://calendar.google.com/calendar/ical/bjms39pe6k6bo5egtsp7don414%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0/embed?src=bjms39pe6k6bo5egtsp7don414@group.calendar.google.com>`__
      - `Minutes/docs <https://docs.google.com/document/d/1UPH2Hzou5RgGT8XfO39OmVXKEibWPfdYLELSaHr3xzo/edit>`__
    * - ML Guided Compiler Optimizations
      - Monthly
