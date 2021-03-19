@@ -299,16 +299,16 @@ int fallthrough_placement_error(int n) {
 int fallthrough_targets(int n) {
   [[clang::fallthrough]]; // expected-error{{fallthrough annotation is outside switch statement}}
 
-  [[clang::fallthrough]]  // expected-error{{fallthrough attribute is only allowed on empty statements}}
+  [[clang::fallthrough]]  // expected-error{{'fallthrough' attribute only applies to empty statements}}
   switch (n) {
     case 121:
       n += 400;
       [[clang::fallthrough]]; // no warning here, correct target
     case 123:
-      [[clang::fallthrough]]  // expected-error{{fallthrough attribute is only allowed on empty statements}}
+      [[clang::fallthrough]]  // expected-error{{'fallthrough' attribute only applies to empty statements}}
       n += 800;
       break;
-    [[clang::fallthrough]]    // expected-error{{fallthrough attribute is only allowed on empty statements}} expected-note{{did you forget ';'?}}
+    [[clang::fallthrough]]    // expected-error{{'fallthrough' attribute is only allowed on empty statements}} expected-note{{did you forget ';'?}}
     case 125:
       n += 1600;
   }
