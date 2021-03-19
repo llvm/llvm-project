@@ -1190,9 +1190,9 @@ def OpenCLKernel : InheritableAttr {
 
 def OpenCLUnrollHint : StmtAttr {
   let Spellings = [GNU<"opencl_unroll_hint">];
-//  let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
-//                             ErrorDiag, "'for', 'while', and 'do' statements">;
-  let Args = [UnsignedArgument<"UnrollHint">];
+  let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
+                             ErrorDiag, "'for', 'while', and 'do' statements">;
+  let Args = [UnsignedArgument<"UnrollHint", /*opt*/1>];
   let Documentation = [OpenCLUnrollHintDocs];
 }
 
@@ -1333,7 +1333,10 @@ def FallThrough : StmtAttr {
   let Spellings = [CXX11<"", "fallthrough", 201603>,
                    C2x<"", "fallthrough", 201904>,
                    CXX11<"clang", "fallthrough">, GCC<"fallthrough">];
-//  let Subjects = [NullStmt];
+  // The attribute only applies to a NullStmt, but we have special fix-it
+  // behavior if applied to a case label.
+  let Subjects = SubjectList<[NullStmt, SwitchCase], ErrorDiag,
+                             "empty statements">;
   let Documentation = [FallthroughDocs];
 }
 
@@ -1351,7 +1354,8 @@ def NoMerge : DeclOrStmtAttr {
   let Spellings = [Clang<"nomerge">];
   let Documentation = [NoMergeDocs];
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function], ErrorDiag, "functions and statements">;
+  let Subjects = SubjectList<[Function, Stmt], ErrorDiag,
+                             "functions and statements">;
   let SimpleHandler = 1;
 }
 
@@ -3534,6 +3538,7 @@ def LoopHint : Attr {
   }];
 
   let Documentation = [LoopHintDocs, UnrollHintDocs];
+  let HasCustomParsing = 1;
 }
 
 def CapturedRecord : InheritableAttr {

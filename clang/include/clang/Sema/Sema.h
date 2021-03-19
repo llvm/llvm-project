@@ -4273,6 +4273,13 @@ public:
 
   void checkUnusedDeclAttributes(Declarator &D);
 
+  /// Handles semantic checking for features that are common to all attributes,
+  /// such as checking whether a parameter was properly specified, or the
+  /// correct number of arguments were passed, etc. Returns true if the
+  /// attribute has been diagnosed.
+  bool checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A);
+  bool checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A);
+
   /// Map any API notes provided for this declaration to attributes on the
   /// declaration.
   ///
