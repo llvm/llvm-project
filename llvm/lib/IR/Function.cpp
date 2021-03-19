@@ -726,30 +726,34 @@ void Function::recalculateIntrinsicID() {
 /// which can't be confused with it's prefix.  This ensures we don't have
 /// collisions between two unrelated function types. Otherwise, you might
 /// parse ffXX as f(fXX) or f(fX)X.  (X is a placeholder for any other type.)
-///
-static std::string getMangledTypeStr(Type* Ty) {
+/// The HasUnnamedType boolean is set if an unnamed type was encountered,
+/// indicating that extra care must be taken to ensure a unique name.
+static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   std::string Result;
   if (PointerType* PTyp = dyn_cast<PointerType>(Ty)) {
     Result += "p" + utostr(PTyp->getAddressSpace()) +
-      getMangledTypeStr(PTyp->getElementType());
+              getMangledTypeStr(PTyp->getElementType(), HasUnnamedType);
   } else if (ArrayType* ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
-      getMangledTypeStr(ATyp->getElementType());
+              getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);
   } else if (StructType *STyp = dyn_cast<StructType>(Ty)) {
     if (!STyp->isLiteral()) {
       Result += "s_";
-      Result += STyp->getName();
+      if (STyp->hasName())
+        Result += STyp->getName();
+      else
+        HasUnnamedType = true;
     } else {
       Result += "sl_";
       for (auto Elem : STyp->elements())
-        Result += getMangledTypeStr(Elem);
+        Result += getMangledTypeStr(Elem, HasUnnamedType);
     }
     // Ensure nested structs are distinguishable.
     Result += "s";
   } else if (FunctionType *FT = dyn_cast<FunctionType>(Ty)) {
-    Result += "f_" + getMangledTypeStr(FT->getReturnType());
+    Result += "f_" + getMangledTypeStr(FT->getReturnType(), HasUnnamedType);
     for (size_t i = 0; i < FT->getNumParams(); i++)
-      Result += getMangledTypeStr(FT->getParamType(i));
+      Result += getMangledTypeStr(FT->getParamType(i), HasUnnamedType);
     if (FT->isVarArg())
       Result += "vararg";
     // Ensure nested function types are distinguishable.
@@ -759,7 +763,7 @@ static std::string getMangledTypeStr(Type* Ty) {
     if (EC.isScalable())
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
-              getMangledTypeStr(VTy->getElementType());
+              getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -789,15 +793,30 @@ StringRef Intrinsic::getName(ID id) {
   return IntrinsicNameTable[id];
 }
 
-std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
-  assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  assert((Tys.empty() || Intrinsic::isOverloaded(id)) &&
+std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys, Module *M,
+                               FunctionType *FT) {
+  assert(Id < num_intrinsics && "Invalid intrinsic ID!");
+  assert((Tys.empty() || Intrinsic::isOverloaded(Id)) &&
          "This version of getName is for overloaded intrinsics only");
-  std::string Result(IntrinsicNameTable[id]);
+  bool HasUnnamedType = false;
+  std::string Result(IntrinsicNameTable[Id]);
   for (Type *Ty : Tys) {
-    Result += "." + getMangledTypeStr(Ty);
+    Result += "." + getMangledTypeStr(Ty, HasUnnamedType);
+  }
+  assert((M || !HasUnnamedType) && "unnamed types need a module");
+  if (M && HasUnnamedType) {
+    if (!FT)
+      FT = getType(M->getContext(), Id, Tys);
+    else
+      assert((FT == getType(M->getContext(), Id, Tys)) &&
+             "Provided FunctionType must match arguments");
+    return M->getUniqueIntrinsicName(Result, Id, FT);
   }
   return Result;
+}
+
+std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys) {
+  return getName(Id, Tys, nullptr, nullptr);
 }
 
 /// IIT_Info - These are enumerators that describe the entries returned by the
@@ -1259,8 +1278,10 @@ bool Intrinsic::isLeaf(ID id) {
 Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
+  auto *FT = getType(M->getContext(), id, Tys);
   return cast<Function>(
-      M->getOrInsertFunction(Tys.empty() ? getName(id) : getName(id, Tys),
+      M->getOrInsertFunction(Tys.empty() ? getName(id)
+                                         : getName(id, Tys, M, FT),
                              getType(M->getContext(), id, Tys))
           .getCallee());
 }
@@ -1573,7 +1594,8 @@ Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
 
   Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
-  if (Name == Intrinsic::getName(ID, ArgTys))
+  if (Name ==
+      Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType()))
     return None;
 
   auto NewDecl = Intrinsic::getDeclaration(F->getParent(), ID, ArgTys);

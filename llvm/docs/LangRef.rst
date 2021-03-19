@@ -3392,9 +3392,10 @@ Opaque Structure Types
 
 :Overview:
 
-Opaque structure types are used to represent named structure types that
+Opaque structure types are used to represent structure types that
 do not have a body specified. This corresponds (for example) to the C
-notion of a forward declared structure.
+notion of a forward declared structure. They can be named (``%X``) or
+unnamed (``%52``).
 
 :Syntax:
 
@@ -11506,6 +11507,15 @@ functions such as ``i8 @llvm.ctpop.i8(i8 %val)`` and
 overloaded, and only one type suffix is required. Because the argument's
 type is matched against the return type, it does not require its own
 name suffix.
+
+:ref:`Unnamed types <t_opaque>` are encoded as ``s_s``. Overloaded intrinsics
+that depend on an unnamed type in one of its overloaded argument types get an
+additional ``.<number>`` suffix. This allows differentiating intrinsics with
+different unnamed types as arguments. (For example:
+``llvm.ssa.copy.p0s_s.2(%42*)``) The number is tracked in the LLVM module and
+it ensures unique names in the module. While linking together two modules, it is
+still possible to get a name clash. In that case one of the names will be
+changed by getting a new number.
 
 For target developers who are defining intrinsics for back-end code
 generation, any intrinsic overloads based solely the distinction between
