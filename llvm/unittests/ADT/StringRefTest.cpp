@@ -646,12 +646,8 @@ TEST(StringRefTest, getAsInteger) {
       ASSERT_TRUE(U32Success);
     }
     bool U64Success = StringRef(Unsigned[i].Str).getAsInteger(0, U64);
-    if (static_cast<uint64_t>(Unsigned[i].Expected) == Unsigned[i].Expected) {
-      ASSERT_FALSE(U64Success);
-      EXPECT_EQ(U64, Unsigned[i].Expected);
-    } else {
-      ASSERT_TRUE(U64Success);
-    }
+    ASSERT_FALSE(U64Success);
+    EXPECT_EQ(U64, Unsigned[i].Expected);
   }
 
   int8_t S8;
@@ -682,12 +678,8 @@ TEST(StringRefTest, getAsInteger) {
       ASSERT_TRUE(S32Success);
     }
     bool S64Success = StringRef(Signed[i].Str).getAsInteger(0, S64);
-    if (static_cast<int64_t>(Signed[i].Expected) == Signed[i].Expected) {
-      ASSERT_FALSE(S64Success);
-      EXPECT_EQ(S64, Signed[i].Expected);
-    } else {
-      ASSERT_TRUE(S64Success);
-    }
+    ASSERT_FALSE(S64Success);
+    EXPECT_EQ(S64, Signed[i].Expected);
   }
 }
 
@@ -828,14 +820,9 @@ TEST(StringRefTest, consumeIntegerUnsigned) {
 
     Str = ConsumeUnsigned[i].Str;
     bool U64Success = Str.consumeInteger(0, U64);
-    if (static_cast<uint64_t>(ConsumeUnsigned[i].Expected) ==
-        ConsumeUnsigned[i].Expected) {
-      ASSERT_FALSE(U64Success);
-      EXPECT_EQ(U64, ConsumeUnsigned[i].Expected);
-      EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
-    } else {
-      ASSERT_TRUE(U64Success);
-    }
+    ASSERT_FALSE(U64Success);
+    EXPECT_EQ(U64, ConsumeUnsigned[i].Expected);
+    EXPECT_EQ(Str, ConsumeUnsigned[i].Leftover);
   }
 }
 
@@ -881,14 +868,9 @@ TEST(StringRefTest, consumeIntegerSigned) {
 
     Str = ConsumeSigned[i].Str;
     bool S64Success = Str.consumeInteger(0, S64);
-    if (static_cast<int64_t>(ConsumeSigned[i].Expected) ==
-        ConsumeSigned[i].Expected) {
-      ASSERT_FALSE(S64Success);
-      EXPECT_EQ(S64, ConsumeSigned[i].Expected);
-      EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
-    } else {
-      ASSERT_TRUE(S64Success);
-    }
+    ASSERT_FALSE(S64Success);
+    EXPECT_EQ(S64, ConsumeSigned[i].Expected);
+    EXPECT_EQ(Str, ConsumeSigned[i].Leftover);
   }
 }
 
