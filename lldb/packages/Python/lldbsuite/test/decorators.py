@@ -620,8 +620,18 @@ def skipUnlessWindows(func):
 
 
 def skipUnlessDarwin(func):
-    """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
+    """Decorate the item to skip tests that should be skipped on any non-Darwin platform."""
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
+
+def skipUnlessFoundation(func):
+    """Decorate the item to skip tests that should be skipped on any non-Foundation platform."""
+    # FIXME: This is just an alias for Darwin and is consistent with Swift's test suite.
+    return skipUnlessDarwin(func)
+
+def skipUnlessObjCInterop(func):
+    """Decorate the item to skip tests that should be skipped on any non-Objective-C platform."""
+    # FIXME: This is just an alias for Darwin and is consistent with Swift's test suite.
+    return skipUnlessDarwin(func)
 
 def skipUnlessTargetAndroid(func):
     return unittest2.skipUnless(lldbplatformutil.target_is_android(),

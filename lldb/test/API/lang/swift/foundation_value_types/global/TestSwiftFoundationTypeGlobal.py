@@ -13,6 +13,7 @@ class TestSwiftFoundationValueTypeGlobal(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
+    @skipUnlessFoundation
     def test(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact())

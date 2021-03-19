@@ -30,6 +30,7 @@ class TestSwiftUnknownReference(lldbtest.TestBase):
 
     
     @swiftTest
+    @skipUnlessFoundation
     def test_unknown_objc_ref(self):
         """Test unknown references to Objective-C objects."""
         self.build()
