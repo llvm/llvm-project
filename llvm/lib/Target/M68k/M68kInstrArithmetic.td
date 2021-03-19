@@ -522,7 +522,7 @@ class MxDiMuOp_DD<string MN, bits<4> CMD, MxBead3Bits OPMODE,
 // $reg <- $reg op $imm
 class MxDiMuOp_DI<string MN, bits<4> CMD, MxBead3Bits OPMODE,
                   MxOperand DST, MxOperand OPD>
-    : MxInst<(outs DST:$dst), (ins DST:$src, unknown:$opd), MN#"\t$opd, $dst", [],
+    : MxInst<(outs DST:$dst), (ins DST:$src, OPD:$opd), MN#"\t$opd, $dst", [],
              MxDiMuEncoding<MxBead4Bits<CMD>, OPMODE, MxEncEAi, MxExtI16_2>>;
 } // let Constraints
 } // Defs = [CCR]
@@ -544,6 +544,12 @@ multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
 }
 
 defm DIV : MxDiMuOp<"div", 0x8>;
+
+// This is used to cast immediates to 16-bits for operations which don't
+// support smaller immediate sizes.
+def as_i16imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+}]>;
 
 // RR i8
 def : Pat<(sdiv i8:$dst, i8:$opd),
@@ -591,22 +597,22 @@ def : Pat<(urem i16:$dst, i16:$opd),
 // RI i8
 def : Pat<(sdiv i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
-            (SDIVd32i16 (MOVSXd32d8 $dst), imm:$opd),
+            (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(udiv i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
-            (UDIVd32i16 (MOVZXd32d8 $dst), imm:$opd),
+            (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(srem i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
-            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d8 $dst), imm:$opd), 8), 8),
+            (ASR32di (ASR32di (SDIVd32i16 (MOVSXd32d8 $dst), (as_i16imm $opd)), 8), 8),
              MxSubRegIndex8Lo)>;
 
 def : Pat<(urem i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
-            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d8 $dst), imm:$opd), 8), 8),
+            (LSR32di (LSR32di (UDIVd32i16 (MOVZXd32d8 $dst), (as_i16imm $opd)), 8), 8),
              MxSubRegIndex8Lo)>;
 
 // RI i16
