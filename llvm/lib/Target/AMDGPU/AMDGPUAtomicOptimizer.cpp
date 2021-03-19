@@ -287,10 +287,6 @@ Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
       Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
-  Function *PermLaneX16 =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_permlanex16, {});
-  Function *ReadLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
 
   for (unsigned Idx = 0; Idx < 4; Idx++) {
     V = buildNonAtomicBinOp(
@@ -317,9 +313,9 @@ Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
 
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
-    Value *const PermX =
-        B.CreateCall(PermLaneX16, {V, V, B.getInt32(-1), B.getInt32(-1),
-                                   B.getFalse(), B.getFalse()});
+    Value *const PermX = B.CreateIntrinsic(
+        Intrinsic::amdgcn_permlanex16, {},
+        {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
     V = buildNonAtomicBinOp(
         B, Op, V,
         B.CreateCall(UpdateDPP,
@@ -327,7 +323,8 @@ Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
                       B.getInt32(0xa), B.getInt32(0xf), B.getFalse()}));
     if (!ST->isWave32()) {
       // Combine lane 31 into lanes 32..63.
-      Value *const Lane31 = B.CreateCall(ReadLane, {V, B.getInt32(31)});
+      Value *const Lane31 = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+                                              {V, B.getInt32(31)});
       V = buildNonAtomicBinOp(
           B, Op, V,
           B.CreateCall(UpdateDPP,
@@ -346,10 +343,6 @@ Value *AMDGPUAtomicOptimizer::buildShiftRight(IRBuilder<> &B, Value *V,
   Module *M = B.GetInsertBlock()->getModule();
   Function *UpdateDPP =
       Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
-  Function *ReadLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
-  Function *WriteLane =
-      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, {});
 
   if (ST->hasDPPWavefrontShifts()) {
     // GFX9 has DPP wavefront shift operations.
@@ -357,6 +350,11 @@ Value *AMDGPUAtomicOptimizer::buildShiftRight(IRBuilder<> &B, Value *V,
                      {Identity, V, B.getInt32(DPP::WAVE_SHR1), B.getInt32(0xf),
                       B.getInt32(0xf), B.getFalse()});
   } else {
+    Function *ReadLane =
+        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
+    Function *WriteLane =
+        Intrinsic::getDeclaration(M, Intrinsic::amdgcn_writelane, {});
+
     // On GFX10 all DPP operations are confined to a single row. To get cross-
     // row operations we have to use permlane or readlane.
     Value *Old = V;
