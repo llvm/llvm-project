@@ -13,9 +13,6 @@ config.name = 'LLVM-Unit'
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = []
 
-# is_early; Request to run this suite early.
-config.is_early = True
-
 # test_source_root: The root path where tests are located.
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.llvm_obj_root, 'unittests')
