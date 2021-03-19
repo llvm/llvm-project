@@ -45,7 +45,12 @@ class DerivedTypeSpec;
 namespace lower::mangle {
 
 /// Convert a front-end Symbol to an internal name.
-std::string mangleName(const semantics::Symbol &);
+/// If \p keepExternalInScope is true, the mangling of external symbols
+/// retains the scope of the symbol declaring externals. Otherwise,
+/// external symbols are mangled outside of any scope. Keeping the scope is
+/// useful in attributes where all the Fortran context is to be maintained.
+std::string mangleName(const semantics::Symbol &,
+                       bool keepExternalInScope = false);
 
 /// Convert a derived type instance to an internal name.
 std::string mangleName(const semantics::DerivedTypeSpec &);

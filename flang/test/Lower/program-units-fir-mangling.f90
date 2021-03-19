@@ -125,13 +125,18 @@ program test
 ! CHECK: }
 end program
 
-! CHECK-LABEL: func @omp_get_num_threads() -> f32 {
+! CHECK-LABEL: func @omp_get_num_threads() -> f32 attributes {fir.sym_name = "_QPomp_get_num_threads"} {
 function omp_get_num_threads() bind(c)
 ! CHECK: }
 end function
 
-! CHECK-LABEL: func @get_threads() -> f32 {
+! CHECK-LABEL: func @get_threads() -> f32 attributes {fir.sym_name = "_QPomp_get_num_threads_1"} {
 function omp_get_num_threads_1() bind(c, name ="get_threads")
+! CHECK: }
+end function
+
+! CHECK-LABEL: func @bEtA() -> f32 attributes {fir.sym_name = "_QPalpha"} {
+function alpha() bind(c, name =" bEtA ")
 ! CHECK: }
 end function
 

@@ -244,6 +244,10 @@ public:
   /// procedure.
   bool isIndirectCall() const;
 
+  /// Return the procedure symbol if this is a call to a user defined
+  /// procedure.
+  const Fortran::semantics::Symbol *getProcedureSymbol() const;
+
   /// Helpers to place the lowered arguments at the right place once they
   /// have been lowered.
   void placeInput(const PassedEntity &passedEntity, mlir::Value arg);
@@ -296,6 +300,10 @@ public:
   /// On the callee side it does not matter whether the procedure is
   /// called through pointers or not.
   bool isIndirectCall() const { return false; }
+
+  /// Return the procedure symbol if this is a call to a user defined
+  /// procedure.
+  const Fortran::semantics::Symbol *getProcedureSymbol() const;
 
   /// Add mlir::FuncOp entry block and map fir block arguments to Fortran dummy
   /// argument symbols.

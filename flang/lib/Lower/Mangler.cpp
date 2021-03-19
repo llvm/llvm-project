@@ -66,7 +66,8 @@ findInterfaceIfSeperateMP(const Fortran::semantics::Symbol &symbol) {
 // Mangle the name of `symbol` to make it unique within FIR's symbol table using
 // the FIR name mangler, `mangler`
 std::string
-Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
+Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
+                                   bool keepExternalInScope) {
   // Resolve host and module association before mangling
   const auto &ultimateSymbol = symbol.GetUltimate();
   auto symbolName = toStringRef(ultimateSymbol.name());
@@ -78,7 +79,8 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol) {
           },
           [&](const Fortran::semantics::SubprogramDetails &) {
             // Mangle external procedure without any scope prefix.
-            if (Fortran::semantics::IsExternal(ultimateSymbol))
+            if (!keepExternalInScope &&
+                Fortran::semantics::IsExternal(ultimateSymbol))
               return fir::NameUniquer::doProcedure(llvm::None, llvm::None,
                                                    symbolName);
             // Separate module subprograms must be mangled according to the

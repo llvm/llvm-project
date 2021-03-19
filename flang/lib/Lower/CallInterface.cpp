@@ -12,6 +12,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/FIRBuilder.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
@@ -21,11 +22,18 @@
 #include "flang/Semantics/tools.h"
 
 //===----------------------------------------------------------------------===//
-// Caller side interface implementation
+// BIND(C) mangling helpers
 //===----------------------------------------------------------------------===//
 
-bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
-  return procRef.hasAlternateReturns();
+// Remove leading and trailing spaces from a string.
+// Bind(C) NAME= expression may have trailing and leading space that must be
+// removed according to 18.9.2 point 2.
+static std::string adjustBindCName(std::string &&str) {
+  auto first = str.find_first_not_of(" ");
+  auto last = str.find_last_not_of(" ");
+  if (first == std::string::npos || last == std::string::npos)
+    llvm::report_fatal_error("Name in Bind(C) has no non-space character");
+  return str.substr(first, last - first + 1);
 }
 
 static std::string getBindCName(const Fortran::semantics::Symbol &symbol) {
@@ -37,14 +45,24 @@ static std::string getBindCName(const Fortran::semantics::Symbol &symbol) {
   if (const auto *procDetails{
           ultimateSymbol.detailsIf<Fortran::semantics::ProcEntityDetails>()}) {
     if (auto bindName = procDetails->bindName())
-      return Fortran::evaluate::GetScalarConstantValue<T>(bindName).value();
+      return adjustBindCName(
+          Fortran::evaluate::GetScalarConstantValue<T>(bindName).value());
     return procDetails->interface().symbol()->name().ToString();
   }
   if (auto bindName =
           ultimateSymbol.get<Fortran::semantics::SubprogramDetails>()
               .bindName())
-    return Fortran::evaluate::GetScalarConstantValue<T>(bindName).value();
+    return adjustBindCName(
+        Fortran::evaluate::GetScalarConstantValue<T>(bindName).value());
   return ultimateSymbol.name().ToString();
+}
+
+//===----------------------------------------------------------------------===//
+// Caller side interface implementation
+//===----------------------------------------------------------------------===//
+
+bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
+  return procRef.hasAlternateReturns();
 }
 
 std::string Fortran::lower::CallerInterface::getMangledName() const {
@@ -55,10 +73,15 @@ std::string Fortran::lower::CallerInterface::getMangledName() const {
     // follow the same mangling semantics. Return the `bindName` instead.
     return Fortran::semantics::IsBindCProcedure(*symbol)
                ? getBindCName(*symbol)
-               : converter.mangleName(*symbol);
+               : Fortran::lower::mangle::mangleName(*symbol);
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::CallerInterface::getProcedureSymbol() const {
+  return procRef.proc().GetSymbol();
 }
 
 bool Fortran::lower::CallerInterface::isIndirectCall() const {
@@ -223,7 +246,6 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 }
 
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
-
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
   // Do NOT mangle names for functions/subroutines with BIND(C) attribute.
@@ -231,7 +253,14 @@ std::string Fortran::lower::CalleeInterface::getMangledName() const {
   // follow the same mangling semantics. Return the `bindName` instead.
   if (Fortran::semantics::IsBindCProcedure(funit.getSubprogramSymbol()))
     return getBindCName(funit.getSubprogramSymbol());
-  return converter.mangleName(funit.getSubprogramSymbol());
+  return Fortran::lower::mangle::mangleName(funit.getSubprogramSymbol());
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::CalleeInterface::getProcedureSymbol() const {
+  if (funit.isMainProgram())
+    return nullptr;
+  return &funit.getSubprogramSymbol();
 }
 
 mlir::Location Fortran::lower::CalleeInterface::getCalleeLocation() const {
@@ -267,6 +296,19 @@ mlir::FuncOp Fortran::lower::CalleeInterface::addEntryBlockAndMapArguments() {
 // sides.
 //===----------------------------------------------------------------------===//
 
+static void addSymbolAttribute(mlir::FuncOp func,
+                               const Fortran::semantics::Symbol &sym,
+                               mlir::MLIRContext &mlirContext) {
+  // Only add this on bind(C) functions for which the symbol is not reflected in
+  // the current context.
+  if (!Fortran::semantics::IsBindCProcedure(sym))
+    return;
+  auto name =
+      Fortran::lower::mangle::mangleName(sym, /*keepExternalInScope*/ true);
+  auto strAttr = mlir::StringAttr::get(&mlirContext, name);
+  func->setAttr(fir::getSymbolAttrName(), strAttr);
+}
+
 /// Declare drives the different actions to be performed while analyzing the
 /// signature and building/finding the mlir::FuncOp.
 template <typename T>
@@ -294,6 +336,8 @@ void Fortran::lower::CallInterface<T>::declare() {
       mlir::FunctionType ty = genFunctionType();
       func =
           Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+      if (const auto *sym = side().getProcedureSymbol())
+        addSymbolAttribute(func, *sym, converter.getMLIRContext());
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
@@ -822,6 +866,12 @@ public:
   mlir::Location getCalleeLocation() const {
     llvm_unreachable("trying to get callee location from SignatureBuilder");
   }
+
+  /// This is only here to fulfill CRTP dependencies and should not be called.
+  const Fortran::semantics::Symbol *getProcedureSymbol() const {
+    llvm_unreachable("trying to get callee symbol from SignatureBuilder");
+  };
+
   Fortran::evaluate::characteristics::Procedure characterize() const {
     return proc;
   }
@@ -880,5 +930,8 @@ mlir::FuncOp Fortran::lower::getOrDeclareFunction(
   auto ty = SignatureBuilder{characteristics.value(), converter,
                              /* forceImplicit */ false}
                 .getFunctionType();
-  return Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+  auto newFunc =
+      Fortran::lower::FirOpBuilder::createFunction(loc, module, name, ty);
+  addSymbolAttribute(newFunc, *symbol, converter.getMLIRContext());
+  return newFunc;
 }
