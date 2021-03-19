@@ -64,6 +64,9 @@ createSomeMutableBox(mlir::Location loc, AbstractConverter &converter,
 
 /// Create and return a projection of a subspace of an array value. This is the
 /// lhs onto which a newly constructed array value can be merged.
+/// This implements copy-in, copy-out semantics. In case that require it,
+/// results will be buffered so that the rhs values are preserved and the lhs is
+/// updated only after all intermediate computation is concluded.
 fir::ArrayLoadOp
 createSomeArraySubspace(AbstractConverter &converter,
                         const evaluate::Expr<evaluate::SomeType> &expr,

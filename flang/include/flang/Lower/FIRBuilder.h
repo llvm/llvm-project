@@ -122,12 +122,19 @@ public:
   /// given a name via a front-end `Symbol` or a `StringRef`.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
                               llvm::StringRef name = {},
-                              llvm::ArrayRef<mlir::Value> shape = {});
+                              mlir::ValueRange shape = {},
+                              mlir::ValueRange lenParams = {},
+                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
-                              llvm::ArrayRef<mlir::Value> shape) {
+                              mlir::ValueRange shape) {
     return createTemporary(loc, type, llvm::StringRef{}, shape);
+  }
+
+  mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
+                              llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    return createTemporary(loc, type, llvm::StringRef{}, {}, {}, attrs);
   }
 
   /// Create a global value.
