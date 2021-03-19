@@ -1,5 +1,9 @@
-// RUN: mlir-rocm-runner %s \
-// RUN:   --shared-libs=%cuda_wrapper_library_dir/libcuda-runtime-wrappers%shlibext \
+// RUN: mlir-opt %s \
+// RUN:   -gpu-kernel-outlining \
+// RUN:   -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-rocdl,gpu-to-hsaco)' \
+// RUN:   -gpu-to-llvm \
+// RUN: | mlir-cpu-runner \
+// RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_rocm_runtime%shlibext \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
@@ -30,5 +34,5 @@ func @main() {
   return
 }
 
-func @mgpuMemGetDeviceMemRef1dInt32(%ptr : memref<?xi32>) -> (memref<?xi32>)
-func @print_memref_i32(%ptr : memref<*xi32>)
+func private @mgpuMemGetDeviceMemRef1dInt32(%ptr : memref<?xi32>) -> (memref<?xi32>)
+func private @print_memref_i32(%ptr : memref<*xi32>)
