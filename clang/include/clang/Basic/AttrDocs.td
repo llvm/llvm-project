@@ -3057,8 +3057,8 @@ function by writing the attribute after the function type:
 
 .. code-block:: c++
 
-    struct string_view {
-      // ...
+    struct string {
+      // The returned pointer should not outlive ``*this``.
       const char *data() const [[clang::lifetimebound]];
     };
 
