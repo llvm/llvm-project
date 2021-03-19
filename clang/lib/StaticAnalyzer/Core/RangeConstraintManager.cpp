@@ -448,12 +448,12 @@ public:
                                               EquivalenceClass Other);
 
   /// Return a set of class members for the given state.
-  LLVM_NODISCARD inline SymbolSet getClassMembers(ProgramStateRef State);
+  LLVM_NODISCARD inline SymbolSet getClassMembers(ProgramStateRef State) const;
   /// Return true if the current class is trivial in the given state.
-  LLVM_NODISCARD inline bool isTrivial(ProgramStateRef State);
+  LLVM_NODISCARD inline bool isTrivial(ProgramStateRef State) const;
   /// Return true if the current class is trivial and its only member is dead.
   LLVM_NODISCARD inline bool isTriviallyDead(ProgramStateRef State,
-                                             SymbolReaper &Reaper);
+                                             SymbolReaper &Reaper) const;
 
   LLVM_NODISCARD static inline ProgramStateRef
   markDisequal(BasicValueFactory &BV, RangeSet::Factory &F,
@@ -521,7 +521,7 @@ private:
                                    ProgramStateRef State, SymbolSet Members,
                                    EquivalenceClass Other,
                                    SymbolSet OtherMembers);
-  static inline void
+  static inline bool
   addToDisequalityInfo(DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
                        BasicValueFactory &BV, RangeSet::Factory &F,
                        ProgramStateRef State, EquivalenceClass First,
@@ -534,6 +534,15 @@ private:
 //===----------------------------------------------------------------------===//
 //                             Constraint functions
 //===----------------------------------------------------------------------===//
+
+LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED bool
+areFeasible(ConstraintRangeTy Constraints) {
+  return llvm::none_of(
+      Constraints,
+      [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
+        return ClassConstraint.second.isEmpty();
+      });
+}
 
 LLVM_NODISCARD inline const RangeSet *getConstraint(ProgramStateRef State,
                                                     EquivalenceClass Class) {
@@ -1397,15 +1406,6 @@ private:
     return EquivalenceClass::merge(getBasicVals(), F, State, LHS, RHS);
   }
 
-  LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
-  areFeasible(ConstraintRangeTy Constraints) {
-    return llvm::none_of(
-        Constraints,
-        [](const std::pair<EquivalenceClass, RangeSet> &ClassConstraint) {
-          return ClassConstraint.second.isEmpty();
-        });
-  }
-
   LLVM_NODISCARD ProgramStateRef setConstraint(ProgramStateRef State,
                                                EquivalenceClass Class,
                                                RangeSet Constraint) {
@@ -1428,7 +1428,7 @@ private:
             getRange(State, DisequalClass).Delete(getBasicVals(), F, *Point);
 
         // If we end up with at least one of the disequal classes to be
-        // constrainted with an empty range-set, the state is infeasible.
+        // constrained with an empty range-set, the state is infeasible.
         if (UpdatedConstraint.isEmpty())
           return nullptr;
 
@@ -1574,6 +1574,9 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
     // Assign new constraints for this class.
     Constraints = CRF.add(Constraints, *this, *NewClassConstraint);
 
+    assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                       "a state with infeasible constraints");
+
     State = State->set<ConstraintRange>(Constraints);
   }
 
@@ -1644,7 +1647,7 @@ EquivalenceClass::getMembersFactory(ProgramStateRef State) {
   return State->get_context<SymbolSet>();
 }
 
-SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) {
+SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) const {
   if (const SymbolSet *Members = State->get<ClassMembers>(*this))
     return *Members;
 
@@ -1654,12 +1657,12 @@ SymbolSet EquivalenceClass::getClassMembers(ProgramStateRef State) {
   return F.add(F.getEmptySet(), getRepresentativeSymbol());
 }
 
-bool EquivalenceClass::isTrivial(ProgramStateRef State) {
+bool EquivalenceClass::isTrivial(ProgramStateRef State) const {
   return State->get<ClassMembers>(*this) == nullptr;
 }
 
 bool EquivalenceClass::isTriviallyDead(ProgramStateRef State,
-                                       SymbolReaper &Reaper) {
+                                       SymbolReaper &Reaper) const {
   return isTrivial(State) && Reaper.isDead(getRepresentativeSymbol());
 }
 
@@ -1694,10 +1697,14 @@ EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
 
   // Disequality is a symmetric relation, so if we mark A as disequal to B,
   // we should also mark B as disequalt to A.
-  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, *this,
-                       Other);
-  addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, Other,
-                       *this);
+  if (!addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, *this,
+                            Other) ||
+      !addToDisequalityInfo(DisequalityInfo, Constraints, VF, RF, State, Other,
+                            *this))
+    return nullptr;
+
+  assert(areFeasible(Constraints) && "Constraint manager shouldn't produce "
+                                     "a state with infeasible constraints");
 
   State = State->set<DisequalityMap>(DisequalityInfo);
   State = State->set<ConstraintRange>(Constraints);
@@ -1705,7 +1712,7 @@ EquivalenceClass::markDisequal(BasicValueFactory &VF, RangeSet::Factory &RF,
   return State;
 }
 
-inline void EquivalenceClass::addToDisequalityInfo(
+inline bool EquivalenceClass::addToDisequalityInfo(
     DisequalityMapTy &Info, ConstraintRangeTy &Constraints,
     BasicValueFactory &VF, RangeSet::Factory &RF, ProgramStateRef State,
     EquivalenceClass First, EquivalenceClass Second) {
@@ -1734,8 +1741,16 @@ inline void EquivalenceClass::addToDisequalityInfo(
           VF, RF, State, First.getRepresentativeSymbol());
 
       FirstConstraint = FirstConstraint.Delete(VF, RF, *Point);
+
+      // If the First class is about to be constrained with an empty
+      // range-set, the state is infeasible.
+      if (FirstConstraint.isEmpty())
+        return false;
+
       Constraints = CRF.add(Constraints, First, FirstConstraint);
     }
+
+  return true;
 }
 
 inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
