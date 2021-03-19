@@ -451,6 +451,12 @@ public:
   /// this DBG_LABEL instruction.
   const DILabel *getDebugLabel() const;
 
+  /// Return the lifetime referenced by this DBG_DEF or DBG_KILL instruction.
+  const DILifetime *getDebugLifetime() const;
+
+  /// Return the referrer for this DBG_DEF instruction.
+  const MachineOperand &getDebugReferrer() const;
+
   /// Fetch the instruction number of this MachineInstr. If it does not have
   /// one already, a new and unique number will be assigned.
   unsigned getDebugInstrNum();
@@ -1213,6 +1219,9 @@ public:
   bool isDebugLabel() const { return getOpcode() == TargetOpcode::DBG_LABEL; }
   bool isDebugRef() const { return getOpcode() == TargetOpcode::DBG_INSTR_REF; }
   bool isDebugPHI() const { return getOpcode() == TargetOpcode::DBG_PHI; }
+  bool isDebugDef() const { return getOpcode() == TargetOpcode::DBG_DEF; }
+  bool isDebugKill() const { return getOpcode() == TargetOpcode::DBG_KILL; }
+  bool isDebugDefKill() const { return isDebugDef() || isDebugKill(); }
   bool isDebugInstr() const {
     return isDebugValue() || isDebugLabel() || isDebugRef() || isDebugPHI();
   }
@@ -1322,6 +1331,8 @@ public:
     case TargetOpcode::DBG_INSTR_REF:
     case TargetOpcode::DBG_PHI:
     case TargetOpcode::DBG_LABEL:
+    case TargetOpcode::DBG_DEF:
+    case TargetOpcode::DBG_KILL:
     case TargetOpcode::LIFETIME_START:
     case TargetOpcode::LIFETIME_END:
     case TargetOpcode::PSEUDO_PROBE:

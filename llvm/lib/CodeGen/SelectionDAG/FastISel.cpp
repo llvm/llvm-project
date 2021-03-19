@@ -1321,6 +1321,52 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
             TII.get(TargetOpcode::DBG_LABEL)).addMetadata(DI->getLabel());
     return true;
   }
+  case Intrinsic::dbg_def: {
+    const DbgDefInst &DDI = *cast<DbgDefInst>(II);
+    const Value *Referrer = DDI.getReferrer();
+    assert(Referrer);
+    if (const auto *UV = dyn_cast<UndefValue>(Referrer)) {
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::DBG_DEF))
+          .addMetadata(DDI.getLifetime())
+          .addReg(Register());
+    } else if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::DBG_DEF))
+          .addMetadata(DDI.getLifetime())
+          .addCImm(CI);
+    } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::DBG_DEF))
+          .addMetadata(DDI.getLifetime())
+          .addFPImm(CFP);
+    } else if (const auto *AI = dyn_cast<AllocaInst>(Referrer)) {
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
+      if (SI != FuncInfo.StaticAllocaMap.end()) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                TII.get(TargetOpcode::DBG_DEF))
+            .addMetadata(DDI.getLifetime())
+            .addFrameIndex(SI->second);
+      } else {
+        LLVM_DEBUG(dbgs() << "Dropping debug info for alloca " << DDI << "\n");
+      }
+    } else if (Register Reg = lookUpRegForValue(Referrer)) {
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::DBG_DEF))
+          .addMetadata(DDI.getLifetime())
+          .addReg(Reg);
+    } else {
+      LLVM_DEBUG(dbgs() << "Dropping debug info for " << DDI << "\n");
+    }
+    return true;
+  }
+  case Intrinsic::dbg_kill: {
+    const DbgKillInst &DKI = *cast<DbgKillInst>(II);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::DBG_KILL))
+        .addMetadata(DKI.getLifetime());
+    return true;
+  }
   case Intrinsic::objectsize:
     llvm_unreachable("llvm.objectsize.* should have been lowered already");
 

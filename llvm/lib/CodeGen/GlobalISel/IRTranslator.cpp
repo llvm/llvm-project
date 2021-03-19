@@ -1959,6 +1959,34 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
+  case Intrinsic::dbg_def:
+  case Intrinsic::dbg_kill: {
+    const DbgDefKillIntrinsic &DDKI = cast<DbgDefKillIntrinsic>(CI);
+    const bool IsDef = ID == Intrinsic::dbg_def;
+    auto MIB = MIRBuilder.buildInstrNoInsert(IsDef ? TargetOpcode::DBG_DEF
+                                                   : TargetOpcode::DBG_KILL);
+    MIB.addMetadata(DDKI.getLifetime());
+    if (IsDef) {
+      const Value *Referrer = cast<DbgDefInst>(DDKI).getReferrer();
+      assert(Referrer);
+      if (const auto *CI = dyn_cast<ConstantInt>(Referrer)) {
+        MIB.addCImm(CI);
+      } else if (auto *CFP = dyn_cast<ConstantFP>(Referrer)) {
+        MIB.addFPImm(CFP);
+      } else {
+        Register Reg = getOrCreateVReg(*Referrer);
+        auto RegDef = MRI->def_instr_begin(Reg);
+        if (RegDef != MRI->def_instr_end() &&
+            RegDef->getOpcode() == TargetOpcode::G_FRAME_INDEX) {
+          MIB.addFrameIndex(RegDef->getOperand(1).getIndex());
+        } else {
+          MIB.addReg(Reg);
+        }
+      }
+    }
+    MIRBuilder.insertInstr(MIB);
+    return true;
+  }
   case Intrinsic::uadd_with_overflow:
     return translateOverflowIntrinsic(CI, TargetOpcode::G_UADDO, MIRBuilder);
   case Intrinsic::sadd_with_overflow:
