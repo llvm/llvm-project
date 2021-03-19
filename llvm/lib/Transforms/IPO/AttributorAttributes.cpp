@@ -1750,8 +1750,9 @@ struct AANonNullImpl : AANonNull {
 
     AANonNull::initialize(A);
 
-    bool CanBeNull = true;
-    if (V.getPointerDereferenceableBytes(A.getDataLayout(), CanBeNull)) {
+    bool CanBeNull, CanBeFreed;
+    if (V.getPointerDereferenceableBytes(A.getDataLayout(), CanBeNull,
+                                         CanBeFreed)) {
       if (!CanBeNull) {
         indicateOptimisticFixpoint();
         return;
@@ -3548,10 +3549,10 @@ struct AADereferenceableImpl : AADereferenceable {
     const IRPosition &IRP = this->getIRPosition();
     NonNullAA = &A.getAAFor<AANonNull>(*this, IRP, DepClassTy::NONE);
 
-    bool CanBeNull;
+    bool CanBeNull, CanBeFreed;
     takeKnownDerefBytesMaximum(
         IRP.getAssociatedValue().getPointerDereferenceableBytes(
-            A.getDataLayout(), CanBeNull));
+            A.getDataLayout(), CanBeNull, CanBeFreed));
 
     bool IsFnInterface = IRP.isFnInterfaceKind();
     Function *FnScope = IRP.getAnchorScope();
@@ -3661,8 +3662,9 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       if (!Stripped && this == &AA) {
         // Use IR information if we did not strip anything.
         // TODO: track globally.
-        bool CanBeNull;
-        DerefBytes = Base->getPointerDereferenceableBytes(DL, CanBeNull);
+        bool CanBeNull, CanBeFreed;
+        DerefBytes =
+          Base->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
         T.GlobalState.indicatePessimisticFixpoint();
       } else {
         const DerefState &DS = AA.getState();

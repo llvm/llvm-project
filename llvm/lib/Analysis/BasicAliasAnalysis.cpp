@@ -199,9 +199,11 @@ static uint64_t getMinimalExtentFrom(const Value &V,
   // If we have dereferenceability information we know a lower bound for the
   // extent as accesses for a lower offset would be valid. We need to exclude
   // the "or null" part if null is a valid pointer.
-  bool CanBeNull;
-  uint64_t DerefBytes = V.getPointerDereferenceableBytes(DL, CanBeNull);
+  bool CanBeNull, CanBeFreed;
+  uint64_t DerefBytes =
+    V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
+  DerefBytes = CanBeFreed ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
   if (LocSize.isPrecise())
