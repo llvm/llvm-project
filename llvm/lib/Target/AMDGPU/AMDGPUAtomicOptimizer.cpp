@@ -478,6 +478,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   Value *ExclScan = nullptr;
   Value *NewV = nullptr;
 
+  const bool NeedResult = !I.use_empty();
+
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
@@ -488,7 +490,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     const AtomicRMWInst::BinOp ScanOp =
         Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
     NewV = buildScan(B, ScanOp, NewV, Identity);
-    ExclScan = buildShiftRight(B, NewV, Identity);
+    if (NeedResult)
+      ExclScan = buildShiftRight(B, NewV, Identity);
 
     // Read the value from the last lane, which has accumlated the values of
     // each active lane in the wavefront. This will be our new value which we
@@ -581,7 +584,6 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // original instruction.
   B.SetInsertPoint(&I);
 
-  const bool NeedResult = !I.use_empty();
   if (NeedResult) {
     // Create a PHI node to get our new atomic result into the exit block.
     PHINode *const PHI = B.CreatePHI(Ty, 2);
