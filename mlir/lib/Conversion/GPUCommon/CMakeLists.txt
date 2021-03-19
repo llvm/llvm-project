@@ -16,7 +16,6 @@ endif()
 
 add_mlir_conversion_library(MLIRGPUToGPURuntimeTransforms
   ConvertLaunchFuncToRuntimeCalls.cpp
-  ConvertKernelFuncToBlob.cpp
   GPUOpsLowering.cpp
 
   DEPENDS
