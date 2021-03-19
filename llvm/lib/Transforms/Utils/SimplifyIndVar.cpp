@@ -99,6 +99,24 @@ namespace {
   };
 }
 
+/// Find a point in code which dominates all given instructions. We can safely
+/// assume that, whatever fact we can prove at the found point, this fact is
+/// also true for each of the given instructions.
+static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
+                                        DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  for (auto *Insn : Instructions)
+    if (!CommonDom || DT.dominates(Insn, CommonDom))
+      CommonDom = Insn;
+    else if (!DT.dominates(CommonDom, Insn))
+      // If there is no dominance relation, use common dominator.
+      CommonDom =
+          DT.findNearestCommonDominator(CommonDom->getParent(),
+                                        Insn->getParent())->getTerminator();
+  assert(CommonDom && "Common dominator not found?");
+  return CommonDom;
+}
+
 /// Fold an IV operand into its use.  This removes increments of an
 /// aligned IV when used by a instruction that ignores the low bits.
 ///
@@ -1475,24 +1493,6 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
     DU.NarrowUse->replaceUsesOfWith(Op, ExtOp);
   }
   return true;
-}
-
-/// Find a point in code which dominates all given instructions. We can safely
-/// assume that, whatever fact we can prove at the found point, this fact is
-/// also true for each of the given instructions.
-static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
-                                        DominatorTree &DT) {
-  Instruction *CommonDom = nullptr;
-  for (auto *Insn : Instructions)
-    if (!CommonDom || DT.dominates(Insn, CommonDom))
-      CommonDom = Insn;
-    else if (!DT.dominates(CommonDom, Insn))
-      // If there is no dominance relation, use common dominator.
-      CommonDom =
-          DT.findNearestCommonDominator(CommonDom->getParent(),
-                                        Insn->getParent())->getTerminator();
-  assert(CommonDom && "Common dominator not found?");
-  return CommonDom;
 }
 
 // The widenIVUse avoids generating trunc by evaluating the use as AddRec, this
