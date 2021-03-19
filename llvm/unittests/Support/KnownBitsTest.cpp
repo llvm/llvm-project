@@ -113,6 +113,8 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       KnownBits KnownSMax(KnownAnd);
       KnownBits KnownSMin(KnownAnd);
       KnownBits KnownMul(KnownAnd);
+      KnownBits KnownMulHS(KnownAnd);
+      KnownBits KnownMulHU(KnownAnd);
       KnownBits KnownUDiv(KnownAnd);
       KnownBits KnownURem(KnownAnd);
       KnownBits KnownSRem(KnownAnd);
@@ -155,6 +157,14 @@ TEST(KnownBitsTest, BinaryExhaustive) {
           Res = N1 * N2;
           KnownMul.One &= Res;
           KnownMul.Zero &= ~Res;
+
+          Res = (N1.sext(2 * Bits) * N2.sext(2 * Bits)).extractBits(Bits, Bits);
+          KnownMulHS.One &= Res;
+          KnownMulHS.Zero &= ~Res;
+
+          Res = (N1.zext(2 * Bits) * N2.zext(2 * Bits)).extractBits(Bits, Bits);
+          KnownMulHU.One &= Res;
+          KnownMulHU.Zero &= ~Res;
 
           if (!N2.isNullValue()) {
             Res = N1.udiv(N2);
@@ -218,11 +228,19 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       EXPECT_EQ(KnownSMin.Zero, ComputedSMin.Zero);
       EXPECT_EQ(KnownSMin.One, ComputedSMin.One);
 
-      // ComputedMul is conservatively correct, but not guaranteed to be
+      // The following are conservatively correct, but not guaranteed to be
       // precise.
       KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
       EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
       EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
+
+      KnownBits ComputedMulHS = KnownBits::mulhs(Known1, Known2);
+      EXPECT_TRUE(ComputedMulHS.Zero.isSubsetOf(KnownMulHS.Zero));
+      EXPECT_TRUE(ComputedMulHS.One.isSubsetOf(KnownMulHS.One));
+
+      KnownBits ComputedMulHU = KnownBits::mulhu(Known1, Known2);
+      EXPECT_TRUE(ComputedMulHU.Zero.isSubsetOf(KnownMulHU.Zero));
+      EXPECT_TRUE(ComputedMulHU.One.isSubsetOf(KnownMulHU.One));
 
       KnownBits ComputedUDiv = KnownBits::udiv(Known1, Known2);
       EXPECT_TRUE(ComputedUDiv.Zero.isSubsetOf(KnownUDiv.Zero));
