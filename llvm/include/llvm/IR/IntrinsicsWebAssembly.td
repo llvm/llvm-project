@@ -115,11 +115,11 @@ def int_wasm_shuffle :
              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
              llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_saturate_signed :
+def int_wasm_sub_sat_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_saturate_unsigned :
+def int_wasm_sub_sat_unsigned :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>],
             [IntrNoMem, IntrSpeculatable]>;
@@ -143,14 +143,6 @@ def int_wasm_bitmask :
   Intrinsic<[llvm_i32_ty],
             [llvm_anyvector_ty],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_qfma :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_qfms :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_dot :
   Intrinsic<[llvm_v4i32_ty],
             [llvm_v8i16_ty, llvm_v8i16_ty],
@@ -166,17 +158,17 @@ def int_wasm_narrow_unsigned :
             [IntrNoMem, IntrSpeculatable]>;
 
 // TODO: Replace these intrinsics with normal ISel patterns once i32x4 to i64x2
-// widening is merged to the proposal.
-def int_wasm_widen_low_signed :
+// extending is merged to the proposal.
+def int_wasm_extend_low_signed :
   Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_high_signed :
+def int_wasm_extend_high_signed :
   Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_low_unsigned :
+def int_wasm_extend_low_unsigned :
   Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_widen_high_unsigned :
+def int_wasm_extend_high_unsigned :
   Intrinsic<[llvm_v2i64_ty], [llvm_v4i32_ty], [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_q15mulr_saturate_signed :
+def int_wasm_q15mulr_sat_signed :
   Intrinsic<[llvm_v8i16_ty],
             [llvm_v8i16_ty, llvm_v8i16_ty],
             [IntrNoMem, IntrSpeculatable]>;
@@ -302,31 +294,12 @@ def int_wasm_extadd_pairwise_unsigned :
             [LLVMSubdivide2VectorType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_signselect :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-
 // TODO: Remove this intrinsic and the associated builtin if i64x2.eq gets
 // merged to the proposal.
 def int_wasm_eq :
   Intrinsic<[llvm_v2i64_ty],
             [llvm_v2i64_ty, llvm_v2i64_ty],
             [IntrNoMem, IntrSpeculatable]>;
-
-// TODO: Remove this after experiments have been run. Use the target-agnostic
-// int_prefetch if this becomes specified at some point.
-def int_wasm_prefetch_t :
-  Intrinsic<[], [llvm_ptr_ty],
-            [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn,
-             ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
-            "", [SDNPMemOperand]>;
-
-def int_wasm_prefetch_nt :
-  Intrinsic<[], [llvm_ptr_ty],
-            [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn,
-             ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
-            "", [SDNPMemOperand]>;
 
 // TODO: Remove these if possible if they are merged to the spec.
 def int_wasm_convert_low_signed :
@@ -335,10 +308,10 @@ def int_wasm_convert_low_signed :
 def int_wasm_convert_low_unsigned :
   Intrinsic<[llvm_v2f64_ty], [llvm_v4i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_trunc_saturate_zero_signed :
+def int_wasm_trunc_sat_zero_signed :
   Intrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_trunc_saturate_zero_unsigned :
+def int_wasm_trunc_sat_zero_unsigned :
   Intrinsic<[llvm_v4i32_ty], [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_demote_zero :
@@ -347,14 +320,6 @@ def int_wasm_demote_zero :
 def int_wasm_promote_low :
   Intrinsic<[llvm_v2f64_ty], [llvm_v4f32_ty],
             [IntrNoMem, IntrSpeculatable]>;
-
-// TODO: Remove these if possible if they are merged to the spec.
-def int_wasm_widen_signed :
-  Intrinsic<[llvm_v4i32_ty], [llvm_v16i8_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
-def int_wasm_widen_unsigned :
-  Intrinsic<[llvm_v4i32_ty], [llvm_v16i8_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 //===----------------------------------------------------------------------===//
 // Thread-local storage intrinsics

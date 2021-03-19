@@ -1828,6 +1828,22 @@ struct PragmaClangAttributeSupport {
 
 } // end anonymous namespace
 
+static bool isSupportedPragmaClangAttributeSubject(const Record &Subject) {
+  // FIXME: #pragma clang attribute does not currently support statement
+  // attributes, so test whether the subject is one that appertains to a
+  // declaration node. However, it may be reasonable for support for statement
+  // attributes to be added.
+  if (Subject.isSubClassOf("DeclNode") || Subject.isSubClassOf("DeclBase") ||
+      Subject.getName() == "DeclBase")
+    return true;
+
+  if (Subject.isSubClassOf("SubsetSubject"))
+    return isSupportedPragmaClangAttributeSubject(
+        *Subject.getValueAsDef("Base"));
+
+  return false;
+}
+
 static bool doesDeclDeriveFrom(const Record *D, const Record *Base) {
   const Record *CurrentBase = D->getValueAsOptionalDef(BaseFieldName);
   if (!CurrentBase)
@@ -1949,13 +1965,15 @@ bool PragmaClangAttributeSupport::isAttributedSupported(
     return false;
   const Record *SubjectObj = Attribute.getValueAsDef("Subjects");
   std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
-  if (Subjects.empty())
-    return false;
+  bool HasAtLeastOneValidSubject = false;
   for (const auto *Subject : Subjects) {
+    if (!isSupportedPragmaClangAttributeSubject(*Subject))
+      continue;
     if (SubjectsToRules.find(Subject) == SubjectsToRules.end())
       return false;
+    HasAtLeastOneValidSubject = true;
   }
-  return true;
+  return HasAtLeastOneValidSubject;
 }
 
 static std::string GenerateTestExpression(ArrayRef<Record *> LangOpts) {
@@ -2001,6 +2019,8 @@ PragmaClangAttributeSupport::generateStrictConformsTo(const Record &Attr,
   const Record *SubjectObj = Attr.getValueAsDef("Subjects");
   std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
   for (const auto *Subject : Subjects) {
+    if (!isSupportedPragmaClangAttributeSubject(*Subject))
+      continue;
     auto It = SubjectsToRules.find(Subject);
     assert(It != SubjectsToRules.end() &&
            "This attribute is unsupported by #pragma clang attribute");
@@ -3503,7 +3523,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     return;
 
   const Record *SubjectObj = Attr.getValueAsDef("Subjects");
-  std::vector<Record*> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
+  std::vector<Record *> Subjects = SubjectObj->getValueAsListOfDefs("Subjects");
 
   // If the list of subjects is empty, it is assumed that the attribute
   // appertains to everything.
@@ -3512,42 +3532,99 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
 
   bool Warn = SubjectObj->getValueAsDef("Diag")->getValueAsBit("Warn");
 
-  // Otherwise, generate an appertainsTo check specific to this attribute which
-  // checks all of the given subjects against the Decl passed in.
-  //
-  // If D is null, that means the attribute was not applied to a declaration
-  // at all (for instance because it was applied to a type), or that the caller
-  // has determined that the check should fail (perhaps prior to the creation
-  // of the declaration).
-  OS << "bool diagAppertainsToDecl(Sema &S, ";
-  OS << "const ParsedAttr &Attr, const Decl *D) const override {\n";
-  OS << "  if (";
-  for (auto I = Subjects.begin(), E = Subjects.end(); I != E; ++I) {
-    // If the subject has custom code associated with it, use the generated
-    // function for it. The function cannot be inlined into this check (yet)
-    // because it requires the subject to be of a specific type, and were that
-    // information inlined here, it would not support an attribute with multiple
-    // custom subjects.
-    if ((*I)->isSubClassOf("SubsetSubject")) {
-      OS << "!" << functionNameForCustomAppertainsTo(**I) << "(D)";
-    } else {
-      OS << "!isa<" << GetSubjectWithSuffix(*I) << ">(D)";
-    }
+  // Split the subjects into declaration subjects and statement subjects.
+  // FIXME: subset subjects are added to the declaration list until there are
+  // enough statement attributes with custom subject needs to warrant
+  // the implementation effort.
+  std::vector<Record *> DeclSubjects, StmtSubjects;
+  llvm::copy_if(
+      Subjects, std::back_inserter(DeclSubjects), [](const Record *R) {
+        return R->isSubClassOf("SubsetSubject") || !R->isSubClassOf("StmtNode");
+      });
+  llvm::copy_if(Subjects, std::back_inserter(StmtSubjects),
+                [](const Record *R) { return R->isSubClassOf("StmtNode"); });
 
-    if (I + 1 != E)
-      OS << " && ";
+  // We should have sorted all of the subjects into two lists.
+  // FIXME: this assertion will be wrong if we ever add type attribute subjects.
+  assert(DeclSubjects.size() + StmtSubjects.size() == Subjects.size());
+
+  if (DeclSubjects.empty()) {
+    // If there are no decl subjects but there are stmt subjects, diagnose
+    // trying to apply a statement attribute to a declaration.
+    if (!StmtSubjects.empty()) {
+      OS << "bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL, ";
+      OS << "const Decl *D) const override {\n";
+      OS << "  S.Diag(AL.getLoc(), diag::err_stmt_attribute_invalid_on_decl)\n";
+      OS << "    << AL << D->getLocation();\n";
+      OS << "  return false;\n";
+      OS << "}\n\n";
+    }
+  } else {
+    // Otherwise, generate an appertainsTo check specific to this attribute
+    // which checks all of the given subjects against the Decl passed in.
+    OS << "bool diagAppertainsToDecl(Sema &S, ";
+    OS << "const ParsedAttr &Attr, const Decl *D) const override {\n";
+    OS << "  if (";
+    for (auto I = DeclSubjects.begin(), E = DeclSubjects.end(); I != E; ++I) {
+      // If the subject has custom code associated with it, use the generated
+      // function for it. The function cannot be inlined into this check (yet)
+      // because it requires the subject to be of a specific type, and were that
+      // information inlined here, it would not support an attribute with
+      // multiple custom subjects.
+      if ((*I)->isSubClassOf("SubsetSubject"))
+        OS << "!" << functionNameForCustomAppertainsTo(**I) << "(D)";
+      else
+        OS << "!isa<" << GetSubjectWithSuffix(*I) << ">(D)";
+
+      if (I + 1 != E)
+        OS << " && ";
+    }
+    OS << ") {\n";
+    OS << "    S.Diag(Attr.getLoc(), diag::";
+    OS << (Warn ? "warn_attribute_wrong_decl_type_str"
+                : "err_attribute_wrong_decl_type_str");
+    OS << ")\n";
+    OS << "      << Attr << ";
+    OS << CalculateDiagnostic(*SubjectObj) << ";\n";
+    OS << "    return false;\n";
+    OS << "  }\n";
+    OS << "  return true;\n";
+    OS << "}\n\n";
   }
-  OS << ") {\n";
-  OS << "    S.Diag(Attr.getLoc(), diag::";
-  OS << (Warn ? "warn_attribute_wrong_decl_type_str" :
-               "err_attribute_wrong_decl_type_str");
-  OS << ")\n";
-  OS << "      << Attr << ";
-  OS << CalculateDiagnostic(*SubjectObj) << ";\n";
-  OS << "    return false;\n";
-  OS << "  }\n";
-  OS << "  return true;\n";
-  OS << "}\n\n";
+
+  if (StmtSubjects.empty()) {
+    // If there are no stmt subjects but there are decl subjects, diagnose
+    // trying to apply a declaration attribute to a statement.
+    if (!DeclSubjects.empty()) {
+      OS << "bool diagAppertainsToStmt(Sema &S, const ParsedAttr &AL, ";
+      OS << "const Stmt *St) const override {\n";
+      OS << "  S.Diag(AL.getLoc(), diag::err_decl_attribute_invalid_on_stmt)\n";
+      OS << "    << AL << St->getBeginLoc();\n";
+      OS << "  return false;\n";
+      OS << "}\n\n";
+    }
+  } else {
+    // Now, do the same for statements.
+    OS << "bool diagAppertainsToStmt(Sema &S, ";
+    OS << "const ParsedAttr &Attr, const Stmt *St) const override {\n";
+    OS << "  if (";
+    for (auto I = StmtSubjects.begin(), E = StmtSubjects.end(); I != E; ++I) {
+      OS << "!isa<" << (*I)->getName() << ">(St)";
+      if (I + 1 != E)
+        OS << " && ";
+    }
+    OS << ") {\n";
+    OS << "    S.Diag(Attr.getLoc(), diag::";
+    OS << (Warn ? "warn_attribute_wrong_decl_type_str"
+                : "err_attribute_wrong_decl_type_str");
+    OS << ")\n";
+    OS << "      << Attr << ";
+    OS << CalculateDiagnostic(*SubjectObj) << ";\n";
+    OS << "    return false;\n";
+    OS << "  }\n";
+    OS << "  return true;\n";
+    OS << "}\n\n";
+  }
 }
 
 static void
@@ -4214,9 +4291,13 @@ void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
     std::vector<Record *> Subjects =
         SubjectObj->getValueAsListOfDefs("Subjects");
     OS << " (";
+    bool PrintComma = false;
     for (const auto &Subject : llvm::enumerate(Subjects)) {
-      if (Subject.index())
+      if (!isSupportedPragmaClangAttributeSubject(*Subject.value()))
+        continue;
+      if (PrintComma)
         OS << ", ";
+      PrintComma = true;
       PragmaClangAttributeSupport::RuleOrAggregateRuleSet &RuleSet =
           Support.SubjectsToRules.find(Subject.value())->getSecond();
       if (RuleSet.isRule()) {

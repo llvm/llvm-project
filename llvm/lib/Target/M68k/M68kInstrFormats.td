@@ -95,16 +95,17 @@ class MxBead4Bits <bits<4> b> : MxBead<0x4, b{0}, b{1}, b{2}, b{3}>;
 class MxBeadDAReg  <bits<3> o, bit a = 0> : MxBead<0x5, o{0}, o{1}, o{2}, a>;
 class MxBeadDA     <bits<3> o, bit a = 0> : MxBead<0x6, o{0}, o{1}, o{2}, a>;
 class MxBeadReg    <bits<3> o, bit a = 0> : MxBead<0x7, o{0}, o{1}, o{2}, a>;
-class MxBead8Disp  <bits<3> o, bit a = 0> : MxBead<0x8, o{0}, o{1}, o{2}, a>;
+class MxBeadDReg   <bits<3> o, bit a = 0> : MxBead<0x8, o{0}, o{1}, o{2}, a>;
+class MxBead8Disp  <bits<3> o, bit a = 0> : MxBead<0x9, o{0}, o{1}, o{2}, a>;
 
 /// Add Immediate to the instruction. 8-bit version is padded with zeros to fit
 /// the word.
-class MxBead8Imm   <bits<3> o, bit a = 0> : MxBead<0x9, o{0}, o{1}, o{2}, a>;
-class MxBead16Imm  <bits<3> o, bit a = 0> : MxBead<0xA, o{0}, o{1}, o{2}, a>;
-class MxBead32Imm  <bits<3> o, bit a = 0> : MxBead<0xB, o{0}, o{1}, o{2}, a>;
+class MxBead8Imm   <bits<3> o, bit a = 0> : MxBead<0xA, o{0}, o{1}, o{2}, a>;
+class MxBead16Imm  <bits<3> o, bit a = 0> : MxBead<0xB, o{0}, o{1}, o{2}, a>;
+class MxBead32Imm  <bits<3> o, bit a = 0> : MxBead<0xC, o{0}, o{1}, o{2}, a>;
 
 /// Encodes an immediate 0-7(alt. 1-8) into 3 bit field
-class MxBead3Imm   <bits<3> o, bit a = 0> : MxBead<0xC, o{0}, o{1}, o{2}, a>;
+class MxBead3Imm   <bits<3> o, bit a = 0> : MxBead<0xD, o{0}, o{1}, o{2}, a>;
 
 
 class MxEncoding<MxBead n0  = MxBeadTerm, MxBead n1  = MxBeadTerm,
@@ -202,7 +203,7 @@ class MxEncEA<MxBead reg, MxBead mode, MxBead da = MxBeadIgnore> {
 // FIXME: Is there a way to factorize the addressing mode suffix (i.e.
 // 'r', 'd', 'a' etc.) and use something like multiclass to replace?
 def MxEncEAr_0: MxEncEA<MxBeadDAReg<0>, MxBead2Bits<0b00>>;
-def MxEncEAd_0: MxEncEA<MxBeadReg<0>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
+def MxEncEAd_0: MxEncEA<MxBeadDReg<0>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
 def MxEncEAa_0: MxEncEA<MxBeadReg<0>, MxBead2Bits<0b00>, MxBead1Bit<1>>;
 def MxEncEAj_0: MxEncEA<MxBeadReg<0>, MxBead2Bits<0b01>, MxBead1Bit<0>>;
 def MxEncEAo_0: MxEncEA<MxBeadReg<0>, MxBead2Bits<0b01>, MxBead1Bit<1>>;
@@ -214,7 +215,7 @@ def MxEncEAa_0_reflected : MxEncEA<MxBeadReg<0>, MxBead3Bits<0b001>>;
 def MxEncEAr_0_reflected : MxEncEA<MxBeadReg<0>, MxBead2Bits<0b00>, MxBeadDA<0>>;
 
 def MxEncEAr_1: MxEncEA<MxBeadDAReg<1>, MxBead2Bits<0b00>>;
-def MxEncEAd_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
+def MxEncEAd_1: MxEncEA<MxBeadDReg<1>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
 def MxEncEAa_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b00>, MxBead1Bit<1>>;
 def MxEncEAj_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b01>, MxBead1Bit<0>>;
 def MxEncEAo_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b01>, MxBead1Bit<1>>;
@@ -223,7 +224,7 @@ def MxEncEAp_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b10>, MxBead1Bit<1>>;
 def MxEncEAf_1: MxEncEA<MxBeadReg<1>, MxBead2Bits<0b11>, MxBead1Bit<0>>;
 
 def MxEncEAr_2: MxEncEA<MxBeadDAReg<2>, MxBead2Bits<0b00>>;
-def MxEncEAd_2: MxEncEA<MxBeadReg<2>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
+def MxEncEAd_2: MxEncEA<MxBeadDReg<2>, MxBead2Bits<0b00>, MxBead1Bit<0>>;
 def MxEncEAa_2: MxEncEA<MxBeadReg<2>, MxBead2Bits<0b00>, MxBead1Bit<1>>;
 def MxEncEAj_2: MxEncEA<MxBeadReg<2>, MxBead2Bits<0b01>, MxBead1Bit<0>>;
 def MxEncEAo_2: MxEncEA<MxBeadReg<2>, MxBead2Bits<0b01>, MxBead1Bit<1>>;

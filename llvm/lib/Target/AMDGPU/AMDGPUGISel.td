@@ -113,14 +113,6 @@ def gi_mubuf_offset :
     GIComplexOperandMatcher<s64, "selectMUBUFOffset">,
     GIComplexPatternEquiv<MUBUFOffset>;
 
-def gi_mubuf_addr64_atomic :
-    GIComplexOperandMatcher<s64, "selectMUBUFAddr64Atomic">,
-    GIComplexPatternEquiv<MUBUFAddr64Atomic>;
-
-def gi_mubuf_offset_atomic :
-    GIComplexOperandMatcher<s64, "selectMUBUFOffsetAtomic">,
-    GIComplexPatternEquiv<MUBUFOffsetAtomic>;
-
 def gi_smrd_buffer_imm :
     GIComplexOperandMatcher<s64, "selectSMRDBufferImm">,
     GIComplexPatternEquiv<SMRDBufferImm>;

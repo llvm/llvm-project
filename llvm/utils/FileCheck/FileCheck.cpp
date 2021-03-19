@@ -821,7 +821,9 @@ int main(int argc, char **argv) {
 
   // Read the expected strings from the check file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CheckFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(CheckFilename);
+      MemoryBuffer::getFileOrSTDIN(CheckFilename, /*FileSize*/ -1,
+                                   /*RequiresNullTerminator*/ true,
+                                   /*IsText*/ true);
   if (std::error_code EC = CheckFileOrErr.getError()) {
     errs() << "Could not open check file '" << CheckFilename
            << "': " << EC.message() << '\n';
@@ -843,7 +845,9 @@ int main(int argc, char **argv) {
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*FileSize*/ -1,
+                                   /*RequiresNullTerminator*/ true,
+                                   /*IsText*/ true);
   if (InputFilename == "-")
     InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {

@@ -67,10 +67,12 @@ static bool isDereferenceableAndAlignedPointer(
           Visited, MaxDepth);
   }
 
-  bool CheckForNonNull = false;
+  bool CheckForNonNull, CheckForFreed;
   APInt KnownDerefBytes(Size.getBitWidth(),
-                        V->getPointerDereferenceableBytes(DL, CheckForNonNull));
-  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size))
+                        V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+                                                          CheckForFreed));
+  if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
+      !CheckForFreed)
     if (!CheckForNonNull || isKnownNonZero(V, DL, 0, nullptr, CtxI, DT)) {
       // As we recursed through GEPs to get here, we've incrementally checked
       // that each step advanced by a multiple of the alignment. If our base is

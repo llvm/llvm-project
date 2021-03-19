@@ -751,7 +751,6 @@ static void sortSegmentsAndSections() {
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
-
       if (!firstTLVDataSection && isThreadLocalData(osec->flags))
         firstTLVDataSection = osec;
 

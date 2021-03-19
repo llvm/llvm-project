@@ -131,8 +131,9 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                     Context2.begin(), Context2.begin() + Context2.size() - 1);
 }
 
-std::string ProfiledBinary::getExpandedContextStr(
-    const SmallVectorImpl<uint64_t> &Stack) const {
+std::string
+ProfiledBinary::getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
+                                      bool &WasLeafInlined) const {
   std::string ContextStr;
   SmallVector<std::string, 16> ContextVec;
   // Process from frame root to leaf
@@ -143,6 +144,9 @@ std::string ProfiledBinary::getExpandedContextStr(
     // processing
     if (ExpandedContext.empty())
       return std::string();
+    // Set WasLeafInlined to the size of inlined frame count for the last
+    // address which is leaf
+    WasLeafInlined = (ExpandedContext.size() > 1);
     for (const auto &Loc : ExpandedContext) {
       ContextVec.push_back(getCallSite(Loc));
     }

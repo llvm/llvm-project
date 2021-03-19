@@ -574,6 +574,7 @@ namespace clang {
 
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
+    ExpectedStmt VisitSourceLocExpr(SourceLocExpr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
@@ -6481,6 +6482,21 @@ ExpectedStmt ASTNodeImporter::VisitExpr(Expr *E) {
   Importer.FromDiag(E->getBeginLoc(), diag::err_unsupported_ast_node)
       << E->getStmtClassName();
   return make_error<ImportError>(ImportError::UnsupportedConstruct);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
+  Error Err = Error::success();
+  auto BLoc = importChecked(Err, E->getBeginLoc());
+  auto RParenLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+  auto ParentContextOrErr = Importer.ImportContext(E->getParentContext());
+  if (!ParentContextOrErr)
+    return ParentContextOrErr.takeError();
+
+  return new (Importer.getToContext())
+      SourceLocExpr(Importer.getToContext(), E->getIdentKind(), BLoc, RParenLoc,
+                    *ParentContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {

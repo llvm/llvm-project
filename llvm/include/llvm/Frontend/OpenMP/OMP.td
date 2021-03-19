@@ -1650,6 +1650,7 @@ def OMP_interop : Directive<"interop"> {
   let allowedClauses = [
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Destroy>,
     VersionedClause<OMPC_Init>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Use>,

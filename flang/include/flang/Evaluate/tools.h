@@ -839,10 +839,12 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
 const Symbol *GetLastTarget(const SymbolVector &);
 
 // Collects all of the Symbols in an expression
-template <typename A> semantics::SymbolSet CollectSymbols(const A &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeInteger> &);
-extern template semantics::SymbolSet CollectSymbols(
+template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?

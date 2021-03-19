@@ -254,7 +254,7 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 }
 
 /// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those exclusing the
+/// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. LoopOp only has one region, so 0 is the only valid value
 /// for `index`.
 OperandRange ForOp::getSuccessorEntryOperands(unsigned index) {

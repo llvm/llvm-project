@@ -66,6 +66,14 @@ TEST_CASE(basic_tests)
         {"TEMPDIR", env.create_dir("dir4")}
 #endif
     };
+    TestCase ignored_cases[] = {
+#ifdef _WIN32
+        {"TMPDIR", env.create_dir("dir5")},
+        {"TEMPDIR", env.create_dir("dir6")},
+#else
+        {"USERPROFILE", env.create_dir("dir5")},
+#endif
+    };
     for (auto& TC : cases) {
         PutEnv(TC.name, TC.p);
     }
@@ -114,6 +122,7 @@ TEST_CASE(basic_tests)
         UnsetEnv(TC.name);
     }
     // No env variables are defined
+    path fallback;
     {
         std::error_code ec = GetTestEC();
         path ret = temp_directory_path(ec);
@@ -123,6 +132,20 @@ TEST_CASE(basic_tests)
         TEST_CHECK(ret == "/tmp");
 #endif
         TEST_CHECK(is_directory(ret));
+        fallback = ret;
+    }
+    for (auto& TC : ignored_cases) {
+        // Check that certain variables are ignored
+        PutEnv(TC.name, TC.p);
+        std::error_code ec = GetTestEC();
+        path ret = temp_directory_path(ec);
+        TEST_CHECK(!ec);
+
+        // Check that we return the same as above when no vars were defined.
+        TEST_CHECK(ret == fallback);
+
+        // Finally erase this env variable
+        UnsetEnv(TC.name);
     }
 }
 

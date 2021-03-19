@@ -630,7 +630,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
       }
     }
     // A list-item cannot appear in more than one aligned clause
-    semantics::SymbolSet alignedVars;
+    semantics::UnorderedSymbolSet alignedVars;
     auto clauseAll = FindClauses(llvm::omp::Clause::OMPC_aligned);
     for (auto itr = clauseAll.first; itr != clauseAll.second; ++itr) {
       const auto &alignedClause{

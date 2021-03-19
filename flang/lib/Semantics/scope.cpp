@@ -61,7 +61,7 @@ static std::vector<common::Reference<T>> GetSortedSymbols(
   for (auto &pair : symbols) {
     result.push_back(*pair.second);
   }
-  std::sort(result.begin(), result.end());
+  std::sort(result.begin(), result.end(), SymbolSourcePositionCompare{});
   return result;
 }
 

@@ -596,13 +596,6 @@ public:
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
-  // Symbol comparison is based on the order of cooked source
-  // stream creation and, when both are from the same cooked source,
-  // their positions in that cooked source stream.
-  // (This function is implemented in Evaluate/tools.cpp to
-  // satisfy complicated shared library interdependency.)
-  bool operator<(const Symbol &) const;
-
   int Rank() const {
     return std::visit(
         common::visitors{
@@ -767,13 +760,40 @@ inline const DeclTypeSpec *Symbol::GetType() const {
       details_);
 }
 
-inline bool operator<(SymbolRef x, SymbolRef y) {
-  return *x < *y; // name source position ordering
+// Sets and maps keyed by Symbols
+
+struct SymbolAddressCompare {
+  bool operator()(const SymbolRef &x, const SymbolRef &y) const {
+    return &*x < &*y;
+  }
+  bool operator()(const MutableSymbolRef &x, const MutableSymbolRef &y) const {
+    return &*x < &*y;
+  }
+};
+
+// Symbol comparison is based on the order of cooked source
+// stream creation and, when both are from the same cooked source,
+// their positions in that cooked source stream.
+// Don't use this comparator or OrderedSymbolSet to hold
+// Symbols that might be subject to ReplaceName().
+struct SymbolSourcePositionCompare {
+  // These functions are implemented in Evaluate/tools.cpp to
+  // satisfy complicated shared library interdependency.
+  bool operator()(const SymbolRef &, const SymbolRef &) const;
+  bool operator()(const MutableSymbolRef &, const MutableSymbolRef &) const;
+};
+
+using UnorderedSymbolSet = std::set<SymbolRef, SymbolAddressCompare>;
+using OrderedSymbolSet = std::set<SymbolRef, SymbolSourcePositionCompare>;
+
+template <typename A>
+OrderedSymbolSet OrderBySourcePosition(const A &container) {
+  OrderedSymbolSet result;
+  for (SymbolRef x : container) {
+    result.emplace(x);
+  }
+  return result;
 }
-inline bool operator<(MutableSymbolRef x, MutableSymbolRef y) {
-  return *x < *y; // name source position ordering
-}
-using SymbolSet = std::set<SymbolRef>;
 
 } // namespace Fortran::semantics
 

@@ -312,21 +312,18 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
     if (region.empty())
       continue;
 
-    // We do the deletion in an order that deletes all uses before deleting
-    // defs.
-    // MLIR's SSA structural invariants guarantee that except for block
-    // arguments, the use-def graph is acyclic, so this is possible with a
-    // single walk of ops and then a final pass to clean up block arguments.
-    //
-    // To do this, we visit ops in an order that visits domtree children
-    // before domtree parents. A CFG post-order (with reverse iteration with a
-    // block) satisfies that without needing an explicit domtree calculation.
+    // Delete every operation that is not live. Graph regions may have cycles
+    // in the use-def graph, so we must explicitly dropAllUses() from each
+    // operation as we erase it. Visiting the operations in post-order
+    // guarantees that in SSA CFG regions value uses are removed before defs,
+    // which makes dropAllUses() a no-op.
     for (Block *block : llvm::post_order(&region.front())) {
       eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
       for (Operation &childOp :
            llvm::make_early_inc_range(llvm::reverse(block->getOperations()))) {
         if (!liveMap.wasProvenLive(&childOp)) {
           erasedAnything = true;
+          childOp.dropAllUses();
           childOp.erase();
         } else {
           erasedAnything |=

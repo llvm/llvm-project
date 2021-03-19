@@ -15,6 +15,8 @@
 
 include "mlir/IR/OpBase.td"
 
+def LinalgOperand: AnyTypeOf<[AnyRankedTensor, AnyStridedMemRef]>;
+
 def Linalg_Dialect : Dialect {
   let name = "linalg";
   let description = [{

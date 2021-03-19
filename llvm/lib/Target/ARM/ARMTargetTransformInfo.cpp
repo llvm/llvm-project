@@ -817,13 +817,12 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 
   if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||
                                  Opcode == Instruction::ExtractElement)) {
-    // We say MVE moves costs at least the MVEVectorCostFactor, even though
-    // they are scalar instructions. This helps prevent mixing scalar and
-    // vector, to prevent vectorising where we end up just scalarising the
-    // result anyway.
-    return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index),
-                    ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)) *
-           cast<FixedVectorType>(ValTy)->getNumElements() / 2;
+    // Integer cross-lane moves are more expensive than float, which can
+    // sometimes just be vmovs. Integer involve being passes to GPR registers,
+    // causing more of a delay.
+    std::pair<unsigned, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, ValTy->getScalarType());
+    return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);

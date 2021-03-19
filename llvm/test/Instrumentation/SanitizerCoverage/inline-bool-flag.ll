@@ -4,6 +4,8 @@
 
 ; CHECK:      $foo = comdat noduplicates
 ; CHECK:      @__sancov_gen_ = private global [1 x i1] zeroinitializer, section "__sancov_bools", comdat($foo), align 1{{$}}
+; CHECK:      @__start___sancov_bools = extern_weak hidden global i1
+; CHECK-NEXT: @__stop___sancov_bools = extern_weak hidden global i1
 ; CHECK-NOT:  @llvm.used =
 ; CHECK:      @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast ([1 x i1]* @__sancov_gen_ to i8*)], section "llvm.metadata"
 

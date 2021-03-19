@@ -1494,6 +1494,30 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   );
 }
 
+def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappable.traits> {
+  let summary = "Rescale scalar operator for Tosa tensor operators";
+
+  let description = [{
+    Applies rescaling for fixed point values. This behavior is replicated in
+    multiple quantized operations (mul, convolution, rescale, matmul, pooling).
+
+    The commonplace implementation is to use i64 operations to avoid integer
+    overflow with target specific implementations can use native operations to
+    avoid wider than necessary types.
+  }];
+
+  let arguments = (ins
+    Tosa_Int32Like:$value,
+    Tosa_Int32Like:$multiplier,
+    Tosa_Int8Like:$shift,
+    BoolAttr:$double_round
+  );
+
+  let results = (outs
+    Tosa_Int32:$output
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Spec Section 2.13
 // Operator Class: Data Node Ops.

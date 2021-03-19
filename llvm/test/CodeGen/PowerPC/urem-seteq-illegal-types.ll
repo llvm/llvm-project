@@ -88,9 +88,8 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; PPC64LE-NEXT:    clrlwi 3, 3, 28
 ; PPC64LE-NEXT:    ori 4, 4, 52429
 ; PPC64LE-NEXT:    mulhwu 4, 3, 4
-; PPC64LE-NEXT:    rlwinm 5, 4, 0, 0, 29
 ; PPC64LE-NEXT:    srwi 4, 4, 2
-; PPC64LE-NEXT:    add 4, 4, 5
+; PPC64LE-NEXT:    rlwimi 4, 4, 2, 28, 29
 ; PPC64LE-NEXT:    sub 3, 3, 4
 ; PPC64LE-NEXT:    cntlzw 3, 3
 ; PPC64LE-NEXT:    not 3, 3

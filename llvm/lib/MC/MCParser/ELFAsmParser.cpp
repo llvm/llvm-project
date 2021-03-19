@@ -182,6 +182,12 @@ bool ELFAsmParser::ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
       if (getParser().parseIdentifier(Name))
         return TokError("expected identifier in directive");
 
+      if (getParser().discardLTOSymbol(Name)) {
+        if (getLexer().is(AsmToken::EndOfStatement))
+          break;
+        continue;
+      }
+
       MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
       getStreamer().emitSymbolAttribute(Sym, Attr);

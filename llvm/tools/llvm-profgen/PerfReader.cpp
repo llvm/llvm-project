@@ -92,7 +92,8 @@ void VirtualUnwinder::unwindBranchWithinFrame(UnwindState &State) {
 std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   std::shared_ptr<StringBasedCtxKey> KeyStr =
       std::make_shared<StringBasedCtxKey>();
-  KeyStr->Context = Binary->getExpandedContextStr(Stack);
+  KeyStr->Context =
+      Binary->getExpandedContextStr(Stack, KeyStr->WasLeafInlined);
   if (KeyStr->Context.empty())
     return nullptr;
   KeyStr->genHashCode();
