@@ -275,11 +275,11 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                        << "' absolute: " << EC.message() << '\n';
         return;
       }
-      if (std::error_code EC =
-          llvm::sys::fs::createUniqueFile(Model, FD, ResultPath)) {
-          llvm::errs() << "warning: could not create file in '" << Directory
-                       << "': " << EC.message() << '\n';
-          return;
+      if (std::error_code EC = llvm::sys::fs::createUniqueFile(
+              Model, FD, ResultPath, llvm::sys::fs::OF_Text)) {
+        llvm::errs() << "warning: could not create file in '" << Directory
+                     << "': " << EC.message() << '\n';
+        return;
       }
   } else {
       int i = 1;
