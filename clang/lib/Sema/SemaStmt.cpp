@@ -3312,15 +3312,16 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
 /// without considering function return type, if applicable.
 ///
 /// \param E The expression being returned from the function or block,
-/// being thrown, or being co_returned from a coroutine.
+/// being thrown, or being co_returned from a coroutine. This expression
+/// might be modified by the implementation.
 ///
-/// \param ForceCXX20 Overrides detection of current language mode
-/// and uses the rules for C++20.
+/// \param ForceCXX2b Overrides detection of current language mode
+/// and uses the rules for C++2b.
 ///
 /// \returns An aggregate which contains the Candidate and isMoveEligible
 /// and isCopyElidable methods. If Candidate is non-null, it means
 /// isMoveEligible() would be true under the most permissive language standard.
-Sema::NamedReturnInfo Sema::getNamedReturnInfo(const Expr *E, bool ForceCXX20) {
+Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E, bool ForceCXX2b) {
   if (!E)
     return NamedReturnInfo();
   // - in a return statement in a function [where] ...
@@ -3331,7 +3332,14 @@ Sema::NamedReturnInfo Sema::getNamedReturnInfo(const Expr *E, bool ForceCXX20) {
   const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
     return NamedReturnInfo();
-  return getNamedReturnInfo(VD, ForceCXX20);
+  NamedReturnInfo Res = getNamedReturnInfo(VD, /*ForceCXX20=*/ForceCXX2b);
+  if (Res.Candidate && !E->isXValue() &&
+      (ForceCXX2b || getLangOpts().CPlusPlus2b)) {
+    E = ImplicitCastExpr::Create(Context, VD->getType().getNonReferenceType(),
+                                 CK_NoOp, E, nullptr, VK_XValue,
+                                 FPOptionsOverride());
+  }
+  return Res;
 }
 
 /// Updates the status in the given NamedReturnInfo object to disallow
@@ -3566,7 +3574,7 @@ Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
                                       const NamedReturnInfo &NRInfo,
                                       Expr *Value) {
 
-  if (NRInfo.Candidate) {
+  if (NRInfo.Candidate && !getLangOpts().CPlusPlus2b) {
     if (NRInfo.isMoveEligible()) {
       ExprResult Res;
       if (!TryMoveInitialization(*this, Entity, NRInfo.Candidate, Value,
