@@ -14,6 +14,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
@@ -291,8 +292,17 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     else
       PI.runAfterPass<Loop>(*Pass, *L, PassPA);
 
-    // FIXME: We should verify the set of analyses relevant to Loop passes
-    // are preserved.
+#ifndef NDEBUG
+    // LoopAnalysisResults should always be valid.
+    // Note that we don't LAR.SE.verify() because that can change observed SE
+    // queries. See PR44815.
+    if (VerifyDomInfo)
+      LAR.DT.verify();
+    if (VerifyLoopInfo)
+      LAR.LI.verify(LAR.DT);
+    if (LAR.MSSA && VerifyMemorySSA)
+      LAR.MSSA->verifyMemorySSA();
+#endif
 
     // If the loop hasn't been deleted, we need to handle invalidation here.
     if (!Updater.skipCurrentLoop())
