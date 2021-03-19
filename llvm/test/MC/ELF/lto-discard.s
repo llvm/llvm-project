@@ -1,17 +1,16 @@
 // Check that ".lto_discard" ignores symbol assignments and attribute changes
 // for the specified symbols.
-// RUN: llvm-mc -triple x86_64 < %s | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-linux-gnu < %s | FileCheck %s
 
 // Check that ".lto_discard" only accepts identifiers.
-// RUN: not llvm-mc -filetype=obj -triple x86_64 --defsym ERR=1 %s 2>&1 |\
+// RUN: not llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu --defsym ERR=1 %s 2>&1 |\
 // RUN:         FileCheck %s --check-prefix=ERR
 
-// CHECK: .weak foo
-// CHECK: foo:
-// CHECK:    .byte 1
-// CHECK: .weak bar
-// CHECK: bar:
-// CHECK:    .byte 2
+// CHECK-NOT:   .weak foo
+// CHECK-NOT:       foo:
+// CHECK:       .weak bar
+// CHECK:           bar:
+// CHECK:               .byte 2
 
 .lto_discard foo
 .weak foo
