@@ -47,6 +47,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
+#include <algorithm>
 #include <string>
 
 namespace clang {
@@ -270,7 +271,9 @@ struct FragmentCompiler {
         Add.push_back(std::move(*A));
       Out.Apply.push_back([Add(std::move(Add))](const Params &, Config &C) {
         C.CompileFlags.Edits.push_back([Add](std::vector<std::string> &Args) {
-          Args.insert(Args.end(), Add.begin(), Add.end());
+          // The point to insert at. Just append when `--` isn't present.
+          auto It = llvm::find(Args, "--");
+          Args.insert(It, Add.begin(), Add.end());
         });
       });
     }
