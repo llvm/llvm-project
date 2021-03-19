@@ -23,7 +23,7 @@ define i32 @testDiv(i8* %p, i64* %p1) {
 ; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], [[INDVARS_IV_NEXT2]]
 ; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
-; CHECK-NEXT:    br i1 false, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
+; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit.loopexit:
 ; CHECK-NEXT:    br label [[LOOP2_EXIT]]
 ; CHECK:       loop2.exit:
@@ -94,7 +94,7 @@ define i32 @testRem(i8* %p, i64* %p1) {
 ; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
-; CHECK-NEXT:    br i1 false, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
+; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit.loopexit:
 ; CHECK-NEXT:    br label [[LOOP2_EXIT]]
 ; CHECK:       loop2.exit:

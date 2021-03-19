@@ -15,8 +15,7 @@ define void @test_signed(i32 %start) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i32 [[IV_NEXT]], [[IV]]
 ; CHECK-NEXT:    br i1 [[CHECK]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[IV]], -2147483648
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -58,8 +57,7 @@ define void @test_unsigned(i32 %start) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV_NEXT]], [[IV]]
 ; CHECK-NEXT:    br i1 [[CHECK]], label [[GUARDED]], label [[FAIL:%.*]]
 ; CHECK:       guarded:
-; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[IV]], 0
-; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:

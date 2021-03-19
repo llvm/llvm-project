@@ -261,9 +261,10 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
   const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
 
-  // If the condition is always true or always false, replace it with
-  // a constant value.
-  if (auto Ev = SE->evaluatePredicate(Pred, S, X)) {
+  // If the condition is always true or always false in the given context,
+  // replace it with a constant value.
+  // TODO: We can sharpen the context to common dominator of all ICmp's users.
+  if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, ICmp)) {
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
