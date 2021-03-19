@@ -43,23 +43,14 @@ using BlobGenerator =
 using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
     Operation *, llvm::LLVMContext &, StringRef)>;
 
-/// Creates a pass to convert a gpu.launch_func operation into a sequence of
-/// GPU runtime calls.
+/// Creates a pass to convert a GPU operations into a sequence of GPU runtime
+/// calls.
 ///
 /// This pass does not generate code to call GPU runtime APIs directly but
 /// instead uses a small wrapper library that exports a stable and conveniently
 /// typed ABI on top of GPU runtimes such as CUDA or ROCm (HIP).
-///
-/// A non-empty gpuBinaryAnnotation overrides the pass' command line option.
-std::unique_ptr<OperationPass<ModuleOp>>
-createGpuToLLVMConversionPass(StringRef gpuBinaryAnnotation = {});
+std::unique_ptr<OperationPass<ModuleOp>> createGpuToLLVMConversionPass();
 
-/// Collect a set of patterns to convert from the GPU dialect to LLVM.
-///
-/// A non-empty gpuBinaryAnnotation overrides the pass' command line option.
-void populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         OwningRewritePatternList &patterns,
-                                         StringRef gpuBinaryAnnotation = {});
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
