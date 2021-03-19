@@ -50,6 +50,11 @@ class InOrderIssueStage final : public Stage {
   /// Number of instructions that can be issued in the current cycle.
   unsigned Bandwidth;
 
+  /// Number of cycles (counted from the current cycle) until the last write is
+  /// committed. This is taken into account to ensure that writes commit in the
+  /// program order.
+  unsigned LastWriteBackCycle;
+
   InOrderIssueStage(const InOrderIssueStage &Other) = delete;
   InOrderIssueStage &operator=(const InOrderIssueStage &Other) = delete;
 
@@ -69,7 +74,7 @@ public:
                     const MCSchedModel &SM, const MCSubtargetInfo &STI)
       : SM(SM), STI(STI), RCU(RCU), PRF(PRF),
         RM(std::make_unique<ResourceManager>(SM)), NumIssued(0),
-        StallCyclesLeft(0), Bandwidth(0) {}
+        StallCyclesLeft(0), Bandwidth(0), LastWriteBackCycle(0) {}
 
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;

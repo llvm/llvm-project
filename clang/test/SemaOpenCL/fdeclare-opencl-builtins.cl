@@ -39,6 +39,9 @@ typedef unsigned int uint;
 typedef unsigned long ulong;
 typedef unsigned short ushort;
 typedef __SIZE_TYPE__ size_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
+typedef __INTPTR_TYPE__ intptr_t;
+typedef __UINTPTR_TYPE__ uintptr_t;
 typedef char char2 __attribute__((ext_vector_type(2)));
 typedef char char4 __attribute__((ext_vector_type(4)));
 typedef uchar uchar4 __attribute__((ext_vector_type(4)));
@@ -97,6 +100,24 @@ void test_typedef_args(clk_event_t evt, volatile atomic_flag *flg, global unsign
 
   size_t ws[2] = {2, 8};
   ndrange_t r = ndrange_2D(ws);
+}
+
+// Check that atomic_fetch_ functions can be called with (u)intptr_t arguments,
+// despite OpenCLBuiltins.td not providing explicit overloads for those types.
+void test_atomic_fetch(volatile __generic atomic_int *a_int,
+                       volatile __generic atomic_intptr_t *a_intptr,
+                       volatile __generic atomic_uintptr_t *a_uintptr) {
+  int i;
+  intptr_t ip;
+  uintptr_t uip;
+  ptrdiff_t ptrdiff;
+
+  i = atomic_fetch_add(a_int, i);
+  ip = atomic_fetch_add(a_intptr, ptrdiff);
+  uip = atomic_fetch_add(a_uintptr, ptrdiff);
+
+  ip = atomic_fetch_or(a_intptr, ip);
+  uip = atomic_fetch_or(a_uintptr, uip);
 }
 #endif
 

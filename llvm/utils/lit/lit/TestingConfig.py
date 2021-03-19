@@ -33,6 +33,7 @@ class TestingConfig(object):
             pass_vars.append('INCLUDE')
             pass_vars.append('LIB')
             pass_vars.append('PATHEXT')
+            pass_vars.append('USERPROFILE')
             environment['PYTHONBUFFERED'] = '1'
 
         for var in pass_vars:

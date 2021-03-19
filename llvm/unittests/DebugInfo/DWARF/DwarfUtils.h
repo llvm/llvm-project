@@ -21,6 +21,7 @@ namespace utils {
 Triple getDefaultTargetTripleForAddrSize(uint8_t AddrSize);
 Triple getNormalizedDefaultTargetTriple();
 bool isConfigurationSupported(Triple &T);
+bool isObjectEmissionSupported(Triple &T);
 
 } // end namespace utils
 } // end namespace dwarf

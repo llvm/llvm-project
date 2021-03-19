@@ -27,7 +27,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
-    UnimplementedSIMD128,
   } SIMDLevel = NoSIMD;
 
   bool HasNontrappingFPToInt = false;

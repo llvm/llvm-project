@@ -88,6 +88,7 @@ struct Configuration {
   uint32_t timeTraceGranularity;
   std::string progName;
   llvm::StringRef installName;
+  llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   bool demangle = false;

@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "MapFile.h"
 #include "MergedOutputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -926,6 +927,7 @@ void Writer::run() {
   createLoadCommands();
   finalizeAddressses();
   finalizeLinkEditSegment();
+  writeMapFile();
   openFile();
   if (errorCount())
     return;

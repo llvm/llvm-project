@@ -3798,4 +3798,3 @@ undef all system defines
 .. option:: -z <arg>
 
 Pass -z <arg> to the linker
-

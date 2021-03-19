@@ -56,29 +56,21 @@ size_t Writer::finalize() {
 
 Error Writer::write() {
   size_t TotalSize = finalize();
-  std::unique_ptr<WritableMemoryBuffer> Buf =
-      WritableMemoryBuffer::getNewMemBuffer(TotalSize);
-  if (!Buf)
-    return createStringError(errc::not_enough_memory,
-                             "failed to allocate memory buffer of " +
-                                 Twine::utohexstr(TotalSize) + " bytes");
+  Out.reserveExtraSpace(TotalSize);
 
   // Write the header.
-  uint8_t *Ptr = reinterpret_cast<uint8_t *>(Buf->getBufferStart());
-  Ptr = std::copy(Obj.Header.Magic.begin(), Obj.Header.Magic.end(), Ptr);
-  support::endian::write32le(Ptr, Obj.Header.Version);
-  Ptr += sizeof(Obj.Header.Version);
+  Out.write(Obj.Header.Magic.data(), Obj.Header.Magic.size());
+  uint32_t Version;
+  support::endian::write32le(&Version, Obj.Header.Version);
+  Out.write(reinterpret_cast<const char *>(&Version), sizeof(Version));
 
   // Write each section.
   for (size_t I = 0, S = SectionHeaders.size(); I < S; ++I) {
-    Ptr = std::copy(SectionHeaders[I].begin(), SectionHeaders[I].end(), Ptr);
-    ArrayRef<uint8_t> Contents = Obj.Sections[I].Contents;
-    Ptr = std::copy(Contents.begin(), Contents.end(), Ptr);
+    Out.write(SectionHeaders[I].data(), SectionHeaders[I].size());
+    Out.write(reinterpret_cast<const char *>(Obj.Sections[I].Contents.data()),
+              Obj.Sections[I].Contents.size());
   }
 
-  // TODO: Implement direct writing to the output stream (without intermediate
-  // memory buffer Buf).
-  Out.write(Buf->getBufferStart(), Buf->getBufferSize());
   return Error::success();
 }
 

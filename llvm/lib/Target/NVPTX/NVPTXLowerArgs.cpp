@@ -200,7 +200,7 @@ static bool isALoadChain(Value *Start) {
       return false;
   }
   return true;
-};
+}
 
 void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Function *Func = Arg->getParent();

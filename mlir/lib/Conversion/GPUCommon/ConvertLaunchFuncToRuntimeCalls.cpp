@@ -18,6 +18,7 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
@@ -313,6 +314,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   OwningRewritePatternList patterns;
   LLVMConversionTarget target(getContext());
 
+  populateVectorToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(&getContext(), converter,
                                                     patterns, target);

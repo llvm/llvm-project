@@ -785,7 +785,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // G_ADD_LOW instructions.
   // By splitting this here, we can optimize accesses in the small code model by
   // folding in the G_ADD_LOW into the load/store offset.
-  auto GV = MI.getOperand(1).getGlobal();
+  auto &GlobalOp = MI.getOperand(1);
+  const auto* GV = GlobalOp.getGlobal();
   if (GV->isThreadLocal())
     return true; // Don't want to modify TLS vars.
 
@@ -795,9 +796,10 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   if (OpFlags & AArch64II::MO_GOT)
     return true;
 
+  auto Offset = GlobalOp.getOffset();
   Register DstReg = MI.getOperand(0).getReg();
   auto ADRP = MIRBuilder.buildInstr(AArch64::ADRP, {LLT::pointer(0, 64)}, {})
-                  .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
+                  .addGlobalAddress(GV, Offset, OpFlags | AArch64II::MO_PAGE);
   // Set the regclass on the dest reg too.
   MRI.setRegClass(ADRP.getReg(0), &AArch64::GPR64RegClass);
 
@@ -815,6 +817,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // binary must also be loaded into address range [0, 2^48). Both of these
   // properties need to be ensured at runtime when using tagged addresses.
   if (OpFlags & AArch64II::MO_TAGGED) {
+    assert(!Offset &&
+           "Should not have folded in an offset for a tagged global!");
     ADRP = MIRBuilder.buildInstr(AArch64::MOVKXi, {LLT::pointer(0, 64)}, {ADRP})
                .addGlobalAddress(GV, 0x100000000,
                                  AArch64II::MO_PREL | AArch64II::MO_G3)
@@ -823,7 +827,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   }
 
   MIRBuilder.buildInstr(AArch64::G_ADD_LOW, {DstReg}, {ADRP})
-      .addGlobalAddress(GV, 0,
+      .addGlobalAddress(GV, Offset,
                         OpFlags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
   MI.eraseFromParent();
   return true;
