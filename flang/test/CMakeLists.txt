@@ -35,7 +35,7 @@ set(FLANG_TEST_DEPENDS
   opt llc
   tco bbc
   fir-opt
-  FortranRuntime FortranDecimal
+  FortranRuntime FortranDecimal Fortran_main
 )
 
 if (FLANG_BUILD_NEW_DRIVER)
