@@ -12,7 +12,7 @@
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
 #elif defined(__ARM_FEATURE_PAC_DEFAULT) && !defined(__APPLE__)
-inline unsigned long ptrauth_strip(unsigned long __value, unsigned int __key) {
+inline unsigned long ptrauth_strip(void* __value, unsigned int __key) {
   // On the stack the link register is protected with Pointer
   // Authentication Code when compiled with -mbranch-protection.
   // Let's stripping the PAC unconditionally because xpaclri is in
@@ -36,6 +36,6 @@ inline unsigned long ptrauth_strip(unsigned long __value, unsigned int __key) {
 #define ptrauth_string_discriminator(__string) ((int)0)
 #endif
 
-#define STRIP_PAC_PC(pc) ((uptr)ptrauth_strip((uptr)pc, 0))
+#define STRIP_PAC_PC(pc) ((uptr)ptrauth_strip(pc, 0))
 
 #endif // SANITIZER_PTRAUTH_H

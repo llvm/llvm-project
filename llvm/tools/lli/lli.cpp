@@ -84,7 +84,7 @@ static codegen::RegisterCodeGenFlags CGF;
 
 namespace {
 
-  enum class JITKind { MCJIT, OrcLazy };
+  enum class JITKind { MCJIT, Orc, OrcLazy };
   enum class JITLinkerKind { Default, RuntimeDyld, JITLink };
 
   cl::opt<std::string>
@@ -101,6 +101,7 @@ namespace {
       "jit-kind", cl::desc("Choose underlying JIT kind."),
       cl::init(JITKind::MCJIT),
       cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
+                 clEnumValN(JITKind::Orc, "orc", "Orc JIT"),
                  clEnumValN(JITKind::OrcLazy, "orc-lazy",
                             "Orc-based lazy JIT.")));
 
@@ -416,7 +417,7 @@ static void reportError(SMDiagnostic Err, const char *ProgName) {
 }
 
 Error loadDylibs();
-int runOrcLazyJIT(const char *ProgName);
+int runOrcJIT(const char *ProgName);
 void disallowOrcOptions();
 
 //===----------------------------------------------------------------------===//
@@ -443,11 +444,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   ExitOnErr(loadDylibs());
 
-  if (UseJITKind == JITKind::OrcLazy)
-    return runOrcLazyJIT(argv[0]);
-  else
+  if (UseJITKind == JITKind::MCJIT)
     disallowOrcOptions();
+  else
+    return runOrcJIT(argv[0]);
 
+  // Old lli implementation based on ExecutionEngine and MCJIT.
   LLVMContext Context;
 
   // Load the bitcode...
@@ -829,7 +831,7 @@ loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   return orc::ThreadSafeModule(std::move(M), std::move(TSCtx));
 }
 
-int runOrcLazyJIT(const char *ProgName) {
+int runOrcJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
@@ -975,8 +977,17 @@ int runOrcLazyJIT(const char *ProgName) {
         std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
                                                       Mangle));
 
+  // Regular modules are greedy: They materialize as a whole and trigger
+  // materialization for all required symbols recursively. Lazy modules go
+  // through partitioning and they replace outgoing calls with reexport stubs
+  // that resolve on call-through.
+  auto AddModule = [&](orc::JITDylib &JD, orc::ThreadSafeModule M) {
+    return UseJITKind == JITKind::OrcLazy ? J->addLazyIRModule(JD, std::move(M))
+                                          : J->addIRModule(JD, std::move(M));
+  };
+
   // Add the main module.
-  ExitOnErr(J->addLazyIRModule(std::move(MainModule)));
+  ExitOnErr(AddModule(J->getMainJITDylib(), std::move(MainModule)));
 
   // Create JITDylibs and add any extra modules.
   {
@@ -1004,7 +1015,7 @@ int runOrcLazyJIT(const char *ProgName) {
       assert(EMIdx != 0 && "ExtraModule should have index > 0");
       auto JDItr = std::prev(IdxToDylib.lower_bound(EMIdx));
       auto &JD = *JDItr->second;
-      ExitOnErr(J->addLazyIRModule(JD, std::move(M)));
+      ExitOnErr(AddModule(JD, std::move(M)));
     }
 
     for (auto EAItr = ExtraArchives.begin(), EAEnd = ExtraArchives.end();

@@ -123,7 +123,7 @@ void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
     // frame[-1] contains the return address
     uhwptr pc1 = frame[-1];
 #else
-    uhwptr pc1 = STRIP_PAC_PC(frame[1]);
+    uhwptr pc1 = STRIP_PAC_PC((void *)frame[1]);
 #endif
     // Let's assume that any pointer in the 0th page (i.e. <0x1000 on i386 and
     // x86_64) is invalid and stop unwinding here.  If we're adding support for

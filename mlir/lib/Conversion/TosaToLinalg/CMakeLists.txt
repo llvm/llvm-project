@@ -14,6 +14,7 @@ add_mlir_conversion_library(MLIRTosaToLinalg
   MLIRLinalg
   MLIRLinalgUtils
   MLIRMath
+  MLIRMemRef
   MLIRPass
   MLIRTosa
   MLIRTosaTransforms

@@ -825,18 +825,6 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_neg(v128_t __a) {
   return (v128_t)(-(__u64x2)__a);
 }
 
-#ifdef __wasm_unimplemented_simd128__
-
-static __inline__ bool __DEFAULT_FN_ATTRS wasm_i64x2_any_true(v128_t __a) {
-  return __builtin_wasm_any_true_i64x2((__i64x2)__a);
-}
-
-static __inline__ bool __DEFAULT_FN_ATTRS wasm_i64x2_all_true(v128_t __a) {
-  return __builtin_wasm_all_true_i64x2((__i64x2)__a);
-}
-
-#endif // __wasm_unimplemented_simd128__
-
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_i64x2_shl(v128_t __a,
                                                            int32_t __b) {
   return (v128_t)((__i64x2)__a << (int64_t)__b);
@@ -878,24 +866,6 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_neg(v128_t __a) {
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_sqrt(v128_t __a) {
   return (v128_t)__builtin_wasm_sqrt_f32x4((__f32x4)__a);
 }
-
-#ifdef __wasm_unimplemented_simd128__
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_qfma(v128_t __a,
-                                                            v128_t __b,
-                                                            v128_t __c) {
-  return (v128_t)__builtin_wasm_qfma_f32x4((__f32x4)__a, (__f32x4)__b,
-                                           (__f32x4)__c);
-}
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_qfms(v128_t __a,
-                                                            v128_t __b,
-                                                            v128_t __c) {
-  return (v128_t)__builtin_wasm_qfms_f32x4((__f32x4)__a, (__f32x4)__b,
-                                           (__f32x4)__c);
-}
-
-#endif // __wasm_unimplemented_simd128__
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f32x4_add(v128_t __a,
                                                            v128_t __b) {
@@ -948,24 +918,6 @@ static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_neg(v128_t __a) {
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_sqrt(v128_t __a) {
   return (v128_t)__builtin_wasm_sqrt_f64x2((__f64x2)__a);
 }
-
-#ifdef __wasm_unimplemented_simd128__
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_qfma(v128_t __a,
-                                                            v128_t __b,
-                                                            v128_t __c) {
-  return (v128_t)__builtin_wasm_qfma_f64x2((__f64x2)__a, (__f64x2)__b,
-                                           (__f64x2)__c);
-}
-
-static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_qfms(v128_t __a,
-                                                            v128_t __b,
-                                                            v128_t __c) {
-  return (v128_t)__builtin_wasm_qfms_f64x2((__f64x2)__a, (__f64x2)__b,
-                                           (__f64x2)__c);
-}
-
-#endif // __wasm_unimplemented_simd128__
 
 static __inline__ v128_t __DEFAULT_FN_ATTRS wasm_f64x2_add(v128_t __a,
                                                            v128_t __b) {

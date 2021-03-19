@@ -15,6 +15,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -168,6 +169,8 @@ private:
   /// List of forward directional labels for diagnosis at the end.
   SmallVector<std::tuple<SMLoc, CppHashInfoTy, MCSymbol *>, 4> DirLabels;
 
+  SmallSet<StringRef, 2> LTODiscardSymbols;
+
   /// AssemblerDialect. ~OU means unset value and use value provided by MAI.
   unsigned AssemblerDialect = ~0U;
 
@@ -234,6 +237,10 @@ public:
     Lexer.setLexMasmIntegers(V);
   }
   bool isParsingMSInlineAsm() override { return ParsingMSInlineAsm; }
+
+  bool discardLTOSymbol(StringRef Name) const override {
+    return LTODiscardSymbols.contains(Name);
+  }
 
   bool parseMSInlineAsm(void *AsmLoc, std::string &AsmString,
                         unsigned &NumOutputs, unsigned &NumInputs,
@@ -516,6 +523,7 @@ private:
     DK_ADDRSIG,
     DK_ADDRSIG_SYM,
     DK_PSEUDO_PROBE,
+    DK_LTO_DISCARD,
     DK_END
   };
 
@@ -681,6 +689,9 @@ private:
 
   // .pseudoprobe
   bool parseDirectivePseudoProbe();
+
+  // ".lto_discard"
+  bool parseDirectiveLTODiscard();
 
   // Directives to support address-significance tables.
   bool parseDirectiveAddrsig();
@@ -892,6 +903,8 @@ bool AsmParser::enabledGenDwarfForAssembly() {
 }
 
 bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
+  LTODiscardSymbols.clear();
+
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
     Out.InitSections(false);
@@ -1770,7 +1783,6 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   StringMap<DirectiveKind>::const_iterator DirKindIt =
       DirectiveKindMap.find(IDVal.lower());
   DirectiveKind DirKind = (DirKindIt == DirectiveKindMap.end())
-
                               ? DK_NO_DIRECTIVE
                               : DirKindIt->getValue();
   switch (DirKind) {
@@ -1867,6 +1879,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     if (getTok().is(AsmToken::EndOfStatement)) {
       Lex();
     }
+
+    if (discardLTOSymbol(IDVal))
+      return false;
 
     getTargetParser().doBeforeLabelEmit(Sym);
 
@@ -2208,6 +2223,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveAddrsigSym();
     case DK_PSEUDO_PROBE:
       return parseDirectivePseudoProbe();
+    case DK_LTO_DISCARD:
+      return parseDirectiveLTODiscard();
     }
 
     return Error(IDLoc, "unknown directive");
@@ -2851,6 +2868,9 @@ bool AsmParser::parseAssignment(StringRef Name, bool allow_redef,
     // should just return out.
     return false;
   }
+
+  if (discardLTOSymbol(Name))
+    return false;
 
   // Do the assignment.
   Out.emitAssignment(Sym, Value);
@@ -4870,6 +4890,10 @@ bool AsmParser::parseDirectiveSymbolAttribute(MCSymbolAttr Attr) {
     SMLoc Loc = getTok().getLoc();
     if (parseIdentifier(Name))
       return Error(Loc, "expected identifier");
+
+    if (discardLTOSymbol(Name))
+      return false;
+
     MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
 
     // Assembler local symbols don't make any sense here. Complain loudly.
@@ -5493,6 +5517,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".addrsig"] = DK_ADDRSIG;
   DirectiveKindMap[".addrsig_sym"] = DK_ADDRSIG_SYM;
   DirectiveKindMap[".pseudoprobe"] = DK_PSEUDO_PROBE;
+  DirectiveKindMap[".lto_discard"] = DK_LTO_DISCARD;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -5803,6 +5828,27 @@ bool AsmParser::parseDirectivePseudoProbe() {
     return true;
 
   getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack);
+  return false;
+}
+
+/// parseDirectiveLTODiscard
+///  ::= ".lto_discard" [ identifier ( , identifier )* ]
+/// The LTO library emits this directive to discard non-prevailing symbols.
+/// We ignore symbol assignments and attribute changes for the specified
+/// symbols.
+bool AsmParser::parseDirectiveLTODiscard() {
+  auto ParseOp = [&]() -> bool {
+    StringRef Name;
+    SMLoc Loc = getTok().getLoc();
+    if (parseIdentifier(Name))
+      return Error(Loc, "expected identifier");
+    LTODiscardSymbols.insert(Name);
+    return false;
+  };
+
+  LTODiscardSymbols.clear();
+  if (parseMany(ParseOp))
+    return addErrorSuffix(" in directive");
   return false;
 }
 
