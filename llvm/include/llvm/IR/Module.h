@@ -197,6 +197,14 @@ private:
                                   ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
+  StringMap<unsigned>
+      CurrentIntrinsicIds; ///< Keep track of the current unique id count for
+                           ///< the specified intrinsic basename.
+  DenseMap<std::pair<Intrinsic::ID, const FunctionType *>, unsigned>
+      UniquedIntrinsicNames; ///< Keep track of uniqued names of intrinsics
+                             ///< based on unnamed types. The combination of
+                             ///< ID and FunctionType maps to the extension that
+                             ///< is used to make the intrinsic name unique.
 
   friend class Constant;
 
@@ -330,6 +338,11 @@ public:
   void getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const;
 
   std::vector<StructType *> getIdentifiedStructTypes() const;
+
+  /// Return a unique name for an intrinsic whose mangling is based on an
+  /// unnamed type. The Proto represents the function prototype.
+  std::string getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
+                                     const FunctionType *Proto);
 
 /// @}
 /// @name Function Accessors
