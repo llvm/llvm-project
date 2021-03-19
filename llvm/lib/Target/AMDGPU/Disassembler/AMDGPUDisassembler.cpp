@@ -381,13 +381,15 @@ template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   return Res;
 }
 
-static inline DecoderBigInt<96> eat12Bytes(ArrayRef<uint8_t>& Bytes) {
+static inline DecoderUInt128 eat12Bytes(ArrayRef<uint8_t> &Bytes) {
   assert(Bytes.size() >= 12);
-  const auto Res1 = support::endian::read<uint64_t, support::endianness::little>(Bytes.data());
+  uint64_t Lo = support::endian::read<uint64_t, support::endianness::little>(
+      Bytes.data());
   Bytes = Bytes.slice(8);
-  const auto Res2 = support::endian::read<uint32_t, support::endianness::little>(Bytes.data());
+  uint64_t Hi = support::endian::read<uint32_t, support::endianness::little>(
+      Bytes.data());
   Bytes = Bytes.slice(4);
-  return DecoderBigInt<96>(APInt(96, {Res1, Res2}));
+  return DecoderUInt128(Lo, Hi);
 }
 
 static bool isValidDPP8(const MCInst &MI) {
@@ -418,12 +420,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
-      DecoderBigInt<96> DecW = eat12Bytes(Bytes);
-      Res = tryDecodeInst<DecoderBigInt<96>>(DecoderTableDPP8GFX1196, MI, DecW, Address);
+      DecoderUInt128 DecW = eat12Bytes(Bytes);
+      Res = tryDecodeInst<DecoderUInt128>(DecoderTableDPP8GFX1196, MI, DecW,
+                                          Address);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
-      Res = tryDecodeInst<DecoderBigInt<96>>(DecoderTableDPPGFX1196, MI, DecW, Address);
+      Res = tryDecodeInst<DecoderUInt128>(DecoderTableDPPGFX1196, MI, DecW,
+                                          Address);
       if (Res) break;
     }
     // Reinitialize Bytes
