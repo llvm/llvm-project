@@ -50,16 +50,16 @@
 // RUN: %clang_cl -### /Tc - 2>&1 | FileCheck -check-prefix=STDINTc %s
 // STDINTc: "-x" "c"
 
-// RUN: env LIB=%S/Inputs/cl-libs %clang_cl -### -- %s cl-test.lib 2>&1 | FileCheck -check-prefix=LIBINPUT %s
+// RUN: env LIB=%S/Inputs/cl-libs %clang_cl -fuse-ld=link -### -- %s cl-test.lib 2>&1 | FileCheck -check-prefix=LIBINPUT %s
 // LIBINPUT: link.exe"
 // LIBINPUT: "cl-test.lib"
 
-// RUN: env LIB=%S/Inputs/cl-libs %clang_cl -### -- %s cl-test2.lib 2>&1 | FileCheck -check-prefix=LIBINPUT2 %s
+// RUN: env LIB=%S/Inputs/cl-libs %clang_cl -fuse-ld=link -### -- %s cl-test2.lib 2>&1 | FileCheck -check-prefix=LIBINPUT2 %s
 // LIBINPUT2: error: no such file or directory: 'cl-test2.lib'
 // LIBINPUT2: link.exe"
 // LIBINPUT2-NOT: "cl-test2.lib"
 
-// RUN: %clang_cl -### -- %s /nonexisting.lib 2>&1 | FileCheck -check-prefix=LIBINPUT3 %s
+// RUN: %clang_cl -fuse-ld=link -### -- %s /nonexisting.lib 2>&1 | FileCheck -check-prefix=LIBINPUT3 %s
 // LIBINPUT3: error: no such file or directory: '/nonexisting.lib'
 // LIBINPUT3: link.exe"
 // LIBINPUT3-NOT: "/nonexisting.lib"
