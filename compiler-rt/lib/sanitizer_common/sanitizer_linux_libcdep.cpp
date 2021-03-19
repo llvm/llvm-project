@@ -704,7 +704,7 @@ static int AddModuleSegments(const char *module_name, dl_phdr_info *info,
     return 0;
   LoadedModule cur_module;
   bool instrumented = IsModuleInstrumented(info);
-  cur_module.set(module_name.data(), info->dlpi_addr, instrumented);
+  cur_module.set(module_name, info->dlpi_addr, instrumented);
   for (int i = 0; i < (int)info->dlpi_phnum; i++) {
     const Elf_Phdr *phdr = &info->dlpi_phdr[i];
     if (phdr->p_type == PT_LOAD) {
