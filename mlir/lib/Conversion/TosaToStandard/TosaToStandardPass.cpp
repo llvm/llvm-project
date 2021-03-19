@@ -33,6 +33,7 @@ public:
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::ConstOp>();
     target.addIllegalOp<tosa::SliceOp>();
+    target.addIllegalOp<tosa::ApplyScaleOp>();
     target.addLegalDialect<StandardOpsDialect>();
 
     auto *op = getOperation();
