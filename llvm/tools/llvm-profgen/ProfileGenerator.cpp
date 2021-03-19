@@ -188,10 +188,13 @@ void ProfileGenerator::findDisjointRanges(RangeSample &DisjointRanges,
 }
 
 FunctionSamples &
-CSProfileGenerator::getFunctionProfileForContext(StringRef ContextStr) {
+CSProfileGenerator::getFunctionProfileForContext(StringRef ContextStr,
+                                                 bool WasLeafInlined) {
   auto Ret = ProfileMap.try_emplace(ContextStr, FunctionSamples());
   if (Ret.second) {
     SampleContext FContext(Ret.first->first(), RawContext);
+    if (WasLeafInlined)
+      FContext.setAttribute(ContextWasInlined);
     FunctionSamples &FProfile = Ret.first->second;
     FProfile.setContext(FContext);
   }
@@ -208,7 +211,7 @@ void CSProfileGenerator::generateProfile() {
       StringRef ContextId(CtxKey->Context);
       // Get or create function profile for the range
       FunctionSamples &FunctionProfile =
-          getFunctionProfileForContext(ContextId);
+          getFunctionProfileForContext(ContextId, CtxKey->WasLeafInlined);
 
       // Fill in function body samples
       populateFunctionBodySamples(FunctionProfile, CI.second.RangeCounter,
@@ -428,6 +431,7 @@ void CSProfileGenerator::write(std::unique_ptr<SampleProfileWriter> Writer,
     assert(Ret.second && "Must be a unique context");
     SampleContext FContext(Ret.first->first(), RawContext);
     FunctionSamples &FProfile = Ret.first->second;
+    FContext.setAllAttributes(FProfile.getContext().getAllAttributes());
     FProfile.setName(FContext.getNameWithContext(true));
     FProfile.setContext(FContext);
   }
@@ -587,7 +591,7 @@ void PseudoProbeCSProfileGenerator::populateBoundarySamplesWithProbes(
 
 FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
     SmallVectorImpl<std::string> &ContextStrStack,
-    const PseudoProbeFuncDesc *LeafFuncDesc) {
+    const PseudoProbeFuncDesc *LeafFuncDesc, bool WasLeafInlined) {
   assert(ContextStrStack.size() && "Profile context must have the leaf frame");
   // Compress the context string except for the leaf frame
   std::string LeafFrame = ContextStrStack.back();
@@ -608,7 +612,7 @@ FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
   OContextStr << StringRef(LeafFrame).split(":").first.str();
 
   FunctionSamples &FunctionProile =
-      getFunctionProfileForContext(OContextStr.str());
+      getFunctionProfileForContext(OContextStr.str(), WasLeafInlined);
   FunctionProile.setFunctionHash(LeafFuncDesc->FuncHash);
   return FunctionProile;
 }
@@ -619,13 +623,11 @@ FunctionSamples &PseudoProbeCSProfileGenerator::getFunctionProfileForLeafProbe(
   // Explicitly copy the context for appending the leaf context
   SmallVector<std::string, 16> ContextStrStackCopy(ContextStrStack.begin(),
                                                    ContextStrStack.end());
-  Binary->getInlineContextForProbe(LeafProbe, ContextStrStackCopy);
-  // Note that the context from probe doesn't include leaf frame,
-  // hence we need to retrieve and append the leaf frame.
+  Binary->getInlineContextForProbe(LeafProbe, ContextStrStackCopy, true);
   const auto *FuncDesc = Binary->getFuncDescForGUID(LeafProbe->GUID);
-  ContextStrStackCopy.emplace_back(FuncDesc->FuncName + ":" +
-                                   Twine(LeafProbe->Index).str());
-  return getFunctionProfileForLeafProbe(ContextStrStackCopy, FuncDesc);
+  bool WasLeafInlined = LeafProbe->InlineTree->hasInlineSite();
+  return getFunctionProfileForLeafProbe(ContextStrStackCopy, FuncDesc,
+                                        WasLeafInlined);
 }
 
 } // end namespace sampleprof
