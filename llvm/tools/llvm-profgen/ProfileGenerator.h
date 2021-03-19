@@ -174,7 +174,8 @@ public:
 
 protected:
   // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
+  FunctionSamples &getFunctionProfileForContext(StringRef ContextId,
+                                                bool WasLeafInlined = false);
   // Merge cold context profile whose total sample is below threshold
   // into base profile.
   void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap);
@@ -229,7 +230,8 @@ private:
   // Helper function to get FunctionSamples for the leaf inlined context
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbeFuncDesc *LeafFuncDesc);
+                                 const PseudoProbeFuncDesc *LeafFuncDesc,
+                                 bool WasLeafInlined);
   // Helper function to get FunctionSamples for the leaf probe
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
