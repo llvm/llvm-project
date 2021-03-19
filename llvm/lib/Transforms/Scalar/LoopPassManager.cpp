@@ -296,8 +296,10 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     // LoopAnalysisResults should always be valid.
     // Note that we don't LAR.SE.verify() because that can change observed SE
     // queries. See PR44815.
-    LAR.DT.verify();
-    LAR.LI.verify(LAR.DT);
+    if (VerifyDomInfo)
+      LAR.DT.verify();
+    if (VerifyLoopInfo)
+      LAR.LI.verify(LAR.DT);
     if (LAR.MSSA && VerifyMemorySSA)
       LAR.MSSA->verifyMemorySSA();
 #endif

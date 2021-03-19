@@ -1566,6 +1566,17 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Vector reduction requires vector source=", MI);
     break;
   }
+
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (DstTy.isVector()) {
+      report("Bitfield extraction is not supported on vectors", MI);
+      break;
+    }
+    break;
+  }
+
   default:
     break;
   }

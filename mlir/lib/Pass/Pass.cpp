@@ -381,6 +381,10 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
                 "nested under the current operation the pass is processing";
     assert(pipeline.getOpName() == root->getName().getStringRef());
 
+    // Before running, make sure to coalesce any adjacent pass adaptors in the
+    // pipeline.
+    pipeline.getImpl().coalesceAdjacentAdaptorPasses();
+
     // Initialize the user provided pipeline and execute the pipeline.
     if (failed(pipeline.initialize(root->getContext(), parentInitGeneration)))
       return failure();

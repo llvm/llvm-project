@@ -1909,9 +1909,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // Compute the set of prefixes for our search.
-  SmallVector<std::string, 8> Prefixes(D.PrefixDirs.begin(),
-                                       D.PrefixDirs.end());
-
+  SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
   if (GCCToolchainDir != "") {
     if (GCCToolchainDir.back() == '/')
