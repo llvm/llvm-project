@@ -1477,6 +1477,24 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   return true;
 }
 
+/// Find a point in code which dominates all given instructions. We can safely
+/// assume that, whatever fact we can prove at the found point, this fact is
+/// also true for each of the given instructions.
+static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
+                                        DominatorTree &DT) {
+  Instruction *CommonDom = nullptr;
+  for (auto *Insn : Instructions)
+    if (!CommonDom || DT.dominates(Insn, CommonDom))
+      CommonDom = Insn;
+    else if (!DT.dominates(CommonDom, Insn))
+      // If there is no dominance relation, use common dominator.
+      CommonDom =
+          DT.findNearestCommonDominator(CommonDom->getParent(),
+                                        Insn->getParent())->getTerminator();
+  assert(CommonDom && "Common dominator not found?");
+  return CommonDom;
+}
+
 // The widenIVUse avoids generating trunc by evaluating the use as AddRec, this
 // will not work when:
 //    1) SCEV traces back to an instruction inside the loop that SCEV can not
@@ -1572,17 +1590,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   // We'll prove some facts that should be true in the context of ext users. If
   // there is no users, we are done now. If there are some, pick their common
   // dominator as context.
-  Instruction *Context = nullptr;
-  for (auto *Ext : ExtUsers) {
-    if (!Context || DT->dominates(Ext, Context))
-      Context = Ext;
-    else if (!DT->dominates(Context, Ext))
-      // For users that don't have dominance relation, use common dominator.
-      Context =
-          DT->findNearestCommonDominator(Context->getParent(), Ext->getParent())
-              ->getTerminator();
-  }
-  assert(Context && "Context not found?");
+  const Instruction *CtxI = findCommonDominator(ExtUsers, *DT);
 
   if (!CanSignExtend && !CanZeroExtend) {
     // Because InstCombine turns 'sub nuw' to 'add' losing the no-wrap flag, we
@@ -1598,8 +1606,8 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     if (!SE->isKnownNegative(RHS))
       return false;
-    bool ProvedSubNUW = SE->isKnownPredicateAt(
-        ICmpInst::ICMP_UGE, LHS, SE->getNegativeSCEV(RHS), Context);
+    bool ProvedSubNUW = SE->isKnownPredicateAt(ICmpInst::ICMP_UGE, LHS,
+                                               SE->getNegativeSCEV(RHS), CtxI);
     if (!ProvedSubNUW)
       return false;
     // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
