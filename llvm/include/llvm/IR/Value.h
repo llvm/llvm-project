@@ -743,8 +743,13 @@ public:
   ///
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
+  ///
+  /// IF CanBeFreed is true, the pointer is known to be dereferenceable at
+  /// point of definition only.  Caller must prove that allocation is not
+  /// deallocated between point of definition and use.
   uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
-                                          bool &CanBeNull) const;
+                                          bool &CanBeNull,
+                                          bool &CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///

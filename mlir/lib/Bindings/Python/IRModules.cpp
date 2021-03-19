@@ -2477,6 +2477,9 @@ public:
   static void bind(py::module &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName);
     cls.def(py::init<PyType &>(), py::keep_alive<0, 1>());
+    cls.def_static("isinstance", [](PyType &otherType) -> bool {
+      return DerivedTy::isaFunction(otherType);
+    });
     DerivedTy::bindDerived(cls);
   }
 
