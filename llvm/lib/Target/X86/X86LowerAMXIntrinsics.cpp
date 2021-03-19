@@ -43,12 +43,14 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "lower-amx-intrinsics"
 
+#ifndef NDEBUG
 static bool isV256I32Ty(Type *Ty) {
   if (auto *FVT = dyn_cast<FixedVectorType>(Ty))
     return FVT->getNumElements() == 256 &&
            FVT->getElementType()->isIntegerTy(32);
   return false;
 }
+#endif
 
 namespace {
 class X86LowerAMXIntrinsics {
