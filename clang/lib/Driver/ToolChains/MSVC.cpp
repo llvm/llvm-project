@@ -11,7 +11,6 @@
 #include "Darwin.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Version.h"
-#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -578,10 +577,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // translate 'lld' into 'lld-link', and in the case of the regular msvc
   // linker, we need to use a special search algorithm.
   llvm::SmallString<128> linkPath;
-  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
-					  CLANG_DEFAULT_LINKER);
-  if (Linker.empty())
-    Linker = "link";
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ, "link");
   if (Linker.equals_lower("lld"))
     Linker = "lld-link";
 
