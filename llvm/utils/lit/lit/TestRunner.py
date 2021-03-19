@@ -608,6 +608,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     assert isinstance(cmd, ShUtil.Pipeline)
 
     procs = []
+    negate_procs = []
     default_stdin = subprocess.PIPE
     stderrTempFiles = []
     opened_files = []
@@ -652,6 +653,12 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     not_crash = True
                 if not args:
                     raise InternalShellError(j, "Error: 'not' requires a"
+                                                " subcommand")
+            elif args[0] == '!':
+                not_args.append(args.pop(0))
+                not_count += 1
+                if not args:
+                    raise InternalShellError(j, "Error: '!' requires a"
                                                 " subcommand")
             else:
                 break
@@ -699,7 +706,15 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # the assumptions that (1) environment variables are not intended to be
         # relevant to 'not' commands and (2) the 'env' command should always
         # blindly pass along the status it receives from any command it calls.
-        args = not_args + args
+
+        # For plain negations, either 'not' without '--crash', or the shell
+        # operator '!', leave them out from the command to execute and
+        # invert the result code afterwards.
+        if not_crash:
+            args = not_args + args
+            not_count = 0
+        else:
+            not_args = []
 
         stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
                                                  opened_files)
@@ -763,6 +778,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                                           stderr = stderr,
                                           env = cmd_shenv.env,
                                           close_fds = kUseCloseFDs))
+            negate_procs.append((not_count % 2) != 0)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
         except OSError as e:
@@ -815,6 +831,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
+        if negate_procs[i]:
+            res = not res
 
         # Ensure the resulting output is always of string type.
         try:
