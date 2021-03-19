@@ -3369,7 +3369,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   m_ast_context_ap->addModuleInterfaceChecker(
     std::make_unique<swift::ModuleInterfaceCheckerImpl>(*m_ast_context_ap,
       moduleCachePath, prebuiltModuleCachePath,
-      swift::ModuleInterfaceLoaderOptions()));
+      swift::ModuleInterfaceLoaderOptions(),
+      swift::RequireOSSAModules_t(GetSILOptions())));
 
   // 2. Create and install the module interface loader.
   //
