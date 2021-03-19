@@ -21255,14 +21255,17 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
     // Merge shuffles through binops if we are able to merge it with at least
     // one other shuffles.
+    // shuffle(bop(shuffle(x,y),shuffle(z,w)),undef)
     // shuffle(bop(shuffle(x,y),shuffle(z,w)),bop(shuffle(a,b),shuffle(c,d)))
     unsigned SrcOpcode = N0.getOpcode();
-    if (SrcOpcode == N1.getOpcode() && TLI.isBinOp(SrcOpcode) &&
-        N->isOnlyUserOf(N0.getNode()) && N->isOnlyUserOf(N1.getNode())) {
+    if (TLI.isBinOp(SrcOpcode) && N->isOnlyUserOf(N0.getNode()) &&
+        (N1.isUndef() ||
+         (SrcOpcode == N1.getOpcode() && N->isOnlyUserOf(N1.getNode())))) {
+      // Get binop source ops, or just pass on the undef.
       SDValue Op00 = N0.getOperand(0);
-      SDValue Op10 = N1.getOperand(0);
       SDValue Op01 = N0.getOperand(1);
-      SDValue Op11 = N1.getOperand(1);
+      SDValue Op10 = N1.isUndef() ? N1 : N1.getOperand(0);
+      SDValue Op11 = N1.isUndef() ? N1 : N1.getOperand(1);
       // TODO: We might be able to relax the VT check but we don't currently
       // have any isBinOp() that has different result/ops VTs so play safe until
       // we have test coverage.

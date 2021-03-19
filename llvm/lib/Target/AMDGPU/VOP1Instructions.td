@@ -605,7 +605,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       let DecoderNamespace = "DPPGFX11";
     }
   }
-  multiclass VOP1_Real_dpp_with_name_gfx11<bits<10> op, string opName,
+  multiclass VOP1_Real_dpp_with_name_gfx11<bits<9> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
     let AsmString = asmName # ps.Pfl.AsmDPP16, DecoderNamespace = "DPPGFX11" in {
@@ -619,7 +619,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       let DecoderNamespace = "DPP8GFX11";
     }
   }
-  multiclass VOP1_Real_dpp8_with_name_gfx11<bits<10> op, string opName,
+  multiclass VOP1_Real_dpp8_with_name_gfx11<bits<9> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
     let AsmString = asmName # ps.Pfl.AsmDPP8, DecoderNamespace = "DPP8GFX11" in {

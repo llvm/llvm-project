@@ -56,11 +56,20 @@ namespace Intrinsic {
   StringRef getName(ID id);
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
-  /// Note, this version of getName supports overloads, but is less efficient
-  /// than the StringRef version of this function.  If no overloads are
-  /// requried, it is safe to use this version, but better to use the StringRef
-  /// version.
-  std::string getName(ID id, ArrayRef<Type*> Tys);
+  /// Note, this version of getName supports overloads, but not unnamed types.
+  /// It is less efficient than the StringRef version of this function. If no
+  /// overloads are required, it is safe to use this version, but better to use
+  /// the StringRef version.
+  std::string getName(ID Id, ArrayRef<Type *> Tys);
+
+  /// Return the LLVM name for an intrinsic, such as "llvm.ssa.copy.p0s_s.1".
+  /// Note, this version of getName supports overloads and unnamed types, but is
+  /// less efficient than the StringRef version of this function.  If no
+  /// overloads are required, it is safe to use this version, but better to use
+  /// the StringRef version. A function type FT can be provided to avoid
+  /// computing it. It is used (or computed) if one of the types is based on an
+  /// unnamed type.
+  std::string getName(ID Id, ArrayRef<Type *> Tys, Module *M, FunctionType *FT);
 
   /// Return the function type for an intrinsic.
   FunctionType *getType(LLVMContext &Context, ID id,

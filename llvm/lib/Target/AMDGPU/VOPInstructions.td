@@ -1106,7 +1106,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOP3_Profile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> {
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> {
   def _e64 : VOP3InstBase<OpName, P, node, VOP3Only, IsVOP2>;
   let SubtargetPredicate = isGFX11Plus in {
     foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in
