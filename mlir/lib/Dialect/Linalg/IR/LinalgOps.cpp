@@ -1863,7 +1863,9 @@ static ParseResult parseTiledLoopOp(OpAsmParser &parser,
     if (parser.resolveOperands(outputs, outputTypes, outputsOperandsLoc,
                                result.operands))
       return failure();
-    result.addTypes(outputTypes);
+    for (Type outputType : outputTypes)
+      if (outputType.isa<RankedTensorType>())
+        result.addTypes(outputType);
   }
 
   // Parse attributes.
