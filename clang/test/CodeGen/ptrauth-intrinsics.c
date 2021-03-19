@@ -5,7 +5,7 @@ long int_discriminator;
 void *ptr_discriminator;
 long signature;
 
-// CHECK-LABEL: define {{.*}} void @test_auth()
+// CHECK-LABEL: define void @test_auth()
 void test_auth() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC0:%.*]] = load i8*, i8** @ptr_discriminator,
@@ -17,7 +17,7 @@ void test_auth() {
   fnptr = __builtin_ptrauth_auth(fnptr, 0, ptr_discriminator);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_auth_peephole()
+// CHECK-LABEL: define void @test_auth_peephole()
 void test_auth_peephole() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC0:%.*]] = load i8*, i8** @ptr_discriminator,
@@ -27,7 +27,7 @@ void test_auth_peephole() {
   __builtin_ptrauth_auth(fnptr, 0, ptr_discriminator)();
 }
 
-// CHECK-LABEL: define {{.*}} void @test_strip()
+// CHECK-LABEL: define void @test_strip()
 void test_strip() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[T0:%.*]] = ptrtoint void ()* [[PTR]] to i64
@@ -37,7 +37,7 @@ void test_strip() {
   fnptr = __builtin_ptrauth_strip(fnptr, 0);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_sign_unauthenticated()
+// CHECK-LABEL: define void @test_sign_unauthenticated()
 void test_sign_unauthenticated() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC0:%.*]] = load i8*, i8** @ptr_discriminator,
@@ -49,7 +49,7 @@ void test_sign_unauthenticated() {
   fnptr = __builtin_ptrauth_sign_unauthenticated(fnptr, 0, ptr_discriminator);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_auth_and_resign()
+// CHECK-LABEL: define void @test_auth_and_resign()
 void test_auth_and_resign() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC0:%.*]] = load i8*, i8** @ptr_discriminator,
@@ -61,7 +61,7 @@ void test_auth_and_resign() {
   fnptr = __builtin_ptrauth_auth_and_resign(fnptr, 0, ptr_discriminator, 3, 15);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_blend_discriminator()
+// CHECK-LABEL: define void @test_blend_discriminator()
 void test_blend_discriminator() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC:%.*]] = load i64, i64* @int_discriminator,
@@ -71,7 +71,7 @@ void test_blend_discriminator() {
   int_discriminator = __builtin_ptrauth_blend_discriminator(fnptr, int_discriminator);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_sign_generic_data()
+// CHECK-LABEL: define void @test_sign_generic_data()
 void test_sign_generic_data() {
   // CHECK:      [[PTR:%.*]] = load void ()*, void ()** @fnptr,
   // CHECK-NEXT: [[DISC0:%.*]] = load i8*, i8** @ptr_discriminator,
@@ -82,7 +82,7 @@ void test_sign_generic_data() {
   signature = __builtin_ptrauth_sign_generic_data(fnptr, ptr_discriminator);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_string_discriminator()
+// CHECK-LABEL: define void @test_string_discriminator()
 void test_string_discriminator() {
   // CHECK:      [[X:%.*]] = alloca i32
 
