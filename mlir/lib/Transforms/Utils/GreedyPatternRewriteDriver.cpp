@@ -114,7 +114,7 @@ private:
       // TODO: This is based on the fact that zero use operations
       // may be deleted, and that single use values often have more
       // canonicalization opportunities.
-      if (!operand.use_empty() && !operand.hasOneUse())
+      if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
         continue;
       if (auto *defInst = operand.getDefiningOp())
         addToWorklist(defInst);
@@ -202,10 +202,7 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 
     // After applying patterns, make sure that the CFG of each of the regions is
     // kept up to date.
-    if (succeeded(simplifyRegions(regions))) {
-      folder.clear();
-      changed = true;
-    }
+    changed |= succeeded(simplifyRegions(*this, regions));
   } while (changed && ++i < maxIterations);
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
