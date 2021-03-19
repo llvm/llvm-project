@@ -489,6 +489,24 @@ KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
   return Res;
 }
 
+KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
+         !RHS.hasConflict() && "Operand mismatch");
+  KnownBits WideLHS = LHS.sext(2 * BitWidth);
+  KnownBits WideRHS = RHS.sext(2 * BitWidth);
+  return computeForMul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
+}
+
+KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
+  unsigned BitWidth = LHS.getBitWidth();
+  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
+         !RHS.hasConflict() && "Operand mismatch");
+  KnownBits WideLHS = LHS.zext(2 * BitWidth);
+  KnownBits WideRHS = RHS.zext(2 * BitWidth);
+  return computeForMul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
+}
+
 KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
   assert(!LHS.hasConflict() && !RHS.hasConflict());
