@@ -299,7 +299,7 @@ wide range of records conveniently and compactly.
 :token:`ClassID`
     Specifying a class name in a type context indicates
     that the type of the defined value must
-    be a subclass of the specified class.  This is useful in conjunction with
+    be a subclass of the specified class. This is useful in conjunction with
     the ``list`` type; for example, to constrain the elements of the list to a
     common base class (e.g., a ``list<Register>`` can only contain definitions
     derived from the ``Register`` class).
@@ -554,19 +554,22 @@ classes and records can inherit.
    TemplateArgDecl: `Type` `TokIdentifier` ["=" `Value`]
 
 A class can be parameterized by a list of "template arguments," whose values
-can be used in the class's record body.  These template arguments are
+can be used in the class's record body. These template arguments are
 specified each time the class is inherited by another class or record.
 
 If a template argument is not assigned a default value with ``=``, it is
 uninitialized (has the "value" ``?``) and must be specified in the template
-argument list when the class is inherited. If an argument is assigned a
-default value, then it need not be specified in the argument list. The
-template argument default values are evaluated from left to right.
+argument list when the class is inherited (required argument). If an
+argument is assigned a default value, then it need not be specified in the
+argument list (optional argument). In the declaration, all required template
+arguments must precede any optional arguments. The template argument default
+values are evaluated from left to right.
 
 The :token:`RecordBody` is defined below. It can include a list of
-superclasses from which the current class inherits, along with field definitions
-and other statements. When a class ``C`` inherits from another class ``D``,
-the fields of ``D`` are effectively merged into the fields of ``C``.
+superclasses from which the current class inherits, along with field
+definitions and other statements. When a class ``C`` inherits from another
+class ``D``, the fields of ``D`` are effectively merged into the fields of
+``C``.
 
 A given class can only be defined once. A ``class`` statement is
 considered to define the class if *any* of the following are true (the
@@ -605,7 +608,7 @@ of the fields of the class or record.
    RecordBody: `ParentClassList` `Body`
    ParentClassList: [":" `ParentClassListNE`]
    ParentClassListNE: `ClassRef` ("," `ClassRef`)*
-   ClassRef: (`ClassID` | `MultiClassID`) ["<" `ValueList` ">"]
+   ClassRef: (`ClassID` | `MultiClassID`) ["<" [`ValueList`] ">"]
 
 A :token:`ParentClassList` containing a :token:`MultiClassID` is valid only
 in the class list of a ``defm`` statement. In that case, the ID must be the

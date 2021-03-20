@@ -1,12 +1,12 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN32 %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN32 %s
 
 # Same again for wasm64
 
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors:
-# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN64 %s
+# RUN: llvm-mc -triple=wasm64-unknown-unknown -filetype=obj -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefixes=BIN,BIN64 %s
 
 # Minimal test for data sections.
 

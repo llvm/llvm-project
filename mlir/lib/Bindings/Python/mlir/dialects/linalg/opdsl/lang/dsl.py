@@ -11,6 +11,8 @@ import threading
 
 from mlir import ir
 from .comprehension import *
+from .config import *
+from .emitter import *
 
 _CONTEXT = threading.local()
 
@@ -42,9 +44,34 @@ class DefinedOpCallable:
     self.op_name = op_name
     self.model = model
 
-  def __call__(self, *args, **kwargs):
-    # TODO: Upstream the emitter and invoke here
-    raise NotImplementedError("Linalg generic emission not yet implemented")
+  def __call__(self, *args, emit_generic: bool = True, **kwargs):
+    """Emits the corresponding op definition as IR.
+
+    Most arguments are passed through to the underlying emitter. The following
+    are interpreted here:
+      emit_generic: Emits a generic form as appropriate (default True). If
+        False, a named form is emitted (which must have been built in to the
+        compiler).
+    """
+    op_configs = LinalgOpConfig.from_linalg_op_def(self.model,
+                                                   context=ir.Context.current)
+
+    if len(op_configs) != 1:
+      # TODO: Support composite ops.
+      raise NotImplementedError(
+          f"Emission of composite linalg ops not supported: {op_configs}")
+
+    op_config = op_configs[0]
+    if op_config.structured_op:
+      if emit_generic:
+        return emit_generic_structured_op(op_config.structured_op, *args,
+                                          **kwargs)
+      else:
+        return emit_named_structured_op(op_config.structured_op, *args,
+                                        **kwargs)
+
+    raise NotImplementedError(
+        f"Emission of linalg op type not supported: {op_config}")
 
 
 def linalg_structured_op(dsl_func=None,

@@ -107,6 +107,116 @@ static bool applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+/// \returns true if it is possible to fold a constant into a G_GLOBAL_VALUE.
+///
+/// e.g.
+///
+/// %g = G_GLOBAL_VALUE @x -> %g = G_GLOBAL_VALUE @x + cst
+static bool matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  std::pair<uint64_t, uint64_t> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  MachineFunction &MF = *MI.getMF();
+  auto &GlobalOp = MI.getOperand(1);
+  auto *GV = GlobalOp.getGlobal();
+
+  // Don't allow anything that could represent offsets etc.
+  if (MF.getSubtarget<AArch64Subtarget>().ClassifyGlobalReference(
+          GV, MF.getTarget()) != AArch64II::MO_NO_FLAG)
+    return false;
+
+  // Look for a G_GLOBAL_VALUE only used by G_PTR_ADDs against constants:
+  //
+  //  %g = G_GLOBAL_VALUE @x
+  //  %ptr1 = G_PTR_ADD %g, cst1
+  //  %ptr2 = G_PTR_ADD %g, cst2
+  //  ...
+  //  %ptrN = G_PTR_ADD %g, cstN
+  //
+  // Identify the *smallest* constant. We want to be able to form this:
+  //
+  //  %offset_g = G_GLOBAL_VALUE @x + min_cst
+  //  %g = G_PTR_ADD %offset_g, -min_cst
+  //  %ptr1 = G_PTR_ADD %g, cst1
+  //  ...
+  Register Dst = MI.getOperand(0).getReg();
+  uint64_t MinOffset = -1ull;
+  for (auto &UseInstr : MRI.use_nodbg_instructions(Dst)) {
+    if (UseInstr.getOpcode() != TargetOpcode::G_PTR_ADD)
+      return false;
+    auto Cst =
+        getConstantVRegValWithLookThrough(UseInstr.getOperand(2).getReg(), MRI);
+    if (!Cst)
+      return false;
+    MinOffset = std::min(MinOffset, Cst->Value.getZExtValue());
+  }
+
+  // Require that the new offset is larger than the existing one to avoid
+  // infinite loops.
+  uint64_t CurrOffset = GlobalOp.getOffset();
+  uint64_t NewOffset = MinOffset + CurrOffset;
+  if (NewOffset <= CurrOffset)
+    return false;
+
+  // Check whether folding this offset is legal. It must not go out of bounds of
+  // the referenced object to avoid violating the code model, and must be
+  // smaller than 2^21 because this is the largest offset expressible in all
+  // object formats.
+  //
+  // This check also prevents us from folding negative offsets, which will end
+  // up being treated in the same way as large positive ones. They could also
+  // cause code model violations, and aren't really common enough to matter.
+  if (NewOffset >= (1 << 21))
+    return false;
+
+  Type *T = GV->getValueType();
+  if (!T->isSized() ||
+      NewOffset > GV->getParent()->getDataLayout().getTypeAllocSize(T))
+    return false;
+  MatchInfo = std::make_pair(NewOffset, MinOffset);
+  return true;
+}
+
+static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B,
+                                  GISelChangeObserver &Observer,
+                                  std::pair<uint64_t, uint64_t> &MatchInfo) {
+  // Change:
+  //
+  //  %g = G_GLOBAL_VALUE @x
+  //  %ptr1 = G_PTR_ADD %g, cst1
+  //  %ptr2 = G_PTR_ADD %g, cst2
+  //  ...
+  //  %ptrN = G_PTR_ADD %g, cstN
+  //
+  // To:
+  //
+  //  %offset_g = G_GLOBAL_VALUE @x + min_cst
+  //  %g = G_PTR_ADD %offset_g, -min_cst
+  //  %ptr1 = G_PTR_ADD %g, cst1
+  //  ...
+  //  %ptrN = G_PTR_ADD %g, cstN
+  //
+  // Then, the original G_PTR_ADDs should be folded later on so that they look
+  // like this:
+  //
+  //  %ptrN = G_PTR_ADD %offset_g, cstN - min_cst
+  uint64_t Offset, MinOffset;
+  std::tie(Offset, MinOffset) = MatchInfo;
+  B.setInstrAndDebugLoc(MI);
+  Observer.changingInstr(MI);
+  auto &GlobalOp = MI.getOperand(1);
+  auto *GV = GlobalOp.getGlobal();
+  GlobalOp.ChangeToGA(GV, Offset, GlobalOp.getTargetFlags());
+  Register Dst = MI.getOperand(0).getReg();
+  Register NewGVDst = MRI.cloneVirtualRegister(Dst);
+  MI.getOperand(0).setReg(NewGVDst);
+  Observer.changedInstr(MI);
+  B.buildPtrAdd(
+      Dst, NewGVDst,
+      B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
+  return true;
+}
+
 class AArch64PreLegalizerCombinerHelperState {
 protected:
   CombinerHelper &Helper;

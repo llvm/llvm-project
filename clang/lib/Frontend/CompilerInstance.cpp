@@ -814,15 +814,18 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     TempPath += OutputExtension;
     TempPath += ".tmp";
     int fd;
-    std::error_code EC =
-        llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
+    std::error_code EC = llvm::sys::fs::createUniqueFile(
+        TempPath, fd, TempPath,
+        Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text);
 
     if (CreateMissingDirectories &&
         EC == llvm::errc::no_such_file_or_directory) {
       StringRef Parent = llvm::sys::path::parent_path(OutputPath);
       EC = llvm::sys::fs::create_directories(Parent);
       if (!EC) {
-        EC = llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath);
+        EC = llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath,
+                                             Binary ? llvm::sys::fs::OF_None
+                                                    : llvm::sys::fs::OF_Text);
       }
     }
 

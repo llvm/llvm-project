@@ -7561,14 +7561,49 @@ public:
 };
 
 /// This represents 'destroy' clause in the '#pragma omp depobj'
-/// directive.
+/// directive or the '#pragma omp interop' directive..
 ///
 /// \code
 /// #pragma omp depobj(a) destroy
+/// #pragma omp interop destroy(obj)
 /// \endcode
-/// In this example directive '#pragma omp depobj' has 'destroy' clause.
+/// In these examples directive '#pragma omp depobj' and '#pragma omp interop'
+/// have a 'destroy' clause. The 'interop' directive includes an object.
 class OMPDestroyClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Location of interop variable.
+  SourceLocation VarLoc;
+
+  /// The interop variable.
+  Stmt *InteropVar = nullptr;
+
+  /// Set the interop variable.
+  void setInteropVar(Expr *E) { InteropVar = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Sets the location of the interop variable.
+  void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
+
 public:
+  /// Build 'destroy' clause with an interop variable expression \a InteropVar.
+  ///
+  /// \param InteropVar The interop variable.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param VarLoc Location of the interop variable.
+  /// \param EndLoc Ending location of the clause.
+  OMPDestroyClause(Expr *InteropVar, SourceLocation StartLoc,
+                   SourceLocation LParenLoc, SourceLocation VarLoc,
+                   SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_destroy, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), VarLoc(VarLoc), InteropVar(InteropVar) {}
+
   /// Build 'destroy' clause.
   ///
   /// \param StartLoc Starting location of the clause.
@@ -7581,11 +7616,24 @@ public:
       : OMPClause(llvm::omp::OMPC_destroy, SourceLocation(), SourceLocation()) {
   }
 
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the location of the interop variable.
+  SourceLocation getVarLoc() const { return VarLoc; }
+
+  /// Returns the interop variable.
+  Expr *getInteropVar() const { return cast_or_null<Expr>(InteropVar); }
+
   child_range children() {
+    if (InteropVar)
+      return child_range(&InteropVar, &InteropVar + 1);
     return child_range(child_iterator(), child_iterator());
   }
 
   const_child_range children() const {
+    if (InteropVar)
+      return const_child_range(&InteropVar, &InteropVar + 1);
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 

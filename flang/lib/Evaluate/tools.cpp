@@ -782,20 +782,22 @@ const Symbol *GetLastTarget(const SymbolVector &symbols) {
 }
 
 struct CollectSymbolsHelper
-    : public SetTraverse<CollectSymbolsHelper, semantics::SymbolSet> {
-  using Base = SetTraverse<CollectSymbolsHelper, semantics::SymbolSet>;
+    : public SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectSymbolsHelper, semantics::UnorderedSymbolSet>;
   CollectSymbolsHelper() : Base{*this} {}
   using Base::operator();
-  semantics::SymbolSet operator()(const Symbol &symbol) const {
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
     return {symbol};
   }
 };
-template <typename A> semantics::SymbolSet CollectSymbols(const A &x) {
+template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &x) {
   return CollectSymbolsHelper{}(x);
 }
-template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
-template semantics::SymbolSet CollectSymbols(const Expr<SomeInteger> &);
-template semantics::SymbolSet CollectSymbols(const Expr<SubscriptInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SubscriptInteger> &);
 
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper : public AnyTraverse<HasVectorSubscriptHelper> {
@@ -1177,7 +1179,7 @@ const Symbol &GetUsedModule(const UseDetails &details) {
 }
 
 static const Symbol *FindFunctionResult(
-    const Symbol &original, SymbolSet &seen) {
+    const Symbol &original, UnorderedSymbolSet &seen) {
   const Symbol &root{GetAssociationRoot(original)};
   ;
   if (!seen.insert(root).second) {
@@ -1199,7 +1201,7 @@ static const Symbol *FindFunctionResult(
 }
 
 const Symbol *FindFunctionResult(const Symbol &symbol) {
-  SymbolSet seen;
+  UnorderedSymbolSet seen;
   return FindFunctionResult(symbol, seen);
 }
 
@@ -1207,8 +1209,15 @@ const Symbol *FindFunctionResult(const Symbol &symbol) {
 // them; they cannot be defined in symbol.h due to the dependence
 // on Scope.
 
-bool Symbol::operator<(const Symbol &that) const {
-  return GetSemanticsContext().allCookedSources().Precedes(name_, that.name_);
+bool SymbolSourcePositionCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
+  return x->GetSemanticsContext().allCookedSources().Precedes(
+      x->name(), y->name());
+}
+bool SymbolSourcePositionCompare::operator()(
+    const MutableSymbolRef &x, const MutableSymbolRef &y) const {
+  return x->GetSemanticsContext().allCookedSources().Precedes(
+      x->name(), y->name());
 }
 
 SemanticsContext &Symbol::GetSemanticsContext() const {

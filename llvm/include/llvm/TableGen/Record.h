@@ -2024,6 +2024,12 @@ public:
 
   void set(Init *Key, Init *Value) { Map[Key] = {Value, false}; }
 
+  bool isComplete(Init *VarName) const {
+    auto It = Map.find(VarName);
+    assert(It != Map.end() && "key must be present in map");
+    return It->second.V->isComplete();
+  }
+
   Init *resolve(Init *VarName) override;
 };
 

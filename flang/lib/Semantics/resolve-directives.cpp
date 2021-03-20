@@ -105,7 +105,7 @@ protected:
   Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
-  SymbolSet dataSharingAttributeObjects_; // on one directive
+  UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
   std::vector<DirContext> dirContext_; // used as a stack
 };
@@ -452,8 +452,8 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   std::vector<const parser::Name *> allocateNames_; // on one directive
-  SymbolSet privateDataSharingAttributeObjects_; // on one directive
-  SymbolSet stmtFunctionExprSymbols_;
+  UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
+  UnorderedSymbolSet stmtFunctionExprSymbols_;
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, std::optional<DirContext>>>
       sourceLabels_;

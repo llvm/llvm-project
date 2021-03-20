@@ -231,6 +231,21 @@ global_atomic_min_f64 v[0:1], v[2:3], off scc
 global_atomic_max_f64 v[0:1], v[2:3], off scc
 // GFX90A: error: instruction must not use scc
 
+buffer_atomic_add_f32 v4, off, s[8:11], s3 scc
+// GFX90A: error: instruction must not use scc
+
+buffer_atomic_pk_add_f16 v4, off, s[8:11], s3 scc
+// GFX90A: error: instruction must not use scc
+
+buffer_atomic_add_f64 v[4:5], off, s[8:11], s3 scc
+// GFX90A: error: instruction must not use scc
+
+buffer_atomic_max_f64 v[4:5], off, s[8:11], s3 scc
+// GFX90A: error: instruction must not use scc
+
+buffer_atomic_min_f64 v[4:5], off, s[8:11], s3 scc
+// GFX90A: error: instruction must not use scc
+
 v_mov_b32_sdwa v1, src_lds_direct dst_sel:DWORD
 // GFX90A: error: lds_direct is not supported on this GPU
 

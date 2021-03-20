@@ -120,6 +120,9 @@ public:
   /// Return true if this argument has the nocapture attribute.
   bool hasNoCaptureAttr() const;
 
+  /// Return true if this argument has the nofree attribute.
+  bool hasNoFreeAttr() const;
+
   /// Return true if this argument has the sret attribute.
   bool hasStructRetAttr() const;
 

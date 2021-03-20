@@ -147,6 +147,9 @@ public:
                                  MachineBasicBlock::iterator II,
                                  int64_t Amount) const;
 
+  Optional<std::pair<unsigned, unsigned>>
+  isRVVSpillForZvlsseg(unsigned Opcode) const;
+
 protected:
   const RISCVSubtarget &STI;
 };

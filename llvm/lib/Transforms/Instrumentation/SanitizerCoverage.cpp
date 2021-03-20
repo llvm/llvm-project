@@ -328,13 +328,15 @@ PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
 std::pair<Value *, Value *>
 ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
+  // Use ExternalWeak so that if all sections are discarded due to section
+  // garbage collection, the linker will not report undefined symbol errors.
   GlobalVariable *SecStart = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionStart(Section));
+      M, Ty->getPointerElementType(), false,
+      GlobalVariable::ExternalWeakLinkage, nullptr, getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
   GlobalVariable *SecEnd = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionEnd(Section));
+      M, Ty->getPointerElementType(), false,
+      GlobalVariable::ExternalWeakLinkage, nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())

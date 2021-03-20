@@ -90,6 +90,10 @@ protected:
 /// annotation.
 void registerGpuSerializeToCubinPass();
 
+/// Register pass to serialize GPU kernel functions to a HSAco binary
+/// annotation.
+void registerGpuSerializeToHsacoPass();
+
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Passes.h.inc"

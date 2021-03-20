@@ -2286,7 +2286,10 @@ void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {
   Visitor->AddStmt(C->getInteropVar());
 }
 
-void OMPClauseEnqueue::VisitOMPDestroyClause(const OMPDestroyClause *) {}
+void OMPClauseEnqueue::VisitOMPDestroyClause(const OMPDestroyClause *C) {
+  if (C->getInteropVar())
+    Visitor->AddStmt(C->getInteropVar());
+}
 
 void OMPClauseEnqueue::VisitOMPUnifiedAddressClause(
     const OMPUnifiedAddressClause *) {}

@@ -750,8 +750,13 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
   else if (ST->hasVector()) {
+    // Vector to scalar cast.
     auto *SrcVecTy = cast<FixedVectorType>(Src);
-    auto *DstVecTy = cast<FixedVectorType>(Dst);
+    auto *DstVecTy = dyn_cast<FixedVectorType>(Dst);
+    if (!DstVecTy) {
+      // TODO: tune vector-to-scalar cast.
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+    }
     unsigned VF = SrcVecTy->getNumElements();
     unsigned NumDstVectors = getNumVectorRegs(Dst);
     unsigned NumSrcVectors = getNumVectorRegs(Src);

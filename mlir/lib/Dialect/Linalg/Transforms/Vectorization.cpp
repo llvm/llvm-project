@@ -87,11 +87,14 @@ static VectorType extractVectorTypeFromShapedValue(Value v) {
 /// Build a vector.transfer_read from `source` at indices set to all `0`.
 /// If source has rank zero, build an memref.load.
 /// Return the produced value.
-static Value buildVectorRead(OpBuilder &builder, Value source) {
+static Value buildVectorRead(OpBuilder &builder, Value source,
+                             VectorType vectorType, AffineMap map) {
   edsc::ScopedContext scope(builder);
   auto shapedType = source.getType().cast<ShapedType>();
-  if (VectorType vectorType = extractVectorTypeFromShapedValue(source)) {
+  if (vectorType) {
     SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
+    if (map)
+      return vector_transfer_read(vectorType, source, indices, map);
     return vector_transfer_read(vectorType, source, indices);
   }
   return memref_load(source);
@@ -238,6 +241,51 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
                              builder.createOperation(state)};
 }
 
+/// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
+static bool hasOnlyScalarElementwiseOp(Region &r) {
+  if (!llvm::hasSingleElement(r))
+    return false;
+  for (Operation &op : r.front()) {
+    if (!(isa<ConstantOp, linalg::YieldOp>(op) ||
+          OpTrait::hasElementwiseMappableTraits(&op)) ||
+        llvm::any_of(op.getResultTypes(),
+                     [](Type type) { return !type.isIntOrIndexOrFloat(); }))
+      return false;
+  }
+  return true;
+}
+
+// Return true if the op is an element-wise linalg op.
+static bool isElementwise(Operation *op) {
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return false;
+  if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
+    return false;
+  // TODO: relax the restrictions on indexing map.
+  for (unsigned i = 0, e = linalgOp.getNumOutputs(); i < e; i++) {
+    if (!linalgOp.getOutputIndexingMap(i).isIdentity())
+      return false;
+  }
+  if (linalgOp->getNumRegions() != 1)
+    return false;
+  return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
+}
+
+// Calculate the map to apply to transfer_read to convert the input shape into
+// the output shape.
+static AffineMap getTransferReadMap(LinalgOp linalgOp, unsigned argIndex) {
+  AffineMap linalgMap = linalgOp.getIndexingMap(argIndex);
+  MLIRContext *context = linalgMap.getContext();
+  AffineExpr zero = mlir::getAffineConstantExpr(0, context);
+  SmallVector<AffineExpr, 4> exprs(linalgMap.getNumInputs(), zero);
+  for (unsigned i : llvm::seq(unsigned(0), linalgMap.getNumResults())) {
+    exprs[linalgMap.getDimPosition(i)] = getAffineDimExpr(i, context);
+  }
+  return AffineMap::get(linalgMap.getNumResults(), /*symbolCount=*/0, exprs,
+                        context);
+}
+
 /// Generic vectorization function that rewrites the body of a `linalgOp` into
 /// vector form. Generic vectorization proceeds as follows:
 ///   1. The region for the linalg op is created if necessary.
@@ -282,7 +330,19 @@ LogicalResult vectorizeAsLinalgGeneric(
   SmallVector<AffineMap> indexings;
   for (auto bbarg : block->getArguments()) {
     Value vectorArg = linalgOp.getShapedOperand(bbarg.getArgNumber());
-    Value vectorRead = buildVectorRead(builder, vectorArg);
+    AffineMap map;
+    VectorType vectorType = extractVectorTypeFromShapedValue(vectorArg);
+    if (isElementwise(linalgOp) &&
+        !linalgOp.getIndexingMap(bbarg.getArgNumber()).isMinorIdentity()) {
+      // Currently assume we don't support output permutations.
+      assert(linalgOp.getNumOutputs() > 0 &&
+             linalgOp.getOutputIndexingMap(0).isIdentity());
+      ArrayRef<int64_t> outputShape =
+          linalgOp.getOutputShapedType(0).getShape();
+      vectorType = VectorType::get(outputShape, vectorType.getElementType());
+      map = getTransferReadMap(linalgOp, bbarg.getArgNumber());
+    }
+    Value vectorRead = buildVectorRead(builder, vectorArg, vectorType, map);
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
                       << bbarg.getArgNumber() << "): " << vectorRead);
     bvm.map(bbarg, vectorRead);
@@ -314,44 +374,6 @@ LogicalResult vectorizeAsLinalgGeneric(
   }
 
   return success();
-}
-
-/// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
-static bool hasOnlyScalarElementwiseOp(Region &r) {
-  if (!llvm::hasSingleElement(r))
-    return false;
-  for (Operation &op : r.front()) {
-    if (!(isa<ConstantOp, linalg::YieldOp>(op) ||
-          OpTrait::hasElementwiseMappableTraits(&op)) ||
-        llvm::any_of(op.getResultTypes(),
-                     [](Type type) { return !type.isIntOrIndexOrFloat(); }))
-      return false;
-  }
-  return true;
-}
-
-// Return true if the op is an element-wise linalg op.
-static bool isElementwise(Operation *op) {
-  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
-  if (!linalgOp)
-    return false;
-  if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
-    return false;
-  // TODO: relax the restrictions on indexing map.
-  for (unsigned i = 0, e = linalgOp.getNumOutputs(); i < e; i++) {
-    if (!linalgOp.getOutputIndexingMap(i).isIdentity())
-      return false;
-  }
-  // Currently bound the input indexing map to minor identity as other
-  // permutations might require adding transpose ops to convert the vector read
-  // to the right shape.
-  for (unsigned i = 0, e = linalgOp.getNumInputs(); i < e; i++) {
-    if (!linalgOp.getInputIndexingMap(i).isMinorIdentity())
-      return false;
-  }
-  if (linalgOp->getNumRegions() != 1)
-    return false;
-  return hasOnlyScalarElementwiseOp(linalgOp->getRegion(0));
 }
 
 static LogicalResult vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp,

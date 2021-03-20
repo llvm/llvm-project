@@ -21,8 +21,7 @@ set(MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTOR
 set(MLIR_RUNNER_UTILS_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for the mlir rocm / spirv / vulkan runner tests.
-set(MLIR_ROCM_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+# for the mlir spirv / vulkan runner tests.
 set(MLIR_SPIRV_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 set(MLIR_VULKAN_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
@@ -75,6 +74,10 @@ if(MLIR_CUDA_RUNNER_ENABLED)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
 endif()
 
+if(MLIR_ROCM_RUNNER_ENABLED)
+  list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
+endif()
+
 list(APPEND MLIR_TEST_DEPENDS MLIRUnitTests)
 
 if(LLVM_BUILD_EXAMPLES)
@@ -87,12 +90,6 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch6
     toyc-ch7
     )
-endif()
-
-if(MLIR_ROCM_RUNNER_ENABLED)
-  list(APPEND MLIR_TEST_DEPENDS
-    mlir-rocm-runner
-  )
 endif()
 
 if(MLIR_SPIRV_CPU_RUNNER_ENABLED)

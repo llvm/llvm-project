@@ -28,6 +28,7 @@
 //       offsetA1[.discriminator]: number_of_samples [fn7:num fn8:num ... ]
 //       ...
 //      !CFGChecksum: num
+//      !Attribute: flags
 //
 // This is a nested tree in which the indentation represents the nesting level
 // of the inline stack. There are no blank lines in the file. And the spacing
@@ -127,6 +128,8 @@
 //
 // a. CFG Checksum (a.k.a. function hash):
 //   !CFGChecksum: 12345
+// b. CFG Checksum (see ContextAttributeMask):
+//   !Atribute: 1
 //
 //
 // Binary format
@@ -647,7 +650,7 @@ protected:
   std::error_code readSecHdrTableEntry(uint32_t Idx);
   std::error_code readSecHdrTable();
 
-  std::error_code readFuncMetadata();
+  std::error_code readFuncMetadata(bool ProfileHasAttribute);
   std::error_code readFuncOffsetTable();
   std::error_code readFuncProfiles();
   std::error_code readMD5NameTable();

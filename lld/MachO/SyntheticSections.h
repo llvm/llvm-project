@@ -500,6 +500,8 @@ struct InStruct {
 extern InStruct in;
 extern std::vector<SyntheticSection *> syntheticSections;
 
+void createSyntheticSymbols();
+
 } // namespace macho
 } // namespace lld
 

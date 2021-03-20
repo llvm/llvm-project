@@ -396,7 +396,6 @@ namespace llvm {
 
     void initInlineSourceManager();
     SourceMgr *getInlineSourceManager() {
-      assert(InlineSrcMgr);
       return InlineSrcMgr.get();
     }
     std::vector<const MDNode *> &getLocInfos() { return LocInfos; }

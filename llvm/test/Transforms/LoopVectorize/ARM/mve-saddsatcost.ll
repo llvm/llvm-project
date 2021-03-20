@@ -8,7 +8,7 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 
 ; CHECK-COST-LABEL: arm_offset_q15
 ; CHECK-COST: Found an estimated cost of 10 for VF 1 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
-; CHECK-COST: Found an estimated cost of 28 for VF 2 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
+; CHECK-COST: Found an estimated cost of 36 for VF 2 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 ; CHECK-COST: Found an estimated cost of 8 for VF 4 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 ; CHECK-COST: Found an estimated cost of 2 for VF 8 For instruction:   %1 = tail call i16 @llvm.sadd.sat.i16(i16 %0, i16 %offset)
 

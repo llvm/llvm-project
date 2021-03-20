@@ -834,8 +834,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_array_v
 
 // is_pointer
 
-// In clang 10.0.0 and earlier __is_pointer didn't work with Objective-C types.
-#if __has_keyword(__is_pointer) && _LIBCPP_CLANG_VER > 1000
+// Before Clang 11, __is_pointer didn't work for Objective-C types.
+#if __has_keyword(__is_pointer) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1100)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
@@ -1129,9 +1129,9 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_arithmetic_v
 
 // is_fundamental
 
-// In clang 9 and lower, this builtin did not work for nullptr_t. Additionally, in C++03 mode,
-// nullptr isn't defined by the compiler so, this builtin won't work.
-#if __has_keyword(__is_fundamental) && _LIBCPP_CLANG_VER > 900 && !defined(_LIBCPP_CXX03_LANG)
+// Before Clang 10, __is_fundamental didn't work for nullptr_t.
+// In C++03 nullptr_t is library-provided but must still count as "fundamental."
+#if __has_keyword(__is_fundamental) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1000) && !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
@@ -1158,7 +1158,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_fundamental_v
 
 // is_scalar
 
-// >= 11 because in C++03 nullptr isn't actually nullptr
+// In C++03 nullptr_t is library-provided but must still count as "scalar."
 #if __has_keyword(__is_scalar) && !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
@@ -1415,8 +1415,8 @@ template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 
 // is_signed
 
-// In clang 9 and earlier, this builtin did not work for floating points or enums
-#if __has_keyword(__is_signed) && _LIBCPP_CLANG_VER > 900
+// Before Clang 10, __is_signed didn't work for floating-point types or enums.
+#if __has_keyword(__is_signed) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1000)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
@@ -1451,8 +1451,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_signed_v
 
 // is_unsigned
 
-// Before clang 13, __is_unsigned returned true for enums with signed underlying type
-#if __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
+// Before Clang 13, __is_unsigned returned true for enums with signed underlying type.
+#if __has_keyword(__is_unsigned) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1300)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> { };
@@ -1462,7 +1462,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_unsigned_v = __is_unsigned(_Tp);
 #endif
 
-#else // __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
+#else // __has_keyword(__is_unsigned)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
 struct __libcpp_is_unsigned_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(0) < _Tp(-1)) {};
@@ -1483,7 +1483,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_unsigned_v
     = is_unsigned<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_unsigned) && _LIBCPP_CLANG_VER >= 1300
+#endif // __has_keyword(__is_unsigned)
 
 // rank
 

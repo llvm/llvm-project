@@ -2593,8 +2593,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
 
       // If the source pointer is dereferenceable, then assume it points to an
       // allocated object and apply "inbounds" to the GEP.
-      bool CanBeNull;
-      if (Src->getPointerDereferenceableBytes(DL, CanBeNull)) {
+      bool CanBeNull, CanBeFreed;
+      if (Src->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed)) {
         // In a non-default address space (not 0), a null pointer can not be
         // assumed inbounds, so ignore that case (dereferenceable_or_null).
         // The reason is that 'null' is not treated differently in these address

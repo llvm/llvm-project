@@ -1068,8 +1068,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
   config->saveTemps = args.hasArg(OPT_save_temps);
-  if (args.hasArg(OPT_shuffle_sections))
-    config->shuffleSectionSeed = args::getInteger(args, OPT_shuffle_sections, 0);
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->sectionStartMap = getSectionStartMap(args);
   config->shared = args.hasArg(OPT_shared);
@@ -1147,6 +1145,24 @@ static void readConfigs(opt::InputArgList &args) {
       config->optEB = true;
     else
       config->optEL = true;
+  }
+
+  for (opt::Arg *arg : args.filtered(OPT_shuffle_sections)) {
+    constexpr StringRef errPrefix = "--shuffle-sections=: ";
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first.empty() || kv.second.empty()) {
+      error(errPrefix + "expected <section_glob>=<seed>, but got '" +
+            arg->getValue() + "'");
+      continue;
+    }
+    // Signed so that <section_glob>=-1 is allowed.
+    int64_t v;
+    if (!to_integer(kv.second, v))
+      error(errPrefix + "expected an integer, but got '" + kv.second + "'");
+    else if (Expected<GlobPattern> pat = GlobPattern::create(kv.first))
+      config->shuffleSections.emplace_back(std::move(*pat), uint32_t(v));
+    else
+      error(errPrefix + toString(pat.takeError()));
   }
 
   for (opt::Arg *arg : args.filtered(OPT_z)) {

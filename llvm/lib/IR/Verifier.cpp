@@ -4542,7 +4542,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   // know they are legal for the intrinsic!) get the intrinsic name through the
   // usual means.  This allows us to verify the mangling of argument types into
   // the name.
-  const std::string ExpectedName = Intrinsic::getName(ID, ArgTys);
+  const std::string ExpectedName =
+      Intrinsic::getName(ID, ArgTys, IF->getParent(), IFTy);
   Assert(ExpectedName == IF->getName(),
          "Intrinsic name not mangled correctly for type arguments! "
          "Should be: " +
