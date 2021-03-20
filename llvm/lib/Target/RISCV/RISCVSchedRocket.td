@@ -52,8 +52,10 @@ def : WriteRes<WriteJmpReg, [RocketUnitB]>;
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [RocketUnitALU]>;
 def : WriteRes<WriteIALU, [RocketUnitALU]>;
-def : WriteRes<WriteShift32, [RocketUnitALU]>;
-def : WriteRes<WriteShift, [RocketUnitALU]>;
+def : WriteRes<WriteShiftImm32, [RocketUnitALU]>;
+def : WriteRes<WriteShiftImm, [RocketUnitALU]>;
+def : WriteRes<WriteShiftReg32, [RocketUnitALU]>;
+def : WriteRes<WriteShiftReg, [RocketUnitALU]>;
 
 // Integer multiplication
 let Latency = 4 in {
@@ -181,8 +183,10 @@ def : ReadAdvance<ReadStoreData, 0>;
 def : ReadAdvance<ReadMemBase, 0>;
 def : ReadAdvance<ReadIALU, 0>;
 def : ReadAdvance<ReadIALU32, 0>;
-def : ReadAdvance<ReadShift, 0>;
-def : ReadAdvance<ReadShift32, 0>;
+def : ReadAdvance<ReadShiftImm, 0>;
+def : ReadAdvance<ReadShiftImm32, 0>;
+def : ReadAdvance<ReadShiftReg, 0>;
+def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
