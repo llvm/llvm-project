@@ -2506,7 +2506,6 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     const llvm::Triple &TargetTriple, const ArgList &Args,
     const std::string &LibDir, StringRef CandidateTriple,
     bool NeedsBiarchSuffix, bool GCCDirExists, bool GCCCrossDirExists) {
-  llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
   // Locations relative to the system lib directory where GCC's triple-specific
   // directories might reside.
   struct GCCLibSuffix {
@@ -2530,15 +2529,7 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // files in that location, not just GCC installation data.
       {CandidateTriple.str(), "..",
        TargetTriple.getVendor() == llvm::Triple::Freescale ||
-       TargetTriple.getVendor() == llvm::Triple::OpenEmbedded},
-
-      // Deal with cases (on Ubuntu) where the system architecture could be i386
-      // but the GCC target architecture could be (say) i686.
-      // FIXME: It may be worthwhile to generalize this and look for a second
-      // triple.
-      {"i386-linux-gnu/gcc/" + CandidateTriple.str(), "../../..",
-       (TargetArch == llvm::Triple::x86 &&
-        TargetTriple.getOS() != llvm::Triple::Solaris)}};
+           TargetTriple.getVendor() == llvm::Triple::OpenEmbedded}};
 
   for (auto &Suffix : Suffixes) {
     if (!Suffix.Active)
