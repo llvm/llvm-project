@@ -967,9 +967,9 @@ define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, i32* %res) {
 ;
 ; RV64ZBA-LABEL: umulo.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 32
-; RV64ZBA-NEXT:    slli a0, a0, 32
-; RV64ZBA-NEXT:    mulhu a1, a0, a1
+; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    mul a1, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a1, 32
 ; RV64ZBA-NEXT:    snez a0, a0
 ; RV64ZBA-NEXT:    sw a1, 0(a2)
@@ -2270,9 +2270,9 @@ define i32 @umulo.select.i32(i32 %v1, i32 %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.select.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a2, a1, 32
-; RV64ZBA-NEXT:    slli a3, a0, 32
-; RV64ZBA-NEXT:    mulhu a2, a3, a2
+; RV64ZBA-NEXT:    zext.w a2, a1
+; RV64ZBA-NEXT:    zext.w a3, a0
+; RV64ZBA-NEXT:    mul a2, a3, a2
 ; RV64ZBA-NEXT:    srli a2, a2, 32
 ; RV64ZBA-NEXT:    bnez a2, .LBB42_2
 ; RV64ZBA-NEXT:  # %bb.1: # %entry
@@ -2310,9 +2310,9 @@ define i1 @umulo.not.i32(i32 %v1, i32 %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.not.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 32
-; RV64ZBA-NEXT:    slli a0, a0, 32
-; RV64ZBA-NEXT:    mulhu a0, a0, a1
+; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    mul a0, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a0, 32
 ; RV64ZBA-NEXT:    seqz a0, a0
 ; RV64ZBA-NEXT:    ret
@@ -3281,9 +3281,9 @@ define zeroext i1 @umulo.br.i32(i32 %v1, i32 %v2) {
 ;
 ; RV64ZBA-LABEL: umulo.br.i32:
 ; RV64ZBA:       # %bb.0: # %entry
-; RV64ZBA-NEXT:    slli a1, a1, 32
-; RV64ZBA-NEXT:    slli a0, a0, 32
-; RV64ZBA-NEXT:    mulhu a0, a0, a1
+; RV64ZBA-NEXT:    zext.w a1, a1
+; RV64ZBA-NEXT:    zext.w a0, a0
+; RV64ZBA-NEXT:    mul a0, a0, a1
 ; RV64ZBA-NEXT:    srli a0, a0, 32
 ; RV64ZBA-NEXT:    beqz a0, .LBB57_2
 ; RV64ZBA-NEXT:  # %bb.1: # %overflow
