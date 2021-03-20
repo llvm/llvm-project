@@ -793,7 +793,7 @@ multiclass PFCHm<string opcStr, bits<8>opc> {
 let Constraints = "$dest = $sd", DisableEncoding = "$sd",
     mayStore=1, mayLoad = 1, hasSideEffects = 0 in
 multiclass RRCAStgm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
-                    Operand immOp, Operand MEM, Operand ADDR,
+                    Operand immOp, Operand MEM, ComplexPattern ADDR,
                     SDPatternOperator OpNode = null_frag> {
   def r : RRM<opc, (outs RC:$dest), (ins MEM:$addr, RC:$sy, RC:$sd),
               !strconcat(opcStr, " $dest, $addr, $sy"),
@@ -1719,10 +1719,10 @@ def : Pat<(i64 (anyext i32:$sy)),
 
 // extload, sextload and zextload stuff
 multiclass EXT64m<SDPatternOperator from,
-                  SDPatternOperator torri,
-                  SDPatternOperator torii,
-                  SDPatternOperator tozri,
-                  SDPatternOperator tozii> {
+                  RM torri,
+                  RM torii,
+                  RM tozri,
+                  RM tozii> {
   def : Pat<(i64 (from ADDRrri:$addr)),
             (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (torri MEMrri:$addr),
                            sub_i32)>;
@@ -1748,10 +1748,10 @@ defm : EXT64m<extloadi32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
 
 // anyextload
 multiclass EXT32m<SDPatternOperator from,
-                  SDPatternOperator torri,
-                  SDPatternOperator torii,
-                  SDPatternOperator tozri,
-                  SDPatternOperator tozii> {
+                  RM torri,
+                  RM torii,
+                  RM tozri,
+                  RM tozii> {
   def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
   def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
   def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
@@ -1762,10 +1762,10 @@ defm : EXT32m<extloadi16, LD2BZXrri, LD2BZXrii, LD2BZXzri, LD2BZXzii>;
 
 // truncstore
 multiclass TRUNC64m<SDPatternOperator from,
-                    SDPatternOperator torri,
-                    SDPatternOperator torii,
-                    SDPatternOperator tozri,
-                    SDPatternOperator tozii> {
+                    RM torri,
+                    RM torii,
+                    RM tozri,
+                    RM tozii> {
   def : Pat<(from i64:$src, ADDRrri:$addr),
             (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
   def : Pat<(from i64:$src, ADDRrii:$addr),
@@ -1781,8 +1781,8 @@ defm : TRUNC64m<truncstorei32, STLrri, STLrii, STLzri, ST1Bzii>;
 
 // Atomic loads
 multiclass ATMLDm<SDPatternOperator from,
-                  SDPatternOperator torri, SDPatternOperator torii,
-                  SDPatternOperator tozri, SDPatternOperator tozii> {
+                  RM torri, RM torii,
+                  RM tozri, RM tozii> {
   def : Pat<(from ADDRrri:$addr), (torri MEMrri:$addr)>;
   def : Pat<(from ADDRrii:$addr), (torii MEMrii:$addr)>;
   def : Pat<(from ADDRzri:$addr), (tozri MEMzri:$addr)>;
@@ -1794,9 +1794,9 @@ defm : ATMLDm<atomic_load_32, LDLZXrri, LDLZXrii, LDLZXzri, LDLZXzii>;
 defm : ATMLDm<atomic_load_64, LDrri, LDrii, LDzri, LDzii>;
 
 // Optimized atomic loads with sext
-multiclass SXATMLDm<SDPatternOperator from, Operand TY,
-                    SDPatternOperator torri, SDPatternOperator torii,
-                    SDPatternOperator tozri, SDPatternOperator tozii> {
+multiclass SXATMLDm<SDPatternOperator from, ValueType TY,
+                    RM torri, RM torii,
+                    RM tozri, RM tozii> {
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrri:$addr))), TY)),
             (i2l (torri MEMrri:$addr))>;
   def : Pat<(i64 (sext_inreg (i64 (anyext (from ADDRrii:$addr))), TY)),
@@ -1807,8 +1807,8 @@ multiclass SXATMLDm<SDPatternOperator from, Operand TY,
             (i2l (tozii MEMzii:$addr))>;
 }
 multiclass SXATMLD32m<SDPatternOperator from,
-                      SDPatternOperator torri, SDPatternOperator torii,
-                      SDPatternOperator tozri, SDPatternOperator tozii> {
+                      RM torri, RM torii,
+                      RM tozri, RM tozii> {
   def : Pat<(i64 (sext (from ADDRrri:$addr))),
             (i2l (torri MEMrri:$addr))>;
   def : Pat<(i64 (sext (from ADDRrii:$addr))),
@@ -1824,9 +1824,9 @@ defm : SXATMLDm<atomic_load_16, i16, LD2BSXrri, LD2BSXrii, LD2BSXzri,
 defm : SXATMLD32m<atomic_load_32, LDLSXrri, LDLSXrii, LDLSXzri, LDLSXzii>;
 
 // Optimized atomic loads with zext
-multiclass ZXATMLDm<SDPatternOperator from, Operand VAL,
-                    SDPatternOperator torri, SDPatternOperator torii,
-                    SDPatternOperator tozri, SDPatternOperator tozii> {
+multiclass ZXATMLDm<SDPatternOperator from, int VAL,
+                    RM torri, RM torii,
+                    RM tozri, RM tozii> {
   def : Pat<(i64 (and (anyext (from ADDRrri:$addr)), VAL)),
             (i2l (torri MEMrri:$addr))>;
   def : Pat<(i64 (and (anyext (from ADDRrii:$addr)), VAL)),
@@ -1836,9 +1836,9 @@ multiclass ZXATMLDm<SDPatternOperator from, Operand VAL,
   def : Pat<(i64 (and (anyext (from ADDRzii:$addr)), VAL)),
             (i2l (tozii MEMzii:$addr))>;
 }
-multiclass ZXATMLD32m<SDPatternOperator from, Operand VAL,
-                      SDPatternOperator torri, SDPatternOperator torii,
-                      SDPatternOperator tozri, SDPatternOperator tozii> {
+multiclass ZXATMLD32m<SDPatternOperator from, int VAL,
+                      RM torri, RM torii,
+                      RM tozri, RM tozii> {
   def : Pat<(i64 (zext (from ADDRrri:$addr))),
             (i2l (torri MEMrri:$addr))>;
   def : Pat<(i64 (zext (from ADDRrii:$addr))),
@@ -1857,8 +1857,8 @@ defm : ZXATMLD32m<atomic_load_32, 0xFFFFFFFF, LDLZXrri, LDLZXrii, LDLZXzri,
 
 // Atomic stores
 multiclass ATMSTm<SDPatternOperator from, ValueType ty,
-                  SDPatternOperator torri, SDPatternOperator torii,
-                  SDPatternOperator tozri, SDPatternOperator tozii> {
+                  RM torri, RM torii,
+                  RM tozri, RM tozii> {
   def : Pat<(from ADDRrri:$addr, ty:$src), (torri MEMrri:$addr, $src)>;
   def : Pat<(from ADDRrii:$addr, ty:$src), (torii MEMrii:$addr, $src)>;
   def : Pat<(from ADDRzri:$addr, ty:$src), (tozri MEMzri:$addr, $src)>;
@@ -1872,10 +1872,10 @@ defm : ATMSTm<atomic_store_64, i64, STrri, STrii, STzri, STzii>;
 // Optimized atomic stores with truncate
 multiclass TRATMSTm<SDPatternOperator from,
                   ValueType ty,
-                  SDPatternOperator torri,
-                  SDPatternOperator torii,
-                  SDPatternOperator tozri,
-                  SDPatternOperator tozii> {
+                  RM torri,
+                  RM torii,
+                  RM tozri,
+                  RM tozii> {
   def : Pat<(from ADDRrri:$addr, (i32 (trunc i64:$src))),
             (torri MEMrri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
   def : Pat<(from ADDRrii:$addr, (i32 (trunc i64:$src))),
@@ -1929,10 +1929,10 @@ def : Pat<(br bb:$addr), (BRCFLa bb:$addr)>;
 
 // brcc
 // integer brcc
-multiclass BRCCIm<ValueType ty, SDPatternOperator BrOpNode1,
-                 SDPatternOperator BrOpNode2,
-                 SDPatternOperator CmpOpNode1,
-                 SDPatternOperator CmpOpNode2> {
+multiclass BRCCIm<ValueType ty, CF BrOpNode1,
+                 CF BrOpNode2,
+                 RR CmpOpNode1,
+                 RR CmpOpNode2> {
   def : Pat<(brcc CCSIOp:$cond, ty:$l, simm7:$r, bb:$addr),
             (BrOpNode2 (icond2ccSwap $cond), (LO7 $r), $l, bb:$addr)>;
   def : Pat<(brcc CCSIOp:$cond, ty:$l, ty:$r, bb:$addr),
@@ -1947,8 +1947,7 @@ defm : BRCCIm<i32, BRCFWrr, BRCFWir, CMPUWrr, CMPUWir>;
 defm : BRCCIm<i64, BRCFLrr, BRCFLir, CMPULrr, CMPULir>;
 
 // floating point brcc
-multiclass BRCCFm<ValueType ty, SDPatternOperator BrOpNode1,
-                 SDPatternOperator BrOpNode2> {
+multiclass BRCCFm<ValueType ty, CF BrOpNode1, CF BrOpNode2> {
   def : Pat<(brcc cond:$cond, ty:$l, simm7fp:$r, bb:$addr),
             (BrOpNode2 (fcond2ccSwap $cond), (LO7FP $r), $l, bb:$addr)>;
   def : Pat<(brcc cond:$cond, ty:$l, ty:$r, bb:$addr),
