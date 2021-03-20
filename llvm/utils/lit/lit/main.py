@@ -295,7 +295,7 @@ def print_results(tests, elapsed, opts):
         tests_by_code[test.result.code].append(test)
 
     for code in lit.Test.ResultCode.all_codes():
-        print_group(tests_by_code[code], code, opts.shown_codes)
+        print_group(sorted(tests_by_code[code], key=lambda t: t.getFullName()), code, opts.shown_codes)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
 
