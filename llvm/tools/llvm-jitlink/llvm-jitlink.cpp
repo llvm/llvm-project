@@ -1008,11 +1008,22 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 static Triple getFirstFileTriple() {
   static Triple FirstTT = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
-    auto ObjBuffer =
-        ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFiles.front())));
-    auto Obj = ExitOnErr(
-        object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-    return Obj->makeTriple();
+    for (auto InputFile : InputFiles) {
+      auto ObjBuffer =
+          ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(InputFile)));
+      switch (identify_magic(ObjBuffer->getBuffer())) {
+      case file_magic::elf_relocatable:
+      case file_magic::macho_object:
+      case file_magic::coff_object: {
+        auto Obj = ExitOnErr(
+            object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
+        return Obj->makeTriple();
+      }
+      default:
+        break;
+      }
+    }
+    return Triple();
   }();
 
   return FirstTT;

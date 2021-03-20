@@ -1498,12 +1498,13 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; VI-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
 ; VI-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; VI-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; VI-NEXT:    s_cbranch_execz BB10_5
 ; VI-NEXT:  ; %bb.3: ; %.kill
 ; VI-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; VI-NEXT:    s_cbranch_scc0 BB10_6
 ; VI-NEXT:  ; %bb.4: ; %.kill
 ; VI-NEXT:    s_mov_b64 exec, 0
-; VI-NEXT:  ; %bb.5: ; %.exit
+; VI-NEXT:  BB10_5: ; %.exit
 ; VI-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    exp mrt0 v0, off, off, off done vm
@@ -1551,12 +1552,13 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
 ; GFX9-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX9-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; GFX9-NEXT:    s_cbranch_execz BB10_5
 ; GFX9-NEXT:  ; %bb.3: ; %.kill
 ; GFX9-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; GFX9-NEXT:    s_cbranch_scc0 BB10_6
 ; GFX9-NEXT:  ; %bb.4: ; %.kill
 ; GFX9-NEXT:    s_mov_b64 exec, 0
-; GFX9-NEXT:  ; %bb.5: ; %.exit
+; GFX9-NEXT:  BB10_5: ; %.exit
 ; GFX9-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    exp mrt0 v0, off, off, off done vm
@@ -1604,12 +1606,13 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-32-NEXT:    v_cmp_gt_f32_e32 vcc_lo, 0, v11
 ; GFX10-32-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX10-32-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX10-32-NEXT:    s_cbranch_execz BB10_5
 ; GFX10-32-NEXT:  ; %bb.3: ; %.kill
 ; GFX10-32-NEXT:    s_andn2_b32 s5, s5, exec_lo
 ; GFX10-32-NEXT:    s_cbranch_scc0 BB10_6
 ; GFX10-32-NEXT:  ; %bb.4: ; %.kill
 ; GFX10-32-NEXT:    s_mov_b32 exec_lo, 0
-; GFX10-32-NEXT:  ; %bb.5: ; %.exit
+; GFX10-32-NEXT:  BB10_5: ; %.exit
 ; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-32-NEXT:    exp mrt0 v0, off, off, off done vm
@@ -1657,12 +1660,13 @@ define amdgpu_ps void @test_waterfall_sample_with_kill(<8 x i32> addrspace(4)* i
 ; GFX10-64-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v11
 ; GFX10-64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX10-64-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; GFX10-64-NEXT:    s_cbranch_execz BB10_5
 ; GFX10-64-NEXT:  ; %bb.3: ; %.kill
 ; GFX10-64-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
 ; GFX10-64-NEXT:    s_cbranch_scc0 BB10_6
 ; GFX10-64-NEXT:  ; %bb.4: ; %.kill
 ; GFX10-64-NEXT:    s_mov_b64 exec, 0
-; GFX10-64-NEXT:  ; %bb.5: ; %.exit
+; GFX10-64-NEXT:  BB10_5: ; %.exit
 ; GFX10-64-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX10-64-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-64-NEXT:    exp mrt0 v0, off, off, off done vm

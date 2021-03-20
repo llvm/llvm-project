@@ -223,14 +223,11 @@ void initializeSIFixScratchSizePass(PassRegistry &);
 extern char &SIFixScratchSizeID;
 extern const char *const SIScratchSizeSymbol;
 
-void initializeSIRemoveShortExecBranchesPass(PassRegistry &);
-extern char &SIRemoveShortExecBranchesID;
-
 void initializeSIPreEmitPeepholePass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
-void initializeSIInsertSkipsPass(PassRegistry &);
-extern char &SIInsertSkipsPassID;
+void initializeSILateBranchLoweringPass(PassRegistry &);
+extern char &SILateBranchLoweringPassID;
 
 void initializeSIOptimizeExecMaskingPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingID;
