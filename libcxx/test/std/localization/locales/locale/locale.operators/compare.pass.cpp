@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <locale>
 
 // template <class charT, class Traits, class Allocator>

@@ -14,6 +14,8 @@
 // file as C, but we're passing C++ flags on the command-line.
 // UNSUPPORTED: gcc
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // Test that the C wrapper headers can be included when compiling them as C.
 
 // NOTE: It's not common or recommended to have libc++ in the header search

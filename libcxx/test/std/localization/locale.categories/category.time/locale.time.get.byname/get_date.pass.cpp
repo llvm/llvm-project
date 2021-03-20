@@ -18,6 +18,8 @@
 // GLIBC also fails on the zh_CN test.
 // XFAIL: linux
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <locale>
 
 // class time_get_byname<charT, InputIterator>
