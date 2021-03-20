@@ -18,7 +18,6 @@
 // CHECK: "[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/x86_64-linux-gnu/c++/4.8"
 // CHECK: "-internal-isystem"
 // CHECK: "[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
-// CHECK: "-internal-isystem" "/usr/local/include"
 //
 // Test for linker toolchain detection. Note that only the '-L' flags will use
 // the same precise formatting of the path as the '-internal-system' flags
