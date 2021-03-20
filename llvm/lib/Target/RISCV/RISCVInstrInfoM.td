@@ -104,4 +104,4 @@ let Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba] in {
 // still be better off shifting both left by 32.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
-} // Predicates = [HasStdExtM, IsRV64]
+} // Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba]
