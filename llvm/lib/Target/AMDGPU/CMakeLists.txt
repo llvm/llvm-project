@@ -120,7 +120,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
   SIInsertHardClauses.cpp
-  SIInsertSkips.cpp
+  SILateBranchLowering.cpp
   SIInsertWaitcnts.cpp
   SIInstrInfo.cpp
   SIISelLowering.cpp
@@ -138,7 +138,6 @@ add_llvm_target(AMDGPUCodeGen
   SIPreEmitPeephole.cpp
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
-  SIRemoveShortExecBranches.cpp
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp

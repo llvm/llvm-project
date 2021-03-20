@@ -585,7 +585,7 @@ public:
   }
 };
 
-class ReshapeOpConverter : public OpConversionPattern<tosa::ReshapeOp> {
+class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
 
@@ -727,7 +727,7 @@ public:
   }
 };
 
-class RescaleOpConverter : public OpRewritePattern<tosa::RescaleOp> {
+class RescaleConverter : public OpRewritePattern<tosa::RescaleOp> {
 public:
   using OpRewritePattern<tosa::RescaleOp>::OpRewritePattern;
 
@@ -889,7 +889,7 @@ public:
   }
 };
 
-struct ConcatOpConversion : public OpConversionPattern<tosa::ConcatOp> {
+struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   using OpConversionPattern<tosa::ConcatOp>::OpConversionPattern;
 
   LogicalResult
@@ -936,6 +936,56 @@ struct ConcatOpConversion : public OpConversionPattern<tosa::ConcatOp> {
   }
 };
 
+class ReverseConverter : public OpRewritePattern<tosa::ReverseOp> {
+public:
+  using OpRewritePattern<tosa::ReverseOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReverseOp op,
+                                PatternRewriter &rewriter) const final {
+    auto loc = op.getLoc();
+    Value input = op.input();
+    auto inputTy = input.getType().template cast<ShapedType>();
+    auto resultTy = op.getType().template cast<ShapedType>();
+    auto rank = resultTy.getRank();
+    auto axis = op.axis();
+
+    if (!inputTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "No initial value found for reduction operation");
+
+    // First fill the output buffer with the init value.
+    auto initTensor = rewriter
+                          .create<linalg::InitTensorOp>(
+                              loc, ArrayRef<Value>({}), inputTy.getShape(),
+                              inputTy.getElementType())
+                          .result();
+
+    SmallVector<AffineExpr, 2> inputExprs;
+    inputExprs.resize(resultTy.getRank());
+
+    for (int i = 0; i < rank; i++)
+      inputExprs[i] = rewriter.getAffineDimExpr(i);
+
+    inputExprs[axis] =
+        rewriter.getAffineConstantExpr(inputTy.getDimSize(axis) - 1) -
+        inputExprs[axis];
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
+                       rewriter.getContext()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        op, resultTy, op.input(), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+        });
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -963,6 +1013,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityOp>,
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>, ConcatOpConversion,
-      ReshapeOpConverter, TransposeConverter, RescaleOpConverter>(context);
+      ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
+      RescaleConverter, ReverseConverter, TransposeConverter>(context);
 }

@@ -246,8 +246,10 @@ public:
 Module &ModuleLazyLoaderCache::operator()(const char *argv0,
                                           const std::string &Identifier) {
   auto &Module = ModuleMap[Identifier];
-  if (!Module)
+  if (!Module) {
     Module = createLazyModule(argv0, Identifier);
+    assert(Module && "Failed to create lazy module!");
+  }
   return *Module;
 }
 } // anonymous namespace

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-remove-short-exec-branches -amdgpu-skip-threshold=3 %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass si-pre-emit-peephole -amdgpu-skip-threshold=3 %s -o - | FileCheck %s
 
 ---
 

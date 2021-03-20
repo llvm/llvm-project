@@ -3,7 +3,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
@@ -34,7 +34,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi14 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-14 %s
 // CHECK-14: "-L{{.*}}/sysroot/usr/lib/arm-linux-androideabi/14"
@@ -42,7 +42,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-STDCXX %s
 // CHECK-STDCXX: {{.*}}clang{{.*}}" "-cc1"
@@ -76,7 +76,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target armv7a-none-linux-androideabi21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // CHECK-ARMV7: {{.*}}clang{{.*}}" "-cc1"
@@ -109,19 +109,19 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -march=armv7 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -march=armv7a \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -march=armv7-a \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7 %s
 //
@@ -129,7 +129,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -mthumb \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-THUMB %s
 // CHECK-THUMB: {{.*}}clang{{.*}}" "-cc1"
@@ -163,7 +163,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -march=armv7-a -mthumb \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7THUMB %s
 // CHECK-ARMV7THUMB: {{.*}}clang{{.*}}" "-cc1"
@@ -195,7 +195,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi21 \
 // RUN:     -march=armv7-a -mthumb \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:     -print-multi-lib \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARM-MULTILIBS %s
@@ -209,13 +209,13 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target armv7a-none-linux-androideabi21 \
 // RUN:     -mthumb \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck  --check-prefix=CHECK-ARMV7THUMB %s
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target aarch64-linux-android21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
 // CHECK-AARCH64: {{.*}}clang{{.*}}" "-cc1"
@@ -231,7 +231,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm64-linux-android21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM64 %s
 // CHECK-ARM64: {{.*}}clang{{.*}}" "-cc1"
@@ -248,7 +248,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android21 \
 // RUN:     -mips32 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
 // CHECK-MIPS: {{.*}}clang{{.*}}" "-cc1"
@@ -263,7 +263,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target i686-linux-android21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-I686 %s
 // CHECK-I686: {{.*}}clang{{.*}}" "-cc1"
@@ -279,7 +279,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-linux-android21 \
-// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-X86_64 %s
 // CHECK-X86_64: {{.*}}clang{{.*}}" "-cc1"

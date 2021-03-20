@@ -479,6 +479,16 @@ public:
   /// Returns the size of this symbol.
   JITTargetAddress getSize() const { return Size; }
 
+  /// Set the size of this symbol.
+  void setSize(JITTargetAddress Size) {
+    assert(Base && "Cannot set size for null Symbol");
+    assert((Size == 0 || Base->isDefined()) &&
+           "Non-zero size can only be set for defined symbols");
+    assert((Offset + Size <= static_cast<const Block &>(*Base).getSize()) &&
+           "Symbol size cannot extend past the end of its containing block");
+    this->Size = Size;
+  }
+
   /// Returns true if this symbol is backed by a zero-fill block.
   /// This method may only be called on defined symbols.
   bool isSymbolZeroFill() const { return getBlock().isZeroFill(); }
@@ -1012,6 +1022,24 @@ public:
     }
     Sym.makeExternal(createAddressable(0, false));
     ExternalSymbols.insert(&Sym);
+  }
+
+  /// Turn an external symbol into a defined one by attaching it to a block.
+  void makeDefined(Symbol &Sym, Block &Content, JITTargetAddress Offset,
+                   JITTargetAddress Size, Linkage L, Scope S, bool IsLive) {
+    assert(!Sym.isDefined() && !Sym.isAbsolute() &&
+           "Sym is not an external symbol");
+    assert(ExternalSymbols.count(&Sym) && "Symbol is not in the externals set");
+    ExternalSymbols.erase(&Sym);
+    Addressable &OldBase = *Sym.Base;
+    Sym.setBlock(Content);
+    Sym.setOffset(Offset);
+    Sym.setSize(Size);
+    Sym.setLinkage(L);
+    Sym.setScope(S);
+    Sym.setLive(IsLive);
+    Content.getSection().addSymbol(Sym);
+    destroyAddressable(OldBase);
   }
 
   /// Removes an external symbol. Also removes the underlying Addressable.

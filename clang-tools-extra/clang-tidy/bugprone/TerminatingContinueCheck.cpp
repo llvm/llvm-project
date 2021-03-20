@@ -26,10 +26,11 @@ void TerminatingContinueCheck::registerMatchers(MatchFinder *Finder) {
              equalsBoundNode("closestLoop"));
 
   Finder->addMatcher(
-      continueStmt(hasAncestor(stmt(anyOf(forStmt(), whileStmt(),
-                                          cxxForRangeStmt(), doStmt()))
-                                   .bind("closestLoop")),
-                   hasAncestor(DoWithFalse))
+      continueStmt(
+          hasAncestor(stmt(anyOf(forStmt(), whileStmt(), cxxForRangeStmt(),
+                                 doStmt(), switchStmt()))
+                          .bind("closestLoop")),
+          hasAncestor(DoWithFalse))
           .bind("continue"),
       this);
 }

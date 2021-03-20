@@ -992,7 +992,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
       // We have entered the condition variable's scope, so we're now able to
       // jump to the continue block.
-      Continue = getJumpDestInCurrentScope("for.inc");
+      Continue = S.getInc() ? getJumpDestInCurrentScope("for.inc") : CondDest;
       BreakContinueStack.back().ContinueBlock = Continue;
     }
 

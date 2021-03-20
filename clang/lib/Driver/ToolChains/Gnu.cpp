@@ -1944,9 +1944,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // Compute the set of prefixes for our search.
-  SmallVector<std::string, 8> Prefixes(D.PrefixDirs.begin(),
-                                       D.PrefixDirs.end());
-
+  SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
   if (GCCToolchainDir != "") {
     if (GCCToolchainDir.back() == '/')
@@ -1992,7 +1990,8 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // Loop over the various components which exist and select the best GCC
   // installation available. GCC installs are ranked by version number.
-  Version = GCCVersion::Parse("0.0.0");
+  const GCCVersion VersionZero = GCCVersion::Parse("0.0.0");
+  Version = VersionZero;
   for (const std::string &Prefix : Prefixes) {
     auto &VFS = D.getVFS();
     if (!VFS.exists(Prefix))
@@ -2025,6 +2024,10 @@ void Generic_GCC::GCCInstallationDetector::init(
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, true,
                                GCCDirExists, GCCCrossDirExists);
     }
+
+    // Skip other prefixes once a GCC installation is found.
+    if (Version > VersionZero)
+      break;
   }
 }
 
@@ -2538,7 +2541,6 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
     const llvm::Triple &TargetTriple, const ArgList &Args,
     const std::string &LibDir, StringRef CandidateTriple,
     bool NeedsBiarchSuffix, bool GCCDirExists, bool GCCCrossDirExists) {
-  llvm::Triple::ArchType TargetArch = TargetTriple.getArch();
   // Locations relative to the system lib directory where GCC's triple-specific
   // directories might reside.
   struct GCCLibSuffix {
@@ -2562,24 +2564,7 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // files in that location, not just GCC installation data.
       {CandidateTriple.str(), "..",
        TargetTriple.getVendor() == llvm::Triple::Freescale ||
-       TargetTriple.getVendor() == llvm::Triple::OpenEmbedded},
-
-      // Natively multiarch systems sometimes put the GCC triple-specific
-      // directory within their multiarch lib directory, resulting in the
-      // triple appearing twice.
-      {CandidateTriple.str() + "/gcc/" + CandidateTriple.str(), "../../..",
-       TargetTriple.getOS() != llvm::Triple::Solaris},
-
-      // Deal with cases (on Ubuntu) where the system architecture could be i386
-      // but the GCC target architecture could be (say) i686.
-      // FIXME: It may be worthwhile to generalize this and look for a second
-      // triple.
-      {"i386-linux-gnu/gcc/" + CandidateTriple.str(), "../../..",
-       (TargetArch == llvm::Triple::x86 &&
-        TargetTriple.getOS() != llvm::Triple::Solaris)},
-      {"i386-gnu/gcc/" + CandidateTriple.str(), "../../..",
-       (TargetArch == llvm::Triple::x86 &&
-        TargetTriple.getOS() != llvm::Triple::Solaris)}};
+           TargetTriple.getVendor() == llvm::Triple::OpenEmbedded}};
 
   for (auto &Suffix : Suffixes) {
     if (!Suffix.Active)
