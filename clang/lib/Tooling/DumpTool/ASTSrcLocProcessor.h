@@ -30,6 +30,7 @@ public:
                                                  StringRef File);
 
   void generate();
+  void generateEmpty();
 
 private:
   void run(const ast_matchers::MatchFinder::MatchResult &Result) override;
