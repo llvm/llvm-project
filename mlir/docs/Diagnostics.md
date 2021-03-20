@@ -11,69 +11,9 @@ structure of the IR, operations, etc.
 ## Source Locations
 
 Source location information is extremely important for any compiler, because it
-provides a baseline for debuggability and error-reporting. MLIR provides several
-different location types depending on the situational need.
-
-### CallSite Location
-
-```
-callsite-location ::= 'callsite' '(' location 'at' location ')'
-```
-
-An instance of this location allows for representing a directed stack of
-location usages. This connects a location of a `callee` with the location of a
-`caller`.
-
-### FileLineCol Location
-
-```
-filelinecol-location ::= string-literal ':' integer-literal ':' integer-literal
-```
-
-An instance of this location represents a tuple of file, line number, and column
-number. This is similar to the type of location that you get from most source
-languages.
-
-### Fused Location
-
-```
-fused-location ::= `fused` fusion-metadata? '[' location (location ',')* ']'
-fusion-metadata ::= '<' attribute-value '>'
-```
-
-An instance of a `fused` location represents a grouping of several other source
-locations, with optional metadata that describes the context of the fusion.
-There are many places within a compiler in which several constructs may be fused
-together, e.g. pattern rewriting, that normally result partial or even total
-loss of location information. With `fused` locations, this is a non-issue.
-
-### Name Location
-
-```
-name-location ::= string-literal ('(' location ')')?
-```
-
-An instance of this location allows for attaching a name to a child location.
-This can be useful for representing the locations of variable, or node,
-definitions.
-
-### Opaque Location
-
-An instance of this location essentially contains a pointer to some data
-structure that is external to MLIR and an optional location that can be used if
-the first one is not suitable. Since it contains an external structure, only the
-optional location is used during serialization.
-
-### Unknown Location
-
-```
-unknown-location ::= `unknown`
-```
-
-Source location information is an extremely integral part of the MLIR
-infrastructure. As such, location information is always present in the IR, and
-must explicitly be set to unknown. Thus an instance of the `unknown` location,
-represents an unspecified source location.
+provides a baseline for debuggability and error-reporting. The
+[builtin dialect](Dialects/Builtin.md) provides several different location
+attributes types depending on the situational need.
 
 ## Diagnostic Engine
 
