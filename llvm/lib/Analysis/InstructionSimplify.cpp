@@ -3936,18 +3936,33 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   transform(I->operands(), NewOps.begin(),
             [&](Value *V) { return V == Op ? RepOp : V; });
 
-  // Consider:
-  //   %cmp = icmp eq i32 %x, 2147483647
-  //   %add = add nsw i32 %x, 1
-  //   %sel = select i1 %cmp, i32 -2147483648, i32 %add
-  //
-  // We can't replace %sel with %add unless we strip away the flags (which will
-  // be done in InstCombine).
-  // TODO: This is unsound, because it only catches some forms of refinement.
-  if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
-    return nullptr;
+  if (!AllowRefinement) {
+    // General InstSimplify functions may refine the result, e.g. by returning
+    // a constant for a potentially poison value. To avoid this, implement only
+    // a few non-refining but profitable transforms here.
 
-  if (MaxRecurse) {
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      unsigned Opcode = BO->getOpcode();
+      // id op x -> x, x op id -> x
+      if (NewOps[0] == ConstantExpr::getBinOpIdentity(Opcode, I->getType()))
+        return NewOps[1];
+      if (NewOps[1] == ConstantExpr::getBinOpIdentity(Opcode, I->getType(),
+                                                      /* RHS */ true))
+        return NewOps[0];
+
+      // x & x -> x, x | x -> x
+      if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
+          NewOps[0] == NewOps[1])
+        return NewOps[0];
+    }
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      // getelementptr x, 0 -> x
+      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()) &&
+          !GEP->isInBounds())
+        return NewOps[0];
+    }
+  } else if (MaxRecurse) {
     // The simplification queries below may return the original value. Consider:
     //   %div = udiv i32 %arg, %arg2
     //   %mul = mul nsw i32 %div, %arg2
@@ -3985,6 +4000,18 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     else
       return nullptr;
   }
+
+  // Consider:
+  //   %cmp = icmp eq i32 %x, 2147483647
+  //   %add = add nsw i32 %x, 1
+  //   %sel = select i1 %cmp, i32 -2147483648, i32 %add
+  //
+  // We can't replace %sel with %add unless we strip away the flags (which
+  // will be done in InstCombine).
+  // TODO: This may be unsound, because it only catches some forms of
+  // refinement.
+  if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
+    return nullptr;
 
   if (CmpInst *C = dyn_cast<CmpInst>(I))
     return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
