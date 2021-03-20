@@ -24,6 +24,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 
@@ -33,25 +34,6 @@ using namespace llvm;
 
 STATISTIC(ExpectIntrinsicsHandled,
           "Number of 'expect' intrinsic instructions handled");
-
-// These default values are chosen to represent an extremely skewed outcome for
-// a condition, but they leave some room for interpretation by later passes.
-//
-// If the documentation for __builtin_expect() was made explicit that it should
-// only be used in extreme cases, we could make this ratio higher. As it stands,
-// programmers may be using __builtin_expect() / llvm.expect to annotate that a
-// branch is likely or unlikely to be taken.
-//
-// There is a known dependency on this ratio in CodeGenPrepare when transforming
-// 'select' instructions. It may be worthwhile to hoist these values to some
-// shared space, so they can be used directly by other passes.
-
-cl::opt<uint32_t> llvm::LikelyBranchWeight(
-    "likely-branch-weight", cl::Hidden, cl::init(2000),
-    cl::desc("Weight of the branch likely to be taken (default = 2000)"));
-cl::opt<uint32_t> llvm::UnlikelyBranchWeight(
-    "unlikely-branch-weight", cl::Hidden, cl::init(1),
-    cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
 
 static std::tuple<uint32_t, uint32_t>
 getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
