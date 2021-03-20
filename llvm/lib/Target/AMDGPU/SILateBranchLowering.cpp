@@ -207,6 +207,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
       }
 
       MBB->addSuccessor(EmptyMBBAtEnd);
+      MDT->getBase().insertEdge(MBB, EmptyMBBAtEnd);
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
           .addMBB(EmptyMBBAtEnd);
       MI->eraseFromParent();
