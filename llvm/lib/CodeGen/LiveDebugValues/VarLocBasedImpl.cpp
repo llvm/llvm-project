@@ -2060,13 +2060,15 @@ static bool isSwiftAsyncContext(const MachineInstr &MI) {
     unsigned Reg = Op.getReg();
     auto &EntryMBB = MF->front();
     unsigned I = 0;
-    for (auto R : EntryMBB.liveins()) {
-      if (R.PhysReg == Reg && F.hasParamAttribute(I, Attribute::SwiftAsync)) {
-        found = true;
-        break;
+    if (MF->getProperties().hasProperty(
+            MachineFunctionProperties::Property::TracksLiveness))
+      for (auto R : EntryMBB.liveins()) {
+        if (R.PhysReg == Reg && F.hasParamAttribute(I, Attribute::SwiftAsync)) {
+          found = true;
+          break;
+        }
+        ++I;
       }
-      ++I;
-    }
     if (!found)
       return false;
   }
