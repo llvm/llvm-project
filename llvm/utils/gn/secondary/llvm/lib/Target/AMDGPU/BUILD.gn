@@ -222,7 +222,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIPreEmitPeephole.cpp",
     "SIProgramInfo.cpp",
     "SIRegisterInfo.cpp",
-    "SIRemoveShortExecBranches.cpp",
     "SIShrinkInstructions.cpp",
     "SIWholeQuadMode.cpp",
   ]
