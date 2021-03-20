@@ -2357,14 +2357,16 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
       Address func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
       AddressRange prologue_range(func_start_addr,
                                   sc.function->GetPrologueByteSize());
-      if (prologue_range.ContainsLoadAddress(pc, &target)) {
+      if (prologue_range.ContainsLoadAddress(pc, &target) ||
+          func_start_addr == pc) {
         return UnwindPlanSP();
       }
     } else if (sc.symbol) {
       Address func_start_addr = sc.symbol->GetAddress();
       AddressRange prologue_range(func_start_addr,
                                   sc.symbol->GetPrologueByteSize());
-      if (prologue_range.ContainsLoadAddress(pc, &target)) {
+      if (prologue_range.ContainsLoadAddress(pc, &target) ||
+          func_start_addr == pc) {
         return UnwindPlanSP();
       }
     }
