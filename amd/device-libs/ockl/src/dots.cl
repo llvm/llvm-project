@@ -11,7 +11,7 @@
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-__attribute__((target("dot2-insts"), const)) static float amdgcn_fdot2(half2 a, half2 b, float c, bool s)
+__attribute__((target("dot7-insts"), const)) static float amdgcn_fdot2(half2 a, half2 b, float c, bool s)
 { if (s) return __builtin_amdgcn_fdot2(a, b, c, true);
   else   return __builtin_amdgcn_fdot2(a, b, c, false); }
 
@@ -27,7 +27,7 @@ __attribute__((target("dot1-insts"), const)) static int amdgcn_sdot4(int a, int 
 { if (s) return __builtin_amdgcn_sdot4(a, b, c, true);
   else   return __builtin_amdgcn_sdot4(a, b, c, false); }
 
-__attribute__((target("dot2-insts"), const)) static uint amdgcn_udot4(uint a, uint b, uint c, bool s)
+__attribute__((target("dot7-insts"), const)) static uint amdgcn_udot4(uint a, uint b, uint c, bool s)
 { if (s) return __builtin_amdgcn_udot4(a, b, c, true);
   else   return __builtin_amdgcn_udot4(a, b, c, false); }
 
@@ -35,7 +35,7 @@ __attribute__((target("dot1-insts"), const)) static int amdgcn_sdot8(int a, int 
 { if (s) return __builtin_amdgcn_sdot8(a, b, c, true);
   else   return __builtin_amdgcn_sdot8(a, b, c, false); }
 
-__attribute__((target("dot2-insts"), const)) static uint amdgcn_udot8(uint a, uint b, uint c, bool s)
+__attribute__((target("dot7-insts"), const)) static uint amdgcn_udot8(uint a, uint b, uint c, bool s)
 { if (s) return __builtin_amdgcn_udot8(a, b, c, true);
   else   return __builtin_amdgcn_udot8(a, b, c, false); }
 
