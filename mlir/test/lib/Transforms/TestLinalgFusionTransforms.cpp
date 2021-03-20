@@ -109,7 +109,7 @@ struct TestLinalgFusionTransforms
   void runOnFunction() override {
     MLIRContext *context = &this->getContext();
     FuncOp funcOp = this->getFunction();
-    OwningRewritePatternList fusionPatterns;
+    OwningRewritePatternList fusionPatterns(context);
     Aliases alias;
     LinalgDependenceGraph dependenceGraph =
         LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);

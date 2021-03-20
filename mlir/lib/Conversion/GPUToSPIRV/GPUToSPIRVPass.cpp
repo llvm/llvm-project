@@ -57,9 +57,9 @@ void GPUToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns;
-  populateGPUToSPIRVPatterns(context, typeConverter, patterns);
-  populateStandardToSPIRVPatterns(context, typeConverter, patterns);
+  OwningRewritePatternList patterns(context);
+  populateGPUToSPIRVPatterns(typeConverter, patterns);
+  populateStandardToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyFullConversion(kernelModules, *target, std::move(patterns))))
     return signalPassFailure();

@@ -125,12 +125,13 @@ struct LowerGpuOpsToNVVMOpsPass
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
     });
 
-    OwningRewritePatternList patterns, llvmPatterns;
+    OwningRewritePatternList patterns(m.getContext());
+    OwningRewritePatternList llvmPatterns(m.getContext());
 
     // Apply in-dialect lowering first. In-dialect lowering will replace ops
     // which need to be lowered further, which is not supported by a single
     // conversion pass.
-    populateGpuRewritePatterns(m.getContext(), patterns);
+    populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateStdToLLVMConversionPatterns(converter, llvmPatterns);

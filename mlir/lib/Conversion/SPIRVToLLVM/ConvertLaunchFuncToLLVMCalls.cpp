@@ -278,7 +278,7 @@ public:
         /*emitCWrappers=*/true,
         /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout};
     auto *context = module.getContext();
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
     patterns.insert<GPULaunchLowering>(typeConverter);

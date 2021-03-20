@@ -101,25 +101,25 @@ struct TestSparsification
   /// Runs the test on a function.
   void runOnOperation() override {
     auto *ctx = &getContext();
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(ctx);
     // Translate strategy flags to strategy options.
     linalg::SparsificationOptions options(parallelOption(), vectorOption(),
                                           vectorLength, typeOption(ptrType),
                                           typeOption(indType), fastOutput);
     // Apply rewriting.
-    linalg::populateSparsificationPatterns(ctx, patterns, options);
-    vector::populateVectorToVectorCanonicalizationPatterns(patterns, ctx);
+    linalg::populateSparsificationPatterns(patterns, options);
+    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     // Lower sparse primitives to calls into runtime support library.
     if (lower) {
-      OwningRewritePatternList conversionPatterns;
+      OwningRewritePatternList conversionPatterns(ctx);
       ConversionTarget target(*ctx);
       target.addIllegalOp<linalg::SparseTensorFromPointerOp,
                           linalg::SparseTensorToPointersMemRefOp,
                           linalg::SparseTensorToIndicesMemRefOp,
                           linalg::SparseTensorToValuesMemRefOp>();
       target.addLegalOp<CallOp>();
-      linalg::populateSparsificationConversionPatterns(ctx, conversionPatterns);
+      linalg::populateSparsificationConversionPatterns(conversionPatterns);
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(conversionPatterns))))
         signalPassFailure();

@@ -642,9 +642,9 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   return success();
 }
 
-void mlir::populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
-                                             MLIRContext *ctx) {
-  patterns.insert<ParallelToGpuLaunchLowering>(ctx);
+void mlir::populateParallelLoopToGPUPatterns(
+    OwningRewritePatternList &patterns) {
+  patterns.insert<ParallelToGpuLaunchLowering>(patterns.getContext());
 }
 
 void mlir::configureParallelLoopToGPULegality(ConversionTarget &target) {

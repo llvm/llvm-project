@@ -53,7 +53,7 @@ std::unique_ptr<OperationPass<FuncOp>> createLinalgBufferizePass();
 /// Populate patterns that convert `ElementwiseMappable` ops to linalg
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
+    OwningRewritePatternList &patterns);
 
 /// Create a pass to conver named Linalg operations to Linalg generic
 /// operations.
@@ -67,14 +67,14 @@ std::unique_ptr<Pass> createLinalgDetensorizePass();
 /// producer (consumer) generic operation by expanding the dimensionality of the
 /// loop in the generic op.
 void populateFoldReshapeOpsByExpansionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic/indexed_generic operation by linearizing the
 /// indexing map used to access the source (target) of the reshape operation in
 /// the generic/indexed_generic operation.
 void populateFoldReshapeOpsByLinearizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic/indexed_generic operation by linearizing the
@@ -83,16 +83,15 @@ void populateFoldReshapeOpsByLinearizationPatterns(
 /// the tensor reshape involved is collapsing (introducing) unit-extent
 /// dimensions.
 void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 /// Patterns for fusing linalg operation on tensors.
-void populateLinalgTensorOpsFusionPatterns(MLIRContext *context,
-                                           OwningRewritePatternList &patterns);
+void populateLinalgTensorOpsFusionPatterns(OwningRewritePatternList &patterns);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors.
 void populateLinalgFoldUnitExtentDimsPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

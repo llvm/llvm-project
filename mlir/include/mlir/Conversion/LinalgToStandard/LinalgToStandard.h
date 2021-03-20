@@ -70,7 +70,7 @@ public:
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void populateLinalgToStandardConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
+    OwningRewritePatternList &patterns);
 
 } // namespace linalg
 

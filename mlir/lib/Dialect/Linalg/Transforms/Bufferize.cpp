@@ -323,8 +323,8 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
-    OwningRewritePatternList patterns;
-    populateLinalgBufferizePatterns(&context, typeConverter, patterns);
+    OwningRewritePatternList patterns(&context);
+    populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -337,8 +337,7 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgBufferizePass() {
 }
 
 void mlir::linalg::populateLinalgBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
+    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
   patterns.insert<BufferizeAnyLinalgOp>(typeConverter);
   // TODO: Drop this once tensor constants work in standard.
   // clang-format off
@@ -347,6 +346,6 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeInitTensorOp,
       SubTensorOpConverter,
       SubTensorInsertOpConverter
-    >(typeConverter, context);
+    >(typeConverter, patterns.getContext());
   // clang-format on
 }

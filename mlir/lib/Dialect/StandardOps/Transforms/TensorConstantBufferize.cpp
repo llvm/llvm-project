@@ -90,7 +90,7 @@ struct TensorConstantBufferizePass
 
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
     target.addLegalDialect<memref::MemRefDialect>();

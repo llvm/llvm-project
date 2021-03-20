@@ -678,8 +678,8 @@ void ConvertShapeToStandardPass::runOnOperation() {
   target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp, ModuleTerminatorOp>();
 
   // Setup conversion patterns.
-  OwningRewritePatternList patterns;
-  populateShapeToStandardConversionPatterns(patterns, &ctx);
+  OwningRewritePatternList patterns(&ctx);
+  populateShapeToStandardConversionPatterns(patterns);
 
   // Apply conversion.
   auto module = getOperation();
@@ -688,9 +688,9 @@ void ConvertShapeToStandardPass::runOnOperation() {
 }
 
 void mlir::populateShapeToStandardConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    OwningRewritePatternList &patterns) {
   // clang-format off
-  populateWithGenerated(ctx, patterns);
+  populateWithGenerated(patterns.getContext(), patterns);
   patterns.insert<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
@@ -705,7 +705,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       ShapeEqOpConverter,
       ShapeOfOpConversion,
       SplitAtOpConversion,
-      ToExtentTensorOpConversion>(ctx);
+      ToExtentTensorOpConversion>(patterns.getContext());
   // clang-format on
 }
 
