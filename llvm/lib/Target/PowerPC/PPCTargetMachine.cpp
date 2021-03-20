@@ -126,13 +126,17 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
 }
 
+static bool isLittleEndianTriple(const Triple &T) {
+  return T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
+}
+
 /// Return the datalayout string of a subtarget.
 static std::string getDataLayoutString(const Triple &T) {
   bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
   std::string Ret;
 
   // Most PPC* platforms are big endian, PPC(64)LE is little endian.
-  if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
+  if (isLittleEndianTriple(T))
     Ret = "e";
   else
     Ret = "E";
@@ -317,7 +321,8 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveRelocModel(TT, RM),
                         getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
-      TargetABI(computeTargetABI(TT, Options)) {
+      TargetABI(computeTargetABI(TT, Options)),
+      Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
 
@@ -538,6 +543,12 @@ void PPCPassConfig::addPreEmitPass() {
 TargetTransformInfo
 PPCTargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(PPCTTIImpl(this, F));
+}
+
+bool PPCTargetMachine::isLittleEndian() const {
+  assert(Endianness != Endian::NOT_DETECTED &&
+         "Unable to determine endianness");
+  return Endianness == Endian::LITTLE;
 }
 
 static MachineSchedRegistry
