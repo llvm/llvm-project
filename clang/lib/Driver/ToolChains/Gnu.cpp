@@ -1955,7 +1955,8 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // Loop over the various components which exist and select the best GCC
   // installation available. GCC installs are ranked by version number.
-  Version = GCCVersion::Parse("0.0.0");
+  const GCCVersion VersionZero = GCCVersion::Parse("0.0.0");
+  Version = VersionZero;
   for (const std::string &Prefix : Prefixes) {
     auto &VFS = D.getVFS();
     if (!VFS.exists(Prefix))
@@ -1988,6 +1989,10 @@ void Generic_GCC::GCCInstallationDetector::init(
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, true,
                                GCCDirExists, GCCCrossDirExists);
     }
+
+    // Skip other prefixes once a GCC installation is found.
+    if (Version > VersionZero)
+      break;
   }
 }
 
