@@ -296,6 +296,12 @@ static void reloadTileConfig(MachineInstr *MI, int FI,
   MachineBasicBlock *MBB = MI->getParent();
   BBVisitedInfo[MBB] = BBInfo(CfgNeedInsert, MBB, MI);
 
+  // The entry BB is special, since it always has a ldtilecfg before AMX
+  // instruction. We don't need to check if its predecessor BBs have call.
+  // FIXME: This case happens only when the entry BB is in a loop. We need to
+  // hoist the first tile config point out of the loop in future.
+  BBVisitedInfo[MBB].HasCallBeforeAMX = true;
+
   WorkList.push_back(MBB);
   while (!WorkList.empty()) {
     MBB = WorkList.pop_back_val();
