@@ -219,8 +219,11 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
     return false;
 
   // Scan back to find an identical S_SET_GPR_IDX_ON
-  for (MachineBasicBlock::iterator I = std::next(First.getIterator()),
-       E = MI.getIterator(); I != E; ++I) {
+  for (MachineBasicBlock::instr_iterator I = std::next(First.getIterator()),
+                                         E = MI.getIterator();
+       I != E; ++I) {
+    if (I->isBundle())
+      continue;
     switch (I->getOpcode()) {
     case AMDGPU::S_SET_GPR_IDX_MODE:
       return false;
@@ -249,9 +252,9 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
     }
   }
 
-  MI.eraseFromParent();
+  MI.eraseFromBundle();
   for (MachineInstr *RI : ToRemove)
-    RI->eraseFromParent();
+    RI->eraseFromBundle();
   return true;
 }
 
@@ -315,7 +318,10 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
     // Scan the block for two S_SET_GPR_IDX_ON instructions to see if a
     // second is not needed. Do expensive checks in the optimizeSetGPR()
     // and limit the distance to 20 instructions for compile time purposes.
-    for (MachineBasicBlock::iterator MBBI = MBB.begin(); MBBI != MBBE; ) {
+    // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
+    // may be bundled with the instructions they modify.
+    for (MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin();
+         MBBI != MBBE;) {
       MachineInstr &MI = *MBBI;
       ++MBBI;
 
