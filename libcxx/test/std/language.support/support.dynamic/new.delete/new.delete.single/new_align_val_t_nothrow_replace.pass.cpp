@@ -20,11 +20,6 @@
 // XFAIL: with_system_cxx_lib=macosx10.10
 // XFAIL: with_system_cxx_lib=macosx10.9
 
-// On Windows libc++ doesn't provide its own definitions for new/delete
-// but instead depends on the ones in VCRuntime. However VCRuntime does not
-// yet provide aligned new/delete definitions so this test fails.
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // test operator new nothrow by replacing only operator new
 
 #include <new>
