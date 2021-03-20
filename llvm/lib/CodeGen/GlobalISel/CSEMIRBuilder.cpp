@@ -185,7 +185,11 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UREM:
-  case TargetOpcode::G_SREM: {
+  case TargetOpcode::G_SREM:
+  case TargetOpcode::G_SMIN:
+  case TargetOpcode::G_SMAX:
+  case TargetOpcode::G_UMIN:
+  case TargetOpcode::G_UMAX: {
     // Try to constant fold these.
     assert(SrcOps.size() == 2 && "Invalid sources");
     assert(DstOps.size() == 1 && "Invalid dsts");
