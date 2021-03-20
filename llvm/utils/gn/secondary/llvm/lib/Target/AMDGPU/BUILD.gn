@@ -203,7 +203,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIFrameLowering.cpp",
     "SIISelLowering.cpp",
     "SIInsertHardClauses.cpp",
-    "SIInsertSkips.cpp",
+    "SILateBranchLowering.cpp",
     "SIInsertWaitcnts.cpp",
     "SIInstrInfo.cpp",
     "SILoadStoreOptimizer.cpp",
