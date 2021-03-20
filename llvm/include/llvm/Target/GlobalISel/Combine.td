@@ -118,6 +118,7 @@ def int64_matchinfo: GIDefMatchData<"int64_t">;
 def apint_matchinfo : GIDefMatchData<"APInt">;
 def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
+def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -321,6 +322,26 @@ def urem_pow2_to_mask : GICombineRule<
   (match (wip_match_opcode G_UREM):$root,
     [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(*${root}, 2); }]),
   (apply [{ Helper.applySimplifyURemByPow2(*${root}); }])
+>;
+
+// Push a binary operator through a select on constants.
+//
+// binop (select cond, K0, K1), K2 ->
+//   select cond, (binop K0, K2), (binop K1, K2)
+
+// Every binary operator that has constant folding. We currently do
+// not have constant folding for G_FPOW, G_FMAXNUM_IEEE or
+// G_FMINNUM_IEEE.
+def fold_binop_into_select : GICombineRule<
+  (defs root:$root, unsigned_matchinfo:$select_op_no),
+  (match (wip_match_opcode
+    G_ADD, G_SUB, G_PTR_ADD, G_AND, G_OR, G_XOR,
+    G_SDIV, G_SREM, G_UDIV, G_UREM, G_LSHR, G_ASHR, G_SHL,
+    G_SMIN, G_SMAX, G_UMIN, G_UMAX,
+    G_FMUL, G_FADD, G_FSUB, G_FDIV, G_FREM,
+    G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
+    [{ return Helper.matchFoldBinOpIntoSelect(*${root}, ${select_op_no}); }]),
+  (apply [{ return Helper.applyFoldBinOpIntoSelect(*${root}, ${select_op_no}); }])
 >;
 
 // Transform d = [su]div(x, y) and r = [su]rem(x, y) - > d, r = [su]divrem(x, y)
@@ -913,7 +934,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask, fma_combines]>;
+    and_or_disjoint_mask, fma_combines, fold_binop_into_select]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

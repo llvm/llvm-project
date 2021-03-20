@@ -539,6 +539,13 @@ public:
   /// Combine G_UREM x, (known power of 2) to an add and bitmasking.
   void applySimplifyURemByPow2(MachineInstr &MI);
 
+  /// Push a binary operator through a select on constants.
+  ///
+  /// binop (select cond, K0, K1), K2 ->
+  ///   select cond, (binop K0, K2), (binop K1, K2)
+  bool matchFoldBinOpIntoSelect(MachineInstr &MI, unsigned &SelectOpNo);
+  bool applyFoldBinOpIntoSelect(MachineInstr &MI, const unsigned &SelectOpNo);
+
   bool matchCombineInsertVecElts(MachineInstr &MI,
                                  SmallVectorImpl<Register> &MatchInfo);
 
