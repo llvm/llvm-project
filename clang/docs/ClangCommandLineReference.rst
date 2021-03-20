@@ -2797,10 +2797,6 @@ Use packed stack layout (SystemZ only).
 
 Specify maximum number of prefixes to use for padding
 
-.. option:: -mpie-copy-relocations, -mno-pie-copy-relocations
-
-Use copy relocations support for PIE builds
-
 .. option:: -mprefer-vector-width=<arg>
 
 Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.

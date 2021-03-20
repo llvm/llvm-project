@@ -873,7 +873,7 @@ InstrProfGetRangeRepValue(uint64_t Value) {
     return Value;
   else
     // Otherwise, take to the previous power of two + 1.
-    return (1 << (64 - InstProfClzll(Value) - 1)) + 1;
+    return (UINT64_C(1) << (64 - InstProfClzll(Value) - 1)) + 1;
 }
 
 /* Return true if the range that an (observed) memop size value belongs to has

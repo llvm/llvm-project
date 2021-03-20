@@ -9,6 +9,7 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -75,7 +76,8 @@ void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
 /// Erase the unreachable blocks within the provided regions. Returns success
 /// if any blocks were erased, failure otherwise.
 // TODO: We could likely merge this with the DCE algorithm below.
-static LogicalResult eraseUnreachableBlocks(MutableArrayRef<Region> regions) {
+static LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
+                                            MutableArrayRef<Region> regions) {
   // Set of blocks found to be reachable within a given region.
   llvm::df_iterator_default_set<Block *, 16> reachable;
   // If any blocks were found to be dead.
@@ -108,7 +110,7 @@ static LogicalResult eraseUnreachableBlocks(MutableArrayRef<Region> regions) {
     for (Block &block : llvm::make_early_inc_range(*region)) {
       if (!reachable.count(&block)) {
         block.dropAllDefinedValueUses();
-        block.erase();
+        rewriter.eraseBlock(&block);
         erasedDeadBlocks = true;
         continue;
       }
@@ -305,7 +307,8 @@ static void eraseTerminatorSuccessorOperands(Operation *terminator,
   }
 }
 
-static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
+static LogicalResult deleteDeadness(RewriterBase &rewriter,
+                                    MutableArrayRef<Region> regions,
                                     LiveMap &liveMap) {
   bool erasedAnything = false;
   for (Region &region : regions) {
@@ -324,10 +327,10 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
         if (!liveMap.wasProvenLive(&childOp)) {
           erasedAnything = true;
           childOp.dropAllUses();
-          childOp.erase();
+          rewriter.eraseOp(&childOp);
         } else {
-          erasedAnything |=
-              succeeded(deleteDeadness(childOp.getRegions(), liveMap));
+          erasedAnything |= succeeded(
+              deleteDeadness(rewriter, childOp.getRegions(), liveMap));
         }
       }
     }
@@ -359,7 +362,8 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
 //
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
-static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
+static LogicalResult runRegionDCE(RewriterBase &rewriter,
+                                  MutableArrayRef<Region> regions) {
   LiveMap liveMap;
   do {
     liveMap.resetChanged();
@@ -368,7 +372,7 @@ static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
       propagateLiveness(region, liveMap);
   } while (liveMap.hasChanged());
 
-  return deleteDeadness(regions, liveMap);
+  return deleteDeadness(rewriter, regions, liveMap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -456,7 +460,7 @@ public:
   LogicalResult addToCluster(BlockEquivalenceData &blockData);
 
   /// Try to merge all of the blocks within this cluster into the leader block.
-  LogicalResult merge();
+  LogicalResult merge(RewriterBase &rewriter);
 
 private:
   /// The equivalence data for the leader of the cluster.
@@ -550,7 +554,7 @@ static bool ableToUpdatePredOperands(Block *block) {
   return true;
 }
 
-LogicalResult BlockMergeCluster::merge() {
+LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
   // Don't consider clusters that don't have blocks to merge.
   if (blocksToMerge.empty())
     return failure();
@@ -613,7 +617,7 @@ LogicalResult BlockMergeCluster::merge() {
   // Replace all uses of the merged blocks with the leader and erase them.
   for (Block *block : blocksToMerge) {
     block->replaceAllUsesWith(leaderBlock);
-    block->erase();
+    rewriter.eraseBlock(block);
   }
   return success();
 }
@@ -621,7 +625,8 @@ LogicalResult BlockMergeCluster::merge() {
 /// Identify identical blocks within the given region and merge them, inserting
 /// new block arguments as necessary. Returns success if any blocks were merged,
 /// failure otherwise.
-static LogicalResult mergeIdenticalBlocks(Region &region) {
+static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
+                                          Region &region) {
   if (region.empty() || llvm::hasSingleElement(region))
     return failure();
 
@@ -659,7 +664,7 @@ static LogicalResult mergeIdenticalBlocks(Region &region) {
         clusters.emplace_back(std::move(data));
     }
     for (auto &cluster : clusters)
-      mergedAnyBlocks |= succeeded(cluster.merge());
+      mergedAnyBlocks |= succeeded(cluster.merge(rewriter));
   }
 
   return success(mergedAnyBlocks);
@@ -667,14 +672,15 @@ static LogicalResult mergeIdenticalBlocks(Region &region) {
 
 /// Identify identical blocks within the given regions and merge them, inserting
 /// new block arguments as necessary.
-static LogicalResult mergeIdenticalBlocks(MutableArrayRef<Region> regions) {
+static LogicalResult mergeIdenticalBlocks(RewriterBase &rewriter,
+                                          MutableArrayRef<Region> regions) {
   llvm::SmallSetVector<Region *, 1> worklist;
   for (auto &region : regions)
     worklist.insert(&region);
   bool anyChanged = false;
   while (!worklist.empty()) {
     Region *region = worklist.pop_back_val();
-    if (succeeded(mergeIdenticalBlocks(*region))) {
+    if (succeeded(mergeIdenticalBlocks(rewriter, *region))) {
       worklist.insert(region);
       anyChanged = true;
     }
@@ -697,10 +703,12 @@ static LogicalResult mergeIdenticalBlocks(MutableArrayRef<Region> regions) {
 /// includes transformations like unreachable block elimination, dead argument
 /// elimination, as well as some other DCE. This function returns success if any
 /// of the regions were simplified, failure otherwise.
-LogicalResult mlir::simplifyRegions(MutableArrayRef<Region> regions) {
-  bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(regions));
-  bool eliminatedOpsOrArgs = succeeded(runRegionDCE(regions));
-  bool mergedIdenticalBlocks = succeeded(mergeIdenticalBlocks(regions));
+LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
+                                    MutableArrayRef<Region> regions) {
+  bool eliminatedBlocks = succeeded(eraseUnreachableBlocks(rewriter, regions));
+  bool eliminatedOpsOrArgs = succeeded(runRegionDCE(rewriter, regions));
+  bool mergedIdenticalBlocks =
+      succeeded(mergeIdenticalBlocks(rewriter, regions));
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
                  mergedIdenticalBlocks);
 }
