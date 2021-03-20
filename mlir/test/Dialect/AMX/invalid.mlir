@@ -46,13 +46,3 @@ func @multsize() {
   // expected-error@+1 {{'amx.tile_mulf' op bad mult shape: 4 x 4 x 4}}
   %3 = amx.tile_mulf %0, %1, %2 : vector<8x8xbf16>, vector<8x8xbf16>, vector<4x4xf32>
 }
-
-// -----
-
-func @zextsize() {
-  %0 = amx.tile_zero : vector<8x8xi8>
-  %1 = amx.tile_zero : vector<8x8xi8>
-  %2 = amx.tile_zero : vector<8x8xi32>
-  // expected-error@+1 {{'amx.tile_muli' op unexpected zext length}}
-  %3 = amx.tile_muli %0, %1, %2 [true] : vector<8x8xi8>, vector<8x8xi8>, vector<8x8xi32>
-}
