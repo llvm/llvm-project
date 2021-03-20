@@ -571,10 +571,10 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
 }
 
 // CHECK-LABEL: func @bitcast_f16_to_f32
-//              bit pattern: 0x00000000
-//       CHECK: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
 //              bit pattern: 0x40004000
-//       CHECK: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//       CHECK-DAG: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//              bit pattern: 0x00000000
+//       CHECK-DAG: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
 //       CHECK: return %[[CST0]], %[[CST1]]
 func @bitcast_f16_to_f32() -> (vector<4xf32>, vector<4xf32>) {
   %cst0 = constant dense<0.0> : vector<8xf16> // bit pattern: 0x0000
@@ -612,8 +612,8 @@ func @broadcast_folding2() -> vector<4x16xi32> {
 // -----
 
 // CHECK-LABEL: shape_cast_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
 func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
   %cst = constant dense<2.000000e+00> : vector<5x4x2xf32>
@@ -626,8 +626,8 @@ func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
 // -----
 
 // CHECK-LABEL: extract_strided_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<12x2xf32>, vector<2x13x3xi32>
 func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
   %cst = constant dense<2.000000e+00> : vector<29x7xf32>
