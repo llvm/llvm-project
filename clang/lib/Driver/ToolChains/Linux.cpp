@@ -307,16 +307,6 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Generic_GCC::AddMultilibPaths(D, SysRoot, OSLibDir, MultiarchTriple, Paths);
 
-  // Similar to the logic for GCC above, if we currently running Clang inside
-  // of the requested system root, add its parent library paths to
-  // those searched.
-  // FIXME: It's not clear whether we should use the driver's installed
-  // directory ('Dir' below) or the ResourceDir.
-  if (StringRef(D.Dir).startswith(SysRoot)) {
-    addPathIfExists(D, D.Dir + "/../lib/" + MultiarchTriple, Paths);
-    addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
-  }
-
   addPathIfExists(D, SysRoot + "/lib/" + MultiarchTriple, Paths);
   addPathIfExists(D, SysRoot + "/lib/../" + OSLibDir, Paths);
 
