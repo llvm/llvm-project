@@ -504,6 +504,7 @@ def map : Separate<["-"], "map">,
 def dependency_info : Separate<["-"], "dependency_info">,
     MetaVarName<"<path>">,
     HelpText<"Dump dependency info">,
+    Flags<[HelpHidden]>,
     Group<grp_introspect>;
 def save_temps : Flag<["-"], "save-temps">,
     HelpText<"Save intermediate LTO compilation results">,
