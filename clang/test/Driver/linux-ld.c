@@ -1020,11 +1020,11 @@
 // CHECK-ANDROID-NOEXECSTACK-NOT: "-z,execstack"
 // CHECK-ANDROID-NOEXECSTACK-NOT: "-zexecstack"
 
-+// RUN: %clang %s -### -o %t.o 2>&1 \
-+// RUN:     --target=armv7-linux-android21 \
-+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-WARN-SHARED-TEXTREL %s
-+// CHECK-ANDROID-WARN-SHARED-TEXTREL: "{{.*}}ld{{(.exe)?}}"
-+// CHECK-ANDROID-WARN-SHARED-TEXTREL: "--warn-shared-textrel"
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android21 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-WARN-SHARED-TEXTREL %s
+// CHECK-ANDROID-WARN-SHARED-TEXTREL: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-WARN-SHARED-TEXTREL: "--warn-shared-textrel"
 
 // RUN: %clang %s -### -o %t.o 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
@@ -1060,165 +1060,8 @@
 // CHECK-SPARCV9: "{{.*}}ld{{(.exe)?}}"
 // CHECK-SPARCV9: "-m" "elf64_sparc"
 // CHECK-SPARCV9: "-dynamic-linker" "{{(/usr/sparcv9-unknown-linux-gnu)?}}/lib{{(64)?}}/ld-linux.so.2"
-//
-// Thoroughly exercise the Debian multiarch environment.
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86 %s
-// CHECK-DEBIAN-X86: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-X86: "{{.*}}/usr/lib/gcc/i686-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-X86: "-L[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.5"
-// CHECK-DEBIAN-X86: "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
-// CHECK-DEBIAN-X86: "-L[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-X86: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-X86: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-X86-64 %s
-// CHECK-DEBIAN-X86-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-X86-64: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.5"
-// CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/usr/lib/x86_64-linux-gnu"
-// CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-X86-64: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC %s
-// CHECK-DEBIAN-PPC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-PPC: "{{.*}}/usr/lib/gcc/powerpc-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/usr/lib/gcc/powerpc-linux-gnu/4.5"
-// CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/usr/lib/powerpc-linux-gnu"
-// CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/usr/lib/gcc/powerpc-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-PPC: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64le-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC64LE %s
-// CHECK-DEBIAN-PPC64LE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-PPC64LE: "{{.*}}/usr/lib/gcc/powerpc64le-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.5"
-// CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/usr/lib/powerpc64le-linux-gnu"
-// CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64le-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-PPC64LE: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=powerpc64-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-PPC64 %s
-// CHECK-DEBIAN-PPC64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-PPC64: "{{.*}}/usr/lib/gcc/powerpc64-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-linux-gnu/4.5"
-// CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/usr/lib/powerpc64-linux-gnu"
-// CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-PPC64: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS %s
-// CHECK-DEBIAN-MIPS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPS: "{{.*}}/usr/lib/gcc/mips-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/mips-linux-gnu"
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPSEL %s
-// CHECK-DEBIAN-MIPSEL: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPSEL: "{{.*}}/usr/lib/gcc/mipsel-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/mipsel-linux-gnu"
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64 %s
-// CHECK-DEBIAN-MIPS64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPS64: "{{.*}}/usr/lib/gcc/mips-linux-gnu/4.5/64{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5/64"
-// CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPS64: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64EL %s
-// CHECK-DEBIAN-MIPS64EL: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPS64EL: "{{.*}}/usr/lib/gcc/mipsel-linux-gnu/4.5/64{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/64"
-// CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64-linux-gnu -rtlib=platform -mabi=n32 \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64-N32 %s
-// CHECK-DEBIAN-MIPS64-N32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPS64-N32: "{{.*}}/usr/lib/gcc/mips-linux-gnu/4.5/n32{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5/n32"
-// CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPS64-N32: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-gnu -rtlib=platform -mabi=n32 \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-MIPS64EL-N32 %s
-// CHECK-DEBIAN-MIPS64EL-N32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-MIPS64EL-N32: "{{.*}}/usr/lib/gcc/mipsel-linux-gnu/4.5/n32{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/n32"
-// CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5"
-// CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC %s
-// CHECK-DEBIAN-SPARC:      "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-SPARC-SAME: "{{.*}}/usr/lib/gcc/sparc-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.5"
-// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/sparc-linux-gnu"
-// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-SPARC-SAME: "-L[[SYSROOT]]/usr/lib"
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=sparc64-linux-gnu -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-DEBIAN-SPARC64 %s
-// CHECK-DEBIAN-SPARC64:      "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-DEBIAN-SPARC64-SAME: "{{.*}}/usr/lib/gcc/sparc64-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.5"
-// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/sparc64-linux-gnu"
-// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib/gcc/sparc64-linux-gnu/4.5/../../.."
-// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/lib"
-// CHECK-DEBIAN-SPARC64-SAME: "-L[[SYSROOT]]/usr/lib"
-//
+
+
 // Test linker invocation on Android.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-linux-androideabi -rtlib=platform --unwindlib=platform \
