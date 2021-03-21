@@ -214,4 +214,93 @@ define i1 @mul_constantexpr(i16 %a) {
   ret i1 %cmp
 }
 
+define i1 @mul_nuw(i16 %x) {
+; CHECK-LABEL: @mul_nuw(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_comm(i16 %x) {
+; CHECK-LABEL: @mul_nuw_comm(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[MUL]], [[NZ]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, 2
+  %cmp = icmp eq i16 %mul, %nz
+  ret i1 %cmp
+}
+
+define i1 @mul_nsw(i16 %x) {
+; CHECK-LABEL: @mul_nsw(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nsw i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_nsw_comm(i16 %x) {
+; CHECK-LABEL: @mul_nsw_comm(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[MUL]], [[NZ]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nsw i16 %nz, 2
+  %cmp = icmp eq i16 %mul, %nz
+  ret i1 %cmp
+}
+
+define i1 @mul_may_wrap(i16 %x) {
+; CHECK-LABEL: @mul_may_wrap(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_may_be_zero(i16 %x) {
+; CHECK-LABEL: @mul_may_be_zero(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i16 %x, 2
+  %cmp = icmp eq i16 %x, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_other_may_be_zero_or_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @mul_other_may_be_zero_or_one(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[NZ]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, %y
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
 !0 = !{ i8 1, i8 5 }
