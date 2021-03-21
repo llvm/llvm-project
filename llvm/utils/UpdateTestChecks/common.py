@@ -362,8 +362,8 @@ class FunctionTestBuilder:
             func_repl = regex
             # Replace any capture groups with their matched strings.
             for g in match.groups():
-              func_repl = group_regex.sub(g, func_repl, count=1)
-            func = '{{' + func_repl + '}}'
+              func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
+            func = re.sub(func_repl, '{{' + func_repl + '}}', func)
 
           # Replace all calls to regex matching functions.
           matches = re.finditer(regex, scrubbed_body)
@@ -371,7 +371,7 @@ class FunctionTestBuilder:
             func_repl = regex
             # Replace any capture groups with their matched strings.
             for g in match.groups():
-                func_repl = group_regex.sub(g, func_repl, count=1)
+                func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
             # Substitute function call names that match the regex with the same
             # capture groups set.
             scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}', scrubbed_body)
