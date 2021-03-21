@@ -3,7 +3,11 @@ llvm_update_compile_flags(fir-opt)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 target_link_libraries(fir-opt PRIVATE
-  FIROptimizer
+  FIRDialect
+  FIRAnalysis
+  FIRSupport
+  FIRTransforms
+  FIRCodeGen
   ${dialect_libs}
   MLIRIR
   MLIRLLVMIR

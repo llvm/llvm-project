@@ -1,52 +1,5 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
-add_flang_library(FIROptimizer
-  Dialect/FIRAttr.cpp
-  Dialect/FIRDialect.cpp
-  Dialect/FIROps.cpp
-  Dialect/FIRType.cpp
-
-  Support/FIRContext.cpp
-  Support/InitFIR.cpp
-  Support/InternalNames.cpp
-  Support/KindMapping.cpp
-
-  Analysis/IteratedDominanceFrontier.cpp
-
-  CodeGen/CGOps.cpp
-  CodeGen/CodeGen.cpp
-  CodeGen/PreCGRewrite.cpp
-  CodeGen/Target.cpp
-  CodeGen/TargetRewrite.cpp
-
-  Transforms/AffineDemotion.cpp
-  Transforms/AffinePromotion.cpp
-  Transforms/ArrayValueCopy.cpp
-  Transforms/ControlFlowConverter.cpp
-  Transforms/CSE.cpp
-  Transforms/FirLoopResultOpt.cpp
-  Transforms/Inliner.cpp
-  Transforms/MemDataFlowOpt.cpp
-  Transforms/MemToReg.cpp
-  Transforms/RewriteLoop.cpp
-
-  DEPENDS
-  FIROpsIncGen
-  FIROptCodeGenPassIncGen
-  FIROptTransformsPassIncGen
-  CGOpsIncGen
-  RewritePatternsIncGen
-  ${dialect_libs}
-
-  LINK_LIBS
-  ${dialect_libs}
-  MLIRAffineToStandard
-  MLIROpenMPToLLVM
-  MLIRTargetLLVMIR
-  MLIRTargetLLVMIRModuleTranslation
-
-  LINK_COMPONENTS
-  AsmParser
-  AsmPrinter
-  Remarks
-)
+add_subdirectory(Analysis)
+add_subdirectory(CodeGen)
+add_subdirectory(Dialect)
+add_subdirectory(Support)
+add_subdirectory(Transforms)

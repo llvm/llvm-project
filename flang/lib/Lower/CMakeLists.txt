@@ -24,13 +24,15 @@ add_flang_library(FortranLower
   SymbolMap.cpp
 
   DEPENDS
-  FIROptimizer
+  FIRDialect
+  FIRSupport
   ${dialect_libs}
   omp_gen
   acc_gen
 
   LINK_LIBS
-  FIROptimizer
+  FIRDialect
+  FIRSupport
   ${dialect_libs}
   FortranCommon
   FortranParser

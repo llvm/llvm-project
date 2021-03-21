@@ -1,0 +1,23 @@
+
+add_flang_library(FIRTransforms
+  AffineDemotion.cpp
+  AffinePromotion.cpp
+  ArrayValueCopy.cpp
+  ControlFlowConverter.cpp
+  CSE.cpp
+  FirLoopResultOpt.cpp
+  Inliner.cpp
+  MemDataFlowOpt.cpp
+  MemToReg.cpp
+  RewriteLoop.cpp
+
+  DEPENDS
+  FIRAnalysis
+  FIRDialect
+  FIRSupport
+  FIROptTransformsPassIncGen
+  RewritePatternsIncGen
+
+  LINK_LIBS
+  MLIRAffineToStandard
+)
