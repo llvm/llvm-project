@@ -154,7 +154,7 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
             [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
             [](auto) {
-              llvm::report_fatal_error("value not be added to symbol table");
+              llvm::report_fatal_error("value not added to symbol table");
             });
 }
 
