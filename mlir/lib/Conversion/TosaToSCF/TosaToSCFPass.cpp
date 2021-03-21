@@ -29,15 +29,14 @@ namespace {
 struct TosaToSCF : public TosaToSCFBase<TosaToSCF> {
 public:
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<tensor::TensorDialect, scf::SCFDialect>();
     target.addIllegalOp<tosa::IfOp, tosa::WhileOp>();
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     auto *op = getOperation();
-    mlir::tosa::populateTosaToSCFConversionPatterns(op->getContext(),
-                                                    &patterns);
+    mlir::tosa::populateTosaToSCFConversionPatterns(&patterns);
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }

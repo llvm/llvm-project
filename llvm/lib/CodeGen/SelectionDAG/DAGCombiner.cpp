@@ -11799,8 +11799,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
     bool IsZext = N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
     APInt DemandedSrcElts = APInt::getLowBitsSet(SrcElts, DstElts);
     if ((N00Bits == ExtVTBits ||
-         (!IsZext && (N00Bits - DAG.ComputeNumSignBits(N00, DemandedSrcElts)) <
-                         ExtVTBits)) &&
+         (!IsZext && (N00Bits < ExtVTBits ||
+                      (N00Bits - DAG.ComputeNumSignBits(N00, DemandedSrcElts)) <
+                          ExtVTBits))) &&
         (!LegalOperations ||
          TLI.isOperationLegal(ISD::SIGN_EXTEND_VECTOR_INREG, VT)))
       return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT, N00);

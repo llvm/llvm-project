@@ -25,7 +25,6 @@ class TypeConverter;
 /// Add a pattern to the given pattern list to convert the operand and result
 /// types of a CallOp with the given type converter.
 void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
-                                         MLIRContext *ctx,
                                          TypeConverter &converter);
 
 /// Add a pattern to the given pattern list to rewrite branch operations to use
@@ -33,8 +32,7 @@ void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
 /// be done if the branch operation implements the BranchOpInterface. Only
 /// needed for partial conversions.
 void populateBranchOpInterfaceTypeConversionPattern(
-    OwningRewritePatternList &patterns, MLIRContext *ctx,
-    TypeConverter &converter);
+    OwningRewritePatternList &patterns, TypeConverter &converter);
 
 /// Return true if op is a BranchOpInterface op whose operands are all legal
 /// according to converter.
@@ -44,7 +42,6 @@ bool isLegalForBranchOpInterfaceTypeConversionPattern(Operation *op,
 /// Add a pattern to the given pattern list to rewrite `return` ops to use
 /// operands that have been legalized by the conversion framework.
 void populateReturnOpTypeConversionPattern(OwningRewritePatternList &patterns,
-                                           MLIRContext *ctx,
                                            TypeConverter &converter);
 
 /// For ReturnLike ops (except `return`), return True. If op is a `return` &&

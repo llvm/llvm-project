@@ -188,7 +188,7 @@ LogicalResult mlir::hoistAffineIfOp(AffineIfOp ifOp, bool *folded) {
   // effective (no unused operands). Since the pattern rewriter's folding is
   // entangled with application of patterns, we may fold/end up erasing the op,
   // in which case we return with `folded` being set.
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(ifOp.getContext());
   AffineIfOp::getCanonicalizationPatterns(patterns, ifOp.getContext());
   bool erased;
   FrozenRewritePatternList frozenPatterns(std::move(patterns));

@@ -15,7 +15,6 @@
 #include <memory>
 
 namespace mlir {
-class MLIRContext;
 class Pass;
 
 // Owning list of rewriting patterns.
@@ -35,8 +34,7 @@ private:
 
 /// Collects a set of patterns to lower from scf.for, scf.if, and
 /// loop.terminator to CFG operations within the SPIR-V dialect.
-void populateSCFToSPIRVPatterns(MLIRContext *context,
-                                SPIRVTypeConverter &typeConverter,
+void populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                 ScfToSPIRVContext &scfToSPIRVContext,
                                 OwningRewritePatternList &patterns);
 } // namespace mlir

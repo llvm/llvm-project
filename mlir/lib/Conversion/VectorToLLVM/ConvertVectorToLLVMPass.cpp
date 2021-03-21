@@ -61,16 +61,16 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {
-    OwningRewritePatternList patterns;
-    populateVectorToVectorCanonicalizationPatterns(patterns, &getContext());
-    populateVectorSlicesLoweringPatterns(patterns, &getContext());
-    populateVectorContractLoweringPatterns(patterns, &getContext());
+    OwningRewritePatternList patterns(&getContext());
+    populateVectorToVectorCanonicalizationPatterns(patterns);
+    populateVectorSlicesLoweringPatterns(patterns);
+    populateVectorContractLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
   // Convert to the LLVM IR dialect.
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(
       converter, patterns, reassociateFPReductions, enableIndexOptimizations);
@@ -98,7 +98,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
       return false;
     };
     // Remove any ArmSVE-specific types from function signatures and results.
-    populateFuncOpTypeConversionPattern(patterns, &getContext(), converter);
+    populateFuncOpTypeConversionPattern(patterns, converter);
     target.addDynamicallyLegalOp<FuncOp>([hasScalableVectorType](FuncOp op) {
       return !hasScalableVectorType(op.getType().getInputs()) &&
              !hasScalableVectorType(op.getType().getResults());

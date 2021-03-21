@@ -221,7 +221,7 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to the LLVM IR dialect using the converter defined above.
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns);
 

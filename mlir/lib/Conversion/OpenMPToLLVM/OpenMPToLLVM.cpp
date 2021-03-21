@@ -58,7 +58,7 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to OpenMP operations with LLVM IR dialect
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateStdToLLVMConversionPatterns(converter, patterns);
   populateOpenMPToLLVMConversionPatterns(converter, patterns);

@@ -84,10 +84,9 @@ public:
 } // namespace
 
 void mlir::populateEliminateBufferizeMaterializationsPatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeTensorLoadOp, BufferizeCastOp>(typeConverter,
-                                                          context);
+    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
+  patterns.insert<BufferizeTensorLoadOp, BufferizeCastOp>(
+      typeConverter, patterns.getContext());
 }
 
 namespace {
@@ -101,11 +100,10 @@ struct FinalizingBufferizePass
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
-    populateEliminateBufferizeMaterializationsPatterns(context, typeConverter,
-                                                       patterns);
+    populateEliminateBufferizeMaterializationsPatterns(typeConverter, patterns);
 
     // If all result types are legal, and all block arguments are legal (ensured
     // by func conversion above), then all types in the program are legal.

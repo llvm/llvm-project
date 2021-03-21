@@ -39,3 +39,6 @@ s_mov_b32 s103, 1
 
 s_mov_b64 s[102:103], -1
 // VI: error: register not available on this GPU
+
+s_setpc_b64 0
+// GCN: error: invalid operand for instruction

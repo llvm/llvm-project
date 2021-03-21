@@ -134,10 +134,10 @@ public:
 } // namespace
 
 void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target) {
+    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    ConversionTarget &target) {
   patterns.insert<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes>(
-      typeConverter, context);
+      typeConverter, patterns.getContext());
   target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getResultTypes());
   });

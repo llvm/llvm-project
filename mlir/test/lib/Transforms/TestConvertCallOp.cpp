@@ -43,15 +43,15 @@ public:
     ModuleOp m = getOperation();
 
     // Populate type conversions.
-    LLVMTypeConverter type_converter(m.getContext());
-    type_converter.addConversion([&](test::TestType type) {
+    LLVMTypeConverter typeConverter(m.getContext());
+    typeConverter.addConversion([&](test::TestType type) {
       return LLVM::LLVMPointerType::get(IntegerType::get(m.getContext(), 8));
     });
 
     // Populate patterns.
-    OwningRewritePatternList patterns;
-    populateStdToLLVMConversionPatterns(type_converter, patterns);
-    patterns.insert<TestTypeProducerOpConverter>(type_converter);
+    OwningRewritePatternList patterns(m.getContext());
+    populateStdToLLVMConversionPatterns(typeConverter, patterns);
+    patterns.insert<TestTypeProducerOpConverter>(typeConverter);
 
     // Set target.
     ConversionTarget target(getContext());

@@ -251,7 +251,7 @@ struct TosaMakeBroadcastable
 public:
   void runOnFunction() override {
     auto func = getFunction();
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(func.getContext());
     MLIRContext *ctx = func.getContext();
     // Add the generated patterns to the list.
     patterns.insert<ConvertTosaOp<tosa::AddOp>>(ctx);

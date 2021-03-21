@@ -139,7 +139,7 @@ void ConvertToTargetEnv::runOnFunction() {
 
   auto target = spirv::SPIRVConversionTarget::get(targetEnv);
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(context);
   patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
                   ConvertToGroupNonUniformBallot, ConvertToModule,
                   ConvertToSubgroupBallot>(context);

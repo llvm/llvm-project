@@ -91,7 +91,7 @@ void TestConvVectorization::runOnOperation() {
   VectorTransformsOptions vectorTransformsOptions{
       VectorContractLowering::Dot, VectorTransposeLowering::EltWise};
 
-  OwningRewritePatternList vectorTransferPatterns;
+  OwningRewritePatternList vectorTransferPatterns(context);
   // Pattern is not applied because rank-reducing vector transfer is not yet
   // supported as can be seen in splitFullAndPartialTransferPrecondition,
   // VectorTransforms.cpp
@@ -106,15 +106,15 @@ void TestConvVectorization::runOnOperation() {
     llvm_unreachable("Unexpected failure in linalg to loops pass.");
 
   // Programmatic controlled lowering of vector.contract only.
-  OwningRewritePatternList vectorContractLoweringPatterns;
+  OwningRewritePatternList vectorContractLoweringPatterns(context);
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
-                                         context, vectorTransformsOptions);
+                                         vectorTransformsOptions);
   (void)applyPatternsAndFoldGreedily(module,
                                      std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
-  OwningRewritePatternList vectorToLoopsPatterns;
-  populateVectorToSCFConversionPatterns(vectorToLoopsPatterns, context,
+  OwningRewritePatternList vectorToLoopsPatterns(context);
+  populateVectorToSCFConversionPatterns(vectorToLoopsPatterns,
                                         VectorTransferToSCFOptions());
   (void)applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));
 

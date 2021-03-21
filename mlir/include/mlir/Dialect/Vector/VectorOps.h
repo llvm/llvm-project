@@ -39,11 +39,11 @@ struct BitmaskEnumStorage;
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context);
+    OwningRewritePatternList &patterns);
 
 /// Collect a set of vector-to-vector transformation patterns.
 void populateVectorToVectorTransformationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context);
+    OwningRewritePatternList &patterns);
 
 /// Collect a set of patterns to split transfer read/write ops.
 ///
@@ -54,7 +54,7 @@ void populateVectorToVectorTransformationPatterns(
 /// of being generic canonicalization patterns. Also one can let the
 /// `ignoreFilter` to return true to fail matching for fine-grained control.
 void populateSplitVectorTransferPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
+    OwningRewritePatternList &patterns,
     std::function<bool(Operation *)> ignoreFilter = nullptr);
 
 /// Collect a set of leading one dimension removal patterns.
@@ -64,15 +64,14 @@ void populateSplitVectorTransferPatterns(
 /// With them, there are more chances that we can cancel out extract-insert
 /// pairs or forward write-read pairs.
 void populateCastAwayVectorLeadingOneDimPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context);
+    OwningRewritePatternList &patterns);
 
 /// Collect a set of patterns that bubble up/down bitcast ops.
 ///
 /// These patterns move vector.bitcast ops to be before insert ops or after
 /// extract ops where suitable. With them, bitcast will happen on smaller
 /// vectors and there are more chances to share extract/insert ops.
-void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns,
-                                           MLIRContext *context);
+void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns);
 
 /// Collect a set of vector slices transformation patterns:
 ///    ExtractSlicesOpLowering, InsertSlicesOpLowering
@@ -82,15 +81,13 @@ void populateBubbleVectorBitCastOpPatterns(OwningRewritePatternList &patterns,
 /// use for "slices" ops), this lowering removes all tuple related
 /// operations as well (through DCE and folding). If tuple values
 /// "leak" coming in, however, some tuple related ops will remain.
-void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
-                                          MLIRContext *context);
+void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns);
 
 /// Collect a set of transfer read/write lowering patterns.
 ///
 /// These patterns lower transfer ops to simpler ops like `vector.load`,
 /// `vector.store` and `vector.broadcast`.
-void populateVectorTransferLoweringPatterns(OwningRewritePatternList &patterns,
-                                            MLIRContext *context);
+void populateVectorTransferLoweringPatterns(OwningRewritePatternList &patterns);
 
 /// An attribute that specifies the combining function for `vector.contract`,
 /// and `vector.reduction`.
@@ -174,7 +171,7 @@ struct VectorTransformsOptions {
 /// These transformation express higher level vector ops in terms of more
 /// elementary extraction, insertion, reduction, product, and broadcast ops.
 void populateVectorContractLoweringPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
+    OwningRewritePatternList &patterns,
     VectorTransformsOptions vectorTransformOptions = VectorTransformsOptions());
 
 /// Returns the integer type required for subscripts in the vector dialect.
