@@ -19,20 +19,6 @@
 
 using namespace llvm;
 
-// These default values are chosen to represent an extremely skewed outcome for
-// a condition, but they leave some room for interpretation by later passes.
-//
-// If the documentation for __builtin_expect() was made explicit that it should
-// only be used in extreme cases, we could make this ratio higher. As it stands,
-// programmers may be using __builtin_expect() / llvm.expect to annotate that a
-// branch is only mildly likely or unlikely to be taken.
-cl::opt<uint32_t> llvm::LikelyBranchWeight(
-    "likely-branch-weight", cl::Hidden, cl::init(2000),
-    cl::desc("Weight of the branch likely to be taken (default = 2000)"));
-cl::opt<uint32_t> llvm::UnlikelyBranchWeight(
-    "unlikely-branch-weight", cl::Hidden, cl::init(1),
-    cl::desc("Weight of the branch unlikely to be taken (default = 1)"));
-
 constexpr uint32_t BranchProbability::D;
 
 raw_ostream &BranchProbability::print(raw_ostream &OS) const {
