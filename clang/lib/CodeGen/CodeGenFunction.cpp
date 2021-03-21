@@ -1774,27 +1774,27 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
   llvm::MDNode *Weights = nullptr;
   llvm::MDNode *Unpredictable = nullptr;
 
-  // If optimizing, lower unpredictability/probability knowledge about cond.
-  if (CGM.getCodeGenOpts().OptimizationLevel != 0) {
-    // If the branch has a condition wrapped by __builtin_unpredictable,
-    // create metadata that specifies that the branch is unpredictable.
-    if (auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts())) {
-      auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
-      if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
-        llvm::MDBuilder MDHelper(getLLVMContext());
-        Unpredictable = MDHelper.createUnpredictable();
-      }
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
+  auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts());
+  if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
+    auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    if (FD && FD->getBuiltinID() == Builtin::BI__builtin_unpredictable) {
+      llvm::MDBuilder MDHelper(getLLVMContext());
+      Unpredictable = MDHelper.createUnpredictable();
     }
+  }
 
-    // If there is a Likelihood knowledge for the cond, lower it.
-    llvm::Value *NewCondV = emitCondLikelihoodViaExpectIntrinsic(CondV, LH);
-    if (CondV != NewCondV)
-      CondV = NewCondV;
-    else {
-      // Otherwise, lower profile counts.
-      uint64_t CurrentCount = std::max(getCurrentProfileCount(), TrueCount);
-      Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
-    }
+  // If there is a Likelihood knowledge for the cond, lower it.
+  // Note that if not optimizing this won't emit anything.
+  llvm::Value *NewCondV = emitCondLikelihoodViaExpectIntrinsic(CondV, LH);
+  if (CondV != NewCondV)
+    CondV = NewCondV;
+  else {
+    // Otherwise, lower profile counts. Note that we do this even at -O0.
+    uint64_t CurrentCount = std::max(getCurrentProfileCount(), TrueCount);
+    Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
   Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
