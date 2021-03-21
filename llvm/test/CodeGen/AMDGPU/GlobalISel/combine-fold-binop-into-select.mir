@@ -1040,12 +1040,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD %two, %sixteen
-    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD %four, %sixteen
-    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[FADD]], [[FADD1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.800000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+01
+    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fadd(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1070,12 +1067,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s32) = G_FADD %sixteen, %two
-    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(s32) = G_FADD %sixteen, %four
-    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[FADD]], [[FADD1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.800000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+01
+    ; CHECK-NEXT: %fadd:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fadd(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1100,12 +1094,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB %two, %sixteen
-    ; CHECK-NEXT: [[FSUB1:%[0-9]+]]:_(s32) = G_FSUB %four, %sixteen
-    ; CHECK-NEXT: %fsub:_(s32) = nnan G_SELECT %cond(s1), [[FSUB]], [[FSUB1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.400000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float -1.200000e+01
+    ; CHECK-NEXT: %fsub:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fsub(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1130,12 +1121,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL %two, %sixteen
-    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL %four, %sixteen
-    ; CHECK-NEXT: %fmul:_(s32) = nnan G_SELECT %cond(s1), [[FMUL]], [[FMUL1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 3.200000e+01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 6.400000e+01
+    ; CHECK-NEXT: %fmul:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fmul(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1160,12 +1148,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
-    ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FDIV:%[0-9]+]]:_(s32) = G_FDIV %two, %sixteen
-    ; CHECK-NEXT: [[FDIV1:%[0-9]+]]:_(s32) = G_FDIV %four, %sixteen
-    ; CHECK-NEXT: %fdiv:_(s32) = nnan G_SELECT %cond(s1), [[FDIV]], [[FDIV1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.250000e-01
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.500000e-01
+    ; CHECK-NEXT: %fdiv:_(s32) = nnan G_SELECT %cond(s1), [[C]], [[C1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fdiv(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1192,10 +1177,7 @@ body: |
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
     ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FREM:%[0-9]+]]:_(s32) = G_FREM %two, %sixteen
-    ; CHECK-NEXT: [[FREM1:%[0-9]+]]:_(s32) = G_FREM %four, %sixteen
-    ; CHECK-NEXT: %frem:_(s32) = nnan G_SELECT %cond(s1), [[FREM]], [[FREM1]]
+    ; CHECK-NEXT: %frem:_(s32) = nnan G_SELECT %cond(s1), %two, %four
     ; CHECK-NEXT: S_ENDPGM 0, implicit %frem(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1251,10 +1233,7 @@ body: |
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
     ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = G_FMINNUM %two, %sixteen
-    ; CHECK-NEXT: [[FMINNUM1:%[0-9]+]]:_(s32) = G_FMINNUM %four, %sixteen
-    ; CHECK-NEXT: %fminnum:_(s32) = nnan G_SELECT %cond(s1), [[FMINNUM]], [[FMINNUM1]]
+    ; CHECK-NEXT: %fminnum:_(s32) = nnan G_SELECT %cond(s1), %two, %four
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fminnum(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1308,12 +1287,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
     ; CHECK-NEXT: %three:_(s32) = G_FCONSTANT float 3.000000e+00
-    ; CHECK-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = G_FMAXNUM %two, %three
-    ; CHECK-NEXT: [[FMAXNUM1:%[0-9]+]]:_(s32) = G_FMAXNUM %four, %three
-    ; CHECK-NEXT: %fmaxnum:_(s32) = nnan G_SELECT %cond(s1), [[FMAXNUM]], [[FMAXNUM1]]
+    ; CHECK-NEXT: %fmaxnum:_(s32) = nnan G_SELECT %cond(s1), %three, %four
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fmaxnum(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1369,10 +1345,7 @@ body: |
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
     ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
-    ; CHECK-NEXT: %sixteen:_(s32) = G_FCONSTANT float 1.600000e+01
-    ; CHECK-NEXT: [[FMINIMUM:%[0-9]+]]:_(s32) = G_FMINIMUM %two, %sixteen
-    ; CHECK-NEXT: [[FMINIMUM1:%[0-9]+]]:_(s32) = G_FMINIMUM %four, %sixteen
-    ; CHECK-NEXT: %fminimum:_(s32) = nnan G_SELECT %cond(s1), [[FMINIMUM]], [[FMINIMUM1]]
+    ; CHECK-NEXT: %fminimum:_(s32) = nnan G_SELECT %cond(s1), %two, %four
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fminimum(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
@@ -1397,12 +1370,9 @@ body: |
     ; CHECK-NEXT: %reg:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: %zero:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: %cond:_(s1) = G_ICMP intpred(eq), %reg(s32), %zero
-    ; CHECK-NEXT: %two:_(s32) = G_FCONSTANT float 2.000000e+00
     ; CHECK-NEXT: %four:_(s32) = G_FCONSTANT float 4.000000e+00
     ; CHECK-NEXT: %three:_(s32) = G_FCONSTANT float 3.000000e+00
-    ; CHECK-NEXT: [[FMAXIMUM:%[0-9]+]]:_(s32) = G_FMAXIMUM %two, %three
-    ; CHECK-NEXT: [[FMAXIMUM1:%[0-9]+]]:_(s32) = G_FMAXIMUM %four, %three
-    ; CHECK-NEXT: %fmaximum:_(s32) = nnan G_SELECT %cond(s1), [[FMAXIMUM]], [[FMAXIMUM1]]
+    ; CHECK-NEXT: %fmaximum:_(s32) = nnan G_SELECT %cond(s1), %three, %four
     ; CHECK-NEXT: S_ENDPGM 0, implicit %fmaximum(s32)
     %reg:_(s32) = COPY $vgpr0
     %zero:_(s32) = G_CONSTANT i32 0
