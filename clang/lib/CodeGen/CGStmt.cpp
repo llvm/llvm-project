@@ -821,8 +821,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     if (ConditionScope.requiresCleanups())
       ExitBlock = createBasicBlock("while.exit");
-    llvm::MDNode *Weights = createProfileOrBranchWeightsForLoop(
-        S.getCond(), getProfileCount(S.getBody()), S.getBody());
+    llvm::MDNode *Weights =
+        createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
+    if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+      BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
+          BoolCondVal, Stmt::getLikelihood(S.getBody()));
     Builder.CreateCondBr(BoolCondVal, LoopBody, ExitBlock, Weights);
 
     if (ExitBlock != LoopExit.getBlock()) {
@@ -1008,8 +1011,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-    llvm::MDNode *Weights = createProfileOrBranchWeightsForLoop(
-        S.getCond(), getProfileCount(S.getBody()), S.getBody());
+    llvm::MDNode *Weights =
+        createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
+    if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+      BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
+          BoolCondVal, Stmt::getLikelihood(S.getBody()));
 
     if (llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal))
       if (C->isOne())
@@ -1094,8 +1100,11 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // The body is executed if the expression, contextually converted
   // to bool, is true.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-  llvm::MDNode *Weights = createProfileOrBranchWeightsForLoop(
-      S.getCond(), getProfileCount(S.getBody()), S.getBody());
+  llvm::MDNode *Weights =
+      createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
+  if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
+    BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
+        BoolCondVal, Stmt::getLikelihood(S.getBody()));
   Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
 
   if (ExitBlock != LoopExit.getBlock()) {
@@ -1369,7 +1378,7 @@ void CodeGenFunction::EmitCaseStmtRange(const CaseStmt &S,
     // this case.
     (*SwitchWeights)[0] += ThisCount;
   } else if (SwitchLikelihood)
-    Weights = createBranchWeights(LH);
+    Cond = emitCondLikelihoodViaExpectIntrinsic(Cond, LH);
 
   Builder.CreateCondBr(Cond, CaseDest, FalseDest, Weights);
 
