@@ -29,10 +29,8 @@ body:             |
 
     ; GCN-LABEL: name: urem_s32_var_const1
     ; GCN: liveins: $vgpr0
-    ; GCN: %const:_(s32) = G_CONSTANT i32 1
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN: [[ADD:%[0-9]+]]:_(s32) = G_ADD %const, [[C]]
-    ; GCN: $vgpr0 = COPY [[ADD]](s32)
+    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; GCN: $vgpr0 = COPY [[C]](s32)
     %var:_(s32) = COPY $vgpr0
     %const:_(s32) = G_CONSTANT i32 1
     %rem:_(s32) = G_UREM %var, %const
@@ -49,10 +47,8 @@ body:             |
     ; GCN-LABEL: name: urem_s32_var_const2
     ; GCN: liveins: $vgpr0
     ; GCN: %var:_(s32) = COPY $vgpr0
-    ; GCN: %const:_(s32) = G_CONSTANT i32 2
-    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; GCN: [[ADD:%[0-9]+]]:_(s32) = G_ADD %const, [[C]]
-    ; GCN: %rem:_(s32) = G_AND %var, [[ADD]]
+    ; GCN: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; GCN: %rem:_(s32) = G_AND %var, [[C]]
     ; GCN: $vgpr0 = COPY %rem(s32)
     %var:_(s32) = COPY $vgpr0
     %const:_(s32) = G_CONSTANT i32 2
