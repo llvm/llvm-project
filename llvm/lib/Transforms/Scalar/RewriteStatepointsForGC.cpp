@@ -782,8 +782,9 @@ static BDVState meetBDVState(const BDVState &LHS, const BDVState &RHS) {
   if (LHS.getStatus() == BDVState::Base && RHS.getStatus() == BDVState::Base &&
       LHS.getBaseValue() != RHS.getBaseValue()) {
     NewStatus = BDVState::Conflict;
-    BaseValue = nullptr;
   }
+  if (NewStatus == BDVState::Conflict)
+    BaseValue = nullptr;
   return BDVState(LHS.getOriginalValue(), NewStatus, BaseValue);
 }
 
