@@ -112,7 +112,8 @@ void RISCVToolChain::addLibStdCxxIncludePaths(
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   addLibStdCXXIncludePaths(computeSysRoot() + "/include/c++/" + Version.Text,
-      "", TripleStr, "", "", Multilib.includeSuffix(), DriverArgs, CC1Args);
+                           TripleStr, Multilib.includeSuffix(), DriverArgs,
+                           CC1Args);
 }
 
 std::string RISCVToolChain::computeSysRoot() const {
