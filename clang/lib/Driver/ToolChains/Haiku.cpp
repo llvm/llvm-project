@@ -29,6 +29,6 @@ void Haiku::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 
 void Haiku::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                      llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(getDriver().SysRoot, "/system/develop/headers/c++",
-                           getTriple().str(), "", "", "", DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(getDriver().SysRoot + "/system/develop/headers/c++",
+                           getTriple().str(), "", DriverArgs, CC1Args);
 }
