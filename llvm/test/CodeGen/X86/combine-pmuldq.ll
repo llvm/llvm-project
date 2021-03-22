@@ -287,3 +287,126 @@ entry:
   ret i32 %call
 }
 declare dso_local i32 @foo(i32, i32, i32, i32)
+
+define <8 x i32> @PR49658(i32* %ptr, i32 %mul) {
+; SSE-LABEL: PR49658:
+; SSE:       # %bb.0: # %start
+; SSE-NEXT:    movl %esi, %eax
+; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    .p2align 4, 0x90
+; SSE-NEXT:  .LBB7_1: # %loop
+; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm3 = mem[0],zero,mem[1],zero
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm4 = mem[0],zero,mem[1],zero
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm5 = mem[0],zero,mem[1],zero
+; SSE-NEXT:    pmovzxdq {{.*#+}} xmm6 = mem[0],zero,mem[1],zero
+; SSE-NEXT:    pmuludq %xmm2, %xmm6
+; SSE-NEXT:    pmuludq %xmm2, %xmm5
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm6[1,3]
+; SSE-NEXT:    paddd %xmm5, %xmm0
+; SSE-NEXT:    pmuludq %xmm2, %xmm4
+; SSE-NEXT:    pmuludq %xmm2, %xmm3
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm3[1,3]
+; SSE-NEXT:    paddd %xmm4, %xmm1
+; SSE-NEXT:    subq $-128, %rax
+; SSE-NEXT:    jne .LBB7_1
+; SSE-NEXT:  # %bb.2: # %end
+; SSE-NEXT:    retq
+;
+; AVX2-LABEL: PR49658:
+; AVX2:       # %bb.0: # %start
+; AVX2-NEXT:    movl %esi, %eax
+; AVX2-NEXT:    vmovq %rax, %xmm0
+; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm1
+; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm2
+; AVX2-NEXT:    .p2align 4, 0x90
+; AVX2-NEXT:  .LBB7_1: # %loop
+; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm4 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; AVX2-NEXT:    vpmuludq %ymm4, %ymm1, %ymm5
+; AVX2-NEXT:    vpmuludq %ymm4, %ymm2, %ymm4
+; AVX2-NEXT:    vpsllq $32, %ymm4, %ymm4
+; AVX2-NEXT:    vpaddq %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm5
+; AVX2-NEXT:    vpmuludq %ymm3, %ymm2, %ymm3
+; AVX2-NEXT:    vpsllq $32, %ymm3, %ymm3
+; AVX2-NEXT:    vpaddq %ymm3, %ymm5, %ymm3
+; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm5 = ymm4[2,3],ymm3[2,3]
+; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
+; AVX2-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[1,3],ymm5[1,3],ymm3[5,7],ymm5[5,7]
+; AVX2-NEXT:    vpaddd %ymm0, %ymm3, %ymm0
+; AVX2-NEXT:    subq $-128, %rax
+; AVX2-NEXT:    jne .LBB7_1
+; AVX2-NEXT:  # %bb.2: # %end
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: PR49658:
+; AVX512VL:       # %bb.0: # %start
+; AVX512VL-NEXT:    movl %esi, %eax
+; AVX512VL-NEXT:    vpbroadcastq %rax, %zmm1
+; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; AVX512VL-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; AVX512VL-NEXT:    .p2align 4, 0x90
+; AVX512VL-NEXT:  .LBB7_1: # %loop
+; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} zmm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX512VL-NEXT:    vpmuludq %zmm3, %zmm1, %zmm4
+; AVX512VL-NEXT:    vpmuludq %zmm3, %zmm2, %zmm3
+; AVX512VL-NEXT:    vpsllq $32, %zmm3, %zmm3
+; AVX512VL-NEXT:    vpaddq %zmm3, %zmm4, %zmm3
+; AVX512VL-NEXT:    vpsrlq $32, %zmm3, %zmm3
+; AVX512VL-NEXT:    vpmovqd %zmm3, %ymm3
+; AVX512VL-NEXT:    vpaddd %ymm0, %ymm3, %ymm0
+; AVX512VL-NEXT:    subq $-128, %rax
+; AVX512VL-NEXT:    jne .LBB7_1
+; AVX512VL-NEXT:  # %bb.2: # %end
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQVL-LABEL: PR49658:
+; AVX512DQVL:       # %bb.0: # %start
+; AVX512DQVL-NEXT:    movl %esi, %eax
+; AVX512DQVL-NEXT:    vpbroadcastq %rax, %zmm1
+; AVX512DQVL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512DQVL-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; AVX512DQVL-NEXT:    .p2align 4, 0x90
+; AVX512DQVL-NEXT:  .LBB7_1: # %loop
+; AVX512DQVL-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX512DQVL-NEXT:    vpmovzxdq {{.*#+}} zmm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX512DQVL-NEXT:    vpmullq %zmm2, %zmm1, %zmm2
+; AVX512DQVL-NEXT:    vpsrlq $32, %zmm2, %zmm2
+; AVX512DQVL-NEXT:    vpmovqd %zmm2, %ymm2
+; AVX512DQVL-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX512DQVL-NEXT:    subq $-128, %rax
+; AVX512DQVL-NEXT:    jne .LBB7_1
+; AVX512DQVL-NEXT:  # %bb.2: # %end
+; AVX512DQVL-NEXT:    retq
+start:
+  %t1 = zext i32 %mul to i64
+  %t2 = insertelement <8 x i64> undef, i64 %t1, i32 0
+  %mulvec = shufflevector <8 x i64> %t2, <8 x i64> undef, <8 x i32> zeroinitializer
+  br label %loop
+loop:
+  %loopcnt = phi i64 [ 0, %start ], [ %nextcnt, %loop ]
+  %sum = phi <8 x i32> [ zeroinitializer, %start ], [ %nextsum, %loop ]
+  %ptroff = getelementptr inbounds i32, i32* %ptr, i64 %loopcnt
+  %vptroff = bitcast i32* %ptroff to <8 x i32>*
+  %v = load <8 x i32>, <8 x i32>* %vptroff, align 4
+  %v64 = zext <8 x i32> %v to <8 x i64>
+  %vmul = mul nuw <8 x i64> %mulvec, %v64
+  %vmulhi = lshr <8 x i64> %vmul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %vtrunc = trunc <8 x i64> %vmulhi to <8 x i32>
+  %nextsum = add <8 x i32> %vtrunc, %sum
+  %nextcnt = add i64 %loopcnt, 32
+  %isdone = icmp eq i64 %nextcnt, 524288
+  br i1 %isdone, label %end, label %loop
+end:
+  ret <8 x i32> %nextsum
+}
