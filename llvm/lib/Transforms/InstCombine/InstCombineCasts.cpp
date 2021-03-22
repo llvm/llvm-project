@@ -271,6 +271,31 @@ InstCombinerImpl::isEliminableCastPair(const CastInst *CI1,
       (Res == Instruction::PtrToInt && DstTy != SrcIntPtrTy))
     Res = 0;
 
+  // Don't combine a inttoptr followed by a bitcast to another pointer type if
+  // the intermediate pointer has multiple uses. Such combine is very unfriendly
+  // to later passes like ScalarEvolutionAnalysis and LoadStoreVectorizer. For
+  // example, this may change the IR from:
+  //
+  // %p1 = inttoptr %addr to i32*
+  // %i  = load i32, i32* %p1
+  // %p2 = bitcast i32* %p1 to float*
+  // %p3 = getelementptr float, float* %p2, i64 1
+  // %f  = load float, float* %p3
+  //
+  // into:
+  //
+  // %p1 = inttoptr %addr to i32*
+  // %p2 = inttoptr %addr to float*
+  // %i  = load i32, i32* %p1
+  // %p3 = getelementptr float, float* %p2, i64 1
+  // %f  = load float, float* %p3
+  //
+  // This causes above mentioned passes fail to reason that the two pointers
+  // are consecutive, thus fail to vectorize the two loads.
+  if (firstOp == Instruction::IntToPtr && Res == Instruction::IntToPtr &&
+      !CI1->hasOneUse())
+    Res = 0;
+
   return Instruction::CastOps(Res);
 }
 
