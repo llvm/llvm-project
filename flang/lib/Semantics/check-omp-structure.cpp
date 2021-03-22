@@ -343,11 +343,21 @@ void OmpStructureChecker::Enter(const parser::OpenMPBlockConstruct &x) {
 void OmpStructureChecker::CheckIfDoOrderedClause(
     const parser::OmpBlockDirective &blkDirective) {
   if (blkDirective.v == llvm::omp::OMPD_ordered) {
-    if (!FindClauseParent(llvm::omp::Clause::OMPC_ordered)) {
+    // Loops
+    if (llvm::omp::doSet.test(GetContextParent().directive) &&
+        !FindClauseParent(llvm::omp::Clause::OMPC_ordered)) {
       context_.Say(blkDirective.source,
           "The ORDERED clause must be present on the loop"
           " construct if any ORDERED region ever binds"
           " to a loop region arising from the loop construct."_err_en_US);
+    }
+    // Other disallowed nestings, these directives do not support
+    // ordered clause in them, so no need to check
+    else if (llvm::omp::nestedOrderedErrSet.test(
+                 GetContextParent().directive)) {
+      context_.Say(blkDirective.source,
+          "`ORDERED` region may not be closely nested inside of "
+          "`CRITICAL`, `ORDERED`, explicit `TASK` or `TASKLOOP` region."_err_en_US);
     }
   }
 }
