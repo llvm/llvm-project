@@ -704,28 +704,28 @@ LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
   addrinfo Hints{};
   Hints.ai_family = AF_INET;
   Hints.ai_socktype = SOCK_STREAM;
-  Hints.ai_protocol = PF_INET;
   Hints.ai_flags = AI_NUMERICSERV;
-  if (getaddrinfo(HostName.c_str(), PortStr.str().c_str(), &Hints, &AI) != 0)
-    return make_error<StringError>("Failed to resolve " + HostName + ":" +
-                                       Twine(Port),
+  if (int EC =
+          getaddrinfo(HostName.c_str(), PortStr.str().c_str(), &Hints, &AI))
+    return make_error<StringError>(formatv("Failed to resolve {0}:{1} ({2})",
+                                           HostName, Port, gai_strerror(EC)),
                                    inconvertibleErrorCode());
-
-  int SockFD = socket(PF_INET, SOCK_STREAM, 0);
-  sockaddr_in ServAddr;
-  memset(&ServAddr, 0, sizeof(ServAddr));
-  ServAddr.sin_family = PF_INET;
-  ServAddr.sin_port = htons(Port);
 
   // getaddrinfo returns a list of address structures.  Go through the list
   // to find one we can connect to.
+  int SockFD;
   int ConnectRC = -1;
   for (addrinfo *Server = AI; Server; Server = Server->ai_next) {
-    memmove(&Server->ai_addr, &ServAddr.sin_addr.s_addr, Server->ai_addrlen);
-    ConnectRC = connect(SockFD, reinterpret_cast<sockaddr *>(&ServAddr),
-                        sizeof(ServAddr));
+    // If socket fails, maybe it's because the address family is not supported.
+    // Skip to the next addrinfo structure.
+    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
+      continue;
+
+    ConnectRC = connect(SockFD, Server->ai_addr, Server->ai_addrlen);
     if (ConnectRC == 0)
       break;
+
+    close(SockFD);
   }
   freeaddrinfo(AI);
   if (ConnectRC == -1)
