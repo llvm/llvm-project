@@ -280,52 +280,48 @@ static unsigned cachedLookup(Type t, DenseMap<Type, unsigned> &cache,
 unsigned mlir::DataLayout::getTypeSize(Type t) const {
   checkValid();
   return cachedLookup(t, sizes, [&](Type ty) {
-    if (originalLayout) {
-      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
-      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
-        return iface.getTypeSize(ty, *this, list);
-      return detail::getDefaultTypeSize(ty, *this, list);
-    }
-    return detail::getDefaultTypeSize(ty, *this, {});
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getTypeSize(ty, *this, list);
+    return detail::getDefaultTypeSize(ty, *this, list);
   });
 }
 
 unsigned mlir::DataLayout::getTypeSizeInBits(Type t) const {
   checkValid();
   return cachedLookup(t, bitsizes, [&](Type ty) {
-    if (originalLayout) {
-      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
-      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
-        return iface.getTypeSizeInBits(ty, *this, list);
-      return detail::getDefaultTypeSizeInBits(ty, *this, list);
-    }
-    return detail::getDefaultTypeSizeInBits(ty, *this, {});
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getTypeSizeInBits(ty, *this, list);
+    return detail::getDefaultTypeSizeInBits(ty, *this, list);
   });
 }
 
 unsigned mlir::DataLayout::getTypeABIAlignment(Type t) const {
   checkValid();
   return cachedLookup(t, abiAlignments, [&](Type ty) {
-    if (originalLayout) {
-      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
-      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
-        return iface.getTypeABIAlignment(ty, *this, list);
-      return detail::getDefaultABIAlignment(ty, *this, list);
-    }
-    return detail::getDefaultABIAlignment(ty, *this, {});
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getTypeABIAlignment(ty, *this, list);
+    return detail::getDefaultABIAlignment(ty, *this, list);
   });
 }
 
 unsigned mlir::DataLayout::getTypePreferredAlignment(Type t) const {
   checkValid();
   return cachedLookup(t, preferredAlignments, [&](Type ty) {
-    if (originalLayout) {
-      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
-      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
-        return iface.getTypePreferredAlignment(ty, *this, list);
-      return detail::getDefaultPreferredAlignment(ty, *this, list);
-    }
-    return detail::getDefaultPreferredAlignment(ty, *this, {});
+    DataLayoutEntryList list;
+    if (originalLayout)
+      list = originalLayout.getSpecForType(ty.getTypeID());
+    if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+      return iface.getTypePreferredAlignment(ty, *this, list);
+    return detail::getDefaultPreferredAlignment(ty, *this, list);
   });
 }
 

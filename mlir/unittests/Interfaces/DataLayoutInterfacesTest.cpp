@@ -227,6 +227,27 @@ struct DLTestDialect : Dialect {
 
 TEST(DataLayout, FallbackDefault) {
   const char *ir = R"MLIR(
+module {}
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<DLTIDialect, DLTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningModuleRef module = parseSourceString(ir, &ctx);
+  DataLayout layout(module.get());
+  EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
+  EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 2u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 42u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 8u);
+  EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 2u);
+  EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
+  EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
+}
+
+TEST(DataLayout, NullSpec) {
+  const char *ir = R"MLIR(
 "dltest.op_with_layout"() : () -> ()
   )MLIR";
 
@@ -238,14 +259,14 @@ TEST(DataLayout, FallbackDefault) {
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
-  EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
-  EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 2u);
-  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 42u);
-  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 16u);
-  EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 8u);
-  EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 2u);
-  EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
-  EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 2u);
+  EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 42u);
+  EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 8u * 42u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 8u * 16u);
+  EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 64u);
+  EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
+  EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 32u);
 }
 
 TEST(DataLayout, EmptySpec) {
