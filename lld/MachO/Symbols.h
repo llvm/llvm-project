@@ -99,7 +99,7 @@ public:
           bool isWeakDef, bool isExternal, bool isPrivateExtern)
       : Symbol(DefinedKind, name, file), isec(isec), value(value),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
-        linkerInternal(false), weakDef(isWeakDef), external(isExternal) {}
+        includeInSymtab(true), weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -124,8 +124,8 @@ public:
   bool overridesWeakDef : 1;
   // Whether this symbol should appear in the output binary's export trie.
   bool privateExtern : 1;
-  // Whether this symbol should appear in the output binary's symbol table.
-  bool linkerInternal : 1;
+  // Whether this symbol should appear in the output symbol table.
+  bool includeInSymtab : 1;
 
 private:
   const bool weakDef : 1;
