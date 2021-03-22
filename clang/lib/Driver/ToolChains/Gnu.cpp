@@ -2834,17 +2834,7 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
                         SelectedMultilib.osSuffix(),
                     Paths);
 
-    // If the GCC installation we found is inside of the sysroot, we want to
-    // prefer libraries installed in the parent prefix of the GCC installation.
-    // It is important to *not* use these paths when the GCC installation is
-    // outside of the system root as that can pick up unintended libraries.
-    // This usually happens when there is an external cross compiler on the
-    // host system, and a more minimal sysroot available that is the target of
-    // the cross. Note that GCC does include some of these directories in some
-    // configurations but this seems somewhere between questionable and simply
-    // a bug.
-    if (StringRef(LibPath).startswith(SysRoot))
-      addPathIfExists(D, LibPath + "/../" + OSLibDir, Paths);
+    addPathIfExists(D, LibPath + "/../" + OSLibDir, Paths);
   }
 }
 
