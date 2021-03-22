@@ -344,6 +344,12 @@ class TypeSourceInfo;
     Import(ExprWithCleanups::CleanupObject From);
 
     /// Import the given type from the "from" context into the "to"
+    /// context.
+    ///
+    /// \returns The equivalent type in the "to" context, or the import error.
+    llvm::Expected<const Type *> Import(const Type *FromT);
+
+    /// Import the given qualified type from the "from" context into the "to"
     /// context. A null type is imported as a null type (no error).
     ///
     /// \returns The equivalent type in the "to" context, or the import error.
