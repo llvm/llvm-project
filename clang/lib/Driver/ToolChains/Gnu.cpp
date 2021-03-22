@@ -2853,8 +2853,6 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
                       Paths);
     }
 
-    // See comments above on the multilib variant for details of why this is
-    // included even from outside the sysroot.
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
@@ -2862,11 +2860,7 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
     addPathIfExists(
         D, LibPath + "/../" + GCCTriple.str() + "/lib" + Multilib.osSuffix(),
                     Paths);
-
-    // See comments above on the multilib variant for details of why this is
-    // only included from within the sysroot.
-    if (StringRef(LibPath).startswith(SysRoot))
-      addPathIfExists(D, LibPath, Paths);
+    addPathIfExists(D, LibPath, Paths);
   }
 }
 
