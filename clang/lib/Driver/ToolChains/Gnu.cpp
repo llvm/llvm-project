@@ -2855,11 +2855,6 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
   // Try walking via the GCC triple path in case of biarch or multiarch GCC
   // installations with strange symlinks.
   if (GCCInstallation.isValid()) {
-    addPathIfExists(D,
-                    SysRoot + "/usr/lib/" + GCCInstallation.getTriple().str() +
-                        "/../../" + OSLibDir,
-                    Paths);
-
     // Add the 'other' biarch variant path
     Multilib BiarchSibling;
     if (GCCInstallation.getBiarchSibling(BiarchSibling)) {
