@@ -35,10 +35,12 @@ func @single_iteration(%A: memref<?x?x?xi32>) {
 
 // -----
 
+func private @side_effect()
 func @one_unused(%cond: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %0, %1 = scf.if %cond -> (index, index) {
+    call @side_effect() : () -> ()
     scf.yield %c0, %c1 : index, index
   } else {
     scf.yield %c0, %c1 : index, index
@@ -49,6 +51,7 @@ func @one_unused(%cond: i1) -> (index) {
 // CHECK-LABEL:   func @one_unused
 // CHECK:           [[C0:%.*]] = constant 1 : index
 // CHECK:           [[V0:%.*]] = scf.if %{{.*}} -> (index) {
+// CHECK:             call @side_effect() : () -> ()
 // CHECK:             scf.yield [[C0]] : index
 // CHECK:           } else
 // CHECK:             scf.yield [[C0]] : index
@@ -57,11 +60,13 @@ func @one_unused(%cond: i1) -> (index) {
 
 // -----
 
+func private @side_effect()
 func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %0, %1 = scf.if %cond1 -> (index, index) {
     %2, %3 = scf.if %cond2 -> (index, index) {
+      call @side_effect() : () -> ()
       scf.yield %c0, %c1 : index, index
     } else {
       scf.yield %c0, %c1 : index, index
@@ -77,6 +82,7 @@ func @nested_unused(%cond1: i1, %cond2: i1) -> (index) {
 // CHECK:           [[C0:%.*]] = constant 1 : index
 // CHECK:           [[V0:%.*]] = scf.if {{.*}} -> (index) {
 // CHECK:             [[V1:%.*]] = scf.if {{.*}} -> (index) {
+// CHECK:               call @side_effect() : () -> ()
 // CHECK:               scf.yield [[C0]] : index
 // CHECK:             } else
 // CHECK:               scf.yield [[C0]] : index
@@ -110,6 +116,96 @@ func @all_unused(%cond: i1) {
 // CHECK:             call @side_effect() : () -> ()
 // CHECK:           }
 // CHECK:           return
+
+// -----
+
+func @empty_if1(%cond: i1) {
+  scf.if %cond {
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL:   func @empty_if1
+// CHECK-NOT:       scf.if
+// CHECK:           return
+
+// -----
+
+func @empty_if2(%cond: i1) {
+  scf.if %cond {
+    scf.yield
+  } else {
+    scf.yield
+  }
+  return
+}
+
+// CHECK-LABEL:   func @empty_if2
+// CHECK-NOT:       scf.if
+// CHECK:           return
+
+// -----
+
+func @to_select1(%cond: i1) -> index {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = scf.if %cond -> index {
+    scf.yield %c0 : index
+  } else {
+    scf.yield %c1 : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL:   func @to_select1
+// CHECK:           [[C0:%.*]] = constant 0 : index
+// CHECK:           [[C1:%.*]] = constant 1 : index
+// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C1]]
+// CHECK:           return [[V0]] : index
+
+// -----
+
+func @to_select_same_val(%cond: i1) -> (index, index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0, %1 = scf.if %cond -> (index, index) {
+    scf.yield %c0, %c1 : index, index
+  } else {
+    scf.yield %c1, %c1 : index, index
+  }
+  return %0, %1 : index, index
+}
+
+// CHECK-LABEL:   func @to_select_same_val
+// CHECK:           [[C0:%.*]] = constant 0 : index
+// CHECK:           [[C1:%.*]] = constant 1 : index
+// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C1]]
+// CHECK:           return [[V0]], [[C1]] : index, index
+
+// -----
+
+func @to_select2(%cond: i1) -> (index, index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %0, %1 = scf.if %cond -> (index, index) {
+    scf.yield %c0, %c1 : index, index
+  } else {
+    scf.yield %c2, %c3 : index, index
+  }
+  return %0, %1 : index, index
+}
+
+// CHECK-LABEL:   func @to_select2
+// CHECK:           [[C0:%.*]] = constant 0 : index
+// CHECK:           [[C1:%.*]] = constant 1 : index
+// CHECK:           [[C2:%.*]] = constant 2 : index
+// CHECK:           [[C3:%.*]] = constant 3 : index
+// CHECK:           [[V0:%.*]] = select {{.*}}, [[C0]], [[C2]]
+// CHECK:           [[V1:%.*]] = select {{.*}}, [[C1]], [[C3]]
+// CHECK:           return [[V0]], [[V1]] : index
 
 // -----
 
