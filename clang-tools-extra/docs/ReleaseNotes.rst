@@ -83,6 +83,12 @@ New checks
   Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
   type is set to asynchronous.
 
+- New :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera-unroll-loops>` check.
+
+  Finds inner loops that have not been unrolled, as well as fully unrolled
+  loops with unknown loops bounds or a large number of iterations.
+
 - New :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
 

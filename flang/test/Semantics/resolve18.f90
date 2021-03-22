@@ -63,6 +63,15 @@ contains
   function foo(x)
   end
 end
+module m4c
+  type :: foo
+  end type
+  interface foo
+    !ERROR: 'foo' is already declared in this scoping unit
+    real function foo()
+    end function foo
+  end interface foo
+end
 
 ! Use associating a name that is a generic and a derived type
 module m5a

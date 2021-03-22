@@ -37,6 +37,7 @@ enum ELFX86RelocationKind : Edge::Kind {
   PCRel32GOTLoad,
   PCRel32GOT,
   PCRel64GOT,
+  GOTOFF64,
   GOT64,
   PCRel32TLV,
   Delta32,
