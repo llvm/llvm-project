@@ -246,6 +246,24 @@ TEST_P(ImportPath, CycleAfterCycle) {
   EXPECT_FALSE(path.hasCycleAtBack());
 }
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, SourceLocExpr> sourceLocExpr;
+
+AST_MATCHER_P(SourceLocExpr, hasBuiltinStr, StringRef, Str) {
+  return Node.getBuiltinStr() == Str;
+}
+
+TEST_P(ImportExpr, ImportSourceLocExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("void declToImport() { (void)__builtin_FILE(); }", Lang_CXX03, "",
+             Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_FILE")))));
+  testImport("void declToImport() { (void)__builtin_COLUMN(); }", Lang_CXX03,
+             "", Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_COLUMN")))));
+}
+
 TEST_P(ImportExpr, ImportStringLiteral) {
   MatchVerifier<Decl> Verifier;
   testImport("void declToImport() { (void)\"foo\"; }", Lang_CXX03, "",
