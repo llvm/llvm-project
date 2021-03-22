@@ -63,6 +63,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2840,30 +2841,52 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
-// Determine if the two branches share a common destination,
-// and deduce a glue that we need to use to join branch's conditions
-// to arrive at the common destination.
+/// Determine if the two branches share a common destination and deduce a glue
+/// that joins branch's conditions to arrive at the common destination if that
+/// would be profitable.
 static Optional<std::pair<Instruction::BinaryOps, bool>>
-CheckIfCondBranchesShareCommonDestination(BranchInst *BI, BranchInst *PBI) {
+shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
+                                          const TargetTransformInfo *TTI) {
   assert(BI && PBI && BI->isConditional() && PBI->isConditional() &&
          "Both blocks must end with a conditional branches.");
   assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
          "PredBB must be a predecessor of BB.");
 
-  if (PBI->getSuccessor(0) == BI->getSuccessor(0))
-    return {{Instruction::Or, false}};
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(1))
-    return {{Instruction::And, false}};
-  else if (PBI->getSuccessor(0) == BI->getSuccessor(1))
-    return {{Instruction::And, true}};
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(0))
-    return {{Instruction::Or, true}};
+  // We have the potential to fold the conditions together, but if the
+  // predecessor branch is predictable, we may not want to merge them.
+  uint64_t PTWeight, PFWeight;
+  BranchProbability PBITrueProb, Likely;
+  if (PBI->extractProfMetadata(PTWeight, PFWeight) &&
+      (PTWeight + PFWeight) != 0) {
+    PBITrueProb =
+        BranchProbability::getBranchProbability(PTWeight, PTWeight + PFWeight);
+    Likely = TTI->getPredictableBranchThreshold();
+  }
+
+  if (PBI->getSuccessor(0) == BI->getSuccessor(0)) {
+    // Speculate the 2nd condition unless the 1st is probably true.
+    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
+      return {{Instruction::Or, false}};
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(1)) {
+    // Speculate the 2nd condition unless the 1st is probably false.
+    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
+      return {{Instruction::And, false}};
+  } else if (PBI->getSuccessor(0) == BI->getSuccessor(1)) {
+    // Speculate the 2nd condition unless the 1st is probably true.
+    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
+      return {{Instruction::And, true}};
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(0)) {
+    // Speculate the 2nd condition unless the 1st is probably false.
+    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
+      return {{Instruction::Or, true}};
+  }
   return None;
 }
 
-static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
+static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
                                              DomTreeUpdater *DTU,
-                                             MemorySSAUpdater *MSSAU) {
+                                             MemorySSAUpdater *MSSAU,
+                                             const TargetTransformInfo *TTI) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *PredBlock = PBI->getParent();
 
@@ -2871,7 +2894,7 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Instruction::BinaryOps Opc;
   bool InvertPredCond;
   std::tie(Opc, InvertPredCond) =
-      *CheckIfCondBranchesShareCommonDestination(BI, PBI);
+      *shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI);
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
@@ -3059,8 +3082,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Determine if the two branches share a common destination.
     Instruction::BinaryOps Opc;
     bool InvertPredCond;
-    if (auto Recepie = CheckIfCondBranchesShareCommonDestination(BI, PBI))
-      std::tie(Opc, InvertPredCond) = *Recepie;
+    if (auto Recipe = shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI))
+      std::tie(Opc, InvertPredCond) = *Recipe;
     else
       continue;
 
@@ -3077,7 +3100,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         continue;
     }
 
-    return PerformBranchToCommonDestFolding(BI, PBI, DTU, MSSAU);
+    return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, TTI);
   }
   return Changed;
 }
