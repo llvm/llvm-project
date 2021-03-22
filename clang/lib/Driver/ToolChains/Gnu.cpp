@@ -2945,48 +2945,41 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
     return;
 }
 
-bool Generic_GCC::addLibStdCXXIncludePaths(
-    Twine IncludeDir, StringRef Triple, Twine IncludeSuffix,
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args) const {
+bool Generic_GCC::addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
+                                           Twine IncludeSuffix,
+                                           const llvm::opt::ArgList &DriverArgs,
+                                           llvm::opt::ArgStringList &CC1Args,
+                                           bool DetectDebian) const {
   if (!getVFS().exists(IncludeDir))
     return false;
 
   // GPLUSPLUS_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, IncludeDir);
-  // GPLUSPLUS_TOOL_INCLUDE_DIR
-  addSystemInclude(DriverArgs, CC1Args,
-                   IncludeDir + "/" + Triple + IncludeSuffix);
+  // GPLUSPLUS_TOOL_INCLUDE_DIR. If Triple is not empty, add a target-dependent
+  // include directory.
+  if (!Triple.empty()) {
+    if (DetectDebian) {
+      // Debian native gcc has an awful patch g++-multiarch-incdir.diff which
+      // uses include/x86_64-linux-gnu/c++/10$IncludeSuffix instead of
+      // include/c++/10/x86_64-linux-gnu$IncludeSuffix.
+      std::string Dir = IncludeDir.str();
+      StringRef Include =
+          llvm::sys::path::parent_path(llvm::sys::path::parent_path(Dir));
+      std::string Path =
+          (Include + "/" + Triple + Dir.substr(Include.size()) + IncludeSuffix)
+              .str();
+      if (getVFS().exists(Path))
+        addSystemInclude(DriverArgs, CC1Args, Path);
+      else
+        addSystemInclude(DriverArgs, CC1Args,
+                         IncludeDir + "/" + Triple + IncludeSuffix);
+    } else {
+      addSystemInclude(DriverArgs, CC1Args,
+                       IncludeDir + "/" + Triple + IncludeSuffix);
+    }
+  }
   // GPLUSPLUS_BACKWARD_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, IncludeDir + "/backward");
-  return true;
-}
-
-/// Helper to add the variant paths of a libstdc++ installation.
-bool Generic_GCC::addLibStdCXXIncludePaths(
-    Twine Base, Twine Suffix, StringRef GCCTriple, StringRef GCCMultiarchTriple,
-    StringRef TargetMultiarchTriple, Twine IncludeSuffix,
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
-  if (!getVFS().exists(Base + Suffix))
-    return false;
-
-  addSystemInclude(DriverArgs, CC1Args, Base + Suffix);
-
-  // The vanilla GCC layout of libstdc++ headers uses a triple subdirectory. If
-  // that path exists or we have neither a GCC nor target multiarch triple, use
-  // this vanilla search path.
-  if ((GCCMultiarchTriple.empty() && TargetMultiarchTriple.empty()) ||
-      getVFS().exists(Base + Suffix + "/" + GCCTriple + IncludeSuffix)) {
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + Suffix + "/" + GCCTriple + IncludeSuffix);
-  } else {
-    // Otherwise try to use multiarch naming schemes which have normalized the
-    // triples and put the triple before the suffix.
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + "/" + GCCMultiarchTriple + Suffix + IncludeSuffix);
-  }
-
-  addSystemInclude(DriverArgs, CC1Args, Base + Suffix + "/backward");
   return true;
 }
 
@@ -3010,18 +3003,15 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
       getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
-  // The primary search for libstdc++ supports multiarch variants.
+  // Try /../$triple/include/c++/$version then /../include/c++/$version.
   if (addLibStdCXXIncludePaths(
           LibDir.str() + "/../" + Triple + "/include/c++/" + Version.Text,
           TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
-
-  // Debian host g++ needs this for
-  // /usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/{c++/10,x86_64-linux-gnu/c++/10,c++/10/backward}
-  // FIXME Some other toolchains incorrectly rely on this hierarchy.
-  if (addLibStdCXXIncludePaths(LibDir.str() + "/../include",
-                               "/c++/" + Version.Text, TripleStr, Triple, "",
-                               Multilib.includeSuffix(), DriverArgs, CC1Args))
+  // Detect Debian g++-multiarch-incdir.diff.
+  if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
+                               TripleStr, Multilib.includeSuffix(), DriverArgs,
+                               CC1Args, /*Debian=*/true))
     return true;
 
   // Otherwise, fall back on a bunch of options which don't use multiarch
@@ -3036,9 +3026,7 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   };
 
   for (const auto &IncludePath : LibStdCXXIncludePathCandidates) {
-    if (addLibStdCXXIncludePaths(IncludePath, /*Suffix*/ "", TripleStr,
-                                 /*GCCMultiarchTriple*/ "",
-                                 /*TargetMultiarchTriple*/ "",
+    if (addLibStdCXXIncludePaths(IncludePath, TripleStr,
                                  Multilib.includeSuffix(), DriverArgs, CC1Args))
       return true;
   }
