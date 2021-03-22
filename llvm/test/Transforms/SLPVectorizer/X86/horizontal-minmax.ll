@@ -9,6 +9,11 @@
 @arrp = local_unnamed_addr global [32 x i32*] zeroinitializer, align 16
 @var = global i32 zeroinitializer, align 8
 
+declare i32 @llvm.smax.i32(i32, i32)
+declare i16 @llvm.smin.i16(i16, i16)
+declare i64 @llvm.umax.i64(i64 %mh, i64)
+declare i8 @llvm.umin.i8(i8, i8)
+
 define i32 @maxi8(i32) {
 ; CHECK-LABEL: @maxi8(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
@@ -198,8 +203,8 @@ define i32 @maxi32(i32) {
   ret i32 %95
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - InstCombine creates maxnum intrinsics for fcmp+select with fastmath on the select.
+
 define float @maxf8(float) {
 ; DEFAULT-LABEL: @maxf8(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -277,8 +282,8 @@ define float @maxf8(float) {
   ret float %23
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - maxnum intrinsics match what InstCombine creates for fcmp+select with fastmath on the select.
+
 define float @maxf16(float) {
 ; DEFAULT-LABEL: @maxf16(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -428,8 +433,8 @@ define float @maxf16(float) {
   ret float %47
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - InstCombine creates maxnum intrinsics for fcmp+select with fastmath on the select.
+
 define float @maxf32(float) {
 ; DEFAULT-LABEL: @maxf32(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -1000,4 +1005,232 @@ define i32* @maxp8(i32) {
   %22 = icmp ugt i32* %20, %21
   %23 = select i1 %22, i32* %20, i32* %21
   ret i32* %23
+}
+
+define i32 @smax_intrinsic_rdx_v8i32(i32* %p0) {
+; CHECK-LABEL: @smax_intrinsic_rdx_v8i32(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 7
+; CHECK-NEXT:    [[T0:%.*]] = load i32, i32* [[P0]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i32, i32* [[P1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i32, i32* [[P2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i32, i32* [[P3]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i32, i32* [[P4]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = load i32, i32* [[P5]], align 4
+; CHECK-NEXT:    [[T6:%.*]] = load i32, i32* [[P6]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i32, i32* [[P7]], align 4
+; CHECK-NEXT:    [[M10:%.*]] = tail call i32 @llvm.smax.i32(i32 [[T1]], i32 [[T0]])
+; CHECK-NEXT:    [[M32:%.*]] = tail call i32 @llvm.smax.i32(i32 [[T3]], i32 [[T2]])
+; CHECK-NEXT:    [[M54:%.*]] = tail call i32 @llvm.smax.i32(i32 [[T5]], i32 [[T4]])
+; CHECK-NEXT:    [[M76:%.*]] = tail call i32 @llvm.smax.i32(i32 [[T7]], i32 [[T6]])
+; CHECK-NEXT:    [[M3210:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M32]], i32 [[M10]])
+; CHECK-NEXT:    [[M7654:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M76]], i32 [[M54]])
+; CHECK-NEXT:    [[M:%.*]] = tail call i32 @llvm.smax.i32(i32 [[M7654]], i32 [[M3210]])
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  %p2 = getelementptr inbounds i32, i32* %p0, i64 2
+  %p3 = getelementptr inbounds i32, i32* %p0, i64 3
+  %p4 = getelementptr inbounds i32, i32* %p0, i64 4
+  %p5 = getelementptr inbounds i32, i32* %p0, i64 5
+  %p6 = getelementptr inbounds i32, i32* %p0, i64 6
+  %p7 = getelementptr inbounds i32, i32* %p0, i64 7
+  %t0 = load i32, i32* %p0, align 4
+  %t1 = load i32, i32* %p1, align 4
+  %t2 = load i32, i32* %p2, align 4
+  %t3 = load i32, i32* %p3, align 4
+  %t4 = load i32, i32* %p4, align 4
+  %t5 = load i32, i32* %p5, align 4
+  %t6 = load i32, i32* %p6, align 4
+  %t7 = load i32, i32* %p7, align 4
+  %m10 = tail call i32 @llvm.smax.i32(i32 %t1, i32 %t0)
+  %m32 = tail call i32 @llvm.smax.i32(i32 %t3, i32 %t2)
+  %m54 = tail call i32 @llvm.smax.i32(i32 %t5, i32 %t4)
+  %m76 = tail call i32 @llvm.smax.i32(i32 %t7, i32 %t6)
+  %m3210 = tail call i32 @llvm.smax.i32(i32 %m32, i32 %m10)
+  %m7654 = tail call i32 @llvm.smax.i32(i32 %m76, i32 %m54)
+  %m = tail call i32 @llvm.smax.i32(i32 %m7654, i32 %m3210)
+  ret i32 %m
+}
+
+define i16 @smin_intrinsic_rdx_v8i16(i16* %p0) {
+; CHECK-LABEL: @smin_intrinsic_rdx_v8i16(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i16, i16* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 7
+; CHECK-NEXT:    [[T0:%.*]] = load i16, i16* [[P0]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i16, i16* [[P1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i16, i16* [[P2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i16, i16* [[P3]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i16, i16* [[P4]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = load i16, i16* [[P5]], align 4
+; CHECK-NEXT:    [[T6:%.*]] = load i16, i16* [[P6]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i16, i16* [[P7]], align 4
+; CHECK-NEXT:    [[M10:%.*]] = tail call i16 @llvm.smin.i16(i16 [[T1]], i16 [[T0]])
+; CHECK-NEXT:    [[M32:%.*]] = tail call i16 @llvm.smin.i16(i16 [[T3]], i16 [[T2]])
+; CHECK-NEXT:    [[M54:%.*]] = tail call i16 @llvm.smin.i16(i16 [[T5]], i16 [[T4]])
+; CHECK-NEXT:    [[M76:%.*]] = tail call i16 @llvm.smin.i16(i16 [[T7]], i16 [[T6]])
+; CHECK-NEXT:    [[M3210:%.*]] = tail call i16 @llvm.smin.i16(i16 [[M32]], i16 [[M10]])
+; CHECK-NEXT:    [[M7654:%.*]] = tail call i16 @llvm.smin.i16(i16 [[M76]], i16 [[M54]])
+; CHECK-NEXT:    [[M:%.*]] = tail call i16 @llvm.smin.i16(i16 [[M7654]], i16 [[M3210]])
+; CHECK-NEXT:    ret i16 [[M]]
+;
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
+  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
+  %p4 = getelementptr inbounds i16, i16* %p0, i64 4
+  %p5 = getelementptr inbounds i16, i16* %p0, i64 5
+  %p6 = getelementptr inbounds i16, i16* %p0, i64 6
+  %p7 = getelementptr inbounds i16, i16* %p0, i64 7
+  %t0 = load i16, i16* %p0, align 4
+  %t1 = load i16, i16* %p1, align 4
+  %t2 = load i16, i16* %p2, align 4
+  %t3 = load i16, i16* %p3, align 4
+  %t4 = load i16, i16* %p4, align 4
+  %t5 = load i16, i16* %p5, align 4
+  %t6 = load i16, i16* %p6, align 4
+  %t7 = load i16, i16* %p7, align 4
+  %m10 = tail call i16 @llvm.smin.i16(i16 %t1, i16 %t0)
+  %m32 = tail call i16 @llvm.smin.i16(i16 %t3, i16 %t2)
+  %m54 = tail call i16 @llvm.smin.i16(i16 %t5, i16 %t4)
+  %m76 = tail call i16 @llvm.smin.i16(i16 %t7, i16 %t6)
+  %m3210 = tail call i16 @llvm.smin.i16(i16 %m32, i16 %m10)
+  %m7654 = tail call i16 @llvm.smin.i16(i16 %m76, i16 %m54)
+  %m = tail call i16 @llvm.smin.i16(i16 %m7654, i16 %m3210)
+  ret i16 %m
+}
+
+define i64 @umax_intrinsic_rdx_v4i64(i64* %p0) {
+; CHECK-LABEL: @umax_intrinsic_rdx_v4i64(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, i64* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 3
+; CHECK-NEXT:    [[T0:%.*]] = load i64, i64* [[P0]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i64, i64* [[P1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i64, i64* [[P2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i64, i64* [[P3]], align 4
+; CHECK-NEXT:    [[M10:%.*]] = tail call i64 @llvm.umax.i64(i64 [[T1]], i64 [[T0]])
+; CHECK-NEXT:    [[M32:%.*]] = tail call i64 @llvm.umax.i64(i64 [[T3]], i64 [[T2]])
+; CHECK-NEXT:    [[M:%.*]] = tail call i64 @llvm.umax.i64(i64 [[M32]], i64 [[M10]])
+; CHECK-NEXT:    ret i64 [[M]]
+;
+  %p1 = getelementptr inbounds i64, i64* %p0, i64 1
+  %p2 = getelementptr inbounds i64, i64* %p0, i64 2
+  %p3 = getelementptr inbounds i64, i64* %p0, i64 3
+  %t0 = load i64, i64* %p0, align 4
+  %t1 = load i64, i64* %p1, align 4
+  %t2 = load i64, i64* %p2, align 4
+  %t3 = load i64, i64* %p3, align 4
+  %m10 = tail call i64 @llvm.umax.i64(i64 %t1, i64 %t0)
+  %m32 = tail call i64 @llvm.umax.i64(i64 %t3, i64 %t2)
+  %m = tail call i64 @llvm.umax.i64(i64 %m32, i64 %m10)
+  ret i64 %m
+}
+
+define i8 @umin_intrinsic_rdx_v16i8(i8* %p0) {
+; CHECK-LABEL: @umin_intrinsic_rdx_v16i8(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 7
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 8
+; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 9
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 10
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 11
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 12
+; CHECK-NEXT:    [[PD:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 13
+; CHECK-NEXT:    [[PE:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 14
+; CHECK-NEXT:    [[PF:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 15
+; CHECK-NEXT:    [[T0:%.*]] = load i8, i8* [[P0]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load i8, i8* [[P1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = load i8, i8* [[P2]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load i8, i8* [[P3]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = load i8, i8* [[P4]], align 4
+; CHECK-NEXT:    [[T5:%.*]] = load i8, i8* [[P5]], align 4
+; CHECK-NEXT:    [[T6:%.*]] = load i8, i8* [[P6]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i8, i8* [[P7]], align 4
+; CHECK-NEXT:    [[T8:%.*]] = load i8, i8* [[P8]], align 4
+; CHECK-NEXT:    [[T9:%.*]] = load i8, i8* [[P9]], align 4
+; CHECK-NEXT:    [[TA:%.*]] = load i8, i8* [[PA]], align 4
+; CHECK-NEXT:    [[TB:%.*]] = load i8, i8* [[PB]], align 4
+; CHECK-NEXT:    [[TC:%.*]] = load i8, i8* [[PC]], align 4
+; CHECK-NEXT:    [[TD:%.*]] = load i8, i8* [[PD]], align 4
+; CHECK-NEXT:    [[TE:%.*]] = load i8, i8* [[PE]], align 4
+; CHECK-NEXT:    [[TF:%.*]] = load i8, i8* [[PF]], align 4
+; CHECK-NEXT:    [[M10:%.*]] = tail call i8 @llvm.umin.i8(i8 [[T1]], i8 [[T0]])
+; CHECK-NEXT:    [[M32:%.*]] = tail call i8 @llvm.umin.i8(i8 [[T3]], i8 [[T2]])
+; CHECK-NEXT:    [[M54:%.*]] = tail call i8 @llvm.umin.i8(i8 [[T5]], i8 [[T4]])
+; CHECK-NEXT:    [[M76:%.*]] = tail call i8 @llvm.umin.i8(i8 [[T7]], i8 [[T6]])
+; CHECK-NEXT:    [[M98:%.*]] = tail call i8 @llvm.umin.i8(i8 [[T9]], i8 [[T8]])
+; CHECK-NEXT:    [[MBA:%.*]] = tail call i8 @llvm.umin.i8(i8 [[TB]], i8 [[TA]])
+; CHECK-NEXT:    [[MDC:%.*]] = tail call i8 @llvm.umin.i8(i8 [[TD]], i8 [[TC]])
+; CHECK-NEXT:    [[MFE:%.*]] = tail call i8 @llvm.umin.i8(i8 [[TF]], i8 [[TE]])
+; CHECK-NEXT:    [[M3210:%.*]] = tail call i8 @llvm.umin.i8(i8 [[M32]], i8 [[M10]])
+; CHECK-NEXT:    [[M7654:%.*]] = tail call i8 @llvm.umin.i8(i8 [[M76]], i8 [[M54]])
+; CHECK-NEXT:    [[MDC98:%.*]] = tail call i8 @llvm.umin.i8(i8 [[MDC]], i8 [[M98]])
+; CHECK-NEXT:    [[MFEBA:%.*]] = tail call i8 @llvm.umin.i8(i8 [[MFE]], i8 [[MBA]])
+; CHECK-NEXT:    [[ML:%.*]] = tail call i8 @llvm.umin.i8(i8 [[M3210]], i8 [[M7654]])
+; CHECK-NEXT:    [[MH:%.*]] = tail call i8 @llvm.umin.i8(i8 [[MFEBA]], i8 [[MDC98]])
+; CHECK-NEXT:    [[M:%.*]] = tail call i8 @llvm.umin.i8(i8 [[MH]], i8 [[ML]])
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
+  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
+  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
+  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
+  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
+  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
+  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
+  %p8 = getelementptr inbounds i8, i8* %p0, i64 8
+  %p9 = getelementptr inbounds i8, i8* %p0, i64 9
+  %pa = getelementptr inbounds i8, i8* %p0, i64 10
+  %pb = getelementptr inbounds i8, i8* %p0, i64 11
+  %pc = getelementptr inbounds i8, i8* %p0, i64 12
+  %pd = getelementptr inbounds i8, i8* %p0, i64 13
+  %pe = getelementptr inbounds i8, i8* %p0, i64 14
+  %pf = getelementptr inbounds i8, i8* %p0, i64 15
+  %t0 = load i8, i8* %p0, align 4
+  %t1 = load i8, i8* %p1, align 4
+  %t2 = load i8, i8* %p2, align 4
+  %t3 = load i8, i8* %p3, align 4
+  %t4 = load i8, i8* %p4, align 4
+  %t5 = load i8, i8* %p5, align 4
+  %t6 = load i8, i8* %p6, align 4
+  %t7 = load i8, i8* %p7, align 4
+  %t8 = load i8, i8* %p8, align 4
+  %t9 = load i8, i8* %p9, align 4
+  %ta = load i8, i8* %pa, align 4
+  %tb = load i8, i8* %pb, align 4
+  %tc = load i8, i8* %pc, align 4
+  %td = load i8, i8* %pd, align 4
+  %te = load i8, i8* %pe, align 4
+  %tf = load i8, i8* %pf, align 4
+  %m10 = tail call i8 @llvm.umin.i8(i8 %t1, i8 %t0)
+  %m32 = tail call i8 @llvm.umin.i8(i8 %t3, i8 %t2)
+  %m54 = tail call i8 @llvm.umin.i8(i8 %t5, i8 %t4)
+  %m76 = tail call i8 @llvm.umin.i8(i8 %t7, i8 %t6)
+  %m98 = tail call i8 @llvm.umin.i8(i8 %t9, i8 %t8)
+  %mba = tail call i8 @llvm.umin.i8(i8 %tb, i8 %ta)
+  %mdc = tail call i8 @llvm.umin.i8(i8 %td, i8 %tc)
+  %mfe = tail call i8 @llvm.umin.i8(i8 %tf, i8 %te)
+  %m3210 = tail call i8 @llvm.umin.i8(i8 %m32, i8 %m10)
+  %m7654 = tail call i8 @llvm.umin.i8(i8 %m76, i8 %m54)
+  %mdc98 = tail call i8 @llvm.umin.i8(i8 %mdc, i8 %m98)
+  %mfeba = tail call i8 @llvm.umin.i8(i8 %mfe, i8 %mba)
+  %ml = tail call i8 @llvm.umin.i8(i8 %m3210, i8 %m7654)
+  %mh = tail call i8 @llvm.umin.i8(i8 %mfeba, i8 %mdc98)
+  %m = tail call i8 @llvm.umin.i8(i8 %mh, i8 %ml)
+  ret i8 %m
 }
