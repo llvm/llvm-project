@@ -280,15 +280,14 @@ define dso_local void @test_loop2(i32 %0) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testl %ebx, %ebx
 ; CHECK-NEXT:    jle .LBB3_3
 ; CHECK-NEXT:  # %bb.2: # in Loop: Header=BB3_1 Depth=1
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
 ; CHECK-NEXT:    movabsq $64, %rax
