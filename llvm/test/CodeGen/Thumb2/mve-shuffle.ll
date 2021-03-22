@@ -1319,8 +1319,7 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @oneoff21_f16(<8 x half> %src1, <8 x half> %src2) {
 ; CHECK-LABEL: oneoff21_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov.16 q1[3], r0
+; CHECK-NEXT:    vins.f16 s5, s0
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

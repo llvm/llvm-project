@@ -1468,19 +1468,19 @@ define void @arm_biquad_cascade_df2T_f16(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    @ Parent Loop BB17_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrh r7, [r1], #4
-; CHECK-NEXT:    vmov r4, s4
+; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    vfma.f16 q2, q3, r7
-; CHECK-NEXT:    ldrh r3, [r1, #-2]
+; CHECK-NEXT:    ldrh r4, [r1, #-2]
 ; CHECK-NEXT:    vmov.u16 r7, q2[0]
 ; CHECK-NEXT:    vfma.f16 q2, q4, r7
-; CHECK-NEXT:    vmov.16 q2[3], r4
-; CHECK-NEXT:    vfma.f16 q2, q5, r3
-; CHECK-NEXT:    vmov.u16 r3, q2[1]
-; CHECK-NEXT:    vfma.f16 q2, q6, r3
-; CHECK-NEXT:    strh r3, [r5, #2]
+; CHECK-NEXT:    vins.f16 s9, s4
+; CHECK-NEXT:    vfma.f16 q2, q5, r4
+; CHECK-NEXT:    vmov.u16 r4, q2[1]
+; CHECK-NEXT:    vfma.f16 q2, q6, r4
+; CHECK-NEXT:    strh r4, [r5, #2]
 ; CHECK-NEXT:    vmov.f32 s8, s9
 ; CHECK-NEXT:    strh r7, [r5], #4
-; CHECK-NEXT:    vmov.16 q2[2], r4
+; CHECK-NEXT:    vmov.16 q2[2], r3
 ; CHECK-NEXT:    le lr, .LBB17_5
 ; CHECK-NEXT:  .LBB17_6: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
