@@ -180,6 +180,35 @@ func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: select
   %18 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
+  // CHECK: linalg.generic
+  // CHECK: fptosi
+  %19 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpf
+  %20 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: fptrunc
+  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
+
+  // CHECK: linalg.generic
+  // CHECK: yield
+  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_simple_f16
+func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
+
+  // CHECK: linalg.generic
+  // CHECK: fpext
+  %0 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xf32>
+
   return
 }
 
@@ -254,6 +283,27 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: cmpi
   // CHECK: select
   %15 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: trunci
+  %16 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
+
+  // CHECK: linalg.generic
+  // CHECK: yield
+  %17 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: sexti
+  %18 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
+
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpi
+  %19 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: sitofp
+  %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
 
   return
 }
