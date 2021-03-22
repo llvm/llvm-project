@@ -12,10 +12,11 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class OwningRewritePatternList;
 class ModuleOp;
 template <typename OpT>
 class OperationPass;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
 void populateVectorToROCDLConversionPatterns(

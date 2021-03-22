@@ -15,8 +15,9 @@ class AffineForOp;
 class ConversionTarget;
 struct LogicalResult;
 class MLIRContext;
-class OwningRewritePatternList;
 class Value;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class ForOp;

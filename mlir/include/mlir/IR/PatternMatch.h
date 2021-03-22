@@ -715,22 +715,22 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// OwningRewritePatternList
+// RewritePatternSet
 //===----------------------------------------------------------------------===//
 
-class OwningRewritePatternList {
+class RewritePatternSet {
   using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
-  OwningRewritePatternList(MLIRContext *context) : context(context) {}
+  RewritePatternSet(MLIRContext *context) : context(context) {}
 
-  /// Construct a OwningRewritePatternList populated with the given pattern.
-  OwningRewritePatternList(MLIRContext *context,
-                           std::unique_ptr<RewritePattern> pattern)
+  /// Construct a RewritePatternSet populated with the given pattern.
+  RewritePatternSet(MLIRContext *context,
+                    std::unique_ptr<RewritePattern> pattern)
       : context(context) {
     nativePatterns.emplace_back(std::move(pattern));
   }
-  OwningRewritePatternList(PDLPatternModule &&pattern)
+  RewritePatternSet(PDLPatternModule &&pattern)
       : context(pattern.getModule()->getContext()),
         pdlPatterns(std::move(pattern)) {}
 
@@ -749,7 +749,7 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Pattern Insertion
+  // 'add' methods for adding patterns to the set.
   //===--------------------------------------------------------------------===//
 
   /// Add an instance of each of the pattern types 'Ts' to the pattern list with
@@ -758,41 +758,104 @@ public:
   template <typename... Ts, typename ConstructorArg,
             typename... ConstructorArgs,
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
-  OwningRewritePatternList &insert(ConstructorArg &&arg,
-                                   ConstructorArgs &&... args) {
+  RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&... args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{0, (insertImpl<Ts>(arg, args...), 0)...};
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
     return *this;
   }
 
   /// Add an instance of each of the pattern types 'Ts'. Return a reference to
   /// `this` for chaining insertions.
   template <typename... Ts>
-  OwningRewritePatternList &insert() {
-    (void)std::initializer_list<int>{0, (insertImpl<Ts>(), 0)...};
+  RewritePatternSet &add() {
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
     return *this;
   }
 
   /// Add the given native pattern to the pattern list. Return a reference to
   /// `this` for chaining insertions.
-  OwningRewritePatternList &insert(std::unique_ptr<RewritePattern> pattern) {
+  RewritePatternSet &add(std::unique_ptr<RewritePattern> pattern) {
     nativePatterns.emplace_back(std::move(pattern));
     return *this;
   }
 
   /// Add the given PDL pattern to the pattern list. Return a reference to
   /// `this` for chaining insertions.
-  OwningRewritePatternList &insert(PDLPatternModule &&pattern) {
+  RewritePatternSet &add(PDLPatternModule &&pattern) {
     pdlPatterns.mergeIn(std::move(pattern));
     return *this;
   }
 
   // Add a matchAndRewrite style pattern represented as a C function pointer.
   template <typename OpType>
-  OwningRewritePatternList &
+  RewritePatternSet &add(LogicalResult (*implFn)(OpType,
+                                                 PatternRewriter &rewriter)) {
+    struct FnPattern final : public OpRewritePattern<OpType> {
+      FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+                MLIRContext *context)
+          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+
+      LogicalResult matchAndRewrite(OpType op,
+                                    PatternRewriter &rewriter) const override {
+        return implFn(op, rewriter);
+      }
+
+    private:
+      LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
+    };
+    add(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    return *this;
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Pattern Insertion
+  //===--------------------------------------------------------------------===//
+
+  // TODO: These are soft deprecated in favor of the 'add' methods above.
+
+  /// Add an instance of each of the pattern types 'Ts' to the pattern list with
+  /// the given arguments. Return a reference to `this` for chaining insertions.
+  /// Note: ConstructorArg is necessary here to separate the two variadic lists.
+  template <typename... Ts, typename ConstructorArg,
+            typename... ConstructorArgs,
+            typename = std::enable_if_t<sizeof...(Ts) != 0>>
+  RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&... args) {
+    // The following expands a call to emplace_back for each of the pattern
+    // types 'Ts'. This magic is necessary due to a limitation in the places
+    // that a parameter pack can be expanded in c++11.
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
+    return *this;
+  }
+
+  /// Add an instance of each of the pattern types 'Ts'. Return a reference to
+  /// `this` for chaining insertions.
+  template <typename... Ts>
+  RewritePatternSet &insert() {
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
+    return *this;
+  }
+
+  /// Add the given native pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  RewritePatternSet &insert(std::unique_ptr<RewritePattern> pattern) {
+    nativePatterns.emplace_back(std::move(pattern));
+    return *this;
+  }
+
+  /// Add the given PDL pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  RewritePatternSet &insert(PDLPatternModule &&pattern) {
+    pdlPatterns.mergeIn(std::move(pattern));
+    return *this;
+  }
+
+  // Add a matchAndRewrite style pattern represented as a C function pointer.
+  template <typename OpType>
+  RewritePatternSet &
   insert(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter)) {
     struct FnPattern final : public OpRewritePattern<OpType> {
       FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
@@ -816,13 +879,13 @@ private:
   /// chaining insertions.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
-  insertImpl(Args &&... args) {
+  addImpl(Args &&... args) {
     nativePatterns.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
-  insertImpl(Args &&... args) {
+  addImpl(Args &&... args) {
     pdlPatterns.mergeIn(T(std::forward<Args>(args)...));
   }
 
@@ -830,6 +893,10 @@ private:
   NativePatternListT nativePatterns;
   PDLPatternModule pdlPatterns;
 };
+
+// TODO: OwningRewritePatternList is soft-deprecated and will be removed in the
+// future.
+using OwningRewritePatternList = RewritePatternSet;
 
 } // end namespace mlir
 

@@ -14,7 +14,8 @@
 
 namespace mlir {
 
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 void populateTensorBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns);

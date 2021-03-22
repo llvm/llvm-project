@@ -13,10 +13,12 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class OwningRewritePatternList;
 class ConversionTarget;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
-template <typename OpT> class OperationPass;
+template <typename OpT>
+class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
