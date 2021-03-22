@@ -2843,10 +2843,8 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     // the cross. Note that GCC does include some of these directories in some
     // configurations but this seems somewhere between questionable and simply
     // a bug.
-    if (StringRef(LibPath).startswith(SysRoot)) {
-      addPathIfExists(D, LibPath + "/" + MultiarchTriple, Paths);
+    if (StringRef(LibPath).startswith(SysRoot))
       addPathIfExists(D, LibPath + "/../" + OSLibDir, Paths);
-    }
   }
 }
 
