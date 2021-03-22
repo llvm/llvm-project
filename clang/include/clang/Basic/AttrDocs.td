@@ -3036,7 +3036,7 @@ By default, a reference is considered to refer to its referenced object, a
 pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
 is considered to refer to its underlying array, and aggregates (arrays and
 simple ``struct``s) are considered to refer to all objects that their
-subobjects refer to, recursively.
+transitive subobjects refer to.
 
 Clang warns if it is able to detect that an object or reference refers to
 another object with a shorter lifetime. For example, Clang will warn if a
