@@ -10,46 +10,6 @@ from mlir.dialects import std
 from mlir.dialects.linalg.opdsl.lang import *
 
 
-# TODO: Find a home for this quality of life helper.
-def build_function(*inputs: Type, results: Optional[Sequence[Type]] = None):
-  """Decorator that emits a function in a more pythonic way.
-
-  If result types are not specified, they are inferred from the function
-  returns. The `ReturnOp` is implicitly added upon the wrapped function return.
-  """
-
-  def decorator(f):
-    return_types = results
-    symbol_name = f.__name__
-    function_type = FunctionType.get(inputs=inputs, results=results or [])
-    func_op = builtin.FuncOp(name=symbol_name, type=function_type)
-    with InsertionPoint(func_op.add_entry_block()):
-      func_args = func_op.entry_block.arguments
-      return_values = f(*func_args)
-      if return_values is None:
-        return_values = []
-      elif isinstance(return_values, Value):
-        return_values = [return_values]
-      else:
-        return_values = list(return_values)
-      std.ReturnOp(return_values)
-      if return_types is None:
-        # Recompute the function type.
-        return_types = [v.type for v in return_values]
-        function_type = FunctionType.get(inputs=inputs, results=return_types)
-        # TODO: Have an API or a setter for this.
-        func_op.attributes["type"] = TypeAttr.get(function_type)
-
-    # TODO: When turning this into a real facility, return a function that emits
-    # a `call` to the function instead of doing nothing.
-    wrapped = lambda: None
-    wrapped.__name__ = symbol_name
-    wrapped.func_op = func_op
-    return wrapped
-
-  return decorator
-
-
 @linalg_structured_op
 def matmul_mono(A=TensorDef(T, S.M, S.K),
                 B=TensorDef(T, S.K, S.N),
@@ -92,8 +52,8 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: ins(%[[A]], %[[B]]
     # CHECK-SAME: outs(%[[INITC]]
 
-    @build_function(RankedTensorType.get((4, 16), f32),
-                    RankedTensorType.get((16, 8), f32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
+                                 RankedTensorType.get((16, 8), f32))
     def test_matmul_mono(lhs, rhs):
       # TODO: Enable outs inference and add sugar for InitTensorOp
       # construction.
@@ -114,9 +74,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @build_function(RankedTensorType.get((4, 16), i8),
-                    RankedTensorType.get((16, 8), i8),
-                    RankedTensorType.get((4, 8), i32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
+                                 RankedTensorType.get((16, 8), i8),
+                                 RankedTensorType.get((4, 8), i32))
     def test_i8i8i32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -128,9 +88,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @build_function(RankedTensorType.get((4, 16), i8),
-                    RankedTensorType.get((16, 8), i16),
-                    RankedTensorType.get((4, 8), i32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
+                                 RankedTensorType.get((16, 8), i16),
+                                 RankedTensorType.get((4, 8), i32))
     def test_i8i16i32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -142,9 +102,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addi %[[C_ARG]], %[[MUL]] : i16
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i16
     # CHECK-NEXT: -> tensor<4x8xi16>
-    @build_function(RankedTensorType.get((4, 16), i32),
-                    RankedTensorType.get((16, 8), i32),
-                    RankedTensorType.get((4, 8), i16))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32),
+                                 RankedTensorType.get((16, 8), i32),
+                                 RankedTensorType.get((4, 8), i16))
     def test_i32i32i16_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -156,9 +116,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @build_function(RankedTensorType.get((4, 16), i8),
-                    RankedTensorType.get((16, 8), i8),
-                    RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i8),
+                                 RankedTensorType.get((16, 8), i8),
+                                 RankedTensorType.get((4, 8), f32))
     def test_i8i8f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -170,9 +130,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @build_function(RankedTensorType.get((4, 16), f16),
-                    RankedTensorType.get((16, 8), f16),
-                    RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f16),
+                                 RankedTensorType.get((16, 8), f16),
+                                 RankedTensorType.get((4, 8), f32))
     def test_f16f16f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
@@ -184,9 +144,9 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @build_function(RankedTensorType.get((4, 16), f64),
-                    RankedTensorType.get((16, 8), f64),
-                    RankedTensorType.get((4, 8), f32))
+    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f64),
+                                 RankedTensorType.get((16, 8), f64),
+                                 RankedTensorType.get((4, 8), f32))
     def test_f64f64f32_matmul(lhs, rhs, init_result):
       return matmul_poly(lhs, rhs, outs=[init_result])
 
