@@ -29,17 +29,16 @@ namespace {
 struct TosaToStandard : public TosaToStandardBase<TosaToStandard> {
 public:
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::ConstOp>();
     target.addIllegalOp<tosa::SliceOp>();
     target.addIllegalOp<tosa::ApplyScaleOp>();
     target.addLegalDialect<StandardOpsDialect>();
 
-    auto *op = getOperation();
-    mlir::tosa::populateTosaToStandardConversionPatterns(op->getContext(),
-                                                         &patterns);
-    if (failed(applyPartialConversion(op, target, std::move(patterns))))
+    mlir::tosa::populateTosaToStandardConversionPatterns(&patterns);
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
       signalPassFailure();
   }
 };

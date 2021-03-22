@@ -37,10 +37,10 @@ public:
 } // namespace
 
 void mlir::populateConvertShapeConstraintsConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<CstrBroadcastableToRequire>(ctx);
-  patterns.insert<CstrEqToRequire>(ctx);
-  patterns.insert<ConvertCstrRequireOp>(ctx);
+    OwningRewritePatternList &patterns) {
+  patterns.insert<CstrBroadcastableToRequire>(patterns.getContext());
+  patterns.insert<CstrEqToRequire>(patterns.getContext());
+  patterns.insert<ConvertCstrRequireOp>(patterns.getContext());
 }
 
 namespace {
@@ -54,8 +54,8 @@ class ConvertShapeConstraints
     auto func = getOperation();
     auto *context = &getContext();
 
-    OwningRewritePatternList patterns;
-    populateConvertShapeConstraintsConversionPatterns(patterns, context);
+    OwningRewritePatternList patterns(context);
+    populateConvertShapeConstraintsConversionPatterns(patterns);
 
     if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns))))
       return signalPassFailure();

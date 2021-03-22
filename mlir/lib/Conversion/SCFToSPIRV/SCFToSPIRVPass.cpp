@@ -37,10 +37,10 @@ void SCFToSPIRVPass::runOnOperation() {
 
   SPIRVTypeConverter typeConverter(targetAttr);
   ScfToSPIRVContext scfContext;
-  OwningRewritePatternList patterns;
-  populateSCFToSPIRVPatterns(context, typeConverter, scfContext, patterns);
-  populateStandardToSPIRVPatterns(context, typeConverter, patterns);
-  populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
+  OwningRewritePatternList patterns(context);
+  populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
+  populateStandardToSPIRVPatterns(typeConverter, patterns);
+  populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
   if (failed(applyPartialConversion(module, *target, std::move(patterns))))
     return signalPassFailure();

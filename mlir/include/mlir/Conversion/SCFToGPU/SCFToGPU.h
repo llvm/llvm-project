@@ -42,8 +42,7 @@ LogicalResult convertAffineLoopNestToGPULaunch(AffineForOp forOp,
 
 /// Adds the conversion pattern from `scf.parallel` to `gpu.launch` to the
 /// provided pattern list.
-void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns,
-                                       MLIRContext *ctx);
+void populateParallelLoopToGPUPatterns(OwningRewritePatternList &patterns);
 
 /// Configures the rewrite target such that only `scf.parallel` operations that
 /// are not rewritten by the provided patterns are legal.

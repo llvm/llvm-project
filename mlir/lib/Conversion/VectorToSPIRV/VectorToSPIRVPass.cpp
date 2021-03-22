@@ -37,8 +37,8 @@ void LowerVectorToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns;
-  populateVectorToSPIRVPatterns(context, typeConverter, patterns);
+  OwningRewritePatternList patterns(context);
+  populateVectorToSPIRVPatterns(typeConverter, patterns);
 
   target->addLegalOp<ModuleOp, ModuleTerminatorOp>();
   target->addLegalOp<FuncOp>();

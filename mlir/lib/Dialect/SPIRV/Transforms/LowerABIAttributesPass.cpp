@@ -246,7 +246,7 @@ void LowerABIAttributesPass::runOnOperation() {
     return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
   });
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(context);
   patterns.insert<ProcessInterfaceVarABI>(typeConverter, context);
 
   ConversionTarget target(*context);

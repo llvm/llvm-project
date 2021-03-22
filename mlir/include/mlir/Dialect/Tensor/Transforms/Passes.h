@@ -16,8 +16,7 @@ namespace mlir {
 
 class OwningRewritePatternList;
 
-void populateTensorBufferizePatterns(MLIRContext *context,
-                                     BufferizeTypeConverter &typeConverter,
+void populateTensorBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns);
 
 /// Creates an instance of `tensor` dialect bufferization pass.

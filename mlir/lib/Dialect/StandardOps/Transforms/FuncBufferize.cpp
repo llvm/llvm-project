@@ -28,21 +28,20 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
-    populateFuncOpTypeConversionPattern(patterns, context, typeConverter);
+    populateFuncOpTypeConversionPattern(patterns, typeConverter);
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
       return typeConverter.isSignatureLegal(op.getType()) &&
              typeConverter.isLegal(&op.getBody());
     });
-    populateCallOpTypeConversionPattern(patterns, context, typeConverter);
+    populateCallOpTypeConversionPattern(patterns, typeConverter);
     target.addDynamicallyLegalOp<CallOp>(
         [&](CallOp op) { return typeConverter.isLegal(op); });
 
-    populateBranchOpInterfaceTypeConversionPattern(patterns, context,
-                                                   typeConverter);
-    populateReturnOpTypeConversionPattern(patterns, context, typeConverter);
+    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
+    populateReturnOpTypeConversionPattern(patterns, typeConverter);
     target.addLegalOp<ModuleOp, ModuleTerminatorOp, memref::TensorLoadOp,
                       memref::BufferCastOp>();
 
