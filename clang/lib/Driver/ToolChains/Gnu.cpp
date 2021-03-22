@@ -2999,8 +2999,6 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   const Multilib &Multilib = GCCInstallation.getMultilib();
   const std::string Triple = getMultiarchTriple(
       getDriver(), GCCInstallation.getTriple(), getDriver().SysRoot);
-  const std::string TargetMultiarchTriple =
-      getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
   // Try /../$triple/include/c++/$version then /../include/c++/$version.
