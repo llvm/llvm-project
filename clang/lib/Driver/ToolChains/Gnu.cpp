@@ -2109,12 +2109,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
   static const char *const X32LibDirs[] = {"/libx32"};
   static const char *const X86LibDirs[] = {"/lib32", "/lib"};
   static const char *const X86Triples[] = {
-      "i686-linux-gnu",       "i686-pc-linux-gnu",     "i486-linux-gnu",
-      "i386-linux-gnu",       "i386-redhat-linux6E",   "i686-redhat-linux",
-      "i586-redhat-linux",    "i386-redhat-linux",     "i586-suse-linux",
-      "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu",
-      "i686-linux-android",   "i386-gnu",              "i486-gnu",
-      "i586-gnu",             "i686-gnu"};
+      "i686-linux-gnu",        "i686-pc-linux-gnu",  "i386-redhat-linux6E",
+      "i686-redhat-linux",     "i386-redhat-linux",  "i586-suse-linux",
+      "i686-montavista-linux", "i686-linux-android", "i386-gnu",
+  };
 
   static const char *const M68kLibDirs[] = {"/lib"};
   static const char *const M68kTriples[] = {
@@ -2999,8 +2997,6 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   const Multilib &Multilib = GCCInstallation.getMultilib();
   const std::string Triple = getMultiarchTriple(
       getDriver(), GCCInstallation.getTriple(), getDriver().SysRoot);
-  const std::string TargetMultiarchTriple =
-      getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
   // Try /../$triple/include/c++/$version then /../include/c++/$version.

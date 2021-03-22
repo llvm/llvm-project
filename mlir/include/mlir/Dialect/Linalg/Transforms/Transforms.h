@@ -716,9 +716,8 @@ void insertVectorizationPatterns(OwningRewritePatternList &patternList,
                                      linalg::LinalgTransformationFilter()) {
   // FIXME: In c++17 this can be simplified by using 'fold expressions'.
   (void)std::initializer_list<int>{
-      0, (insertVectorizationPatternImpl<OpTypes>(
-              patternList, patternList.getContext(), options, f),
-          0)...};
+      0,
+      (insertVectorizationPatternImpl<OpTypes>(patternList, options, f), 0)...};
 }
 
 ///

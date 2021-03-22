@@ -51,6 +51,12 @@ protected:
 
   using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
 
+  // Returns the PassConfiguration for this instance. This can be used by
+  // JITLinkerBase implementations to add late passes that reference their
+  // own data structures (e.g. for ELF implementations to locate / construct
+  // a GOT start symbol prior to fixup).
+  PassConfiguration &getPassConfig() { return Passes; }
+
   // Phase 1:
   //   1.1: Run pre-prune passes
   //   1.2: Prune graph

@@ -133,8 +133,9 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
         else
           return TS.takeError();
         SectionContainsContent = true;
-      } else if (Sym->hasName()) {
-        dbgs() << "Symbol: " << Sym->getName() << "\n";
+      }
+
+      if (Sym->hasName()) {
         if (Sym->isSymbolZeroFill()) {
           S.SymbolInfos[Sym->getName()] = {Sym->getSize(), Sym->getAddress()};
           SectionContainsZeroFill = true;

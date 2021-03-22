@@ -40,18 +40,24 @@ public:
       : F(std::move(F)) {}
 
   Error operator()(LinkGraph &G) {
-    for (auto *Sym : G.external_symbols()) {
+
+    // This pass will affect the external symbols set, so copy them out into a
+    // vector and iterate over that.
+    std::vector<Symbol *> Externals(G.external_symbols().begin(),
+                                    G.external_symbols().end());
+
+    for (auto *Sym : Externals) {
       SectionRangeSymbolDesc D = F(G, *Sym);
       if (D.Sec) {
         auto &SR = getSectionRange(*D.Sec);
         if (D.IsStart) {
-          if (SR.isEmpty())
+          if (SR.empty())
             G.makeAbsolute(*Sym, 0);
           else
             G.makeDefined(*Sym, *SR.getFirstBlock(), 0, 0, Linkage::Strong,
                           Scope::Local, false);
         } else {
-          if (SR.isEmpty())
+          if (SR.empty())
             G.makeAbsolute(*Sym, 0);
           else
             G.makeDefined(*Sym, *SR.getLastBlock(),
