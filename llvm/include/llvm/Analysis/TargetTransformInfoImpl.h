@@ -78,6 +78,16 @@ public:
     return TTI::TCC_Expensive;
   }
 
+  // Although this default value is arbitrary, it is not random. It is assumed
+  // that a condition that evaluates the same way by a higher percentage than
+  // this is best represented as control flow. Therefore, the default value N
+  // should be set such that the win from N% correct executions is greater than
+  // the loss from (100 - N)% mispredicted executions for the majority of
+  //  intended targets.
+  BranchProbability getPredictableBranchThreshold() const {
+    return BranchProbability(99, 100);
+  }
+
   bool hasBranchDivergence() const { return false; }
 
   bool useGPUDivergenceAnalysis() const { return false; }
