@@ -11,7 +11,7 @@ from lit.llvm.subst import ToolSubst
 
 
 def _get_lldb_init_path(config):
-    return os.path.join(config.test_exec_root, 'Shell', 'lit-lldb-init')
+    return os.path.join(config.test_exec_root, 'lit-lldb-init')
 
 
 def _disallow(config, execName):
