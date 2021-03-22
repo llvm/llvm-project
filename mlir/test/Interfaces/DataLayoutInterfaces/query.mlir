@@ -3,10 +3,12 @@
 // CHECK-LABEL: @no_layout_builtin
 func @no_layout_builtin() {
   // CHECK: alignment = 4
+  // CHECK: bitsize = 32
   // CHECK: preferred = 4
   // CHECK: size = 4
   "test.data_layout_query"() : () -> i32
   // CHECK: alignment = 8
+  // CHECK: bitsize = 64
   // CHECK: preferred = 8
   // CHECK: size = 8
   "test.data_layout_query"() : () -> f64
@@ -16,6 +18,7 @@ func @no_layout_builtin() {
 // CHECK-LABEL: @no_layout_custom
 func @no_layout_custom() {
   // CHECK: alignment = 1
+  // CHECK: bitsize = 1
   // CHECK: preferred = 1
   // CHECK: size = 1
   "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
@@ -26,6 +29,7 @@ func @no_layout_custom() {
 func @layout_op_no_layout() {
   "test.op_with_data_layout"() ({
     // CHECK: alignment = 1
+    // CHECK: bitsize = 1
     // CHECK: preferred = 1
     // CHECK: size = 1
     "test.data_layout_query"() : () -> !test.test_type_with_layout<1000>
@@ -38,8 +42,9 @@ func @layout_op_no_layout() {
 func @layout_op() {
   "test.op_with_data_layout"() ({
     // CHECK: alignment = 20
+    // CHECK: bitsize = 10
     // CHECK: preferred = 1
-    // CHECK: size = 10
+    // CHECK: size = 2
     "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
@@ -55,8 +60,9 @@ func @nested_inner_only() {
   "test.op_with_data_layout"() ({
     "test.op_with_data_layout"() ({
       // CHECK: alignment = 20
+      // CHECK: bitsize = 10
       // CHECK: preferred = 1
-      // CHECK: size = 10
+      // CHECK: size = 2
       "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
       "test.maybe_terminator"() : () -> ()
     }) { dlti.dl_spec = #dlti.dl_spec<
@@ -74,8 +80,9 @@ func @nested_outer_only() {
   "test.op_with_data_layout"() ({
     "test.op_with_data_layout"() ({
       // CHECK: alignment = 20
+      // CHECK: bitsize = 10
       // CHECK: preferred = 1
-      // CHECK: size = 10
+      // CHECK: size = 2
       "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
       "test.maybe_terminator"() : () -> ()
     }) : () -> ()
@@ -93,8 +100,9 @@ func @nested_middle_only() {
     "test.op_with_data_layout"() ({
       "test.op_with_data_layout"() ({
         // CHECK: alignment = 20
+        // CHECK: bitsize = 10
         // CHECK: preferred = 1
-        // CHECK: size = 10
+        // CHECK: size = 2
         "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
         "test.maybe_terminator"() : () -> ()
     }) : () -> ()
@@ -114,8 +122,9 @@ func @nested_combine_with_missing() {
     "test.op_with_data_layout"() ({
       "test.op_with_data_layout"() ({
         // CHECK: alignment = 20
+        // CHECK: bitsize = 10
         // CHECK: preferred = 30
-        // CHECK: size = 10
+        // CHECK: size = 2
         "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
         "test.maybe_terminator"() : () -> ()
       }) : () -> ()
@@ -125,8 +134,9 @@ func @nested_combine_with_missing() {
         #dlti.dl_entry<!test.test_type_with_layout<20>, ["alignment", 20]>
       >} : () -> ()
     // CHECK: alignment = 1
+    // CHECK: bitsize = 42
     // CHECK: preferred = 30
-    // CHECK: size = 42
+    // CHECK: size = 6
     "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<
@@ -142,8 +152,9 @@ func @nested_combine_all() {
     "test.op_with_data_layout"() ({
       "test.op_with_data_layout"() ({
         // CHECK: alignment = 20
+        // CHECK: bitsize = 3
         // CHECK: preferred = 30
-        // CHECK: size = 3
+        // CHECK: size = 1
         "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
         "test.maybe_terminator"() : () -> ()
       }) { dlti.dl_spec = #dlti.dl_spec<
@@ -151,8 +162,9 @@ func @nested_combine_all() {
           #dlti.dl_entry<!test.test_type_with_layout<30>, ["preferred", 30]>
         >} : () -> ()
       // CHECK: alignment = 20
+      // CHECK: bitsize = 10
       // CHECK: preferred = 30
-      // CHECK: size = 10
+      // CHECK: size = 2
       "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
       "test.maybe_terminator"() : () -> ()
     }) { dlti.dl_spec = #dlti.dl_spec<
@@ -160,8 +172,9 @@ func @nested_combine_all() {
         #dlti.dl_entry<!test.test_type_with_layout<20>, ["alignment", 20]>
       >} : () -> ()
     // CHECK: alignment = 1
+    // CHECK: bitsize = 42
     // CHECK: preferred = 30
-    // CHECK: size = 42
+    // CHECK: size = 6
     "test.data_layout_query"() : () -> !test.test_type_with_layout<10>
     "test.maybe_terminator"() : () -> ()
   }) { dlti.dl_spec = #dlti.dl_spec<

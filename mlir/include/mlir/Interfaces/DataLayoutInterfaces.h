@@ -35,7 +35,13 @@ namespace detail {
 /// Default handler for the type size request. Computes results for built-in
 /// types and dispatches to the DataLayoutTypeInterface for other types.
 unsigned getDefaultTypeSize(Type type, const DataLayout &dataLayout,
-                            ArrayRef<DataLayoutEntryInterface> params);
+                            DataLayoutEntryListRef params);
+
+/// Default handler for the type size in bits request. Computes results for
+/// built-in types and dispatches to the DataLayoutTypeInterface for other
+/// types.
+unsigned getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
+                                  DataLayoutEntryListRef params);
 
 /// Default handler for the required alignemnt request. Computes results for
 /// built-in types and dispatches to the DataLayoutTypeInterface for other
@@ -140,6 +146,9 @@ public:
   /// Returns the size of the given type in the current scope.
   unsigned getTypeSize(Type t) const;
 
+  /// Returns the size in bits of the given type in the current scope.
+  unsigned getTypeSizeInBits(Type t) const;
+
   /// Returns the required alignment of the given type in the current scope.
   unsigned getTypeABIAlignment(Type t) const;
 
@@ -166,6 +175,7 @@ private:
 
   /// Caches for individual requests.
   mutable DenseMap<Type, unsigned> sizes;
+  mutable DenseMap<Type, unsigned> bitsizes;
   mutable DenseMap<Type, unsigned> abiAlignments;
   mutable DenseMap<Type, unsigned> preferredAlignments;
 };

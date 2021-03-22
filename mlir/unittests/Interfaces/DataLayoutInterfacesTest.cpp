@@ -71,8 +71,8 @@ struct SingleQueryType
 
   static SingleQueryType get(MLIRContext *ctx) { return Base::get(ctx); }
 
-  unsigned getTypeSize(const DataLayout &layout,
-                       DataLayoutEntryListRef params) {
+  unsigned getTypeSizeInBits(const DataLayout &layout,
+                             DataLayoutEntryListRef params) const {
     static bool executed = false;
     if (executed)
       llvm::report_fatal_error("repeated call");
@@ -121,19 +121,20 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
     return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
   }
 
-  static unsigned getTypeSize(Type type, const DataLayout &dataLayout,
-                              DataLayoutEntryListRef params) {
+  static unsigned getTypeSizeInBits(Type type, const DataLayout &dataLayout,
+                                    DataLayoutEntryListRef params) {
     // Make a recursive query.
     if (type.isa<FloatType>())
-      return dataLayout.getTypeSize(
+      return dataLayout.getTypeSizeInBits(
           IntegerType::get(type.getContext(), type.getIntOrFloatBitWidth()));
 
     // Handle built-in types that are not handled by the default process.
     if (auto iType = type.dyn_cast<IntegerType>()) {
       for (DataLayoutEntryInterface entry : params)
         if (entry.getKey().dyn_cast<Type>() == type)
-          return entry.getValue().cast<IntegerAttr>().getValue().getZExtValue();
-      return iType.getIntOrFloatBitWidth();
+          return 8 *
+                 entry.getValue().cast<IntegerAttr>().getValue().getZExtValue();
+      return 8 * iType.getIntOrFloatBitWidth();
     }
 
     // Use the default process for everything else.
@@ -152,13 +153,30 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
   }
 };
 
+struct OpWith7BitByte
+    : public Op<OpWith7BitByte, DataLayoutOpInterface::Trait> {
+  using Op::Op;
+
+  static StringRef getOperationName() { return "dltest.op_with_7bit_byte"; }
+
+  DataLayoutSpecInterface getDataLayoutSpec() {
+    return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+  }
+
+  // Bytes are assumed to be 7-bit here.
+  static unsigned getTypeSize(Type type, const DataLayout &dataLayout,
+                              DataLayoutEntryListRef params) {
+    return llvm::divideCeil(dataLayout.getTypeSizeInBits(type), 7);
+  }
+};
+
 /// A dialect putting all the above together.
 struct DLTestDialect : Dialect {
   explicit DLTestDialect(MLIRContext *ctx)
       : Dialect(getDialectNamespace(), ctx, TypeID::get<DLTestDialect>()) {
     ctx->getOrLoadDialect<DLTIDialect>();
     addAttributes<CustomDataLayoutSpec>();
-    addOperations<OpWithLayout>();
+    addOperations<OpWithLayout, OpWith7BitByte>();
     addTypes<SingleQueryType, TypeNoLayout>();
   }
   static StringRef getDialectNamespace() { return "dltest"; }
@@ -222,6 +240,8 @@ TEST(DataLayout, FallbackDefault) {
   DataLayout layout(op);
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 2u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 42u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 2u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 8u);
@@ -243,6 +263,8 @@ TEST(DataLayout, EmptySpec) {
   DataLayout layout(op);
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 42u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 16u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 8u * 42u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 8u * 16u);
   EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 64u);
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 128u);
@@ -267,6 +289,8 @@ TEST(DataLayout, SpecWithEntries) {
   DataLayout layout(op);
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 5u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 6u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 40u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 48u);
   EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 16u);
@@ -274,6 +298,8 @@ TEST(DataLayout, SpecWithEntries) {
 
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 32)), 32u);
   EXPECT_EQ(layout.getTypeSize(Float32Type::get(&ctx)), 32u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 32)), 256u);
+  EXPECT_EQ(layout.getTypeSizeInBits(Float32Type::get(&ctx)), 256u);
   EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 32)), 32u);
   EXPECT_EQ(layout.getTypeABIAlignment(Float32Type::get(&ctx)), 32u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 32)), 64u);
@@ -354,4 +380,24 @@ TEST(DataLayout, UnimplementedTypeInterface) {
   ASSERT_DEATH(layout.getTypeSize(TypeNoLayout::get(&ctx)),
                "neither the scoping op nor the type class provide data layout "
                "information");
+}
+
+TEST(DataLayout, SevenBitByte) {
+  const char *ir = R"MLIR(
+"dltest.op_with_7bit_byte"() { dltest.layout = #dltest.spec<> } : () -> ()
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<DLTIDialect, DLTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningModuleRef module = parseSourceString(ir, &ctx);
+  auto op =
+      cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
+  DataLayout layout(op);
+
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 42u);
+  EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 32)), 32u);
+  EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
+  EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 32)), 5u);
 }
