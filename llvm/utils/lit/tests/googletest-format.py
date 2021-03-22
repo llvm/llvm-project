@@ -1,5 +1,8 @@
 # Check the various features of the GoogleTest format.
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/googletest-format/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -v %{inputs}/googletest-format > %t.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.
