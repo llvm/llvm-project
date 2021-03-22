@@ -79,17 +79,16 @@ llvm::json::Object toJSON(llvm::StringMap<ClassData> const &Obj) {
   return JsonObj;
 }
 
-void WriteJSON(std::string JsonPath,
-               llvm::StringMap<StringRef> const &ClassInheritance,
-               llvm::StringMap<std::vector<StringRef>> const &ClassesInClade,
-               llvm::StringMap<ClassData> const &ClassEntries) {
+void WriteJSON(std::string JsonPath, llvm::json::Object &&ClassInheritance,
+               llvm::json::Object &&ClassesInClade,
+               llvm::json::Object &&ClassEntries) {
   llvm::json::Object JsonObj;
 
   using llvm::json::toJSON;
 
-  JsonObj["classInheritance"] = ::toJSON(ClassInheritance);
-  JsonObj["classesInClade"] = ::toJSON(ClassesInClade);
-  JsonObj["classEntries"] = ::toJSON(ClassEntries);
+  JsonObj["classInheritance"] = std::move(ClassInheritance);
+  JsonObj["classesInClade"] = std::move(ClassesInClade);
+  JsonObj["classEntries"] = std::move(ClassEntries);
 
   std::error_code EC;
   llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::F_Text);
@@ -101,8 +100,11 @@ void WriteJSON(std::string JsonPath,
 }
 
 void ASTSrcLocProcessor::generate() {
-  WriteJSON(JsonPath, ClassInheritance, ClassesInClade, ClassEntries);
+  WriteJSON(JsonPath, ::toJSON(ClassInheritance), ::toJSON(ClassesInClade),
+            ::toJSON(ClassEntries));
 }
+
+void ASTSrcLocProcessor::generateEmpty() { WriteJSON(JsonPath, {}, {}, {}); }
 
 std::vector<std::string>
 CaptureMethods(std::string TypeString, const clang::CXXRecordDecl *ASTClass,
