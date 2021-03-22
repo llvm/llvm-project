@@ -97,8 +97,8 @@ entry:
   ret void
 }
 
-define dso_local void @test_amx_dp(i16 signext %row, i16 signext %col, i16 signext %k, <256 x i32> %c, <256 x i32> %a, <256 x i32> %b, <256 x i32>* %vptr) #0 {
-; CHECK-LABEL: @test_amx_dp(
+define dso_local void @test_amx_dpbssd(i16 signext %row, i16 signext %col, i16 signext %k, <256 x i32> %c, <256 x i32> %a, <256 x i32> %b, <256 x i32>* %vptr) #0 {
+; CHECK-LABEL: @test_amx_dpbssd(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_AMX:%.*]] = bitcast <256 x i32> [[A:%.*]] to x86_amx
 ; CHECK-NEXT:    [[B_AMX:%.*]] = bitcast <256 x i32> [[B:%.*]] to x86_amx
@@ -172,6 +172,84 @@ entry:
   ret void
 }
 
+define dso_local void @test_amx_dpbf16ps(i16 signext %row, i16 signext %col, i16 signext %k, <256 x i32> %c, <256 x i32> %a, <256 x i32> %b, <256 x i32>* %vptr) #0 {
+; CHECK-LABEL: @test_amx_dpbf16ps(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_AMX:%.*]] = bitcast <256 x i32> [[A:%.*]] to x86_amx
+; CHECK-NEXT:    [[B_AMX:%.*]] = bitcast <256 x i32> [[B:%.*]] to x86_amx
+; CHECK-NEXT:    [[C_AMX:%.*]] = bitcast <256 x i32> [[C:%.*]] to x86_amx
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i16 [[COL:%.*]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 [[K:%.*]], 2
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_ROWS_HEADER:%.*]]
+; CHECK:       tdpbf16ps.scalarize.rows.header:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_ROWS_IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TDPBF16PS_SCALARIZE_ROWS_STEP:%.*]], [[TDPBF16PS_SCALARIZE_ROWS_LATCH:%.*]] ]
+; CHECK-NEXT:    [[VEC_C_PHI_ROW:%.*]] = phi <256 x i32> [ [[C]], [[ENTRY]] ], [ [[TMP21:%.*]], [[TDPBF16PS_SCALARIZE_ROWS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_D_PHI_ROW:%.*]] = phi <256 x i32> [ zeroinitializer, [[ENTRY]] ], [ [[TMP23:%.*]], [[TDPBF16PS_SCALARIZE_ROWS_LATCH]] ]
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_ROWS_BODY:%.*]]
+; CHECK:       tdpbf16ps.scalarize.rows.body:
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_COLS_HEADER:%.*]]
+; CHECK:       tdpbf16ps.scalarize.cols.header:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_COLS_IV:%.*]] = phi i16 [ 0, [[TDPBF16PS_SCALARIZE_ROWS_BODY]] ], [ [[TDPBF16PS_SCALARIZE_COLS_STEP:%.*]], [[TDPBF16PS_SCALARIZE_COLS_LATCH:%.*]] ]
+; CHECK-NEXT:    [[VEC_C_PHI_COL:%.*]] = phi <256 x i32> [ [[VEC_C_PHI_ROW]], [[TDPBF16PS_SCALARIZE_ROWS_BODY]] ], [ [[TMP21]], [[TDPBF16PS_SCALARIZE_COLS_LATCH]] ]
+; CHECK-NEXT:    [[VEC_D_PHI_COL:%.*]] = phi <256 x i32> [ [[VEC_D_PHI_ROW]], [[TDPBF16PS_SCALARIZE_ROWS_BODY]] ], [ [[TMP23]], [[TDPBF16PS_SCALARIZE_COLS_LATCH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i16 [[TDPBF16PS_SCALARIZE_ROWS_IV]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TDPBF16PS_SCALARIZE_COLS_IV]]
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_COLS_BODY:%.*]]
+; CHECK:       tdpbf16ps.scalarize.cols.body:
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_INNER_HEADER:%.*]]
+; CHECK:       tdpbf16ps.scalarize.inner.header:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_INNER_IV:%.*]] = phi i16 [ 0, [[TDPBF16PS_SCALARIZE_COLS_BODY]] ], [ [[TDPBF16PS_SCALARIZE_INNER_STEP:%.*]], [[TDPBF16PS_SCALARIZE_INNER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[VEC_C_INNER_PHI:%.*]] = phi <256 x i32> [ [[VEC_C_PHI_COL]], [[TDPBF16PS_SCALARIZE_COLS_BODY]] ], [ [[TMP21]], [[TDPBF16PS_SCALARIZE_INNER_LATCH]] ]
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_INNER_BODY:%.*]]
+; CHECK:       tdpbf16ps.scalarize.inner.body:
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i16 [[TDPBF16PS_SCALARIZE_ROWS_IV]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[TMP4]], [[TDPBF16PS_SCALARIZE_INNER_IV]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i16 [[TDPBF16PS_SCALARIZE_INNER_IV]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[TMP6]], [[TDPBF16PS_SCALARIZE_COLS_IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <256 x i32> [[VEC_C_INNER_PHI]], i16 [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32 [[TMP8]] to float
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <256 x i32> [[A]], i16 [[TMP5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32 [[TMP10]] to <2 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <256 x i32> [[B]], i16 [[TMP7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32 [[TMP12]] to <2 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i16> [[TMP11]], <2 x i16> zeroinitializer, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[TMP14]] to <2 x float>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i16> [[TMP13]], <2 x i16> zeroinitializer, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP16]] to <2 x float>
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul <2 x float> [[TMP15]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP9]], <2 x float> [[TMP18]])
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast float [[TMP19]] to i32
+; CHECK-NEXT:    [[TMP21]] = insertelement <256 x i32> [[VEC_C_INNER_PHI]], i32 [[TMP20]], i16 [[TMP3]]
+; CHECK-NEXT:    br label [[TDPBF16PS_SCALARIZE_INNER_LATCH]]
+; CHECK:       tdpbf16ps.scalarize.inner.latch:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_INNER_STEP]] = add i16 [[TDPBF16PS_SCALARIZE_INNER_IV]], 1
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_INNER_COND:%.*]] = icmp ne i16 [[TDPBF16PS_SCALARIZE_INNER_STEP]], [[TMP1]]
+; CHECK-NEXT:    br i1 [[TDPBF16PS_SCALARIZE_INNER_COND]], label [[TDPBF16PS_SCALARIZE_INNER_HEADER]], label [[TDPBF16PS_SCALARIZE_COLS_LATCH]]
+; CHECK:       tdpbf16ps.scalarize.cols.latch:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_COLS_STEP]] = add i16 [[TDPBF16PS_SCALARIZE_COLS_IV]], 1
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_COLS_COND:%.*]] = icmp ne i16 [[TDPBF16PS_SCALARIZE_COLS_STEP]], [[TMP0]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <256 x i32> [[TMP21]], i16 [[TMP3]]
+; CHECK-NEXT:    [[TMP23]] = insertelement <256 x i32> [[VEC_D_PHI_COL]], i32 [[TMP22]], i16 [[TMP3]]
+; CHECK-NEXT:    br i1 [[TDPBF16PS_SCALARIZE_COLS_COND]], label [[TDPBF16PS_SCALARIZE_COLS_HEADER]], label [[TDPBF16PS_SCALARIZE_ROWS_LATCH]]
+; CHECK:       tdpbf16ps.scalarize.rows.latch:
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_ROWS_STEP]] = add i16 [[TDPBF16PS_SCALARIZE_ROWS_IV]], 1
+; CHECK-NEXT:    [[TDPBF16PS_SCALARIZE_ROWS_COND:%.*]] = icmp ne i16 [[TDPBF16PS_SCALARIZE_ROWS_STEP]], [[ROW:%.*]]
+; CHECK-NEXT:    br i1 [[TDPBF16PS_SCALARIZE_ROWS_COND]], label [[TDPBF16PS_SCALARIZE_ROWS_HEADER]], label [[CONTINUE:%.*]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <256 x i32> [[TMP23]] to x86_amx
+; CHECK-NEXT:    store <256 x i32> [[TMP23]], <256 x i32>* [[VPTR:%.*]], align 64
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.amx = bitcast <256 x i32> %a to x86_amx
+  %b.amx = bitcast <256 x i32> %b to x86_amx
+  %c.amx = bitcast <256 x i32> %c to x86_amx
+  %acc = call x86_amx @llvm.x86.tdpbf16ps.internal(i16 %row, i16 %col, i16 %k, x86_amx %c.amx, x86_amx %a.amx, x86_amx %b.amx)
+  %vec = bitcast x86_amx %acc to <256 x i32>
+  store <256 x i32> %vec, <256 x i32>* %vptr, align 64
+  ret void
+}
+
 define dso_local void @test_amx_store(i16 signext %row, i16 signext %col, i8 *%ptr, i64 %stride, <256 x i32>* %vptr, <256 x i32> %vec) #0 {
 ; CHECK-LABEL: @test_amx_store(
 ; CHECK-NEXT:  entry:
@@ -232,6 +310,7 @@ entry:
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
 declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
+declare x86_amx @llvm.x86.tdpbf16ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
 
 attributes #0 = { noinline nounwind optnone }
