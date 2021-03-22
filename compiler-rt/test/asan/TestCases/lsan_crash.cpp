@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O2 %s -o %t && %run %t
+// RUN: %clangxx_asan -O2 %s --std=c++11 -o %t && %run %t
 
 #include <atomic>
 #include <memory>
