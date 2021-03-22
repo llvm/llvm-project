@@ -69,16 +69,16 @@ define void @stores() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store i128 undef, i128* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store float undef, float* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store double undef, double* undef, align 4
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i8> undef, <2 x i8>* undef, align 1
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i16> undef, <2 x i16>* undef, align 2
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i32> undef, <2 x i32>* undef, align 4
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i8> undef, <2 x i8>* undef, align 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i16> undef, <2 x i16>* undef, align 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i32> undef, <2 x i32>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i64> undef, <2 x i64>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> undef, <4 x i32>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> undef, <8 x i16>* undef, align 2
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> undef, <16 x i8>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x float> undef, <4 x float>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x double> undef, <4 x double>* undef, align 4
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x float> undef, <2 x float>* undef, align 4
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <2 x float> undef, <2 x float>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x double> undef, <2 x double>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <2 x i64> undef, <2 x i64>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> undef, <4 x i32>* undef, align 1
@@ -256,16 +256,16 @@ define void @loads() {
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %5 = load i128, i128* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %6 = load float, float* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %7 = load double, double* undef, align 4
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %8 = load <2 x i8>, <2 x i8>* undef, align 1
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %9 = load <2 x i16>, <2 x i16>* undef, align 2
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %10 = load <2 x i32>, <2 x i32>* undef, align 4
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %8 = load <2 x i8>, <2 x i8>* undef, align 1
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %9 = load <2 x i16>, <2 x i16>* undef, align 2
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %10 = load <2 x i32>, <2 x i32>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %11 = load <2 x i64>, <2 x i64>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %12 = load <4 x i32>, <4 x i32>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %13 = load <8 x i16>, <8 x i16>* undef, align 2
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = load <16 x i8>, <16 x i8>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %15 = load <4 x float>, <4 x float>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %16 = load <4 x double>, <4 x double>* undef, align 4
-; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %17 = load <2 x float>, <2 x float>* undef, align 4
+; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %17 = load <2 x float>, <2 x float>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = load <2 x double>, <2 x double>* undef, align 4
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %19 = load <2 x i64>, <2 x i64>* undef, align 1
 ; CHECK-MVE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %20 = load <4 x i32>, <4 x i32>* undef, align 1
