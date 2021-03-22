@@ -1184,47 +1184,8 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
   ret void
 }
 
-; Temporary test to ensure amdgcn.wqm.helper works as amdgcn.live.mask
-define amdgpu_ps float @wqm_helper(i32 %count) {
-; SI-LABEL: wqm_helper:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_mov_b64 s[0:1], exec
-; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
-; SI-NEXT:    s_nop 1
-; SI-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; SI-NEXT:    ; return to shader part epilog
-;
-; GFX9-LABEL: wqm_helper:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_mov_b64 s[0:1], exec
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
-; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX9-NEXT:    ; return to shader part epilog
-;
-; GFX10-32-LABEL: wqm_helper:
-; GFX10-32:       ; %bb.0:
-; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
-; GFX10-32-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
-; GFX10-32-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX10-32-NEXT:    ; return to shader part epilog
-;
-; GFX10-64-LABEL: wqm_helper:
-; GFX10-64:       ; %bb.0:
-; GFX10-64-NEXT:    s_mov_b64 s[0:1], exec
-; GFX10-64-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
-; GFX10-64-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GFX10-64-NEXT:    ; return to shader part epilog
-  %live = call i1 @llvm.amdgcn.wqm.helper()
-  %live.cond = select i1 %live, i32 0, i32 %count
-  %live.v0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %live.cond, i32 85, i32 15, i32 15, i1 true)
-  %live.v0f = bitcast i32 %live.v0 to float
-  ret float %live.v0f
-}
-
 declare void @llvm.amdgcn.wqm.demote(i1) #0
 declare i1 @llvm.amdgcn.live.mask() #0
-declare i1 @llvm.amdgcn.wqm.helper() #0
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare float @llvm.amdgcn.wqm.f32(float) #1

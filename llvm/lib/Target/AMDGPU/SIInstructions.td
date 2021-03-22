@@ -392,9 +392,6 @@ def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>
 } // End Defs = [EXEC,SCC]
 } // End Uses = [EXEC]
 
-// FIXME: temporarily support old version of live mask intrinsic:
-def : GCNPat<(int_amdgcn_wqm_helper), (SI_LIVE_MASK)>;
-
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
   "; divergent unreachable"> {
