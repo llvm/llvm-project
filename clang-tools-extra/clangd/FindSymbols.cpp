@@ -376,10 +376,10 @@ public:
 
   /// Builds the document outline for the generated AST.
   std::vector<DocumentSymbol> build() {
-    SymBuilder DummyRoot;
+    SymBuilder Root;
     for (auto &TopLevel : AST.getLocalTopLevelDecls())
-      traverseDecl(TopLevel, DummyRoot);
-    return std::move(std::move(DummyRoot).build().children);
+      traverseDecl(TopLevel, Root);
+    return std::move(std::move(Root).build().children);
   }
 
 private:
