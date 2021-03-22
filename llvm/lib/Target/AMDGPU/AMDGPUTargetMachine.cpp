@@ -250,7 +250,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
-  initializeSIInsertSkipsPass(*PR);
+  initializeSILateBranchLoweringPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIPreAllocateWWMRegsPass(*PR);
@@ -1214,8 +1214,9 @@ void GCNPassConfig::addPreEmitPass() {
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIInsertHardClausesID);
 
-  addPass(&SIInsertSkipsPassID);
-  addPass(&SIPreEmitPeepholeID);
+  addPass(&SILateBranchLoweringPassID);
+  if (getOptLevel() > CodeGenOpt::None)
+    addPass(&SIPreEmitPeepholeID);
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
   // are multiple scheduling regions in a basic block, the regions are scheduled

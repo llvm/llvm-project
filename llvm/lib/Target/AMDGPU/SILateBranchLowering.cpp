@@ -1,4 +1,4 @@
-//===-- SIInsertSkips.cpp - Use predicates for control flow ---------------===//
+//===-- SILateBranchLowering.cpp - Final preparation of branches ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,28 +14,23 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/DepthFirstIterator.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "si-insert-skips"
+#define DEBUG_TYPE "si-late-branch-lowering"
 
 namespace {
 
-class SIInsertSkips : public MachineFunctionPass {
+class SILateBranchLowering : public MachineFunctionPass {
 private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   MachineDominatorTree *MDT = nullptr;
 
-  MachineBasicBlock *EarlyExitBlock = nullptr;
-  bool EarlyExitClearsExec = false;
-
-  void ensureEarlyExitBlock(MachineBasicBlock &MBB, bool ClearExec);
-
-  void earlyTerm(MachineInstr &MI);
+  void earlyTerm(MachineInstr &MI, MachineBasicBlock *EarlyExitBlock);
 
 public:
   static char ID;
@@ -43,12 +38,12 @@ public:
   unsigned MovOpc;
   Register ExecReg;
 
-  SIInsertSkips() : MachineFunctionPass(ID) {}
+  SILateBranchLowering() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
-    return "SI insert s_cbranch_execz instructions";
+    return "SI Final Branch Preparation";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -60,15 +55,15 @@ public:
 
 } // end anonymous namespace
 
-char SIInsertSkips::ID = 0;
+char SILateBranchLowering::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SIInsertSkips, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SILateBranchLowering, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_END(SIInsertSkips, DEBUG_TYPE,
+INITIALIZE_PASS_END(SILateBranchLowering, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
-char &llvm::SIInsertSkipsPassID = SIInsertSkips::ID;
+char &llvm::SILateBranchLoweringPassID = SILateBranchLowering::ID;
 
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,
@@ -89,27 +84,6 @@ static void generateEndPgm(MachineBasicBlock &MBB,
   BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ENDPGM)).addImm(0);
 }
 
-void SIInsertSkips::ensureEarlyExitBlock(MachineBasicBlock &MBB,
-                                         bool ClearExec) {
-  MachineFunction *MF = MBB.getParent();
-  DebugLoc DL;
-
-  if (!EarlyExitBlock) {
-    EarlyExitBlock = MF->CreateMachineBasicBlock();
-    MF->insert(MF->end(), EarlyExitBlock);
-    generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII,
-                   MF->getFunction().getCallingConv() ==
-                       CallingConv::AMDGPU_PS);
-    EarlyExitClearsExec = false;
-  }
-
-  if (ClearExec && !EarlyExitClearsExec) {
-    auto ExitI = EarlyExitBlock->getFirstNonPHI();
-    BuildMI(*EarlyExitBlock, ExitI, DL, TII->get(MovOpc), ExecReg).addImm(0);
-    EarlyExitClearsExec = true;
-  }
-}
-
 static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
                        MachineDominatorTree *MDT) {
   MachineBasicBlock *SplitBB = MBB.splitAt(MI, /*UpdateLiveIns*/ true);
@@ -125,11 +99,10 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->getBase().applyUpdates(DTUpdates);
 }
 
-void SIInsertSkips::earlyTerm(MachineInstr &MI) {
+void SILateBranchLowering::earlyTerm(MachineInstr &MI,
+                                     MachineBasicBlock *EarlyExitBlock) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc DL = MI.getDebugLoc();
-
-  ensureEarlyExitBlock(MBB, true);
 
   auto BranchMI = BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC0))
                       .addMBB(EarlyExitBlock);
@@ -142,7 +115,7 @@ void SIInsertSkips::earlyTerm(MachineInstr &MI) {
   MDT->getBase().insertEdge(&MBB, EarlyExitBlock);
 }
 
-bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
+bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
@@ -152,6 +125,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
   ExecReg = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
   SmallVector<MachineInstr *, 4> EarlyTermInstrs;
+  SmallVector<MachineInstr *, 1> EpilogInstrs;
   bool MadeChange = false;
 
   for (MachineBasicBlock &MBB : MF) {
@@ -163,7 +137,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       case AMDGPU::S_BRANCH:
         // Optimize out branches to the next block.
-        // FIXME: Shouldn't this be handled by BranchFolding?
+        // This only occurs in -O0 when BranchFolding is not executed.
         if (MBB.isLayoutSuccessor(MI.getOperand(0).getMBB())) {
           assert(&MI == &MBB.back());
           MI.eraseFromParent();
@@ -175,20 +149,72 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         EarlyTermInstrs.push_back(&MI);
         break;
 
+      case AMDGPU::SI_RETURN_TO_EPILOG:
+        EpilogInstrs.push_back(&MI);
+        break;
+
       default:
         break;
       }
     }
   }
 
-  for (MachineInstr *Instr : EarlyTermInstrs) {
-    // Early termination in GS does nothing
-    if (MF.getFunction().getCallingConv() != CallingConv::AMDGPU_GS)
-      earlyTerm(*Instr);
-    Instr->eraseFromParent();
+  // Lower any early exit branches first
+  if (!EarlyTermInstrs.empty()) {
+    MachineBasicBlock *EarlyExitBlock = MF.CreateMachineBasicBlock();
+    DebugLoc DL;
+
+    MF.insert(MF.end(), EarlyExitBlock);
+    BuildMI(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII->get(MovOpc),
+            ExecReg)
+        .addImm(0);
+    generateEndPgm(*EarlyExitBlock, EarlyExitBlock->end(), DL, TII,
+                   MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS);
+
+    for (MachineInstr *Instr : EarlyTermInstrs) {
+      // Early termination in GS does nothing
+      if (MF.getFunction().getCallingConv() != CallingConv::AMDGPU_GS)
+        earlyTerm(*Instr, EarlyExitBlock);
+      Instr->eraseFromParent();
+    }
+
+    EarlyTermInstrs.clear();
+    MadeChange = true;
   }
-  EarlyTermInstrs.clear();
-  EarlyExitBlock = nullptr;
+
+  // Now check return to epilog instructions occur at function end
+  if (!EpilogInstrs.empty()) {
+    MachineBasicBlock *EmptyMBBAtEnd = nullptr;
+    assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
+
+    // If there are multiple returns to epilog then all will
+    // become jumps to new empty end block.
+    if (EpilogInstrs.size() > 1) {
+      EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
+      MF.insert(MF.end(), EmptyMBBAtEnd);
+    }
+
+    for (auto MI : EpilogInstrs) {
+      auto MBB = MI->getParent();
+      if (MBB == &MF.back() && MI == &MBB->back())
+        continue;
+
+      // SI_RETURN_TO_EPILOG is not the last instruction.
+      // Jump to empty block at function end.
+      if (!EmptyMBBAtEnd) {
+        EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
+        MF.insert(MF.end(), EmptyMBBAtEnd);
+      }
+
+      MBB->addSuccessor(EmptyMBBAtEnd);
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
+          .addMBB(EmptyMBBAtEnd);
+      MI->eraseFromParent();
+      MadeChange = true;
+    }
+
+    EpilogInstrs.clear();
+  }
 
   return MadeChange;
 }
