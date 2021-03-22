@@ -48,7 +48,13 @@ class ASTSrcLocGenerationAction : public clang::ASTFrontendAction {
 public:
   ASTSrcLocGenerationAction() : Processor(JsonOutputPath) {}
 
-  ~ASTSrcLocGenerationAction() { Processor.generate(); }
+  void ExecuteAction() override {
+    clang::ASTFrontendAction::ExecuteAction();
+    if (getCompilerInstance().getDiagnostics().getNumErrors() > 0)
+      Processor.generateEmpty();
+    else
+      Processor.generate();
+  }
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
