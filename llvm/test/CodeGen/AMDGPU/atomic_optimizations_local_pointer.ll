@@ -2,8 +2,8 @@
 ; RUN: llc -march=amdgcn -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX7LESS %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX8 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1064 %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1032 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX1064 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX1032 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
@@ -1169,35 +1169,20 @@ define amdgpu_kernel void @add_i64_varying(i64 addrspace(1)* %out) {
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: add_i64_varying:
-; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
-; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1064-NEXT:    s_mov_b32 s2, -1
-; GFX1064-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1064-NEXT:    ds_add_rtn_u64 v[0:1], v2, v[0:1]
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    buffer_gl0_inv
-; GFX1064-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX1064-NEXT:    s_endpgm
-;
-; GFX1032-LABEL: add_i64_varying:
-; GFX1032:       ; %bb.0: ; %entry
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
-; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1032-NEXT:    s_mov_b32 s2, -1
-; GFX1032-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1032-NEXT:    ds_add_rtn_u64 v[0:1], v2, v[0:1]
-; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    buffer_gl0_inv
-; GFX1032-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX1032-NEXT:    s_endpgm
+; GFX10-LABEL: add_i64_varying:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX10-NEXT:    s_mov_b32 s2, -1
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_add_rtn_u64 v[0:1], v2, v[0:1]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX10-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
@@ -2376,35 +2361,20 @@ define amdgpu_kernel void @sub_i64_varying(i64 addrspace(1)* %out) {
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1064-LABEL: sub_i64_varying:
-; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1064-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
-; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1064-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1064-NEXT:    s_mov_b32 s2, -1
-; GFX1064-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1064-NEXT:    ds_sub_rtn_u64 v[0:1], v2, v[0:1]
-; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    buffer_gl0_inv
-; GFX1064-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX1064-NEXT:    s_endpgm
-;
-; GFX1032-LABEL: sub_i64_varying:
-; GFX1032:       ; %bb.0: ; %entry
-; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1032-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
-; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX1032-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX1032-NEXT:    s_mov_b32 s2, -1
-; GFX1032-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX1032-NEXT:    ds_sub_rtn_u64 v[0:1], v2, v[0:1]
-; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    buffer_gl0_inv
-; GFX1032-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
-; GFX1032-NEXT:    s_endpgm
+; GFX10-LABEL: sub_i64_varying:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    v_mov_b32_e32 v2, local_var64@abs32@lo
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX10-NEXT:    s_mov_b32 s2, -1
+; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    ds_sub_rtn_u64 v[0:1], v2, v[0:1]
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    buffer_gl0_inv
+; GFX10-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; GFX10-NEXT:    s_endpgm
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %zext = zext i32 %lane to i64
