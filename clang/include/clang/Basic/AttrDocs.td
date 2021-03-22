@@ -3026,19 +3026,31 @@ It is only supported when using the Microsoft C++ ABI.
 def LifetimeBoundDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``lifetimebound`` attribute indicates that a resource owned by
-a function parameter or implicit object parameter
-is retained by the return value of the annotated function
-(or, for a parameter of a constructor, in the value of the constructed object).
-It is only supported in C++.
+The ``lifetimebound`` attribute on a function parameter or implicit object
+parameter indicates that objects that are referred to by that parameter may
+also be referred to by the return value of the annotated function (or, for a
+parameter of a constructor, by the value of the constructed object). It is only
+supported in C++.
 
-This attribute causes warnings to be produced if a temporary object does not
-live long enough. For example:
+By default, a reference is considered to refer to its referenced object, a
+pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
+is considered to refer to its underlying array, and aggregates (arrays and
+simple ``struct``s) are considered to refer to all objects that their
+subobjects refer to, recursively.
+
+Clang warns if it is able to detect that an object or reference refers to
+another object with a shorter lifetime. For example, Clang will warn if a
+function returns a reference to a local variable, or if a reference is bound to
+a temporary object whose lifetime is not extended. By using the
+``lifetimebound`` attribute, this determination can be extended to look through
+user-declared functions. For example:
 
 .. code-block:: c++
 
+    // Returns m[key] if key is present, or default_value if not.
     template<typename T, typename U>
-    const U &get_or_default(std::map<T, U> &m, const T &key,
+    const U &get_or_default(const std::map<T, U> &m [[clang::lifetimebound]],
+                            const T &key, /* note, not lifetimebound */
                             const U &default_value [[clang::lifetimebound]]);
 
     std::map<std::string, std::string> m;
@@ -3046,11 +3058,9 @@ live long enough. For example:
     // will be destroyed at the end of the full-expression
     const std::string &val = get_or_default(m, "foo"s, "bar"s);
 
-When applied to a reference parameter, the referenced object is assumed to be
-retained by the return value of the function. When applied to a non-reference
-parameter (for example, a pointer or a class type), all temporaries referenced
-by the parameter are assumed to be retained by the return value of the
-function.
+    // No warning in this case.
+    std::string def_val = "bar"s;
+    const std::string &val = get_or_default(m, "foo"s, def_val);
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
