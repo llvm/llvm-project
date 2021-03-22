@@ -229,38 +229,33 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
 /// args as SubClass's template arguments.
 bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   Record *SC = SubClass.Rec;
-  // Add all of the values in the subclass into the current class.
-  for (const RecordVal &Val : SC->getValues())
-    if (AddValue(CurRec, SubClass.RefRange.Start, Val))
-      return true;
-
-  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
-
-  // Ensure that an appropriate number of template arguments are specified.
-  if (TArgs.size() < SubClass.TemplateArgs.size())
-    return Error(SubClass.RefRange.Start,
-                 "More template args specified than expected");
-
-  // Loop over all of the template arguments, setting them to the specified
-  // value or leaving them as the default if necessary.
   MapResolver R(CurRec);
 
-  for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-    if (i < SubClass.TemplateArgs.size()) {
-      // If a value is specified for this template arg, set it now.
-      if (SetValue(CurRec, SubClass.RefRange.Start, TArgs[i],
-                   None, SubClass.TemplateArgs[i]))
+  // Loop over all the subclass record's fields. Add template arguments
+  // to the resolver map. Add regular fields to the new record.
+  for (const RecordVal &Field : SC->getValues()) {
+    if (Field.isTemplateArg()) {
+      R.set(Field.getNameInit(), Field.getValue());
+    } else {
+      if (AddValue(CurRec, SubClass.RefRange.Start, Field))
         return true;
-    } else if (!CurRec->getValue(TArgs[i])->getValue()->isComplete()) {
-      return Error(SubClass.RefRange.Start,
-                   "Value not specified for template argument #" +
-                   Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
-                   ") of subclass '" + SC->getNameInitAsString() + "'!");
     }
+  }
 
-    R.set(TArgs[i], CurRec->getValue(TArgs[i])->getValue());
+  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
+  assert(SubClass.TemplateArgs.size() <= TArgs.size() &&
+         "Too many template arguments allowed");
 
-    CurRec->removeValue(TArgs[i]);
+  // Loop over the template argument names. If a value was specified,
+  // reset the map value. If not and there was no default, complain.
+  for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
+    if (I < SubClass.TemplateArgs.size())
+      R.set(TArgs[I], SubClass.TemplateArgs[I]);
+    else if (!R.isComplete(TArgs[I]))
+      return Error(SubClass.RefRange.Start,
+                   "Value not specified for template argument '" +
+                       TArgs[I]->getAsUnquotedString() + "' (#" + Twine(I) +
+                       ") of parent class '" + SC->getNameInitAsString() + "'");
   }
 
   Init *Name;
@@ -584,8 +579,8 @@ MultiClass *TGParser::ParseMultiClassID() {
   return Result;
 }
 
-/// ParseSubClassReference - Parse a reference to a subclass or to a templated
-/// subclass.  This returns a SubClassRefTy with a null Record* on error.
+/// ParseSubClassReference - Parse a reference to a subclass or a
+/// multiclass. This returns a SubClassRefTy with a null Record* on error.
 ///
 ///  SubClassRef ::= ClassID
 ///  SubClassRef ::= ClassID '<' ValueList '>'
@@ -609,25 +604,18 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
     return Result;
   }
 
-  if (Lex.getCode() == tgtok::greater) {
-    TokError("subclass reference requires a non-empty list of template values");
-    Result.Rec = nullptr;
+  if (ParseTemplateArgValueList(Result.TemplateArgs, CurRec, Result.Rec)) {
+    Result.Rec = nullptr; // Error parsing value list.
     return Result;
   }
 
-  ParseValueList(Result.TemplateArgs, CurRec, Result.Rec);
-  if (Result.TemplateArgs.empty()) {
-    Result.Rec = nullptr;   // Error parsing value list.
+  if (CheckTemplateArgValues(Result.TemplateArgs, Result.RefRange.Start,
+                             Result.Rec)) {
+    Result.Rec = nullptr; // Error checking value list.
     return Result;
   }
 
-  if (!consume(tgtok::greater)) {
-    TokError("expected '>' in template value list");
-    Result.Rec = nullptr;
-    return Result;
-  }
   Result.RefRange.End = Lex.getLoc();
-
   return Result;
 }
 
@@ -652,23 +640,12 @@ ParseSubMultiClassReference(MultiClass *CurMC) {
     return Result;
   }
 
-  if (Lex.getCode() == tgtok::greater) {
-    TokError("subclass reference requires a non-empty list of template values");
-    Result.MC = nullptr;
+  if (ParseTemplateArgValueList(Result.TemplateArgs, &CurMC->Rec,
+                                &Result.MC->Rec)) {
+    Result.MC = nullptr; // Error parsing value list.
     return Result;
   }
 
-  ParseValueList(Result.TemplateArgs, &CurMC->Rec, &Result.MC->Rec);
-  if (Result.TemplateArgs.empty()) {
-    Result.MC = nullptr;   // Error parsing value list.
-    return Result;
-  }
-
-  if (!consume(tgtok::greater)) {
-    TokError("expected '>' in template value list");
-    Result.MC = nullptr;
-    return Result;
-  }
   Result.RefRange.End = Lex.getLoc();
 
   return Result;
@@ -2032,15 +2009,9 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     if (Lex.Lex() != tgtok::less)  // consume the Id.
       return ParseIDValue(CurRec, Name, NameLoc, Mode);    // Value ::= IDValue
 
-    // Value ::= ID '<' ValueListNE '>'
-    if (Lex.Lex() == tgtok::greater) {
-      TokError("expected non-empty value list");
-      return nullptr;
-    }
-
-    // This is a CLASS<initvalslist> expression.  This is supposed to synthesize
-    // a new anonymous definition, deriving from CLASS<initvalslist> with no
-    // body.
+    // Value ::= CLASSID '<' ValueListNE '>' (CLASSID has been consumed)
+    // This is supposed to synthesize a new anonymous definition, deriving
+    // from the class with the template arguments, but no body.
     Record *Class = Records.getClass(Name->getValue());
     if (!Class) {
       Error(NameLoc, "Expected a class name, got '" + Name->getValue() + "'");
@@ -2048,44 +2019,26 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     }
 
     SmallVector<Init *, 8> Args;
-    ParseValueList(Args, CurRec, Class);
-    if (Args.empty()) return nullptr;
+    Lex.Lex(); // consume the <
+    if (ParseTemplateArgValueList(Args, CurRec, Class))
+      return nullptr; // Error parsing value list.
 
-    if (!consume(tgtok::greater)) {
-      TokError("expected '>' at end of value list");
-      return nullptr;
-    }
+    if (CheckTemplateArgValues(Args, NameLoc, Class))
+      return nullptr; // Error checking template argument values.
 
-    // Typecheck the template arguments list
-    ArrayRef<Init *> ExpectedArgs = Class->getTemplateArgs();
-    if (ExpectedArgs.size() < Args.size()) {
-      Error(NameLoc,
-            "More template args specified than expected");
-      return nullptr;
-    }
-
-    for (unsigned i = 0, e = ExpectedArgs.size(); i != e; ++i) {
-      RecordVal *ExpectedArg = Class->getValue(ExpectedArgs[i]);
-      if (i < Args.size()) {
-        if (TypedInit *TI = dyn_cast<TypedInit>(Args[i])) {
-          RecTy *ExpectedType = ExpectedArg->getType();
-          if (!TI->getType()->typeIsConvertibleTo(ExpectedType)) {
-            Error(NameLoc,
-                  "Value specified for template argument #" + Twine(i) + " (" +
-                  ExpectedArg->getNameInitAsString() + ") is of type '" +
-                  TI->getType()->getAsString() + "', expected '" +
-                  ExpectedType->getAsString() + "': " + TI->getAsString());
-            return nullptr;
-          }
-          continue;
-        }
-      } else if (ExpectedArg->getValue()->isComplete())
-        continue;
-
-      Error(NameLoc,
-            "Value not specified for template argument #" + Twine(i) + " (" +
-            ExpectedArgs[i]->getAsUnquotedString() + ")");
-      return nullptr;
+    // Loop through the arguments that were not specified and make sure
+    // they have a complete value.
+    // TODO: If we just keep a required argument count, we can do away
+    //       with this checking.
+    ArrayRef<Init *> TArgs = Class->getTemplateArgs();
+    for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
+      RecordVal *Arg = Class->getValue(TArgs[I]);
+      if (!Arg->getValue()->isComplete()) 
+        Error(NameLoc, "Value not specified for template argument '" +
+                           TArgs[I]->getAsUnquotedString() + "' (#" + Twine(I) +
+                           ") of parent class '" +
+                           Class->getNameInitAsString() + "'");
+              
     }
 
     return VarDefInit::get(Class, Args)->Fold();
@@ -2158,7 +2111,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     }
 
     if (Lex.getCode() != tgtok::r_square) {
-      ParseValueList(Vals, CurRec, nullptr,
+      ParseValueList(Vals, CurRec,
                      GivenListTy ? GivenListTy->getElementType() : nullptr);
       if (Vals.empty()) return nullptr;
     }
@@ -2522,32 +2475,15 @@ void TGParser::ParseDagArgList(
   }
 }
 
-/// ParseValueList - Parse a comma separated list of values, returning them as a
-/// vector.  Note that this always expects to be able to parse at least one
-/// value.  It returns an empty list if this is not possible.
+/// ParseValueList - Parse a comma separated list of values, returning them
+/// in a vector. Note that this always expects to be able to parse at least one
+/// value. It returns an empty list if this is not possible.
 ///
 ///   ValueList ::= Value (',' Value)
 ///
-void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
-                              Record *ArgsRec, RecTy *EltTy) {
-  RecTy *ItemType = EltTy;
-  unsigned int ArgN = 0;
-  if (ArgsRec && !EltTy) {
-    ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
-    if (TArgs.empty()) {
-      TokError("template argument provided to non-template class");
-      Result.clear();
-      return;
-    }
-    const RecordVal *RV = ArgsRec->getValue(TArgs[ArgN]);
-    if (!RV) {
-      errs() << "Cannot find template arg " << ArgN << " (" << TArgs[ArgN]
-        << ")\n";
-    }
-    assert(RV && "Template argument record not found??");
-    ItemType = RV->getType();
-    ++ArgN;
-  }
+void TGParser::ParseValueList(SmallVectorImpl<Init *> &Result, Record *CurRec,
+                              RecTy *ItemType) {
+
   Result.push_back(ParseValue(CurRec, ItemType));
   if (!Result.back()) {
     Result.clear();
@@ -2558,19 +2494,6 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
     // ignore trailing comma for lists
     if (Lex.getCode() == tgtok::r_square)
       return;
-
-    if (ArgsRec && !EltTy) {
-      ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
-      if (ArgN >= TArgs.size()) {
-        TokError("too many template arguments");
-        Result.clear();
-        return;
-      }
-      const RecordVal *RV = ArgsRec->getValue(TArgs[ArgN]);
-      assert(RV && "Template argument record not found??");
-      ItemType = RV->getType();
-      ++ArgN;
-    }
     Result.push_back(ParseValue(CurRec, ItemType));
     if (!Result.back()) {
       Result.clear();
@@ -2579,9 +2502,48 @@ void TGParser::ParseValueList(SmallVectorImpl<Init*> &Result, Record *CurRec,
   }
 }
 
+// ParseTemplateArgValueList - Parse a template argument list with the syntax
+// shown, filling in the Result vector. The open angle has been consumed.
+// An empty argument list is allowed. Return false if okay, true if an 
+// error was detected.
+//
+//   TemplateArgList ::= '<' [Value {',' Value}*] '>'
+bool TGParser::ParseTemplateArgValueList(SmallVectorImpl<Init *> &Result,
+                                         Record *CurRec, Record *ArgsRec) {
+
+  assert(Result.empty() && "Result vector is not empty");
+  ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
+  unsigned ArgIndex = 0;
+  RecTy *ItemType;
+
+  if (consume(tgtok::greater)) // empty value list
+    return false;
+
+  while (true) {
+    if (ArgIndex >= TArgs.size()) {
+      TokError("Too many template arguments: " + utostr(ArgIndex + 1));
+      return true;
+    }
+    const RecordVal *Arg = ArgsRec->getValue(TArgs[ArgIndex]);
+    assert(Arg && "Template argument record not found");
+
+    ItemType = Arg->getType();
+    Init *Value = ParseValue(CurRec, ItemType);
+    if (!Value)
+      return true;
+    Result.push_back(Value);
+
+    if (consume(tgtok::greater)) // end of argument list?
+      return false;
+    if (!consume(tgtok::comma)) // must be comma
+      return true;
+    ++ArgIndex; 
+  }
+}
+
 /// ParseDeclaration - Read a declaration, returning the name of field ID, or an
-/// empty string on error.  This can happen in a number of different context's,
-/// including within a def or in the template args for a def (which which case
+/// empty string on error.  This can happen in a number of different contexts,
+/// including within a def or in the template args for a class (in which case
 /// CurRec will be non-null) and within the template args for a multiclass (in
 /// which case CurRec will be null, but CurMultiClass will be set).  This can
 /// also happen within a def that is within a multiclass, which will set both
@@ -2612,23 +2574,28 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
   Init *DeclName = StringInit::get(Str);
   Lex.Lex();
 
-  if (ParsingTemplateArgs) {
-    if (CurRec)
-      DeclName = QualifyName(*CurRec, CurMultiClass, DeclName, ":");
-    else
-      assert(CurMultiClass);
-    if (CurMultiClass)
-      DeclName = QualifyName(CurMultiClass->Rec, CurMultiClass, DeclName,
-                             "::");
-  }
+  bool BadField;
+  if (!ParsingTemplateArgs) { // def, possibly in a multiclass
+    BadField = AddValue(CurRec, IdLoc,
+                        RecordVal(DeclName, IdLoc, Type,
+                                  HasField ? RecordVal::FK_NonconcreteOK
+                                           : RecordVal::FK_Normal));
 
-  // Add the field to the record.
-  if (AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
-                                        HasField ? RecordVal::FK_NonconcreteOK
-                                                 : RecordVal::FK_Normal)))
+  } else if (CurRec) { // class template argument
+    DeclName = QualifyName(*CurRec, CurMultiClass, DeclName, ":");
+    BadField = AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
+                                                 RecordVal::FK_TemplateArg));
+
+  } else { // multiclass template argument
+    assert(CurMultiClass && "invalid context for template argument");
+    DeclName = QualifyName(CurMultiClass->Rec, CurMultiClass, DeclName, "::");
+    BadField = AddValue(CurRec, IdLoc, RecordVal(DeclName, IdLoc, Type,
+                                                 RecordVal::FK_TemplateArg));
+  }
+  if (BadField)
     return nullptr;
 
-  // If a value is present, parse it.
+  // If a value is present, parse it and set new field's value.
   if (consume(tgtok::equal)) {
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
@@ -2715,7 +2682,7 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
   if (!Ranges.empty()) {
     assert(!IterType && "Type already initialized?");
     IterType = IntRecTy::get();
-    std::vector<Init*> Values;
+    std::vector<Init *> Values;
     for (unsigned R : Ranges)
       Values.push_back(IntInit::get(R));
     ForeachListValue = ListInit::get(Values, IterType);
@@ -2729,7 +2696,7 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
 
 /// ParseTemplateArgList - Read a template argument list, which is a non-empty
 /// sequence of template-declarations in <>'s.  If CurRec is non-null, these are
-/// template args for a def, which may or may not be in a multiclass.  If null,
+/// template args for a class, which may or may not be in a multiclass. If null,
 /// these are the template args for a multiclass.
 ///
 ///    TemplateArgList ::= '<' Declaration (',' Declaration)* '>'
@@ -3493,32 +3460,28 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
   while (true) {
     if (!Ref.Rec) return true;
 
-    // To instantiate a multiclass, we need to first get the multiclass, then
-    // instantiate each def contained in the multiclass with the SubClassRef
-    // template parameters.
+    // To instantiate a multiclass, we get the multiclass and then loop
+    // through its template argument names. Substs contains a substitution
+    // value for each argument, either the value specified or the default.
+    // Then we can resolve the template arguments.
     MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
     assert(MC && "Didn't lookup multiclass correctly?");
-    ArrayRef<Init*> TemplateVals = Ref.TemplateArgs;
 
-    // Verify that the correct number of template arguments were specified.
+    ArrayRef<Init *> TemplateVals = Ref.TemplateArgs;
     ArrayRef<Init *> TArgs = MC->Rec.getTemplateArgs();
-    if (TArgs.size() < TemplateVals.size())
-      return Error(SubClassLoc,
-                   "more template args specified than multiclass expects");
-
     SubstStack Substs;
+
     for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
       if (i < TemplateVals.size()) {
         Substs.emplace_back(TArgs[i], TemplateVals[i]);
       } else {
         Init *Default = MC->Rec.getValue(TArgs[i])->getValue();
-        if (!Default->isComplete()) {
+        if (!Default->isComplete())
           return Error(SubClassLoc,
-                       "value not specified for template argument #" +
-                           Twine(i) + " (" + TArgs[i]->getAsUnquotedString() +
-                           ") of multiclass '" + MC->Rec.getNameInitAsString() +
-                           "'");
-        }
+                       "value not specified for template argument '" +
+                           TArgs[i]->getAsUnquotedString() + "' (#" +
+                           Twine(i) + ") of multiclass '" +
+                           MC->Rec.getNameInitAsString() + "'");
         Substs.emplace_back(TArgs[i], Default);
       }
     }
@@ -3537,7 +3500,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 
     SubClassLoc = Lex.getLoc();
 
-    // A defm can inherit from regular classes (non-multiclass) as
+    // A defm can inherit from regular classes (non-multiclasses) as
     // long as they come in the end of the inheritance list.
     InheritFromClass = (Records.getClass(Lex.getCurStrVal()) != nullptr);
 
@@ -3640,6 +3603,41 @@ bool TGParser::ParseFile() {
     return false;
 
   return TokError("Unexpected token at top level");
+}
+
+// Check the types of the template argument values for a class
+// inheritance, multiclass invocation, or anonymous class invocation.
+// If necessary, replace an argument with a cast to the required type.
+// The argument count has already been checked.
+bool TGParser::CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
+                                      SMLoc Loc, Record *ArgsRec) {
+
+  ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
+
+  for (unsigned I = 0, E = Values.size(); I < E; ++I) {
+    RecordVal *Arg = ArgsRec->getValue(TArgs[I]);
+    RecTy *ArgType = Arg->getType();
+    auto *Value = Values[I];
+
+    if (TypedInit *ArgValue = dyn_cast<TypedInit>(Value)) { 
+      auto *CastValue = ArgValue->getCastTo(ArgType);
+      if (CastValue) {
+        assert((!isa<TypedInit>(CastValue) ||
+                cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
+               "result of template arg value cast has wrong type");
+        Values[I] = CastValue;
+      } else {
+        PrintFatalError(Loc,
+                        "Value specified for template argument '" +
+                            Arg->getNameInitAsString() + "' (#" + Twine(I) +
+                            ") is of type " + ArgValue->getType()->getAsString() +
+                            "; expected type " + ArgType->getAsString() + ": " +
+                            ArgValue->getAsString());
+      }
+    }
+  }
+
+  return false;
 }
 
 // Check an assertion: Obtain the condition value and be sure it is true.
