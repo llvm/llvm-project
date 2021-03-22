@@ -284,7 +284,8 @@ def find_tests_for_inputs(lit_config, inputs, indirectlyRunCheck):
     # This data is no longer needed but keeping it around causes awful
     # performance problems while the test suites run.
     for k, suite in test_suite_cache.items():
-      suite[0].test_times = None
+      if suite[0]:
+        suite[0].test_times = None
 
     # If there were any errors during test discovery, exit now.
     if lit_config.numErrors:

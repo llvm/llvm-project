@@ -1,5 +1,8 @@
 # Check the internal shell handling component of the ShTest format.
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-shell/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -v %{inputs}/shtest-shell > %t.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.
@@ -290,7 +293,7 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-0.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-0.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: dir1unique
 # CHECK: Only in {{.*}}dir2: dir2unique
@@ -298,7 +301,7 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-1.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-1.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: *** {{.*}}dir1{{.*}}subdir{{.*}}f01
 # CHECK: --- {{.*}}dir2{{.*}}subdir{{.*}}f01
@@ -308,35 +311,35 @@
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-2.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-2.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir2: extrafile
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-3.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-3.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: extra_subdir
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-4.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-4.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: File {{.*}}dir1{{.*}}extra_subdir is a directory while file {{.*}}dir2{{.*}}extra_subdir is a regular file
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-5.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-5.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: Only in {{.*}}dir1: extra_subdir
 # CHECK: error: command failed with exit status: 1
 
 # CHECK: FAIL: shtest-shell :: diff-r-error-6.txt
 # CHECK: *** TEST 'shtest-shell :: diff-r-error-6.txt' FAILED ***
-# CHECK: $ "diff" "-r" 
+# CHECK: $ "diff" "-r"
 # CHECK: # command output:
 # CHECK: File {{.*}}dir1{{.*}}extra_file is a regular empty file while file {{.*}}dir2{{.*}}extra_file is a directory
 # CHECK: error: command failed with exit status: 1

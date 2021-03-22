@@ -87,29 +87,29 @@ function generate-cmake() {
 
 function check-cxx-cxxabi() {
     echo "+++ Running the libc++ tests"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}" check-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 
     echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
     echo "+++ Running the libc++ ABI list test"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx-abilist || (
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx-abilist || (
         echo "+++ Generating the libc++ ABI list after failed check"
-        ${NINJA} -C "${BUILD_DIR}" generate-cxx-abilist
+        ${NINJA} -vC "${BUILD_DIR}" generate-cxx-abilist
         false
     )
 }
 
 function check-cxx-benchmarks() {
     echo "--- Running the benchmarks"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx-benchmarks
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
 case "${BUILDER}" in
@@ -330,7 +330,7 @@ documentation)
     generate-cmake -DLLVM_ENABLE_SPHINX=ON
 
     echo "+++ Generating documentation"
-    ${NINJA} -C "${BUILD_DIR}" docs-libcxx-html
+    ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
 unified-standalone)
     export CC=clang
@@ -376,16 +376,16 @@ legacy-standalone)
           -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
 
     echo "+++ Building libc++abi"
-    ${NINJA} -C "${BUILD_DIR}/libcxxabi" cxxabi
+    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" cxxabi
 
     echo "+++ Building libc++"
-    ${NINJA} -C "${BUILD_DIR}/libcxx" cxx
+    ${NINJA} -vC "${BUILD_DIR}/libcxx" cxx
 
     echo "+++ Running the libc++ tests"
-    ${NINJA} -C "${BUILD_DIR}/libcxx" check-cxx
+    ${NINJA} -vC "${BUILD_DIR}/libcxx" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}/libcxxabi" check-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 aarch64)
     clean

@@ -37,6 +37,11 @@ static bool areTensorOpsFusable(LinalgOp producer, LinalgOp consumer,
   if (producer.getNumParallelLoops() != producer.getNumLoops())
     return false;
 
+  // Only allow fusing the producer of an input operand for now.
+  // TODO: allow fusing the producer of an output operand.
+  if (consumerIdx >= consumer.getNumInputs())
+    return false;
+
   // Get the consumer index map. The number of results of the consumer index
   // map must match the number of loops of the producer.
   AffineMap consumerIndexMap = consumer.getIndexingMap(consumerIdx);
@@ -120,60 +125,86 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
        isa<IndexedGenericOp>(consumer.getOperation()))
           ? std::max(producer.getNumLoops(), consumer.getNumLoops())
           : 0;
-  // Firstly, add all the indices to the block arguments.
+
+  // 0. Firstly, add all the indices to the block arguments.
   for (unsigned i = 0, e = numFusedOpIndices; i < e; ++i)
     fusedBlock->addArgument(rewriter.getIndexType());
-  // Map the arguments for the unmodified args from the consumer.
-  for (auto consumerArg : llvm::enumerate(consumerBlock.getArguments())) {
-    if (consumerArg.index() == consumerIdx + numConsumerIndices) {
-      // Map the arguments for the args from the producer.
-      for (auto producerArg :
-           llvm::enumerate(producerBlock.getArguments().take_front(
-               producer.getNumInputs() + numProducerIndices))) {
-        // If producer is an indexed_generic op, map the indices from consumer
-        // loop to producer loop (because the fusedOp is built based on
-        // consumer's perspective).
-        if (producerArg.index() < numProducerIndices) {
-          auto newIndex = rewriter.create<mlir::AffineApplyOp>(
-              producer.getLoc(),
-              consumerToProducerLoopsMap.getSubMap(producerArg.index()),
-              fusedBlock->getArguments().take_front(numFusedOpIndices));
-          mapper.map(producerArg.value(), newIndex);
-        } else {
-          mapper.map(producerArg.value(),
-                     fusedBlock->addArgument(producerArg.value().getType()));
-        }
-      }
-      continue;
-    }
-
-    // If consumer is an indexed_generic op, map the indices to the block
-    // arguments directly. Otherwise, add the same type of argument and map to
-    // it.
-    if (consumerArg.index() < numConsumerIndices) {
-      mapper.map(consumerArg.value(),
-                 fusedBlock->getArgument(consumerArg.index()));
-    } else {
-      mapper.map(consumerArg.value(),
-                 fusedBlock->addArgument(consumerArg.value().getType()));
-    }
+  // 1. Map consumer indices to fusedBlock indices 1-1.
+  mapper.map(consumerBlock.getArguments().take_front(numConsumerIndices),
+             fusedBlock->getArguments().take_front(numConsumerIndices));
+  // 2. Embed producer indices into fusedBlock index space 1-1.
+  for (auto it :
+       llvm::zip(producerBlock.getArguments().take_front(numProducerIndices),
+                 fusedBlock->getArguments().take_front(numProducerIndices))) {
+    auto newIndex = rewriter.create<mlir::AffineApplyOp>(
+        producer.getLoc(),
+        consumerToProducerLoopsMap.getSubMap(std::get<0>(it).getArgNumber()),
+        fusedBlock->getArguments().take_front(numFusedOpIndices));
+    mapper.map(std::get<0>(it), newIndex);
   }
+  // TODO: allow fusing the producer of an output operand.
+  assert(consumerIdx < consumer.getNumInputs() &&
+         "expected producer of input operand");
+  // 3. Consumer input operands up to consumerIdx (exclusive).
+  for (BlockArgument bbArg : consumerBlock.getArguments()
+                                 .drop_front(numConsumerIndices)
+                                 .take_front(consumerIdx)) // input assumption.
+    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType()));
 
-  // Add operations from producer (except the yield operation) to the fused
+  // Replacing consumerIdx requires getting the cloned, yielded, value from
+  // the (cloned) producer block. This happens in step 9.
+
+  // 4. Splice in producer's input operands.
+  for (BlockArgument bbArg : producerBlock.getArguments()
+                                 .drop_front(numProducerIndices)
+                                 .take_front(producer.getNumInputs()))
+    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType()));
+  // 5. Remaining consumer's input operands (drop past index `consumerIdx`).
+  for (BlockArgument bbArg : consumerBlock.getArguments()
+                                 .drop_front(numConsumerIndices)
+                                 .take_front(consumer.getNumInputs())
+                                 .drop_front(consumerIdx + 1))
+    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType()));
+  // 6. All of consumer's output operands.
+  for (BlockArgument bbArg :
+       consumerBlock.getArguments().take_back(consumer.getNumOutputs()))
+    mapper.map(bbArg, fusedBlock->addArgument(bbArg.getType()));
+  // 7. All of producer's output operands except the one fused.
+  // TODO: allow fusion of multi-result producers.
+  assert(producer->getNumResults() == 1 && "expected single result producer");
+
+  // 8. Clone operations from producer (except the yield operation) to the fused
   // op.
-  for (auto &op : producerBlock.getOperations()) {
-    if (auto yieldOp = dyn_cast<linalg::YieldOp>(op)) {
-      // Lookup the value the yield operation is mapped to.
-      Value yieldVal = yieldOp.getOperand(0);
-      if (Value clonedVal = mapper.lookupOrNull(yieldVal))
-        mapper.map(consumerBlock.getArgument(consumerIdx + numConsumerIndices),
-                   clonedVal);
-      continue;
-    }
+  for (auto &op : producerBlock.without_terminator())
     rewriter.clone(op, mapper);
+  // 9. Now we can map the consumerBlock's `consumerIdx` block argument. Just
+  // forward the yield operand.
+  auto yieldOp = cast<linalg::YieldOp>(producerBlock.getTerminator());
+  // TODO: allow fusion of multi-result producers.
+  assert(producer->getNumResults() == 1 && "expected single result producer");
+  unsigned producerResultNumber = 0;
+  Value replacement =
+      mapper.lookupOrDefault(yieldOp.getOperand(producerResultNumber));
+  // Sanity checks, if replacement is not already in the mapper then it must be
+  // produced outside.
+  if (replacement == yieldOp.getOperand(producerResultNumber)) {
+    if (auto bb = replacement.dyn_cast<BlockArgument>())
+      assert(bb.getOwner() != &producerBlock &&
+             "yielded block argument must have been mapped");
+    else
+      assert(!producer->isAncestor(replacement.getDefiningOp()) &&
+             "yielded value must have been mapped");
   }
+  mapper.map(consumerBlock.getArgument(consumerIdx + numConsumerIndices),
+             replacement);
+  // 10. Clone operations from the consumer to the fused op.
   for (auto &op : consumerBlock.getOperations())
     rewriter.clone(op, mapper);
+
+  // Sanity checks.
+  assert(fusedBlock->getNumArguments() ==
+             fusedOp->getNumOperands() + numFusedOpIndices &&
+         "Ill-formed LinalgOp region");
 }
 
 static Optional<SmallVector<Value, 1>>
@@ -856,8 +887,6 @@ struct FoldProducerReshapeOpByLinearization
       op->setOperands(fusedOperands);
       op.indexing_mapsAttr(rewriter.getAffineMapArrayAttr(fusedIndexMaps));
       rewriter.finalizeRootUpdate(op);
-      if (reshapeOp.use_empty())
-        rewriter.eraseOp(reshapeOp);
       return success();
     }
     return failure();
@@ -897,8 +926,6 @@ struct FoldWithProducerReshapeOpByExpansion
       if (!replacementValues)
         return failure();
       rewriter.replaceOp(genericOp, replacementValues.getValue());
-      if (reshapeOp.use_empty())
-        rewriter.eraseOp(reshapeOp);
       return success();
     }
     return failure();
@@ -963,8 +990,6 @@ struct FoldConsumerReshapeOpByLinearization
     rewriter.cloneRegionBefore(producer->getRegion(0), fusedRegion,
                                fusedRegion.begin());
     rewriter.replaceOp(reshapeOp, fusedOp->getResults());
-    if (producer.use_empty())
-      rewriter.eraseOp(producer);
     return success();
   }
 };
@@ -995,8 +1020,6 @@ struct FoldReshapeWithGenericOpByExpansion
     if (!replacementValues)
       return failure();
     rewriter.replaceOp(reshapeOp, replacementValues.getValue());
-    if (producer.use_empty())
-      rewriter.eraseOp(producer);
     return success();
   }
 };
@@ -1057,8 +1080,6 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
       rewriter.cloneRegionBefore(linalgOpRegion, fusedRegion,
                                  fusedRegion.begin(), mapping);
       rewriter.replaceOp(linalgOp, fusedOp->getResults());
-      if (constantOp.use_empty())
-        rewriter.eraseOp(constantOp);
       return success();
     }
     return failure();
@@ -1092,15 +1113,14 @@ struct FuseTensorOps : public OpRewritePattern<LinalgOpTy> {
                                 PatternRewriter &rewriter) const override {
     // Find the first operand that is defined by another generic op on tensors.
     for (OpOperand &opOperand : op.getShapedOpOperands()) {
-      Operation *producer = opOperand.get().getDefiningOp();
-      if (!producer)
+      LinalgOp producerOp =
+          dyn_cast_or_null<LinalgOp>(opOperand.get().getDefiningOp());
+      if (!producerOp || !producerOp.hasTensorSemantics())
         continue;
       Optional<SmallVector<Value, 1>> fusedOpResults =
           fuseTensorOps(rewriter, opOperand);
       if (fusedOpResults) {
         rewriter.replaceOp(op, *fusedOpResults);
-        if (producer->use_empty())
-          rewriter.eraseOp(producer);
         return success();
       }
     }
@@ -1115,8 +1135,7 @@ struct FusionOfTensorOpsPass
     Operation *op = getOperation();
     OwningRewritePatternList patterns(op->getContext());
     populateLinalgTensorOpsFusionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns),
-                                       /*useTopDown=*/false);
+    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
 
