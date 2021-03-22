@@ -122,11 +122,16 @@ public:
   void setAddress(JITTargetAddress Address) { this->Address = Address; }
 
   /// Returns true if this is a defined addressable, in which case you
-  /// can downcast this to a .
+  /// can downcast this to a Block.
   bool isDefined() const { return static_cast<bool>(IsDefined); }
   bool isAbsolute() const { return static_cast<bool>(IsAbsolute); }
 
 private:
+  void setAbsolute(bool IsAbsolute) {
+    assert(!IsDefined && "Cannot change the Absolute flag on a defined block");
+    this->IsAbsolute = IsAbsolute;
+  }
+
   JITTargetAddress Address = 0;
   uint64_t IsDefined : 1;
   uint64_t IsAbsolute : 1;
@@ -441,7 +446,7 @@ public:
   /// Returns true if the underlying addressable is an absolute symbol.
   bool isAbsolute() const {
     assert(Base && "Attempt to access null symbol");
-    return !Base->isDefined() && Base->isAbsolute();
+    return Base->isAbsolute();
   }
 
   /// Return the addressable that this symbol points to.
@@ -523,13 +528,20 @@ public:
 
 private:
   void makeExternal(Addressable &A) {
-    assert(!A.isDefined() && "Attempting to make external with defined block");
+    assert(!A.isDefined() && !A.isAbsolute() &&
+           "Attempting to make external with defined or absolute block");
     Base = &A;
     Offset = 0;
-    setLinkage(Linkage::Strong);
     setScope(Scope::Default);
     IsLive = 0;
-    // note: Size and IsCallable fields left unchanged.
+    // note: Size, Linkage and IsCallable fields left unchanged.
+  }
+
+  void makeAbsolute(Addressable &A) {
+    assert(!A.isDefined() && A.isAbsolute() &&
+           "Attempting to make absolute with defined or external block");
+    Base = &A;
+    Offset = 0;
   }
 
   void setBlock(Block &B) { Base = &B; }
@@ -916,6 +928,11 @@ public:
   /// an error will be emitted. Externals with weak linkage are permitted to
   /// be undefined, in which case they are assigned a value of 0.
   Symbol &addExternalSymbol(StringRef Name, uint64_t Size, Linkage L) {
+    assert(llvm::count_if(ExternalSymbols,
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate external symbol");
     auto &Sym =
         Symbol::constructExternal(Allocator.Allocate<Symbol>(),
                                   createAddressable(0, false), Name, Size, L);
@@ -926,6 +943,11 @@ public:
   /// Add an absolute symbol.
   Symbol &addAbsoluteSymbol(StringRef Name, JITTargetAddress Address,
                             uint64_t Size, Linkage L, Scope S, bool IsLive) {
+    assert(llvm::count_if(AbsoluteSymbols,
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator.Allocate<Symbol>(),
                                           createAddressable(Address), Name,
                                           Size, L, S, IsLive);
@@ -937,6 +959,11 @@ public:
   Symbol &addCommonSymbol(StringRef Name, Scope S, Section &Section,
                           JITTargetAddress Address, uint64_t Size,
                           uint64_t Alignment, bool IsLive) {
+    assert(llvm::count_if(defined_symbols(),
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate defined symbol");
     auto &Sym = Symbol::constructCommon(
         Allocator.Allocate<Symbol>(),
         createBlock(Section, Size, Address, Alignment, 0), Name, Size, S,
@@ -959,6 +986,11 @@ public:
   Symbol &addDefinedSymbol(Block &Content, JITTargetAddress Offset,
                            StringRef Name, JITTargetAddress Size, Linkage L,
                            Scope S, bool IsCallable, bool IsLive) {
+    assert(llvm::count_if(defined_symbols(),
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator.Allocate<Symbol>(), Content, Offset,
                                   Name, Size, L, S, IsLive, IsCallable);
@@ -1009,28 +1041,63 @@ public:
         const_defined_symbol_iterator(Sections.end(), Sections.end()));
   }
 
-  /// Turn a defined symbol into an external one.
+  /// Make the given symbol external (must not already be external).
+  ///
+  /// Symbol size, linkage and callability will be left unchanged. Symbol scope
+  /// will be set to Default, and offset will be reset to 0.
   void makeExternal(Symbol &Sym) {
-    if (Sym.getAddressable().isAbsolute()) {
+    assert(!Sym.isExternal() && "Symbol is already external");
+    if (Sym.isAbsolute()) {
       assert(AbsoluteSymbols.count(&Sym) &&
              "Sym is not in the absolute symbols set");
+      assert(Sym.getOffset() == 0 && "Absolute not at offset 0");
       AbsoluteSymbols.erase(&Sym);
+      Sym.getAddressable().setAbsolute(false);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
       Section &Sec = Sym.getBlock().getSection();
       Sec.removeSymbol(Sym);
+      Sym.makeExternal(createAddressable(0, false));
     }
-    Sym.makeExternal(createAddressable(0, false));
     ExternalSymbols.insert(&Sym);
   }
 
-  /// Turn an external symbol into a defined one by attaching it to a block.
+  /// Make the given symbol an absolute with the given address (must not already
+  /// be absolute).
+  ///
+  /// Symbol size, linkage, scope, and callability, and liveness will be left
+  /// unchanged. Symbol offset will be reset to 0.
+  void makeAbsolute(Symbol &Sym, JITTargetAddress Address) {
+    assert(!Sym.isAbsolute() && "Symbol is already absolute");
+    if (Sym.isExternal()) {
+      assert(ExternalSymbols.count(&Sym) &&
+             "Sym is not in the absolute symbols set");
+      assert(Sym.getOffset() == 0 && "External is not at offset 0");
+      ExternalSymbols.erase(&Sym);
+      Sym.getAddressable().setAbsolute(true);
+    } else {
+      assert(Sym.isDefined() && "Sym is not a defined symbol");
+      Section &Sec = Sym.getBlock().getSection();
+      Sec.removeSymbol(Sym);
+      Sym.makeAbsolute(createAddressable(Address));
+    }
+    AbsoluteSymbols.insert(&Sym);
+  }
+
+  /// Turn an absolute or external symbol into a defined one by attaching it to
+  /// a block. Symbol must not already be defined.
   void makeDefined(Symbol &Sym, Block &Content, JITTargetAddress Offset,
                    JITTargetAddress Size, Linkage L, Scope S, bool IsLive) {
-    assert(!Sym.isDefined() && !Sym.isAbsolute() &&
-           "Sym is not an external symbol");
-    assert(ExternalSymbols.count(&Sym) && "Symbol is not in the externals set");
-    ExternalSymbols.erase(&Sym);
+    assert(!Sym.isDefined() && "Sym is already a defined symbol");
+    if (Sym.isAbsolute()) {
+      assert(AbsoluteSymbols.count(&Sym) &&
+             "Symbol is not in the absolutes set");
+      AbsoluteSymbols.erase(&Sym);
+    } else {
+      assert(ExternalSymbols.count(&Sym) &&
+             "Symbol is not in the externals set");
+      ExternalSymbols.erase(&Sym);
+    }
     Addressable &OldBase = *Sym.Base;
     Sym.setBlock(Content);
     Sym.setOffset(Offset);
