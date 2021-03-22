@@ -684,29 +684,16 @@ define i1 @t11() {
 ; ARM:       @ %bb.0: @ %entry
 ; ARM-NEXT:    .pad #4
 ; ARM-NEXT:    sub sp, sp, #4
-; ARM-NEXT:    ldr r0, .LCPI10_0
-; ARM-NEXT:    mov r1, #33
-; ARM-NEXT:    umull r2, r3, r1, r0
-; ARM-NEXT:    lsr r0, r3, #3
-; ARM-NEXT:    add r0, r0, r0, lsl #2
-; ARM-NEXT:    sub r0, r1, r0, lsl #1
-; ARM-NEXT:    ldr r1, [sp]
-; ARM-NEXT:    and r1, r1, #-33554432
-; ARM-NEXT:    orr r0, r1, r0
-; ARM-NEXT:    mov r1, #255
+; ARM-NEXT:    ldr r0, [sp]
+; ARM-NEXT:    mov r1, #40960
+; ARM-NEXT:    orr r1, r1, #-33554432
 ; ARM-NEXT:    orr r0, r0, #40960
-; ARM-NEXT:    orr r1, r1, #3840
-; ARM-NEXT:    str r0, [sp]
 ; ARM-NEXT:    and r0, r0, r1
-; ARM-NEXT:    sub r0, r0, #3
-; ARM-NEXT:    rsbs r1, r0, #0
-; ARM-NEXT:    adc r0, r0, r1
+; ARM-NEXT:    orr r0, r0, #3
+; ARM-NEXT:    str r0, [sp]
+; ARM-NEXT:    mov r0, #1
 ; ARM-NEXT:    add sp, sp, #4
 ; ARM-NEXT:    mov pc, lr
-; ARM-NEXT:    .p2align 2
-; ARM-NEXT:  @ %bb.1:
-; ARM-NEXT:  .LCPI10_0:
-; ARM-NEXT:    .long 3435973837 @ 0xcccccccd
 ;
 ; ARMT2-LABEL: t11:
 ; ARMT2:       @ %bb.0: @ %entry
