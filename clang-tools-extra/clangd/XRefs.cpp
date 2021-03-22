@@ -162,10 +162,10 @@ SymbolLocation toIndexLocation(const Location &Loc, std::string &URIStorage) {
 SymbolLocation getPreferredLocation(const Location &ASTLoc,
                                     const SymbolLocation &IdxLoc,
                                     std::string &Scratch) {
-  // Also use a dummy symbol for the index location so that other fields (e.g.
+  // Also use a mock symbol for the index location so that other fields (e.g.
   // definition) are not factored into the preference.
   Symbol ASTSym, IdxSym;
-  ASTSym.ID = IdxSym.ID = SymbolID("dummy_id");
+  ASTSym.ID = IdxSym.ID = SymbolID("mock_symbol_id");
   ASTSym.CanonicalDeclaration = toIndexLocation(ASTLoc, Scratch);
   IdxSym.CanonicalDeclaration = IdxLoc;
   auto Merged = mergeSymbol(ASTSym, IdxSym);

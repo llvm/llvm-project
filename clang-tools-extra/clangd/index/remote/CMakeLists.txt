@@ -39,6 +39,6 @@ if (CLANGD_ENABLE_REMOTE)
   add_subdirectory(marshalling)
   add_subdirectory(server)
 else()
-  # Provides a dummy implementation of clangdRemoteIndex.
+  # Provides a no-op implementation of clangdRemoteIndex.
   add_subdirectory(unimplemented)
 endif()

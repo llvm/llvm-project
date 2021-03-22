@@ -71,7 +71,7 @@ MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
   return true;
 }
 
-// Dummy ContextProvider to verify the provider is invoked & contexts are used.
+// Simple ContextProvider to verify the provider is invoked & contexts are used.
 static Key<std::string> BoundPath;
 Context bindPath(PathRef F) {
   return Context::current().derive(BoundPath, F.str());
