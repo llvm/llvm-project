@@ -207,21 +207,28 @@ define i32 @v_urem_i32_pow2k_denom(i32 %num) {
 ; CHECK-LABEL: v_urem_i32_pow2k_denom:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_add_i32 s4, 0x1000, -1
-; CHECK-NEXT:    v_and_b32_e32 v0, s4, v0
+; CHECK-NEXT:    v_and_b32_e32 v0, 0xfff, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %result = urem i32 %num, 4096
   ret i32 %result
 }
 
 define <2 x i32> @v_urem_v2i32_pow2k_denom(<2 x i32> %num) {
-; CHECK-LABEL: v_urem_v2i32_pow2k_denom:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_add_i32 s4, 0x1000, -1
-; CHECK-NEXT:    v_and_b32_e32 v0, s4, v0
-; CHECK-NEXT:    v_and_b32_e32 v1, s4, v1
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
+; GISEL-LABEL: v_urem_v2i32_pow2k_denom:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_add_i32 s4, 0x1000, -1
+; GISEL-NEXT:    v_and_b32_e32 v0, s4, v0
+; GISEL-NEXT:    v_and_b32_e32 v1, s4, v1
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; CGP-LABEL: v_urem_v2i32_pow2k_denom:
+; CGP:       ; %bb.0:
+; CGP-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CGP-NEXT:    s_movk_i32 s4, 0xfff
+; CGP-NEXT:    v_and_b32_e32 v0, s4, v0
+; CGP-NEXT:    v_and_b32_e32 v1, s4, v1
+; CGP-NEXT:    s_setpc_b64 s[30:31]
   %result = urem <2 x i32> %num, <i32 4096, i32 4096>
   ret <2 x i32> %result
 }
