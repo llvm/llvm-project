@@ -1964,7 +1964,7 @@ class OneXRegData<bits<3> opc, string asm, SDPatternOperator node>
 }
 
 class SignAuthOneData<bits<3> opcode_prefix, bits<2> opcode, string asm,
-                      Intrinsic op>
+                      SDPatternOperator op>
   : I<(outs GPR64:$dst), (ins GPR64:$Rd, GPR64sp:$Rn), asm, "\t$Rd, $Rn",
       "$dst = $Rd", [(set GPR64:$dst, (op GPR64:$Rd, opcode, GPR64sp:$Rn))]>,
     Sched<[WriteI, ReadI]> {

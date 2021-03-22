@@ -1173,7 +1173,7 @@ def : InstAlias<"xpaclri", (XPACLRI), 0>;
 // These pointer authentication instructions require armv8.3a
 let Predicates = [HasPAuth] in {
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm,
-                      Intrinsic op> {
+                      SDPatternOperator op> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia"), op>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib"), op>;
     def DA   : SignAuthOneData<prefix, 0b10, !strconcat(asm, "da"), op>;
