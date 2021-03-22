@@ -5,8 +5,8 @@
 # will define a C++ class called ${cpp_class} - which may be a
 # namespace-qualified class name.
 function(gen_decision_forest model filename cpp_class)
-  set(model_compiler ${CMAKE_SOURCE_DIR}/../clang-tools-extra/clangd/quality/CompletionModelCodegen.py)
-  
+  set(model_compiler ${LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR}/clangd/quality/CompletionModelCodegen.py)
+
   set(output_dir ${CMAKE_CURRENT_BINARY_DIR})
   set(header_file ${output_dir}/${filename}.h)
   set(cpp_file ${output_dir}/${filename}.cpp)
