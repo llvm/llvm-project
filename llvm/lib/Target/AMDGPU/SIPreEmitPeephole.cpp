@@ -21,6 +21,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
 
+static unsigned SkipThreshold;
+
+static cl::opt<unsigned, true> SkipThresholdFlag(
+    "amdgpu-skip-threshold", cl::Hidden,
+    cl::desc(
+        "Number of instructions before jumping over divergent control flow"),
+    cl::location(SkipThreshold), cl::init(12));
+
 namespace {
 
 class SIPreEmitPeephole : public MachineFunctionPass {
@@ -30,6 +38,13 @@ private:
 
   bool optimizeVccBranch(MachineInstr &MI) const;
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
+  bool getBlockDestinations(MachineBasicBlock &SrcMBB,
+                            MachineBasicBlock *&TrueMBB,
+                            MachineBasicBlock *&FalseMBB,
+                            SmallVectorImpl<MachineOperand> &Cond);
+  bool mustRetainExeczBranch(const MachineBasicBlock &From,
+                             const MachineBasicBlock &To) const;
+  bool removeExeczBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
 
 public:
   static char ID;
@@ -258,6 +273,74 @@ bool SIPreEmitPeephole::optimizeSetGPR(MachineInstr &First,
   return true;
 }
 
+bool SIPreEmitPeephole::getBlockDestinations(
+    MachineBasicBlock &SrcMBB, MachineBasicBlock *&TrueMBB,
+    MachineBasicBlock *&FalseMBB, SmallVectorImpl<MachineOperand> &Cond) {
+  if (TII->analyzeBranch(SrcMBB, TrueMBB, FalseMBB, Cond))
+    return false;
+
+  if (!FalseMBB)
+    FalseMBB = SrcMBB.getNextNode();
+
+  return true;
+}
+
+bool SIPreEmitPeephole::mustRetainExeczBranch(
+    const MachineBasicBlock &From, const MachineBasicBlock &To) const {
+  unsigned NumInstr = 0;
+  const MachineFunction *MF = From.getParent();
+
+  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
+       MBBI != End && MBBI != ToI; ++MBBI) {
+    const MachineBasicBlock &MBB = *MBBI;
+
+    for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
+         I != E; ++I) {
+      // When a uniform loop is inside non-uniform control flow, the branch
+      // leaving the loop might never be taken when EXEC = 0.
+      // Hence we should retain cbranch out of the loop lest it become infinite.
+      if (I->isConditionalBranch())
+        return true;
+
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
+        return true;
+
+      // These instructions are potentially expensive even if EXEC = 0.
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
+          TII->isDS(*I) || I->getOpcode() == AMDGPU::S_WAITCNT)
+        return true;
+
+      ++NumInstr;
+      if (NumInstr >= SkipThreshold)
+        return true;
+    }
+  }
+
+  return false;
+}
+
+// Returns true if the skip branch instruction is removed.
+bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
+                                          MachineBasicBlock &SrcMBB) {
+  MachineBasicBlock *TrueMBB = nullptr;
+  MachineBasicBlock *FalseMBB = nullptr;
+  SmallVector<MachineOperand, 1> Cond;
+
+  if (!getBlockDestinations(SrcMBB, TrueMBB, FalseMBB, Cond))
+    return false;
+
+  // Consider only the forward branches.
+  if ((SrcMBB.getNumber() >= TrueMBB->getNumber()) ||
+      mustRetainExeczBranch(*FalseMBB, *TrueMBB))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
+  MI.eraseFromParent();
+  SrcMBB.removeSuccessor(TrueMBB);
+
+  return true;
+}
+
 bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -265,16 +348,21 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   MachineBasicBlock *EmptyMBBAtEnd = nullptr;
   bool Changed = false;
 
+  MF.RenumberBlocks();
+
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator MBBE = MBB.getFirstTerminator();
     MachineBasicBlock::iterator TermI = MBBE;
-    // Check first terminator for VCC branches to optimize
+    // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {
       MachineInstr &MI = *TermI;
       switch (MI.getOpcode()) {
       case AMDGPU::S_CBRANCH_VCCZ:
       case AMDGPU::S_CBRANCH_VCCNZ:
         Changed |= optimizeVccBranch(MI);
+        continue;
+      case AMDGPU::S_CBRANCH_EXECZ:
+        Changed |= removeExeczBranch(MI, MBB);
         continue;
       default:
         break;
