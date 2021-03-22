@@ -2379,8 +2379,12 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue ValInVec;
 
   if (IsLegalInsert) {
-    if (isNullConstant(Idx))
-      return DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Vec, Val, VL);
+    if (isNullConstant(Idx)) {
+      Vec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Vec, Val, VL);
+      if (!VecVT.isFixedLengthVector())
+        return Vec;
+      return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
+    }
     ValInVec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT,
                            DAG.getUNDEF(ContainerVT), Val, VL);
   } else {
