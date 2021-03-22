@@ -578,3 +578,41 @@ func @consumer_with_reduction(%arg0: tensor<1x10xf32>,
 //      CHECK:     %[[T4:.+]] = addf %[[T3]], %[[T2]] : f32
 //      CHECK:     linalg.yield %[[T4]]
 //      CHECK:   return %[[RES]]
+
+// -----
+
+// CHECK-LABEL: func @sigmoid_dynamic_dim(
+//       CHECK:   %[[RES:.*]] = linalg.generic
+//   CHECK-NOT:   linalg.generic
+//       CHECK:   return %[[RES]]
+func @sigmoid_dynamic_dim(%0: tensor<?x1xf32>) -> tensor<?x1xf32> {
+  %cp5 = constant 5.000000e-01 : f32
+  %c0 = constant 0 : index
+  %shape = shape.shape_of %0 : tensor<?x1xf32> -> tensor<?xindex>
+  %extend = shape.to_extent_tensor %shape : tensor<?xindex> -> tensor<2xindex>
+  %extracted = tensor.extract %extend[%c0] : tensor<2xindex>
+  %init0 = linalg.init_tensor [%extracted, 1] : tensor<?x1xf32>
+  %1 = linalg.generic {indexing_maps = [
+    affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  }
+     outs(%init0 : tensor<?x1xf32>) {
+    ^bb0(%a: f32):  // no predecessors
+      linalg.yield %cp5 : f32
+  } -> tensor<?x1xf32>
+  %d0 = memref.dim %0, %c0 : tensor<?x1xf32>
+  %init1 = linalg.init_tensor [%d0, 1] : tensor<?x1xf32>
+  %2 = linalg.generic {indexing_maps = [
+    affine_map<(d0, d1) -> (d0, d1)>,
+    affine_map<(d0, d1) -> (d0, d1)>,
+    affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]
+  }
+      ins(%0, %1 : tensor<?x1xf32>, tensor<?x1xf32>)
+     outs(%init1 : tensor<?x1xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):  // no predecessors
+      %m = mulf %a, %b : f32
+      linalg.yield %m : f32
+  } -> tensor<?x1xf32>
+  return %2 : tensor<?x1xf32>
+}
