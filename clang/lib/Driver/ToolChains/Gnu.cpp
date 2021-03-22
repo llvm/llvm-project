@@ -2532,12 +2532,6 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
        TargetTriple.getVendor() == llvm::Triple::Freescale ||
        TargetTriple.getVendor() == llvm::Triple::OpenEmbedded},
 
-      // Natively multiarch systems sometimes put the GCC triple-specific
-      // directory within their multiarch lib directory, resulting in the
-      // triple appearing twice.
-      {CandidateTriple.str() + "/gcc/" + CandidateTriple.str(), "../../..",
-       TargetTriple.getOS() != llvm::Triple::Solaris},
-
       // Deal with cases (on Ubuntu) where the system architecture could be i386
       // but the GCC target architecture could be (say) i686.
       // FIXME: It may be worthwhile to generalize this and look for a second
