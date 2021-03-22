@@ -5,11 +5,12 @@
 # RUN: cp %{inputs}/reorder/.lit_test_times.txt %{inputs}/reorder/.lit_test_times.txt.new
 # RUN: cp %{inputs}/reorder/.lit_test_times.txt.orig %{inputs}/reorder/.lit_test_times.txt
 # RUN: not diff %{inputs}/reorder/.lit_test_times.txt.new %{inputs}/reorder/.lit_test_times.txt.orig
-# RUN: FileCheck --check-prefix=TIMES --implicit-check-not=not-executed.txt < %{inputs}/reorder/.lit_test_times.txt.new %s
+# RUN: FileCheck --check-prefix=TIMES --implicit-check-not= < %{inputs}/reorder/.lit_test_times.txt.new %s
 # RUN: FileCheck < %t.out %s
 # END.
 
-# TIMES: subdir/ccc.txt
+# TIMES: not-executed.txt
+# TIMES-NEXT: subdir/ccc.txt
 # TIMES-NEXT: bbb.txt
 # TIMES-NEXT: aaa.txt
 # TIMES-NEXT: new-test.txt
