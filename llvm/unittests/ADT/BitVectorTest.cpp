@@ -1142,10 +1142,12 @@ TYPED_TEST(BitVectorTest, Iterators) {
 
   TypeParam Empty;
   EXPECT_EQ(Empty.set_bits_begin(), Empty.set_bits_end());
+  int BitCount = 0;
   for (unsigned Bit : Empty.set_bits()) {
     (void)Bit;
-    EXPECT_TRUE(false);
+    BitCount++;
   }
+  ASSERT_EQ(BitCount, 0);
 
   TypeParam ToFill(100, false);
   ToFill.set(0);
