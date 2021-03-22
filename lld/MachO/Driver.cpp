@@ -905,6 +905,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
+  config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
 
   if (const Arg *arg = args.getLastArg(OPT_install_name)) {
     if (config->outputType != MH_DYLIB)
