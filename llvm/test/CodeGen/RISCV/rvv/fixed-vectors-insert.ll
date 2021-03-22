@@ -53,7 +53,6 @@ define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    vsetivli a4, 4, e32,m1,ta,mu
 ; RV32-NEXT:    lw a4, 16(a0)
 ; RV32-NEXT:    vmv.v.x v26, a3
-; RV32-NEXT:    vsetvli a3, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vmv.s.x v26, a4
 ; RV32-NEXT:    vsetivli a3, 4, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 2
