@@ -11,7 +11,7 @@
 
 declare i32 @llvm.smax.i32(i32, i32)
 declare i16 @llvm.smin.i16(i16, i16)
-declare i64 @llvm.umax.i64(i64 %mh, i64)
+declare i64 @llvm.umax.i64(i64, i64)
 declare i8 @llvm.umin.i8(i8, i8)
 
 define i32 @maxi8(i32) {
