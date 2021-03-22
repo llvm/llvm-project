@@ -1,0 +1,8 @@
+# RUN: not llvm-sim %s 2>&1 | FileCheck %s
+# RUN: not llvm-sim %s.2 2>&1 | FileCheck %s --check-prefix=EXIST
+
+# File reading error messaging tests.
+
+# CHECK: error: expected top-level entity
+
+# EXIST: error: Could not open input file: No such file or directory

@@ -109,6 +109,7 @@ set(LLVM_TEST_DEPENDS
           llvm-readelf
           llvm-reduce
           llvm-rtdyld
+          llvm-sim
           llvm-size
           llvm-split
           llvm-strings
