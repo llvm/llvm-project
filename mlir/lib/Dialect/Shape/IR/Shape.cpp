@@ -570,9 +570,9 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // on the input shapes.
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
-        for (const auto &shape : shapes()) {
+        for (auto shapeValue : shapes()) {
           extents.emplace_back();
-          if (failed(getShapeVec(shape, extents.back())))
+          if (failed(getShapeVec(shapeValue, extents.back())))
             return false;
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
