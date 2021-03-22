@@ -9,8 +9,10 @@
 /// Define scheduler resources associated with def operands.
 def WriteIALU       : SchedWrite;    // 32 or 64-bit integer ALU operations
 def WriteIALU32     : SchedWrite;    // 32-bit integer ALU operations on RV64I
-def WriteShift32    : SchedWrite;    // 32-bit shift operations on RV64Ix
-def WriteShift      : SchedWrite;    // 32 or 64-bit shift operations
+def WriteShiftImm   : SchedWrite;    // 32 or 64-bit shift by immediate operations
+def WriteShiftImm32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
+def WriteShiftReg   : SchedWrite;    // 32 or 64-bit shift by immediate operations
+def WriteShiftReg32 : SchedWrite;    // 32-bit shift by immediate operations on RV64Ix
 def WriteIDiv       : SchedWrite;    // 32-bit or 64-bit divide and remainder
 def WriteIDiv32     : SchedWrite;    // 32-bit divide and remainder on RV64I
 def WriteIMul       : SchedWrite;    // 32-bit or 64-bit multiply
@@ -97,8 +99,10 @@ def ReadFMemBase    : SchedRead;
 def ReadStoreData   : SchedRead;
 def ReadIALU        : SchedRead;
 def ReadIALU32      : SchedRead;    // 32-bit integer ALU operations on RV64I
-def ReadShift       : SchedRead;
-def ReadShift32     : SchedRead;    // 32-bit shift operations on RV64Ix
+def ReadShiftImm    : SchedRead;
+def ReadShiftImm32  : SchedRead;    // 32-bit shift by immediate operations on RV64Ix
+def ReadShiftReg    : SchedRead;
+def ReadShiftReg32  : SchedRead;    // 32-bit shift by register operations on RV64Ix
 def ReadIDiv        : SchedRead;
 def ReadIDiv32      : SchedRead;
 def ReadIMul        : SchedRead;
