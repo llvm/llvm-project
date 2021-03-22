@@ -324,6 +324,7 @@ TEST(VPBasicBlockTest, getPlan) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPBasicBlockTest, print) {
   VPInstruction *I1 = new VPInstruction(Instruction::Add, {});
   VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1});
@@ -422,6 +423,7 @@ No successors
     EXPECT_EQ("EMIT vp<%3> = mul vp<%1> vp<%0>", I4Dump);
   }
 }
+#endif
 
 TEST(VPRecipeTest, CastVPInstructionToVPUser) {
   VPValue Op1;
@@ -608,6 +610,7 @@ TEST(VPRecipeTest, CastVPWidenMemoryInstructionRecipeToVPUserAndVPDef) {
   delete Load;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST(VPRecipeTest, dump) {
   VPlan Plan;
   VPBasicBlock *VPBB1 = new VPBasicBlock();
@@ -663,6 +666,7 @@ TEST(VPRecipeTest, dump) {
 
   delete AI;
 }
+#endif
 
 TEST(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   LLVMContext C;
@@ -684,8 +688,10 @@ struct VPDoubleValueDef : public VPRecipeBase {
   }
 
   void execute(struct VPTransformState &State) override{};
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override {}
+#endif
 };
 
 TEST(VPDoubleValueDefTest, traverseUseLists) {
