@@ -745,7 +745,7 @@ private:
   } funcInfo_;
 
   // Create a subprogram symbol in the current scope and push a new scope.
-  void CheckExtantExternal(const parser::Name &, Symbol::Flag);
+  void CheckExtantProc(const parser::Name &, Symbol::Flag);
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
@@ -3084,7 +3084,6 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
 
   Symbol::Flag subpFlag{
       inFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine};
-  CheckExtantExternal(name, subpFlag);
   Scope &outer{inclusiveScope.parent()}; // global or module scope
   if (Symbol * extant{FindSymbol(outer, name)}) {
     if (extant->has<ProcEntityDetails>()) {
@@ -3176,7 +3175,7 @@ bool SubprogramVisitor::BeginSubprogram(
 
 void SubprogramVisitor::EndSubprogram() { PopScope(); }
 
-void SubprogramVisitor::CheckExtantExternal(
+void SubprogramVisitor::CheckExtantProc(
     const parser::Name &name, Symbol::Flag subpFlag) {
   if (auto *prev{FindSymbol(name)}) {
     if (prev->attrs().test(Attr::EXTERNAL) && prev->has<ProcEntityDetails>()) {
@@ -3189,6 +3188,11 @@ void SubprogramVisitor::CheckExtantExternal(
             *prev, "Previous call of '%s'"_en_US);
       }
       EraseSymbol(name);
+    } else if (const auto *details{prev->detailsIf<EntityDetails>()}) {
+      if (!details->isDummy()) {
+        Say2(name, "Procedure '%s' was previously declared"_err_en_US, *prev,
+            "Previous declaration of '%s'"_en_US);
+      }
     }
   }
 }
@@ -3197,7 +3201,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
     const parser::Name &name, Symbol::Flag subpFlag) {
   auto *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
-    CheckExtantExternal(name, subpFlag);
+    CheckExtantProc(name, subpFlag);
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
   symbol->set(subpFlag);
