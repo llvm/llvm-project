@@ -4,13 +4,13 @@
 define i32 @reduce_i1(i32 %arg) {
 ; CHECK-LABEL: 'reduce_i1'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V1 = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2 = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4 = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V8 = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 46 for instruction: %V16 = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 94 for instruction: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 190 for instruction: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 382 for instruction: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2 = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V4 = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8 = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %V16 = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 33 for instruction: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 65 for instruction: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
   %V1   = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> undef)

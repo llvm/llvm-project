@@ -1895,6 +1895,22 @@ public:
                                       TTI::TargetCostKind CostKind) {
     Type *ScalarTy = Ty->getElementType();
     unsigned NumVecElts = cast<FixedVectorType>(Ty)->getNumElements();
+    if ((Opcode == Instruction::Or || Opcode == Instruction::And) &&
+        ScalarTy == IntegerType::getInt1Ty(Ty->getContext()) &&
+        NumVecElts >= 2) {
+      // Or reduction for i1 is represented as:
+      // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+      // %res = cmp ne iReduxWidth %val, 0
+      // And reduction for i1 is represented as:
+      // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+      // %res = cmp eq iReduxWidth %val, 11111
+      Type *ValTy = IntegerType::get(Ty->getContext(), NumVecElts);
+      return thisT()->getCastInstrCost(Instruction::BitCast, ValTy, Ty,
+                                       TTI::CastContextHint::None, CostKind) +
+             thisT()->getCmpSelInstrCost(Instruction::ICmp, ValTy,
+                                         CmpInst::makeCmpResultType(ValTy),
+                                         CmpInst::BAD_ICMP_PREDICATE, CostKind);
+    }
     unsigned NumReduxLevels = Log2_32(NumVecElts);
     unsigned ArithCost = 0;
     unsigned ShuffleCost = 0;
