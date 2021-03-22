@@ -251,3 +251,13 @@ define i64 @test_array_of_zero_size_array() {
   %v = load i64, i64* bitcast ([4294967295 x [0 x i32]]* @g9 to i64*)
   ret i64 %v
 }
+
+@g10 = constant {i128} {i128 undef}
+
+define i32* @test_undef_aggregate() {
+; CHECK-LABEL: @test_undef_aggregate(
+; CHECK-NEXT:    ret i32* undef
+;
+  %v = load i32*, i32** bitcast ({i128}* @g10 to i32**)
+  ret i32* %v
+}
