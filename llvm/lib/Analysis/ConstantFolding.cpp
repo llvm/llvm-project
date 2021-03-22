@@ -389,7 +389,7 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
     // If this isn't an aggregate type, there is nothing we can do to drill down
     // and find a bitcastable constant.
-    if (!SrcTy->isAggregateType())
+    if (!SrcTy->isAggregateType() && !SrcTy->isVectorTy())
       return nullptr;
 
     // We're simulating a load through a pointer that was bitcast to point to
