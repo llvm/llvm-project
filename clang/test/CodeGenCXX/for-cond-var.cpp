@@ -123,3 +123,16 @@ void PR49585_break() {
   // CHECK [[for_end]]:
   // CHECK: ret void
 }
+
+// CHECK: define {{.*}} void @_Z16incless_for_loopv(
+void incless_for_loop() {
+  // CHECK: br label %[[for_cond:.*]]
+  // CHECK: [[for_cond]]:
+  // CHECK:   br i1 {{.*}}, label %[[for_body:.*]], label %[[for_end:.*]]
+  // CHECK: [[for_body]]:
+  // CHECK:   br label %[[for_cond]]
+  // CHECK: [[for_end]]:
+  // CHECK:   ret void
+  // CHECK: }
+  for (; int b = 0;) continue;
+}
