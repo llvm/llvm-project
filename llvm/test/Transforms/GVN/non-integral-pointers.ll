@@ -213,14 +213,12 @@ entry:
   ret i64 addrspace(4)* %ref
 }
 
-; TODO: missed optimization
 define i8 addrspace(4)* @forward_memcopy(i8 addrspace(4)* addrspace(4)* %loc) {
 ; CHECK-LABEL: @forward_memcopy(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LOC_BC:%.*]] = bitcast i8 addrspace(4)* addrspace(4)* [[LOC:%.*]] to i8 addrspace(4)*
 ; CHECK-NEXT:    call void @llvm.memcpy.p4i8.p0i8.i64(i8 addrspace(4)* align 4 [[LOC_BC]], i8* bitcast (<4 x i64 addrspace(4)*>* @NonZeroConstant2 to i8*), i64 8, i1 false)
-; CHECK-NEXT:    [[REF:%.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* [[LOC]], align 8
-; CHECK-NEXT:    ret i8 addrspace(4)* [[REF]]
+; CHECK-NEXT:    ret i8 addrspace(4)* bitcast (i64 addrspace(4)* getelementptr (i64, i64 addrspace(4)* null, i32 3) to i8 addrspace(4)*)
 ;
 entry:
   %loc.bc = bitcast i8 addrspace(4)* addrspace(4)* %loc to i8 addrspace(4)*
