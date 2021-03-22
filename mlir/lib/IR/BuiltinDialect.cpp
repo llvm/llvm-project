@@ -222,6 +222,17 @@ ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
   return builder.create<ModuleOp>(loc, name);
 }
 
+DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
+  // Take the first and only (if present) attribute that implements the
+  // interface. This needs a linear search, but is called only once per data
+  // layout object construction that is used for repeated queries.
+  for (Attribute attr : llvm::make_second_range(getOperation()->getAttrs())) {
+    if (auto spec = attr.dyn_cast<DataLayoutSpecInterface>())
+      return spec;
+  }
+  return {};
+}
+
 static LogicalResult verify(ModuleOp op) {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
@@ -234,6 +245,23 @@ static LogicalResult verify(ModuleOp op) {
       return op.emitOpError() << "can only contain attributes with "
                                  "dialect-prefixed names, found: '"
                               << attr.first << "'";
+  }
+
+  // Check that there is at most one data layout spec attribute.
+  StringRef layoutSpecAttrName;
+  DataLayoutSpecInterface layoutSpec;
+  for (const NamedAttribute &na : op->getAttrs()) {
+    if (auto spec = na.second.dyn_cast<DataLayoutSpecInterface>()) {
+      if (layoutSpec) {
+        InFlightDiagnostic diag =
+            op.emitOpError() << "expects at most one data layout attribute";
+        diag.attachNote() << "'" << layoutSpecAttrName
+                          << "' is a data layout attribute";
+        diag.attachNote() << "'" << na.first << "' is a data layout attribute";
+      }
+      layoutSpecAttrName = na.first.strref();
+      layoutSpec = spec;
+    }
   }
 
   return success();
