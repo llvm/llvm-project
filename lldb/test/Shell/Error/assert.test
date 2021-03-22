@@ -1,0 +1,4 @@
+# REQUIRES: asserts
+# RUN: not --crash lldb-test assert > %t.error 2>&1
+# RUN: cat %t.error | FileCheck %s
+# CHECK: Assertion failed: (false && "lldb_assert failed")
