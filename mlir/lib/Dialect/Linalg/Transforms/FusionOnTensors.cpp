@@ -1115,7 +1115,8 @@ struct FusionOfTensorOpsPass
     Operation *op = getOperation();
     OwningRewritePatternList patterns(op->getContext());
     populateLinalgTensorOpsFusionPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns),
+                                       /*useTopDown=*/false);
   }
 };
 
