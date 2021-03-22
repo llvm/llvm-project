@@ -70,7 +70,10 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     python
   SOURCES
     MainModule.cpp
-    IRModules.cpp
+    IRAffine.cpp
+    IRAttributes.cpp
+    IRCore.cpp
+    IRTypes.cpp
     PybindUtils.cpp
     Pass.cpp
     ExecutionEngine.cpp
