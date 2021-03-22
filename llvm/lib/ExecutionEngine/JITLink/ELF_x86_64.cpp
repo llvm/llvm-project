@@ -12,6 +12,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
 
@@ -707,10 +708,10 @@ private:
     case ELFX86RelocationKind::PCRel32:
     case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
         return makeTargetOutOfRangeError(G, B, E);
-      *(little32_t *)FixupPtr = Value;
       break;
     }
     case ELFX86RelocationKind::Pointer64: {
@@ -718,11 +719,38 @@ private:
       *(ulittle64_t *)FixupPtr = Value;
       break;
     }
+    case ELFX86RelocationKind::Delta32: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
+        return makeTargetOutOfRangeError(G, B, E);
+      break;
+    }
     case ELFX86RelocationKind::Delta64: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
       *(little64_t *)FixupPtr = Value;
       break;
     }
+    case ELFX86RelocationKind::NegDelta32: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
+        return makeTargetOutOfRangeError(G, B, E);
+      break;
+    }
+    case ELFX86RelocationKind::NegDelta64: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      *(little64_t *)FixupPtr = Value;
+      break;
+    }
+    default:
+      LLVM_DEBUG({
+        dbgs() << "Bad edge: " << getELFX86RelocationKindName(E.getKind())
+               << "\n";
+      });
+      llvm_unreachable("Unsupported relocation");
     }
     return Error::success();
   }
@@ -780,16 +808,46 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
 }
 const char *getELFX86RelocationKindName(Edge::Kind R) {
   switch (R) {
-  case PCRel32:
-    return "PCRel32";
-  case Pointer64:
-    return "Pointer64";
-  case PCRel32GOTLoad:
-    return "PCRel32GOTLoad";
   case Branch32:
     return "Branch32";
   case Branch32ToStub:
     return "Branch32ToStub";
+  case Pointer32:
+    return "Pointer32";
+  case Pointer64:
+    return "Pointer64";
+  case Pointer64Anon:
+    return "Pointer64Anon";
+  case PCRel32:
+    return "PCRel32";
+  case PCRel32Minus1:
+    return "PCRel32Minus1";
+  case PCRel32Minus2:
+    return "PCRel32Minus2";
+  case PCRel32Minus4:
+    return "PCRel32Minus4";
+  case PCRel32Anon:
+    return "PCRel32Anon";
+  case PCRel32Minus1Anon:
+    return "PCRel32Minus1Anon";
+  case PCRel32Minus2Anon:
+    return "PCRel32Minus2Anon";
+  case PCRel32Minus4Anon:
+    return "PCRel32Minus4Anon";
+  case PCRel32GOTLoad:
+    return "PCRel32GOTLoad";
+  case PCRel32GOT:
+    return "PCRel32GOT";
+  case PCRel32TLV:
+    return "PCRel32TLV";
+  case Delta32:
+    return "Delta32";
+  case Delta64:
+    return "Delta64";
+  case NegDelta32:
+    return "NegDelta32";
+  case NegDelta64:
+    return "NegDelta64";
   }
   return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
