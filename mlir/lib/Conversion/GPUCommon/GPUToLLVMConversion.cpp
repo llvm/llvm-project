@@ -308,13 +308,13 @@ private:
 
 void GpuToLLVMConversionPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   LLVMConversionTarget target(getContext());
 
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
-  populateAsyncStructuralTypeConversionsAndLegality(&getContext(), converter,
-                                                    patterns, target);
+  populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
+                                                    target);
 
   converter.addConversion(
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {

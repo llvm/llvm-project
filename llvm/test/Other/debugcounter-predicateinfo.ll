@@ -8,10 +8,10 @@ define fastcc void @barney() {
 ; CHECK-NEXT:    br label [[BB22:%.*]]
 ; CHECK:       bb22:
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i32 undef, 2
-; CHECK:         [[TMP23_0:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[TMP23]])
+; CHECK:         [[TMP23_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP23]])
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[BB29:%.*]], label [[BB35:%.*]]
 ; CHECK:       bb29:
-; CHECK:         [[TMP23_0_1:%.*]] = call i1 @llvm.ssa.copy.{{.+}}(i1 [[TMP23_0]])
+; CHECK:         [[TMP23_0_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[TMP23_0]])
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[BB33:%.*]], label [[BB35]]
 ; CHECK:       bb33:
 ; CHECK-NEXT:    br i1 [[TMP23_0_1]], label [[BB35]], label [[BB35]]

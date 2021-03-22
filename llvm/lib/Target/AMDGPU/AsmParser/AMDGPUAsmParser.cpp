@@ -340,9 +340,6 @@ public:
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
-  // "CPol_GLC1" is a MatchClass of the CPOL_GLC1 operand with the default and
-  // forced value of the GLC operand.
-  bool isCPol_GLC1() const { return isImmTy(ImmTyCPol); }
   bool isSWZ() const { return isImmTy(ImmTySWZ); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isD16() const { return isImmTy(ImmTyD16); }
@@ -1641,7 +1638,6 @@ public:
   void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
 
   AMDGPUOperand::Ptr defaultCPol() const;
-  AMDGPUOperand::Ptr defaultCPol_GLC1() const;
 
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMEMOffset() const;
@@ -7077,11 +7073,6 @@ AMDGPUAsmParser::parseBoolReg(OperandVector &Operands) {
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultCPol() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyCPol);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultCPol_GLC1() const {
-  return AMDGPUOperand::CreateImm(this, CPol::GLC, SMLoc(),
-                                  AMDGPUOperand::ImmTyCPol);
 }
 
 void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,

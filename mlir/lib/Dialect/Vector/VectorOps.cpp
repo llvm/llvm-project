@@ -3534,11 +3534,11 @@ void CreateMaskOp::getCanonicalizationPatterns(
 }
 
 void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    OwningRewritePatternList &patterns) {
   patterns.insert<CreateMaskFolder, MaskedLoadFolder, MaskedStoreFolder,
                   GatherFolder, ScatterFolder, ExpandLoadFolder,
                   CompressStoreFolder, StridedSliceConstantMaskFolder,
-                  TransposeFolder>(context);
+                  TransposeFolder>(patterns.getContext());
 }
 
 #define GET_OP_CLASSES

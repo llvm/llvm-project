@@ -351,12 +351,11 @@ protected:
   addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const;
 
-  bool addLibStdCXXIncludePaths(Twine Base, Twine Suffix, StringRef GCCTriple,
-                                StringRef GCCMultiarchTriple,
-                                StringRef TargetMultiarchTriple,
+  bool addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
                                 Twine IncludeSuffix,
                                 const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CC1Args) const;
+                                llvm::opt::ArgStringList &CC1Args,
+                                bool DetectDebian = false) const;
 
   /// @}
 

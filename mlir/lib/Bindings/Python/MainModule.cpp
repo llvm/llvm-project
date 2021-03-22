@@ -12,7 +12,7 @@
 
 #include "ExecutionEngine.h"
 #include "Globals.h"
-#include "IRModules.h"
+#include "IRModule.h"
 #include "Pass.h"
 
 namespace py = pybind11;
@@ -211,7 +211,10 @@ PYBIND11_MODULE(_mlir, m) {
 
   // Define and populate IR submodule.
   auto irModule = m.def_submodule("ir", "MLIR IR Bindings");
-  populateIRSubmodule(irModule);
+  populateIRCore(irModule);
+  populateIRAffine(irModule);
+  populateIRAttributes(irModule);
+  populateIRTypes(irModule);
 
   // Define and populate PassManager submodule.
   auto passModule =

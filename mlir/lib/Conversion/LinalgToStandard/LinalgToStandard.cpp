@@ -192,14 +192,14 @@ mlir::linalg::IndexedGenericOpToLibraryCallRewrite::matchAndRewrite(
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void mlir::linalg::populateLinalgToStandardConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    OwningRewritePatternList &patterns) {
   // TODO: ConvOp conversion needs to export a descriptor with relevant
   // attribute values such as kernel striding and dilation.
   // clang-format off
   patterns.insert<
       CopyOpToLibraryCallRewrite,
       CopyTransposeRewrite,
-      IndexedGenericOpToLibraryCallRewrite>(ctx);
+      IndexedGenericOpToLibraryCallRewrite>(patterns.getContext());
   patterns.insert<LinalgOpToLibraryCallRewrite>();
   // clang-format on
 }
@@ -218,8 +218,8 @@ void ConvertLinalgToStandardPass::runOnOperation() {
                          StandardOpsDialect>();
   target.addLegalOp<ModuleOp, FuncOp, ModuleTerminatorOp, ReturnOp>();
   target.addLegalOp<linalg::ReshapeOp, linalg::RangeOp>();
-  OwningRewritePatternList patterns;
-  populateLinalgToStandardConversionPatterns(patterns, &getContext());
+  OwningRewritePatternList patterns(&getContext());
+  populateLinalgToStandardConversionPatterns(patterns);
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

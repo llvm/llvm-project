@@ -30,9 +30,9 @@ void LinalgToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns;
-  populateLinalgToSPIRVPatterns(context, typeConverter, patterns);
-  populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
+  OwningRewritePatternList patterns(context);
+  populateLinalgToSPIRVPatterns(typeConverter, patterns);
+  populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
   // Allow builtin ops.
   target->addLegalOp<ModuleOp, ModuleTerminatorOp>();

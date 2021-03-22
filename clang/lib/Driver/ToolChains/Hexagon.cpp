@@ -613,15 +613,15 @@ void HexagonToolChain::addLibCxxIncludePaths(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   if (!D.SysRoot.empty() && getTriple().isMusl())
-    addLibStdCXXIncludePaths(D.SysRoot + "/usr/include/c++/v1", "", "", "", "",
-                             "", DriverArgs, CC1Args);
-  else if (getTriple().isMusl())
-    addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", "", "", "",
+    addLibStdCXXIncludePaths(D.SysRoot + "/usr/include/c++/v1", "", "",
                              DriverArgs, CC1Args);
+  else if (getTriple().isMusl())
+    addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", DriverArgs,
+                             CC1Args);
   else {
     std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
-    addLibStdCXXIncludePaths(TargetDir, "/hexagon/include/c++/v1", "", "", "",
-                             "", DriverArgs, CC1Args);
+    addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++/v1", "", "",
+                             DriverArgs, CC1Args);
   }
 }
 void HexagonToolChain::addLibStdCxxIncludePaths(
@@ -629,7 +629,7 @@ void HexagonToolChain::addLibStdCxxIncludePaths(
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
   std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
-  addLibStdCXXIncludePaths(TargetDir, "/hexagon/include/c++", "", "", "", "",
+  addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++", "", "",
                            DriverArgs, CC1Args);
 }
 

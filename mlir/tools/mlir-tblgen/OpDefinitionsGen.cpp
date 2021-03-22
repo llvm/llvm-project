@@ -90,13 +90,14 @@ const char *adapterSegmentSizeAttrInitCode = R"(
   auto sizeAttr = odsAttrs.get("{0}").cast<::mlir::DenseIntElementsAttr>();
 )";
 const char *opSegmentSizeAttrInitCode = R"(
-  auto sizeAttr = (*this)->getAttrOfType<::mlir::DenseIntElementsAttr>("{0}");
+  auto sizeAttr = (*this)->getAttr("{0}").cast<::mlir::DenseIntElementsAttr>();
 )";
 const char *attrSizedSegmentValueRangeCalcCode = R"(
+  auto sizeAttrValues = sizeAttr.getValues<uint32_t>();
   unsigned start = 0;
   for (unsigned i = 0; i < index; ++i)
-    start += (*(sizeAttr.begin() + i)).getZExtValue();
-  unsigned size = (*(sizeAttr.begin() + index)).getZExtValue();
+    start += *(sizeAttrValues.begin() + i);
+  unsigned size = *(sizeAttrValues.begin() + index);
   return {start, size};
 )";
 

@@ -10111,7 +10111,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, WideVec,
           DAG.getConstant(Subtarget.isLittleEndian() ? NumVecs - 1 - VecNo
                                                      : VecNo,
-                          dl, MVT::i64));
+                          dl, getPointerTy(DAG.getDataLayout())));
       RetOps.push_back(Extract);
     }
     return DAG.getMergeValues(RetOps, dl);
@@ -10395,7 +10395,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
     unsigned VecNum = Subtarget.isLittleEndian() ? NumVecs - 1 - Idx : Idx;
     SDValue Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
-                              DAG.getConstant(VecNum, dl, MVT::i64));
+                              DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
     SDValue Store =
         DAG.getStore(StoreChain, dl, Elt, BasePtr,
                      SN->getPointerInfo().getWithOffset(Idx * 16),

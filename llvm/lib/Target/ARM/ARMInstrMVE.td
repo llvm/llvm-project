@@ -1900,8 +1900,13 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(insertelt (v4f32 MQPR:$src1), (f32 SPR:$src2), imm:$lane),
             (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$src1, MQPR)), SPR:$src2, (SSubReg_f32_reg imm:$lane))>;
 
-  def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm:$lane),
+  def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm_even:$lane),
             (MVE_VMOV_to_lane_16 MQPR:$src1, (COPY_TO_REGCLASS (f16 HPR:$src2), rGPR), imm:$lane)>;
+  def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm_odd:$lane),
+            (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$src1, MQPR)),
+                                (VINSH (EXTRACT_SUBREG MQPR:$src1, (SSubReg_f16_reg imm_odd:$lane)),
+                                       (COPY_TO_REGCLASS HPR:$src2, SPR)),
+                                (SSubReg_f16_reg imm_odd:$lane)), MQPR)>;
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_even:$lane),
             (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_even:$lane))>;
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_odd:$lane),

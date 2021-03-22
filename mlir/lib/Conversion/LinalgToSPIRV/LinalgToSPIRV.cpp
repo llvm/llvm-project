@@ -203,8 +203,8 @@ LogicalResult SingleWorkgroupReduction::matchAndRewrite(
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateLinalgToSPIRVPatterns(MLIRContext *context,
-                                         SPIRVTypeConverter &typeConverter,
+void mlir::populateLinalgToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                          OwningRewritePatternList &patterns) {
-  patterns.insert<SingleWorkgroupReduction>(typeConverter, context);
+  patterns.insert<SingleWorkgroupReduction>(typeConverter,
+                                            patterns.getContext());
 }

@@ -1224,9 +1224,10 @@ XOrOpPattern::matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateStandardToSPIRVPatterns(MLIRContext *context,
-                                     SPIRVTypeConverter &typeConverter,
+void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns) {
+  MLIRContext *context = patterns.getContext();
+
   patterns.insert<
       // Math dialect operations.
       // TODO: Move to separate pass.
@@ -1293,11 +1294,10 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                           /*benefit=*/2);
 }
 
-void populateTensorToSPIRVPatterns(MLIRContext *context,
-                                   SPIRVTypeConverter &typeConverter,
+void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
                                    OwningRewritePatternList &patterns) {
-  patterns.insert<TensorExtractPattern>(typeConverter, context,
+  patterns.insert<TensorExtractPattern>(typeConverter, patterns.getContext(),
                                         byteCountThreshold);
 }
 

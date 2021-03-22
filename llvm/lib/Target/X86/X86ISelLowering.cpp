@@ -34303,6 +34303,14 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = Known.trunc(BitWidth);
     break;
   }
+  case X86ISD::VBROADCAST: {
+    SDValue Src = Op.getOperand(0);
+    if (!Src.getSimpleValueType().isVector()) {
+      Known = DAG.computeKnownBits(Src, Depth + 1);
+      return;
+    }
+    break;
+  }
   case X86ISD::ANDNP: {
     KnownBits Known2;
     Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
@@ -34328,6 +34336,16 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     // PSADBW - fills low 16 bits and zeros upper 48 bits of each i64 result.
     Known.Zero.setBitsFrom(16);
+    break;
+  }
+  case X86ISD::PMULUDQ: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
+    Known = Known.trunc(BitWidth / 2).zext(BitWidth);
+    Known2 = Known2.trunc(BitWidth / 2).zext(BitWidth);
+    Known = KnownBits::computeForMul(Known, Known2);
     break;
   }
   case X86ISD::CMOV: {
@@ -34525,6 +34543,13 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     if (Tmp > (SrcBits - VTBits))
       return Tmp - (SrcBits - VTBits);
     return 1;
+  }
+
+  case X86ISD::VBROADCAST: {
+    SDValue Src = Op.getOperand(0);
+    if (!Src.getSimpleValueType().isVector())
+      return DAG.ComputeNumSignBits(Src, Depth + 1);
+    break;
   }
 
   case X86ISD::VSHLI: {

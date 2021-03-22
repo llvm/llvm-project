@@ -393,7 +393,7 @@ class Shift_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShift<arithshift, funct3, OPC_OP_IMM, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">,
-      Sched<[WriteShift, ReadShift]>;
+      Sched<[WriteShiftImm, ReadShiftImm]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -418,7 +418,7 @@ class ShiftW_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<arithshift, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
                     "$rd, $rs1, $shamt">,
-      Sched<[WriteShift32, ReadShift32]>;
+      Sched<[WriteShiftImm32, ReadShiftImm32]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -491,12 +491,12 @@ def SRAI : Shift_ri<1, 0b101, "srai">;
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SUB  : ALU_rr<0b0100000, 0b000, "sub">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SLL  : ALU_rr<0b0000000, 0b001, "sll">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLL  : ALU_rr<0b0000000, 0b001, "sll">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 def SLT  : ALU_rr<0b0000000, 0b010, "slt">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SLTU : ALU_rr<0b0000000, 0b011, "sltu">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def XOR  : ALU_rr<0b0000000, 0b100, "xor">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SRL  : ALU_rr<0b0000000, 0b101, "srl">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SRA  : ALU_rr<0b0100000, 0b101, "sra">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SRL  : ALU_rr<0b0000000, 0b101, "srl">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+def SRA  : ALU_rr<0b0100000, 0b101, "sra">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 def OR   : ALU_rr<0b0000000, 0b110, "or">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def AND  : ALU_rr<0b0000000, 0b111, "and">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
@@ -578,11 +578,11 @@ def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">,
 def SUBW  : ALUW_rr<0b0100000, 0b000, "subw">,
             Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 def SLLW  : ALUW_rr<0b0000000, 0b001, "sllw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // Predicates = [IsRV64]
 
 //===----------------------------------------------------------------------===//

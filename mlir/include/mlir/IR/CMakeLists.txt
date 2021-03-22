@@ -26,4 +26,7 @@ mlir_tablegen(BuiltinTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(BuiltinTypes.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRBuiltinTypesIncGen)
 
-add_mlir_doc(BuiltinOps -gen-dialect-doc Builtin Dialects/)
+add_mlir_doc(BuiltinAttributes -gen-attrdef-doc BuiltinAttributes Dialects/)
+add_mlir_doc(BuiltinLocationAttributes -gen-attrdef-doc BuiltinLocationAttributes Dialects/)
+add_mlir_doc(BuiltinOps -gen-op-doc BuiltinOps Dialects/)
+add_mlir_doc(BuiltinTypes -gen-typedef-doc BuiltinTypes Dialects/)

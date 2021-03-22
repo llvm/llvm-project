@@ -66,6 +66,17 @@ TEST_CASE(test_exist_not_found)
     const path p = static_env.DNE;
     TEST_CHECK(exists(p) == false);
 
+    TEST_CHECK(exists(static_env.Dir) == true);
+    TEST_CHECK(exists(static_env.Dir / "dne") == false);
+    // Whether <dir>/dne/.. is considered to exist or not is not necessarily
+    // something we need to define, but the platform specific behaviour
+    // does affect a few other tests, so clarify the root cause here.
+#ifdef _WIN32
+    TEST_CHECK(exists(static_env.Dir / "dne" / "..") == true);
+#else
+    TEST_CHECK(exists(static_env.Dir / "dne" / "..") == false);
+#endif
+
     std::error_code ec = GetTestEC();
     TEST_CHECK(exists(p, ec) == false);
     TEST_CHECK(!ec);

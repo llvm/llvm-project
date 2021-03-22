@@ -69,9 +69,8 @@ define void @buildvec_vid_mpy_imm_v16i8(<16 x i8>* %x) {
 define void @buildvec_dominant0_v8i16(<8 x i16>* %x) {
 ; CHECK-LABEL: buildvec_dominant0_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
-; CHECK-NEXT:    vmv.s.x v25, zero
 ; CHECK-NEXT:    vsetivli a1, 8, e16,m1,ta,mu
+; CHECK-NEXT:    vmv.s.x v25, zero
 ; CHECK-NEXT:    vmv.v.i v26, 8
 ; CHECK-NEXT:    vsetivli a1, 4, e16,m1,tu,mu
 ; CHECK-NEXT:    vslideup.vi v26, v25, 3
@@ -117,9 +116,7 @@ define void @buildvec_dominant2_v2i8(<2 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v25, -1
-; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.s.x v25, zero
-; CHECK-NEXT:    vsetivli a1, 2, e8,m1,ta,mu
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <2 x i8> <i8 0, i8 -1>, <2 x i8>* %x
@@ -148,9 +145,7 @@ define void @buildvec_dominant0_v2i32(<2 x i64>* %x) {
 ; RV64-NEXT:    addi a1, a1, -455
 ; RV64-NEXT:    slli a1, a1, 13
 ; RV64-NEXT:    addi a1, a1, -910
-; RV64-NEXT:    vsetvli a2, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.s.x v25, a1
-; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV64-NEXT:    vse64.v v25, (a0)
 ; RV64-NEXT:    ret
   store <2 x i64> <i64 2049638230412172402, i64 -1>, <2 x i64>* %x

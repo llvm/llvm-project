@@ -490,14 +490,15 @@ struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
 /// Patterns that are used to canonicalize the use of unit-extent dims for
 /// broadcasting.
 void mlir::populateLinalgFoldUnitExtentDimsPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns) {
+    OwningRewritePatternList &patterns) {
+  auto *context = patterns.getContext();
   patterns
       .insert<FoldUnitDimLoops<GenericOp>, FoldUnitDimLoops<IndexedGenericOp>,
               ReplaceUnitExtentTensors<GenericOp>,
               ReplaceUnitExtentTensors<IndexedGenericOp>>(context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
   patterns.insert<FoldReshapeOpWithUnitExtent>(context);
-  populateFoldUnitDimsReshapeOpsByLinearizationPatterns(context, patterns);
+  populateFoldUnitDimsReshapeOpsByLinearizationPatterns(patterns);
 }
 
 namespace {
@@ -505,14 +506,14 @@ namespace {
 struct LinalgFoldUnitExtentDimsPass
     : public LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
   void runOnFunction() override {
-    OwningRewritePatternList patterns;
     FuncOp funcOp = getFunction();
     MLIRContext *context = funcOp.getContext();
+    OwningRewritePatternList patterns(context);
     if (foldOneTripLoopsOnly)
       patterns.insert<FoldUnitDimLoops<GenericOp>,
                       FoldUnitDimLoops<IndexedGenericOp>>(context);
     else
-      populateLinalgFoldUnitExtentDimsPatterns(context, patterns);
+      populateLinalgFoldUnitExtentDimsPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
   }
 };

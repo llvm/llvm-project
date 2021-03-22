@@ -37,8 +37,7 @@ void populateConvVectorizationPatterns(
     ArrayRef<int64_t> tileSizes);
 
 /// Populates the given list with patterns to bufferize linalg ops.
-void populateLinalgBufferizePatterns(MLIRContext *context,
-                                     BufferizeTypeConverter &converter,
+void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
                                      OwningRewritePatternList &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
@@ -445,7 +444,7 @@ struct LinalgTilingOptions {
 OwningRewritePatternList
 getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
+    OwningRewritePatternList &patterns);
 
 /// Base pattern that applied the tiling transformation specified by `options`.
 /// Abort and return failure in 2 cases:
@@ -692,11 +691,10 @@ template <
     typename = std::enable_if_t<detect_has_get_operation_name<OpType>::value>,
     typename = void>
 void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
-                                    MLIRContext *context,
                                     linalg::LinalgVectorizationOptions options,
                                     linalg::LinalgTransformationFilter f) {
   patternList.insert<linalg::LinalgVectorizationPattern>(
-      OpType::getOperationName(), context, options, f);
+      OpType::getOperationName(), patternList.getContext(), options, f);
 }
 
 /// SFINAE helper for single C++ class without a `getOperationName` method (e.g.
@@ -704,7 +702,6 @@ void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
 template <typename OpType, typename = std::enable_if_t<
                                !detect_has_get_operation_name<OpType>::value>>
 void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
-                                    MLIRContext *context,
                                     linalg::LinalgVectorizationOptions options,
                                     linalg::LinalgTransformationFilter f) {
   patternList.insert<linalg::LinalgVectorizationPattern>(
@@ -714,14 +711,14 @@ void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
 /// Variadic helper function to insert vectorization patterns for C++ ops.
 template <typename... OpTypes>
 void insertVectorizationPatterns(OwningRewritePatternList &patternList,
-                                 MLIRContext *context,
                                  linalg::LinalgVectorizationOptions options,
                                  linalg::LinalgTransformationFilter f =
                                      linalg::LinalgTransformationFilter()) {
   // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-  (void)std::initializer_list<int>{0, (insertVectorizationPatternImpl<OpTypes>(
-                                           patternList, context, options, f),
-                                       0)...};
+  (void)std::initializer_list<int>{
+      0, (insertVectorizationPatternImpl<OpTypes>(
+              patternList, patternList.getContext(), options, f),
+          0)...};
 }
 
 ///
@@ -793,13 +790,13 @@ private:
 /// Populates `patterns` with patterns to convert spec-generated named ops to
 /// linalg.generic ops.
 void populateLinalgNamedOpsGeneralizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
+    OwningRewritePatternList &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
 
 /// Populates `patterns` with patterns to convert linalg.conv ops to
 /// linalg.generic ops.
 void populateLinalgConvGeneralizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
+    OwningRewritePatternList &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
 
 //===----------------------------------------------------------------------===//
@@ -892,6 +889,30 @@ struct AffineMinSCFCanonicalizationPattern
   LogicalResult matchAndRewrite(AffineMinOp minOp,
                                 PatternRewriter &rewriter) const override;
 };
+
+/// Helper struct to return the results of `substituteMin`.
+struct AffineMapAndOperands {
+  AffineMap map;
+  SmallVector<Value> dims;
+  SmallVector<Value> symbols;
+};
+/// Traverse the dims of the AffineMap of `affineMinOp` and substitute scf loop
+/// induction variables by new expressions involving the lower or upper bound:
+///   - If the AffineDimExpr mapped to a loop IV has a positive sign, it is
+///     replaced by the loop upper bound.
+///   - If the AffineDimExpr mapped to a loop IV has a negative sign, it is
+///     replaced by the loop lower bound.
+/// All loop induction variables are iteratively replaced, unless a
+/// `substituteOperation` hook is passed to more finely determine which
+/// operations are substituted.
+/// This is used as an intermediate step in computing bounding boxes and
+/// canonicalize AffineMinOps. All dim and symbol operands are assumed to have
+/// positive values (positive orthant assumptions).
+/// Return a new AffineMap, dims and symbols that have been canonicalized and
+/// simplified.
+AffineMapAndOperands substituteMin(
+    AffineMinOp affineMinOp,
+    llvm::function_ref<bool(Operation *)> substituteOperation = nullptr);
 
 /// Converts Convolution op into vector contraction.
 ///
@@ -1036,12 +1057,12 @@ struct SparsificationOptions {
 
 /// Sets up sparsification rewriting rules with the given options.
 void populateSparsificationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
+    OwningRewritePatternList &patterns,
     const SparsificationOptions &options = SparsificationOptions());
 
 /// Sets up sparsification conversion rules with the given options.
 void populateSparsificationConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 } // namespace linalg
 } // namespace mlir

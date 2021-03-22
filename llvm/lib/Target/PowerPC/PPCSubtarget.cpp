@@ -182,9 +182,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   StackAlignment = getPlatformStackAlignment();
 
   // Determine endianness.
-  // FIXME: Part of the TargetMachine.
-  IsLittleEndian = (TargetTriple.getArch() == Triple::ppc64le ||
-                    TargetTriple.getArch() == Triple::ppcle);
+  IsLittleEndian = TM.isLittleEndian();
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

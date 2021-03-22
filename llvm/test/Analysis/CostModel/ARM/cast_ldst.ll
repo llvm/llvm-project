@@ -81,14 +81,14 @@ define i32 @load_extends() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi8 = load i8, i8* undef, align 1
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi16 = load i16, i16* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadi32 = load i32, i32* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv2i8 = load <2 x i8>, <2 x i8>* undef, align 2
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %loadv2i8 = load <2 x i8>, <2 x i8>* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i8 = load <4 x i8>, <4 x i8>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8i8 = load <8 x i8>, <8 x i8>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv16i8 = load <16 x i8>, <16 x i8>* undef, align 16
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv2i16 = load <2 x i16>, <2 x i16>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %loadv2i16 = load <2 x i16>, <2 x i16>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i16 = load <4 x i16>, <4 x i16>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8i16 = load <8 x i16>, <8 x i16>* undef, align 16
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv2i32 = load <2 x i32>, <2 x i32>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %loadv2i32 = load <2 x i32>, <2 x i32>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4i32 = load <4 x i32>, <4 x i32>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r0 = sext i8 %loadi8 to i16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r1 = zext i8 %loadi8 to i16
@@ -774,9 +774,9 @@ define i32 @store_trunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %i1632, i16* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i16 %i1664, i16* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store i32 %i3264, i32* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i8> %v2816, <2 x i8>* undef, align 2
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i8> %v2832, <2 x i8>* undef, align 2
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i8> %v2864, <2 x i8>* undef, align 2
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i8> %v2816, <2 x i8>* undef, align 2
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i8> %v2832, <2 x i8>* undef, align 2
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i8> %v2864, <2 x i8>* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> %v4816, <4 x i8>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> %v4832, <4 x i8>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> %v4864, <4 x i8>* undef, align 4
@@ -786,13 +786,13 @@ define i32 @store_trunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16816, <16 x i8>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16832, <16 x i8>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16864, <16 x i8>* undef, align 16
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i16> %v21632, <2 x i16>* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i16> %v21664, <2 x i16>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i16> %v21632, <2 x i16>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i16> %v21664, <2 x i16>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i16> %v41632, <4 x i16>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i16> %v41664, <4 x i16>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v81632, <8 x i16>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v81664, <8 x i16>* undef, align 16
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x i32> %v23264, <2 x i32>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: store <2 x i32> %v23264, <2 x i32>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> %v43264, <4 x i32>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -1273,11 +1273,11 @@ define i32 @load_fpextends() {
 ; CHECK-MVE-RECIP-LABEL: 'load_fpextends'
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadf16 = load half, half* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %loadf32 = load float, float* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv2f16 = load <2 x half>, <2 x half>* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %loadv4f16 = load <4 x half>, <4 x half>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %loadv2f16 = load <2 x half>, <2 x half>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv4f16 = load <4 x half>, <4 x half>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv8f16 = load <8 x half>, <8 x half>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv16f16 = load <16 x half>, <16 x half>* undef, align 32
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %loadv2f32 = load <2 x float>, <2 x float>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %loadv2f32 = load <2 x float>, <2 x float>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %loadv4f32 = load <4 x float>, <4 x float>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %loadv8f32 = load <8 x float>, <8 x float>* undef, align 32
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %r1 = fpext half %loadf16 to float
@@ -1567,13 +1567,13 @@ define i32 @load_fptrunc() {
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store half %i1632, half* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store half %i1664, half* undef, align 2
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: store float %i3264, float* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x half> %v21632, <2 x half>* undef, align 4
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x half> %v21664, <2 x half>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <2 x half> %v21632, <2 x half>* undef, align 4
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <2 x half> %v21664, <2 x half>* undef, align 4
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x half> %v41632, <4 x half>* undef, align 8
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: store <4 x half> %v41664, <4 x half>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <4 x half> %v41664, <4 x half>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x half> %v81632, <8 x half>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x half> %v81664, <8 x half>* undef, align 16
-; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: store <2 x float> %v23264, <2 x float>* undef, align 8
+; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: store <2 x float> %v23264, <2 x float>* undef, align 8
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x float> %v43264, <4 x float>* undef, align 16
 ; CHECK-MVE-RECIP-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;

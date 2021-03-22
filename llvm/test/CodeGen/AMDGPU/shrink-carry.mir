@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -start-before si-shrink-instructions -stop-before si-insert-skips -o - %s | FileCheck -check-prefix=GCN %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -start-before si-shrink-instructions -stop-before si-late-branch-lowering -o - %s | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: subbrev{{$}}
 # GCN:       V_SUBBREV_U32_e32 0, undef $vgpr0, implicit-def $vcc, implicit killed $vcc, implicit $exec

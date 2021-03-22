@@ -212,6 +212,11 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     append("-bcdtors:mbr"
            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
+  if(BUILD_SHARED_LIBS)
+    # See rpath handling in AddLLVM.cmake
+    # FIXME: Remove this warning if this rpath is no longer hardcoded.
+    message(WARNING "Build and install environment path info may be exposed; binaries will also be unrelocatable.")
+  endif()
 endif()
 
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO
@@ -668,6 +673,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   if (LLVM_ENABLE_PEDANTIC AND LLVM_COMPILER_IS_GCC_COMPATIBLE)
     append("-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     append("-Wno-long-long" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+    # GCC warns about redundant toplevel semicolons (enabled by -pedantic
+    # above), while Clang doesn't. Enable the corresponding Clang option to
+    # pick up on these even in builds with Clang.
+    add_flag_if_supported("-Wc++98-compat-extra-semi" CXX98_COMPAT_EXTRA_SEMI_FLAG)
   endif()
 
   add_flag_if_supported("-Wimplicit-fallthrough" IMPLICIT_FALLTHROUGH_FLAG)

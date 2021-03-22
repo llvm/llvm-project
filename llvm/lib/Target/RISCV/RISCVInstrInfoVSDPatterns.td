@@ -33,21 +33,6 @@ def SplatPat       : ComplexPattern<vAny, 1, "selectVSplat",      [splat_vector,
 def SplatPat_simm5 : ComplexPattern<vAny, 1, "selectVSplatSimm5", [splat_vector, rv32_splat_i64], [], 2>;
 def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimm5", [splat_vector, rv32_splat_i64], [], 2>;
 
-def masked_load :
-  PatFrag<(ops node:$ptr, node:$mask, node:$maskedoff),
-          (masked_ld node:$ptr, undef, node:$mask, node:$maskedoff), [{
-  return !cast<MaskedLoadSDNode>(N)->isExpandingLoad() &&
-    cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
-    cast<MaskedLoadSDNode>(N)->isUnindexed();
-}]>;
-def masked_store :
-  PatFrag<(ops node:$val, node:$ptr, node:$mask),
-          (masked_st node:$val, node:$ptr, undef, node:$mask), [{
-  return !cast<MaskedStoreSDNode>(N)->isTruncatingStore() &&
-         !cast<MaskedStoreSDNode>(N)->isCompressingStore() &&
-         cast<MaskedStoreSDNode>(N)->isUnindexed();
-}]>;
-
 class SwapHelper<dag Prefix, dag A, dag B, dag Suffix, bit swap> {
    dag Value = !con(Prefix, !if(swap, B, A), !if(swap, A, B), Suffix);
 }
@@ -66,25 +51,6 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   // Store
   def : Pat<(store type:$rs2, BaseAddr:$rs1),
             (store_instr reg_class:$rs2, BaseAddr:$rs1, avl, sew)>;
-}
-
-multiclass VPatUSLoadStoreSDNodeMask<ValueType type,
-                                     ValueType mask_type,
-                                     int sew,
-                                     LMULInfo vlmul,
-                                     OutPatFrag avl,
-                                     VReg reg_class>
-{
-  defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX#"_MASK");
-  defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX#"_MASK");
-  // Load
-  def : Pat<(type (masked_load BaseAddr:$rs1, (mask_type V0), type:$merge)),
-            (load_instr reg_class:$merge, BaseAddr:$rs1, (mask_type V0),
-                        avl, sew)>;
-  // Store
-  def : Pat<(masked_store type:$rs2, BaseAddr:$rs1, (mask_type V0)),
-            (store_instr reg_class:$rs2, BaseAddr:$rs1, (mask_type V0),
-                         avl, sew)>;
 }
 
 multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
@@ -394,9 +360,6 @@ foreach vti = !listconcat(FractionalGroupIntegerVectors,
                           FractionalGroupFloatVectors) in
   defm "" : VPatUSLoadStoreSDNode<vti.Vector, vti.SEW, vti.LMul,
                                   vti.AVL, vti.RegClass>;
-foreach vti = AllVectors in
-  defm "" : VPatUSLoadStoreSDNodeMask<vti.Vector, vti.Mask, vti.SEW, vti.LMul,
-                                      vti.AVL, vti.RegClass>;
 foreach vti = [VI8M1, VI16M1, VI32M1, VI64M1, VF16M1, VF32M1, VF64M1] in
   defm "" : VPatUSLoadStoreWholeVRSDNode<vti.Vector, vti.SEW, vti.LMul,
                                          vti.RegClass>;

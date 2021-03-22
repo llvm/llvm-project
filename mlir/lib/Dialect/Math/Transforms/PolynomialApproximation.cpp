@@ -10,6 +10,7 @@
 // that do not rely on any of the library functions.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -17,9 +18,10 @@
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/Transforms/Bufferize.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include <limits.h>
+#include <climits>
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -530,7 +532,7 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 //----------------------------------------------------------------------------//
 
 void mlir::populateMathPolynomialApproximationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    OwningRewritePatternList &patterns) {
   patterns.insert<TanhApproximation, LogApproximation, Log2Approximation,
-                  ExpApproximation>(ctx);
+                  ExpApproximation>(patterns.getContext());
 }

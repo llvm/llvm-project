@@ -60,9 +60,10 @@ struct LowerGpuOpsToROCDLOpsPass
                                   /*useAlignedAlloc =*/false};
     LLVMTypeConverter converter(m.getContext(), options);
 
-    OwningRewritePatternList patterns, llvmPatterns;
+    OwningRewritePatternList patterns(m.getContext());
+    OwningRewritePatternList llvmPatterns(m.getContext());
 
-    populateGpuRewritePatterns(m.getContext(), patterns);
+    populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
@@ -93,7 +94,7 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToROCDLConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  populateWithGenerated(converter.getDialect()->getContext(), patterns);
+  populateWithGenerated(patterns);
   patterns.insert<
       GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
                                   ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,

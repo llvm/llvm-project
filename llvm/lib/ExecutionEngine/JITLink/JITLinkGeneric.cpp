@@ -66,14 +66,27 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
     return Ctx->notifyFailed(std::move(Err));
 
   // Notify client that the defined symbols have been assigned addresses.
-  LLVM_DEBUG(
-      { dbgs() << "Resolving symbols defined in " << G->getName() << "\n"; });
+  LLVM_DEBUG(dbgs() << "Resolving symbols defined in " << G->getName() << "\n");
 
   if (auto Err = Ctx->notifyResolved(*G))
     return Ctx->notifyFailed(std::move(Err));
 
   auto ExternalSymbols = getExternalSymbolNames();
 
+  // If there are no external symbols then proceed immediately with phase 2.
+  if (ExternalSymbols.empty()) {
+    LLVM_DEBUG({
+      dbgs() << "No external symbols for " << G->getName()
+             << ". Proceeding immediately with link phase 2.\n";
+    });
+    // FIXME: Once callee expressions are defined to be sequenced before
+    //        argument expressions (c++17) we can simplify this. See below.
+    auto &TmpSelf = *Self;
+    TmpSelf.linkPhase2(std::move(Self), AsyncLookupResult(), std::move(Layout));
+    return;
+  }
+
+  // Otherwise look up the externals.
   LLVM_DEBUG({
     dbgs() << "Issuing lookup for external symbols for " << G->getName()
            << " (may trigger materialization/linking of other graphs)...\n";

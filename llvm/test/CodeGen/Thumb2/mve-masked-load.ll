@@ -1500,8 +1500,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    ldrh r2, [r0, #2]
 ; CHECK-LE-NEXT:    strh.w r2, [sp, #24]
 ; CHECK-LE-NEXT:    vldr.16 s4, [sp, #24]
-; CHECK-LE-NEXT:    vmov r2, s4
-; CHECK-LE-NEXT:    vmov.16 q0[1], r2
+; CHECK-LE-NEXT:    vins.f16 s0, s4
 ; CHECK-LE-NEXT:    lsls r2, r1, #29
 ; CHECK-LE-NEXT:    bpl .LBB45_3
 ; CHECK-LE-NEXT:  .LBB45_11: @ %cond.load4
@@ -1516,8 +1515,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    ldrh r2, [r0, #6]
 ; CHECK-LE-NEXT:    strh.w r2, [sp, #16]
 ; CHECK-LE-NEXT:    vldr.16 s4, [sp, #16]
-; CHECK-LE-NEXT:    vmov r2, s4
-; CHECK-LE-NEXT:    vmov.16 q0[3], r2
+; CHECK-LE-NEXT:    vins.f16 s1, s4
 ; CHECK-LE-NEXT:    lsls r2, r1, #27
 ; CHECK-LE-NEXT:    bpl .LBB45_5
 ; CHECK-LE-NEXT:  .LBB45_13: @ %cond.load10
@@ -1532,8 +1530,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    ldrh r2, [r0, #10]
 ; CHECK-LE-NEXT:    strh.w r2, [sp, #8]
 ; CHECK-LE-NEXT:    vldr.16 s4, [sp, #8]
-; CHECK-LE-NEXT:    vmov r2, s4
-; CHECK-LE-NEXT:    vmov.16 q0[5], r2
+; CHECK-LE-NEXT:    vins.f16 s2, s4
 ; CHECK-LE-NEXT:    lsls r2, r1, #25
 ; CHECK-LE-NEXT:    bpl .LBB45_7
 ; CHECK-LE-NEXT:  .LBB45_15: @ %cond.load16
@@ -1548,8 +1545,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-LE-NEXT:    ldrh r0, [r0, #14]
 ; CHECK-LE-NEXT:    strh.w r0, [sp]
 ; CHECK-LE-NEXT:    vldr.16 s4, [sp]
-; CHECK-LE-NEXT:    vmov r0, s4
-; CHECK-LE-NEXT:    vmov.16 q0[7], r0
+; CHECK-LE-NEXT:    vins.f16 s3, s4
 ; CHECK-LE-NEXT:    add sp, #40
 ; CHECK-LE-NEXT:    bx lr
 ;
@@ -1614,8 +1610,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    ldrh r0, [r0, #14]
 ; CHECK-BE-NEXT:    strh.w r0, [sp]
 ; CHECK-BE-NEXT:    vldr.16 s0, [sp]
-; CHECK-BE-NEXT:    vmov r0, s0
-; CHECK-BE-NEXT:    vmov.16 q1[7], r0
+; CHECK-BE-NEXT:    vins.f16 s7, s0
 ; CHECK-BE-NEXT:  .LBB45_9: @ %else20
 ; CHECK-BE-NEXT:    vrev64.16 q0, q1
 ; CHECK-BE-NEXT:    add sp, #40
@@ -1630,8 +1625,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    ldrh r2, [r0, #2]
 ; CHECK-BE-NEXT:    strh.w r2, [sp, #24]
 ; CHECK-BE-NEXT:    vldr.16 s0, [sp, #24]
-; CHECK-BE-NEXT:    vmov r2, s0
-; CHECK-BE-NEXT:    vmov.16 q1[1], r2
+; CHECK-BE-NEXT:    vins.f16 s4, s0
 ; CHECK-BE-NEXT:    lsls r2, r1, #26
 ; CHECK-BE-NEXT:    bpl .LBB45_3
 ; CHECK-BE-NEXT:  .LBB45_12: @ %cond.load4
@@ -1646,8 +1640,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    ldrh r2, [r0, #6]
 ; CHECK-BE-NEXT:    strh.w r2, [sp, #16]
 ; CHECK-BE-NEXT:    vldr.16 s0, [sp, #16]
-; CHECK-BE-NEXT:    vmov r2, s0
-; CHECK-BE-NEXT:    vmov.16 q1[3], r2
+; CHECK-BE-NEXT:    vins.f16 s5, s0
 ; CHECK-BE-NEXT:    lsls r2, r1, #28
 ; CHECK-BE-NEXT:    bpl .LBB45_5
 ; CHECK-BE-NEXT:  .LBB45_14: @ %cond.load10
@@ -1662,8 +1655,7 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    ldrh r2, [r0, #10]
 ; CHECK-BE-NEXT:    strh.w r2, [sp, #8]
 ; CHECK-BE-NEXT:    vldr.16 s0, [sp, #8]
-; CHECK-BE-NEXT:    vmov r2, s0
-; CHECK-BE-NEXT:    vmov.16 q1[5], r2
+; CHECK-BE-NEXT:    vins.f16 s6, s0
 ; CHECK-BE-NEXT:    lsls r2, r1, #30
 ; CHECK-BE-NEXT:    bpl .LBB45_7
 ; CHECK-BE-NEXT:  .LBB45_16: @ %cond.load16

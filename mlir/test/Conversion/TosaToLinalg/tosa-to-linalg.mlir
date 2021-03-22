@@ -180,6 +180,35 @@ func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: select
   %18 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
+  // CHECK: linalg.generic
+  // CHECK: fptosi
+  %19 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpf
+  %20 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: fptrunc
+  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
+
+  // CHECK: linalg.generic
+  // CHECK: yield
+  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_simple_f16
+func @test_simple_f16(%arg0: tensor<1xf16>) -> () {
+
+  // CHECK: linalg.generic
+  // CHECK: fpext
+  %0 = "tosa.cast"(%arg0) : (tensor<1xf16>) -> tensor<1xf32>
+
   return
 }
 
@@ -254,6 +283,51 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: cmpi
   // CHECK: select
   %15 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: trunci
+  %16 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
+
+  // CHECK: linalg.generic
+  // CHECK: yield
+  %17 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: sexti
+  %18 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
+
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpi
+  %19 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: sitofp
+  %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_bool
+func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: and
+  %0 = "tosa.logical_and"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: or
+  %1 = "tosa.logical_or"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: xor
+  %2 = "tosa.logical_xor"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: constant true
+  // CHECK: xor
+  %3 = "tosa.logical_not"(%arg0) : (tensor<1xi1>) -> tensor<1xi1>
 
   return
 }
@@ -523,4 +597,27 @@ func @rescaleUnnecessaryDoubleRound(%arg0 : tensor<1xi8>) -> (tensor<1xi8>) {
   // CHECK-SAME:  {double_round = false}
   %0 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [19689 : i32], shift = [15 : i32], scale32 = true, double_round = true, per_channel = false} : (tensor<1xi8>)  -> (tensor<1xi8>)
   return %0 : tensor<1xi8>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (-d0 + 4, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0, -d1 + 3)>
+
+// CHECK-LABEL: @reverse
+func @reverse(%arg0: tensor<5x4xi32>) -> () {
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [5, 4]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg0 : tensor<5x4xi32>) outs([[INIT]] : tensor<5x4xi32>) {
+  // CHECK: ^bb0(%arg1: i32, %arg2: i32):
+  // CHECK:   linalg.yield %arg1 : i32
+  %0 = "tosa.reverse"(%arg0) {axis = 0 : i64} : (tensor<5x4xi32>) -> tensor<5x4xi32>
+
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [5, 4]
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP1]]], iterator_types = ["parallel", "parallel"]} ins(%arg0 : tensor<5x4xi32>) outs([[INIT]] : tensor<5x4xi32>) {
+  // CHECK: ^bb0(%arg1: i32, %arg2: i32):
+  // CHECK:   linalg.yield %arg1 : i32
+  %1 = "tosa.reverse"(%arg0) {axis = 1 : i64} : (tensor<5x4xi32>) -> tensor<5x4xi32>
+
+  return
 }

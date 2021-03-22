@@ -36,15 +36,15 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   // Encode global variable's descriptor set and binding if they exist.
   encodeBindAttribute(module);
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(context);
 
   populateSPIRVToLLVMTypeConversion(converter);
 
-  populateSPIRVToLLVMModuleConversionPatterns(context, converter, patterns);
-  populateSPIRVToLLVMConversionPatterns(context, converter, patterns);
-  populateSPIRVToLLVMFunctionConversionPatterns(context, converter, patterns);
+  populateSPIRVToLLVMModuleConversionPatterns(converter, patterns);
+  populateSPIRVToLLVMConversionPatterns(converter, patterns);
+  populateSPIRVToLLVMFunctionConversionPatterns(converter, patterns);
 
-  ConversionTarget target(getContext());
+  ConversionTarget target(*context);
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 

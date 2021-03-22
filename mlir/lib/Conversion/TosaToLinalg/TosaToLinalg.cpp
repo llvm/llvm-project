@@ -149,9 +149,28 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::LogicalLeftShiftOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::ShiftLeftOp>(loc, resultTypes, args);
 
-  // tosa::LogicalrightShiftOp
+  // tosa::LogicalRightShiftOp
   if (isa<tosa::LogicalRightShiftOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::UnsignedShiftRightOp>(loc, resultTypes, args);
+
+  // tosa::LogicalAnd
+  if (isa<tosa::LogicalAndOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::AndOp>(loc, resultTypes, args);
+
+  // tosa::LogicalNot
+  if (isa<tosa::LogicalNotOp>(op) && elementTy.isInteger(1)) {
+    auto one = rewriter.create<mlir::ConstantOp>(
+        loc, rewriter.getIntegerAttr(elementTy, 1));
+    return rewriter.create<mlir::XOrOp>(loc, resultTypes, args[0], one);
+  }
+
+  // tosa::LogicalOr
+  if (isa<tosa::LogicalOrOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::OrOp>(loc, resultTypes, args);
+
+  // tosa::LogicalXor
+  if (isa<tosa::LogicalXorOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::XOrOp>(loc, resultTypes, args);
 
   // tosa::PowOp
   if (isa<tosa::PowOp>(op) && elementTy.isa<FloatType>())
@@ -268,6 +287,67 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                                                   rewriter);
     return clampHelper<mlir::CmpIOp>(loc, args[0], zero, n, CmpIPredicate::slt,
                                      rewriter);
+  }
+
+  // tosa::CastOp
+  if (isa<tosa::CastOp>(op)) {
+    Type srcTy = elementTy;
+    Type dstTy = resultTypes.front();
+    bool bitExtend =
+        srcTy.getIntOrFloatBitWidth() < dstTy.getIntOrFloatBitWidth();
+
+    if (srcTy == dstTy)
+      return args.front();
+
+    if (srcTy.isa<FloatType>() && dstTy.isa<FloatType>() && bitExtend)
+      return rewriter.create<mlir::FPExtOp>(loc, resultTypes, args, mlir::None);
+
+    if (srcTy.isa<FloatType>() && dstTy.isa<FloatType>() && !bitExtend)
+      return rewriter.create<mlir::FPTruncOp>(loc, resultTypes, args,
+                                              mlir::None);
+
+    // 1-bit integers need to be treated as signless.
+    if (srcTy.isInteger(1) && mlir::UIToFPOp::areCastCompatible(srcTy, dstTy))
+      return rewriter.create<mlir::UIToFPOp>(loc, resultTypes, args,
+                                             mlir::None);
+
+    if (srcTy.isInteger(1) && dstTy.isa<IntegerType>() && bitExtend)
+      return rewriter.create<mlir::ZeroExtendIOp>(loc, resultTypes, args,
+                                                  mlir::None);
+
+    // All other si-to-fp conversions should be handled by SIToFP.
+    if (mlir::SIToFPOp::areCastCompatible(srcTy, dstTy))
+      return rewriter.create<mlir::SIToFPOp>(loc, resultTypes, args,
+                                             mlir::None);
+
+    // Casting to boolean, floats need to only be checked as not-equal to zero.
+    if (srcTy.isa<FloatType>() && dstTy.isInteger(1)) {
+      Value zero =
+          rewriter.create<ConstantOp>(loc, rewriter.getFloatAttr(srcTy, 0.0));
+      return rewriter.create<mlir::CmpFOp>(loc, CmpFPredicate::UNE,
+                                           args.front(), zero);
+    }
+
+    if (mlir::FPToSIOp::areCastCompatible(srcTy, dstTy))
+      return rewriter.create<mlir::FPToSIOp>(loc, resultTypes, args,
+                                             mlir::None);
+
+    // Casting to boolean, integers need to only be checked as not-equal to
+    // zero.
+    if (srcTy.isa<IntegerType>() && dstTy.isInteger(1)) {
+      Value zero =
+          rewriter.create<ConstantIntOp>(loc, 0, srcTy.getIntOrFloatBitWidth());
+      return rewriter.create<mlir::CmpIOp>(loc, CmpIPredicate::ne, args.front(),
+                                           zero);
+    }
+
+    if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && bitExtend)
+      return rewriter.create<mlir::SignExtendIOp>(loc, resultTypes, args,
+                                                  mlir::None);
+
+    if (srcTy.isa<IntegerType>() && dstTy.isa<IntegerType>() && !bitExtend)
+      return rewriter.create<mlir::TruncateIOp>(loc, resultTypes, args,
+                                                mlir::None);
   }
 
   (void)rewriter.notifyMatchFailure(
@@ -505,7 +585,7 @@ public:
   }
 };
 
-class ReshapeOpConverter : public OpConversionPattern<tosa::ReshapeOp> {
+class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
 
@@ -647,7 +727,7 @@ public:
   }
 };
 
-class RescaleOpConverter : public OpRewritePattern<tosa::RescaleOp> {
+class RescaleConverter : public OpRewritePattern<tosa::RescaleOp> {
 public:
   using OpRewritePattern<tosa::RescaleOp>::OpRewritePattern;
 
@@ -809,7 +889,7 @@ public:
   }
 };
 
-struct ConcatOpConversion : public OpConversionPattern<tosa::ConcatOp> {
+struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
   using OpConversionPattern<tosa::ConcatOp>::OpConversionPattern;
 
   LogicalResult
@@ -856,10 +936,60 @@ struct ConcatOpConversion : public OpConversionPattern<tosa::ConcatOp> {
   }
 };
 
+class ReverseConverter : public OpRewritePattern<tosa::ReverseOp> {
+public:
+  using OpRewritePattern<tosa::ReverseOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ReverseOp op,
+                                PatternRewriter &rewriter) const final {
+    auto loc = op.getLoc();
+    Value input = op.input();
+    auto inputTy = input.getType().template cast<ShapedType>();
+    auto resultTy = op.getType().template cast<ShapedType>();
+    auto rank = resultTy.getRank();
+    auto axis = op.axis();
+
+    if (!inputTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "No initial value found for reduction operation");
+
+    // First fill the output buffer with the init value.
+    auto initTensor = rewriter
+                          .create<linalg::InitTensorOp>(
+                              loc, ArrayRef<Value>({}), inputTy.getShape(),
+                              inputTy.getElementType())
+                          .result();
+
+    SmallVector<AffineExpr, 2> inputExprs;
+    inputExprs.resize(resultTy.getRank());
+
+    for (int i = 0; i < rank; i++)
+      inputExprs[i] = rewriter.getAffineDimExpr(i);
+
+    inputExprs[axis] =
+        rewriter.getAffineConstantExpr(inputTy.getDimSize(axis) - 1) -
+        inputExprs[axis];
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
+                       rewriter.getContext()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+        op, resultTy, op.input(), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+        });
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
+    OwningRewritePatternList *patterns) {
   patterns->insert<
       PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>, PointwiseConverter<tosa::NegateOp>,
@@ -869,6 +999,10 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::BitwiseAndOp>,
       PointwiseConverter<tosa::BitwiseOrOp>,
       PointwiseConverter<tosa::BitwiseXorOp>,
+      PointwiseConverter<tosa::LogicalAndOp>,
+      PointwiseConverter<tosa::LogicalNotOp>,
+      PointwiseConverter<tosa::LogicalOrOp>,
+      PointwiseConverter<tosa::LogicalXorOp>, PointwiseConverter<tosa::CastOp>,
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
       PointwiseConverter<tosa::LogicalRightShiftOp>,
       PointwiseConverter<tosa::SelectOp>, PointwiseConverter<tosa::GreaterOp>,
@@ -879,6 +1013,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityOp>,
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>, ConcatOpConversion,
-      ReshapeOpConverter, TransposeConverter, RescaleOpConverter>(context);
+      ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
+      RescaleConverter, ReverseConverter, TransposeConverter>(
+      patterns->getContext());
 }

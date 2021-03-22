@@ -339,3 +339,32 @@ func @subtensor_insert_output_dest_canonicalize(%arg0 : tensor<2x3xi32>, %arg1 :
 //       CHECK:   %[[GENERATE:.+]] = tensor.generate
 //       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[ARG0]] into %[[GENERATE]]
 //       CHECK:   return %[[RESULT]]
+
+// -----
+
+// CHECK-LABEL: @select_same_val
+//       CHECK:   return %arg1
+func @select_same_val(%arg0: i1, %arg1: i64) -> i64 {
+  %0 = select %arg0, %arg1, %arg1 : i64
+  return %0 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @select_cmp_eq_select
+//       CHECK:   return %arg1
+func @select_cmp_eq_select(%arg0: i64, %arg1: i64) -> i64 {
+  %0 = cmpi eq, %arg0, %arg1 : i64
+  %1 = select %0, %arg0, %arg1 : i64
+  return %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @select_cmp_ne_select
+//       CHECK:   return %arg0
+func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
+  %0 = cmpi ne, %arg0, %arg1 : i64
+  %1 = select %0, %arg0, %arg1 : i64
+  return %1 : i64
+}

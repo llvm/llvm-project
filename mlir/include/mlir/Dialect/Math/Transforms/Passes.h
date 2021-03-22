@@ -9,18 +9,14 @@
 #ifndef MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_MATH_TRANSFORMS_PASSES_H_
 
-#include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Bufferize.h"
-
 namespace mlir {
 
 class OwningRewritePatternList;
 
-void populateExpandTanhPattern(OwningRewritePatternList &patterns,
-                               MLIRContext *ctx);
+void populateExpandTanhPattern(OwningRewritePatternList &patterns);
 
 void populateMathPolynomialApproximationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx);
+    OwningRewritePatternList &patterns);
 
 } // namespace mlir
 

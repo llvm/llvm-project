@@ -137,8 +137,8 @@ public:
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
 void linalg::populateSparsificationConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns) {
+    OwningRewritePatternList &patterns) {
   patterns.insert<TensorFromPointerConverter, TensorToDimSizeConverter,
                   TensorToPointersConverter, TensorToIndicesConverter,
-                  TensorToValuesConverter>(context);
+                  TensorToValuesConverter>(patterns.getContext());
 }
