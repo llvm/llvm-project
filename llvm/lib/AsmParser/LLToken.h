@@ -241,6 +241,7 @@ enum Kind {
   kw_swiftself,
   kw_swiftasync,
   kw_uwtable,
+  kw_vscale_range,
   kw_willreturn,
   kw_writeonly,
   kw_zeroext,

@@ -496,6 +496,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (LargestVectorWidth)
     CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 
+  // Add vscale attribute if appropriate.
+  if (getLangOpts().ArmSveVectorBits) {
+    unsigned VScale = getLangOpts().ArmSveVectorBits / 128;
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(getLLVMContext(),
+                                                             VScale, VScale));
+  }
+
   // If we generated an unreachable return block, delete it now.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
     Builder.ClearInsertionPoint();
