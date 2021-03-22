@@ -1,6 +1,9 @@
 # Check that -vv makes the line number of the failing RUN command clear.
 # (-v is actually sufficient in the case of the internal shell.)
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-run-at-line/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -vv %{inputs}/shtest-run-at-line > %t.out
 # RUN: FileCheck --input-file %t.out %s
 #
