@@ -27,6 +27,7 @@ int main(int, char**) {
 
   static_test_env static_env;
 
+  fs::path root = fs::current_path().root_path();
   // clang-format off
   struct {
     fs::path input;
@@ -34,10 +35,10 @@ int main(int, char**) {
   } TestCases[] = {
       {"", fs::current_path()},
       {".", fs::current_path()},
-      {"/", "/"},
-      {"/foo", "/foo"},
-      {"/.", "/"},
-      {"/./", "/"},
+      {"/", root},
+      {"/foo", root / "foo"},
+      {"/.", root},
+      {"/./", root},
       {"a/b", fs::current_path() / "a/b"},
       {"a", fs::current_path() / "a"},
       {"a/b/", fs::current_path() / "a/b/"},
@@ -61,15 +62,17 @@ int main(int, char**) {
   bool Failed = false;
   for (auto& TC : TestCases) {
     ++ID;
-    fs::path p(TC.input);
+    fs::path p = TC.input;
+    fs::path expect = TC.expect;
+    expect.make_preferred();
     const fs::path output = fs::weakly_canonical(p);
-    if (!PathEq(output, TC.expect)) {
+    if (!PathEq(output, expect)) {
       Failed = true;
       std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
                   "  Input: '%s'\n"
                   "  Expected: '%s'\n"
                   "  Output: '%s'\n",
-        ID, TC.input.string().c_str(), TC.expect.string().c_str(),
+        ID, TC.input.string().c_str(), expect.string().c_str(),
         output.string().c_str());
     }
   }
