@@ -92,36 +92,36 @@ struct TestLinalgTransforms
 
 static void applyPatterns(FuncOp funcOp) {
   MLIRContext *ctx = funcOp.getContext();
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
 
   //===--------------------------------------------------------------------===//
   // Linalg tiling patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({2000, 3000, 4000}),
       LinalgTransformationFilter(Identifier::get("MEM", ctx),
                                  Identifier::get("L3", ctx)));
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({200, 300, 400}),
       LinalgTransformationFilter(Identifier::get("L3", ctx),
                                  Identifier::get("L2", ctx)));
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({20, 30, 40}),
       LinalgTransformationFilter(Identifier::get("L2", ctx),
                                  Identifier::get("L1", ctx)));
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({2, 3, 4}),
       LinalgTransformationFilter(Identifier::get("L1", ctx),
                                  Identifier::get("REG", ctx)));
 
-  patterns.insert<LinalgTilingPattern<MatvecOp>>(
+  patterns.add<LinalgTilingPattern<MatvecOp>>(
       ctx,
       LinalgTilingOptions().setTileSizes({5, 6}).setLoopType(
           LinalgTilingLoopType::ParallelLoops),
       LinalgTransformationFilter(ArrayRef<Identifier>{},
                                  Identifier::get("L1", ctx)));
 
-  patterns.insert<LinalgTilingPattern<DotOp>>(
+  patterns.add<LinalgTilingPattern<DotOp>>(
       ctx, LinalgTilingOptions().setTileSizes(8000),
       LinalgTransformationFilter(
           ArrayRef<Identifier>{Identifier::get("MEM", ctx),
@@ -132,31 +132,31 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg tiling and permutation patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx,
       LinalgTilingOptions()
           .setTileSizes({2000, 3000, 4000})
           .setInterchange({1, 2, 0}),
       LinalgTransformationFilter(Identifier::get("__with_perm__", ctx),
                                  Identifier::get("L2__with_perm__", ctx)));
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx,
       LinalgTilingOptions()
           .setTileSizes({200, 300, 400})
           .setInterchange({1, 0, 2}),
       LinalgTransformationFilter(Identifier::get("L2__with_perm__", ctx),
                                  Identifier::get("L1__with_perm__", ctx)));
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({20, 30, 40}),
       LinalgTransformationFilter(Identifier::get("L1__with_perm__", ctx),
                                  Identifier::get("REG__with_perm__", ctx)));
 
-  patterns.insert<LinalgTilingPattern<MatvecOp>>(
+  patterns.add<LinalgTilingPattern<MatvecOp>>(
       ctx, LinalgTilingOptions().setTileSizes({5, 6}).setInterchange({1, 0}),
       LinalgTransformationFilter(Identifier::get("__with_perm__", ctx),
                                  Identifier::get("L1__with_perm__", ctx)));
 
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx,
       LinalgTilingOptions()
           .setTileSizes({16, 8, 4})
@@ -169,7 +169,7 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg to loops patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgLoweringPattern<DotOp>>(
+  patterns.add<LinalgLoweringPattern<DotOp>>(
       ctx,
       /*loweringType=*/LinalgLoweringType::Loops,
       LinalgTransformationFilter(Identifier::get("REG", ctx)));
@@ -182,19 +182,19 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg to vector contraction patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgVectorizationPattern>(
+  patterns.add<LinalgVectorizationPattern>(
       LinalgTransformationFilter(Identifier::get("VECTORIZE", ctx))
           .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
 
   //===--------------------------------------------------------------------===//
   // Linalg generic permutation patterns.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgInterchangePattern<GenericOp>>(
+  patterns.add<LinalgInterchangePattern<GenericOp>>(
       ctx,
       /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
       LinalgTransformationFilter(ArrayRef<Identifier>{},
                                  Identifier::get("PERMUTED", ctx)));
-  patterns.insert<LinalgInterchangePattern<IndexedGenericOp>>(
+  patterns.add<LinalgInterchangePattern<IndexedGenericOp>>(
       ctx,
       /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
       LinalgTransformationFilter(ArrayRef<Identifier>{},
@@ -203,11 +203,11 @@ static void applyPatterns(FuncOp funcOp) {
   //===--------------------------------------------------------------------===//
   // Linalg subview operands promotion.
   //===--------------------------------------------------------------------===//
-  patterns.insert<LinalgPromotionPattern<MatmulOp>>(
+  patterns.add<LinalgPromotionPattern<MatmulOp>>(
       ctx, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
       LinalgTransformationFilter(Identifier::get("_promote_views_", ctx),
                                  Identifier::get("_views_promoted_", ctx)));
-  patterns.insert<LinalgPromotionPattern<MatmulOp>>(
+  patterns.add<LinalgPromotionPattern<MatmulOp>>(
       ctx,
       LinalgPromotionOptions()
           .setOperandsToPromote({0})
@@ -215,7 +215,7 @@ static void applyPatterns(FuncOp funcOp) {
       LinalgTransformationFilter(
           Identifier::get("_promote_first_view_", ctx),
           Identifier::get("_first_view_promoted_", ctx)));
-  patterns.insert<LinalgPromotionPattern<FillOp>>(
+  patterns.add<LinalgPromotionPattern<FillOp>>(
       ctx,
       LinalgPromotionOptions()
           .setOperandsToPromote({0})
@@ -235,7 +235,7 @@ static void applyPatterns(FuncOp funcOp) {
 
 static void fillL1TilingAndMatmulToVectorPatterns(
     FuncOp funcOp, StringRef startMarker,
-    SmallVectorImpl<OwningRewritePatternList> &patternsVector) {
+    SmallVectorImpl<RewritePatternSet> &patternsVector) {
   MLIRContext *ctx = funcOp.getContext();
   patternsVector.emplace_back(
       ctx, std::make_unique<LinalgTilingPattern<MatmulOp>>(
@@ -257,7 +257,7 @@ static void fillL1TilingAndMatmulToVectorPatterns(
       ctx, std::make_unique<LinalgVectorizationPattern>(
                MatmulOp::getOperationName(), ctx, LinalgVectorizationOptions(),
                LinalgTransformationFilter(Identifier::get("VEC", ctx))));
-  patternsVector.back().insert<LinalgVectorizationPattern>(
+  patternsVector.back().add<LinalgVectorizationPattern>(
       LinalgTransformationFilter().addFilter(
           [](Operation *op) { return success(isa<FillOp, CopyOp>(op)); }));
 }
@@ -301,12 +301,12 @@ static LogicalResult copyCallBackFn(OpBuilder &b, Value src, Value dst,
 }
 
 static void fillPromotionCallBackPatterns(MLIRContext *ctx,
-                                          OwningRewritePatternList &patterns) {
-  patterns.insert<LinalgTilingPattern<MatmulOp>>(
+                                          RewritePatternSet &patterns) {
+  patterns.add<LinalgTilingPattern<MatmulOp>>(
       ctx, LinalgTilingOptions().setTileSizes({16, 16, 16}),
       LinalgTransformationFilter(Identifier::get("START", ctx),
                                  Identifier::get("PROMOTE", ctx)));
-  patterns.insert<LinalgPromotionPattern<MatmulOp>>(
+  patterns.add<LinalgPromotionPattern<MatmulOp>>(
       ctx,
       LinalgPromotionOptions()
           .setOperandsToPromote({0, 2})
@@ -335,14 +335,14 @@ getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
 }
 
 static void fillTileAndDistributePatterns(MLIRContext *context,
-                                          OwningRewritePatternList &patterns) {
+                                          RewritePatternSet &patterns) {
   {
     LinalgLoopDistributionOptions cyclicNprocsEqNiters;
     cyclicNprocsEqNiters.distributionMethod.resize(
         2, DistributionMethod::CyclicNumProcsEqNumIters);
     cyclicNprocsEqNiters.procInfo =
         getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -359,7 +359,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         2, DistributionMethod::CyclicNumProcsGeNumIters);
     cyclicNprocsGeNiters.procInfo =
         getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -376,7 +376,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
                                                   DistributionMethod::Cyclic);
     cyclicNprocsDefault.procInfo =
         getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -393,7 +393,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         DistributionMethod::CyclicNumProcsEqNumIters,
         DistributionMethod::CyclicNumProcsGeNumIters};
     cyclicNprocsMixed1.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -410,7 +410,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         DistributionMethod::CyclicNumProcsGeNumIters,
         DistributionMethod::Cyclic};
     cyclicNprocsMixed2.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -428,7 +428,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
         DistributionMethod::CyclicNumProcsEqNumIters};
     cyclicNprocsMixed3.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
 
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -445,7 +445,7 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
                                                    DistributionMethod::Cyclic);
     cyclicNprocsEqNiters.procInfo =
         getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
-    patterns.insert<LinalgTilingPattern<MatmulOp>>(
+    patterns.add<LinalgTilingPattern<MatmulOp>>(
         context,
         LinalgTilingOptions()
             .setTileSizes({8, 8, 4})
@@ -462,7 +462,7 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
                             bool testMatmulToVectorPatterns1dTiling,
                             bool testMatmulToVectorPatterns2dTiling) {
   MLIRContext *ctx = funcOp.getContext();
-  SmallVector<OwningRewritePatternList, 4> stage1Patterns;
+  SmallVector<RewritePatternSet, 4> stage1Patterns;
   if (testMatmulToVectorPatterns1dTiling) {
     fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("START", ctx),
                                           stage1Patterns);
@@ -487,24 +487,24 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
 }
 
 static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
-  OwningRewritePatternList forwardPattern(funcOp.getContext());
-  forwardPattern.insert<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
-  forwardPattern.insert<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
+  RewritePatternSet forwardPattern(funcOp.getContext());
+  forwardPattern.add<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
+  forwardPattern.add<LinalgCopyVTWForwardingPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(forwardPattern));
 }
 
 static void applyLinalgToVectorPatterns(FuncOp funcOp) {
-  OwningRewritePatternList patterns(funcOp.getContext());
-  patterns.insert<LinalgVectorizationPattern>(
+  RewritePatternSet patterns(funcOp.getContext());
+  patterns.add<LinalgVectorizationPattern>(
       LinalgTransformationFilter()
           .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
-  patterns.insert<PadTensorOpVectorizationPattern>(funcOp.getContext());
+  patterns.add<PadTensorOpVectorizationPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
-  OwningRewritePatternList foldPattern(funcOp.getContext());
-  foldPattern.insert<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
+  RewritePatternSet foldPattern(funcOp.getContext());
+  foldPattern.add<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
   FrozenRewritePatternList frozenPatterns(std::move(foldPattern));
 
   // Explicitly walk and apply the pattern locally to avoid more general folding
@@ -523,12 +523,12 @@ static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
 
 static void applyTileAndPadPattern(FuncOp funcOp) {
   MLIRContext *context = funcOp.getContext();
-  OwningRewritePatternList tilingPattern(context);
+  RewritePatternSet tilingPattern(context);
   auto linalgTilingOptions =
       linalg::LinalgTilingOptions()
           .setTileSizes({2, 3, 4})
           .setPaddingValueComputationFunction(getNeutralOfLinalgOp);
-  tilingPattern.insert<linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>>(
+  tilingPattern.add<linalg::LinalgTilingPattern<linalg::MatmulI8I8I32Op>>(
       context, linalgTilingOptions,
       linalg::LinalgTransformationFilter(
           Identifier::get("tile-and-pad", context)));
@@ -545,13 +545,13 @@ void TestLinalgTransforms::runOnFunction() {
   std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};
 
   if (testPromotionOptions) {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     fillPromotionCallBackPatterns(&getContext(), patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
     return;
   }
   if (testTileAndDistributionOptions) {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     fillTileAndDistributePatterns(&getContext(), patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
     return;

@@ -23,9 +23,9 @@ using namespace mlir::linalg;
 template <LinalgTilingLoopType LoopType>
 static void fillFusionPatterns(MLIRContext *context,
                                const LinalgDependenceGraph &dependenceGraph,
-                               OwningRewritePatternList &patterns) {
-  patterns.insert<LinalgTileAndFusePattern<MatmulOp>,
-                  LinalgTileAndFusePattern<ConvOp>>(
+                               RewritePatternSet &patterns) {
+  patterns.add<LinalgTileAndFusePattern<MatmulOp>,
+               LinalgTileAndFusePattern<ConvOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({2}),
@@ -39,7 +39,7 @@ static void fillFusionPatterns(MLIRContext *context,
           ArrayRef<Identifier>(),
           Identifier::get("after_basic_fusion_original", context)));
 
-  patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
+  patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0}),
@@ -52,7 +52,7 @@ static void fillFusionPatterns(MLIRContext *context,
           ArrayRef<Identifier>(),
           Identifier::get("after_lhs_fusion_original", context)));
 
-  patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
+  patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({1}),
@@ -65,7 +65,7 @@ static void fillFusionPatterns(MLIRContext *context,
           ArrayRef<Identifier>(),
           Identifier::get("after_rhs_fusion_original", context)));
 
-  patterns.insert<LinalgTileAndFusePattern<MatmulOp>>(
+  patterns.add<LinalgTileAndFusePattern<MatmulOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64, 16}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 2}),
@@ -79,7 +79,7 @@ static void fillFusionPatterns(MLIRContext *context,
           ArrayRef<Identifier>(),
           Identifier::get("after_two_operand_fusion_original", context)));
 
-  patterns.insert<LinalgTileAndFusePattern<GenericOp>>(
+  patterns.add<LinalgTileAndFusePattern<GenericOp>>(
       context, dependenceGraph,
       LinalgTilingOptions().setTileSizes({32, 64}).setLoopType(LoopType),
       LinalgFusionOptions().setIndicesToFuse({0, 1}),
@@ -109,7 +109,7 @@ struct TestLinalgFusionTransforms
   void runOnFunction() override {
     MLIRContext *context = &this->getContext();
     FuncOp funcOp = this->getFunction();
-    OwningRewritePatternList fusionPatterns(context);
+    RewritePatternSet fusionPatterns(context);
     Aliases alias;
     LinalgDependenceGraph dependenceGraph =
         LinalgDependenceGraph::buildDependenceGraph(alias, funcOp);
@@ -181,9 +181,9 @@ struct TestLinalgGreedyFusion
     : public PassWrapper<TestLinalgGreedyFusion, FunctionPass> {
   void runOnFunction() override {
     MLIRContext *context = &getContext();
-    OwningRewritePatternList patterns =
+    RewritePatternSet patterns =
         linalg::getLinalgTilingCanonicalizationPatterns(context);
-    patterns.insert<AffineMinSCFCanonicalizationPattern>(context);
+    patterns.add<AffineMinSCFCanonicalizationPattern>(context);
     FrozenRewritePatternList frozenPatterns(std::move(patterns));
     while (succeeded(fuseLinalgOpsGreedily(getFunction()))) {
       (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);

@@ -37,9 +37,9 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
 };
 } // end anonymous namespace
 
-void mlir::populateCallOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, TypeConverter &converter) {
-  patterns.insert<CallOpSignatureConversion>(converter, patterns.getContext());
+void mlir::populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
+                                               TypeConverter &converter) {
+  patterns.add<CallOpSignatureConversion>(converter, patterns.getContext());
 }
 
 namespace {
@@ -102,9 +102,9 @@ public:
 } // end anonymous namespace
 
 void mlir::populateBranchOpInterfaceTypeConversionPattern(
-    OwningRewritePatternList &patterns, TypeConverter &typeConverter) {
-  patterns.insert<BranchOpInterfaceTypeConversion>(typeConverter,
-                                                   patterns.getContext());
+    RewritePatternSet &patterns, TypeConverter &typeConverter) {
+  patterns.add<BranchOpInterfaceTypeConversion>(typeConverter,
+                                                patterns.getContext());
 }
 
 bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
@@ -123,9 +123,9 @@ bool mlir::isLegalForBranchOpInterfaceTypeConversionPattern(
   return false;
 }
 
-void mlir::populateReturnOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, TypeConverter &typeConverter) {
-  patterns.insert<ReturnOpTypeConversion>(typeConverter, patterns.getContext());
+void mlir::populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
+                                                 TypeConverter &typeConverter) {
+  patterns.add<ReturnOpTypeConversion>(typeConverter, patterns.getContext());
 }
 
 bool mlir::isLegalForReturnOpTypeConversionPattern(Operation *op,

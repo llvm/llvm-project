@@ -45,9 +45,9 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
     currentState = nextState;
   }
 
-  OwningRewritePatternList stage2Patterns =
+  RewritePatternSet stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
-  stage2Patterns.insert<AffineMinSCFCanonicalizationPattern>(context);
+  stage2Patterns.add<AffineMinSCFCanonicalizationPattern>(context);
 
   auto stage3Transforms = [&](Operation *op) {
     // Some of these may be too aggressive as a stage 3 that is applied on each
@@ -76,18 +76,18 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
 
   // Programmatic splitting of slow/fast path vector transfers.
   if (lateCodegenStrategyOptions.enableVectorTransferPartialRewrite) {
-    OwningRewritePatternList patterns(context);
-    patterns.insert<vector::VectorTransferFullPartialRewriter>(
+    RewritePatternSet patterns(context);
+    patterns.add<vector::VectorTransferFullPartialRewriter>(
         context, vectorTransformsOptions);
     (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 
   // Programmatic controlled lowering of vector.contract only.
   if (lateCodegenStrategyOptions.enableVectorContractLowering) {
-    OwningRewritePatternList vectorContractLoweringPatterns(context);
+    RewritePatternSet vectorContractLoweringPatterns(context);
     vectorContractLoweringPatterns
-        .insert<ContractionOpToOuterProductOpLowering,
-                ContractionOpToMatmulOpLowering, ContractionOpLowering>(
+        .add<ContractionOpToOuterProductOpLowering,
+             ContractionOpToMatmulOpLowering, ContractionOpLowering>(
             vectorTransformsOptions, context);
     (void)applyPatternsAndFoldGreedily(
         func, std::move(vectorContractLoweringPatterns));
@@ -95,7 +95,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
 
   // Programmatic controlled lowering of vector.transfer only.
   if (lateCodegenStrategyOptions.enableVectorToSCFConversion) {
-    OwningRewritePatternList vectorToLoopsPatterns(context);
+    RewritePatternSet vectorToLoopsPatterns(context);
     populateVectorToSCFConversionPatterns(vectorToLoopsPatterns,
                                           vectorToSCFOptions);
     (void)applyPatternsAndFoldGreedily(func, std::move(vectorToLoopsPatterns));

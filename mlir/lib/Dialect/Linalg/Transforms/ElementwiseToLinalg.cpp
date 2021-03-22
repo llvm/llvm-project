@@ -116,8 +116,8 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
 } // namespace
 
 void mlir::populateElementwiseToLinalgConversionPatterns(
-    OwningRewritePatternList &patterns) {
-  patterns.insert<ConvertAnyElementwiseMappableOpOnRankedTensors>();
+    RewritePatternSet &patterns) {
+  patterns.add<ConvertAnyElementwiseMappableOpOnRankedTensors>();
 }
 
 namespace {
@@ -128,7 +128,7 @@ class ConvertElementwiseToLinalgPass
     auto func = getOperation();
     auto *context = &getContext();
     ConversionTarget target(*context);
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
 
     populateElementwiseToLinalgConversionPatterns(patterns);
     target.markUnknownOpDynamicallyLegal([](Operation *op) {

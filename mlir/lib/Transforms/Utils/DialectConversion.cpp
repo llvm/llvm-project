@@ -2612,14 +2612,14 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
 } // end anonymous namespace
 
 void mlir::populateFunctionLikeTypeConversionPattern(
-    StringRef functionLikeOpName, OwningRewritePatternList &patterns,
+    StringRef functionLikeOpName, RewritePatternSet &patterns,
     TypeConverter &converter) {
-  patterns.insert<FunctionLikeSignatureConversion>(
+  patterns.add<FunctionLikeSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
 }
 
-void mlir::populateFuncOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, TypeConverter &converter) {
+void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
+                                               TypeConverter &converter) {
   populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
 }
 

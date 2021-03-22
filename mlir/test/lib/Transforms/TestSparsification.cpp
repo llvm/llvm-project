@@ -101,7 +101,7 @@ struct TestSparsification
   /// Runs the test on a function.
   void runOnOperation() override {
     auto *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
+    RewritePatternSet patterns(ctx);
     // Translate strategy flags to strategy options.
     linalg::SparsificationOptions options(parallelOption(), vectorOption(),
                                           vectorLength, typeOption(ptrType),
@@ -112,7 +112,7 @@ struct TestSparsification
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     // Lower sparse primitives to calls into runtime support library.
     if (lower) {
-      OwningRewritePatternList conversionPatterns(ctx);
+      RewritePatternSet conversionPatterns(ctx);
       ConversionTarget target(*ctx);
       target.addIllegalOp<linalg::SparseTensorFromPointerOp,
                           linalg::SparseTensorToPointersMemRefOp,

@@ -41,10 +41,10 @@ struct RegionOpConversion : public ConvertOpToLLVMPattern<OpType> {
 };
 } // namespace
 
-void mlir::populateOpenMPToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  patterns.insert<RegionOpConversion<omp::ParallelOp>,
-                  RegionOpConversion<omp::WsLoopOp>>(converter);
+void mlir::populateOpenMPToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns) {
+  patterns.add<RegionOpConversion<omp::ParallelOp>,
+               RegionOpConversion<omp::WsLoopOp>>(converter);
 }
 
 namespace {
@@ -58,7 +58,7 @@ void ConvertOpenMPToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to OpenMP operations with LLVM IR dialect
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateStdToLLVMConversionPatterns(converter, patterns);
   populateOpenMPToLLVMConversionPatterns(converter, patterns);

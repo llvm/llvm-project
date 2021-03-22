@@ -37,7 +37,7 @@ public:
   }
 
   void runOnFunction() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addLegalDialect<linalg::LinalgDialect, memref::MemRefDialect,
                            StandardOpsDialect>();

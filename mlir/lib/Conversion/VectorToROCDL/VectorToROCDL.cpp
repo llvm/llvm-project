@@ -144,9 +144,9 @@ public:
 } // end anonymous namespace
 
 void mlir::populateVectorToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  patterns.insert<VectorTransferConversion<TransferReadOp>,
-                  VectorTransferConversion<TransferWriteOp>>(converter);
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  patterns.add<VectorTransferConversion<TransferReadOp>,
+               VectorTransferConversion<TransferWriteOp>>(converter);
 }
 
 namespace {
@@ -158,7 +158,7 @@ struct LowerVectorToROCDLPass
 
 void LowerVectorToROCDLPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
 
   populateVectorToROCDLConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);

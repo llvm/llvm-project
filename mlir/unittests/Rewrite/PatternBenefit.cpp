@@ -52,13 +52,13 @@ TEST(PatternBenefitTest, BenefitOrder) {
     bool *called;
   };
 
-  OwningRewritePatternList patterns(&context);
+  RewritePatternSet patterns(&context);
 
   bool called1 = false;
   bool called2 = false;
 
-  patterns.insert<Pattern1>(&context, &called1);
-  patterns.insert<Pattern2>(&called2);
+  patterns.add<Pattern1>(&context, &called1);
+  patterns.add<Pattern2>(&called2);
 
   FrozenRewritePatternList frozenPatterns(std::move(patterns));
   PatternApplicator pa(frozenPatterns);

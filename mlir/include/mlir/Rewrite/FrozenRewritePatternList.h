@@ -27,7 +27,7 @@ class FrozenRewritePatternList {
 public:
   /// Freeze the patterns held in `patterns`, and take ownership.
   FrozenRewritePatternList();
-  FrozenRewritePatternList(OwningRewritePatternList &&patterns);
+  FrozenRewritePatternList(RewritePatternSet &&patterns);
   FrozenRewritePatternList(FrozenRewritePatternList &&patterns) = default;
   FrozenRewritePatternList(const FrozenRewritePatternList &patterns) = default;
   FrozenRewritePatternList &

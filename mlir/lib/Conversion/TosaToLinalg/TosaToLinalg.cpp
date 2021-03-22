@@ -1016,8 +1016,8 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
-    OwningRewritePatternList *patterns) {
-  patterns->insert<
+    RewritePatternSet *patterns) {
+  patterns->add<
       PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>, PointwiseConverter<tosa::NegateOp>,
       PointwiseConverter<tosa::PowOp>, PointwiseConverter<tosa::RsqrtOp>,

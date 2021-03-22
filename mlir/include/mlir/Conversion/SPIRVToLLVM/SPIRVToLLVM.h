@@ -41,16 +41,16 @@ void populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter);
 
 /// Populates the given list with patterns that convert from SPIR-V to LLVM.
 void populateSPIRVToLLVMConversionPatterns(LLVMTypeConverter &typeConverter,
-                                           OwningRewritePatternList &patterns);
+                                           RewritePatternSet &patterns);
 
 /// Populates the given list with patterns for function conversion from SPIR-V
 /// to LLVM.
 void populateSPIRVToLLVMFunctionConversionPatterns(
-    LLVMTypeConverter &typeConverter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Populates the given patterns for module conversion from SPIR-V to LLVM.
 void populateSPIRVToLLVMModuleConversionPatterns(
-    LLVMTypeConverter &typeConverter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 } // namespace mlir
 

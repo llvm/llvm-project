@@ -84,9 +84,9 @@ public:
 } // namespace
 
 void mlir::populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeTensorLoadOp, BufferizeCastOp>(
-      typeConverter, patterns.getContext());
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<BufferizeTensorLoadOp, BufferizeCastOp>(typeConverter,
+                                                       patterns.getContext());
 }
 
 namespace {
@@ -100,7 +100,7 @@ struct FinalizingBufferizePass
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateEliminateBufferizeMaterializationsPatterns(typeConverter, patterns);

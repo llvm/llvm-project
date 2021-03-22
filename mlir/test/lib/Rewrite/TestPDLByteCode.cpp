@@ -96,7 +96,7 @@ struct TestPDLByteCodePass
     pdlPattern.registerRewriteFunction("type_creator", customCreateType);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
 
-    OwningRewritePatternList patternList(std::move(pdlPattern));
+    RewritePatternSet patternList(std::move(pdlPattern));
 
     // Invoke the pattern driver with the provided patterns.
     (void)applyPatternsAndFoldGreedily(irModule.getBodyRegion(),

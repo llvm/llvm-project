@@ -235,9 +235,9 @@ struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
 };
 } // end anonymous namespace
 
-void FoldToCallOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<FoldToCallOpPattern>(context);
+void FoldToCallOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<FoldToCallOpPattern>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -615,8 +615,8 @@ struct TestRemoveOpWithInnerOps
 } // end anonymous namespace
 
 void TestOpWithRegionPattern::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<TestRemoveOpWithInnerOps>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<TestRemoveOpWithInnerOps>(context);
 }
 
 OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {

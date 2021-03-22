@@ -18,7 +18,7 @@ class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
 void populateTensorBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                     OwningRewritePatternList &patterns);
+                                     RewritePatternSet &patterns);
 
 /// Creates an instance of `tensor` dialect bufferization pass.
 std::unique_ptr<Pass> createTensorBufferizePass();

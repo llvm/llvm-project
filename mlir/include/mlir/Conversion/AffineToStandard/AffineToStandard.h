@@ -42,12 +42,11 @@ Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
 /// branch-based control flow.
-void populateAffineToStdConversionPatterns(OwningRewritePatternList &patterns);
+void populateAffineToStdConversionPatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert vector-related Affine ops to the Vector
 /// dialect.
-void populateAffineToVectorConversionPatterns(
-    OwningRewritePatternList &patterns);
+void populateAffineToVectorConversionPatterns(RewritePatternSet &patterns);
 
 /// Emit code that computes the lower bound of the given affine loop using
 /// standard arithmetic operations.

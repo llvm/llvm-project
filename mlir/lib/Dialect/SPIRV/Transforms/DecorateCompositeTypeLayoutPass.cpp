@@ -74,10 +74,9 @@ public:
 };
 } // namespace
 
-static void
-populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns) {
-  patterns.insert<SPIRVGlobalVariableOpLayoutInfoDecoration,
-                  SPIRVAddressOfOpLayoutInfoDecoration>(patterns.getContext());
+static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
+  patterns.add<SPIRVGlobalVariableOpLayoutInfoDecoration,
+               SPIRVAddressOfOpLayoutInfoDecoration>(patterns.getContext());
 }
 
 namespace {
@@ -90,7 +89,7 @@ class DecorateSPIRVCompositeTypeLayoutPass
 
 void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   auto module = getOperation();
-  OwningRewritePatternList patterns(module.getContext());
+  RewritePatternSet patterns(module.getContext());
   populateSPIRVLayoutInfoPatterns(patterns);
   ConversionTarget target(*(module.getContext()));
   target.addLegalDialect<spirv::SPIRVDialect>();

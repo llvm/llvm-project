@@ -251,20 +251,20 @@ struct TosaMakeBroadcastable
 public:
   void runOnFunction() override {
     auto func = getFunction();
-    OwningRewritePatternList patterns(func.getContext());
+    RewritePatternSet patterns(func.getContext());
     MLIRContext *ctx = func.getContext();
     // Add the generated patterns to the list.
-    patterns.insert<ConvertTosaOp<tosa::AddOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::SubOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::MulOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::MaximumOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::MinimumOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::EqualOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::GreaterOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::GreaterEqualOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::LogicalLeftShiftOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::ArithmeticRightShiftOp>>(ctx);
-    patterns.insert<ConvertTosaOp<tosa::LogicalRightShiftOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::AddOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::SubOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::MulOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::MaximumOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::MinimumOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::EqualOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::GreaterOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::GreaterEqualOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::LogicalLeftShiftOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::ArithmeticRightShiftOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::LogicalRightShiftOp>>(ctx);
     (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   }
 };

@@ -79,7 +79,7 @@ mlir::createSimplifyAffineStructuresPass() {
 void SimplifyAffineStructures::runOnFunction() {
   auto func = getFunction();
   simplifiedAttributes.clear();
-  OwningRewritePatternList patterns(func.getContext());
+  RewritePatternSet patterns(func.getContext());
   AffineForOp::getCanonicalizationPatterns(patterns, func.getContext());
   AffineIfOp::getCanonicalizationPatterns(patterns, func.getContext());
   AffineApplyOp::getCanonicalizationPatterns(patterns, func.getContext());

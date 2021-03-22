@@ -67,7 +67,7 @@ using OwningRewritePatternList = RewritePatternSet;
 /// the concrete operation types.
 class AbstractOperation {
 public:
-  using GetCanonicalizationPatternsFn = void (*)(OwningRewritePatternList &,
+  using GetCanonicalizationPatternsFn = void (*)(RewritePatternSet &,
                                                  MLIRContext *);
   using FoldHookFn = LogicalResult (*)(Operation *, ArrayRef<Attribute>,
                                        SmallVectorImpl<OpFoldResult> &);
@@ -126,7 +126,7 @@ public:
 
   /// This hook returns any canonicalization pattern rewrites that the operation
   /// supports, for use by the canonicalization pass.
-  void getCanonicalizationPatterns(OwningRewritePatternList &results,
+  void getCanonicalizationPatterns(RewritePatternSet &results,
                                    MLIRContext *context) const {
     return getCanonicalizationPatternsFn(results, context);
   }

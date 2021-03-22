@@ -139,10 +139,10 @@ void ConvertToTargetEnv::runOnFunction() {
 
   auto target = spirv::SPIRVConversionTarget::get(targetEnv);
 
-  OwningRewritePatternList patterns(context);
-  patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
-                  ConvertToGroupNonUniformBallot, ConvertToModule,
-                  ConvertToSubgroupBallot>(context);
+  RewritePatternSet patterns(context);
+  patterns.add<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
+               ConvertToGroupNonUniformBallot, ConvertToModule,
+               ConvertToSubgroupBallot>(context);
 
   if (failed(applyPartialConversion(fn, *target, std::move(patterns))))
     return signalPassFailure();

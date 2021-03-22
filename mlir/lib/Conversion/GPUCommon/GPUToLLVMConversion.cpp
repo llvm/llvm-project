@@ -308,7 +308,7 @@ private:
 
 void GpuToLLVMConversionPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   LLVMConversionTarget target(getContext());
 
   populateVectorToLLVMConversionPatterns(converter, patterns);
@@ -320,16 +320,16 @@ void GpuToLLVMConversionPass::runOnOperation() {
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
         return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
       });
-  patterns.insert<ConvertAllocOpToGpuRuntimeCallPattern,
-                  ConvertDeallocOpToGpuRuntimeCallPattern,
-                  ConvertHostRegisterOpToGpuRuntimeCallPattern,
-                  ConvertMemcpyOpToGpuRuntimeCallPattern,
-                  ConvertWaitAsyncOpToGpuRuntimeCallPattern,
-                  ConvertWaitOpToGpuRuntimeCallPattern,
-                  ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
-  patterns.insert<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
-      converter, gpuBinaryAnnotation);
-  patterns.insert<EraseGpuModuleOpPattern>(&converter.getContext());
+  patterns.add<ConvertAllocOpToGpuRuntimeCallPattern,
+               ConvertDeallocOpToGpuRuntimeCallPattern,
+               ConvertHostRegisterOpToGpuRuntimeCallPattern,
+               ConvertMemcpyOpToGpuRuntimeCallPattern,
+               ConvertWaitAsyncOpToGpuRuntimeCallPattern,
+               ConvertWaitOpToGpuRuntimeCallPattern,
+               ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
+  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(converter,
+                                                           gpuBinaryAnnotation);
+  patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

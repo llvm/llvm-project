@@ -324,9 +324,9 @@ struct EraseRedundantAssertions : public OpRewritePattern<AssertOp> {
 };
 } // namespace
 
-void AssertOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void AssertOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                            MLIRContext *context) {
-  patterns.insert<EraseRedundantAssertions>(context);
+  patterns.add<EraseRedundantAssertions>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,10 +553,9 @@ void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
 
-void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void BranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.insert<SimplifyBrToBlockWithSinglePred, SimplifyPassThroughBr>(
-      context);
+  results.add<SimplifyBrToBlockWithSinglePred, SimplifyPassThroughBr>(context);
 }
 
 Optional<MutableOperandRange>
@@ -631,9 +630,9 @@ struct SimplifyIndirectCallWithKnownCallee
 };
 } // end anonymous namespace.
 
-void CallIndirectOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyIndirectCallWithKnownCallee>(context);
+void CallIndirectOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
+  results.add<SimplifyIndirectCallWithKnownCallee>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -965,11 +964,11 @@ struct SimplifyCondBranchFromCondBranchOnSameCondition
 };
 } // end anonymous namespace
 
-void CondBranchOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
-                 SimplifyCondBranchIdenticalSuccessors,
-                 SimplifyCondBranchFromCondBranchOnSameCondition>(context);
+void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
+              SimplifyCondBranchIdenticalSuccessors,
+              SimplifyCondBranchFromCondBranchOnSameCondition>(context);
 }
 
 Optional<MutableOperandRange>
@@ -2017,11 +2016,11 @@ struct SubTensorCanonicalizer {
   }
 };
 
-void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SubTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                     SubTensorOp, SubTensorCanonicalizer>,
-                 SubTensorOpCastFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  SubTensorOp, SubTensorCanonicalizer>,
+              SubTensorOpCastFolder>(context);
 }
 
 //
@@ -2188,10 +2187,10 @@ struct SubTensorInsertOpCastFolder final
 };
 } // namespace
 
-void SubTensorInsertOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SubTensorInsertOpConstantArgumentFolder,
-                 SubTensorInsertOpCastFolder>(context);
+void SubTensorInsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                    MLIRContext *context) {
+  results.add<SubTensorInsertOpConstantArgumentFolder,
+              SubTensorInsertOpCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

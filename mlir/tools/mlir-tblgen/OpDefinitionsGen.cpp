@@ -1678,7 +1678,7 @@ void OpEmitter::genCanonicalizerDecls() {
     return;
 
   SmallVector<OpMethodParameter, 2> paramList;
-  paramList.emplace_back("::mlir::OwningRewritePatternList &", "results");
+  paramList.emplace_back("::mlir::RewritePatternSet &", "results");
   paramList.emplace_back("::mlir::MLIRContext *", "context");
   opClass.addMethodAndPrune("void", "getCanonicalizationPatterns",
                             OpMethod::MP_StaticDeclaration,

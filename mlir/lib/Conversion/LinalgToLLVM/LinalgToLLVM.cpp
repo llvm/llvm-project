@@ -200,9 +200,9 @@ public:
 } // namespace
 
 /// Populate the given list with patterns that convert from Linalg to LLVM.
-void mlir::populateLinalgToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  patterns.insert<RangeOpConversion, ReshapeOpConversion, YieldOpConversion>(
+void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns) {
+  patterns.add<RangeOpConversion, ReshapeOpConversion, YieldOpConversion>(
       converter);
 
   // Populate the type conversions for the linalg types.
@@ -221,7 +221,7 @@ void ConvertLinalgToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to the LLVM IR dialect using the converter defined above.
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateLinalgToLLVMConversionPatterns(converter, patterns);
 
