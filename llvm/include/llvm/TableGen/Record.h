@@ -1616,6 +1616,12 @@ public:
     Assertions.push_back(std::make_tuple(Loc, Condition, Message));
   }
 
+  void appendAssertions(const Record *Rec) {
+    Assertions.append(Rec->Assertions);
+  }
+
+  void checkAssertions();
+
   bool isSubClassOf(const Record *R) const {
     for (const auto &SCPair : SuperClasses)
       if (SCPair.first == R)

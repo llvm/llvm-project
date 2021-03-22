@@ -1272,11 +1272,29 @@ placement.
   checked after the record is completely built.
 
 * In a class definition, the assertions are saved and inherited by all
-  the record definitions that inherit from the class. The assertions are
-  then checked when the records are completely built. [this placement is not
-  yet available]
+  the subclasses and records that inherit from the class. The assertions are
+  then checked when the records are completely built.
 
 * In a multiclass definition, ... [this placement is not yet available]
+
+Using assertions in TableGen files can simplify record checking in TableGen
+backends. Here is an example of an ``assert`` in two class definitions.
+
+.. code-block:: text
+
+  class PersonName<string name> {
+    assert !le(!size(name), 32), "person name is too long: " # name;
+    string Name = name;
+  }
+
+  class Person<string name, int age> : PersonName<name> {
+    assert !and(!ge(age, 1), !le(age, 120)), "person age is invalid: " # age;
+    int Age = age;
+  }
+
+  def Rec20 : Person<"Donald Knuth", 60> {
+    ...
+  }
 
 
 Additional Details
