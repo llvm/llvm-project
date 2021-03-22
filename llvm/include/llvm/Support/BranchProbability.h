@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_BRANCHPROBABILITY_H
 #define LLVM_SUPPORT_BRANCHPROBABILITY_H
 
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataTypes.h"
 #include <algorithm>
 #include <cassert>
@@ -20,6 +21,9 @@
 #include <numeric>
 
 namespace llvm {
+
+extern cl::opt<uint32_t> LikelyBranchWeight;
+extern cl::opt<uint32_t> UnlikelyBranchWeight;
 
 class raw_ostream;
 

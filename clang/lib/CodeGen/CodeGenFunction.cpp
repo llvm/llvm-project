@@ -42,8 +42,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 using namespace clang;
 using namespace CodeGen;
