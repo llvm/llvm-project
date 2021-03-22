@@ -12,10 +12,10 @@
 // GNU-NEXT:     x86 feature: SHSTK
 // GNU-NEXT:     x86 feature: IBT, SHSTK
 // GNU-NEXT:     x86 feature: <None>
-// GNU-NEXT:     x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
-// GNU-NEXT:     x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
 // GNU-NEXT:     x86 feature needed: x86, x87, MMX, XMM, YMM
 // GNU-NEXT:     x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
+// GNU-NEXT:     x86 ISA needed: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
+// GNU-NEXT:     x86 ISA used: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
 // GNU-NEXT:     <application-specific type 0xfefefefe>
 // GNU-NEXT:     stack size: <corrupt length: 0x0>
 // GNU-NEXT:     stack size: <corrupt length: 0x4>
@@ -40,10 +40,10 @@
 // LLVM-NEXT:         x86 feature: SHSTK
 // LLVM-NEXT:         x86 feature: IBT, SHSTK
 // LLVM-NEXT:         x86 feature: <None>
-// LLVM-NEXT:         x86 ISA needed: CMOV, SSE, SSE2, SSE3, SSSE3, SSE4_1, SSE4_2, AVX, AVX2, FMA, AVX512F, AVX512CD
-// LLVM-NEXT:         x86 ISA used: AVX512ER, AVX512PF, AVX512VL, AVX512DQ, AVX512BW, AVX512_4FMAPS, AVX512_4VNNIW, AVX512_BITALG, AVX512_IFMA, AVX512_VBMI, AVX512_VBMI2, AVX512_VNNI
 // LLVM-NEXT:         x86 feature needed: x86, x87, MMX, XMM, YMM
 // LLVM-NEXT:         x86 feature used: ZMM, FXSR, XSAVE, XSAVEOPT, XSAVEC
+// LLVM-NEXT:         x86 ISA needed: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
+// LLVM-NEXT:         x86 ISA used: x86-64-baseline, x86-64-v2, x86-64-v3, x86-64-v4
 // LLVM-NEXT:         <application-specific type 0xfefefefe>
 // LLVM-NEXT:         stack size: <corrupt length: 0x0>
 // LLVM-NEXT:         stack size: <corrupt length: 0x4>
@@ -96,16 +96,6 @@ begin:
   .long 0           /* Empty flags, not an error */
   .p2align 3        /* Align to 8 byte for 64 bit */
 
-  .long 0xc0008000         /* Type: GNU_PROPERTY_X86_ISA_1_NEEDED */
-  .long 4                  /* Data size */
-  .long 0x00000fff         /* CMOV, ... */
-  .p2align 3               /* Align to 8 byte for 64 bit */
-
-  .long 0xc0010000         /* Type: GNU_PROPERTY_X86_ISA_1_USED */
-  .long 4                  /* Data size */
-  .long 0x00fff000         /* AVX512_ER, ... */
-  .p2align 3               /* Align to 8 byte for 64 bit */
-
   .long 0xc0008001         /* Type: GNU_PROPERTY_X86_FEATURE_2_NEEDED */
   .long 4                  /* Data size */
   .long 0x0000001f         /* X86, ... */
@@ -114,6 +104,16 @@ begin:
   .long 0xc0010001         /* Type: GNU_PROPERTY_X86_FEATURE_2_USED */
   .long 4                  /* Data size */
   .long 0x000003e0         /* ZMM, ... */
+  .p2align 3               /* Align to 8 byte for 64 bit */
+
+  .long 0xc0008002         /* Type: GNU_PROPERTY_X86_ISA_1_NEEDED */
+  .long 4                  /* Data size */
+  .long 0x0000000f         /* x86-64-baseline, ... */
+  .p2align 3               /* Align to 8 byte for 64 bit */
+
+  .long 0xc0010002         /* Type: GNU_PROPERTY_X86_ISA_1_USED */
+  .long 4                  /* Data size */
+  .long 0x0000000f         /* x86-64-baseline, ... */
   .p2align 3               /* Align to 8 byte for 64 bit */
 
   /* All notes below are broken. Test we are able to report them. */
