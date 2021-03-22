@@ -581,10 +581,12 @@ static AffineMap substitute(
     auto map = AffineMap::get(dims.size(), symbols.size(), exprs,
                               exprs.front().getContext());
 
-    LLVM_DEBUG(DBGS() << "Map to simplify: " << map << "\n");
-    LLVM_DEBUG(DBGS() << "Operands:\n");
-    for (Value v : operands)
-      LLVM_DEBUG(DBGS() << v << "\n");
+    LLVM_DEBUG({
+      DBGS() << "Map to simplify: " << map << "\n";
+      DBGS() << "Operands:\n";
+      for (Value v : operands)
+        DBGS() << v << "\n";
+    });
 
     // Pull in affine.apply operations and compose them fully into the
     // result.
