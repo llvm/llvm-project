@@ -158,7 +158,7 @@ struct LowerVectorToROCDLPass
 
 void LowerVectorToROCDLPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
 
   populateVectorToROCDLConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);

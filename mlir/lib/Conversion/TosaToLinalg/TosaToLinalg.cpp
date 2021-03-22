@@ -989,7 +989,7 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
+    OwningRewritePatternList *patterns) {
   patterns->insert<
       PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>, PointwiseConverter<tosa::NegateOp>,
@@ -1014,5 +1014,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
-      RescaleConverter, ReverseConverter, TransposeConverter>(context);
+      RescaleConverter, ReverseConverter, TransposeConverter>(
+      patterns->getContext());
 }

@@ -255,7 +255,8 @@ public:
   PDLValue(ValueRange *value) : value(value), kind(Kind::ValueRange) {}
 
   /// Returns true if the type of the held value is `T`.
-  template <typename T> bool isa() const {
+  template <typename T>
+  bool isa() const {
     assert(value && "isa<> used on a null value");
     return kind == getKindOf<T>();
   }
@@ -271,7 +272,8 @@ public:
 
   /// Cast this value to type `T`, asserts if this value is not an instance of
   /// `T`.
-  template <typename T> T cast() const {
+  template <typename T>
+  T cast() const {
     assert(isa<T>() && "expected value to be of type `T`");
     return castImpl<T>();
   }
@@ -290,7 +292,8 @@ public:
 
 private:
   /// Find the index of a given type in a range of other types.
-  template <typename...> struct index_of_t;
+  template <typename...>
+  struct index_of_t;
   template <typename T, typename... R>
   struct index_of_t<T, T, R...> : std::integral_constant<size_t, 0> {};
   template <typename T, typename F, typename... R>
@@ -298,7 +301,8 @@ private:
       : std::integral_constant<size_t, 1 + index_of_t<T, R...>::value> {};
 
   /// Return the kind used for the given T.
-  template <typename T> static Kind getKindOf() {
+  template <typename T>
+  static Kind getKindOf() {
     return static_cast<Kind>(index_of_t<T, Attribute, Operation *, Type,
                                         TypeRange, Value, ValueRange>::value);
   }
@@ -718,14 +722,19 @@ class OwningRewritePatternList {
   using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
-  OwningRewritePatternList() = default;
+  OwningRewritePatternList(MLIRContext *context) : context(context) {}
 
   /// Construct a OwningRewritePatternList populated with the given pattern.
-  OwningRewritePatternList(std::unique_ptr<RewritePattern> pattern) {
+  OwningRewritePatternList(MLIRContext *context,
+                           std::unique_ptr<RewritePattern> pattern)
+      : context(context) {
     nativePatterns.emplace_back(std::move(pattern));
   }
   OwningRewritePatternList(PDLPatternModule &&pattern)
-      : pdlPatterns(std::move(pattern)) {}
+      : context(pattern.getModule()->getContext()),
+        pdlPatterns(std::move(pattern)) {}
+
+  MLIRContext *getContext() const { return context; }
 
   /// Return the native patterns held in this list.
   NativePatternListT &getNativePatterns() { return nativePatterns; }
@@ -750,7 +759,7 @@ public:
             typename... ConstructorArgs,
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
   OwningRewritePatternList &insert(ConstructorArg &&arg,
-                                   ConstructorArgs &&...args) {
+                                   ConstructorArgs &&... args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
@@ -761,7 +770,8 @@ public:
 
   /// Add an instance of each of the pattern types 'Ts'. Return a reference to
   /// `this` for chaining insertions.
-  template <typename... Ts> OwningRewritePatternList &insert() {
+  template <typename... Ts>
+  OwningRewritePatternList &insert() {
     (void)std::initializer_list<int>{0, (insertImpl<Ts>(), 0)...};
     return *this;
   }
@@ -785,16 +795,17 @@ private:
   /// chaining insertions.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
-  insertImpl(Args &&...args) {
+  insertImpl(Args &&... args) {
     nativePatterns.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
-  insertImpl(Args &&...args) {
+  insertImpl(Args &&... args) {
     pdlPatterns.mergeIn(T(std::forward<Args>(args)...));
   }
 
+  MLIRContext *const context;
   NativePatternListT nativePatterns;
   PDLPatternModule pdlPatterns;
 };

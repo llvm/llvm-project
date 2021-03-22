@@ -54,10 +54,10 @@ public:
 };
 } // namespace
 
-void mlir::populateStdBufferizePatterns(MLIRContext *context,
-                                        BufferizeTypeConverter &typeConverter,
+void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                         OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeDimOp, BufferizeSelectOp>(typeConverter, context);
+  patterns.insert<BufferizeDimOp, BufferizeSelectOp>(typeConverter,
+                                                     patterns.getContext());
 }
 
 namespace {
@@ -65,14 +65,14 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
     target.addLegalDialect<memref::MemRefDialect>();
     target.addLegalDialect<StandardOpsDialect>();
     target.addLegalDialect<scf::SCFDialect>();
 
-    populateStdBufferizePatterns(context, typeConverter, patterns);
+    populateStdBufferizePatterns(typeConverter, patterns);
     // We only bufferize the case of tensor selected type and scalar condition,
     // as that boils down to a select over memref descriptors (don't need to
     // touch the data).

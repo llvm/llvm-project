@@ -138,10 +138,9 @@ public:
 } // namespace
 
 void mlir::populateTensorBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
+    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
   patterns.insert<BufferizeCastOp, BufferizeExtractOp, BufferizeFromElementsOp,
-                  BufferizeGenerateOp>(typeConverter, context);
+                  BufferizeGenerateOp>(typeConverter, patterns.getContext());
 }
 
 namespace {
@@ -149,12 +148,12 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
     populateBufferizeMaterializationLegality(target);
 
-    populateTensorBufferizePatterns(context, typeConverter, patterns);
+    populateTensorBufferizePatterns(typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp,
                         tensor::FromElementsOp, tensor::GenerateOp>();
     target.addLegalDialect<memref::MemRefDialect>();

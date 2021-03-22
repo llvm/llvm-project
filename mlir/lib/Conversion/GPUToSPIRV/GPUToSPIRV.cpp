@@ -329,9 +329,9 @@ namespace {
 #include "GPUToSPIRV.cpp.inc"
 }
 
-void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
-                                      SPIRVTypeConverter &typeConverter,
+void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       OwningRewritePatternList &patterns) {
+  auto *context = patterns.getContext();
   populateWithGenerated(context, patterns);
   patterns.insert<
       GPUFuncOpConversion, GPUModuleConversion, GPUReturnOpConversion,

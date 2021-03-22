@@ -211,8 +211,8 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
-    OwningRewritePatternList patterns;
-    populateStdExpandOpsPatterns(&ctx, patterns);
+    OwningRewritePatternList patterns(&ctx);
+    populateStdExpandOpsPatterns(patterns);
 
     ConversionTarget target(getContext());
 
@@ -234,11 +234,10 @@ struct StdExpandOpsPass : public StdExpandOpsBase<StdExpandOpsPass> {
 
 } // namespace
 
-void mlir::populateStdExpandOpsPatterns(MLIRContext *context,
-                                        OwningRewritePatternList &patterns) {
+void mlir::populateStdExpandOpsPatterns(OwningRewritePatternList &patterns) {
   patterns.insert<AtomicRMWOpConverter, MemRefReshapeOpConverter,
                   SignedCeilDivIOpConverter, SignedFloorDivIOpConverter>(
-      context);
+      patterns.getContext());
 }
 
 std::unique_ptr<Pass> mlir::createStdExpandOpsPass() {

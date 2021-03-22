@@ -60,9 +60,10 @@ struct LowerGpuOpsToROCDLOpsPass
                                   /*useAlignedAlloc =*/false};
     LLVMTypeConverter converter(m.getContext(), options);
 
-    OwningRewritePatternList patterns, llvmPatterns;
+    OwningRewritePatternList patterns(m.getContext());
+    OwningRewritePatternList llvmPatterns(m.getContext());
 
-    populateGpuRewritePatterns(m.getContext(), patterns);
+    populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);

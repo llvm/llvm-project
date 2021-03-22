@@ -60,7 +60,6 @@ public:
 };
 } // namespace
 
-void mlir::populateExpandTanhPattern(OwningRewritePatternList &patterns,
-                                     MLIRContext *ctx) {
-  patterns.insert<TanhOpConverter>(ctx);
+void mlir::populateExpandTanhPattern(OwningRewritePatternList &patterns) {
+  patterns.insert<TanhOpConverter>(patterns.getContext());
 }

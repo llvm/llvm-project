@@ -28,7 +28,7 @@ void addTosaToLinalgOnTensorsPasses(OpPassManager &pm);
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
 void populateTosaToLinalgOnTensorsConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns);
+    OwningRewritePatternList *patterns);
 
 } // namespace tosa
 } // namespace mlir
