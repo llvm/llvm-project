@@ -14,7 +14,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 using namespace llvm;
@@ -345,7 +344,6 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MachineBasicBlock *EmptyMBBAtEnd = nullptr;
   bool Changed = false;
 
   MF.RenumberBlocks();
@@ -367,34 +365,6 @@ bool SIPreEmitPeephole::runOnMachineFunction(MachineFunction &MF) {
       default:
         break;
       }
-    }
-    // Check all terminators for SI_RETURN_TO_EPILOG
-    // FIXME: This is not an optimization and should be moved somewhere else.
-    while (TermI != MBB.end()) {
-      MachineInstr &MI = *TermI;
-      if (MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
-        assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
-
-        // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
-        // because external bytecode will be appended at the end.
-        if (&MBB != &MF.back() || &MI != &MBB.back()) {
-          // SI_RETURN_TO_EPILOG is not the last instruction. Add an empty block
-          // at the end and jump there.
-          if (!EmptyMBBAtEnd) {
-            EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
-            MF.insert(MF.end(), EmptyMBBAtEnd);
-          }
-
-          MBB.addSuccessor(EmptyMBBAtEnd);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
-              .addMBB(EmptyMBBAtEnd);
-          MI.eraseFromParent();
-          MBBE = MBB.getFirstTerminator();
-          TermI = MBBE;
-          continue;
-        }
-      }
-      TermI++;
     }
 
     if (!ST.hasVGPRIndexMode())
