@@ -690,7 +690,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
 void mlir::populateShapeToStandardConversionPatterns(
     OwningRewritePatternList &patterns) {
   // clang-format off
-  populateWithGenerated(patterns.getContext(), patterns);
+  populateWithGenerated(patterns);
   patterns.insert<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
