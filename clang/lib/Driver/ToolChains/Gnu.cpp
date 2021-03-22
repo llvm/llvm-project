@@ -2945,6 +2945,23 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
     return;
 }
 
+bool Generic_GCC::addLibStdCXXIncludePaths(
+    Twine IncludeDir, StringRef Triple, Twine IncludeSuffix,
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  if (!getVFS().exists(IncludeDir))
+    return false;
+
+  // GPLUSPLUS_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir);
+  // GPLUSPLUS_TOOL_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args,
+                   IncludeDir + "/" + Triple + IncludeSuffix);
+  // GPLUSPLUS_BACKWARD_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, IncludeDir + "/backward");
+  return true;
+}
+
 /// Helper to add the variant paths of a libstdc++ installation.
 bool Generic_GCC::addLibStdCXXIncludePaths(
     Twine Base, Twine Suffix, StringRef GCCTriple, StringRef GCCMultiarchTriple,
@@ -2965,13 +2982,8 @@ bool Generic_GCC::addLibStdCXXIncludePaths(
   } else {
     // Otherwise try to use multiarch naming schemes which have normalized the
     // triples and put the triple before the suffix.
-    //
-    // GCC surprisingly uses *both* the GCC triple with a multilib suffix and
-    // the target triple, so we support that here.
     addSystemInclude(DriverArgs, CC1Args,
                      Base + "/" + GCCMultiarchTriple + Suffix + IncludeSuffix);
-    addSystemInclude(DriverArgs, CC1Args,
-                     Base + "/" + TargetMultiarchTriple + Suffix);
   }
 
   addSystemInclude(DriverArgs, CC1Args, Base + Suffix + "/backward");
@@ -2992,16 +3004,23 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   StringRef InstallDir = GCCInstallation.getInstallPath();
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
-  const std::string GCCMultiarchTriple = getMultiarchTriple(
+  const std::string Triple = getMultiarchTriple(
       getDriver(), GCCInstallation.getTriple(), getDriver().SysRoot);
   const std::string TargetMultiarchTriple =
       getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
   // The primary search for libstdc++ supports multiarch variants.
+  if (addLibStdCXXIncludePaths(
+          LibDir.str() + "/../" + Triple + "/include/c++/" + Version.Text,
+          TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
+    return true;
+
+  // Debian host g++ needs this for
+  // /usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/{c++/10,x86_64-linux-gnu/c++/10,c++/10/backward}
+  // FIXME Some other toolchains incorrectly rely on this hierarchy.
   if (addLibStdCXXIncludePaths(LibDir.str() + "/../include",
-                               "/c++/" + Version.Text, TripleStr,
-                               GCCMultiarchTriple, TargetMultiarchTriple,
+                               "/c++/" + Version.Text, TripleStr, Triple, "",
                                Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
 
