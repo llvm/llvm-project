@@ -140,6 +140,7 @@ public:
 /// mode, the cache validity is being checked in every request.
 class DataLayout {
 public:
+  explicit DataLayout();
   explicit DataLayout(DataLayoutOpInterface op);
   explicit DataLayout(ModuleOp op);
 

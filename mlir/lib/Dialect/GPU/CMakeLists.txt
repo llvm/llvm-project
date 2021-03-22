@@ -45,6 +45,8 @@ add_mlir_dialect_library(MLIRGPU
 
   LINK_LIBS PUBLIC
   MLIRAsync
+  MLIRDataLayoutInterfaces
+  MLIRDLTI
   MLIREDSC
   MLIRIR
   MLIRMemRef
