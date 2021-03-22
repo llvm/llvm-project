@@ -29,6 +29,7 @@ _main:
 # CHECK-NEXT: [[#%x,MAIN:]]   g     F __TEXT,__text _main
 # CHECK-NEXT: [[#%x,NUMBER:]] g     O __DATA,__common _number
 # CHECK-NEXT: [[#%x,FOO:]]    g     O __TEXT,obj _foo
+# CHECK-NEXT: {{0+}}          g       *ABS* __mh_execute_header
 
 # CHECK-NEXT: # Path: {{.*}}{{/|\\}}map-file.s.tmp/test-map
 # CHECK-NEXT: # Arch: x86_64
