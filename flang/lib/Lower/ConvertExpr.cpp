@@ -1004,9 +1004,16 @@ public:
     auto baseString = std::visit(
         Fortran::common::visitors{
             [&](const Fortran::evaluate::DataRef &x) { return gen(x); },
-            [&](const Fortran::evaluate::StaticDataObject::Pointer &)
+            [&](const Fortran::evaluate::StaticDataObject::Pointer &p)
                 -> fir::ExtendedValue {
-              TODO(getLoc(), "StaticDataObject::Pointer substring");
+              if (auto str = p->AsString())
+                return Fortran::lower::createStringLiteral(builder, getLoc(),
+                                                           *str);
+              // TODO: convert StaticDataObject to Constant<T> and use normal
+              // constant path. Beware that StaticDataObject data() takes into
+              // account build machine endianness.
+              TODO(getLoc(),
+                   "StaticDataObject::Pointer substring with kind > 1");
             },
         },
         s.parent());
