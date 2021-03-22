@@ -133,6 +133,10 @@ llvm::Optional<HighlightingKind> kindForDecl(const NamedDecl *D) {
     return HighlightingKind::TemplateParameter;
   if (isa<ConceptDecl>(D))
     return HighlightingKind::Concept;
+  if (isa<UnresolvedUsingValueDecl>(D)) {
+    // FIXME: We may be able to do better using HeuristicResolver.
+    return HighlightingKind::Unknown;
+  }
   return llvm::None;
 }
 llvm::Optional<HighlightingKind> kindForType(const Type *TP) {
@@ -225,6 +229,12 @@ bool isAbstract(const Decl *D) {
     return CMD->isPure();
   if (const auto *CRD = llvm::dyn_cast<CXXRecordDecl>(D))
     return CRD->hasDefinition() && CRD->isAbstract();
+  return false;
+}
+
+bool isDependent(const Decl *D) {
+  if (isa<UnresolvedUsingValueDecl>(D))
+    return true;
   return false;
 }
 
@@ -619,9 +629,14 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
             Tok.addModifier(HighlightingModifier::Static);
           if (isAbstract(Decl))
             Tok.addModifier(HighlightingModifier::Abstract);
+          if (isDependent(Decl))
+            Tok.addModifier(HighlightingModifier::DependentName);
           if (Decl->isDeprecated())
             Tok.addModifier(HighlightingModifier::Deprecated);
-          if (R.IsDecl)
+          // Do not treat an UnresolvedUsingValueDecl as a declaration.
+          // It's more common to think of it as a reference to the
+          // underlying declaration.
+          if (R.IsDecl && !isa<UnresolvedUsingValueDecl>(Decl))
             Tok.addModifier(HighlightingModifier::Declaration);
         }
       },

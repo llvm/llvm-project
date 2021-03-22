@@ -688,6 +688,20 @@ sizeof...($TemplateParameter[[Elements]]);
         @implementation $Class[[Foo]]($Namespace_decl[[Bar]])
         @end
       )cpp",
+      // Member imported from dependent base
+      R"cpp(
+        template <typename> struct $Class_decl[[Base]] {
+          int $Field_decl[[member]];
+        };
+        template <typename $TemplateParameter_decl[[T]]>
+        struct $Class_decl[[Derived]] : $Class[[Base]]<$TemplateParameter[[T]]> {
+          using $Class[[Base]]<$TemplateParameter[[T]]>::$Unknown_dependentName[[member]];
+
+          void $Method_decl[[method]]() {
+            (void)$Unknown_dependentName[[member]];
+          }
+        };
+      )cpp",
   };
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
