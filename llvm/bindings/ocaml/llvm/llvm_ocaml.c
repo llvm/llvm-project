@@ -44,12 +44,12 @@ CAMLprim value ptr_to_option(void *Ptr) {
   CAMLreturn(Option);
 }
 
-CAMLprim value cstr_to_string(const unsigned char *Str, unsigned Len) {
+CAMLprim value cstr_to_string(const unsigned char *Str, mlsize_t Len) {
   CAMLparam0();
   CAMLlocal1(String);
   if (Str) {
     String = caml_alloc_string(Len);
-    memcpy(String_val(Str), Str, Len);
+    memcpy(String_val(String), Str, Len);
   } else {
     String = caml_alloc_string(0);
   }
@@ -333,6 +333,19 @@ CAMLprim value llvm_string_of_llmodule(LLVMModuleRef M) {
   LLVMDisposeMessage(ModuleCStr);
 
   CAMLreturn(ModuleStr);
+}
+
+/* llmodule -> string */
+CAMLprim value llvm_get_module_identifier(LLVMModuleRef M) {
+  size_t Len;
+  const char *Name = LLVMGetModuleIdentifier(M, &Len);
+  return cstr_to_string(Name, (mlsize_t)Len);
+}
+
+/* llmodule -> string -> unit */
+CAMLprim value llvm_set_module_identifier(LLVMModuleRef M, value Id) {
+  LLVMSetModuleIdentifier(M, String_val(Id), caml_string_length(Id));
+  return Val_unit;
 }
 
 /* llmodule -> string -> unit */

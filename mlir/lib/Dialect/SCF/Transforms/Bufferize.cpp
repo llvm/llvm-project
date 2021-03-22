@@ -25,12 +25,12 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    OwningRewritePatternList patterns(context);
     ConversionTarget target(*context);
 
     populateBufferizeMaterializationLegality(target);
-    populateSCFStructuralTypeConversionsAndLegality(context, typeConverter,
-                                                    patterns, target);
+    populateSCFStructuralTypeConversionsAndLegality(typeConverter, patterns,
+                                                    target);
     if (failed(applyPartialConversion(func, target, std::move(patterns))))
       return signalPassFailure();
   };

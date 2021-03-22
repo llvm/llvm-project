@@ -91,7 +91,7 @@ QuantizedConstRewrite::matchAndRewrite(QuantizeCastOp qbarrier,
 }
 
 void ConvertConstPass::runOnFunction() {
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   auto func = getFunction();
   auto *context = &getContext();
   patterns.insert<QuantizedConstRewrite>(context);

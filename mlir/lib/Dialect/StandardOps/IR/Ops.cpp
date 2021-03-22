@@ -1360,15 +1360,38 @@ static LogicalResult verify(ReturnOp op) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult SelectOp::fold(ArrayRef<Attribute> operands) {
+  auto trueVal = getTrueValue();
+  auto falseVal = getFalseValue();
+  if (trueVal == falseVal)
+    return trueVal;
+
   auto condition = getCondition();
 
   // select true, %0, %1 => %0
   if (matchPattern(condition, m_One()))
-    return getTrueValue();
+    return trueVal;
 
   // select false, %0, %1 => %1
   if (matchPattern(condition, m_Zero()))
-    return getFalseValue();
+    return falseVal;
+
+  if (auto cmp = dyn_cast_or_null<CmpIOp>(condition.getDefiningOp())) {
+    auto pred = cmp.predicate();
+    if (pred == mlir::CmpIPredicate::eq || pred == mlir::CmpIPredicate::ne) {
+      auto cmpLhs = cmp.lhs();
+      auto cmpRhs = cmp.rhs();
+
+      // %0 = cmpi eq, %arg0, %arg1
+      // %1 = select %0, %arg0, %arg1 => %arg1
+
+      // %0 = cmpi ne, %arg0, %arg1
+      // %1 = select %0, %arg0, %arg1 => %arg0
+
+      if ((cmpLhs == trueVal && cmpRhs == falseVal) ||
+          (cmpRhs == trueVal && cmpLhs == falseVal))
+        return pred == mlir::CmpIPredicate::ne ? trueVal : falseVal;
+    }
+  }
   return nullptr;
 }
 

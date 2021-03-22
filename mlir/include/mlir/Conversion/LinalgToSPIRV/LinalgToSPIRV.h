@@ -20,8 +20,7 @@ class SPIRVTypeConverter;
 
 /// Appends to a pattern list additional patterns for translating Linalg ops to
 /// SPIR-V ops.
-void populateLinalgToSPIRVPatterns(MLIRContext *context,
-                                   SPIRVTypeConverter &typeConverter,
+void populateLinalgToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    OwningRewritePatternList &patterns);
 
 } // namespace mlir

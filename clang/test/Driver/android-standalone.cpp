@@ -3,7 +3,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm-linux-androideabi -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck  %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
@@ -18,7 +18,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target aarch64-linux-android -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64 %s
 // CHECK-AARCH64: {{.*}}clang{{.*}}" "-cc1"
@@ -33,7 +33,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target arm64-linux-android -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ARM64 %s
 // CHECK-ARM64: {{.*}}clang{{.*}}" "-cc1"
@@ -49,7 +49,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
 // RUN:     -mips32 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
 // CHECK-MIPS: {{.*}}clang{{.*}}" "-cc1"
@@ -65,7 +65,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
 // RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR2 %s
 // CHECK-MIPSR2: {{.*}}clang{{.*}}" "-cc1"
@@ -81,7 +81,7 @@
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
 // RUN:     -mips32 -march=mips32r2 -stdlib=libstdc++ \
-// RUN:     -B%S/Inputs/basic_android_tree \
+// RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR2-A %s
 // CHECK-MIPSR2-A: {{.*}}clang{{.*}}" "-cc1"

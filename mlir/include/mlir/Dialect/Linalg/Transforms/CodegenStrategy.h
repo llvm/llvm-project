@@ -36,11 +36,11 @@ template <template <typename> class PatternType, typename ConcreteOpType,
           typename = std::enable_if_t<std::is_member_function_pointer<
               decltype(&ConcreteOpType::getOperationName)>::value>>
 void sfinae_enqueue(OwningRewritePatternList &patternList, OptionsType options,
-                    MLIRContext *context, StringRef opName,
-                    linalg::LinalgTransformationFilter m) {
+                    StringRef opName, linalg::LinalgTransformationFilter m) {
   assert(opName == ConcreteOpType::getOperationName() &&
          "explicit name must match ConcreteOpType::getOperationName");
-  patternList.insert<PatternType<ConcreteOpType>>(context, options, m);
+  patternList.insert<PatternType<ConcreteOpType>>(patternList.getContext(),
+                                                  options, m);
 }
 
 /// SFINAE: Enqueue helper for OpType that do not have a `getOperationName`
@@ -48,25 +48,26 @@ void sfinae_enqueue(OwningRewritePatternList &patternList, OptionsType options,
 template <template <typename> class PatternType, typename OpType,
           typename OptionsType>
 void sfinae_enqueue(OwningRewritePatternList &patternList, OptionsType options,
-                    MLIRContext *context, StringRef opName,
-                    linalg::LinalgTransformationFilter m) {
+                    StringRef opName, linalg::LinalgTransformationFilter m) {
   assert(!opName.empty() && "opName must not be empty");
-  patternList.insert<PatternType<OpType>>(opName, context, options, m);
+  patternList.insert<PatternType<OpType>>(opName, patternList.getContext(),
+                                          options, m);
 }
 
 template <typename PatternType, typename OpType, typename OptionsType>
 void enqueue(OwningRewritePatternList &patternList, OptionsType options,
-             MLIRContext *context, StringRef opName,
-             linalg::LinalgTransformationFilter m) {
+             StringRef opName, linalg::LinalgTransformationFilter m) {
   if (!opName.empty())
-    patternList.insert<PatternType>(opName, context, options, m);
+    patternList.insert<PatternType>(opName, patternList.getContext(), options,
+                                    m);
   else
     patternList.insert<PatternType>(m.addOpFilter<OpType>(), options);
 }
 
 /// Promotion transformation enqueues a particular stage-1 pattern for
 /// `Tile<LinalgOpType>`with the appropriate `options`.
-template <typename LinalgOpType> struct Tile : public Transformation {
+template <typename LinalgOpType>
+struct Tile : public Transformation {
   explicit Tile(linalg::LinalgTilingOptions options,
                 linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
       : Transformation(f), opName(LinalgOpType::getOperationName()),
@@ -79,9 +80,9 @@ template <typename LinalgOpType> struct Tile : public Transformation {
   OwningRewritePatternList
   buildRewritePatterns(MLIRContext *context,
                        linalg::LinalgTransformationFilter m) override {
-    OwningRewritePatternList tilingPatterns;
+    OwningRewritePatternList tilingPatterns(context);
     sfinae_enqueue<linalg::LinalgTilingPattern, LinalgOpType>(
-        tilingPatterns, options, context, opName, m);
+        tilingPatterns, options, opName, m);
     return tilingPatterns;
   }
 
@@ -92,7 +93,8 @@ private:
 
 /// Promotion transformation enqueues a particular stage-1 pattern for
 /// `Promote<LinalgOpType>`with the appropriate `options`.
-template <typename LinalgOpType> struct Promote : public Transformation {
+template <typename LinalgOpType>
+struct Promote : public Transformation {
   explicit Promote(
       linalg::LinalgPromotionOptions options,
       linalg::LinalgTransformationFilter::FilterFunction f = nullptr)
@@ -106,9 +108,9 @@ template <typename LinalgOpType> struct Promote : public Transformation {
   OwningRewritePatternList
   buildRewritePatterns(MLIRContext *context,
                        linalg::LinalgTransformationFilter m) override {
-    OwningRewritePatternList promotionPatterns;
+    OwningRewritePatternList promotionPatterns(context);
     sfinae_enqueue<linalg::LinalgPromotionPattern, LinalgOpType>(
-        promotionPatterns, options, context, opName, m);
+        promotionPatterns, options, opName, m);
     return promotionPatterns;
   }
 
@@ -134,9 +136,9 @@ struct Vectorize : public Transformation {
   OwningRewritePatternList
   buildRewritePatterns(MLIRContext *context,
                        linalg::LinalgTransformationFilter m) override {
-    OwningRewritePatternList vectorizationPatterns;
+    OwningRewritePatternList vectorizationPatterns(context);
     enqueue<linalg::LinalgVectorizationPattern, LinalgOpType>(
-        vectorizationPatterns, options, context, opName, m);
+        vectorizationPatterns, options, opName, m);
     vectorizationPatterns.insert<linalg::LinalgCopyVTRForwardingPattern,
                                  linalg::LinalgCopyVTWForwardingPattern>(
         context, /*benefit=*/2);

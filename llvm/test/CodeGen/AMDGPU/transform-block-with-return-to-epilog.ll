@@ -108,25 +108,26 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
   ; GCN:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; GCN: bb.4.Flow1:
-  ; GCN:   successors: %bb.5(0x40000000)
+  ; GCN:   successors: %bb.5(0x40000000), %bb.7(0x40000000)
   ; GCN:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
   ; GCN:   renamable $sgpr2_sgpr3 = S_OR_SAVEEXEC_B64 killed renamable $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GCN:   $exec = S_XOR_B64 $exec, renamable $sgpr2_sgpr3, implicit-def $scc
+  ; GCN:   S_CBRANCH_EXECZ %bb.7, implicit $exec
   ; GCN: bb.5.kill0:
-  ; GCN:   successors: %bb.8(0x40000000), %bb.7(0x40000000)
+  ; GCN:   successors: %bb.6(0x40000000), %bb.8(0x40000000)
   ; GCN:   liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
   ; GCN:   dead renamable $sgpr0_sgpr1 = S_ANDN2_B64 killed renamable $sgpr0_sgpr1, $exec, implicit-def $scc
-  ; GCN:   S_CBRANCH_SCC0 %bb.7, implicit $scc
-  ; GCN: bb.8.kill0:
-  ; GCN:   successors: %bb.6(0x80000000)
+  ; GCN:   S_CBRANCH_SCC0 %bb.8, implicit $scc
+  ; GCN: bb.6.kill0:
+  ; GCN:   successors: %bb.7(0x80000000)
   ; GCN:   liveins: $sgpr2_sgpr3, $scc
   ; GCN:   $exec = S_MOV_B64 0
-  ; GCN: bb.6.end:
+  ; GCN: bb.7.end:
   ; GCN:   successors: %bb.9(0x80000000)
   ; GCN:   liveins: $sgpr2_sgpr3
   ; GCN:   $exec = S_OR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def $scc
   ; GCN:   S_BRANCH %bb.9
-  ; GCN: bb.7:
+  ; GCN: bb.8:
   ; GCN:   $exec = S_MOV_B64 0
   ; GCN:   EXP_DONE 9, undef $vgpr0, undef $vgpr0, undef $vgpr0, undef $vgpr0, 1, 0, 0, implicit $exec
   ; GCN:   S_ENDPGM 0

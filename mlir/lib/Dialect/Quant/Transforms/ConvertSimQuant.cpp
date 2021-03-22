@@ -124,8 +124,8 @@ public:
 
 void ConvertSimulatedQuantPass::runOnFunction() {
   bool hadFailure = false;
-  OwningRewritePatternList patterns;
   auto func = getFunction();
+  OwningRewritePatternList patterns(func.getContext());
   auto ctx = func.getContext();
   patterns.insert<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
       ctx, &hadFailure);

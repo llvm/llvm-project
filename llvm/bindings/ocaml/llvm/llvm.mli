@@ -543,6 +543,14 @@ val set_module_inline_asm : llmodule -> string -> unit
     See the method [llvm::Module::getContext] *)
 val module_context : llmodule -> llcontext
 
+(** [get_module_identifier m] returns the module identifier of the
+    specified module. See the method [llvm::Module::getModuleIdentifier] *)
+val get_module_identifier : llmodule -> string
+
+(** [set_module_identifier m id] sets the module identifier of [m]
+    to [id]. See the method [llvm::Module::setModuleIdentifier] *)
+val set_module_identifer : llmodule -> string -> unit
+
 (** [get_module_flag m k] Return the corresponding value if key [k] appears in
     the module flags of [m], otherwise return None
     See the method [llvm::Module::getModuleFlag] *)

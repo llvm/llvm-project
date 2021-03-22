@@ -545,7 +545,7 @@ template <typename LoopType>
 static void lowerLinalgToLoopsImpl(FuncOp funcOp,
                                    ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(context);
   patterns.insert<LinalgRewritePattern<LoopType>>(interchangeVector);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);

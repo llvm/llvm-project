@@ -38,6 +38,11 @@
 
 using namespace llvm;
 
+static cl::opt<unsigned> UseDerefAtPointSemantics(
+    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
+    cl::desc("Deref attributes and metadata infer facts at definition only"));
+
+
 static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
@@ -724,11 +729,13 @@ Value::stripInBoundsOffsets(function_ref<void(const Value *)> Func) const {
 }
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
-                                               bool &CanBeNull) const {
+                                               bool &CanBeNull,
+                                               bool &CanBeFreed) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   uint64_t DerefBytes = 0;
   CanBeNull = false;
+  CanBeFreed = UseDerefAtPointSemantics;
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
     if (DerefBytes == 0) {
@@ -783,6 +790,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       DerefBytes =
           DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinSize();
       CanBeNull = false;
+      CanBeFreed = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
@@ -790,6 +798,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       // CanBeNull flag.
       DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedSize();
       CanBeNull = false;
+      CanBeFreed = false;
     }
   }
   return DerefBytes;

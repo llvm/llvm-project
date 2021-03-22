@@ -212,6 +212,11 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     append("-bcdtors:mbr"
            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   endif()
+  if(BUILD_SHARED_LIBS)
+    # See rpath handling in AddLLVM.cmake
+    # FIXME: Remove this warning if this rpath is no longer hardcoded.
+    message(WARNING "Build and install environment path info may be exposed; binaries will also be unrelocatable.")
+  endif()
 endif()
 
 # Pass -Wl,-z,defs. This makes sure all symbols are defined. Otherwise a DSO

@@ -25,9 +25,8 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
 
-  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
   //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
-  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
+  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -54,13 +53,12 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32>, index, index
   //      CHECK: }
-  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %[[cst]]
+  //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
   // CHECK_SAME:   {masked = [false, false]} : memref<?x8xf32>, vector<4x8xf32>
 
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
-  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      LINALG: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -77,7 +75,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      LINALG:   scf.yield %[[A]], %[[i]], %[[j]] : memref<?x8xf32>, index, index
   //      LINALG: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      LINALG:   linalg.fill(%[[alloc]], %[[cst]]) : memref<4x8xf32>, f32
+  //      LINALG:   linalg.fill(%[[alloc]], %cst) : memref<4x8xf32>, f32
   //      LINALG:   %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[d0]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
@@ -89,7 +87,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // LINALG-SAME:     memref<?x8xf32>, index, index
   //      LINALG: }
-  //      LINALG: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %[[cst]]
+  //      LINALG: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
   // LINALG_SAME:   {masked = [false, false]} : memref<?x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
@@ -112,10 +110,9 @@ func @split_vector_transfer_read_strided_2d(
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
 
-  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
   //  CHECK-DAG: %[[c7:.*]] = constant 7 : index
   //  CHECK-DAG: %[[c8:.*]] = constant 8 : index
-  //  CHECK-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
+  //  CHECK-DAG: %[[c0:.*]] = constant 0 : index
   // alloca for boundary full tile
   //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -152,7 +149,6 @@ func @split_vector_transfer_read_strided_2d(
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
   //  LINALG-DAG: %[[c7:.*]] = constant 7 : index
   //  LINALG-DAG: %[[c8:.*]] = constant 8 : index
-  //  LINALG-DAG: %[[cst:.*]] = constant 0.000000e+00 : f32
   // alloca for boundary full tile
   //      LINALG: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
@@ -171,7 +167,7 @@ func @split_vector_transfer_read_strided_2d(
   // LINALG-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
   //      LINALG: } else {
   //               slow path, fill tmp alloc and yield a memref_casted version of it
-  //      LINALG:   linalg.fill(%[[alloc]], %[[cst]]) : memref<4x8xf32>, f32
+  //      LINALG:   linalg.fill(%[[alloc]], %cst) : memref<4x8xf32>, f32
   //      LINALG:   %[[sv0:.*]] = affine.min #[[$bounds_map_4]](%[[c7]], %[[i]], %[[c4]])
   //      LINALG:   %[[sv1:.*]] = affine.min #[[$bounds_map_8]](%[[c8]], %[[j]], %[[c8]])
   //      LINALG:   %[[sv:.*]] = memref.subview %[[A]][%[[i]], %[[j]]] [%[[sv0]], %[[sv1]]] [1, 1]

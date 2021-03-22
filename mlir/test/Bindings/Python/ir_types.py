@@ -59,6 +59,21 @@ def testTypeEq():
 run(testTypeEq)
 
 
+# CHECK-LABEL: TEST: testTypeIsInstance
+def testTypeIsInstance():
+  ctx = Context()
+  t1 = Type.parse("i32", ctx)
+  t2 = Type.parse("f32", ctx)
+  # CHECK: True
+  print(IntegerType.isinstance(t1))
+  # CHECK: False
+  print(F32Type.isinstance(t1))
+  # CHECK: True
+  print(F32Type.isinstance(t2))
+
+run(testTypeIsInstance)
+
+
 # CHECK-LABEL: TEST: testTypeEqDoesNotRaise
 def testTypeEqDoesNotRaise():
   ctx = Context()

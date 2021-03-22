@@ -515,9 +515,8 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
 }
 
 void mlir::populateBuiltinFuncToSPIRVPatterns(
-    MLIRContext *context, SPIRVTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
-  patterns.insert<FuncOpConversion>(typeConverter, context);
+    SPIRVTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
+  patterns.insert<FuncOpConversion>(typeConverter, patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

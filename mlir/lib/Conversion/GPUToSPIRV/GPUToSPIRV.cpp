@@ -329,10 +329,9 @@ namespace {
 #include "GPUToSPIRV.cpp.inc"
 }
 
-void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
-                                      SPIRVTypeConverter &typeConverter,
+void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       OwningRewritePatternList &patterns) {
-  populateWithGenerated(context, patterns);
+  populateWithGenerated(patterns);
   patterns.insert<
       GPUFuncOpConversion, GPUModuleConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
@@ -345,5 +344,5 @@ void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
                                       spirv::BuiltIn::NumSubgroups>,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
-      WorkGroupSizeConversion>(typeConverter, context);
+      WorkGroupSizeConversion>(typeConverter, patterns.getContext());
 }

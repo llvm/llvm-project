@@ -442,6 +442,13 @@ external string_of_llmodule : llmodule -> string = "llvm_string_of_llmodule"
 external set_module_inline_asm : llmodule -> string -> unit
                                = "llvm_set_module_inline_asm"
 external module_context : llmodule -> llcontext = "LLVMGetModuleContext"
+
+external get_module_identifier : llmodule -> string
+                               = "llvm_get_module_identifier"
+
+external set_module_identifer : llmodule -> string -> unit
+                              = "llvm_set_module_identifier"
+
 external get_module_flag : llmodule -> string -> llmetadata option
                          = "llvm_get_module_flag"
 external add_module_flag : llmodule -> ModuleFlagBehavior.t ->

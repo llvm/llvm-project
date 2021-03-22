@@ -31,13 +31,11 @@ std::unique_ptr<OperationPass<ModuleOp>> createGpuKernelOutliningPass();
 std::unique_ptr<OperationPass<FuncOp>> createGpuAsyncRegionPass();
 
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
-void populateGpuAllReducePatterns(MLIRContext *context,
-                                  OwningRewritePatternList &patterns);
+void populateGpuAllReducePatterns(OwningRewritePatternList &patterns);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
-inline void populateGpuRewritePatterns(MLIRContext *context,
-                                       OwningRewritePatternList &patterns) {
-  populateGpuAllReducePatterns(context, patterns);
+inline void populateGpuRewritePatterns(OwningRewritePatternList &patterns) {
+  populateGpuAllReducePatterns(patterns);
 }
 
 namespace gpu {

@@ -67,23 +67,6 @@
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v2"
 // CHECK-BASIC-LIBSTDCXX-LIBCXXV2-SYSROOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 //
-// Test a very broken version of multiarch that shipped in Ubuntu 11.04.
-// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
-// RUN:     -target i386-unknown-linux -stdlib=libstdc++ \
-// RUN:     --sysroot=%S/Inputs/ubuntu_11.04_multiarch_tree \
-// RUN:     --gcc-toolchain="" \
-// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-11-04 %s
-// CHECK-UBUNTU-11-04: "{{.*}}clang{{.*}}" "-cc1"
-// CHECK-UBUNTU-11-04: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
-// CHECK-UBUNTU-11-04: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-UBUNTU-11-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../../../include/c++/4.5"
-// CHECK-UBUNTU-11-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../../../include/c++/4.5/i686-linux-gnu"
-// CHECK-UBUNTU-11-04: "-internal-isystem" "[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../../../include/c++/4.5/backward"
-// CHECK-UBUNTU-11-04: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
-// CHECK-UBUNTU-11-04: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
-// CHECK-UBUNTU-11-04: "-internal-externc-isystem" "[[SYSROOT]]/include"
-// CHECK-UBUNTU-11-04: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
-//
 // RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
 // RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
 // RUN:     --sysroot=%S/Inputs/ubuntu_13.04_multiarch_tree \
@@ -205,7 +188,8 @@
 // CHECK-DEBIAN-X86: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.5/../../../../include/c++/4.5/i686-linux-gnu"
 // CHECK-DEBIAN-X86: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.5/../../../../include/c++/4.5/backward"
 // CHECK-DEBIAN-X86: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
-// CHECK-DEBIAN-X86: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-DEBIAN-X86-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/4.5/../../../../i686-linux-gnu/include"
+// CHECK-DEBIAN-X86-SAME: {{^}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-DEBIAN-X86: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/i386-linux-gnu"
 // CHECK-DEBIAN-X86: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-X86: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
@@ -221,7 +205,8 @@
 // CHECK-DEBIAN-X86-64: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.5/../../../../include/c++/4.5/x86_64-linux-gnu"
 // CHECK-DEBIAN-X86-64: "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.5/../../../../include/c++/4.5/backward"
 // CHECK-DEBIAN-X86-64: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
-// CHECK-DEBIAN-X86-64: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
+// CHECK-DEBIAN-X86-64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.5/../../../../x86_64-linux-gnu/include"
+// CHECK-DEBIAN-X86-64-SAME: {{^}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-DEBIAN-X86-64: "-internal-externc-isystem" "[[SYSROOT]]/usr/include/x86_64-linux-gnu"
 // CHECK-DEBIAN-X86-64: "-internal-externc-isystem" "[[SYSROOT]]/include"
 // CHECK-DEBIAN-X86-64: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"

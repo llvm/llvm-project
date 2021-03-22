@@ -13,7 +13,7 @@ func @kernel1(%arg0: memref<2x8xi8>,
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %3 = amx.tile_zero : vector<2x2xi32>
-  %4 = amx.tile_muli %1, %2, %3 [true, true] : vector<2x8xi8>, vector<2x8xi8>, vector<2x2xi32>
+  %4 = amx.tile_muli %1 zext, %2 zext, %3 : vector<2x8xi8>, vector<2x8xi8>, vector<2x2xi32>
   amx.tile_store %arg2[%0, %0], %4 : memref<2x2xi32>, vector<2x2xi32>
   return
 }
@@ -26,7 +26,7 @@ func @kernel2(%arg0: memref<2x8xi8>,
   %1 = amx.tile_load %arg0[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %2 = amx.tile_load %arg1[%0, %0] : memref<2x8xi8>  into vector<2x8xi8>
   %3 = amx.tile_load %arg2[%0, %0] : memref<2x2xi32> into vector<2x2xi32>
-  %4 = amx.tile_muli %1, %2, %3 [true, true] : vector<2x8xi8>, vector<2x8xi8>, vector<2x2xi32>
+  %4 = amx.tile_muli %1 zext, %2 zext, %3 : vector<2x8xi8>, vector<2x8xi8>, vector<2x2xi32>
   amx.tile_store %arg2[%0, %0], %4 : memref<2x2xi32>, vector<2x2xi32>
   return
 }

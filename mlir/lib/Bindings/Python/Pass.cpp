@@ -8,7 +8,7 @@
 
 #include "Pass.h"
 
-#include "IRModules.h"
+#include "IRModule.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/Pass.h"
 

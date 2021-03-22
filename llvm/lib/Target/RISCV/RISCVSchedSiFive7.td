@@ -45,8 +45,10 @@ def : WriteRes<WriteJmpReg, [SiFive7PipeB]>;
 let Latency = 3 in {
 def : WriteRes<WriteIALU, [SiFive7PipeAB]>;
 def : WriteRes<WriteIALU32, [SiFive7PipeAB]>;
-def : WriteRes<WriteShift, [SiFive7PipeAB]>;
-def : WriteRes<WriteShift32, [SiFive7PipeAB]>;
+def : WriteRes<WriteShiftImm, [SiFive7PipeAB]>;
+def : WriteRes<WriteShiftImm32, [SiFive7PipeAB]>;
+def : WriteRes<WriteShiftReg, [SiFive7PipeAB]>;
+def : WriteRes<WriteShiftReg32, [SiFive7PipeAB]>;
 }
 
 // Integer multiplication
@@ -170,8 +172,10 @@ def : ReadAdvance<ReadStoreData, 0>;
 def : ReadAdvance<ReadMemBase, 0>;
 def : ReadAdvance<ReadIALU, 0>;
 def : ReadAdvance<ReadIALU32, 0>;
-def : ReadAdvance<ReadShift, 0>;
-def : ReadAdvance<ReadShift32, 0>;
+def : ReadAdvance<ReadShiftImm, 0>;
+def : ReadAdvance<ReadShiftImm32, 0>;
+def : ReadAdvance<ReadShiftReg, 0>;
+def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
 def : ReadAdvance<ReadIMul, 0>;

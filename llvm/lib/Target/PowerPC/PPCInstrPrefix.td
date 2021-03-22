@@ -18,10 +18,10 @@ def SDT_PPCPairBuild : SDTypeProfile<1, 2, [
   SDTCisVT<0, v256i1>, SDTCisVT<1, v4i32>, SDTCisVT<2, v4i32>
 ]>;
 def SDT_PPCAccExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v512i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCPairExtractVsx : SDTypeProfile<1, 2, [
-  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisInt<2>
+  SDTCisVT<0, v4i32>, SDTCisVT<1, v256i1>, SDTCisPtrTy<2>
 ]>;
 def SDT_PPCxxmfacc : SDTypeProfile<1, 1, [
   SDTCisVT<0, v512i1>, SDTCisVT<1, v512i1>
@@ -1608,13 +1608,13 @@ let Predicates = [MMA] in {
                                               v16i8:$vs3, v16i8:$vs2)),
             (XXMTACC Concats.VecsToVecQuad)>;
   def : Pat<(v512i1 (PPCxxmfacc v512i1:$AS)), (XXMFACC acc:$AS)>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 0)),
             Extracts.Vec0>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 1)),
             Extracts.Vec1>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 2))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 2)),
             Extracts.Vec2>;
-  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, (i64 3))),
+  def : Pat<(v4i32 (PPCAccExtractVsx acc:$v, 3)),
             Extracts.Vec3>;
 }
 
@@ -1623,9 +1623,9 @@ let Predicates = [PairedVectorMemops] in {
             Concats.VecsToVecPair0>;
   def : Pat<(v256i1 (int_ppc_vsx_assemble_pair v16i8:$vs1, v16i8:$vs0)),
             Concats.VecsToVecPair0>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 0))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 0)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx0))>;
-  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, (i64 1))),
+  def : Pat<(v4i32 (PPCPairExtractVsx vsrpevenrc:$v, 1)),
             (v4i32 (EXTRACT_SUBREG $v, sub_vsx1))>;
 }
 

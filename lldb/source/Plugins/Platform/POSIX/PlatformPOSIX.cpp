@@ -578,7 +578,19 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   // __lldb_dlopen_result for consistency. The wrapper returns a void * but
   // doesn't use it because UtilityFunctions don't work with void returns at
   // present.
+  //
+  // Use lazy binding so as to not make dlopen()'s success conditional on
+  // forcing every symbol in the library.
+  //
+  // In general, the debugger should allow programs to load & run with
+  // libraries as far as they can, instead of defaulting to being super-picky
+  // about unavailable symbols.
+  //
+  // The value "1" appears to imply lazy binding (RTLD_LAZY) on both Darwin
+  // and other POSIX OSes.
   static const char *dlopen_wrapper_code = R"(
+  const int RTLD_LAZY = 1;
+
   struct __lldb_dlopen_result {
     void *image_ptr;
     const char *error_str;
@@ -595,7 +607,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   {
     // This is the case where the name is the full path:
     if (!path_strings) {
-      result_ptr->image_ptr = dlopen(name, 2);
+      result_ptr->image_ptr = dlopen(name, RTLD_LAZY);
       if (result_ptr->image_ptr)
         result_ptr->error_str = nullptr;
       return nullptr;
@@ -609,7 +621,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
       buffer[path_len] = '/';
       char *target_ptr = buffer+path_len+1; 
       memcpy((void *) target_ptr, (void *) name, name_len + 1);
-      result_ptr->image_ptr = dlopen(buffer, 2);
+      result_ptr->image_ptr = dlopen(buffer, RTLD_LAZY);
       if (result_ptr->image_ptr) {
         result_ptr->error_str = nullptr;
         break;
