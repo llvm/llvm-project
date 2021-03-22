@@ -2344,13 +2344,13 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
         if (TypedInit *VRT = dyn_cast<TypedInit>(VR))
           Type =
               (Twine("of type '") + VRT->getType()->getAsString() + "' ").str();
-        PrintFatalError(getLoc(), Twine("Invalid value ") + Type +
-                                      "is found when setting '" +
-                                      Value.getNameInitAsString() +
-                                      "' of type '" +
-                                      Value.getType()->getAsString() +
-                                      "' after resolving references: " +
-                                      VR->getAsUnquotedString() + "\n");
+        PrintFatalError(
+            getLoc(),
+            Twine("Invalid value ") + Type + "found when setting field '" +
+                Value.getNameInitAsString() + "' of type '" +
+                Value.getType()->getAsString() +
+                "' after resolving references: " + VR->getAsUnquotedString() +
+                "\n");
       }
     }
   }
