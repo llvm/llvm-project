@@ -14,25 +14,16 @@ class TestStopOnSharedlibraryEvents(TestBase):
     def test_stopping_breakpoints(self):
         self.do_test()
 
-    @skipIfRemote
-    @skipIfWindows
-    @no_debug_info_test
     def test_auto_continue(self):
         def auto_continue(bkpt):
             bkpt.SetAutoContinue(True)
         self.do_test(auto_continue)
 
-    @skipIfRemote
-    @skipIfWindows
-    @no_debug_info_test
     def test_failing_condition(self):
         def condition(bkpt):
             bkpt.SetCondition("1 == 2")
         self.do_test(condition)
         
-    @skipIfRemote
-    @skipIfWindows
-    @no_debug_info_test
     def test_continue_callback(self):
         def bkpt_callback(bkpt):
             bkpt.SetScriptCallbackBody("return False")
