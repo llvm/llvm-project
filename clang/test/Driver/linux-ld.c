@@ -565,21 +565,6 @@
 // CHECK-BASIC-LIBCXX-C-LINK: "--sysroot=[[SYSROOT]]"
 // CHECK-BASIC-LIBCXX-C-LINK: "-L[[SYSROOT]]/usr/bin/../lib"
 //
-// Test a very broken version of multiarch that shipped in Ubuntu 11.04.
-// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i386-unknown-linux -rtlib=platform \
-// RUN:     --gcc-toolchain="" \
-// RUN:     --sysroot=%S/Inputs/ubuntu_11.04_multiarch_tree \
-// RUN:   | FileCheck --check-prefix=CHECK-UBUNTU-11-04 %s
-// CHECK-UBUNTU-11-04: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-UBUNTU-11-04: "{{.*}}/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5{{/|\\\\}}crtbegin.o"
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5"
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../../i386-linux-gnu"
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/usr/lib/i386-linux-gnu/gcc/i686-linux-gnu/4.5/../../../.."
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/lib"
-// CHECK-UBUNTU-11-04: "-L[[SYSROOT]]/usr/lib"
-//
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     --target=arm-unknown-linux-gnueabihf -rtlib=platform \
