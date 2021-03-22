@@ -1,5 +1,5 @@
 # Test handling of DWARF5 file index 0.
-
+# XFAIL: target-arm && linux-gnu
 # REQUIRES: x86
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
