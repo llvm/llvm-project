@@ -23,7 +23,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
@@ -165,15 +164,12 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
   // they are consistent.
   if (fs::exists(path))
     return std::string(path);
-  else
-    depTracker->logFileNotFound(path);
 
   SmallString<261> location = path;
   path::replace_extension(location, ".tbd");
   if (fs::exists(location))
     return std::string(location);
-  else
-    depTracker->logFileNotFound(location);
+
   return {};
 }
 
@@ -243,60 +239,4 @@ void macho::printArchiveMemberLoad(StringRef reason, const InputFile *f) {
     message(toString(f));
   if (config->printWhyLoad)
     message(reason + " forced load of " + toString(f));
-}
-
-macho::DependencyTracker::DependencyTracker(StringRef path)
-    : path(path), active(!path.empty()) {
-  if (active && fs::exists(path) && !fs::can_write(path)) {
-    warn("Ignoring dependency_info option since specified path is not "
-         "writeable.");
-    active = false;
-  }
-}
-
-inline void macho::DependencyTracker::logFileNotFound(std::string path) {
-  if (active)
-    notFounds.insert(std::move(path));
-}
-
-inline void macho::DependencyTracker::logFileNotFound(const Twine &path) {
-  if (active)
-    notFounds.insert(path.str());
-}
-
-void macho::DependencyTracker::write(llvm::StringRef version,
-                                     const llvm::SetVector<InputFile *> &inputs,
-                                     llvm::StringRef output) {
-  if (!active)
-    return;
-
-  std::error_code ec;
-  llvm::raw_fd_ostream os(path, ec, llvm::sys::fs::OF_None);
-  if (ec) {
-    warn("Error writing dependency info to file");
-    return;
-  }
-
-  auto addDep = [&os](DepOpCode opcode, const StringRef &path) {
-    os << opcode;
-    os << path;
-    os << '\0';
-  };
-
-  addDep(DepOpCode::Version, version);
-
-  // Sort the input by its names.
-  std::vector<StringRef> inputNames;
-  inputNames.reserve(inputs.size());
-  for (InputFile *f : inputs)
-    inputNames.push_back(f->getName());
-  llvm::sort(inputNames,
-             [](const StringRef &a, const StringRef &b) { return a < b; });
-  for (const StringRef &in : inputNames)
-    addDep(DepOpCode::Input, in);
-
-  for (const std::string &f : notFounds)
-    addDep(DepOpCode::NotFound, f);
-
-  addDep(DepOpCode::Output, output);
 }
