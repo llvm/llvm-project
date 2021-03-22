@@ -6,7 +6,6 @@ add_flang_library(FIRTransforms
   ControlFlowConverter.cpp
   CSE.cpp
   FirLoopResultOpt.cpp
-  Inliner.cpp
   MemDataFlowOpt.cpp
   MemToReg.cpp
   RewriteLoop.cpp
@@ -19,5 +18,7 @@ add_flang_library(FIRTransforms
   RewritePatternsIncGen
 
   LINK_LIBS
+  FIRAnalysis
+  FIRDialect
   MLIRAffineToStandard
 )

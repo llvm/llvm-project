@@ -13,6 +13,7 @@ add_flang_library(FIRCodeGen
   CGOpsIncGen
 
   LINK_LIBS
+  FIRDialect
   FIRSupport
   MLIROpenMPToLLVM
   MLIRTargetLLVMIR
