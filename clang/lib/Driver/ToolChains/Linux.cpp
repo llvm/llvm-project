@@ -813,9 +813,7 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   };
 
   for (const auto &IncludePath : LibStdCXXIncludePathCandidates) {
-    if (addLibStdCXXIncludePaths(IncludePath, /*Suffix*/ "", TripleStr,
-                                 /*GCCMultiarchTriple*/ "",
-                                 /*TargetMultiarchTriple*/ "",
+    if (addLibStdCXXIncludePaths(IncludePath, TripleStr,
                                  Multilib.includeSuffix(), DriverArgs, CC1Args))
       break;
   }
