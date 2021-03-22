@@ -12,12 +12,14 @@
 
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Endian.h"
 
-#include "BasicGOTAndStubsBuilder.h"
+#include "DefineExternalSectionStartAndEndSymbols.h"
 #include "EHFrameSupportImpl.h"
 #include "JITLinkGeneric.h"
+#include "PerGraphGOTAndPLTStubsBuilder.h"
 
 #define DEBUG_TYPE "jitlink"
 
@@ -27,14 +29,15 @@ using namespace llvm::jitlink::ELF_x86_64_Edges;
 
 namespace {
 
-class ELF_x86_64_GOTAndStubsBuilder
-    : public BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder> {
+class PerGraphGOTAndPLTStubsBuilder_ELF_x86_64
+    : public PerGraphGOTAndPLTStubsBuilder<
+          PerGraphGOTAndPLTStubsBuilder_ELF_x86_64> {
 public:
   static const uint8_t NullGOTEntryContent[8];
   static const uint8_t StubContent[6];
 
-  ELF_x86_64_GOTAndStubsBuilder(LinkGraph &G)
-      : BasicGOTAndStubsBuilder<ELF_x86_64_GOTAndStubsBuilder>(G) {}
+  using PerGraphGOTAndPLTStubsBuilder<
+      PerGraphGOTAndPLTStubsBuilder_ELF_x86_64>::PerGraphGOTAndPLTStubsBuilder;
 
   bool isGOTEdgeToFix(Edge &E) const {
     return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
@@ -65,16 +68,16 @@ public:
     return E.getKind() == Branch32 && !E.getTarget().isDefined();
   }
 
-  Symbol &createStub(Symbol &Target) {
+  Symbol &createPLTStub(Symbol &Target) {
     auto &StubContentBlock =
         G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
     // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = getGOTEntrySymbol(Target);
+    auto &GOTEntrySymbol = getGOTEntry(Target);
     StubContentBlock.addEdge(PCRel32, 2, GOTEntrySymbol, -4);
     return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
   }
 
-  void fixExternalBranchEdge(Edge &E, Symbol &Stub) {
+  void fixPLTEdge(Edge &E, Symbol &Stub) {
     assert(E.getKind() == Branch32 && "Not a Branch32 edge?");
 
     // Set the edge kind to Branch32ToStub. We will use this to check for stub
@@ -114,6 +117,8 @@ private:
   Section *StubsSection = nullptr;
 };
 
+StringRef ELFGOTSectionName = "$__GOT";
+
 const char *const DwarfSectionNames[] = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
   ELF_NAME,
@@ -123,9 +128,9 @@ const char *const DwarfSectionNames[] = {
 
 } // namespace
 
-const uint8_t ELF_x86_64_GOTAndStubsBuilder::NullGOTEntryContent[8] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t ELF_x86_64_GOTAndStubsBuilder::StubContent[6] = {
+const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::NullGOTEntryContent[8] =
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::StubContent[6] = {
     0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 
 static const char *CommonSectionName = "__common";
@@ -171,9 +176,10 @@ static Error optimizeELF_x86_64_GOTAndStubs(LinkGraph &G) {
         }
       } else if (E.getKind() == Branch32ToStub) {
         auto &StubBlock = E.getTarget().getBlock();
-        assert(StubBlock.getSize() ==
-                   sizeof(ELF_x86_64_GOTAndStubsBuilder::StubContent) &&
-               "Stub block should be stub sized");
+        assert(
+            StubBlock.getSize() ==
+                sizeof(PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::StubContent) &&
+            "Stub block should be stub sized");
         assert(StubBlock.edges_size() == 1 &&
                "Stub block should only have one outgoing edge");
 
@@ -216,6 +222,7 @@ class ELFLinkGraphBuilder_x86_64 {
 
 private:
   Section *CommonSection = nullptr;
+
   // TODO hack to get this working
   // Find a better way
   using SymbolTable = object::ELFFile<object::ELF64LE>::Elf_Shdr;
@@ -707,10 +714,10 @@ private:
     case ELFX86RelocationKind::PCRel32:
     case ELFX86RelocationKind::PCRel32GOTLoad: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
         return makeTargetOutOfRangeError(G, B, E);
-      *(little32_t *)FixupPtr = Value;
       break;
     }
     case ELFX86RelocationKind::Pointer64: {
@@ -718,11 +725,38 @@ private:
       *(ulittle64_t *)FixupPtr = Value;
       break;
     }
+    case ELFX86RelocationKind::Delta32: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
+        return makeTargetOutOfRangeError(G, B, E);
+      break;
+    }
     case ELFX86RelocationKind::Delta64: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
       *(little64_t *)FixupPtr = Value;
       break;
     }
+    case ELFX86RelocationKind::NegDelta32: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      if (LLVM_LIKELY(x86_64::isInRangeForImmS32(Value)))
+        *(little32_t *)FixupPtr = Value;
+      else
+        return makeTargetOutOfRangeError(G, B, E);
+      break;
+    }
+    case ELFX86RelocationKind::NegDelta64: {
+      int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      *(little64_t *)FixupPtr = Value;
+      break;
+    }
+    default:
+      LLVM_DEBUG({
+        dbgs() << "Bad edge: " << getELFX86RelocationKindName(E.getKind())
+               << "\n";
+      });
+      llvm_unreachable("Unsupported relocation");
     }
     return Error::success();
   }
@@ -745,6 +779,27 @@ createLinkGraphFromELFObject_x86_64(MemoryBufferRef ObjectBuffer) {
       .buildGraph();
 }
 
+static SectionRangeSymbolDesc
+identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
+  constexpr StringRef StartSymbolPrefix = "__start";
+  constexpr StringRef EndSymbolPrefix = "__end";
+
+  auto SymName = Sym.getName();
+  if (SymName.startswith(StartSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(StartSymbolPrefix.size())))
+      return {*Sec, true};
+  } else if (SymName.startswith(EndSymbolPrefix)) {
+    if (auto *Sec =
+            G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
+      return {*Sec, false};
+  } else if (SymName == "_GLOBAL_OFFSET_TABLE_") {
+    if (auto *GOTSec = G.findSectionByName(ELFGOTSectionName))
+      return {*GOTSec, true};
+  }
+  return {};
+}
+
 void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
                      std::unique_ptr<JITLinkContext> Ctx) {
   PassConfiguration Config;
@@ -764,13 +819,16 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
     // Add an in-place GOT/Stubs pass.
-    Config.PostPrunePasses.push_back([](LinkGraph &G) -> Error {
-      ELF_x86_64_GOTAndStubsBuilder(G).run();
-      return Error::success();
-    });
+    Config.PostPrunePasses.push_back(
+        PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::asPass);
 
     // Add GOT/Stubs optimizer pass.
     Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
+
+    // Resolve any external section start / end symbols.
+    Config.PreFixupPasses.push_back(
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            identifyELFSectionStartAndEndSymbols));
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
@@ -780,16 +838,46 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
 }
 const char *getELFX86RelocationKindName(Edge::Kind R) {
   switch (R) {
-  case PCRel32:
-    return "PCRel32";
-  case Pointer64:
-    return "Pointer64";
-  case PCRel32GOTLoad:
-    return "PCRel32GOTLoad";
   case Branch32:
     return "Branch32";
   case Branch32ToStub:
     return "Branch32ToStub";
+  case Pointer32:
+    return "Pointer32";
+  case Pointer64:
+    return "Pointer64";
+  case Pointer64Anon:
+    return "Pointer64Anon";
+  case PCRel32:
+    return "PCRel32";
+  case PCRel32Minus1:
+    return "PCRel32Minus1";
+  case PCRel32Minus2:
+    return "PCRel32Minus2";
+  case PCRel32Minus4:
+    return "PCRel32Minus4";
+  case PCRel32Anon:
+    return "PCRel32Anon";
+  case PCRel32Minus1Anon:
+    return "PCRel32Minus1Anon";
+  case PCRel32Minus2Anon:
+    return "PCRel32Minus2Anon";
+  case PCRel32Minus4Anon:
+    return "PCRel32Minus4Anon";
+  case PCRel32GOTLoad:
+    return "PCRel32GOTLoad";
+  case PCRel32GOT:
+    return "PCRel32GOT";
+  case PCRel32TLV:
+    return "PCRel32TLV";
+  case Delta32:
+    return "Delta32";
+  case Delta64:
+    return "Delta64";
+  case NegDelta32:
+    return "NegDelta32";
+  case NegDelta64:
+    return "NegDelta64";
   }
   return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
 }
