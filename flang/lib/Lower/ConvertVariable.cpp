@@ -360,7 +360,7 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     if (auto arrTy = ty.dyn_cast<fir::SequenceType>()) {
       // elide the constant dimensions before construction
       assert(shape.size() == arrTy.getDimension());
-      llvm::SmallVector<mlir::Value, 8> args;
+      llvm::SmallVector<mlir::Value> args;
       auto typeShape = arrTy.getShape();
       for (unsigned i = 0, end = arrTy.getDimension(); i < end; ++i)
         if (typeShape[i] == fir::SequenceType::getUnknownExtent())
@@ -419,7 +419,7 @@ getAggregateType(Fortran::lower::AbstractConverter &converter,
                  const Fortran::lower::pft::Variable::AggregateStore &st) {
   auto &builder = converter.getFirOpBuilder();
   auto i8Ty = builder.getIntegerType(8);
-  llvm::SmallVector<mlir::Type, 8> members;
+  llvm::SmallVector<mlir::Type> members;
   std::size_t counter = std::get<0>(st.interval);
   for (const auto *mem : st.vars) {
     if (const auto *memDet =
@@ -616,7 +616,7 @@ static mlir::TupleType getTypeOfCommonWithInit(
     const Fortran::semantics::MutableSymbolVector &cmnBlkMems,
     std::size_t commonSize) {
   auto &builder = converter.getFirOpBuilder();
-  llvm::SmallVector<mlir::Type, 8> members;
+  llvm::SmallVector<mlir::Type> members;
   std::size_t counter = 0;
   for (const auto &mem : cmnBlkMems) {
     if (const auto *memDet =
@@ -945,7 +945,7 @@ void Fortran::lower::mapSymbolAttributes(
     if (!boxAlloc)
       boxAlloc = createNewLocal(converter, loc, var, preAlloc);
     // Lower non deferred parameters.
-    llvm::SmallVector<mlir::Value, 2> nonDeferredLenParams;
+    llvm::SmallVector<mlir::Value> nonDeferredLenParams;
     if (sba.isChar()) {
       if (auto len = lowerExplicitCharLen(converter, loc, sba, symMap, stmtCtx))
         nonDeferredLenParams.push_back(len);
@@ -966,9 +966,9 @@ void Fortran::lower::mapSymbolAttributes(
   if (isDummy) {
     auto dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg)) {
-      llvm::SmallVector<mlir::Value, 4> lbounds;
-      llvm::SmallVector<mlir::Value, 4> extents;
-      llvm::SmallVector<mlir::Value, 2> explicitParams;
+      llvm::SmallVector<mlir::Value> lbounds;
+      llvm::SmallVector<mlir::Value> extents;
+      llvm::SmallVector<mlir::Value> explicitParams;
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
       if (sba.isChar())
@@ -1156,7 +1156,7 @@ void Fortran::lower::mapSymbolAttributes(
           symMap.addCharSymbol(sym, preAlloc, len);
           return;
         }
-        llvm::SmallVector<mlir::Value, 1> lengths = {len};
+        llvm::SmallVector<mlir::Value> lengths = {len};
         auto local =
             createNewLocal(converter, loc, var, preAlloc, llvm::None, lengths);
         symMap.addCharSymbol(sym, local, len);
@@ -1172,7 +1172,7 @@ void Fortran::lower::mapSymbolAttributes(
           addr = builder.createConvert(loc, castTy, addr);
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
+          llvm::SmallVector<mlir::Value> shape;
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
           mlir::Value local =
@@ -1182,8 +1182,8 @@ void Fortran::lower::mapSymbolAttributes(
         }
         // If object is an array process the lower bound and extent values by
         // constructing constants and populating the lbounds and extents.
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
         for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, fst));
           extents.emplace_back(builder.createIntegerConstant(loc, idxTy, snd));
@@ -1214,7 +1214,7 @@ void Fortran::lower::mapSymbolAttributes(
         }
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shapes;
+          llvm::SmallVector<mlir::Value> shapes;
           populateShape(shapes, x.bounds, argBox);
           if (isDummy || isResult) {
             symMap.addSymbolWithShape(sym, addr, shapes, true);
@@ -1228,8 +1228,8 @@ void Fortran::lower::mapSymbolAttributes(
           return;
         }
         // if object is an array process the lower bound and extent values
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
         if (isDummy || isResult) {
           symMap.addSymbolWithBounds(sym, addr, extents, lbounds, true);
@@ -1267,7 +1267,7 @@ void Fortran::lower::mapSymbolAttributes(
 
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
+          llvm::SmallVector<mlir::Value> shape;
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
           mlir::Value local =
@@ -1277,8 +1277,8 @@ void Fortran::lower::mapSymbolAttributes(
         }
 
         // if object is an array process the lower bound and extent values
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
         // construct constants and populate `bounds`
         for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
           lbounds.emplace_back(builder.createIntegerConstant(loc, idxTy, fst));
@@ -1293,7 +1293,7 @@ void Fortran::lower::mapSymbolAttributes(
         // local CHARACTER array with computed bounds
         assert(Fortran::lower::isExplicitShape(sym) ||
                Fortran::semantics::IsAllocatableOrPointer(sym));
-        llvm::SmallVector<mlir::Value, 1> lengths = {len};
+        llvm::SmallVector<mlir::Value> lengths = {len};
         auto local =
             createNewLocal(converter, loc, var, preAlloc, extents, lengths);
         symMap.addCharSymbolWithBounds(sym, local, len, extents, lbounds);
@@ -1326,7 +1326,7 @@ void Fortran::lower::mapSymbolAttributes(
           else
             len = builder.createIntegerConstant(loc, idxTy, sym.size());
         }
-        llvm::SmallVector<mlir::Value, 1> lengths = {len};
+        llvm::SmallVector<mlir::Value> lengths = {len};
 
         // cast to the known constant parts from the declaration
         auto castTy = builder.getRefType(converter.genType(var));
@@ -1335,7 +1335,7 @@ void Fortran::lower::mapSymbolAttributes(
 
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
+          llvm::SmallVector<mlir::Value> shape;
           for (auto i : x.shapes)
             shape.push_back(builder.createIntegerConstant(loc, idxTy, i));
           if (isDummy || isResult) {
@@ -1350,8 +1350,8 @@ void Fortran::lower::mapSymbolAttributes(
         }
 
         // if object is an array process the lower bound and extent values
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
 
         // construct constants and populate `bounds`
         for (auto [fst, snd] : llvm::zip(x.lbounds, x.shapes)) {
@@ -1402,7 +1402,7 @@ void Fortran::lower::mapSymbolAttributes(
           addr = builder.createConvert(loc, castTy, addr);
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
+          llvm::SmallVector<mlir::Value> shape;
           populateShape(shape, x.bounds, argBox);
           if (isDummy || isResult) {
             symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
@@ -1414,8 +1414,8 @@ void Fortran::lower::mapSymbolAttributes(
           return;
         }
         // if object is an array process the lower bound and extent values
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
         if (isDummy || isResult) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,
@@ -1467,7 +1467,7 @@ void Fortran::lower::mapSymbolAttributes(
           else
             len = builder.createIntegerConstant(loc, idxTy, sym.size());
         }
-        llvm::SmallVector<mlir::Value, 1> lengths = {len};
+        llvm::SmallVector<mlir::Value> lengths = {len};
 
         // cast to the known constant parts from the declaration
         auto castTy = builder.getRefType(converter.genType(var));
@@ -1475,7 +1475,7 @@ void Fortran::lower::mapSymbolAttributes(
           addr = builder.createConvert(loc, castTy, addr);
         if (x.lboundAllOnes()) {
           // if lower bounds are all ones, build simple shaped object
-          llvm::SmallVector<mlir::Value, 8> shape;
+          llvm::SmallVector<mlir::Value> shape;
           populateShape(shape, x.bounds, argBox);
           if (isDummy || isResult) {
             symMap.addCharSymbolWithShape(sym, addr, len, shape, true);
@@ -1488,8 +1488,8 @@ void Fortran::lower::mapSymbolAttributes(
           return;
         }
         // Process the lower bound and extent values.
-        llvm::SmallVector<mlir::Value, 8> extents;
-        llvm::SmallVector<mlir::Value, 8> lbounds;
+        llvm::SmallVector<mlir::Value> extents;
+        llvm::SmallVector<mlir::Value> lbounds;
         populateLBoundsExtents(lbounds, extents, x.bounds, argBox);
         if (isDummy || isResult) {
           symMap.addCharSymbolWithBounds(sym, addr, len, extents, lbounds,

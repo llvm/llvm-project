@@ -111,8 +111,8 @@ class fir_AllocatableOp<string mnemonic, Resource resource,
       return mlir::failure();
     auto &builder = parser.getBuilder();
     result.addAttribute(inType(), mlir::TypeAttr::get(intype));
-    llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> operands;
-    llvm::SmallVector<mlir::Type, 8> typeVec;
+    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::Type> typeVec;
     bool hasOperands = false;
     if (!parser.parseOptionalLParen()) {
       // parse the LEN params of the derived type. (<params> : <types>)
@@ -200,7 +200,7 @@ class fir_AllocatableOp<string mnemonic, Resource resource,
 
   // Verify checks common to all allocation operations
   string allocVerify = [{
-    llvm::SmallVector<llvm::StringRef, 8> visited;
+    llvm::SmallVector<llvm::StringRef> visited;
     if (verifyInType(getInType(), visited, numShapeOperands()))
       return emitOpError("invalid type for allocation");
     if (verifyRecordLenParams(getInType(), numLenParams()))
@@ -578,7 +578,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes),
     [{
       $_state.addOperands(selector);
-      llvm::SmallVector<mlir::Attribute, 8> ivalues;
+      llvm::SmallVector<mlir::Attribute> ivalues;
       for (auto iv : compareOperands)
         ivalues.push_back($_builder.getI64IntegerAttr(iv));
       ivalues.push_back($_builder.getUnitAttr());
@@ -587,7 +587,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       for (auto d : destinations)
         $_state.addSuccessors(d);
       const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
+      llvm::SmallVector<int32_t> argOffs;
       int32_t sumArgs = 0;
       for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
         if (i < opCount) {
@@ -613,13 +613,13 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     if (parseSelector(parser, result, selector, type))
       return mlir::failure();
 
-    llvm::SmallVector<mlir::Attribute, 8> ivalues;
-    llvm::SmallVector<mlir::Block *, 8> dests;
-    llvm::SmallVector<llvm::SmallVector<mlir::Value, 8>, 8> destArgs;
+    llvm::SmallVector<mlir::Attribute> ivalues;
+    llvm::SmallVector<mlir::Block *> dests;
+    llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
     while (true) {
       mlir::Attribute ivalue; // Integer or Unit
       mlir::Block *dest;
-      llvm::SmallVector<mlir::Value, 8> destArg;
+      llvm::SmallVector<mlir::Value> destArg;
       mlir::NamedAttrList temp;
       if (parser.parseAttribute(ivalue, "i", temp) ||
           parser.parseComma() ||
@@ -635,7 +635,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
     }
     auto &bld = parser.getBuilder();
     result.addAttribute(getCasesAttr(), bld.getArrayAttr(ivalues));
-    llvm::SmallVector<int32_t, 8> argOffs;
+    llvm::SmallVector<int32_t> argOffs;
     int32_t sumArgs = 0;
     const auto count = dests.size();
     for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
@@ -869,7 +869,7 @@ def fir_SelectTypeOp : fir_SwitchTerminatorOp<"select_type"> {
       for (auto d : destinations)
         $_state.addSuccessors(d);
       const auto opCount = destOperands.size();
-      llvm::SmallVector<int32_t, 8> argOffs;
+      llvm::SmallVector<int32_t> argOffs;
       int32_t sumArgs = 0;
       for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
         if (i < opCount) {
@@ -1889,8 +1889,8 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoSideEffect]> {
       return mlir::failure();
     result.addAttribute(typeAttrName(), mlir::TypeAttr::get(recty));
     if (!parser.parseOptionalLParen()) {
-      llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> operands;
-      llvm::SmallVector<mlir::Type, 8> types;
+      llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+      llvm::SmallVector<mlir::Type> types;
       auto loc = parser.getNameLoc();
       if (parser.parseOperandList(operands,
                                   mlir::OpAsmParser::Delimiter::None) ||
@@ -2622,7 +2622,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
 
   let parser = [{
     mlir::FunctionType calleeType;
-    llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> operands;
+    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
     auto calleeLoc = parser.getNameLoc();
     llvm::StringRef calleeName;
     if (failed(parser.parseOptionalKeyword(&calleeName))) {

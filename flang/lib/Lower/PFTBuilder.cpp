@@ -452,7 +452,7 @@ private:
       lower::pft::EvaluationList::iterator ifConstructIt;
       parser::Label ifTargetLabel;
     };
-    llvm::SmallVector<T, 8> ifExpansionStack;
+    llvm::SmallVector<T> ifExpansionStack;
     auto &evaluationList = *evaluationListStack.back();
     for (auto it = evaluationList.begin(), end = evaluationList.end();
          it != end; ++it) {
@@ -1220,7 +1220,7 @@ struct SymbolDependenceDepth {
       return;
     scopeAnlyzedForAliases.insert(&scope);
     Fortran::lower::IntervalSet intervals;
-    llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *, 8>>
+    llvm::DenseMap<std::size_t, llvm::SmallVector<const semantics::Symbol *>>
         aliasSets;
     llvm::DenseMap<std::size_t, const semantics::Symbol *> setIsGlobal;
 

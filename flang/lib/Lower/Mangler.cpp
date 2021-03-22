@@ -21,7 +21,7 @@
 
 // recursively build the vector of module scopes
 static void moduleNames(const Fortran::semantics::Scope &scope,
-                        llvm::SmallVector<llvm::StringRef, 2> &result) {
+                        llvm::SmallVector<llvm::StringRef> &result) {
   if (scope.kind() == Fortran::semantics::Scope::Kind::Global) {
     return;
   }
@@ -31,10 +31,10 @@ static void moduleNames(const Fortran::semantics::Scope &scope,
       result.emplace_back(toStringRef(symbol->name()));
 }
 
-static llvm::SmallVector<llvm::StringRef, 2>
+static llvm::SmallVector<llvm::StringRef>
 moduleNames(const Fortran::semantics::Symbol &symbol) {
   const auto &scope = symbol.owner();
-  llvm::SmallVector<llvm::StringRef, 2> result;
+  llvm::SmallVector<llvm::StringRef> result;
   moduleNames(scope, result);
   return result;
 }
@@ -133,7 +133,7 @@ std::string Fortran::lower::mangle::mangleName(
   auto symbolName = toStringRef(ultimateSymbol.name());
   auto modNames = moduleNames(ultimateSymbol);
   auto optHost = hostName(ultimateSymbol);
-  llvm::SmallVector<std::int64_t, 4> kinds;
+  llvm::SmallVector<std::int64_t> kinds;
   for (const auto &param :
        Fortran::semantics::OrderParameterDeclarations(ultimateSymbol)) {
     const auto &paramDetails =

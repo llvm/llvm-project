@@ -219,7 +219,7 @@ Fortran::lower::FirOpBuilder::createStringLitOp(mlir::Location loc,
   mlir::NamedAttribute dataAttr(valTag, strAttr);
   auto sizeTag = mlir::Identifier::get(fir::StringLitOp::size(), getContext());
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
-  llvm::SmallVector<mlir::NamedAttribute, 2> attrs{dataAttr, sizeAttr};
+  llvm::SmallVector<mlir::NamedAttribute> attrs{dataAttr, sizeAttr};
   return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},
                                   llvm::None, attrs);
 }
@@ -233,7 +233,7 @@ Fortran::lower::FirOpBuilder::consShape(mlir::Location loc,
   }
   auto shapeType =
       fir::ShapeShiftType::get(getContext(), arr.getExtents().size());
-  SmallVector<mlir::Value, 8> shapeArgs;
+  SmallVector<mlir::Value> shapeArgs;
   auto idxTy = getIndexType();
   for (auto [lbnd, ext] : llvm::zip(arr.getLBounds(), arr.getExtents())) {
     auto lb = createConvert(loc, idxTy, lbnd);
@@ -267,7 +267,7 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
     // If there is no slicing by triple notation, then take the whole array.
     auto fullShape = [&](const llvm::ArrayRef<mlir::Value> lbounds,
                          llvm::ArrayRef<mlir::Value> extents) -> mlir::Value {
-      llvm::SmallVector<mlir::Value, 8> trips;
+      llvm::SmallVector<mlir::Value> trips;
       auto idxTy = getIndexType();
       auto one = createIntegerConstant(loc, idxTy, 1);
       auto sliceTy = fir::SliceType::get(getContext(), extents.size());
@@ -295,7 +295,7 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
           return fullShape(box.getLBounds(), box.getExtents());
         },
         [&](const fir::BoxValue &box) {
-          llvm::SmallVector<mlir::Value, 4> extents;
+          llvm::SmallVector<mlir::Value> extents;
           Fortran::lower::readExtents(*this, loc, box, extents);
           return fullShape(box.getLBounds(), extents);
         },
@@ -328,7 +328,7 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
           return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
 
         mlir::Value emptySlice;
-        llvm::SmallVector<mlir::Value, 1> lenParams{box.getLen()};
+        llvm::SmallVector<mlir::Value> lenParams{box.getLen()};
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, emptySlice,
                                     lenParams);
       },
@@ -336,7 +336,7 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
         if (Fortran::lower::CharacterExprHelper::hasConstantLengthInType(exv))
           return create<fir::EmboxOp>(loc, boxTy, itemAddr);
         mlir::Value emptyShape, emptySlice;
-        llvm::SmallVector<mlir::Value, 1> lenParams{box.getLen()};
+        llvm::SmallVector<mlir::Value> lenParams{box.getLen()};
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, emptyShape,
                                     emptySlice, lenParams);
       },

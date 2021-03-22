@@ -112,7 +112,7 @@ Fortran::lower::CharacterExprHelper::toExtendedValue(mlir::Value character,
   auto type = character.getType();
   auto base = fir::isa_passbyref_type(type) ? character : mlir::Value{};
   auto resultLen = len;
-  llvm::SmallVector<mlir::Value, 2> extents;
+  llvm::SmallVector<mlir::Value> extents;
 
   if (auto eleType = fir::dyn_cast_ptrEleTy(type))
     type = eleType;
@@ -330,7 +330,7 @@ Fortran::lower::CharacterExprHelper::createCharacterTemp(mlir::Type type,
     typeLen = *cstLen;
   auto *ctxt = builder.getContext();
   auto charTy = fir::CharacterType::get(ctxt, kind, typeLen);
-  llvm::SmallVector<mlir::Value, 1> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams;
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
   auto ref = builder.allocateLocal(loc, charTy, llvm::StringRef{}, llvm::None,
@@ -423,7 +423,7 @@ fir::CharBoxValue Fortran::lower::CharacterExprHelper::createSubstring(
     mlir::emitError(loc, "Incorrect number of bounds in substring");
     return {mlir::Value{}, mlir::Value{}};
   }
-  mlir::SmallVector<mlir::Value, 2> castBounds;
+  mlir::SmallVector<mlir::Value> castBounds;
   // Convert bounds to length type to do safe arithmetic on it.
   for (auto bound : bounds)
     castBounds.push_back(
@@ -485,7 +485,7 @@ mlir::Value Fortran::lower::CharacterExprHelper::createLenTrim(
   auto c = builder.create<fir::LoadOp>(loc, codeAddr);
   auto isBlank =
       builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::eq, blank, c);
-  llvm::SmallVector<mlir::Value, 2> results = {isBlank, index};
+  llvm::SmallVector<mlir::Value> results = {isBlank, index};
   builder.create<fir::ResultOp>(loc, results);
   builder.restoreInsertionPoint(insPt);
   // Compute length after iteration (zero if all blanks)

@@ -631,10 +631,10 @@ static mlir::FunctionType
 getFunctionType(llvm::Optional<mlir::Type> resultType,
                 llvm::ArrayRef<mlir::Value> arguments,
                 Fortran::lower::FirOpBuilder &builder) {
-  llvm::SmallVector<mlir::Type, 2> argTypes;
+  llvm::SmallVector<mlir::Type> argTypes;
   for (auto &arg : arguments)
     argTypes.push_back(arg.getType());
-  llvm::SmallVector<mlir::Type, 1> resTypes;
+  llvm::SmallVector<mlir::Type> resTypes;
   if (resultType)
     resTypes.push_back(*resultType);
   return mlir::FunctionType::get(builder.getModule().getContext(), argTypes,
@@ -650,7 +650,7 @@ fir::ExtendedValue toExtendedValue(mlir::Value val,
   auto type = val.getType();
   auto base = val;
   auto indexType = builder.getIndexType();
-  llvm::SmallVector<mlir::Value, 2> extents;
+  llvm::SmallVector<mlir::Value> extents;
 
   Fortran::lower::CharacterExprHelper charHelper{builder, loc};
   // FIXME: we may want to allow non character scalar here.
@@ -705,7 +705,7 @@ template <typename GeneratorType>
 fir::ExtendedValue IntrinsicLibrary::genElementalCall(
     GeneratorType generator, llvm::StringRef name, mlir::Type resultType,
     llvm::ArrayRef<fir::ExtendedValue> args, bool outline) {
-  llvm::SmallVector<mlir::Value, 2> scalarArgs;
+  llvm::SmallVector<mlir::Value> scalarArgs;
   for (const auto &arg : args) {
     if (arg.getUnboxed() || arg.getCharBox()) {
       scalarArgs.emplace_back(fir::getBase(arg));
@@ -812,7 +812,7 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name,
   // crash if it gets absent optional.
 
   // FIXME: using toValue to get the type won't work with array arguments.
-  llvm::SmallVector<mlir::Value, 2> mlirArgs;
+  llvm::SmallVector<mlir::Value> mlirArgs;
   for (const auto &extendedVal : args) {
     auto val = toValue(extendedVal, builder, loc);
     if (!val)
@@ -847,7 +847,7 @@ mlir::Value
 IntrinsicLibrary::invokeGenerator(ExtendedGenerator generator,
                                   mlir::Type resultType,
                                   llvm::ArrayRef<mlir::Value> args) {
-  llvm::SmallVector<fir::ExtendedValue, 2> extendedArgs;
+  llvm::SmallVector<fir::ExtendedValue> extendedArgs;
   for (auto arg : args)
     extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
   auto extendedResult = std::invoke(generator, *this, resultType, extendedArgs);
@@ -857,7 +857,7 @@ IntrinsicLibrary::invokeGenerator(ExtendedGenerator generator,
 mlir::Value
 IntrinsicLibrary::invokeGenerator(SubroutineGenerator generator,
                                   llvm::ArrayRef<mlir::Value> args) {
-  llvm::SmallVector<fir::ExtendedValue, 2> extendedArgs;
+  llvm::SmallVector<fir::ExtendedValue> extendedArgs;
   for (auto arg : args)
     extendedArgs.emplace_back(toExtendedValue(arg, builder, loc));
   std::invoke(generator, *this, extendedArgs);
@@ -887,7 +887,7 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // Location of code inside wrapper of the wrapper is independent from
     // the location of the intrinsic call.
     auto localLoc = localBuilder->getUnknownLoc();
-    llvm::SmallVector<mlir::Value, 2> localArguments;
+    llvm::SmallVector<mlir::Value> localArguments;
     for (mlir::BlockArgument bArg : function.front().getArguments()) {
       auto refType = bArg.getType().dyn_cast<fir::ReferenceType>();
       if (loadRefArguments && refType) {
@@ -966,7 +966,7 @@ fir::ExtendedValue IntrinsicLibrary::outlineInExtendedWrapper(
                              " with absent optional argument");
     exit(1);
   }
-  llvm::SmallVector<mlir::Value, 2> mlirArgs;
+  llvm::SmallVector<mlir::Value> mlirArgs;
   for (const auto &extendedVal : args)
     mlirArgs.emplace_back(toValue(extendedVal, builder, loc));
   auto funcType = getFunctionType(resultType, mlirArgs, builder);
@@ -997,7 +997,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
   return [funcOp, actualFuncType, soughtFuncType](
              Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
              llvm::ArrayRef<mlir::Value> args) {
-    llvm::SmallVector<mlir::Value, 2> convertedArguments;
+    llvm::SmallVector<mlir::Value> convertedArguments;
     for (auto [fst, snd] : llvm::zip(actualFuncType.getInputs(), args))
       convertedArguments.push_back(builder.createConvert(loc, fst, snd));
     auto call = builder.create<fir::CallOp>(loc, funcOp, convertedArguments);
@@ -1023,7 +1023,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
           handler.generator);
 
   if (!funcOp) {
-    llvm::SmallVector<mlir::Type, 2> argTypes;
+    llvm::SmallVector<mlir::Type> argTypes;
     for (auto type : signature.getInputs()) {
       if (auto refType = type.dyn_cast<fir::ReferenceType>())
         argTypes.push_back(refType.getEleTy());
@@ -1088,7 +1088,7 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     // Use HYPOT to fulfill the no underflow/overflow requirement.
     auto parts =
         Fortran::lower::ComplexExprHelper{builder, loc}.extractParts(arg);
-    llvm::SmallVector<mlir::Value, 2> args = {parts.first, parts.second};
+    llvm::SmallVector<mlir::Value> args = {parts.first, parts.second};
     return genRuntimeCall("hypot", resultType, args);
   }
   llvm_unreachable("unexpected type in ABS argument");
@@ -1169,7 +1169,7 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
 // DATE_AND_TIME
 void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 4 && "date_and_time has 4 args");
-  llvm::SmallVector<llvm::Optional<fir::CharBoxValue>, 3> charArgs(3);
+  llvm::SmallVector<llvm::Optional<fir::CharBoxValue>> charArgs(3);
   for (auto i = 0; i < 3; ++i)
     if (auto *charBox = args[i].getCharBox())
       charArgs[i] = *charBox;

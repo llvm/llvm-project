@@ -77,7 +77,7 @@ struct IncrementLoopInfo {
   const Fortran::semantics::SomeExpr *stepExpr;
   const Fortran::semantics::SomeExpr *maskExpr = nullptr;
   bool isUnordered; // do concurrent, forall
-  llvm::SmallVector<const Fortran::semantics::Symbol *, 4> localInitSymList;
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localInitSymList;
   mlir::Value loopVariable = nullptr;
   mlir::Value stepValue = nullptr; // possible uses in multiple blocks
 
@@ -93,7 +93,7 @@ struct IncrementLoopInfo {
   mlir::Block *exitBlock = nullptr;   // loop exit target block
 };
 
-using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 4>;
+using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo>;
 } // namespace
 
 /// Clone subexpression and wrap it as a generic `Fortran::evaluate::Expr`.
@@ -573,8 +573,8 @@ private:
       return; // "Normal" subroutine call.
     // Call with alternate return specifiers.
     // The call returns an index that selects an alternate return branch target.
-    llvm::SmallVector<int64_t, 5> indexList;
-    llvm::SmallVector<mlir::Block *, 5> blockList;
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
     int64_t index = 0;
     for (const auto &arg :
          std::get<std::list<Fortran::parser::ActualArgSpec>>(stmt.v.t)) {
@@ -599,8 +599,8 @@ private:
                           std::get<Fortran::parser::ScalarIntExpr>(stmt.t)),
                       stmtCtx);
     stmtCtx.finalize();
-    llvm::SmallVector<int64_t, 8> indexList;
-    llvm::SmallVector<mlir::Block *, 8> blockList;
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
     int64_t index = 0;
     for (auto &label : std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       indexList.push_back(++index);
@@ -625,9 +625,9 @@ private:
       // Arithmetic expression has Integer type.  Generate a SelectCaseOp
       // with ranges {(-inf:-1], 0=default, [1:inf)}.
       MLIRContext *context = builder->getContext();
-      llvm::SmallVector<mlir::Attribute, 3> attrList;
-      llvm::SmallVector<mlir::Value, 3> valueList;
-      llvm::SmallVector<mlir::Block *, 3> blockList;
+      llvm::SmallVector<mlir::Attribute> attrList;
+      llvm::SmallVector<mlir::Value> valueList;
+      llvm::SmallVector<mlir::Block *> blockList;
       attrList.push_back(fir::UpperBoundAttr::get(context));
       valueList.push_back(builder->createIntegerConstant(loc, exprType, -1));
       blockList.push_back(blockOfLabel(eval, std::get<1>(stmt.t)));
@@ -684,8 +684,8 @@ private:
       exit(1);
     }
     auto labelSet = iter->second;
-    llvm::SmallVector<int64_t, 10> indexList;
-    llvm::SmallVector<mlir::Block *, 10> blockList;
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
     auto addLabel = [&](Fortran::parser::Label label) {
       indexList.push_back(label);
       blockList.push_back(blockOfLabel(eval, label));
@@ -1442,8 +1442,8 @@ private:
     auto loc = toLocation();
     auto indexType = builder->getIndexType();
     auto selector = builder->createConvert(loc, indexType, iostat);
-    llvm::SmallVector<int64_t, 5> indexList;
-    llvm::SmallVector<mlir::Block *, 4> blockList;
+    llvm::SmallVector<int64_t> indexList;
+    llvm::SmallVector<mlir::Block *> blockList;
     if (eorBlock) {
       indexList.push_back(Fortran::runtime::io::IostatEor);
       blockList.push_back(eorBlock);
@@ -1662,7 +1662,7 @@ private:
               if ((lhsType && lhsType->IsPolymorphic()) ||
                   (rhsType && rhsType->IsPolymorphic()))
                 TODO(loc, "pointer assignment involving polymorphic entity");
-              llvm::SmallVector<mlir::Value, 4> lbounds;
+              llvm::SmallVector<mlir::Value> lbounds;
               for (const auto &lbExpr : lbExprs)
                 lbounds.push_back(
                     fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
@@ -1690,8 +1690,8 @@ private:
               if ((lhsType && lhsType->IsPolymorphic()) ||
                   (rhsType && rhsType->IsPolymorphic()))
                 TODO(loc, "pointer assignment involving polymorphic entity");
-              llvm::SmallVector<mlir::Value, 4> lbounds;
-              llvm::SmallVector<mlir::Value, 4> ubounds;
+              llvm::SmallVector<mlir::Value> lbounds;
+              llvm::SmallVector<mlir::Value> ubounds;
               for (const auto &[lbExpr, ubExpr] : boundExprs) {
                 lbounds.push_back(
                     fir::getBase(genExprValue(toEvExpr(lbExpr), stmtCtx)));
@@ -1946,7 +1946,7 @@ private:
 
     // Note: not storing Variable references because getOrderedSymbolTable
     // below returns a temporary.
-    llvm::SmallVector<Fortran::lower::pft::Variable, 4> deferredFuncResultList;
+    llvm::SmallVector<Fortran::lower::pft::Variable> deferredFuncResultList;
 
     // Backup actual argument for entry character results
     // with different lengths. It needs to be added to the non

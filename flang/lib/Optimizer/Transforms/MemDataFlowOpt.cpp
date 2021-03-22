@@ -43,7 +43,7 @@ public:
   // store and a load.
   llvm::Optional<WriteOp> findStoreToForward(ReadOp loadOp,
                                              std::vector<WriteOp> &&storeOps) {
-    llvm::SmallVector<WriteOp, 8> candidateSet;
+    llvm::SmallVector<WriteOp> candidateSet;
 
     for (auto &storeOp : storeOps)
       if (domInfo->dominates(storeOp, loadOp))

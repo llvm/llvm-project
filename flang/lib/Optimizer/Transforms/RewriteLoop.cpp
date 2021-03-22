@@ -86,7 +86,7 @@ public:
       iters = rewriter.create<mlir::SelectOp>(loc, cond, one, iters);
     }
 
-    llvm::SmallVector<mlir::Value, 8> loopOperands;
+    llvm::SmallVector<mlir::Value> loopOperands;
     loopOperands.push_back(low);
     auto operands = loop.getIterOperands();
     loopOperands.append(operands.begin(), operands.end());
@@ -106,7 +106,7 @@ public:
     mlir::Value itersMinusOne =
         rewriter.create<mlir::SubIOp>(loc, itersLeft, one);
 
-    llvm::SmallVector<mlir::Value, 8> loopCarried;
+    llvm::SmallVector<mlir::Value> loopCarried;
     loopCarried.push_back(steppedIndex);
     auto begin = loop.finalValue() ? std::next(terminator->operand_begin())
                                    : terminator->operand_begin();
@@ -234,7 +234,7 @@ public:
     mlir::Value stepped = rewriter.create<mlir::AddIOp>(loc, iv, step);
     assert(stepped && "must be a Value");
 
-    llvm::SmallVector<mlir::Value, 8> loopCarried;
+    llvm::SmallVector<mlir::Value> loopCarried;
     loopCarried.push_back(stepped);
     auto begin = whileOp.finalValue() ? std::next(terminator->operand_begin())
                                       : terminator->operand_begin();
@@ -250,7 +250,7 @@ public:
 
     // The initial values of loop-carried values is obtained from the operands
     // of the loop operation.
-    llvm::SmallVector<mlir::Value, 8> destOperands;
+    llvm::SmallVector<mlir::Value> destOperands;
     destOperands.push_back(lowerBound);
     auto iterOperands = whileOp.getIterOperands();
     destOperands.append(iterOperands.begin(), iterOperands.end());

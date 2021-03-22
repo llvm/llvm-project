@@ -43,7 +43,7 @@ static std::string doModulesHost(llvm::ArrayRef<llvm::StringRef> mods,
   return result;
 }
 
-inline llvm::SmallVector<llvm::StringRef, 2>
+inline llvm::SmallVector<llvm::StringRef>
 convertToStringRef(llvm::ArrayRef<std::string> from) {
   return {from.begin(), from.end()};
 }
@@ -214,10 +214,10 @@ llvm::StringRef fir::NameUniquer::doProgramEntry() {
 std::pair<fir::NameUniquer::NameKind, fir::NameUniquer::DeconstructedName>
 fir::NameUniquer::deconstruct(llvm::StringRef uniq) {
   if (uniq.startswith("_Q")) {
-    llvm::SmallVector<std::string, 4> modules;
+    llvm::SmallVector<std::string> modules;
     llvm::Optional<std::string> host;
     std::string name;
-    llvm::SmallVector<std::int64_t, 8> kinds;
+    llvm::SmallVector<std::int64_t> kinds;
     NameKind nk = NameKind::NOT_UNIQUED;
     for (std::size_t i = 2, end{uniq.size()}; i != end;) {
       switch (uniq[i]) {

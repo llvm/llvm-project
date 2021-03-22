@@ -49,7 +49,7 @@ void Fortran::lower::genStopStatement(
   auto &builder = converter.getFirOpBuilder();
   auto loc = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
-  llvm::SmallVector<mlir::Value, 8> operands;
+  llvm::SmallVector<mlir::Value> operands;
   mlir::FuncOp callee;
   mlir::FunctionType calleeType;
   // First operand is stop code (zero if absent)
@@ -213,9 +213,9 @@ void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
   mlir::Value zoneLen;
   splitArg(zone, zoneBuffer, zoneLen);
 
-  llvm::SmallVector<mlir::Value, 8> args{dateBuffer, timeBuffer, zoneBuffer,
-                                         dateLen,    timeLen,    zoneLen};
-  llvm::SmallVector<mlir::Value, 8> operands;
+  llvm::SmallVector<mlir::Value> args{dateBuffer, timeBuffer, zoneBuffer,
+                                      dateLen,    timeLen,    zoneLen};
+  llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);

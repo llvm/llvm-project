@@ -119,9 +119,9 @@ static void genAllocatableSetBounds(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Value upperBound) {
   auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableSetBounds)>(
       loc, builder);
-  llvm::SmallVector<mlir::Value, 4> args{boxAddress, dimIndex, lowerBound,
-                                         upperBound};
-  llvm::SmallVector<mlir::Value, 4> operands;
+  llvm::SmallVector<mlir::Value> args{boxAddress, dimIndex, lowerBound,
+                                      upperBound};
+  llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
@@ -142,7 +142,7 @@ static void genAllocatableInitCharacter(Fortran::lower::FirOpBuilder &builder,
         loc, "AllocatableInitCharacter runtime interface not as expected");
     return;
   }
-  llvm::SmallVector<mlir::Value, 5> args;
+  llvm::SmallVector<mlir::Value> args;
   args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
   args.push_back(builder.createConvert(loc, inputTypes[1], len));
   auto kind = box.getEleTy().cast<fir::CharacterType>().getFKind();
@@ -162,10 +162,10 @@ static mlir::Value genAllocatableAllocate(Fortran::lower::FirOpBuilder &builder,
                                           ErrorManager &errorManager) {
   auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableAllocate)>(
       loc, builder);
-  llvm::SmallVector<mlir::Value, 5> args{
+  llvm::SmallVector<mlir::Value> args{
       boxAddress, errorManager.hasStat, errorManager.errMsgAddr,
       errorManager.sourceFile, errorManager.sourceLine};
-  llvm::SmallVector<mlir::Value, 5> operands;
+  llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
@@ -178,10 +178,10 @@ genAllocatableDeallocate(Fortran::lower::FirOpBuilder &builder,
                          ErrorManager &errorManager) {
   auto callee = Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableDeallocate)>(
       loc, builder);
-  llvm::SmallVector<mlir::Value, 5> args{
+  llvm::SmallVector<mlir::Value> args{
       boxAddress, errorManager.hasStat, errorManager.errMsgAddr,
       errorManager.sourceFile, errorManager.sourceLine};
-  llvm::SmallVector<mlir::Value, 5> operands;
+  llvm::SmallVector<mlir::Value> operands;
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   return builder.create<fir::CallOp>(loc, callee, operands).getResult(0);
@@ -343,9 +343,9 @@ public:
   void syncMutablePropertiesFromIRBox() {
     if (!box.isDescribedByVariables())
       return;
-    llvm::SmallVector<mlir::Value, 2> lbounds;
-    llvm::SmallVector<mlir::Value, 2> extents;
-    llvm::SmallVector<mlir::Value, 2> lengths;
+    llvm::SmallVector<mlir::Value> lbounds;
+    llvm::SmallVector<mlir::Value> extents;
+    llvm::SmallVector<mlir::Value> lengths;
     auto addr =
         MutablePropertyReader{builder, loc, box, /*forceIRBoxRead=*/true}.read(
             lbounds, extents, lengths);
@@ -356,9 +356,9 @@ public:
   void syncIRBoxFromMutableProperties() {
     if (!box.isDescribedByVariables())
       return;
-    llvm::SmallVector<mlir::Value, 2> lbounds;
-    llvm::SmallVector<mlir::Value, 2> extents;
-    llvm::SmallVector<mlir::Value, 2> lengths;
+    llvm::SmallVector<mlir::Value> lbounds;
+    llvm::SmallVector<mlir::Value> extents;
+    llvm::SmallVector<mlir::Value> lengths;
     auto addr = MutablePropertyReader{builder, loc, box}.read(lbounds, extents,
                                                               lengths);
     updateIRBox(addr, lbounds, extents, lengths);
@@ -375,7 +375,7 @@ private:
             fir::ShapeType::get(builder.getContext(), extents.size());
         shape = builder.create<fir::ShapeOp>(loc, shapeType, extents);
       } else {
-        llvm::SmallVector<mlir::Value, 2> shapeShiftBounds;
+        llvm::SmallVector<mlir::Value> shapeShiftBounds;
         for (auto [lb, extent] : llvm::zip(lbounds, extents)) {
           shapeShiftBounds.emplace_back(lb);
           shapeShiftBounds.emplace_back(extent);
@@ -389,7 +389,7 @@ private:
     mlir::Value emptySlice;
     // Ignore lengths if already constant in the box type (this would trigger an
     // error in the embox).
-    llvm::SmallVector<mlir::Value, 2> cleanedLengths;
+    llvm::SmallVector<mlir::Value> cleanedLengths;
     if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
       if (charTy.getLen() == fir::CharacterType::unknownLen())
         cleanedLengths.append(lengths.begin(), lengths.end());
@@ -579,8 +579,8 @@ private:
   /// Only for intrinsic types. No coarrays, no polymorphism. No error recovery.
   void genInlinedAllocation(const Allocation &alloc,
                             const fir::MutableBoxValue &box) {
-    llvm::SmallVector<mlir::Value, 2> lbounds;
-    llvm::SmallVector<mlir::Value, 2> extents;
+    llvm::SmallVector<mlir::Value> lbounds;
+    llvm::SmallVector<mlir::Value> extents;
     Fortran::lower::StatementContext stmtCtx;
     auto idxTy = builder.getIndexType();
     auto lBoundsAreOnes = lowerBoundsAreOnes(alloc);
@@ -608,7 +608,7 @@ private:
       }
     }
 
-    llvm::SmallVector<mlir::Value, 2> lengths;
+    llvm::SmallVector<mlir::Value> lengths;
     if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
       if (charTy.getLen() == fir::CharacterType::unknownLen()) {
         if (box.hasNonDeferredLenParams())
@@ -625,7 +625,7 @@ private:
 
     // FIXME: AllocMemOp is ignoring its length arguments. Squeezed in into the
     // extents for now.
-    llvm::SmallVector<mlir::Value, 2> sizes = extents;
+    llvm::SmallVector<mlir::Value> sizes = extents;
     sizes.append(lengths.begin(), lengths.end());
     mlir::Value heap = builder.create<fir::AllocMemOp>(
         loc, box.getBaseTy(), mangleAlloc(alloc), llvm::None, sizes);
@@ -741,7 +741,7 @@ private:
   const Fortran::lower::SomeExpr *errMsgExpr{nullptr};
   // If the allocate has a type spec, lenParams contains the
   // value of the length parameters that were specified inside.
-  llvm::SmallVector<mlir::Value, 2> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams;
   ErrorManager errorManager;
 
   mlir::Location loc;
@@ -826,13 +826,13 @@ Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
   mlir::Value shape;
   if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
     auto zero = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-    llvm::SmallVector<mlir::Value, 2> extents(seqTy.getDimension(), zero);
+    llvm::SmallVector<mlir::Value> extents(seqTy.getDimension(), zero);
     shape = builder.createShape(
         loc, fir::ArrayBoxValue{nullAddr, extents, /*lbounds=*/llvm::None});
   }
   // Provide dummy length parameters if they are dynamic. If a length parameter
   // is deferred. it is set to zero here and will be set on allocation.
-  llvm::SmallVector<mlir::Value, 2> lenParams;
+  llvm::SmallVector<mlir::Value> lenParams;
   if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
     if (charTy.getLen() == fir::CharacterType::unknownLen()) {
       if (!nonDeferredParams.empty()) {
@@ -981,9 +981,9 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
                                   const fir::MutableBoxValue &box) {
   if (box.hasAssumedRank())
     TODO(loc, "Assumed rank allocatables or pointers");
-  llvm::SmallVector<mlir::Value, 2> lbounds;
-  llvm::SmallVector<mlir::Value, 2> extents;
-  llvm::SmallVector<mlir::Value, 2> lengths;
+  llvm::SmallVector<mlir::Value> lbounds;
+  llvm::SmallVector<mlir::Value> extents;
+  llvm::SmallVector<mlir::Value> lengths;
   if (readToBoxValue(box)) {
     auto reader = MutablePropertyReader(builder, loc, box);
     reader.getLowerBounds(lbounds);
@@ -1080,7 +1080,7 @@ void Fortran::lower::associateMutableBoxWithRemap(
     mlir::ValueRange lbounds, mlir::ValueRange ubounds) {
 
   // Compute new extents
-  llvm::SmallVector<mlir::Value, 4> extents;
+  llvm::SmallVector<mlir::Value> extents;
   if (!lbounds.empty()) {
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
@@ -1127,7 +1127,7 @@ void Fortran::lower::associateMutableBoxWithRemap(
         // Rebox right-hand side fir.box with a new shape and type.
         auto shapeType =
             fir::ShapeShiftType::get(builder.getContext(), extents.size());
-        SmallVector<mlir::Value, 8> shapeArgs;
+        SmallVector<mlir::Value> shapeArgs;
         auto idxTy = builder.getIndexType();
         for (auto [lbnd, ext] : llvm::zip(lbounds, extents)) {
           auto lb = builder.createConvert(loc, idxTy, lbnd);

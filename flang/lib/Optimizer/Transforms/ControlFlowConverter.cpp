@@ -35,9 +35,7 @@ static llvm::cl::opt<bool> disableControlFlowLowering(
                    "dialect operations to more primitive operations"),
     llvm::cl::init(false), llvm::cl::Hidden);
 
-using SmallVecResult = llvm::SmallVector<mlir::Value, 4>;
 using OperandTy = llvm::ArrayRef<mlir::Value>;
-using AttributeTy = llvm::ArrayRef<mlir::NamedAttribute>;
 using namespace fir;
 
 namespace {

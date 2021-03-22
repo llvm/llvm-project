@@ -76,9 +76,9 @@ public:
     });
     addConversion([&](mlir::TupleType tuple) {
       LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
-      llvm::SmallVector<mlir::Type, 8> inMembers;
+      llvm::SmallVector<mlir::Type> inMembers;
       tuple.getFlattenedTypes(inMembers);
-      llvm::SmallVector<mlir::Type, 8> members;
+      llvm::SmallVector<mlir::Type> members;
       for (auto mem : inMembers) {
         // Prevent fir.box from degenerating to a pointer to a descriptor in the
         // context of a tuple type.
@@ -137,7 +137,7 @@ public:
   // addendum defined in descriptor.h.
   mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
     // (buffer*, ele-size, rank, type-descriptor, attribute, [dims])
-    SmallVector<mlir::Type, 6> parts;
+    SmallVector<mlir::Type> parts;
     mlir::Type ele = box.getEleTy();
     // remove fir.heap/fir.ref/fir.ptr
     if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
@@ -281,7 +281,7 @@ public:
       return iter->second;
     auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
     identStructCache[name] = st;
-    llvm::SmallVector<mlir::Type, 8> members;
+    llvm::SmallVector<mlir::Type> members;
     for (auto mem : derived.getTypeList()) {
       // Prevent fir.box from degenerating to a pointer to a descriptor in the
       // context of a record type.

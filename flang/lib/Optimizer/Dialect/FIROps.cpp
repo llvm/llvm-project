@@ -232,7 +232,7 @@ fir::BoxCharLenOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
 /// Get the result types packed in a tuple tuple
 mlir::Type fir::BoxDimsOp::getTupleType() {
   // note: triple, but 4 is nearest power of 2
-  llvm::SmallVector<mlir::Type, 4> triple{
+  llvm::SmallVector<mlir::Type> triple{
       getResult(0).getType(), getResult(1).getType(), getResult(2).getType()};
   return mlir::TupleType::get(getContext(), triple);
 }
@@ -257,14 +257,14 @@ static void printCallOp(mlir::OpAsmPrinter &p, fir::CallOp &op) {
   p << '(' << op->getOperands().drop_front(isDirect ? 0 : 1) << ')';
   p.printOptionalAttrDict(op->getAttrs(), {fir::CallOp::calleeAttrName()});
   auto resultTypes{op.getResultTypes()};
-  llvm::SmallVector<Type, 8> argTypes(
+  llvm::SmallVector<Type> argTypes(
       llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
   p << " : " << FunctionType::get(op.getContext(), argTypes, resultTypes);
 }
 
 static mlir::ParseResult parseCallOp(mlir::OpAsmParser &parser,
                                      mlir::OperationState &result) {
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> operands;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
   if (parser.parseOperandList(operands))
     return mlir::failure();
 
@@ -343,7 +343,7 @@ static void printCmpfOp(OpAsmPrinter &p, CmpfOp op) { printCmpOp(p, op); }
 template <typename OPTY>
 static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
                                     mlir::OperationState &result) {
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 2> ops;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> ops;
   mlir::NamedAttrList attrs;
   mlir::Attribute predicateNameAttr;
   mlir::Type type;
@@ -458,10 +458,10 @@ static mlir::ParseResult parseCoordinateCustom(mlir::OpAsmParser &parser,
   mlir::OpAsmParser::OperandType memref;
   if (parser.parseOperand(memref) || parser.parseComma())
     return mlir::failure();
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> coorOperands;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> coorOperands;
   if (parser.parseOperandList(coorOperands))
     return mlir::failure();
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 16> allOperands;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> allOperands;
   allOperands.push_back(memref);
   allOperands.append(coorOperands.begin(), coorOperands.end());
   mlir::FunctionType funcTy;
@@ -802,7 +802,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   // Parse the initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> regionArgs;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> regionArgs;
   auto prependCount = false;
 
   // Induction variable.
@@ -810,8 +810,8 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
   regionArgs.push_back(iterateVar);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
-    llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> operands;
-    llvm::SmallVector<mlir::Type, 4> regionTypes;
+    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::Type> regionTypes;
     // Parse assignment list and results type list.
     if (parser.parseAssignmentList(regionArgs, operands) ||
         parser.parseArrowTypeList(regionTypes))
@@ -832,7 +832,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
       result.addTypes(resTypes);
     }
   } else if (succeeded(parser.parseOptionalArrow())) {
-    llvm::SmallVector<mlir::Type, 4> typeList;
+    llvm::SmallVector<mlir::Type> typeList;
     if (parser.parseLParen() || parser.parseTypeList(typeList) ||
         parser.parseRParen())
       return failure();
@@ -849,7 +849,7 @@ static mlir::ParseResult parseIterWhileOp(mlir::OpAsmParser &parser,
   if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::Type, 4> argTypes;
+  llvm::SmallVector<mlir::Type> argTypes;
   // Induction variable (hidden)
   if (prependCount)
     result.addAttribute(IterWhileOp::finalValueAttrName(),
@@ -1055,8 +1055,8 @@ static mlir::ParseResult parseDoLoopOp(mlir::OpAsmParser &parser,
                         builder.getUnitAttr());
 
   // Parse the optional initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 4> regionArgs, operands;
-  llvm::SmallVector<mlir::Type, 4> argTypes;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> regionArgs, operands;
+  llvm::SmallVector<mlir::Type> argTypes;
   auto prependCount = false;
   regionArgs.push_back(inductionVariable);
 
@@ -1340,7 +1340,7 @@ static constexpr llvm::StringRef getTargetOffsetAttr() {
 template <typename A, typename... AdditionalArgs>
 static A getSubOperands(unsigned pos, A allArgs,
                         mlir::DenseIntElementsAttr ranges,
-                        AdditionalArgs &&... additionalArgs) {
+                        AdditionalArgs &&...additionalArgs) {
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
     start += (*(ranges.begin() + i)).getZExtValue();
@@ -1438,16 +1438,16 @@ static mlir::ParseResult parseSelectCase(mlir::OpAsmParser &parser,
   if (parseSelector(parser, result, selector, type))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::Attribute, 8> attrs;
-  llvm::SmallVector<mlir::OpAsmParser::OperandType, 8> opers;
-  llvm::SmallVector<mlir::Block *, 8> dests;
-  llvm::SmallVector<llvm::SmallVector<mlir::Value, 8>, 8> destArgs;
-  llvm::SmallVector<int32_t, 8> argOffs;
+  llvm::SmallVector<mlir::Attribute> attrs;
+  llvm::SmallVector<mlir::OpAsmParser::OperandType> opers;
+  llvm::SmallVector<mlir::Block *> dests;
+  llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
+  llvm::SmallVector<int32_t> argOffs;
   int32_t offSize = 0;
   while (true) {
     mlir::Attribute attr;
     mlir::Block *dest;
-    llvm::SmallVector<mlir::Value, 8> destArg;
+    llvm::SmallVector<mlir::Value> destArg;
     mlir::NamedAttrList temp;
     if (parser.parseAttribute(attr, "a", temp) || isValidCaseAttr(attr) ||
         parser.parseComma())
@@ -1486,7 +1486,7 @@ static mlir::ParseResult parseSelectCase(mlir::OpAsmParser &parser,
                       parser.getBuilder().getArrayAttr(attrs));
   if (parser.resolveOperands(opers, type, result.operands))
     return mlir::failure();
-  llvm::SmallVector<int32_t, 8> targOffs;
+  llvm::SmallVector<int32_t> targOffs;
   int32_t toffSize = 0;
   const auto count = dests.size();
   for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
@@ -1524,7 +1524,7 @@ void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
                               llvm::ArrayRef<mlir::NamedAttribute> attributes) {
   result.addOperands(selector);
   result.addAttribute(getCasesAttr(), builder.getArrayAttr(compareAttrs));
-  llvm::SmallVector<int32_t, 8> operOffs;
+  llvm::SmallVector<int32_t> operOffs;
   int32_t operSize = 0;
   for (auto attr : compareAttrs) {
     if (attr.isa<fir::ClosedIntervalAttr>()) {
@@ -1545,7 +1545,7 @@ void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
   for (auto d : destinations)
     result.addSuccessors(d);
   const auto opCount = destOperands.size();
-  llvm::SmallVector<int32_t, 8> argOffs;
+  llvm::SmallVector<int32_t> argOffs;
   int32_t sumArgs = 0;
   for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {
     if (i < opCount) {
@@ -1575,7 +1575,7 @@ void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
                               llvm::ArrayRef<mlir::Block *> destinations,
                               llvm::ArrayRef<mlir::ValueRange> destOperands,
                               llvm::ArrayRef<mlir::NamedAttribute> attributes) {
-  llvm::SmallVector<mlir::ValueRange, 16> cmpOpers;
+  llvm::SmallVector<mlir::ValueRange> cmpOpers;
   auto iter = cmpOpList.begin();
   for (auto &attr : compareAttrs) {
     if (attr.isa<fir::ClosedIntervalAttr>()) {
@@ -1664,13 +1664,13 @@ static ParseResult parseSelectType(OpAsmParser &parser,
   if (parseSelector(parser, result, selector, type))
     return mlir::failure();
 
-  llvm::SmallVector<mlir::Attribute, 8> attrs;
-  llvm::SmallVector<mlir::Block *, 8> dests;
-  llvm::SmallVector<llvm::SmallVector<mlir::Value, 8>, 8> destArgs;
+  llvm::SmallVector<mlir::Attribute> attrs;
+  llvm::SmallVector<mlir::Block *> dests;
+  llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
   while (true) {
     mlir::Attribute attr;
     mlir::Block *dest;
-    llvm::SmallVector<mlir::Value, 8> destArg;
+    llvm::SmallVector<mlir::Value> destArg;
     mlir::NamedAttrList temp;
     if (parser.parseAttribute(attr, "a", temp) || parser.parseComma() ||
         parser.parseSuccessorAndUseList(dest, destArg))
@@ -1686,7 +1686,7 @@ static ParseResult parseSelectType(OpAsmParser &parser,
   auto &bld = parser.getBuilder();
   result.addAttribute(fir::SelectTypeOp::getCasesAttr(),
                       bld.getArrayAttr(attrs));
-  llvm::SmallVector<int32_t, 8> argOffs;
+  llvm::SmallVector<int32_t> argOffs;
   int32_t offSize = 0;
   const auto count = dests.size();
   for (std::remove_const_t<decltype(count)> i = 0; i != count; ++i) {

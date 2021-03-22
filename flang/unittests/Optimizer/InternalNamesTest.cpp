@@ -30,10 +30,10 @@ struct DeconstructedName {
   }
 
 private:
-  llvm::SmallVector<std::string, 2> modules;
+  llvm::SmallVector<std::string> modules;
   llvm::Optional<std::string> host;
   std::string name;
-  llvm::SmallVector<std::int64_t, 4> kinds;
+  llvm::SmallVector<std::int64_t> kinds;
 };
 
 void validateDeconstructedName(

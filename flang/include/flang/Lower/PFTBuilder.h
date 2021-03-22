@@ -402,7 +402,7 @@ struct Variable {
                    bool isDeclaration = false)
         : interval{std::move(interval)}, scope{&scope}, isDecl{isDeclaration} {}
     AggregateStore(Interval &&interval, const Fortran::semantics::Scope &scope,
-                   const llvm::SmallVector<const semantics::Symbol *, 8> &vars,
+                   const llvm::SmallVector<const semantics::Symbol *> &vars,
                    bool isDeclaration = false)
         : interval{std::move(interval)}, scope{&scope}, vars{vars},
           isDecl{isDeclaration} {}
@@ -415,7 +415,7 @@ struct Variable {
     Interval interval{};
     /// scope in which the interval is.
     const Fortran::semantics::Scope *scope;
-    llvm::SmallVector<const semantics::Symbol *, 8> vars{};
+    llvm::SmallVector<const semantics::Symbol *> vars{};
     /// Is this a declaration of a storage defined in another scope ?
     bool isDecl;
   };
@@ -640,7 +640,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Current index into entryPointList.  Index 0 is the primary entry point.
   int activeEntry = 0;
   /// Dummy arguments that are not universal across entry points.
-  llvm::SmallVector<const semantics::Symbol *, 3> nonUniversalDummyArguments;
+  llvm::SmallVector<const semantics::Symbol *, 1> nonUniversalDummyArguments;
   /// Primary result for function subprograms with alternate entries.  This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};

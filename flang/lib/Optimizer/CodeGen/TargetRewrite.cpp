@@ -181,9 +181,9 @@ public:
     auto fnTy = callOp.getFunctionType();
     auto loc = callOp.getLoc();
     rewriter->setInsertionPoint(callOp);
-    llvm::SmallVector<mlir::Type, 8> newResTys;
-    llvm::SmallVector<mlir::Type, 8> newInTys;
-    llvm::SmallVector<mlir::Value, 8> newOpers;
+    llvm::SmallVector<mlir::Type> newResTys;
+    llvm::SmallVector<mlir::Type> newInTys;
+    llvm::SmallVector<mlir::Value> newOpers;
 
     // If the call is indirect, the first argument must still be the function
     // to call.
@@ -217,8 +217,8 @@ public:
                        fnTy.getResults().end());
     }
 
-    llvm::SmallVector<mlir::Type, 8> trailingInTys;
-    llvm::SmallVector<mlir::Value, 8> trailingOpers;
+    llvm::SmallVector<mlir::Type> trailingInTys;
+    llvm::SmallVector<mlir::Value> trailingOpers;
     for (auto e : llvm::enumerate(
              llvm::zip(fnTy.getInputs().drop_front(dropFront),
                        callOp.getOperands().drop_front(dropFront)))) {
@@ -323,8 +323,8 @@ public:
   void convertAddrOp(AddrOfOp addrOp) {
     rewriter->setInsertionPoint(addrOp);
     auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
-    llvm::SmallVector<mlir::Type, 8> newResTys;
-    llvm::SmallVector<mlir::Type, 8> newInTys;
+    llvm::SmallVector<mlir::Type> newResTys;
+    llvm::SmallVector<mlir::Type> newInTys;
     for (mlir::Type ty : addrTy.getResults()) {
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case<fir::ComplexType>([&](fir::ComplexType ty) {
@@ -335,7 +335,7 @@ public:
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
     }
-    llvm::SmallVector<mlir::Type, 8> trailingInTys;
+    llvm::SmallVector<mlir::Type> trailingInTys;
     for (mlir::Type ty : addrTy.getInputs()) {
       llvm::TypeSwitch<mlir::Type>(ty)
           .Case<BoxCharType>([&](BoxCharType box) {
@@ -406,9 +406,9 @@ public:
     auto funcTy = func.getType().cast<mlir::FunctionType>();
     if (hasPortableSignature(funcTy))
       return;
-    llvm::SmallVector<mlir::Type, 8> newResTys;
-    llvm::SmallVector<mlir::Type, 8> newInTys;
-    llvm::SmallVector<FixupTy, 8> fixups;
+    llvm::SmallVector<mlir::Type> newResTys;
+    llvm::SmallVector<mlir::Type> newInTys;
+    llvm::SmallVector<FixupTy> fixups;
 
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
@@ -428,7 +428,7 @@ public:
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
 
     // Convert arguments
-    llvm::SmallVector<mlir::Type, 8> trailingTys;
+    llvm::SmallVector<mlir::Type> trailingTys;
     for (auto e : llvm::enumerate(funcTy.getInputs())) {
       auto ty = e.value();
       unsigned index = e.index();

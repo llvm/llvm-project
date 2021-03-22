@@ -249,7 +249,7 @@ private:
     }
   }
 
-  llvm::SmallVector<mlir::Value, 8> affineArgs;
+  llvm::SmallVector<mlir::Value> affineArgs;
   llvm::Optional<mlir::IntegerSet> integerSet;
   mlir::Value firCondition;
   unsigned symCount{0u};
@@ -386,7 +386,7 @@ createAffineOps(mlir::Value arrayRef, mlir::PatternRewriter &rewriter) {
   auto acoOp = arrayRef.getDefiningOp<ArrayCoorOp>();
   auto affineMap =
       createArrayIndexAffineMap(acoOp.indices().size(), acoOp.getContext());
-  SmallVector<mlir::Value, 4> indexArgs;
+  SmallVector<mlir::Value> indexArgs;
   indexArgs.append(acoOp.indices().begin(), acoOp.indices().end());
 
   populateIndexArgs(acoOp, indexArgs, rewriter);

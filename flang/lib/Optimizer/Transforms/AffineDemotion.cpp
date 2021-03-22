@@ -36,7 +36,7 @@ public:
 
   LogicalResult matchAndRewrite(mlir::AffineLoadOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value, 8> indices(op.getMapOperands());
+    SmallVector<Value> indices(op.getMapOperands());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -57,7 +57,7 @@ public:
 
   LogicalResult matchAndRewrite(mlir::AffineStoreOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<Value, 8> indices(op.getMapOperands());
+    SmallVector<Value> indices(op.getMapOperands());
     auto maybeExpandedMap =
         expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
     if (!maybeExpandedMap)
@@ -104,7 +104,7 @@ public:
 
 mlir::Type convertMemRef(mlir::MemRefType type) {
   return fir::SequenceType::get(
-      SmallVector<int64_t, 8>(type.getShape().begin(), type.getShape().end()),
+      SmallVector<int64_t>(type.getShape().begin(), type.getShape().end()),
       type.getElementType());
 }
 

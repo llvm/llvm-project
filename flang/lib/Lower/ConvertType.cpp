@@ -148,7 +148,7 @@ struct TypeBuilder {
       baseType = genDerivedType(dynamicType->GetDerivedTypeSpec());
     } else {
       // LOGICAL, INTEGER, REAL, COMPLEX, CHARACTER
-      llvm::SmallVector<Fortran::lower::LenParameterTy, 2> params;
+      llvm::SmallVector<Fortran::lower::LenParameterTy> params;
       translateLenParameters(params, category, expr);
       baseType = genFIRType(context, category, dynamicType->kind(), params);
     }
@@ -220,7 +220,7 @@ struct TypeBuilder {
     if (auto *type{ultimate.GetType()}) {
       if (auto *tySpec{type->AsIntrinsic()}) {
         int kind = toInt64(Fortran::common::Clone(tySpec->kind())).value();
-        llvm::SmallVector<Fortran::lower::LenParameterTy, 2> params;
+        llvm::SmallVector<Fortran::lower::LenParameterTy> params;
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (auto *tySpec = type->AsDerived()) {
@@ -379,7 +379,7 @@ struct TypeBuilder {
   /// Stack derived type being processed to avoid infinite loops in case of
   /// recursive derived types. The depth of derived types is expected to be
   /// shallow (<10), so a SmallVector is sufficient.
-  llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>, 4>
+  llvm::SmallVector<std::pair<const Fortran::lower::SymbolRef, mlir::Type>>
       derivedTypeInConstruction;
   Fortran::lower::AbstractConverter &converter;
   mlir::MLIRContext *context;

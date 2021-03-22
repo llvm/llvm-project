@@ -114,7 +114,7 @@ static void populateSets(llvm::SmallVectorImpl<mlir::Operation *> &reach,
     LLVM_DEBUG(llvm::dbgs() << "popset: " << val << '\n');
     auto popFn = [&](auto rop) {
       auto resNum = val.cast<mlir::OpResult>().getResultNumber();
-      llvm::SmallVector<mlir::Value, 2> results;
+      llvm::SmallVector<mlir::Value> results;
       rop.resultToSourceOps(results, resNum);
       for (auto u : results)
         populateSets(reach, visited, u);
@@ -190,7 +190,7 @@ void ArrayCopyAnalysis::arrayAccesses(
   }
 
   UseSetT visited;
-  llvm::SmallVector<mlir::OpOperand *, 16> queue; // uses of ArrayLoad[orig]
+  llvm::SmallVector<mlir::OpOperand *> queue; // uses of ArrayLoad[orig]
 
   auto appendToQueue = [&](mlir::Value val) {
     for (auto &use : val.getUses())
@@ -289,11 +289,11 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
 static bool conflictOnMerge(llvm::ArrayRef<mlir::Operation *> accesses) {
   if (accesses.size() < 2)
     return false;
-  llvm::SmallVector<mlir::Value, 8> indices;
+  llvm::SmallVector<mlir::Value> indices;
   LLVM_DEBUG(llvm::dbgs() << "check merge conflict on with " << accesses.size()
                           << " accesses on the list\n");
   for (auto *op : accesses) {
-    llvm::SmallVector<mlir::Value, 8> compareVector;
+    llvm::SmallVector<mlir::Value> compareVector;
     if (auto u = mlir::dyn_cast<ArrayUpdateOp>(op)) {
       if (indices.empty()) {
         indices = u.indices();
@@ -335,9 +335,9 @@ void ArrayCopyAnalysis::construct(mlir::MutableArrayRef<mlir::Region> regions) {
         if (op.getNumRegions())
           construct(op.getRegions());
         if (auto st = mlir::dyn_cast<fir::ArrayMergeStoreOp>(op)) {
-          llvm::SmallVector<Operation *, 16> values;
+          llvm::SmallVector<Operation *> values;
           reachingValues(values, st.sequence());
-          llvm::SmallVector<Operation *, 16> accesses;
+          llvm::SmallVector<Operation *> accesses;
           arrayAccesses(accesses,
                         mlir::cast<ArrayLoadOp>(st.original().getDefiningOp()));
           if (conflictDetected(values, accesses, st)) {
@@ -353,7 +353,7 @@ void ArrayCopyAnalysis::construct(mlir::MutableArrayRef<mlir::Region> regions) {
                      << "map: adding {" << *ld << " -> " << st << "}\n");
           useMap.insert({ld, &op});
         } else if (auto load = mlir::dyn_cast<ArrayLoadOp>(op)) {
-          llvm::SmallVector<mlir::Operation *, 16> accesses;
+          llvm::SmallVector<mlir::Operation *> accesses;
           arrayAccesses(accesses, load);
           LLVM_DEBUG(llvm::dbgs() << "process load: " << load
                                   << ", accesses: " << accesses.size() << '\n');
@@ -518,7 +518,7 @@ public:
       LLVM_DEBUG(llvm::outs() << "Yes, conflict was found\n");
       rewriter.setInsertionPoint(loadOp);
       // Copy in.
-      llvm::SmallVector<mlir::Value, 8> extents;
+      llvm::SmallVector<mlir::Value> extents;
       auto shapeOp = getOrReadExtentsAndShapeOp(loc, rewriter, load, extents);
       auto allocmem = rewriter.create<AllocMemOp>(
           loc, dyn_cast_ptrOrBoxEleTy(load.memref().getType()),
@@ -557,8 +557,8 @@ public:
                     mlir::Value dst, mlir::Value src, mlir::Value shapeOp,
                     mlir::Type arrTy) const {
     auto insPt = rewriter.saveInsertionPoint();
-    llvm::SmallVector<mlir::Value, 8> indices;
-    llvm::SmallVector<mlir::Value, 8> extents;
+    llvm::SmallVector<mlir::Value> indices;
+    llvm::SmallVector<mlir::Value> extents;
     getExtents(extents, shapeOp);
     // Build loop nest from column to row.
     for (auto sh : llvm::reverse(extents)) {

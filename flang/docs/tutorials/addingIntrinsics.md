@@ -318,7 +318,7 @@ void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
   auto sourceLine =
       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(3));
 
-  llvm::SmallVector<mlir::Value, 4> args;
+  llvm::SmallVector<mlir::Value> args;
   args.emplace_back(builder.createConvert(loc, fTy.getInput(0), resultBox));
   args.emplace_back(builder.createConvert(loc, fTy.getInput(1), stringBox));
   args.emplace_back(builder.createConvert(loc, fTy.getInput(2), sourceFile));

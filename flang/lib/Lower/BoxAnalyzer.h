@@ -66,7 +66,7 @@ struct ScalarStaticDerived : ScalarSym {
       : ScalarSym{sym}, lens{std::move(lens)} {}
 
 private:
-  llvm::SmallVector<int64_t, 8> lens;
+  llvm::SmallVector<int64_t> lens;
 };
 
 /// Scalar of dependent type CHARACTER, dynamic LEN.
@@ -98,7 +98,7 @@ struct ScalarDynamicDerived : ScalarSym {
       : ScalarSym{sym}, lens{std::move(lens)} {}
 
 private:
-  llvm::SmallVector<Fortran::semantics::SomeExpr, 8> lens;
+  llvm::SmallVector<Fortran::semantics::SomeExpr> lens;
 };
 
 struct LBoundsAndShape {
@@ -112,8 +112,8 @@ struct LBoundsAndShape {
     return llvm::all_of(lbounds, [](int64_t v) { return v == 1; });
   }
 
-  llvm::SmallVector<int64_t, 8> lbounds;
-  llvm::SmallVector<int64_t, 8> shapes;
+  llvm::SmallVector<int64_t> lbounds;
+  llvm::SmallVector<int64_t> shapes;
 };
 
 /// Array of T with statically known origin (lbounds) and shape.
@@ -143,7 +143,7 @@ struct DynamicBound {
     });
   }
 
-  llvm::SmallVector<const Fortran::semantics::ShapeSpec *, 8> bounds;
+  llvm::SmallVector<const Fortran::semantics::ShapeSpec *> bounds;
 };
 
 /// Array of T with dynamic origin and/or shape.
@@ -381,9 +381,9 @@ public:
   void analyze(const Fortran::semantics::Symbol &sym) {
     if (symIsArray(sym)) {
       auto isConstant = true;
-      llvm::SmallVector<int64_t, 8> lbounds;
-      llvm::SmallVector<int64_t, 8> shapes;
-      llvm::SmallVector<const Fortran::semantics::ShapeSpec *, 8> bounds;
+      llvm::SmallVector<int64_t> lbounds;
+      llvm::SmallVector<int64_t> shapes;
+      llvm::SmallVector<const Fortran::semantics::ShapeSpec *> bounds;
       for (const auto &subs : getSymShape(sym)) {
         bounds.push_back(&subs);
         if (!isConstant)

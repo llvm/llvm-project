@@ -320,7 +320,7 @@ private:
     symbolMapStack.back().try_emplace(&*sym, box);
   }
 
-  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>, 4>
+  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
       symbolMapStack;
 };
 

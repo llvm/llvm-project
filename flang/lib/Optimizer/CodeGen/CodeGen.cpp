@@ -74,9 +74,6 @@ bool allConstants(OperandTy operands) {
 }
 } // namespace fir
 
-using SmallVecResult = SmallVector<mlir::Value, 4>;
-using AttributeTy = ArrayRef<mlir::NamedAttribute>;
-
 // FIXME: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
 
@@ -243,7 +240,7 @@ protected:
   mlir::LLVM::GEPOp genGEP(mlir::Location loc, mlir::Type ty,
                            mlir::ConversionPatternRewriter &rewriter,
                            mlir::Value base, ARGS... args) const {
-    SmallVector<mlir::Value, 8> cv{args...};
+    SmallVector<mlir::Value> cv{args...};
     return rewriter.create<mlir::LLVM::GEPOp>(loc, ty, base, cv);
   }
 
@@ -336,7 +333,7 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
     auto resultTy = ty;
     if (alloc.hasLenParams()) {
       unsigned end = alloc.numLenParams();
-      llvm::SmallVector<mlir::Value, 4> lenParams;
+      llvm::SmallVector<mlir::Value> lenParams;
       for (; i < end; ++i)
         lenParams.push_back(operands[i]);
       auto i64Ty = mlir::IntegerType::get(alloc.getContext(), 64);
@@ -691,7 +688,7 @@ struct CallOpConversion : public FIROpConversion<fir::CallOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::CallOp call, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    SmallVector<mlir::Type, 4> resultTys;
+    SmallVector<mlir::Type> resultTys;
     for (auto r : call.getResults())
       resultTys.push_back(convertType(r.getType()));
     rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(call, resultTys, operands,
@@ -1324,8 +1321,8 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
         consDescriptorPrefix(rebox, rewriter, rebox.getOutRank(), lenParams);
 
     // Read input extents, strides, and base address
-    llvm::SmallVector<mlir::Value, 8> inputExtents;
-    llvm::SmallVector<mlir::Value, 8> inputStrides;
+    llvm::SmallVector<mlir::Value> inputExtents;
+    llvm::SmallVector<mlir::Value> inputStrides;
     const auto inputRank = rebox.getRank();
     for (unsigned i = 0; i < inputRank; ++i) {
       auto dim = genConstantIndex(loc, idxTy, rewriter, i);
@@ -1396,8 +1393,8 @@ private:
 
     // The slice is of the form array(i:j:k)[%component]. Compute new extents
     // and strides.
-    llvm::SmallVector<mlir::Value, 8> slicedExtents;
-    llvm::SmallVector<mlir::Value, 8> slicedStrides;
+    llvm::SmallVector<mlir::Value> slicedExtents;
+    llvm::SmallVector<mlir::Value> slicedStrides;
     auto idxTy = lowerTy().indexType();
     auto one = genConstantIndex(loc, idxTy, rewriter, 1);
     const bool sliceHasOrigins = !rebox.shift().empty();
@@ -1454,8 +1451,8 @@ private:
       return finalizeRebox(rebox, dest, base, rebox.shift(), inputExtents,
                            inputStrides, rewriter);
 
-    llvm::SmallVector<mlir::Value, 8> newStrides;
-    llvm::SmallVector<mlir::Value, 8> newExtents;
+    llvm::SmallVector<mlir::Value> newStrides;
+    llvm::SmallVector<mlir::Value> newExtents;
     auto loc = rebox.getLoc();
     auto idxTy = lowerTy().indexType();
     // First stride from input box is kept. The rest is assumed contiguous
@@ -1571,7 +1568,7 @@ struct ExtractValueOpConversion
     if (!fir::allConstants(operands.drop_front(1)))
       llvm_unreachable("fir.extract_value incorrectly formed");
     // since all indices are constants use LLVM's extractvalue instruction
-    SmallVector<mlir::Attribute, 8> attrs;
+    SmallVector<mlir::Attribute> attrs;
     for (std::size_t i = 1, end = operands.size(); i < end; ++i)
       attrs.push_back(getValue(operands[i]));
     toRowMajor(attrs, lowerTy().unwrap(operands[0].getType()));
@@ -1594,7 +1591,7 @@ struct InsertValueOpConversion
             mlir::ConversionPatternRewriter &rewriter) const override {
     assert(fir::allConstants(operands.drop_front(2)));
     // since all indices must be constants use LLVM's insertvalue instruction
-    SmallVector<mlir::Attribute, 8> attrs;
+    SmallVector<mlir::Attribute> attrs;
     for (std::size_t i = 2, end = operands.size(); i < end; ++i)
       attrs.push_back(getValue(operands[i]));
     toRowMajor(attrs, lowerTy().unwrap(operands[0].getType()));
@@ -1612,8 +1609,8 @@ struct InsertOnRangeOpConversion
   using FIROpAndTypeConversion::FIROpAndTypeConversion;
 
   // Increments an array of subscripts in a row major fasion.
-  void incrementSubscripts(const SmallVector<uint64_t, 8> &dims,
-                           SmallVector<uint64_t, 8> &subscripts) const {
+  void incrementSubscripts(const SmallVector<uint64_t> &dims,
+                           SmallVector<uint64_t> &subscripts) const {
     for (size_t i = dims.size(); i > 0; --i) {
       if (++subscripts[i - 1] < dims[i - 1]) {
         return;
@@ -1627,9 +1624,9 @@ struct InsertOnRangeOpConversion
             mlir::ConversionPatternRewriter &rewriter) const override {
     assert(fir::allConstants(operands.drop_front(2)));
 
-    llvm::SmallVector<mlir::Attribute, 8> lowerBound;
-    llvm::SmallVector<mlir::Attribute, 8> upperBound;
-    llvm::SmallVector<uint64_t, 8> dims;
+    llvm::SmallVector<mlir::Attribute> lowerBound;
+    llvm::SmallVector<mlir::Attribute> upperBound;
+    llvm::SmallVector<uint64_t> dims;
     auto type = operands[0].getType();
 
     // Iteratively extract the array dimensions from the type.
@@ -1644,8 +1641,8 @@ struct InsertOnRangeOpConversion
       upperBound.push_back(ExtractValueOpConversion::getValue(operands[i + 1]));
     }
 
-    SmallVector<std::uint64_t, 8> lBounds;
-    SmallVector<std::uint64_t, 8> uBounds;
+    SmallVector<std::uint64_t> lBounds;
+    SmallVector<std::uint64_t> uBounds;
 
     // Extract the integer value from the attribute bounds and convert to row
     // major format.
@@ -1661,7 +1658,7 @@ struct InsertOnRangeOpConversion
 
     while (subscripts != uBounds) {
       // Convert uint64_t's to Attribute's.
-      SmallVector<mlir::Attribute, 8> subscriptAttrs;
+      SmallVector<mlir::Attribute> subscriptAttrs;
       for (const auto &subscript : subscripts)
         subscriptAttrs.push_back(
             IntegerAttr::get(rewriter.getI64Type(), subscript));
@@ -1674,7 +1671,7 @@ struct InsertOnRangeOpConversion
     }
 
     // Convert uint64_t's to Attribute's.
-    SmallVector<mlir::Attribute, 8> subscriptAttrs;
+    SmallVector<mlir::Attribute> subscriptAttrs;
     for (const auto &subscript : subscripts)
       subscriptAttrs.push_back(
           IntegerAttr::get(rewriter.getI64Type(), subscript));
@@ -1765,7 +1762,7 @@ struct XArrayCoorOpConversion
       auto base = loadBaseAddrFromBox(loc, baseTy, operands[0], rewriter);
       auto voidPtrTy = getVoidPtrType(coor.getContext());
       base = rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, base);
-      SmallVector<mlir::Value, 4> args{base, off};
+      SmallVector<mlir::Value> args{base, off};
       auto addr = rewriter.create<mlir::LLVM::GEPOp>(loc, voidPtrTy, args);
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, baseTy, addr);
       return success();
@@ -1787,7 +1784,7 @@ struct XArrayCoorOpConversion
       auto newTy = mlir::LLVM::LLVMPointerType::get(eleTy);
       base = rewriter.create<mlir::LLVM::BitcastOp>(loc, newTy, operands[0]);
     }
-    SmallVector<mlir::Value, 8> args = {base, off};
+    SmallVector<mlir::Value> args = {base, off};
     args.append(coor.subcomponent().begin(), coor.subcomponent().end());
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(coor, ty, args);
     return success();
@@ -1816,7 +1813,7 @@ struct CoordinateOpConversion
 
     // if argument 0 is complex, get the real or imaginary part
     if (fir::isa_complex(cpnTy)) {
-      SmallVector<mlir::Value, 8> offs = {c0};
+      SmallVector<mlir::Value> offs = {c0};
       offs.append(std::next(operands.begin()), operands.end());
       mlir::Value gep = genGEP(loc, unwrap(ty), rewriter, base, offs);
       rewriter.replaceOp(coor, gep);
@@ -1866,7 +1863,7 @@ struct CoordinateOpConversion
       auto voidPtrTy = getVoidPtrType(coor.getContext());
       auto voidPtrBase =
           rewriter.create<mlir::LLVM::BitcastOp>(loc, voidPtrTy, base);
-      SmallVector<mlir::Value, 4> args{voidPtrBase, off};
+      SmallVector<mlir::Value> args{voidPtrBase, off};
       auto addr = rewriter.create<mlir::LLVM::GEPOp>(loc, voidPtrTy, args);
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(coor, unwrap(ty),
                                                          addr);
@@ -1906,12 +1903,12 @@ struct CoordinateOpConversion
       TODO(loc, "type has dynamic size");
 
     if (hasKnownShape || columnIsDeferred) {
-      SmallVector<mlir::Value, 8> offs;
+      SmallVector<mlir::Value> offs;
       if (hasKnownShape && hasSubdimension)
         offs.push_back(c0);
       const auto sz = operands.size();
       Optional<int> dims;
-      SmallVector<mlir::Value, 8> arrIdx;
+      SmallVector<mlir::Value> arrIdx;
       for (std::remove_const_t<decltype(sz)> i = 1; i < sz; ++i) {
         auto nxtOpnd = operands[i];
 
@@ -2049,8 +2046,8 @@ struct CoordinateOpConversion
     return true;
   }
 
-  SmallVector<mlir::Value, 8> arguments(OperandTy vec, unsigned s,
-                                        unsigned e) const {
+  SmallVector<mlir::Value> arguments(OperandTy vec, unsigned s,
+                                     unsigned e) const {
     return {vec.begin() + s, vec.begin() + e};
   }
 
