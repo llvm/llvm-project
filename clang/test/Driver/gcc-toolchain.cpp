@@ -24,7 +24,8 @@
 // CHECK: "{{[^"]*}}ld{{(.exe)?}}"
 // CHECK-SAME: "{{[^"]*}}/usr/lib/gcc/x86_64-linux-gnu/4.8{{/|\\\\}}crtbegin.o"
 // CHECK-SAME: "-L[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8"
-// CHECK-SAME: "-L[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu"
+/// On x86_64, there is an extra usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu but we should not test it.
+// CHECK-SAME: "-L[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.."
 
 /// Test we don't detect GCC installation under -B.
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
