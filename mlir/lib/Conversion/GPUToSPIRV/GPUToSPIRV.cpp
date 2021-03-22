@@ -331,8 +331,7 @@ namespace {
 
 void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       OwningRewritePatternList &patterns) {
-  auto *context = patterns.getContext();
-  populateWithGenerated(context, patterns);
+  populateWithGenerated(patterns);
   patterns.insert<
       GPUFuncOpConversion, GPUModuleConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
@@ -345,5 +344,5 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       spirv::BuiltIn::NumSubgroups>,
       SingleDimLaunchConfigConversion<gpu::SubgroupSizeOp,
                                       spirv::BuiltIn::SubgroupSize>,
-      WorkGroupSizeConversion>(typeConverter, context);
+      WorkGroupSizeConversion>(typeConverter, patterns.getContext());
 }

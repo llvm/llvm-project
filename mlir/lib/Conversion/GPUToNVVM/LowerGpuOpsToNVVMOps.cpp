@@ -160,7 +160,7 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 
 void mlir::populateGpuToNVVMConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  populateWithGenerated(converter.getDialect()->getContext(), patterns);
+  populateWithGenerated(patterns);
   patterns
       .insert<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
                                           NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
