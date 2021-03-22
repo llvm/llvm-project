@@ -61,7 +61,7 @@ static_library("Utils") {
     "NameAnonGlobals.cpp",
     "PredicateInfo.cpp",
     "PromoteMemoryToRegister.cpp",
-    "RelLookupTableConverter.cpp"
+    "RelLookupTableConverter.cpp",
     "SSAUpdater.cpp",
     "SSAUpdaterBulk.cpp",
     "SampleProfileLoaderBaseUtil.cpp",
