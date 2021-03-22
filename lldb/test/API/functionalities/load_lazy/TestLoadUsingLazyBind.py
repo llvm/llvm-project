@@ -1,0 +1,65 @@
+﻿"""
+Test that SBProcess.LoadImageUsingPaths uses RTLD_LAZY
+"""
+
+
+
+import os
+import shutil
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+from lldbsuite.test import lldbutil
+
+
+class LoadUsingLazyBind(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
+
+    @skipIfRemote
+    @skipIfWindows # The Windows platform doesn't implement DoLoadImage.
+    # Failing for unknown reasons on Linux, see
+    # https://bugs.llvm.org/show_bug.cgi?id=49656.
+    @skipUnlessDarwin
+    def test_load_using_lazy_bind(self):
+        """Test that we load using RTLD_LAZY"""
+
+        self.build()
+        wd = os.path.realpath(self.getBuildDir())
+
+        ext = '.so'
+        if self.platformIsDarwin():
+            ext = '.dylib'
+
+        def make_lib_path(name):
+            libpath = os.path.join(wd, name + ext)
+            self.assertTrue(os.path.exists(libpath))
+            return libpath
+
+        libt1 = make_lib_path('libt1')
+        libt2_0 = make_lib_path('libt2_0')
+        libt2_1 = make_lib_path('libt2_1')
+
+        # Overwrite t2_0 with t2_1 to delete the definition of `use`.
+        shutil.copy(libt2_1, libt2_0)
+
+        # Launch a process and break
+        (target, process, thread, _) = lldbutil.run_to_source_breakpoint(self,
+                                                "break here",
+                                                lldb.SBFileSpec("main.cpp"))
+
+        # Load libt1; should fail unless we use RTLD_LAZY
+        error = lldb.SBError()
+        lib_spec = lldb.SBFileSpec('libt1' + ext)
+        paths = lldb.SBStringList()
+        paths.AppendString(wd)
+        out_spec = lldb.SBFileSpec()
+        token = process.LoadImageUsingPaths(lib_spec, paths, out_spec, error)
+        self.assertNotEqual(token, lldb.LLDB_INVALID_IMAGE_TOKEN, "Got a valid token")
+
+        # Calling `f1()` should return 5.
+        frame = thread.GetFrameAtIndex(0)
+        val = frame.EvaluateExpression("f1()")
+        self.assertTrue(val.IsValid())
+        self.assertEquals(val.GetValueAsSigned(-1), 5)
