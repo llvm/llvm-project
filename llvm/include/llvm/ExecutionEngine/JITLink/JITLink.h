@@ -674,7 +674,7 @@ public:
     assert((First || !Last) && "Last can not be null if start is non-null");
     return Last;
   }
-  bool isEmpty() const {
+  bool empty() const {
     assert((First || !Last) && "Last can not be null if start is non-null");
     return !First;
   }
