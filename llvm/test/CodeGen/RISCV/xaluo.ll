@@ -556,10 +556,8 @@ define zeroext i1 @umulo.i32(i32 %v1, i32 %v2, i32* %res) {
 ; RV64-LABEL: umulo.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    mul a1, a0, a1
+; RV64-NEXT:    mulhu a1, a0, a1
 ; RV64-NEXT:    srli a0, a1, 32
 ; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    sw a1, 0(a2)
@@ -1297,10 +1295,8 @@ define i32 @umulo.select.i32(i32 %v1, i32 %v2) {
 ; RV64-LABEL: umulo.select.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slli a2, a1, 32
-; RV64-NEXT:    srli a2, a2, 32
 ; RV64-NEXT:    slli a3, a0, 32
-; RV64-NEXT:    srli a3, a3, 32
-; RV64-NEXT:    mul a2, a3, a2
+; RV64-NEXT:    mulhu a2, a3, a2
 ; RV64-NEXT:    srli a2, a2, 32
 ; RV64-NEXT:    bnez a2, .LBB42_2
 ; RV64-NEXT:  # %bb.1: # %entry
@@ -1324,10 +1320,8 @@ define i1 @umulo.not.i32(i32 %v1, i32 %v2) {
 ; RV64-LABEL: umulo.not.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    mulhu a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
@@ -1893,10 +1887,8 @@ define zeroext i1 @umulo.br.i32(i32 %v1, i32 %v2) {
 ; RV64-LABEL: umulo.br.i32:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    srli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    mulhu a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    beqz a0, .LBB57_2
 ; RV64-NEXT:  # %bb.1: # %overflow
