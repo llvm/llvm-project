@@ -736,6 +736,13 @@ dfsan_read_origin_of_first_taint(const void *addr, uptr size) {
   return GetOriginIfTainted((uptr)addr, size);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE void dfsan_set_label_origin(dfsan_label label,
+                                                          dfsan_origin origin,
+                                                          void *addr,
+                                                          uptr size) {
+  __dfsan_set_label(label, origin, addr, size);
+}
+
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 const struct dfsan_label_info *dfsan_get_label_info(dfsan_label label) {
   return &__dfsan_label_info[label];
