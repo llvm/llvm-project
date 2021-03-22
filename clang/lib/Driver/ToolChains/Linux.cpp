@@ -604,8 +604,13 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  // On Android and Debian, add /usr/include/$triple if exists.
-  std::string MultiarchIncludeDir = getMultiarchTriple(D, getTriple(), SysRoot);
+  // On Android and Debian, add /usr/include/$triple if exists. On Debian, we
+  // can assume a GCC installation is available.
+  std::string MultiarchIncludeDir;
+  if (getTriple().isAndroid())
+    MultiarchIncludeDir = getMultiarchTriple(D, getTriple(), SysRoot);
+  else if (GCCInstallation.isValid())
+    MultiarchIncludeDir = GCCInstallation.getTriple().str();
   if (!MultiarchIncludeDir.empty() &&
       D.getVFS().exists(SysRoot + "/usr/include/" + MultiarchIncludeDir))
     addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include/" + MultiarchIncludeDir);
