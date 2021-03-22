@@ -2876,9 +2876,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
     SDValue SlideupAmt = DAG.getConstant(OrigIdx, DL, XLenVT);
     SDValue Slideup = DAG.getNode(RISCVISD::VSLIDEUP_VL, DL, ContainerVT, Vec,
                                   SubVec, SlideupAmt, Mask, VL);
-    if (!VecVT.isFixedLengthVector())
-      return Slideup;
-    return convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
+    if (VecVT.isFixedLengthVector())
+      Slideup = convertFromScalableVector(VecVT, Slideup, DAG, Subtarget);
+    return DAG.getBitcast(Op.getValueType(), Slideup);
   }
 
   unsigned SubRegIdx, RemIdx;
@@ -3025,8 +3025,9 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
         DAG.getNode(RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT,
                     DAG.getUNDEF(ContainerVT), Vec, SlidedownAmt, Mask, VL);
     // Now we can use a cast-like subvector extract to get the result.
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
-                       DAG.getConstant(0, DL, XLenVT));
+    Slidedown = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVecVT, Slidedown,
+                            DAG.getConstant(0, DL, XLenVT));
+    return DAG.getBitcast(Op.getValueType(), Slidedown);
   }
 
   unsigned SubRegIdx, RemIdx;
