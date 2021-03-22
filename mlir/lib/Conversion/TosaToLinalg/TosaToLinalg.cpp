@@ -149,9 +149,28 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::LogicalLeftShiftOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::ShiftLeftOp>(loc, resultTypes, args);
 
-  // tosa::LogicalrightShiftOp
+  // tosa::LogicalRightShiftOp
   if (isa<tosa::LogicalRightShiftOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::UnsignedShiftRightOp>(loc, resultTypes, args);
+
+  // tosa::LogicalAnd
+  if (isa<tosa::LogicalAndOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::AndOp>(loc, resultTypes, args);
+
+  // tosa::LogicalNot
+  if (isa<tosa::LogicalNotOp>(op) && elementTy.isInteger(1)) {
+    auto one = rewriter.create<mlir::ConstantOp>(
+        loc, rewriter.getIntegerAttr(elementTy, 1));
+    return rewriter.create<mlir::XOrOp>(loc, resultTypes, args[0], one);
+  }
+
+  // tosa::LogicalOr
+  if (isa<tosa::LogicalOrOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::OrOp>(loc, resultTypes, args);
+
+  // tosa::LogicalXor
+  if (isa<tosa::LogicalXorOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::XOrOp>(loc, resultTypes, args);
 
   // tosa::PowOp
   if (isa<tosa::PowOp>(op) && elementTy.isa<FloatType>())
@@ -869,6 +888,10 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::BitwiseAndOp>,
       PointwiseConverter<tosa::BitwiseOrOp>,
       PointwiseConverter<tosa::BitwiseXorOp>,
+      PointwiseConverter<tosa::LogicalAndOp>,
+      PointwiseConverter<tosa::LogicalNotOp>,
+      PointwiseConverter<tosa::LogicalOrOp>,
+      PointwiseConverter<tosa::LogicalXorOp>,
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
       PointwiseConverter<tosa::LogicalRightShiftOp>,
       PointwiseConverter<tosa::SelectOp>, PointwiseConverter<tosa::GreaterOp>,

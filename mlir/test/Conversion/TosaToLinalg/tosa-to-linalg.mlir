@@ -260,6 +260,30 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
 
 // -----
 
+// CHECK-LABEL: @test_bool
+func @test_bool(%arg0: tensor<1xi1>, %arg1: tensor<1xi1>) -> () {
+  // CHECK: linalg.generic
+  // CHECK: and
+  %0 = "tosa.logical_and"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: or
+  %1 = "tosa.logical_or"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: xor
+  %2 = "tosa.logical_xor"(%arg0, %arg1) : (tensor<1xi1>, tensor<1xi1>) -> tensor<1xi1>
+
+  // CHECK: linalg.generic
+  // CHECK: constant true
+  // CHECK: xor
+  %3 = "tosa.logical_not"(%arg0) : (tensor<1xi1>) -> tensor<1xi1>
+
+  return
+}
+
+// -----
+
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: @test_reshape_downrank
 func @test_reshape_downrank(%arg0: tensor<2x3xf32>) -> tensor<6xf32> {
