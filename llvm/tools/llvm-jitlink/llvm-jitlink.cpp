@@ -42,6 +42,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 
+#include <cstring>
 #include <list>
 #include <string>
 
@@ -668,6 +669,50 @@ LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
 #endif
 }
 
+static Error createTCPSocketError(Twine Details) {
+  return make_error<StringError>(
+      formatv("Failed to connect TCP socket '{0}': {1}",
+              OutOfProcessExecutorConnect, Details),
+      inconvertibleErrorCode());
+}
+
+static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
+  addrinfo *AI;
+  addrinfo Hints{};
+  Hints.ai_family = AF_INET;
+  Hints.ai_socktype = SOCK_STREAM;
+  Hints.ai_flags = AI_NUMERICSERV;
+
+  if (int EC = getaddrinfo(Host.c_str(), PortStr.c_str(), &Hints, &AI))
+    return createTCPSocketError("Address resolution failed (" +
+                                StringRef(gai_strerror(EC)) + ")");
+
+  // Cycle through the returned addrinfo structures and connect to the first
+  // reachable endpoint.
+  int SockFD;
+  addrinfo *Server;
+  for (Server = AI; Server != nullptr; Server = Server->ai_next) {
+    // socket might fail, e.g. if the address family is not supported. Skip to
+    // the next addrinfo structure in such a case.
+    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
+      continue;
+
+    // If connect returns null, we exit the loop with a working socket.
+    if (connect(SockFD, Server->ai_addr, Server->ai_addrlen) == 0)
+      break;
+
+    close(SockFD);
+  }
+  freeaddrinfo(AI);
+
+  // If we reached the end of the loop without connecting to a valid endpoint,
+  // dump the last error that was logged in socket() or connect().
+  if (Server == nullptr)
+    return createTCPSocketError(std::strerror(errno));
+
+  return SockFD;
+}
+
 Expected<std::unique_ptr<TargetProcessControl>>
 LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
 #ifndef LLVM_ON_UNIX
@@ -679,62 +724,27 @@ LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
 
   shared::registerStringError<LLVMJITLinkChannel>();
 
-  StringRef HostNameStr, PortStr;
-  std::tie(HostNameStr, PortStr) =
-      StringRef(OutOfProcessExecutorConnect).split(':');
-
-  if (HostNameStr.empty())
-    return make_error<StringError>("host name for -" +
-                                       OutOfProcessExecutorConnect.ArgStr +
-                                       " can not be empty",
-                                   inconvertibleErrorCode());
+  StringRef Host, PortStr;
+  std::tie(Host, PortStr) = StringRef(OutOfProcessExecutorConnect).split(':');
+  if (Host.empty())
+    return createTCPSocketError("Host name for -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
   if (PortStr.empty())
-    return make_error<StringError>(
-        "port for -" + OutOfProcessExecutorConnect.ArgStr + " can not be empty",
-        inconvertibleErrorCode());
-
-  std::string HostName = HostNameStr.str();
+    return createTCPSocketError("Port number in -" +
+                                OutOfProcessExecutorConnect.ArgStr +
+                                " can not be empty");
   int Port = 0;
   if (PortStr.getAsInteger(10, Port))
-    return make_error<StringError>("port number " + PortStr +
-                                       " is not a valid integer",
-                                   inconvertibleErrorCode());
+    return createTCPSocketError("Port number '" + PortStr +
+                                "' is not a valid integer");
 
-  addrinfo *AI;
-  addrinfo Hints{};
-  Hints.ai_family = AF_INET;
-  Hints.ai_socktype = SOCK_STREAM;
-  Hints.ai_flags = AI_NUMERICSERV;
-  if (int EC =
-          getaddrinfo(HostName.c_str(), PortStr.str().c_str(), &Hints, &AI))
-    return make_error<StringError>(formatv("Failed to resolve {0}:{1} ({2})",
-                                           HostName, Port, gai_strerror(EC)),
-                                   inconvertibleErrorCode());
-
-  // getaddrinfo returns a list of address structures.  Go through the list
-  // to find one we can connect to.
-  int SockFD;
-  int ConnectRC = -1;
-  for (addrinfo *Server = AI; Server; Server = Server->ai_next) {
-    // If socket fails, maybe it's because the address family is not supported.
-    // Skip to the next addrinfo structure.
-    if ((SockFD = socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol)) < 0)
-      continue;
-
-    ConnectRC = connect(SockFD, Server->ai_addr, Server->ai_addrlen);
-    if (ConnectRC == 0)
-      break;
-
-    close(SockFD);
-  }
-  freeaddrinfo(AI);
-  if (ConnectRC == -1)
-    return make_error<StringError>("Failed to connect to " + HostName + ":" +
-                                       Twine(Port),
-                                   inconvertibleErrorCode());
+  Expected<int> SockFD = connectTCPSocket(Host.str(), PortStr.str());
+  if (!SockFD)
+    return SockFD.takeError();
 
   auto SSP = std::make_shared<SymbolStringPool>();
-  auto Channel = std::make_unique<shared::FDRawByteChannel>(SockFD, SockFD);
+  auto Channel = std::make_unique<shared::FDRawByteChannel>(*SockFD, *SockFD);
   auto Endpoint = std::make_unique<LLVMJITLinkRPCEndpoint>(*Channel, true);
 
   auto ReportError = [](Error Err) {
