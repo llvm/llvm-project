@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -finclude-default-header -cl-std=CL1.2 -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -finclude-default-header -fdeclare-opencl-builtins -cl-std=CL1.2 -emit-llvm -o - -O0 | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : enable
 void test_int8(uchar4 ua, uchar4 ub, char4 sa, char4 sb) {
