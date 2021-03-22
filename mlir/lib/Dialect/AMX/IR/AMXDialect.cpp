@@ -85,8 +85,6 @@ static LogicalResult verify(amx::TileMulFOp op) {
 }
 
 static LogicalResult verify(amx::TileMulIOp op) {
-  if (op.zext().size() != 2)
-    return op.emitOpError("unexpected zext length");
   VectorType aType = op.getLhsVectorType();
   VectorType bType = op.getRhsVectorType();
   VectorType cType = op.getVectorType();
