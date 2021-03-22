@@ -9,7 +9,7 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 ; CHECK-NEXT:    s_mov_b32 s4, 0xcccccccd
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, s4
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, 5
+; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 5, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -28,7 +28,7 @@ define i1 @test_urem_even(i27 %X) nounwind {
 ; CHECK-NEXT:    s_mov_b32 s4, 0x92492493
 ; CHECK-NEXT:    v_mul_hi_u32 v0, v0, s4
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v0, 2, v0
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, 14
+; CHECK-NEXT:    v_mul_u32_u24_e32 v0, 14, v0
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v1, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -46,7 +46,7 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; CHECK-NEXT:    s_mov_b32 s4, 0xcccccccd
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, s4
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 2, v1
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, 5
+; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 5, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -62,10 +62,9 @@ define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x1ff, v0
 ; CHECK-NEXT:    s_mov_b32 s4, 0x2050c9f9
-; CHECK-NEXT:    s_movk_i32 s5, 0x1fb
 ; CHECK-NEXT:    v_mul_hi_u32 v1, v0, s4
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 6, v1
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, s5
+; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 0x1fb, v1
 ; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
