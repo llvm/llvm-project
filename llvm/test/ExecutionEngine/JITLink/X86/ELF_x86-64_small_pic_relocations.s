@@ -1,12 +1,13 @@
 # RUN: rm -rf %t && mkdir -p %t
-# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj -o %t/elf_reloc.o %s
+# RUN: llvm-mc -triple=x86_64-unknown-linux -position-independent -filetype=obj \
+# RUN:         -o %t/elf_sm_pic_reloc.o %s
 # RUN: llvm-jitlink -noexec -slab-allocate 100Kb -slab-address 0xfff00000 \
 # RUN:              -define-abs external_data=0x1 \
 # RUN:              -define-abs extern_in_range32=0xffe00000 \
 # RUN:              -define-abs extern_out_of_range32=0x7fff00000000 \
-# RUN:              -check %s %t/elf_reloc.o
+# RUN:              -check %s %t/elf_sm_pic_reloc.o
 #
-# Test standard ELF relocations.
+# Test ELF small/PIC relocations.
 
         .text
         .file   "testcase.c"
@@ -55,7 +56,8 @@ test_call_local:
 # resolution, the target turns out to be in-range from the callsite and so the
 # edge is relaxed in post-allocation optimization.
 #
-# jitlink-check: decode_operand(test_call_extern, 0) = extern_in_range32 - next_pc(test_call_extern)
+# jitlink-check: decode_operand(test_call_extern, 0) = \
+# jitlink-check:     extern_in_range32 - next_pc(test_call_extern)
         .globl  test_call_extern
         .p2align       4, 0x90
         .type   test_call_extern,@function
@@ -70,8 +72,10 @@ test_call_extern:
 # entry.
 #
 # jitlink-check: decode_operand(test_call_extern_plt, 0) = \
-# jitlink-check:     stub_addr(elf_reloc.o, extern_out_of_range32) - next_pc(test_call_extern_plt)
-# jitlink-check: *{8}(got_addr(elf_reloc.o, extern_out_of_range32)) = extern_out_of_range32
+# jitlink-check:     stub_addr(elf_sm_pic_reloc.o, extern_out_of_range32) - \
+# jitlink-check:        next_pc(test_call_extern_plt)
+# jitlink-check: *{8}(got_addr(elf_sm_pic_reloc.o, extern_out_of_range32)) = \
+# jitlink-check:     extern_out_of_range32
         .globl  test_call_extern_plt
         .p2align       4, 0x90
         .type   test_call_extern_plt,@function
@@ -82,8 +86,9 @@ test_call_extern_plt:
 
 # Test GOTPCREL handling. We want to check both the offset to the GOT entry and its
 # contents.
-# jitlink-check: decode_operand(test_gotpcrel, 4) = got_addr(elf_reloc.o, named_data) - next_pc(test_gotpcrel)
-# jitlink-check: *{8}(got_addr(elf_reloc.o, named_data)) = named_data
+# jitlink-check: decode_operand(test_gotpcrel, 4) = \
+# jitlink-check:     got_addr(elf_sm_pic_reloc.o, named_data) - next_pc(test_gotpcrel)
+# jitlink-check: *{8}(got_addr(elf_sm_pic_reloc.o, named_data)) = named_data
 
         .globl test_gotpcrel
         .p2align      4, 0x90
@@ -96,7 +101,7 @@ test_gotpcrel:
 # Test REX_GOTPCRELX handling. We want to check both the offset to the GOT entry and its
 # contents.
 # jitlink-check: decode_operand(test_rex_gotpcrelx, 4) = \
-# jitlink-check:   got_addr(elf_reloc.o, external_data) - next_pc(test_rex_gotpcrelx)
+# jitlink-check:   got_addr(elf_sm_pic_reloc.o, external_data) - next_pc(test_rex_gotpcrelx)
 
         .globl test_rex_gotpcrelx
         .p2align      4, 0x90

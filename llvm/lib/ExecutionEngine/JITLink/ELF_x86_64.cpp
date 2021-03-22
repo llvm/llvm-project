@@ -40,7 +40,8 @@ public:
       PerGraphGOTAndPLTStubsBuilder_ELF_x86_64>::PerGraphGOTAndPLTStubsBuilder;
 
   bool isGOTEdgeToFix(Edge &E) const {
-    return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad;
+    return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad ||
+           E.getKind() == PCRel64GOT || E.getKind() == GOT64;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
@@ -51,14 +52,25 @@ public:
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
-    assert((E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad) &&
-           "Not a GOT edge?");
-    // If this is a PCRel32GOT then change it to an ordinary PCRel32. If it is
-    // a PCRel32GOTLoad then leave it as-is for now. We will use the kind to
-    // check for GOT optimization opportunities in the
+    // If this is a PCRel32GOT/PCRel64GOT then change it to an ordinary
+    // PCRel32/PCRel64. If it is a PCRel32GOTLoad then leave it as-is for now:
+    // We will use the kind to check for GOT optimization opportunities in the
     // optimizeMachO_x86_64_GOTAndStubs pass below.
-    if (E.getKind() == PCRel32GOT)
+    // If it's a GOT64 leave it as is.
+    switch (E.getKind()) {
+    case PCRel32GOT:
       E.setKind(PCRel32);
+      break;
+    case PCRel64GOT:
+      E.setKind(PCRel64);
+      break;
+    case GOT64:
+      break;
+    case PCRel32GOTLoad:
+      break;
+    default:
+      llvm_unreachable("Unexpected GOT edge kind");
+    }
 
     E.setTarget(GOTEntry);
     // Leave the edge addend as-is.
@@ -117,7 +129,8 @@ private:
   Section *StubsSection = nullptr;
 };
 
-StringRef ELFGOTSectionName = "$__GOT";
+constexpr StringRef ELFGOTSectionName = "$__GOT";
+constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 
 const char *const DwarfSectionNames[] = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
@@ -245,6 +258,7 @@ private:
     case ELF::R_X86_64_PC32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32;
     case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPC64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Delta64;
     case ELF::R_X86_64_64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Pointer64;
@@ -252,6 +266,10 @@ private:
     case ELF::R_X86_64_GOTPCRELX:
     case ELF::R_X86_64_REX_GOTPCRELX:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel32GOTLoad;
+    case ELF::R_X86_64_GOTPCREL64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel64GOT;
+    case ELF::R_X86_64_GOT64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::GOT64;
     case ELF::R_X86_64_PLT32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
     }
@@ -699,9 +717,57 @@ public:
   ELFJITLinker_x86_64(std::unique_ptr<JITLinkContext> Ctx,
                       std::unique_ptr<LinkGraph> G,
                       PassConfiguration PassConfig)
-      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {}
+      : JITLinker(std::move(Ctx), std::move(G), std::move(PassConfig)) {
+    getPassConfig().PostAllocationPasses.push_back(
+        [this](LinkGraph &G) { return getOrCreateGOTSymbol(G); });
+  }
 
 private:
+  Symbol *GOTSymbol = nullptr;
+
+  Error getOrCreateGOTSymbol(LinkGraph &G) {
+    Section *GOTSection = nullptr;
+
+    auto DefineExternalGOTSymbolIfPresent =
+        createDefineExternalSectionStartAndEndSymbolsPass(
+            [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
+              if (Sym.getName() == ELFGOTSymbolName)
+                if ((GOTSection = G.findSectionByName(ELFGOTSectionName))) {
+                  GOTSymbol = &Sym;
+                  return {*GOTSection, true};
+                }
+              return {};
+            });
+
+    // Try to attach _GLOBAL_OFFSET_TABLE_ to the GOT if it's defined as an
+    // external.
+    if (auto Err = DefineExternalGOTSymbolIfPresent(G))
+      return Err;
+
+    // If there's a GOT section but we didn't find an external GOT symbol...
+    if (GOTSection && !GOTSymbol) {
+
+      // Check for an existing defined symbol.
+      for (auto *Sym : GOTSection->symbols())
+        if (Sym->getName() == ELFGOTSymbolName) {
+          GOTSymbol = Sym;
+          return Error::success();
+        }
+
+      // If there's no defined symbol then create one.
+      SectionRange SR(*GOTSection);
+      if (SR.empty())
+        GOTSymbol = &G.addAbsoluteSymbol(ELFGOTSymbolName, 0, 0,
+                                         Linkage::Strong, Scope::Local, true);
+      else
+        GOTSymbol =
+            &G.addDefinedSymbol(*SR.getFirstBlock(), 0, ELFGOTSymbolName, 0,
+                                Linkage::Strong, Scope::Local, false, true);
+    }
+
+    return Error::success();
+  }
+
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                    char *BlockWorkingMem) const {
     using namespace ELF_x86_64_Edges;
@@ -718,6 +784,11 @@ private:
         *(little32_t *)FixupPtr = Value;
       else
         return makeTargetOutOfRangeError(G, B, E);
+      break;
+    }
+    case ELFX86RelocationKind::PCRel64: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      *(little64_t *)FixupPtr = Value;
       break;
     }
     case ELFX86RelocationKind::Pointer64: {
@@ -748,6 +819,13 @@ private:
     }
     case ELFX86RelocationKind::NegDelta64: {
       int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+      *(little64_t *)FixupPtr = Value;
+      break;
+    }
+    case ELFX86RelocationKind::GOT64: {
+      assert(GOTSymbol && "No GOT section symbol");
+      int64_t Value =
+          E.getTarget().getAddress() - GOTSymbol->getAddress() + E.getAddend();
       *(little64_t *)FixupPtr = Value;
       break;
     }
@@ -793,9 +871,6 @@ identifyELFSectionStartAndEndSymbols(LinkGraph &G, Symbol &Sym) {
     if (auto *Sec =
             G.findSectionByName(SymName.drop_front(EndSymbolPrefix.size())))
       return {*Sec, false};
-  } else if (SymName == "_GLOBAL_OFFSET_TABLE_") {
-    if (auto *GOTSec = G.findSectionByName(ELFGOTSectionName))
-      return {*GOTSec, true};
   }
   return {};
 }
@@ -822,13 +897,13 @@ void link_ELF_x86_64(std::unique_ptr<LinkGraph> G,
     Config.PostPrunePasses.push_back(
         PerGraphGOTAndPLTStubsBuilder_ELF_x86_64::asPass);
 
-    // Add GOT/Stubs optimizer pass.
-    Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
-
     // Resolve any external section start / end symbols.
-    Config.PreFixupPasses.push_back(
+    Config.PostAllocationPasses.push_back(
         createDefineExternalSectionStartAndEndSymbolsPass(
             identifyELFSectionStartAndEndSymbols));
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(optimizeELF_x86_64_GOTAndStubs);
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
