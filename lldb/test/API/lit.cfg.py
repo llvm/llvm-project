@@ -17,9 +17,10 @@ config.name = 'lldb-api'
 config.suffixes = ['.py']
 
 # test_source_root: The root path where tests are located.
-# test_exec_root: The root path where tests should be run.
 config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = config.test_source_root
+
+# test_exec_root: The root path where tests should be run.
+config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
 
 
 def mkdir_p(path):
