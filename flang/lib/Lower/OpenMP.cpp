@@ -373,6 +373,22 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     }
     iv = bounds->name.thing.symbol;
   }
+
+  for (const auto &clause : wsLoopOpClauseList.v) {
+    if (const auto &scheduleClause =
+            std::get_if<Fortran::parser::OmpClause::Schedule>(&clause.u)) {
+      if (const auto &chunkExpr =
+              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
+                  scheduleClause->v.t)) {
+        if (const auto *expr = Fortran::semantics::GetExpr(*chunkExpr)) {
+          Fortran::lower::StatementContext stmtCtx;
+          scheduleChunkClauseOperand =
+              fir::getBase(converter.genExprValue(*expr, stmtCtx));
+        }
+      }
+    }
+  }
+
   // FIXME: Add support for following clauses:
   // 1. linear
   // 2. order
