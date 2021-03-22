@@ -193,11 +193,11 @@ define void @test_shl2() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 4, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-3) S: [-9223372036854775808,9223372036854775801) Exits: 64 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [4,65) S: [4,65) Exits: 64 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, 1
-; CHECK-NEXT:    --> (2 * %iv.shl) U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: 128 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (2 * %iv.shl)<nuw><nsw> U: [8,129) S: [8,129) Exits: 128 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_shl2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
@@ -227,7 +227,7 @@ define void @test_shl3(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 4, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [4,65) S: [4,65) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, %shiftamt
@@ -260,11 +260,11 @@ define void @test_shl4() {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,61) S: [0,61) Exits: 60 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 4, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-3) S: [-9223372036854775808,9223372036854775801) Exits: 4611686018427387904 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [4,4611686018427387905) S: [4,4611686018427387905) Exits: 4611686018427387904 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,62) S: [1,62) Exits: 61 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, 1
-; CHECK-NEXT:    --> (2 * %iv.shl) U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: -9223372036854775808 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (2 * %iv.shl)<nuw> U: [8,-9223372036854775807) S: [-9223372036854775808,9223372036854775801) Exits: -9223372036854775808 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_shl4
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 60
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 60
@@ -324,7 +324,7 @@ define void @test_shl6(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 4, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: 16 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [4,65) S: [4,65) Exits: 16 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %shiftamt = and i64 %iv, 1
