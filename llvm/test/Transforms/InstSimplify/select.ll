@@ -969,6 +969,52 @@ define <vscale x 2 x i1> @ignore_scalable_undef(<vscale x 2 x i1> %cond) {
   ret <vscale x 2 x i1> %s
 }
 
+define i32 @select_neutral_add_rhs(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_neutral_add_rhs(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %cmp = icmp ne i32 %y, 0
+  %add = add i32 %x, %y
+  %sel = select i1 %cmp, i32 %add, i32 %x
+  ret i32 %sel
+}
+
+define i32 @select_neutral_add_lhs(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_neutral_add_lhs(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %cmp = icmp ne i32 %y, 0
+  %add = add i32 %y, %x
+  %sel = select i1 %cmp, i32 %add, i32 %x
+  ret i32 %sel
+}
+
+define i32 @select_neutral_sub_rhs(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_neutral_sub_rhs(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %cmp = icmp ne i32 %y, 0
+  %add = sub i32 %x, %y
+  %sel = select i1 %cmp, i32 %add, i32 %x
+  ret i32 %sel
+}
+
+define i32 @select_neutral_sub_lhs(i32 %x, i32 %y) {
+; CHECK-LABEL: @select_neutral_sub_lhs(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp ne i32 %y, 0
+  %add = sub i32 %y, %x
+  %sel = select i1 %cmp, i32 %add, i32 %x
+  ret i32 %sel
+}
+
 ; TODO: these can be optimized more
 
 define i32 @poison(i32 %x, i32 %y) {
