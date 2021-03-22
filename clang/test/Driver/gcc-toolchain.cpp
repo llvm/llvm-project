@@ -1,12 +1,12 @@
 // Test that gcc-toolchain option is working correctly
 //
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
-// RUN:   --target=x86_64-linux-gnu --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr | \
+// RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Additionally check that the legacy spelling of the flag works.
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
-// RUN:   --target=x86_64-linux-gnu -gcc-toolchain %S/Inputs/ubuntu_14.04_multiarch_tree/usr | \
+// RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Test for header search toolchain detection.
