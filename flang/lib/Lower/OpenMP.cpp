@@ -577,6 +577,21 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         &*std::next(doConstructEval->getNestedEvaluations().begin());
   } while (collapseValue > 0);
 
+  for (const auto &clause : wsLoopOpClauseList.v) {
+    if (const auto &scheduleClause =
+            std::get_if<Fortran::parser::OmpClause::Schedule>(&clause.u)) {
+      if (const auto &chunkExpr =
+              std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
+                  scheduleClause->v.t)) {
+        if (const auto *expr = Fortran::semantics::GetExpr(*chunkExpr)) {
+          Fortran::lower::StatementContext stmtCtx;
+          scheduleChunkClauseOperand =
+              fir::getBase(converter.genExprValue(*expr, stmtCtx));
+        }
+      }
+    }
+  }
+
   // The types of lower bound, upper bound, and step are converted into the
   // type of the loop variable if necessary.
   mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
@@ -592,7 +607,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   // FIXME: Add support for following clauses:
   // 1. linear
   // 2. order
-  // 3. schedule (with chunk)
   auto wsLoopOp = firOpBuilder.create<mlir::omp::WsLoopOp>(
       currentLocation, lowerBound, upperBound, step, linearVars, linearStepVars,
       reductionVars, /*reductions=*/nullptr,
