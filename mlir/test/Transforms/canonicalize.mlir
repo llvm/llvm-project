@@ -572,7 +572,8 @@ func @indirect_call_folding() {
 //
 // CHECK-LABEL: @lowered_affine_mod
 func @lowered_affine_mod() -> (index, index) {
-// CHECK-NEXT: {{.*}} = constant 41 : index
+// CHECK-DAG: {{.*}} = constant 1 : index
+// CHECK-DAG: {{.*}} = constant 41 : index
   %c-43 = constant -43 : index
   %c42 = constant 42 : index
   %0 = remi_signed %c-43, %c42 : index
@@ -580,7 +581,6 @@ func @lowered_affine_mod() -> (index, index) {
   %1 = cmpi slt, %0, %c0 : index
   %2 = addi %0, %c42 : index
   %3 = select %1, %2, %0 : index
-// CHECK-NEXT: {{.*}} = constant 1 : index
   %c43 = constant 43 : index
   %c42_0 = constant 42 : index
   %4 = remi_signed %c43, %c42_0 : index
@@ -598,7 +598,8 @@ func @lowered_affine_mod() -> (index, index) {
 //
 // CHECK-LABEL: func @lowered_affine_floordiv
 func @lowered_affine_floordiv() -> (index, index) {
-// CHECK-NEXT: %c-2 = constant -2 : index
+// CHECK-DAG: %c1 = constant 1 : index
+// CHECK-DAG: %c-2 = constant -2 : index
   %c-43 = constant -43 : index
   %c42 = constant 42 : index
   %c0 = constant 0 : index
@@ -609,7 +610,6 @@ func @lowered_affine_floordiv() -> (index, index) {
   %3 = divi_signed %2, %c42 : index
   %4 = subi %c-1, %3 : index
   %5 = select %0, %4, %3 : index
-// CHECK-NEXT: %c1 = constant 1 : index
   %c43 = constant 43 : index
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
@@ -724,17 +724,17 @@ func @view(%arg0 : index) -> (f32, f32, f32, f32) {
 // CHECK-LABEL: func @subview
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
 func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
-  // CHECK: %[[C0:.*]] = constant 0 : index
+  // Folded but reappears after subview folding into dim.
+  // CHECK-DAG: %[[C0:.*]] = constant 0 : index
+  // CHECK-DAG: %[[C7:.*]] = constant 7 : index
+  // CHECK-DAG: %[[C11:.*]] = constant 11 : index
   %c0 = constant 0 : index
   // CHECK-NOT: constant 1 : index
   %c1 = constant 1 : index
   // CHECK-NOT: constant 2 : index
   %c2 = constant 2 : index
   // Folded but reappears after subview folding into dim.
-  // CHECK: %[[C7:.*]] = constant 7 : index
   %c7 = constant 7 : index
-  // Folded but reappears after subview folding into dim.
-  // CHECK: %[[C11:.*]] = constant 11 : index
   %c11 = constant 11 : index
   // CHECK-NOT: constant 15 : index
   %c15 = constant 15 : index
@@ -895,8 +895,8 @@ func @index_cast_fold() -> (i16, index) {
   %1 = index_cast %c4 : index to i16
   %c4_i16 = constant 4 : i16
   %2 = index_cast %c4_i16 : i16 to index
-  // CHECK: %[[C4_I16:.*]] = constant 4 : i16
-  // CHECK: %[[C4:.*]] = constant 4 : index
+  // CHECK-DAG: %[[C4:.*]] = constant 4 : index
+  // CHECK-DAG: %[[C4_I16:.*]] = constant 4 : i16
   // CHECK: return %[[C4_I16]], %[[C4]] : i16, index
   return %1, %2 : i16, index
 }
