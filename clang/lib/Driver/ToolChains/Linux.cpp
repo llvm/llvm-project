@@ -574,9 +574,14 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
     return;
 
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc))
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
+    // LOCAL_INCLUDE_DIR
     addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");
+    // TOOL_INCLUDE_DIR
+    AddMultilibIncludeArgs(DriverArgs, CC1Args);
+  }
 
+  // Note: in gcc, GCC_INCLUDE_DIR (private headers) precedes LOCAL_INCLUDE_DIR.
   SmallString<128> ResourceDirInclude(D.ResourceDir);
   llvm::sys::path::append(ResourceDirInclude, "include");
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
@@ -598,11 +603,6 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     }
     return;
   }
-
-  // Lacking those, try to detect the correct set of system includes for the
-  // target triple.
-
-  AddMultilibIncludeArgs(DriverArgs, CC1Args);
 
   // Implement generic Debian multiarch support.
   const StringRef X86_64MultiarchIncludeDirs[] = {

@@ -2867,13 +2867,19 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
 void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
                                          ArgStringList &CC1Args) const {
   // Add include directories specific to the selected multilib set and multilib.
-  if (GCCInstallation.isValid()) {
-    const auto &Callback = Multilibs.includeDirsCallback();
-    if (Callback) {
-      for (const auto &Path : Callback(GCCInstallation.getMultilib()))
-        addExternCSystemIncludeIfExists(
-            DriverArgs, CC1Args, GCCInstallation.getInstallPath() + Path);
-    }
+  if (!GCCInstallation.isValid())
+    return;
+  // gcc TOOL_INCLUDE_DIR.
+  const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
+  std::string LibPath(GCCInstallation.getParentLibPath());
+  addSystemInclude(DriverArgs, CC1Args,
+                   Twine(LibPath) + "/../" + GCCTriple.str() + "/include");
+
+  const auto &Callback = Multilibs.includeDirsCallback();
+  if (Callback) {
+    for (const auto &Path : Callback(GCCInstallation.getMultilib()))
+      addExternCSystemIncludeIfExists(DriverArgs, CC1Args,
+                                      GCCInstallation.getInstallPath() + Path);
   }
 }
 
