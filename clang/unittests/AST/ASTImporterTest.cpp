@@ -6261,6 +6261,25 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_TRUE(To2);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportOfCapturedVLAType) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      void declToImport(int N) {
+        int VLA[N];
+        [&VLA] {}; // FieldDecl inside the lambda.
+      }
+      )",
+      Lang_CXX14);
+  auto *FromFD = FirstDeclMatcher<FieldDecl>().match(FromTU, fieldDecl());
+  ASSERT_TRUE(FromFD);
+  ASSERT_TRUE(FromFD->hasCapturedVLAType());
+
+  auto *ToFD = Import(FromFD, Lang_CXX14);
+  EXPECT_TRUE(ToFD);
+  EXPECT_TRUE(ToFD->hasCapturedVLAType());
+  EXPECT_NE(FromFD->getCapturedVLAType(), ToFD->getCapturedVLAType());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 

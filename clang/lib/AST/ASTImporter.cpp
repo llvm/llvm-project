@@ -3632,6 +3632,10 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   auto ToInitializer = importChecked(Err, D->getInClassInitializer());
   if (Err)
     return std::move(Err);
+  const Type *ToCapturedVLAType = nullptr;
+  if (Error Err = Importer.importInto(
+          ToCapturedVLAType, cast_or_null<Type>(D->getCapturedVLAType())))
+    return std::move(Err);
 
   FieldDecl *ToField;
   if (GetImportedOrCreateDecl(ToField, D, Importer.getToContext(), DC,
@@ -3645,6 +3649,8 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   if (ToInitializer)
     ToField->setInClassInitializer(ToInitializer);
   ToField->setImplicit(D->isImplicit());
+  if (ToCapturedVLAType)
+    ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);
   return ToField;
 }
