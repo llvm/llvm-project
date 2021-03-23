@@ -138,9 +138,9 @@ public:
 } // namespace
 
 void mlir::populateTensorBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeCastOp, BufferizeExtractOp, BufferizeFromElementsOp,
-                  BufferizeGenerateOp>(typeConverter, patterns.getContext());
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<BufferizeCastOp, BufferizeExtractOp, BufferizeFromElementsOp,
+               BufferizeGenerateOp>(typeConverter, patterns.getContext());
 }
 
 namespace {
@@ -148,7 +148,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateBufferizeMaterializationLegality(target);

@@ -18,8 +18,8 @@ using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.
-void populateAMXLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateAMXLegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Configure the target to support lowering AMX ops to ops that map to LLVM
 /// intrinsics.

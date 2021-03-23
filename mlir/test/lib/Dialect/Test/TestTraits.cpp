@@ -34,7 +34,7 @@ namespace {
 struct TestTraitFolder : public PassWrapper<TestTraitFolder, FunctionPass> {
   void runOnFunction() override {
     (void)applyPatternsAndFoldGreedily(getFunction(),
-                                       OwningRewritePatternList(&getContext()));
+                                       RewritePatternSet(&getContext()));
   }
 };
 } // end anonymous namespace

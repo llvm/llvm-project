@@ -905,9 +905,9 @@ void SimplifyAffineOp<AffineOpTy>::replaceAffineOp(
 }
 } // end anonymous namespace.
 
-void AffineApplyOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineApplyOp>>(context);
+void AffineApplyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineApplyOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1611,9 +1611,9 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
 };
 } // end anonymous namespace
 
-void AffineForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<AffineForEmptyLoopFolder>(context);
+  results.add<AffineForEmptyLoopFolder>(context);
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
@@ -2033,9 +2033,9 @@ LogicalResult AffineIfOp::fold(ArrayRef<Attribute>,
   return failure();
 }
 
-void AffineIfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineIfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<SimplifyDeadElse>(context);
+  results.add<SimplifyDeadElse>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2149,9 +2149,9 @@ LogicalResult verify(AffineLoadOp op) {
   return success();
 }
 
-void AffineLoadOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineLoadOp>>(context);
+void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineLoadOp>>(context);
 }
 
 OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
@@ -2239,9 +2239,9 @@ LogicalResult verify(AffineStoreOp op) {
   return success();
 }
 
-void AffineStoreOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineStoreOp>>(context);
+void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineStoreOp>>(context);
 }
 
 LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
@@ -2338,9 +2338,9 @@ OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMinOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMinOp>>(context);
+void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<SimplifyAffineOp<AffineMinOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2354,9 +2354,9 @@ OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMaxOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMaxOp>>(context);
+void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<SimplifyAffineOp<AffineMaxOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2454,10 +2454,10 @@ static LogicalResult verify(AffinePrefetchOp op) {
   return success();
 }
 
-void AffinePrefetchOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
   // prefetch(memrefcast) -> prefetch
-  results.insert<SimplifyAffineOp<AffinePrefetchOp>>(context);
+  results.add<SimplifyAffineOp<AffinePrefetchOp>>(context);
 }
 
 LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,

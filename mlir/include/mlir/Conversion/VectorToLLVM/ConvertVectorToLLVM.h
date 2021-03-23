@@ -62,12 +62,12 @@ struct LowerVectorToLLVMOptions {
 /// Collect a set of patterns to convert from Vector contractions to LLVM Matrix
 /// Intrinsics. To lower to assembly, the LLVM flag -lower-matrix-intrinsics
 /// will be needed when invoking LLVM.
-void populateVectorToLLVMMatrixConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateVectorToLLVMMatrixConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
 void populateVectorToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions = false, bool enableIndexOptimizations = true);
 
 /// Create a pass to convert vector operations to the LLVMIR dialect.

@@ -49,9 +49,9 @@ public:
     });
 
     // Populate patterns.
-    OwningRewritePatternList patterns(m.getContext());
+    RewritePatternSet patterns(m.getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    patterns.insert<TestTypeProducerOpConverter>(typeConverter);
+    patterns.add<TestTypeProducerOpConverter>(typeConverter);
 
     // Set target.
     ConversionTarget target(getContext());

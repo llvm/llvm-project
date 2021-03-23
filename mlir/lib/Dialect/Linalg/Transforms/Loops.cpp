@@ -545,11 +545,11 @@ template <typename LoopType>
 static void lowerLinalgToLoopsImpl(FuncOp funcOp,
                                    ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
-  OwningRewritePatternList patterns(context);
-  patterns.insert<LinalgRewritePattern<LoopType>>(interchangeVector);
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(interchangeVector);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.insert<FoldAffineOp>(context);
+  patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }

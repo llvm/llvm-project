@@ -216,9 +216,9 @@ struct TileMulIConversion : public ConvertOpToLLVMPattern<TileMulIOp> {
 } // namespace
 
 void mlir::populateAMXLegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
-  patterns.insert<TileZeroConversion, TileLoadConversion, TileStoreConversion,
-                  TileMulFConversion, TileMulIConversion>(converter);
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  patterns.add<TileZeroConversion, TileLoadConversion, TileStoreConversion,
+               TileMulFConversion, TileMulIConversion>(converter);
 }
 
 void mlir::configureAMXLegalizeForExportTarget(LLVMConversionTarget &target) {

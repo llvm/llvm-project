@@ -46,7 +46,7 @@ class RemoveShapeConstraintsPass
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
-    OwningRewritePatternList patterns(&ctx);
+    RewritePatternSet patterns(&ctx);
     populateRemoveShapeConstraintsPatterns(patterns);
 
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
@@ -55,9 +55,8 @@ class RemoveShapeConstraintsPass
 
 } // namespace
 
-void mlir::populateRemoveShapeConstraintsPatterns(
-    OwningRewritePatternList &patterns) {
-  patterns.insert<RemoveCstrBroadcastableOp, RemoveCstrEqOp>(
+void mlir::populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns) {
+  patterns.add<RemoveCstrBroadcastableOp, RemoveCstrEqOp>(
       patterns.getContext());
 }
 

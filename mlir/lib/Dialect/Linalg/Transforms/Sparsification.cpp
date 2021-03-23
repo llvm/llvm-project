@@ -1361,6 +1361,6 @@ private:
 /// Populates the given patterns list with rewriting rules required for
 /// the sparsification of linear algebra operations.
 void linalg::populateSparsificationPatterns(
-    OwningRewritePatternList &patterns, const SparsificationOptions &options) {
-  patterns.insert<GenericOpSparsifier>(patterns.getContext(), options);
+    RewritePatternSet &patterns, const SparsificationOptions &options) {
+  patterns.add<GenericOpSparsifier>(patterns.getContext(), options);
 }

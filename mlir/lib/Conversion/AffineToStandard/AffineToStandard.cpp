@@ -746,10 +746,9 @@ public:
 
 } // end namespace
 
-void mlir::populateAffineToStdConversionPatterns(
-    OwningRewritePatternList &patterns) {
+void mlir::populateAffineToStdConversionPatterns(RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AffineApplyLowering,
       AffineDmaStartLowering,
       AffineDmaWaitLowering,
@@ -766,9 +765,9 @@ void mlir::populateAffineToStdConversionPatterns(
 }
 
 void mlir::populateAffineToVectorConversionPatterns(
-    OwningRewritePatternList &patterns) {
+    RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AffineVectorLoadLowering,
       AffineVectorStoreLowering>(patterns.getContext());
   // clang-format on
@@ -777,7 +776,7 @@ void mlir::populateAffineToVectorConversionPatterns(
 namespace {
 class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnOperation() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());

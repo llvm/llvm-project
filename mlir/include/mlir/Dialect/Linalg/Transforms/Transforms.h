@@ -33,12 +33,12 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 
 /// Populates patterns for vectorization of all ConvN-D ops.
 void populateConvVectorizationPatterns(
-    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
+    MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes);
 
 /// Populates the given list with patterns to bufferize linalg ops.
 void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
-                                     OwningRewritePatternList &patterns);
+                                     RewritePatternSet &patterns);
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
@@ -441,10 +441,8 @@ struct LinalgTilingOptions {
 /// Canonicalization patterns relevant to apply after tiling patterns. These are
 /// applied automatically by the tiling pass but need to be applied manually
 /// when tiling is called programmatically.
-OwningRewritePatternList
-getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
-void populateLinalgTilingCanonicalizationPatterns(
-    OwningRewritePatternList &patterns);
+RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
+void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Base pattern that applied the tiling transformation specified by `options`.
 /// Abort and return failure in 2 cases:
@@ -690,10 +688,10 @@ template <
     typename OpType,
     typename = std::enable_if_t<detect_has_get_operation_name<OpType>::value>,
     typename = void>
-void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
+void insertVectorizationPatternImpl(RewritePatternSet &patternList,
                                     linalg::LinalgVectorizationOptions options,
                                     linalg::LinalgTransformationFilter f) {
-  patternList.insert<linalg::LinalgVectorizationPattern>(
+  patternList.add<linalg::LinalgVectorizationPattern>(
       OpType::getOperationName(), patternList.getContext(), options, f);
 }
 
@@ -701,16 +699,16 @@ void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
 /// an OpInterface).
 template <typename OpType, typename = std::enable_if_t<
                                !detect_has_get_operation_name<OpType>::value>>
-void insertVectorizationPatternImpl(OwningRewritePatternList &patternList,
+void insertVectorizationPatternImpl(RewritePatternSet &patternList,
                                     linalg::LinalgVectorizationOptions options,
                                     linalg::LinalgTransformationFilter f) {
-  patternList.insert<linalg::LinalgVectorizationPattern>(
-      f.addOpFilter<OpType>(), options);
+  patternList.add<linalg::LinalgVectorizationPattern>(f.addOpFilter<OpType>(),
+                                                      options);
 }
 
 /// Variadic helper function to insert vectorization patterns for C++ ops.
 template <typename... OpTypes>
-void insertVectorizationPatterns(OwningRewritePatternList &patternList,
+void insertVectorizationPatterns(RewritePatternSet &patternList,
                                  linalg::LinalgVectorizationOptions options,
                                  linalg::LinalgTransformationFilter f =
                                      linalg::LinalgTransformationFilter()) {
@@ -789,13 +787,13 @@ private:
 /// Populates `patterns` with patterns to convert spec-generated named ops to
 /// linalg.generic ops.
 void populateLinalgNamedOpsGeneralizationPatterns(
-    OwningRewritePatternList &patterns,
+    RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
 
 /// Populates `patterns` with patterns to convert linalg.conv ops to
 /// linalg.generic ops.
 void populateLinalgConvGeneralizationPatterns(
-    OwningRewritePatternList &patterns,
+    RewritePatternSet &patterns,
     LinalgTransformationFilter filter = LinalgTransformationFilter());
 
 //===----------------------------------------------------------------------===//
@@ -1056,12 +1054,11 @@ struct SparsificationOptions {
 
 /// Sets up sparsification rewriting rules with the given options.
 void populateSparsificationPatterns(
-    OwningRewritePatternList &patterns,
+    RewritePatternSet &patterns,
     const SparsificationOptions &options = SparsificationOptions());
 
 /// Sets up sparsification conversion rules with the given options.
-void populateSparsificationConversionPatterns(
-    OwningRewritePatternList &patterns);
+void populateSparsificationConversionPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg
 } // namespace mlir

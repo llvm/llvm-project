@@ -57,7 +57,7 @@ void GPUToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns(context);
+  RewritePatternSet patterns(context);
   populateGPUToSPIRVPatterns(typeConverter, patterns);
   populateStandardToSPIRVPatterns(typeConverter, patterns);
 

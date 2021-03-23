@@ -532,7 +532,7 @@ ExpApproximation::matchAndRewrite(math::ExpOp op,
 //----------------------------------------------------------------------------//
 
 void mlir::populateMathPolynomialApproximationPatterns(
-    OwningRewritePatternList &patterns) {
-  patterns.insert<TanhApproximation, LogApproximation, Log2Approximation,
-                  ExpApproximation>(patterns.getContext());
+    RewritePatternSet &patterns) {
+  patterns.add<TanhApproximation, LogApproximation, Log2Approximation,
+               ExpApproximation>(patterns.getContext());
 }

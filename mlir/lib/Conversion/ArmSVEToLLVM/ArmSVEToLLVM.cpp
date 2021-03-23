@@ -96,19 +96,19 @@ static Optional<Value> addUnrealizedCast(OpBuilder &builder,
 }
 
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
-void mlir::populateArmSVEToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+void mlir::populateArmSVEToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns) {
   converter.addConversion([&converter](ScalableVectorType svType) {
     return convertScalableVectorTypeToLLVM(svType, converter);
   });
   converter.addSourceMaterialization(addUnrealizedCast);
 
   // clang-format off
-  patterns.insert<ForwardOperands<CallOp>,
+  patterns.add<ForwardOperands<CallOp>,
                   ForwardOperands<CallIndirectOp>,
                   ForwardOperands<ReturnOp>>(converter,
                                              &converter.getContext());
-  patterns.insert<SdotOpLowering,
+  patterns.add<SdotOpLowering,
                   SmmlaOpLowering,
                   UdotOpLowering,
                   UmmlaOpLowering,

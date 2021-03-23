@@ -69,8 +69,7 @@ public:
 };
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
-void populateLinalgToStandardConversionPatterns(
-    OwningRewritePatternList &patterns);
+void populateLinalgToStandardConversionPatterns(RewritePatternSet &patterns);
 
 } // namespace linalg
 

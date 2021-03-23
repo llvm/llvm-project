@@ -193,11 +193,11 @@ StoreOpOfSubViewFolder<OpTy>::matchAndRewrite(OpTy storeOp,
 //===----------------------------------------------------------------------===//
 
 void mlir::populateStdLegalizationPatternsForSPIRVLowering(
-    OwningRewritePatternList &patterns) {
-  patterns.insert<LoadOpOfSubViewFolder<memref::LoadOp>,
-                  LoadOpOfSubViewFolder<vector::TransferReadOp>,
-                  StoreOpOfSubViewFolder<memref::StoreOp>,
-                  StoreOpOfSubViewFolder<vector::TransferWriteOp>>(
+    RewritePatternSet &patterns) {
+  patterns.add<LoadOpOfSubViewFolder<memref::LoadOp>,
+               LoadOpOfSubViewFolder<vector::TransferReadOp>,
+               StoreOpOfSubViewFolder<memref::StoreOp>,
+               StoreOpOfSubViewFolder<vector::TransferWriteOp>>(
       patterns.getContext());
 }
 
@@ -213,7 +213,7 @@ struct SPIRVLegalization final
 } // namespace
 
 void SPIRVLegalization::runOnOperation() {
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   populateStdLegalizationPatternsForSPIRVLowering(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
                                      std::move(patterns));

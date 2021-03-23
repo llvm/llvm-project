@@ -27,7 +27,7 @@ class IfOp;
 /// Collect a set of patterns to convert from the Vector dialect to itself.
 /// Should be merged with populateVectorToSCFLoweringPattern.
 void populateVectorToVectorConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
+    MLIRContext *context, RewritePatternSet &patterns,
     ArrayRef<int64_t> coarseVectorShape = {},
     ArrayRef<int64_t> fineVectorShape = {});
 

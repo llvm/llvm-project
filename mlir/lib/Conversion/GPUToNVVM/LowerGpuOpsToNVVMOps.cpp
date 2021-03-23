@@ -125,8 +125,8 @@ struct LowerGpuOpsToNVVMOpsPass
       return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
     });
 
-    OwningRewritePatternList patterns(m.getContext());
-    OwningRewritePatternList llvmPatterns(m.getContext());
+    RewritePatternSet patterns(m.getContext());
+    RewritePatternSet llvmPatterns(m.getContext());
 
     // Apply in-dialect lowering first. In-dialect lowering will replace ops
     // which need to be lowered further, which is not supported by a single
@@ -158,62 +158,62 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
 }
 
-void mlir::populateGpuToNVVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
+                                               RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
   patterns
-      .insert<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
-                                          NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
-                                          NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
-                                          NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
-              GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
-                                          NVVM::GridDimYOp, NVVM::GridDimZOp>,
-              GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
+      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,
+                                       NVVM::ThreadIdYOp, NVVM::ThreadIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, NVVM::BlockDimXOp,
+                                       NVVM::BlockDimYOp, NVVM::BlockDimZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, NVVM::BlockIdXOp,
+                                       NVVM::BlockIdYOp, NVVM::BlockIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, NVVM::GridDimXOp,
+                                       NVVM::GridDimYOp, NVVM::GridDimZOp>,
+           GPUShuffleOpLowering, GPUReturnOpLowering>(converter);
 
   // Explicitly drop memory space when lowering private memory
   // attributions since NVVM models it as `alloca`s in the default
   // memory space and does not support `alloca`s with addrspace(5).
-  patterns.insert<GPUFuncOpLowering>(
+  patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/0,
       Identifier::get(NVVM::NVVMDialect::getKernelFuncAttrName(),
                       &converter.getContext()));
 
-  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
-                                                "__nv_fabs");
-  patterns.insert<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
-                                                      "__nv_atan");
-  patterns.insert<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
-                                                       "__nv_atan2");
-  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
-                                                 "__nv_ceil");
-  patterns.insert<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
-                                                     "__nv_cos");
-  patterns.insert<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
-                                                     "__nv_exp");
-  patterns.insert<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
-                                                       "__nv_expm1");
-  patterns.insert<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",
-                                                  "__nv_floor");
-  patterns.insert<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
-                                                     "__nv_log");
-  patterns.insert<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",
-                                                       "__nv_log1p");
-  patterns.insert<OpToFuncCallLowering<math::Log10Op>>(converter, "__nv_log10f",
-                                                       "__nv_log10");
-  patterns.insert<OpToFuncCallLowering<math::Log2Op>>(converter, "__nv_log2f",
-                                                      "__nv_log2");
-  patterns.insert<OpToFuncCallLowering<math::PowFOp>>(converter, "__nv_powf",
-                                                      "__nv_pow");
-  patterns.insert<OpToFuncCallLowering<math::RsqrtOp>>(converter, "__nv_rsqrtf",
-                                                       "__nv_rsqrt");
-  patterns.insert<OpToFuncCallLowering<math::SinOp>>(converter, "__nv_sinf",
-                                                     "__nv_sin");
-  patterns.insert<OpToFuncCallLowering<math::SqrtOp>>(converter, "__nv_sqrtf",
-                                                      "__nv_sqrt");
-  patterns.insert<OpToFuncCallLowering<math::TanhOp>>(converter, "__nv_tanhf",
-                                                      "__nv_tanh");
+  patterns.add<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
+                                             "__nv_fabs");
+  patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
+                                                   "__nv_atan");
+  patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
+                                                    "__nv_atan2");
+  patterns.add<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
+                                              "__nv_ceil");
+  patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
+                                                  "__nv_cos");
+  patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
+                                                  "__nv_exp");
+  patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
+                                                    "__nv_expm1");
+  patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__nv_floorf",
+                                               "__nv_floor");
+  patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
+                                                  "__nv_log");
+  patterns.add<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",
+                                                    "__nv_log1p");
+  patterns.add<OpToFuncCallLowering<math::Log10Op>>(converter, "__nv_log10f",
+                                                    "__nv_log10");
+  patterns.add<OpToFuncCallLowering<math::Log2Op>>(converter, "__nv_log2f",
+                                                   "__nv_log2");
+  patterns.add<OpToFuncCallLowering<math::PowFOp>>(converter, "__nv_powf",
+                                                   "__nv_pow");
+  patterns.add<OpToFuncCallLowering<math::RsqrtOp>>(converter, "__nv_rsqrtf",
+                                                    "__nv_rsqrt");
+  patterns.add<OpToFuncCallLowering<math::SinOp>>(converter, "__nv_sinf",
+                                                  "__nv_sin");
+  patterns.add<OpToFuncCallLowering<math::SqrtOp>>(converter, "__nv_sqrtf",
+                                                   "__nv_sqrt");
+  patterns.add<OpToFuncCallLowering<math::TanhOp>>(converter, "__nv_tanhf",
+                                                   "__nv_tanh");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

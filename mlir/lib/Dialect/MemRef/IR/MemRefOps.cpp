@@ -209,14 +209,14 @@ struct SimplifyDeadAlloc : public OpRewritePattern<AllocOp> {
 };
 } // end anonymous namespace.
 
-void AllocOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.insert<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
+  results.add<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
 }
 
-void AllocaOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.insert<SimplifyAllocConst<AllocaOp>>(context);
+  results.add<SimplifyAllocConst<AllocaOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -290,9 +290,9 @@ struct TensorLoadToMemRef : public OpRewritePattern<BufferCastOp> {
 
 } // namespace
 
-void BufferCastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<BufferCast, TensorLoadToMemRef>(context);
+void BufferCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<BufferCast, TensorLoadToMemRef>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -498,9 +498,9 @@ static LogicalResult verify(DeallocOp op) {
   return success();
 }
 
-void DeallocOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<SimplifyDeadDealloc>(context);
+  results.add<SimplifyDeadDealloc>(context);
 }
 
 LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,
@@ -677,10 +677,10 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
 };
 } // end anonymous namespace.
 
-void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.insert<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
-                 DimOfCastOp<tensor::CastOp>>(context);
+  results.add<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
+              DimOfCastOp<tensor::CastOp>>(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -1069,9 +1069,9 @@ struct LoadOfBufferCast : public OpRewritePattern<LoadOp> {
 };
 } // end anonymous namespace.
 
-void LoadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void LoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<LoadOfBufferCast>(context);
+  results.add<LoadOfBufferCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1802,11 +1802,11 @@ struct SubViewCanonicalizer {
   }
 };
 
-void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                     SubViewOp, SubViewCanonicalizer>,
-                 SubViewOpMemRefCastFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  SubViewOp, SubViewCanonicalizer>,
+              SubViewOpMemRefCastFolder>(context);
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
@@ -2085,9 +2085,9 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
 
 } // end anonymous namespace
 
-void ViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
+  results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

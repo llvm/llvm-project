@@ -576,23 +576,21 @@ using ConvOpConst = ConvOpVectorization<ConvWOp, 1>;
 /// Inserts tiling, promotion and vectorization pattern for ConvOp
 /// conversion into corresponding pattern lists.
 template <typename ConvOp, unsigned N>
-static void
-populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
-                              OwningRewritePatternList &promotionPatterns,
-                              OwningRewritePatternList &vectorizationPatterns,
-                              ArrayRef<int64_t> tileSizes) {
+static void populateVectorizationPatterns(
+    RewritePatternSet &tilingPatterns, RewritePatternSet &promotionPatterns,
+    RewritePatternSet &vectorizationPatterns, ArrayRef<int64_t> tileSizes) {
   auto *context = tilingPatterns.getContext();
   if (tileSizes.size() < N)
     return;
 
   constexpr static StringRef kTiledMarker = "TILED";
   constexpr static StringRef kPromotedMarker = "PROMOTED";
-  tilingPatterns.insert<LinalgTilingPattern<ConvOp>>(
+  tilingPatterns.add<LinalgTilingPattern<ConvOp>>(
       context, LinalgTilingOptions().setTileSizes(tileSizes),
       LinalgTransformationFilter(ArrayRef<Identifier>{},
                                  Identifier::get(kTiledMarker, context)));
 
-  promotionPatterns.insert<LinalgPromotionPattern<ConvOp>>(
+  promotionPatterns.add<LinalgPromotionPattern<ConvOp>>(
       context, LinalgPromotionOptions().setUseFullTileBuffersByDefault(true),
       LinalgTransformationFilter(Identifier::get(kTiledMarker, context),
                                  Identifier::get(kPromotedMarker, context)));
@@ -602,15 +600,15 @@ populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
   std::transform(tileSizes.begin() + offset, tileSizes.end(), mask.begin(),
                  [](int64_t i) -> bool { return i > 1; });
 
-  vectorizationPatterns.insert<ConvOpVectorization<ConvOp, N>>(context, mask);
+  vectorizationPatterns.add<ConvOpVectorization<ConvOp, N>>(context, mask);
 }
 
 void mlir::linalg::populateConvVectorizationPatterns(
-    MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
+    MLIRContext *context, SmallVectorImpl<RewritePatternSet> &patterns,
     ArrayRef<int64_t> tileSizes) {
-  OwningRewritePatternList tiling(context);
-  OwningRewritePatternList promotion(context);
-  OwningRewritePatternList vectorization(context);
+  RewritePatternSet tiling(context);
+  RewritePatternSet promotion(context);
+  RewritePatternSet vectorization(context);
   populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
                                             tileSizes);
 
