@@ -108,6 +108,12 @@ addDagOperandMapping(Record *Rec, DagInit *Dag, CodeGenInstruction &Insn,
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;
+    } else if (auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
+      auto II = dyn_cast<IntInit>(BI->convertInitializerTo(IntRecTy::get()));
+      assert(II && "Cannot convert to integer initializer");
+      OperandMap[BaseIdx + i].Kind = OpData::Imm;
+      OperandMap[BaseIdx + i].Data.Imm = II->getValue();
+      ++OpsAdded;
     } else if (DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
       // Just add the operands recursively. This is almost certainly
       // a constant value for a complex operand (> 1 MI operand).
