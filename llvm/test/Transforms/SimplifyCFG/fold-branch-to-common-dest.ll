@@ -894,3 +894,37 @@ if.end7:
 cleanup:
   unreachable
 }
+
+@global_pr49510 = external global i16, align 1
+
+define void @pr49510() {
+; CHECK-LABEL: @pr49510(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DOTOLD:%.*]] = load i16, i16* @global_pr49510, align 1
+; CHECK-NEXT:    [[TOBOOL_OLD:%.*]] = icmp ne i16 [[DOTOLD]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_OLD]], label [[LAND_RHS:%.*]], label [[FOR_END:%.*]]
+; CHECK:       land.rhs:
+; CHECK-NEXT:    [[DOTMERGE:%.*]] = phi i16 [ [[TMP0:%.*]], [[LAND_RHS]] ], [ [[DOTOLD]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[DOTMERGE]], 0
+; CHECK-NEXT:    [[TMP0]] = load i16, i16* @global_pr49510, align 1
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP0]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[TOBOOL]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[LAND_RHS]], label [[FOR_END]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  %0 = load i16, i16* @global_pr49510, align 1
+  %tobool = icmp ne i16 %0, 0
+  br i1 %tobool, label %land.rhs, label %for.end
+
+land.rhs:
+  %cmp = icmp slt i16 %0, 0
+  br i1 %cmp, label %for.cond, label %for.end
+
+for.end:
+  ret void
+}
