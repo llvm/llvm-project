@@ -716,7 +716,16 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     // TODO: Test this error.
     return SymbolsOrErr.takeError();
 
-  if (EF.getHeader().e_machine == ELF::EM_ARM) {
+  if (EF.getHeader().e_machine == ELF::EM_AARCH64) {
+    if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
+      StringRef Name = *NameOrErr;
+      if (Name.startswith("$d") || Name.startswith("$x"))
+        Result |= SymbolRef::SF_FormatSpecific;
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
+    }
+  } else if (EF.getHeader().e_machine == ELF::EM_ARM) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
       if (Name.startswith("$d") || Name.startswith("$t") ||
