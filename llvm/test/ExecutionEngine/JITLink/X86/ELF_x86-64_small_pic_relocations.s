@@ -111,6 +111,16 @@ test_rex_gotpcrelx:
 
         .size   test_rex_gotpcrelx, .-test_rex_gotpcrelx
 
+# Test GOTOFF64 handling.
+# jitlink-check: decode_operand(test_gotoff64, 1) = named_func - _GLOBAL_OFFSET_TABLE_
+        .globl test_gotoff64
+        .p2align     4, 0x90
+        .type  test_gotoff64,@function
+test_gotoff64:
+        movabsq $named_func@GOTOFF, %rax
+
+        .size   test_gotoff64, .-test_gotoff64
+
 # Test that relocations to anonymous constant pool entries work.
         .globl  test_anchor_LCPI
         .p2align        4, 0x90

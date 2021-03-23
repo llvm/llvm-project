@@ -29,6 +29,9 @@ using namespace llvm::jitlink::ELF_x86_64_Edges;
 
 namespace {
 
+constexpr StringRef ELFGOTSectionName = "$__GOT";
+constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
+
 class PerGraphGOTAndPLTStubsBuilder_ELF_x86_64
     : public PerGraphGOTAndPLTStubsBuilder<
           PerGraphGOTAndPLTStubsBuilder_ELF_x86_64> {
@@ -40,6 +43,13 @@ public:
       PerGraphGOTAndPLTStubsBuilder_ELF_x86_64>::PerGraphGOTAndPLTStubsBuilder;
 
   bool isGOTEdgeToFix(Edge &E) const {
+    if (E.getKind() == GOTOFF64) {
+      // We need to make sure that the GOT section exists, but don't otherwise
+      // need to fix up this edge.
+      getGOTSection();
+      return false;
+    }
+
     return E.getKind() == PCRel32GOT || E.getKind() == PCRel32GOTLoad ||
            E.getKind() == PCRel64GOT || E.getKind() == GOT64;
   }
@@ -100,13 +110,13 @@ public:
   }
 
 private:
-  Section &getGOTSection() {
+  Section &getGOTSection() const {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", sys::Memory::MF_READ);
+      GOTSection = &G.createSection(ELFGOTSectionName, sys::Memory::MF_READ);
     return *GOTSection;
   }
 
-  Section &getStubsSection() {
+  Section &getStubsSection() const {
     if (!StubsSection) {
       auto StubsProt = static_cast<sys::Memory::ProtectionFlags>(
           sys::Memory::MF_READ | sys::Memory::MF_EXEC);
@@ -125,12 +135,9 @@ private:
                      sizeof(StubContent));
   }
 
-  Section *GOTSection = nullptr;
-  Section *StubsSection = nullptr;
+  mutable Section *GOTSection = nullptr;
+  mutable Section *StubsSection = nullptr;
 };
-
-constexpr StringRef ELFGOTSectionName = "$__GOT";
-constexpr StringRef ELFGOTSymbolName = "_GLOBAL_OFFSET_TABLE_";
 
 const char *const DwarfSectionNames[] = {
 #define HANDLE_DWARF_SECTION(ENUM_NAME, ELF_NAME, CMDLINE_NAME, OPTION)        \
@@ -270,6 +277,8 @@ private:
       return ELF_x86_64_Edges::ELFX86RelocationKind::PCRel64GOT;
     case ELF::R_X86_64_GOT64:
       return ELF_x86_64_Edges::ELFX86RelocationKind::GOT64;
+    case ELF::R_X86_64_GOTOFF64:
+      return ELF_x86_64_Edges::ELFX86RelocationKind::GOTOFF64;
     case ELF::R_X86_64_PLT32:
       return ELF_x86_64_Edges::ELFX86RelocationKind::Branch32;
     }
@@ -726,13 +735,11 @@ private:
   Symbol *GOTSymbol = nullptr;
 
   Error getOrCreateGOTSymbol(LinkGraph &G) {
-    Section *GOTSection = nullptr;
-
     auto DefineExternalGOTSymbolIfPresent =
         createDefineExternalSectionStartAndEndSymbolsPass(
             [&](LinkGraph &LG, Symbol &Sym) -> SectionRangeSymbolDesc {
               if (Sym.getName() == ELFGOTSymbolName)
-                if ((GOTSection = G.findSectionByName(ELFGOTSectionName))) {
+                if (auto *GOTSection = G.findSectionByName(ELFGOTSectionName)) {
                   GOTSymbol = &Sym;
                   return {*GOTSection, true};
                 }
@@ -744,8 +751,14 @@ private:
     if (auto Err = DefineExternalGOTSymbolIfPresent(G))
       return Err;
 
+    // If we succeeded then we're done.
+    if (GOTSymbol)
+      return Error::success();
+
+    // Otherwise look for a GOT section: If it already has a start symbol we'll
+    // record it, otherwise we'll create our own.
     // If there's a GOT section but we didn't find an external GOT symbol...
-    if (GOTSection && !GOTSymbol) {
+    if (auto *GOTSection = G.findSectionByName(ELFGOTSectionName)) {
 
       // Check for an existing defined symbol.
       for (auto *Sym : GOTSection->symbols())
@@ -822,7 +835,13 @@ private:
       *(little64_t *)FixupPtr = Value;
       break;
     }
-    case ELFX86RelocationKind::GOT64: {
+    case ELFX86RelocationKind::GOT64:
+    case ELFX86RelocationKind::GOTOFF64: {
+      // GOT64: Offset of GOT entry within GOT.
+      // GOTOFF64: Offset from GOT base to target.
+      // The expressions are the same in both cases, but in the GOT64 case the
+      // edge will have been fixed to point at the GOT entry, and in the
+      // GOTOFF64 case it will still point at the original target.
       assert(GOTSymbol && "No GOT section symbol");
       int64_t Value =
           E.getTarget().getAddress() - GOTSymbol->getAddress() + E.getAddend();

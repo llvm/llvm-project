@@ -116,11 +116,15 @@ Error registerELFGraphInfo(Session &S, LinkGraph &G) {
           return make_error<StringError>("zero-fill atom in GOT section",
                                          inconvertibleErrorCode());
 
-        if (auto TS = getELFGOTTarget(G, Sym->getBlock()))
-          FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
-                                                   Sym->getAddress()};
-        else
-          return TS.takeError();
+        // If this is a GOT symbol with size (i.e. not the GOT start symbol)
+        // then add it to the GOT entry info table.
+        if (Sym->getSize() != 0) {
+          if (auto TS = getELFGOTTarget(G, Sym->getBlock()))
+            FileInfo.GOTEntryInfos[TS->getName()] = {Sym->getSymbolContent(),
+                                                     Sym->getAddress()};
+          else
+            return TS.takeError();
+        }
         SectionContainsContent = true;
       } else if (isStubsSection) {
         if (Sym->isSymbolZeroFill())
