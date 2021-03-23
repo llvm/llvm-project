@@ -390,6 +390,18 @@ def OptionalInvalidL : TestFormat_Op<[{
 def OptionalInvalidM : TestFormat_Op<[{
   (` `^)?
 }]>, Arguments<(ins)>;
+// CHECK: error: expected '(' to start else branch of optional group
+def OptionalInvalidN : TestFormat_Op<[{
+  ($arg^):
+}]>, Arguments<(ins Variadic<I64>:$arg)>;
+// CHECK: error: expected directive, literal, variable, or optional group
+def OptionalInvalidO : TestFormat_Op<[{
+  ($arg^):(`test`
+}]>, Arguments<(ins Variadic<I64>:$arg)>;
+// CHECK: error: expected '?' after optional group
+def OptionalInvalidP : TestFormat_Op<[{
+  ($arg^):(`test`)
+}]>, Arguments<(ins Variadic<I64>:$arg)>;
 
 // CHECK-NOT: error
 def OptionalValidA : TestFormat_Op<[{
