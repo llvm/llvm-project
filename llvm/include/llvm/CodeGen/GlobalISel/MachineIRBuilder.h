@@ -1444,6 +1444,13 @@ public:
     return buildInstr(TargetOpcode::G_SMULH, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Res = G_UREM \p Op0, \p Op1
+  MachineInstrBuilder buildURem(const DstOp &Dst, const SrcOp &Src0,
+                                const SrcOp &Src1,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_UREM, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildFMul(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1,
                                 Optional<unsigned> Flags = None) {

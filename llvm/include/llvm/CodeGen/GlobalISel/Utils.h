@@ -328,6 +328,13 @@ bool isBuildVectorAllOnes(const MachineInstr &MI,
 Optional<RegOrConstant> getVectorSplat(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI);
 
+/// Attempt to match a unary predicate against a scalar/splat constant or every
+/// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
+/// value was undef.
+bool matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
+                         std::function<bool(const Constant *ConstVal)> Match,
+                         bool AllowUndefs = false);
+
 /// Returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a true value.
 bool isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
