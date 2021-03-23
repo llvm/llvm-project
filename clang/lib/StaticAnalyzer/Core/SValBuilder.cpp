@@ -423,6 +423,14 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
     return UnknownVal();
   }
 
+  if (op == BinaryOperatorKind::BO_Cmp) {
+    // We can't reason about C++20 spaceship operator yet.
+    //
+    // FIXME: Support C++20 spaceship operator.
+    //        The main problem here is that the result is not integer.
+    return UnknownVal();
+  }
+
   if (Optional<Loc> LV = lhs.getAs<Loc>()) {
     if (Optional<Loc> RV = rhs.getAs<Loc>())
       return evalBinOpLL(state, op, *LV, *RV, type);
