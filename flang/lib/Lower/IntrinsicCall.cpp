@@ -152,6 +152,7 @@ struct IntrinsicLibrary {
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
@@ -281,6 +282,9 @@ static constexpr IntrinsicHandler handlers[]{
     {"mod", &I::genMod},
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
+    {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr}, 
+                          {"back", asAddr}, {"kind", asAddr} }}, 
+             /*isElemental*/ true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental*/ false},
 };
@@ -1354,6 +1358,39 @@ IntrinsicLibrary::genPresent(mlir::Type,
   assert(args.size() == 1);
   return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
                                           fir::getBase(args[0]));
+}
+
+// SCAN 
+fir::ExtendedValue
+IntrinsicLibrary::genScan(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  // TBD: What about optional arguments that are not present?
+  assert(args.size() >= 2);
+
+  auto string = builder.createBox(loc, args[0]);
+  auto set = builder.createBox(loc, args[1]);
+  auto back = builder.createBox(loc, args[2]);
+  auto kind = builder.createBox(loc, args[3]);
+
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+
+  Fortran::lower::genScan(builder, loc, resultIrBox, string, set, back, kind);
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+
+  /* TBD: Not sure about the return value yet */
+  return res.match(
+        [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+            -> fir::ExtendedValue { 
+            addCleanUpForTemp(loc, /*fir::getBase*/(box.getAddr()));
+            return box.getAddr();
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for SCAN");
+      });
 }
 
 // SIGN

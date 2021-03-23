@@ -103,3 +103,25 @@ void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
   args.emplace_back(builder.createConvert(loc, fTy.getInput(3), sourceLine));
   builder.create<fir::CallOp>(loc, trimFunc, args);
 }
+
+void
+Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
+                             mlir::Location loc, mlir::Value resultBox,
+                             mlir::Value stringBox, mlir::Value setBox,
+                             mlir::Value backBox, mlir::Value kindBox) {
+  auto scanFunc = getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
+  auto fTy = scanFunc.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
+  auto arg0 = builder.createConvert(loc, fTy.getInput(0), resultBox);
+  auto arg1 = builder.createConvert(loc, fTy.getInput(1), stringBox);
+  auto arg2 = builder.createConvert(loc, fTy.getInput(2), setBox);
+  auto arg3 = builder.createConvert(loc, fTy.getInput(3), backBox);
+  auto arg4 = builder.createIntegerConstant(loc, fTy.getInput(4), 4); /*builder.createConvert(loc, fTy.getInput(4), kindBox); */
+  auto arg5 = builder.createConvert(loc, fTy.getInput(5), sourceFile);
+  auto arg6 = builder.createConvert(loc, fTy.getInput(6), sourceLine);
+  llvm::SmallVector<mlir::Value, 7> args {arg0, arg1, arg2, arg3, arg4, arg5,
+                                          arg6};
+  builder.create<fir::CallOp>(loc, scanFunc, args);
+}

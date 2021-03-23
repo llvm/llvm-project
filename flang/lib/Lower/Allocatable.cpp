@@ -997,12 +997,14 @@ Fortran::lower::genMutableBoxRead(Fortran::lower::FirOpBuilder &builder,
   auto rank = box.rank();
   if (box.isCharacter()) {
     auto len = lengths.empty() ? mlir::Value{} : lengths[0];
-    if (rank)
+    if (rank) {
       return fir::CharArrayBoxValue{addr, len, extents, lbounds};
+    }
     return fir::CharBoxValue{addr, len};
   }
-  if (rank)
+  if (rank) {
     return fir::ArrayBoxValue{addr, extents, lbounds};
+  }
   return fir::AbstractBox{addr};
 }
 

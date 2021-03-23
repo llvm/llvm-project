@@ -329,6 +329,7 @@ static void ScanVerify(Descriptor &result, const Descriptor &string,
         ScanVerify<CHAR, IS_VERIFY>(string.Element<CHAR>(stringAt),
             stringElementChars, set.Element<CHAR>(setAt), setElementChars,
             back && IsLogicalElementTrue(*back, backAt));
+    //printf("AQUI %d\n",(int)*result.OffsetElement<INT>(resultAt));
   }
 }
 
