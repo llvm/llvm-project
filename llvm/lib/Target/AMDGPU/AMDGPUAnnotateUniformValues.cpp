@@ -112,7 +112,7 @@ bool AMDGPUAnnotateUniformValues::isClobberedInFunction(LoadInst * Load) {
 
 void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
   if (DA->isUniform(&I))
-    setUniformMetadata(I.getParent()->getTerminator());
+    setUniformMetadata(&I);
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
