@@ -19,7 +19,8 @@
 
 namespace mlir {
 
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 void populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
                                   OwningRewritePatternList &patterns);

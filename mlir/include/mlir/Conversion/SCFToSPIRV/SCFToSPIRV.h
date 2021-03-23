@@ -18,9 +18,10 @@ namespace mlir {
 class Pass;
 
 // Owning list of rewriting patterns.
-class OwningRewritePatternList;
 class SPIRVTypeConverter;
 struct ScfToSPIRVContextImpl;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 struct ScfToSPIRVContext {
   ScfToSPIRVContext();

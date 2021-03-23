@@ -24,8 +24,8 @@ class RewritePattern;
 class Value;
 class ValueRange;
 
-// Owning list of rewriting patterns.
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.

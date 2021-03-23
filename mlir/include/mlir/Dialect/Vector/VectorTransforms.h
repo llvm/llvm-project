@@ -16,8 +16,9 @@
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
 class VectorTransferOpInterface;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class IfOp;
