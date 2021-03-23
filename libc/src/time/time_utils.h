@@ -53,15 +53,27 @@ struct TimeConstants {
   static constexpr time_t OutOfRangeReturnValue = -1;
 };
 
+// Update the "tm" structure's year, month, etc. members from seconds.
+// "total_seconds" is the number of seconds since January 1st, 1970.
+extern int64_t UpdateFromSeconds(int64_t total_seconds, struct tm *tm);
+
 // POSIX.1-2017 requires this.
 static inline time_t OutOfRange() {
   llvmlibc_errno = EOVERFLOW;
   return static_cast<time_t>(-1);
 }
 
-// Update the "tm" structure's year, month, etc. members from seconds.
-// "total_seconds" is the number of seconds since January 1st, 1970.
-extern int64_t UpdateFromSeconds(int64_t total_seconds, struct tm *tm);
+static inline struct tm *gmtime_internal(const time_t *timer,
+                                         struct tm *result) {
+  int64_t seconds = *timer;
+  // Update the tm structure's year, month, day, etc. from seconds.
+  if (UpdateFromSeconds(seconds, result) < 0) {
+    OutOfRange();
+    return nullptr;
+  }
+
+  return result;
+}
 
 } // namespace time_utils
 } // namespace __llvm_libc
