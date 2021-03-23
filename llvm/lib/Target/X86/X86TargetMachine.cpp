@@ -248,7 +248,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS =
       FSAttr.isValid() ? FSAttr.getValueAsString() : (StringRef)TargetFS;
 
-  SmallString<64> Key;
+  SmallString<512> Key;
   // The additions here are ordered so that the definitely short strings are
   // added first so we won't exceed the small size. We append the
   // much longer FS string at the end so that we only heap allocate at most
