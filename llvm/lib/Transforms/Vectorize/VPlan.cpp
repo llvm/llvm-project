@@ -745,7 +745,7 @@ LLVM_DUMP_METHOD
 void VPlan::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  O << "VPlan {";
+  O << "VPlan '" << Name << "' {";
   for (const VPBlockBase *Block : depth_first(getEntry())) {
     O << '\n';
     Block->print(O, "", SlotTracker);
