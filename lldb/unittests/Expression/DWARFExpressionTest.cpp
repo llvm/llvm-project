@@ -213,42 +213,45 @@ DWARF:
   //
 
   // Leave as is.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
-                               DW_OP_convert, offs_uint32_t}),
-                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+              DW_OP_convert, offs_uint32_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
 
   // Zero-extend to 64 bits.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
-                               DW_OP_convert, offs_uint64_t}),
-                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+              DW_OP_convert, offs_uint64_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
 
   // Sign-extend to 64 bits.
   EXPECT_THAT_EXPECTED(
       t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
-              DW_OP_convert, offs_sint64_t}),
+              DW_OP_convert, offs_sint64_t, DW_OP_stack_value}),
       llvm::HasValue(GetScalar(64, 0xffffffffffeeddcc, is_signed)));
 
   // Sign-extend, then truncate.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
-                               DW_OP_convert, offs_sint64_t,          //
-                               DW_OP_convert, offs_uint32_t}),
-                       llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
+              DW_OP_convert, offs_sint64_t,          //
+              DW_OP_convert, offs_uint32_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
 
   // Truncate to default unspecified (pointer-sized) type.
   EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
                                DW_OP_convert, offs_sint64_t,          //
-                               DW_OP_convert, 0x00}),
+                               DW_OP_convert, 0x00, DW_OP_stack_value}),
                        llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
 
   // Truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_uchar}),
-      llvm::HasValue(GetScalar(8, 'A', not_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert,
+                               offs_uchar, DW_OP_stack_value}),
+                       llvm::HasValue(GetScalar(8, 'A', not_signed)));
 
   // Also truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_schar}),
-      llvm::HasValue(GetScalar(8, 'A', is_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert,
+                               offs_schar, DW_OP_stack_value}),
+                       llvm::HasValue(GetScalar(8, 'A', is_signed)));
 
   //
   // Errors.
@@ -354,4 +357,13 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref}, {}, {}, &exe_ctx),
                        llvm::HasValue(Scalar(LLDB_INVALID_ADDRESS)));
+  // Memory location: *0x4.
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4}, {}, {}, &exe_ctx),
+                       llvm::HasValue(Scalar(4)));
+  // Implicit location: *0x4.
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx),
+      llvm::HasValue(GetScalar(32, 0x07060504, false)));
 }
