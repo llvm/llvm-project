@@ -12,6 +12,7 @@
 // clang-format off
 
 // UNSUPPORTED: libcpp-has-no-filesystem-library
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // <filesystem>
 

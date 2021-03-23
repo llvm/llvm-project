@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // class path

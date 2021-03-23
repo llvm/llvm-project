@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // bool copy_file(const path& from, const path& to);

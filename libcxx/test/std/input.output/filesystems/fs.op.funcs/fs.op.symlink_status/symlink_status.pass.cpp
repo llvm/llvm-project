@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // file_status symlink_status(const path& p);

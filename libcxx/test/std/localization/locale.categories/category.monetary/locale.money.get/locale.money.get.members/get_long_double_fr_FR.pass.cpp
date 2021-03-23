@@ -11,6 +11,8 @@
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // REQUIRES: locale.fr_FR.UTF-8
 
 // <locale>
