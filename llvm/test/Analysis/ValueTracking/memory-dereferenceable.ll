@@ -44,6 +44,7 @@ define void @test(i32 addrspace(1)* dereferenceable(8) %dparam,
     gc "statepoint-example" {
 ; CHECK: The following are dereferenceable:
 entry:
+  call void @mayfree()
 
 ; GLOBAL: %dparam{{.*}}(unaligned)
 ; POINT-NOT: %dparam{{.*}}(unaligned)
@@ -144,6 +145,7 @@ entry:
 define void @alloca_aligned() {
    %alloca.align1 = alloca i1, align 1
    %alloca.align16 = alloca i1, align 16
+   call void @mayfree()
    %load17 = load i1, i1* %alloca.align1, align 16
    %load18 = load i1, i1* %alloca.align16, align 16
    ret void
@@ -153,6 +155,7 @@ define void @alloca_aligned() {
 ; CHECK: %alloca{{.*}}(aligned)
 define void @alloca_basic() {
   %alloca = alloca i1
+  call void @mayfree()
   %load2 = load i1, i1* %alloca
   ret void
 }
@@ -162,6 +165,7 @@ define void @alloca_basic() {
 ; CHECK-NOT: %empty_alloca
 define void @alloca_empty() {
   %empty_alloca = alloca i8, i64 0
+  call void @mayfree()
   %empty_load = load i8, i8* %empty_alloca
   ret void
 }
@@ -172,6 +176,7 @@ define void @alloca_empty() {
 ; CHECK: %alloca.noalign{{.*}}(aligned)
 define void @alloca_perfalign() {
    %alloca.noalign = alloca i32
+   call void @mayfree()
    %load28 = load i32, i32* %alloca.noalign, align 8
    ret void
 }
@@ -210,8 +215,10 @@ define void @global_allocationsize() {
 ; CHECK-NOT: %byval_cast
 ; GLOBAL: %byval_gep{{.*}}(aligned)
 ; POINT-NOT: %byval_gep{{.*}}(aligned)
+; FIXME: Should hold in the point semantics case too
 define void @byval(i8* byval(i8) %i8_byval,
                         %struct.A* byval(%struct.A) %A_byval) {
+  call void @mayfree()
   %i8_byval_load = load i8, i8* %i8_byval
 
   %byval_cast = bitcast i8* %i8_byval to i32*
@@ -222,14 +229,68 @@ define void @byval(i8* byval(i8) %i8_byval,
   ret void
 }
 
-; CHECK: The following are dereferenceable:
+; CHECK-LABEL: 'f_0'
 ; GLOBAL: %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
 ; POINT-NOT: %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
 define i32 @f_0(i32 %val) {
   %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
+  call void @mayfree()
   %load29 = load i32, i32* %ptr, align 8
   ret i32 %load29
 }
+
+
+; The most basic case showing the difference between legacy global deref
+; attribute semantics and the new point-in-time semantics.
+; CHECK-LABEL: 'negative'
+; GLOBAL: %p
+; POINT-NOT: %p
+define void @negative(i32* dereferenceable(8) %p) nofree nosync {
+  call void @mayfree()
+  %v = load i32, i32* %p
+  ret void
+}
+
+; CHECK-LABEL: 'infer_func_attrs1'
+; GLOBAL: %p
+; POINT-NOT: %p
+; FIXME: Can be inferred from attributes
+define void @infer_func_attrs1(i32* dereferenceable(8) %p) nofree nosync {
+  call void @mayfree()
+  %v = load i32, i32* %p
+  ret void
+}
+
+; CHECK-LABEL: 'infer_func_attrs2'
+; GLOBAL: %p
+; POINT-NOT: %p
+; FIXME: Can be inferred from attributes
+define void @infer_func_attrs2(i32* dereferenceable(8) %p) readonly {
+  call void @mayfree()
+  %v = load i32, i32* %p
+  ret void
+}
+
+; CHECK-LABEL: 'infer_noalias1'
+; GLOBAL: %p
+; POINT-NOT: %p
+; FIXME: Can be inferred from attributes
+define void @infer_noalias1(i32* dereferenceable(8) noalias nofree %p) {
+  call void @mayfree()
+  %v = load i32, i32* %p
+  ret void
+}
+
+; CHECK-LABEL: 'infer_noalias2'
+; GLOBAL: %p
+; POINT-NOT: %p
+; FIXME: Can be inferred from attributes
+define void @infer_noalias2(i32* dereferenceable(8) noalias readonly %p) nosync {
+  call void @mayfree()
+  %v = load i32, i32* %p
+  ret void
+}
+
 
 ; Just check that we don't crash.
 ; CHECK-LABEL: 'opaque_type_crasher'
@@ -252,6 +313,9 @@ declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i3
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
 
 declare i32 addrspace(1)* @func1(i32 addrspace(1)* returned) nounwind argmemonly
+
+; Can free any object accessible in memory
+declare void @mayfree()
 
 !0 = !{i64 4}
 !1 = !{i64 2}
