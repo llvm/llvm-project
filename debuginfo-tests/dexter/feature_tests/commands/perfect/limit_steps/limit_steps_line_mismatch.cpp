@@ -1,0 +1,25 @@
+// Purpose:
+//      Check that \DexLimitSteps works even if the opening breakpoint line
+//      doesn't exist. This can happen due to optimisations or label is on an
+//      empty line.
+//
+// FIXME: Windows regression tests run with dbgeng. \DexLimitSteps isn't yet
+// supported with dbgeng.
+//
+// REQUIRES: system-linux
+//
+// RUN: %dexter_regression_test -- %s | FileCheck %s
+// CHECK: limit_steps_line_mismatch.cpp
+
+int main() {
+  int i = 0;
+  for (; i < 2; i++) {
+    // DexLabel('from')
+    int x = i;
+  }
+  int ret = 0;
+  return ret; // DexLabel('to')
+}
+
+// DexLimitSteps('1', '1', from_line='from', to_line='to')
+// DexExpectWatchValue('i', 0, 1, 2, from_line='from', to_line='to')
