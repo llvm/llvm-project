@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -remote-mcjit -O0 -mcjit-remote-process=lli-child-target%exeext %s
+; RUN: %lli -remote-mcjit -O0 -mcjit-remote-process=lli-child-target%exeext %s
 ; XFAIL: windows-gnu,windows-msvc
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed

@@ -1,4 +1,3 @@
-; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 define void @test(i8* %P, i16* %P.upgrd.1, i32* %P.upgrd.2, i64* %P.upgrd.3) {

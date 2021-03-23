@@ -99,7 +99,7 @@ namespace {
 
   cl::opt<JITKind> UseJITKind(
       "jit-kind", cl::desc("Choose underlying JIT kind."),
-      cl::init(JITKind::Orc),
+      cl::init(JITKind::MCJIT),
       cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
                  clEnumValN(JITKind::Orc, "orc", "Orc JIT"),
                  clEnumValN(JITKind::OrcLazy, "orc-lazy",

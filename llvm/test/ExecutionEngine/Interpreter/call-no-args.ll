@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -force-interpreter %s
+; RUN: %lli -force-interpreter %s
 
 declare void @exit(i32)
 declare i32 @rand()
