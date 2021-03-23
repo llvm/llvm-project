@@ -46,6 +46,9 @@ int main(int, char**)
     test<bool>();
     test<char>();
     test<wchar_t>();
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    test<char8_t>();
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>();
     test<char32_t>();
