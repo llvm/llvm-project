@@ -11,7 +11,9 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include <memory>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -179,6 +181,7 @@ protected:
   // Merge cold context profile whose total sample is below threshold
   // into base profile.
   void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap);
+  void computeSummaryAndThreshold();
   void write(std::unique_ptr<SampleProfileWriter> Writer,
              StringMap<FunctionSamples> &ProfileMap) override;
 
@@ -196,6 +199,9 @@ private:
                                        const BranchSample &BranchCounters,
                                        ProfiledBinary *Binary);
   void populateInferredFunctionSamples();
+
+  // Profile summary to answer isHotCount and isColdCount queries.
+  std::unique_ptr<ProfileSummaryInfo> PSI;
 
 public:
   // Deduplicate adjacent repeated context sequences up to a given sequence
