@@ -1460,14 +1460,15 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
 
 void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
   auto RemovePredicate = [](MachineInstr *MI) {
+    if (MI->isDebugInstr())
+      return;
     LLVM_DEBUG(dbgs() << "ARM Loops: Removing predicate from: " << *MI);
-    if (int PIdx = llvm::findFirstVPTPredOperandIdx(*MI)) {
-      assert(MI->getOperand(PIdx).getImm() == ARMVCC::Then &&
-             "Expected Then predicate!");
-      MI->getOperand(PIdx).setImm(ARMVCC::None);
-      MI->getOperand(PIdx+1).setReg(0);
-    } else
-      llvm_unreachable("trying to unpredicate a non-predicated instruction");
+    int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
+    assert(PIdx >= 1 && "Trying to unpredicate a non-predicated instruction");
+    assert(MI->getOperand(PIdx).getImm() == ARMVCC::Then &&
+           "Expected Then predicate!");
+    MI->getOperand(PIdx).setImm(ARMVCC::None);
+    MI->getOperand(PIdx + 1).setReg(0);
   };
 
   for (auto &Block : LoLoop.getVPTBlocks()) {
@@ -1511,8 +1512,13 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
         // - Insert a new vpst to predicate the instruction(s) that following
         //   the divergent vpr def.
         MachineInstr *Divergent = VPTState::getDivergent(Block);
+        MachineBasicBlock *MBB = Divergent->getParent();
         auto DivergentNext = ++MachineBasicBlock::iterator(Divergent);
+        while (DivergentNext != MBB->end() && DivergentNext->isDebugInstr())
+          ++DivergentNext;
+
         bool DivergentNextIsPredicated =
+            DivergentNext != MBB->end() &&
             getVPTInstrPredicate(*DivergentNext) != ARMVCC::None;
 
         for (auto I = ++MachineBasicBlock::iterator(VPST), E = DivergentNext;
