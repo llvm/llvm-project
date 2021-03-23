@@ -13,8 +13,7 @@ define dso_local i32 @annotated(i32* %c) local_unnamed_addr #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.annotation.i32(i32 [[TMP0]], i8* undef, i8* undef, i32 undef)
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:

@@ -320,22 +320,22 @@ declare void @dummy(i1) nounwind
 declare void @llvm.experimental.guard(i1, ...)
 ;.
 ; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR2]] = { nounwind }
 ; IS__TUNIT_OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.
 ; IS__TUNIT_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; IS__TUNIT_NPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS__TUNIT_NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR2]] = { nounwind }
 ; IS__TUNIT_NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nounwind }
 ; IS__CGSCC_OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nounwind }
 ; IS__CGSCC_NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
 ;.
