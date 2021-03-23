@@ -308,21 +308,6 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
-// Extract least significant 12 bits from an immediate value and sign extend
-// them.
-def LO12Sext : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend64<12>(N->getZExtValue()),
-                                   SDLoc(N), N->getValueType(0));
-}]>;
-
-// Extract the most significant 20 bits from an immediate value. Add 1 if bit
-// 11 is 1, to compensate for the low 12 bits in the matching immediate addi
-// or ld/st being negative.
-def HI20 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
-                                   SDLoc(N), N->getValueType(0));
-}]>;
-
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
@@ -873,13 +858,6 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
                         (and (shl node:$A, node:$B), imm), [{
   return MatchSLLIUW(N);
 }]>;
-
-/// Immediates
-
-def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
-def : Pat<(simm32hi20:$imm), (LUI (HI20 imm:$imm))>;
-def : Pat<(i32 (simm32:$imm)), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
-      Requires<[IsRV32]>;
 
 /// Simple arithmetic operations
 
