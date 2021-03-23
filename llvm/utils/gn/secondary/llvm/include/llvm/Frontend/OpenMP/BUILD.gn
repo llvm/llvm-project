@@ -9,7 +9,7 @@ tablegen("OMPh") {
 
 tablegen("OMP") {
   visibility = [ ":public_tablegen" ]
-  args = [ "-gen-directive-gen" ]
+  args = [ "-gen-directive-impl" ]
 }
 
 # Groups all tablegen() calls that create .inc files that are included in

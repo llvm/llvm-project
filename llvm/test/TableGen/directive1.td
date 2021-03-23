@@ -1,6 +1,5 @@
 // RUN: llvm-tblgen -gen-directive-decl -I %p/../../include %s | FileCheck -match-full-lines %s
 // RUN: llvm-tblgen -gen-directive-impl -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=IMPL
-// RUN: llvm-tblgen -gen-directive-gen -I %p/../../include %s | FileCheck -match-full-lines %s -check-prefix=GEN
 
 include "llvm/Frontend/Directive/DirectiveBase.td"
 
@@ -101,12 +100,143 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 
-// IMPL:       #include "llvm/ADT/StringRef.h"
-// IMPL-NEXT:  #include "llvm/ADT/StringSwitch.h"
-// IMPL-NEXT:  #include "llvm/Support/ErrorHandling.h"
+// IMPL:       #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+// IMPL-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT:  using namespace llvm;
-// IMPL-NEXT:  using namespace tdl;
+// IMPL-NEXT:  namespace llvm {
+// IMPL-NEXT:  namespace tdl {
+// IMPL-EMPTY:
+// IMPL-NEXT:    // Sets for dira
+// IMPL-EMPTY:
+// IMPL-NEXT:    static  allowedClauses_TDLD_dira {
+// IMPL-NEXT:      llvm::tdl::Clause::TDLC_clausea,
+// IMPL-NEXT:      llvm::tdl::Clause::TDLC_clauseb,
+// IMPL-NEXT:    };
+// IMPL-EMPTY:
+// IMPL-NEXT:    static  allowedOnceClauses_TDLD_dira {
+// IMPL-NEXT:    };
+// IMPL-EMPTY:
+// IMPL-NEXT:    static  allowedExclusiveClauses_TDLD_dira {
+// IMPL-NEXT:    };
+// IMPL-EMPTY:
+// IMPL-NEXT:    static  requiredClauses_TDLD_dira {
+// IMPL-NEXT:    };
+// IMPL-NEXT:  } // namespace tdl
+// IMPL-NEXT:  } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// IMPL-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// IMPL-EMPTY:
+// IMPL-NEXT:  {
+// IMPL-NEXT:    {llvm::tdl::Directive::TDLD_dira,
+// IMPL-NEXT:      {
+// IMPL-NEXT:        llvm::tdl::allowedClauses_TDLD_dira,
+// IMPL-NEXT:        llvm::tdl::allowedOnceClauses_TDLD_dira,
+// IMPL-NEXT:        llvm::tdl::allowedExclusiveClauses_TDLD_dira,
+// IMPL-NEXT:        llvm::tdl::requiredClauses_TDLD_dira,
+// IMPL-NEXT:      }
+// IMPL-NEXT:    },
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// IMPL-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
+// IMPL-EMPTY:
+// IMPL-NEXT:  EMPTY_CLASS(Clausea);
+// IMPL-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// IMPL-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// IMPL-EMPTY:
+// IMPL-NEXT:  Clausea
+// IMPL-NEXT:  , Clauseb
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// IMPL-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// IMPL-EMPTY:
+// IMPL-NEXT:  NODE(TdlClause, Clausea)
+// IMPL-NEXT:  NODE(TdlClause, Clauseb)
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
+// IMPL-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
+// IMPL-EMPTY:
+// IMPL-NEXT:  void Before(const TdlClause::Clausea &) { Word("CLAUSEA"); }
+// IMPL-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
+// IMPL-NEXT:    Word("CLAUSEB");
+// IMPL-NEXT:    Walk("(", x.v, ")");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_CLAUSE_CHECK_ENTER
+// IMPL-NEXT:  #undef GEN_FLANG_CLAUSE_CHECK_ENTER
+// IMPL-EMPTY:
+// IMPL-NEXT:  void Enter(const parser::TdlClause::Clausea &);
+// IMPL-NEXT:  void Enter(const parser::TdlClause::Clauseb &);
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_CHECK_ENTER
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// IMPL-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// IMPL-EMPTY:
+// IMPL-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clausea>)
+// IMPL-NEXT:    return llvm::tdl::Clause::TDLC_clausea;
+// IMPL-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clauseb>)
+// IMPL-NEXT:    return llvm::tdl::Clause::TDLC_clauseb;
+// IMPL-NEXT:  llvm_unreachable("Invalid Tdl Parser clause");
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifdef GEN_CLANG_CLAUSE_CLASS
+// IMPL-NEXT:  #undef GEN_CLANG_CLAUSE_CLASS
+// IMPL-EMPTY:
+// IMPL-NEXT:  #ifndef CLAUSE
+// IMPL-NEXT:  #define CLAUSE(Enum, Str, Implicit)
+// IMPL-NEXT:  #endif
+// IMPL-NEXT:  #ifndef CLAUSE_CLASS
+// IMPL-NEXT:  #define CLAUSE_CLASS(Enum, Str, Class)
+// IMPL-NEXT:  #endif
+// IMPL-NEXT:  #ifndef CLAUSE_NO_CLASS
+// IMPL-NEXT:  #define CLAUSE_NO_CLASS(Enum, Str)
+// IMPL-NEXT:  #endif
+// IMPL-EMPTY:
+// IMPL-NEXT:  #define __CLAUSE(Name, Class)                      \
+// IMPL-NEXT:    CLAUSE(TDLC_##Name, #Name, /* Implicit */ false) \
+// IMPL-NEXT:    CLAUSE_CLASS(TDLC_##Name, #Name, Class)
+// IMPL-NEXT:  #define __CLAUSE_NO_CLASS(Name)                    \
+// IMPL-NEXT:    CLAUSE(TDLC_##Name, #Name, /* Implicit */ false) \
+// IMPL-NEXT:    CLAUSE_NO_CLASS(TDLC_##Name, #Name)
+// IMPL-NEXT:  #define __IMPLICIT_CLAUSE_CLASS(Name, Str, Class)  \
+// IMPL-NEXT:    CLAUSE(TDLC_##Name, Str, /* Implicit */ true)    \
+// IMPL-NEXT:    CLAUSE_CLASS(TDLC_##Name, Str, Class)
+// IMPL-NEXT:  #define __IMPLICIT_CLAUSE_NO_CLASS(Name, Str)      \
+// IMPL-NEXT:    CLAUSE(TDLC_##Name, Str, /* Implicit */ true)    \
+// IMPL-NEXT:    CLAUSE_NO_CLASS(TDLC_##Name, Str)
+// IMPL-EMPTY:
+// IMPL-NEXT:  __CLAUSE_NO_CLASS(clausea)
+// IMPL-NEXT:  __CLAUSE_NO_CLASS(clauseb)
+// IMPL-EMPTY:
+// IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_NO_CLASS
+// IMPL-NEXT:  #undef __IMPLICIT_CLAUSE_CLASS
+// IMPL-NEXT:  #undef __CLAUSE
+// IMPL-NEXT:  #undef CLAUSE_NO_CLASS
+// IMPL-NEXT:  #undef CLAUSE_CLASS
+// IMPL-NEXT:  #undef CLAUSE
+// IMPL-EMPTY:
+// IMPL-NEXT:  #endif // GEN_CLANG_CLAUSE_CLASS
+// IMPL-EMPTY:
+
+// IMPL:       #ifdef GEN_DIRECTIVES_IMPL
+// IMPL-NEXT:  #undef GEN_DIRECTIVES_IMPL
 // IMPL-EMPTY:
 // IMPL-NEXT:  Directive llvm::tdl::getTdlDirectiveKind(llvm::StringRef Str) {
 // IMPL-NEXT:    return llvm::StringSwitch<Directive>(Str)
@@ -177,102 +307,4 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
-
-
-
-// GEN:       #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
-// GEN-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
-// GEN-EMPTY:
-// GEN-NEXT:  namespace llvm {
-// GEN-NEXT:  namespace tdl {
-// GEN-EMPTY:
-// GEN-NEXT:    // Sets for dira
-// GEN-EMPTY:
-// GEN-NEXT:    static  allowedClauses_TDLD_dira {
-// GEN-NEXT:      llvm::tdl::Clause::TDLC_clausea,
-// GEN-NEXT:      llvm::tdl::Clause::TDLC_clauseb,
-// GEN-NEXT:    };
-// GEN-EMPTY:
-// GEN-NEXT:    static  allowedOnceClauses_TDLD_dira {
-// GEN-NEXT:    };
-// GEN-EMPTY:
-// GEN-NEXT:    static  allowedExclusiveClauses_TDLD_dira {
-// GEN-NEXT:    };
-// GEN-EMPTY:
-// GEN-NEXT:    static  requiredClauses_TDLD_dira {
-// GEN-NEXT:    };
-// GEN-NEXT:  } // namespace tdl
-// GEN-NEXT:  } // namespace llvm
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-// GEN-NEXT:  #undef GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-// GEN-EMPTY:
-// GEN-NEXT:  {
-// GEN-NEXT:    {llvm::tdl::Directive::TDLD_dira,
-// GEN-NEXT:      {
-// GEN-NEXT:        llvm::tdl::allowedClauses_TDLD_dira,
-// GEN-NEXT:        llvm::tdl::allowedOnceClauses_TDLD_dira,
-// GEN-NEXT:        llvm::tdl::allowedExclusiveClauses_TDLD_dira,
-// GEN-NEXT:        llvm::tdl::requiredClauses_TDLD_dira,
-// GEN-NEXT:      }
-// GEN-NEXT:    },
-// GEN-NEXT:  }
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_DIRECTIVE_CLAUSE_MAP
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES
-// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES
-// GEN-EMPTY:
-// GEN-NEXT:  EMPTY_CLASS(Clausea);
-// GEN-NEXT:  WRAPPER_CLASS(Clauseb, std::optional<IntExpr>);
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
-// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
-// GEN-EMPTY:
-// GEN-NEXT:  Clausea
-// GEN-NEXT:  , Clauseb
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_CLASSES_LIST
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-// GEN-NEXT:  #undef GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-// GEN-EMPTY:
-// GEN-NEXT:  NODE(TdlClause, Clausea)
-// GEN-NEXT:  NODE(TdlClause, Clauseb)
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_UNPARSE
-// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_UNPARSE
-// GEN-EMPTY:
-// GEN-NEXT:  void Before(const TdlClause::Clausea &) { Word("CLAUSEA"); }
-// GEN-NEXT:  void Unparse(const TdlClause::Clauseb &x) {
-// GEN-NEXT:    Word("CLAUSEB");
-// GEN-NEXT:    Walk("(", x.v, ")");
-// GEN-NEXT:  }
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_UNPARSE
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_CHECK_ENTER
-// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_CHECK_ENTER
-// GEN-EMPTY:
-// GEN-NEXT:  void Enter(const parser::TdlClause::Clausea &);
-// GEN-NEXT:  void Enter(const parser::TdlClause::Clauseb &);
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_CHECK_ENTER
-// GEN-EMPTY:
-// GEN-NEXT:  #ifdef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-// GEN-NEXT:  #undef GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-// GEN-EMPTY:
-// GEN-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clausea>)
-// GEN-NEXT:    return llvm::tdl::Clause::TDLC_clausea;
-// GEN-NEXT:  if constexpr (std::is_same_v<A, parser::TdlClause::Clauseb>)
-// GEN-NEXT:    return llvm::tdl::Clause::TDLC_clauseb;
-// GEN-NEXT:  llvm_unreachable("Invalid Tdl Parser clause");
-// GEN-EMPTY:
-// GEN-NEXT:  #endif // GEN_FLANG_CLAUSE_PARSER_KIND_MAP
-// GEN-EMPTY:
+// IMPL-NEXT:  #endif // GEN_DIRECTIVES_IMPL

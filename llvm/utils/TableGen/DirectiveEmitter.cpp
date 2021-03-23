@@ -758,37 +758,11 @@ void GenerateClauseClassMacro(const DirectiveLanguage &DirLang,
   OS << "#undef CLAUSE\n";
 }
 
-// Generate the implementation section for the enumeration in the directive
-// language.
-void EmitDirectivesGen(RecordKeeper &Records, raw_ostream &OS) {
-  const auto DirLang = DirectiveLanguage{Records};
-  if (DirLang.HasValidityErrors())
-    return;
-
-  EmitDirectivesFlangImpl(DirLang, OS);
-
-  GenerateClauseClassMacro(DirLang, OS);
-}
-
-// Generate the implementation for the enumeration in the directive
+// Generate the implemenation for the enumeration in the directive
 // language. This code can be included in library.
-void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
-  const auto DirLang = DirectiveLanguage{Records};
-  if (DirLang.HasValidityErrors())
-    return;
-
-  if (!DirLang.getIncludeHeader().empty())
-    OS << "#include \"" << DirLang.getIncludeHeader() << "\"\n\n";
-
-  OS << "#include \"llvm/ADT/StringRef.h\"\n";
-  OS << "#include \"llvm/ADT/StringSwitch.h\"\n";
-  OS << "#include \"llvm/Support/ErrorHandling.h\"\n";
-  OS << "\n";
-  OS << "using namespace llvm;\n";
-  llvm::SmallVector<StringRef, 2> Namespaces;
-  llvm::SplitString(DirLang.getCppNamespace(), Namespaces, "::");
-  for (auto Ns : Namespaces)
-    OS << "using namespace " << Ns << ";\n";
+void EmitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
+                             raw_ostream &OS) {
+  IfDefScope Scope("GEN_DIRECTIVES_IMPL", OS);
 
   // getDirectiveKind(StringRef Str)
   GenerateGetKind(DirLang.getDirectives(), OS, "Directive", DirLang,
@@ -812,6 +786,20 @@ void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
 
   // isAllowedClauseForDirective(Directive D, Clause C, unsigned Version)
   GenerateIsAllowedClause(DirLang, OS);
+}
+
+// Generate the implemenation section for the enumeration in the directive
+// language.
+void EmitDirectivesImpl(RecordKeeper &Records, raw_ostream &OS) {
+  const auto DirLang = DirectiveLanguage{Records};
+  if (DirLang.HasValidityErrors())
+    return;
+
+  EmitDirectivesFlangImpl(DirLang, OS);
+
+  GenerateClauseClassMacro(DirLang, OS);
+
+  EmitDirectivesBasicImpl(DirLang, OS);
 }
 
 } // namespace llvm

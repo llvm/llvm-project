@@ -30,10 +30,6 @@ public:
     return Def->getValueAsString("clausePrefix");
   }
 
-  StringRef getIncludeHeader() const {
-    return Def->getValueAsString("includeHeader");
-  }
-
   StringRef getClauseEnumSetClass() const {
     return Def->getValueAsString("clauseEnumSetClass");
   }
