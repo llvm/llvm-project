@@ -33,7 +33,7 @@ struct TestDecomposeCallGraphTypes
     TypeConverter typeConverter;
     ConversionTarget target(*context);
     ValueDecomposer decomposer;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
 
     target.addLegalDialect<test::TestDialect>();
 

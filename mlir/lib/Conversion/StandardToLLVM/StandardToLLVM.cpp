@@ -3856,10 +3856,10 @@ private:
 
 /// Collect a set of patterns to convert from the Standard dialect to LLVM.
 void mlir::populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // FIXME: this should be tablegen'ed
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AbsFOpLowering,
       AddFOpLowering,
       AddIOpLowering,
@@ -3926,9 +3926,9 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
 }
 
 void mlir::populateStdToLLVMMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AssumeAlignmentOpLowering,
       DeallocOpLowering,
       DimOpLowering,
@@ -3945,21 +3945,21 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       ViewOpLowering>(converter);
   // clang-format on
   if (converter.getOptions().useAlignedAlloc)
-    patterns.insert<AlignedAllocOpLowering>(converter);
+    patterns.add<AlignedAllocOpLowering>(converter);
   else
-    patterns.insert<AllocOpLowering>(converter);
+    patterns.add<AllocOpLowering>(converter);
 }
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   if (converter.getOptions().useBarePtrCallConv)
-    patterns.insert<BarePtrFuncOpConversion>(converter);
+    patterns.add<BarePtrFuncOpConversion>(converter);
   else
-    patterns.insert<FuncOpConversion>(converter);
+    patterns.add<FuncOpConversion>(converter);
 }
 
-void mlir::populateStdToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                               RewritePatternSet &patterns) {
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
@@ -4079,7 +4079,7 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
                                   llvm::DataLayout(this->dataLayout)};
     LLVMTypeConverter typeConverter(&getContext(), options);
 
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());

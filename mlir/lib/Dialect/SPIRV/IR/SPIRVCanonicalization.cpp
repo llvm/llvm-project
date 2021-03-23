@@ -111,17 +111,17 @@ struct CombineChainedAccessChain
 } // end anonymous namespace
 
 void spirv::AccessChainOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<CombineChainedAccessChain>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<CombineChainedAccessChain>(context);
 }
 
 //===----------------------------------------------------------------------===//
 // spv.BitcastOp
 //===----------------------------------------------------------------------===//
 
-void spirv::BitcastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ConvertChainedBitcast>(context);
+void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
+  results.add<ConvertChainedBitcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -230,10 +230,11 @@ OpFoldResult spirv::LogicalAndOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ConvertLogicalNotOfIEqual, ConvertLogicalNotOfINotEqual,
-                 ConvertLogicalNotOfLogicalEqual,
-                 ConvertLogicalNotOfLogicalNotEqual>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results
+      .add<ConvertLogicalNotOfIEqual, ConvertLogicalNotOfINotEqual,
+           ConvertLogicalNotOfLogicalEqual, ConvertLogicalNotOfLogicalNotEqual>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -415,7 +416,7 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
 }
 } // end anonymous namespace
 
-void spirv::SelectionOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ConvertSelectionOpToSelect>(context);
+void spirv::SelectionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                     MLIRContext *context) {
+  results.add<ConvertSelectionOpToSelect>(context);
 }

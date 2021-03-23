@@ -378,7 +378,7 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
     // Apply canonicalization so the newForOp + yield folds immediately, thus
     // cleaning up the IR and potentially enabling more hoisting.
     if (changed) {
-      OwningRewritePatternList patterns(func->getContext());
+      RewritePatternSet patterns(func->getContext());
       scf::ForOp::getCanonicalizationPatterns(patterns, func->getContext());
       (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
     }

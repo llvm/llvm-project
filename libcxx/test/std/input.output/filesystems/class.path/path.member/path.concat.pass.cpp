@@ -11,6 +11,8 @@
 // These tests require locale for non-char paths
 // UNSUPPORTED: libcpp-has-no-localization
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // class path

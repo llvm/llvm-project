@@ -35,7 +35,7 @@ void ConvertStandardToSPIRVPass::runOnOperation() {
       spirv::SPIRVConversionTarget::get(targetAttr);
 
   SPIRVTypeConverter typeConverter(targetAttr);
-  OwningRewritePatternList patterns(context);
+  RewritePatternSet patterns(context);
   populateStandardToSPIRVPatterns(typeConverter, patterns);
   populateTensorToSPIRVPatterns(typeConverter,
                                 /*byteCountThreshold=*/64, patterns);

@@ -163,7 +163,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   void runOnFunction() override {
     auto *context = &getContext();
     DetensorizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     target.addDynamicallyLegalOp<GenericOp>([&](GenericOp op) {
@@ -194,9 +194,9 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                  op, typeConverter, /*returnOpAlwaysLegal*/ true);
     });
 
-    patterns.insert<DetensorizeGenericOp>(typeConverter, context);
-    patterns.insert<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
-                                                     context, typeConverter);
+    patterns.add<DetensorizeGenericOp>(typeConverter, context);
+    patterns.add<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
+                                                  context, typeConverter);
     // Since non-entry block arguments get detensorized, we also need to update
     // the control flow inside the function to reflect the correct types.
     populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
@@ -204,8 +204,8 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     if (failed(applyFullConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
 
-    OwningRewritePatternList canonPatterns(context);
-    canonPatterns.insert<ExtractFromReshapeFromElements>(context);
+    RewritePatternSet canonPatterns(context);
+    canonPatterns.add<ExtractFromReshapeFromElements>(context);
     if (failed(applyPatternsAndFoldGreedily(getFunction(),
                                             std::move(canonPatterns))))
       signalPassFailure();

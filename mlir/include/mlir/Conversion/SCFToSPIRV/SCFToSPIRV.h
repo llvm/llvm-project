@@ -18,9 +18,10 @@ namespace mlir {
 class Pass;
 
 // Owning list of rewriting patterns.
-class OwningRewritePatternList;
 class SPIRVTypeConverter;
 struct ScfToSPIRVContextImpl;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 struct ScfToSPIRVContext {
   ScfToSPIRVContext();
@@ -36,7 +37,7 @@ private:
 /// loop.terminator to CFG operations within the SPIR-V dialect.
 void populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                 ScfToSPIRVContext &scfToSPIRVContext,
-                                OwningRewritePatternList &patterns);
+                                RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_SCFTOSPIRV_SCFTOSPIRV_H_

@@ -321,7 +321,7 @@ LogicalResult TerminatorOpConversion::matchAndRewrite(
 
 void mlir::populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       ScfToSPIRVContext &scfToSPIRVContext,
-                                      OwningRewritePatternList &patterns) {
-  patterns.insert<ForOpConversion, IfOpConversion, TerminatorOpConversion>(
+                                      RewritePatternSet &patterns) {
+  patterns.add<ForOpConversion, IfOpConversion, TerminatorOpConversion>(
       patterns.getContext(), typeConverter, scfToSPIRVContext.getImpl());
 }

@@ -208,6 +208,26 @@ TestDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
   return success();
 }
 
+Optional<Dialect::ParseOpHook>
+TestDialect::getParseOperationHook(StringRef opName) const {
+  if (opName == "test.dialect_custom_printer") {
+    return ParseOpHook{[](OpAsmParser &parser, OperationState &state) {
+      return parser.parseKeyword("custom_format");
+    }};
+  }
+  return None;
+}
+
+LogicalResult TestDialect::printOperation(Operation *op,
+                                          OpAsmPrinter &printer) const {
+  StringRef opName = op->getName().getStringRef();
+  if (opName == "test.dialect_custom_printer") {
+    printer.getStream() << opName << " custom_format";
+    return success();
+  }
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // TestBranchOp
 //===----------------------------------------------------------------------===//
@@ -235,9 +255,9 @@ struct FoldToCallOpPattern : public OpRewritePattern<FoldToCallOp> {
 };
 } // end anonymous namespace
 
-void FoldToCallOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<FoldToCallOpPattern>(context);
+void FoldToCallOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<FoldToCallOpPattern>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -615,8 +635,8 @@ struct TestRemoveOpWithInnerOps
 } // end anonymous namespace
 
 void TestOpWithRegionPattern::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<TestRemoveOpWithInnerOps>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<TestRemoveOpWithInnerOps>(context);
 }
 
 OpFoldResult TestOpWithRegionFold::fold(ArrayRef<Attribute> operands) {

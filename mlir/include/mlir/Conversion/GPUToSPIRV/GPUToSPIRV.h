@@ -22,7 +22,7 @@ class SPIRVTypeConverter;
 /// SPIR-V ops. For a gpu.func to be converted, it should have a
 /// spv.entry_point_abi attribute.
 void populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                OwningRewritePatternList &patterns);
+                                RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H

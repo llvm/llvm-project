@@ -330,9 +330,9 @@ namespace {
 }
 
 void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                      OwningRewritePatternList &patterns) {
+                                      RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
-  patterns.insert<
+  patterns.add<
       GPUFuncOpConversion, GPUModuleConversion, GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,

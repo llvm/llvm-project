@@ -1927,11 +1927,8 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   unsigned AS = CI.getAddressSpace();
   if (CI.getOperand(0)->getType()->getScalarSizeInBits() !=
       DL.getPointerSizeInBits(AS)) {
-    Type *Ty = DL.getIntPtrType(CI.getContext(), AS);
-    // Handle vectors of pointers.
-    if (auto *CIVTy = dyn_cast<VectorType>(CI.getType()))
-      Ty = VectorType::get(Ty, CIVTy->getElementCount());
-
+    Type *Ty = CI.getOperand(0)->getType()->getWithNewType(
+        DL.getIntPtrType(CI.getContext(), AS));
     Value *P = Builder.CreateZExtOrTrunc(CI.getOperand(0), Ty);
     return new IntToPtrInst(P, CI.getType());
   }
@@ -1970,16 +1967,14 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
   // to be exposed to other transforms.
   Value *SrcOp = CI.getPointerOperand();
+  Type *SrcTy = SrcOp->getType();
   Type *Ty = CI.getType();
   unsigned AS = CI.getPointerAddressSpace();
   unsigned TySize = Ty->getScalarSizeInBits();
   unsigned PtrSize = DL.getPointerSizeInBits(AS);
   if (TySize != PtrSize) {
-    Type *IntPtrTy = DL.getIntPtrType(CI.getContext(), AS);
-    // Handle vectors of pointers.
-    if (auto *VecTy = dyn_cast<VectorType>(Ty))
-      IntPtrTy = VectorType::get(IntPtrTy, VecTy->getElementCount());
-
+    Type *IntPtrTy =
+        SrcTy->getWithNewType(DL.getIntPtrType(CI.getContext(), AS));
     Value *P = Builder.CreatePtrToInt(SrcOp, IntPtrTy);
     return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
   }

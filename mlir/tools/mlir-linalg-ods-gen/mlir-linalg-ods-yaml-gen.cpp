@@ -519,10 +519,10 @@ ArrayAttr {0}::iterator_types() {
 // {0}: Class name
 const char structuredOpCanonicalizersAndFoldersFormat[] = R"FMT(
 void {0}::getCanonicalizationPatterns(
-    OwningRewritePatternList &results,
+    RewritePatternSet &results,
     MLIRContext *context) {{
-  results.insert<EraseDeadLinalgOp>();
-  results.insert<FoldTensorCastOp>();
+  results.add<EraseDeadLinalgOp>();
+  results.add<FoldTensorCastOp>();
 }
 LogicalResult {0}::fold(ArrayRef<Attribute>,
                         SmallVectorImpl<OpFoldResult> &) {{

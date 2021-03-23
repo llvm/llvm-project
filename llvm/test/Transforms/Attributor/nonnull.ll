@@ -37,7 +37,7 @@ define i8* @test2(i8* nonnull %p) {
 
 define i8* @test2A(i1 %c, i8* %ret) {
 ; ATTRIBUTOR: define nonnull i8* @test2A(i1 %c, i8* nofree nonnull readnone returned %ret)
-; NOT_CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; NOT_CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2A
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
 ; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
@@ -48,7 +48,7 @@ define i8* @test2A(i1 %c, i8* %ret) {
 ; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "nonnull"(i8* [[RET]]) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test2A
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
@@ -70,7 +70,7 @@ B:
 
 define i8* @test2B(i1 %c, i8* %ret) {
 ; ATTRIBUTOR: define nonnull dereferenceable(4) i8* @test2B(i1 %c, i8* nofree nonnull readnone returned dereferenceable(4) %ret)
-; NOT_CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; NOT_CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test2B
 ; NOT_CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
 ; NOT_CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
@@ -81,7 +81,7 @@ define i8* @test2B(i1 %c, i8* %ret) {
 ; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]] [ "dereferenceable"(i8* [[RET]], i32 4) ]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[RET]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test2B
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]], i8* nofree nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[RET:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
@@ -335,14 +335,14 @@ define i8* @test9(i8* %a, i64 %n) {
 ; ATTRIBUTOR_OPM: define i8* @test10
 ; ATTRIBUTOR_NPM: define nonnull i8* @test10
 define i8* @test10(i8* %a, i64 %n) {
-; NOT_CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; NOT_CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@test10
 ; NOT_CGSCC_OPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; NOT_CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR12]]
 ; NOT_CGSCC_OPM-NEXT:    [[B:%.*]] = getelementptr inbounds i8, i8* [[A]], i64 [[N]]
 ; NOT_CGSCC_OPM-NEXT:    ret i8* [[B]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nofree nosync nounwind willreturn
+; IS__CGSCC_OPM: Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test10
 ; IS__CGSCC_OPM-SAME: (i8* nofree readnone "no-capture-maybe-returned" [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; IS__CGSCC_OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR13]]
@@ -1718,7 +1718,7 @@ declare void @nonnull_callee(i8* nonnull %p)
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
 ;.
-; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
+; IS__TUNIT____: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__TUNIT____: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; IS__TUNIT____: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__TUNIT____: attributes #[[ATTR3]] = { noreturn }
@@ -1734,7 +1734,7 @@ attributes #1 = { nounwind willreturn}
 ; IS__TUNIT____: attributes #[[ATTR13]] = { nofree nosync nounwind readonly }
 ; IS__TUNIT____: attributes #[[ATTR14]] = { readonly willreturn }
 ;.
-; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
@@ -1751,7 +1751,7 @@ attributes #1 = { nounwind willreturn}
 ; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nofree nosync nounwind readonly }
 ; IS__CGSCC_OPM: attributes #[[ATTR15]] = { readonly willreturn }
 ;.
-; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR0]] = { inaccessiblememonly nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR2]] = { nofree noreturn nosync nounwind readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR3]] = { noreturn }

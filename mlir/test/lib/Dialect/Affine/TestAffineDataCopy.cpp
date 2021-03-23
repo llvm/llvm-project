@@ -110,7 +110,7 @@ void TestAffineDataCopy::runOnFunction() {
   // Promoting single iteration loops could lead to simplification of
   // generated load's/store's, and the latter could anyway also be
   // canonicalized.
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   for (auto op : copyOps) {
     patterns.clear();
     if (isa<AffineLoadOp>(op)) {

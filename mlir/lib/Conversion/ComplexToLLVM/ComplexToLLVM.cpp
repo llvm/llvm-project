@@ -258,9 +258,9 @@ struct SubOpConversion : public ConvertOpToLLVMPattern<complex::SubOp> {
 } // namespace
 
 void mlir::populateComplexToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AbsOpConversion,
       AddOpConversion,
       CreateOpConversion,
@@ -284,7 +284,7 @@ void ConvertComplexToLLVMPass::runOnOperation() {
   auto module = getOperation();
 
   // Convert to the LLVM IR dialect using the converter defined above.
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   LLVMTypeConverter converter(&getContext());
   populateComplexToLLVMConversionPatterns(converter, patterns);
 

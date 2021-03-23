@@ -37,7 +37,7 @@ namespace {
 class GreedyPatternRewriteDriver : public PatternRewriter {
 public:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
-                                      const FrozenRewritePatternList &patterns,
+                                      const FrozenRewritePatternSet &patterns,
                                       bool useTopDownTraversal)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx),
         useTopDownTraversal(useTopDownTraversal) {
@@ -242,13 +242,13 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 ///
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(Operation *op,
-                                   const FrozenRewritePatternList &patterns,
+                                   const FrozenRewritePatternSet &patterns,
                                    bool useTopDownTraversal) {
   return applyPatternsAndFoldGreedily(op, patterns, maxPatternMatchIterations,
                                       useTopDownTraversal);
 }
 LogicalResult mlir::applyPatternsAndFoldGreedily(
-    Operation *op, const FrozenRewritePatternList &patterns,
+    Operation *op, const FrozenRewritePatternSet &patterns,
     unsigned maxIterations, bool useTopDownTraversal) {
   return applyPatternsAndFoldGreedily(op->getRegions(), patterns, maxIterations,
                                       useTopDownTraversal);
@@ -256,13 +256,13 @@ LogicalResult mlir::applyPatternsAndFoldGreedily(
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                                   const FrozenRewritePatternList &patterns,
+                                   const FrozenRewritePatternSet &patterns,
                                    bool useTopDownTraversal) {
   return applyPatternsAndFoldGreedily(
       regions, patterns, maxPatternMatchIterations, useTopDownTraversal);
 }
 LogicalResult mlir::applyPatternsAndFoldGreedily(
-    MutableArrayRef<Region> regions, const FrozenRewritePatternList &patterns,
+    MutableArrayRef<Region> regions, const FrozenRewritePatternSet &patterns,
     unsigned maxIterations, bool useTopDownTraversal) {
   if (regions.empty())
     return success();
@@ -298,7 +298,7 @@ namespace {
 class OpPatternRewriteDriver : public PatternRewriter {
 public:
   explicit OpPatternRewriteDriver(MLIRContext *ctx,
-                                  const FrozenRewritePatternList &patterns)
+                                  const FrozenRewritePatternSet &patterns)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
     // Apply a simple cost model based solely on pattern benefit.
     matcher.applyDefaultCostModel();
@@ -382,7 +382,7 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
 /// folding. `erased` is set to true if the op is erased as a result of being
 /// folded, replaced, or dead.
 LogicalResult mlir::applyOpPatternsAndFold(
-    Operation *op, const FrozenRewritePatternList &patterns, bool *erased) {
+    Operation *op, const FrozenRewritePatternSet &patterns, bool *erased) {
   // Start the pattern driver.
   OpPatternRewriteDriver driver(op->getContext(), patterns);
   bool opErased;

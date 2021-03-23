@@ -11,12 +11,11 @@
 
 namespace mlir {
 
-class OwningRewritePatternList;
+class RewritePatternSet;
 
-void populateExpandTanhPattern(OwningRewritePatternList &patterns);
+void populateExpandTanhPattern(RewritePatternSet &patterns);
 
-void populateMathPolynomialApproximationPatterns(
-    OwningRewritePatternList &patterns);
+void populateMathPolynomialApproximationPatterns(RewritePatternSet &patterns);
 
 } // namespace mlir
 

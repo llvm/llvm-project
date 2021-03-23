@@ -63,7 +63,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2841,52 +2840,31 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
-/// Determine if the two branches share a common destination and deduce a glue
-/// that joins branch's conditions to arrive at the common destination if that
-/// would be profitable.
+// Determine if the two branches share a common destination,
+// and deduce a glue that we need to use to join branch's conditions
+// to arrive at the common destination.
 static Optional<std::pair<Instruction::BinaryOps, bool>>
-shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
-                                          const TargetTransformInfo *TTI) {
+CheckIfCondBranchesShareCommonDestination(BranchInst *BI, BranchInst *PBI) {
   assert(BI && PBI && BI->isConditional() && PBI->isConditional() &&
          "Both blocks must end with a conditional branches.");
   assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
          "PredBB must be a predecessor of BB.");
 
-  // We have the potential to fold the conditions together, but if the
-  // predecessor branch is predictable, we may not want to merge them.
-  uint64_t PTWeight, PFWeight;
-  BranchProbability PBITrueProb, Likely;
-  if (PBI->extractProfMetadata(PTWeight, PFWeight) &&
-      (PTWeight + PFWeight) != 0) {
-    PBITrueProb =
-        BranchProbability::getBranchProbability(PTWeight, PTWeight + PFWeight);
-    Likely = TTI->getPredictableBranchThreshold();
-  }
-
-  if (PBI->getSuccessor(0) == BI->getSuccessor(0)) {
-    // Speculate the 2nd condition unless the 1st is probably true.
-    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
-      return {{Instruction::Or, false}};
-  } else if (PBI->getSuccessor(1) == BI->getSuccessor(1)) {
-    // Speculate the 2nd condition unless the 1st is probably false.
-    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
-      return {{Instruction::And, false}};
-  } else if (PBI->getSuccessor(0) == BI->getSuccessor(1)) {
-    // Speculate the 2nd condition unless the 1st is probably true.
-    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
-      return {{Instruction::And, true}};
-  } else if (PBI->getSuccessor(1) == BI->getSuccessor(0)) {
-    // Speculate the 2nd condition unless the 1st is probably false.
-    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
-      return {{Instruction::Or, true}};
-  }
+  if (PBI->getSuccessor(0) == BI->getSuccessor(0))
+    return {{Instruction::Or, false}};
+  else if (PBI->getSuccessor(1) == BI->getSuccessor(1))
+    return {{Instruction::And, false}};
+  else if (PBI->getSuccessor(0) == BI->getSuccessor(1))
+    return {{Instruction::And, true}};
+  else if (PBI->getSuccessor(1) == BI->getSuccessor(0))
+    return {{Instruction::Or, true}};
   return None;
 }
 
-static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
+static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
                                              DomTreeUpdater *DTU,
                                              MemorySSAUpdater *MSSAU,
-                                             const TargetTransformInfo *TTI) {
+                                             bool PoisonSafe) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *PredBlock = PBI->getParent();
 
@@ -2894,7 +2872,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Instruction::BinaryOps Opc;
   bool InvertPredCond;
   std::tie(Opc, InvertPredCond) =
-      *shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI);
+      *CheckIfCondBranchesShareCommonDestination(BI, PBI);
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
@@ -2985,8 +2963,17 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Now that the Cond was cloned into the predecessor basic block,
   // or/and the two conditions together.
-  Instruction *NewCond = cast<Instruction>(Builder.CreateBinOp(
-      Opc, PBI->getCondition(), VMap[BI->getCondition()], "or.cond"));
+  Value *NewCond = nullptr;
+  Value *BICond = VMap[BI->getCondition()];
+  bool UseBinOp = !PoisonSafe || impliesPoison(BICond, PBI->getCondition());
+
+  if (UseBinOp)
+    NewCond = Builder.CreateBinOp(Opc, PBI->getCondition(), BICond, "or.cond");
+  else
+    NewCond =
+        Opc == Instruction::And
+            ? Builder.CreateLogicalAnd(PBI->getCondition(), BICond, "or.cond")
+            : Builder.CreateLogicalOr(PBI->getCondition(), BICond, "or.cond");
   PBI->setCondition(NewCond);
 
   // Copy any debug value intrinsics into the end of PredBlock.
@@ -3009,7 +2996,8 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                                   MemorySSAUpdater *MSSAU,
                                   const TargetTransformInfo *TTI,
-                                  unsigned BonusInstThreshold) {
+                                  unsigned BonusInstThreshold,
+                                  bool PoisonSafe) {
   // If this block ends with an unconditional branch,
   // let SpeculativelyExecuteBB() deal with it.
   if (!BI->isConditional())
@@ -3082,8 +3070,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
     // Determine if the two branches share a common destination.
     Instruction::BinaryOps Opc;
     bool InvertPredCond;
-    if (auto Recipe = shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI))
-      std::tie(Opc, InvertPredCond) = *Recipe;
+    if (auto Recepie = CheckIfCondBranchesShareCommonDestination(BI, PBI))
+      std::tie(Opc, InvertPredCond) = *Recepie;
     else
       continue;
 
@@ -3100,7 +3088,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         continue;
     }
 
-    return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, TTI);
+    return PerformBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, PoisonSafe);
   }
   return Changed;
 }
@@ -6290,7 +6278,7 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
   // predecessor and use logical operations to update the incoming value
   // for PHI nodes in common successor.
   if (FoldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
-                             Options.BonusInstThreshold))
+                             Options.BonusInstThreshold, true))
     return requestResimplify();
   return false;
 }
@@ -6354,7 +6342,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   // branches to us and one of our successors, fold the comparison into the
   // predecessor and use logical operations to pick the right destination.
   if (FoldBranchToCommonDest(BI, DTU, /*MSSAU=*/nullptr, &TTI,
-                             Options.BonusInstThreshold))
+                             Options.BonusInstThreshold, true))
     return requestResimplify();
 
   // We have a conditional branch to two blocks that are only reachable

@@ -13,10 +13,12 @@
 
 namespace mlir {
 class LLVMTypeConverter;
-class OwningRewritePatternList;
 class ConversionTarget;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
-template <typename OpT> class OperationPass;
+template <typename OpT>
+class OperationPass;
 
 namespace gpu {
 class GPUModuleOp;
@@ -27,7 +29,7 @@ void configureGpuToNVVMConversionLegality(ConversionTarget &target);
 
 /// Collect a set of patterns to convert from the GPU dialect to NVVM.
 void populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                         OwningRewritePatternList &patterns);
+                                         RewritePatternSet &patterns);
 
 /// Creates a pass that lowers GPU dialect operations to NVVM counterparts. The
 /// index bitwidth used for the lowering of the device side index computations

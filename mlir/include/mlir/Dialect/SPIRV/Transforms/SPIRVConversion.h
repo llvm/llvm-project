@@ -68,7 +68,7 @@ private:
 /// interface/ABI; they convert function parameters to be of SPIR-V allowed
 /// types.
 void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                        OwningRewritePatternList &patterns);
+                                        RewritePatternSet &patterns);
 
 namespace spirv {
 class AccessChainOp;

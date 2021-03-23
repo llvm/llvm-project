@@ -294,8 +294,8 @@ Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
 
 /// See if V simplifies when its operand Op is replaced with RepOp. If not,
 /// return null.
-/// AllowRefinement specifies whether the simplification can be a refinement,
-/// or whether it needs to be strictly identical.
+/// AllowRefinement specifies whether the simplification can be a refinement
+/// (e.g. 0 instead of poison), or whether it needs to be strictly identical.
 Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                               const SimplifyQuery &Q, bool AllowRefinement);
 

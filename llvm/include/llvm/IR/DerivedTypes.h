@@ -677,14 +677,17 @@ Type *Type::getExtendedType() const {
   return cast<IntegerType>(this)->getExtendedType();
 }
 
+Type *Type::getWithNewType(Type *EltTy) const {
+  if (auto *VTy = dyn_cast<VectorType>(this))
+    return VectorType::get(EltTy, VTy->getElementCount());
+  return EltTy;
+}
+
 Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
   assert(
       isIntOrIntVectorTy() &&
       "Original type expected to be a vector of integers or a scalar integer.");
-  Type *NewType = getIntNTy(getContext(), NewBitWidth);
-  if (auto *VTy = dyn_cast<VectorType>(this))
-    NewType = VectorType::get(NewType, VTy->getElementCount());
-  return NewType;
+  return getWithNewType(getIntNTy(getContext(), NewBitWidth));
 }
 
 unsigned Type::getPointerAddressSpace() const {

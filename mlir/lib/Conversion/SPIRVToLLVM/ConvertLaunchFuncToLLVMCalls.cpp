@@ -278,10 +278,10 @@ public:
         /*emitCWrappers=*/true,
         /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout};
     auto *context = module.getContext();
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    patterns.insert<GPULaunchLowering>(typeConverter);
+    patterns.add<GPULaunchLowering>(typeConverter);
 
     // Pull in SPIR-V type conversion patterns to convert SPIR-V global
     // variable's type to LLVM dialect type.

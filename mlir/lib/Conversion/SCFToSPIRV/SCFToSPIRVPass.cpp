@@ -37,7 +37,7 @@ void SCFToSPIRVPass::runOnOperation() {
 
   SPIRVTypeConverter typeConverter(targetAttr);
   ScfToSPIRVContext scfContext;
-  OwningRewritePatternList patterns(context);
+  RewritePatternSet patterns(context);
   populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
   populateStandardToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
