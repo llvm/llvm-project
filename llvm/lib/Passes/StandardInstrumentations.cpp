@@ -15,6 +15,7 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -25,10 +26,12 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include <unordered_set>
 #include <vector>
@@ -116,6 +119,12 @@ static cl::opt<bool>
 static cl::opt<std::string>
     DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
                cl::desc("system diff used by change reporters"));
+
+// An option to print the IR that was being processed when a pass crashes.
+static cl::opt<bool>
+    PrintCrashIR("print-on-crash",
+                 cl::desc("Print the last form of the IR before crash"),
+                 cl::init(false), cl::Hidden);
 
 namespace {
 
@@ -1153,6 +1162,68 @@ StandardInstrumentations::StandardInstrumentations(bool DebugLogging,
       PrintChangedDiff(PrintChanged == ChangePrinter::PrintChangedDiffVerbose),
       Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
+std::mutex PrintCrashIRInstrumentation::MtxLock::Mtx;
+DenseSet<PrintCrashIRInstrumentation *>
+    *PrintCrashIRInstrumentation::CrashReporters = nullptr;
+
+void PrintCrashIRInstrumentation::reportCrashIR() { dbgs() << SavedIR; }
+
+void PrintCrashIRInstrumentation::SignalHandler(void *) {
+  // Called by signal handlers so do not lock here
+  // Are any of PrintCrashIRInstrumentation objects still alive?
+  if (!CrashReporters)
+    return;
+
+  assert(PrintCrashIR && "Did not expect to get here without option set.");
+  for (auto I : *CrashReporters)
+    I->reportCrashIR();
+}
+
+PrintCrashIRInstrumentation::~PrintCrashIRInstrumentation() {
+  if (!PrintCrashIR)
+    return;
+
+  MtxLock Lock;
+  assert(CrashReporters && "Expected CrashReporters to be set");
+
+  // Was this registered?
+  DenseSet<PrintCrashIRInstrumentation *>::iterator I =
+      CrashReporters->find(this);
+  if (I == CrashReporters->end())
+    return;
+  CrashReporters->erase(I);
+  if (!CrashReporters->empty())
+    return;
+  delete CrashReporters;
+  CrashReporters = nullptr;
+}
+
+void PrintCrashIRInstrumentation::registerCallbacks(
+    PassInstrumentationCallbacks &PIC) {
+  if (!PrintCrashIR)
+    return;
+
+  {
+    MtxLock Lock;
+    if (!CrashReporters) {
+      CrashReporters = new DenseSet<PrintCrashIRInstrumentation *>();
+      sys::AddSignalHandler(SignalHandler, nullptr);
+    }
+    CrashReporters->insert(this);
+  }
+  PIC.registerBeforeNonSkippedPassCallback([this](StringRef PassID, Any IR) {
+    assert((MtxLock(), CrashReporters && CrashReporters->find(this) !=
+                                             CrashReporters->end()) &&
+           "Expected CrashReporters to be set and containing this");
+    SavedIR.clear();
+    SmallString<80> Banner =
+        formatv("*** Dump of {0}IR Before Last Pass {1} Started ***",
+                llvm::forcePrintModuleIR() ? "Module " : "", PassID);
+    raw_string_ostream OS(SavedIR);
+    unwrapAndPrint(OS, IR, Banner, llvm::forcePrintModuleIR());
+  });
+}
+
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
   PrintIR.registerCallbacks(PIC);
@@ -1166,6 +1237,7 @@ void StandardInstrumentations::registerCallbacks(
   if (VerifyEach)
     Verify.registerCallbacks(PIC);
   PrintChangedDiff.registerCallbacks(PIC);
+  PrintCrashIR.registerCallbacks(PIC);
 }
 
 namespace llvm {

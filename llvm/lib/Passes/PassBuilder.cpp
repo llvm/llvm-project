@@ -438,6 +438,18 @@ bool shouldPopulateClassToPassNames() {
   return !printBeforePasses().empty() || !printAfterPasses().empty();
 }
 
+// A pass for testing -print-on-crash.
+// DO NOT USE THIS EXCEPT FOR TESTING!
+class TriggerCrashPass : public PassInfoMixin<TriggerCrashPass> {
+public:
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+};
+
+// DO NOT USE THIS EXCEPT FOR TESTING!
+PreservedAnalyses TriggerCrashPass::run(Function &, FunctionAnalysisManager &) {
+  __builtin_trap();
+}
+
 } // namespace
 
 PassBuilder::PassBuilder(bool DebugLogging, TargetMachine *TM,

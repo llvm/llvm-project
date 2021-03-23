@@ -15,6 +15,7 @@
 #ifndef LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 #define LLVM_PASSES_STANDARDINSTRUMENTATIONS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -390,6 +392,35 @@ public:
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
+// Print IR on crash.
+class PrintCrashIRInstrumentation {
+public:
+  PrintCrashIRInstrumentation()
+      : SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
+  ~PrintCrashIRInstrumentation();
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  void reportCrashIR();
+
+protected:
+  std::string SavedIR;
+
+private:
+  // All of the crash reporters that will report on a crash.
+  static DenseSet<PrintCrashIRInstrumentation *> *CrashReporters;
+  // Crash handler registered when print-on-crash is specified.
+  static void SignalHandler(void *);
+  // Exception-safe locking
+  class MtxLock {
+  public:
+    MtxLock() { Mtx.lock(); }
+    ~MtxLock() { Mtx.unlock(); }
+
+  protected:
+    // Avoid races when creating/destroying the crash IR printers.
+    static std::mutex Mtx;
+  };
+};
+
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -402,6 +433,7 @@ class StandardInstrumentations {
   IRChangedPrinter PrintChangedIR;
   PseudoProbeVerifier PseudoProbeVerification;
   InLineChangePrinter PrintChangedDiff;
+  PrintCrashIRInstrumentation PrintCrashIR;
   VerifyInstrumentation Verify;
 
   bool VerifyEach;
@@ -419,7 +451,6 @@ extern template class TextChangeReporter<std::string>;
 
 extern template class ChangeReporter<ChangedIRData>;
 extern template class TextChangeReporter<ChangedIRData>;
-
 } // namespace llvm
 
 #endif
