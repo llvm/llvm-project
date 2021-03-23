@@ -169,6 +169,14 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   if (isa<tosa::BitwiseOrOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::OrOp>(loc, resultTypes, args);
 
+  // tosa::BitwiseNotOp
+  if (isa<tosa::BitwiseNotOp>(op) && elementTy.isa<IntegerType>()) {
+    auto allOnesAttr = rewriter.getIntegerAttr(
+        elementTy, APInt::getAllOnesValue(elementTy.getIntOrFloatBitWidth()));
+    auto allOnes = rewriter.create<ConstantOp>(loc, allOnesAttr);
+    return rewriter.create<mlir::XOrOp>(loc, resultTypes, args[0], allOnes);
+  }
+
   // tosa::BitwiseXOrOp
   if (isa<tosa::BitwiseXorOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<mlir::XOrOp>(loc, resultTypes, args);
@@ -441,13 +449,14 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
         Value opResult = createLinalgBodyCalculationForElementwiseOp(
             operation, blockArgs.take_front(operation->getNumOperands()),
             bodyResultTypes, rewriter);
-        if (opResult) {
+        if (!opResult) {
           didEncounterError = true;
+          return;
         }
         nestedBuilder.create<linalg::YieldOp>(loc, opResult);
       });
 
-  if (!didEncounterError)
+  if (didEncounterError)
     return failure();
 
   rewriter.replaceOp(operation, linalgOp->getResults());
@@ -1379,6 +1388,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::AbsOp>, PointwiseConverter<tosa::TanhOp>,
       PointwiseConverter<tosa::BitwiseAndOp>,
       PointwiseConverter<tosa::BitwiseOrOp>,
+      PointwiseConverter<tosa::BitwiseNotOp>,
       PointwiseConverter<tosa::BitwiseXorOp>,
       PointwiseConverter<tosa::LogicalAndOp>,
       PointwiseConverter<tosa::LogicalNotOp>,
