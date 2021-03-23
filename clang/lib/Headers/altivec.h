@@ -3033,10 +3033,32 @@ static __inline__ vector double __ATTRS_o_ai vec_cpsgn(vector double __a,
                                                    (__b)))
 #endif
 
+/* vec_ctd */
+#ifdef __VSX__
+#define vec_ctd(__a, __b)                                                      \
+  _Generic((__a), vector signed int                                            \
+           : (vec_doublee((vector signed int)(__a)) *                          \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)),              \
+             vector unsigned int                                               \
+           : (vec_doublee((vector unsigned int)(__a)) *                        \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)),              \
+             vector unsigned long long                                         \
+           : (__builtin_convertvector((vector unsigned long long)(__a),        \
+                                      vector double) *                         \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)),              \
+             vector signed long long                                           \
+           : (__builtin_convertvector((vector signed long long)(__a),          \
+                                      vector double) *                         \
+              (vector double)(vector unsigned long long)((0x3ffULL - (__b))    \
+                                                         << 52)))
+#endif // __VSX__
+
 /* vec_vcfsx */
 
 #define vec_vcfux __builtin_altivec_vcfux
-
 /* vec_vcfux */
 
 #define vec_vcfsx(__a, __b) __builtin_altivec_vcfsx((vector int)(__a), (__b))

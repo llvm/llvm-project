@@ -35,9 +35,9 @@ class CombinedAllocator {
     secondary_.InitLinkerInitialized();
   }
 
-  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
+  void Init(s32 release_to_os_interval_ms) {
     stats_.Init();
-    primary_.Init(release_to_os_interval_ms, heap_start);
+    primary_.Init(release_to_os_interval_ms);
     secondary_.Init();
   }
 

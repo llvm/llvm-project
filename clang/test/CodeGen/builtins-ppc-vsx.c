@@ -1294,6 +1294,32 @@ void test1() {
 // CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
 // CHECK-LE: fmul <2 x double>
 
+  res_vd = vec_ctd(vsll, 2);
+// CHECK: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+// CHECK-LE: sitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+
+  res_vd = vec_ctd(vull, 2);
+// CHECK: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+// CHECK-LE: uitofp <2 x i64> %{{.*}} to <2 x double>
+// CHECK-LE: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+
+  res_vd = vec_ctd(vsi, 2);
+// CHECK: call <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32>
+// CHECK: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+// CHECK-LE: vperm
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.xvcvsxwdp(<4 x i32>
+// CHECK-LE: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+
+  res_vd = vec_ctd(vui, 2);
+// CHECK: call <2 x double> @llvm.ppc.vsx.xvcvuxwdp(<4 x i32>
+// CHECK: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+// CHECK-LE: vperm
+// CHECK-LE: call <2 x double> @llvm.ppc.vsx.xvcvuxwdp(<4 x i32>
+// CHECK-LE: fmul <2 x double> {{.*}} <double 2.500000e-01, double 2.500000e-01>
+
   res_vsll = vec_signed(vd);
 // CHECK: fptosi <2 x double>
 // CHECK-LE: fptosi <2 x double>

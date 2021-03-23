@@ -240,6 +240,16 @@ test.format_optional_result_b_op : i64 -> i64, i64
 test.format_optional_result_c_op : (i64) -> (i64, i64)
 
 //===----------------------------------------------------------------------===//
+// Format optional with else
+//===----------------------------------------------------------------------===//
+
+// CHECK: test.format_optional_else then
+test.format_optional_else then
+
+// CHECK: test.format_optional_else else
+test.format_optional_else else
+
+//===----------------------------------------------------------------------===//
 // Format custom directives
 //===----------------------------------------------------------------------===//
 
