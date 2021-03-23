@@ -1606,6 +1606,14 @@ void test1() {
 // CHECK-LE: llvm.ppc.altivec.vgbbd
 // CHECK-PPC: warning: implicit declaration of function 'vec_gb'
 
+  res_vsll = vec_gbb(vsll);
+// CHECK: llvm.ppc.altivec.vgbbd
+// CHECK-LE: llvm.ppc.altivec.vgbbd
+
+  res_vull = vec_gbb(vull);
+// CHECK: llvm.ppc.altivec.vgbbd
+// CHECK-LE: llvm.ppc.altivec.vgbbd
+
   res_vull = vec_bperm(vux, vux);
 // CHECK: llvm.ppc.altivec.vbpermq
 // CHECK-LE: llvm.ppc.altivec.vbpermq

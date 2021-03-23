@@ -16844,6 +16844,16 @@ vec_vgbbd(vector unsigned char __a) {
   return __builtin_altivec_vgbbd(__a);
 }
 
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_gbb(vector signed long long __a) {
+  return __builtin_altivec_vgbbd((vector unsigned char)__a);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_gbb(vector unsigned long long __a) {
+  return __builtin_altivec_vgbbd((vector unsigned char)__a);
+}
+
 static __inline__ vector long long __ATTRS_o_ai
 vec_vbpermq(vector signed char __a, vector signed char __b) {
   return __builtin_altivec_vbpermq((vector unsigned char)__a,
