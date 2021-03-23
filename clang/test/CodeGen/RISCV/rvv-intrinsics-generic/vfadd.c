@@ -3,9 +3,8 @@
 // RUN:   -target-feature +experimental-zfh -disable-O0-optnone -emit-llvm %s -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV32 %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d -target-feature +experimental-v \
 // RUN:   -target-feature +experimental-zfh -disable-O0-optnone -emit-llvm %s -o - | opt -S -mem2reg | FileCheck --check-prefix=CHECK-RV64 %s
-// RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d -target-feature +experimental-v \
-// RUN:   -target-feature +experimental-zfh -Werror -Wall -o - %s >/dev/null 2>%t
-// RUN: FileCheck --check-prefix=ASM --allow-empty %s <%t
+// RUN: %clang_cc1 -triple riscv64 -target-feature +m -target-feature +f -target-feature +d -target-feature +experimental-v \
+// RUN:   -Werror -Wall -o - %s -S >/dev/null 2>&1 | FileCheck --check-prefix=ASM --allow-empty %s
 
 // ASM-NOT: warning
 #include <riscv_vector_generic.h>
