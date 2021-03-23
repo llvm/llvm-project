@@ -45,6 +45,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -377,6 +378,25 @@ public:
     const TargetLoweringBase *TLI = getTLI();
     return TLI->isOperationLegalOrCustom(ISD::BR_JT, MVT::Other) ||
            TLI->isOperationLegalOrCustom(ISD::BRIND, MVT::Other);
+  }
+
+  bool shouldBuildRelLookupTables() {
+    const TargetMachine &TM = getTLI()->getTargetMachine();
+    // If non-PIC mode, do not generate a relative lookup table.
+    if (!TM.isPositionIndependent())
+      return false;
+
+    if (!TM.getTargetTriple().isArch64Bit())
+      return false;
+
+    /// Relative lookup table entries consist of 32-bit offsets.
+    /// Do not generate relative lookup tables for large code models
+    /// in 64-bit achitectures where 32-bit offsets might not be enough.
+    if (TM.getCodeModel() == CodeModel::Medium ||
+        TM.getCodeModel() == CodeModel::Large)
+      return false;
+
+    return true;
   }
 
   bool haveFastSqrt(Type *Ty) {
