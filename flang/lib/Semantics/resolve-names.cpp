@@ -3248,7 +3248,12 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
       if (!specific) {
         specific =
             &currScope().MakeSymbol(name.source, Attrs{}, SubprogramDetails{});
-        details->set_specific(Resolve(name, *specific));
+        if (details->derivedType()) {
+          // A specific procedure with the same name as a derived type
+          SayAlreadyDeclared(name, *details->derivedType());
+        } else {
+          details->set_specific(Resolve(name, *specific));
+        }
       } else if (isGeneric()) {
         SayAlreadyDeclared(name, *specific);
       }
