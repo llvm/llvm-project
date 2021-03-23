@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit %s test
 ; RUN: %lli %s test
 
 declare i32 @puts(i8*)

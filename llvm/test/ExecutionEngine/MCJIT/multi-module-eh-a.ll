@@ -1,4 +1,5 @@
 ; REQUIRES: cxx-shared-library
+; RUN: %lli -jit-kind=mcjit -extra-module=%p/Inputs/multi-module-eh-b.ll %s
 ; RUN: %lli -extra-module=%p/Inputs/multi-module-eh-b.ll %s
 ; XFAIL: arm, cygwin, windows-msvc, windows-gnu
 declare i8* @__cxa_allocate_exception(i64)

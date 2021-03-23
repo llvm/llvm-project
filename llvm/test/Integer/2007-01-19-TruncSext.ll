@@ -1,7 +1,7 @@
 ; RUN: llvm-as %s -o - | llvm-dis > %t1.ll
 ; RUN: llvm-as %t1.ll -o - | llvm-dis > %t2.ll
 ; RUN: diff %t1.ll %t2.ll
-; RUN: llvm-as < %s | lli --force-interpreter=true | FileCheck %s
+; RUN: llvm-as < %s | lli -jit-kind=mcjit --force-interpreter=true | FileCheck %s
 ; CHECK: -255
 
 @ARRAY   = global [ 20 x i17 ] zeroinitializer
