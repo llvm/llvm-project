@@ -1144,28 +1144,3 @@ func @broadcast_on_single_operand(%a : tensor<3xindex>) {
   "use"(%0) : (tensor<?xindex>) -> ()
   return
 }
-
-// -----
-
-// CHECK-LABEL: @bypass_assmunig
-// CHECK-SAME: (%[[ARG:.*]]: tensor<2x3xf32>)
-func @bypass_assmunig(%arg : tensor<2x3xf32>)
-    -> (tensor<2x3xf32>, tensor<2x3xf32>, tensor<2x3xf32>) {
-  // CHECK: %[[OUTER:.*]] = "some.tensor"
-  // CHECK: %[[WITNESS:.*]] = "some.witness"
-  // CHECK: %[[YIELDED:.*]] = shape.assuming %[[WITNESS]] -> (tensor<2x3xf32>) {
-  // CHECK:   %[[INNER:.*]] = "some.tensor"
-  // CHECK:   shape.assuming_yield %[[INNER]] : tensor<2x3xf32>
-  // CHECK: }
-  // CHECK: return %[[YIELDED]], %[[OUTER]], %[[ARG]]
-  %outer = "some.tensor"() : () -> tensor<2x3xf32>
-  %witness = "some.witness"() : () -> !shape.witness
-  %results:3 = shape.assuming %witness
-      -> (tensor<2x3xf32>, tensor<2x3xf32>, tensor<2x3xf32>) {
-    %inner = "some.tensor"() : () -> tensor<2x3xf32>
-    shape.assuming_yield %inner, %outer, %arg
-        : tensor<2x3xf32>, tensor<2x3xf32>, tensor<2x3xf32>
-  }
-  return %results#0, %results#1, %results#2
-      : tensor<2x3xf32>, tensor<2x3xf32>, tensor<2x3xf32>
-}
