@@ -1,4 +1,4 @@
-//===- FrozenRewritePatternList.cpp - Frozen Pattern List -------*- C++ -*-===//
+//===- FrozenRewritePatternSet.cpp - Frozen Pattern List -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Rewrite/FrozenRewritePatternList.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "ByteCode.h"
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
@@ -47,13 +47,13 @@ static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
 }
 
 //===----------------------------------------------------------------------===//
-// FrozenRewritePatternList
+// FrozenRewritePatternSet
 //===----------------------------------------------------------------------===//
 
-FrozenRewritePatternList::FrozenRewritePatternList()
+FrozenRewritePatternSet::FrozenRewritePatternSet()
     : impl(std::make_shared<Impl>()) {}
 
-FrozenRewritePatternList::FrozenRewritePatternList(RewritePatternSet &&patterns)
+FrozenRewritePatternSet::FrozenRewritePatternSet(RewritePatternSet &&patterns)
     : impl(std::make_shared<Impl>()) {
   impl->nativePatterns = std::move(patterns.getNativePatterns());
 
@@ -72,4 +72,4 @@ FrozenRewritePatternList::FrozenRewritePatternList(RewritePatternSet &&patterns)
       pdlPatterns.takeRewriteFunctions());
 }
 
-FrozenRewritePatternList::~FrozenRewritePatternList() {}
+FrozenRewritePatternSet::~FrozenRewritePatternSet() {}

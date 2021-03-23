@@ -479,8 +479,8 @@ LogicalResult mlir::linalg::LinalgBaseVectorizationPattern::matchAndRewrite(
 }
 
 LogicalResult mlir::linalg::applyStagedPatterns(
-    Operation *op, ArrayRef<FrozenRewritePatternList> stage1Patterns,
-    const FrozenRewritePatternList &stage2Patterns,
+    Operation *op, ArrayRef<FrozenRewritePatternSet> stage1Patterns,
+    const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda) {
   unsigned iteration = 0;
   (void)iteration;

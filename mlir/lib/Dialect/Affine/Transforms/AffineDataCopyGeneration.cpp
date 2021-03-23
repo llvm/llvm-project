@@ -230,7 +230,7 @@ void AffineDataCopyGeneration::runOnFunction() {
   RewritePatternSet patterns(&getContext());
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
-  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   for (Operation *op : copyOps)
     (void)applyOpPatternsAndFold(op, frozenPatterns);
 }

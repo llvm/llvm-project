@@ -1,4 +1,4 @@
-//===- FrozenRewritePatternList.h - FrozenRewritePatternList ----*- C++ -*-===//
+//===- FrozenRewritePatternSet.h --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_REWRITE_FROZENREWRITEPATTERNLIST_H
-#define MLIR_REWRITE_FROZENREWRITEPATTERNLIST_H
+#ifndef MLIR_REWRITE_FROZENREWRITEPATTERNSET_H
+#define MLIR_REWRITE_FROZENREWRITEPATTERNSET_H
 
 #include "mlir/IR/PatternMatch.h"
 
@@ -21,20 +21,20 @@ class PDLByteCode;
 /// such that they need not be continuously recomputed. Note that all copies of
 /// this class share the same compiled pattern list, allowing for a reduction in
 /// the number of duplicated patterns that need to be created.
-class FrozenRewritePatternList {
+class FrozenRewritePatternSet {
   using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
   /// Freeze the patterns held in `patterns`, and take ownership.
-  FrozenRewritePatternList();
-  FrozenRewritePatternList(RewritePatternSet &&patterns);
-  FrozenRewritePatternList(FrozenRewritePatternList &&patterns) = default;
-  FrozenRewritePatternList(const FrozenRewritePatternList &patterns) = default;
-  FrozenRewritePatternList &
-  operator=(const FrozenRewritePatternList &patterns) = default;
-  FrozenRewritePatternList &
-  operator=(FrozenRewritePatternList &&patterns) = default;
-  ~FrozenRewritePatternList();
+  FrozenRewritePatternSet();
+  FrozenRewritePatternSet(RewritePatternSet &&patterns);
+  FrozenRewritePatternSet(FrozenRewritePatternSet &&patterns) = default;
+  FrozenRewritePatternSet(const FrozenRewritePatternSet &patterns) = default;
+  FrozenRewritePatternSet &
+  operator=(const FrozenRewritePatternSet &patterns) = default;
+  FrozenRewritePatternSet &
+  operator=(FrozenRewritePatternSet &&patterns) = default;
+  ~FrozenRewritePatternSet();
 
   /// Return the native patterns held by this list.
   iterator_range<llvm::pointee_iterator<NativePatternListT::const_iterator>>
@@ -66,6 +66,10 @@ private:
   std::shared_ptr<Impl> impl;
 };
 
+// TODO: FrozenRewritePatternList is soft-deprecated and will be removed in the
+// future.
+using FrozenRewritePatternList = FrozenRewritePatternSet;
+
 } // end namespace mlir
 
-#endif // MLIR_REWRITE_FROZENREWRITEPATTERNLIST_H
+#endif // MLIR_REWRITE_FROZENREWRITEPATTERNSET_H

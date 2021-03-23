@@ -61,7 +61,7 @@ void TestConvVectorization::runOnOperation() {
 
   SmallVector<RewritePatternSet, 4> stage1Patterns;
   linalg::populateConvVectorizationPatterns(context, stage1Patterns, tileSizes);
-  SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
+  SmallVector<FrozenRewritePatternSet, 4> frozenStage1Patterns;
   llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
 
   RewritePatternSet stage2Patterns =
