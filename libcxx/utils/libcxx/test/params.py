@@ -7,6 +7,7 @@
 #===----------------------------------------------------------------------===##
 
 from libcxx.test.dsl import *
+from libcxx.test.features import _isMSVC
 
 _warningFlags = [
   '-Werror',
@@ -111,7 +112,12 @@ DEFAULT_PARAMETERS = [
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
             actions=lambda experimental: [] if not experimental else [
               AddFeature('c++experimental'),
-              PrependLinkFlag('-lc++experimental')
+              # When linking in MSVC mode via the Clang driver, a -l<foo>
+              # maps to <foo>.lib, so we need to use -llibc++experimental here
+              # to make it link against the static libc++experimental.lib.
+              # We can't check for the feature 'msvc' in available_features
+              # as those features are added after processing parameters.
+              PrependLinkFlag(lambda config: '-llibc++experimental' if _isMSVC(config) else '-lc++experimental')
             ]),
 
   Parameter(name='long_tests', choices=[True, False], type=bool, default=True,
