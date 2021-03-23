@@ -98,9 +98,9 @@
 ; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
 ; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-PRELINK-O-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
-; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
+; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy	
+; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis	
+; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy	
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: DevirtSCCRepeatedPass
 ; CHECK-O-NEXT: Starting CGSCC pass manager run.
@@ -243,8 +243,6 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
-; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
-; CHECK-POSTLINK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-PRELINK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass
