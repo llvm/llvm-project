@@ -67,8 +67,6 @@ def WriteFCvtF64ToI64  : SchedWrite;    // RV64I only
 def WriteFCvtF32ToF64  : SchedWrite;
 def WriteFCvtF64ToF32  : SchedWrite;
 
-def WriteFConv32    : SchedWrite;    // 32-bit floating point convert
-def WriteFConv64    : SchedWrite;    // 64-bit floating point convert
 def WriteFClass32   : SchedWrite;    // 32-bit floating point classify
 def WriteFClass64   : SchedWrite;    // 64-bit floating point classify
 def WriteFCmp32     : SchedWrite;    // 32-bit floating point compare
@@ -83,8 +81,6 @@ def WriteFMovI32ToF32     : SchedWrite;
 def WriteFMovF64ToI64     : SchedWrite;    // RV64I only
 def WriteFMovI64ToF64     : SchedWrite;    // RV64I only
 
-def WriteFMov32       : SchedWrite;    // 32-bit floating point move
-def WriteFMov64       : SchedWrite;    // 64-bit floating point move
 def WriteFLD32        : SchedWrite;    // Floating point sp load
 def WriteFLD64        : SchedWrite;    // Floating point dp load
 def WriteFST32        : SchedWrite;    // Floating point sp store
