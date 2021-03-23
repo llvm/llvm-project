@@ -119,8 +119,7 @@ class SizeClassAllocator32 {
   typedef SizeClassAllocator32<Params> ThisT;
   typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
-  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
-    CHECK(!heap_start);
+  void Init(s32 release_to_os_interval_ms) {
     possible_regions.Init();
     internal_memset(size_class_info_array, 0, sizeof(size_class_info_array));
   }

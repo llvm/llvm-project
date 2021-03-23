@@ -196,9 +196,9 @@ TEST(SanitizerCommon, DenseSizeClassMap) {
 }
 
 template <class Allocator>
-void TestSizeClassAllocator(uptr premapped_heap = 0) {
+void TestSizeClassAllocator() {
   Allocator *a = new Allocator;
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   typename Allocator::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -265,25 +265,6 @@ void TestSizeClassAllocator(uptr premapped_heap = 0) {
 }
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
-
-// Allocates kAllocatorSize aligned bytes on construction and frees it on
-// destruction.
-class ScopedPremappedHeap {
- public:
-  ScopedPremappedHeap() {
-    BasePtr = MmapNoReserveOrDie(2 * kAllocatorSize, "preallocated heap");
-    AlignedAddr = RoundUpTo(reinterpret_cast<uptr>(BasePtr), kAllocatorSize);
-  }
-
-  ~ScopedPremappedHeap() { UnmapOrDie(BasePtr, kAllocatorSize); }
-
-  uptr Addr() { return AlignedAddr; }
-
- private:
-  void *BasePtr;
-  uptr AlignedAddr;
-};
-
 // These tests can fail on Windows if memory is somewhat full and lit happens
 // to run them all at the same time. FIXME: Make them not flaky and reenable.
 #if !SANITIZER_WINDOWS
@@ -293,11 +274,6 @@ TEST(SanitizerCommon, SizeClassAllocator64) {
 
 TEST(SanitizerCommon, SizeClassAllocator64Dynamic) {
   TestSizeClassAllocator<Allocator64Dynamic>();
-}
-
-TEST(SanitizerCommon, SizeClassAllocator64DynamicPremapped) {
-  ScopedPremappedHeap h;
-  TestSizeClassAllocator<Allocator64Dynamic>(h.Addr());
 }
 
 #if !SANITIZER_ANDROID
@@ -344,9 +320,9 @@ TEST(SanitizerCommon, SizeClassAllocator32SeparateBatches) {
 }
 
 template <class Allocator>
-void SizeClassAllocatorMetadataStress(uptr premapped_heap = 0) {
+void SizeClassAllocatorMetadataStress() {
   Allocator *a = new Allocator;
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   typename Allocator::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -385,11 +361,6 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Dynamic>();
 }
 
-TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedMetadataStress) {
-  ScopedPremappedHeap h;
-  SizeClassAllocatorMetadataStress<Allocator64Dynamic>(h.Addr());
-}
-
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Compact>();
@@ -403,10 +374,9 @@ TEST(SanitizerCommon, SizeClassAllocator32CompactMetadataStress) {
 }
 
 template <class Allocator>
-void SizeClassAllocatorGetBlockBeginStress(u64 TotalSize,
-                                           uptr premapped_heap = 0) {
+void SizeClassAllocatorGetBlockBeginStress(u64 TotalSize) {
   Allocator *a = new Allocator;
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   typename Allocator::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -437,11 +407,6 @@ TEST(SanitizerCommon, SizeClassAllocator64GetBlockBegin) {
 TEST(SanitizerCommon, SizeClassAllocator64DynamicGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>(
       1ULL << (SANITIZER_ANDROID ? 31 : 33));
-}
-TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedGetBlockBegin) {
-  ScopedPremappedHeap h;
-  SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>(
-      1ULL << (SANITIZER_ANDROID ? 31 : 33), h.Addr());
 }
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactGetBlockBegin) {
@@ -659,10 +624,10 @@ TEST(SanitizerCommon, LargeMmapAllocator) {
 }
 
 template <class PrimaryAllocator>
-void TestCombinedAllocator(uptr premapped_heap = 0) {
+void TestCombinedAllocator() {
   typedef CombinedAllocator<PrimaryAllocator> Allocator;
   Allocator *a = new Allocator;
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   std::mt19937 r;
 
   typename Allocator::AllocatorCache cache;
@@ -733,11 +698,6 @@ TEST(SanitizerCommon, CombinedAllocator64Dynamic) {
   TestCombinedAllocator<Allocator64Dynamic>();
 }
 
-TEST(SanitizerCommon, CombinedAllocator64DynamicPremapped) {
-  ScopedPremappedHeap h;
-  TestCombinedAllocator<Allocator64Dynamic>(h.Addr());
-}
-
 #if !SANITIZER_ANDROID
 TEST(SanitizerCommon, CombinedAllocator64Compact) {
   TestCombinedAllocator<Allocator64Compact>();
@@ -754,12 +714,12 @@ TEST(SanitizerCommon, SKIP_ON_SOLARIS_SPARCV9(CombinedAllocator32Compact)) {
 }
 
 template <class Allocator>
-void TestSizeClassAllocatorLocalCache(uptr premapped_heap = 0) {
+void TestSizeClassAllocatorLocalCache() {
   using AllocatorCache = typename Allocator::AllocatorCache;
   AllocatorCache cache;
   Allocator *a = new Allocator();
 
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
 
@@ -797,11 +757,6 @@ TEST(SanitizerCommon, SizeClassAllocator64LocalCache) {
 
 TEST(SanitizerCommon, SizeClassAllocator64DynamicLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Dynamic>();
-}
-
-TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedLocalCache) {
-  ScopedPremappedHeap h;
-  TestSizeClassAllocatorLocalCache<Allocator64Dynamic>(h.Addr());
 }
 
 #if !SANITIZER_ANDROID
@@ -936,9 +891,9 @@ void IterationTestCallback(uptr chunk, void *arg) {
 }
 
 template <class Allocator>
-void TestSizeClassAllocatorIteration(uptr premapped_heap = 0) {
+void TestSizeClassAllocatorIteration() {
   Allocator *a = new Allocator;
-  a->Init(kReleaseToOSIntervalNever, premapped_heap);
+  a->Init(kReleaseToOSIntervalNever);
   typename Allocator::AllocatorCache cache;
   memset(&cache, 0, sizeof(cache));
   cache.Init(0);
@@ -986,10 +941,6 @@ TEST(SanitizerCommon, SizeClassAllocator64Iteration) {
 }
 TEST(SanitizerCommon, SizeClassAllocator64DynamicIteration) {
   TestSizeClassAllocatorIteration<Allocator64Dynamic>();
-}
-TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedIteration) {
-  ScopedPremappedHeap h;
-  TestSizeClassAllocatorIteration<Allocator64Dynamic>(h.Addr());
 }
 #endif
 #endif
