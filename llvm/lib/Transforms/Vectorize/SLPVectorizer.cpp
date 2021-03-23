@@ -941,16 +941,10 @@ public:
                                ScalarEvolution &SE) {
       auto *LI1 = dyn_cast<LoadInst>(V1);
       auto *LI2 = dyn_cast<LoadInst>(V2);
-      if (LI1 && LI2) {
-        if (LI1->getParent() != LI2->getParent())
-          return VLOperands::ScoreFail;
-
-        Optional<int> Dist =
-            getPointersDiff(LI1->getPointerOperand(), LI2->getPointerOperand(),
-                            DL, SE, /*StrictCheck=*/true);
-        return (Dist && *Dist == 1) ? VLOperands::ScoreConsecutiveLoads
-                                    : VLOperands::ScoreFail;
-      }
+      if (LI1 && LI2)
+        return isConsecutiveAccess(LI1, LI2, DL, SE)
+                   ? VLOperands::ScoreConsecutiveLoads
+                   : VLOperands::ScoreFail;
 
       auto *C1 = dyn_cast<Constant>(V1);
       auto *C2 = dyn_cast<Constant>(V2);
@@ -2877,9 +2871,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Ptr0 = PointerOps[CurrentOrder.front()];
           PtrN = PointerOps[CurrentOrder.back()];
         }
-        Optional<int> Diff = getPointersDiff(Ptr0, PtrN, *DL, *SE);
+        const SCEV *Scev0 = SE->getSCEV(Ptr0);
+        const SCEV *ScevN = SE->getSCEV(PtrN);
+        const auto *Diff =
+            dyn_cast<SCEVConstant>(SE->getMinusSCEV(ScevN, Scev0));
+        uint64_t Size = DL->getTypeAllocSize(ScalarTy);
         // Check that the sorted loads are consecutive.
-        if (static_cast<unsigned>(*Diff) == VL.size() - 1) {
+        if (Diff && Diff->getAPInt() == (VL.size() - 1) * Size) {
           if (CurrentOrder.empty()) {
             // Original loads are consecutive and does not require reordering.
             ++NumOpsWantToKeepOriginalOrder;
@@ -3152,9 +3150,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Ptr0 = PointerOps[CurrentOrder.front()];
           PtrN = PointerOps[CurrentOrder.back()];
         }
-        Optional<int> Dist = getPointersDiff(Ptr0, PtrN, *DL, *SE);
+        const SCEV *Scev0 = SE->getSCEV(Ptr0);
+        const SCEV *ScevN = SE->getSCEV(PtrN);
+        const auto *Diff =
+            dyn_cast<SCEVConstant>(SE->getMinusSCEV(ScevN, Scev0));
+        uint64_t Size = DL->getTypeAllocSize(ScalarTy);
         // Check that the sorted pointer operands are consecutive.
-        if (static_cast<unsigned>(*Dist) == VL.size() - 1) {
+        if (Diff && Diff->getAPInt() == (VL.size() - 1) * Size) {
           if (CurrentOrder.empty()) {
             // Original stores are consecutive and does not require reordering.
             ++NumOpsWantToKeepOriginalOrder;
@@ -6105,41 +6107,20 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
 
   int E = Stores.size();
   SmallBitVector Tails(E, false);
+  SmallVector<int, 16> ConsecutiveChain(E, E + 1);
   int MaxIter = MaxStoreLookup.getValue();
-  SmallVector<std::pair<int, int>, 16> ConsecutiveChain(
-      E, std::make_pair(E, INT_MAX));
-  SmallVector<SmallBitVector, 4> CheckedPairs(E, SmallBitVector(E, false));
   int IterCnt;
   auto &&FindConsecutiveAccess = [this, &Stores, &Tails, &IterCnt, MaxIter,
-                                  &CheckedPairs,
                                   &ConsecutiveChain](int K, int Idx) {
     if (IterCnt >= MaxIter)
       return true;
-    if (CheckedPairs[Idx].test(K))
-      return ConsecutiveChain[K].second == 1 &&
-             ConsecutiveChain[K].first == Idx;
     ++IterCnt;
-    CheckedPairs[Idx].set(K);
-    CheckedPairs[K].set(Idx);
-    Optional<int> Diff = getPointersDiff(Stores[K]->getPointerOperand(),
-                                         Stores[Idx]->getPointerOperand(), *DL,
-                                         *SE, /*StrictCheck=*/true);
-    if (!Diff || *Diff == 0)
-      return false;
-    int Val = *Diff;
-    if (Val < 0) {
-      if (ConsecutiveChain[Idx].second > -Val) {
-        Tails.set(K);
-        ConsecutiveChain[Idx] = std::make_pair(K, -Val);
-      }
-      return false;
-    }
-    if (ConsecutiveChain[K].second <= Val)
+    if (!isConsecutiveAccess(Stores[K], Stores[Idx], *DL, *SE))
       return false;
 
     Tails.set(Idx);
-    ConsecutiveChain[K] = std::make_pair(Idx, Val);
-    return Val == 1;
+    ConsecutiveChain[K] = Idx;
+    return true;
   };
   // Do a quadratic search on all of the given stores in reverse order and find
   // all of the pairs of stores that follow each other.
@@ -6159,28 +6140,16 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
   // For stores that start but don't end a link in the chain:
   for (int Cnt = E; Cnt > 0; --Cnt) {
     int I = Cnt - 1;
-    if (ConsecutiveChain[I].first == E || Tails.test(I))
+    if (ConsecutiveChain[I] == E + 1 || Tails.test(I))
       continue;
     // We found a store instr that starts a chain. Now follow the chain and try
     // to vectorize it.
     BoUpSLP::ValueList Operands;
     // Collect the chain into a list.
-    while (I != E && !VectorizedStores.count(Stores[I])) {
+    while (I != E + 1 && !VectorizedStores.count(Stores[I])) {
       Operands.push_back(Stores[I]);
-      Tails.set(I);
-      if (ConsecutiveChain[I].second != 1) {
-        // Mark the new end in the chain and go back, if required. It might be
-        // required if the original stores comes in reversed order, for example.
-        if (ConsecutiveChain[I].first != E &&
-            Tails.test(ConsecutiveChain[I].first)) {
-          Tails.reset(ConsecutiveChain[I].first);
-          if (Cnt < ConsecutiveChain[I].first + 2)
-            Cnt = ConsecutiveChain[I].first + 2;
-        }
-        break;
-      }
       // Move to the next value in the chain.
-      I = ConsecutiveChain[I].first;
+      I = ConsecutiveChain[I];
     }
 
     unsigned MaxVecRegSize = R.getMaxVecRegSize();
