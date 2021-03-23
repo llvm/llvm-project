@@ -3223,7 +3223,7 @@ element zero is put in the most significant bits.
 
 Using a vector such as ``<i4 1, i4 2, i4 3, i4 5>`` as an example, together
 with the analogy that we can replace a vector store by a bitcast followed by
-an integer store, we ge this for big endian:
+an integer store, we get this for big endian:
 
 .. code-block:: llvm
 
@@ -3260,7 +3260,7 @@ The same example for little endian:
 When ``<N*M>`` isn't evenly divisible by the byte size the exact memory layout
 is unspecified (just like it is for an integral type of the same size). This
 is because different targets could put the padding at different positions when
-the type size is smaller than the types store size.
+the type size is smaller than the type's store size.
 
 :Syntax:
 
