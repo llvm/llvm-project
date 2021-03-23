@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.13.4)
 project(Runtimes C CXX ASM)
 
-set(LLVM_ALL_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind;openmp")
+set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
