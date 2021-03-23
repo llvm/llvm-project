@@ -1521,6 +1521,15 @@ void test1() {
 // CHECK-LE: sub nsw i32 31
 // CHECK-LE: @llvm.ppc.altivec.vperm
 
+  res_vf = vec_cvf(vd);
+// CHECK: @llvm.ppc.vsx.xvcvdpsp
+// CHECK-LE: @llvm.ppc.vsx.xvcvdpsp
+// CHECK-LE: sub nsw i32 16
+// CHECK-LE: sub nsw i32 17
+// CHECK-LE: sub nsw i32 18
+// CHECK-LE: sub nsw i32 31
+// CHECK-LE: @llvm.ppc.altivec.vperm
+
   res_vf = vec_floato(vsll);
 // CHECK: @llvm.ppc.vsx.xvcvsxdsp
 // CHECK: add nsw i32 {{[0-9a-zA-Z%.]+}}, 1
@@ -1575,6 +1584,15 @@ void test1() {
 // CHECK-LE: @llvm.ppc.vsx.xvcvuxwdp(<4 x i32
 
   res_vd = vec_doublee(vf);
+// CHECK: @llvm.ppc.vsx.xvcvspdp(<4 x float
+// CHECK-LE: sub nsw i32 16
+// CHECK-LE: sub nsw i32 17
+// CHECK-LE: sub nsw i32 18
+// CHECK-LE: sub nsw i32 31
+// CHECK-LE: @llvm.ppc.altivec.vperm
+// CHECK-LE: @llvm.ppc.vsx.xvcvspdp(<4 x float
+
+  res_vd = vec_cvf(vf);
 // CHECK: @llvm.ppc.vsx.xvcvspdp(<4 x float
 // CHECK-LE: sub nsw i32 16
 // CHECK-LE: sub nsw i32 17

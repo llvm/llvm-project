@@ -3421,6 +3421,15 @@ vec_doubleo(vector float __a) {
   return __builtin_vsx_xvcvspdp(vec_sld(__a, __a, 4));
 #endif
 }
+
+/* vec_cvf */
+static __inline__ vector double __ATTRS_o_ai vec_cvf(vector float __a) {
+  return vec_doublee(__a);
+}
+
+static __inline__ vector float __ATTRS_o_ai vec_cvf(vector double __a) {
+  return vec_floate(__a);
+}
 #endif
 
 /* vec_div */
