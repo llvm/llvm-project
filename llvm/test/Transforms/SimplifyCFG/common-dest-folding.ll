@@ -5,7 +5,7 @@
 ;CHECK: icmp eq i32
 ;CHECK: and i32 %c2, %k
 ;CHECK: icmp eq i32
-;CHECK: or i1
+;CHECK: select i1 {{.*}}, i1 true,
 ;CHECK: ret
 define i32 @foo(i32 %k, i32 %c1, i32 %c2) {
   %1 = and i32 %c1, %k
