@@ -471,20 +471,25 @@ public:
     TODO(getLoc(), "implied do index");
   }
 
+  // FIXME: Assumption is these return an i64 regardless of the target.
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
     auto exv = desc.base().IsSymbol() ? gen(desc.base().GetLastSymbol())
                                       : gen(desc.base().GetComponent());
     auto idxTy = builder.getIndexType();
     auto loc = getLoc();
+    auto castToI64 = [&](mlir::Value v) {
+      return builder.createConvert(loc, builder.getI64Type(), v);
+    };
     switch (desc.field()) {
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
-      return Fortran::lower::readCharLen(builder, loc, exv);
+      return castToI64(Fortran::lower::readCharLen(builder, loc, exv));
     case Fortran::evaluate::DescriptorInquiry::Field::LowerBound:
-      return Fortran::lower::readLowerBound(
+      return castToI64(Fortran::lower::readLowerBound(
           builder, loc, exv, desc.dimension(),
-          builder.createIntegerConstant(loc, idxTy, 1));
+          builder.createIntegerConstant(loc, idxTy, 1)));
     case Fortran::evaluate::DescriptorInquiry::Field::Extent:
-      return Fortran::lower::readExtent(builder, loc, exv, desc.dimension());
+      return castToI64(
+          Fortran::lower::readExtent(builder, loc, exv, desc.dimension()));
     case Fortran::evaluate::DescriptorInquiry::Field::Rank:
       TODO(loc, "rank inquiry on assumed rank");
     case Fortran::evaluate::DescriptorInquiry::Field::Stride:
@@ -536,7 +541,7 @@ public:
                              const fir::ExtendedValue &right) {
     auto *lhs = left.getUnboxed();
     auto *rhs = right.getUnboxed();
-    assert(lhs && rhs);
+    assert(lhs && rhs && lhs->getType() == rhs->getType());
     return builder.create<OpTy>(getLoc(), *lhs, *rhs);
   }
 
