@@ -178,7 +178,7 @@ steps:
           limit: 2
 
   - label: "No debug mode"
-    command: "libcxx/utils/ci/run-buildbot generic-nodebug"
+    command: "libcxx/utils/ci/run-buildbot generic-no-debug"
     artifact_paths:
       - "**/test-results.xml"
     agents:
