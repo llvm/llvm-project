@@ -713,10 +713,10 @@ def Shape_AssumingAllOp : Shape_Op<"assuming_all", [Commutative, NoSideEffect]> 
   let verifier = [{ return ::verify(*this); }];
 }
 
-def Shape_AssumingOp : Shape_Op<"assuming",
-                           [SingleBlockImplicitTerminator<"AssumingYieldOp">,
-                            DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-                            RecursiveSideEffects]> {
+def Shape_AssumingOp : Shape_Op<"assuming", [
+    SingleBlockImplicitTerminator<"AssumingYieldOp">,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    RecursiveSideEffects]> {
   let summary = "Execute the region";
   let description = [{
     Executes the region assuming all witnesses are true.
@@ -742,6 +742,11 @@ def Shape_AssumingOp : Shape_Op<"assuming",
     static void inlineRegionIntoParent(AssumingOp &op, PatternRewriter &rewriter);
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$witness,
+        CArg<"function_ref<SmallVector<Value, 2>(OpBuilder &, Location)>">)>
+  ];
+
   let hasCanonicalizer = 1;
 }
 
@@ -757,7 +762,9 @@ def Shape_AssumingYieldOp : Shape_Op<"assuming_yield",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+  let builders = [
+    OpBuilder<(ins), [{ /* nothing to do */ }]>,
+  ];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 }
