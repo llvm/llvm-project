@@ -88,6 +88,9 @@ public:
   /// Use the specified object to parse this ops custom assembly format.
   ParseResult parseAssembly(OpAsmParser &parser, OperationState &result) const;
 
+  /// Return the static hook for parsing this operation assembly.
+  ParseAssemblyFn getParseAssemblyFn() const { return parseAssemblyFn; }
+
   /// This hook implements the AsmPrinter for this operation.
   void printAssembly(Operation *op, OpAsmPrinter &p) const {
     return printAssemblyFn(op, p);
