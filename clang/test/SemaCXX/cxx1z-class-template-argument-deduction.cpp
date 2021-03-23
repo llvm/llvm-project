@@ -543,6 +543,18 @@ namespace PR47175 {
   int m = n<int>;
 }
 
+// Ensure we don't crash when CTAD fails.
+template <typename T1, typename T2>
+struct Foo {   // expected-note{{candidate function template not viable}}
+  Foo(T1, T2); // expected-note{{candidate function template not viable}}
+};
+
+template <typename... Args>
+void insert(Args &&...args);
+
+void foo() {
+  insert(Foo(2, 2, 2)); // expected-error{{no viable constructor or deduction guide}}
+}
 #else
 
 // expected-no-diagnostics

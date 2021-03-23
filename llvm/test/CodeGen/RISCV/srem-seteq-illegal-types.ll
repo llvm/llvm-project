@@ -699,14 +699,16 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    call __moddi3@plt
 ; RV32MV-NEXT:    sw a1, 12(sp)
 ; RV32MV-NEXT:    sw a0, 8(sp)
+; RV32MV-NEXT:    addi a0, zero, 85
+; RV32MV-NEXT:    vsetivli a1, 1, e8,m1,ta,mu
+; RV32MV-NEXT:    vmv.s.x v0, a0
+; RV32MV-NEXT:    vsetivli a0, 8, e32,m2,ta,mu
+; RV32MV-NEXT:    vmv.v.i v26, 1
+; RV32MV-NEXT:    vle32.v v28, (sp)
 ; RV32MV-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV32MV-NEXT:    addi a0, a0, %lo(.LCPI3_0)
-; RV32MV-NEXT:    vsetivli a1, 8, e32,m2,ta,mu
-; RV32MV-NEXT:    vle32.v v26, (a0)
-; RV32MV-NEXT:    vle32.v v28, (sp)
-; RV32MV-NEXT:    lui a0, %hi(.LCPI3_1)
-; RV32MV-NEXT:    addi a0, a0, %lo(.LCPI3_1)
 ; RV32MV-NEXT:    vle32.v v30, (a0)
+; RV32MV-NEXT:    vmerge.vim v26, v26, -1, v0
 ; RV32MV-NEXT:    vand.vv v26, v28, v26
 ; RV32MV-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
 ; RV32MV-NEXT:    vmsne.vv v0, v26, v30

@@ -648,7 +648,7 @@ func @f() {
   // CHECK: shape.cstr_broadcastable
   // CHECK-NEXT: consume.witness
   // CHECK-NEXT: return
-  %cs0 = shape.const_shape [8, 1] : !shape.shape
+  %cs0 = shape.const_shape [8, 1] : !shape.shape  
   %cs1 = shape.const_shape [1, 8] : !shape.shape
   %cs2 = shape.const_shape [1, -1] : !shape.shape
   %0 = shape.cstr_broadcastable %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
@@ -665,7 +665,7 @@ func @f() {
   // CHECK-NEXT: return
   %cs0 = shape.const_shape [8, 1] : !shape.shape
   %cs1 = shape.const_shape [1, -1] : !shape.shape
-  %cs2 = shape.const_shape [1, -1] : !shape.shape
+  %cs2 = shape.const_shape [8, -1] : !shape.shape
   %0 = shape.cstr_broadcastable %cs0, %cs1, %cs2 : !shape.shape, !shape.shape, !shape.shape
   "consume.witness"(%0) : (!shape.witness) -> ()
   return
@@ -1093,6 +1093,19 @@ func @is_broadcastable_on_duplicate_shapes(%a : !shape.shape, %b : !shape.shape)
   %0 = shape.is_broadcastable %a, %b, %a, %a, %a, %b : !shape.shape,
       !shape.shape, !shape.shape, !shape.shape, !shape.shape, !shape.shape
   return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @cstr_broadcastable_on_duplicate_shapes
+// CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: !shape.shape)
+func @cstr_broadcastable_on_duplicate_shapes(%a : !shape.shape,
+    %b : !shape.shape) -> !shape.witness {
+  // CHECK: %[[RES:.*]] = shape.cstr_broadcastable %[[A]], %[[B]] :
+  // CHECK: return %[[RES]]
+  %0 = shape.cstr_broadcastable %a, %b, %a, %a, %a, %b : !shape.shape,
+      !shape.shape, !shape.shape, !shape.shape, !shape.shape, !shape.shape
+  return %0 : !shape.witness
 }
 
 // -----

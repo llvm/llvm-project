@@ -1595,10 +1595,25 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S64)
     .lower();
 
+  // TODO: Only Try to form v2s16 with legal packed instructions.
   getActionDefinitionsBuilder(G_FSHR)
     .legalFor({{S32, S32}})
+    .lowerFor({{V2S16, V2S16}})
+    .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
     .scalarize(0)
     .lower();
+
+  if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder(G_FSHL)
+      .lowerFor({{V2S16, V2S16}})
+      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16))
+      .scalarize(0)
+      .lower();
+  } else {
+    getActionDefinitionsBuilder(G_FSHL)
+      .scalarize(0)
+      .lower();
+  }
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
@@ -1624,9 +1639,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_SADDO, G_SSUBO,
 
        // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM,
-      G_FSHL
-    }).lower();
+      G_FMINIMUM, G_FMAXIMUM}).lower();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,

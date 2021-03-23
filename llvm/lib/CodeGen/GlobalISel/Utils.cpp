@@ -926,6 +926,38 @@ Optional<RegOrConstant> llvm::getVectorSplat(const MachineInstr &MI,
   return RegOrConstant(Reg);
 }
 
+bool llvm::matchUnaryPredicate(
+    const MachineRegisterInfo &MRI, Register Reg,
+    std::function<bool(const Constant *ConstVal)> Match, bool AllowUndefs) {
+
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+  if (AllowUndefs && Def->getOpcode() == TargetOpcode::G_IMPLICIT_DEF)
+    return Match(nullptr);
+
+  // TODO: Also handle fconstant
+  if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+    return Match(Def->getOperand(1).getCImm());
+
+  if (Def->getOpcode() != TargetOpcode::G_BUILD_VECTOR)
+    return false;
+
+  for (unsigned I = 1, E = Def->getNumOperands(); I != E; ++I) {
+    Register SrcElt = Def->getOperand(I).getReg();
+    const MachineInstr *SrcDef = getDefIgnoringCopies(SrcElt, MRI);
+    if (AllowUndefs && SrcDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      if (!Match(nullptr))
+        return false;
+      continue;
+    }
+
+    if (SrcDef->getOpcode() != TargetOpcode::G_CONSTANT ||
+        !Match(SrcDef->getOperand(1).getCImm()))
+      return false;
+  }
+
+  return true;
+}
+
 bool llvm::isConstTrueVal(const TargetLowering &TLI, int64_t Val, bool IsVector,
                           bool IsFP) {
   switch (TLI.getBooleanContents(IsVector, IsFP)) {

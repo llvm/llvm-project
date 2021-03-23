@@ -63,8 +63,9 @@ class DS_Real <DS_Pseudo ds, string opName = ds.Mnemonic> :
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ds.SubtargetPredicate;
-  let OtherPredicates = ds.OtherPredicates;
+  let OtherPredicates    = ds.OtherPredicates;
   let AsmMatchConverter  = ds.AsmMatchConverter;
+  let SchedRW            = ds.SchedRW;
 
   let Constraints = ds.Constraints;
   let DisableEncoding = ds.DisableEncoding;

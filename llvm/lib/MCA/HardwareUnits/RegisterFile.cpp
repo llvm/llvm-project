@@ -22,11 +22,47 @@
 namespace llvm {
 namespace mca {
 
+const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
+
+WriteRef::WriteRef(unsigned SourceIndex, WriteState *WS)
+    : IID(SourceIndex), WriteBackCycle(), WriteResID(), Write(WS) {}
+
+void WriteRef::commit() {
+  assert(Write && Write->isExecuted() && "Cannot commit before write back!");
+  Write = nullptr;
+}
+
+void WriteRef::notifyExecuted(unsigned Cycle) {
+  assert(Write && Write->isExecuted() && "Not executed!");
+  WriteBackCycle = Cycle;
+}
+
+bool WriteRef::hasKnownWriteBackCycle() const {
+  return isValid() && (!Write || Write->isExecuted());
+}
+
+bool WriteRef::isWriteZero() const {
+  assert(isValid() && "Invalid null WriteState found!");
+  return getWriteState()->isWriteZero();
+}
+
+unsigned WriteRef::getWriteResourceID() const {
+  if (Write)
+    return Write->getWriteResourceID();
+  return WriteResID;
+}
+
+MCPhysReg WriteRef::getRegisterID() const {
+  if (Write)
+    return Write->getRegisterID();
+  return RegisterID;
+}
+
 RegisterFile::RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
                            unsigned NumRegs)
     : MRI(mri),
       RegisterMappings(mri.getNumRegs(), {WriteRef(), RegisterRenamingInfo()}),
-      ZeroRegisters(mri.getNumRegs(), false) {
+      ZeroRegisters(mri.getNumRegs(), false), CurrentCycle() {
   initialize(SM, NumRegs);
 }
 
@@ -61,6 +97,43 @@ void RegisterFile::initialize(const MCSchedModel &SM, unsigned NumRegs) {
 void RegisterFile::cycleStart() {
   for (RegisterMappingTracker &RMT : RegisterFiles)
     RMT.NumMoveEliminated = 0;
+}
+
+void RegisterFile::onInstructionExecuted(Instruction *IS) {
+  assert(IS && IS->isExecuted() && "Unexpected internal state found!");
+  for (WriteState &WS : IS->getDefs()) {
+    if (WS.isEliminated())
+      return;
+
+    MCPhysReg RegID = WS.getRegisterID();
+    assert(RegID != 0 && "A write of an invalid register?");
+    assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
+           "The number of cycles should be known at this point!");
+    assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
+
+    MCPhysReg RenameAs = RegisterMappings[RegID].second.RenameAs;
+    if (RenameAs && RenameAs != RegID)
+      RegID = RenameAs;
+
+    WriteRef &WR = RegisterMappings[RegID].first;
+    if (WR.getWriteState() == &WS)
+      WR.notifyExecuted(CurrentCycle);
+
+    for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+      WriteRef &OtherWR = RegisterMappings[*I].first;
+      if (OtherWR.getWriteState() == &WS)
+        OtherWR.notifyExecuted(CurrentCycle);
+    }
+
+    if (!WS.clearsSuperRegisters())
+      continue;
+
+    for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
+      WriteRef &OtherWR = RegisterMappings[*I].first;
+      if (OtherWR.getWriteState() == &WS)
+        OtherWR.notifyExecuted(CurrentCycle);
+    }
+  }
 }
 
 void RegisterFile::addRegisterFile(const MCRegisterFileDesc &RF,
@@ -261,12 +334,12 @@ void RegisterFile::removeRegisterWrite(
 
   WriteRef &WR = RegisterMappings[RegID].first;
   if (WR.getWriteState() == &WS)
-    WR.invalidate();
+    WR.commit();
 
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     WriteRef &OtherWR = RegisterMappings[*I].first;
     if (OtherWR.getWriteState() == &WS)
-      OtherWR.invalidate();
+      OtherWR.commit();
   }
 
   if (!WS.clearsSuperRegisters())
@@ -275,7 +348,7 @@ void RegisterFile::removeRegisterWrite(
   for (MCSuperRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     WriteRef &OtherWR = RegisterMappings[*I].first;
     if (OtherWR.getWriteState() == &WS)
-      OtherWR.invalidate();
+      OtherWR.commit();
   }
 }
 
@@ -344,8 +417,25 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   return true;
 }
 
-void RegisterFile::collectWrites(const ReadState &RS,
-                                 SmallVectorImpl<WriteRef> &Writes) const {
+unsigned WriteRef::getWriteBackCycle() const {
+  assert(hasKnownWriteBackCycle() && "Instruction not executed!");
+  assert((!Write || Write->getCyclesLeft() <= 0) &&
+         "Inconsistent state found!");
+  return WriteBackCycle;
+}
+
+unsigned RegisterFile::getElapsedCyclesFromWriteBack(const WriteRef &WR) const {
+  assert(WR.hasKnownWriteBackCycle() && "Write hasn't been committed yet!");
+  return CurrentCycle - WR.getWriteBackCycle();
+}
+
+void RegisterFile::collectWrites(
+    const MCSubtargetInfo &STI, const ReadState &RS,
+    SmallVectorImpl<WriteRef> &Writes,
+    SmallVectorImpl<WriteRef> &CommittedWrites) const {
+  const ReadDescriptor &RD = RS.getDescriptor();
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
   MCPhysReg RegID = RS.getRegisterID();
   assert(RegID && RegID < RegisterMappings.size());
   LLVM_DEBUG(dbgs() << "RegisterFile: collecting writes for register "
@@ -357,14 +447,32 @@ void RegisterFile::collectWrites(const ReadState &RS,
     RegID = RRI.AliasRegID;
 
   const WriteRef &WR = RegisterMappings[RegID].first;
-  if (WR.isValid())
+  if (WR.getWriteState()) {
     Writes.push_back(WR);
+  } else if (WR.hasKnownWriteBackCycle()) {
+    unsigned WriteResID = WR.getWriteResourceID();
+    int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
+    if (ReadAdvance < 0) {
+      unsigned Elapsed = getElapsedCyclesFromWriteBack(WR);
+      if (Elapsed < static_cast<unsigned>(-ReadAdvance))
+        CommittedWrites.push_back(WR);
+    }
+  }
 
   // Handle potential partial register updates.
   for (MCSubRegIterator I(RegID, &MRI); I.isValid(); ++I) {
     const WriteRef &WR = RegisterMappings[*I].first;
-    if (WR.isValid())
+    if (WR.getWriteState()) {
       Writes.push_back(WR);
+    } else if (WR.hasKnownWriteBackCycle()) {
+      unsigned WriteResID = WR.getWriteResourceID();
+      int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
+      if (ReadAdvance < 0) {
+        unsigned Elapsed = getElapsedCyclesFromWriteBack(WR);
+        if (Elapsed < static_cast<unsigned>(-ReadAdvance))
+          CommittedWrites.push_back(WR);
+      }
+    }
   }
 
   // Remove duplicate entries and resize the input vector.
@@ -398,20 +506,33 @@ void RegisterFile::addRegisterRead(ReadState &RS,
     RS.setReadZero();
 
   SmallVector<WriteRef, 4> DependentWrites;
-  collectWrites(RS, DependentWrites);
-  RS.setDependentWrites(DependentWrites.size());
+  SmallVector<WriteRef, 4> CompletedWrites;
+  collectWrites(STI, RS, DependentWrites, CompletedWrites);
+  RS.setDependentWrites(DependentWrites.size() + CompletedWrites.size());
 
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
-  // to figure out in how many cycles this read becomes available.
+  // to figure out in how many cycles this read will be available.
   const ReadDescriptor &RD = RS.getDescriptor();
   const MCSchedModel &SM = STI.getSchedModel();
   const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
   for (WriteRef &WR : DependentWrites) {
+    unsigned WriteResID = WR.getWriteResourceID();
     WriteState &WS = *WR.getWriteState();
-    unsigned WriteResID = WS.getWriteResourceID();
     int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
     WS.addUser(WR.getSourceIndex(), &RS, ReadAdvance);
+  }
+
+  for (WriteRef &WR : CompletedWrites) {
+    unsigned WriteResID = WR.getWriteResourceID();
+    assert(WR.hasKnownWriteBackCycle() && "Invalid write!");
+    assert(STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID) < 0);
+    unsigned ReadAdvance = static_cast<unsigned>(
+        -STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID));
+    unsigned Elapsed = getElapsedCyclesFromWriteBack(WR);
+    assert(Elapsed < ReadAdvance && "Should not have been added to the set!");
+    RS.writeStartEvent(WR.getSourceIndex(), WR.getRegisterID(),
+                       ReadAdvance - Elapsed);
   }
 }
 
@@ -463,6 +584,14 @@ unsigned RegisterFile::isAvailable(ArrayRef<MCPhysReg> Regs) const {
 }
 
 #ifndef NDEBUG
+void WriteRef::dump() const {
+  dbgs() << "IID=" << getSourceIndex() << ' ';
+  if (isValid())
+    getWriteState()->dump();
+  else
+    dbgs() << "(null)";
+}
+
 void RegisterFile::dump() const {
   for (unsigned I = 0, E = MRI.getNumRegs(); I < E; ++I) {
     const RegisterMapping &RM = RegisterMappings[I];

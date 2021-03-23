@@ -14,6 +14,7 @@
 vector signed __int128 vlll = { -1 };
 // CHECK-PPC: error: __int128 is not supported on this target
 vector unsigned __int128 vulll = { 1 };
+vector unsigned char vuc;
 
 signed long long param_sll;
 // CHECK-PPC: error: __int128 is not supported on this target
@@ -25,6 +26,7 @@ unsigned __int128 param_ulll;
 vector signed __int128 res_vlll;
 // CHECK-PPC: error: __int128 is not supported on this target
 vector unsigned __int128 res_vulll;
+vector unsigned char res_vuc;
 
 
 // CHECK-LABEL: define{{.*}} void @test1
@@ -119,6 +121,10 @@ void test1() {
 // CHECK-LE: sub <1 x i128> 
 // CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'
   
+  res_vuc = vec_sub_u128(vuc, vuc);
+// CHECK: sub <1 x i128>
+// CHECK-LE: sub <1 x i128>
+
   /* vec_vsubeuqm */
   res_vlll = vec_vsubeuqm(vlll, vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubeuqm
@@ -151,6 +157,10 @@ void test1() {
 // CHECK-LE: @llvm.ppc.altivec.vsubeuqm
 // CHECK-PPC: error: call to 'vec_sube' is ambiguous
 
+  res_vuc = vec_sube_u128(vuc, vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vsubeuqm
+// CHECK-LE: @llvm.ppc.altivec.vsubeuqm
+
   /* vec_subc */
   res_vlll = vec_subc(vlll, vlll);
 // CHECK: @llvm.ppc.altivec.vsubcuq
@@ -161,6 +171,10 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vsubcuq
 // CHECK-LE: @llvm.ppc.altivec.vsubcuq
 // KCHECK-PPC: error: call to 'vec_subc' is ambiguous
+
+  res_vuc = vec_subc_u128(vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vsubcuq
+// CHECK-LE: @llvm.ppc.altivec.vsubcuq
 
   /* vec_vsubcuq */
   res_vlll = vec_vsubcuq(vlll, vlll);
@@ -193,6 +207,10 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vsubecuq
 // CHECK-LE: @llvm.ppc.altivec.vsubecuq
 // CHECK-PPC: error: assigning to '__vector unsigned __int128' (vector of 1 'unsigned __int128' value) from incompatible type 'int'  
+
+  res_vuc = vec_subec_u128(vuc, vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vsubecuq
+// CHECK-LE: @llvm.ppc.altivec.vsubecuq
 
   res_vulll = vec_revb(vulll);
 // CHECK: store <16 x i8> <i8 15, i8 14, i8 13, i8 12, i8 11, i8 10, i8 9, i8 8, i8 7, i8 6, i8 5, i8 4, i8 3, i8 2, i8 1, i8 0>, <16 x i8>* {{%.+}}, align 16

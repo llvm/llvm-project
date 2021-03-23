@@ -664,6 +664,8 @@ def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
 def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
+def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
+                       [SDTCisVec<0>, SDTCisInt<1>]>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
