@@ -57,10 +57,11 @@ class SM_Real <SM_Pseudo ps>
   Instruction Opcode = !cast<Instruction>(NAME);
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let SMRD = ps.SMRD;
+  let SMRD                 = ps.SMRD;
+  let SchedRW              = ps.SchedRW;
 
   let TSFlags = ps.TSFlags;
 
