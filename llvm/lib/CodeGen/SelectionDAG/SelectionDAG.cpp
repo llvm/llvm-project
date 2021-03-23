@@ -1744,6 +1744,18 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
   return SDValue(CondCodeNodes[Cond], 0);
 }
 
+SDValue SelectionDAG::getStepVector(const SDLoc &DL, EVT ResVT, SDValue Step) {
+  if (ResVT.isScalableVector())
+    return getNode(ISD::STEP_VECTOR, DL, ResVT, Step);
+
+  EVT OpVT = Step.getValueType();
+  APInt StepVal = cast<ConstantSDNode>(Step)->getAPIntValue();
+  SmallVector<SDValue, 16> OpsStepConstants;
+  for (uint64_t i = 0; i < ResVT.getVectorNumElements(); i++)
+    OpsStepConstants.push_back(getConstant(StepVal * i, DL, OpVT));
+  return getBuildVector(ResVT, DL, OpsStepConstants);
+}
+
 /// Swaps the values of N1 and N2. Swaps all indices in the shuffle mask M that
 /// point at N1 to point at N2 and indices that point at N2 to point at N1.
 static void commuteShuffle(SDValue &N1, SDValue &N2, MutableArrayRef<int> M) {
@@ -4339,6 +4351,14 @@ bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   return (computeKnownBits(A).Zero | computeKnownBits(B).Zero).isAllOnesValue();
 }
 
+static SDValue FoldSTEP_VECTOR(const SDLoc &DL, EVT VT, SDValue Step,
+                               SelectionDAG &DAG) {
+  if (cast<ConstantSDNode>(Step)->isNullValue())
+    return DAG.getConstant(0, DL, VT);
+
+  return SDValue();
+}
+
 static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
                                 ArrayRef<SDValue> Ops,
                                 SelectionDAG &DAG) {
@@ -4560,6 +4580,11 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                         APFloat::rmNearestTiesToEven, &Ignored);
       return getConstantFP(FPV, DL, VT);
     }
+    case ISD::STEP_VECTOR: {
+      if (SDValue V = FoldSTEP_VECTOR(DL, VT, Operand, *this))
+        return V;
+      break;
+    }
     }
   }
 
@@ -4669,6 +4694,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
   unsigned OpOpcode = Operand.getNode()->getOpcode();
   switch (Opcode) {
+  case ISD::STEP_VECTOR:
+    assert(VT.isScalableVector() &&
+           "STEP_VECTOR can only be used with scalable types");
+    assert(VT.getScalarSizeInBits() >= 8 &&
+           "STEP_VECTOR can only be used with vectors of integers that are at "
+           "least 8 bits wide");
+    assert(Operand.getValueType().bitsGE(VT.getScalarType()) &&
+           "Operand type should be at least as large as the element type");
+    assert(isa<ConstantSDNode>(Operand) &&
+           cast<ConstantSDNode>(Operand)->getAPIntValue().isNonNegative() &&
+           "Expected positive integer constant for STEP_VECTOR");
+    break;
   case ISD::FREEZE:
     assert(VT == Operand.getValueType() && "Unexpected VT!");
     break;

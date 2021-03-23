@@ -180,6 +180,32 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
     EXPECT_EQ(FTy->getParamType(i), ArgTys[i]->getType());
 }
 
+TEST_F(IRBuilderTest, CreateStepVector) {
+  IRBuilder<> Builder(BB);
+
+  // Fixed width vectors
+  Type *DstVecTy = VectorType::get(Builder.getInt32Ty(), 4, false);
+  Value *StepVec = Builder.CreateStepVector(DstVecTy);
+  EXPECT_TRUE(isa<Constant>(StepVec));
+  EXPECT_EQ(StepVec->getType(), DstVecTy);
+
+  const auto *VectorValue = cast<Constant>(StepVec);
+  for (unsigned i = 0; i < 4; i++) {
+    EXPECT_TRUE(isa<ConstantInt>(VectorValue->getAggregateElement(i)));
+    ConstantInt *El = cast<ConstantInt>(VectorValue->getAggregateElement(i));
+    EXPECT_EQ(El->getValue(), i);
+  }
+
+  // Scalable vectors
+  DstVecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  StepVec = Builder.CreateStepVector(DstVecTy);
+  EXPECT_TRUE(isa<CallInst>(StepVec));
+  CallInst *Call = cast<CallInst>(StepVec);
+  FunctionType *FTy = Call->getFunctionType();
+  EXPECT_EQ(FTy->getReturnType(), DstVecTy);
+  EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::experimental_stepvector);
+}
+
 TEST_F(IRBuilderTest, ConstrainedFP) {
   IRBuilder<> Builder(BB);
   Value *V;

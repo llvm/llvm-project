@@ -1249,6 +1249,12 @@ public:
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
     }
+    case Intrinsic::experimental_stepvector: {
+      if (isa<ScalableVectorType>(RetTy))
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      // The cost of materialising a constant integer vector.
+      return TargetTransformInfo::TCC_Basic;
+    }
     case Intrinsic::experimental_vector_extract: {
       // FIXME: Handle case where a scalable vector is extracted from a scalable
       // vector
