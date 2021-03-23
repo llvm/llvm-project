@@ -1155,6 +1155,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                           0x03d      Reserved.
      *reserved*                           0x03e      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``     0x03f      ``gfx90a``
+     *reserved*                           0x040      Reserved.
      ==================================== ========== =============================
 
 Sections
@@ -4104,9 +4105,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      work-group. Granularity is
                                                      device specific:
 
-                                                     GFX6:
+                                                     GFX6
                                                        roundup(lds-size / (64 * 4))
-                                                     GFX7-GFX10:
+                                                     GFX7-GFX10
                                                        roundup(lds-size / (128 * 4))
 
      24      1 bit   ENABLE_EXCEPTION_IEEE_754_FP    Wavefront starts execution
