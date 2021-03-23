@@ -4280,12 +4280,11 @@ SGPR register initial state is defined in
                 (enable_sgpr_dispatch_id)         dispatch packet being
                                                   executed.
      then       Flat Scratch Init          2      See
-                                                  :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+                (enable_sgpr_flat_scratch         :ref:`amdgpu-amdhsa-kernel-prolog-flat-scratch`.
+                _init)
      then       Private Segment Size       1      The 32-bit byte size of a
-                                                  (enable_sgpr_private single
-                                                  work-item's
-                                                  scratch_segment_size) memory
-                                                  allocation. This is the
+                (enable_sgpr_private              single work-item's memory
+                _segment_size)                    allocation. This is the
                                                   value from the kernel
                                                   dispatch packet Private
                                                   Segment Byte Size rounded up
@@ -4303,36 +4302,6 @@ SGPR register initial state is defined in
                                                   may be needed for GFX9-GFX10 which
                                                   changes the meaning of the
                                                   Flat Scratch Init value.
-     then       Grid Work-Group Count X    1      32-bit count of the number of
-                (enable_sgpr_grid                 work-groups in the X dimension
-                _workgroup_count_X)               for the grid being
-                                                  executed. Computed from the
-                                                  fields in the kernel dispatch
-                                                  packet as ((grid_size.x +
-                                                  workgroup_size.x - 1) /
-                                                  workgroup_size.x).
-     then       Grid Work-Group Count Y    1      32-bit count of the number of
-                (enable_sgpr_grid                 work-groups in the Y dimension
-                _workgroup_count_Y &&             for the grid being
-                less than 16 previous             executed. Computed from the
-                SGPRs)                            fields in the kernel dispatch
-                                                  packet as ((grid_size.y +
-                                                  workgroup_size.y - 1) /
-                                                  workgroupSize.y).
-
-                                                  Only initialized if <16
-                                                  previous SGPRs initialized.
-     then       Grid Work-Group Count Z    1      32-bit count of the number of
-                (enable_sgpr_grid                 work-groups in the Z dimension
-                _workgroup_count_Z &&             for the grid being
-                less than 16 previous             executed. Computed from the
-                SGPRs)                            fields in the kernel dispatch
-                                                  packet as ((grid_size.z +
-                                                  workgroup_size.z - 1) /
-                                                  workgroupSize.z).
-
-                                                  Only initialized if <16
-                                                  previous SGPRs initialized.
      then       Work-Group Id X            1      32-bit work-group id in X
                 (enable_sgpr_workgroup_id         dimension of grid for
                 _X)                               wavefront.
