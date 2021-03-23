@@ -136,6 +136,18 @@ Type Dialect::parseType(DialectAsmParser &parser) const {
   return Type();
 }
 
+Optional<Dialect::ParseOpHook>
+Dialect::getParseOperationHook(StringRef opName) const {
+  return None;
+}
+
+LogicalResult Dialect::printOperation(Operation *op,
+                                      OpAsmPrinter &printer) const {
+  assert(op->getDialect() == this &&
+         "Dialect hook invoked on non-dialect owned operation");
+  return failure();
+}
+
 /// Utility function that returns if the given string is a valid dialect
 /// namespace.
 bool Dialect::isValidNamespace(StringRef str) {

@@ -208,6 +208,26 @@ TestDialect::verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
   return success();
 }
 
+Optional<Dialect::ParseOpHook>
+TestDialect::getParseOperationHook(StringRef opName) const {
+  if (opName == "test.dialect_custom_printer") {
+    return ParseOpHook{[](OpAsmParser &parser, OperationState &state) {
+      return parser.parseKeyword("custom_format");
+    }};
+  }
+  return None;
+}
+
+LogicalResult TestDialect::printOperation(Operation *op,
+                                          OpAsmPrinter &printer) const {
+  StringRef opName = op->getName().getStringRef();
+  if (opName == "test.dialect_custom_printer") {
+    printer.getStream() << opName << " custom_format";
+    return success();
+  }
+  return failure();
+}
+
 //===----------------------------------------------------------------------===//
 // TestBranchOp
 //===----------------------------------------------------------------------===//
