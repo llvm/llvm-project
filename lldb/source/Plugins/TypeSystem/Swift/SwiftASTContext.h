@@ -774,21 +774,26 @@ public:
                                lldb::StackFrameWP &stack_frame_wp,
                                swift::SourceFile &source_file, Status &error);
 
-  /// Retrieve/import the modules imported by the compilation unit.
+  /// Retrieve/import the modules imported by the compilation
+  /// unit. Early-exists with false if there was an import failure.
   bool GetCompileUnitImports(
       SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
-          *modules,
+          &modules,
       Status &error);
 
   /// Perform all the implicit imports for the current frame.
   void PerformCompileUnitImports(SymbolContext &sc,
                                  lldb::StackFrameWP &stack_frame_wp,
-                                 Status &error) {
-    GetCompileUnitImports(sc, stack_frame_wp, nullptr, error);
-  }
+                                 Status &error);
 
 protected:
+  bool GetCompileUnitImportsImpl(
+      SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+          *modules,
+      Status &error);
+
   /// This map uses the string value of ConstStrings as the key, and the
   /// TypeBase
   /// * as the value. Since the ConstString strings are uniqued, we can use

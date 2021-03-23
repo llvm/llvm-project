@@ -8276,7 +8276,7 @@ bool SwiftASTContext::GetImplicitImports(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
-  if (!swift_ast_context.GetCompileUnitImports(sc, stack_frame_wp, &modules,
+  if (!swift_ast_context.GetCompileUnitImports(sc, stack_frame_wp, modules,
                                                error)) {
     return false;
   }
@@ -8348,23 +8348,41 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
   return true;
 }
 
-namespace {
-struct CUSignature : public std::pair<Module *, lldb::user_id_t> {
-  CUSignature(CompileUnit &compile_unit)
-      : std::pair<Module *, lldb::user_id_t>(compile_unit.GetModule().get(),
-                                             compile_unit.GetID()) {}
-};
-} // namespace
-
 bool SwiftASTContext::GetCompileUnitImports(
+    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+    llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+        &modules,
+    Status &error) {
+  return GetCompileUnitImportsImpl(sc, stack_frame_wp, &modules, error);
+}
+
+void SwiftASTContext::PerformCompileUnitImports(
+    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp, Status &error) {
+  GetCompileUnitImportsImpl(sc, stack_frame_wp, nullptr, error);
+}
+
+static std::pair<Module *, lldb::user_id_t>
+GetCUSignature(CompileUnit &compile_unit) {
+  return {compile_unit.GetModule().get(), compile_unit.GetID()};
+}
+
+bool SwiftASTContext::GetCompileUnitImportsImpl(
     SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         *modules,
     Status &error) {
   CompileUnit *compile_unit = sc.comp_unit;
   if (compile_unit)
-    if (m_cu_imports.insert(CUSignature(*compile_unit)).second)
-      // List of imports isn't requested and we already processes this CU?
+    // Check the cache if this compile unit's imports were previously
+    // requested.  If the caller didn't request the list of imported
+    // modules then there is nothing left to do for subsequent
+    // GetCompileUnitImportsImpl() calls as the previously loaded
+    // modules should still be loaded.  The fact the we
+    // unconditionally return true does not matter because the only
+    // way to get here is through void PerformCompileUnitImports(),
+    // which discards the return value.
+    if (!m_cu_imports.insert(GetCUSignature(*compile_unit)).second)
+      // List of imports isn't requested and we already processed this CU?
       if (!modules)
         return true;
 
