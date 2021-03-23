@@ -12,6 +12,7 @@
 
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
 #include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPythonImpl.h"
+#include "lldb/API/SBError.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 
@@ -153,6 +154,14 @@ extern "C" int LLDBSwigPython_GetIndexOfChildWithName(void *implementor,
   return 0;
 }
 
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBData(void *data) {
+  return nullptr;
+}
+
+extern "C" void *LLDBSWIGPython_CastPyObjectToSBError(void *data) {
+  return nullptr;
+}
+
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data) {
   return nullptr;
 }
@@ -204,6 +213,13 @@ extern "C" void *
 LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
                              const char *session_dictionary_name,
                              const lldb::ProcessSP &process_sp) {
+  return nullptr;
+}
+
+extern "C" void *LLDBSwigPythonCreateScriptedProcess(
+    const char *python_class_name, const char *session_dictionary_name,
+    const lldb::TargetSP &target_sp, StructuredDataImpl *args_impl,
+    std::string &error_string) {
   return nullptr;
 }
 
