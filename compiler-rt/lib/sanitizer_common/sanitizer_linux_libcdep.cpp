@@ -36,6 +36,7 @@
 #include <link.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
 #include <syslog.h>
 
@@ -913,6 +914,60 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   UnmapFromTo(shadow_start + shadow_size, map_start + map_size);
 
   return shadow_start;
+}
+
+static uptr MmapSharedNoReserve(uptr addr, uptr size) {
+  return internal_mmap(
+      reinterpret_cast<void *>(addr), size, PROT_READ | PROT_WRITE,
+      MAP_FIXED | MAP_SHARED | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+}
+
+static uptr MremapCreateAlias(uptr base_addr, uptr alias_addr,
+                              uptr alias_size) {
+  return internal_mremap(reinterpret_cast<void *>(base_addr), 0, alias_size,
+                         MREMAP_MAYMOVE | MREMAP_FIXED,
+                         reinterpret_cast<void *>(alias_addr));
+}
+
+static void CreateAliases(uptr start_addr, uptr alias_size, uptr num_aliases) {
+  uptr total_size = alias_size * num_aliases;
+  uptr mapped = MmapSharedNoReserve(start_addr, total_size);
+  CHECK_EQ(mapped, start_addr);
+
+  for (uptr i = 1; i < num_aliases; ++i) {
+    uptr alias_addr = start_addr + i * alias_size;
+    CHECK_EQ(MremapCreateAlias(start_addr, alias_addr, alias_size), alias_addr);
+  }
+}
+
+uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
+                                uptr num_aliases, uptr ring_buffer_size) {
+  CHECK_EQ(alias_size & (alias_size - 1), 0);
+  CHECK_EQ(num_aliases & (num_aliases - 1), 0);
+  CHECK_EQ(ring_buffer_size & (ring_buffer_size - 1), 0);
+
+  const uptr granularity = GetMmapGranularity();
+  shadow_size = RoundUpTo(shadow_size, granularity);
+  CHECK_EQ(shadow_size & (shadow_size - 1), 0);
+
+  const uptr alias_region_size = alias_size * num_aliases;
+  const uptr alignment =
+      2 * Max(Max(shadow_size, alias_region_size), ring_buffer_size);
+  const uptr left_padding = ring_buffer_size;
+
+  const uptr right_size = alignment;
+  const uptr map_size = left_padding + 2 * alignment;
+
+  const uptr map_start = reinterpret_cast<uptr>(MmapNoAccess(map_size));
+  CHECK_NE(map_start, static_cast<uptr>(-1));
+  const uptr right_start = RoundUpTo(map_start + left_padding, alignment);
+
+  UnmapFromTo(map_start, right_start - left_padding);
+  UnmapFromTo(right_start + right_size, map_start + map_size);
+
+  CreateAliases(right_start + right_size / 2, alias_size, num_aliases);
+
+  return right_start;
 }
 
 void InitializePlatformCommonFlags(CommonFlags *cf) {
