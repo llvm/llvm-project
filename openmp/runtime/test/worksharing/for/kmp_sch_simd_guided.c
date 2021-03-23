@@ -5,6 +5,7 @@
   value 46 to the OpenMP RTL. Test uses numerous loop parameter combinations.
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <omp.h>
 
 #if defined(WIN32) || defined(_WIN32)
