@@ -580,8 +580,8 @@ static void
 populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
                               OwningRewritePatternList &promotionPatterns,
                               OwningRewritePatternList &vectorizationPatterns,
-                              ArrayRef<int64_t> tileSizes,
-                              MLIRContext *context) {
+                              ArrayRef<int64_t> tileSizes) {
+  auto *context = tilingPatterns.getContext();
   if (tileSizes.size() < N)
     return;
 
@@ -608,45 +608,47 @@ populateVectorizationPatterns(OwningRewritePatternList &tilingPatterns,
 void mlir::linalg::populateConvVectorizationPatterns(
     MLIRContext *context, SmallVectorImpl<OwningRewritePatternList> &patterns,
     ArrayRef<int64_t> tileSizes) {
-  OwningRewritePatternList tiling, promotion, vectorization;
+  OwningRewritePatternList tiling(context);
+  OwningRewritePatternList promotion(context);
+  OwningRewritePatternList vectorization(context);
   populateVectorizationPatterns<ConvWOp, 1>(tiling, promotion, vectorization,
-                                            tileSizes, context);
+                                            tileSizes);
 
   populateVectorizationPatterns<ConvNWCOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
+                                              tileSizes);
   populateVectorizationPatterns<ConvInputNWCFilterWCFOp, 3>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvNCWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
+                                              tileSizes);
   populateVectorizationPatterns<ConvInputNCWFilterWCFOp, 3>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvHWOp, 2>(tiling, promotion, vectorization,
-                                             tileSizes, context);
+                                             tileSizes);
 
   populateVectorizationPatterns<ConvNHWCOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes, context);
+                                               tileSizes);
   populateVectorizationPatterns<ConvInputNHWCFilterHWCFOp, 4>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvNCHWOp, 4>(tiling, promotion, vectorization,
-                                               tileSizes, context);
+                                               tileSizes);
   populateVectorizationPatterns<ConvInputNCHWFilterHWCFOp, 4>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
   populateVectorizationPatterns<ConvDHWOp, 3>(tiling, promotion, vectorization,
-                                              tileSizes, context);
+                                              tileSizes);
 
-  populateVectorizationPatterns<ConvNDHWCOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
+  populateVectorizationPatterns<ConvNDHWCOp, 5>(tiling, promotion,
+                                                vectorization, tileSizes);
   populateVectorizationPatterns<ConvInputNDHWCFilterDHWCFOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
-  populateVectorizationPatterns<ConvNCDHWOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
+  populateVectorizationPatterns<ConvNCDHWOp, 5>(tiling, promotion,
+                                                vectorization, tileSizes);
   populateVectorizationPatterns<ConvInputNCDHWFilterDHWCFOp, 5>(
-      tiling, promotion, vectorization, tileSizes, context);
+      tiling, promotion, vectorization, tileSizes);
 
   patterns.push_back(std::move(tiling));
   patterns.push_back(std::move(promotion));

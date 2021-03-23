@@ -875,7 +875,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 
   // Convert async dialect types and operations to LLVM dialect.
   AsyncRuntimeTypeConverter converter;
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(ctx);
 
   // We use conversion to LLVM type to lower async.runtime load and store
   // operations.
@@ -883,8 +883,8 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   llvmConverter.addConversion(AsyncRuntimeTypeConverter::convertAsyncTypes);
 
   // Convert async types in function signatures and function calls.
-  populateFuncOpTypeConversionPattern(patterns, ctx, converter);
-  populateCallOpTypeConversionPattern(patterns, ctx, converter);
+  populateFuncOpTypeConversionPattern(patterns, converter);
+  populateCallOpTypeConversionPattern(patterns, converter);
 
   // Convert return operations inside async.execute regions.
   patterns.insert<ReturnOpOpConversion>(converter, ctx);
@@ -985,8 +985,8 @@ std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
 }
 
 void mlir::populateAsyncStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target) {
+    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    ConversionTarget &target) {
   typeConverter.addConversion([&](TokenType type) { return type; });
   typeConverter.addConversion([&](ValueType type) {
     return ValueType::get(typeConverter.convertType(type.getValueType()));
@@ -994,7 +994,7 @@ void mlir::populateAsyncStructuralTypeConversionsAndLegality(
 
   patterns
       .insert<ConvertExecuteOpTypes, ConvertAwaitOpTypes, ConvertYieldOpTypes>(
-          typeConverter, context);
+          typeConverter, patterns.getContext());
 
   target.addDynamicallyLegalOp<AwaitOp, ExecuteOp, async::YieldOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });

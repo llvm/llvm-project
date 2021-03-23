@@ -267,7 +267,7 @@ private:
     bool InGlobal;
     bool InTls;
 
-    void init(Triple &TargetTriple);
+    void init(Triple &TargetTriple, bool InstrumentWithCalls);
     unsigned getObjectAlignment() const { return 1U << Scale; }
   };
   ShadowMapping Mapping;
@@ -284,6 +284,9 @@ private:
   bool OutlinedChecks;
   bool UseShortGranules;
   bool InstrumentLandingPads;
+  bool InstrumentWithCalls;
+  bool InstrumentStack;
+  bool UsePageAliases;
 
   bool HasMatchAllTag = false;
   uint8_t MatchAllTag = 0;
@@ -479,7 +482,13 @@ void HWAddressSanitizer::initializeModule() {
 
   TargetTriple = Triple(M.getTargetTriple());
 
-  Mapping.init(TargetTriple);
+  // x86_64 uses userspace pointer aliases, currently heap-only with callback
+  // instrumentation only.
+  UsePageAliases = TargetTriple.getArch() == Triple::x86_64;
+  InstrumentWithCalls = UsePageAliases ? true : ClInstrumentWithCalls;
+  InstrumentStack = UsePageAliases ? false : ClInstrumentStack;
+
+  Mapping.init(TargetTriple, InstrumentWithCalls);
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
@@ -521,7 +530,7 @@ void HWAddressSanitizer::initializeModule() {
     createHwasanCtorComdat();
     bool InstrumentGlobals =
         ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
-    if (InstrumentGlobals)
+    if (InstrumentGlobals && !UsePageAliases)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -721,6 +730,7 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore) {
+  assert(!UsePageAliases);
   const int64_t AccessInfo =
       (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
       (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
@@ -849,7 +859,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
       (!O.Alignment || *O.Alignment >= (1ULL << Mapping.Scale) ||
        *O.Alignment >= O.TypeSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
-    if (ClInstrumentWithCalls) {
+    if (InstrumentWithCalls) {
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
     } else {
@@ -884,7 +894,7 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
     Size = AlignedSize;
 
   Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
-  if (ClInstrumentWithCalls) {
+  if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
                    {IRB.CreatePointerCast(AI, Int8PtrTy), JustTag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
@@ -976,6 +986,7 @@ Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
 // Add a tag to an address.
 Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
                                       Value *PtrLong, Value *Tag) {
+  assert(!UsePageAliases);
   Value *TaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
@@ -1207,7 +1218,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
-      if (ClInstrumentStack)
+      if (InstrumentStack)
         if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
           if (isInterestingAlloca(*AI))
             AllocasToInstrument.push_back(AI);
@@ -1343,6 +1354,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
+  assert(!UsePageAliases);
   Constant *Initializer = GV->getInitializer();
   uint64_t SizeInBytes =
       M.getDataLayout().getTypeAllocSize(Initializer->getType());
@@ -1515,13 +1527,14 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   }
 }
 
-void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple) {
+void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
+                                             bool InstrumentWithCalls) {
   Scale = kDefaultShadowScale;
   if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
     InTls = false;
     Offset = ClMappingOffset;
-  } else if (ClEnableKhwasan || ClInstrumentWithCalls) {
+  } else if (ClEnableKhwasan || InstrumentWithCalls) {
     InGlobal = false;
     InTls = false;
     Offset = 0;

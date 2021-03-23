@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: libcpp-has-no-stdout
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // <iostream>
 

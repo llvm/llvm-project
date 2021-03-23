@@ -115,12 +115,39 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
   }
 
   if (isa<tosa::MulOp>(op) && elementTy.isa<IntegerType>()) {
-    auto mul =
-        rewriter.create<mlir::MulIOp>(loc, resultTypes, args[0], args[1]);
-    auto constant =
-        rewriter.create<mlir::ConstantOp>(loc, elementTy, op->getAttr("shift"));
-    return rewriter.create<mlir::SignedShiftRightOp>(loc, resultTypes, mul,
-                                                     constant);
+    Value a = args[0];
+    Value b = args[1];
+    auto shift =
+        op->getAttr("shift").cast<IntegerAttr>().getValue().getSExtValue();
+    if (shift > 0) {
+      auto shiftConst =
+          rewriter.create<ConstantIntOp>(loc, shift, /*bitwidth=*/8);
+      if (!a.getType().isInteger(32))
+        a = rewriter.create<SignExtendIOp>(loc, rewriter.getI32Type(), a);
+
+      if (!b.getType().isInteger(32))
+        b = rewriter.create<SignExtendIOp>(loc, rewriter.getI32Type(), b);
+
+      auto result = rewriter.create<tosa::ApplyScaleOp>(
+          loc, rewriter.getI32Type(), a, b, shiftConst,
+          rewriter.getBoolAttr(false));
+
+      if (elementTy.isInteger(32))
+        return result;
+
+      return rewriter.create<TruncateIOp>(loc, elementTy, result);
+    }
+
+    int aWidth = a.getType().getIntOrFloatBitWidth();
+    int bWidth = b.getType().getIntOrFloatBitWidth();
+    int cWidth = resultTypes[0].getIntOrFloatBitWidth();
+
+    if (aWidth < cWidth)
+      a = rewriter.create<SignExtendIOp>(loc, resultTypes[0], a);
+    if (bWidth < cWidth)
+      b = rewriter.create<SignExtendIOp>(loc, resultTypes[0], b);
+
+    return rewriter.create<mlir::MulIOp>(loc, resultTypes, a, b);
   }
 
   // tosa::NegateOp
@@ -989,7 +1016,7 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
+    OwningRewritePatternList *patterns) {
   patterns->insert<
       PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>, PointwiseConverter<tosa::NegateOp>,
@@ -1014,5 +1041,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
-      RescaleConverter, ReverseConverter, TransposeConverter>(context);
+      RescaleConverter, ReverseConverter, TransposeConverter>(
+      patterns->getContext());
 }

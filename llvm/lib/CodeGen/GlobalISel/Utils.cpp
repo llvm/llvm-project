@@ -481,6 +481,60 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
+Optional<APFloat> llvm::ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
+                                            const Register Op2,
+                                            const MachineRegisterInfo &MRI) {
+  const ConstantFP *Op2Cst = getConstantFPVRegVal(Op2, MRI);
+  if (!Op2Cst)
+    return None;
+
+  const ConstantFP *Op1Cst = getConstantFPVRegVal(Op1, MRI);
+  if (!Op1Cst)
+    return None;
+
+  APFloat C1 = Op1Cst->getValueAPF();
+  const APFloat &C2 = Op2Cst->getValueAPF();
+  switch (Opcode) {
+  case TargetOpcode::G_FADD:
+    C1.add(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FSUB:
+    C1.subtract(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FMUL:
+    C1.multiply(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FDIV:
+    C1.divide(C2, APFloat::rmNearestTiesToEven);
+    return C1;
+  case TargetOpcode::G_FREM:
+    C1.mod(C2);
+    return C1;
+  case TargetOpcode::G_FCOPYSIGN:
+    C1.copySign(C2);
+    return C1;
+  case TargetOpcode::G_FMINNUM:
+    return minnum(C1, C2);
+  case TargetOpcode::G_FMAXNUM:
+    return maxnum(C1, C2);
+  case TargetOpcode::G_FMINIMUM:
+    return minimum(C1, C2);
+  case TargetOpcode::G_FMAXIMUM:
+    return maximum(C1, C2);
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+    // FIXME: These operations were unfortunately named. fminnum/fmaxnum do not
+    // follow the IEEE behavior for signaling nans and follow libm's fmin/fmax,
+    // and currently there isn't a nice wrapper in APFloat for the version with
+    // correct snan handling.
+    break;
+  default:
+    break;
+  }
+
+  return None;
+}
+
 bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
                            bool SNaN) {
   const MachineInstr *DefMI = MRI.getVRegDef(Val);
@@ -647,11 +701,32 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
 
     break;
   }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // TODO: Probably should have a recursion depth guard since you could have
+    // bitcasted vector elements.
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+      if (!isKnownToBeAPowerOfTwo(MI.getOperand(I).getReg(), MRI, KB))
+        return false;
+    }
+
+    return true;
+  }
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
+    // Only handle constants since we would need to know if number of leading
+    // zeros is greater than the truncation amount.
+    const unsigned BitWidth = Ty.getScalarSizeInBits();
+    for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+      auto Const = getConstantVRegVal(MI.getOperand(I).getReg(), MRI);
+      if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
+        return false;
+    }
+
+    return true;
+  }
   default:
     break;
   }
 
-  // TODO: Are all operands of a build vector constant powers of two?
   if (!KB)
     return false;
 

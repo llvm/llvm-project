@@ -1,4 +1,3 @@
-; XFAIL: *
 // RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -finclude-default-header %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -o - -O0 -triple spir-unknown-unknown -cl-std=CL1.2 -fdeclare-opencl-builtins -finclude-default-header %s | FileCheck %s
 

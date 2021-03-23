@@ -25,8 +25,8 @@ struct TestGpuRewritePass
     registry.insert<StandardOpsDialect, memref::MemRefDialect>();
   }
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
-    populateGpuRewritePatterns(&getContext(), patterns);
+    OwningRewritePatternList patterns(&getContext());
+    populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };

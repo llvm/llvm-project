@@ -52,7 +52,7 @@ TEST(PatternBenefitTest, BenefitOrder) {
     bool *called;
   };
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&context);
 
   bool called1 = false;
   bool called2 = false;

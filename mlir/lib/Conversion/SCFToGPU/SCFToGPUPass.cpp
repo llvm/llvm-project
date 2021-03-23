@@ -47,8 +47,8 @@ struct ForLoopMapper : public ConvertAffineForToGPUBase<ForLoopMapper> {
 struct ParallelLoopToGpuPass
     : public ConvertParallelLoopToGpuBase<ParallelLoopToGpuPass> {
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
-    populateParallelLoopToGPUPatterns(patterns, &getContext());
+    OwningRewritePatternList patterns(&getContext());
+    populateParallelLoopToGPUPatterns(patterns);
     ConversionTarget target(getContext());
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     configureParallelLoopToGPULegality(target);

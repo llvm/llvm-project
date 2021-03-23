@@ -37,11 +37,11 @@ symbols.
 The ``warn-backrefs`` option provides information that helps identify cases
 where LLD and GNU ld archive selection may differ.
 
-    % ld.lld --warn-backrefs ... -lB -lA
-    ld.lld: warning: backward reference detected: system in A.a(a.o) refers to B.a(b.o)
+    | % ld.lld --warn-backrefs ... -lB -lA
+    | ld.lld: warning: backward reference detected: system in A.a(a.o) refers to B.a(b.o)
 
-    % ld.lld --warn-backrefs ... --start-lib B/b.o --end-lib --start-lib A/a.o --end-lib
-    ld.lld: warning: backward reference detected: system in A/a.o refers to B/b.o
+    | % ld.lld --warn-backrefs ... --start-lib B/b.o --end-lib --start-lib A/a.o --end-lib
+    | ld.lld: warning: backward reference detected: system in A/a.o refers to B/b.o
 
     # To suppress the warning, you can specify --warn-backrefs-exclude=<glob> to match B/b.o or B.a(b.o)
 

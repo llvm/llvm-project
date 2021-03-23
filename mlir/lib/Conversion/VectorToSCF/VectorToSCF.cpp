@@ -694,11 +694,11 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 }
 
 void populateVectorToSCFConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
+    OwningRewritePatternList &patterns,
     const VectorTransferToSCFOptions &options) {
   patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
-                  VectorTransferRewriter<vector::TransferWriteOp>>(options,
-                                                                   context);
+                  VectorTransferRewriter<vector::TransferWriteOp>>(
+      options, patterns.getContext());
 }
 
 } // namespace mlir
@@ -713,10 +713,9 @@ struct ConvertVectorToSCFPass
   }
 
   void runOnFunction() override {
-    OwningRewritePatternList patterns;
-    auto *context = getFunction().getContext();
+    OwningRewritePatternList patterns(getFunction().getContext());
     populateVectorToSCFConversionPatterns(
-        patterns, context, VectorTransferToSCFOptions().setUnroll(fullUnroll));
+        patterns, VectorTransferToSCFOptions().setUnroll(fullUnroll));
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };

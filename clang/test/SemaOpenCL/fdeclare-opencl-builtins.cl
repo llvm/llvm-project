@@ -7,8 +7,6 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
 
-// XFAIL: *
-
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
 // this test should cover different functional aspects of the TableGen builtin

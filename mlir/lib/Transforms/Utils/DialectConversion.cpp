@@ -75,7 +75,8 @@ computeConversionSet(iterator_range<Region::iterator> region,
 
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
-static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
+static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
+                       Args &&... args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> SUCCESS";
@@ -88,7 +89,8 @@ static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
 
 /// A utility function to log a failure result for the given reason.
 template <typename... Args>
-static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
+static void logFailure(llvm::ScopedPrinter &os, StringRef fmt,
+                       Args &&... args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> FAILURE : "
@@ -2611,15 +2613,14 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
 
 void mlir::populateFunctionLikeTypeConversionPattern(
     StringRef functionLikeOpName, OwningRewritePatternList &patterns,
-    MLIRContext *ctx, TypeConverter &converter) {
-  patterns.insert<FunctionLikeSignatureConversion>(functionLikeOpName, ctx,
-                                                   converter);
+    TypeConverter &converter) {
+  patterns.insert<FunctionLikeSignatureConversion>(
+      functionLikeOpName, patterns.getContext(), converter);
 }
 
 void mlir::populateFuncOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, MLIRContext *ctx,
-    TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, ctx, converter);
+    OwningRewritePatternList &patterns, TypeConverter &converter) {
+  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
 }
 
 //===----------------------------------------------------------------------===//

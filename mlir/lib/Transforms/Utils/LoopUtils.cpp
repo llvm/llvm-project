@@ -403,7 +403,7 @@ LogicalResult mlir::affineForOpBodySkew(AffineForOp forOp,
 
       if (res) {
         // Simplify/canonicalize the affine.for.
-        OwningRewritePatternList patterns;
+        OwningRewritePatternList patterns(res.getContext());
         AffineForOp::getCanonicalizationPatterns(patterns, res.getContext());
         bool erased;
         (void)applyOpPatternsAndFold(res, std::move(patterns), &erased);

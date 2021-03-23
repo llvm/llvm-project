@@ -60,8 +60,8 @@ tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 /// corresponding scf.yield ops need to update their types accordingly to the
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target);
+    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    ConversionTarget &target);
 
 } // namespace scf
 } // namespace mlir

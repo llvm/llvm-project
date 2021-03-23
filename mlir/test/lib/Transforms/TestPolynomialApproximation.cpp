@@ -32,8 +32,8 @@ struct TestMathPolynomialApproximationPass
 } // end anonymous namespace
 
 void TestMathPolynomialApproximationPass::runOnFunction() {
-  OwningRewritePatternList patterns;
-  populateMathPolynomialApproximationPatterns(patterns, &getContext());
+  OwningRewritePatternList patterns(&getContext());
+  populateMathPolynomialApproximationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

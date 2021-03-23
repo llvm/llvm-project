@@ -21,8 +21,7 @@ class SPIRVTypeConverter;
 /// Appends to a pattern list additional patterns for translating standard ops
 /// to SPIR-V ops. Also adds the patterns to legalize ops not directly
 /// translated to SPIR-V dialect.
-void populateStandardToSPIRVPatterns(MLIRContext *context,
-                                     SPIRVTypeConverter &typeConverter,
+void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                      OwningRewritePatternList &patterns);
 
 /// Appends to a pattern list additional patterns for translating tensor ops
@@ -37,15 +36,14 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
 /// variables. SPIR-V consumers in GPU drivers may or may not optimize that
 /// away. So this has implications over register pressure. Therefore, a
 /// threshold is used to control when the patterns should kick in.
-void populateTensorToSPIRVPatterns(MLIRContext *context,
-                                   SPIRVTypeConverter &typeConverter,
+void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
                                    OwningRewritePatternList &patterns);
 
 /// Appends to a pattern list patterns to legalize ops that are not directly
 /// lowered to SPIR-V.
 void populateStdLegalizationPatternsForSPIRVLowering(
-    MLIRContext *context, OwningRewritePatternList &patterns);
+    OwningRewritePatternList &patterns);
 
 } // namespace mlir
 

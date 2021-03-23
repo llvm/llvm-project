@@ -270,7 +270,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 void AsyncParallelForPass::runOnFunction() {
   MLIRContext *ctx = &getContext();
 
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(ctx);
   patterns.insert<AsyncParallelForRewrite>(ctx, numConcurrentAsyncExecute);
 
   if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))

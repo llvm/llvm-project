@@ -250,6 +250,7 @@ def TimeAPI : PublicAPI<"time.h"> {
 
   let Functions = [
     "gmtime",
+    "gmtime_r",
     "mktime",
   ];
 }

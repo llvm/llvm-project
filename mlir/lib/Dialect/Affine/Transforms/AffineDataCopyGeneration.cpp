@@ -227,7 +227,7 @@ void AffineDataCopyGeneration::runOnFunction() {
   // Promoting single iteration loops could lead to simplification of
   // contained load's/store's, and the latter could anyway also be
   // canonicalized.
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternList frozenPatterns(std::move(patterns));

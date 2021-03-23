@@ -1,12 +1,14 @@
 // Test that gcc-toolchain option is working correctly
 //
+/// Without --rtlib=libgcc the driver may pick clang_rt.crtbegin.o if
+/// -DCLANG_DEFAULT_RTLIB=compiler-rt.
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
-// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ 2>&1 | \
+// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Additionally check that the legacy spelling of the flag works.
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
-// RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ 2>&1 | \
+// RUN:   -gcc-toolchain %S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Test for header search toolchain detection.
@@ -16,7 +18,6 @@
 // CHECK: "[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/x86_64-linux-gnu/c++/4.8"
 // CHECK: "-internal-isystem"
 // CHECK: "[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../include/c++/4.8/backward"
-// CHECK: "-internal-isystem" "/usr/local/include"
 //
 // Test for linker toolchain detection. Note that only the '-L' flags will use
 // the same precise formatting of the path as the '-internal-system' flags

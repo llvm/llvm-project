@@ -226,28 +226,30 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
 void PPCMIPeephole::UpdateTOCSaves(
   std::map<MachineInstr *, bool> &TOCSaves, MachineInstr *MI) {
   assert(TII->isTOCSaveMI(*MI) && "Expecting a TOC save instruction here");
-  assert(MF->getSubtarget<PPCSubtarget>().isELFv2ABI() &&
-         "TOC-save removal only supported on ELFv2");
-  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  // FIXME: Saving TOC in prologue hasn't been implemented well in AIX ABI part,
+  // here only support it under ELFv2.
+  if (MF->getSubtarget<PPCSubtarget>().isELFv2ABI()) {
+    PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
 
-  MachineBasicBlock *Entry = &MF->front();
-  uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+    MachineBasicBlock *Entry = &MF->front();
+    uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
 
-  // If the block in which the TOC save resides is in a block that
-  // post-dominates Entry, or a block that is hotter than entry (keep in mind
-  // that early MachineLICM has already run so the TOC save won't be hoisted)
-  // we can just do the save in the prologue.
-  if (CurrBlockFreq > EntryFreq || MPDT->dominates(MI->getParent(), Entry))
-    FI->setMustSaveTOC(true);
+    // If the block in which the TOC save resides is in a block that
+    // post-dominates Entry, or a block that is hotter than entry (keep in mind
+    // that early MachineLICM has already run so the TOC save won't be hoisted)
+    // we can just do the save in the prologue.
+    if (CurrBlockFreq > EntryFreq || MPDT->dominates(MI->getParent(), Entry))
+      FI->setMustSaveTOC(true);
 
-  // If we are saving the TOC in the prologue, all the TOC saves can be removed
-  // from the code.
-  if (FI->mustSaveTOC()) {
-    for (auto &TOCSave : TOCSaves)
-      TOCSave.second = false;
-    // Add new instruction to map.
-    TOCSaves[MI] = false;
-    return;
+    // If we are saving the TOC in the prologue, all the TOC saves can be
+    // removed from the code.
+    if (FI->mustSaveTOC()) {
+      for (auto &TOCSave : TOCSaves)
+        TOCSave.second = false;
+      // Add new instruction to map.
+      TOCSaves[MI] = false;
+      return;
+    }
   }
 
   bool Keep = true;
@@ -476,10 +478,12 @@ bool PPCMIPeephole::simplifyCode(void) {
         }
         break;
       }
+      case PPC::STW:
       case PPC::STD: {
         MachineFrameInfo &MFI = MF->getFrameInfo();
         if (MFI.hasVarSizedObjects() ||
-            !MF->getSubtarget<PPCSubtarget>().isELFv2ABI())
+            (!MF->getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+             !MF->getSubtarget<PPCSubtarget>().isAIXABI()))
           break;
         // When encountering a TOC save instruction, call UpdateTOCSaves
         // to add it to the TOCSaves map and mark any existing TOC saves

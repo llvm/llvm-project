@@ -88,6 +88,7 @@ set(files
   mwaitxintrin.h
   nmmintrin.h
   opencl-c.h
+  opencl-c-base.h
   offload_macros.h
   pkuintrin.h
   pmmintrin.h

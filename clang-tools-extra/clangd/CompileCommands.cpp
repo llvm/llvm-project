@@ -96,9 +96,9 @@ std::string detectClangPath() {
     if (auto PathCC = llvm::sys::findProgramByName(Name))
       return resolve(std::move(*PathCC));
   // Fallback: a nonexistent 'clang' binary next to clangd.
-  static int Dummy;
+  static int StaticForMainAddr;
   std::string ClangdExecutable =
-      llvm::sys::fs::getMainExecutable("clangd", (void *)&Dummy);
+      llvm::sys::fs::getMainExecutable("clangd", (void *)&StaticForMainAddr);
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
@@ -120,8 +120,9 @@ const llvm::Optional<std::string> detectSysroot() {
 }
 
 std::string detectStandardResourceDir() {
-  static int Dummy; // Just an address in this process.
-  return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
+  static int StaticForMainAddr; // Just an address in this process.
+  return CompilerInvocation::GetResourcesPath("clangd",
+                                              (void *)&StaticForMainAddr);
 }
 
 // The path passed to argv[0] is important:

@@ -204,6 +204,9 @@ void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const Register Op1,
                                   const Register Op2,
                                   const MachineRegisterInfo &MRI);
+Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
+                                      const Register Op2,
+                                      const MachineRegisterInfo &MRI);
 
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);

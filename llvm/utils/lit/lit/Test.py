@@ -3,6 +3,7 @@ import os
 from json import JSONEncoder
 
 from lit.BooleanExpression import BooleanExpression
+from lit.TestTimes import read_test_times
 
 # Test result codes.
 
@@ -207,15 +208,7 @@ class TestSuite:
         # The test suite configuration.
         self.config = config
 
-        self.test_times = {}
-        test_times_file = os.path.join(exec_root, '.lit_test_times.txt')
-        if not os.path.exists(test_times_file):
-            test_times_file = os.path.join(source_root, '.lit_test_times.txt')
-        if os.path.exists(test_times_file):
-            with open(test_times_file, 'r') as time_file:
-                for line in time_file:
-                    time, path = line.split(maxsplit=1)
-                    self.test_times[path.strip('\n')] = float(time)
+        self.test_times = read_test_times(self)
 
     def getSourcePath(self, components):
         return os.path.join(self.source_root, *components)

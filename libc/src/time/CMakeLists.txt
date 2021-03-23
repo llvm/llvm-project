@@ -4,6 +4,10 @@ add_object_library(
     time_utils.cpp
   HDRS
     time_utils.h
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.errno.__errno_location
 )
 
 add_entrypoint_object(
@@ -14,9 +18,18 @@ add_entrypoint_object(
     gmtime.h
   DEPENDS
     .time_utils
-    libc.include.errno
     libc.include.time
-    libc.src.errno.__errno_location
+)
+
+add_entrypoint_object(
+  gmtime_r
+  SRCS
+    gmtime_r.cpp
+  HDRS
+    gmtime_r.h
+  DEPENDS
+    .time_utils
+    libc.include.time
 )
 
 add_entrypoint_object(

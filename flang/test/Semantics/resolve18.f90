@@ -63,6 +63,15 @@ contains
   function foo(x)
   end
 end
+module m4c
+  type :: foo
+  end type
+  interface foo
+    !ERROR: 'foo' is already declared in this scoping unit
+    real function foo()
+    end function foo
+  end interface foo
+end
 
 ! Use associating a name that is a generic and a derived type
 module m5a
@@ -85,3 +94,30 @@ subroutine s5
   use m5b
   type(g) :: y
 end
+
+module m6
+  real :: f6
+  interface g6
+  !ERROR: Procedure 'f6' was previously declared
+    real function f6()
+    end function f6
+  end interface g6
+end module m6
+
+module m7
+  integer :: f7
+  interface g7
+    !ERROR: Procedure 'f7' was previously declared
+    real function f7()
+    end function f7
+  end interface g7
+end module m7
+
+module m8
+  real :: f8
+  interface g8
+    !ERROR: Procedure 'f8' was previously declared
+    subroutine f8()
+    end subroutine f8
+  end interface g8
+end module m8

@@ -15,6 +15,8 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
+#include <limits>
+
 namespace llvm {
 namespace jitlink {
 namespace x86_64 {
@@ -244,6 +246,17 @@ enum EdgeKind_x86_64 : Edge::Kind {
 /// only.
 const char *getEdgeKindName(Edge::Kind K);
 
+/// Returns true if the given uint64_t value is in range for a uint32_t.
+inline bool isInRangeForImmU32(uint64_t Value) {
+  return Value <= std::numeric_limits<uint32_t>::max();
+}
+
+/// Returns true if the given int64_t value is in range for an int32_t.
+inline bool isInRangeForImmS32(int64_t Value) {
+  return (Value >= std::numeric_limits<int32_t>::min() &&
+          Value <= std::numeric_limits<int32_t>::max());
+}
+
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
                         char *BlockWorkingMem) {
@@ -262,9 +275,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress() + E.getAddend();
-    if (Value > std::numeric_limits<uint32_t>::max())
+    if (LLVM_LIKELY(isInRangeForImmU32(Value)))
+      *(ulittle32_t *)FixupPtr = Value;
+    else
       return makeTargetOutOfRangeError(G, B, E);
-    *(ulittle32_t *)FixupPtr = Value;
     break;
   }
 
@@ -275,10 +289,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case PCRel32TLVPLoadRelaxable: {
     int64_t Value =
         E.getTarget().getAddress() - (FixupAddress + 4) + E.getAddend();
-    if (Value < std::numeric_limits<int32_t>::min() ||
-        Value > std::numeric_limits<int32_t>::max())
+    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+      *(little32_t *)FixupPtr = Value;
+    else
       return makeTargetOutOfRangeError(G, B, E);
-    *(little32_t *)FixupPtr = Value;
     break;
   }
 
@@ -290,10 +304,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case Delta32: {
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
-    if (Value < std::numeric_limits<int32_t>::min() ||
-        Value > std::numeric_limits<int32_t>::max())
+    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+      *(little32_t *)FixupPtr = Value;
+    else
       return makeTargetOutOfRangeError(G, B, E);
-    *(little32_t *)FixupPtr = Value;
     break;
   }
 
@@ -305,10 +319,10 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 
   case NegDelta32: {
     int64_t Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
-    if (Value < std::numeric_limits<int32_t>::min() ||
-        Value > std::numeric_limits<int32_t>::max())
+    if (LLVM_LIKELY(isInRangeForImmS32(Value)))
+      *(little32_t *)FixupPtr = Value;
+    else
       return makeTargetOutOfRangeError(G, B, E);
-    *(little32_t *)FixupPtr = Value;
     break;
   }
 

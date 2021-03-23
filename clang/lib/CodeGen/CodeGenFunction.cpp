@@ -496,6 +496,13 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   if (LargestVectorWidth)
     CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 
+  // Add vscale attribute if appropriate.
+  if (getLangOpts().ArmSveVectorBits) {
+    unsigned VScale = getLangOpts().ArmSveVectorBits / 128;
+    CurFn->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(getLLVMContext(),
+                                                             VScale, VScale));
+  }
+
   // If we generated an unreachable return block, delete it now.
   if (ReturnBlock.isValid() && ReturnBlock.getBlock()->use_empty()) {
     Builder.ClearInsertionPoint();
@@ -1764,10 +1771,19 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
     return;
   }
 
+  // Emit the code with the fully general case.
+  llvm::Value *CondV;
+  {
+    ApplyDebugLocation DL(*this, Cond);
+    CondV = EvaluateExprAsBool(Cond);
+  }
+
+  llvm::MDNode *Weights = nullptr;
+  llvm::MDNode *Unpredictable = nullptr;
+
   // If the branch has a condition wrapped by __builtin_unpredictable,
   // create metadata that specifies that the branch is unpredictable.
   // Don't bother if not optimizing because that metadata would not be used.
-  llvm::MDNode *Unpredictable = nullptr;
   auto *Call = dyn_cast<CallExpr>(Cond->IgnoreImpCasts());
   if (Call && CGM.getCodeGenOpts().OptimizationLevel != 0) {
     auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
@@ -1777,18 +1793,17 @@ void CodeGenFunction::EmitBranchOnBoolExpr(const Expr *Cond,
     }
   }
 
-  llvm::MDNode *Weights = createBranchWeights(LH);
-  if (!Weights) {
+  // If there is a Likelihood knowledge for the cond, lower it.
+  // Note that if not optimizing this won't emit anything.
+  llvm::Value *NewCondV = emitCondLikelihoodViaExpectIntrinsic(CondV, LH);
+  if (CondV != NewCondV)
+    CondV = NewCondV;
+  else {
+    // Otherwise, lower profile counts. Note that we do this even at -O0.
     uint64_t CurrentCount = std::max(getCurrentProfileCount(), TrueCount);
     Weights = createProfileWeights(TrueCount, CurrentCount - TrueCount);
   }
 
-  // Emit the code with the fully general case.
-  llvm::Value *CondV;
-  {
-    ApplyDebugLocation DL(*this, Cond);
-    CondV = EvaluateExprAsBool(Cond);
-  }
   Builder.CreateCondBr(CondV, TrueBlock, FalseBlock, Weights, Unpredictable);
 }
 
@@ -2632,35 +2647,26 @@ llvm::DebugLoc CodeGenFunction::SourceLocToDebugLoc(SourceLocation Location) {
   return llvm::DebugLoc();
 }
 
-static Optional<std::pair<uint32_t, uint32_t>>
-getLikelihoodWeights(Stmt::Likelihood LH) {
+llvm::Value *
+CodeGenFunction::emitCondLikelihoodViaExpectIntrinsic(llvm::Value *Cond,
+                                                      Stmt::Likelihood LH) {
   switch (LH) {
-  case Stmt::LH_Unlikely:
-    return std::pair<uint32_t, uint32_t>(llvm::UnlikelyBranchWeight,
-                                         llvm::LikelyBranchWeight);
   case Stmt::LH_None:
-    return None;
+    return Cond;
   case Stmt::LH_Likely:
-    return std::pair<uint32_t, uint32_t>(llvm::LikelyBranchWeight,
-                                         llvm::UnlikelyBranchWeight);
+  case Stmt::LH_Unlikely:
+    // Don't generate llvm.expect on -O0 as the backend won't use it for
+    // anything.
+    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+      return Cond;
+    llvm::Type *CondTy = Cond->getType();
+    assert(CondTy->isIntegerTy(1) && "expecting condition to be a boolean");
+    llvm::Function *FnExpect =
+        CGM.getIntrinsic(llvm::Intrinsic::expect, CondTy);
+    llvm::Value *ExpectedValueOfCond =
+        llvm::ConstantInt::getBool(CondTy, LH == Stmt::LH_Likely);
+    return Builder.CreateCall(FnExpect, {Cond, ExpectedValueOfCond},
+                              Cond->getName() + ".expval");
   }
   llvm_unreachable("Unknown Likelihood");
-}
-
-llvm::MDNode *CodeGenFunction::createBranchWeights(Stmt::Likelihood LH) const {
-  Optional<std::pair<uint32_t, uint32_t>> LHW = getLikelihoodWeights(LH);
-  if (!LHW)
-    return nullptr;
-
-  llvm::MDBuilder MDHelper(CGM.getLLVMContext());
-  return MDHelper.createBranchWeights(LHW->first, LHW->second);
-}
-
-llvm::MDNode *CodeGenFunction::createProfileOrBranchWeightsForLoop(
-    const Stmt *Cond, uint64_t LoopCount, const Stmt *Body) const {
-  llvm::MDNode *Weights = createProfileWeightsForLoop(Cond, LoopCount);
-  if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
-    Weights = createBranchWeights(Stmt::getLikelihood(Body));
-
-  return Weights;
 }

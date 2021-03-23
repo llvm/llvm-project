@@ -1,8 +1,8 @@
 add_llvm_component_library(LLVMJITLink
+  EHFrameSupport.cpp
   JITLink.cpp
   JITLinkGeneric.cpp
   JITLinkMemoryManager.cpp
-  EHFrameSupport.cpp
 
   # Formats:
 

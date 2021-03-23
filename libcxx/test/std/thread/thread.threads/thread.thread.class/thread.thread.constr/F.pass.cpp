@@ -8,6 +8,8 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <thread>
 
 // class thread

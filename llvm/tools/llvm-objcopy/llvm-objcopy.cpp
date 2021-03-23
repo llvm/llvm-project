@@ -57,34 +57,6 @@
 namespace llvm {
 namespace objcopy {
 
-Error writeToFile(StringRef OutputFileName,
-                  std::function<Error(raw_ostream &)> Write) {
-  if (OutputFileName == "-")
-    return Write(outs());
-
-  if (OutputFileName == "/dev/null") {
-    raw_null_ostream Out;
-    return Write(Out);
-  }
-
-  unsigned Mode = sys::fs::all_read | sys::fs::all_write | sys::fs::all_exe;
-  Expected<sys::fs::TempFile> Temp =
-      sys::fs::TempFile::create(OutputFileName + ".temp-objcopy-%%%%%%", Mode);
-  if (!Temp)
-    return createFileError(OutputFileName, Temp.takeError());
-
-  raw_fd_ostream Out(Temp->FD, false);
-
-  if (Error E = Write(Out)) {
-    if (Error DiscardError = Temp->discard())
-      return joinErrors(std::move(E), std::move(DiscardError));
-    return E;
-  }
-  Out.flush();
-
-  return Temp->keep(OutputFileName);
-}
-
 // The name this program was invoked as.
 StringRef ToolName;
 
@@ -369,21 +341,21 @@ static Error executeObjcopy(CopyConfig &Config) {
     if (Config.SplitDWO.empty()) {
       // Apply transformations described by Config and store result into
       // Config.OutputFilename using specified ObjcopyFunc function.
-      if (Error E = writeToFile(Config.OutputFilename, ObjcopyFunc))
+      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
         return E;
     } else {
       Config.ExtractDWO = true;
       Config.StripDWO = false;
       // Copy .dwo tables from the Config.InputFilename into Config.SplitDWO
       // file using specified ObjcopyFunc function.
-      if (Error E = writeToFile(Config.SplitDWO, ObjcopyFunc))
+      if (Error E = writeToOutput(Config.SplitDWO, ObjcopyFunc))
         return E;
       Config.ExtractDWO = false;
       Config.StripDWO = true;
       // Apply transformations described by Config, remove .dwo tables and
       // store result into Config.OutputFilename using specified ObjcopyFunc
       // function.
-      if (Error E = writeToFile(Config.OutputFilename, ObjcopyFunc))
+      if (Error E = writeToOutput(Config.OutputFilename, ObjcopyFunc))
         return E;
     }
   }

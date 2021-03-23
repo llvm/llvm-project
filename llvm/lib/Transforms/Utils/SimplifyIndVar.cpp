@@ -281,8 +281,11 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
 
   // If the condition is always true or always false in the given context,
   // replace it with a constant value.
-  // TODO: We can sharpen the context to common dominator of all ICmp's users.
-  if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, ICmp)) {
+  SmallVector<Instruction *, 4> Users;
+  for (auto *U : ICmp->users())
+    Users.push_back(cast<Instruction>(U));
+  const Instruction *CtxI = findCommonDominator(Users, *DT);
+  if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');

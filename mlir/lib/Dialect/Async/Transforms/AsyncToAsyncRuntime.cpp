@@ -485,7 +485,7 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
 
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
-  OwningRewritePatternList asyncPatterns;
+  OwningRewritePatternList asyncPatterns(ctx);
 
   // Async lowering does not use type converter because it must preserve all
   // types for async.runtime operations.

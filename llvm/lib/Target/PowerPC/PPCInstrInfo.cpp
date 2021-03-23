@@ -5156,7 +5156,8 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
   unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
   unsigned StackOffset = MI.getOperand(1).getImm();
   Register StackReg = MI.getOperand(2).getReg();
-  if (StackReg == PPC::X1 && StackOffset == TOCSaveOffset)
+  Register SPReg = Subtarget.isPPC64() ? PPC::X1 : PPC::R1;
+  if (StackReg == SPReg && StackOffset == TOCSaveOffset)
     return true;
 
   return false;

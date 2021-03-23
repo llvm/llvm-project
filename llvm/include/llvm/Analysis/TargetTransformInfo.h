@@ -27,6 +27,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
@@ -327,6 +328,10 @@ public:
     SmallVector<const Value *, 4> Operands(U->operand_values());
     return getUserCost(U, Operands, CostKind);
   }
+
+  /// If a branch or a select condition is skewed in one direction by more than
+  /// this factor, it is very likely to be predicted correctly.
+  BranchProbability getPredictableBranchThreshold() const;
 
   /// Return true if branch divergence exists.
   ///
@@ -714,6 +719,9 @@ public:
   /// Return true if switches should be turned into lookup tables
   /// containing this constant value for the target.
   bool shouldBuildLookupTablesForConstant(Constant *C) const;
+
+  /// Return true if lookup tables should be turned into relative lookup tables.
+  bool shouldBuildRelLookupTables() const;
 
   /// Return true if the input function which is cold at all call sites,
   ///  should use coldcc calling convention.
@@ -1400,6 +1408,7 @@ public:
                                    BlockFrequencyInfo *BFI) = 0;
   virtual int getUserCost(const User *U, ArrayRef<const Value *> Operands,
                           TargetCostKind CostKind) = 0;
+  virtual BranchProbability getPredictableBranchThreshold() = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
@@ -1475,6 +1484,7 @@ public:
   virtual unsigned getRegUsageForType(Type *Ty) = 0;
   virtual bool shouldBuildLookupTables() = 0;
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) = 0;
+  virtual bool shouldBuildRelLookupTables() = 0;
   virtual bool useColdCCForColdCall(Function &F) = 0;
   virtual unsigned getScalarizationOverhead(VectorType *Ty,
                                             const APInt &DemandedElts,
@@ -1691,6 +1701,9 @@ public:
                   TargetCostKind CostKind) override {
     return Impl.getUserCost(U, Operands, CostKind);
   }
+  BranchProbability getPredictableBranchThreshold() override {
+    return Impl.getPredictableBranchThreshold();
+  }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
   bool useGPUDivergenceAnalysis() override {
     return Impl.useGPUDivergenceAnalysis();
@@ -1857,6 +1870,9 @@ public:
   }
   bool shouldBuildLookupTablesForConstant(Constant *C) override {
     return Impl.shouldBuildLookupTablesForConstant(C);
+  }
+  bool shouldBuildRelLookupTables() override {
+    return Impl.shouldBuildRelLookupTables();
   }
   bool useColdCCForColdCall(Function &F) override {
     return Impl.useColdCCForColdCall(F);

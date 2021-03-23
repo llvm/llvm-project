@@ -3928,103 +3928,100 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     return nullptr;
 
   auto *I = dyn_cast<Instruction>(V);
-  if (!I)
+  if (!I || !is_contained(I->operands(), Op))
     return nullptr;
+
+  // Replace Op with RepOp in instruction operands.
+  SmallVector<Value *, 8> NewOps(I->getNumOperands());
+  transform(I->operands(), NewOps.begin(),
+            [&](Value *V) { return V == Op ? RepOp : V; });
+
+  if (!AllowRefinement) {
+    // General InstSimplify functions may refine the result, e.g. by returning
+    // a constant for a potentially poison value. To avoid this, implement only
+    // a few non-refining but profitable transforms here.
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      unsigned Opcode = BO->getOpcode();
+      // id op x -> x, x op id -> x
+      if (NewOps[0] == ConstantExpr::getBinOpIdentity(Opcode, I->getType()))
+        return NewOps[1];
+      if (NewOps[1] == ConstantExpr::getBinOpIdentity(Opcode, I->getType(),
+                                                      /* RHS */ true))
+        return NewOps[0];
+
+      // x & x -> x, x | x -> x
+      if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
+          NewOps[0] == NewOps[1])
+        return NewOps[0];
+    }
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      // getelementptr x, 0 -> x
+      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()) &&
+          !GEP->isInBounds())
+        return NewOps[0];
+    }
+  } else if (MaxRecurse) {
+    // The simplification queries below may return the original value. Consider:
+    //   %div = udiv i32 %arg, %arg2
+    //   %mul = mul nsw i32 %div, %arg2
+    //   %cmp = icmp eq i32 %mul, %arg
+    //   %sel = select i1 %cmp, i32 %div, i32 undef
+    // Replacing %arg by %mul, %div becomes "udiv i32 %mul, %arg2", which
+    // simplifies back to %arg. This can only happen because %mul does not
+    // dominate %div. To ensure a consistent return value contract, we make sure
+    // that this case returns nullptr as well.
+    auto PreventSelfSimplify = [V](Value *Simplified) {
+      return Simplified != V ? Simplified : nullptr;
+    };
+
+    if (auto *B = dyn_cast<BinaryOperator>(I))
+      return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(), NewOps[0],
+                                               NewOps[1], Q, MaxRecurse - 1));
+
+    if (CmpInst *C = dyn_cast<CmpInst>(I))
+      return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(), NewOps[0],
+                                                 NewOps[1], Q, MaxRecurse - 1));
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+      return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
+                                                 NewOps, Q, MaxRecurse - 1));
+
+    // TODO: We could hand off more cases to instsimplify here.
+  }
+
+  // If all operands are constant after substituting Op for RepOp then we can
+  // constant fold the instruction.
+  SmallVector<Constant *, 8> ConstOps;
+  for (Value *NewOp : NewOps) {
+    if (Constant *ConstOp = dyn_cast<Constant>(NewOp))
+      ConstOps.push_back(ConstOp);
+    else
+      return nullptr;
+  }
 
   // Consider:
   //   %cmp = icmp eq i32 %x, 2147483647
   //   %add = add nsw i32 %x, 1
   //   %sel = select i1 %cmp, i32 -2147483648, i32 %add
   //
-  // We can't replace %sel with %add unless we strip away the flags (which will
-  // be done in InstCombine).
-  // TODO: This is unsound, because it only catches some forms of refinement.
+  // We can't replace %sel with %add unless we strip away the flags (which
+  // will be done in InstCombine).
+  // TODO: This may be unsound, because it only catches some forms of
+  // refinement.
   if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
     return nullptr;
 
-  // The simplification queries below may return the original value. Consider:
-  //   %div = udiv i32 %arg, %arg2
-  //   %mul = mul nsw i32 %div, %arg2
-  //   %cmp = icmp eq i32 %mul, %arg
-  //   %sel = select i1 %cmp, i32 %div, i32 undef
-  // Replacing %arg by %mul, %div becomes "udiv i32 %mul, %arg2", which
-  // simplifies back to %arg. This can only happen because %mul does not
-  // dominate %div. To ensure a consistent return value contract, we make sure
-  // that this case returns nullptr as well.
-  auto PreventSelfSimplify = [V](Value *Simplified) {
-    return Simplified != V ? Simplified : nullptr;
-  };
+  if (CmpInst *C = dyn_cast<CmpInst>(I))
+    return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
+                                           ConstOps[1], Q.DL, Q.TLI);
 
-  // If this is a binary operator, try to simplify it with the replaced op.
-  if (auto *B = dyn_cast<BinaryOperator>(I)) {
-    if (MaxRecurse) {
-      if (B->getOperand(0) == Op)
-        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(), RepOp,
-                                                 B->getOperand(1), Q,
-                                                 MaxRecurse - 1));
-      if (B->getOperand(1) == Op)
-        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(),
-                                                 B->getOperand(0), RepOp, Q,
-                                                 MaxRecurse - 1));
-    }
-  }
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    if (!LI->isVolatile())
+      return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
 
-  // Same for CmpInsts.
-  if (CmpInst *C = dyn_cast<CmpInst>(I)) {
-    if (MaxRecurse) {
-      if (C->getOperand(0) == Op)
-        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(), RepOp,
-                                                   C->getOperand(1), Q,
-                                                   MaxRecurse - 1));
-      if (C->getOperand(1) == Op)
-        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(),
-                                                   C->getOperand(0), RepOp, Q,
-                                                   MaxRecurse - 1));
-    }
-  }
-
-  // Same for GEPs.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-    if (MaxRecurse) {
-      SmallVector<Value *, 8> NewOps(GEP->getNumOperands());
-      transform(GEP->operands(), NewOps.begin(),
-                [&](Value *V) { return V == Op ? RepOp : V; });
-      return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
-                                                 NewOps, Q, MaxRecurse - 1));
-    }
-  }
-
-  // TODO: We could hand off more cases to instsimplify here.
-
-  // If all operands are constant after substituting Op for RepOp then we can
-  // constant fold the instruction.
-  if (Constant *CRepOp = dyn_cast<Constant>(RepOp)) {
-    // Build a list of all constant operands.
-    SmallVector<Constant *, 8> ConstOps;
-    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-      if (I->getOperand(i) == Op)
-        ConstOps.push_back(CRepOp);
-      else if (Constant *COp = dyn_cast<Constant>(I->getOperand(i)))
-        ConstOps.push_back(COp);
-      else
-        break;
-    }
-
-    // All operands were constants, fold it.
-    if (ConstOps.size() == I->getNumOperands()) {
-      if (CmpInst *C = dyn_cast<CmpInst>(I))
-        return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
-                                               ConstOps[1], Q.DL, Q.TLI);
-
-      if (LoadInst *LI = dyn_cast<LoadInst>(I))
-        if (!LI->isVolatile())
-          return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
-
-      return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
-    }
-  }
-
-  return nullptr;
+  return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 
 Value *llvm::SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,

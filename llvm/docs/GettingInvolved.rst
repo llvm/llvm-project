@@ -177,10 +177,18 @@ writing, the following sync-ups are organized:
      - Weekly, on Thursdays
      - 
      - `Minutes/docs <https://docs.google.com/document/d/1y_9f1AbfgcoVdJh4_aM6-BaSHvrHl8zuA5G4jv_94K8/edit#heading=h.cite1kolful9>`__
-   * - flang and openmp
+   * - flang
      - Multiple meeting series, `documented here <https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md#calls>`__
      - 
      - 
+   * - OpenMP
+     - Multiple meeting series, `documented here <https://openmp.llvm.org/docs/SupportAndFAQ.html>`__
+     - 
+     - 
+   * - LLVM Alias Analysis
+     - Every 4 weeks on Tuesdays
+     - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
+     - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
 
 IRC
 ---

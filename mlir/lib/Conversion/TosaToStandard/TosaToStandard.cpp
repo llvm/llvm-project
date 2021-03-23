@@ -154,12 +154,12 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToStandardConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
+    OwningRewritePatternList *patterns) {
   patterns->insert<ApplyScaleOpConverter, ConstOpConverter, SliceOpConverter>(
-      context);
+      patterns->getContext());
 }
 
 void mlir::tosa::populateTosaRescaleToStandardConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
-  patterns->insert<ApplyScaleOpConverter>(context);
+    OwningRewritePatternList *patterns) {
+  patterns->insert<ApplyScaleOpConverter>(patterns->getContext());
 }

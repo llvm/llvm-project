@@ -24,8 +24,8 @@ struct TestExpandTanhPass
 } // end anonymous namespace
 
 void TestExpandTanhPass::runOnFunction() {
-  OwningRewritePatternList patterns;
-  populateExpandTanhPattern(patterns, &getContext());
+  OwningRewritePatternList patterns(&getContext());
+  populateExpandTanhPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

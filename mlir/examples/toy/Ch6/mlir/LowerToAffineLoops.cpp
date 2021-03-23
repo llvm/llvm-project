@@ -296,7 +296,7 @@ void ToyToAffineLoweringPass::runOnFunction() {
 
   // Now that the conversion target has been defined, we just need to provide
   // the set of patterns that will lower the Toy operations.
-  OwningRewritePatternList patterns;
+  OwningRewritePatternList patterns(&getContext());
   patterns.insert<AddOpLowering, ConstantOpLowering, MulOpLowering,
                   ReturnOpLowering, TransposeOpLowering>(&getContext());
 

@@ -902,7 +902,9 @@ define i32 @test56(i16 %x) {
 define i32 @test57(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test57(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[DOTAND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[DOTAND]]
 ;
   %and = and i32 %x, %y
   %tobool = icmp eq i32 %x, 0
@@ -2680,7 +2682,7 @@ define void @select_freeze_icmp_multuses(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true), [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]

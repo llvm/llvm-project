@@ -1,5 +1,8 @@
 # Check the not command
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-not/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -a -v %{inputs}/shtest-not \
 # RUN: | FileCheck -match-full-lines %s
 #
