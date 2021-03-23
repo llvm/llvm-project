@@ -2229,10 +2229,11 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     return !Rec->isCompleteDefinition();
   }
   case ConstantArray:
+  case VariableArray:
     // An array is incomplete if its element type is incomplete
     // (C++ [dcl.array]p1).
-    // We don't handle variable arrays (they're not allowed in C++) or
-    // dependent-sized arrays (dependent types are never treated as incomplete).
+    // We don't handle dependent-sized arrays (dependent types are never treated
+    // as incomplete).
     return cast<ArrayType>(CanonicalType)->getElementType()
              ->isIncompleteType(Def);
   case IncompleteArray:
