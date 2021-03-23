@@ -14,7 +14,7 @@ define void @test1(%0* sret(%0)  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) noun
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub x86_fp80 0xK80000000000000000000, [[Z_1:%.*]]
-; CHECK-NEXT:    call void @ccoshl(%0* sret(%0) [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) [[ATTR0:#.*]]
+; CHECK-NEXT:    call void @ccoshl(%0* sret([[TMP0]]) [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP219:%.*]] = bitcast %0* [[TMP2]] to i8*
 ; CHECK-NEXT:    [[MEMTMP20:%.*]] = bitcast %0* [[MEMTMP]] to i8*
 ; CHECK-NEXT:    [[AGG_RESULT21:%.*]] = bitcast %0* [[AGG_RESULT:%.*]] to i8*
@@ -222,7 +222,7 @@ define i32 @test5(i32 %x) nounwind ssp {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP]], i8* align 16 bitcast (%struct.S* @sS to i8*), i64 32, i1 false)
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [[STRUCT_S]], %struct.S* [[Y]], i64 0, i32 1, i64 0
 ; CHECK-NEXT:    store i8 4, i8* [[A]], align 1
-; CHECK-NEXT:    call void @test5a(%struct.S* byval(%struct.S) align 16 [[Y]])
+; CHECK-NEXT:    call void @test5a(%struct.S* byval([[STRUCT_S]]) align 16 [[Y]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -252,7 +252,7 @@ define void @test6(i8 *%P) {
 define i32 @test7(%struct.p* nocapture align 8 byval(%struct.p) %q) nounwind ssp {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval(%struct.p) align 8 [[Q:%.*]]) [[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @g(%struct.p* byval([[STRUCT_P:%.*]]) align 8 [[Q:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
 entry:
@@ -295,7 +295,7 @@ define void @test9_addrspacecast() nounwind ssp uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG]], align 4
-; CHECK-NEXT:    call void @f1(%struct.big* sret(%struct.big) [[B]])
+; CHECK-NEXT:    call void @f1(%struct.big* sret([[STRUCT_BIG]]) [[B]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast %struct.big* [[B]] to i8 addrspace(1)*
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast %struct.big* [[TMP]] to i8 addrspace(1)*
 ; CHECK-NEXT:    call void @f2(%struct.big* [[B]])
@@ -317,7 +317,7 @@ define void @test9() nounwind ssp uwtable {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[STRUCT_BIG:%.*]], align 4
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_BIG]], align 4
-; CHECK-NEXT:    call void @f1(%struct.big* sret(%struct.big) [[B]])
+; CHECK-NEXT:    call void @f1(%struct.big* sret([[STRUCT_BIG]]) [[B]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.big* [[B]] to i8*
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.big* [[TMP]] to i8*
 ; CHECK-NEXT:    call void @f2(%struct.big* [[B]])
@@ -381,7 +381,6 @@ declare void @llvm.memcpy.p1i8.p0i8.i64(i8 addrspace(1)* nocapture, i8* nocaptur
 declare void @f1(%struct.big* nocapture sret(%struct.big))
 declare void @f2(%struct.big*)
 
-; CHECK: attributes [[ATTR0]] = { nounwind }
 ; CHECK: attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 ; CHECK: attributes #2 = { nounwind ssp }
 ; CHECK: attributes #3 = { willreturn }
