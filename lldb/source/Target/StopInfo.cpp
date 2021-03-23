@@ -305,6 +305,20 @@ protected:
           // location said we should stop. But that's better than not running
           // all the callbacks.
 
+          // There's one other complication here.  We may have run an async
+          // breakpoint callback that said we should stop.  We only want to
+          // override that if another breakpoint action says we shouldn't 
+          // stop.  If nobody else has an opinion, then we should stop if the
+          // async callback says we should.  An example of this is the async
+          // shared library load notification breakpoint and the setting
+          // stop-on-sharedlibrary-events.
+          // We'll keep the async value in async_should_stop, and track whether
+          // anyone said we should NOT stop in actually_said_continue.
+          bool async_should_stop = false;
+          if (m_should_stop_is_valid)
+            async_should_stop = m_should_stop;
+          bool actually_said_continue = false;
+
           m_should_stop = false;
 
           // We don't select threads as we go through them testing breakpoint
@@ -422,9 +436,10 @@ protected:
 
             bool precondition_result =
                 bp_loc_sp->GetBreakpoint().EvaluatePrecondition(context);
-            if (!precondition_result)
+            if (!precondition_result) {
+              actually_said_continue = true;
               continue;
-
+            }
             // Next run the condition for the breakpoint.  If that says we
             // should stop, then we'll run the callback for the breakpoint.  If
             // the callback says we shouldn't stop that will win.
@@ -462,6 +477,7 @@ protected:
                   // the condition fails. We've already bumped it by the time
                   // we get here, so undo the bump:
                   bp_loc_sp->UndoBumpHitCount();
+                  actually_said_continue = true;
                   continue;
                 }
               }
@@ -494,16 +510,22 @@ protected:
             // When we figure out how to nest breakpoint hits then this will
             // change.
 
-            Debugger &debugger = thread_sp->CalculateTarget()->GetDebugger();
-            bool old_async = debugger.GetAsyncExecution();
-            debugger.SetAsyncExecution(true);
+            // Don't run async callbacks in PerformAction.  They have already
+            // been taken into account with async_should_stop.
+            if (!bp_loc_sp->IsCallbackSynchronous()) {
+              Debugger &debugger = thread_sp->CalculateTarget()->GetDebugger();
+              bool old_async = debugger.GetAsyncExecution();
+              debugger.SetAsyncExecution(true);
 
-            callback_says_stop = bp_loc_sp->InvokeCallback(&context);
+              callback_says_stop = bp_loc_sp->InvokeCallback(&context);
 
-            debugger.SetAsyncExecution(old_async);
+              debugger.SetAsyncExecution(old_async);
 
-            if (callback_says_stop && auto_continue_says_stop)
-              m_should_stop = true;
+              if (callback_says_stop && auto_continue_says_stop)
+                m_should_stop = true;
+              else
+                actually_said_continue = true;
+            }
                   
             // If we are going to stop for this breakpoint, then remove the
             // breakpoint.
@@ -517,8 +539,14 @@ protected:
             // here.
             if (HasTargetRunSinceMe()) {
               m_should_stop = false;
+              actually_said_continue = true;
               break;
             }
+          }
+          // At this point if nobody actually told us to continue, we should
+          // give the async breakpoint callback a chance to weigh in:
+          if (!actually_said_continue && !m_should_stop) {
+            m_should_stop = async_should_stop;
           }
         }
         // We've figured out what this stop wants to do, so mark it as valid so
