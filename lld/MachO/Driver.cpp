@@ -54,8 +54,7 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-Configuration *macho::config;
-DependencyTracker *macho::depTracker;
+Configuration *lld::macho::config;
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
@@ -85,8 +84,6 @@ findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
       Twine location = base + ext;
       if (fs::exists(location))
         return location.str();
-      else
-        depTracker->logFileNotFound(location);
     }
   }
   return {};
@@ -818,9 +815,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
 
-  depTracker =
-      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
-
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
@@ -1072,8 +1066,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Write to an output file.
     writeResult();
-
-    depTracker->write(getLLDVersion(), inputFiles, config->outputFile);
   }
 
   if (config->timeTraceEnabled) {
