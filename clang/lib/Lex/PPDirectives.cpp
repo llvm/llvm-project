@@ -1045,12 +1045,12 @@ void Preprocessor::HandleDirective(Token &Result) {
       break;
 
     case tok::pp___public_macro:
-      if (getLangOpts().Modules)
+      if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
         return HandleMacroPublicDirective(Result);
       break;
 
     case tok::pp___private_macro:
-      if (getLangOpts().Modules)
+      if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
         return HandleMacroPrivateDirective();
       break;
     }
