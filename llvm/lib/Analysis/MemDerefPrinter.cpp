@@ -70,12 +70,13 @@ bool MemDerefPrinter::runOnFunction(Function &F) {
 void MemDerefPrinter::print(raw_ostream &OS, const Module *M) const {
   OS << "The following are dereferenceable:\n";
   for (Value *V: Deref) {
+    OS << "  ";
     V->print(OS);
     if (DerefAndAligned.count(V))
       OS << "\t(aligned)";
     else
       OS << "\t(unaligned)";
-    OS << "\n\n";
+    OS << "\n";
   }
 }
 
@@ -101,12 +102,13 @@ PreservedAnalyses MemDerefPrinterPass::run(Function &F,
 
   OS << "The following are dereferenceable:\n";
   for (Value *V : Deref) {
+    OS << "  ";
     V->print(OS);
     if (DerefAndAligned.count(V))
       OS << "\t(aligned)";
     else
       OS << "\t(unaligned)";
-    OS << "\n\n";
+    OS << "\n";
   }
   return PreservedAnalyses::all();
 }
