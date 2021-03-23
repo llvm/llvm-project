@@ -22,6 +22,7 @@
 namespace clang {
 
 class Stmt;
+class Decl;
 
 namespace tooling {
 
@@ -78,6 +79,7 @@ struct NodeLocationAccessors {
 
 namespace NodeIntrospection {
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
+NodeLocationAccessors GetLocations(clang::Decl const *Object);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);
 } // namespace NodeIntrospection
 } // namespace tooling
