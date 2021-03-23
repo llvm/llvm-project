@@ -113,7 +113,8 @@ def main():
       flags = type('', (object,), {
             'verbose': args.verbose,
             'function_signature': False,
-            'check_attributes': False}),
+            'check_attributes': False,
+            'replace_function_regex': []}),
       scrubber_args = [])
 
     for prefixes, opt_args in prefix_list:
