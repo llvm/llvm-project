@@ -9,7 +9,7 @@
 ; CHECK:      --- !Analysis
 ; CHECK-NEXT: Pass:            annotation-remarks
 ; CHECK-NEXT: Name:            AnnotationSummary
-; CHECK-NEXT: DebugLoc: { File: test.c, Line: 400, Column: 3 }
+; CHECK-NEXT: DebugLoc: { File: test.c, Line: 10, Column: 0 }
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          'Annotated '
@@ -20,7 +20,7 @@
 ; CHECK-NEXT: --- !Analysis
 ; CHECK-NEXT: Pass:            annotation-remarks
 ; CHECK-NEXT: Name:            AnnotationSummary
-; CHECK-NEXT: DebugLoc: { File: test.c, Line: 400, Column: 3 }
+; CHECK-NEXT: DebugLoc: { File: test.c, Line: 10, Column: 0 }
 ; CHECK-NEXT: Function:        test1
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          'Annotated '
@@ -31,6 +31,7 @@
 ; CHECK-NEXT: --- !Analysis
 ; CHECK-NEXT: Pass:            annotation-remarks
 ; CHECK-NEXT: Name:            AnnotationSummary
+; CHECK-NEXT: DebugLoc: { File: test.c, Line: 20, Column: 0 }
 ; CHECK-NEXT: Function:        test2
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          'Annotated '
