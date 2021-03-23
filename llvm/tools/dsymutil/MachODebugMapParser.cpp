@@ -463,13 +463,15 @@ void MachODebugMapParser::handleStabSymbolTableEntry(uint32_t StringIndex,
   }
 
   // ThinLTO adds a unique suffix to exported private symbols.
-  for (auto Iter = CurrentObjectAddresses.begin();
-       Iter != CurrentObjectAddresses.end(); ++Iter) {
-    llvm::StringRef SymbolName = Iter->getKey();
-    auto Pos = SymbolName.rfind(".llvm.");
-    if (Pos != llvm::StringRef::npos && SymbolName.substr(0, Pos) == Name) {
-      ObjectSymIt = Iter;
-      break;
+  if (ObjectSymIt == CurrentObjectAddresses.end()) {
+    for (auto Iter = CurrentObjectAddresses.begin();
+         Iter != CurrentObjectAddresses.end(); ++Iter) {
+      llvm::StringRef SymbolName = Iter->getKey();
+      auto Pos = SymbolName.rfind(".llvm.");
+      if (Pos != llvm::StringRef::npos && SymbolName.substr(0, Pos) == Name) {
+        ObjectSymIt = Iter;
+        break;
+      }
     }
   }
 
