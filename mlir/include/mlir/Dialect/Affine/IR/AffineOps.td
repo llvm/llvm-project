@@ -75,6 +75,11 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
     OpBuilder<(ins "AffineMap":$map, "ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
+    }]>,
+    OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
+    [{
+      build($_builder, $_state, $_builder.getIndexType(),
+            AffineMap::inferFromExprList(exprList).front(), mapOperands);
     }]>
   ];
 

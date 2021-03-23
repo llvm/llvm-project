@@ -13,7 +13,9 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
@@ -503,6 +505,134 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
   }
 }
 
+/// Return success if `v` is a value that is only transitively defined by ops of
+/// type in `OpTypeList`.
+template <typename... OpTypeList>
+static bool backwardsSliceOnlyHasOpsOfType(scf::ForOp outerLimit, Value v) {
+  // Compute a backward slice up to, but not including, `outerLimit`.
+  llvm::SetVector<Operation *> backwardSlice;
+  getBackwardSlice(v, &backwardSlice, [&](Operation *op) {
+    return outerLimit->isProperAncestor(op);
+  });
+  // Traverse the backward slice and ensure we can perform the computation to
+  // hoist.
+  for (Operation *op : backwardSlice) {
+    if (isa<OpTypeList...>(op))
+      continue;
+    LLVM_DEBUG(DBGS() << "Abort: unadmissible op in slice " << *op << "\n");
+    return false;
+  }
+  return true;
+}
+
+bool isDefinedOutsideOrConstant(scf::ForOp outer, Value v) {
+  return outer.isDefinedOutsideOfLoop(v) || v.getDefiningOp<ConstantOp>();
+}
+
+/// Compute the tightest lower bound with quantities that are all defined
+/// outside of `outer`.
+/// Return null if such a bound cannot be computed.
+Value computeLoopIndependentLowerBound(OpBuilder &b, scf::ForOp outer,
+                                       Value v) {
+  if (isDefinedOutsideOrConstant(outer, v))
+    return v;
+  return Value();
+}
+
+/// Compute the tightest upper bound with quantities that are all defined
+/// outside of `outer`.
+/// Expects all ops in the backward slice of `v` up to `outer` to be either
+/// scf.for, affine.min or affine.apply.
+static Value computeLoopIndependentUpperBound(OpBuilder &b, scf::ForOp outer,
+                                              Value v) {
+  if (isDefinedOutsideOrConstant(outer, v))
+    return v;
+
+  LLVM_DEBUG(DBGS() << "Begin loopIndependentUpperBound for: " << v << "\n");
+
+  bool ok =
+      backwardsSliceOnlyHasOpsOfType<scf::ForOp, AffineMinOp, AffineApplyOp>(
+          outer, v);
+  assert(ok && "expected to only be defined by scf::ForOp and AffineMinOp");
+
+  // Compute a backward slice up to, but not including, `outer`.
+  llvm::SetVector<Operation *> backwardSlice;
+  getBackwardSlice(v, &backwardSlice,
+                   [&](Operation *op) { return outer->isProperAncestor(op); });
+  backwardSlice.insert(v.getDefiningOp());
+
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(outer);
+  Value res = v;
+  BlockAndValueMapping bvm;
+  for (Operation *op : backwardSlice) {
+    if (isa<scf::ForOp>(op))
+      continue;
+    if (isa<AffineApplyOp>(op)) {
+      b.clone(*op, bvm);
+      continue;
+    }
+    auto sliceMinOp = cast<AffineMinOp>(op);
+    // Perform the substitution of the operands of AffineMinOp.
+    auto mapAndOperands = substituteMin(
+        sliceMinOp, [&](Operation *op) { return outer->isAncestor(op); });
+    SmallVector<Value> resultOperands = mapAndOperands.dims;
+    llvm::append_range(resultOperands, mapAndOperands.symbols);
+    AffineMap map = mapAndOperands.map;
+    canonicalizeMapAndOperands(&map, &resultOperands);
+    map = simplifyAffineMap(map);
+    res = b.create<AffineMinOp>(
+        outer->getLoc(), map,
+        llvm::to_vector<4>(llvm::map_range(resultOperands, [&](Value operand) {
+          return bvm.lookupOrDefault(operand);
+        })));
+    bvm.map(sliceMinOp, res);
+  }
+  LLVM_DEBUG(DBGS() << "End loopIndependentUpperBound with: " << res << "\n");
+  return res;
+}
+
+/// Return the number of iterations in the loop (ub - lb).ceilDiv(step).
+/// The returned Value is guaranteed not to depend on any loop comprised in
+/// [`outer`, `forOp`].
+/// Return null if such a loop-independent quantity cannot be computed.
+static Value buildLoopTripCount(OpBuilder &b, scf::ForOp outer,
+                                scf::ForOp forOp) {
+  MLIRContext *ctx = forOp->getContext();
+  AffineExpr lb, ub, step;
+  bindDims(ctx, lb, ub);
+  bindSymbols(ctx, step);
+  Value lbVal = computeLoopIndependentLowerBound(b, outer, forOp.lowerBound()),
+        ubVal = computeLoopIndependentUpperBound(b, outer, forOp.upperBound()),
+        stepVal = forOp.step();
+  if (!lbVal || !ubVal || !stepVal)
+    return Value();
+  auto loc = forOp->getLoc();
+  Value res = b.create<AffineApplyOp>(loc, (ub - lb).ceilDiv(step),
+                                      ValueRange{lbVal, ubVal, stepVal});
+  return res;
+}
+
+/// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
+/// The returned Value is guaranteed not to depend on any loop comprised in
+/// [`outer`, `forOp`].
+/// Return null if such a loop-independent quantity cannot be computed.
+static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp outer,
+                                     scf::ForOp forOp) {
+  MLIRContext *ctx = forOp->getContext();
+  AffineExpr iv, lb, step;
+  bindDims(ctx, iv, lb);
+  bindSymbols(ctx, step);
+  Value ivVal = forOp.getInductionVar(),
+        lbVal = computeLoopIndependentLowerBound(b, outer, forOp.lowerBound()),
+        stepVal = forOp.step();
+  if (!ivVal || !lbVal || !stepVal)
+    return Value();
+  auto loc = forOp->getLoc();
+  return b.create<AffineApplyOp>(loc, (iv - lb).ceilDiv(step),
+                                 ValueRange{ivVal, lbVal, stepVal});
+}
+
 /// Ensure prerequisites that guarantee pad op hoisting can occur.
 /// Return failure in the cases when we cannot perform hoisting; i.e. if either:
 ///   1. There exists a use of `padTensorOp` that is not a linalg input operand.
@@ -510,8 +640,10 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
 ///   3. There exists an op with a region that is dominated by
 ///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface or a
 ///    LinalgOp.
-///   3. There exists an op with side effects that is dominated by
-///    `outermostEnclosingForOp` and that isn't a LoopLikeInterface.
+///   4. There exists an op with side effects that is dominated by
+///   `outermostEnclosingForOp` and that isn't a LoopLikeInterface.
+///   5. The lower bound, upper bound and step of all the loops involved in the
+///   hoisting can be
 ///
 /// While ensuring prerequisites:
 ///   1. Fill the `backwardSlice` to contain the topologically sorted ops
@@ -523,7 +655,8 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
 static LogicalResult
 hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
                                    llvm::SetVector<Operation *> &backwardSlice,
-                                   llvm::SetVector<Operation *> &packingLoops) {
+                                   llvm::SetVector<Operation *> &packingLoops,
+                                   SmallVector<Value> &dynamicTensorSizes) {
   // Bail on any use that isn't an input of a Linalg op.
   // Hoisting of inplace updates happens after vectorization.
   for (OpOperand &use : padTensorOp.result().getUses()) {
@@ -583,36 +716,39 @@ hoistPaddingOnTensorsPrerequisites(linalg::PadTensorOp padTensorOp, int nLevels,
   // `outermostEnclosingForOp`.
   assert(outermostEnclosingForOp == backwardSlice.front());
 
+  scf::ForOp outer = cast<scf::ForOp>(outermostEnclosingForOp);
+  if (llvm::any_of(packingLoops, [&](Operation *op) {
+        scf::ForOp forOp = cast<scf::ForOp>(op);
+        Value lb = forOp.lowerBound(), ub = forOp.upperBound(),
+              step = forOp.step();
+        return !isDefinedOutsideOrConstant(outer, lb) ||
+               !(isDefinedOutsideOrConstant(outer, ub) ||
+                 backwardsSliceOnlyHasOpsOfType<scf::ForOp, AffineMinOp,
+                                                AffineApplyOp>(outer, ub)) ||
+               !isDefinedOutsideOrConstant(outer, step);
+      }))
+    return failure();
+
+  // IP just before the outermost loop considered that we hoist above.
+  OpBuilder b(outermostEnclosingForOp);
+  dynamicTensorSizes =
+      llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *op) {
+        return buildLoopTripCount(b, cast<scf::ForOp>(outermostEnclosingForOp),
+                                  cast<scf::ForOp>(op));
+      }));
+  // Assert all loop trip counts can be computed.
+  if (!llvm::all_of(dynamicTensorSizes, [](Value v) { return v; }))
+    llvm_unreachable("loop independence prerequisite not met");
   return success();
-}
-
-/// Return the number of iterations in the loop (ub - lb).ceilDiv(step).
-static Value buildLoopTripCount(OpBuilder &b, scf::ForOp forOp) {
-  MLIRContext *ctx = forOp->getContext();
-  AffineExpr lb, ub, step;
-  bindDims(ctx, lb, ub);
-  bindSymbols(ctx, step);
-  return b.create<AffineApplyOp>(
-      forOp->getLoc(), AffineMap::get(2, 1, {(ub - lb).ceilDiv(step)}, ctx),
-      ValueRange{forOp.lowerBound(), forOp.upperBound(), forOp.step()});
-}
-
-/// Return the current iteration number in the loop (iv - lb).ceilDiv(step).
-static Value buildLoopIterationCount(OpBuilder &b, scf::ForOp forOp) {
-  MLIRContext *ctx = forOp->getContext();
-  AffineExpr iv, lb, step;
-  bindDims(ctx, iv, lb);
-  bindSymbols(ctx, step);
-  return b.create<AffineApplyOp>(
-      forOp->getLoc(), AffineMap::get(2, 1, {(iv - lb).ceilDiv(step)}, ctx),
-      ValueRange{forOp.getInductionVar(), forOp.lowerBound(), forOp.step()});
 }
 
 LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
                                                   unsigned nLoops) {
+  SmallVector<Value> dynamicTensorSizes;
   llvm::SetVector<Operation *> backwardSlice, packingLoops;
   if (failed(hoistPaddingOnTensorsPrerequisites(padTensorOp, nLoops,
-                                                backwardSlice, packingLoops)))
+                                                backwardSlice, packingLoops,
+                                                dynamicTensorSizes)))
     return failure();
 
   // Update actual number of loops, which may be smaller.
@@ -636,12 +772,8 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   llvm::append_range(packedShape, paddedTensorType.getShape());
   auto packedTensorType =
       RankedTensorType::get(packedShape, paddedTensorType.getElementType());
-  auto dynamicSizes =
-      llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *op) {
-        return buildLoopTripCount(b, cast<scf::ForOp>(op));
-      }));
   Value packedTensor = b.create<linalg::InitTensorOp>(
-      loc, dynamicSizes, packedTensorType.getShape(),
+      loc, dynamicTensorSizes, packedTensorType.getShape(),
       packedTensorType.getElementType());
 
   // Clone the operations involved in the backward slice, iteratively stepping
@@ -656,9 +788,9 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   clonedLoopIvs.reserve(nLoops);
   leadingPackedTensorIndexings.reserve(nLoops);
   BlockAndValueMapping bvm;
-  // Stack step 1. iteratively clone loops and push `packedTensor`.
   // Insert `padTensorOp` into the backwardSlice so we clone it too.
   backwardSlice.insert(padTensorOp);
+  // Stack step 1. iteratively clone loops and push `packedTensor`.
   for (Operation *op : backwardSlice) {
     if (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op)) {
       b.clone(*op, bvm);
@@ -670,15 +802,23 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
     // Unused loop, just skip it.
     if (!packingLoops.contains(forOp))
       continue;
+
     auto clonedForOp =
-        b.create<scf::ForOp>(loc, forOp.lowerBound(), forOp.upperBound(),
-                             forOp.step(), packedTensor);
+        b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
+                             bvm.lookupOrDefault(forOp.upperBound()),
+                             bvm.lookupOrDefault(forOp.step()), packedTensor);
+
+    bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
     assert(clonedForOp->getNumRegions() == 1);
     clonedLoopIvs.push_back(clonedForOp.getInductionVar());
+
     b.setInsertionPointToStart(&clonedForOp->getRegion(0).front());
-    leadingPackedTensorIndexings.push_back(
-        buildLoopIterationCount(b, clonedForOp));
-    bvm.map(forOp.getInductionVar(), clonedLoopIvs.back());
+    Value loopIndependentIterationCount = buildLoopIterationCount(
+        b, cast<scf::ForOp>(outermostEnclosingForOp), clonedForOp);
+    // Assert the loop-independent iteration count can be computed.
+    if (!loopIndependentIterationCount)
+      llvm_unreachable("loop independence prerequisite not met");
+    leadingPackedTensorIndexings.push_back(loopIndependentIterationCount);
     packedTensor = clonedForOp.getRegionIterArgs().front();
   }
 
@@ -716,8 +856,13 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   b.setInsertionPoint(padTensorOp);
   SmallVector<Value> loopIterationCounts =
       llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *loop) {
-        return buildLoopIterationCount(b, cast<scf::ForOp>(loop));
+        return buildLoopIterationCount(
+            b, cast<scf::ForOp>(outermostEnclosingForOp),
+            cast<scf::ForOp>(loop));
       }));
+  // Assert all loop iteration counts can be computed.
+  if (llvm::any_of(loopIterationCounts, [](Value v) { return !v; }))
+    llvm_unreachable("loop independence prerequisite not met");
   // offsets = [originalLoopIvs, 0 .. 0].
   offsets.assign(loopIterationCounts.begin(), loopIterationCounts.end());
   offsets.append(paddedRank, b.getIndexAttr(0));
