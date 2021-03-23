@@ -869,6 +869,16 @@ int runOrcJIT(const char *ProgName) {
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
 
+  // FIXME: Setting a dummy call-through manager in non-lazy mode prevents the
+  // JIT builder to instantiate a default (which would fail with an error for
+  // unsupported architectures).
+  if (UseJITKind != JITKind::OrcLazy) {
+    auto ES = std::make_unique<orc::ExecutionSession>();
+    Builder.setLazyCallthroughManager(
+        std::make_unique<orc::LazyCallThroughManager>(*ES, 0, nullptr));
+    Builder.setExecutionSession(std::move(ES));
+  }
+
   Builder.setLazyCompileFailureAddr(
       pointerToJITTargetAddress(exitOnLazyCallThroughFailure));
   Builder.setNumCompileThreads(LazyJITCompileThreads);
