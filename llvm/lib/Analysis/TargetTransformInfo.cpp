@@ -228,6 +228,10 @@ int TargetTransformInfo::getUserCost(const User *U,
   return Cost;
 }
 
+BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
+  return TTIImpl->getPredictableBranchThreshold();
+}
+
 bool TargetTransformInfo::hasBranchDivergence() const {
   return TTIImpl->hasBranchDivergence();
 }

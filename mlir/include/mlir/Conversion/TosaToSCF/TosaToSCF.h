@@ -20,7 +20,7 @@ namespace tosa {
 
 std::unique_ptr<Pass> createTosaToSCF();
 
-void populateTosaToSCFConversionPatterns(OwningRewritePatternList *patterns);
+void populateTosaToSCFConversionPatterns(RewritePatternSet *patterns);
 
 /// Populates passes to convert from TOSA to SCF.
 void addTosaToSCFPasses(OpPassManager &pm);

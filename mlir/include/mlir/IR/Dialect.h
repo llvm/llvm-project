@@ -39,6 +39,12 @@ using InterfaceAllocatorFunction =
 ///
 class Dialect {
 public:
+  /// Type for a callback provided by the dialect to parse a custom operation.
+  /// This is used for the dialect to provide an alternative way to parse custom
+  /// operations, including unregistered ones.
+  using ParseOpHook =
+      function_ref<ParseResult(OpAsmParser &parser, OperationState &result)>;
+
   virtual ~Dialect();
 
   /// Utility function that returns if the given string is a valid dialect
@@ -96,6 +102,18 @@ public:
   virtual void printType(Type, DialectAsmPrinter &) const {
     llvm_unreachable("dialect has no registered type printing hook");
   }
+
+  /// Return the hook to parse an operation registered to this dialect, if any.
+  /// By default this will lookup for registered operations and return the
+  /// `parse()` method registered on the AbstractOperation. Dialects can
+  /// override this behavior and handle unregistered operations as well.
+  virtual Optional<ParseOpHook> getParseOperationHook(StringRef opName) const;
+
+  /// Print an operation registered to this dialect.
+  /// This hook is invoked for registered operation which don't override the
+  /// `print()` method to define their own custom assembly.
+  virtual LogicalResult printOperation(Operation *op,
+                                       OpAsmPrinter &printer) const;
 
   //===--------------------------------------------------------------------===//
   // Verification Hooks

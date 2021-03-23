@@ -155,7 +155,7 @@ add_public_tablegen_target(<name-of-the-cmake-target>)
 Then you can `#include` the generated file in any C++ implementation file you
 like. (You will also need to make sure the library depends on the CMake target
 defined in the above.) The generated file will have a `populateWithGenerated(
-OwningRewritePatternList &patterns)` function that you can
+RewritePatternSet &patterns)` function that you can
 use to collect all the generated patterns inside `patterns` and then use
 `patterns` in any pass you would like.
 
@@ -189,7 +189,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
       : RewritePattern("tf.LeakyRelu", 1, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+                                PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
         op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
@@ -201,6 +201,19 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 In the C++ rewrite the static benefit of the rewrite pattern is specified at
 construction. While in the pattern generator a simple heuristic is currently
 employed based around the number of ops matched and replaced.
+
+In the case where you have a registered op and want to use a benefit of 1, you
+can even define the pattern as a C function:
+
+```c++
+static LogicalResult
+convertTFLeakyRelu(TFLeakyReluOp op, PatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
+      op, op->getResult(0).getType(), op->getOperand(0),
+      /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
+  return success();
+}
+```
 
 The above rule did not capture the matching operands/attributes, but in general
 the `match` function in a multi-step rewrite may populate and return a

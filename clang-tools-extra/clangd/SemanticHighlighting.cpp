@@ -294,7 +294,7 @@ public:
   HighlightingToken &addToken(SourceLocation Loc, HighlightingKind Kind) {
     Loc = getHighlightableSpellingToken(Loc, SourceMgr);
     if (Loc.isInvalid())
-      return Dummy;
+      return InvalidHighlightingToken;
     const auto *Tok = TB.spelledTokenAt(Loc);
     assert(Tok);
     return addToken(
@@ -395,7 +395,8 @@ private:
   const SourceManager &SourceMgr;
   const LangOptions &LangOpts;
   std::vector<HighlightingToken> Tokens;
-  HighlightingToken Dummy; // returned from addToken(InvalidLoc)
+  // returned from addToken(InvalidLoc)
+  HighlightingToken InvalidHighlightingToken;
 };
 
 llvm::Optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {

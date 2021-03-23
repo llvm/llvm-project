@@ -29,7 +29,7 @@ namespace {
 struct TosaToStandard : public TosaToStandardBase<TosaToStandard> {
 public:
   void runOnOperation() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
     target.addIllegalOp<tosa::ConstOp>();
     target.addIllegalOp<tosa::SliceOp>();

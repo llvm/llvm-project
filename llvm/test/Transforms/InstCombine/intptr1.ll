@@ -13,8 +13,8 @@ define void @test1(float* %a, float* readnone %a_end, i64* %b.i64) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
 ; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_PTR]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[A_ADDR_03]], i64 1
@@ -37,8 +37,8 @@ for.body:                                         ; preds = %for.body, %for.body
 
 
   %tmp = inttoptr i64 %b.addr.02 to float*
-  %tmp1 = load float, float* %tmp, align 4
-  %mul.i = fmul float %tmp1, 4.200000e+01
+  %i1 = load float, float* %tmp, align 4
+  %mul.i = fmul float %i1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
   %add.int = ptrtoint float* %add to i64
@@ -65,8 +65,8 @@ define void @test1_neg(float* %a, float* readnone %a_end, i64* %b.i64) {
 ; CHECK-NEXT:    [[PTRCMP:%.*]] = icmp ult float* [[TMP]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[PTRCMP]], label [[FOR_END]], label [[BB]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[A]], align 4
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[A]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = getelementptr inbounds float, float* [[A]], i64 1
 ; CHECK-NEXT:    [[ADD_INT]] = ptrtoint float* [[ADD]] to i64
@@ -94,8 +94,8 @@ for.body:                                         ; preds = %for.body, %for.body
   br i1 %ptrcmp, label %for.end, label %bb
 
 bb:
-  %tmp1 = load float, float* %a, align 4
-  %mul.i = fmul float %tmp1, 4.200000e+01
+  %i1 = load float, float* %a, align 4
+  %mul.i = fmul float %i1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %a, i64 1
   %add.int = ptrtoint float* %add to i64
@@ -121,8 +121,8 @@ define void @test2(float* %a, float* readnone %a_end, float** %b.float) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
 ; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_PTR]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[A_ADDR_03]], i64 1
@@ -146,8 +146,8 @@ for.body:                                         ; preds = %for.body, %for.body
 
 
   %tmp = inttoptr i64 %b.addr.02 to float*
-  %tmp1 = load float, float* %tmp, align 4
-  %mul.i = fmul float %tmp1, 4.200000e+01
+  %i1 = load float, float* %tmp, align 4
+  %mul.i = fmul float %i1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
   %add.int = ptrtoint float* %add to i64
@@ -173,8 +173,8 @@ define void @test3(float* %a, float* readnone %a_end, i8** %b.i8p) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ADDR_02_PTR:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_PTR]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B_ADDR_02_PTR]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
 ; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_PTR]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[A_ADDR_03]], i64 1
@@ -198,8 +198,8 @@ for.body:                                         ; preds = %for.body, %for.body
 
 
   %tmp = inttoptr i64 %b.addr.02 to float*
-  %tmp1 = load float, float* %tmp, align 4
-  %mul.i = fmul float %tmp1, 4.200000e+01
+  %i1 = load float, float* %tmp, align 4
+  %mul.i = fmul float %i1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
   %add.int = ptrtoint float* %add to i64
@@ -223,8 +223,8 @@ define void @test4(float* %a, float* readnone %a_end, float** %b.float) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi float* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[B_ADDR_02_IN:%.*]] = phi float* [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[B_F]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[B_ADDR_02_IN]], align 4
-; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], 4.200000e+01
+; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B_ADDR_02_IN]], align 4
+; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], float* [[A_ADDR_03]], align 4
 ; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, float* [[B_ADDR_02_IN]], i64 1
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, float* [[A_ADDR_03]], i64 1
@@ -246,8 +246,8 @@ for.body:                                         ; preds = %for.body, %for.body
   %a.addr.03 = phi float* [ %incdec.ptr, %for.body ], [ %a, %for.body.preheader ]
   %b.addr.02 = phi i64 [ %add.int, %for.body ], [ %b, %for.body.preheader ]
   %tmp = inttoptr i64 %b.addr.02 to float*
-  %tmp1 = load float, float* %tmp, align 4
-  %mul.i = fmul float %tmp1, 4.200000e+01
+  %i1 = load float, float* %tmp, align 4
+  %mul.i = fmul float %i1, 4.200000e+01
   store float %mul.i, float* %a.addr.03, align 4
   %add = getelementptr inbounds float, float* %tmp, i64 1
   %add.int = ptrtoint float* %add to i64

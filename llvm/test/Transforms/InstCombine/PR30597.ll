@@ -23,7 +23,7 @@ entry-block:
 define i64* @function(i64* noalias nocapture readonly dereferenceable(8)) {
 ; CHECK-LABEL: @function(
 ; CHECK-NEXT:  entry-block:
-; CHECK-NEXT:    [[LOADED:%.*]] = load i64, i64* [[TMP0:%.*]], align 8, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[LOADED:%.*]] = load i64, i64* [[TMP0:%.*]], align 8, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[INTTOPTR:%.*]] = inttoptr i64 [[LOADED]] to i64*
 ; CHECK-NEXT:    ret i64* [[INTTOPTR]]
 ;

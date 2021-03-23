@@ -26,7 +26,8 @@ ASTSrcLocProcessor::ASTSrcLocProcessor(StringRef JsonPath)
           isDefinition(),
           isSameOrDerivedFrom(
               // TODO: Extend this with other clades
-              namedDecl(hasName("clang::Stmt")).bind("nodeClade")),
+              namedDecl(hasAnyName("clang::Stmt", "clang::Decl"))
+                  .bind("nodeClade")),
           optionally(isDerivedFrom(cxxRecordDecl().bind("derivedFrom"))))
           .bind("className"),
       this);

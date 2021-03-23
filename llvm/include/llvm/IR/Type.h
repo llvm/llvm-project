@@ -380,6 +380,11 @@ public:
     return ContainedTys[0];
   }
 
+  /// Given vector type, change the element type,
+  /// whilst keeping the old number of elements.
+  /// For non-vectors simply returns \p EltTy.
+  inline Type *getWithNewType(Type *EltTy) const;
+
   /// Given an integer or vector type, change the lane bitwidth to NewBitwidth,
   /// whilst keeping the old number of lanes.
   inline Type *getWithNewBitWidth(unsigned NewBitWidth) const;

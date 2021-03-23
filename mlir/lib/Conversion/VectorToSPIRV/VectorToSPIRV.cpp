@@ -242,11 +242,11 @@ struct VectorInsertStridedSliceOpConvert final
 } // namespace
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                         OwningRewritePatternList &patterns) {
-  patterns.insert<VectorBitcastConvert, VectorBroadcastConvert,
-                  VectorExtractElementOpConvert, VectorExtractOpConvert,
-                  VectorExtractStridedSliceOpConvert, VectorFmaOpConvert,
-                  VectorInsertElementOpConvert, VectorInsertOpConvert,
-                  VectorInsertStridedSliceOpConvert>(typeConverter,
-                                                     patterns.getContext());
+                                         RewritePatternSet &patterns) {
+  patterns.add<VectorBitcastConvert, VectorBroadcastConvert,
+               VectorExtractElementOpConvert, VectorExtractOpConvert,
+               VectorExtractStridedSliceOpConvert, VectorFmaOpConvert,
+               VectorInsertElementOpConvert, VectorInsertOpConvert,
+               VectorInsertStridedSliceOpConvert>(typeConverter,
+                                                  patterns.getContext());
 }

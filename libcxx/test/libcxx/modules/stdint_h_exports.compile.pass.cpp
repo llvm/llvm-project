@@ -17,6 +17,8 @@
 // REQUIRES: modules-support
 // ADDITIONAL_COMPILE_FLAGS: -fmodules
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <stdint.h>
 
 int main(int, char**) {

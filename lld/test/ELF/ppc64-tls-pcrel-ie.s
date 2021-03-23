@@ -54,9 +54,9 @@ y:
 
 # LE-RELOC: There are no relocations in this file.
 
-# LE-SYM: Symbol table '.symtab' contains 7 entries:
-# LE-SYM: 5: 0000000000000000     0 TLS     GLOBAL DEFAULT     6 x
-# LE-SYM: 6: 0000000000000004     0 TLS     GLOBAL DEFAULT     6 y
+# LE-SYM: Symbol table '.symtab' contains 8 entries:
+# LE-SYM: 6: 0000000000000000     0 TLS     GLOBAL DEFAULT     6 x
+# LE-SYM: 7: 0000000000000004     0 TLS     GLOBAL DEFAULT     6 y
 
 # LE-GOT: could not find section '.got'
 
@@ -72,6 +72,20 @@ y:
 IEAddr:
 	pld 3, x@got@tprel@pcrel(0), 1
 	add 3, 3, x@tls@pcrel
+	blr
+
+# IE-LABEL: <IEAddrCopy>:
+# IE-NEXT:    pld 3, 12488(0), 1
+# IE-NEXT:    add 4, 3, 13
+# IE-NEXT:    blr
+# LE-LABEL: <IEAddrCopy>:
+# LE-NEXT:    paddi 3, 13, -28672, 0
+# LE-NEXT:    mr 4, 3
+# LE-NEXT:    blr
+.section .text_addr, "ax", %progbits
+IEAddrCopy:
+	pld 3, x@got@tprel@pcrel(0), 1
+	add 4, 3, x@tls@pcrel
 	blr
 
 # IE-LABEL: <IEVal>:

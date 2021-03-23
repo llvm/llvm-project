@@ -4746,6 +4746,27 @@ def : Pat<(f64 (AArch64frsqrts (f64 FPR64:$Rn), (f64 FPR64:$Rm))),
 def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
           (FRSQRTSv2f64 FPR128:$Rn, FPR128:$Rm)>;
 
+// Some float -> int -> float conversion patterns for which we want to keep the
+// int values in FP registers using the corresponding NEON instructions to
+// avoid more costly int <-> fp register transfers.
+let Predicates = [HasNEON] in {
+def : Pat<(f64 (sint_to_fp (i64 (fp_to_sint f64:$Rn)))),
+          (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
+def : Pat<(f32 (sint_to_fp (i32 (fp_to_sint f32:$Rn)))),
+          (SCVTFv1i32 (i32 (FCVTZSv1i32 f32:$Rn)))>;
+def : Pat<(f64 (uint_to_fp (i64 (fp_to_uint f64:$Rn)))),
+          (UCVTFv1i64 (i64 (FCVTZUv1i64 f64:$Rn)))>;
+def : Pat<(f32 (uint_to_fp (i32 (fp_to_uint f32:$Rn)))),
+          (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
+
+let Predicates = [HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (fp_to_sint f16:$Rn)))),
+          (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
+def : Pat<(f16 (uint_to_fp (i32 (fp_to_uint f16:$Rn)))),
+          (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
+}
+}
+
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
 // Here are the patterns for 8 and 16-bits to float.

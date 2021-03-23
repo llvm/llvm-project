@@ -1070,12 +1070,19 @@ The integer codes are mapped to well-known attributes as follows.
 * code 68: ``noundef``
 * code 69: ``byref``
 * code 70: ``mustprogress``
+* code 74: ``vscale_range(<Min>[, <Max>])``
 
 .. note::
   The ``allocsize`` attribute has a special encoding for its arguments. Its two
   arguments, which are 32-bit integers, are packed into one 64-bit integer value
   (i.e. ``(EltSizeParam << 32) | NumEltsParam``), with ``NumEltsParam`` taking on
   the sentinel value -1 if it is not specified.
+
+.. note::
+  The ``vscale_range`` attribute has a special encoding for its arguments. Its two
+  arguments, which are 32-bit integers, are packed into one 64-bit integer value
+  (i.e. ``(Min << 32) | Max``), with ``Max`` taking on the value of ``Min`` if
+  it is not specified.
 
 .. _TYPE_BLOCK:
 

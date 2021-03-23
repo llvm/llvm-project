@@ -125,9 +125,9 @@ public:
 void ConvertSimulatedQuantPass::runOnFunction() {
   bool hadFailure = false;
   auto func = getFunction();
-  OwningRewritePatternList patterns(func.getContext());
+  RewritePatternSet patterns(func.getContext());
   auto ctx = func.getContext();
-  patterns.insert<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
+  patterns.add<ConstFakeQuantRewrite, ConstFakeQuantPerAxisRewrite>(
       ctx, &hadFailure);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
   if (hadFailure)

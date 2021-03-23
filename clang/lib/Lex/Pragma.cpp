@@ -1122,6 +1122,57 @@ struct PragmaDebugHandler : public PragmaHandler {
         DebugOverflowStack();
     } else if (II->isStr("captured")) {
       HandleCaptured(PP);
+    } else if (II->isStr("modules")) {
+      struct ModuleVisitor {
+        Preprocessor &PP;
+        void visit(Module *M, bool VisibleOnly) {
+          SourceLocation ImportLoc = PP.getModuleImportLoc(M);
+          if (!VisibleOnly || ImportLoc.isValid()) {
+            llvm::errs() << M->getFullModuleName() << " ";
+            if (ImportLoc.isValid()) {
+              llvm::errs() << M << " visible ";
+              ImportLoc.print(llvm::errs(), PP.getSourceManager());
+            }
+            llvm::errs() << "\n";
+          }
+          for (Module *Sub : M->submodules()) {
+            if (!VisibleOnly || ImportLoc.isInvalid() || Sub->IsExplicit)
+              visit(Sub, VisibleOnly);
+          }
+        }
+        void visitAll(bool VisibleOnly) {
+          for (auto &NameAndMod :
+               PP.getHeaderSearchInfo().getModuleMap().modules())
+            visit(NameAndMod.second, VisibleOnly);
+        }
+      } Visitor{PP};
+
+      Token Kind;
+      PP.LexUnexpandedToken(Kind);
+      auto *DumpII = Kind.getIdentifierInfo();
+      if (!DumpII) {
+        PP.Diag(Kind, diag::warn_pragma_debug_missing_argument)
+            << II->getName();
+      } else if (DumpII->isStr("all")) {
+        Visitor.visitAll(false);
+      } else if (DumpII->isStr("visible")) {
+        Visitor.visitAll(true);
+      } else if (DumpII->isStr("building")) {
+        for (auto &Building : PP.getBuildingSubmodules()) {
+          llvm::errs() << "in " << Building.M->getFullModuleName();
+          if (Building.ImportLoc.isValid()) {
+            llvm::errs() << " imported ";
+            if (Building.IsPragma)
+              llvm::errs() << "via pragma ";
+            llvm::errs() << "at ";
+            Building.ImportLoc.print(llvm::errs(), PP.getSourceManager());
+            llvm::errs() << "\n";
+          }
+        }
+      } else {
+        PP.Diag(Tok, diag::warn_pragma_debug_unexpected_command)
+          << DumpII->getName();
+      }
     } else {
       PP.Diag(Tok, diag::warn_pragma_debug_unexpected_command)
         << II->getName();

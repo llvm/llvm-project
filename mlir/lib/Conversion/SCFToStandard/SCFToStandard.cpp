@@ -568,15 +568,14 @@ DoWhileLowering::matchAndRewrite(WhileOp whileOp,
   return success();
 }
 
-void mlir::populateLoopToStdConversionPatterns(
-    OwningRewritePatternList &patterns) {
-  patterns.insert<ForLowering, IfLowering, ParallelLowering, WhileLowering>(
+void mlir::populateLoopToStdConversionPatterns(RewritePatternSet &patterns) {
+  patterns.add<ForLowering, IfLowering, ParallelLowering, WhileLowering>(
       patterns.getContext());
-  patterns.insert<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
+  patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
 void SCFToStandardPass::runOnOperation() {
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   populateLoopToStdConversionPatterns(patterns);
   // Configure conversion to lower out scf.for, scf.if, scf.parallel and
   // scf.while. Anything else is fine.

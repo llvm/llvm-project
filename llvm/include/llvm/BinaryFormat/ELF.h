@@ -733,6 +733,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X3D = 0x03d,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X3E = 0x03e,
   EF_AMDGPU_MACH_AMDGCN_GFX90A        = 0x03f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40 = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100       = 0x0fe, // Temporary ELF number
 
   // First/last AMDGCN-based processors.

@@ -46,7 +46,7 @@ STATISTIC(ExpectIntrinsicsHandled,
 // WARNING: these values are internal implementation detail of the pass.
 // They should not be exposed to the outside of the pass, front-end codegen
 // should emit @llvm.expect intrinsics instead of using these weights directly.
-// Transforms should use TargetLowering getPredictableBranchThreshold() hook.
+// Transforms should use TargetTransformInfo's getPredictableBranchThreshold().
 static cl::opt<uint32_t> LikelyBranchWeight(
     "likely-branch-weight", cl::Hidden, cl::init(2000),
     cl::desc("Weight of the branch likely to be taken (default = 2000)"));

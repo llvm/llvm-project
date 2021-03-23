@@ -7,6 +7,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 #include <stdlib.h>
 // At least -O1 is needed for this function to not have a stack frame on
 // AArch64.

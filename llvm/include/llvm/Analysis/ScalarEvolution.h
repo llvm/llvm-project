@@ -1574,6 +1574,12 @@ private:
   ConstantRange getRangeViaFactoring(const SCEV *Start, const SCEV *Stop,
                                      const SCEV *MaxBECount, unsigned BitWidth);
 
+  /// If the unknown expression U corresponds to a simple recurrence, return
+  /// a constant range which represents the entire recurrence.  Note that
+  /// *add* recurrences with loop invariant steps aren't represented by
+  /// SCEVUnknowns and thus don't use this mechanism.
+  ConstantRange getRangeForUnknownRecurrence(const SCEVUnknown *U);
+
   /// We know that there is no SCEV for the specified value.  Analyze the
   /// expression.
   const SCEV *createSCEV(Value *V);

@@ -920,7 +920,15 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
       // that comes before it will already have computed the address of the
       // symbol.
       if (secondaryOp == 266) {
-        write32(loc - 1, NOP);
+        // Check if the add uses the same result register as the input register.
+        uint32_t rt = (tlsInstr & 0x03E00000) >> 21; // bits 6-10
+        uint32_t ra = (tlsInstr & 0x001F0000) >> 16; // bits 11-15
+        if (ra == rt) {
+          write32(loc - 1, NOP);
+        } else {
+          // mr rt, ra
+          write32(loc - 1, 0x7C000378 | (rt << 16) | (ra << 21) | (ra << 11));
+        }
       } else {
         uint32_t dFormOp = getPPCDFormOp(secondaryOp);
         if (dFormOp == 0)

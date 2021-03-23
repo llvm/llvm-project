@@ -25,7 +25,7 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateBufferizeMaterializationLegality(target);

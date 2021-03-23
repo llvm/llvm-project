@@ -19,7 +19,7 @@ using namespace mlir;
 using namespace mlir::detail;
 
 PatternApplicator::PatternApplicator(
-    const FrozenRewritePatternList &frozenPatternList)
+    const FrozenRewritePatternSet &frozenPatternList)
     : frozenPatternList(frozenPatternList) {
   if (const PDLByteCode *bytecode = frozenPatternList.getPDLByteCode()) {
     mutableByteCodeState = std::make_unique<PDLByteCodeMutableState>();

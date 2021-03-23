@@ -79,11 +79,11 @@ public:
 
 struct TestPatternDriver : public PassWrapper<TestPatternDriver, FunctionPass> {
   void runOnFunction() override {
-    mlir::OwningRewritePatternList patterns(&getContext());
+    mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
 
     // Verify named pattern is generated with expected name.
-    patterns.insert<FoldingPattern, TestNamedPatternRule>(&getContext());
+    patterns.add<FoldingPattern, TestNamedPatternRule>(&getContext());
 
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
@@ -557,17 +557,17 @@ struct TestLegalizePatternDriver
 
   void runOnOperation() override {
     TestTypeConverter converter;
-    mlir::OwningRewritePatternList patterns(&getContext());
+    mlir::RewritePatternSet patterns(&getContext());
     populateWithGenerated(patterns);
-    patterns.insert<
-        TestRegionRewriteBlockMovement, TestRegionRewriteUndo, TestCreateBlock,
-        TestCreateIllegalBlock, TestUndoBlockArgReplace, TestUndoBlockErase,
-        TestPassthroughInvalidOp, TestSplitReturnType,
-        TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
-        TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
-        TestNonRootReplacement, TestBoundedRecursiveRewrite,
-        TestNestedOpCreationUndoRewrite>(&getContext());
-    patterns.insert<TestDropOpSignatureConversion>(&getContext(), converter);
+    patterns
+        .add<TestRegionRewriteBlockMovement, TestRegionRewriteUndo,
+             TestCreateBlock, TestCreateIllegalBlock, TestUndoBlockArgReplace,
+             TestUndoBlockErase, TestPassthroughInvalidOp, TestSplitReturnType,
+             TestChangeProducerTypeI32ToF32, TestChangeProducerTypeF32ToF64,
+             TestChangeProducerTypeF32ToInvalid, TestUpdateConsumerType,
+             TestNonRootReplacement, TestBoundedRecursiveRewrite,
+             TestNestedOpCreationUndoRewrite>(&getContext());
+    patterns.add<TestDropOpSignatureConversion>(&getContext(), converter);
     mlir::populateFuncOpTypeConversionPattern(patterns, converter);
     mlir::populateCallOpTypeConversionPattern(patterns, converter);
 
@@ -698,8 +698,8 @@ struct OneVResOneVOperandOp1Converter
 struct TestRemappedValue
     : public mlir::PassWrapper<TestRemappedValue, FunctionPass> {
   void runOnFunction() override {
-    mlir::OwningRewritePatternList patterns(&getContext());
-    patterns.insert<OneVResOneVOperandOp1Converter>(&getContext());
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<OneVResOneVOperandOp1Converter>(&getContext());
 
     mlir::ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp, ModuleTerminatorOp, FuncOp, TestReturnOp>();
@@ -740,8 +740,8 @@ struct RemoveTestDialectOps : public RewritePattern {
 struct TestUnknownRootOpDriver
     : public mlir::PassWrapper<TestUnknownRootOpDriver, FunctionPass> {
   void runOnFunction() override {
-    mlir::OwningRewritePatternList patterns(&getContext());
-    patterns.insert<RemoveTestDialectOps>();
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<RemoveTestDialectOps>();
 
     mlir::ConversionTarget target(getContext());
     target.addIllegalDialect<TestDialect>();
@@ -876,10 +876,10 @@ struct TestTypeConversionDriver
     });
 
     // Initialize the set of rewrite patterns.
-    OwningRewritePatternList patterns(&getContext());
-    patterns.insert<TestTypeConsumerForward, TestTypeConversionProducer,
-                    TestSignatureConversionUndo>(converter, &getContext());
-    patterns.insert<TestTypeConversionAnotherProducer>(&getContext());
+    RewritePatternSet patterns(&getContext());
+    patterns.add<TestTypeConsumerForward, TestTypeConversionProducer,
+                 TestSignatureConversionUndo>(converter, &getContext());
+    patterns.add<TestTypeConversionAnotherProducer>(&getContext());
     mlir::populateFuncOpTypeConversionPattern(patterns, converter);
 
     if (failed(applyPartialConversion(getOperation(), target,
@@ -964,10 +964,9 @@ struct TestMergeBlocksPatternDriver
                          OperationPass<ModuleOp>> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    mlir::OwningRewritePatternList patterns(context);
-    patterns
-        .insert<TestMergeBlock, TestUndoBlocksMerge, TestMergeSingleBlockOps>(
-            context);
+    mlir::RewritePatternSet patterns(context);
+    patterns.add<TestMergeBlock, TestUndoBlocksMerge, TestMergeSingleBlockOps>(
+        context);
     ConversionTarget target(*context);
     target.addLegalOp<FuncOp, ModuleOp, ModuleTerminatorOp, TerminatorOp,
                       TestBranchOp, TestTypeConsumerOp, TestTypeProducerOp,
@@ -1033,8 +1032,8 @@ struct TestSelectiveReplacementPatternDriver
                          OperationPass<>> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    mlir::OwningRewritePatternList patterns(context);
-    patterns.insert<TestSelectiveOpReplacementPattern>(context);
+    mlir::RewritePatternSet patterns(context);
+    patterns.add<TestSelectiveOpReplacementPattern>(context);
     (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(),
                                        std::move(patterns));
   }

@@ -71,12 +71,20 @@ private:
   Value *createTileLoadStoreLoops(BasicBlock *Start, BasicBlock *End,
                                   IRBuilderBase &B, Value *Row, Value *Col,
                                   Value *Ptr, Value *Stride, Value *Tile);
-  Value *createTileDPBSSDLoops(BasicBlock *Start, BasicBlock *End,
-                               IRBuilderBase &B, Value *Row, Value *Col,
-                               Value *K, Value *Acc, Value *LHS, Value *RHS);
+  template <Intrinsic::ID IntrID>
+  typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                              IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                          Value *>::type
+  createTileDPLoops(BasicBlock *Start, BasicBlock *End, IRBuilderBase &B,
+                    Value *Row, Value *Col, Value *K, Value *Acc, Value *LHS,
+                    Value *RHS);
   template <bool IsTileLoad>
   bool lowerTileLoadStore(Instruction *TileLoadStore);
-  bool lowerTileDPBSSD(Instruction *TileDPBSSD);
+  template <Intrinsic::ID IntrID>
+  typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                              IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                          bool>::type
+  lowerTileDP(Instruction *TileDP);
   bool lowerTileZero(Instruction *TileZero);
 };
 
@@ -213,9 +221,16 @@ Value *X86LowerAMXIntrinsics::createTileLoadStoreLoops(
   }
 }
 
-Value *X86LowerAMXIntrinsics::createTileDPBSSDLoops(
-    BasicBlock *Start, BasicBlock *End, IRBuilderBase &B, Value *Row,
-    Value *Col, Value *K, Value *Acc, Value *LHS, Value *RHS) {
+template <Intrinsic::ID IntrID>
+typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                            IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                        Value *>::type
+X86LowerAMXIntrinsics::createTileDPLoops(BasicBlock *Start, BasicBlock *End,
+                                         IRBuilderBase &B, Value *Row,
+                                         Value *Col, Value *K, Value *Acc,
+                                         Value *LHS, Value *RHS) {
+  std::string IntrinName =
+      IntrID == Intrinsic::x86_tdpbssd_internal ? "tiledpbssd" : "tdpbf16ps";
   Loop *RowLoop = nullptr;
   Loop *ColLoop = nullptr;
   Loop *InnerLoop = nullptr;
@@ -232,17 +247,18 @@ Value *X86LowerAMXIntrinsics::createTileDPBSSDLoops(
   }
 
   BasicBlock *RowBody = createLoop(Start, End, Row, B.getInt16(1),
-                                   "tiledpbssd.scalarize.rows", B, RowLoop);
+                                   IntrinName + ".scalarize.rows", B, RowLoop);
   BasicBlock *RowLatch = RowBody->getSingleSuccessor();
 
   BasicBlock *ColBody = createLoop(RowBody, RowLatch, Col, B.getInt16(1),
-                                   "tiledpbssd.scalarize.cols", B, ColLoop);
+                                   IntrinName + ".scalarize.cols", B, ColLoop);
+
   BasicBlock *ColLoopLatch = ColBody->getSingleSuccessor();
 
   B.SetInsertPoint(ColBody->getTerminator());
   BasicBlock *InnerBody =
       createLoop(ColBody, ColLoopLatch, K, B.getInt16(1),
-                 "tiledpbssd.scalarize.inner", B, InnerLoop);
+                 IntrinName + ".scalarize.inner", B, InnerLoop);
 
   BasicBlock *ColLoopHeader = ColBody->getSinglePredecessor();
   BasicBlock *RowLoopHeader = RowBody->getSinglePredecessor();
@@ -306,39 +322,82 @@ Value *X86LowerAMXIntrinsics::createTileDPBSSDLoops(
   PHINode *VecCPhi = B.CreatePHI(V256I32Ty, 2, "vec.c.inner.phi");
   VecCPhi->addIncoming(VecCPhiColLoop, ColBody);
 
-  // tiledpbssd.scalarize.inner.body:
-  // calculate idxa, idxb
-  // %eltc = extractelement <256 x i32> %vec.c.inner.phi, i16 %idxc
-  // %elta = extractelement <256 x i32> %veca, i16 %idxa
-  // %eltav4i8 = bitcast i32 %elta to <4 x i8>
-  // %eltb = extractelement <256 x i32> %vecb, i16 %idxb
-  // %eltbv4i8 = bitcast i32 %eltb to <4 x i8>
-  // %eltav4i32 = sext <4 x i8> %eltav4i8 to <4 x i32>
-  // %eltbv4i32 = sext <4 x i8> %eltbv4i8 to <4 x i32>
-  // %mulab = mul <4 x i32> %eltbv4i32, %eltav4i32
-  // %acc = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %131)
-  // %neweltc = add i32 %elt, %acc
-  // %NewVecC = insertelement <256 x i32> %vec.c.inner.phi, i32 %neweltc,
-  // i16 %idxc
-
   B.SetInsertPoint(InnerBody->getTerminator());
   Value *IdxA =
       B.CreateAdd(B.CreateMul(CurrentRow, B.getInt16(16)), CurrentInner);
   Value *IdxB =
       B.CreateAdd(B.CreateMul(CurrentInner, B.getInt16(16)), CurrentCol);
+  Value *NewVecC = nullptr;
 
-  FixedVectorType *V4I8Ty = FixedVectorType::get(B.getInt8Ty(), 4);
-  FixedVectorType *V4I32Ty = FixedVectorType::get(B.getInt32Ty(), 4);
-  Value *EltC = B.CreateExtractElement(VecCPhi, IdxC);
-  Value *EltA = B.CreateExtractElement(VecA, IdxA);
-  Value *SubVecA = B.CreateBitCast(EltA, V4I8Ty);
-  Value *EltB = B.CreateExtractElement(VecB, IdxB);
-  Value *SubVecB = B.CreateBitCast(EltB, V4I8Ty);
-  Value *SEXTSubVecB = B.CreateSExt(SubVecB, V4I32Ty);
-  Value *SEXTSubVecA = B.CreateSExt(SubVecA, V4I32Ty);
-  Value *SubVecR = B.CreateAddReduce(B.CreateMul(SEXTSubVecA, SEXTSubVecB));
-  Value *ResElt = B.CreateAdd(EltC, SubVecR);
-  Value *NewVecC = B.CreateInsertElement(VecCPhi, ResElt, IdxC);
+  if (IntrID == Intrinsic::x86_tdpbssd_internal) {
+    // tiledpbssd.scalarize.inner.body:
+    // calculate idxa, idxb
+    // %eltc = extractelement <256 x i32> %vec.c.inner.phi, i16 %idxc
+    // %elta = extractelement <256 x i32> %veca, i16 %idxa
+    // %eltav4i8 = bitcast i32 %elta to <4 x i8>
+    // %eltb = extractelement <256 x i32> %vecb, i16 %idxb
+    // %eltbv4i8 = bitcast i32 %eltb to <4 x i8>
+    // %eltav4i32 = sext <4 x i8> %eltav4i8 to <4 x i32>
+    // %eltbv4i32 = sext <4 x i8> %eltbv4i8 to <4 x i32>
+    // %mulab = mul <4 x i32> %eltbv4i32, %eltav4i32
+    // %acc = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %131)
+    // %neweltc = add i32 %elt, %acc
+    // %NewVecC = insertelement <256 x i32> %vec.c.inner.phi, i32 %neweltc,
+    // i16 %idxc
+    FixedVectorType *V4I8Ty = FixedVectorType::get(B.getInt8Ty(), 4);
+    FixedVectorType *V4I32Ty = FixedVectorType::get(B.getInt32Ty(), 4);
+    Value *EltC = B.CreateExtractElement(VecCPhi, IdxC);
+    Value *EltA = B.CreateExtractElement(VecA, IdxA);
+    Value *SubVecA = B.CreateBitCast(EltA, V4I8Ty);
+    Value *EltB = B.CreateExtractElement(VecB, IdxB);
+    Value *SubVecB = B.CreateBitCast(EltB, V4I8Ty);
+    Value *SEXTSubVecB = B.CreateSExt(SubVecB, V4I32Ty);
+    Value *SEXTSubVecA = B.CreateSExt(SubVecA, V4I32Ty);
+    Value *SubVecR = B.CreateAddReduce(B.CreateMul(SEXTSubVecA, SEXTSubVecB));
+    Value *ResElt = B.CreateAdd(EltC, SubVecR);
+    NewVecC = B.CreateInsertElement(VecCPhi, ResElt, IdxC);
+  } else if (IntrID == Intrinsic::x86_tdpbf16ps_internal) {
+    // tiledpbf16ps.scalarize.inner.body:
+    // calculate idxa, idxb, idxc
+    // %eltc = extractelement <256 x i32> %vec.c.inner.phi, i16 %idxc
+    // %eltcf32 = bitcast i32 %eltc to float
+    // %elta = extractelement <256 x i32> %veca, i16 %idxa
+    // %eltav2i16 = bitcast i32 %elta to <2 x i16>
+    // %eltb = extractelement <256 x i32> %vecb, i16 %idxb
+    // %eltbv2i16 = bitcast i32 %eltb to <2 x i16>
+    // %shufflea = shufflevector <2 x i16> %elta, <2 x i16> zeroinitializer, <4
+    // x i32> <i32 2, i32 0, i32 3, i32 1>
+    // %eltav2f32 = bitcast <4 x i16> %shufflea to <2 x float>
+    // %shuffleb = shufflevector <2 x i16> %eltb, <2 xi16> zeroinitializer, <4 x
+    // i32> <i32 2, i32 0, i32 3, i32 1>
+    // %eltbv2f32 = bitcast <4 x i16> %shuffleb to <2 x float>
+    // %mulab = fmul <2 x float> %eltav2f32, %eltbv2f32
+    // %acc = call float
+    // @llvm.vector.reduce.fadd.v2f32(float %eltcf32, <2 x float> %mulab)
+    // %neweltc = bitcast float %acc to i32
+    // %NewVecC = insertelement <256 x i32> %vec.c.inner.phi, i32 %neweltc,
+    // i16 %idxc
+    // %NewVecD = insertelement <256 x i32> %vec.d.inner.phi, i32 %neweltc,
+    // i16 %idxc
+    FixedVectorType *V2I16Ty = FixedVectorType::get(B.getInt16Ty(), 2);
+    FixedVectorType *V2F32Ty = FixedVectorType::get(B.getFloatTy(), 2);
+    Value *EltC = B.CreateExtractElement(VecCPhi, IdxC);
+    Value *EltCF32 = B.CreateBitCast(EltC, B.getFloatTy());
+    Value *EltA = B.CreateExtractElement(VecA, IdxA);
+    Value *SubVecA = B.CreateBitCast(EltA, V2I16Ty);
+    Value *EltB = B.CreateExtractElement(VecB, IdxB);
+    Value *SubVecB = B.CreateBitCast(EltB, V2I16Ty);
+    Value *ZeroV2I16 = Constant::getNullValue(V2I16Ty);
+    int ShuffleMask[4] = {2, 0, 3, 1};
+    auto ShuffleArray = makeArrayRef(ShuffleMask);
+    Value *AV2F32 = B.CreateBitCast(
+        B.CreateShuffleVector(SubVecA, ZeroV2I16, ShuffleArray), V2F32Ty);
+    Value *BV2F32 = B.CreateBitCast(
+        B.CreateShuffleVector(SubVecB, ZeroV2I16, ShuffleArray), V2F32Ty);
+    Value *SubVecR = B.CreateFAddReduce(EltCF32, B.CreateFMul(AV2F32, BV2F32));
+    Value *ResElt = B.CreateBitCast(SubVecR, B.getInt32Ty());
+    NewVecC = B.CreateInsertElement(VecCPhi, ResElt, IdxC);
+  }
 
   // tiledpbssd.scalarize.cols.latch:
   // %NewEltC = extractelement <256 x i32> %vec.c.phi.col, i16 %idxc
@@ -357,14 +416,17 @@ Value *X86LowerAMXIntrinsics::createTileDPBSSDLoops(
   return NewVecD;
 }
 
-bool X86LowerAMXIntrinsics::lowerTileDPBSSD(Instruction *TileDPBSSD) {
+template <Intrinsic::ID IntrID>
+typename std::enable_if<IntrID == Intrinsic::x86_tdpbssd_internal ||
+                            IntrID == Intrinsic::x86_tdpbf16ps_internal,
+                        bool>::type
+X86LowerAMXIntrinsics::lowerTileDP(Instruction *TileDP) {
   Value *M, *N, *K, *C, *A, *B;
-  match(TileDPBSSD, m_Intrinsic<Intrinsic::x86_tdpbssd_internal>(
-                        m_Value(M), m_Value(N), m_Value(K), m_Value(C),
-                        m_Value(A), m_Value(B)));
-  Instruction *InsertI = TileDPBSSD;
-  IRBuilder<> PreBuilder(TileDPBSSD);
-  PreBuilder.SetInsertPoint(TileDPBSSD);
+  match(TileDP, m_Intrinsic<IntrID>(m_Value(M), m_Value(N), m_Value(K),
+                                    m_Value(C), m_Value(A), m_Value(B)));
+  Instruction *InsertI = TileDP;
+  IRBuilder<> PreBuilder(TileDP);
+  PreBuilder.SetInsertPoint(TileDP);
   // We visit the loop with (m, n/4, k/4):
   // %n_dword = lshr i16 %n, 2
   // %k_dword = lshr i16 %k, 2
@@ -373,17 +435,16 @@ bool X86LowerAMXIntrinsics::lowerTileDPBSSD(Instruction *TileDPBSSD) {
   BasicBlock *Start = InsertI->getParent();
   BasicBlock *End =
       SplitBlock(InsertI->getParent(), InsertI, &DTU, LI, nullptr, "continue");
-  IRBuilder<> Builder(TileDPBSSD);
-  Value *ResVec =
-      createTileDPBSSDLoops(Start, End, Builder, M, NDWord, KDWord, C, A, B);
+  IRBuilder<> Builder(TileDP);
+  Value *ResVec = createTileDPLoops<IntrID>(Start, End, Builder, M, NDWord,
+                                            KDWord, C, A, B);
   // we cannot assume there always be bitcast after tiledpbssd. So we need to
   // insert one bitcast as required
   Builder.SetInsertPoint(End->getFirstNonPHI());
   Value *ResAMX =
       Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
-  // Delete tiledpbssd intrinsic and do some clean-up.
-  for (auto UI = TileDPBSSD->use_begin(), UE = TileDPBSSD->use_end();
-       UI != UE;) {
+  // Delete TileDP intrinsic and do some clean-up.
+  for (auto UI = TileDP->use_begin(), UE = TileDP->use_end(); UI != UE;) {
     Instruction *I = cast<Instruction>((UI++)->getUser());
     Value *Vec;
     if (match(I, m_BitCast(m_Value(Vec)))) {
@@ -391,8 +452,8 @@ bool X86LowerAMXIntrinsics::lowerTileDPBSSD(Instruction *TileDPBSSD) {
       I->eraseFromParent();
     }
   }
-  TileDPBSSD->replaceAllUsesWith(ResAMX);
-  TileDPBSSD->eraseFromParent();
+  TileDP->replaceAllUsesWith(ResAMX);
+  TileDP->eraseFromParent();
   return true;
 }
 
@@ -469,6 +530,7 @@ bool X86LowerAMXIntrinsics::visit() {
         case Intrinsic::x86_tileloadd64_internal:
         case Intrinsic::x86_tilestored64_internal:
         case Intrinsic::x86_tilezero_internal:
+        case Intrinsic::x86_tdpbf16ps_internal:
           WorkList.push_back(Inst);
           break;
         default:
@@ -481,7 +543,10 @@ bool X86LowerAMXIntrinsics::visit() {
   for (auto *Inst : WorkList) {
     switch (Inst->getIntrinsicID()) {
     case Intrinsic::x86_tdpbssd_internal:
-      C = lowerTileDPBSSD(Inst) || C;
+      C = lowerTileDP<Intrinsic::x86_tdpbssd_internal>(Inst) || C;
+      break;
+    case Intrinsic::x86_tdpbf16ps_internal:
+      C = lowerTileDP<Intrinsic::x86_tdpbf16ps_internal>(Inst) || C;
       break;
     case Intrinsic::x86_tileloadd64_internal:
       C = lowerTileLoadStore<true>(Inst) || C;

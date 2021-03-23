@@ -1,3 +1,10 @@
+add_custom_target(lldb-api-test-deps)
+add_dependencies(lldb-api-test-deps lldb-test-deps)
+
+add_lit_testsuites(LLDB-API
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS lldb-api-test-deps)
+
 function(add_python_test_target name test_script args comment)
   set(PYTHON_TEST_COMMAND
     ${Python3_EXECUTABLE}
@@ -153,20 +160,11 @@ string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_EXECUTAB
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
 
-# Configure the API test suite.
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
-
-if (CMAKE_GENERATOR STREQUAL "Xcode")
-  # Xcode does not get the auto-generated targets. We need to create
-  # check-lldb-api manually.
-  add_lit_testsuite(check-lldb-api "Running lldb api test suite"
-    ${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS lldb-test-deps)
-endif()
 
 # Targets for running the test suite on the different Apple simulators.
 add_lit_testsuite(check-lldb-simulator-ios
@@ -174,18 +172,23 @@ add_lit_testsuite(check-lldb-simulator-ios
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS "lldb-run-with-simulator=ios"
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-deps)
+  DEPENDS lldb-api-test-deps)
 
 add_lit_testsuite(check-lldb-simulator-watchos
   "Running lldb test suite on the watchOS simulator"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS "lldb-run-with-simulator=watchos"
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-deps)
+  DEPENDS lldb-api-test-deps)
 
 add_lit_testsuite(check-lldb-simulator-tvos
   "Running lldb test suite on the tvOS simulator"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS "lldb-run-with-simulator=tvos"
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS lldb-test-deps)
+  DEPENDS lldb-api-test-deps)
+
+add_lit_testsuite(check-lldb-api "Running lldb api test suite"
+  ${CMAKE_CURRENT_BINARY_DIR}
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS lldb-api-test-deps)

@@ -1225,10 +1225,10 @@ XOrOpPattern::matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
 
 namespace mlir {
 void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                     OwningRewritePatternList &patterns) {
+                                     RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.insert<
+  patterns.add<
       // Math dialect operations.
       // TODO: Move to separate pass.
       UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
@@ -1290,15 +1290,15 @@ void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
   // Give CmpFOpNanKernelPattern a higher benefit so it can prevail when Kernel
   // capability is available.
-  patterns.insert<CmpFOpNanKernelPattern>(typeConverter, context,
-                                          /*benefit=*/2);
+  patterns.add<CmpFOpNanKernelPattern>(typeConverter, context,
+                                       /*benefit=*/2);
 }
 
 void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
-                                   OwningRewritePatternList &patterns) {
-  patterns.insert<TensorExtractPattern>(typeConverter, patterns.getContext(),
-                                        byteCountThreshold);
+                                   RewritePatternSet &patterns) {
+  patterns.add<TensorExtractPattern>(typeConverter, patterns.getContext(),
+                                     byteCountThreshold);
 }
 
 } // namespace mlir

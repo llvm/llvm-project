@@ -17,15 +17,15 @@ class FuncOp;
 class ModuleOp;
 template <typename T>
 class OperationPass;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
-void populateShapeToStandardConversionPatterns(
-    OwningRewritePatternList &patterns);
+void populateShapeToStandardConversionPatterns(RewritePatternSet &patterns);
 
 std::unique_ptr<OperationPass<ModuleOp>> createConvertShapeToStandardPass();
 
 void populateConvertShapeConstraintsConversionPatterns(
-    OwningRewritePatternList &patterns);
+    RewritePatternSet &patterns);
 
 std::unique_ptr<OperationPass<FuncOp>> createConvertShapeConstraintsPass();
 

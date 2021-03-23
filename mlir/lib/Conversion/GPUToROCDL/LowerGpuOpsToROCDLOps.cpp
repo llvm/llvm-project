@@ -60,8 +60,8 @@ struct LowerGpuOpsToROCDLOpsPass
                                   /*useAlignedAlloc =*/false};
     LLVMTypeConverter converter(m.getContext(), options);
 
-    OwningRewritePatternList patterns(m.getContext());
-    OwningRewritePatternList llvmPatterns(m.getContext());
+    RewritePatternSet patterns(m.getContext());
+    RewritePatternSet llvmPatterns(m.getContext());
 
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
@@ -92,57 +92,57 @@ void mlir::configureGpuToROCDLConversionLegality(ConversionTarget &target) {
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
 }
 
-void mlir::populateGpuToROCDLConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+void mlir::populateGpuToROCDLConversionPatterns(LLVMTypeConverter &converter,
+                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
-  patterns.insert<
-      GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
-                                  ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
-                                  ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
-                                  ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
-      GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
-                                  ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
-      GPUReturnOpLowering>(converter);
-  patterns.insert<GPUFuncOpLowering>(
+  patterns
+      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
+                                       ROCDL::ThreadIdYOp, ROCDL::ThreadIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, ROCDL::BlockDimXOp,
+                                       ROCDL::BlockDimYOp, ROCDL::BlockDimZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, ROCDL::BlockIdXOp,
+                                       ROCDL::BlockIdYOp, ROCDL::BlockIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, ROCDL::GridDimXOp,
+                                       ROCDL::GridDimYOp, ROCDL::GridDimZOp>,
+           GPUReturnOpLowering>(converter);
+  patterns.add<GPUFuncOpLowering>(
       converter, /*allocaAddrSpace=*/5,
       Identifier::get(ROCDL::ROCDLDialect::getKernelFuncAttrName(),
                       &converter.getContext()));
-  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__ocml_fabs_f32",
-                                                "__ocml_fabs_f64");
-  patterns.insert<OpToFuncCallLowering<math::AtanOp>>(
-      converter, "__ocml_atan_f32", "__ocml_atan_f64");
-  patterns.insert<OpToFuncCallLowering<math::Atan2Op>>(
+  patterns.add<OpToFuncCallLowering<AbsFOp>>(converter, "__ocml_fabs_f32",
+                                             "__ocml_fabs_f64");
+  patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__ocml_atan_f32",
+                                                   "__ocml_atan_f64");
+  patterns.add<OpToFuncCallLowering<math::Atan2Op>>(
       converter, "__ocml_atan2_f32", "__ocml_atan2_f64");
-  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__ocml_ceil_f32",
-                                                 "__ocml_ceil_f64");
-  patterns.insert<OpToFuncCallLowering<math::CosOp>>(
-      converter, "__ocml_cos_f32", "__ocml_cos_f64");
-  patterns.insert<OpToFuncCallLowering<math::ExpOp>>(
-      converter, "__ocml_exp_f32", "__ocml_exp_f64");
-  patterns.insert<OpToFuncCallLowering<math::ExpM1Op>>(
+  patterns.add<OpToFuncCallLowering<CeilFOp>>(converter, "__ocml_ceil_f32",
+                                              "__ocml_ceil_f64");
+  patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__ocml_cos_f32",
+                                                  "__ocml_cos_f64");
+  patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__ocml_exp_f32",
+                                                  "__ocml_exp_f64");
+  patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(
       converter, "__ocml_expm1_f32", "__ocml_expm1_f64");
-  patterns.insert<OpToFuncCallLowering<FloorFOp>>(converter, "__ocml_floor_f32",
-                                                  "__ocml_floor_f64");
-  patterns.insert<OpToFuncCallLowering<math::LogOp>>(
-      converter, "__ocml_log_f32", "__ocml_log_f64");
-  patterns.insert<OpToFuncCallLowering<math::Log10Op>>(
+  patterns.add<OpToFuncCallLowering<FloorFOp>>(converter, "__ocml_floor_f32",
+                                               "__ocml_floor_f64");
+  patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__ocml_log_f32",
+                                                  "__ocml_log_f64");
+  patterns.add<OpToFuncCallLowering<math::Log10Op>>(
       converter, "__ocml_log10_f32", "__ocml_log10_f64");
-  patterns.insert<OpToFuncCallLowering<math::Log1pOp>>(
+  patterns.add<OpToFuncCallLowering<math::Log1pOp>>(
       converter, "__ocml_log1p_f32", "__ocml_log1p_f64");
-  patterns.insert<OpToFuncCallLowering<math::Log2Op>>(
-      converter, "__ocml_log2_f32", "__ocml_log2_f64");
-  patterns.insert<OpToFuncCallLowering<math::PowFOp>>(
-      converter, "__ocml_pow_f32", "__ocml_pow_f64");
-  patterns.insert<OpToFuncCallLowering<math::RsqrtOp>>(
+  patterns.add<OpToFuncCallLowering<math::Log2Op>>(converter, "__ocml_log2_f32",
+                                                   "__ocml_log2_f64");
+  patterns.add<OpToFuncCallLowering<math::PowFOp>>(converter, "__ocml_pow_f32",
+                                                   "__ocml_pow_f64");
+  patterns.add<OpToFuncCallLowering<math::RsqrtOp>>(
       converter, "__ocml_rsqrt_f32", "__ocml_rsqrt_f64");
-  patterns.insert<OpToFuncCallLowering<math::SinOp>>(
-      converter, "__ocml_sin_f32", "__ocml_sin_f64");
-  patterns.insert<OpToFuncCallLowering<math::SqrtOp>>(
-      converter, "__ocml_sqrt_f32", "__ocml_sqrt_f64");
-  patterns.insert<OpToFuncCallLowering<math::TanhOp>>(
-      converter, "__ocml_tanh_f32", "__ocml_tanh_f64");
+  patterns.add<OpToFuncCallLowering<math::SinOp>>(converter, "__ocml_sin_f32",
+                                                  "__ocml_sin_f64");
+  patterns.add<OpToFuncCallLowering<math::SqrtOp>>(converter, "__ocml_sqrt_f32",
+                                                   "__ocml_sqrt_f64");
+  patterns.add<OpToFuncCallLowering<math::TanhOp>>(converter, "__ocml_tanh_f32",
+                                                   "__ocml_tanh_f64");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

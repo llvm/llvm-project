@@ -8,6 +8,8 @@
 
 // test <cstdlib>
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <cstdlib>
 #include <type_traits>
 #include <cassert>

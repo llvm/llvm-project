@@ -2,9 +2,13 @@
 ; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=8
 ; RUN: FileCheck %s --input-file %t
 
-; Test --csprof-keep-cold
-; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=100 --csprof-keep-cold
+; Test --csprof-trim-cold-context=0
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=100 --csprof-trim-cold-context=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-KEEP-COLD
+
+; Test --csprof-merge-cold-context=0
+; RUN: llvm-profgen --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=-1 --csprof-cold-thres=10 --csprof-merge-cold-context=0
+; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-UNMERGED
 
 ; CHECK:     [fa]:14:4
 ; CHECK-NEXT: 1: 4
@@ -39,6 +43,16 @@
 ; CHECK-KEEP-COLD-NEXT: 7: 2 fb:2
 ; CHECK-KEEP-COLD-NEXT: 8: 1 fa:1
 ; CHECK-KEEP-COLD-NEXT: !CFGChecksum: 120515930909
+
+; CHECK-UNMERGED:     [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb]:13:4
+; CHECK-UNMERGED-NEXT: 1: 4
+; CHECK-UNMERGED-NEXT: 2: 3
+; CHECK-UNMERGED-NEXT: 3: 1
+; CHECK-UNMERGED-NEXT: 5: 4 fb:4
+; CHECK-UNMERGED-NEXT: 6: 1 fa:1
+; CHECK-UNMERGED-NEXT: !CFGChecksum: 72617220756
+; CHECK-UNMERGED-NOT: [fa]
+; CHECK-UNMERGED-NOT: [fb]
 
 
 ; clang -O3 -fexperimental-new-pass-manager -fuse-ld=lld -fpseudo-probe-for-profiling

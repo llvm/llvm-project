@@ -24,7 +24,7 @@
 namespace mlir {
 namespace spirv {
 void populateSPIRVGLSLCanonicalizationPatterns(
-    mlir::OwningRewritePatternList &results);
+    mlir::RewritePatternSet &results);
 } // namespace spirv
 } // namespace mlir
 

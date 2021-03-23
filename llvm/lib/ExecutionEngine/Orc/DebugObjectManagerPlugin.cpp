@@ -371,16 +371,6 @@ DebugObjectSection *ELFDebugObject::getSection(StringRef Name) {
   return It == Sections.end() ? nullptr : It->second.get();
 }
 
-static ResourceKey getResourceKey(MaterializationResponsibility &MR) {
-  ResourceKey Key;
-  if (auto Err = MR.withResourceKeyDo([&](ResourceKey K) { Key = K; })) {
-    MR.getExecutionSession().reportError(std::move(Err));
-    return ResourceKey{};
-  }
-  assert(Key && "Invalid key");
-  return Key;
-}
-
 /// Creates a debug object based on the input object file from
 /// ObjectLinkingLayerJITLinkContext.
 ///
@@ -407,17 +397,15 @@ DebugObjectManagerPlugin::~DebugObjectManagerPlugin() = default;
 void DebugObjectManagerPlugin::notifyMaterializing(
     MaterializationResponsibility &MR, LinkGraph &G, JITLinkContext &Ctx,
     MemoryBufferRef ObjBuffer) {
-  assert(PendingObjs.count(getResourceKey(MR)) == 0 &&
+  std::lock_guard<std::mutex> Lock(PendingObjsLock);
+  assert(PendingObjs.count(&MR) == 0 &&
          "Cannot have more than one pending debug object per "
          "MaterializationResponsibility");
 
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
   if (auto DebugObj = createDebugObjectFromBuffer(ES, G, Ctx, ObjBuffer)) {
     // Not all link artifacts allow debugging.
-    if (*DebugObj != nullptr) {
-      ResourceKey Key = getResourceKey(MR);
-      PendingObjs[Key] = std::move(*DebugObj);
-    }
+    if (*DebugObj != nullptr)
+      PendingObjs[&MR] = std::move(*DebugObj);
   } else {
     ES.reportError(DebugObj.takeError());
   }
@@ -428,7 +416,7 @@ void DebugObjectManagerPlugin::modifyPassConfig(
     PassConfiguration &PassConfig) {
   // Not all link artifacts have associated debug objects.
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  auto It = PendingObjs.find(getResourceKey(MR));
+  auto It = PendingObjs.find(&MR);
   if (It == PendingObjs.end())
     return;
 
@@ -446,15 +434,10 @@ void DebugObjectManagerPlugin::modifyPassConfig(
 
 Error DebugObjectManagerPlugin::notifyEmitted(
     MaterializationResponsibility &MR) {
-  ResourceKey Key = getResourceKey(MR);
-
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  auto It = PendingObjs.find(Key);
+  auto It = PendingObjs.find(&MR);
   if (It == PendingObjs.end())
     return Error::success();
-
-  DebugObject *UnownedDebugObj = It->second.release();
-  PendingObjs.erase(It);
 
   // During finalization the debug object is registered with the target.
   // Materialization must wait for this process to finish. Otherwise we might
@@ -463,29 +446,27 @@ Error DebugObjectManagerPlugin::notifyEmitted(
   std::promise<MSVCPError> FinalizePromise;
   std::future<MSVCPError> FinalizeErr = FinalizePromise.get_future();
 
-  // FIXME: We released ownership of the DebugObject, so we can easily capture
-  // the raw pointer in the continuation function, which re-owns it immediately.
-  if (UnownedDebugObj)
-    UnownedDebugObj->finalizeAsync(
-        [this, Key, UnownedDebugObj,
-         &FinalizePromise](Expected<sys::MemoryBlock> TargetMem) {
-          std::unique_ptr<DebugObject> ReownedDebugObj(UnownedDebugObj);
-          if (!TargetMem) {
-            FinalizePromise.set_value(TargetMem.takeError());
-            return;
-          }
-          if (Error Err = Target->registerDebugObject(*TargetMem)) {
-            FinalizePromise.set_value(std::move(Err));
-            return;
-          }
+  It->second->finalizeAsync(
+      [this, &FinalizePromise, &MR](Expected<sys::MemoryBlock> TargetMem) {
+        // Any failure here will fail materialization.
+        if (!TargetMem) {
+          FinalizePromise.set_value(TargetMem.takeError());
+          return;
+        }
+        if (Error Err = Target->registerDebugObject(*TargetMem)) {
+          FinalizePromise.set_value(std::move(Err));
+          return;
+        }
 
-          // Registration successful, notifyEmitted() can return now and
-          // materialization can finish.
-          FinalizePromise.set_value(Error::success());
-
+        // Once our tracking info is updated, notifyEmitted() can return and
+        // finish materialization.
+        FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
+          assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          RegisteredObjs[Key].push_back(std::move(ReownedDebugObj));
-        });
+          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
+          PendingObjs.erase(&MR);
+        }));
+      });
 
   return FinalizeErr.get();
 }
@@ -493,45 +474,32 @@ Error DebugObjectManagerPlugin::notifyEmitted(
 Error DebugObjectManagerPlugin::notifyFailed(
     MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(getResourceKey(MR));
+  PendingObjs.erase(&MR);
   return Error::success();
 }
 
 void DebugObjectManagerPlugin::notifyTransferringResources(ResourceKey DstKey,
                                                            ResourceKey SrcKey) {
-  {
-    std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-    auto SrcIt = RegisteredObjs.find(SrcKey);
-    if (SrcIt != RegisteredObjs.end()) {
-      // Resources from distinct MaterializationResponsibilitys can get merged
-      // after emission, so we can have multiple debug objects per resource key.
-      for (std::unique_ptr<DebugObject> &DebugObj : SrcIt->second)
-        RegisteredObjs[DstKey].push_back(std::move(DebugObj));
-      RegisteredObjs.erase(SrcIt);
-    }
-  }
-  {
-    std::lock_guard<std::mutex> Lock(PendingObjsLock);
-    auto SrcIt = PendingObjs.find(SrcKey);
-    if (SrcIt != PendingObjs.end()) {
-      assert(PendingObjs.count(DstKey) == 0 &&
-             "Cannot have more than one pending debug object per "
-             "MaterializationResponsibility");
-      PendingObjs[DstKey] = std::move(SrcIt->second);
-      PendingObjs.erase(SrcIt);
-    }
+  // Debug objects are stored by ResourceKey only after registration.
+  // Thus, pending objects don't need to be updated here.
+  std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
+  auto SrcIt = RegisteredObjs.find(SrcKey);
+  if (SrcIt != RegisteredObjs.end()) {
+    // Resources from distinct MaterializationResponsibilitys can get merged
+    // after emission, so we can have multiple debug objects per resource key.
+    for (std::unique_ptr<DebugObject> &DebugObj : SrcIt->second)
+      RegisteredObjs[DstKey].push_back(std::move(DebugObj));
+    RegisteredObjs.erase(SrcIt);
   }
 }
 
-Error DebugObjectManagerPlugin::notifyRemovingResources(ResourceKey K) {
-  {
-    std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-    RegisteredObjs.erase(K);
-    // TODO: Implement unregister notifications.
-  }
-  std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(K);
+Error DebugObjectManagerPlugin::notifyRemovingResources(ResourceKey Key) {
+  // Removing the resource for a pending object fails materialization, so they
+  // get cleaned up in the notifyFailed() handler.
+  std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
+  RegisteredObjs.erase(Key);
 
+  // TODO: Implement unregister notifications.
   return Error::success();
 }
 

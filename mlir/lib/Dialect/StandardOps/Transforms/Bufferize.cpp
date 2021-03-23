@@ -55,9 +55,9 @@ public:
 } // namespace
 
 void mlir::populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                        OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeDimOp, BufferizeSelectOp>(typeConverter,
-                                                     patterns.getContext());
+                                        RewritePatternSet &patterns) {
+  patterns.add<BufferizeDimOp, BufferizeSelectOp>(typeConverter,
+                                                  patterns.getContext());
 }
 
 namespace {
@@ -65,7 +65,7 @@ struct StdBufferizePass : public StdBufferizeBase<StdBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     target.addLegalDialect<memref::MemRefDialect>();

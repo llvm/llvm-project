@@ -12,6 +12,7 @@
 // clang-format off
 
 // UNSUPPORTED: libcpp-has-no-localization
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 // <locale>
 

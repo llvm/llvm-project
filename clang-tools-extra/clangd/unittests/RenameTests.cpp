@@ -844,7 +844,7 @@ TEST(RenameTest, Renameable) {
     const char *Code;
     const char* ErrorMessage; // null if no error
     bool IsHeaderFile;
-    llvm::StringRef NewName = "DummyName";
+    llvm::StringRef NewName = "MockName";
   };
   const bool HeaderFile = true;
   Case Cases[] = {

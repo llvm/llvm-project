@@ -61,15 +61,7 @@ public:
     return ST->getXLen();
   }
 
-  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
-    if (!ST->hasStdExtV())
-      return false;
-
-    // Only support fixed vectors if we know the minimum vector size.
-    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
-      return false;
-
-    Type *ScalarTy = DataType->getScalarType();
+  bool isLegalElementTypeForRVV(Type *ScalarTy) {
     if (ScalarTy->isPointerTy())
       return true;
 
@@ -87,11 +79,40 @@ public:
     return false;
   }
 
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
+    if (!ST->hasStdExtV())
+      return false;
+
+    // Only support fixed vectors if we know the minimum vector size.
+    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    return isLegalElementTypeForRVV(DataType->getScalarType());
+  }
+
   bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
   bool isLegalMaskedStore(Type *DataType, Align Alignment) {
     return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
+  bool isLegalMaskedGatherScatter(Type *DataType, Align Alignment) {
+    if (!ST->hasStdExtV())
+      return false;
+
+    // Only support fixed vectors if we know the minimum vector size.
+    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    return isLegalElementTypeForRVV(DataType->getScalarType());
+  }
+
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) {
+    return isLegalMaskedGatherScatter(DataType, Alignment);
+  }
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) {
+    return isLegalMaskedGatherScatter(DataType, Alignment);
   }
 };
 

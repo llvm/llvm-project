@@ -348,29 +348,41 @@ private:
 
 namespace {
 /// This class represents a group of elements that are optionally emitted based
-/// upon an optional variable of the operation.
+/// upon an optional variable of the operation, and a group of elements that are
+/// emotted when the anchor element is not present.
 class OptionalElement : public Element {
 public:
-  OptionalElement(std::vector<std::unique_ptr<Element>> &&elements,
+  OptionalElement(std::vector<std::unique_ptr<Element>> &&thenElements,
+                  std::vector<std::unique_ptr<Element>> &&elseElements,
                   unsigned anchor, unsigned parseStart)
-      : Element{Kind::Optional}, elements(std::move(elements)), anchor(anchor),
+      : Element{Kind::Optional}, thenElements(std::move(thenElements)),
+        elseElements(std::move(elseElements)), anchor(anchor),
         parseStart(parseStart) {}
   static bool classof(const Element *element) {
     return element->getKind() == Kind::Optional;
   }
 
-  /// Return the nested elements of this grouping.
-  auto getElements() const { return llvm::make_pointee_range(elements); }
+  /// Return the `then` elements of this grouping.
+  auto getThenElements() const {
+    return llvm::make_pointee_range(thenElements);
+  }
+
+  /// Return the `else` elements of this grouping.
+  auto getElseElements() const {
+    return llvm::make_pointee_range(elseElements);
+  }
 
   /// Return the anchor of this optional group.
-  Element *getAnchor() const { return elements[anchor].get(); }
+  Element *getAnchor() const { return thenElements[anchor].get(); }
 
   /// Return the index of the first element that needs to be parsed.
   unsigned getParseStart() const { return parseStart; }
 
 private:
-  /// The child elements of this optional.
-  std::vector<std::unique_ptr<Element>> elements;
+  /// The child elements of `then` branch of this optional.
+  std::vector<std::unique_ptr<Element>> thenElements;
+  /// The child elements of `else` branch of this optional.
+  std::vector<std::unique_ptr<Element>> elseElements;
   /// The index of the element that acts as the anchor for the optional group.
   unsigned anchor;
   /// The index of the first element that is parsed (is not a
@@ -792,7 +804,7 @@ static void genLiteralParser(StringRef value, OpMethodBody &body) {
 /// Generate the storage code required for parsing the given element.
 static void genElementParserStorage(Element *element, OpMethodBody &body) {
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
-    auto elements = optional->getElements();
+    auto elements = optional->getThenElements();
 
     // If the anchor is a unit attribute, it won't be parsed directly so elide
     // it.
@@ -803,6 +815,8 @@ static void genElementParserStorage(Element *element, OpMethodBody &body) {
     for (auto &childElement : elements)
       if (&childElement != elidedAnchorElement)
         genElementParserStorage(&childElement, body);
+    for (auto &childElement : optional->getElseElements())
+      genElementParserStorage(&childElement, body);
 
   } else if (auto *custom = dyn_cast<CustomDirective>(element)) {
     for (auto &paramElement : custom->getArguments())
@@ -1094,8 +1108,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
                                        FmtContext &attrTypeCtx) {
   /// Optional Group.
   if (auto *optional = dyn_cast<OptionalElement>(element)) {
-    auto elements =
-        llvm::drop_begin(optional->getElements(), optional->getParseStart());
+    auto elements = llvm::drop_begin(optional->getThenElements(),
+                                     optional->getParseStart());
 
     // Generate a special optional parser for the first element to gate the
     // parsing of the rest of the elements.
@@ -1140,7 +1154,17 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
       if (&childElement != elidedAnchorElement)
         genElementParser(&childElement, body, attrTypeCtx);
     }
-    body << "  }\n";
+    body << "  }";
+
+    // Generate the else elements.
+    auto elseElements = optional->getElseElements();
+    if (!elseElements.empty()) {
+      body << " else {\n";
+      for (Element &childElement : elseElements)
+        genElementParser(&childElement, body, attrTypeCtx);
+      body << "  }";
+    }
+    body << "\n";
 
     /// Literals.
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
@@ -1778,7 +1802,7 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
 
     // If the anchor is a unit attribute, we don't need to print it. When
     // parsing, we will add this attribute if this group is present.
-    auto elements = optional->getElements();
+    auto elements = optional->getThenElements();
     Element *elidedAnchorElement = nullptr;
     auto *anchorAttr = dyn_cast<AttributeVariable>(anchor);
     if (anchorAttr && anchorAttr != &*elements.begin() &&
@@ -1793,7 +1817,20 @@ void OperationFormat::genElementPrinter(Element *element, OpMethodBody &body,
                           lastWasPunctuation);
       }
     }
-    body << "  }\n";
+    body << "  }";
+
+    // Emit each of the else elements.
+    auto elseElements = optional->getElseElements();
+    if (!elseElements.empty()) {
+      body << " else {\n";
+      for (Element &childElement : elseElements) {
+        genElementPrinter(&childElement, body, op, shouldEmitSpace,
+                          lastWasPunctuation);
+      }
+      body << "  }";
+    }
+
+    body << "\n";
     return;
   }
 
@@ -1911,6 +1948,7 @@ public:
     l_paren,
     r_paren,
     caret,
+    colon,
     comma,
     equal,
     less,
@@ -2065,6 +2103,8 @@ Token FormatLexer::lexToken() {
   // Lex punctuation.
   case '^':
     return formToken(Token::caret, tokStart);
+  case ':':
+    return formToken(Token::colon, tokStart);
   case ',':
     return formToken(Token::comma, tokStart);
   case '=':
@@ -2393,8 +2433,11 @@ LogicalResult FormatParser::verifyAttributes(
 
     // Traverse into optional groups.
     if (auto *optional = dyn_cast<OptionalElement>(element)) {
-      auto elements = optional->getElements();
-      iteratorStack.emplace_back(elements.begin(), elements.end());
+      auto thenElements = optional->getThenElements();
+      iteratorStack.emplace_back(thenElements.begin(), thenElements.end());
+
+      auto elseElements = optional->getElseElements();
+      iteratorStack.emplace_back(elseElements.begin(), elseElements.end());
       return ::mlir::success();
     }
 
@@ -2795,13 +2838,31 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
   consumeToken();
 
   // Parse the child elements for this optional group.
-  std::vector<std::unique_ptr<Element>> elements;
+  std::vector<std::unique_ptr<Element>> thenElements, elseElements;
   Optional<unsigned> anchorIdx;
   do {
-    if (failed(parseOptionalChildElement(elements, anchorIdx)))
+    if (failed(parseOptionalChildElement(thenElements, anchorIdx)))
       return ::mlir::failure();
   } while (curToken.getKind() != Token::r_paren);
   consumeToken();
+
+  // Parse the `else` elements of this optional group.
+  if (curToken.getKind() == Token::colon) {
+    consumeToken();
+    if (failed(parseToken(Token::l_paren, "expected '(' to start else branch "
+                                          "of optional group")))
+      return failure();
+    do {
+      llvm::SMLoc childLoc = curToken.getLoc();
+      elseElements.push_back({});
+      if (failed(parseElement(elseElements.back(), TopLevelContext)) ||
+          failed(verifyOptionalChildElement(elseElements.back().get(), childLoc,
+                                            /*isAnchor=*/false)))
+        return failure();
+    } while (curToken.getKind() != Token::r_paren);
+    consumeToken();
+  }
+
   if (failed(parseToken(Token::question, "expected '?' after optional group")))
     return ::mlir::failure();
 
@@ -2811,7 +2872,7 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
 
   // The first parsable element of the group must be able to be parsed in an
   // optional fashion.
-  auto parseBegin = llvm::find_if_not(elements, [](auto &element) {
+  auto parseBegin = llvm::find_if_not(thenElements, [](auto &element) {
     return isa<WhitespaceElement>(element.get());
   });
   Element *firstElement = parseBegin->get();
@@ -2822,9 +2883,9 @@ LogicalResult FormatParser::parseOptional(std::unique_ptr<Element> &element,
                      "first parsable element of an operand group must be "
                      "an attribute, literal, operand, or region");
 
-  auto parseStart = parseBegin - elements.begin();
-  element = std::make_unique<OptionalElement>(std::move(elements), *anchorIdx,
-                                              parseStart);
+  auto parseStart = parseBegin - thenElements.begin();
+  element = std::make_unique<OptionalElement>(
+      std::move(thenElements), std::move(elseElements), *anchorIdx, parseStart);
   return ::mlir::success();
 }
 

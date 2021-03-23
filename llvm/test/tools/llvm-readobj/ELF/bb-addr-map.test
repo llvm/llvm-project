@@ -24,6 +24,7 @@
 # LLVM-NEXT:         HasReturn: No
 # LLVM-NEXT:         HasTailCall: Yes
 # LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:         CanFallThrough: No
 # LLVM-NEXT:       }
 # LLVM-NEXT:       {
 # LLVM-NEXT:         Offset: 0x3
@@ -31,6 +32,7 @@
 # LLVM-NEXT:         HasReturn: Yes
 # LLVM-NEXT:         HasTailCall: No
 # LLVM-NEXT:         IsEHPad: Yes
+# LLVM-NEXT:         CanFallThrough: No
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:   }
@@ -43,6 +45,7 @@
 # LLVM-NEXT:         HasReturn: No
 # LLVM-NEXT:         HasTailCall: No
 # LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:         CanFallThrough: Yes
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:   }
@@ -57,6 +60,7 @@
 # LLVM-NEXT:         HasReturn: Yes
 # LLVM-NEXT:         HasTailCall: Yes
 # LLVM-NEXT:         IsEHPad: No
+# LLVM-NEXT:         CanFallThrough: Yes
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
 # LLVM-NEXT:   }
@@ -78,6 +82,7 @@
 # TRUNCATED-NEXT:         HasReturn: Yes
 # TRUNCATED-NEXT:         HasTailCall: Yes
 # TRUNCATED-NEXT:         IsEHPad: No
+# TRUNCATED-NEXT:         CanFallThrough: Yes
 # TRUNCATED-NEXT:       }
 # TRUNCATED-NEXT:     ]
 # TRUNCATED-NEXT:   }

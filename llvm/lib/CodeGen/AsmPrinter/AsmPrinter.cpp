@@ -1078,17 +1078,19 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
 
 /// Returns the BB metadata to be emitted in the .llvm_bb_addr_map section for a
 /// given basic block. This can be used to capture more precise profile
-/// information. We use the last 3 bits (LSBs) to ecnode the following
+/// information. We use the last 4 bits (LSBs) to encode the following
 /// information:
 ///  * (1): set if return block (ret or tail call).
 ///  * (2): set if ends with a tail call.
 ///  * (3): set if exception handling (EH) landing pad.
+///  * (4): set if the block can fall through to its next.
 /// The remaining bits are zero.
 static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
   return ((unsigned)MBB.isReturnBlock()) |
          ((!MBB.empty() && TII->isTailCall(MBB.back())) << 1) |
-         (MBB.isEHPad() << 2);
+         (MBB.isEHPad() << 2) |
+         (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {

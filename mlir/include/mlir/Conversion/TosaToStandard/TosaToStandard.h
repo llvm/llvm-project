@@ -20,11 +20,10 @@ namespace tosa {
 
 std::unique_ptr<Pass> createTosaToStandard();
 
-void populateTosaToStandardConversionPatterns(
-    OwningRewritePatternList *patterns);
+void populateTosaToStandardConversionPatterns(RewritePatternSet *patterns);
 
 void populateTosaRescaleToStandardConversionPatterns(
-    OwningRewritePatternList *patterns);
+    RewritePatternSet *patterns);
 
 /// Populates passes to convert from TOSA to Standard.
 void addTosaToStandardPasses(OpPassManager &pm);

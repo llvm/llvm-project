@@ -12,10 +12,8 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load8(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 
-; ABORT: call void asm sideeffect "int3\0Anopl 64(%rax)", "{rdi}"(i64 %[[A]])
-; ABORT: unreachable
-; RECOVER: call void asm sideeffect "int3\0Anopl 96(%rax)", "{rdi}"(i64 %[[A]])
-; RECOVER: br label
+; ABORT: call void @__hwasan_load1(i64 %[[A]])
+; RECOVER: call void @__hwasan_load1_noabort(i64 %[[A]])
 
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 ; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
@@ -50,10 +48,8 @@ define void @test_store8(i8* %a, i8 %b) sanitize_hwaddress {
 ; CHECK-LABEL: @test_store8(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 
-; ABORT: call void asm sideeffect "int3\0Anopl 80(%rax)", "{rdi}"(i64 %[[A]])
-; ABORT: unreachable
-; RECOVER: call void asm sideeffect "int3\0Anopl 112(%rax)", "{rdi}"(i64 %[[A]])
-; RECOVER: br label
+; ABORT: call void @__hwasan_store1(i64 %[[A]])
+; RECOVER: call void @__hwasan_store1_noabort(i64 %[[A]])
 
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 ; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935

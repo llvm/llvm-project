@@ -604,6 +604,14 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<TimeTTypePtr>]
           >,
           FunctionSpec<
+              "gmtime_r",
+              RetValSpec<StructTmPtr>,
+              [
+                  ArgSpec<TimeTTypePtr>,
+                  ArgSpec<StructTmPtr>,
+              ]
+          >,
+          FunctionSpec<
               "mktime",
               RetValSpec<TimeTType>,
               [ArgSpec<StructTmPtr>]

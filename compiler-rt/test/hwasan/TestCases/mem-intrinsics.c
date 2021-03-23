@@ -5,6 +5,9 @@
 
 // REQUIRES: stable-runtime
 
+// Stack aliasing is not implemented on x86.
+// XFAIL: x86_64
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

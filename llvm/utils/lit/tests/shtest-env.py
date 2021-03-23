@@ -1,5 +1,8 @@
 # Check the env command
-#
+
+# FIXME: this test depends on order of tests
+# RUN: rm -f %{inputs}/shtest-env/.lit_test_times.txt
+
 # RUN: not %{lit} -j 1 -a -v %{inputs}/shtest-env \
 # RUN: | FileCheck -match-full-lines %s
 #

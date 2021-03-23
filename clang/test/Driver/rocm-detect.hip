@@ -21,6 +21,20 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,NODEFAULTLIBS %s
 
+// Test environment variable ROCM_PATH.
+// RUN: env ROCM_PATH=%S/Inputs/rocm %clang -### -target x86_64-linux-gnu \
+// RUN:   --print-rocm-search-dirs %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-ENV %s
+
+// Test detecting latest /opt/rocm-{release} directory.
+// RUN: rm -rf %T/opt
+// RUN: mkdir -p %T/opt
+// RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.9.0-1234
+// RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.10.0
+// RUN: %clang -### -target x86_64-linux-gnu --sysroot=%T \
+// RUN:   --print-rocm-search-dirs %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-REL %s
+
 // Test ROCm installation built by SPACK by invoke clang at %T/rocm-spack/llvm-amdgpu-*
 // directory through a soft link.
 
@@ -59,6 +73,11 @@
 // NODEFAULTLIBS-NOT: error: cannot find
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
+
+// ROCM-ENV: ROCm installation search path: {{.*}}/Inputs/rocm
+
+// ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm
+// ROCM-REL: ROCm installation search path: {{.*}}/opt/rocm-3.10.0
 
 // SPACK: ROCm installation search path (Spack 4.0.0): [[DIR:.*]]
 // SPACK: ROCm installation search path: [[CLANG:.*]]

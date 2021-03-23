@@ -465,8 +465,8 @@ return:                                           ; preds = %if.end, %if.then
 define void @test12() nounwind {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTOLD:%.*]] = icmp eq i32 undef, undef
-; CHECK-NEXT:    br i1 [[DOTOLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
+; CHECK-NEXT:    [[A_OLD:%.*]] = icmp eq i32 undef, undef
+; CHECK-NEXT:    br i1 [[A_OLD]], label [[BB55_US_US:%.*]], label [[MALFORMED:%.*]]
 ; CHECK:       bb55.us.us:
 ; CHECK-NEXT:    [[B:%.*]] = icmp ugt i32 undef, undef
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq i32 undef, undef
