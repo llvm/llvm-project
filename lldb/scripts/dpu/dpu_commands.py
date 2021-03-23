@@ -12,6 +12,13 @@ def check_target(target):
     return True
 
 
+def decompute_dpu_pid(pid):
+    rank_id = (pid / (100*100)) % 100
+    slice_id = (pid / 100) % 100
+    dpu_id = pid % 100
+    return rank_id, slice_id, dpu_id
+
+
 def compute_dpu_pid(rank_id, slice_id, dpu_id):
     return dpu_id + 100 * (slice_id + 100 * (rank_id + 100))
 
@@ -512,6 +519,43 @@ def dpu_list(debugger, command, result, internal_dict):
     return result_list
 
 
+def exec_ufi_identity(debugger, rank):
+    success, unused = get_value_from_command(
+        debugger,
+        "ufi_identity((dpu_rank_t *)"
+        + rank.GetValue() + ", 0xff, lldb_dummy_results)",
+        16)
+    return success
+
+
+def get_rank_from_pid(debugger, pid):
+    target_rank_id, _, _ = decompute_dpu_pid(pid)
+    target = debugger.GetSelectedTarget()
+    if not(check_target(target)):
+        return None
+
+    nb_allocated_rank = \
+        target.FindFirstGlobalVariable("dpu_rank_handler_dpu_rank_list_size")
+    if nb_allocated_rank is None:
+        print("get_rank_from_pid: internal error 1 (can't get number of ranks)")
+        return None
+
+    rank_list = target.FindFirstGlobalVariable(
+        "dpu_rank_handler_dpu_rank_list")
+    if rank_list is None:
+        print("get_rank_from_pid: internal error 2 (can't get rank list)")
+        return None
+
+    for each_rank in range(0, nb_allocated_rank.GetValueAsUnsigned()):
+        rank = rank_list.GetValueForExpressionPath("[" + str(each_rank) + "]")
+        if rank.GetValueAsUnsigned() == 0:
+            continue
+        rank_id, _ = get_rank_id(rank, target)
+        if rank_id != target_rank_id:
+            continue
+        return rank
+
+
 def dpu_detach(debugger, command, result, internal_dict):
     '''
     usage: dpu_detach
@@ -520,5 +564,9 @@ def dpu_detach(debugger, command, result, internal_dict):
     if target.GetTriple() != "dpu-upmem-dpurte":
         print("Current target is not a DPU target")
         return None
+    pid = target.GetProcess().GetProcessID()
     target.GetProcess().Detach()
     debugger.DeleteTarget(target)
+    rank = get_rank_from_pid(debugger, pid)
+    if not exec_ufi_identity(debugger, rank):
+        print("Could not execute ufi_identity during detach")
