@@ -91,12 +91,13 @@ static unsigned checkRegisterHazard(const RegisterFile &PRF,
                                     const InstRef &IR) {
   unsigned StallCycles = 0;
   SmallVector<WriteRef, 4> Writes;
+  SmallVector<WriteRef, 4> CommittedWrites;
 
   for (const ReadState &RS : IR.getInstruction()->getUses()) {
     const ReadDescriptor &RD = RS.getDescriptor();
     const MCSchedClassDesc *SC = SM.getSchedClassDesc(RD.SchedClassID);
 
-    PRF.collectWrites(RS, Writes);
+    PRF.collectWrites(STI, RS, Writes, CommittedWrites);
     for (const WriteRef &WR : Writes) {
       const WriteState *WS = WR.getWriteState();
       unsigned WriteResID = WS->getWriteResourceID();
@@ -118,6 +119,19 @@ static unsigned checkRegisterHazard(const RegisterFile &PRF,
       }
     }
     Writes.clear();
+
+    for (const WriteRef &WR : CommittedWrites) {
+      unsigned WriteResID = WR.getWriteResourceID();
+      assert(!WR.getWriteState() && "Should be already committed!");
+      assert(WR.hasKnownWriteBackCycle() && "Invalid write!");
+      assert(STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID) < 0);
+      unsigned ReadAdvance = static_cast<unsigned>(
+          -STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID));
+      unsigned Elapsed = PRF.getElapsedCyclesFromWriteBack(WR);
+      assert(Elapsed < ReadAdvance && "Should not have been added to the set!");
+      unsigned CyclesLeft = (ReadAdvance - Elapsed);
+      StallCycles = std::max(StallCycles, CyclesLeft);
+    }
   }
 
   return StallCycles;
@@ -293,6 +307,8 @@ llvm::Error InOrderIssueStage::updateIssuedInst() {
 llvm::Error InOrderIssueStage::cycleStart() {
   NumIssued = 0;
 
+  PRF.cycleStart();
+
   // Release consumed resources.
   SmallVector<ResourceRef, 4> Freed;
   RM->cycleEvent(Freed);
@@ -320,6 +336,8 @@ llvm::Error InOrderIssueStage::cycleStart() {
 }
 
 llvm::Error InOrderIssueStage::cycleEnd() {
+  PRF.cycleEnd();
+
   if (StallCyclesLeft > 0)
     --StallCyclesLeft;
 
