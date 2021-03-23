@@ -5699,8 +5699,9 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
 
   // Compute total shift amount, being careful of overflow and bitwidths.
   auto MaxShiftAmt = KnownStep.getMaxValue();
+  APInt TCAP(BitWidth, TC-1, false);
   bool Overflow = false;
-  auto TotalShift = MaxShiftAmt.umul_ov(APInt(BitWidth, TC-1, false), Overflow);
+  auto TotalShift = MaxShiftAmt.umul_ov(TCAP, Overflow);
   if (Overflow)
     return CR;
 
