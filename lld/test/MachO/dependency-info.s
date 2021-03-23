@@ -15,7 +15,7 @@
 # RUN: %lld %t/main.o %t/bar.a %t/libfoo.dylib -lSystem -dependency_info %t/deps_info.out
 # RUN: %python %S/Inputs/DependencyDump.py %t/deps_info.out | FileCheck %s
 
-# CHECK: lld-version: {{.*}} LLD {{.*}}
+# CHECK: lld-version: {{.*}}LLD {{.*}}
 # CHECK-DAG: input-file: {{.*}}/bar.a
 # CHECK-DAG: input-file: {{.*}}/libfoo.dylib
 # CHECK-DAG: input-file: {{.*}}/libSystem.tbd
