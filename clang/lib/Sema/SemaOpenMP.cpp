@@ -1987,11 +1987,6 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
   QualType Ty = D->getType();
 
   bool IsVariableUsedInMapClause = false;
-
-  // Locate map clauses and see if the variable being captured is referred to
-  // in any of those clauses. Here we only care about variables, not fields,
-  // because fields are part of aggregates.
-  bool IsVariableAssociatedWithSection = false;
   if (DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective, Level)) {
     // This table summarizes how a given variable should be passed to the device
     // given its type and the clauses where it appears. This table is based on
@@ -2049,6 +2044,11 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
     if (Ty->isReferenceType())
       Ty = Ty->castAs<ReferenceType>()->getPointeeType();
+
+    // Locate map clauses and see if the variable being captured is referred to
+    // in any of those clauses. Here we only care about variables, not fields,
+    // because fields are part of aggregates.
+    bool IsVariableAssociatedWithSection = false;
 
     DSAStack->checkMappableExprComponentListsForDeclAtLevel(
         D, Level,
@@ -2139,12 +2139,13 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
   // and alignment, because the runtime library only deals with uintptr types.
   // If it does not fit the uintptr size, we need to pass the data by reference
   // instead.
-  if (!IsByRef && !IsVariableAssociatedWithSection &&
-      (Ctx.getTypeSizeInChars(Ty) >
-           Ctx.getTypeSizeInChars(Ctx.getUIntPtrType()) ||
-       Ctx.getDeclAlign(D) > Ctx.getTypeAlignInChars(Ctx.getUIntPtrType()))) {
-    IsByRef = true;
-  }
+  if (!Ctx.getTargetInfo().getTriple().isAMDGCN())
+    if (!IsByRef &&
+        (Ctx.getTypeSizeInChars(Ty) >
+             Ctx.getTypeSizeInChars(Ctx.getUIntPtrType()) ||
+         Ctx.getDeclAlign(D) > Ctx.getTypeAlignInChars(Ctx.getUIntPtrType()))) {
+      IsByRef = true;
+    }
 
   return IsByRef;
 }
