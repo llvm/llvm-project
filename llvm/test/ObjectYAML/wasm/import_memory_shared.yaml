@@ -17,7 +17,7 @@ Sections:
         Kind:            MEMORY
         Memory:
           Flags:           [ HAS_MAX, IS_SHARED ]
-          Initial:         0x00000010
+          Minimum:         0x00000010
           Maximum:         0x00000011
 
 ...
@@ -32,6 +32,6 @@ Sections:
 # CHECK:         Kind:            MEMORY
 # CHECK:         Memory:
 # CHECK:           Flags:           [ HAS_MAX, IS_SHARED ]
-# CHECK:           Initial:         0x10
+# CHECK:           Minimum:         0x10
 # CHECK:           Maximum:         0x11
 # CHECK: ...

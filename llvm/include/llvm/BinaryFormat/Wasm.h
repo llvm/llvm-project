@@ -63,7 +63,7 @@ struct WasmExport {
 
 struct WasmLimits {
   uint8_t Flags;
-  uint64_t Initial;
+  uint64_t Minimum;
   uint64_t Maximum;
 };
 

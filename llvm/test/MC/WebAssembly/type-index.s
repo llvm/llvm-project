@@ -37,7 +37,7 @@ test0:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
-# BIN-NEXT:           Initial:         0x0
+# BIN-NEXT:           Minimum:         0x0
 # BIN-NEXT:       - Module:          env
 # BIN-NEXT:         Field:           __indirect_function_table
 # BIN-NEXT:         Kind:            TABLE
@@ -45,7 +45,7 @@ test0:
 # BIN-NEXT:           Index:           0
 # BIN-NEXT:           ElemType:        FUNCREF
 # BIN-NEXT:           Limits:
-# BIN-NEXT:             Initial:         0x0
+# BIN-NEXT:             Minimum:         0x0
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            CODE
