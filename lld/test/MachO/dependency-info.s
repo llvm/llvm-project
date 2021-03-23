@@ -1,4 +1,7 @@
 # REQUIRES: x86
+## FIXME: Paths on windows have both `\` and '/', as a result, they are in a different
+## order when sorted. Maybe create a separate test for that?
+# UNSUPPORTED: system-windows
 #
 # RUN: rm -rf %t
 # RUN: split-file %s %t
@@ -12,7 +15,7 @@
 # RUN: %lld %t/main.o %t/bar.a %t/libfoo.dylib -lSystem -dependency_info %t/deps_info.out
 # RUN: %python %S/Inputs/DependencyDump.py %t/deps_info.out | FileCheck %s
 
-# CHECK: lld-version: LLD {{.*}}
+# CHECK: lld-version: {{.*}} LLD {{.*}}
 # CHECK-DAG: input-file: {{.*}}/bar.a
 # CHECK-DAG: input-file: {{.*}}/libfoo.dylib
 # CHECK-DAG: input-file: {{.*}}/libSystem.tbd

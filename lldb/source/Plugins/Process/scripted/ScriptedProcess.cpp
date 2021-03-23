@@ -123,7 +123,7 @@ Status ScriptedProcess::DoLaunch(Module *exe_module,
   }
 
   return status;
-};
+}
 
 void ScriptedProcess::DidLaunch() {
   if (m_interpreter)

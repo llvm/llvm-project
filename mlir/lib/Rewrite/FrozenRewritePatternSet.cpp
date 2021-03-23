@@ -55,7 +55,43 @@ FrozenRewritePatternSet::FrozenRewritePatternSet()
 
 FrozenRewritePatternSet::FrozenRewritePatternSet(RewritePatternSet &&patterns)
     : impl(std::make_shared<Impl>()) {
-  impl->nativePatterns = std::move(patterns.getNativePatterns());
+  // Functor used to walk all of the operations registered in the context. This
+  // is useful for patterns that get applied to multiple operations, such as
+  // interface and trait based patterns.
+  std::vector<AbstractOperation *> abstractOps;
+  auto addToOpsWhen = [&](std::unique_ptr<RewritePattern> &pattern,
+                          function_ref<bool(AbstractOperation *)> callbackFn) {
+    if (abstractOps.empty())
+      abstractOps = pattern->getContext()->getRegisteredOperations();
+    for (AbstractOperation *absOp : abstractOps) {
+      if (callbackFn(absOp)) {
+        OperationName opName(absOp);
+        impl->nativeOpSpecificPatternMap[opName].push_back(pattern.get());
+      }
+    }
+    impl->nativeOpSpecificPatternList.push_back(std::move(pattern));
+  };
+
+  for (std::unique_ptr<RewritePattern> &pat : patterns.getNativePatterns()) {
+    if (Optional<OperationName> rootName = pat->getRootKind()) {
+      impl->nativeOpSpecificPatternMap[*rootName].push_back(pat.get());
+      impl->nativeOpSpecificPatternList.push_back(std::move(pat));
+      continue;
+    }
+    if (Optional<TypeID> interfaceID = pat->getRootInterfaceID()) {
+      addToOpsWhen(pat, [&](AbstractOperation *absOp) {
+        return absOp->hasInterface(*interfaceID);
+      });
+      continue;
+    }
+    if (Optional<TypeID> traitID = pat->getRootTraitID()) {
+      addToOpsWhen(pat, [&](AbstractOperation *absOp) {
+        return absOp->hasTrait(*traitID);
+      });
+      continue;
+    }
+    impl->nativeAnyOpPatterns.push_back(std::move(pat));
+  }
 
   // Generate the bytecode for the PDL patterns if any were provided.
   PDLPatternModule &pdlPatterns = patterns.getPDLPatterns();

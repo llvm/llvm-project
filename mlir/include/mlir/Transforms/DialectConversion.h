@@ -351,20 +351,12 @@ protected:
   /// See `RewritePattern::RewritePattern` for information on the other
   /// available constructors.
   using RewritePattern::RewritePattern;
-  /// Construct a conversion pattern that matches an operation with the given
-  /// root name. This constructor allows for providing a type converter to use
-  /// within the pattern.
-  ConversionPattern(StringRef rootName, PatternBenefit benefit,
-                    TypeConverter &typeConverter, MLIRContext *ctx)
-      : RewritePattern(rootName, benefit, ctx), typeConverter(&typeConverter) {}
-  /// Construct a conversion pattern that matches any operation type. This
-  /// constructor allows for providing a type converter to use within the
-  /// pattern. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
-  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
-  /// always be supplied here.
-  ConversionPattern(PatternBenefit benefit, TypeConverter &typeConverter,
-                    MatchAnyOpTypeTag tag)
-      : RewritePattern(benefit, tag), typeConverter(&typeConverter) {}
+  /// Construct a conversion pattern with the given converter, and forward the
+  /// remaining arguments to RewritePattern.
+  template <typename... Args>
+  ConversionPattern(TypeConverter &typeConverter, Args &&... args)
+      : RewritePattern(std::forward<Args>(args)...),
+        typeConverter(&typeConverter) {}
 
 protected:
   /// An optional type converter for use by this pattern.
@@ -374,17 +366,13 @@ private:
   using RewritePattern::rewrite;
 };
 
-/// OpConversionPattern is a wrapper around ConversionPattern that allows for
-/// matching and rewriting against an instance of a derived operation class as
-/// opposed to a raw Operation.
+namespace detail {
+/// OpOrInterfaceConversionPatternBase is a wrapper around ConversionPattern
+/// that allows for matching and rewriting against an instance of a derived
+/// operation class or an Interface as opposed to a raw Operation.
 template <typename SourceOp>
-struct OpConversionPattern : public ConversionPattern {
-  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
-  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
-                      PatternBenefit benefit = 1)
-      : ConversionPattern(SourceOp::getOperationName(), benefit, typeConverter,
-                          context) {}
+struct OpOrInterfaceConversionPatternBase : public ConversionPattern {
+  using ConversionPattern::ConversionPattern;
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
@@ -418,6 +406,39 @@ struct OpConversionPattern : public ConversionPattern {
 
 private:
   using ConversionPattern::matchAndRewrite;
+};
+} // namespace detail
+
+/// OpConversionPattern is a wrapper around ConversionPattern that allows for
+/// matching and rewriting against an instance of a derived operation class as
+/// opposed to a raw Operation.
+template <typename SourceOp>
+struct OpConversionPattern
+    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
+  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            SourceOp::getOperationName(), benefit, context) {}
+  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            typeConverter, SourceOp::getOperationName(), benefit, context) {}
+};
+
+/// OpInterfaceConversionPattern is a wrapper around ConversionPattern that
+/// allows for matching and rewriting against an instance of an OpInterface
+/// class as opposed to a raw Operation.
+template <typename SourceOp>
+struct OpInterfaceConversionPattern
+    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
+  OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
+            benefit, context) {}
+  OpInterfaceConversionPattern(TypeConverter &typeConverter,
+                               MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            typeConverter, Pattern::MatchInterfaceOpTypeTag(),
+            SourceOp::getInterfaceID(), benefit, context) {}
 };
 
 /// Add a pattern to the given pattern list to convert the signature of a
