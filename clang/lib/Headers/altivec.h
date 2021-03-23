@@ -12589,6 +12589,16 @@ static __inline__ void __ATTRS_o_ai vec_vsx_st(vector unsigned char __a,
 #ifdef __VSX__
 #define vec_xxpermdi __builtin_vsx_xxpermdi
 #define vec_xxsldwi __builtin_vsx_xxsldwi
+#define vec_permi(__a, __b, __c)                                               \
+  _Generic((__a), vector signed long long                                      \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)),                       \
+             vector unsigned long long                                         \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)),                       \
+             vector double                                                     \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)))
 #endif
 
 /* vec_xor */
