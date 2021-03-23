@@ -304,6 +304,12 @@ static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_add(vector unsigned __int128 __a, vector unsigned __int128 __b) {
   return __a + __b;
 }
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_add_u128(vector unsigned char __a, vector unsigned char __b) {
+  return (vector unsigned char)((vector unsigned __int128)__a +
+                                (vector unsigned __int128)__b);
+}
 #endif // defined(__POWER8_VECTOR__) && defined(__powerpc64__)
 
 static __inline__ vector float __ATTRS_o_ai vec_add(vector float __a,
@@ -331,6 +337,14 @@ static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_adde(vector unsigned __int128 __a, vector unsigned __int128 __b,
          vector unsigned __int128 __c) {
   return __builtin_altivec_vaddeuqm(__a, __b, __c);
+}
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_adde_u128(vector unsigned char __a, vector unsigned char __b,
+              vector unsigned char __c) {
+  return (vector unsigned char)__builtin_altivec_vaddeuqm(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b,
+      (vector unsigned __int128)__c);
 }
 #endif
 
@@ -363,6 +377,14 @@ static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_addec(vector unsigned __int128 __a, vector unsigned __int128 __b,
           vector unsigned __int128 __c) {
   return __builtin_altivec_vaddecuq(__a, __b, __c);
+}
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_addec_u128(vector unsigned char __a, vector unsigned char __b,
+               vector unsigned char __c) {
+  return (vector unsigned char)__builtin_altivec_vaddecuq(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b,
+      (vector unsigned __int128)__c);
 }
 
 static __inline__ vector signed int __ATTRS_o_ai
@@ -544,6 +566,12 @@ vec_addc(vector signed __int128 __a, vector signed __int128 __b) {
 static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_addc(vector unsigned __int128 __a, vector unsigned __int128 __b) {
   return __builtin_altivec_vaddcuq(__a, __b);
+}
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_addc_u128(vector unsigned char __a, vector unsigned char __b) {
+  return (vector unsigned char)__builtin_altivec_vaddcuq(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b);
 }
 #endif // defined(__POWER8_VECTOR__) && defined(__powerpc64__)
 
