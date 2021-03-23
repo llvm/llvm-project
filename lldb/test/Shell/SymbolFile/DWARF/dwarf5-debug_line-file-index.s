@@ -1,5 +1,7 @@
 # Test handling of DWARF5 file index 0.
 # REQUIRES: x86
+# XFAIL: target-arm && linux-gnu
+# XFAIL: system-windows
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
 # RUN: %lldb %t -o "image lookup -f hello.c -l 1" \
