@@ -93,7 +93,6 @@ void EmitExegesis(RecordKeeper &RK, raw_ostream &OS);
 void EmitAutomata(RecordKeeper &RK, raw_ostream &OS);
 void EmitDirectivesDecl(RecordKeeper &RK, raw_ostream &OS);
 void EmitDirectivesImpl(RecordKeeper &RK, raw_ostream &OS);
-void EmitDirectivesGen(RecordKeeper &RK, raw_ostream &OS);
 
 } // End llvm namespace
 

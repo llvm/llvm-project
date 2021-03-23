@@ -63,6 +63,7 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1096,8 +1097,13 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
                          (NewBonusInst->getName() + ".merge").str());
     SSAUpdate.AddAvailableValue(BB, &BonusInst);
     SSAUpdate.AddAvailableValue(PredBlock, NewBonusInst);
-    for (Use &U : make_early_inc_range(BonusInst.uses()))
-      SSAUpdate.RewriteUseAfterInsertions(U);
+    for (Use &U : make_early_inc_range(BonusInst.uses())) {
+      auto *UI = cast<Instruction>(U.getUser());
+      if (UI->getParent() != PredBlock)
+        SSAUpdate.RewriteUseAfterInsertions(U);
+      else // Use is in the same block as, and comes before, NewBonusInst.
+        SSAUpdate.RewriteUse(U);
+    }
   }
 }
 
@@ -2840,31 +2846,53 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
   }
 }
 
-// Determine if the two branches share a common destination,
-// and deduce a glue that we need to use to join branch's conditions
-// to arrive at the common destination.
+/// Determine if the two branches share a common destination and deduce a glue
+/// that joins the branches' conditions to arrive at the common destination if
+/// that would be profitable.
 static Optional<std::pair<Instruction::BinaryOps, bool>>
-CheckIfCondBranchesShareCommonDestination(BranchInst *BI, BranchInst *PBI) {
+shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
+                                          const TargetTransformInfo *TTI) {
   assert(BI && PBI && BI->isConditional() && PBI->isConditional() &&
          "Both blocks must end with a conditional branches.");
   assert(is_contained(predecessors(BI->getParent()), PBI->getParent()) &&
          "PredBB must be a predecessor of BB.");
 
-  if (PBI->getSuccessor(0) == BI->getSuccessor(0))
-    return {{Instruction::Or, false}};
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(1))
-    return {{Instruction::And, false}};
-  else if (PBI->getSuccessor(0) == BI->getSuccessor(1))
-    return {{Instruction::And, true}};
-  else if (PBI->getSuccessor(1) == BI->getSuccessor(0))
-    return {{Instruction::Or, true}};
+  // We have the potential to fold the conditions together, but if the
+  // predecessor branch is predictable, we may not want to merge them.
+  uint64_t PTWeight, PFWeight;
+  BranchProbability PBITrueProb, Likely;
+  if (TTI && PBI->extractProfMetadata(PTWeight, PFWeight) &&
+      (PTWeight + PFWeight) != 0) {
+    PBITrueProb =
+        BranchProbability::getBranchProbability(PTWeight, PTWeight + PFWeight);
+    Likely = TTI->getPredictableBranchThreshold();
+  }
+
+  if (PBI->getSuccessor(0) == BI->getSuccessor(0)) {
+    // Speculate the 2nd condition unless the 1st is probably true.
+    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
+      return {{Instruction::Or, false}};
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(1)) {
+    // Speculate the 2nd condition unless the 1st is probably false.
+    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
+      return {{Instruction::And, false}};
+  } else if (PBI->getSuccessor(0) == BI->getSuccessor(1)) {
+    // Speculate the 2nd condition unless the 1st is probably true.
+    if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
+      return {{Instruction::And, true}};
+  } else if (PBI->getSuccessor(1) == BI->getSuccessor(0)) {
+    // Speculate the 2nd condition unless the 1st is probably false.
+    if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
+      return {{Instruction::Or, true}};
+  }
   return None;
 }
 
-static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
+static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
                                              DomTreeUpdater *DTU,
                                              MemorySSAUpdater *MSSAU,
-                                             bool PoisonSafe) {
+                                             bool PoisonSafe,
+                                             const TargetTransformInfo *TTI) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *PredBlock = PBI->getParent();
 
@@ -2872,7 +2900,7 @@ static bool PerformBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Instruction::BinaryOps Opc;
   bool InvertPredCond;
   std::tie(Opc, InvertPredCond) =
-      *CheckIfCondBranchesShareCommonDestination(BI, PBI);
+      *shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI);
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
@@ -3005,8 +3033,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   BasicBlock *BB = BI->getParent();
 
-  const unsigned PredCount = pred_size(BB);
-
   bool Changed = false;
 
   TargetTransformInfo::TargetCostKind CostKind =
@@ -3019,6 +3045,56 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       Cond->getParent() != BB || !Cond->hasOneUse())
     return Changed;
 
+  // Cond is known to be a compare or binary operator.  Check to make sure that
+  // neither operand is a potentially-trapping constant expression.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(0)))
+    if (CE->canTrap())
+      return Changed;
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(1)))
+    if (CE->canTrap())
+      return Changed;
+
+  // Finally, don't infinitely unroll conditional loops.
+  if (is_contained(successors(BB), BB))
+    return Changed;
+
+  // With which predecessors will we want to deal with?
+  SmallVector<BasicBlock *, 8> Preds;
+  for (BasicBlock *PredBlock : predecessors(BB)) {
+    BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
+
+    // Check that we have two conditional branches.  If there is a PHI node in
+    // the common successor, verify that the same value flows in from both
+    // blocks.
+    if (!PBI || PBI->isUnconditional() || !SafeToMergeTerminators(BI, PBI))
+      continue;
+
+    // Determine if the two branches share a common destination.
+    Instruction::BinaryOps Opc;
+    bool InvertPredCond;
+    if (auto Recipe = shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI))
+      std::tie(Opc, InvertPredCond) = *Recipe;
+    else
+      continue;
+
+    // Check the cost of inserting the necessary logic before performing the
+    // transformation.
+    if (TTI) {
+      Type *Ty = BI->getCondition()->getType();
+      InstructionCost Cost = TTI->getArithmeticInstrCost(Opc, Ty, CostKind);
+      if (InvertPredCond && (!PBI->getCondition()->hasOneUse() ||
+          !isa<CmpInst>(PBI->getCondition())))
+        Cost += TTI->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
+
+      if (Cost > BranchFoldThreshold)
+        continue;
+    }
+
+    // Ok, we do want to deal with this predecessor. Record it.
+    Preds.emplace_back(PredBlock);
+  }
+
+  const unsigned PredCount = Preds.size();
   // Only allow this transformation if computing the condition doesn't involve
   // too many instructions and these involved instructions can be executed
   // unconditionally. We denote all involved instructions except the condition
@@ -3045,50 +3121,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       return Changed;
   }
 
-  // Cond is known to be a compare or binary operator.  Check to make sure that
-  // neither operand is a potentially-trapping constant expression.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(0)))
-    if (CE->canTrap())
-      return Changed;
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Cond->getOperand(1)))
-    if (CE->canTrap())
-      return Changed;
-
-  // Finally, don't infinitely unroll conditional loops.
-  if (is_contained(successors(BB), BB))
-    return Changed;
-
-  for (BasicBlock *PredBlock : predecessors(BB)) {
-    BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
-
-    // Check that we have two conditional branches.  If there is a PHI node in
-    // the common successor, verify that the same value flows in from both
-    // blocks.
-    if (!PBI || PBI->isUnconditional() || !SafeToMergeTerminators(BI, PBI))
-      continue;
-
-    // Determine if the two branches share a common destination.
-    Instruction::BinaryOps Opc;
-    bool InvertPredCond;
-    if (auto Recepie = CheckIfCondBranchesShareCommonDestination(BI, PBI))
-      std::tie(Opc, InvertPredCond) = *Recepie;
-    else
-      continue;
-
-    // Check the cost of inserting the necessary logic before performing the
-    // transformation.
-    if (TTI) {
-      Type *Ty = BI->getCondition()->getType();
-      InstructionCost Cost = TTI->getArithmeticInstrCost(Opc, Ty, CostKind);
-      if (InvertPredCond && (!PBI->getCondition()->hasOneUse() ||
-          !isa<CmpInst>(PBI->getCondition())))
-        Cost += TTI->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
-
-      if (Cost > BranchFoldThreshold)
-        continue;
-    }
-
-    return PerformBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, PoisonSafe);
+  // Ok, we have the budget. Perform the transformation.
+  for (BasicBlock *PredBlock : Preds) {
+    auto *PBI = cast<BranchInst>(PredBlock->getTerminator());
+    return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, PoisonSafe,
+                                            TTI);
   }
   return Changed;
 }

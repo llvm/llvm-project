@@ -292,6 +292,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SPLAT_VECTOR:               return "splat_vector";
   case ISD::SPLAT_VECTOR_PARTS:         return "splat_vector_parts";
   case ISD::VECTOR_REVERSE:             return "vector_reverse";
+  case ISD::STEP_VECTOR:                return "step_vector";
   case ISD::CARRY_FALSE:                return "carry_false";
   case ISD::ADDC:                       return "addc";
   case ISD::ADDE:                       return "adde";

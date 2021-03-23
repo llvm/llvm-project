@@ -92,9 +92,9 @@ std::unique_ptr<Module>
 llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
                   DataLayoutCallbackTy DataLayoutCallback) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Filename, /*FileSize*/ -1,
-                                   /*RequiresNullTerminator*/ true,
-                                   /*IsText*/ true);
+      MemoryBuffer::getFileOrSTDIN(Filename, /*FileSize=*/-1,
+                                   /*RequiresNullTerminator=*/true,
+                                   /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Err = SMDiagnostic(Filename, SourceMgr::DK_Error,
                        "Could not open input file: " + EC.message());

@@ -6628,17 +6628,20 @@ class HorizontalReduction {
     if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
       return RecurKind::FMin;
 
+    // This matches either cmp+select or intrinsics. SLP is expected to handle
+    // either form.
+    // TODO: If we are canonicalizing to intrinsics, we can remove several
+    //       special-case paths that deal with selects.
+    if (match(I, m_SMax(m_Value(), m_Value())))
+      return RecurKind::SMax;
+    if (match(I, m_SMin(m_Value(), m_Value())))
+      return RecurKind::SMin;
+    if (match(I, m_UMax(m_Value(), m_Value())))
+      return RecurKind::UMax;
+    if (match(I, m_UMin(m_Value(), m_Value())))
+      return RecurKind::UMin;
+
     if (auto *Select = dyn_cast<SelectInst>(I)) {
-      // These would also match llvm.{u,s}{min,max} intrinsic call
-      // if were not guarded by the SelectInst check above.
-      if (match(I, m_SMax(m_Value(), m_Value())))
-        return RecurKind::SMax;
-      if (match(I, m_SMin(m_Value(), m_Value())))
-        return RecurKind::SMin;
-      if (match(I, m_UMax(m_Value(), m_Value())))
-        return RecurKind::UMax;
-      if (match(I, m_UMin(m_Value(), m_Value())))
-        return RecurKind::UMin;
       // Try harder: look for min/max pattern based on instructions producing
       // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
       // During the intermediate stages of SLP, it's very common to have
@@ -7352,6 +7355,14 @@ static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
   if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(V0), m_Value(V1))))
     return true;
   if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smin>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umin>(m_Value(V0), m_Value(V1))))
     return true;
   return false;
 }

@@ -260,6 +260,19 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::experimental_stepvector: {
+    unsigned Cost = 1; // Cost of the `index' instruction
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    // Legalisation of illegal vectors involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
+    if (LT.first > 1) {
+      Type *LegalVTy = EVT(LT.second).getTypeForEVT(RetTy->getContext());
+      unsigned AddCost =
+          getArithmeticInstrCost(Instruction::Add, LegalVTy, CostKind);
+      Cost += AddCost * (LT.first - 1);
+    }
+    return Cost;
+  }
   default:
     break;
   }

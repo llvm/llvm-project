@@ -264,9 +264,9 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
   MBBInfo.OutgoingCFARegister = SetRegister;
 
   // Update outgoing CSR info.
-  MBBInfo.OutgoingCSRSaved = MBBInfo.IncomingCSRSaved;
-  MBBInfo.OutgoingCSRSaved |= CSRSaved;
-  MBBInfo.OutgoingCSRSaved.reset(CSRRestored);
+  BitVector::apply([](auto x, auto y, auto z) { return (x | y) & ~z; },
+                   MBBInfo.OutgoingCSRSaved, MBBInfo.IncomingCSRSaved, CSRSaved,
+                   CSRRestored);
 }
 
 void CFIInstrInserter::updateSuccCFAInfo(MBBCFAInfo &MBBInfo) {
@@ -294,6 +294,7 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   bool InsertedCFIInstr = false;
 
+  BitVector SetDifference;
   for (MachineBasicBlock &MBB : MF) {
     // Skip the first MBB in a function
     if (MBB.getNumber() == MF.front().getNumber()) continue;
@@ -345,8 +346,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       continue;
     }
 
-    BitVector SetDifference = PrevMBBInfo->OutgoingCSRSaved;
-    SetDifference.reset(MBBInfo.IncomingCSRSaved);
+    BitVector::apply([](auto x, auto y) { return x & ~y; }, SetDifference,
+                     PrevMBBInfo->OutgoingCSRSaved, MBBInfo.IncomingCSRSaved);
     for (int Reg : SetDifference.set_bits()) {
       unsigned CFIIndex =
           MF.addFrameInst(MCCFIInstruction::createRestore(nullptr, Reg));
@@ -355,8 +356,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       InsertedCFIInstr = true;
     }
 
-    SetDifference = MBBInfo.IncomingCSRSaved;
-    SetDifference.reset(PrevMBBInfo->OutgoingCSRSaved);
+    BitVector::apply([](auto x, auto y) { return x & ~y; }, SetDifference,
+                     MBBInfo.IncomingCSRSaved, PrevMBBInfo->OutgoingCSRSaved);
     for (int Reg : SetDifference.set_bits()) {
       auto it = CSRLocMap.find(Reg);
       assert(it != CSRLocMap.end() && "Reg should have an entry in CSRLocMap");

@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-nm --special-syms --debug-syms %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
-# RUN: llvm-nm --special-syms -a %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
+# RUN: llvm-nm --debug-syms %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
+# RUN: llvm-nm -a %t.o | FileCheck %s --implicit-check-not {{.}} --check-prefix SYMBOL
 
 # SYMBOL:      0000000000000000 n $a
 # SYMBOL-NEXT: 0000000000000000 n $d

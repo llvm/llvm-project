@@ -28,7 +28,53 @@ namespace mca {
 
 class ReadState;
 class WriteState;
-class WriteRef;
+class Instruction;
+
+/// A reference to a register write.
+///
+/// This class is mainly used by the register file to describe register
+/// mappings. It correlates a register write to the source index of the
+/// defining instruction.
+class WriteRef {
+  unsigned IID;
+  unsigned WriteBackCycle;
+  unsigned WriteResID;
+  MCPhysReg RegisterID;
+  WriteState *Write;
+
+  static const unsigned INVALID_IID;
+
+public:
+  WriteRef() : IID(INVALID_IID), WriteBackCycle(), WriteResID(), Write() {}
+  WriteRef(unsigned SourceIndex, WriteState *WS);
+
+  unsigned getSourceIndex() const { return IID; }
+  unsigned getWriteBackCycle() const;
+
+  const WriteState *getWriteState() const { return Write; }
+  WriteState *getWriteState() { return Write; }
+  unsigned getWriteResourceID() const;
+  MCPhysReg getRegisterID() const;
+
+  void commit();
+  void notifyExecuted(unsigned Cycle);
+
+  bool hasKnownWriteBackCycle() const;
+  bool isWriteZero() const;
+  bool isValid() const { return getSourceIndex() != INVALID_IID; }
+
+  /// Returns true if this register write has been executed, and the new
+  /// register value is therefore available to users.
+  bool isAvailable() const { return hasKnownWriteBackCycle(); }
+
+  bool operator==(const WriteRef &Other) const {
+    return Write && Other.Write && Write == Other.Write;
+  }
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
+};
 
 /// Manages hardware register files, and tracks register definitions for
 /// register renaming purposes.
@@ -145,6 +191,8 @@ class RegisterFile : public HardwareUnit {
   // the target. Bits are set for registers that are known to be zero.
   APInt ZeroRegisters;
 
+  unsigned CurrentCycle;
+
   // This method creates a new register file descriptor.
   // The new register file owns all of the registers declared by register
   // classes in the 'RegisterClasses' set.
@@ -183,8 +231,9 @@ public:
                unsigned NumRegs = 0);
 
   // Collects writes that are in a RAW dependency with RS.
-  void collectWrites(const ReadState &RS,
-                     SmallVectorImpl<WriteRef> &Writes) const;
+  void collectWrites(const MCSubtargetInfo &STI, const ReadState &RS,
+                     SmallVectorImpl<WriteRef> &Writes,
+                     SmallVectorImpl<WriteRef> &CommittedWrites) const;
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
@@ -223,8 +272,14 @@ public:
   // Returns the number of PRFs implemented by this processor.
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
+  unsigned getElapsedCyclesFromWriteBack(const WriteRef &WR) const;
+
+  void onInstructionExecuted(Instruction *IS);
+
   // Notify each PRF that a new cycle just started.
   void cycleStart();
+
+  void cycleEnd() { ++CurrentCycle; }
 
 #ifndef NDEBUG
   void dump() const;

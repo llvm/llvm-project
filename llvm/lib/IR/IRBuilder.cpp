@@ -91,6 +91,23 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
              : CreateMul(CI, Scaling);
 }
 
+Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
+  if (isa<ScalableVectorType>(DstType))
+    return CreateIntrinsic(Intrinsic::experimental_stepvector, {DstType}, {},
+                           nullptr, Name);
+
+  Type *STy = DstType->getScalarType();
+  unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
+
+  // Create a vector of consecutive numbers from zero to VF.
+  SmallVector<Constant *, 8> Indices;
+  for (unsigned i = 0; i < NumEls; ++i)
+    Indices.push_back(ConstantInt::get(STy, i));
+
+  // Add the consecutive indices to the vector value.
+  return ConstantVector::get(Indices);
+}
+
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MaybeAlign Align, bool isVolatile,
                                       MDNode *TBAATag, MDNode *ScopeTag,

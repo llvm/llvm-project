@@ -3210,6 +3210,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SDIVREM:
   case G_UDIVREM:
     return lowerDIVREM(MI);
+  case G_FSHL:
+  case G_FSHR:
+    return lowerFunnelShift(MI);
   }
 }
 
@@ -5205,6 +5208,132 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     return Legalized;
   }
   }
+}
+
+// Check that (every element of) Reg is undef or not an exact multiple of BW.
+static bool isNonZeroModBitWidthOrUndef(const MachineRegisterInfo &MRI,
+                                        Register Reg, unsigned BW) {
+  return matchUnaryPredicate(
+      MRI, Reg,
+      [=](const Constant *C) {
+        // Null constant here means an undef.
+        const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(C);
+        return !CI || CI->getValue().urem(BW) != 0;
+      },
+      /*AllowUndefs*/ true);
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFunnelShiftWithInverse(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
+  Register Z = MI.getOperand(3).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShTy = MRI.getType(Z);
+
+  unsigned BW = Ty.getScalarSizeInBits();
+  const bool IsFSHL = MI.getOpcode() == TargetOpcode::G_FSHL;
+  unsigned RevOpcode = IsFSHL ? TargetOpcode::G_FSHR : TargetOpcode::G_FSHL;
+
+  if (isNonZeroModBitWidthOrUndef(MRI, Z, BW)) {
+    // fshl X, Y, Z -> fshr X, Y, -Z
+    // fshr X, Y, Z -> fshl X, Y, -Z
+    auto Zero = MIRBuilder.buildConstant(ShTy, 0);
+    Z = MIRBuilder.buildSub(Ty, Zero, Z).getReg(0);
+  } else {
+    // fshl X, Y, Z -> fshr (srl X, 1), (fshr X, Y, 1), ~Z
+    // fshr X, Y, Z -> fshl (fshl X, Y, 1), (shl Y, 1), ~Z
+    auto One = MIRBuilder.buildConstant(ShTy, 1);
+    if (IsFSHL) {
+      Y = MIRBuilder.buildInstr(RevOpcode, {Ty}, {X, Y, One}).getReg(0);
+      X = MIRBuilder.buildLShr(Ty, X, One).getReg(0);
+    } else {
+      X = MIRBuilder.buildInstr(RevOpcode, {Ty}, {X, Y, One}).getReg(0);
+      Y = MIRBuilder.buildShl(Ty, Y, One).getReg(0);
+    }
+
+    Z = MIRBuilder.buildNot(ShTy, Z).getReg(0);
+  }
+
+  MIRBuilder.buildInstr(RevOpcode, {Dst}, {X, Y, Z});
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFunnelShiftAsShifts(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
+  Register Z = MI.getOperand(3).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShTy = MRI.getType(Z);
+
+  const unsigned BW = Ty.getScalarSizeInBits();
+  const bool IsFSHL = MI.getOpcode() == TargetOpcode::G_FSHL;
+
+  Register ShX, ShY;
+  Register ShAmt, InvShAmt;
+
+  // FIXME: Emit optimized urem by constant instead of letting it expand later.
+  if (isNonZeroModBitWidthOrUndef(MRI, Z, BW)) {
+    // fshl: X << C | Y >> (BW - C)
+    // fshr: X << (BW - C) | Y >> C
+    // where C = Z % BW is not zero
+    auto BitWidthC = MIRBuilder.buildConstant(ShTy, BW);
+    ShAmt = MIRBuilder.buildURem(ShTy, Z, BitWidthC).getReg(0);
+    InvShAmt = MIRBuilder.buildSub(ShTy, BitWidthC, ShAmt).getReg(0);
+    ShX = MIRBuilder.buildShl(Ty, X, IsFSHL ? ShAmt : InvShAmt).getReg(0);
+    ShY = MIRBuilder.buildLShr(Ty, Y, IsFSHL ? InvShAmt : ShAmt).getReg(0);
+  } else {
+    // fshl: X << (Z % BW) | Y >> 1 >> (BW - 1 - (Z % BW))
+    // fshr: X << 1 << (BW - 1 - (Z % BW)) | Y >> (Z % BW)
+    auto Mask = MIRBuilder.buildConstant(ShTy, BW - 1);
+    if (isPowerOf2_32(BW)) {
+      // Z % BW -> Z & (BW - 1)
+      ShAmt = MIRBuilder.buildAnd(ShTy, Z, Mask).getReg(0);
+      // (BW - 1) - (Z % BW) -> ~Z & (BW - 1)
+      auto NotZ = MIRBuilder.buildNot(ShTy, Z);
+      InvShAmt = MIRBuilder.buildAnd(ShTy, NotZ, Mask).getReg(0);
+    } else {
+      auto BitWidthC = MIRBuilder.buildConstant(ShTy, BW);
+      ShAmt = MIRBuilder.buildURem(ShTy, Z, BitWidthC).getReg(0);
+      InvShAmt = MIRBuilder.buildSub(ShTy, Mask, ShAmt).getReg(0);
+    }
+
+    auto One = MIRBuilder.buildConstant(ShTy, 1);
+    if (IsFSHL) {
+      ShX = MIRBuilder.buildShl(Ty, X, ShAmt).getReg(0);
+      auto ShY1 = MIRBuilder.buildLShr(Ty, Y, One);
+      ShY = MIRBuilder.buildLShr(Ty, ShY1, InvShAmt).getReg(0);
+    } else {
+      auto ShX1 = MIRBuilder.buildShl(Ty, X, One);
+      ShX = MIRBuilder.buildShl(Ty, ShX1, InvShAmt).getReg(0);
+      ShY = MIRBuilder.buildLShr(Ty, Y, ShAmt).getReg(0);
+    }
+  }
+
+  MIRBuilder.buildOr(Dst, ShX, ShY);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFunnelShift(MachineInstr &MI) {
+  // These operations approximately do the following (while avoiding undefined
+  // shifts by BW):
+  // G_FSHL: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+  // G_FSHR: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  LLT ShTy = MRI.getType(MI.getOperand(3).getReg());
+
+  bool IsFSHL = MI.getOpcode() == TargetOpcode::G_FSHL;
+  unsigned RevOpcode = IsFSHL ? TargetOpcode::G_FSHR : TargetOpcode::G_FSHL;
+  if (LI.getAction({RevOpcode, {Ty, ShTy}}).Action == Lower)
+    return lowerFunnelShiftAsShifts(MI);
+  return lowerFunnelShiftWithInverse(MI);
 }
 
 // Expand s32 = G_UITOFP s64 using bit operations to an IEEE float

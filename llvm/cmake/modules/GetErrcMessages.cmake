@@ -4,6 +4,11 @@
 # Messages are semi colon separated.
 # Keep amount, order and tested error codes in sync with llvm/utils/lit/lit/llvm/config.py.
 function(get_errc_messages outvar)
+    if(CMAKE_CROSSCOMPILING AND NOT CMAKE_CROSSCOMPILING_EMULATOR AND NOT DEFINED errc_exit_code)
+        set(${outvar} "" PARENT_SCOPE)
+        message(STATUS "Can't get errc messages in cross-compilation mode")
+        return()
+    endif()
 
     set(errc_test_code ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/getErrc.cpp)
 

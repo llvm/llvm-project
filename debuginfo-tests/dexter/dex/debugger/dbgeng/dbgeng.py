@@ -87,7 +87,10 @@ class DbgEng(DebuggerBase):
         # but is something that should be considered in the future.
         raise NotImplementedError('add_conditional_breakpoint is not yet implemented by dbgeng')
 
-    def _delete_conditional_breakpoint(self, file_, line, condition):
+    def get_triggered_breakpoint_ids(self):
+      raise NotImplementedError('get_triggered_breakpoint_ids is not yet implemented by dbgeng')
+
+    def delete_breakpoint(self, id):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')

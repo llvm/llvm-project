@@ -5195,6 +5195,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     break;
   }
+  case Intrinsic::experimental_stepvector: {
+    VectorType *VecTy = dyn_cast<VectorType>(Call.getType());
+    Assert(VecTy && VecTy->getScalarType()->isIntegerTy() &&
+               VecTy->getScalarSizeInBits() >= 8,
+           "experimental_stepvector only supported for vectors of integers "
+           "with a bitwidth of at least 8.",
+           &Call);
+    break;
+  }
   case Intrinsic::experimental_vector_insert: {
     VectorType *VecTy = cast<VectorType>(Call.getArgOperand(0)->getType());
     VectorType *SubVecTy = cast<VectorType>(Call.getArgOperand(1)->getType());

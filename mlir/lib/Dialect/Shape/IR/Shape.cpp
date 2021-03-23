@@ -311,6 +311,27 @@ void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
   rewriter.mergeBlocks(blockAfterAssuming, blockBeforeAssuming);
 }
 
+void AssumingOp::build(
+    OpBuilder &builder, OperationState &result, Value witness,
+    function_ref<SmallVector<Value, 2>(OpBuilder &, Location)> bodyBuilder) {
+
+  result.addOperands(witness);
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+
+  // Build body.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&bodyBlock);
+  SmallVector<Value, 2> yieldValues = bodyBuilder(builder, result.location);
+  builder.create<AssumingYieldOp>(result.location, yieldValues);
+
+  SmallVector<Type, 2> assumingTypes;
+  for (Value v : yieldValues)
+    assumingTypes.push_back(v.getType());
+  result.addTypes(assumingTypes);
+}
+
 //===----------------------------------------------------------------------===//
 // AssumingAllOp
 //===----------------------------------------------------------------------===//
@@ -532,7 +553,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
   // Canonicalization patterns have overlap with the considerations during
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
-  patterns.add<CstrBroadcastableEqOps>(context);
+  patterns.add<CstrBroadcastableEqOps,
+               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>>(context);
 }
 
 // Return true if there is exactly one attribute not representing a scalar

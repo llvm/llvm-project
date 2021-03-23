@@ -304,6 +304,7 @@ private:
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_SCALAR_TO_VECTOR(SDNode *N);
   SDValue PromoteIntRes_SPLAT_VECTOR(SDNode *N);
+  SDValue PromoteIntRes_STEP_VECTOR(SDNode *N);
   SDValue PromoteIntRes_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_CONCAT_VECTORS(SDNode *N);
@@ -836,6 +837,7 @@ private:
   void SplitVecRes_MLOAD(MaskedLoadSDNode *MLD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_MGATHER(MaskedGatherSDNode *MGT, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_STEP_VECTOR(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_SETCC(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,

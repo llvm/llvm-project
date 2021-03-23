@@ -100,9 +100,9 @@ static void runImpl(Function &F, const TargetLibraryInfo &TLI) {
     }
   }
 
-  Instruction *IP = &*F.begin()->begin();
   for (const auto &KV : Mapping)
-    ORE.emit(OptimizationRemarkAnalysis(REMARK_PASS, "AnnotationSummary", IP)
+    ORE.emit(OptimizationRemarkAnalysis(REMARK_PASS, "AnnotationSummary",
+                                        F.getSubprogram(), &F.front())
              << "Annotated " << NV("count", KV.second) << " instructions with "
              << NV("type", KV.first));
 
