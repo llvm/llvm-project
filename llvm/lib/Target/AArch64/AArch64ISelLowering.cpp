@@ -9058,8 +9058,7 @@ SDValue AArch64TargetLowering::LowerSTEP_VECTOR(SDValue Op,
   EVT VT = Op.getValueType();
   assert(VT.isScalableVector() &&
          "Only expect scalable vectors for STEP_VECTOR");
-  EVT ElemVT = VT.getScalarType();
-  assert(ElemVT != MVT::i1 &&
+  assert(VT.getScalarType() != MVT::i1 &&
          "Vectors of i1 types not supported for STEP_VECTOR");
 
   SDValue StepVal = Op.getOperand(0);
