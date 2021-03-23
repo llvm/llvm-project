@@ -68,6 +68,19 @@ private:
 /// used to interface with the metadata of a pattern, such as the benefit or
 /// root operation.
 class Pattern {
+  /// This enum represents the kind of value used to select the root operations
+  /// that match this pattern.
+  enum class RootKind {
+    /// The pattern root matches "any" operation.
+    Any,
+    /// The pattern root is matched using a concrete operation name.
+    OperationName,
+    /// The pattern root is matched using an interface ID.
+    InterfaceID,
+    /// The patter root is matched using a trait ID.
+    TraitID
+  };
+
 public:
   /// Return a list of operations that may be generated when rewriting an
   /// operation instance with this pattern.
@@ -75,7 +88,29 @@ public:
 
   /// Return the root node that this pattern matches. Patterns that can match
   /// multiple root types return None.
-  Optional<OperationName> getRootKind() const { return rootKind; }
+  Optional<OperationName> getRootKind() const {
+    if (rootKind == RootKind::OperationName)
+      return OperationName::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
+
+  /// Return the interface ID used to match the root operation of this pattern.
+  /// If the pattern does not use an interface ID for deciding the root match,
+  /// this returns None.
+  Optional<TypeID> getRootInterfaceID() const {
+    if (rootKind == RootKind::InterfaceID)
+      return TypeID::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
+
+  /// Return the trait ID used to match the root operation of this pattern.
+  /// If the pattern does not use a trait ID for deciding the root match, this
+  /// returns None.
+  Optional<TypeID> getRootTraitID() const {
+    if (rootKind == RootKind::TraitID)
+      return TypeID::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
 
   /// Return the benefit (the inverse of "cost") of matching this pattern.  The
   /// benefit of a Pattern is always static - rewrites that may have dynamic
@@ -88,56 +123,85 @@ public:
   /// i.e. this pattern may generate IR that also matches this pattern, but is
   /// known to bound the recursion. This signals to a rewrite driver that it is
   /// safe to apply this pattern recursively to generated IR.
-  bool hasBoundedRewriteRecursion() const { return hasBoundedRecursion; }
+  bool hasBoundedRewriteRecursion() const {
+    return contextAndHasBoundedRecursion.getInt();
+  }
+
+  /// Return the MLIRContext used to create this pattern.
+  MLIRContext *getContext() const {
+    return contextAndHasBoundedRecursion.getPointer();
+  }
 
 protected:
   /// This class acts as a special tag that makes the desire to match "any"
   /// operation type explicit. This helps to avoid unnecessary usages of this
   /// feature, and ensures that the user is making a conscious decision.
   struct MatchAnyOpTypeTag {};
+  /// This class acts as a special tag that makes the desire to match any
+  /// operation that implements a given interface explicit. This helps to avoid
+  /// unnecessary usages of this feature, and ensures that the user is making a
+  /// conscious decision.
+  struct MatchInterfaceOpTypeTag {};
+  /// This class acts as a special tag that makes the desire to match any
+  /// operation that implements a given trait explicit. This helps to avoid
+  /// unnecessary usages of this feature, and ensures that the user is making a
+  /// conscious decision.
+  struct MatchTraitOpTypeTag {};
 
   /// Construct a pattern with a certain benefit that matches the operation
   /// with the given root name.
-  Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context);
-  /// Construct a pattern with a certain benefit that matches any operation
-  /// type. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
-  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
-  /// always be supplied here.
-  Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag);
-  /// Construct a pattern with a certain benefit that matches the operation with
-  /// the given root name. `generatedNames` contains the names of operations
-  /// that may be generated during a successful rewrite.
-  Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
-          PatternBenefit benefit, MLIRContext *context);
+  Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
   /// Construct a pattern that may match any operation type. `generatedNames`
   /// contains the names of operations that may be generated during a successful
   /// rewrite. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
   /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
   /// always be supplied here.
-  Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
-          MLIRContext *context, MatchAnyOpTypeTag tag);
+  Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
+  /// Construct a pattern that may match any operation that implements the
+  /// interface defined by the provided `interfaceID`. `generatedNames` contains
+  /// the names of operations that may be generated during a successful rewrite.
+  /// `MatchInterfaceOpTypeTag` is just a tag to ensure that the "match
+  /// interface" behavior is what the user actually desired,
+  /// `MatchInterfaceOpTypeTag()` should always be supplied here.
+  Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
+          PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
+  /// Construct a pattern that may match any operation that implements the
+  /// trait defined by the provided `traitID`. `generatedNames` contains the
+  /// names of operations that may be generated during a successful rewrite.
+  /// `MatchTraitOpTypeTag` is just a tag to ensure that the "match trait"
+  /// behavior is what the user actually desired, `MatchTraitOpTypeTag()` should
+  /// always be supplied here.
+  Pattern(MatchTraitOpTypeTag tag, TypeID traitID, PatternBenefit benefit,
+          MLIRContext *context, ArrayRef<StringRef> generatedNames = {});
 
   /// Set the flag detailing if this pattern has bounded rewrite recursion or
   /// not.
   void setHasBoundedRewriteRecursion(bool hasBoundedRecursionArg = true) {
-    hasBoundedRecursion = hasBoundedRecursionArg;
+    contextAndHasBoundedRecursion.setInt(hasBoundedRecursionArg);
   }
 
 private:
-  /// A list of the potential operations that may be generated when rewriting
-  /// an op with this pattern.
-  SmallVector<OperationName, 2> generatedOps;
+  Pattern(const void *rootValue, RootKind rootKind,
+          ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+          MLIRContext *context);
 
-  /// The root operation of the pattern. If the pattern matches a specific
-  /// operation, this contains the name of that operation. Contains None
-  /// otherwise.
-  Optional<OperationName> rootKind;
+  /// The value used to match the root operation of the pattern.
+  const void *rootValue;
+  RootKind rootKind;
 
   /// The expected benefit of matching this pattern.
   const PatternBenefit benefit;
 
-  /// A boolean flag of whether this pattern has bounded recursion or not.
-  bool hasBoundedRecursion = false;
+  /// The context this pattern was created from, and a boolean flag indicating
+  /// whether this pattern has bounded recursion or not.
+  llvm::PointerIntPair<MLIRContext *, 1, bool> contextAndHasBoundedRecursion;
+
+  /// A list of the potential operations that may be generated when rewriting
+  /// an op with this pattern.
+  SmallVector<OperationName, 2> generatedOps;
 };
 
 //===----------------------------------------------------------------------===//
@@ -188,15 +252,13 @@ protected:
   virtual void anchor();
 };
 
-/// OpRewritePattern is a wrapper around RewritePattern that allows for
-/// matching and rewriting against an instance of a derived operation class as
-/// opposed to a raw Operation.
+namespace detail {
+/// OpOrInterfaceRewritePatternBase is a wrapper around RewritePattern that
+/// allows for matching and rewriting against an instance of a derived operation
+/// class or Interface.
 template <typename SourceOp>
-struct OpRewritePattern : public RewritePattern {
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
-  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : RewritePattern(SourceOp::getOperationName(), benefit, context) {}
+struct OpOrInterfaceRewritePatternBase : public RewritePattern {
+  using RewritePattern::RewritePattern;
 
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, PatternRewriter &rewriter) const final {
@@ -226,6 +288,43 @@ struct OpRewritePattern : public RewritePattern {
     }
     return failure();
   }
+};
+} // namespace detail
+
+/// OpRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against an instance of a derived operation class as
+/// opposed to a raw Operation.
+template <typename SourceOp>
+struct OpRewritePattern
+    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Patterns must specify the root operation name they match against, and can
+  /// also specify the benefit of the pattern matching.
+  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+            SourceOp::getOperationName(), benefit, context) {}
+};
+
+/// OpInterfaceRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against an instance of an operation interface instead
+/// of a raw Operation.
+template <typename SourceOp>
+struct OpInterfaceRewritePattern
+    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+            Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
+            benefit, context) {}
+};
+
+/// OpTraitRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against instances of an operation that possess a
+/// given trait.
+template <template <typename> class TraitType>
+class OpTraitRewritePattern : public RewritePattern {
+public:
+  OpTraitRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : RewritePattern(Pattern::MatchTraitOpTypeTag(), TypeID::get<TraitType>(),
+                       benefit, context) {}
 };
 
 //===----------------------------------------------------------------------===//

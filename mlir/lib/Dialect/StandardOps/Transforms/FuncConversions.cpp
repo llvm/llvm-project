@@ -46,25 +46,21 @@ namespace {
 /// Only needed to support partial conversion of functions where this pattern
 /// ensures that the branch operation arguments matches up with the succesor
 /// block arguments.
-class BranchOpInterfaceTypeConversion : public ConversionPattern {
+class BranchOpInterfaceTypeConversion
+    : public OpInterfaceConversionPattern<BranchOpInterface> {
 public:
-  BranchOpInterfaceTypeConversion(TypeConverter &typeConverter,
-                                  MLIRContext *ctx)
-      : ConversionPattern(/*benefit=*/1, typeConverter, MatchAnyOpTypeTag()) {}
+  using OpInterfaceConversionPattern<
+      BranchOpInterface>::OpInterfaceConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(BranchOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    auto branchOp = dyn_cast<BranchOpInterface>(op);
-    if (!branchOp)
-      return failure();
-
     // For a branch operation, only some operands go to the target blocks, so
     // only rewrite those.
     SmallVector<Value, 4> newOperands(op->operand_begin(), op->operand_end());
     for (int succIdx = 0, succEnd = op->getBlock()->getNumSuccessors();
          succIdx < succEnd; ++succIdx) {
-      auto successorOperands = branchOp.getSuccessorOperands(succIdx);
+      auto successorOperands = op.getSuccessorOperands(succIdx);
       if (!successorOperands)
         continue;
       for (int idx = successorOperands->getBeginOperandIndex(),

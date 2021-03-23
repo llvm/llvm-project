@@ -83,7 +83,7 @@ public:
 struct FunctionNonEntryBlockConversion : public ConversionPattern {
   FunctionNonEntryBlockConversion(StringRef functionLikeOpName,
                                   MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern(functionLikeOpName, /*benefit=*/1, converter, ctx) {}
+      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,

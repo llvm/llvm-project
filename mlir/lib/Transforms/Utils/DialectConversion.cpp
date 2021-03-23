@@ -2582,7 +2582,7 @@ namespace {
 struct FunctionLikeSignatureConversion : public ConversionPattern {
   FunctionLikeSignatureConversion(StringRef functionLikeOpName,
                                   MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern(functionLikeOpName, /*benefit=*/1, converter, ctx) {}
+      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   /// Hook to implement combined matching and rewriting for FunctionLike ops.
   LogicalResult

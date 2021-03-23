@@ -450,7 +450,7 @@ ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
                                            PatternBenefit benefit)
-    : ConversionPattern(rootOpName, benefit, typeConverter, context) {}
+    : ConversionPattern(typeConverter, rootOpName, benefit, context) {}
 
 //===----------------------------------------------------------------------===//
 // StructBuilder implementation

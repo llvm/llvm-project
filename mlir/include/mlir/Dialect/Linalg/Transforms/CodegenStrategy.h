@@ -60,7 +60,8 @@ void enqueue(RewritePatternSet &patternList, OptionsType options,
   if (!opName.empty())
     patternList.add<PatternType>(opName, patternList.getContext(), options, m);
   else
-    patternList.add<PatternType>(m.addOpFilter<OpType>(), options);
+    patternList.add<PatternType>(patternList.getContext(),
+                                 m.addOpFilter<OpType>(), options);
 }
 
 /// Promotion transformation enqueues a particular stage-1 pattern for

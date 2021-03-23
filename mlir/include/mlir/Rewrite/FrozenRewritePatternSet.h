@@ -25,6 +25,10 @@ class FrozenRewritePatternSet {
   using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
+  /// A map of operation specific native patterns.
+  using OpSpecificNativePatternListT =
+      DenseMap<OperationName, std::vector<RewritePattern *>>;
+
   /// Freeze the patterns held in `patterns`, and take ownership.
   FrozenRewritePatternSet();
   FrozenRewritePatternSet(RewritePatternSet &&patterns);
@@ -36,11 +40,16 @@ public:
   operator=(FrozenRewritePatternSet &&patterns) = default;
   ~FrozenRewritePatternSet();
 
-  /// Return the native patterns held by this list.
+  /// Return the op specific native patterns held by this list.
+  const OpSpecificNativePatternListT &getOpSpecificNativePatterns() const {
+    return impl->nativeOpSpecificPatternMap;
+  }
+
+  /// Return the "match any" native patterns held by this list.
   iterator_range<llvm::pointee_iterator<NativePatternListT::const_iterator>>
-  getNativePatterns() const {
-    const NativePatternListT &nativePatterns = impl->nativePatterns;
-    return llvm::make_pointee_range(nativePatterns);
+  getMatchAnyOpNativePatterns() const {
+    const NativePatternListT &nativeList = impl->nativeAnyOpPatterns;
+    return llvm::make_pointee_range(nativeList);
   }
 
   /// Return the compiled PDL bytecode held by this list. Returns null if
@@ -52,8 +61,17 @@ public:
 private:
   /// The internal implementation of the frozen pattern list.
   struct Impl {
-    /// The set of native C++ rewrite patterns.
-    NativePatternListT nativePatterns;
+    /// The set of native C++ rewrite patterns that are matched to specific
+    /// operation kinds.
+    OpSpecificNativePatternListT nativeOpSpecificPatternMap;
+
+    /// The full op-specific native rewrite list. This allows for the map above
+    /// to contain duplicate patterns, e.g. for interfaces and traits.
+    NativePatternListT nativeOpSpecificPatternList;
+
+    /// The set of native C++ rewrite patterns that are matched to "any"
+    /// operation.
+    NativePatternListT nativeAnyOpPatterns;
 
     /// The bytecode containing the compiled PDL patterns.
     std::unique_ptr<detail::PDLByteCode> pdlByteCode;

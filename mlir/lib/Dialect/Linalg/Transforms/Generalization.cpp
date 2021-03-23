@@ -104,7 +104,7 @@ struct LinalgNamedOpGeneralizationPattern : RewritePattern {
   LinalgNamedOpGeneralizationPattern(MLIRContext *context,
                                      linalg::LinalgTransformationFilter marker,
                                      PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()),
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
         marker(std::move(marker)) {}
 
   LogicalResult matchAndRewrite(Operation *rootOp,

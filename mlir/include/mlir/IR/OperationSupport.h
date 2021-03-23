@@ -142,11 +142,19 @@ public:
     return interfaceMap.lookup<T>();
   }
 
+  /// Returns true if this operation has the given interface registered to it.
+  bool hasInterface(TypeID interfaceID) const {
+    return interfaceMap.contains(interfaceID);
+  }
+
   /// Returns true if the operation has a particular trait.
   template <template <typename T> class Trait>
   bool hasTrait() const {
     return hasTraitFn(TypeID::get<Trait>());
   }
+
+  /// Returns true if the operation has a particular trait.
+  bool hasTrait(TypeID traitID) const { return hasTraitFn(traitID); }
 
   /// Look up the specified operation in the specified MLIRContext and return a
   /// pointer to it if present.  Otherwise, return a null pointer.
