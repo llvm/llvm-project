@@ -3862,7 +3862,7 @@ void CombinerHelper::applyExtractAllEltsFromBuildVector(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::applyLoadOrCombine(
+bool CombinerHelper::applyBuildFn(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   Builder.setInstrAndDebugLoc(MI);
   MatchInfo(Builder);
