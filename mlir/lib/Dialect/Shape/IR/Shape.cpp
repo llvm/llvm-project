@@ -11,7 +11,6 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Traits.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -269,72 +268,12 @@ struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
     return success();
   }
 };
-
-// Results of an assuming op that are defined outside its body are available
-// indepentently of the assuming op. There is no need to yield such values. This
-// canonicalization replaces such results with their definition.
-struct AssumingBypassIndependentResult : public OpRewritePattern<AssumingOp> {
-  using OpRewritePattern<AssumingOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AssumingOp op,
-                                PatternRewriter &rewriter) const override {
-    Block *body = op.getBody();
-    auto yieldOp = llvm::dyn_cast<AssumingYieldOp>(body->getTerminator());
-    if (!yieldOp)
-      return failure();
-
-    // See if there is at least one result that can bypass the assuming op.
-    auto isDefinedInBody = [&](Value val) {
-      Operation *def = val.getDefiningOp();
-      return def && op->isAncestor(def);
-    };
-    if (llvm::all_of(yieldOp.operands(), isDefinedInBody))
-      return failure();
-
-    SmallVector<Value, 2> replacementValues;
-    auto newAssumingOp = rewriter.create<shape::AssumingOp>(
-        op.getLoc(), op.witness(), [&](OpBuilder &b, Location loc) {
-          // Copy body.
-          BlockAndValueMapping mapping;
-          for (auto &nested : body->without_terminator())
-            b.clone(nested, mapping);
-
-          // Collect new yielded values.
-          SmallVector<Value, 2> mappedResults;
-          for (auto result : yieldOp.getOperands()) {
-            if (isDefinedInBody(result)) {
-              // This value is a result of the assuming op. We can obtain the
-              // replacement value only after the new op is fully constructed.
-              mappedResults.push_back(mapping.lookup(result));
-              replacementValues.push_back(nullptr);
-            } else {
-              // When defined outside of the assuming block, we can use it
-              // direclty. There is no need to yield the value from within the
-              // block.
-              replacementValues.push_back(result);
-            }
-          }
-          return mappedResults;
-        });
-
-    // Use the assuming op's results for the missing replacement values, which
-    // could not bypass the op.
-    auto src = newAssumingOp.getResults().begin();
-    for (auto &dst : replacementValues) {
-      if (dst)
-        continue;
-      dst = *src++;
-    }
-
-    rewriter.replaceOp(op, replacementValues);
-    return success();
-  }
-};
 } // namespace
 
 void AssumingOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                              MLIRContext *context) {
-  patterns.add<AssumingBypassIndependentResult, AssumingWithTrue>(context);
+  // If taking a passing witness, inline region.
+  patterns.add<AssumingWithTrue>(context);
 }
 
 // See RegionBranchOpInterface in Interfaces/ControlFlowInterfaces.td
