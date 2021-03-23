@@ -4794,6 +4794,14 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
     // destination type.
     return true;
   case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      switch (II->getIntrinsicID()) {
+      // TODO: Add more intrinsics.
+      case Intrinsic::ctpop:
+        return false;
+      }
+    }
+    LLVM_FALLTHROUGH;
   case Instruction::CallBr:
   case Instruction::Invoke: {
     const auto *CB = cast<CallBase>(Op);

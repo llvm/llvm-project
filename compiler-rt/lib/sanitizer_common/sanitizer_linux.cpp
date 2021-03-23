@@ -183,6 +183,12 @@ uptr internal_munmap(void *addr, uptr length) {
   return internal_syscall(SYSCALL(munmap), (uptr)addr, length);
 }
 
+uptr internal_mremap(void *old_address, uptr old_size, uptr new_size, int flags,
+                     void *new_address) {
+  return internal_syscall(SYSCALL(mremap), (uptr)old_address, old_size,
+                          new_size, flags, (uptr)new_address);
+}
+
 int internal_mprotect(void *addr, uptr length, int prot) {
   return internal_syscall(SYSCALL(mprotect), (uptr)addr, length, prot);
 }

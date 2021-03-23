@@ -2141,10 +2141,11 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
-  // TODO: figure out a better way to write canonicalization patterns in
-  // TableGen rules directly instead of using this marker and C++
-  // implementations.
   bit hasCanonicalizer = 0;
+
+  // Whether this op has a static "canonicalize" method to perform "match and
+  // rewrite patterns".
+  bit hasCanonicalizeMethod = 0;
 
   // Whether this op has a folder.
   bit hasFolder = 0;

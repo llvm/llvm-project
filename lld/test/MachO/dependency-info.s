@@ -1,7 +1,4 @@
 # REQUIRES: x86
-## FIXME: Paths on windows have both `\` and '/', as a result, they are in a different
-## order when sorted. Maybe create a separate test for that?
-# UNSUPPORTED: system-windows
 #
 # RUN: rm -rf %t
 # RUN: split-file %s %t

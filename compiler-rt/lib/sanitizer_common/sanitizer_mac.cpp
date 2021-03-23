@@ -142,6 +142,12 @@ uptr internal_munmap(void *addr, uptr length) {
   return munmap(addr, length);
 }
 
+uptr internal_mremap(void *old_address, uptr old_size, uptr new_size, int flags,
+                     void *new_address) {
+  CHECK(false && "internal_mremap is unimplemented on Mac");
+  return 0;
+}
+
 int internal_mprotect(void *addr, uptr length, int prot) {
   return mprotect(addr, length, prot);
 }
@@ -1250,6 +1256,12 @@ uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
   CHECK_NE((uptr)0, shadow_start);
   CHECK(IsAligned(shadow_start, alignment));
   return shadow_start;
+}
+
+uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
+                                uptr num_aliases, uptr ring_buffer_size) {
+  CHECK(false && "HWASan aliasing is unimplemented on Mac");
+  return 0;
 }
 
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,

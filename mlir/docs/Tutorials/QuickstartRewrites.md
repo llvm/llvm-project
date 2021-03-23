@@ -159,10 +159,61 @@ RewritePatternSet &patterns)` function that you can
 use to collect all the generated patterns inside `patterns` and then use
 `patterns` in any pass you would like.
 
-### C++ rewrite specification
+### Simple C++ `matchAndRewrite` style specifications
 
-In case patterns are not sufficient there is also the fully C++ way of
-expressing a rewrite:
+Many simple rewrites can be expressed with a `matchAndRewrite` style  of
+pattern, e.g. when converting a multiply by a power of two into a shift.  For
+these cases, the you can define the pattern as a simple function:
+
+```c++
+static LogicalResult
+convertTFLeakyRelu(TFLeakyReluOp op, PatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
+      op, op->getResult(0).getType(), op->getOperand(0),
+      /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
+  return success();
+}
+
+void populateRewrites(RewritePatternSet &patternSet) {
+  // Add it to a pattern set.
+  patternSet.add(convertTFLeakyRelu);
+}
+```
+
+ODS provides a simple way to define a function-style canonicalization for your
+operation.  In the TableGen definition of the op, specify
+`let hasCanonicalizeMethod = 1;` and then implement the `canonicalize` method in
+your .cpp file:
+
+```c++
+// Example from the CIRCT project which has a variadic integer multiply.
+LogicalResult circt::MulOp::canonicalize(MulOp op, PatternRewriter &rewriter) {
+  auto inputs = op.inputs();
+  APInt value;
+
+  // mul(x, c) -> shl(x, log2(c)), where c is a power of two.
+  if (inputs.size() == 2 && matchPattern(inputs.back(), m_RConstant(value)) &&
+      value.isPowerOf2()) {
+    auto shift = rewriter.create<rtl::ConstantOp>(op.getLoc(), op.getType(),
+                                                  value.exactLogBase2());
+    auto shlOp =
+        rewriter.create<comb::ShlOp>(op.getLoc(), inputs[0], shift);
+    rewriter.replaceOpWithNewOp<MulOp>(op, op.getType(),
+                                       ArrayRef<Value>(shlOp));
+    return success();
+  }
+
+  return failure();
+}
+```
+
+However, you may want the full generality of canonicalization patterns, for that
+you can specify an arbitrary list of `RewritePattern`s.
+
+### Fully general C++ `RewritePattern` specifications
+
+In case ODS patterns and `matchAndRewrite`-style functions are not sufficient
+you can also specify rewrites as a general set of `RewritePattern`s:
 
 ```c++
 /// Multi-step rewrite using "match" and "rewrite". This allows for separating
@@ -201,19 +252,6 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 In the C++ rewrite the static benefit of the rewrite pattern is specified at
 construction. While in the pattern generator a simple heuristic is currently
 employed based around the number of ops matched and replaced.
-
-In the case where you have a registered op and want to use a benefit of 1, you
-can even define the pattern as a C function:
-
-```c++
-static LogicalResult
-convertTFLeakyRelu(TFLeakyReluOp op, PatternRewriter &rewriter) {
-  rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
-      op, op->getResult(0).getType(), op->getOperand(0),
-      /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
-  return success();
-}
-```
 
 The above rule did not capture the matching operands/attributes, but in general
 the `match` function in a multi-step rewrite may populate and return a

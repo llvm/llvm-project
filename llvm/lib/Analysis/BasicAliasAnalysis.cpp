@@ -672,11 +672,21 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return Worklist.empty();
 }
 
+static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
+  return II && II->getIntrinsicID() == IID;
+}
+
 /// Returns the behavior when calling the given call site.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->doesNotAccessMemory())
     // Can't do better than this.
     return FMRB_DoesNotAccessMemory;
+
+  // The assume intrinsic can have operand bundles, but still only accesses
+  // inaccessible memory in that case (to maintain control dependencies).
+  if (isIntrinsicCall(Call, Intrinsic::assume))
+    return FMRB_OnlyAccessesInaccessibleMem;
 
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
@@ -769,11 +779,6 @@ ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   return AAResultBase::getArgModRefInfo(Call, ArgIdx);
-}
-
-static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
-  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
-  return II && II->getIntrinsicID() == IID;
 }
 
 #ifndef NDEBUG
