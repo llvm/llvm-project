@@ -554,6 +554,7 @@ static Value computeLoopIndependentUpperBound(OpBuilder &b, scf::ForOp outer,
       backwardsSliceOnlyHasOpsOfType<scf::ForOp, AffineMinOp, AffineApplyOp>(
           outer, v);
   assert(ok && "expected to only be defined by scf::ForOp and AffineMinOp");
+  (void)ok;
 
   // Compute a backward slice up to, but not including, `outer`.
   llvm::SetVector<Operation *> backwardSlice;
