@@ -35,6 +35,8 @@
 ! CHECK-NEXT: -ffree-form            Process source files in free form
 ! CHECK-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
+! CHECK-NEXT: -fintrinsic-modules-path <dir>
+! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
