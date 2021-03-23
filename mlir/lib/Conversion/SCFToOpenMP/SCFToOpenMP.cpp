@@ -92,7 +92,7 @@ static LogicalResult applyPatterns(FuncOp func) {
 
   RewritePatternSet patterns(func.getContext());
   patterns.add<ParallelOpLowering>(func.getContext());
-  FrozenRewritePatternList frozen(std::move(patterns));
+  FrozenRewritePatternSet frozen(std::move(patterns));
   return applyPartialConversion(func, target, frozen);
 }
 

@@ -14,7 +14,7 @@
 #ifndef MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 #define MLIR_TRANSFORMS_GREEDYPATTERNREWRITEDRIVER_H_
 
-#include "mlir/Rewrite/FrozenRewritePatternList.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 
 namespace mlir {
 
@@ -35,25 +35,25 @@ namespace mlir {
 ///       before attempting to match any of the provided patterns.
 LogicalResult
 applyPatternsAndFoldGreedily(Operation *op,
-                             const FrozenRewritePatternList &patterns,
+                             const FrozenRewritePatternSet &patterns,
                              bool useTopDownTraversal = true);
 
 /// Rewrite the regions of the specified operation, with a user-provided limit
 /// on iterations to attempt before reaching convergence.
 LogicalResult applyPatternsAndFoldGreedily(
-    Operation *op, const FrozenRewritePatternList &patterns,
+    Operation *op, const FrozenRewritePatternSet &patterns,
     unsigned maxIterations, bool useTopDownTraversal = true);
 
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                             const FrozenRewritePatternList &patterns,
+                             const FrozenRewritePatternSet &patterns,
                              bool useTopDownTraversal = true);
 
 /// Rewrite the given regions, with a user-provided limit on iterations to
 /// attempt before reaching convergence.
 LogicalResult applyPatternsAndFoldGreedily(
-    MutableArrayRef<Region> regions, const FrozenRewritePatternList &patterns,
+    MutableArrayRef<Region> regions, const FrozenRewritePatternSet &patterns,
     unsigned maxIterations, bool useTopDownTraversal = true);
 
 /// Applies the specified patterns on `op` alone while also trying to fold it,
@@ -62,7 +62,7 @@ LogicalResult applyPatternsAndFoldGreedily(
 /// was folded away or erased as a result of becoming dead. Note: This does not
 /// apply any patterns recursively to the regions of `op`.
 LogicalResult applyOpPatternsAndFold(Operation *op,
-                                     const FrozenRewritePatternList &patterns,
+                                     const FrozenRewritePatternSet &patterns,
                                      bool *erased = nullptr);
 
 } // end namespace mlir

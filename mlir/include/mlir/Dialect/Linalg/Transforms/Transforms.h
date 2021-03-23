@@ -19,7 +19,7 @@
 
 namespace mlir {
 class BufferizeTypeConverter;
-class FrozenRewritePatternList;
+class FrozenRewritePatternSet;
 
 namespace linalg {
 
@@ -964,8 +964,8 @@ public:
 //===----------------------------------------------------------------------===//
 /// Helper function to allow applying rewrite patterns, interleaved with more
 /// global transformations, in a staged fashion:
-///   1. the first stage consists of a list of FrozenRewritePatternList. Each
-///   FrozenRewritePatternList in this list is applied once, in order.
+///   1. the first stage consists of a list of FrozenRewritePatternSet. Each
+///   FrozenRewritePatternSet in this list is applied once, in order.
 ///   2. the second stage consists of a single OwningRewritePattern that is
 ///   applied greedily until convergence.
 ///   3. the third stage consists of applying a lambda, generally used for
@@ -973,8 +973,8 @@ public:
 ///   transformations where patterns can be ordered and applied at a finer
 ///   granularity than a sequence of traditional compiler passes.
 LogicalResult applyStagedPatterns(
-    Operation *op, ArrayRef<FrozenRewritePatternList> stage1Patterns,
-    const FrozenRewritePatternList &stage2Patterns,
+    Operation *op, ArrayRef<FrozenRewritePatternSet> stage1Patterns,
+    const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 
 //===----------------------------------------------------------------------===//

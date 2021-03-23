@@ -894,7 +894,7 @@ private:
   PDLPatternModule pdlPatterns;
 };
 
-// TODO: RewritePatternSet is soft-deprecated and will be removed in the
+// TODO: OwningRewritePatternList is soft-deprecated and will be removed in the
 // future.
 using OwningRewritePatternList = RewritePatternSet;
 
