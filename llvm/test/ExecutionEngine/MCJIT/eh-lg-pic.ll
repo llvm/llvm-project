@@ -1,5 +1,5 @@
 ; REQUIRES: cxx-shared-library
-; RUN: %lli -jit-kind=mcjit -relocation-model=pic -code-model=large %s
+; RUN: %lli -relocation-model=pic -code-model=large %s
 ; XFAIL: cygwin, windows-msvc, windows-gnu, mips-, mipsel-, i686, i386, aarch64, arm
 declare i8* @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(i8*, i8*, i8*)

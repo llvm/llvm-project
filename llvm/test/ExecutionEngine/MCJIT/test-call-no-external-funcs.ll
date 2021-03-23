@@ -1,4 +1,3 @@
-; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 define i32 @_Z14func_exit_codev() nounwind uwtable {

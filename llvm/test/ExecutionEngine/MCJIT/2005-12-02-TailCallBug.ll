@@ -1,5 +1,4 @@
 ; PR672
-; RUN: %lli -jit-kind=mcjit %s
 ; RUN: %lli %s
 ; XFAIL: mcjit-ia32
 

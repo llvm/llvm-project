@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s > /dev/null
+; RUN: %lli -force-interpreter=true %s > /dev/null
 
 define i32 @main() {
     %shamt = add <2 x i8> <i8 0, i8 0>, <i8 1, i8 2>

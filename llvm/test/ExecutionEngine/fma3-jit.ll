@@ -1,4 +1,3 @@
-; RUN: %lli -jit-kind=mcjit %s | FileCheck %s
 ; RUN: %lli %s | FileCheck %s
 ; REQUIRES: fma3
 ; CHECK: 12.000000
