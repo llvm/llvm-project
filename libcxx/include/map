@@ -480,7 +480,7 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__config>
 #include <__tree>
 #include <__node_handle>
-#include <iterator>
+#include <iterator> // __libcpp_erase_if_container
 #include <memory>
 #include <utility>
 #include <functional>
@@ -1660,7 +1660,7 @@ template <class _Key, class _Tp, class _Compare, class _Allocator,
 inline _LIBCPP_INLINE_VISIBILITY
     typename map<_Key, _Tp, _Compare, _Allocator>::size_type
     erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -2246,7 +2246,7 @@ inline _LIBCPP_INLINE_VISIBILITY
     typename multimap<_Key, _Tp, _Compare, _Allocator>::size_type
     erase_if(multimap<_Key, _Tp, _Compare, _Allocator>& __c,
              _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
