@@ -3421,6 +3421,15 @@ vec_doubleo(vector float __a) {
   return __builtin_vsx_xvcvspdp(vec_sld(__a, __a, 4));
 #endif
 }
+
+/* vec_cvf */
+static __inline__ vector double __ATTRS_o_ai vec_cvf(vector float __a) {
+  return vec_doublee(__a);
+}
+
+static __inline__ vector float __ATTRS_o_ai vec_cvf(vector double __a) {
+  return vec_floate(__a);
+}
 #endif
 
 /* vec_div */
@@ -12580,6 +12589,16 @@ static __inline__ void __ATTRS_o_ai vec_vsx_st(vector unsigned char __a,
 #ifdef __VSX__
 #define vec_xxpermdi __builtin_vsx_xxpermdi
 #define vec_xxsldwi __builtin_vsx_xxsldwi
+#define vec_permi(__a, __b, __c)                                               \
+  _Generic((__a), vector signed long long                                      \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)),                       \
+             vector unsigned long long                                         \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)),                       \
+             vector double                                                     \
+           : __builtin_shufflevector((__a), (__b), (((__c) >> 1) & 0x1),       \
+                                     (((__c)&0x1) + 2)))
 #endif
 
 /* vec_xor */
@@ -16833,6 +16852,16 @@ vec_vgbbd(vector signed char __a) {
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_vgbbd(vector unsigned char __a) {
   return __builtin_altivec_vgbbd(__a);
+}
+
+static __inline__ vector signed long long __ATTRS_o_ai
+vec_gbb(vector signed long long __a) {
+  return __builtin_altivec_vgbbd((vector unsigned char)__a);
+}
+
+static __inline__ vector unsigned long long __ATTRS_o_ai
+vec_gbb(vector unsigned long long __a) {
+  return __builtin_altivec_vgbbd((vector unsigned char)__a);
 }
 
 static __inline__ vector long long __ATTRS_o_ai
