@@ -208,14 +208,14 @@ static bool filesCompareEqual(StringRef fname1, StringRef fname2) {
   using namespace llvm;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> file1 = MemoryBuffer::getFile(
-      fname1, /*FileSize*/ -1, /*RequiresNullTerminator*/ true,
-      /*IsVolatile*/ false, /*IsText*/ true);
+      fname1, /*FileSize=*/-1, /*RequiresNullTerminator=*/true,
+      /*IsVolatile=*/false, /*IsText=*/true);
   if (!file1)
     return false;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> file2 = MemoryBuffer::getFile(
-      fname2, /*FileSize*/ -1, /*RequiresNullTerminator*/ true,
-      /*IsVolatile*/ false, /*IsText*/ true);
+      fname2, /*FileSize=*/-1, /*RequiresNullTerminator=*/true,
+      /*IsVolatile=*/false, /*IsText=*/true);
   if (!file2)
     return false;
 
@@ -244,9 +244,9 @@ static bool verifyTransformedFiles(ArrayRef<std::string> resultFiles) {
   if (RemappingsFile.empty())
     inputBuf = MemoryBuffer::getSTDIN();
   else
-    inputBuf = MemoryBuffer::getFile(RemappingsFile, /*FileSize*/ -1,
-                                     /*RequiresNullTerminator*/ true,
-                                     /*IsVolatile*/ false, /*IsText*/ true);
+    inputBuf = MemoryBuffer::getFile(RemappingsFile, /*FileSize=*/-1,
+                                     /*RequiresNullTerminator=*/true,
+                                     /*IsVolatile=*/false, /*IsText=*/true);
   if (!inputBuf) {
     errs() << "error: could not read remappings input\n";
     return true;
