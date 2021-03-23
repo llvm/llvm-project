@@ -758,9 +758,20 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
   ///   %inc = binop %step, %iv
   ///
-  /// WARNING: For non-commutative operators, we will match both forms.  This
-  /// results in some odd recurrence structures.  Callers may wish to filter
-  /// out recurrences where the phi is not the LHS of the returned operator.
+  /// A first order recurrence is a formula with the form: X_n = f(X_(n-1))
+  ///
+  /// A couple of notes on subtleties in that definition:
+  /// * The Step does not have to be loop invariant.  In math terms, it can
+  ///   be a free variable.  We allow recurrences with both constant and
+  ///   variable coefficients. Callers may wish to filter cases where Step
+  ///   does not dominate P.
+  /// * For non-commutative operators, we will match both forms.  This
+  ///   results in some odd recurrence structures.  Callers may wish to filter
+  ///   out recurrences where the phi is not the LHS of the returned operator.
+  /// * Because of the structure matched, the caller can assume as a post
+  ///   condition of the match the presence of a Loop with P's parent as it's
+  ///   header *except* in unreachable code.  (Dominance decays in unreachable
+  ///   code.)
   ///
   /// NOTE: This is intentional simple.  If you want the ability to analyze
   /// non-trivial loop conditons, see ScalarEvolution instead.
