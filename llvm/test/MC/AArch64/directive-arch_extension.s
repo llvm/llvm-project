@@ -56,6 +56,10 @@ irg x0, x1
 tlbi vmalle1os
 // CHECK: tlbi vmalle1os
 
+.arch_extension pan
+mrs x0, pan
+// CHECK: mrs x0, PAN
+
 .arch_extension pan-rwv
 at s1e1wp, x2
 // CHECK: at s1e1wp, x2
