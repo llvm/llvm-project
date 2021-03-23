@@ -145,6 +145,7 @@ struct IntrinsicLibrary {
   mlir::Value genIAnd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIEOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIOr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -247,6 +248,7 @@ struct IntrinsicHandler {
 
 constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
 constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
+constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
 using I = IntrinsicLibrary;
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
@@ -272,6 +274,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"iand", &I::genIAnd},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIEOr},
+    {"index",
+     &I::genIndex,
+     {{{"string", asAddr},
+       {"substring", asAddr},
+       {"back", asAddr},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
     {"ior", &I::genIOr},
     {"len", &I::genLen},
     {"len_trim", &I::genLenTrim},
@@ -1271,6 +1280,38 @@ mlir::Value IntrinsicLibrary::genIEOr(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::XOrOp>(loc, args[0], args[1]);
+}
+
+// INDEX
+fir::ExtendedValue
+IntrinsicLibrary::genIndex(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 2);
+  auto string = builder.createBox(loc, args[0]);
+  auto substring = builder.createBox(loc, args[1]);
+  auto backOpt = builder.createBox(loc, args[2]);
+  mlir::Value kind = /* FIXME: get default from KindMap or ... */
+      builder.createIntegerConstant(loc, builder.getIndexType(), 4);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  Fortran::lower::genIndex(builder, loc, resultIrBox, string, substring,
+                           backOpt, kind);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, fir::getBase(box));
+        return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "result of INDEX is not a scalar integer");
+      });
 }
 
 // IOR

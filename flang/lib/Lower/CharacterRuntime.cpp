@@ -87,6 +87,27 @@ Fortran::lower::genCharCompare(Fortran::lower::FirOpBuilder &builder,
                            rhsBuffer, fir::getLen(rhs));
 }
 
+void Fortran::lower::genIndex(Fortran::lower::FirOpBuilder &builder,
+                              mlir::Location loc, mlir::Value resultBox,
+                              mlir::Value stringBox, mlir::Value substringBox,
+                              mlir::Value backOpt, mlir::Value kind) {
+  auto indexFunc = getRuntimeFunc<mkRTKey(Index)>(loc, builder);
+  auto fTy = indexFunc.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
+
+  llvm::SmallVector<mlir::Value> args;
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(0), resultBox));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(1), stringBox));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(2), substringBox));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(3), backOpt));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(4), kind));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(5), sourceFile));
+  args.emplace_back(builder.createConvert(loc, fTy.getInput(6), sourceLine));
+  builder.create<fir::CallOp>(loc, indexFunc, args);
+}
+
 void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
                              mlir::Location loc, mlir::Value resultBox,
                              mlir::Value stringBox) {
