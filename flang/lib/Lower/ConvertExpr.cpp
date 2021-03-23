@@ -1523,11 +1523,9 @@ public:
       if (arg.passBy == PassBy::Value) {
         auto *argVal = genval(*expr).getUnboxed();
         if (!argVal)
-          mlir::emitError(
-              loc,
-              "Lowering internal error: passing non trivial value by value");
-        else
-          caller.placeInput(arg, *argVal);
+          fir::emitFatalError(
+              loc, "internal error: passing non trivial value by value");
+        caller.placeInput(arg, *argVal);
         continue;
       }
 
@@ -1559,10 +1557,9 @@ public:
               // and after the call to a contiguous character argument.
               TODO(loc, "lowering actual arguments descriptor to boxchar");
             },
-            [&](const auto &x) {
-              mlir::emitError(loc, "Lowering internal error: actual "
-                                   "argument is not a character");
-              return mlir::Value{};
+            [&](const auto &) -> mlir::Value {
+              fir::emitFatalError(
+                  loc, "internal error: actual argument is not a character");
             });
         caller.placeInput(arg, boxChar);
       } else if (arg.passBy == PassBy::Box) {
