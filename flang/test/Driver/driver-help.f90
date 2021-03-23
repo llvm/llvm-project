@@ -35,6 +35,8 @@
 ! HELP-NEXT: -ffree-form            Process source files in free form
 ! HELP-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-NEXT: -fintrinsic-modules-path <dir>
+! HELP-NEXT:                        Specify where to find the compiled intrinsic modules
 ! HELP-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! HELP-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-NEXT: -fno-color-diagnostics Disable colors in diagnostics
@@ -83,6 +85,8 @@
 ! HELP-FC1-NEXT: -fget-symbols-sources   Dump symbols and their source code locations
 ! HELP-FC1-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! HELP-FC1-NEXT: -finput-charset=<value> Specify the default character set for source files
+! HELP-FC1-NEXT: -fintrinsic-modules-path <dir>
+! HELP-FC1-NEXT:                        Specify where to find the compiled intrinsic modules
 ! HELP-FC1-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! HELP-FC1-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC

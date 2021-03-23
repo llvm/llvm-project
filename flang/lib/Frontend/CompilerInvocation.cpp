@@ -21,6 +21,8 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
@@ -285,6 +287,16 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
   return dashX;
 }
 
+// Generate the path to look for intrinsic modules
+static std::string getIntrinsicDir() {
+  // TODO: Find a system independent API
+  llvm::SmallString<128> driverPath;
+  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  llvm::sys::path::remove_filename(driverPath);
+  driverPath.append("/../include/flang/");
+  return std::string(driverPath);
+}
+
 /// Parses all preprocessor input arguments and populates the preprocessor
 /// options accordingly.
 ///
@@ -305,6 +317,12 @@ static void parsePreprocessorArgs(
   // Add the ordered list of -I's.
   for (const auto *currentArg : args.filtered(clang::driver::options::OPT_I))
     opts.searchDirectoriesFromDashI.emplace_back(currentArg->getValue());
+
+  // Prepend the ordered list of -intrinsic-modules-path
+  // to the default location to search.
+  for (const auto *currentArg :
+      args.filtered(clang::driver::options::OPT_fintrinsic_modules_path))
+    opts.searchDirectoriesFromIntrModPath.emplace_back(currentArg->getValue());
 }
 
 /// Parses all semantic related arguments and populates the variables
@@ -499,10 +517,20 @@ void CompilerInvocation::setFortranOpts() {
 
   collectMacroDefinitions(preprocessorOptions, fortranOptions);
 
+  // Adding search directories specified by -I
   fortranOptions.searchDirectories.insert(
       fortranOptions.searchDirectories.end(),
       preprocessorOptions.searchDirectoriesFromDashI.begin(),
       preprocessorOptions.searchDirectoriesFromDashI.end());
+
+  // Add the ordered list of -intrinsic-modules-path
+  fortranOptions.searchDirectories.insert(
+      fortranOptions.searchDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
+  //  Add the default intrinsic module directory at the end
+  fortranOptions.searchDirectories.emplace_back(getIntrinsicDir());
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
