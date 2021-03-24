@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // path proximate(const path& p, error_code &ec)
@@ -29,7 +27,7 @@
 static int count_path_elems(const fs::path& p) {
   int count = 0;
   for (auto& elem : p) {
-    if (elem != "/" && elem != "")
+    if (elem != p.root_name() && elem != "/" && elem != "")
       ++count;
   }
   return count;
@@ -59,7 +57,7 @@ TEST_CASE(basic_test) {
   path dot_dot_to_root;
   for (int i=0; i < cwd_depth; ++i)
     dot_dot_to_root /= "..";
-  path relative_cwd = cwd.native().substr(1);
+  path relative_cwd = cwd.native().substr(cwd.root_path().native().size());
   // clang-format off
   struct {
     fs::path input;
@@ -77,11 +75,51 @@ TEST_CASE(basic_test) {
       {"a", "/", relative_cwd / "a"},
       {"a/b", "/", relative_cwd / "a/b"},
       {"a", "/net", ".." / relative_cwd / "a"},
+#ifdef _WIN32
+      {"//foo/", "//foo", "//foo/"},
+      {"//foo", "//foo/", "//foo"},
+#else
       {"//foo/", "//foo", "."},
       {"//foo", "//foo/", "."},
+#endif
       {"//foo", "//foo", "."},
       {"//foo/", "//foo/", "."},
-      {"//base", "a", dot_dot_to_root / "../base"},
+#ifdef _WIN32
+      {"//foo", "a", "//foo"},
+      {"//foo/a", "//bar", "//foo/a"},
+      {"//foo/a", "//bar/", "//foo/a"},
+      {"//foo/a", "b", "//foo/a"},
+      {"//foo/a", "/b", "//foo/a"},
+      {"//foo/a", "//bar/b", "//foo/a"},
+      // Using X: instead of C: to avoid influence from the CWD being under C:
+      {"X:/a", "X:/b", "../a"},
+      {"X:/a", "X:b", "X:/a"},
+      {"X:/a", "Y:/a", "X:/a"},
+      {"X:/a", "Y:/b", "X:/a"},
+      {"X:/a", "Y:b", "X:/a"},
+      {"X:a", "X:/b", "X:a"},
+      {"X:a", "X:b", "../a"},
+      {"X:a", "Y:/a", "X:a"},
+      {"X:a", "Y:/b", "X:a"},
+      {"X:a", "Y:b", "X:a"},
+#else
+      {"//foo", "a", dot_dot_to_root / "../foo"},
+      {"//foo/a", "//bar", "../foo/a"},
+      {"//foo/a", "//bar/", "../foo/a"},
+      {"//foo/a", "b", dot_dot_to_root / "../foo/a"},
+      {"//foo/a", "/b", "../foo/a"},
+      {"//foo/a", "//bar/b", "../../foo/a"},
+      {"X:/a", "X:/b", "../a"},
+      {"X:/a", "X:b", "../X:/a"},
+      {"X:/a", "Y:/a", "../../X:/a"},
+      {"X:/a", "Y:/b", "../../X:/a"},
+      {"X:/a", "Y:b", "../X:/a"},
+      {"X:a", "X:/b", "../../X:a"},
+      {"X:a", "X:b", "../X:a"},
+      {"X:a", "Y:/a", "../../X:a"},
+      {"X:a", "Y:/b", "../../X:a"},
+      {"X:a", "Y:b", "../X:a"},
+#endif
       {"a", "a", "."},
       {"a/b", "a/b", "."},
       {"a/b/c/", "a/b/c/", "."},
@@ -98,8 +136,10 @@ TEST_CASE(basic_test) {
   for (auto& TC : TestCases) {
     ++ID;
     std::error_code ec = GetTestEC();
-    fs::path p(TC.input);
+    fs::path p = TC.input;
     const fs::path output = fs::proximate(p, TC.base, ec);
+    fs::path expect = TC.expect;
+    expect.make_preferred();
     if (ec) {
       TEST_CHECK(!ec);
       std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
@@ -107,9 +147,9 @@ TEST_CASE(basic_test) {
                   "  Base: '%s'\n"
                   "  Expected: '%s'\n",
         ID, TC.input.string().c_str(), TC.base.string().c_str(),
-        TC.expect.string().c_str());
-    } else if (!PathEq(output, TC.expect)) {
-      TEST_CHECK(PathEq(output, TC.expect));
+        expect.string().c_str());
+    } else if (!PathEq(output, expect)) {
+      TEST_CHECK(PathEq(output, expect));
 
       const path canon_input = fs::weakly_canonical(TC.input);
       const path canon_base = fs::weakly_canonical(TC.base);
@@ -123,7 +163,7 @@ TEST_CASE(basic_test) {
                   "  Canon Input: '%s'\n"
                   "  Canon Base: '%s'\n",
         ID, TC.input.string().c_str(), TC.base.string().c_str(),
-        TC.expect.string().c_str(), output.string().c_str(),
+        expect.string().c_str(), output.string().c_str(),
         lexically_p.string().c_str(), canon_input.string().c_str(),
         canon_base.string().c_str());
     }
