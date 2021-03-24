@@ -679,15 +679,6 @@ int64_t getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
                      const ValueToValueMap &StridesMap = ValueToValueMap(),
                      bool Assume = false, bool ShouldCheckWrap = true);
 
-/// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
-/// compatible and it is possible to calculate the distance between them. This
-/// is a simple API that does not depend on the analysis pass.
-/// \param StrictCheck Ensure that the calculated distance matches the
-/// type-based one after all the bitcasts removal in the provided pointers.
-Optional<int> getPointersDiff(Value *PtrA, Value *PtrB, const DataLayout &DL,
-                              ScalarEvolution &SE, bool StrictCheck = false,
-                              bool CheckType = true);
-
 /// Attempt to sort the pointers in \p VL and return the sorted indices
 /// in \p SortedIndices, if reordering is required.
 ///
