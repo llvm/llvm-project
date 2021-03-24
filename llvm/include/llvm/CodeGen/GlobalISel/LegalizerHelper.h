@@ -345,6 +345,9 @@ public:
   LegalizeResult lowerLoad(MachineInstr &MI);
   LegalizeResult lowerStore(MachineInstr &MI);
   LegalizeResult lowerBitCount(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
+  LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
+  LegalizeResult lowerFunnelShift(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
