@@ -8,6 +8,7 @@ add_clang_unittest(ASTTests
   ASTContextParentMapTest.cpp
   ASTImporterFixtures.cpp
   ASTImporterTest.cpp
+  ASTImporterObjCTest.cpp
   ASTImporterGenericRedeclTest.cpp
   ASTImporterODRStrategiesTest.cpp
   ASTImporterVisibilityTest.cpp
