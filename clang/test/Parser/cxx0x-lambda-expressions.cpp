@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++11 -Wno-c99-designator %s
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2a -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2b -Wno-c99-designator %s
 
 enum E { e };
 
@@ -17,7 +18,7 @@ class C {
     [&this] {}; // expected-error {{'this' cannot be captured by reference}}
     [&,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
     [=,] {}; // expected-error {{expected variable name or 'this' in lambda capture list}}
-    [] {}; 
+    [] {};
     [=] (int i) {}; 
     [&] (int) mutable -> void {}; 
     [foo,bar] () { return 3; }; 
@@ -27,8 +28,12 @@ class C {
     [] () -> class C { return C(); };
     [] () -> enum E { return e; };
 
-    [] -> int { return 0; }; // expected-error{{lambda requires '()' before return type}}
-    [] mutable -> int { return 0; }; // expected-error{{lambda requires '()' before 'mutable'}}
+    [] -> int { return 0; };
+    [] mutable -> int { return 0; };
+#if __cplusplus <= 202002L
+    // expected-warning@-3 {{lambda without a parameter clause is a C++2b extension}}
+    // expected-warning@-3 {{is a C++2b extension}}
+#endif
     [](int) -> {}; // PR13652 expected-error {{expected a type}}
     return 1;
   }
@@ -101,7 +106,10 @@ class C {
   }
 
   void attributes() {
-    [] __attribute__((noreturn)) {}; // expected-error {{lambda requires '()' before attribute specifier}}
+    [] __attribute__((noreturn)){};
+#if __cplusplus <= 202002L
+    // expected-warning@-2 {{is a C++2b extension}}
+#endif
     []() [[]]
       mutable {}; // expected-error {{expected body of lambda expression}}
 
@@ -118,11 +126,29 @@ class C {
 
     // Testing support for P2173 on adding attributes to the declaration
     // rather than the type.
-    [] [[]] () {}; // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
-#if __cplusplus > 201703L
-    [] <typename> [[]] () {};  // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
+    [][[]](){};
+#if __cplusplus <= 202002L
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
 #endif
-    [] [[]] {}; // expected-warning {{an attribute specifier sequence in this position is a C++2b extension}}
+#if __cplusplus > 201703L
+    []<typename>[[]](){};
+#if __cplusplus <= 202002L
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
+#endif
+#endif
+    [][[]]{};
+#if __cplusplus <= 202002L
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
+#endif
+  }
+
+  void missing_parens() {
+    [] mutable {};
+    [] noexcept {};
+#if __cplusplus <= 202002L
+    // expected-warning@-3 {{is a C++2b extension}}
+    // expected-warning@-3 {{is a C++2b extension}}
+#endif
   }
 };
 
