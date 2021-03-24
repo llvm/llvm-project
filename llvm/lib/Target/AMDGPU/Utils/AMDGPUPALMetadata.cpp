@@ -41,7 +41,7 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
     }
     return;
   }
-  BlobType = ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  BlobType = ELF::NT_AMD_PAL_METADATA;
   NamedMD = M.getNamedMetadata("amdgpu.pal.metadata");
   if (!NamedMD || !NamedMD->getNumOperands()) {
     // Emit msgpack metadata by default
@@ -69,7 +69,7 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
 // Metadata.
 bool AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
   BlobType = Type;
-  if (Type == ELF::NT_AMD_AMDGPU_PAL_METADATA)
+  if (Type == ELF::NT_AMD_PAL_METADATA)
     return setFromLegacyBlob(Blob);
   return setFromMsgPackBlob(Blob);
 }
@@ -688,7 +688,7 @@ void AMDGPUPALMetadata::toString(std::string &String) {
 // a .note record of the specified AMD type. Returns an empty blob if
 // there is no PAL metadata,
 void AMDGPUPALMetadata::toBlob(unsigned Type, std::string &Blob) {
-  if (Type == ELF::NT_AMD_AMDGPU_PAL_METADATA)
+  if (Type == ELF::NT_AMD_PAL_METADATA)
     toLegacyBlob(Blob);
   else if (Type)
     toMsgPackBlob(Blob);
@@ -825,7 +825,7 @@ const char *AMDGPUPALMetadata::getVendor() const {
 }
 
 // Get .note record type of metadata blob to be emitted:
-// ELF::NT_AMD_AMDGPU_PAL_METADATA (legacy key=val format), or
+// ELF::NT_AMD_PAL_METADATA (legacy key=val format), or
 // ELF::NT_AMDGPU_METADATA (MsgPack format), or
 // 0 (no PAL metadata).
 unsigned AMDGPUPALMetadata::getType() const {
@@ -834,12 +834,12 @@ unsigned AMDGPUPALMetadata::getType() const {
 
 // Return whether the blob type is legacy PAL metadata.
 bool AMDGPUPALMetadata::isLegacy() const {
-  return BlobType == ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  return BlobType == ELF::NT_AMD_PAL_METADATA;
 }
 
 // Set legacy PAL metadata format.
 void AMDGPUPALMetadata::setLegacy() {
-  BlobType = ELF::NT_AMD_AMDGPU_PAL_METADATA;
+  BlobType = ELF::NT_AMD_PAL_METADATA;
 }
 
 // Erase all PAL metadata.

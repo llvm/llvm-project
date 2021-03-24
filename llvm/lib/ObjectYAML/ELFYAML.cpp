@@ -155,9 +155,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
   ECase(NT_FREEBSD_PROCSTAT_AUXV);
   // AMD specific notes. (Code Object V2)
-  ECase(NT_AMD_AMDGPU_HSA_METADATA);
-  ECase(NT_AMD_AMDGPU_ISA);
-  ECase(NT_AMD_AMDGPU_PAL_METADATA);
+  ECase(NT_AMD_HSA_METADATA);
+  ECase(NT_AMD_HSA_ISA_NAME);
+  ECase(NT_AMD_PAL_METADATA);
   // AMDGPU specific notes. (Code Object V3)
   ECase(NT_AMDGPU_METADATA);
 #undef ECase
@@ -546,8 +546,33 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1031, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1032, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1033, EF_AMDGPU_MACH);
-    BCase(EF_AMDGPU_XNACK);
-    BCase(EF_AMDGPU_SRAM_ECC);
+    switch (Object->Header.ABIVersion) {
+    default:
+      // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
+      LLVM_FALLTHROUGH;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      BCase(EF_AMDGPU_FEATURE_XNACK_V3);
+      BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_ANY_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_OFF_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_ON_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_ANY_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_OFF_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_ON_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      break;
+    }
     break;
   default:
     break;
