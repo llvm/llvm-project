@@ -215,16 +215,25 @@ define i1 @trunc_v4i64_v4i1(<4 x i64>) {
 ; SSE-NEXT:    setnp %al
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: trunc_v4i64_v4i1:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; AVX-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX-NEXT:    vmovmskps %xmm0, %eax
-; AVX-NEXT:    testb %al, %al
-; AVX-NEXT:    setnp %al
-; AVX-NEXT:    vzeroupper
-; AVX-NEXT:    retq
+; AVX1-LABEL: trunc_v4i64_v4i1:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vmovmskps %xmm0, %eax
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    setnp %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: trunc_v4i64_v4i1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsllq $63, %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskpd %ymm0, %eax
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    setnp %al
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_v4i64_v4i1:
 ; AVX512F:       # %bb.0:
@@ -290,14 +299,11 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 ;
 ; AVX1-LABEL: trunc_v8i32_v8i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u>
-; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
@@ -305,11 +311,8 @@ define i1 @trunc_v8i32_v8i1(<8 x i32>) {
 ;
 ; AVX2-LABEL: trunc_v8i32_v8i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskps %ymm0, %eax
 ; AVX2-NEXT:    testb %al, %al
 ; AVX2-NEXT:    setnp %al
 ; AVX2-NEXT:    vzeroupper
@@ -548,17 +551,14 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) {
 ;
 ; AVX1-LABEL: trunc_v8i64_v8i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} ymm2 = [65535,65535,65535,65535]
-; AVX1-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpackusdw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vandps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vpackusdw %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX1-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vmovmskps %ymm0, %eax
 ; AVX1-NEXT:    testb %al, %al
 ; AVX1-NEXT:    setnp %al
 ; AVX1-NEXT:    vzeroupper
@@ -569,11 +569,8 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) {
 ; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]
-; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
+; AVX2-NEXT:    vmovmskps %ymm0, %eax
 ; AVX2-NEXT:    testb %al, %al
 ; AVX2-NEXT:    setnp %al
 ; AVX2-NEXT:    vzeroupper

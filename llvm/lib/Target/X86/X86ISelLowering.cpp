@@ -39201,17 +39201,22 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       Op, DemandedBits, DemandedElts, DAG, Depth);
 }
 
-// Helper to peek through bitops/setcc to determine size of source vector.
+// Helper to peek through bitops/trunc/setcc to determine size of source vector.
 // Allows combineBitcastvxi1 to determine what size vector generated a <X x i1>.
-static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size) {
+static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
+                                      bool AllowTruncate) {
   switch (Src.getOpcode()) {
+  case ISD::TRUNCATE:
+    if (!AllowTruncate)
+      return false;
+    LLVM_FALLTHROUGH;
   case ISD::SETCC:
     return Src.getOperand(0).getValueSizeInBits() == Size;
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
-    return checkBitcastSrcVectorSize(Src.getOperand(0), Size) &&
-           checkBitcastSrcVectorSize(Src.getOperand(1), Size);
+    return checkBitcastSrcVectorSize(Src.getOperand(0), Size, AllowTruncate) &&
+           checkBitcastSrcVectorSize(Src.getOperand(1), Size, AllowTruncate);
   }
   return false;
 }
@@ -39266,6 +39271,7 @@ static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
                                           SDValue Src, const SDLoc &DL) {
   switch (Src.getOpcode()) {
   case ISD::SETCC:
+  case ISD::TRUNCATE:
     return DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
   case ISD::AND:
   case ISD::XOR:
@@ -39349,7 +39355,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     SExtVT = MVT::v4i32;
     // For cases such as (i4 bitcast (v4i1 setcc v4i64 v1, v2))
     // sign-extend to a 256-bit operation to avoid truncation.
-    if (Subtarget.hasAVX() && checkBitcastSrcVectorSize(Src, 256)) {
+    if (Subtarget.hasAVX() &&
+        checkBitcastSrcVectorSize(Src, 256, Subtarget.hasAVX2())) {
       SExtVT = MVT::v4i64;
       PropagateSExt = true;
     }
@@ -39361,8 +39368,8 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
     // If the setcc operand is 128-bit, prefer sign-extending to 128-bit over
     // 256-bit because the shuffle is cheaper than sign extending the result of
     // the compare.
-    if (Subtarget.hasAVX() && (checkBitcastSrcVectorSize(Src, 256) ||
-                               checkBitcastSrcVectorSize(Src, 512))) {
+    if (Subtarget.hasAVX() && (checkBitcastSrcVectorSize(Src, 256, true) ||
+                               checkBitcastSrcVectorSize(Src, 512, true))) {
       SExtVT = MVT::v8i32;
       PropagateSExt = true;
     }
@@ -39387,7 +39394,7 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
       break;
     }
     // Split if this is a <64 x i8> comparison result.
-    if (checkBitcastSrcVectorSize(Src, 512)) {
+    if (checkBitcastSrcVectorSize(Src, 512, false)) {
       SExtVT = MVT::v64i8;
       break;
     }
