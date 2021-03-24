@@ -3011,15 +3011,11 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   StringRef InstallDir = GCCInstallation.getInstallPath();
   StringRef TripleStr = GCCInstallation.getTriple().str();
   const Multilib &Multilib = GCCInstallation.getMultilib();
-  const std::string Triple = getMultiarchTriple(
-      getDriver(), GCCInstallation.getTriple(), getDriver().SysRoot);
-  const std::string TargetMultiarchTriple =
-      getMultiarchTriple(getDriver(), getTriple(), getDriver().SysRoot);
   const GCCVersion &Version = GCCInstallation.getVersion();
 
   // Try /../$triple/include/c++/$version then /../include/c++/$version.
   if (addLibStdCXXIncludePaths(
-          LibDir.str() + "/../" + Triple + "/include/c++/" + Version.Text,
+          LibDir.str() + "/../" + TripleStr + "/include/c++/" + Version.Text,
           TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
   // Detect Debian g++-multiarch-incdir.diff.
