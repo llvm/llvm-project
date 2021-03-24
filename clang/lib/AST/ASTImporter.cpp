@@ -5066,6 +5066,11 @@ ExpectedDecl ASTNodeImporter::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
   auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
   for (auto *FoundDecl : FoundDecls) {
     if (auto *FoundProp = dyn_cast<ObjCPropertyDecl>(FoundDecl)) {
+      // Instance and class properties can share the same name but are different
+      // declarations.
+      if (FoundProp->isInstanceProperty() != D->isInstanceProperty())
+        continue;
+
       // Check property types.
       if (!Importer.IsStructurallyEquivalent(D->getType(),
                                              FoundProp->getType())) {
