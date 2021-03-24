@@ -227,6 +227,7 @@ void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[RELEASE]]
   // CHECK: switch {{.*}}, label %[[RELEASE_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 2, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQREL]]
@@ -252,6 +253,14 @@ void generalFailureOrder(atomic_int *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[ACQUIRE_ACQUIRE]]
   // CHECK: cmpxchg {{.*}} acquire acquire, align 4
+  // CHECK: br
+
+  // CHECK: [[RELEASE_MONOTONIC]]
+  // CHECK: cmpxchg {{.*}} release monotonic, align 4
+  // CHECK: br
+
+  // CHECK: [[RELEASE_ACQUIRE]]
+  // CHECK: cmpxchg {{.*}} release acquire, align 4
   // CHECK: br
 
   // CHECK: [[ACQREL_MONOTONIC]]
