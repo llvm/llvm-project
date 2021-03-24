@@ -7,202 +7,205 @@
 #
 #===----------------------------------------------------------------------===##
 
-from argparse import ArgumentParser
+import argparse
 import os
-import shutil
-import sys
-import shlex
-import json
 import re
-import libcxx.graph as dot
-import libcxx.util
-
-def print_and_exit(msg):
-    sys.stderr.write(msg + '\n')
-    sys.exit(1)
-
-def libcxx_include_path():
-    curr_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    include_dir = os.path.join(curr_dir, 'include')
-    return include_dir
-
-def get_libcxx_headers():
-    headers = []
-    include_dir = libcxx_include_path()
-    for fname in os.listdir(include_dir):
-        f = os.path.join(include_dir, fname)
-        if not os.path.isfile(f):
-            continue
-        base, ext = os.path.splitext(fname)
-        if (ext == '' or ext == '.h') and (not fname.startswith('__') or fname == '__config'):
-            headers += [f]
-    return headers
 
 
-def rename_headers_and_remove_test_root(graph):
-    inc_root = libcxx_include_path()
-    to_remove = set()
-    for n in graph.nodes:
-        assert 'label' in n.attributes
-        l = n.attributes['label']
-        if not l.startswith('/') and os.path.exists(os.path.join('/', l)):
-            l = '/' + l
-        if l.endswith('.tmp.cpp'):
-            to_remove.add(n)
-        if l.startswith(inc_root):
-            l = l[len(inc_root):]
-            if l.startswith('/'):
-                l = l[1:]
-        n.attributes['label'] = l
-    for n in to_remove:
-        graph.removeNode(n)
+def is_config_header(h):
+    return os.path.basename(h) in ['__config', '__libcpp_version']
 
-def remove_non_std_headers(graph):
-    inc_root = libcxx_include_path()
-    to_remove = set()
-    for n in graph.nodes:
-        test_file = os.path.join(inc_root, n.attributes['label'])
-        if not test_file.startswith(inc_root):
-            to_remove.add(n)
-    for xn in to_remove:
-        graph.removeNode(xn)
 
-class DependencyCommand(object):
-    def __init__(self, compile_commands, output_dir, new_std=None):
-        output_dir = os.path.abspath(output_dir)
-        if not os.path.isdir(output_dir):
-            print_and_exit('"%s" must point to a directory' % output_dir)
-        self.output_dir = output_dir
-        self.new_std = new_std
-        cwd,bcmd =  self._get_base_command(compile_commands)
-        self.cwd = cwd
-        self.base_cmd = bcmd
+def is_experimental_header(h):
+    return ('experimental/' in h) or ('ext/' in h)
 
-    def run_for_headers(self, header_list):
-        outputs = []
-        for header in header_list:
-            header_name = os.path.basename(header)
-            out = os.path.join(self.output_dir, ('%s.dot' % header_name))
-            outputs += [out]
-            cmd =  self.base_cmd + ["-fsyntax-only", "-Xclang", "-dependency-dot", "-Xclang", "%s" % out, '-xc++', '-']
-            libcxx.util.executeCommandOrDie(cmd, cwd=self.cwd, input='#include <%s>\n\n' % header_name)
-        return outputs
 
-    def _get_base_command(self, command_file):
-        commands = None
-        with open(command_file, 'r') as f:
-            commands = json.load(f)
-        for compile_cmd in commands:
-            file = compile_cmd['file']
-            if not file.endswith('src/algorithm.cpp'):
+def is_support_header(h):
+    return '__support/' in h
+
+
+class FileEntry:
+    def __init__(self, includes, individual_linecount):
+        self.includes = includes
+        self.individual_linecount = individual_linecount
+        self.cumulative_linecount = None  # documentation: this gets filled in later
+        self.is_graph_root = None  # documentation: this gets filled in later
+
+
+def list_all_roots_under(root):
+    result = []
+    for root, _, files in os.walk(root):
+        for fname in files:
+            if '__support' in root:
+                pass
+            elif ('.' in fname and not fname.endswith('.h')):
+                pass
+            else:
+                result.append(root + '/' + fname)
+    return result
+
+
+def build_file_entry(fname, options):
+    assert os.path.exists(fname)
+
+    def locate_header_file(h, paths):
+        for p in paths:
+            fullname = p + '/' + h
+            if os.path.exists(fullname):
+                return fullname
+        if options.error_on_file_not_found:
+            raise RuntimeError('Header not found: %s, included by %s' % (h, fname))
+        return None
+
+    local_includes = []
+    system_includes = []
+    linecount = 0
+    with open(fname, 'r') as f:
+        for line in f.readlines():
+            linecount += 1
+            m = re.match(r'\s*#\s*include\s+"([^"]*)"', line)
+            if m is not None:
+                local_includes.append(m.group(1))
+            m = re.match(r'\s*#\s*include\s+<([^>]*)>', line)
+            if m is not None:
+                system_includes.append(m.group(1))
+
+    fully_qualified_includes = [
+        locate_header_file(h, options.search_dirs)
+        for h in system_includes
+    ] + [
+        locate_header_file(h, os.path.dirname(fname))
+        for h in local_includes
+    ]
+
+    return FileEntry(
+        # If file-not-found wasn't an error, then skip non-found files
+        includes = [h for h in fully_qualified_includes if h is not None],
+        individual_linecount = linecount,
+    )
+
+
+def transitive_closure_of_includes(graph, h1):
+    visited = set()
+    def explore(graph, h1):
+        if h1 not in visited:
+            visited.add(h1)
+            for h2 in graph[h1].includes:
+                explore(graph, h2)
+    explore(graph, h1)
+    return visited
+
+
+def transitively_includes(graph, h1, h2):
+    return (h1 != h2) and (h2 in transitive_closure_of_includes(graph, h1))
+
+
+def build_graph(roots, options):
+    original_roots = list(roots)
+    graph = {}
+    while roots:
+        frontier = roots
+        roots = []
+        for fname in frontier:
+            if fname not in graph:
+                graph[fname] = build_file_entry(fname, options)
+                graph[fname].is_graph_root = (fname in original_roots)
+                roots += graph[fname].includes
+    for fname, entry in graph.items():
+        entry.cumulative_linecount = sum(graph[h].individual_linecount for h in transitive_closure_of_includes(graph, fname))
+    return graph
+
+
+def get_graphviz(graph, options):
+
+    def get_friendly_id(fname):
+        i = fname.index('include/')
+        assert(i >= 0)
+        result = fname[i+8:]
+        return result
+
+    def get_decorators(fname, entry):
+        result = ''
+        if entry.is_graph_root:
+            result += ' [style=bold]'
+        if options.show_individual_line_counts and options.show_cumulative_line_counts:
+            result += ' [label="%s\\n%d indiv, %d cumul"]' % (
+                get_friendly_id(fname), entry.individual_linecount, entry.cumulative_linecount
+            )
+        elif options.show_individual_line_counts:
+            result += ' [label="%s\\n%d indiv"]' % (get_friendly_id(fname), entry.individual_linecount)
+        elif options.show_cumulative_line_counts:
+            result += ' [label="%s\\n%d cumul"]' % (get_friendly_id(fname), entry.cumulative_linecount)
+        return result
+
+    result = ''
+    result += 'strict digraph {\n'
+    result += '    rankdir=LR;\n'
+    result += '    layout=dot;\n\n'
+    for fname, entry in graph.items():
+        result += '    "%s"%s;\n' % (get_friendly_id(fname), get_decorators(fname, entry))
+        for h in entry.includes:
+            if any(transitively_includes(graph, i, h) for i in entry.includes) and not options.show_transitive_edges:
                 continue
-            wd = compile_cmd['directory']
-            cmd_str = compile_cmd['command']
-            cmd = shlex.split(cmd_str)
-            out_arg = cmd.index('-o')
-            del cmd[out_arg]
-            del cmd[out_arg]
-            in_arg = cmd.index('-c')
-            del cmd[in_arg]
-            del cmd[in_arg]
-            if self.new_std is not None:
-                for f in cmd:
-                    if f.startswith('-std='):
-                        del cmd[cmd.index(f)]
-                        cmd += [self.new_std]
-                        break
-            return wd, cmd
-        print_and_exit("failed to find command to build algorithm.cpp")
-
-def post_process_outputs(outputs, libcxx_only):
-    graphs = []
-    for dot_file in outputs:
-        g = dot.DirectedGraph.fromDotFile(dot_file)
-        rename_headers_and_remove_test_root(g)
-        if libcxx_only:
-            remove_non_std_headers(g)
-        graphs += [g]
-        g.toDotFile(dot_file)
-    return graphs
-
-def build_canonical_names(graphs):
-    canonical_names = {}
-    next_idx = 0
-    for g in graphs:
-        for n in g.nodes:
-            if n.attributes['label'] not in canonical_names:
-                name = 'header_%d' % next_idx
-                next_idx += 1
-                canonical_names[n.attributes['label']] = name
-    return canonical_names
-
-
-
-class CanonicalGraphBuilder(object):
-    def __init__(self, graphs):
-        self.graphs = list(graphs)
-        self.canonical_names = build_canonical_names(graphs)
-
-    def build(self):
-        self.canonical = dot.DirectedGraph('all_headers')
-        for k,v in self.canonical_names.iteritems():
-            n = dot.Node(v, edges=[], attributes={'shape': 'box', 'label': k})
-            self.canonical.addNode(n)
-        for g in self.graphs:
-            self._merge_graph(g)
-        return self.canonical
-
-    def _merge_graph(self, g):
-        for n in g.nodes:
-            new_name = self.canonical.getNodeByLabel(n.attributes['label']).id
-            for e in n.edges:
-                to_node = self.canonical.getNodeByLabel(e.attributes['label']).id
-                self.canonical.addEdge(new_name, to_node)
-
-
-def main():
-    parser = ArgumentParser(
-        description="Generate a graph of libc++ header dependencies")
-    parser.add_argument(
-        '-v', '--verbose', dest='verbose', action='store_true', default=False)
-    parser.add_argument(
-        '-o', '--output', dest='output', required=True,
-        help='The output file. stdout is used if not given',
-        type=str, action='store')
-    parser.add_argument(
-        '--no-compile', dest='no_compile', action='store_true', default=False)
-    parser.add_argument(
-        '--libcxx-only', dest='libcxx_only', action='store_true', default=False)
-    parser.add_argument(
-        'compile_commands', metavar='compile-commands-file',
-        help='the compile commands database')
-
-    args = parser.parse_args()
-    builder = DependencyCommand(args.compile_commands, args.output, new_std='-std=c++2a')
-    if not args.no_compile:
-        outputs = builder.run_for_headers(get_libcxx_headers())
-        graphs = post_process_outputs(outputs, args.libcxx_only)
-    else:
-        outputs = [os.path.join(args.output, l) for l in os.listdir(args.output) if not l.endswith('all_headers.dot')]
-        graphs = [dot.DirectedGraph.fromDotFile(o) for o in outputs]
-
-    canon = CanonicalGraphBuilder(graphs).build()
-    canon.toDotFile(os.path.join(args.output, 'all_headers.dot'))
-    all_graphs = graphs + [canon]
-
-    found_cycles = False
-    for g in all_graphs:
-        cycle_finder = dot.CycleFinder(g)
-        all_cycles = cycle_finder.findCyclesInGraph()
-        if len(all_cycles):
-            found_cycles = True
-            print("cycle in graph %s" % g.name)
-            for start, path in all_cycles:
-                print("Cycle for %s = %s" % (start, path))
-    if not found_cycles:
-        print("No cycles found")
-
+            result += '        "%s" -> "%s";\n' % (get_friendly_id(fname), get_friendly_id(h))
+    result += '}\n'
+    return result
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Produce a dependency graph of libc++ headers, in GraphViz dot format.')
+    parser.add_argument('--root', default=None, metavar='FILE', help='File or directory to be the root of the dependency graph')
+    parser.add_argument('-I', dest='search_dirs', default=[], action='append', metavar='DIR', help='Path(s) to search for local includes')
+    parser.add_argument('--show-transitive-edges', action='store_true', help='Show edges to headers that are transitively included anyway')
+    parser.add_argument('--show-config-headers', action='store_true', help='Show headers named __config')
+    parser.add_argument('--show-experimental-headers', action='store_true', help='Show headers in the experimental/ and ext/ directories')
+    parser.add_argument('--show-support-headers', action='store_true', help='Show headers in the __support/ directory')
+    parser.add_argument('--show-individual-line-counts', action='store_true', help='Include an individual line count in each node')
+    parser.add_argument('--show-cumulative-line-counts', action='store_true', help='Include a total line count in each node')
+    parser.add_argument('--error-on-file-not-found', action='store_true', help="Don't ignore failure to open an #included file")
+
+    options = parser.parse_args()
+
+    if options.root is None:
+        curr_dir = os.path.dirname(os.path.abspath(__file__))
+        options.root = os.path.join(curr_dir, '../include')
+
+    if options.search_dirs == [] and os.path.isdir(options.root):
+        options.search_dirs = [options.root]
+
+    options.root = os.path.abspath(options.root)
+    options.search_dirs = [os.path.abspath(p) for p in options.search_dirs]
+
+    if os.path.isdir(options.root):
+        roots = list_all_roots_under(options.root)
+    elif os.path.isfile(options.root):
+        roots = [options.root]
+    else:
+        raise RuntimeError('--root seems to be invalid')
+
+    graph = build_graph(roots, options)
+
+    # Eliminate certain kinds of "visual noise" headers, if asked for.
+    def should_keep(fname):
+        return all([
+            options.show_config_headers or not is_config_header(fname),
+            options.show_experimental_headers or not is_experimental_header(fname),
+            options.show_support_headers or not is_support_header(fname),
+        ])
+
+    for fname in list(graph.keys()):
+        if should_keep(fname):
+            graph[fname].includes = [h for h in graph[fname].includes if should_keep(h)]
+        else:
+            del graph[fname]
+
+    # Look for cycles.
+    no_cycles_detected = True
+    for fname, entry in graph.items():
+        for h in entry.includes:
+            if transitively_includes(graph, h, fname):
+                print('Cycle detected between %s and %s' % (fname, h))
+                no_cycles_detected = False
+    assert no_cycles_detected
+
+    print(get_graphviz(graph, options))
