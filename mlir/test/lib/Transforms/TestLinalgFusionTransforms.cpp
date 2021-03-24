@@ -184,7 +184,7 @@ struct TestLinalgGreedyFusion
     RewritePatternSet patterns =
         linalg::getLinalgTilingCanonicalizationPatterns(context);
     patterns.add<AffineMinSCFCanonicalizationPattern>(context);
-    FrozenRewritePatternList frozenPatterns(std::move(patterns));
+    FrozenRewritePatternSet frozenPatterns(std::move(patterns));
     while (succeeded(fuseLinalgOpsGreedily(getFunction()))) {
       (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);
       PassManager pm(context);

@@ -31,7 +31,7 @@ void mlir::linalg::CodegenStrategy::transform(FuncOp func) const {
   // Emplace patterns one at a time while also maintaining a simple chained
   // state transition.
   unsigned stepCount = 0;
-  SmallVector<FrozenRewritePatternList, 4> stage1Patterns;
+  SmallVector<FrozenRewritePatternSet, 4> stage1Patterns;
   auto zeroState = Identifier::get(std::to_string(stepCount), context);
   auto currentState = zeroState;
   for (const std::unique_ptr<Transformation> &t : transformationSequence) {

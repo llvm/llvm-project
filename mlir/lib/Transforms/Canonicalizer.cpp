@@ -35,7 +35,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     (void)applyPatternsAndFoldGreedily(getOperation()->getRegions(), patterns);
   }
 
-  FrozenRewritePatternList patterns;
+  FrozenRewritePatternSet patterns;
 };
 } // end anonymous namespace
 

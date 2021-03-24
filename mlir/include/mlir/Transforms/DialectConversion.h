@@ -13,7 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
-#include "mlir/Rewrite/FrozenRewritePatternList.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -842,11 +842,11 @@ private:
 /// the `unconvertedOps` set will not necessarily be complete.)
 LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                       const FrozenRewritePatternList &patterns,
+                       const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
-                       const FrozenRewritePatternList &patterns,
+                       const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
 /// Apply a complete conversion on the given operations, and all nested
@@ -855,9 +855,9 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
                                   ConversionTarget &target,
-                                  const FrozenRewritePatternList &patterns);
+                                  const FrozenRewritePatternSet &patterns);
 LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
-                                  const FrozenRewritePatternList &patterns);
+                                  const FrozenRewritePatternSet &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -869,10 +869,10 @@ LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
 /// the regions nested within 'ops'.
 LogicalResult applyAnalysisConversion(ArrayRef<Operation *> ops,
                                       ConversionTarget &target,
-                                      const FrozenRewritePatternList &patterns,
+                                      const FrozenRewritePatternSet &patterns,
                                       DenseSet<Operation *> &convertedOps);
 LogicalResult applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                                      const FrozenRewritePatternList &patterns,
+                                      const FrozenRewritePatternSet &patterns,
                                       DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 

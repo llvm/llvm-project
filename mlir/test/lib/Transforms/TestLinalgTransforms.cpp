@@ -478,9 +478,9 @@ applyMatmulToVectorPatterns(FuncOp funcOp,
     fillL1TilingAndMatmulToVectorPatterns(funcOp, Identifier::get("L2", ctx),
                                           stage1Patterns);
   }
-  SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
+  SmallVector<FrozenRewritePatternSet, 4> frozenStage1Patterns;
   llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
-  FrozenRewritePatternList stage2Patterns =
+  FrozenRewritePatternSet stage2Patterns =
       getLinalgTilingCanonicalizationPatterns(ctx);
   (void)applyStagedPatterns(funcOp, frozenStage1Patterns,
                             std::move(stage2Patterns));
@@ -505,7 +505,7 @@ static void applyLinalgToVectorPatterns(FuncOp funcOp) {
 static void applyAffineMinSCFCanonicalizationPatterns(FuncOp funcOp) {
   RewritePatternSet foldPattern(funcOp.getContext());
   foldPattern.add<AffineMinSCFCanonicalizationPattern>(funcOp.getContext());
-  FrozenRewritePatternList frozenPatterns(std::move(foldPattern));
+  FrozenRewritePatternSet frozenPatterns(std::move(foldPattern));
 
   // Explicitly walk and apply the pattern locally to avoid more general folding
   // on the rest of the IR.

@@ -60,7 +60,7 @@ TEST(PatternBenefitTest, BenefitOrder) {
   patterns.add<Pattern1>(&context, &called1);
   patterns.add<Pattern2>(&called2);
 
-  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   PatternApplicator pa(frozenPatterns);
   pa.applyDefaultCostModel();
 
