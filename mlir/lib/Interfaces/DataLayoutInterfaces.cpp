@@ -34,18 +34,28 @@ static LLVM_ATTRIBUTE_NORETURN void reportMissingDataLayout(Type type) {
 unsigned
 mlir::detail::getDefaultTypeSize(Type type, const DataLayout &dataLayout,
                                  ArrayRef<DataLayoutEntryInterface> params) {
+  unsigned bits = getDefaultTypeSizeInBits(type, dataLayout, params);
+  return llvm::divideCeil(bits, 8);
+}
+
+unsigned mlir::detail::getDefaultTypeSizeInBits(Type type,
+                                                const DataLayout &dataLayout,
+                                                DataLayoutEntryListRef params) {
   if (type.isa<IntegerType, FloatType>())
-    return llvm::divideCeil(type.getIntOrFloatBitWidth(), 8);
+    return type.getIntOrFloatBitWidth();
 
   // Sizes of vector types are rounded up to those of types with closest
-  // power-of-two number of elements.
+  // power-of-two number of elements in the innermost dimension. We also assume
+  // there is no bit-packing at the moment element sizes are taken in bytes and
+  // multiplied with 8 bits.
   // TODO: make this extensible.
   if (auto vecType = type.dyn_cast<VectorType>())
-    return llvm::PowerOf2Ceil(vecType.getNumElements()) *
-           dataLayout.getTypeSize(vecType.getElementType());
+    return vecType.getNumElements() / vecType.getShape().back() *
+           llvm::PowerOf2Ceil(vecType.getShape().back()) *
+           dataLayout.getTypeSize(vecType.getElementType()) * 8;
 
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
-    return typeInterface.getTypeSize(dataLayout, params);
+    return typeInterface.getTypeSizeInBits(dataLayout, params);
 
   reportMissingDataLayout(type);
 }
@@ -277,6 +287,19 @@ unsigned mlir::DataLayout::getTypeSize(Type t) const {
       return detail::getDefaultTypeSize(ty, *this, list);
     }
     return detail::getDefaultTypeSize(ty, *this, {});
+  });
+}
+
+unsigned mlir::DataLayout::getTypeSizeInBits(Type t) const {
+  checkValid();
+  return cachedLookup(t, bitsizes, [&](Type ty) {
+    if (originalLayout) {
+      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
+      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
+        return iface.getTypeSizeInBits(ty, *this, list);
+      return detail::getDefaultTypeSizeInBits(ty, *this, list);
+    }
+    return detail::getDefaultTypeSizeInBits(ty, *this, {});
   });
 }
 
