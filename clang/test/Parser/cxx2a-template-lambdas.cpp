@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++2b %s -verify
 // RUN: %clang_cc1 -std=c++2a %s -verify
 
 auto L0 = []<> { }; //expected-error {{cannot be empty}}

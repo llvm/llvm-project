@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef POLLY_DEADCODEELIMINATION_H
 #define POLLY_DEADCODEELIMINATION_H
 
@@ -28,9 +27,9 @@ llvm::Pass *createDeadCodeElimWrapperPass();
 struct DeadCodeElimPass : llvm::PassInfoMixin<DeadCodeElimPass> {
   DeadCodeElimPass() {}
 
-  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
+  llvm::PreservedAnalyses run(Scop &S, ScopAnalysisManager &SAM,
+                              ScopStandardAnalysisResults &SAR, SPMUpdater &U);
 };
-
 
 } // namespace polly
 

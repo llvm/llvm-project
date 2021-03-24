@@ -3247,6 +3247,8 @@ def mmma: Flag<["-"], "mmma">, Group<m_ppc_Features_Group>;
 def mno_mma: Flag<["-"], "mno-mma">, Group<m_ppc_Features_Group>;
 def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
+def mprivileged : Flag<["-"], "mprivileged">,
+    Group<m_ppc_Features_Group>;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">;

@@ -256,6 +256,10 @@ def FeatureROPProtect :
   SubtargetFeature<"rop-protect", "HasROPProtect", "true",
                    "Add ROP protect">;
 
+def FeaturePrivileged :
+  SubtargetFeature<"privileged", "HasPrivileged", "true",
+                   "Add privileged instructions">;
+
 def FeaturePredictableSelectIsExpensive :
   SubtargetFeature<"predictable-select-expensive",
                    "PredictableSelectIsExpensive",

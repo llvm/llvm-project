@@ -52,7 +52,10 @@ int test_no_parameter_list()
 {
   static int si = 0;
     auto M = [] { return 5; }; // OK
-    auto M2 = [] -> auto&& { return si; }; // expected-error{{lambda requires '()'}}
+    auto M2 = [] -> auto && { return si; };
+#if __cplusplus <= 202002L
+      // expected-warning@-2{{is a C++2b extension}}
+#endif
     M();
 }
 

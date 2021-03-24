@@ -9,6 +9,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -369,6 +370,8 @@ LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,
       return op->emitError() << "'" << DLTIDialect::kDataLayoutAttrName
                              << "' is expected to be a #dlti.dl_spec attribute";
     }
+    if (isa<ModuleOp>(op))
+      return detail::verifyDataLayoutOp(op);
     return success();
   }
 

@@ -15230,7 +15230,8 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  if (N0.getOpcode() != ISD::SETCC || CCVT.getVectorNumElements() != 1 ||
+  if (N0.getOpcode() != ISD::SETCC ||
+      CCVT.getVectorElementCount() != ElementCount::getFixed(1) ||
       CCVT.getVectorElementType() != MVT::i1)
     return SDValue();
 

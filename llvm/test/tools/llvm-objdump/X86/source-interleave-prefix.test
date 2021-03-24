@@ -12,8 +12,8 @@
 ; RUN: sed -e "s,SRC_COMPDIR,./Inputs,g" %p/Inputs/source-interleave.ll > %t-relative-path.ll
 ; RUN: llc -o %t-relative-path.o -filetype=obj -mtriple=x86_64-pc-linux %t-relative-path.ll
 ; RUN: llvm-objdump --prefix myprefix --source %t-relative-path.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-relative-path.o -DPREFIX=.
-; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]]/Inputs{{[/\\]}}source-interleave-x86_64.c
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-relative-path.o -DPREFIX=. -DCOMPDIR=/Inputs
+; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]][[COMPDIR]]{{[/\\]}}source-interleave-x86_64.c
 
 ;; Test invalid source interleave fixed by adding the correct prefix.
 
@@ -28,16 +28,64 @@
 ; RUN: sed -e "s,SRC_COMPDIR,%/p/Inputs,g" %p/Inputs/source-interleave.ll > %t-correct-prefix.ll
 ; RUN: llc -o %t-correct-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-correct-prefix.ll
 ; RUN: llvm-objdump --prefix myprefix --source %t-correct-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%/p
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-correct-prefix.o -DPREFIX=myprefix%/p -DCOMPDIR=/Inputs
 
 ;; Using only a prefix separator is the same as not using the `--prefix` option.
 
 ; RUN: llvm-objdump --prefix / --source %t-missing-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX=''
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX='' -DCOMPDIR=/Inputs
 
 ;; All trailing separators on the prefix are discarded.
 ;; The prefix 'myprefix//' is converted to 'myprefix'.
 
 ; RUN: llvm-objdump --prefix myprefix// --source %t-missing-prefix.o 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX=myprefix
+; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-missing-prefix.o -DPREFIX=myprefix -DCOMPDIR=/Inputs
 
+;; Test invalid source interleave fixed by adding the correct prefix and
+;; stripping out an extra directory from the path.
+
+; RUN: sed -e "s,SRC_COMPDIR,/extra/Inputs,g" %p/Inputs/source-interleave.ll > %t-extra-path-prefix.ll
+; RUN: llc -o %t-extra-path-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-extra-path-prefix.ll
+; RUN: llvm-objdump --prefix %p --prefix-strip 1 --source %t-extra-path-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX
+
+;; Test do not skip extra separators. The --prefix-strip should take into
+;; account each separator individually. Hence, to fix '/extra/Inputs'
+;; --prefix-strip needs to be 1. To fix '//extra/Inputs' --prefix-strip
+;; needs to be 2.
+
+; RUN: sed -e "s,SRC_COMPDIR,//extra/Inputs,g" %p/Inputs/source-interleave.ll > %t-extra-sep-path-prefix.ll
+; RUN: llc -o %t-extra-sep-path-prefix.o -filetype=obj -mtriple=x86_64-pc-linux %t-extra-sep-path-prefix.ll
+; RUN: llvm-objdump --prefix %p --prefix-strip 2 --source %t-extra-sep-path-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX
+
+;; Test --prefix-strip value of 0. No effect.
+;; SRC_COMPDIR is set to '/Inputs' before and after --prefix-strip 0.
+
+; RUN: llvm-objdump --prefix %p --prefix-strip 0 --source %t-missing-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX
+
+;; Test --prefix-strip value equal to the number of directory components.
+;; SRC_COMPDIR is set to '/Inputs' before --prefix-strip 1.
+;; SRC_COMPDIR becomes '' after --prefix-strip 1.
+
+; RUN: llvm-objdump --prefix %p/Inputs --prefix-strip 1 --source %t-missing-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX
+
+;; Test --prefix-strip value greater than the number of components.
+;; SRC_COMPDIR is set to '/Inputs' before --prefix-strip 2.
+;; SRC_COMPDIR becomes '' after --prefix-strip 2.
+
+; RUN: llvm-objdump --prefix %p/Inputs --prefix-strip 2 --source %t-missing-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-MISSING-PREFIX-FIX
+
+;; Test negative value --prefix-strip. Reports an error.
+
+; RUN: not llvm-objdump --prefix %p --prefix-strip '-1' --source %t-missing-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-INVALID-PREFIX-STRIP -DOPTION='-1'
+; CHECK-INVALID-PREFIX-STRIP: llvm-objdump{{.*}}: for the --prefix-strip option: '[[OPTION]]' value invalid for uint argument!
+
+;; Test text value --prefix-strip. Reports an error.
+
+; RUN: not llvm-objdump --prefix %p --prefix-strip foo --source %t-missing-prefix.o 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=CHECK-INVALID-PREFIX-STRIP -DOPTION='foo'

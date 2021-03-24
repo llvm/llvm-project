@@ -29,12 +29,19 @@ using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
+class ModuleOp;
 
 namespace detail {
 /// Default handler for the type size request. Computes results for built-in
 /// types and dispatches to the DataLayoutTypeInterface for other types.
 unsigned getDefaultTypeSize(Type type, const DataLayout &dataLayout,
-                            ArrayRef<DataLayoutEntryInterface> params);
+                            DataLayoutEntryListRef params);
+
+/// Default handler for the type size in bits request. Computes results for
+/// built-in types and dispatches to the DataLayoutTypeInterface for other
+/// types.
+unsigned getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
+                                  DataLayoutEntryListRef params);
 
 /// Default handler for the required alignemnt request. Computes results for
 /// built-in types and dispatches to the DataLayoutTypeInterface for other
@@ -60,10 +67,11 @@ DataLayoutEntryList filterEntriesForType(DataLayoutEntryListRef entries,
 DataLayoutEntryInterface
 filterEntryForIdentifier(DataLayoutEntryListRef entries, Identifier id);
 
-/// Verifies that the operation implementing the data layout interface is valid.
-/// This calls the verifier of the spec attribute and checks if the layout is
-/// compatible with specs attached to the enclosing operations.
-LogicalResult verifyDataLayoutOp(DataLayoutOpInterface op);
+/// Verifies that the operation implementing the data layout interface, or a
+/// module operation, is valid. This calls the verifier of the spec attribute
+/// and checks if the layout is compatible with specs attached to the enclosing
+/// operations.
+LogicalResult verifyDataLayoutOp(Operation *op);
 
 /// Verifies that a data layout spec is valid. This dispatches to individual
 /// entry verifiers, and then to the verifiers implemented by the relevant type
@@ -132,10 +140,15 @@ public:
 /// mode, the cache validity is being checked in every request.
 class DataLayout {
 public:
+  explicit DataLayout();
   explicit DataLayout(DataLayoutOpInterface op);
+  explicit DataLayout(ModuleOp op);
 
   /// Returns the size of the given type in the current scope.
   unsigned getTypeSize(Type t) const;
+
+  /// Returns the size in bits of the given type in the current scope.
+  unsigned getTypeSizeInBits(Type t) const;
 
   /// Returns the required alignment of the given type in the current scope.
   unsigned getTypeABIAlignment(Type t) const;
@@ -159,10 +172,11 @@ private:
   /// Operation defining the scope of requests.
   // TODO: this is mutable because the generated interface method are not const.
   // Update the generator to support const methods and change this to const.
-  mutable DataLayoutOpInterface scope;
+  mutable Operation *scope;
 
   /// Caches for individual requests.
   mutable DenseMap<Type, unsigned> sizes;
+  mutable DenseMap<Type, unsigned> bitsizes;
   mutable DenseMap<Type, unsigned> abiAlignments;
   mutable DenseMap<Type, unsigned> preferredAlignments;
 };

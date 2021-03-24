@@ -109,6 +109,11 @@ When disassembling instructions, do not print the instruction bytes.
 When disassembling, add
 .Ar PREFIX
 to absolute paths.
+.It Fl -prefix-strip Ns = Ns Ar LEVEL
+When disassembling, strip out
+.Ar LEVEL
+initial directories from absolute paths. This option has no effect without
+.Fl -prefix Ns = Ns PREFIX .
 .It Fl -print-imm-hex
 Use hex format for immediate values.
 .It Fl -private-header

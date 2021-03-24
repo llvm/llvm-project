@@ -135,8 +135,8 @@ public:
 
   unsigned getKey() { return getImpl()->key; }
 
-  unsigned getTypeSize(const DataLayout &dataLayout,
-                       DataLayoutEntryListRef params) const {
+  unsigned getTypeSizeInBits(const DataLayout &dataLayout,
+                             DataLayoutEntryListRef params) const {
     return extractKind(params, "size");
   }
 
