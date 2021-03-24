@@ -2450,21 +2450,19 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   else if (const PHINode *PN = dyn_cast<PHINode>(V)) {
     // Try and detect a recurrence that monotonically increases from a
     // starting value, as these are common as induction variables.
-    if (PN->getNumIncomingValues() == 2) {
-      Value *Start = PN->getIncomingValue(0);
-      Value *Induction = PN->getIncomingValue(1);
-      if (isa<ConstantInt>(Induction) && !isa<ConstantInt>(Start))
-        std::swap(Start, Induction);
-      if (ConstantInt *C = dyn_cast<ConstantInt>(Start)) {
-        if (!C->isZero() && !C->isNegative()) {
-          ConstantInt *X;
-          if (Q.IIQ.UseInstrInfo &&
-              (match(Induction, m_NSWAdd(m_Specific(PN), m_ConstantInt(X))) ||
-               match(Induction, m_NUWAdd(m_Specific(PN), m_ConstantInt(X)))) &&
-              !X->isNegative())
-            return true;
-        }
-      }
+    BinaryOperator *BO = nullptr;
+    Value *Start = nullptr, *Step = nullptr;
+    const APInt *StartC, *StepC;
+    if (Q.IIQ.UseInstrInfo && matchSimpleRecurrence(PN, BO, Start, Step) &&
+        match(Start, m_APInt(StartC)) && match(Step, m_APInt(StepC))) {
+      if (BO->getOpcode() == Instruction::Add &&
+          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
+          StartC->isStrictlyPositive() && !StepC->isNegative())
+        return true;
+      if (BO->getOpcode() == Instruction::Mul &&
+          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
+          !StartC->isNullValue() && StepC->isStrictlyPositive())
+        return true;
     }
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
