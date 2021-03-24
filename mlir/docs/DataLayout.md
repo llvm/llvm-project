@@ -72,6 +72,7 @@ public:
   explicit DataLayout(DataLayoutOpInterface scope);
 
   unsigned getTypeSize(Type type) const;
+  unsigned getTypeSizeInBits(Type type) const;
   unsigned getTypeABIAlignment(Type type) const;
   unsigned getTypePreferredAlignment(Type type) const;
 };
@@ -178,6 +179,15 @@ dialect is expected to implement the `DataLayoutDialectInterface`. This dialect
 provides hooks for verifying the validity of the entry value attributes and for
 and the compatibility of nested entries.
 
+### Bits and Bytes
+
+Two versions of hooks are provided for sizes: in bits and in bytes. The version
+in bytes has a default implementation that derives the size in bytes by rounding
+up the result of division of the size in bits by 8. Types exclusively targeting
+architectures with different assumptions can override this. Operations can
+redefine this for all types, providing scoped versions for cases of byte sizes
+other than eight without having to modify types, including built-in types.
+
 ### Query Dispatch
 
 The overall flow of a data layout property query is as follows.
@@ -242,6 +252,10 @@ which MLIR assumed until the introduction of proper data layout modeling, and
 with the
 [modeling of n-D vectors](https://mlir.llvm.org/docs/Dialects/Vector/#deeperdive).
 They **may change** in the future.
+
+### Byte Size
+
+The default data layout assumes 8-bit bytes.
 
 ### DLTI Dialect
 
