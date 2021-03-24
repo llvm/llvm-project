@@ -82,11 +82,12 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
-  let OtherPredicates = ps.OtherPredicates;
-  let TSFlags = ps.TSFlags;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let OtherPredicates      = ps.OtherPredicates;
+  let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let SchedRW              = ps.SchedRW;
 
   // encoding fields
   bits<8> vaddr;
