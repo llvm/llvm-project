@@ -13,7 +13,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest-typed-test.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
