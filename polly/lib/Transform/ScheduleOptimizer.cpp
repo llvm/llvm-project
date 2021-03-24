@@ -1217,7 +1217,8 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   long RegisterBitwidth = VectorRegisterBitwidth;
 
   if (RegisterBitwidth == -1)
-    RegisterBitwidth = TTI->getRegisterBitWidth(true);
+    RegisterBitwidth =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
   auto ElementSize = getMatMulTypeSize(MMI);
   assert(ElementSize > 0 && "The element size of the matrix multiplication "
                             "operands should be greater than zero.");
