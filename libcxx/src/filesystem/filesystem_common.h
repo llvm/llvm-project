@@ -467,6 +467,15 @@ inline TimeSpec extract_atime(StatT const& st) {
   TimeSpec TS = {st.st_atime, 0};
   return TS;
 }
+#elif defined(_AIX)
+inline TimeSpec extract_mtime(StatT const& st) {
+  TimeSpec TS = {st.st_mtime, st.st_mtime_n};
+  return TS;
+}
+inline TimeSpec extract_atime(StatT const& st) {
+  TimeSpec TS = {st.st_atime, st.st_atime_n};
+  return TS;
+}
 #else
 inline TimeSpec extract_mtime(StatT const& st) { return st.st_mtim; }
 inline TimeSpec extract_atime(StatT const& st) { return st.st_atim; }
