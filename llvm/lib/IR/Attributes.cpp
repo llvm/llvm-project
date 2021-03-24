@@ -287,6 +287,13 @@ uint64_t Attribute::getValueAsInt() const {
   return pImpl->getValueAsInt();
 }
 
+bool Attribute::getValueAsBool() const {
+  if (!pImpl) return false;
+  assert(isStringAttribute() &&
+         "Expected the attribute to be a string attribute!");
+  return pImpl->getValueAsBool();
+}
+
 StringRef Attribute::getKindAsString() const {
   if (!pImpl) return {};
   assert(isStringAttribute() &&
@@ -648,6 +655,11 @@ Attribute::AttrKind AttributeImpl::getKindAsEnum() const {
 uint64_t AttributeImpl::getValueAsInt() const {
   assert(isIntAttribute());
   return static_cast<const IntAttributeImpl *>(this)->getValue();
+}
+
+bool AttributeImpl::getValueAsBool() const {
+  assert(getValueAsString().empty() || getValueAsString() == "false" || getValueAsString() == "true");
+  return getValueAsString() == "true";
 }
 
 StringRef AttributeImpl::getKindAsString() const {
