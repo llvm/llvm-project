@@ -132,6 +132,8 @@ struct IntrinsicLibrary {
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAllocated(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -255,6 +257,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"achar", &I::genChar},
     {"aimag", &I::genAimag},
     {"aint", &I::genAint},
+    {"allocated",
+     &I::genAllocated,
+     {{{"array", asInquired}, {"scalar", asInquired}}},
+     /*isElemental=*/false},
     {"anint", &I::genAnint},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
@@ -265,7 +271,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"time", asAddr},
        {"zone", asAddr},
        {"values", asAddr}}},
-     /*isElemental*/ false},
+     /*isElemental=*/false},
     {"dim", &I::genDim},
     {"dble", &I::genConversion},
     {"dprod", &I::genDprod},
@@ -1103,6 +1109,20 @@ mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
   assert(args.size() == 1);
   return Fortran::lower::ComplexExprHelper{builder, loc}.extractComplexPart(
       args[0], true /* isImagPart */);
+}
+
+// ALLOCATED
+fir::ExtendedValue
+IntrinsicLibrary::genAllocated(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  return args[0].match(
+      [&](const fir::MutableBoxValue &x) -> fir::ExtendedValue {
+        return Fortran::lower::genIsAllocatedOrAssociatedTest(builder, loc, x);
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "allocate arg not lowered to MutableBoxValue");
+      });
 }
 
 // ANINT
