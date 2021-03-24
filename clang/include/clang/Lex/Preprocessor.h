@@ -1163,6 +1163,11 @@ public:
     return None;
   }
 
+  /// Get the list of submodules that we're currently building.
+  ArrayRef<BuildingSubmoduleInfo> getBuildingSubmodules() const {
+    return BuildingSubmoduleStack;
+  }
+
   /// \{
   /// Iterators for the macro history table. Currently defined macros have
   /// IdentifierInfo::hasMacroDefinition() set and an empty
