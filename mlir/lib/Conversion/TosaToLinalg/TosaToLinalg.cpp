@@ -612,6 +612,84 @@ public:
   }
 };
 
+class MatMulConverter : public OpConversionPattern<tosa::MatMulOp> {
+public:
+  using OpConversionPattern<tosa::MatMulOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::MatMulOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    tosa::MatMulOp::Adaptor adaptor(args);
+
+    Location loc = op.getLoc();
+
+    auto outputTy = op.getType().cast<ShapedType>();
+    auto outputElementTy = outputTy.getElementType();
+    auto zero_attr = rewriter.getZeroAttr(outputElementTy);
+    Value zero = rewriter.create<ConstantOp>(loc, zero_attr);
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        loc, outputTy.getShape(), outputTy.getElementType());
+    Value zeroTensor =
+        rewriter.create<linalg::FillOp>(loc, initTensor, zero).getResult(0);
+    rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
+        op, TypeRange{op.getType()}, ValueRange{adaptor.a(), adaptor.b()},
+        ValueRange{zeroTensor});
+    return success();
+  }
+};
+
+class FullyConnectedConverter
+    : public OpConversionPattern<tosa::FullyConnectedOp> {
+public:
+  using OpConversionPattern<tosa::FullyConnectedOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tosa::FullyConnectedOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const final {
+    tosa::FullyConnectedOp::Adaptor adaptor(args);
+
+    Location loc = op.getLoc();
+    auto outputTy = op.getType().cast<ShapedType>();
+    auto biasTy = op->getOperand(2).getType().cast<ShapedType>();
+
+    // Reshaping the bias from n to [1, n] for broadcasting
+    SmallVector<int64_t> biasShapeReshaped;
+    biasShapeReshaped.push_back(1);
+    biasShapeReshaped.push_back(biasTy.getShape()[0]);
+
+    RankedTensorType reshapedBias =
+        RankedTensorType::get(biasShapeReshaped, outputTy.getElementType());
+    auto reshapeResult =
+        rewriter.create<tosa::ReshapeOp>(loc, reshapedBias, args[2])
+            ->getResult(0);
+
+    // Creating maps for the output of MatMul and the bias
+    SmallVector<AffineMap, 4> indexingMaps;
+    indexingMaps.push_back(createAffineMapForType(reshapedBias, rewriter));
+    indexingMaps.push_back(rewriter.getMultiDimIdentityMap(outputTy.getRank()));
+
+    auto initTensor =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, outputTy.getShape(),
+                                          outputTy.getElementType())
+            ->getResults();
+
+    auto linalgOp =
+        rewriter
+            .create<linalg::GenericOp>(
+                loc, outputTy, reshapeResult, initTensor, indexingMaps,
+                getNParallelLoopsAttrs(outputTy.getRank()),
+                [&](OpBuilder &nested_builder, Location nested_loc,
+                    ValueRange args) {
+                  nested_builder.create<linalg::YieldOp>(loc, *args.begin());
+                })
+            ->getResults();
+
+    rewriter.replaceOpWithNewOp<linalg::MatmulOp>(
+        op, TypeRange{op.getType()},
+        ValueRange{adaptor.input(), adaptor.weight()}, linalgOp);
+    return success();
+  }
+};
+
 class ReshapeConverter : public OpConversionPattern<tosa::ReshapeOp> {
 public:
   using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
@@ -1041,6 +1119,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
-      RescaleConverter, ReverseConverter, TransposeConverter>(
-      patterns->getContext());
+      RescaleConverter, ReverseConverter, TransposeConverter, MatMulConverter,
+      FullyConnectedConverter>(patterns->getContext());
 }
