@@ -238,5 +238,20 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
   }
 }
 
+TEST(VerifierTest, MDNodeWrongContext) {
+  LLVMContext C1, C2;
+  auto *Node = MDNode::get(C1, None);
+
+  Module M("M", C2);
+  auto *NamedNode = M.getOrInsertNamedMetadata("test");
+  NamedNode->addOperand(Node);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyModule(M, &ErrorOS));
+  EXPECT_TRUE(StringRef(ErrorOS.str())
+                  .startswith("MDNode context does not match Module context!"));
+}
+
 } // end anonymous namespace
 } // end namespace llvm
