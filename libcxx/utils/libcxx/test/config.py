@@ -456,8 +456,10 @@ class Configuration(object):
             self.cxx.link_flags += ['-lcxxrt']
         elif cxx_abi == 'vcruntime':
             debug_suffix = 'd' if self.debug_build else ''
+            # This matches the set of libraries linked in the toplevel
+            # libcxx CMakeLists.txt if building targeting msvc.
             self.cxx.link_flags += ['-l%s%s' % (lib, debug_suffix) for lib in
-                                    ['vcruntime', 'ucrt', 'msvcrt']]
+                                    ['vcruntime', 'ucrt', 'msvcrt', 'msvcprt']]
         elif cxx_abi == 'none' or cxx_abi == 'default':
             if self.target_info.is_windows():
                 debug_suffix = 'd' if self.debug_build else ''
