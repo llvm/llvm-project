@@ -2,12 +2,12 @@
 //
 /// Without --rtlib=libgcc the driver may pick clang_rt.crtbegin.o if
 /// -DCLANG_DEFAULT_RTLIB=compiler-rt.
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
+// RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
 // RUN:   FileCheck %s
 //
 // Additionally check that the legacy spelling of the flag works.
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t --target=x86_64-linux-gnu \
+// RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
 // RUN:   -gcc-toolchain %S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc 2>&1 | \
 // RUN:   FileCheck %s
 //
@@ -29,10 +29,10 @@
 // CHECK-SAME: "-L[[TOOLCHAIN]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../.."
 
 /// Test we don't detect GCC installation under -B.
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
+// RUN: %clangxx %s -### --sysroot= 2>&1 \
 // RUN:   --target=aarch64-suse-linux --gcc-toolchain=%S/Inputs/opensuse_42.2_aarch64_tree/usr | \
 // RUN:   FileCheck %s --check-prefix=AARCH64
-// RUN: %clangxx -no-canonical-prefixes %s -### -o %t 2>&1 \
+// RUN: %clangxx %s -### --sysroot= 2>&1 \
 // RUN:   --target=aarch64-suse-linux -B%S/Inputs/opensuse_42.2_aarch64_tree/usr | \
 // RUN:   FileCheck %s --check-prefix=NO_AARCH64
 
