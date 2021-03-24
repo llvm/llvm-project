@@ -90,7 +90,7 @@ into LLVM dialect. These patterns allow for lowering the IR in multiple stages
 by relying on [transitive lowering](../../../getting_started/Glossary.md#transitive-lowering).
 
 ```c++
-  mlir::RewritePatternSet patterns;
+  mlir::RewritePatternSet patterns(&getContext());
   mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
   mlir::populateLoopToStdConversionPatterns(patterns, &getContext());
   mlir::populateStdToLLVMConversionPatterns(typeConverter, patterns);
