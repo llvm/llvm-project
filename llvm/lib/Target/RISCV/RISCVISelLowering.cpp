@@ -1248,14 +1248,10 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   // "insert" the upper element, and an insert of the lower element at position
   // 0, which improves codegen.
   SDValue DominantValue;
+  unsigned MostCommonCount = 0;
   DenseMap<SDValue, unsigned> ValueCounts;
-  // Use a fairly conservative threshold. A future optimization could be to use
-  // multiple vmerge.vi/vmerge.vx instructions on "partially-dominant"
-  // elements with more relaxed thresholds.
   unsigned NumUndefElts =
       count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
-  unsigned NumDefElts = NumElts - NumUndefElts;
-  unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
 
   for (SDValue V : Op->op_values()) {
     if (V.isUndef())
@@ -1264,22 +1260,48 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     ValueCounts.insert(std::make_pair(V, 0));
     unsigned &Count = ValueCounts[V];
 
-    // Is this value dominant?
-    if (++Count > DominantValueCountThreshold)
+    // Is this value dominant? In case of a tie, prefer the highest element as
+    // it's cheaper to insert near the beginning of a vector than it is at the
+    // end.
+    if (++Count >= MostCommonCount) {
       DominantValue = V;
+      MostCommonCount = Count;
+    }
   }
+
+  assert(DominantValue && "Not expecting an all-undef BUILD_VECTOR");
+  MVT XLenVT = Subtarget.getXLenVT();
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
 
   // Don't perform this optimization when optimizing for size, since
   // materializing elements and inserting them tends to cause code bloat.
-  if (DominantValue && !DAG.shouldOptForSize()) {
+  if (!DAG.shouldOptForSize() &&
+      ((MostCommonCount > DominantValueCountThreshold) ||
+       (ValueCounts.size() <= Log2_32(NumDefElts)))) {
+    // Start by splatting the most common element.
     SDValue Vec = DAG.getSplatBuildVector(VT, DL, DominantValue);
 
-    if (ValueCounts.size() != 1) {
-      MVT XLenVT = Subtarget.getXLenVT();
-      for (unsigned I = 0; I < NumElts; ++I) {
-        if (!Op.getOperand(I).isUndef() && Op.getOperand(I) != DominantValue)
-          Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec,
-                            Op.getOperand(I), DAG.getConstant(I, DL, XLenVT));
+    DenseSet<SDValue> Processed{DominantValue};
+    MVT SelMaskTy = VT.changeVectorElementType(MVT::i1);
+    for (const auto &OpIdx : enumerate(Op->ops())) {
+      const SDValue &V = OpIdx.value();
+      if (V.isUndef() || !Processed.insert(V).second)
+        continue;
+      if (ValueCounts[V] == 1) {
+        Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec, V,
+                          DAG.getConstant(OpIdx.index(), DL, XLenVT));
+      } else {
+        // Blend in all instances of this value using a VSELECT, using a
+        // mask where each bit signals whether that element is the one
+        // we're after.
+        SmallVector<SDValue> Ops;
+        transform(Op->op_values(), std::back_inserter(Ops), [&](SDValue V1) {
+          return DAG.getConstant(V == V1, DL, XLenVT);
+        });
+        Vec = DAG.getNode(ISD::VSELECT, DL, VT,
+                          DAG.getBuildVector(SelMaskTy, DL, Ops),
+                          DAG.getSplatBuildVector(VT, DL, V), Vec);
       }
     }
 
