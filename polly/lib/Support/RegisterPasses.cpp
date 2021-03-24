@@ -25,6 +25,7 @@
 #include "polly/CodeGen/IslAst.h"
 #include "polly/CodePreparation.h"
 #include "polly/DeLICM.h"
+#include "polly/DeadCodeElimination.h"
 #include "polly/DependenceInfo.h"
 #include "polly/ForwardOpTree.h"
 #include "polly/JSONExporter.h"
@@ -248,7 +249,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   LLVMInitializeNVPTXAsmPrinter();
 #endif
   initializeCodePreparationPass(Registry);
-  initializeDeadCodeElimPass(Registry);
+  initializeDeadCodeElimWrapperPassPass(Registry);
   initializeDependenceInfoPass(Registry);
   initializeDependenceInfoWrapperPassPass(Registry);
   initializeJSONExporterPass(Registry);
@@ -336,7 +337,7 @@ static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
     PM.add(polly::createJSONImporterPass());
 
   if (DeadCodeElim)
-    PM.add(polly::createDeadCodeElimPass());
+    PM.add(polly::createDeadCodeElimWrapperPass());
 
   if (FullyIndexedStaticExpansion)
     PM.add(polly::createMaximalStaticExpansionPass());
@@ -517,7 +518,7 @@ static void buildDefaultPollyPipeline(FunctionPassManager &PM,
     SPM.addPass(JSONImportPass());
 
   if (DeadCodeElim)
-    report_fatal_error("Option -polly-run-dce not supported with NPM", false);
+    SPM.addPass(DeadCodeElimPass());
 
   if (FullyIndexedStaticExpansion)
     report_fatal_error("Option -polly-enable-mse not supported with NPM",
