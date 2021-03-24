@@ -13,13 +13,13 @@
 #ifndef HWASAN_ALLOCATOR_H
 #define HWASAN_ALLOCATOR_H
 
+#include "hwasan_poisoning.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
-#include "hwasan_poisoning.h"
 
 #if !defined(__aarch64__) && !defined(__x86_64__)
 #error Unsupported platform
@@ -101,6 +101,11 @@ struct HeapAllocationRecord {
 typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
 
 void GetAllocatorStats(AllocatorStatCounters s);
+
+inline bool InTaggableRegion(uptr addr) {
+  // TODO: specialize for x86 once we use aliasing mode in the allocator.
+  return true;
+}
 
 } // namespace __hwasan
 
