@@ -50,7 +50,7 @@ extern "C" void *LLDBSWIGPython_CastPyObjectToSBData(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBError(void *data);
 extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data);
 
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // LLDB_ENABLE_PYTHON
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
