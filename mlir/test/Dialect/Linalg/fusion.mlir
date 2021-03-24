@@ -252,10 +252,11 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
   }
   return %E : memref<?x?xf32, offset: 0, strides: [?, ?]>
 }
-//     CHECK: #[[BOUND_2_MAP:.+]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
-//     CHECK: #[[BOUND_ID_MAP:.+]] = affine_map<(d0, d1)[s0] -> (d1, -d0 + s0)>
-//     CHECK: #[[BOUND_4_MAP:.+]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
-//     CHECK: func @f5
+
+// CHECK-DAG: #[[BOUND_2_MAP:.+]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
+// CHECK-DAG: #[[BOUND_2_MAP_2:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s0, 2, -d0 + s1)>
+// CHECK-DAG: #[[BOUND_4_MAP:.+]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
+// CHECK: func @f5
 // HECK-SAME:  (%[[A:.*]]:{{.*}}, %[[B:.*]]:{{.*}}, %[[C:.*]]:{{.*}}, %[[D:.*]]:{{.*}}, %[[E:.*]]:{{.*}})
 // CHECK-DAG:  %[[C0:.*]] = constant 0 : index
 // CHECK-DAG:  %[[C1:.*]] = constant 1 : index
@@ -269,8 +270,7 @@ func @f5(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>,
 //     CHECK:    %[[C_I0:.*]] = memref.subview %[[C]][%[[I]], 0] [%[[BOUND_2_C0]]
 //     CHECK:    %[[BOUND_2_D0:.+]] = affine.min #[[BOUND_2_MAP]](%[[I]])[%[[D_0]]]
 //     CHECK:    %[[A_I0:.*]] = memref.subview %[[A]][%[[I]], 0]
-//               Note that %[[BOUND_ID_C0]] is essentially %[[BOUND_2_C0]].
-//     CHECK:    %[[BOUND_ID_C0:.+]] = affine.min #[[BOUND_ID_MAP]](%[[I]], %[[BOUND_2_C0]])[%[[C_0]]]
+//     CHECK:    %[[BOUND_ID_C0:.+]] = affine.min #[[BOUND_2_MAP_2]](%[[I]])[%[[C_0]], %[[C_0]]]
 //     CHECK:    %[[C_I0_OUT:.*]] = memref.subview %[[C]][%[[I]], 0] [%[[BOUND_ID_C0]]
 //     CHECK:    scf.for %[[J:.*]] = %{{.*}} to %[[B_1]] step %{{.*}} {
 //     CHECK:      %[[E_IJ:.*]] = memref.subview %[[E]][%[[I]], %[[J]]]

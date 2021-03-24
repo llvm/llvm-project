@@ -12,12 +12,11 @@ module {
     return %1 : tensor<?x?xf32>
   }
 }
-//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (32, -d0 + s0)>
 //  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (32, d0 - d1)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0)[s0] -> (64, -d0 + s0)>
 //  CHECK-DAG: #[[MAP4:.+]] = affine_map<(d0, d1) -> (64, d0 - d1)>
-//  CHECK-DAG: #[[MAP5:.+]] = affine_map<(d0, d1)[s0] -> (d1, -d0 + s0)>
+//  CHECK-DAG: #[[MAP5:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s0, 32, -d0 + s1)>
 
 //      CHECK: func @matmul_fusion
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -35,18 +34,17 @@ module {
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:     %[[C0]] to %[[M]] step %[[C32]]
 // CHECK-SAME:     iter_args(%[[ARG6:.+]] = %[[ARG4]]) -> (tensor<?x?xf32>) {
-//      CHECK:     %[[TILE_M:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M]]]
 //      CHECK:     %[[M_2:.+]] = memref.dim %[[ARG6]], %[[C0]]
 //      CHECK:     %[[TILE_M_2:.+]] = affine.min #[[MAP1]](%[[M_2]], %[[IV0]])
 //      CHECK:     %[[N3:.+]] = memref.dim %[[ARG6]], %[[C1]]
 //      CHECK:     %[[ST_ARG6:.+]] = subtensor %[[ARG6]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_2]], %[[N3]]]
-//      CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP5]](%[[IV0]], %[[TILE_M]])[%[[M]]]
+//      CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP5]](%[[IV0]])[%[[M]], %[[M]]]
 //      CHECK:     %[[N1:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //      CHECK:     %[[ST_ARG0:.+]] = subtensor %[[ARG0]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_3]], %[[N1]]]
 //      CHECK:     %[[M_3:.+]] = memref.dim %[[ARG2]], %[[C0]]
-//      CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP5]](%[[IV0]], %[[TILE_M]])[%[[M_3]]]
+//      CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP5]](%[[IV0]])[%[[M_3]], %[[M]]]
 //      CHECK:     %[[N2_2:.+]] = memref.dim %[[ARG2]], %[[C1]]
 //      CHECK:     %[[ST_ARG2:.+]] = subtensor %[[ARG2]][%[[IV0]], 0]
 // CHECK-SAME:       [%[[TILE_M_4]], %[[N2_2]]]
