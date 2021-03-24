@@ -4291,7 +4291,6 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
       // cheaper for the select to remain in the loop than be sunk out of it,
       // and so use the select value for the phi instead of the old
       // LoopExitValue.
-      RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
       if (PreferPredicatedReductionSelect ||
           TTI->preferPredicatedReductionSelect(
               RdxDesc.getOpcode(), Phi->getType(),
