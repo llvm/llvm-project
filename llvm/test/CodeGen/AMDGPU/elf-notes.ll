@@ -16,13 +16,13 @@
 ; OSABI-UNK-NOT: .amd_amdgpu_pal_metadata
 
 ; OSABI-UNK-ELF-NOT: Unknown note type
-; OSABI-UNK-ELF: NT_AMD_AMDGPU_ISA (ISA Version)
-; OSABI-UNK-ELF: ISA Version:
+; OSABI-UNK-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
+; OSABI-UNK-ELF: AMD HSA ISA Name:
 ; OSABI-UNK-ELF: amdgcn-amd-unknown--gfx802
 ; OSABI-UNK-ELF-NOT: Unknown note type
-; OSABI-UNK-ELF-NOT: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; OSABI-UNK-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
-; OSABI-UNK-ELF-NOT: NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
+; OSABI-UNK-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 
 ; OSABI-HSA: .hsa_code_object_version
@@ -31,12 +31,12 @@
 ; OSABI-HSA: .amd_amdgpu_hsa_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
 
-; OSABI-HSA-ELF: Unknown note type: (0x00000001)
-; OSABI-HSA-ELF: Unknown note type: (0x00000003)
-; OSABI-HSA-ELF: NT_AMD_AMDGPU_ISA (ISA Version)
-; OSABI-HSA-ELF: ISA Version:
+; OSABI-HSA-ELF: NT_AMD_HSA_CODE_OBJECT_VERSION (AMD HSA Code Object Version)
+; OSABI-HSA-ELF: NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)
+; OSABI-HSA-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
+; OSABI-HSA-ELF: AMD HSA ISA Name:
 ; OSABI-HSA-ELF: amdgcn-amd-amdhsa--gfx802
-; OSABI-HSA-ELF: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; OSABI-HSA-ELF: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-HSA-ELF: HSA Metadata:
 ; OSABI-HSA-ELF: ---
 ; OSABI-HSA-ELF: Version: [ 1, 0 ]
@@ -51,18 +51,18 @@
 ; OSABI-HSA-ELF:       WavefrontSize:   64
 ; OSABI-HSA-ELF:       NumSGPRs:        96
 ; OSABI-HSA-ELF: ...
-; OSABI-HSA-ELF-NOT: NT_AMD_AMDGPU_PAL_METADATA (PAL Metadata)
+; OSABI-HSA-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 
 ; OSABI-PAL-NOT: .hsa_code_object_version
 ; OSABI-PAL: .hsa_code_object_isa
 ; OSABI-PAL: .amd_amdgpu_isa "amdgcn-amd-amdpal--gfx802"
 ; OSABI-PAL-NOT: .amd_amdgpu_hsa_metadata
 
-; OSABI-PAL-ELF: Unknown note type: (0x00000003)
-; OSABI-PAL-ELF: NT_AMD_AMDGPU_ISA (ISA Version)
-; OSABI-PAL-ELF: ISA Version:
+; OSABI-PAL-ELF: NT_AMD_HSA_ISA_VERSION (AMD HSA ISA Version)
+; OSABI-PAL-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
+; OSABI-PAL-ELF: AMD HSA ISA Name:
 ; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802
-; OSABI-PAL-ELF-NOT: NT_AMD_AMDGPU_HSA_METADATA (HSA Metadata)
+; OSABI-PAL-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-PAL-ELF: NT_AMDGPU_METADATA (AMDGPU Metadata)
 ; OSABI-PAL-ELF: AMDGPU Metadata:
 ; OSABI-PAL-ELF: amdpal.pipelines:
