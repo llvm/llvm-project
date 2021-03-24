@@ -78,7 +78,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // We do not want #line markers to affect dependency generation!
   if (Optional<StringRef> Filename =
           SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
-    MDC.MainDeps.push_back(
+    MDC.FileDeps.push_back(
         std::string(llvm::sys::path::remove_leading_dotslash(*Filename)));
 }
 
@@ -90,7 +90,7 @@ void ModuleDepCollectorPP::InclusionDirective(
   if (!File && !Imported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
-    MDC.MainDeps.push_back(std::string(FileName));
+    MDC.FileDeps.push_back(std::string(FileName));
   }
   handleImport(Imported);
 }
@@ -105,9 +105,10 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (!Imported)
     return;
 
-  MDC.Deps[MDC.ContextHash + Imported->getTopLevelModule()->getFullModuleName()]
+  const Module *TopLevelModule = Imported->getTopLevelModule();
+  MDC.ModularDeps[MDC.ContextHash + TopLevelModule->getFullModuleName()]
       .ImportedByMainFile = true;
-  DirectDeps.insert(Imported->getTopLevelModule());
+  DirectModularDeps.insert(TopLevelModule);
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -115,21 +116,20 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   MDC.MainFile = std::string(
       Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
-  for (const Module *M : DirectDeps) {
+  for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
-  }
 
-  for (auto &&I : MDC.Deps)
+  for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(I.second);
 
-  for (auto &&I : MDC.MainDeps)
+  for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(*MDC.Opts, I);
 }
 
 void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
 
-  auto ModI = MDC.Deps.insert(
+  auto ModI = MDC.ModularDeps.insert(
       std::make_pair(MDC.ContextHash + M->getFullModuleName(), ModuleDeps{}));
 
   if (!ModI.first->second.ID.ModuleName.empty())

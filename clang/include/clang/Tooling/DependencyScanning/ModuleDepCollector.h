@@ -104,6 +104,10 @@ void appendCommonModuleArguments(
 
 class ModuleDepCollector;
 
+/// Callback that records textual includes and direct modular includes/imports
+/// during preprocessing. At the end of the main file, it also collects
+/// transitive modular dependencies and passes everything to the
+/// \c DependencyConsumer of the parent \c ModuleDepCollector.
 class ModuleDepCollectorPP final : public PPCallbacks {
 public:
   ModuleDepCollectorPP(CompilerInstance &I, ModuleDepCollector &MDC)
@@ -124,11 +128,18 @@ public:
   void EndOfMainFile() override;
 
 private:
+  /// The compiler instance for the current translation unit.
   CompilerInstance &Instance;
+  /// The parent dependency collector.
   ModuleDepCollector &MDC;
-  llvm::DenseSet<const Module *> DirectDeps;
+  /// Working set of direct modular dependencies.
+  llvm::DenseSet<const Module *> DirectModularDeps;
 
   void handleImport(const Module *Imported);
+
+  /// Traverses the previously collected direct modular dependencies to discover
+  /// transitive modular dependencies and fills the parent \c ModuleDepCollector
+  /// with both.
   void handleTopLevelModule(const Module *M);
   void addAllSubmoduleDeps(const Module *M, ModuleDeps &MD,
                            llvm::DenseSet<const Module *> &AddedModules);
@@ -136,6 +147,8 @@ private:
                     llvm::DenseSet<const Module *> &AddedModules);
 };
 
+/// Collects modular and non-modular dependencies of the main file by attaching
+/// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
@@ -147,12 +160,20 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
+  /// The compiler instance for the current translation unit.
   CompilerInstance &Instance;
+  /// The consumer of collected dependency information.
   DependencyConsumer &Consumer;
+  /// Path to the main source file.
   std::string MainFile;
+  /// The module hash identifying the compilation conditions.
   std::string ContextHash;
-  std::vector<std::string> MainDeps;
-  std::unordered_map<std::string, ModuleDeps> Deps;
+  /// Non-modular file dependencies. This includes the main source file and
+  /// textually included header files.
+  std::vector<std::string> FileDeps;
+  /// Direct and transitive modular dependencies of the main source file.
+  std::unordered_map<std::string, ModuleDeps> ModularDeps;
+  /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
 };
 
