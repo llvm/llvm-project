@@ -20,6 +20,6 @@ public:
   std::string printable_name;
   uint32_t enum_value;
 };
-};
+}
 
 #endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_THREADINFO_H
