@@ -1606,6 +1606,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
+  getActionDefinitionsBuilder({G_SMULO, G_UMULO})
+      .scalarize(0)
+      .minScalar(0, S32)
+      .lower();
+
   getActionDefinitionsBuilder({
       // TODO: Verify V_BFI_B32 is generated from expanded bit ops
       G_FCOPYSIGN,
