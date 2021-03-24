@@ -18,7 +18,8 @@ class LLVMTypeConverter;
 class ModuleOp;
 template <typename T>
 class OperationPass;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Value to pass as bitwidth for the index type when the converter is expected
 /// to derive the bitwidth from the LLVM data layout.

@@ -51,6 +51,6 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   return success();
 }
 
-void mlir::populateExpandTanhPattern(OwningRewritePatternList &patterns) {
-  patterns.insert(convertTanhOp);
+void mlir::populateExpandTanhPattern(RewritePatternSet &patterns) {
+  patterns.add(convertTanhOp);
 }

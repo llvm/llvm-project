@@ -28,7 +28,8 @@
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace vector {
 class VectorDialect;

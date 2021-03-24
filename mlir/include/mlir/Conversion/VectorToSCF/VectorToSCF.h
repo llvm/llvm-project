@@ -13,8 +13,9 @@
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
 class Pass;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Control whether unrolling is used when lowering vector transfer ops to SCF.
 ///

@@ -13,7 +13,8 @@ namespace mlir {
 
 class LLVMConversionTarget;
 class LLVMTypeConverter;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to lower AMX ops to ops that map to LLVM
 /// intrinsics.

@@ -19,9 +19,10 @@ namespace mlir {
 
 class ConversionTarget;
 class MLIRContext;
-class OwningRewritePatternList;
 class Region;
 class TypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 

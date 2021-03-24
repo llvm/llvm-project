@@ -24,7 +24,8 @@ class Location;
 struct LogicalResult;
 class ModuleOp;
 class Operation;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 template <typename T>
 class OperationPass;
