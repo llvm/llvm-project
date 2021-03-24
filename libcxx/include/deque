@@ -162,6 +162,7 @@ template <class T, class Allocator, class Predicate>
 
 #include <__config>
 #include <__split_buffer>
+#include <compare>
 #include <type_traits>
 #include <initializer_list>
 #include <iterator>

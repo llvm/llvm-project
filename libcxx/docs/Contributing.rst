@@ -45,9 +45,10 @@ Adding a new header TODO
 When adding a new header to libc++:
 
 1. Add a test under ``test/libcxx`` that the new header defines ``_LIBCPP_VERSION``. See ``test/libcxx/algorithms/version.pass.cpp`` for an example.
-2. Run ``python utils/generate_header_tests.py``, verify and commit the modifications.
-3. Create a submodule in ``include/module.modulemap`` for the new header.
-4. Update the ``include/CMakeLists.txt`` file to include the new header.
+2. Run ``python utils/generate_header_tests.py``; verify and commit the changes.
+3. Modify ``python utils/generate_header_inclusion_tests.py``; run it; verify and commit the changes.
+4. Create a submodule in ``include/module.modulemap`` for the new header.
+5. Update the ``include/CMakeLists.txt`` file to include the new header.
 
 Exporting new symbols from the library
 ======================================

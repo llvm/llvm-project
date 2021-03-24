@@ -765,6 +765,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__config>
 #include <stdexcept>
 #include <__locale>
+#include <compare>
 #include <initializer_list>
 #include <utility>
 #include <iterator>
