@@ -2126,10 +2126,10 @@ packaged_task<void(_ArgTypes...)>::reset()
     __p_ = promise<result_type>();
 }
 
-template <class _Callable>
+template <class _Rp, class... _ArgTypes>
 inline _LIBCPP_INLINE_VISIBILITY
 void
-swap(packaged_task<_Callable>& __x, packaged_task<_Callable>& __y) _NOEXCEPT
+swap(packaged_task<_Rp(_ArgTypes...)>& __x, packaged_task<_Rp(_ArgTypes...)>& __y) _NOEXCEPT
 {
     __x.swap(__y);
 }
