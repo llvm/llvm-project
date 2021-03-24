@@ -29,15 +29,19 @@ namespace llvm {
 namespace mca {
 
 bool InOrderIssueStage::hasWorkToComplete() const {
-  return !IssuedInst.empty() || StalledInst;
+  return !IssuedInst.empty() || StalledInst || CarriedOver;
 }
 
 bool InOrderIssueStage::isAvailable(const InstRef &IR) const {
+  if (StalledInst || CarriedOver)
+    return false;
+
   const Instruction &Inst = *IR.getInstruction();
   unsigned NumMicroOps = Inst.getNumMicroOps();
   const InstrDesc &Desc = Inst.getDesc();
 
-  if (Bandwidth < NumMicroOps)
+  bool ShouldCarryOver = NumMicroOps > SM.IssueWidth;
+  if (Bandwidth < NumMicroOps && !ShouldCarryOver)
     return false;
 
   // Instruction with BeginGroup must be the first instruction to be issued in a
@@ -247,15 +251,19 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR, unsigned *StallCycles) {
   }
   notifyInstructionIssue(IR, UsedResources, *this);
 
-  if (Desc.EndGroup) {
+  bool ShouldCarryOver = NumMicroOps > Bandwidth;
+  if (ShouldCarryOver) {
+    CarryOver = NumMicroOps - Bandwidth;
+    CarriedOver = IR;
     Bandwidth = 0;
+    NumIssued += Bandwidth;
+    LLVM_DEBUG(dbgs() << "[N] Carry over #" << IR << " \n");
   } else {
-    assert(Bandwidth >= NumMicroOps);
-    Bandwidth -= NumMicroOps;
+    NumIssued += NumMicroOps;
+    Bandwidth = Desc.EndGroup ? 0 : Bandwidth - NumMicroOps;
   }
 
   IssuedInst.push_back(IR);
-  NumIssued += NumMicroOps;
 
   if (!IR.getInstruction()->getDesc().RetireOOO)
     LastWriteBackCycle = findLastWriteBackCycle(IR);
@@ -295,6 +303,32 @@ void InOrderIssueStage::updateIssuedInst() {
     IssuedInst.resize(IssuedInst.size() - NumExecuted);
 }
 
+void InOrderIssueStage::updateCarriedOver() {
+  if (!CarriedOver)
+    return;
+
+  assert(!StalledInst && "A stalled instruction cannot be carried over.");
+
+  if (CarryOver > Bandwidth) {
+    CarryOver -= Bandwidth;
+    Bandwidth = 0;
+    LLVM_DEBUG(dbgs() << "[N] Carry over (" << CarryOver << "uops left) #"
+               << CarriedOver << " \n");
+    return;
+  }
+
+  LLVM_DEBUG(dbgs() << "[N] Carry over (complete) #" << CarriedOver
+             << " \n");
+
+  if (CarriedOver.getInstruction()->getDesc().EndGroup)
+    Bandwidth = 0;
+  else
+    Bandwidth -= CarryOver;
+
+  CarriedOver = InstRef();
+  CarryOver = 0;
+}
+
 void InOrderIssueStage::retireInstruction(InstRef &IR) {
   Instruction &IS = *IR.getInstruction();
   IS.retire();
@@ -318,6 +352,9 @@ llvm::Error InOrderIssueStage::cycleStart() {
   RM->cycleEvent(Freed);
 
   updateIssuedInst();
+
+  // Continue to issue the instruction carried over from the previous cycle
+  updateCarriedOver();
 
   // Issue instructions scheduled for this cycle
   if (!StallCyclesLeft && StalledInst) {
