@@ -37,7 +37,7 @@ private:
 /// loop.terminator to CFG operations within the SPIR-V dialect.
 void populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                 ScfToSPIRVContext &scfToSPIRVContext,
-                                OwningRewritePatternList &patterns);
+                                RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_SCFTOSPIRV_SCFTOSPIRV_H_

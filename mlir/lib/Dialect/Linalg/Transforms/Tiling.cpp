@@ -511,13 +511,13 @@ class CanonicalizationPatternList;
 template <>
 class CanonicalizationPatternList<> {
 public:
-  static void insert(OwningRewritePatternList &patterns) {}
+  static void insert(RewritePatternSet &patterns) {}
 };
 
 template <typename OpTy, typename... OpTypes>
 class CanonicalizationPatternList<OpTy, OpTypes...> {
 public:
-  static void insert(OwningRewritePatternList &patterns) {
+  static void insert(RewritePatternSet &patterns) {
     OpTy::getCanonicalizationPatterns(patterns, patterns.getContext());
     CanonicalizationPatternList<OpTypes...>::insert(patterns);
   }
@@ -530,17 +530,17 @@ class RewritePatternList;
 template <>
 class RewritePatternList<> {
 public:
-  static void insert(OwningRewritePatternList &patterns,
+  static void insert(RewritePatternSet &patterns,
                      const LinalgTilingOptions &options) {}
 };
 
 template <typename OpTy, typename... OpTypes>
 class RewritePatternList<OpTy, OpTypes...> {
 public:
-  static void insert(OwningRewritePatternList &patterns,
+  static void insert(RewritePatternSet &patterns,
                      const LinalgTilingOptions &options) {
     auto *ctx = patterns.getContext();
-    patterns.insert<LinalgTilingPattern<OpTy>>(
+    patterns.add<LinalgTilingPattern<OpTy>>(
         ctx, options,
         LinalgTransformationFilter(ArrayRef<Identifier>{},
                                    Identifier::get("tiled", ctx)));
@@ -549,15 +549,15 @@ public:
 };
 } // namespace
 
-OwningRewritePatternList
+RewritePatternSet
 mlir::linalg::getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx) {
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   populateLinalgTilingCanonicalizationPatterns(patterns);
   return patterns;
 }
 
 void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
-    OwningRewritePatternList &patterns) {
+    RewritePatternSet &patterns) {
   auto *ctx = patterns.getContext();
   AffineApplyOp::getCanonicalizationPatterns(patterns, ctx);
   AffineForOp::getCanonicalizationPatterns(patterns, ctx);
@@ -577,7 +577,7 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
 }
 
 /// Populate the given list with patterns that apply Linalg tiling.
-static void insertTilingPatterns(OwningRewritePatternList &patterns,
+static void insertTilingPatterns(RewritePatternSet &patterns,
                                  const LinalgTilingOptions &options) {
   RewritePatternList<GenericOp, IndexedGenericOp,
 #define GET_OP_LIST
@@ -591,7 +591,7 @@ static void applyTilingToLoopPatterns(LinalgTilingLoopType loopType,
   auto options =
       LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(loopType);
   MLIRContext *ctx = funcOp.getContext();
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   insertTilingPatterns(patterns, options);
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
   (void)applyPatternsAndFoldGreedily(

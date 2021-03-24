@@ -1518,7 +1518,6 @@ LogicalResult TCParser::parseExpression(TensorUse currentDefinition,
       reductionDims.push_back(iter.cast<AffineDimExpr>().getPosition());
   }
 
-
   auto parseExpr = [&]() -> LogicalResult {
     std::unique_ptr<Expression> e;
     if (failed(parseExpression(currentDefinition, e, state)))
@@ -2074,10 +2073,10 @@ void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
                                              StringRef cppOpName) {
   const char *canonicalizersAndFoldersFmt = R"FMT(
     void {0}::getCanonicalizationPatterns(
-        OwningRewritePatternList &results,
+        RewritePatternSet &results,
         MLIRContext *context) {{
-      results.insert<EraseDeadLinalgOp>();
-      results.insert<FoldTensorCastOp>();
+      results.add<EraseDeadLinalgOp>();
+      results.add<FoldTensorCastOp>();
     }
     LogicalResult {0}::fold(ArrayRef<Attribute>,
                             SmallVectorImpl<OpFoldResult> &) {{

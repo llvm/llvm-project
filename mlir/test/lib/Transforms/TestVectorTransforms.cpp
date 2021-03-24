@@ -37,9 +37,9 @@ struct TestVectorToVectorConversion
 
   void runOnFunction() override {
     auto *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
+    RewritePatternSet patterns(ctx);
     if (unroll) {
-      patterns.insert<UnrollVectorPattern>(
+      patterns.add<UnrollVectorPattern>(
           ctx,
           UnrollVectorOptions().setNativeShapeFn(getShape).setFilterConstraint(
               filter));
@@ -70,7 +70,7 @@ private:
 struct TestVectorSlicesConversion
     : public PassWrapper<TestVectorSlicesConversion, FunctionPass> {
   void runOnFunction() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     populateVectorSlicesLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
@@ -101,14 +101,14 @@ struct TestVectorContractionConversion
       llvm::cl::init(false)};
 
   void runOnFunction() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
 
     // Test on one pattern in isolation.
     if (lowerToOuterProduct) {
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
-      patterns.insert<ContractionOpToOuterProductOpLowering>(options,
-                                                             &getContext());
+      patterns.add<ContractionOpToOuterProductOpLowering>(options,
+                                                          &getContext());
       (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
       return;
     }
@@ -117,7 +117,7 @@ struct TestVectorContractionConversion
     if (lowerToFilterOuterProduct) {
       VectorContractLowering lowering = VectorContractLowering::OuterProduct;
       VectorTransformsOptions options{lowering};
-      patterns.insert<ContractionOpToOuterProductOpLowering>(
+      patterns.add<ContractionOpToOuterProductOpLowering>(
           options, &getContext(), [](vector::ContractionOp op) {
             // Only lowers vector.contract where the lhs as a type vector<MxNx?>
             // where M is not 4.
@@ -149,8 +149,8 @@ struct TestVectorUnrollingPatterns
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass) {}
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
-    patterns.insert<UnrollVectorPattern>(
+    RewritePatternSet patterns(ctx);
+    patterns.add<UnrollVectorPattern>(
         ctx, UnrollVectorOptions()
                  .setNativeShape(ArrayRef<int64_t>{2, 2})
                  .setFilterConstraint([](Operation *op) {
@@ -171,14 +171,14 @@ struct TestVectorUnrollingPatterns
         }
         return nativeShape;
       };
-      patterns.insert<UnrollVectorPattern>(
+      patterns.add<UnrollVectorPattern>(
           ctx, UnrollVectorOptions()
                    .setNativeShapeFn(nativeShapeFn)
                    .setFilterConstraint([](Operation *op) {
                      return success(isa<ContractionOp>(op));
                    }));
     } else {
-      patterns.insert<UnrollVectorPattern>(
+      patterns.add<UnrollVectorPattern>(
           ctx, UnrollVectorOptions()
                    .setNativeShape(ArrayRef<int64_t>{2, 2, 2})
                    .setFilterConstraint([](Operation *op) {
@@ -210,7 +210,7 @@ struct TestVectorDistributePatterns
 
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
+    RewritePatternSet patterns(ctx);
     FuncOp func = getFunction();
     func.walk([&](AddFOp op) {
       OpBuilder builder(op);
@@ -240,7 +240,7 @@ struct TestVectorDistributePatterns
         }
       }
     });
-    patterns.insert<PointwiseExtractPattern>(ctx);
+    patterns.add<PointwiseExtractPattern>(ctx);
     populateVectorToVectorTransformationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
@@ -260,7 +260,7 @@ struct TestVectorToLoopPatterns
       llvm::cl::init(32)};
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
+    RewritePatternSet patterns(ctx);
     FuncOp func = getFunction();
     func.walk([&](AddFOp op) {
       // Check that the operation type can be broken down into a loop.
@@ -300,7 +300,7 @@ struct TestVectorToLoopPatterns
       }
       return mlir::WalkResult::interrupt();
     });
-    patterns.insert<PointwiseExtractPattern>(ctx);
+    patterns.add<PointwiseExtractPattern>(ctx);
     populateVectorToVectorTransformationPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
@@ -313,8 +313,8 @@ struct TestVectorTransferUnrollingPatterns
   }
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
-    patterns.insert<UnrollVectorPattern>(
+    RewritePatternSet patterns(ctx);
+    patterns.add<UnrollVectorPattern>(
         ctx,
         UnrollVectorOptions()
             .setNativeShape(ArrayRef<int64_t>{2, 2})
@@ -347,13 +347,13 @@ struct TestVectorTransferFullPartialSplitPatterns
       llvm::cl::init(false)};
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
-    OwningRewritePatternList patterns(ctx);
+    RewritePatternSet patterns(ctx);
     VectorTransformsOptions options;
     if (useLinalgOps)
       options.setVectorTransferSplit(VectorTransferSplit::LinalgCopy);
     else
       options.setVectorTransferSplit(VectorTransferSplit::VectorTransfer);
-    patterns.insert<VectorTransferFullPartialRewriter>(ctx, options);
+    patterns.add<VectorTransferFullPartialRewriter>(ctx, options);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }
 };
@@ -369,7 +369,7 @@ struct TestVectorTransferLoweringPatterns
     registry.insert<memref::MemRefDialect>();
   }
   void runOnFunction() override {
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     populateVectorTransferLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));
   }

@@ -34,7 +34,7 @@ std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
 /// the TypeConverter, but otherwise don't care what type conversions are
 /// happening.
 void populateAsyncStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
 } // namespace mlir

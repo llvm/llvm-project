@@ -1385,8 +1385,8 @@ void mlir::populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter) {
 }
 
 void mlir::populateSPIRVToLLVMConversionPatterns(
-    LLVMTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<
       // Arithmetic ops
       DirectConversionPattern<spirv::IAddOp, LLVM::AddOp>,
       DirectConversionPattern<spirv::IMulOp, LLVM::MulOp>,
@@ -1499,13 +1499,13 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 }
 
 void mlir::populateSPIRVToLLVMFunctionConversionPatterns(
-    LLVMTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<FuncConversionPattern>(patterns.getContext(), typeConverter);
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<FuncConversionPattern>(patterns.getContext(), typeConverter);
 }
 
 void mlir::populateSPIRVToLLVMModuleConversionPatterns(
-    LLVMTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<ModuleConversionPattern, ModuleEndConversionPattern>(
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<ModuleConversionPattern, ModuleEndConversionPattern>(
       patterns.getContext(), typeConverter);
 }
 

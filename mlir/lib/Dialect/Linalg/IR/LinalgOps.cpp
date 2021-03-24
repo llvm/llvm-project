@@ -842,10 +842,9 @@ struct FoldInitTensorWithTensorReshapeOp
 };
 } // namespace
 
-void InitTensorOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results
-      .insert<FoldInitTensorWithSubTensorOp, FoldInitTensorWithTensorReshapeOp,
+void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<FoldInitTensorWithSubTensorOp, FoldInitTensorWithTensorReshapeOp,
               ReplaceDimOfInitTensorOp, ReplaceStaticShapeDims>(context);
 }
 
@@ -1546,9 +1545,9 @@ static LogicalResult verify(ReshapeOp op) {
   return success();
 }
 
-void ReshapeOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<CollapseReshapeOps<ReshapeOp>>(context);
+  results.add<CollapseReshapeOps<ReshapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1661,10 +1660,10 @@ struct ReplaceDimOfReshapeOpResult : OpRewritePattern<memref::DimOp> {
 };
 } // namespace
 
-void TensorReshapeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<CollapseReshapeOps<TensorReshapeOp>, FoldReshapeWithConstant,
-                 ReplaceDimOfReshapeOpResult>(context);
+void TensorReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<CollapseReshapeOps<TensorReshapeOp>, FoldReshapeWithConstant,
+              ReplaceDimOfReshapeOpResult>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2654,11 +2653,11 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
 } // namespace
 
 #define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
-  void XXX::getCanonicalizationPatterns(OwningRewritePatternList &results,     \
+  void XXX::getCanonicalizationPatterns(RewritePatternSet &results,            \
                                         MLIRContext *context) {                \
-    results.insert<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,     \
-                   RemoveIdentityLinalgOps>();                                 \
-    results.insert<ReplaceDimOfLinalgOpResult>(context);                       \
+    results.add<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,        \
+                RemoveIdentityLinalgOps>();                                    \
+    results.add<ReplaceDimOfLinalgOpResult>(context);                          \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \

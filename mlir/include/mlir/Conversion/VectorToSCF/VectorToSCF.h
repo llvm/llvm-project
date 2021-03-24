@@ -163,7 +163,7 @@ struct VectorTransferRewriter : public RewritePattern {
 
 /// Collect a set of patterns to convert from the Vector dialect to SCF + std.
 void populateVectorToSCFConversionPatterns(
-    OwningRewritePatternList &patterns,
+    RewritePatternSet &patterns,
     const VectorTransferToSCFOptions &options = VectorTransferToSCFOptions());
 
 /// Create a pass to convert a subset of vector ops to SCF.

@@ -246,8 +246,8 @@ void LowerABIAttributesPass::runOnOperation() {
     return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
   });
 
-  OwningRewritePatternList patterns(context);
-  patterns.insert<ProcessInterfaceVarABI>(typeConverter, context);
+  RewritePatternSet patterns(context);
+  patterns.add<ProcessInterfaceVarABI>(typeConverter, context);
 
   ConversionTarget target(*context);
   // "Legal" function ops should have no interface variable ABI attributes.

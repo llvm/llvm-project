@@ -53,8 +53,7 @@ static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
 FrozenRewritePatternList::FrozenRewritePatternList()
     : impl(std::make_shared<Impl>()) {}
 
-FrozenRewritePatternList::FrozenRewritePatternList(
-    OwningRewritePatternList &&patterns)
+FrozenRewritePatternList::FrozenRewritePatternList(RewritePatternSet &&patterns)
     : impl(std::make_shared<Impl>()) {
   impl->nativePatterns = std::move(patterns.getNativePatterns());
 

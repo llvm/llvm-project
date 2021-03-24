@@ -25,15 +25,15 @@ using OwningRewritePatternList = RewritePatternSet;
 
 /// Add a pattern to the given pattern list to convert the operand and result
 /// types of a CallOp with the given type converter.
-void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
+void populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
                                          TypeConverter &converter);
 
 /// Add a pattern to the given pattern list to rewrite branch operations to use
 /// operands that have been legalized by the conversion framework. This can only
 /// be done if the branch operation implements the BranchOpInterface. Only
 /// needed for partial conversions.
-void populateBranchOpInterfaceTypeConversionPattern(
-    OwningRewritePatternList &patterns, TypeConverter &converter);
+void populateBranchOpInterfaceTypeConversionPattern(RewritePatternSet &patterns,
+                                                    TypeConverter &converter);
 
 /// Return true if op is a BranchOpInterface op whose operands are all legal
 /// according to converter.
@@ -42,7 +42,7 @@ bool isLegalForBranchOpInterfaceTypeConversionPattern(Operation *op,
 
 /// Add a pattern to the given pattern list to rewrite `return` ops to use
 /// operands that have been legalized by the conversion framework.
-void populateReturnOpTypeConversionPattern(OwningRewritePatternList &patterns,
+void populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
                                            TypeConverter &converter);
 
 /// For ReturnLike ops (except `return`), return True. If op is a `return` &&

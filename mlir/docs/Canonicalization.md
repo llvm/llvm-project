@@ -79,9 +79,9 @@ def MyOp : ... {
 Canonicalization patterns can then be provided in the source file:
 
 ```c++
-void MyOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void MyOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                        MLIRContext *context) {
-  patterns.insert<...>(...);
+  patterns.add<...>(...);
 }
 ```
 

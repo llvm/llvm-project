@@ -23,7 +23,7 @@ class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
 void populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
-                                  OwningRewritePatternList &patterns);
+                                  RewritePatternSet &patterns);
 
 /// Creates an instance of std bufferization pass.
 std::unique_ptr<Pass> createStdBufferizePass();
@@ -42,7 +42,7 @@ std::unique_ptr<Pass> createTensorConstantBufferizePass();
 std::unique_ptr<Pass> createStdExpandOpsPass();
 
 /// Collects a set of patterns to rewrite ops within the Std dialect.
-void populateStdExpandOpsPatterns(OwningRewritePatternList &patterns);
+void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

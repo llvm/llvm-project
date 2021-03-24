@@ -59,14 +59,14 @@ void TestConvVectorization::runOnOperation() {
   target.addLegalOp<ModuleOp, FuncOp, ModuleTerminatorOp, ReturnOp>();
   target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
 
-  SmallVector<OwningRewritePatternList, 4> stage1Patterns;
+  SmallVector<RewritePatternSet, 4> stage1Patterns;
   linalg::populateConvVectorizationPatterns(context, stage1Patterns, tileSizes);
   SmallVector<FrozenRewritePatternList, 4> frozenStage1Patterns;
   llvm::move(stage1Patterns, std::back_inserter(frozenStage1Patterns));
 
-  OwningRewritePatternList stage2Patterns =
+  RewritePatternSet stage2Patterns =
       linalg::getLinalgTilingCanonicalizationPatterns(context);
-  stage2Patterns.insert<linalg::AffineMinSCFCanonicalizationPattern>(context);
+  stage2Patterns.add<linalg::AffineMinSCFCanonicalizationPattern>(context);
 
   auto stage3Transforms = [](Operation *op) {
     PassManager pm(op->getContext());
@@ -91,11 +91,11 @@ void TestConvVectorization::runOnOperation() {
   VectorTransformsOptions vectorTransformsOptions{
       VectorContractLowering::Dot, VectorTransposeLowering::EltWise};
 
-  OwningRewritePatternList vectorTransferPatterns(context);
+  RewritePatternSet vectorTransferPatterns(context);
   // Pattern is not applied because rank-reducing vector transfer is not yet
   // supported as can be seen in splitFullAndPartialTransferPrecondition,
   // VectorTransforms.cpp
-  vectorTransferPatterns.insert<VectorTransferFullPartialRewriter>(
+  vectorTransferPatterns.add<VectorTransferFullPartialRewriter>(
       context, vectorTransformsOptions);
   (void)applyPatternsAndFoldGreedily(module, std::move(vectorTransferPatterns));
 
@@ -106,14 +106,14 @@ void TestConvVectorization::runOnOperation() {
     llvm_unreachable("Unexpected failure in linalg to loops pass.");
 
   // Programmatic controlled lowering of vector.contract only.
-  OwningRewritePatternList vectorContractLoweringPatterns(context);
+  RewritePatternSet vectorContractLoweringPatterns(context);
   populateVectorContractLoweringPatterns(vectorContractLoweringPatterns,
                                          vectorTransformsOptions);
   (void)applyPatternsAndFoldGreedily(module,
                                      std::move(vectorContractLoweringPatterns));
 
   // Programmatic controlled lowering of vector.transfer only.
-  OwningRewritePatternList vectorToLoopsPatterns(context);
+  RewritePatternSet vectorToLoopsPatterns(context);
   populateVectorToSCFConversionPatterns(vectorToLoopsPatterns,
                                         VectorTransferToSCFOptions());
   (void)applyPatternsAndFoldGreedily(module, std::move(vectorToLoopsPatterns));

@@ -105,10 +105,10 @@ struct RegistryImpl {
   /// Registers the patterns specializing the "main" op to one of the
   /// "intrinsic" ops depending on elemental type.
   static void registerPatterns(LLVMTypeConverter &converter,
-                               OwningRewritePatternList &patterns) {
+                               RewritePatternSet &patterns) {
     patterns
-        .insert<LowerToIntrinsic<typename Args::MainOp, typename Args::Intr32Op,
-                                 typename Args::Intr64Op>...>(converter);
+        .add<LowerToIntrinsic<typename Args::MainOp, typename Args::Intr32Op,
+                              typename Args::Intr64Op>...>(converter);
   }
 
   /// Configures the conversion target to lower out "main" ops.
@@ -128,9 +128,9 @@ using Registry = RegistryImpl<
 
 /// Populate the given list with patterns that convert from AVX512 to LLVM.
 void mlir::populateAVX512LegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   Registry::registerPatterns(converter, patterns);
-  patterns.insert<MaskCompressOpConversion>(converter);
+  patterns.add<MaskCompressOpConversion>(converter);
 }
 
 void mlir::configureAVX512LegalizeForExportTarget(

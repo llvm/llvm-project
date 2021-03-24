@@ -28,7 +28,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateFuncOpTypeConversionPattern(patterns, typeConverter);

@@ -154,10 +154,10 @@ creation, as well as many useful attribute and type construction methods.
 After a set of patterns have been defined, they are collected and provided to a
 specific driver for application. A driver consists of several high levels parts:
 
-*   Input `OwningRewritePatternList`
+*   Input `RewritePatternSet`
 
 The input patterns to a driver are provided in the form of an
-`OwningRewritePatternList`. This class provides a simplified API for building a
+`RewritePatternSet`. This class provides a simplified API for building a
 list of patterns.
 
 *   Driver-specific `PatternRewriter`
@@ -173,7 +173,7 @@ mutation directly.
 Each driver is responsible for defining its own operation visitation order as
 well as pattern cost model, but the final application is performed via a
 `PatternApplicator` class. This class takes as input the
-`OwningRewritePatternList` and transforms the patterns based upon a provided
+`RewritePatternSet` and transforms the patterns based upon a provided
 cost model. This cost model computes a final benefit for a given pattern, using
 whatever driver specific information necessary. After a cost model has been
 computed, the driver may begin to match patterns against operations using
@@ -189,8 +189,8 @@ public:
 };
 
 /// Populate the pattern list.
-void collectMyPatterns(OwningRewritePatternList &patterns, MLIRContext *ctx) {
-  patterns.insert<MyPattern>(/*benefit=*/1, ctx);
+void collectMyPatterns(RewritePatternSet &patterns, MLIRContext *ctx) {
+  patterns.add<MyPattern>(/*benefit=*/1, ctx);
 }
 
 /// Define a custom PatternRewriter for use by the driver.
@@ -203,7 +203,7 @@ public:
 
 /// Apply the custom driver to `op`.
 void applyMyPatternDriver(Operation *op,
-                          const OwningRewritePatternList &patterns) {
+                          const RewritePatternSet &patterns) {
   // Initialize the custom PatternRewriter.
   MyPatternRewriter rewriter(op->getContext());
 

@@ -25,7 +25,7 @@ public:
 } // namespace
 
 void TestGLSLCanonicalizationPass::runOnOperation() {
-  OwningRewritePatternList patterns(&getContext());
+  RewritePatternSet patterns(&getContext());
   spirv::populateSPIRVGLSLCanonicalizationPatterns(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }

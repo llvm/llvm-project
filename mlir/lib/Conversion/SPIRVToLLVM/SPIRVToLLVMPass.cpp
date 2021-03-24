@@ -36,7 +36,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   // Encode global variable's descriptor set and binding if they exist.
   encodeBindAttribute(module);
 
-  OwningRewritePatternList patterns(context);
+  RewritePatternSet patterns(context);
 
   populateSPIRVToLLVMTypeConversion(converter);
 

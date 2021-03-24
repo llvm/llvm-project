@@ -18,8 +18,8 @@ using OwningRewritePatternList = RewritePatternSet;
 
 /// Collect a set of patterns to lower AVX512 ops to ops that map to LLVM
 /// intrinsics.
-void populateAVX512LegalizeForLLVMExportPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateAVX512LegalizeForLLVMExportPatterns(LLVMTypeConverter &converter,
+                                                 RewritePatternSet &patterns);
 
 /// Configure the target to support lowering AVX512 ops to ops that map to LLVM
 /// intrinsics.

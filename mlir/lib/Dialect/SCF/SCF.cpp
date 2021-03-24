@@ -703,10 +703,10 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
 };
 } // namespace
 
-void ForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.insert<ForOpIterArgsFolder, SimplifyTrivialLoops,
-                 LastTensorLoadCanonicalization>(context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
+              LastTensorLoadCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -973,10 +973,10 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
 };
 } // namespace
 
-void IfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.insert<RemoveUnusedResults, RemoveStaticCondition,
-                 ConvertTrivialIfToSelect>(context);
+  results.add<RemoveUnusedResults, RemoveStaticCondition,
+              ConvertTrivialIfToSelect>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1275,10 +1275,9 @@ struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
 
 } // namespace
 
-void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(
-      context);
+  results.add<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//

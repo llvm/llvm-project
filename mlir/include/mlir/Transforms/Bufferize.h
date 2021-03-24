@@ -56,7 +56,7 @@ void populateBufferizeMaterializationLegality(ConversionTarget &target);
 ///
 /// In particular, these are the tensor_load/buffer_cast ops.
 void populateEliminateBufferizeMaterializationsPatterns(
-    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns);
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns);
 
 } // end namespace mlir
 

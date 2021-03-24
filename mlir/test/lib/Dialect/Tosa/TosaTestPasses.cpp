@@ -184,11 +184,11 @@ struct TosaTestQuantUtilAPI
 
 void TosaTestQuantUtilAPI::runOnFunction() {
   auto *ctx = &getContext();
-  OwningRewritePatternList patterns(ctx);
+  RewritePatternSet patterns(ctx);
   auto func = getFunction();
 
-  patterns.insert<ConvertTosaNegateOp>(ctx);
-  patterns.insert<ConvertTosaConv2DOp>(ctx);
+  patterns.add<ConvertTosaNegateOp>(ctx);
+  patterns.add<ConvertTosaConv2DOp>(ctx);
   (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
