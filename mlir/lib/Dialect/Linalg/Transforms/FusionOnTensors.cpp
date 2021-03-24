@@ -897,9 +897,14 @@ struct FoldProducerReshapeOpByLinearization
 /// generic/indexed_generic op, when the reshape op is collapsing
 /// dimensions. The dimensionality of the loop in the consumer is expanded.
 template <typename GenericOpTy>
-struct FoldWithProducerReshapeOpByExpansion
+class FoldWithProducerReshapeOpByExpansion
     : public OpRewritePattern<GenericOpTy> {
-  using OpRewritePattern<GenericOpTy>::OpRewritePattern;
+public:
+  FoldWithProducerReshapeOpByExpansion(MLIRContext *context,
+                                       bool foldUnitDimReshapes,
+                                       PatternBenefit benefit = 1)
+      : OpRewritePattern<GenericOpTy>(context, benefit),
+        allowFoldingUnitDimReshapes(foldUnitDimReshapes) {}
 
   LogicalResult matchAndRewrite(GenericOpTy genericOp,
                                 PatternRewriter &rewriter) const override {
@@ -916,8 +921,9 @@ struct FoldWithProducerReshapeOpByExpansion
       if (reshapeOp.getSrcType().getRank() <
               reshapeOp.getResultType().getRank() ||
           !isFusableWithReshapeByDimExpansion(linalgOp, operand.index()) ||
-          isUnitDimExpansionOnly(reshapeOp.getSrcType().getShape(),
-                                 reshapeOp.getReassociationMaps()))
+          (!allowFoldingUnitDimReshapes &&
+           isUnitDimExpansionOnly(reshapeOp.getSrcType().getShape(),
+                                  reshapeOp.getReassociationMaps())))
         continue;
 
       Optional<SmallVector<Value, 1>> replacementValues =
@@ -930,6 +936,9 @@ struct FoldWithProducerReshapeOpByExpansion
     }
     return failure();
   }
+
+private:
+  bool allowFoldingUnitDimReshapes;
 };
 
 /// Pattern to fold tensor_reshape op with its producer. The corresponding index
@@ -1134,7 +1143,8 @@ struct FusionOfTensorOpsPass
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateLinalgTensorOpsFusionPatterns(patterns);
+    populateLinalgTensorOpsFusionPatterns(patterns,
+                                          allowFoldingUnitDimReshapes);
     (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
@@ -1171,20 +1181,22 @@ void mlir::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
 }
 
 void mlir::populateFoldReshapeOpsByExpansionPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<FoldReshapeWithGenericOpByExpansion,
-               FoldWithProducerReshapeOpByExpansion<GenericOp>,
+    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes) {
+  patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext());
+  patterns.add<FoldWithProducerReshapeOpByExpansion<GenericOp>,
                FoldWithProducerReshapeOpByExpansion<IndexedGenericOp>>(
-      patterns.getContext());
+      patterns.getContext(), allowFoldingUnitDimReshapes);
 }
 
-void mlir::populateLinalgTensorOpsFusionPatterns(RewritePatternSet &patterns) {
+void mlir::populateLinalgTensorOpsFusionPatterns(
+    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes) {
   auto *context = patterns.getContext();
   patterns
       .add<FuseTensorOps<GenericOp>, FuseTensorOps<IndexedGenericOp>,
            FoldSplatConstants<GenericOp>, FoldSplatConstants<IndexedGenericOp>>(
           context);
-  populateFoldReshapeOpsByExpansionPatterns(patterns);
+  populateFoldReshapeOpsByExpansionPatterns(patterns,
+                                            allowFoldingUnitDimReshapes);
   GenericOp::getCanonicalizationPatterns(patterns, context);
   IndexedGenericOp::getCanonicalizationPatterns(patterns, context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
