@@ -1084,12 +1084,15 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   for (const auto &RC : RegisterClasses) {
     assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
+    uint32_t RegSize = 0;
+    if (RC.RSI.isSimple())
+      RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
-       << RegClassStrings.get(RC.getName()) << ", "
-       << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
-       << RC.getQualifiedName() + "RegClassID" << ", "
-       << RC.CopyCost << ", "
-       << ( RC.Allocatable ? "true" : "false" ) << " },\n";
+       << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
+       << ", sizeof(" << RC.getName() << "Bits), "
+       << RC.getQualifiedName() + "RegClassID"
+       << ", " << RegSize << ", " << RC.CopyCost << ", "
+       << (RC.Allocatable ? "true" : "false") << " },\n";
   }
 
   OS << "};\n\n";
