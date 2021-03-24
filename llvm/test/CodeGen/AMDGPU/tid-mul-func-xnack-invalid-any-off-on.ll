@@ -1,6 +1,6 @@
-; RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefixes=ERR %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=4 < %s 2>&1 | FileCheck --check-prefixes=ERR %s
 
-; ERR: LLVM ERROR: xnack setting of 'func2' function does not match module xnack setting
+; ERR: error: xnack setting of 'func2' function does not match module xnack setting
 
 define void @func0() {
 entry:

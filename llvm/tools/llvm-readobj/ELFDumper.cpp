@@ -1501,14 +1501,17 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
@@ -1517,6 +1520,7 @@ static const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
+  LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
   LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
@@ -5008,7 +5012,7 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     auto Version = reinterpret_cast<const CodeObjectVersion *>(Desc.data());
     StrOS << "[Major: " << Version->MajorVersion
           << ", Minor: " << Version->MinorVersion << "]";
-    return {"AMD HSA Code Object Version", StrOS.str()};
+    return {"AMD HSA Code Object Version", VersionString};
   }
   case ELF::NT_AMD_HSA_HSAIL: {
     struct HSAILProperties {
@@ -5028,7 +5032,7 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
           << ", Profile: " << Properties->Profile
           << ", Machine Model: " << Properties->MachineModel
           << ", Default Float Round: " << Properties->DefaultFloatRound << "]";
-    return {"AMD HSA HSAIL Properties", StrOS.str()};
+    return {"AMD HSA HSAIL Properties", HSAILPropetiesString};
   }
   case ELF::NT_AMD_HSA_ISA_VERSION: {
     struct IsaVersion {
@@ -5037,25 +5041,24 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
       uint32_t Major;
       uint32_t Minor;
       uint32_t Stepping;
-      char VendorAndArchitectureName[1];
     };
-    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName))
+    if (Desc.size() < sizeof(IsaVersion))
       return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
     auto Isa = reinterpret_cast<const IsaVersion *>(Desc.data());
-    if (Desc.size() < offsetof(IsaVersion, VendorAndArchitectureName) +
+    if (Desc.size() < sizeof(IsaVersion) +
                           Isa->VendorNameSize + Isa->ArchitectureNameSize ||
         Isa->VendorNameSize == 0 || Isa->ArchitectureNameSize == 0)
       return {"AMD HSA ISA Version", "Invalid AMD HSA ISA Version"};
     std::string IsaString;
     raw_string_ostream StrOS(IsaString);
     StrOS << "[Vendor: "
-          << StringRef(Isa->VendorAndArchitectureName, Isa->VendorNameSize - 1)
+          << StringRef((const char*)Desc.data() + sizeof(IsaVersion), Isa->VendorNameSize - 1)
           << ", Architecture: "
-          << StringRef(Isa->VendorAndArchitectureName + Isa->VendorNameSize,
+          << StringRef((const char*)Desc.data() + sizeof(IsaVersion) + Isa->VendorNameSize,
                        Isa->ArchitectureNameSize - 1)
           << ", Major: " << Isa->Major << ", Minor: " << Isa->Minor
           << ", Stepping: " << Isa->Stepping << "]";
-    return {"AMD HSA ISA Version", StrOS.str()};
+    return {"AMD HSA ISA Version", IsaString};
   }
   case ELF::NT_AMD_HSA_METADATA: {
     if (Desc.size() == 0)
@@ -5079,10 +5082,10 @@ static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     auto Isa = reinterpret_cast<const PALMetadata *>(Desc.data());
     std::string MetadataString;
     raw_string_ostream StrOS(MetadataString);
-    for (size_t i = 0; i < Desc.size() / sizeof(PALMetadata); ++i) {
-      StrOS << "[" << Isa[i].Key << ": " << Isa[i].Value << "]";
+    for (size_t I = 0, E = Desc.size() / sizeof(PALMetadata); I < E; ++E) {
+      StrOS << "[" << Isa[I].Key << ": " << Isa[I].Value << "]";
     }
-    return {"AMD PAL Metadata", StrOS.str()};
+    return {"AMD PAL Metadata", MetadataString};
   }
   }
 }
@@ -6187,6 +6190,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_AMDGPU) {
       switch (E.e_ident[ELF::EI_ABIVERSION]) {
       default:
+        W.printHex("Flags", E.e_flags);
+        break;
+      case 0:
         // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
         LLVM_FALLTHROUGH;
       case ELF::ELFABIVERSION_AMDGPU_HSA_V3:

@@ -106,20 +106,20 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
 }
 
 bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   return false;
 }
 
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   return false;
 }
 
 bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   return false;
 }
 
@@ -373,8 +373,8 @@ std::string AMDGPUTargetID::toString() const {
                     .str();
 
   std::string Features = "";
-  if (const auto &&HsaAbiVersion = getHsaAbiVersion(&STI)) {
-    switch (HsaAbiVersion.getValue()) {
+  if (Optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
+    switch (*HsaAbiVersion) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
       // Code object V2 only supported specific processors and had fixed
       // settings for the XNACK.

@@ -5160,30 +5160,30 @@ SDValue SITargetLowering::lowerXMULO(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::lowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->isTrapHandlerEnabled() ||
       Subtarget->getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return lowerTRAP_ENDPGM(Op, DAG);
+    return lowerTrapEndpgm(Op, DAG);
 
-  if (const auto &&HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
-    switch (HsaAbiVer.getValue()) {
+  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(Subtarget)) {
+    switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
-      return lowerTRAP_AMDHSA_QUEUE_PTR(Op, DAG);
+      return lowerTrapHsaQueuePtr(Op, DAG);
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
       return Subtarget->supportsGetDoorbellID() ?
-          lowerTRAP_AMDHSA(Op, DAG) : lowerTRAP_AMDHSA_QUEUE_PTR(Op, DAG);
+          lowerTrapHsa(Op, DAG) : lowerTrapHsaQueuePtr(Op, DAG);
     }
   }
 
   llvm_unreachable("Unknown trap handler");
 }
 
-SDValue SITargetLowering::lowerTRAP_ENDPGM(
+SDValue SITargetLowering::lowerTrapEndpgm(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
   return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
 }
 
-SDValue SITargetLowering::lowerTRAP_AMDHSA_QUEUE_PTR(
+SDValue SITargetLowering::lowerTrapHsaQueuePtr(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
@@ -5208,7 +5208,7 @@ SDValue SITargetLowering::lowerTRAP_AMDHSA_QUEUE_PTR(
   return DAG.getNode(AMDGPUISD::TRAP, SL, MVT::Other, Ops);
 }
 
-SDValue SITargetLowering::lowerTRAP_AMDHSA(
+SDValue SITargetLowering::lowerTrapHsa(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);

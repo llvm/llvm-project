@@ -183,12 +183,12 @@ public:
 
   bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
-  bool legalizeTrap_ENDPGM(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-  bool legalizeTrap_AMDHSA_QUEUE_PTR(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                     MachineIRBuilder &B) const;
-  bool legalizeTrap_AMDHSA(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
+  bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
+  bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B) const;
   bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &B) const;
 

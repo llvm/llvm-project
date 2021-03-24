@@ -4523,31 +4523,31 @@ bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
                                                 MachineIRBuilder &B) const {
   if (!ST.isTrapHandlerEnabled() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return legalizeTrap_ENDPGM(MI, MRI, B);
+    return legalizeTrapEndpgm(MI, MRI, B);
 
-  if (const auto &&HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
-    switch (HsaAbiVer.getValue()) {
+  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
+    switch (*HsaAbiVer) {
     case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
     case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
-      return legalizeTrap_AMDHSA_QUEUE_PTR(MI, MRI, B);
+      return legalizeTrapHsaQueuePtr(MI, MRI, B);
     case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
       return ST.supportsGetDoorbellID() ?
-          legalizeTrap_AMDHSA(MI, MRI, B) :
-          legalizeTrap_AMDHSA_QUEUE_PTR(MI, MRI, B);
+          legalizeTrapHsa(MI, MRI, B) :
+          legalizeTrapHsaQueuePtr(MI, MRI, B);
     }
   }
 
   llvm_unreachable("Unknown trap handler");
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_ENDPGM(
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
   MI.eraseFromParent();
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA_QUEUE_PTR(
+bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   // Pass queue pointer to trap handler as input, and insert trap instruction
   // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
@@ -4566,7 +4566,7 @@ bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA_QUEUE_PTR(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrap_AMDHSA(
+bool AMDGPULegalizerInfo::legalizeTrapHsa(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   B.buildInstr(AMDGPU::S_TRAP)
       .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));

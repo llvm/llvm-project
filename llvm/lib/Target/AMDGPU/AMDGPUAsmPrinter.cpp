@@ -203,16 +203,20 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // xnack settings.
   if (FunctionTargetID.isXnackSupported() &&
       FunctionTargetID.getXnackSetting() != IsaInfo::TargetIDSetting::Any &&
-      FunctionTargetID.getXnackSetting() != getTargetStreamer()->getTargetID()->getXnackSetting())
-    report_fatal_error("xnack setting of '" + Twine(MF->getName()) +
-                       "' function does not match module xnack setting");
+      FunctionTargetID.getXnackSetting() != getTargetStreamer()->getTargetID()->getXnackSetting()) {
+    OutContext.reportError({}, "xnack setting of '" + Twine(MF->getName()) +
+                           "' function does not match module xnack setting");
+    return;
+  }
   // Make sure function's sramecc settings are compatible with module's
   // sramecc settings.
   if (FunctionTargetID.isSramEccSupported() &&
       FunctionTargetID.getSramEccSetting() != IsaInfo::TargetIDSetting::Any &&
-      FunctionTargetID.getSramEccSetting() != getTargetStreamer()->getTargetID()->getSramEccSetting())
-    report_fatal_error("sramecc setting of '" + Twine(MF->getName()) +
-                       "' function does not match module sramecc setting");
+      FunctionTargetID.getSramEccSetting() != getTargetStreamer()->getTargetID()->getSramEccSetting()) {
+    OutContext.reportError({}, "sramecc setting of '" + Twine(MF->getName()) +
+                           "' function does not match module sramecc setting");
+    return;
+  }
 
   if (!MFI.isEntryFunction())
     return;
@@ -637,20 +641,19 @@ void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
   // If module is not empty, need to find first 'Off' or 'On' feature
   // setting per feature from functions in module.
   for (auto &F : M) {
-    if ((!getTargetStreamer()->getTargetID()->isXnackSupported() ||
-            getTargetStreamer()->getTargetID()->isXnackOnOrOff()) &&
-        (!getTargetStreamer()->getTargetID()->isSramEccSupported() ||
-            getTargetStreamer()->getTargetID()->isSramEccOnOrOff()))
+    auto &TSTargetID = getTargetStreamer()->getTargetID();
+    if ((!TSTargetID->isXnackSupported() || TSTargetID->isXnackOnOrOff()) &&
+        (!TSTargetID->isSramEccSupported() || TSTargetID->isSramEccOnOrOff()))
       break;
 
     const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const IsaInfo::AMDGPUTargetID &TID = STM.getTargetID();
-    if (getTargetStreamer()->getTargetID()->isXnackSupported())
-      if (getTargetStreamer()->getTargetID()->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
-        getTargetStreamer()->getTargetID()->setXnackSetting(TID.getXnackSetting());
-    if (getTargetStreamer()->getTargetID()->isSramEccSupported())
-      if (getTargetStreamer()->getTargetID()->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
-        getTargetStreamer()->getTargetID()->setSramEccSetting(TID.getSramEccSetting());
+    const IsaInfo::AMDGPUTargetID &STMTargetID = STM.getTargetID();
+    if (TSTargetID->isXnackSupported())
+      if (TSTargetID->getXnackSetting() == IsaInfo::TargetIDSetting::Any)
+        TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
+    if (TSTargetID->isSramEccSupported())
+      if (TSTargetID->getSramEccSetting() == IsaInfo::TargetIDSetting::Any)
+        TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
   }
 }
 
