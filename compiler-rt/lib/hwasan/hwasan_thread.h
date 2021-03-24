@@ -42,7 +42,7 @@ class Thread {
   HeapAllocationsRingBuffer *heap_allocations() { return heap_allocations_; }
   StackAllocationsRingBuffer *stack_allocations() { return stack_allocations_; }
 
-  tag_t GenerateRandomTag();
+  tag_t GenerateRandomTag(uptr num_bits = kTagBits);
 
   void DisableTagging() { tagging_disabled_++; }
   void EnableTagging() { tagging_disabled_--; }
