@@ -245,16 +245,14 @@ define i32 @f_0(i32 %val) {
 ; CHECK-LABEL: 'negative'
 ; GLOBAL: %p
 ; POINT-NOT: %p
-define void @negative(i32* dereferenceable(8) %p) nofree nosync {
+define void @negative(i32* dereferenceable(8) %p) {
   call void @mayfree()
   %v = load i32, i32* %p
   ret void
 }
 
 ; CHECK-LABEL: 'infer_func_attrs1'
-; GLOBAL: %p
-; POINT-NOT: %p
-; FIXME: Can be inferred from attributes
+; CHECK: %p
 define void @infer_func_attrs1(i32* dereferenceable(8) %p) nofree nosync {
   call void @mayfree()
   %v = load i32, i32* %p
