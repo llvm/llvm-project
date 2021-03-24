@@ -402,8 +402,22 @@ std::error_code is_local(int FD, bool &Result) {
 }
 
 static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
-  // First, check if the file is on a network (non-local) drive. If so, don't
-  // set DeleteFile to true, since it prevents opening the file for writes.
+  // Clear the FILE_DISPOSITION_INFO flag first, before checking if it's a
+  // network file. On Windows 7 the function realPathFromHandle() below fails
+  // if the FILE_DISPOSITION_INFO flag was already set to 'DeleteFile = true' by
+  // a prior call.
+  FILE_DISPOSITION_INFO Disposition;
+  Disposition.DeleteFile = false;
+  if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
+                                  sizeof(Disposition)))
+    return mapWindowsError(::GetLastError());
+  if (!Delete)
+    return std::error_code();
+
+  // Check if the file is on a network (non-local) drive. If so, don't
+  // continue when DeleteFile is true, since it prevents opening the file for
+  // writes. Note -- this will leak temporary files on disk, but only when the
+  // target file is on a network drive.
   SmallVector<wchar_t, 128> FinalPath;
   if (std::error_code EC = realPathFromHandle(Handle, FinalPath))
     return EC;
@@ -415,9 +429,9 @@ static std::error_code setDeleteDisposition(HANDLE Handle, bool Delete) {
   if (!IsLocal)
     return std::error_code();
 
-  // The file is on a local drive, set the DeleteFile to true.
-  FILE_DISPOSITION_INFO Disposition;
-  Disposition.DeleteFile = Delete;
+  // The file is on a local drive, we can safely set FILE_DISPOSITION_INFO's
+  // flag.
+  Disposition.DeleteFile = true;
   if (!SetFileInformationByHandle(Handle, FileDispositionInfo, &Disposition,
                                   sizeof(Disposition)))
     return mapWindowsError(::GetLastError());

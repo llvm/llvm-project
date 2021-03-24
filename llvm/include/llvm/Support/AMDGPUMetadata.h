@@ -29,10 +29,20 @@ namespace AMDGPU {
 //===----------------------------------------------------------------------===//
 namespace HSAMD {
 
-/// HSA metadata major version.
-constexpr uint32_t VersionMajor = 1;
-/// HSA metadata minor version.
-constexpr uint32_t VersionMinor = 0;
+/// HSA metadata major version for code object V2.
+constexpr uint32_t VersionMajorV2 = 1;
+/// HSA metadata minor version for code object V2.
+constexpr uint32_t VersionMinorV2 = 0;
+
+/// HSA metadata major version for code object V3.
+constexpr uint32_t VersionMajorV3 = 1;
+/// HSA metadata minor version for code object V3.
+constexpr uint32_t VersionMinorV3 = 0;
+
+/// HSA metadata major version for code object V4.
+constexpr uint32_t VersionMajorV4 = 1;
+/// HSA metadata minor version for code object V4.
+constexpr uint32_t VersionMinorV4 = 1;
 
 /// HSA metadata beginning assembler directive.
 constexpr char AssemblerDirectiveBegin[] = ".amd_amdgpu_hsa_metadata";

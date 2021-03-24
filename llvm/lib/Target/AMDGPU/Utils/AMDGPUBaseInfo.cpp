@@ -30,7 +30,8 @@
 
 static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
   "amdhsa-code-object-version", llvm::cl::Hidden,
-  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(3));
+  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4),
+  llvm::cl::ZeroOrMore);
 
 namespace {
 
@@ -96,21 +97,34 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   case 3:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  case 4:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   default:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+    report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
+                       Twine(AmdhsaCodeObjectVersion));
   }
 }
 
 bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   return false;
 }
 
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   return false;
+}
+
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  return false;
+}
+
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
+  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI);
 }
 
 #define GET_MIMGBaseOpcodesTable_IMPL
@@ -247,7 +261,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
 namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : XnackSetting(TargetIDSetting::Any), SramEccSetting(TargetIDSetting::Any) {
+    : STI(STI), XnackSetting(TargetIDSetting::Any),
+      SramEccSetting(TargetIDSetting::Any) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -334,25 +349,104 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
-  auto TargetTriple = STI->getTargetTriple();
-  auto Version = getIsaVersion(STI->getCPU());
+std::string AMDGPUTargetID::toString() const {
+  std::string StringRep = "";
+  raw_string_ostream StreamRep(StringRep);
 
-  Stream << TargetTriple.getArchName() << '-'
-         << TargetTriple.getVendorName() << '-'
-         << TargetTriple.getOSName() << '-'
-         << TargetTriple.getEnvironmentName() << '-'
-         << "gfx"
-         << Version.Major
-         << Version.Minor
-         << hexdigit(Version.Stepping, true);
+  auto TargetTriple = STI.getTargetTriple();
+  auto Version = getIsaVersion(STI.getCPU());
 
-  if (hasXNACK(*STI))
-    Stream << "+xnack";
-  if (hasSRAMECC(*STI))
-    Stream << "+sramecc";
+  StreamRep << TargetTriple.getArchName() << '-'
+            << TargetTriple.getVendorName() << '-'
+            << TargetTriple.getOSName() << '-'
+            << TargetTriple.getEnvironmentName() << '-';
 
-  Stream.flush();
+  std::string Processor = "";
+  // TODO: Following else statement is present here because we used various
+  // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
+  // Remove once all aliases are removed from GCNProcessors.td.
+  if (Version.Major >= 9)
+    Processor = STI.getCPU().str();
+  else
+    Processor = (Twine("gfx") + Twine(Version.Major) + Twine(Version.Minor) +
+                 Twine(Version.Stepping))
+                    .str();
+
+  std::string Features = "";
+  if (Optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
+    switch (*HsaAbiVersion) {
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+      // Code object V2 only supported specific processors and had fixed
+      // settings for the XNACK.
+      if (Processor == "gfx600") {
+      } else if (Processor == "gfx601") {
+      } else if (Processor == "gfx602") {
+      } else if (Processor == "gfx700") {
+      } else if (Processor == "gfx701") {
+      } else if (Processor == "gfx702") {
+      } else if (Processor == "gfx703") {
+      } else if (Processor == "gfx704") {
+      } else if (Processor == "gfx705") {
+      } else if (Processor == "gfx801") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor " + Processor +
+              " without XNACK");
+      } else if (Processor == "gfx802") {
+      } else if (Processor == "gfx803") {
+      } else if (Processor == "gfx805") {
+      } else if (Processor == "gfx810") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor " + Processor +
+              " without XNACK");
+      } else if (Processor == "gfx900") {
+        if (isXnackOnOrAny())
+          Processor = "gfx901";
+      } else if (Processor == "gfx902") {
+        if (isXnackOnOrAny())
+          Processor = "gfx903";
+      } else if (Processor == "gfx904") {
+        if (isXnackOnOrAny())
+          Processor = "gfx905";
+      } else if (Processor == "gfx906") {
+        if (isXnackOnOrAny())
+          Processor = "gfx907";
+      } else {
+        report_fatal_error(
+            "AMD GPU code object V2 does not support processor " + Processor);
+      }
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      // xnack.
+      if (isXnackOnOrAny())
+        Features += "+xnack";
+      // In code object v2 and v3, "sramecc" feature was spelled with a
+      // hyphen ("sram-ecc").
+      if (isSramEccOnOrAny())
+        Features += "+sram-ecc";
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      // sramecc.
+      if (getSramEccSetting() == TargetIDSetting::Off)
+        Features += ":sramecc-";
+      else if (getSramEccSetting() == TargetIDSetting::On)
+        Features += ":sramecc+";
+      // xnack.
+      if (getXnackSetting() == TargetIDSetting::Off)
+        Features += ":xnack-";
+      else if (getXnackSetting() == TargetIDSetting::On)
+        Features += ":xnack+";
+      break;
+    default:
+      break;
+    }
+  }
+
+  StreamRep << Processor << Features;
+
+  StreamRep.flush();
+  return StringRep;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
