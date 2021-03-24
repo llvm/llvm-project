@@ -60,18 +60,7 @@ public:
 private:
 };
 
-class WithBindName {
-public:
-  const std::string *bindName() const {
-    return bindName_ ? &*bindName_ : nullptr;
-  }
-  void set_bindName(std::string &&name) { bindName_ = std::move(name); }
-
-private:
-  std::optional<std::string> bindName_;
-};
-
-class SubprogramDetails : public WithBindName {
+class SubprogramDetails {
 public:
   bool isFunction() const { return result_ != nullptr; }
   bool isInterface() const { return isInterface_; }
@@ -79,6 +68,8 @@ public:
   Scope *entryScope() { return entryScope_; }
   const Scope *entryScope() const { return entryScope_; }
   void set_entryScope(Scope &scope) { entryScope_ = &scope; }
+  MaybeExpr bindName() const { return bindName_; }
+  void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
   const Symbol &result() const {
     CHECK(isFunction());
     return *result_;
@@ -95,6 +86,7 @@ public:
 
 private:
   bool isInterface_{false}; // true if this represents an interface-body
+  MaybeExpr bindName_;
   std::vector<Symbol *> dummyArgs_; // nullptr -> alternate return indicator
   Symbol *result_{nullptr};
   Scope *entryScope_{nullptr}; // if ENTRY, points to subprogram's scope
@@ -125,7 +117,7 @@ private:
 };
 
 // A name from an entity-decl -- could be object or function.
-class EntityDetails : public WithBindName {
+class EntityDetails {
 public:
   explicit EntityDetails(bool isDummy = false) : isDummy_{isDummy} {}
   const DeclTypeSpec *type() const { return type_; }
@@ -135,11 +127,14 @@ public:
   void set_isDummy(bool value = true) { isDummy_ = value; }
   bool isFuncResult() const { return isFuncResult_; }
   void set_funcResult(bool x) { isFuncResult_ = x; }
+  MaybeExpr bindName() const { return bindName_; }
+  void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
 
 private:
   bool isDummy_{false};
   bool isFuncResult_{false};
   const DeclTypeSpec *type_{nullptr};
+  MaybeExpr bindName_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const EntityDetails &);
 };
@@ -315,16 +310,19 @@ private:
   SymbolVector objects_;
 };
 
-class CommonBlockDetails : public WithBindName {
+class CommonBlockDetails {
 public:
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
+  MaybeExpr bindName() const { return bindName_; }
+  void set_bindName(MaybeExpr &&expr) { bindName_ = std::move(expr); }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
 private:
   MutableSymbolVector objects_;
+  MaybeExpr bindName_;
   std::size_t alignment_{0}; // required alignment in bytes
 };
 
@@ -567,10 +565,8 @@ public:
 
   inline DeclTypeSpec *GetType();
   inline const DeclTypeSpec *GetType() const;
-  void SetType(const DeclTypeSpec &);
 
-  const std::string *GetBindName() const;
-  void SetBindName(std::string &&);
+  void SetType(const DeclTypeSpec &);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
   bool IsSubprogram() const;
