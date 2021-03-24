@@ -1714,6 +1714,7 @@ static void __kmp_stg_print_barrier_pattern(kmp_str_buf_t *buffer,
         __kmp_str_buf_print(buffer, "   %s='",
                             __kmp_barrier_pattern_env_name[i]);
       }
+      KMP_DEBUG_ASSERT(j < bs_last_barrier && k < bs_last_barrier);
       __kmp_str_buf_print(buffer, "%s,%s'\n", __kmp_barrier_pattern_name[j],
                           __kmp_barrier_pattern_name[k]);
     }
