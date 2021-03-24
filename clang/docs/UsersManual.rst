@@ -674,6 +674,11 @@ control the crash diagnostics.
 The -fno-crash-diagnostics flag can be helpful for speeding the process
 of generating a delta reduced test case.
 
+.. option:: -fcrash-diagnostics-dir=<dir>
+
+  Specify where to write the crash diagnostics files; defaults to the
+  usual location for temporary files.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is specially useful when trying to
 generate a reproducer for warnings or errors while using modules.
@@ -3629,6 +3634,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fcomplete-member-pointers
                               Require member pointer base types to be complete if they would be significant under the Microsoft ABI
       -fcoverage-mapping      Generate coverage mapping to enable code coverage analysis
+      -fcrash-diagnostics-dir=<dir>
+                              Put crash-report files in <dir>
       -fdebug-macro           Emit macro debug information
       -fdelayed-template-parsing
                               Parse templated function definitions at the end of the translation unit
