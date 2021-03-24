@@ -688,9 +688,9 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 /// ParseLambdaExpression - Parse a C++11 lambda expression.
 ///
 ///       lambda-expression:
-///         lambda-introducer lambda-declarator[opt] compound-statement
+///         lambda-introducer lambda-declarator compound-statement
 ///         lambda-introducer '<' template-parameter-list '>'
-///             lambda-declarator[opt] compound-statement
+///             lambda-declarator compound-statement
 ///
 ///       lambda-introducer:
 ///         '[' lambda-capture[opt] ']'
@@ -722,9 +722,13 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ///         '&' identifier initializer
 ///
 ///       lambda-declarator:
-///         '(' parameter-declaration-clause ')' attribute-specifier[opt]
-///           'mutable'[opt] exception-specification[opt]
-///           trailing-return-type[opt]
+///         lambda-specifiers     [C++2b]
+///         '(' parameter-declaration-clause ')' lambda-specifiers
+///             requires-clause[opt]
+///
+///       lambda-specifiers:
+///         decl-specifier-seq[opt] noexcept-specifier[opt]
+///             attribute-specifier-seq[opt] trailing-return-type[opt]
 ///
 ExprResult Parser::ParseLambdaExpression() {
   // Parse lambda-introducer.
@@ -1249,7 +1253,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   Actions.PushLambdaScope();
 
   ParsedAttributes Attr(AttrFactory);
-  SourceLocation DeclLoc = Tok.getLocation();
   if (getLangOpts().CUDA) {
     // In CUDA code, GNU attributes are allowed to appear immediately after the
     // "[...]", even if there is no "(...)" before the lambda body.
@@ -1315,11 +1318,92 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   TypeResult TrailingReturnType;
   SourceLocation TrailingReturnTypeLoc;
+
+  auto ParseLambdaSpecifiers =
+      [&](SourceLocation LParenLoc, SourceLocation RParenLoc,
+          MutableArrayRef<DeclaratorChunk::ParamInfo> ParamInfo,
+          SourceLocation EllipsisLoc) {
+        SourceLocation DeclEndLoc = RParenLoc;
+
+        // GNU-style attributes must be parsed before the mutable specifier to
+        // be compatible with GCC. MSVC-style attributes must be parsed before
+        // the mutable specifier to be compatible with MSVC.
+        MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attr);
+
+        // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update
+        // the DeclEndLoc.
+        SourceLocation MutableLoc;
+        SourceLocation ConstexprLoc;
+        SourceLocation ConstevalLoc;
+        tryConsumeLambdaSpecifierToken(*this, MutableLoc, ConstexprLoc,
+                                       ConstevalLoc, DeclEndLoc);
+
+        addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
+        addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
+        // Parse exception-specification[opt].
+        ExceptionSpecificationType ESpecType = EST_None;
+        SourceRange ESpecRange;
+        SmallVector<ParsedType, 2> DynamicExceptions;
+        SmallVector<SourceRange, 2> DynamicExceptionRanges;
+        ExprResult NoexceptExpr;
+        CachedTokens *ExceptionSpecTokens;
+        ESpecType = tryParseExceptionSpecification(
+            /*Delayed=*/false, ESpecRange, DynamicExceptions,
+            DynamicExceptionRanges, NoexceptExpr, ExceptionSpecTokens);
+
+        if (ESpecType != EST_None)
+          DeclEndLoc = ESpecRange.getEnd();
+
+        // Parse attribute-specifier[opt].
+        MaybeParseCXX11Attributes(Attr, &DeclEndLoc);
+
+        // Parse OpenCL addr space attribute.
+        if (Tok.isOneOf(tok::kw___private, tok::kw___global, tok::kw___local,
+                        tok::kw___constant, tok::kw___generic)) {
+          ParseOpenCLQualifiers(DS.getAttributes());
+          ConsumeToken();
+        }
+
+        SourceLocation FunLocalRangeEnd = DeclEndLoc;
+
+        // Parse trailing-return-type[opt].
+        if (Tok.is(tok::arrow)) {
+          FunLocalRangeEnd = Tok.getLocation();
+          SourceRange Range;
+          TrailingReturnType = ParseTrailingReturnType(
+              Range, /*MayBeFollowedByDirectInit*/ false);
+          TrailingReturnTypeLoc = Range.getBegin();
+          if (Range.getEnd().isValid())
+            DeclEndLoc = Range.getEnd();
+        }
+
+        SourceLocation NoLoc;
+        D.AddTypeInfo(
+            DeclaratorChunk::getFunction(
+                /*HasProto=*/true,
+                /*IsAmbiguous=*/false, LParenLoc, ParamInfo.data(),
+                ParamInfo.size(), EllipsisLoc, RParenLoc,
+                /*RefQualifierIsLvalueRef=*/true,
+                /*RefQualifierLoc=*/NoLoc, MutableLoc, ESpecType, ESpecRange,
+                DynamicExceptions.data(), DynamicExceptionRanges.data(),
+                DynamicExceptions.size(),
+                NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
+                /*ExceptionSpecTokens*/ nullptr,
+                /*DeclsInPrototype=*/None, LParenLoc, FunLocalRangeEnd, D,
+                TrailingReturnType, TrailingReturnTypeLoc, &DS),
+            std::move(Attr), DeclEndLoc);
+
+        // Parse requires-clause[opt].
+        if (Tok.is(tok::kw_requires))
+          ParseTrailingRequiresClause(D);
+
+        WarnIfHasCUDATargetAttr();
+      };
+
   if (Tok.is(tok::l_paren)) {
-    ParseScope PrototypeScope(this,
-                              Scope::FunctionPrototypeScope |
-                              Scope::FunctionDeclarationScope |
-                              Scope::DeclScope);
+    ParseScope PrototypeScope(this, Scope::FunctionPrototypeScope |
+                                        Scope::FunctionDeclarationScope |
+                                        Scope::DeclScope);
 
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
@@ -1345,165 +1429,28 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     }
 
     T.consumeClose();
-    SourceLocation RParenLoc = T.getCloseLocation();
-    SourceLocation DeclEndLoc = RParenLoc;
 
-    // GNU-style attributes must be parsed before the mutable specifier to be
-    // compatible with GCC. MSVC-style attributes must be parsed before the
-    // mutable specifier to be compatible with MSVC.
-    MaybeParseAttributes(PAKM_GNU | PAKM_Declspec, Attr);
-
-    // Parse mutable-opt and/or constexpr-opt or consteval-opt, and update the
-    // DeclEndLoc.
-    SourceLocation MutableLoc;
-    SourceLocation ConstexprLoc;
-    SourceLocation ConstevalLoc;
-    tryConsumeLambdaSpecifierToken(*this, MutableLoc, ConstexprLoc,
-                                   ConstevalLoc, DeclEndLoc);
-
-    addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
-    addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
-    // Parse exception-specification[opt].
-    ExceptionSpecificationType ESpecType = EST_None;
-    SourceRange ESpecRange;
-    SmallVector<ParsedType, 2> DynamicExceptions;
-    SmallVector<SourceRange, 2> DynamicExceptionRanges;
-    ExprResult NoexceptExpr;
-    CachedTokens *ExceptionSpecTokens;
-    ESpecType = tryParseExceptionSpecification(/*Delayed=*/false,
-                                               ESpecRange,
-                                               DynamicExceptions,
-                                               DynamicExceptionRanges,
-                                               NoexceptExpr,
-                                               ExceptionSpecTokens);
-
-    if (ESpecType != EST_None)
-      DeclEndLoc = ESpecRange.getEnd();
-
-    // Parse attribute-specifier[opt].
-    MaybeParseCXX11Attributes(Attr, &DeclEndLoc);
-
-    // Parse OpenCL addr space attribute.
-    if (Tok.isOneOf(tok::kw___private, tok::kw___global, tok::kw___local,
-                    tok::kw___constant, tok::kw___generic)) {
-      ParseOpenCLQualifiers(DS.getAttributes());
-      ConsumeToken();
-    }
-
-    SourceLocation FunLocalRangeEnd = DeclEndLoc;
-
-    // Parse trailing-return-type[opt].
-    if (Tok.is(tok::arrow)) {
-      FunLocalRangeEnd = Tok.getLocation();
-      SourceRange Range;
-      TrailingReturnType =
-          ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit*/ false);
-      TrailingReturnTypeLoc = Range.getBegin();
-      if (Range.getEnd().isValid())
-        DeclEndLoc = Range.getEnd();
-    }
-
-    SourceLocation NoLoc;
-    D.AddTypeInfo(DeclaratorChunk::getFunction(
-                      /*HasProto=*/true,
-                      /*IsAmbiguous=*/false, LParenLoc, ParamInfo.data(),
-                      ParamInfo.size(), EllipsisLoc, RParenLoc,
-                      /*RefQualifierIsLvalueRef=*/true,
-                      /*RefQualifierLoc=*/NoLoc, MutableLoc, ESpecType,
-                      ESpecRange, DynamicExceptions.data(),
-                      DynamicExceptionRanges.data(), DynamicExceptions.size(),
-                      NoexceptExpr.isUsable() ? NoexceptExpr.get() : nullptr,
-                      /*ExceptionSpecTokens*/ nullptr,
-                      /*DeclsInPrototype=*/None, LParenLoc, FunLocalRangeEnd, D,
-                      TrailingReturnType, TrailingReturnTypeLoc, &DS),
-                  std::move(Attr), DeclEndLoc);
-
-    // Parse requires-clause[opt].
-    if (Tok.is(tok::kw_requires))
-      ParseTrailingRequiresClause(D);
-
-    PrototypeScope.Exit();
-
-    WarnIfHasCUDATargetAttr();
+    // Parse lambda-specifiers.
+    ParseLambdaSpecifiers(LParenLoc, /*DeclEndLoc=*/T.getCloseLocation(),
+                          ParamInfo, EllipsisLoc);
   } else if (Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
                          tok::kw_constexpr, tok::kw_consteval,
                          tok::kw___private, tok::kw___global, tok::kw___local,
                          tok::kw___constant, tok::kw___generic,
-                         tok::kw_requires) ||
+                         tok::kw_requires, tok::kw_noexcept) ||
              (Tok.is(tok::l_square) && NextToken().is(tok::l_square))) {
-    // It's common to forget that one needs '()' before 'mutable', an attribute
-    // specifier, the result type, or the requires clause. Deal with this.
-    unsigned TokKind = 0;
-    switch (Tok.getKind()) {
-    case tok::kw_mutable: TokKind = 0; break;
-    case tok::arrow: TokKind = 1; break;
-    case tok::kw___attribute:
-    case tok::kw___private:
-    case tok::kw___global:
-    case tok::kw___local:
-    case tok::kw___constant:
-    case tok::kw___generic:
-    case tok::l_square: TokKind = 2; break;
-    case tok::kw_constexpr: TokKind = 3; break;
-    case tok::kw_consteval: TokKind = 4; break;
-    case tok::kw_requires: TokKind = 5; break;
-    default: llvm_unreachable("Unknown token kind");
-    }
-
-    Diag(Tok, diag::err_lambda_missing_parens)
-      << TokKind
-      << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
-    SourceLocation DeclEndLoc = DeclLoc;
-
-    // GNU-style attributes must be parsed before the mutable specifier to be
-    // compatible with GCC.
-    MaybeParseGNUAttributes(Attr, &DeclEndLoc);
-
-    // Parse 'mutable', if it's there.
-    SourceLocation MutableLoc;
-    if (Tok.is(tok::kw_mutable)) {
-      MutableLoc = ConsumeToken();
-      DeclEndLoc = MutableLoc;
-    }
-
-    // Parse attribute-specifier[opt].
-    MaybeParseCXX11Attributes(Attr, &DeclEndLoc);
-
-    // Parse the return type, if there is one.
-    if (Tok.is(tok::arrow)) {
-      SourceRange Range;
-      TrailingReturnType =
-          ParseTrailingReturnType(Range, /*MayBeFollowedByDirectInit*/ false);
-      if (Range.getEnd().isValid())
-        DeclEndLoc = Range.getEnd();
-    }
+    if (!getLangOpts().CPlusPlus2b)
+      // It's common to forget that one needs '()' before 'mutable', an
+      // attribute specifier, the result type, or the requires clause. Deal with
+      // this.
+      Diag(Tok, diag::ext_lambda_missing_parens)
+          << FixItHint::CreateInsertion(Tok.getLocation(), "() ");
 
     SourceLocation NoLoc;
-    D.AddTypeInfo(DeclaratorChunk::getFunction(
-                      /*HasProto=*/true,
-                      /*IsAmbiguous=*/false,
-                      /*LParenLoc=*/NoLoc,
-                      /*Params=*/nullptr,
-                      /*NumParams=*/0,
-                      /*EllipsisLoc=*/NoLoc,
-                      /*RParenLoc=*/NoLoc,
-                      /*RefQualifierIsLvalueRef=*/true,
-                      /*RefQualifierLoc=*/NoLoc, MutableLoc, EST_None,
-                      /*ESpecRange=*/SourceRange(),
-                      /*Exceptions=*/nullptr,
-                      /*ExceptionRanges=*/nullptr,
-                      /*NumExceptions=*/0,
-                      /*NoexceptExpr=*/nullptr,
-                      /*ExceptionSpecTokens=*/nullptr,
-                      /*DeclsInPrototype=*/None, DeclLoc, DeclEndLoc, D,
-                      TrailingReturnType),
-                  std::move(Attr), DeclEndLoc);
-
-    // Parse the requires-clause, if present.
-    if (Tok.is(tok::kw_requires))
-      ParseTrailingRequiresClause(D);
-
-    WarnIfHasCUDATargetAttr();
+    // Parse lambda-specifiers.
+    std::vector<DeclaratorChunk::ParamInfo> EmptyParamInfo;
+    ParseLambdaSpecifiers(/*LParenLoc=*/NoLoc, /*RParenLoc=*/NoLoc,
+                          EmptyParamInfo, /*EllipsisLoc=*/NoLoc);
   }
 
   // FIXME: Rename BlockScope -> ClosureScope if we decide to continue using
