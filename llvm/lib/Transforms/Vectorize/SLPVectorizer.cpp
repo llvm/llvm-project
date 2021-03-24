@@ -5338,41 +5338,39 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
   BasicBlock::reverse_iterator UpperEnd = BB->rend();
   BasicBlock::iterator DownIter = ScheduleEnd->getIterator();
   BasicBlock::iterator LowerEnd = BB->end();
-  while (true) {
+  while (UpIter != UpperEnd && DownIter != LowerEnd && &*UpIter != I &&
+         &*DownIter != I) {
     if (++ScheduleRegionSize > ScheduleRegionSizeLimit) {
       LLVM_DEBUG(dbgs() << "SLP:  exceeded schedule region size limit\n");
       return false;
     }
 
-    if (UpIter != UpperEnd) {
-      if (&*UpIter == I) {
-        initScheduleData(I, ScheduleStart, nullptr, FirstLoadStoreInRegion);
-        ScheduleStart = I;
-        if (isOneOf(S, I) != I)
-          CheckSheduleForI(I);
-        LLVM_DEBUG(dbgs() << "SLP:  extend schedule region start to " << *I
-                          << "\n");
-        return true;
-      }
-      ++UpIter;
-    }
-    if (DownIter != LowerEnd) {
-      if (&*DownIter == I) {
-        initScheduleData(ScheduleEnd, I->getNextNode(), LastLoadStoreInRegion,
-                         nullptr);
-        ScheduleEnd = I->getNextNode();
-        if (isOneOf(S, I) != I)
-          CheckSheduleForI(I);
-        assert(ScheduleEnd && "tried to vectorize a terminator?");
-        LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I
-                          << "\n");
-        return true;
-      }
-      ++DownIter;
-    }
-    assert((UpIter != UpperEnd || DownIter != LowerEnd) &&
-           "instruction not found in block");
+    ++UpIter;
+    ++DownIter;
   }
+  if (DownIter == LowerEnd || (UpIter != UpperEnd && &*UpIter == I)) {
+    assert(I->getParent() == ScheduleStart->getParent() &&
+           "Instruction is in wrong basic block.");
+    initScheduleData(I, ScheduleStart, nullptr, FirstLoadStoreInRegion);
+    ScheduleStart = I;
+    if (isOneOf(S, I) != I)
+      CheckSheduleForI(I);
+    LLVM_DEBUG(dbgs() << "SLP:  extend schedule region start to " << *I
+                      << "\n");
+    return true;
+  }
+  assert((UpIter == UpperEnd || (DownIter != LowerEnd && &*DownIter == I)) &&
+         "Expected to reach top of the basic block or instruction down the "
+         "lower end.");
+  assert(I->getParent() == ScheduleEnd->getParent() &&
+         "Instruction is in wrong basic block.");
+  initScheduleData(ScheduleEnd, I->getNextNode(), LastLoadStoreInRegion,
+                   nullptr);
+  ScheduleEnd = I->getNextNode();
+  if (isOneOf(S, I) != I)
+    CheckSheduleForI(I);
+  assert(ScheduleEnd && "tried to vectorize a terminator?");
+  LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I << "\n");
   return true;
 }
 
