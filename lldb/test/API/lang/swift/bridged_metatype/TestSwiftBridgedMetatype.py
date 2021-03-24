@@ -17,6 +17,7 @@ class TestSwiftBridgedMetatype(TestBase):
         TestBase.setUp(self)
 
     @swiftTest
+    @skipUnlessFoundation
     def test_swift_bridged_metatype(self):
         """Test the formatting of bridged Swift metatypes"""
         self.build()
