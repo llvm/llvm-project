@@ -250,6 +250,9 @@ def SwiftAsync : EnumAttr<"swiftasync">;
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
 
+/// Minimum/Maximum vscale value for function.
+def VScaleRange : IntAttr<"vscale_range">;
+
 /// Function always comes back to callsite.
 def WillReturn : EnumAttr<"willreturn">;
 

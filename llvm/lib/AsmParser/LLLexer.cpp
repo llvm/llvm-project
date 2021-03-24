@@ -699,6 +699,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(swiftself);
   KEYWORD(swiftasync);
   KEYWORD(uwtable);
+  KEYWORD(vscale_range);
   KEYWORD(willreturn);
   KEYWORD(writeonly);
   KEYWORD(zeroext);

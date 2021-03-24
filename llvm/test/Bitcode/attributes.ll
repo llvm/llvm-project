@@ -428,6 +428,31 @@ define void @f72(i8* swiftasync %0)
   ret void;
 }
 
+; CHECK: define void @f72() #45
+define void @f72() vscale_range(8)
+{
+  ret void
+}
+
+; CHECK: define void @f73() #46
+define void @f73() vscale_range(1,8)
+{
+  ret void
+}
+
+; CHECK: define void @f74() #47
+define void @f74() vscale_range(1,0)
+{
+  ret void
+}
+
+; CHECK: define void @f75()
+; CHECK-NOT: define void @f75() #
+define void @f75() vscale_range(0,0)
+{
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -473,4 +498,7 @@ define void @f72(i8* swiftasync %0)
 ; CHECK: attributes #42 = { nocallback }
 ; CHECK: attributes #43 = { cold }
 ; CHECK: attributes #44 = { hot }
+; CHECK: attributes #45 = { vscale_range(8,8) }
+; CHECK: attributes #46 = { vscale_range(1,8) }
+; CHECK: attributes #47 = { vscale_range(1,0) }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }
