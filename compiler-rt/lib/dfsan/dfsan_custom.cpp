@@ -644,7 +644,6 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strdup(const char *s,
   void *p = malloc(len + 1);
   dfsan_memcpy_with_origin(p, s, len + 1);
   *ret_label = 0;
-  *ret_origin = 0;
   return static_cast<char *>(p);
 }
 
@@ -700,9 +699,8 @@ SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfso_pread(
     dfsan_label *ret_label, dfsan_origin fd_origin, dfsan_origin buf_origin,
     dfsan_origin count_origin, dfsan_label offset_origin,
     dfsan_origin *ret_origin) {
-  ssize_t ret = __dfsw_pread(fd, buf, count, offset, fd_label, buf_label,
-                             count_label, offset_label, ret_label);
-  return ret;
+  return __dfsw_pread(fd, buf, count, offset, fd_label, buf_label, count_label,
+                      offset_label, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE ssize_t
@@ -722,9 +720,8 @@ SANITIZER_INTERFACE_ATTRIBUTE ssize_t __dfso_read(
     dfsan_label buf_label, dfsan_label count_label, dfsan_label *ret_label,
     dfsan_origin fd_origin, dfsan_origin buf_origin, dfsan_origin count_origin,
     dfsan_origin *ret_origin) {
-  ssize_t ret =
-      __dfsw_read(fd, buf, count, fd_label, buf_label, count_label, ret_label);
-  return ret;
+  return __dfsw_read(fd, buf, count, fd_label, buf_label, count_label,
+                     ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE int __dfsw_clock_gettime(clockid_t clk_id,
@@ -743,8 +740,7 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_clock_gettime(
     clockid_t clk_id, struct timespec *tp, dfsan_label clk_id_label,
     dfsan_label tp_label, dfsan_label *ret_label, dfsan_origin clk_id_origin,
     dfsan_origin tp_origin, dfsan_origin *ret_origin) {
-  int ret = __dfsw_clock_gettime(clk_id, tp, clk_id_label, tp_label, ret_label);
-  return ret;
+  return __dfsw_clock_gettime(clk_id, tp, clk_id_label, tp_label, ret_label);
 }
 
 static void dfsan_set_zero_label(const void *ptr, uptr size) {
@@ -770,9 +766,7 @@ SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_dlopen(
     dfsan_label flag_label, dfsan_label *ret_label,
     dfsan_origin filename_origin, dfsan_origin flag_origin,
     dfsan_origin *ret_origin) {
-  void *handle =
-      __dfsw_dlopen(filename, flag, filename_label, flag_label, ret_label);
-  return handle;
+  return __dfsw_dlopen(filename, flag, filename_label, flag_label, ret_label);
 }
 
 static void *DFsanThreadStartFunc(void *arg) {
@@ -965,6 +959,25 @@ char *__dfsw_ctime_r(const time_t *timep, char *buf, dfsan_label timep_label,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+char *__dfso_ctime_r(const time_t *timep, char *buf, dfsan_label timep_label,
+                     dfsan_label buf_label, dfsan_label *ret_label,
+                     dfsan_origin timep_origin, dfsan_origin buf_origin,
+                     dfsan_origin *ret_origin) {
+  char *ret = ctime_r(timep, buf);
+  if (ret) {
+    dfsan_set_label_origin(
+        dfsan_read_label(timep, sizeof(time_t)),
+        dfsan_read_origin_of_first_taint(timep, sizeof(time_t)), buf,
+        strlen(buf) + 1);
+    *ret_label = buf_label;
+    *ret_origin = buf_origin;
+  } else {
+    *ret_label = 0;
+  }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_fgets(char *s, int size, FILE *stream, dfsan_label s_label,
                    dfsan_label size_label, dfsan_label stream_label,
                    dfsan_label *ret_label) {
@@ -975,6 +988,19 @@ char *__dfsw_fgets(char *s, int size, FILE *stream, dfsan_label s_label,
   } else {
     *ret_label = 0;
   }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+char *__dfso_fgets(char *s, int size, FILE *stream, dfsan_label s_label,
+                   dfsan_label size_label, dfsan_label stream_label,
+                   dfsan_label *ret_label, dfsan_origin s_origin,
+                   dfsan_origin size_origin, dfsan_origin stream_origin,
+                   dfsan_origin *ret_origin) {
+  char *ret = __dfsw_fgets(s, size, stream, s_label, size_label, stream_label,
+                           ret_label);
+  if (ret)
+    *ret_origin = s_origin;
   return ret;
 }
 
@@ -992,13 +1018,29 @@ char *__dfsw_getcwd(char *buf, size_t size, dfsan_label buf_label,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+char *__dfso_getcwd(char *buf, size_t size, dfsan_label buf_label,
+                    dfsan_label size_label, dfsan_label *ret_label,
+                    dfsan_origin buf_origin, dfsan_origin size_origin,
+                    dfsan_origin *ret_origin) {
+  char *ret = __dfsw_getcwd(buf, size, buf_label, size_label, ret_label);
+  if (ret)
+    *ret_origin = buf_origin;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_get_current_dir_name(dfsan_label *ret_label) {
   char *ret = get_current_dir_name();
-  if (ret) {
+  if (ret)
     dfsan_set_label(0, ret, strlen(ret) + 1);
-  }
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+char *__dfso_get_current_dir_name(dfsan_label *ret_label,
+                                  dfsan_origin *ret_origin) {
+  return __dfsw_get_current_dir_name(ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1010,6 +1052,14 @@ int __dfsw_gethostname(char *name, size_t len, dfsan_label name_label,
   }
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_gethostname(char *name, size_t len, dfsan_label name_label,
+                       dfsan_label len_label, dfsan_label *ret_label,
+                       dfsan_origin name_origin, dfsan_origin len_origin,
+                       dfsan_label *ret_origin) {
+  return __dfsw_gethostname(name, len, name_label, len_label, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1025,6 +1075,15 @@ int __dfsw_getrlimit(int resource, struct rlimit *rlim,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_getrlimit(int resource, struct rlimit *rlim,
+                     dfsan_label resource_label, dfsan_label rlim_label,
+                     dfsan_label *ret_label, dfsan_origin resource_origin,
+                     dfsan_origin rlim_origin, dfsan_origin *ret_origin) {
+  return __dfsw_getrlimit(resource, rlim, resource_label, rlim_label,
+                          ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_getrusage(int who, struct rusage *usage, dfsan_label who_label,
                      dfsan_label usage_label, dfsan_label *ret_label) {
   int ret = getrusage(who, usage);
@@ -1033,6 +1092,14 @@ int __dfsw_getrusage(int who, struct rusage *usage, dfsan_label who_label,
   }
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_getrusage(int who, struct rusage *usage, dfsan_label who_label,
+                     dfsan_label usage_label, dfsan_label *ret_label,
+                     dfsan_origin who_origin, dfsan_origin usage_origin,
+                     dfsan_label *ret_origin) {
+  return __dfsw_getrusage(who, usage, who_label, usage_label, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1287,6 +1354,12 @@ time_t __dfsw_time(time_t *t, dfsan_label t_label, dfsan_label *ret_label) {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+time_t __dfso_time(time_t *t, dfsan_label t_label, dfsan_label *ret_label,
+                   dfsan_origin t_origin, dfsan_origin *ret_origin) {
+  return __dfsw_time(t, t_label, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_inet_pton(int af, const char *src, void *dst, dfsan_label af_label,
                      dfsan_label src_label, dfsan_label dst_label,
                      dfsan_label *ret_label) {
@@ -1294,6 +1367,24 @@ int __dfsw_inet_pton(int af, const char *src, void *dst, dfsan_label af_label,
   if (ret == 1) {
     dfsan_set_label(dfsan_read_label(src, strlen(src) + 1), dst,
                     af == AF_INET ? sizeof(struct in_addr) : sizeof(in6_addr));
+  }
+  *ret_label = 0;
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_inet_pton(int af, const char *src, void *dst, dfsan_label af_label,
+                     dfsan_label src_label, dfsan_label dst_label,
+                     dfsan_label *ret_label, dfsan_origin af_origin,
+                     dfsan_origin src_origin, dfsan_origin dst_origin,
+                     dfsan_origin *ret_origin) {
+  int ret = inet_pton(af, src, dst);
+  if (ret == 1) {
+    int src_len = strlen(src) + 1;
+    dfsan_set_label_origin(
+        dfsan_read_label(src, src_len),
+        dfsan_read_origin_of_first_taint(src, src_len), dst,
+        af == AF_INET ? sizeof(struct in_addr) : sizeof(in6_addr));
   }
   *ret_label = 0;
   return ret;
@@ -1308,6 +1399,26 @@ struct tm *__dfsw_localtime_r(const time_t *timep, struct tm *result,
     dfsan_set_label(dfsan_read_label(timep, sizeof(time_t)), result,
                     sizeof(struct tm));
     *ret_label = result_label;
+  } else {
+    *ret_label = 0;
+  }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+struct tm *__dfso_localtime_r(const time_t *timep, struct tm *result,
+                              dfsan_label timep_label, dfsan_label result_label,
+                              dfsan_label *ret_label, dfsan_origin timep_origin,
+                              dfsan_origin result_origin,
+                              dfsan_origin *ret_origin) {
+  struct tm *ret = localtime_r(timep, result);
+  if (ret) {
+    dfsan_set_label_origin(
+        dfsan_read_label(timep, sizeof(time_t)),
+        dfsan_read_origin_of_first_taint(timep, sizeof(time_t)), result,
+        sizeof(struct tm));
+    *ret_label = result_label;
+    *ret_origin = result_origin;
   } else {
     *ret_label = 0;
   }
@@ -1333,6 +1444,19 @@ int __dfsw_getpwuid_r(id_t uid, struct passwd *pwd,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_getpwuid_r(id_t uid, struct passwd *pwd, char *buf, size_t buflen,
+                      struct passwd **result, dfsan_label uid_label,
+                      dfsan_label pwd_label, dfsan_label buf_label,
+                      dfsan_label buflen_label, dfsan_label result_label,
+                      dfsan_label *ret_label, dfsan_origin uid_origin,
+                      dfsan_origin pwd_origin, dfsan_origin buf_origin,
+                      dfsan_origin buflen_origin, dfsan_origin result_origin,
+                      dfsan_origin *ret_origin) {
+  return __dfsw_getpwuid_r(uid, pwd, buf, buflen, result, uid_label, pwd_label,
+                           buf_label, buflen_label, result_label, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_epoll_wait(int epfd, struct epoll_event *events, int maxevents,
                       int timeout, dfsan_label epfd_label,
                       dfsan_label events_label, dfsan_label maxevents_label,
@@ -1342,6 +1466,19 @@ int __dfsw_epoll_wait(int epfd, struct epoll_event *events, int maxevents,
     dfsan_set_label(0, events, ret * sizeof(*events));
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_epoll_wait(int epfd, struct epoll_event *events, int maxevents,
+                      int timeout, dfsan_label epfd_label,
+                      dfsan_label events_label, dfsan_label maxevents_label,
+                      dfsan_label timeout_label, dfsan_label *ret_label,
+                      dfsan_origin epfd_origin, dfsan_origin events_origin,
+                      dfsan_origin maxevents_origin,
+                      dfsan_origin timeout_origin, dfsan_origin *ret_origin) {
+  return __dfsw_epoll_wait(epfd, events, maxevents, timeout, epfd_label,
+                           events_label, maxevents_label, timeout_label,
+                           ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1356,6 +1493,16 @@ int __dfsw_poll(struct pollfd *fds, nfds_t nfds, int timeout,
   }
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_poll(struct pollfd *fds, nfds_t nfds, int timeout,
+                dfsan_label dfs_label, dfsan_label nfds_label,
+                dfsan_label timeout_label, dfsan_label *ret_label,
+                dfsan_origin dfs_origin, dfsan_origin nfds_origin,
+                dfsan_origin timeout_origin, dfsan_origin *ret_origin) {
+  return __dfsw_poll(fds, nfds, timeout, dfs_label, nfds_label, timeout_label,
+                     ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -1382,6 +1529,20 @@ int __dfsw_select(int nfds, fd_set *readfds, fd_set *writefds,
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_select(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout,
+                  dfsan_label nfds_label, dfsan_label readfds_label,
+                  dfsan_label writefds_label, dfsan_label exceptfds_label,
+                  dfsan_label timeout_label, dfsan_label *ret_label,
+                  dfsan_origin nfds_origin, dfsan_origin readfds_origin,
+                  dfsan_origin writefds_origin, dfsan_origin exceptfds_origin,
+                  dfsan_origin timeout_origin, dfsan_origin *ret_origin) {
+  return __dfsw_select(nfds, readfds, writefds, exceptfds, timeout, nfds_label,
+                       readfds_label, writefds_label, exceptfds_label,
+                       timeout_label, ret_label);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
 int __dfsw_sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask,
                              dfsan_label pid_label,
                              dfsan_label cpusetsize_label,
@@ -1392,6 +1553,19 @@ int __dfsw_sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask,
   }
   *ret_label = 0;
   return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+int __dfso_sched_getaffinity(pid_t pid, size_t cpusetsize, cpu_set_t *mask,
+                             dfsan_label pid_label,
+                             dfsan_label cpusetsize_label,
+                             dfsan_label mask_label, dfsan_label *ret_label,
+                             dfsan_origin pid_origin,
+                             dfsan_origin cpusetsize_origin,
+                             dfsan_origin mask_origin,
+                             dfsan_origin *ret_origin) {
+  return __dfsw_sched_getaffinity(pid, cpusetsize, mask, pid_label,
+                                  cpusetsize_label, mask_label, ret_label);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
