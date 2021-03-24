@@ -1045,10 +1045,10 @@ exit:
 !12 = !{!"these_are_not_the_branch_weights_you_are_looking_for", i32 3, i32 5}
 !13 = !{!"branch_weights", i32 2, i32 3}
 !14 = !{!"branch_weights", i32 4, i32 7}
-!15 = !{!"branch_weights", i32 2000, i32 1}
-!16 = !{!"branch_weights", i32 1, i32 2000}
-!17 = !{!"branch_weights", i32 1999, i32 1}
-!18 = !{!"branch_weights", i32 1, i32 1999}
+!15 = !{!"branch_weights", i32 99, i32 1}
+!16 = !{!"branch_weights", i32 1, i32 99}
+!17 = !{!"branch_weights", i32 98, i32 1}
+!18 = !{!"branch_weights", i32 1, i32 98}
 !19 = !{!"branch_weights", i32 0, i32 0}
 
 ; CHECK: !0 = !{!"branch_weights", i32 5, i32 11}
