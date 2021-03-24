@@ -390,6 +390,7 @@ template <class Value, class Hash, class Pred, class Alloc>
 #include <__hash_table>
 #include <__node_handle>
 #include <functional>
+#include <iterator> // __libcpp_erase_if_container
 #include <version>
 
 #include <__debug>
@@ -1069,7 +1070,7 @@ inline _LIBCPP_INLINE_VISIBILITY
     typename unordered_set<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_set<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1735,7 +1736,7 @@ inline _LIBCPP_INLINE_VISIBILITY
     typename unordered_multiset<_Value, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
