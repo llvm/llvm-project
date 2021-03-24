@@ -81,7 +81,7 @@ public:
 
   unsigned getNumberOfRegisters(bool vector) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
   ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 

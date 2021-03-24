@@ -52,13 +52,19 @@ public:
   bool supportsScalableVectors() const { return ST->hasStdExtV(); }
   Optional<unsigned> getMaxVScale() const;
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
-      if (ST->hasStdExtV())
-        return ST->getMinRVVVectorSizeInBits();
-      return 0;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(ST->getXLen());
+    case TargetTransformInfo::RGK_FixedWidthVector:
+      return TypeSize::getFixed(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
     }
-    return ST->getXLen();
+
+    llvm_unreachable("Unsupported register kind");
   }
 
   bool isLegalElementTypeForRVV(Type *ScalarTy) {
