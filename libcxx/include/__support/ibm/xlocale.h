@@ -212,11 +212,13 @@ size_t wcsxfrm_l(wchar_t *__ws1, const wchar_t *__ws2, size_t __n,
 
 // strftime_l() is defined by POSIX. However, AIX 7.1 and z/OS do not have it
 // implemented yet. z/OS retrieves it from the POSIX fallbacks.
+#if !defined(_AIX72)
 static inline
 size_t strftime_l(char *__s, size_t __size, const char *__fmt,
                   const struct tm *__tm, locale_t locale) {
   return __xstrftime(locale, __s, __size, __fmt, __tm);
 }
+#endif
 
 #elif defined(__MVS__)
 #include <wctype.h>
@@ -224,47 +226,79 @@ size_t strftime_l(char *__s, size_t __size, const char *__fmt,
 #include <__support/xlocale/__posix_l_fallback.h>
 #endif // defined(__MVS__)
 
+namespace {
+
+struct __setAndRestore {
+  explicit __setAndRestore(locale_t locale) {
+    if (locale == (locale_t)0) {
+      __cloc = newlocale(LC_ALL_MASK, "C", /* base */ (locale_t)0);
+      __stored = uselocale(__cloc);
+    } else {
+      __stored = uselocale(locale);
+    }
+  }
+
+  ~__setAndRestore() {
+    uselocale(__stored);
+    if (__cloc)
+      freelocale(__cloc);
+  }
+
+private:
+  locale_t __stored = (locale_t)0;
+  locale_t __cloc = (locale_t)0;
+};
+
+} // namespace
+
 // The following are not POSIX routines.  These are quick-and-dirty hacks
 // to make things pretend to work
 static inline
 long long strtoll_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtoll(__nptr, __endptr, __base);
 }
 
 static inline
 long strtol_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtol(__nptr, __endptr, __base);
 }
 
 static inline
 double strtod_l(const char *__nptr, char **__endptr,
     locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtod(__nptr, __endptr);
 }
 
 static inline
 float strtof_l(const char *__nptr, char **__endptr,
     locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtof(__nptr, __endptr);
 }
 
 static inline
 long double strtold_l(const char *__nptr, char **__endptr,
     locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtold(__nptr, __endptr);
 }
 
 static inline
 unsigned long long strtoull_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtoull(__nptr, __endptr, __base);
 }
 
 static inline
 unsigned long strtoul_l(const char *__nptr, char **__endptr,
     int __base, locale_t locale) {
+  __setAndRestore __newloc(locale);
   return strtoul(__nptr, __endptr, __base);
 }
 
