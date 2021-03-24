@@ -124,19 +124,19 @@ table_fill:
 # BIN-NEXT:      - Index:           0
 # BIN-NEXT:        ElemType:        EXTERNREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x0
+# BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           1
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x0
+# BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x0
+# BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           3
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Initial:         0x0
+# BIN-NEXT:          Minimum:         0x0
 
 #      BIN:  - Type:            CODE
 # BIN-NEXT:    Relocations:

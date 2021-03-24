@@ -66,7 +66,7 @@ define void @_start() {
 ; CHECK-NEXT:           Index:           0
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x4
+; CHECK-NEXT:             Minimum:         0x4
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           puts
 ; CHECK-NEXT:         Kind:            FUNCTION
@@ -83,7 +83,7 @@ define void @_start() {
 ; CHECK-NEXT:     FunctionTypes:   [ 2, 1, 1, 2 ]
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:      - Initial:         0x1
+; CHECK-NEXT:      - Minimum:         0x1
 ; CHECK-NEXT:   - Type:            ELEM
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:

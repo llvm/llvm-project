@@ -48,7 +48,7 @@ entry:
 
 ; YAML:      Memory:
 ; YAML-NEXT:   Flags:   [ IS_64 ]
-; YAML-NEXT:   Initial: 0x1
+; YAML-NEXT:   Minimum: 0x1
 
 ; YAML:      - Type:   CODE
 ; YAML:      - Type:   R_WASM_TABLE_INDEX_SLEB64

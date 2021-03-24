@@ -62,7 +62,7 @@ define void @_start() {
 ; CHECK-NEXT:           Index:           0
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x1
+; CHECK-NEXT:             Minimum:         0x1
 
 ; CHECK:        - Type:            START
 ; CHECK-NEXT:     StartFunction:   2
