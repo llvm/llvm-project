@@ -1,4 +1,3 @@
-; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 define i32 @bar(i8* %X) {

@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s | FileCheck %s
+; RUN: %lli -force-interpreter=true %s | FileCheck %s
 ; CHECK: 40091eb8
 
 define i32 @test(double %x) {

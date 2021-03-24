@@ -1,4 +1,4 @@
-; RUN: %lli -jit-kind=mcjit -remote-mcjit -disable-lazy-compilation=false -relocation-model=pic -code-model=small %s
+; RUN: %lli -remote-mcjit -disable-lazy-compilation=false -relocation-model=pic -code-model=small %s
 ; XFAIL: *
 ; This function should fail until remote symbol resolution is supported.
 

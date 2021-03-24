@@ -2,7 +2,6 @@
 ; floating point intrinsics (defined as macros) are used.
 ; This unit test guards against the failure.
 ;
-; RUN: %lli -jit-kind=mcjit %s | FileCheck %s
 ; RUN: %lli %s | FileCheck %s
 
 @flt = internal global float 12.0e+0
