@@ -36,18 +36,19 @@ module {
 //  CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //       CHECK:   %[[TEMP:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32>
 //       CHECK:   scf.parallel (%[[IV0:.+]], %[[IV1:.+]]) = {{.*}} {
-//   CHECK-DAG:     %[[SV_TEMP:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
+//       CHECK:     %[[SV_TEMP_1:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
 //   CHECK-DAG:     %[[SV_ARG2:.+]] = memref.subview %[[ARG2]][%[[IV1]]]
 //   CHECK-DAG:     %[[SV_ARG3:.+]] = memref.subview %[[ARG3]][%[[IV0]], %[[IV1]]]
 //   CHECK-DAG:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
 //   CHECK-DAG:     %[[SV_ARG1:.+]] = memref.subview %[[ARG1]][0, %[[IV1]]]
-//       CHECK:     linalg.fill(%[[SV_TEMP]], %{{.+}})
+//       CHECK:     %[[SV_TEMP_2:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
+//       CHECK:     linalg.fill(%[[SV_TEMP_2]], %{{.+}})
 //       CHECK:     linalg.matmul
 //  CHECK-SAME:       ins(%[[SV_ARG0]], %[[SV_ARG1]]
 //  CHECK-SAME:         : memref<?x?xf32, #[[MAP2]]>, memref<?x?xf32, #[[MAP2]]>)
-//  CHECK-SAME:       outs(%[[SV_TEMP]] : memref<?x?xf32, #[[MAP2]]>)
+//  CHECK-SAME:       outs(%[[SV_TEMP_2]] : memref<?x?xf32, #[[MAP2]]>)
 //       CHECK:     linalg.generic
-//  CHECK-SAME:       ins(%[[SV_TEMP]], %[[SV_ARG2]]
+//  CHECK-SAME:       ins(%[[SV_TEMP_1]], %[[SV_ARG2]]
 //  CHECK-SAME:         : memref<?x?xf32, #[[MAP2]]>, memref<?xf32, #[[MAP3]]>)
 //  CHECK-SAME:       outs(%[[SV_ARG3]] : memref<?x?xf32, #[[MAP2]]>)
 //       CHECK:     scf.yield
@@ -83,6 +84,8 @@ module {
 
 //   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1)[s0] -> (d1, -d0 + s0)>
+
 //       CHECK: func @sequence_of_matmul
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
@@ -100,36 +103,39 @@ module {
 //       CHECK:   scf.parallel (%[[IV0:.+]]) = (%[[C0]]) to (%[[M]])
 //  CHECK-SAME:     step (%[[C16]]) {
 //       CHECK:     %[[TILE_M:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M]]]
-//       CHECK:     %[[SV_ALLOC2:.+]] = memref.subview %[[ALLOC2]][%[[IV0]], 0]
+//       CHECK:     %[[SV_ALLOC3:.+]] = memref.subview %[[ALLOC2]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M]], %[[N2]]]
 //       CHECK:     %[[M_2:.+]] = memref.dim %[[ARG4]], %[[C0]]
 //       CHECK:     %[[TILE_M_2:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M_2]]]
 //       CHECK:     %[[N3:.+]] = memref.dim %[[ARG4]], %[[C1]]
 //       CHECK:     %[[SV_ARG4:.+]] = memref.subview %[[ARG4]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_2]], %[[N3]]]
+//       CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP2]](%[[IV0]], %[[TILE_M]])[%[[M_2]]]
 //       CHECK:     %[[SV_ARG4_2:.+]] = memref.subview %[[ARG4]][%[[IV0]], 0]
-//  CHECK-SAME:       [%[[TILE_M]], %[[N3]]]
+//  CHECK-SAME:       [%[[TILE_M_3]], %[[N3]]]
+//       CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP2]](%[[IV0]], %[[TILE_M]])[%[[M]]]
 //       CHECK:     %[[SV_ALLOC1:.+]] = memref.subview %[[ALLOC1]][%[[IV0]], 0]
-//  CHECK-SAME:       [%[[TILE_M]], %[[N1]]]
-//       CHECK:     %[[SV_ARG2:.+]] = memref.subview %[[ARG2]][0, 0] [%[[N1]], %[[N2]]]
+//  CHECK-SAME:       [%[[TILE_M_4]], %[[N1]]]
+//       CHECK:     %[[SV_ALLOC2:.+]] = memref.subview %[[ALLOC2]][%[[IV0]], 0]
+//  CHECK-SAME:       [%[[TILE_M_4]], %[[N2]]]
 //       CHECK:     %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //       CHECK:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
-//  CHECK-SAME:       [%[[TILE_M:.+]], %[[N0]]]
-//       CHECK:     %[[SV_ARG1:.+]] = memref.subview %[[ARG1]][0, 0] [%[[N0]], %[[N1]]]
+//  CHECK-SAME:       [%[[TILE_M_4]], %[[N0]]]
 //       CHECK:     linalg.fill(%[[SV_ALLOC1]], %{{.+}})
-//       CHECK:     linalg.matmul ins(%[[SV_ARG0]], %[[SV_ARG1]]
-//  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32, #[[MAP1]]>)
+//       CHECK:     linalg.matmul ins(%[[SV_ARG0]], %[[ARG1]]
+//  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ALLOC1]] : memref<?x?xf32, #[[MAP1]]>)
 //       CHECK:     linalg.fill(%[[SV_ALLOC2]], %{{.+}})
-//       CHECK:     linalg.matmul ins(%[[SV_ALLOC1]], %[[SV_ARG2]]
-//  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32, #[[MAP1]]>)
+//       CHECK:     linalg.matmul ins(%[[SV_ALLOC1]], %[[ARG2]]
+//  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ALLOC2]] : memref<?x?xf32, #[[MAP1]]>)
 //       CHECK:     linalg.fill(%[[SV_ARG4_2]], %{{.+}})
-//       CHECK:     linalg.matmul ins(%[[SV_ALLOC2]], %[[ARG3]]
+//       CHECK:     linalg.matmul ins(%[[SV_ALLOC3]], %[[ARG3]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ARG4]] : memref<?x?xf32, #[[MAP1]]>)
 //       CHECK:     scf.yield
 //       CHECK:   }
+
 
 // -----
 
@@ -189,8 +195,8 @@ module {
 module {
   func @tensor_matmul_fusion(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
                              %arg2: tensor<?x?xf32>, %arg3: tensor<?x?xf32>,
-			     %arg4: tensor<?x?xf32>, %arg5: tensor<?x?xf32>,
-			     %arg6: tensor<?x?xf32>) -> tensor<?x?xf32> {
+           %arg4: tensor<?x?xf32>, %arg5: tensor<?x?xf32>,
+           %arg6: tensor<?x?xf32>) -> tensor<?x?xf32> {
     %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> // [M, N0] * [N0, N1]
     %1 = linalg.matmul ins(%0, %arg3 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -200,7 +206,12 @@ module {
     return %2 : tensor<?x?xf32>
   }
 }
-// CHECK-LABEL: func @tensor_matmul_fusion(
+
+//       CHECK: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
+//       CHECK: #[[MAP1:.+]] = affine_map<(d0, d1) -> (16, d0 - d1)>
+//       CHECK: #[[MAP2:.+]] = affine_map<(d0, d1)[s0] -> (d1, -d0 + s0)>
+
+//       CHECK: func @tensor_matmul_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
@@ -210,36 +221,39 @@ module {
 //  CHECK-SAME:   %[[ARG6:[a-zA-Z0-9_]+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
 //   CHECK-DAG:   %[[C0:.+]] = constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
+//       CHECK:   %[[M:.+]] = memref.dim %[[ARG0]], %c0 : tensor<?x?xf32>
 //       CHECK:   %[[R0:.+]] = scf.for %[[IV0:[a-zA-Z0-9_]+]] =
 //  CHECK-SAME:     iter_args(%[[ARG8:.+]] = %[[ARG6]]) -> (tensor<?x?xf32>) {
-//       CHECK:       %[[N3:.+]] = memref.dim %[[ARG8]], %[[C1]]
-//       CHECK:       %[[STARG6:.+]] = subtensor %[[ARG8]][%[[IV0]], 0]
-//  CHECK-SAME:         [%{{[a-zA-Z0-9_]+}}, %[[N3]]]
-//       CHECK:       %[[N2:.+]] = memref.dim %[[ARG3]], %[[C1]]
-//       CHECK:       %[[N1:.+]] = memref.dim %[[ARG1]], %[[C1]]
-//       CHECK:       %[[STARG3:.+]] = subtensor %[[ARG3]][0, 0]
-//  CHECK-SAME:         [%[[N1]], %[[N2]]]
-//       CHECK:       %[[STARG4:.+]] = subtensor %[[ARG4]][%[[IV0]], 0]
-//  CHECK-SAME:         [%{{[a-zA-Z0-9_]+}}, %[[N2]]]
-//       CHECK:       %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
-//       CHECK:       %[[STARG0:.+]] = subtensor %[[ARG0]][%[[IV0]], 0]
-//  CHECK-SAME:         [%{{[a-zA-Z0-9_]+}}, %[[N0]]]
-//       CHECK:       %[[STARG1:.+]] = subtensor %[[ARG1]][0, 0]
-//  CHECK-SAME:         [%[[N0]], %[[N1]]]
-//       CHECK:       %[[STARG2:.+]] = subtensor %[[ARG2]][%[[IV0]], 0]
-//  CHECK-SAME:         [%{{[a-zA-Z0-9_]+}}, %[[N1]]]
-//       CHECK:       %[[T0:.+]] = linalg.matmul
-//  CHECK-SAME:         ins(%[[STARG0]], %[[STARG1]]
-//  CHECK-SAME:         ) outs(%[[STARG2]] : tensor<?x?xf32>)
-//       CHECK:       %[[T1:.+]] = linalg.matmul
-//  CHECK-SAME:         ins(%[[T0]], %[[STARG3]]
-//  CHECK-SAME:         ) outs(%[[STARG4]] : tensor<?x?xf32>)
-//       CHECK:       %[[T2:.+]] = linalg.matmul
-//  CHECK-SAME:         ins(%[[T1]], %[[ARG5]]
-//  CHECK-SAME:         ) outs(%[[STARG6]] : tensor<?x?xf32>)
-//       CHECK:       %[[R1:.+]] = subtensor_insert %[[T2]]
-//  CHECK-SAME:         into %[[ARG8]][%[[IV0]], 0]
-//       CHECK:       scf.yield %[[R1]]
-//       CHECK:     }
-//       CHECK:     return %[[R0]]
+//       CHECK:     %[[TILE_M:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[M]]]
+//       CHECK:     %[[M_1:.+]] = memref.dim %[[ARG8]], %[[C0]]
+//       CHECK:     %[[TILE_M_1:.+]] = affine.min #[[MAP1]](%[[M_1]], %[[IV0]])
+//       CHECK:     %[[N3:.+]] = memref.dim %[[ARG8]], %[[C1]]
+//       CHECK:     %[[STARG6:.+]] = subtensor %[[ARG8]][%[[IV0]], 0]
+//  CHECK-SAME:       [%[[TILE_M_1]], %[[N3]]]
+//       CHECK:     %[[M_2:.+]] = memref.dim %[[ARG4]], %[[C0]]
+//       CHECK:     %[[TILE_M_2:.+]] = affine.min #[[MAP2]](%[[IV0]], %[[TILE_M]])[%[[M_2]]]
+//       CHECK:     %[[N2:.+]] = memref.dim %[[ARG4]], %[[C1]]
+//       CHECK:     %[[STARG4:.+]] = subtensor %[[ARG4]][%[[IV0]], 0]
+//  CHECK-SAME:       [%[[TILE_M_2]], %[[N2]]]
+//       CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP2]](%[[IV0]], %[[TILE_M]])[%[[M]]]
+//       CHECK:     %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//       CHECK:     %[[STARG0:.+]] = subtensor %[[ARG0]][%[[IV0]], 0]
+//  CHECK-SAME:       [%[[TILE_M_3]], %[[N0]]]
+//       CHECK:     %[[M_3:.+]] = memref.dim %[[ARG2]], %[[C0]]
+//       CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP2]](%[[IV0]], %[[TILE_M]])[%[[M_3]]]
+//       CHECK:     %[[N1:.+]] = memref.dim %[[ARG2]], %[[C1]]
+//       CHECK:     %[[STARG2:.+]] = subtensor %[[ARG2]][%[[IV0]], 0]
+//  CHECK-SAME:       [%[[TILE_M_4]], %[[N1]]]
+//       CHECK:     %[[T0:.+]] = linalg.matmul
+//  CHECK-SAME:       ins(%[[STARG0]], %[[ARG1]] : tensor<?x?xf32>, tensor<?x?xf32>
+//  CHECK-SAME:       ) outs(%[[STARG2]] : tensor<?x?xf32>)
+//       CHECK:     %[[T1:.+]] = linalg.matmul
+//  CHECK-SAME:       ins(%[[T0]], %arg3 : tensor<?x?xf32>, tensor<?x?xf32>
+//  CHECK-SAME:       ) outs(%[[STARG4]] : tensor<?x?xf32>)
+//       CHECK:     %[[T2:.+]] = linalg.matmul
+//  CHECK-SAME:       ins(%[[T1]], %arg5 : tensor<?x?xf32>, tensor<?x?xf32>
+//  CHECK-SAME:       ) outs(%[[STARG6]] : tensor<?x?xf32>)
+//       CHECK:     %[[R1:.+]] = subtensor_insert %[[T2]]
+//  CHECK-SAME:       into %[[ARG8]][%[[IV0]], 0] [%[[TILE_M_1]], %[[N3]]]
+//       CHECK:     scf.yield %[[R1]] : tensor<?x?xf32>
 //       CHECK:   }
