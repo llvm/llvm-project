@@ -34,8 +34,6 @@
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
-// DEBIAN_X86_64_M32:      "-internal-externc-isystem"
-// DEBIAN_X86_64_M32-SAME: {{^}} "[[SYSROOT]]/usr/include/i386-linux-gnu"
 // DEBIAN_X86_64_M32:      "-L
 // DEBIAN_X86_64_M32-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../lib32"
