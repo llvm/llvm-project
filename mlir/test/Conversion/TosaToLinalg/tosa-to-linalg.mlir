@@ -702,3 +702,46 @@ func @fully_connected(%arg0: tensor<5x3xf32>, %arg1: tensor<3x6xf32>, %arg2: ten
   %0 = "tosa.fully_connected"(%arg0, %arg1, %arg2) : (tensor<5x3xf32>, tensor<3x6xf32>, tensor<6xf32>)  -> (tensor<5x6xf32>)
   return %0 : tensor<5x6xf32>
 }
+
+// -----
+
+func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
+  %0 = constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+  // CHECK: [[INDEX0:%.+]] = constant 0 : index
+  // CHECK: [[INDEX1:%.+]] = constant 1 : index
+  // CHECK: [[ROW0:%.+]] = constant 0 : index
+  // CHECK: [[LOW0:%.+]] = tensor.extract %cst{{\[}}[[ROW0]], [[INDEX0]]]
+  // CHECK: [[HIGH0:%.+]] = tensor.extract %cst{{\[}}[[ROW0]], [[INDEX1]]]
+  // CHECK: [[LOW0_IDX:%.+]] = index_cast %0
+  // CHECK: [[HIGH0_IDX:%.+]] = index_cast %1
+  // CHECK: [[ROW1:%.+]] = constant 1 : index
+  // CHECK: [[LOW1:%.+]] = tensor.extract %cst{{\[}}%c1_1, %c0]
+  // CHECK: [[HIGH1:%.+]] = tensor.extract %cst{{\[}}%c1_1, %c1]
+  // CHECK: [[LOW1_IDX:%.+]] = index_cast [[LOW1]]
+  // CHECK: [[HIGH1_IDX:%.+]] = index_cast [[HIGH1]]
+  // CHECK: [[CST:%.+]] = constant 0.000000e+00 : f32
+  // CHECK: %8 = linalg.pad_tensor %arg0 low{{\[}}[[LOW0_IDX]], [[LOW1_IDX]]] high{{\[}}[[HIGH0_IDX]], [[HIGH1_IDX]]]  {
+  // CHECK: ^bb0(%arg1: index, %arg2: index):  // no predecessors
+  // CHECK:   linalg.yield [[CST]]
+  // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
+  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
+  return %1 : tensor<4x9xf32>
+}
+
+func @pad_int(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
+  %0 = constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+  // CHECK: [[CST:%.+]] = constant 0 : i32
+  // CHECK: linalg.pad_tensor
+  // CHECK:   linalg.yield [[CST]]
+  %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xi32>, tensor<2x2xi32>)  -> (tensor<4x9xi32>)
+  return %1 : tensor<4x9xi32>
+}
+
+func @pad_quant(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
+  %0 = constant dense<[[1, 2], [3, 4]]> : tensor<2x2xi32>
+  // CHECK: [[CST:%.+]] = constant 42 : i32
+  // CHECK: linalg.pad_tensor
+  // CHECK:   linalg.yield [[CST]]
+  %1 = "tosa.pad"(%arg0, %0) { quantization_info = { input_zp = 42 : i32}} : (tensor<1x2xi32>, tensor<2x2xi32>)  -> (tensor<4x9xi32>)
+  return %1 : tensor<4x9xi32>
+}
