@@ -1402,7 +1402,7 @@ public:
   lowerIntrinsicArgumentAsInquired(const Fortran::lower::SomeExpr &expr) {
     const auto *sym = Fortran::evaluate::UnwrapWholeSymbolDataRef(expr);
     if (sym && Fortran::semantics::IsAllocatableOrPointer(*sym))
-      return genMutableBoxValue(expr).getAddr();
+      return genMutableBoxValue(expr);
     return gen(expr);
   }
 

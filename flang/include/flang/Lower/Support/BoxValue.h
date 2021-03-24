@@ -393,8 +393,9 @@ bool isArray(const ExtendedValue &exv);
 /// indices if it is an array entity.
 class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
-  using VT = std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue,
-                          CharArrayBoxValue, ProcBoxValue, BoxValue>;
+  using VT =
+      std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
+                   ProcBoxValue, BoxValue, MutableBoxValue>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   ExtendedValue(const ExtendedValue &) = default;

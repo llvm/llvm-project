@@ -19,13 +19,16 @@ mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
 }
 
 mlir::Value fir::getLen(const fir::ExtendedValue &exv) {
-  return exv.match([](const fir::CharBoxValue &x) { return x.getLen(); },
-                   [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
-                   [](const fir::BoxValue &x) -> mlir::Value {
-                     llvm::report_fatal_error(
-                         "Need to read len from BoxValue Exv");
-                   },
-                   [](const auto &) { return mlir::Value{}; });
+  return exv.match(
+      [](const fir::CharBoxValue &x) { return x.getLen(); },
+      [](const fir::CharArrayBoxValue &x) { return x.getLen(); },
+      [](const fir::BoxValue &) -> mlir::Value {
+        llvm::report_fatal_error("Need to read len from BoxValue Exv");
+      },
+      [](const fir::MutableBoxValue &) -> mlir::Value {
+        llvm::report_fatal_error("Need to read len from MutableBoxValue Exv");
+      },
+      [](const auto &) { return mlir::Value{}; });
 }
 
 fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
@@ -35,14 +38,19 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
       [=](const fir::BoxValue &) -> fir::ExtendedValue {
         llvm::report_fatal_error("TODO: substbase of BoxValue");
       },
+      [=](const fir::MutableBoxValue &) -> fir::ExtendedValue {
+        llvm::report_fatal_error("TODO: substbase of MutableBoxValue");
+      },
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
 bool fir::isArray(const fir::ExtendedValue &exv) {
-  return exv.match([](const fir::ArrayBoxValue &) { return true; },
-                   [](const fir::CharArrayBoxValue &) { return true; },
-                   [](const fir::BoxValue &box) { return box.hasRank(); },
-                   [](auto) { return false; });
+  return exv.match(
+      [](const fir::ArrayBoxValue &) { return true; },
+      [](const fir::CharArrayBoxValue &) { return true; },
+      [](const fir::BoxValue &box) { return box.hasRank(); },
+      [](const fir::MutableBoxValue &box) { return box.hasRank(); },
+      [](auto) { return false; });
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
@@ -153,6 +161,7 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
             [&](const fir::ArrayBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
+            [&](const fir::MutableBoxValue &v) { makeSym(sym, v, force); },
             [](auto) {
               llvm::report_fatal_error("value not added to symbol table");
             });

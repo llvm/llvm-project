@@ -8,6 +8,7 @@
 
 #include "flang/Lower/FIRBuilder.h"
 #include "SymbolMap.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
@@ -257,6 +258,11 @@ Fortran::lower::FirOpBuilder::createShape(mlir::Location loc,
         }
         return mlir::Value{};
       },
+      [&](const fir::MutableBoxValue &) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "createShape on MutableBoxValue");
+      },
       [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
 }
 
@@ -299,6 +305,11 @@ mlir::Value Fortran::lower::FirOpBuilder::createSlice(
           Fortran::lower::readExtents(*this, loc, box, extents);
           return fullShape(box.getLBounds(), extents);
         },
+        [&](const fir::MutableBoxValue &) -> mlir::Value {
+          // MutableBoxValue must be read into another category to work with
+          // them outside of allocation/assignment contexts.
+          fir::emitFatalError(loc, "createSlice on MutableBoxValue");
+        },
         [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
   }
   auto rank = exv.rank();
@@ -340,6 +351,10 @@ Fortran::lower::FirOpBuilder::createBox(mlir::Location loc,
         return create<fir::EmboxOp>(loc, boxTy, itemAddr, emptyShape,
                                     emptySlice, lenParams);
       },
+      [&](const fir::MutableBoxValue &x) -> mlir::Value {
+        return create<fir::LoadOp>(
+            loc, Fortran::lower::getMutableIRBox(*this, loc, x));
+      },
       [&](const auto &) -> mlir::Value {
         return create<fir::EmboxOp>(loc, boxTy, itemAddr);
       });
@@ -363,6 +378,11 @@ mlir::Value Fortran::lower::readCharLen(Fortran::lower::FirOpBuilder &builder,
           return x.getExplicitParameters()[0];
         return Fortran::lower::CharacterExprHelper{builder, loc}
             .readLengthFromBox(x.getAddr());
+      },
+      [&](const fir::MutableBoxValue &) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "readCharLen on MutableBoxValue");
       },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(
@@ -392,6 +412,11 @@ mlir::Value Fortran::lower::readExtent(Fortran::lower::FirOpBuilder &builder,
                                     dimVal)
             .getResult(1);
       },
+      [&](const fir::MutableBoxValue &x) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "readExtents on MutableBoxValue");
+      },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(loc, "extent inquiry on scalar");
       });
@@ -412,6 +437,11 @@ mlir::Value Fortran::lower::readLowerBound(Fortran::lower::FirOpBuilder &,
       },
       [&](const fir::BoxValue &x) -> mlir::Value {
         return x.getLBounds().empty() ? mlir::Value{} : x.getLBounds()[dim];
+      },
+      [&](const fir::MutableBoxValue &) -> mlir::Value {
+        // MutableBoxValue must be read into another category to work with them
+        // outside of allocation/assignment contexts.
+        fir::emitFatalError(loc, "readLowerBound on MutableBoxValue");
       },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(loc, "lower bound inquiry on scalar");
