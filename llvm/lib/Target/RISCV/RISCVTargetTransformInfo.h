@@ -69,6 +69,11 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, bool VariableMask,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
+                                  const Instruction *I);
+
   bool isLegalElementTypeForRVV(Type *ScalarTy) {
     if (ScalarTy->isPointerTy())
       return true;
