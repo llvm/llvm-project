@@ -14,7 +14,6 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
-#include <type_traits>
 
 namespace Fortran::semantics {
 
@@ -85,7 +84,7 @@ void ModuleDetails::set_scope(const Scope *scope) {
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const SubprogramDetails &x) {
   DumpBool(os, "isInterface", x.isInterface_);
-  DumpOptional(os, "bindName", x.bindName());
+  DumpExpr(os, "bindName", x.bindName_);
   if (x.result_) {
     DumpType(os << " result:", x.result());
     os << x.result_->name();
@@ -291,33 +290,6 @@ void Symbol::SetType(const DeclTypeSpec &type) {
       details_);
 }
 
-template <typename T>
-constexpr bool HasBindName{std::is_convertible_v<T, const WithBindName *>};
-
-const std::string *Symbol::GetBindName() const {
-  return std::visit(
-      [&](auto &x) -> const std::string * {
-        if constexpr (HasBindName<decltype(&x)>) {
-          return x.bindName();
-        } else {
-          return nullptr;
-        }
-      },
-      details_);
-}
-
-void Symbol::SetBindName(std::string &&name) {
-  std::visit(
-      [&](auto &x) {
-        if constexpr (HasBindName<decltype(&x)>) {
-          x.set_bindName(std::move(name));
-        } else {
-          DIE("bind name not allowed on this kind of symbol");
-        }
-      },
-      details_);
-}
-
 bool Symbol::IsFuncResult() const {
   return std::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
@@ -359,7 +331,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
   if (x.type()) {
     os << " type: " << *x.type();
   }
-  DumpOptional(os, "bindName", x.bindName());
+  DumpExpr(os, "bindName", x.bindName_);
   return os;
 }
 
@@ -389,7 +361,7 @@ llvm::raw_ostream &operator<<(
   } else {
     DumpType(os, x.interface_.type());
   }
-  DumpOptional(os, "bindName", x.bindName());
+  DumpExpr(os, "bindName", x.bindName());
   DumpOptional(os, "passName", x.passName());
   if (x.init()) {
     if (const Symbol * target{*x.init()}) {
@@ -476,7 +448,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             DumpSymbolVector(os, x.objects());
           },
           [&](const CommonBlockDetails &x) {
-            DumpOptional(os, "bindName", x.bindName());
             if (x.alignment()) {
               os << " alignment=" << x.alignment();
             }
