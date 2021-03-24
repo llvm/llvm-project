@@ -864,7 +864,8 @@ void PassManager::enableVerifier(bool enabled) { verifyPasses = enabled; }
 LogicalResult PassManager::run(Operation *op) {
   MLIRContext *context = getContext();
   assert(op->getName().getIdentifier() == getOpName(*context) &&
-         "operation has a different name than the PassManager");
+         "operation has a different name than the PassManager or is from a "
+         "different context");
 
   // Before running, make sure to coalesce any adjacent pass adaptors in the
   // pipeline.
