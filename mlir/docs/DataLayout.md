@@ -253,6 +253,24 @@ with the
 [modeling of n-D vectors](https://mlir.llvm.org/docs/Dialects/Vector/#deeperdive).
 They **may change** in the future.
 
+#### `index` type
+
+Index type is an integer type used for target-specific size information in,
+e.g., `memref` operations. Its data layout is parameterized by a single integer
+data layout entry that specifies its bitwidth. For example,
+
+```
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<index, 32>
+>} {}
+```
+
+specifies that `index` has 32 bits. All other layout properties of `index` match
+those of the integer type with the same bitwidth defined above.
+
+In absence of the corresponding entry, `index` is assumed to be a 64-bit
+integer.
+
 ### Byte Size
 
 The default data layout assumes 8-bit bytes.

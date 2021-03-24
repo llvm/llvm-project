@@ -273,10 +273,8 @@ public:
 
     // Specify options to lower Standard to LLVM and pull in the conversion
     // patterns.
-    LowerToLLVMOptions options = {
-        /*useBarePtrCallConv=*/false,
-        /*emitCWrappers=*/true,
-        /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout};
+    LowerToLLVMOptions options(module.getContext());
+    options.emitCWrappers = true;
     auto *context = module.getContext();
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
