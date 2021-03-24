@@ -790,6 +790,27 @@ public:
     return *this;
   }
 
+  // Add a matchAndRewrite style pattern represented as a C function pointer.
+  template <typename OpType>
+  OwningRewritePatternList &
+  insert(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter)) {
+    struct FnPattern final : public OpRewritePattern<OpType> {
+      FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+                MLIRContext *context)
+          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+
+      LogicalResult matchAndRewrite(OpType op,
+                                    PatternRewriter &rewriter) const override {
+        return implFn(op, rewriter);
+      }
+
+    private:
+      LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
+    };
+    insert(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    return *this;
+  }
+
 private:
   /// Add an instance of the pattern type 'T'. Return a reference to `this` for
   /// chaining insertions.

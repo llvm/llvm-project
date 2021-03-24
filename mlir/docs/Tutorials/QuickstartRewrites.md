@@ -189,7 +189,7 @@ struct ConvertTFLeakyRelu : public RewritePattern {
       : RewritePattern("tf.LeakyRelu", 1, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const override {
+                                PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
         op, op->getResult(0).getType(), op->getOperand(0),
         /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
@@ -201,6 +201,19 @@ struct ConvertTFLeakyRelu : public RewritePattern {
 In the C++ rewrite the static benefit of the rewrite pattern is specified at
 construction. While in the pattern generator a simple heuristic is currently
 employed based around the number of ops matched and replaced.
+
+In the case where you have a registered op and want to use a benefit of 1, you
+can even define the pattern as a C function:
+
+```c++
+static LogicalResult
+convertTFLeakyRelu(TFLeakyReluOp op, PatternRewriter &rewriter) {
+  rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
+      op, op->getResult(0).getType(), op->getOperand(0),
+      /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
+  return success();
+}
+```
 
 The above rule did not capture the matching operands/attributes, but in general
 the `match` function in a multi-step rewrite may populate and return a
