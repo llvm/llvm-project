@@ -7,6 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; Tests for printing VPlans.
 
 define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x) nounwind uwtable {
+; CHECK-LABEL: Checking a loop in "print_call_and_memory"
 ; CHECK:      VPlan {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
@@ -38,6 +39,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalias %x, float* %z) nounwind uwtable {
+; CHECK-LABEL: Checking a loop in "print_widen_gep_and_select"
 ; CHECK:      VPlan {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
@@ -73,6 +75,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define float @print_reduction(i64 %n, float* noalias %y) {
+; CHECK-LABEL: Checking a loop in "print_reduction"
 ; CHECK:      VPlan {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0
@@ -101,6 +104,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
+; CHECK-LABEL: Checking a loop in "print_replicate_predicated_phi"
 ; CHECK:      VPlan {
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next
