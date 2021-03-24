@@ -40,7 +40,8 @@ public:
   // Return the C/C++ string representation of LMUL
   std::string str() const;
   Optional<unsigned> getScale(unsigned ElementBitwidth) const;
-  LMULType &operator*=(unsigned RHS);
+  void MulLog2LMUL(int Log2LMUL);
+  LMULType &operator*=(uint32_t RHS);
 };
 
 // This class is compact representation of a valid and invalid RVVType.
@@ -89,7 +90,13 @@ public:
   const std::string &getTypeStr() const { return Str; }
 
   // Return the short name of a type for C/C++ name suffix.
-  const std::string &getShortStr() const { return ShortStr; }
+  const std::string &getShortStr() {
+    // Not all types are used in short name, so compute the short name by
+    // demanded.
+    if (ShortStr.empty())
+      initShortStr();
+    return ShortStr;
+  }
 
   bool isValid() const { return Valid; }
   bool isScalar() const { return Scale.hasValue() && Scale.getValue() == 0; }
@@ -216,6 +223,8 @@ public:
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGen(raw_ostream &o);
 
+  std::string getSuffixStr(char Type, int Log2LMUL, StringRef Prototypes);
+
 private:
   /// Create all intrinsics and add them to \p Out
   void createRVVIntrinsics(std::vector<std::unique_ptr<RVVIntrinsic>> &Out);
@@ -235,6 +244,10 @@ private:
   // Emit the architecture preprocessor definitions. Return true when emits
   // non-empty string.
   bool emitExtDefStr(uint8_t Extensions, raw_ostream &o);
+  // Slice Prototypes string into sub prototype string and process each sub
+  // prototype string individually in the Handler.
+  void parsePrototypes(StringRef Prototypes,
+                       std::function<void(StringRef)> Handler);
 };
 
 } // namespace
@@ -279,6 +292,8 @@ VScaleVal LMULType::getScale(unsigned ElementBitwidth) const {
   return 1 << Log2ScaleResult;
 }
 
+void LMULType::MulLog2LMUL(int log2LMUL) { Log2LMUL += log2LMUL; }
+
 LMULType &LMULType::operator*=(uint32_t RHS) {
   assert(isPowerOf2_32(RHS));
   this->Log2LMUL = this->Log2LMUL + Log2_32(RHS);
@@ -295,7 +310,6 @@ RVVType::RVVType(BasicType BT, int Log2LMUL, StringRef prototype)
     initTypeStr();
     if (isVector()) {
       initClangBuiltinStr();
-      initShortStr();
     }
   }
 }
@@ -318,6 +332,8 @@ RVVType::RVVType(BasicType BT, int Log2LMUL, StringRef prototype)
 // clang-format on
 
 bool RVVType::verifyType() const {
+  if (ScalarType == Invalid)
+    return false;
   if (isScalar())
     return true;
   if (!Scale.hasValue())
@@ -553,7 +569,8 @@ void RVVType::applyModifier(StringRef Transformer) {
   if (Transformer.empty())
     return;
   // Handle primitive type transformer
-  switch (Transformer.back()) {
+  auto PType = Transformer.back();
+  switch (PType) {
   case 'e':
     Scale = 0;
     break;
@@ -599,7 +616,40 @@ void RVVType::applyModifier(StringRef Transformer) {
   }
   Transformer = Transformer.drop_back();
 
-  // Compute type transformers
+  // Extract and compute complex type transformer. It can only appear one time.
+  if (Transformer.startswith("(")) {
+    size_t Idx = Transformer.find(')');
+    assert(Idx != StringRef::npos);
+    StringRef ComplexType = Transformer.slice(1, Idx);
+    Transformer = Transformer.drop_front(Idx + 1);
+    assert(Transformer.find('(') == StringRef::npos &&
+           "Only allow one complex type transformer");
+
+    auto UpdateAndCheckComplexProto = [&]() {
+      Scale = LMUL.getScale(ElementBitwidth);
+      const StringRef VectorPrototypes("vwqom");
+      if (!VectorPrototypes.contains(PType))
+        PrintFatalError("Complex type transformer only supports vector type!");
+      if (Transformer.find_first_of("PCKWS") != StringRef::npos)
+        PrintFatalError(
+            "Illegal type transformer for Complex type transformer");
+    };
+    auto ComplexTT = ComplexType.split(":");
+    if (ComplexTT.first == "Log2EEW") {
+      uint32_t Log2EEW;
+      ComplexTT.second.getAsInteger(10, Log2EEW);
+      // update new elmul = (eew/sew) * lmul
+      LMUL.MulLog2LMUL(Log2EEW - Log2_32(ElementBitwidth));
+      // update new eew
+      ElementBitwidth = 1 << Log2EEW;
+      ScalarType = ScalarTypeKind::SignedInteger;
+      UpdateAndCheckComplexProto();
+    } else {
+      PrintFatalError("Illegal complex type transformers!");
+    }
+  }
+
+  // Compute the remain type transformers
   for (char I : Transformer) {
     switch (I) {
     case 'P':
@@ -714,6 +764,7 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
       // C type order: mask, op0, op1, ...,
       std::rotate(CTypeOrder.begin(), CTypeOrder.end() - 1, CTypeOrder.end());
   }
+
   // IntrinsicTypes is nonmasked version index. Need to update it
   // if there is maskedoff operand (It is always in first operand).
   IntrinsicTypes = NewIntrinsicTypes;
@@ -876,8 +927,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#endif\n";
 
   OS << "#if defined(__riscv_d)\n";
-  for (int ELMul : Log2LMULs) {
-    auto T = computeType('d', ELMul, "v");
+  for (int Log2LMUL : Log2LMULs) {
+    auto T = computeType('d', Log2LMUL, "v");
     if (T.hasValue())
       printType(T.getValue());
   }
@@ -952,12 +1003,38 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   OS << "\n";
 }
 
+void RVVEmitter::parsePrototypes(StringRef Prototypes,
+                                 std::function<void(StringRef)> Handler) {
+  const StringRef Primaries("evwqom0ztc");
+  while (!Prototypes.empty()) {
+    size_t Idx = 0;
+    // Skip over complex prototype because it could contain primitive type
+    // character.
+    if (Prototypes[0] == '(')
+      Idx = Prototypes.find_first_of(')');
+    Idx = Prototypes.find_first_of(Primaries, Idx);
+    assert(Idx != StringRef::npos);
+    Handler(Prototypes.slice(0, Idx + 1));
+    Prototypes = Prototypes.drop_front(Idx + 1);
+  }
+}
+
+std::string RVVEmitter::getSuffixStr(char Type, int Log2LMUL,
+                                     StringRef Prototypes) {
+  SmallVector<std::string> SuffixStrs;
+  parsePrototypes(Prototypes, [&](StringRef Proto) {
+    auto T = computeType(Type, Log2LMUL, Proto);
+    SuffixStrs.push_back(T.getValue()->getShortStr());
+  });
+  return join(SuffixStrs, "_");
+}
+
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out) {
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
   for (auto *R : RV) {
     StringRef Name = R->getValueAsString("Name");
-    StringRef Suffix = R->getValueAsString("Suffix");
+    StringRef SuffixProto = R->getValueAsString("Suffix");
     StringRef MangledName = R->getValueAsString("MangledName");
     StringRef Prototypes = R->getValueAsString("Prototype");
     StringRef TypeRange = R->getValueAsString("TypeRange");
@@ -983,17 +1060,13 @@ void RVVEmitter::createRVVIntrinsics(
     }
     // Parse prototype and create a list of primitive type with transformers
     // (operand) in ProtoSeq. ProtoSeq[0] is output operand.
-    SmallVector<std::string, 8> ProtoSeq;
-    const StringRef Primaries("evwqom0ztc");
-    while (!Prototypes.empty()) {
-      auto Idx = Prototypes.find_first_of(Primaries);
-      assert(Idx != StringRef::npos);
-      ProtoSeq.push_back(Prototypes.slice(0, Idx + 1).str());
-      Prototypes = Prototypes.drop_front(Idx + 1);
-    }
+    SmallVector<std::string> ProtoSeq;
+    parsePrototypes(Prototypes, [&ProtoSeq](StringRef Proto) {
+      ProtoSeq.push_back(Proto.str());
+    });
 
     // Compute Builtin types
-    SmallVector<std::string, 8> ProtoMaskSeq = ProtoSeq;
+    SmallVector<std::string> ProtoMaskSeq = ProtoSeq;
     if (HasMask) {
       // If HasMask, append 'm' to last operand.
       ProtoMaskSeq.push_back("m");
@@ -1015,8 +1088,7 @@ void RVVEmitter::createRVVIntrinsics(
         if (!Types.hasValue())
           continue;
 
-        auto SuffixStr =
-            computeType(I, Log2LMUL, Suffix).getValue()->getShortStr();
+        auto SuffixStr = getSuffixStr(I, Log2LMUL, SuffixProto);
         // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
