@@ -427,6 +427,8 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
     else
       switch ((llvm::AtomicOrderingCABI)FOS) {
       case llvm::AtomicOrderingCABI::relaxed:
+      // 31.7.2.18: "The failure argument shall not be memory_order_release
+      // nor memory_order_acq_rel". Fallback to monotonic.
       case llvm::AtomicOrderingCABI::release:
       case llvm::AtomicOrderingCABI::acq_rel:
         FailureOrder = llvm::AtomicOrdering::Monotonic;
@@ -439,12 +441,10 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
         FailureOrder = llvm::AtomicOrdering::SequentiallyConsistent;
         break;
       }
-    if (isStrongerThan(FailureOrder, SuccessOrder)) {
-      // Don't assert on undefined behavior "failure argument shall be no
-      // stronger than the success argument".
-      FailureOrder =
-          llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(SuccessOrder);
-    }
+    // Prior to c++17, "the failure argument shall be no stronger than the
+    // success argument". This condition has been lifted and the only
+    // precondition is 31.7.2.18. Effectively treat this as a DR and skip
+    // language version checks.
     emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size, SuccessOrder,
                       FailureOrder, Scope);
     return;
@@ -454,8 +454,7 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
   llvm::BasicBlock *MonotonicBB = nullptr, *AcquireBB = nullptr,
                    *SeqCstBB = nullptr;
   MonotonicBB = CGF.createBasicBlock("monotonic_fail", CGF.CurFn);
-  if (SuccessOrder != llvm::AtomicOrdering::Monotonic &&
-      SuccessOrder != llvm::AtomicOrdering::Release)
+  if (SuccessOrder != llvm::AtomicOrdering::Monotonic)
     AcquireBB = CGF.createBasicBlock("acquire_fail", CGF.CurFn);
   if (SuccessOrder == llvm::AtomicOrdering::SequentiallyConsistent)
     SeqCstBB = CGF.createBasicBlock("seqcst_fail", CGF.CurFn);
@@ -479,8 +478,9 @@ static void emitAtomicCmpXchgFailureSet(CodeGenFunction &CGF, AtomicExpr *E,
     emitAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2,
                       Size, SuccessOrder, llvm::AtomicOrdering::Acquire, Scope);
     CGF.Builder.CreateBr(ContBB);
-    SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::consume),
-                AcquireBB);
+    if (SuccessOrder != llvm::AtomicOrdering::Release)
+      SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::consume),
+                  AcquireBB);
     SI->addCase(CGF.Builder.getInt32((int)llvm::AtomicOrderingCABI::acquire),
                 AcquireBB);
   }

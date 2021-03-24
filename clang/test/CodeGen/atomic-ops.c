@@ -500,6 +500,7 @@ void generalFailureOrder(_Atomic(int) *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[RELEASE]]
   // CHECK: switch {{.*}}, label %[[RELEASE_MONOTONIC:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i32 2, label %[[RELEASE_ACQUIRE:[0-9a-zA-Z._]+]]
   // CHECK-NEXT: ]
 
   // CHECK: [[ACQREL]]
@@ -525,6 +526,14 @@ void generalFailureOrder(_Atomic(int) *ptr, int *ptr2, int success, int fail) {
 
   // CHECK: [[ACQUIRE_ACQUIRE]]
   // CHECK: cmpxchg {{.*}} acquire acquire, align
+  // CHECK: br
+
+  // CHECK: [[RELEASE_MONOTONIC]]
+  // CHECK: cmpxchg {{.*}} release monotonic, align
+  // CHECK: br
+
+  // CHECK: [[RELEASE_ACQUIRE]]
+  // CHECK: cmpxchg {{.*}} release acquire, align
   // CHECK: br
 
   // CHECK: [[ACQREL_MONOTONIC]]
@@ -562,6 +571,20 @@ void generalWeakness(int *ptr, int *ptr2, _Bool weak) {
   // CHECK-NOT: br
   // CHECK: cmpxchg weak {{.*}} seq_cst seq_cst, align
   // CHECK: br
+
+  __atomic_compare_exchange_n(ptr, ptr2, 42, weak, memory_order_release, memory_order_acquire);
+  // CHECK: switch i1 {{.*}}, label %[[WEAK:[0-9a-zA-Z._]+]] [
+  // CHECK-NEXT: i1 false, label %[[STRONG:[0-9a-zA-Z._]+]]
+
+  // CHECK: [[STRONG]]
+  // CHECK-NOT: br
+  // CHECK: cmpxchg {{.*}} release acquire
+  // CHECK: br
+
+  // CHECK: [[WEAK]]
+  // CHECK-NOT: br
+  // CHECK: cmpxchg weak {{.*}} release acquire
+  // CHECK: br
 }
 
 // Having checked the flow in the previous two cases, we'll trust clang to
@@ -576,7 +599,9 @@ void EMIT_ALL_THE_THINGS(int *ptr, int *ptr2, int new, _Bool weak, int success, 
   // CHECK: = cmpxchg weak {{.*}} acquire monotonic, align
   // CHECK: = cmpxchg weak {{.*}} acquire acquire, align
   // CHECK: = cmpxchg {{.*}} release monotonic, align
+  // CHECK: = cmpxchg {{.*}} release acquire, align
   // CHECK: = cmpxchg weak {{.*}} release monotonic, align
+  // CHECK: = cmpxchg weak {{.*}} release acquire, align
   // CHECK: = cmpxchg {{.*}} acq_rel monotonic, align
   // CHECK: = cmpxchg {{.*}} acq_rel acquire, align
   // CHECK: = cmpxchg weak {{.*}} acq_rel monotonic, align
