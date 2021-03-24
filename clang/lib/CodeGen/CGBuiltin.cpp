@@ -15028,6 +15028,18 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ResultType);
     return Builder.CreateCall(F, X);
   }
+  case PPC::BI__builtin_altivec_vadduqm:
+  case PPC::BI__builtin_altivec_vsubuqm: {
+    llvm::Type *Int128Ty = llvm::IntegerType::get(getLLVMContext(), 128);
+    Ops[0] =
+        Builder.CreateBitCast(Ops[0], llvm::FixedVectorType::get(Int128Ty, 1));
+    Ops[1] =
+        Builder.CreateBitCast(Ops[1], llvm::FixedVectorType::get(Int128Ty, 1));
+    if (BuiltinID == PPC::BI__builtin_altivec_vadduqm)
+      return Builder.CreateAdd(Ops[0], Ops[1], "vadduqm");
+    else
+      return Builder.CreateSub(Ops[0], Ops[1], "vsubuqm");
+  }
   // Copy sign
   case PPC::BI__builtin_vsx_xvcpsgnsp:
   case PPC::BI__builtin_vsx_xvcpsgndp: {
