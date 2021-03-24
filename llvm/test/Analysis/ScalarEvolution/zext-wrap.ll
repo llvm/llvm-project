@@ -15,7 +15,7 @@ bb.i:           ; preds = %bb1.i, %bb.nph
 
 ; This cast shouldn't be folded into the addrec.
 ; CHECK: %tmp = zext i8 %l_95.0.i1 to i16
-; CHECK: -->  (zext i8 {0,+,-1}<nw><%bb.i> to i16){{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: 2
+; CHECK: -->  (zext i8 {0,+,-1}<%bb.i> to i16){{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: 2
 
         %tmp = zext i8 %l_95.0.i1 to i16
 
