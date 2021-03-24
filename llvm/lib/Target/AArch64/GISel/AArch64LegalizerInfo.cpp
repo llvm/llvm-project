@@ -702,6 +702,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
+  getActionDefinitionsBuilder({G_SBFX, G_UBFX}).legalFor({s32, s64});
   computeTables();
   verify(*ST.getInstrInfo());
 }
