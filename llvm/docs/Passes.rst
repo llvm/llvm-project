@@ -974,7 +974,7 @@ at 2), which effectively gives values in deep loops higher rank than values not
 in loops.
 
 ``-rel-lookup-table-converter``: Relative lookup table converter
------------------------------------------
+----------------------------------------------------------------
 
 This pass converts lookup tables to PIC-friendly relative lookup tables.
 
