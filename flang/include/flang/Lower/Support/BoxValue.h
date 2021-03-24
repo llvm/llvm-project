@@ -363,10 +363,22 @@ using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
 
 class ExtendedValue;
 
+/// Get the base value of an extended value. Every type of extended value has a
+/// base value or is null.
 mlir::Value getBase(const ExtendedValue &exv);
+
+/// Get the LEN property value of an extended value. CHARACTER values have a LEN
+/// property.
 mlir::Value getLen(const ExtendedValue &exv);
+
+/// Pretty-print an extended value.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ExtendedValue &);
+
+/// Return a clone of the extended value `exv` with the base value `base`
+/// substituted.
 ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
+
+/// Is the extended value `exv` an array?
 bool isArray(const ExtendedValue &exv);
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
@@ -432,6 +444,13 @@ public:
 private:
   VT box;
 };
+
+/// Is the extended value `exv` unboxed and non-null?
+inline bool isUnboxedValue(const ExtendedValue &exv) {
+  return exv.match(
+      [](const fir::UnboxedValue &box) { return box ? true : false; },
+      [](const auto &) { return false; });
+}
 } // namespace fir
 
 #endif // FORTRAN_LOWER_SUPPORT_BOXVALUE_H

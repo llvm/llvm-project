@@ -87,10 +87,42 @@ Fortran::lower::genCharCompare(Fortran::lower::FirOpBuilder &builder,
                            rhsBuffer, fir::getLen(rhs));
 }
 
-void Fortran::lower::genIndex(Fortran::lower::FirOpBuilder &builder,
-                              mlir::Location loc, mlir::Value resultBox,
-                              mlir::Value stringBox, mlir::Value substringBox,
-                              mlir::Value backOpt, mlir::Value kind) {
+mlir::Value
+Fortran::lower::genIndex(Fortran::lower::FirOpBuilder &builder,
+                         mlir::Location loc, int kind, mlir::Value stringBase,
+                         mlir::Value stringLen, mlir::Value substringBase,
+                         mlir::Value substringLen, mlir::Value back) {
+  mlir::FuncOp indexFunc;
+  switch (kind) {
+  case 1:
+    indexFunc = getRuntimeFunc<mkRTKey(Index1)>(loc, builder);
+    break;
+  case 2:
+    indexFunc = getRuntimeFunc<mkRTKey(Index2)>(loc, builder);
+    break;
+  case 4:
+    indexFunc = getRuntimeFunc<mkRTKey(Index4)>(loc, builder);
+    break;
+  default:
+    fir::emitFatalError(
+        loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
+  }
+  auto fTy = indexFunc.getType();
+  llvm::SmallVector<mlir::Value> args = {
+      builder.createConvert(loc, fTy.getInput(0), stringBase),
+      builder.createConvert(loc, fTy.getInput(1), stringLen),
+      builder.createConvert(loc, fTy.getInput(2), substringBase),
+      builder.createConvert(loc, fTy.getInput(3), substringLen),
+      builder.createConvert(loc, fTy.getInput(4), back)};
+  return builder.create<fir::CallOp>(loc, indexFunc, args).getResult(0);
+}
+
+void Fortran::lower::genIndexDescriptor(Fortran::lower::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value resultBox,
+                                        mlir::Value stringBox,
+                                        mlir::Value substringBox,
+                                        mlir::Value backOpt, mlir::Value kind) {
   auto indexFunc = getRuntimeFunc<mkRTKey(Index)>(loc, builder);
   auto fTy = indexFunc.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);

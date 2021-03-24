@@ -207,6 +207,22 @@ subroutine ieor_test(a, b)
   ! CHECK: %{{[0-9]+}} = xor %{{[0-9]+}}, %{{[0-9]+}} : i{{(8|16|32|64|128)}}
 end subroutine ieor_test
 
+! INDEX
+! CHECK-LABEL: func @_QPindex_test(%
+! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
+! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32 
+integer function index_test(s1, s2)
+  character(*) :: s1, s2
+  ! CHECK: %[[st:[^:]*]]:2 = fir.unboxchar %[[s]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[sst:[^:]*]]:2 = fir.unboxchar %[[ss]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK: %[[a1:.*]] = fir.convert %[[st]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK: %[[a2:.*]] = fir.convert %[[st]]#1 : (index) -> i64
+  ! CHECK: %[[a3:.*]] = fir.convert %[[sst]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK: %[[a4:.*]] = fir.convert %[[sst]]#1 : (index) -> i64
+  ! CHECK: = fir.call @_FortranAIndex1(%[[a1]], %[[a2]], %[[a3]], %[[a4]], %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+  index_test = index(s1, s2)
+end function index_test
+
 ! IOR
 ! CHECK-LABEL: ior_test
 subroutine ior_test(a, b)

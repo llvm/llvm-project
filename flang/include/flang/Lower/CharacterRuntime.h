@@ -35,12 +35,21 @@ mlir::Value genRawCharCompare(FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value lhsLen, mlir::Value rhsBuff,
                               mlir::Value rhsLen);
 
-/// Generate call to index runtime.
+/// Generate call to INDEX runtime.
+/// This calls the simple runtime entry points based on the KIND of the string.
+/// No descriptors are used.
+mlir::Value genIndex(FirOpBuilder &builder, mlir::Location loc, int kind,
+                     mlir::Value stringBase, mlir::Value stringLen,
+                     mlir::Value substringBase, mlir::Value substringLen,
+                     mlir::Value back);
+
+/// Generate call to INDEX runtime.
 /// This calls the descriptor based runtime call implementation for the index
 /// intrinsic.
-void genIndex(FirOpBuilder &builder, mlir::Location loc, mlir::Value resultBox,
-              mlir::Value stringBox, mlir::Value substringBox,
-              mlir::Value backOpt, mlir::Value kind);
+void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
+                        mlir::Value resultBox, mlir::Value stringBox,
+                        mlir::Value substringBox, mlir::Value backOpt,
+                        mlir::Value kind);
 
 /// Generate call to trim runtime.
 ///   \p resultBox must be an unallocated allocatable used for the temporary

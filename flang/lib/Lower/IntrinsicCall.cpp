@@ -274,13 +274,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"iand", &I::genIAnd},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIEOr},
-    {"index",
-     &I::genIndex,
-     {{{"string", asAddr},
-       {"substring", asAddr},
-       {"back", asAddr},
-       {"kind", asValue}}},
-     /*isElemental=*/true},
+    {"index", &I::genIndex},
     {"ior", &I::genIOr},
     {"len", &I::genLen},
     {"len_trim", &I::genLenTrim},
@@ -291,7 +285,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"sign", &I::genSign},
-    {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental*/ false},
+    {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
 };
 
 /// To make fir output more readable for debug, one can outline all intrinsic
@@ -1286,21 +1280,42 @@ mlir::Value IntrinsicLibrary::genIEOr(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genIndex(mlir::Type resultType,
                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() >= 2);
+  assert(args.size() == 4);
+  for (int i = 0; i < 4; ++i)
+    if (fir::getBase(args[i]))
+      LLVM_DEBUG(llvm::dbgs() << "index(" << i << "): " << args[i] << '\n');
+
+  auto stringBase = fir::getBase(args[0]);
+  auto kind =
+      Fortran::lower::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+  auto stringLen = fir::getLen(args[0]);
+  auto substringBase = fir::getBase(args[1]);
+  auto substringLen = fir::getLen(args[1]);
+  mlir::Value back =
+      fir::isUnboxedValue(args[2])
+          ? fir::getBase(args[2])
+          : builder.createIntegerConstant(loc, builder.getI1Type(), 0);
+  if (!fir::isUnboxedValue(args[3]))
+    return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genIndex(builder, loc, kind, stringBase, stringLen,
+                                 substringBase, substringLen, back));
+
+  // Call the descriptor-based Index implementation
   auto string = builder.createBox(loc, args[0]);
   auto substring = builder.createBox(loc, args[1]);
   auto backOpt = builder.createBox(loc, args[2]);
-  mlir::Value kind = /* FIXME: get default from KindMap or ... */
+  mlir::Value kindVal = /* FIXME: get default from KindMap or ... */
       builder.createIntegerConstant(loc, builder.getIndexType(), 4);
-
   // Create mutable fir.box to be passed to the runtime for the result.
   auto resultMutableBox =
       Fortran::lower::createTempMutableBox(builder, loc, resultType);
   auto resultIrBox =
       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
   // Call runtime. The runtime is allocating the result.
-  Fortran::lower::genIndex(builder, loc, resultIrBox, string, substring,
-                           backOpt, kind);
+  Fortran::lower::genIndexDescriptor(builder, loc, resultIrBox, string,
+                                     substring, backOpt, kindVal);
   // Read result from mutable fir.box and add it to the list of temps to be
   // finalized by the StatementContext.
   auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
