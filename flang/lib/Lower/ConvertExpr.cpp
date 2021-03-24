@@ -471,24 +471,25 @@ public:
     TODO(getLoc(), "implied do index");
   }
 
-  // FIXME: Assumption is these return an i64 regardless of the target.
   fir::ExtendedValue genval(const Fortran::evaluate::DescriptorInquiry &desc) {
     auto exv = desc.base().IsSymbol() ? gen(desc.base().GetLastSymbol())
                                       : gen(desc.base().GetComponent());
     auto idxTy = builder.getIndexType();
     auto loc = getLoc();
-    auto castToI64 = [&](mlir::Value v) {
-      return builder.createConvert(loc, builder.getI64Type(), v);
+    auto castResult = [&](mlir::Value v) {
+      using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
+      return builder.createConvert(
+          loc, converter.genType(ResTy::category, ResTy::kind), v);
     };
     switch (desc.field()) {
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
-      return castToI64(Fortran::lower::readCharLen(builder, loc, exv));
+      return castResult(Fortran::lower::readCharLen(builder, loc, exv));
     case Fortran::evaluate::DescriptorInquiry::Field::LowerBound:
-      return castToI64(Fortran::lower::readLowerBound(
+      return castResult(Fortran::lower::readLowerBound(
           builder, loc, exv, desc.dimension(),
           builder.createIntegerConstant(loc, idxTy, 1)));
     case Fortran::evaluate::DescriptorInquiry::Field::Extent:
-      return castToI64(
+      return castResult(
           Fortran::lower::readExtent(builder, loc, exv, desc.dimension()));
     case Fortran::evaluate::DescriptorInquiry::Field::Rank:
       TODO(loc, "rank inquiry on assumed rank");
