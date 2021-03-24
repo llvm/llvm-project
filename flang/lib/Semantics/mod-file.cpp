@@ -54,8 +54,8 @@ static void PutEntity(
 static void PutInit(llvm::raw_ostream &, const Symbol &, const MaybeExpr &);
 static void PutInit(llvm::raw_ostream &, const MaybeIntExpr &);
 static void PutBound(llvm::raw_ostream &, const Bound &);
-static llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
-    const MaybeExpr & = std::nullopt, std::string before = ","s,
+llvm::raw_ostream &PutAttrs(llvm::raw_ostream &, Attrs,
+    const std::string * = nullptr, std::string before = ","s,
     std::string after = ""s);
 
 static llvm::raw_ostream &PutAttr(llvm::raw_ostream &, Attr);
@@ -346,7 +346,7 @@ void ModFileWriter::PutSubprogram(const Symbol &symbol) {
   if (isInterface) {
     os << (isAbstract ? "abstract " : "") << "interface\n";
   }
-  PutAttrs(os, prefixAttrs, std::nullopt, ""s, " "s);
+  PutAttrs(os, prefixAttrs, nullptr, ""s, " "s);
   os << (details.isFunction() ? "function " : "subroutine ");
   os << symbol.name() << '(';
   int n = 0;
@@ -636,26 +636,18 @@ void PutBound(llvm::raw_ostream &os, const Bound &x) {
 void PutEntity(llvm::raw_ostream &os, const Symbol &symbol,
     std::function<void()> writeType, Attrs attrs) {
   writeType();
-  MaybeExpr bindName;
-  std::visit(common::visitors{
-                 [&](const SubprogramDetails &x) { bindName = x.bindName(); },
-                 [&](const ObjectEntityDetails &x) { bindName = x.bindName(); },
-                 [&](const ProcEntityDetails &x) { bindName = x.bindName(); },
-                 [&](const auto &) {},
-             },
-      symbol.details());
-  PutAttrs(os, attrs, bindName);
+  PutAttrs(os, attrs, symbol.GetBindName());
   os << "::" << symbol.name();
 }
 
 // Put out each attribute to os, surrounded by `before` and `after` and
 // mapped to lower case.
 llvm::raw_ostream &PutAttrs(llvm::raw_ostream &os, Attrs attrs,
-    const MaybeExpr &bindName, std::string before, std::string after) {
+    const std::string *bindName, std::string before, std::string after) {
   attrs.set(Attr::PUBLIC, false); // no need to write PUBLIC
   attrs.set(Attr::EXTERNAL, false); // no need to write EXTERNAL
   if (bindName) {
-    bindName->AsFortran(os << before << "bind(c, name=") << ')' << after;
+    os << before << "bind(c, name=\"" << *bindName << "\")" << after;
     attrs.set(Attr::BIND_C, false);
   }
   for (std::size_t i{0}; i < Attr_enumSize; ++i) {
