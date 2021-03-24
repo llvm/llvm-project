@@ -2305,6 +2305,30 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   MachineIRBuilder MIB(I);
 
   switch (Opcode) {
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX: {
+    static const unsigned OpcTable[2][2] = {
+        {AArch64::UBFMWri, AArch64::UBFMXri},
+        {AArch64::SBFMWri, AArch64::SBFMXri}};
+    bool IsSigned = Opcode == TargetOpcode::G_SBFX;
+    unsigned Size = Ty.getSizeInBits();
+    unsigned Opc = OpcTable[IsSigned][Size == 64];
+    auto Cst1 =
+        getConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI);
+    assert(Cst1 && "Should have gotten a constant for src 1?");
+    auto Cst2 =
+        getConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI);
+    assert(Cst2 && "Should have gotten a constant for src 2?");
+    auto LSB = Cst1->Value.getZExtValue();
+    auto Width = Cst2->Value.getZExtValue();
+    MachineIRBuilder MIB(I);
+    auto BitfieldInst =
+        MIB.buildInstr(Opc, {I.getOperand(0)}, {I.getOperand(1)})
+            .addImm(LSB)
+            .addImm(Width);
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*BitfieldInst, TII, TRI, RBI);
+  }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
 
