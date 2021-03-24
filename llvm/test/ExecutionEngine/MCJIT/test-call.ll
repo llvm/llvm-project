@@ -1,5 +1,4 @@
 ; RUN: %lli -jit-kind=mcjit %s > /dev/null
-; RUN: %lli %s > /dev/null
 
 declare void @exit(i32)
 
