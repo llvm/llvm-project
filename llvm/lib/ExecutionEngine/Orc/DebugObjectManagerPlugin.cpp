@@ -371,16 +371,6 @@ DebugObjectSection *ELFDebugObject::getSection(StringRef Name) {
   return It == Sections.end() ? nullptr : It->second.get();
 }
 
-static ResourceKey getResourceKey(MaterializationResponsibility &MR) {
-  ResourceKey Key;
-  if (auto Err = MR.withResourceKeyDo([&](ResourceKey K) { Key = K; })) {
-    MR.getExecutionSession().reportError(std::move(Err));
-    return ResourceKey{};
-  }
-  assert(Key && "Invalid key");
-  return Key;
-}
-
 /// Creates a debug object based on the input object file from
 /// ObjectLinkingLayerJITLinkContext.
 ///
@@ -449,9 +439,6 @@ Error DebugObjectManagerPlugin::notifyEmitted(
   if (It == PendingObjs.end())
     return Error::success();
 
-  DebugObject *UnownedDebugObj = It->second.release();
-  PendingObjs.erase(It);
-
   // During finalization the debug object is registered with the target.
   // Materialization must wait for this process to finish. Otherwise we might
   // start running code before the debugger processed the corresponding debug
@@ -459,30 +446,27 @@ Error DebugObjectManagerPlugin::notifyEmitted(
   std::promise<MSVCPError> FinalizePromise;
   std::future<MSVCPError> FinalizeErr = FinalizePromise.get_future();
 
-  // FIXME: We released ownership of the DebugObject, so we can easily capture
-  // the raw pointer in the continuation function, which re-owns it immediately.
-  if (UnownedDebugObj)
-    UnownedDebugObj->finalizeAsync(
-        [this, UnownedDebugObj, &MR,
-         &FinalizePromise](Expected<sys::MemoryBlock> TargetMem) {
-          std::unique_ptr<DebugObject> ReownedDebugObj(UnownedDebugObj);
-          if (!TargetMem) {
-            FinalizePromise.set_value(TargetMem.takeError());
-            return;
-          }
-          if (Error Err = Target->registerDebugObject(*TargetMem)) {
-            FinalizePromise.set_value(std::move(Err));
-            return;
-          }
+  It->second->finalizeAsync(
+      [this, &FinalizePromise, &MR](Expected<sys::MemoryBlock> TargetMem) {
+        // Any failure here will fail materialization.
+        if (!TargetMem) {
+          FinalizePromise.set_value(TargetMem.takeError());
+          return;
+        }
+        if (Error Err = Target->registerDebugObject(*TargetMem)) {
+          FinalizePromise.set_value(std::move(Err));
+          return;
+        }
 
-          // Registration successful, notifyEmitted() can return now and
-          // materialization can finish.
-          FinalizePromise.set_value(Error::success());
-
-          ResourceKey Key = getResourceKey(MR);
+        // Once our tracking info is updated, notifyEmitted() can return and
+        // finish materialization.
+        FinalizePromise.set_value(MR.withResourceKeyDo([&](ResourceKey K) {
+          assert(PendingObjs.count(&MR) && "We still hold PendingObjsLock");
           std::lock_guard<std::mutex> Lock(RegisteredObjsLock);
-          RegisteredObjs[Key].push_back(std::move(ReownedDebugObj));
-        });
+          RegisteredObjs[K].push_back(std::move(PendingObjs[&MR]));
+          PendingObjs.erase(&MR);
+        }));
+      });
 
   return FinalizeErr.get();
 }
