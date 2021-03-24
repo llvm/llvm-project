@@ -18,8 +18,10 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -27,8 +29,63 @@
 #include "mlir/Transforms/LoopUtils.h"
 
 using namespace mlir;
+using namespace mlir::edsc;
+using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::scf;
+
+static bool isZero(Value v) {
+  if (auto cst = v.getDefiningOp<ConstantIndexOp>())
+    return cst.getValue() == 0;
+  return false;
+}
+
+namespace {
+
+// Helper visitor to determine whether an AffineExpr is tiled.
+// This is achieved by traversing every AffineDimExpr with position `pos` and
+// checking whether the corresponding `tileSizes[pos]` is non-zero.
+// This also enforces only positive coefficients occur in multiplications.
+//
+// Example:
+//   `d0 + 2 * d1 + d3` is tiled by [0, 0, 0, 2] but not by [0, 0, 2, 0]
+//
+struct TileCheck : public AffineExprVisitor<TileCheck> {
+  TileCheck(ValueRange tileSizes) : isTiled(false), tileSizes(tileSizes) {}
+
+  void visitDimExpr(AffineDimExpr expr) {
+    isTiled |= !isZero(tileSizes[expr.getPosition()]);
+  }
+  void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
+    visit(expr.getLHS());
+    visit(expr.getRHS());
+    if (expr.getKind() == mlir::AffineExprKind::Mul)
+      assert(expr.getRHS().cast<AffineConstantExpr>().getValue() > 0 &&
+             "nonpositive multiplying coefficient");
+  }
+  bool isTiled;
+  ValueRange tileSizes;
+};
+
+} // namespace
+
+static bool isTiled(AffineExpr expr, ValueRange tileSizes) {
+  if (!expr)
+    return false;
+  TileCheck t(tileSizes);
+  t.visit(expr);
+  return t.isTiled;
+}
+
+// Checks whether the `map  varies with respect to a non-zero `tileSize`.
+static bool isTiled(AffineMap map, ValueRange tileSizes) {
+  if (!map)
+    return false;
+  for (unsigned r = 0; r < map.getNumResults(); ++r)
+    if (isTiled(map.getResult(r), tileSizes))
+      return true;
+  return false;
+}
 
 Optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
@@ -372,6 +429,99 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
                            distributionMethod);
 
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
+}
+
+SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
+                                      LinalgOp linalgOp,
+                                      ArrayRef<Value> tiledOperands,
+                                      ValueRange ivs, ValueRange tileSizes,
+                                      ArrayRef<Value> sizeBounds) {
+  assert(ivs.size() == static_cast<size_t>(llvm::count_if(
+                           llvm::make_range(tileSizes.begin(), tileSizes.end()),
+                           [](Value v) { return !isZero(v); })) &&
+         "expected as many ivs as non-zero sizes");
+
+  using namespace edsc::op;
+
+  // Construct (potentially temporary) mins and maxes on which to apply maps
+  // that define tile subshapes.
+  SmallVector<Value, 8> lbs, subShapeSizes;
+  for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
+    bool isTiled = !isZero(tileSizes[idx]);
+    lbs.push_back(isTiled ? ivs[idxIvs++] : (Value)std_constant_index(0));
+    // Before composing, we need to make range a closed interval.
+    Value size = isTiled ? tileSizes[idx] : sizeBounds[idx];
+    subShapeSizes.push_back(size - std_constant_index(1));
+  }
+
+  MLIRContext *context = builder.getContext();
+  SmallVector<Value, 4> tiledShapes;
+  tiledShapes.reserve(tiledOperands.size());
+  for (auto en : llvm::enumerate(tiledOperands)) {
+    Value shapedOp = en.value();
+    ShapedType shapedType = shapedOp.getType().cast<ShapedType>();
+    unsigned rank = shapedType.getRank();
+    AffineMap map = linalgOp.getIndexingMap(en.index());
+    // If the shape is not tiled, we can use it as is.
+    if (!isTiled(map, tileSizes)) {
+      tiledShapes.push_back(shapedOp);
+      continue;
+    }
+
+    // Construct a new subview / subtensor for the tile.
+    SmallVector<OpFoldResult, 4> offsets, sizes, strides;
+    offsets.reserve(rank);
+    sizes.reserve(rank);
+    strides.reserve(rank);
+    for (unsigned r = 0; r < rank; ++r) {
+      if (!isTiled(map.getSubMap({r}), tileSizes)) {
+        offsets.push_back(builder.getIndexAttr(0));
+        sizes.push_back(memref_dim(shapedOp, r).value);
+        strides.push_back(builder.getIndexAttr(1));
+        continue;
+      }
+
+      // Tiling creates a new slice at the proper index, the slice step is 1
+      // (i.e. the op does not subsample, stepping occurs in the loop).
+      auto m = map.getSubMap({r});
+      auto offset = applyMapToValues(builder, loc, m, lbs).front();
+      offsets.push_back(offset);
+      auto closedIntSize =
+          applyMapToValues(builder, loc, m, subShapeSizes).front();
+      // Resulting size needs to be made half open interval again.
+      auto size = closedIntSize + std_constant_index(1);
+
+      // The size of the subview / subtensor should be trimmed to avoid
+      // out-of-bounds accesses, unless we statically know the subshape size
+      // divides the shape size evenly.
+      int64_t shapeSize = shapedType.getDimSize(r);
+      auto sizeCst = size.getDefiningOp<ConstantIndexOp>();
+      if (ShapedType::isDynamic(shapeSize) || !sizeCst ||
+          (shapeSize % sizeCst.getValue()) != 0) {
+        AffineExpr dim0, dim1, dim2;
+        bindDims(context, dim0, dim1, dim2);
+        // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
+        auto minMap = AffineMap::get(
+            /*dimCount=*/3, /*symbolCount=*/0, {dim0, dim1 - dim2}, context);
+        Value d = memref_dim(shapedOp, r);
+        SmallVector<Value, 4> operands{size, d, offset};
+        fullyComposeAffineMapAndOperands(&minMap, &operands);
+        size = affine_min(builder.getIndexType(), minMap, operands);
+      }
+
+      sizes.push_back(size);
+      strides.push_back(builder.getIndexAttr(1));
+    }
+
+    if (shapedType.isa<MemRefType>())
+      tiledShapes.push_back(builder.create<memref::SubViewOp>(
+          loc, shapedOp, offsets, sizes, strides));
+    else
+      tiledShapes.push_back(
+          builder.create<SubTensorOp>(loc, shapedOp, offsets, sizes, strides));
+  }
+
+  return tiledShapes;
 }
 
 } // namespace linalg
