@@ -1,4 +1,13 @@
-// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding-2-level -canonicalize | FileCheck %s
+// Specific structural checks are performed on 2-level hoisting
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=2 -canonicalize | FileCheck %s
+
+// IR verification is performed on [0-6]-level hoisting
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=0 | FileCheck %s --check-prefix=VERIFIER-ONLY
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=1 | FileCheck %s --check-prefix=VERIFIER-ONLY
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=3 | FileCheck %s --check-prefix=VERIFIER-ONLY
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=4 | FileCheck %s --check-prefix=VERIFIER-ONLY
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=5 | FileCheck %s --check-prefix=VERIFIER-ONLY
+// RUN: mlir-opt %s -split-input-file -test-linalg-transform-patterns=test-hoist-padding=6 | FileCheck %s --check-prefix=VERIFIER-ONLY
 
 // CHECK-DAG: #[[$DIV3:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 3)>
 // CHECK-DAG: #[[$DIV4:[0-9a-z]+]] = affine_map<(d0) -> (d0 ceildiv 4)>
@@ -14,6 +23,7 @@
 //  CHECK-SAME:   %[[TA:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[TB:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[TC:[0-9a-z]+]]: tensor
+// VERIFIER-ONLY-LABEL: func @matmul_tensors
 func @matmul_tensors(
   %arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>)
   -> tensor<?x?xf32>
@@ -140,6 +150,7 @@ func @matmul_tensors(
 #map2 = affine_map<(d0, d1) -> (2, d0 - d1)>
 
 // CHECK-LABEL: func @dot
+// VERIFIER-ONLY-LABEL: func @dot
 func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
     -> tensor<f32>
 {
@@ -216,4 +227,64 @@ func @dot(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>, %arg2: tensor<f32>)
     scf.yield %9 : tensor<f32>
   }
   return %4 : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: func @matmul_2d_tiling
+// VERIFIER-ONLY-LABEL: func @matmul_2d_tiling
+func @matmul_2d_tiling(%arg0: tensor<32x128xf32>, %arg1: tensor<128x64xf32>, %arg2: tensor<32x64xf32>) -> tensor<32x64xf32> {
+  %c128 = constant 128 : index
+  %c64 = constant 64 : index
+  %c32 = constant 32 : index
+  %c16 = constant 16 : index
+  %cst = constant 0.000000e+00 : f32
+  %c2 = constant 2 : index
+  %c4 = constant 4 : index
+  %c0 = constant 0 : index
+  %1 = scf.for %arg3 = %c0 to %c32 step %c16 iter_args(%arg4 = %arg2) -> (tensor<32x64xf32>) {
+    %2 = scf.for %arg5 = %c0 to %c64 step %c32 iter_args(%arg6 = %arg4) -> (tensor<32x64xf32>) {
+      %3 = scf.for %arg7 = %c0 to %c128 step %c32 iter_args(%arg8 = %arg6) -> (tensor<32x64xf32>) {
+        %4 = subtensor %arg0[%arg3, %arg7] [16, 32] [1, 1] : tensor<32x128xf32> to tensor<16x32xf32>
+        %5 = subtensor %arg1[%arg7, %arg5] [32, 32] [1, 1] : tensor<128x64xf32> to tensor<32x32xf32>
+        %6 = subtensor %arg8[%arg3, %arg5] [16, 32] [1, 1] : tensor<32x64xf32> to tensor<16x32xf32>
+        %7 = scf.for %arg9 = %c0 to %c16 step %c2 iter_args(%arg10 = %6) -> (tensor<16x32xf32>) {
+          %10 = scf.for %arg11 = %c0 to %c32 step %c4 iter_args(%arg12 = %arg10) -> (tensor<16x32xf32>) {
+            %11 = scf.for %arg13 = %c0 to %c32 step %c16 iter_args(%arg14 = %arg12) -> (tensor<16x32xf32>) {
+              %12 = subtensor %4[%arg9, %arg13] [2, 16] [1, 1] : tensor<16x32xf32> to tensor<2x16xf32>
+              %13 = tensor.cast %12 : tensor<2x16xf32> to tensor<?x?xf32>
+              %14 = subtensor %5[%arg13, %arg11] [16, 4] [1, 1] : tensor<32x32xf32> to tensor<16x4xf32>
+              %15 = tensor.cast %14 : tensor<16x4xf32> to tensor<?x?xf32>
+              %16 = subtensor %arg14[%arg9, %arg11] [2, 4] [1, 1] : tensor<16x32xf32> to tensor<2x4xf32>
+              %17 = tensor.cast %16 : tensor<2x4xf32> to tensor<?x?xf32>
+              %18 = linalg.pad_tensor %13 low[%c0, %c0] high[%c0, %c0]  {
+              ^bb0(%arg15: index, %arg16: index):  // no predecessors
+                linalg.yield %cst : f32
+              } : tensor<?x?xf32> to tensor<2x16xf32>
+              %19 = linalg.pad_tensor %15 low[%c0, %c0] high[%c0, %c0]  {
+              ^bb0(%arg15: index, %arg16: index):  // no predecessors
+                linalg.yield %cst : f32
+              } : tensor<?x?xf32> to tensor<16x4xf32>
+              %20 = linalg.pad_tensor %17 low[%c0, %c0] high[%c0, %c0]  {
+              ^bb0(%arg15: index, %arg16: index):  // no predecessors
+                linalg.yield %cst : f32
+              } : tensor<?x?xf32> to tensor<2x4xf32>
+              %21 = linalg.matmul ins(%18, %19 : tensor<2x16xf32>, tensor<16x4xf32>) outs(%20 : tensor<2x4xf32>) -> tensor<2x4xf32>
+              %22 = tensor.cast %21 : tensor<2x4xf32> to tensor<?x?xf32>
+              %23 = subtensor_insert %22 into %arg14[%arg9, %arg11] [%c2, %c4] [1, 1] : tensor<?x?xf32> into tensor<16x32xf32>
+              scf.yield %23 : tensor<16x32xf32>
+            }
+            scf.yield %11 : tensor<16x32xf32>
+          }
+          scf.yield %10 : tensor<16x32xf32>
+        }
+        %8 = tensor.cast %7 : tensor<16x32xf32> to tensor<?x?xf32>
+        %9 = subtensor_insert %8 into %arg8[%arg3, %arg5] [%c16, %c32] [1, 1] : tensor<?x?xf32> into tensor<32x64xf32>
+        scf.yield %9 : tensor<32x64xf32>
+      }
+      scf.yield %3 : tensor<32x64xf32>
+    }
+    scf.yield %2 : tensor<32x64xf32>
+  }
+  return %1 : tensor<32x64xf32>
 }

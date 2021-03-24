@@ -793,7 +793,15 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   backwardSlice.insert(padTensorOp);
   // Stack step 1. iteratively clone loops and push `packedTensor`.
   for (Operation *op : backwardSlice) {
-    if (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op)) {
+    // Specifically sit out in the subtenso(packedTensor) case: this is the
+    // piece we seek to replace.
+    if (auto subTensor = dyn_cast<SubTensorOp>(op))
+      if (bvm.lookupOrDefault(subTensor.source()) == packedTensor)
+        continue;
+    auto effects = dyn_cast<MemoryEffectOpInterface>(op);
+    bool hasNoEffects = !effects || effects.hasNoEffect();
+    if (hasNoEffects &&
+        (op->getNumRegions() == 0 || isa<linalg::PadTensorOp>(op))) {
       b.clone(*op, bvm);
       continue;
     }
@@ -808,8 +816,10 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
         b.create<scf::ForOp>(loc, bvm.lookupOrDefault(forOp.lowerBound()),
                              bvm.lookupOrDefault(forOp.upperBound()),
                              bvm.lookupOrDefault(forOp.step()), packedTensor);
-
+    // Map the induction var, region args and results to the `clonedForOp`.
     bvm.map(forOp.getInductionVar(), clonedForOp.getInductionVar());
+    bvm.map(forOp.getRegionIterArgs(), clonedForOp.getRegionIterArgs());
+    bvm.map(forOp.getResults(), clonedForOp.getResults());
     assert(clonedForOp->getNumRegions() == 1);
     clonedLoopIvs.push_back(clonedForOp.getInductionVar());
 
