@@ -178,7 +178,8 @@ static bool findLoopComponents(
   assert(InductionPHI->getNumIncomingValues() == 2);
 
   if (InductionPHI->getIncomingValueForBlock(Latch) != Increment) {
-    LLVM_DEBUG(dbgs() << "PHI value is not increment inst");
+    LLVM_DEBUG(
+        dbgs() << "Incoming value from latch is not the increment inst\n");
     return false;
   }
 
