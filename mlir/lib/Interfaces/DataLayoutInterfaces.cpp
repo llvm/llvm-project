@@ -8,8 +8,11 @@
 
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
@@ -105,65 +108,97 @@ mlir::detail::filterEntryForIdentifier(DataLayoutEntryListRef entries,
   return it == entries.end() ? DataLayoutEntryInterface() : *it;
 }
 
+static DataLayoutSpecInterface getSpec(Operation *operation) {
+  return llvm::TypeSwitch<Operation *, DataLayoutSpecInterface>(operation)
+      .Case<ModuleOp, DataLayoutOpInterface>(
+          [&](auto op) { return op.getDataLayoutSpec(); })
+      .Default([](Operation *) {
+        llvm_unreachable("expected an op with data layout spec");
+        return DataLayoutSpecInterface();
+      });
+}
+
 /// Populates `opsWithLayout` with the list of proper ancestors of `leaf` that
-/// implement the `DataLayoutOpInterface`.
-static void findProperAscendantsWithLayout(
-    Operation *leaf, SmallVectorImpl<DataLayoutOpInterface> &opsWithLayout) {
+/// are either modules or implement the `DataLayoutOpInterface`.
+static void
+collectParentLayouts(Operation *leaf,
+                     SmallVectorImpl<DataLayoutSpecInterface> &specs,
+                     SmallVectorImpl<Location> *opLocations = nullptr) {
   if (!leaf)
     return;
 
-  while (auto opLayout = leaf->getParentOfType<DataLayoutOpInterface>()) {
-    opsWithLayout.push_back(opLayout);
-    leaf = opLayout;
+  for (Operation *parent = leaf->getParentOp(); parent != nullptr;
+       parent = parent->getParentOp()) {
+    llvm::TypeSwitch<Operation *>(parent)
+        .Case<ModuleOp>([&](ModuleOp op) {
+          // Skip top-level module op unless it has a layout. Top-level module
+          // without layout is most likely the one implicitly added by the
+          // parser and it doesn't have location. Top-level null specification
+          // would have had the same effect as not having a specification at all
+          // (using type defaults).
+          if (!op->getParentOp() && !op.getDataLayoutSpec())
+            return;
+          specs.push_back(op.getDataLayoutSpec());
+          if (opLocations)
+            opLocations->push_back(op.getLoc());
+        })
+        .Case<DataLayoutOpInterface>([&](DataLayoutOpInterface op) {
+          specs.push_back(op.getDataLayoutSpec());
+          if (opLocations)
+            opLocations->push_back(op.getLoc());
+        });
   }
 }
 
 /// Returns a layout spec that is a combination of the layout specs attached
 /// to the given operation and all its ancestors.
-static DataLayoutSpecInterface
-getCombinedDataLayout(DataLayoutOpInterface leaf) {
+static DataLayoutSpecInterface getCombinedDataLayout(Operation *leaf) {
   if (!leaf)
     return {};
 
+  assert((isa<ModuleOp, DataLayoutOpInterface>(leaf)) &&
+         "expected an op with data layout spec");
+
   SmallVector<DataLayoutOpInterface> opsWithLayout;
-  findProperAscendantsWithLayout(leaf, opsWithLayout);
+  SmallVector<DataLayoutSpecInterface> specs;
+  collectParentLayouts(leaf, specs);
 
   // Fast track if there are no ancestors.
-  if (opsWithLayout.empty())
-    return leaf.getDataLayoutSpec();
+  if (specs.empty())
+    return getSpec(leaf);
 
   // Create the list of non-null specs (null/missing specs can be safely
   // ignored) from the outermost to the innermost.
-  SmallVector<DataLayoutSpecInterface> specs;
-  specs.reserve(opsWithLayout.size());
-  for (DataLayoutOpInterface op : llvm::reverse(opsWithLayout))
-    if (DataLayoutSpecInterface current = op.getDataLayoutSpec())
-      specs.push_back(current);
+  auto nonNullSpecs = llvm::to_vector<2>(llvm::make_filter_range(
+      llvm::reverse(specs),
+      [](DataLayoutSpecInterface iface) { return iface != nullptr; }));
 
   // Combine the specs using the innermost as anchor.
-  if (DataLayoutSpecInterface current = leaf.getDataLayoutSpec())
-    return current.combineWith(specs);
-  if (specs.empty())
+  if (DataLayoutSpecInterface current = getSpec(leaf))
+    return current.combineWith(nonNullSpecs);
+  if (nonNullSpecs.empty())
     return {};
-  return specs.back().combineWith(llvm::makeArrayRef(specs).drop_back());
+  return nonNullSpecs.back().combineWith(
+      llvm::makeArrayRef(nonNullSpecs).drop_back());
 }
 
-LogicalResult mlir::detail::verifyDataLayoutOp(DataLayoutOpInterface op) {
-  DataLayoutSpecInterface spec = op.getDataLayoutSpec();
+LogicalResult mlir::detail::verifyDataLayoutOp(Operation *op) {
+  DataLayoutSpecInterface spec = getSpec(op);
   // The layout specification may be missing and it's fine.
   if (!spec)
     return success();
 
-  if (failed(spec.verifySpec(op.getLoc())))
+  if (failed(spec.verifySpec(op->getLoc())))
     return failure();
   if (!getCombinedDataLayout(op)) {
     InFlightDiagnostic diag =
-        op.emitError()
-        << "data layout is not a refinement of the layouts in enclosing ops";
-    SmallVector<DataLayoutOpInterface> opsWithLayout;
-    findProperAscendantsWithLayout(op, opsWithLayout);
-    for (DataLayoutOpInterface parent : opsWithLayout)
-      diag.attachNote(parent.getLoc()) << "enclosing op with data layout";
+        op->emitError()
+        << "data layout does not combine with layouts of enclosing ops";
+    SmallVector<DataLayoutSpecInterface> specs;
+    SmallVector<Location> opLocations;
+    collectParentLayouts(op, specs, &opLocations);
+    for (Location loc : opLocations)
+      diag.attachNote(loc) << "enclosing op with data layout";
     return diag;
   }
   return success();
@@ -173,33 +208,40 @@ LogicalResult mlir::detail::verifyDataLayoutOp(DataLayoutOpInterface op) {
 // DataLayout
 //===----------------------------------------------------------------------===//
 
-mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
-    : originalLayout(getCombinedDataLayout(op)), scope(op) {
+template <typename OpTy>
+void checkMissingLayout(DataLayoutSpecInterface originalLayout, OpTy op) {
   if (!originalLayout) {
     assert((!op || !op.getDataLayoutSpec()) &&
            "could not compute layout information for an op (failed to "
            "combine attributes?)");
   }
+}
 
+mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
+    : originalLayout(getCombinedDataLayout(op)), scope(op) {
 #ifndef NDEBUG
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
-  findProperAscendantsWithLayout(op, opsWithLayout);
-  layoutStack = llvm::to_vector<2>(
-      llvm::map_range(opsWithLayout, [](DataLayoutOpInterface iface) {
-        return iface.getDataLayoutSpec();
-      }));
+  checkMissingLayout(originalLayout, op);
+  collectParentLayouts(op, layoutStack);
+#endif
+}
+
+mlir::DataLayout::DataLayout(ModuleOp op)
+    : originalLayout(getCombinedDataLayout(op)), scope(op) {
+#ifndef NDEBUG
+  checkMissingLayout(originalLayout, op);
+  collectParentLayouts(op, layoutStack);
 #endif
 }
 
 void mlir::DataLayout::checkValid() const {
 #ifndef NDEBUG
-  SmallVector<DataLayoutOpInterface> opsWithLayout;
-  findProperAscendantsWithLayout(scope, opsWithLayout);
-  assert(opsWithLayout.size() == layoutStack.size() &&
+  SmallVector<DataLayoutSpecInterface> specs;
+  collectParentLayouts(scope, specs);
+  assert(specs.size() == layoutStack.size() &&
          "data layout object used, but no longer valid due to the change in "
          "number of nested layouts");
-  for (auto pair : llvm::zip(opsWithLayout, layoutStack)) {
-    Attribute newLayout = std::get<0>(pair).getDataLayoutSpec();
+  for (auto pair : llvm::zip(specs, layoutStack)) {
+    Attribute newLayout = std::get<0>(pair);
     Attribute origLayout = std::get<1>(pair);
     assert(newLayout == origLayout &&
            "data layout object used, but no longer valid "
@@ -228,30 +270,39 @@ static unsigned cachedLookup(Type t, DenseMap<Type, unsigned> &cache,
 unsigned mlir::DataLayout::getTypeSize(Type t) const {
   checkValid();
   return cachedLookup(t, sizes, [&](Type ty) {
-    return (scope && originalLayout)
-               ? scope.getTypeSize(
-                     ty, *this, originalLayout.getSpecForType(ty.getTypeID()))
-               : detail::getDefaultTypeSize(ty, *this, {});
+    if (originalLayout) {
+      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
+      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
+        return iface.getTypeSize(ty, *this, list);
+      return detail::getDefaultTypeSize(ty, *this, list);
+    }
+    return detail::getDefaultTypeSize(ty, *this, {});
   });
 }
 
 unsigned mlir::DataLayout::getTypeABIAlignment(Type t) const {
   checkValid();
   return cachedLookup(t, abiAlignments, [&](Type ty) {
-    return (scope && originalLayout)
-               ? scope.getTypeABIAlignment(
-                     ty, *this, originalLayout.getSpecForType(ty.getTypeID()))
-               : detail::getDefaultABIAlignment(ty, *this, {});
+    if (originalLayout) {
+      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
+      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
+        return iface.getTypeABIAlignment(ty, *this, list);
+      return detail::getDefaultABIAlignment(ty, *this, list);
+    }
+    return detail::getDefaultABIAlignment(ty, *this, {});
   });
 }
 
 unsigned mlir::DataLayout::getTypePreferredAlignment(Type t) const {
   checkValid();
   return cachedLookup(t, preferredAlignments, [&](Type ty) {
-    return (scope && originalLayout)
-               ? scope.getTypePreferredAlignment(
-                     ty, *this, originalLayout.getSpecForType(ty.getTypeID()))
-               : detail::getDefaultPreferredAlignment(ty, *this, {});
+    if (originalLayout) {
+      DataLayoutEntryList list = originalLayout.getSpecForType(ty.getTypeID());
+      if (auto iface = dyn_cast<DataLayoutOpInterface>(scope))
+        return iface.getTypePreferredAlignment(ty, *this, list);
+      return detail::getDefaultPreferredAlignment(ty, *this, list);
+    }
+    return detail::getDefaultPreferredAlignment(ty, *this, {});
   });
 }
 

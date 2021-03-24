@@ -55,3 +55,12 @@ module @foo {
     }
   }
 }
+
+// -----
+
+// expected-error@below {{expects at most one data layout attribute}}
+// expected-note@below {{'test.another_attribute' is a data layout attribute}}
+// expected-note@below {{'test.random_attribute' is a data layout attribute}}
+module attributes { test.random_attribute = #dlti.dl_spec<>,
+                    test.another_attribute = #dlti.dl_spec<>} {
+}

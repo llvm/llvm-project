@@ -40,6 +40,7 @@ add_mlir_library(MLIRIR
   MLIRBuiltinTypesIncGen
   MLIRCallInterfacesIncGen
   MLIRCastInterfacesIncGen
+  MLIRDataLayoutInterfacesIncGen
   MLIROpAsmInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen

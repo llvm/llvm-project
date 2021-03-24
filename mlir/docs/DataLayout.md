@@ -18,24 +18,26 @@ system. At the top level, it consists of:
     types.
 
 Built-in types are handled specially to decrease the overall query cost.
+Similarly, built-in `ModuleOp` supports data layouts without going through the
+interface.
 
 ## Usage
 
 ### Scoping
 
 Following MLIR's nested structure, data layout properties are _scoped_ to
-regions belonging to specific operations that implement the
-`DataLayoutOpInterface`. Such scoping operations partially control the data
-layout properties and may have attributes that affect them, typically organized
-in a data layout specification.
+regions belonging to either operations that implement the
+`DataLayoutOpInterface` or `ModuleOp` operations. Such scoping operations
+partially control the data layout properties and may have attributes that affect
+them, typically organized in a data layout specification.
 
 Types may have a different data layout in different scopes, including scopes
 that are nested in other scopes such as modules contained in other modules. At
 the same time, within the given scope excluding any nested scope, a given type
 has fixed data layout properties. Types are also expected to have a default,
 "natural" data layout in case they are used outside of any operation that
-provides data layout scope for them. This ensure data layout queries always have
-a valid result.
+provides data layout scope for them. This ensures that data layout queries
+always have a valid result.
 
 ### Compatibility and Transformations
 
@@ -180,26 +182,38 @@ and the compatibility of nested entries.
 
 The overall flow of a data layout property query is as follows.
 
--   The user constructs a `DataLayout` at the given scope. The constructor
+1.  The user constructs a `DataLayout` at the given scope. The constructor
     fetches the data layout specification and combines it with those of
     enclosing scopes (layouts are expected to be compatible).
--   The user calls `DataLayout::query(Type ty)`.
--   If `DataLayout` has a cached response, this response is returned
+2.  The user calls `DataLayout::query(Type ty)`.
+3.  If `DataLayout` has a cached response, this response is returned
     immediately.
--   Otherwise, the query is handed down by `DataLayout` to
-    `DataLayoutOpInterface::query(ty, *this, relevantEntries)` where the
-    relevant entries are computed as described above.
--   Unless the `query` hook is reimplemented by the op interface, the query is
+4.  Otherwise, the query is handed down by `DataLayout` to the closest layout
+    scoping operation. If it implements `DataLayoutOpInterface`, then the query
+    is forwarded to`DataLayoutOpInterface::query(ty, *this, relevantEntries)`
+    where the relevant entries are computed as described above. If it does not
+    implement `DataLayoutOpInterface`, it must be a `ModuleOp`, and the query is
+    forwarded to `DataLayoutTypeInterface::query(dataLayout, relevantEntries)`
+    after casting `ty` to the type interface.
+5.  Unless the `query` hook is reimplemented by the op interface, the query is
     handled further down to `DataLayoutTypeInterface::query(dataLayout,
     relevantEntries)` after casting `ty` to the type interface. If the type does
     not implement the interface, an unrecoverable fatal error is produced.
--   The type is expected to always provide the response, which is returned up
+6.  The type is expected to always provide the response, which is returned up
     the call stack and cached by the `DataLayout.`
 
 ## Default Implementation
 
 The default implementation of the data layout interfaces directly handles
 queries for a subset of built-in types.
+
+### Built-in Modules
+
+Built-in `ModuleOp` allows at most one attribute that implements
+`DataLayoutSpecInterface`. It does not implement the entire interface for
+efficiency and layering reasons. Instead, `DataLayout` can be constructed for
+`ModuleOp` and handles modules transparently alongside other operations that
+implement the interface.
 
 ### Built-in Types
 
