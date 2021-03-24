@@ -248,6 +248,7 @@ struct IntrinsicHandler {
 
 constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
 constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
+constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
 using I = IntrinsicLibrary;
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
@@ -283,7 +284,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr}, 
-                          {"back", asAddr}, {"kind", asAddr} }}, 
+                          {"back", asAddr}, {"kind", asValue} }}, 
              /*isElemental*/ true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental*/ false},
@@ -1364,29 +1365,51 @@ IntrinsicLibrary::genPresent(mlir::Type,
 fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
-  // TBD: What about optional arguments that are not present?
+
   assert(args.size() >= 2);
 
+  // required string argument
   auto string = builder.createBox(loc, args[0]);
+  // required set argument
   auto set = builder.createBox(loc, args[1]);
-  auto back = builder.createBox(loc, args[2]);
-  auto kind = builder.createBox(loc, args[3]);
 
+  // Handle optional argument, kind
+  // TBD: Where to get default integer kind? For now, use 4.
+  auto kind = fir::getBase(args[3]) ? fir::getBase(args[3]) :
+              builder.createIntegerConstant(loc, resultType, 4);
+  
+  // Create result descriptor    
   auto resultMutableBox =
        Fortran::lower::createTempMutableBox(builder, loc, resultType);
   auto resultIrBox =
       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
 
-  Fortran::lower::genScan(builder, loc, resultIrBox, string, set, back, kind);
+  // Handle optional back argument then call Fortran::lower::genScan().
+  if (!fir::getBase(args[2])) {
+    // back argument not specified, so pass in default logical false by
+    // passing in default integer 0.
+    // TBD: Is there a better way to pass in a constant logical false?
+    auto i32Ty = builder.getI32Type();
+    auto isFalse = builder.createIntegerConstant(loc, i32Ty, 0);
+    auto val = builder.createConvert(loc, i32Ty, isFalse);
+    auto temp = builder.createTemporary(loc, i32Ty);
+    builder.create<fir::StoreOp>(loc, val, temp);
+    Fortran::lower::genScan(builder, loc, resultIrBox, string, set, 
+                            builder.createBox(loc, temp), kind);
+  } else {
+    Fortran::lower::genScan(builder, loc, resultIrBox, string, set, 
+                            builder.createBox(loc, args[2]), kind);
+  }
+
+  // handle cleanup of allocatable result descriptor and return
   auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
 
-  /* TBD: Not sure about the return value yet */
   return res.match(
         [&](const Fortran::lower::SymbolBox::Intrinsic &box)
             -> fir::ExtendedValue { 
-            addCleanUpForTemp(loc, /*fir::getBase*/(box.getAddr()));
-            return box.getAddr();
+            addCleanUpForTemp(loc, box.getAddr());
+            return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
       },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(loc, "unexpected result for SCAN");

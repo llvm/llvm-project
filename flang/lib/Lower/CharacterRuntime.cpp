@@ -118,9 +118,11 @@ Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
   auto arg1 = builder.createConvert(loc, fTy.getInput(1), stringBox);
   auto arg2 = builder.createConvert(loc, fTy.getInput(2), setBox);
   auto arg3 = builder.createConvert(loc, fTy.getInput(3), backBox);
-  auto arg4 = builder.createIntegerConstant(loc, fTy.getInput(4), 4); /*builder.createConvert(loc, fTy.getInput(4), kindBox); */
+  auto arg4 = builder.createConvert(loc, fTy.getInput(4), kindBox); 
   auto arg5 = builder.createConvert(loc, fTy.getInput(5), sourceFile);
   auto arg6 = builder.createConvert(loc, fTy.getInput(6), sourceLine);
+
+  
   llvm::SmallVector<mlir::Value, 7> args {arg0, arg1, arg2, arg3, arg4, arg5,
                                           arg6};
   builder.create<fir::CallOp>(loc, scanFunc, args);
