@@ -24,6 +24,8 @@
 // it.
 // XFAIL: linux-gnu
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <locale>
 #include <string>
 #include <cassert>

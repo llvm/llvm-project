@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // Make sure TEST_HAS_ALIGNED_ALLOC (defined by the test suite) and
 // _LIBCPP_HAS_ALIGNED_ALLOC (defined by libc++) stay in sync.
 

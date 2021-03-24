@@ -14,6 +14,7 @@
 //               ios_base::iostate& err, long double& v) const;
 
 // REQUIRES: locale.en_US.UTF-8
+// XFAIL: LIBCXX-WINDOWS-FIXME
 
 #include <locale>
 #include <ios>
