@@ -122,27 +122,6 @@ public:
   /// The source location the operation was defined or derived from.
   Location getLoc() { return state->getLoc(); }
 
-  /// Return all of the attributes on this operation.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      ArrayRef<NamedAttribute> getAttrs(),
-      "Use Operation::getAttrs() instead (replace '.' with '->').") {
-    return state->getAttrs();
-  }
-
-  /// Remove the attribute with the specified name if it exists. Return the
-  /// attribute that was erased, or nullptr if there was no attribute with such
-  /// name.
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Attribute removeAttr(Identifier name),
-      "Use Operation::removeAttr() instead (replace '.' with '->').") {
-    return state->removeAttr(name);
-  }
-  LLVM_ATTRIBUTE_DEPRECATED(
-      Attribute removeAttr(StringRef name),
-      "Use Operation::removeAttr() instead (replace '.' with '->').") {
-    return state->removeAttr(Identifier::get(name, getContext()));
-  }
-
   /// Return true if there are no users of any results of this operation.
   bool use_empty() { return state->use_empty(); }
 
