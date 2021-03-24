@@ -222,7 +222,9 @@ void InitThreads() {
 }
 
 bool MemIsApp(uptr p) {
+#if !defined(__x86_64__)  // Memory outside the alias range has non-zero tags.
   CHECK(GetTagFromPointer(p) == 0);
+#endif
   return p >= kHighMemStart || (p >= kLowMemStart && p <= kLowMemEnd);
 }
 
