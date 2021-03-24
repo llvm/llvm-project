@@ -9,12 +9,12 @@ vldr d0, [r1]
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      3
-# CHECK-NEXT: Total Cycles:      7
+# CHECK-NEXT: Total Cycles:      6
 # CHECK-NEXT: Total uOps:        3
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.43
-# CHECK-NEXT: IPC:               0.43
+# CHECK-NEXT: uOps Per Cycle:    0.50
+# CHECK-NEXT: IPC:               0.50
 # CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
@@ -56,11 +56,11 @@ vldr d0, [r1]
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -     2.00   vldr	d0, [r1]
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456
+# CHECK-NEXT: Index     012345
 
-# CHECK:      [0,0]     DER  ..   add.w	r1, r1, #1
-# CHECK-NEXT: [0,1]     .DER ..   add.w	r1, r1, #2
-# CHECK-NEXT: [0,2]     .  DeER   vldr	d0, [r1]
+# CHECK:      [0,0]     DE   .   add.w	r1, r1, #1
+# CHECK-NEXT: [0,1]     .DE  .   add.w	r1, r1, #2
+# CHECK-NEXT: [0,2]     .  DeE   vldr	d0, [r1]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

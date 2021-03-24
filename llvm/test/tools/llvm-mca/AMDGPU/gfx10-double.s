@@ -42,7 +42,7 @@ v_sqrt_f64 v[4:5], v[4:5]
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      27
-# CHECK-NEXT: Total Cycles:      205
+# CHECK-NEXT: Total Cycles:      204
 # CHECK-NEXT: Total uOps:        27
 
 # CHECK:      Dispatch Width:    1
@@ -134,19 +134,19 @@ v_sqrt_f64 v[4:5], v[4:5]
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0
 # CHECK-NEXT: Index     0123456789          0123456789          0123456789          0123456789
 
-# CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeER .    .    .    .    .    .    .    .    .    .   v_cvt_i32_f64_e32 v0, v[0:1]
-# CHECK-NEXT: [0,1]     .DeeeeeeeeeeeeeeeeeeeeeER.    .    .    .    .    .    .    .    .    .   v_cvt_f64_i32_e32 v[2:3], v2
-# CHECK-NEXT: [0,2]     . DeeeeeeeeeeeeeeeeeeeeeER    .    .    .    .    .    .    .    .    .   v_cvt_f32_f64_e32 v4, v[4:5]
-# CHECK-NEXT: [0,3]     .  DeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .    .    .    .    .    .   v_cvt_f64_f32_e32 v[6:7], v6
-# CHECK-NEXT: [0,4]     .   DeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .    .    .    .    .   v_cvt_u32_f64_e32 v8, v[8:9]
-# CHECK-NEXT: [0,5]     .    DeeeeeeeeeeeeeeeeeeeeeER .    .    .    .    .    .    .    .    .   v_cvt_f64_u32_e32 v[10:11], v10
-# CHECK-NEXT: [0,6]     .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeER    .    .    .    .    .   v_frexp_exp_i32_f64_e32 v0, v[0:1]
-# CHECK-NEXT: [0,7]     .    .    .    .    .  DeeeeeeeeeeeeeeeeeeeeeER   .    .    .    .    .   v_frexp_mant_f64_e32 v[2:3], v[2:3]
-# CHECK-NEXT: [0,8]     .    .    .    .    .   DeeeeeeeeeeeeeeeeeeeeeER  .    .    .    .    .   v_fract_f64_e32 v[4:5], v[4:5]
-# CHECK-NEXT: [0,9]     .    .    .    .    .    .    .    .    .   DeeeeeeeeeeeeeeeeeeeeeER  .   v_trunc_f64_e32 v[0:1], v[0:1]
-# CHECK-NEXT: [0,10]    .    .    .    .    .    .    .    .    .    DeeeeeeeeeeeeeeeeeeeeeER .   v_ceil_f64_e32 v[2:3], v[2:3]
-# CHECK-NEXT: [0,11]    .    .    .    .    .    .    .    .    .    .DeeeeeeeeeeeeeeeeeeeeeER.   v_rndne_f64_e32 v[4:5], v[4:5]
-# CHECK-NEXT: [0,12]    .    .    .    .    .    .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeER   v_floor_f64_e32 v[6:7], v[6:7]
+# CHECK:      [0,0]     DeeeeeeeeeeeeeeeeeeeeeE  .    .    .    .    .    .    .    .    .    .   v_cvt_i32_f64_e32 v0, v[0:1]
+# CHECK-NEXT: [0,1]     .DeeeeeeeeeeeeeeeeeeeeeE .    .    .    .    .    .    .    .    .    .   v_cvt_f64_i32_e32 v[2:3], v2
+# CHECK-NEXT: [0,2]     . DeeeeeeeeeeeeeeeeeeeeeE.    .    .    .    .    .    .    .    .    .   v_cvt_f32_f64_e32 v4, v[4:5]
+# CHECK-NEXT: [0,3]     .  DeeeeeeeeeeeeeeeeeeeeeE    .    .    .    .    .    .    .    .    .   v_cvt_f64_f32_e32 v[6:7], v6
+# CHECK-NEXT: [0,4]     .   DeeeeeeeeeeeeeeeeeeeeeE   .    .    .    .    .    .    .    .    .   v_cvt_u32_f64_e32 v8, v[8:9]
+# CHECK-NEXT: [0,5]     .    DeeeeeeeeeeeeeeeeeeeeeE  .    .    .    .    .    .    .    .    .   v_cvt_f64_u32_e32 v[10:11], v10
+# CHECK-NEXT: [0,6]     .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeE.    .    .    .    .    .   v_frexp_exp_i32_f64_e32 v0, v[0:1]
+# CHECK-NEXT: [0,7]     .    .    .    .    .  DeeeeeeeeeeeeeeeeeeeeeE    .    .    .    .    .   v_frexp_mant_f64_e32 v[2:3], v[2:3]
+# CHECK-NEXT: [0,8]     .    .    .    .    .   DeeeeeeeeeeeeeeeeeeeeeE   .    .    .    .    .   v_fract_f64_e32 v[4:5], v[4:5]
+# CHECK-NEXT: [0,9]     .    .    .    .    .    .    .    .    .   DeeeeeeeeeeeeeeeeeeeeeE   .   v_trunc_f64_e32 v[0:1], v[0:1]
+# CHECK-NEXT: [0,10]    .    .    .    .    .    .    .    .    .    DeeeeeeeeeeeeeeeeeeeeeE  .   v_ceil_f64_e32 v[2:3], v[2:3]
+# CHECK-NEXT: [0,11]    .    .    .    .    .    .    .    .    .    .DeeeeeeeeeeeeeeeeeeeeeE .   v_rndne_f64_e32 v[4:5], v[4:5]
+# CHECK-NEXT: [0,12]    .    .    .    .    .    .    .    .    .    . DeeeeeeeeeeeeeeeeeeeeeE.   v_floor_f64_e32 v[6:7], v[6:7]
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
