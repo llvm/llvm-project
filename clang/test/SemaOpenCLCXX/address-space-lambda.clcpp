@@ -61,7 +61,10 @@ __kernel void test_qual() {
   [&] () __global {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__global'}}
   [&] () __private {} (); //expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__private'}}
 
-  [&] __private {} (); //expected-error{{lambda requires '()' before attribute specifier}} expected-error{{expected body of lambda expression}}
+  [&] __private {} (); // expected-error{{no matching function for call to object of type '(lambda at}} expected-note{{candidate function not viable: 'this' object is in default address space, but method expects object in address space '__private'}}
+#if __cplusplus <= 202002L
+// expected-warning@-2{{lambda without a parameter clause is a C++2b extension}}
+#endif
 
   [&] () mutable __private {} ();
   [&] () __private mutable {} (); //expected-error{{expected body of lambda expression}}
