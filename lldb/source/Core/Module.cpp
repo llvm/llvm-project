@@ -1072,8 +1072,6 @@ std::string Module::GetSpecificationDescription() const {
 
 void Module::GetDescription(llvm::raw_ostream &s,
                             lldb::DescriptionLevel level) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
   if (level >= eDescriptionLevelFull) {
     if (m_arch.IsValid())
       s << llvm::formatv("({0}) ", m_arch.GetArchitectureName());

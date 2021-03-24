@@ -661,6 +661,11 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
   return target_sp;
 }
 
+ConstString Debugger::GetStaticBroadcasterClass() {
+  static ConstString class_name("lldb.debugger");
+  return class_name;
+}
+
 Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
     : UserID(g_unique_id++),
       Properties(std::make_shared<OptionValueProperties>()),
@@ -677,6 +682,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_io_handler_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
+      m_broadcaster(m_broadcaster_manager_sp,
+                    GetStaticBroadcasterClass().AsCString()),
       m_forward_listener_sp(), m_clear_once() {
   m_instance_name.SetString(llvm::formatv("debugger_{0}", GetID()).str());
   if (log_callback)
@@ -1135,6 +1142,74 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // callback.
   m_log_callback_stream_sp =
       std::make_shared<StreamCallback>(log_callback, baton);
+}
+
+ConstString Debugger::ProgressEventData::GetFlavorString() {
+  static ConstString g_flavor("Debugger::ProgressEventData");
+  return g_flavor;
+}
+
+ConstString Debugger::ProgressEventData::GetFlavor() const {
+  return Debugger::ProgressEventData::GetFlavorString();
+}
+
+void Debugger::ProgressEventData::Dump(Stream *s) const {
+  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
+  if (m_completed == 0 || m_completed == m_total)
+    s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
+  else
+    s->PutCString(", type = update");
+  // If m_total is UINT64_MAX, there is no progress to report, just "start"
+  // and "end". If it isn't we will show the completed and total amounts.
+  if (m_total != UINT64_MAX)
+    s->Printf(", progress = %" PRIu64 " of %" PRIu64, m_completed, m_total);
+}
+
+const Debugger::ProgressEventData *
+Debugger::ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
+  if (event_ptr)
+    if (const EventData *event_data = event_ptr->GetData())
+      if (event_data->GetFlavor() == ProgressEventData::GetFlavorString())
+        return static_cast<const ProgressEventData *>(event_ptr->GetData());
+  return nullptr;
+}
+
+static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
+                                  const std::string &message,
+                                  uint64_t completed, uint64_t total,
+                                  bool is_debugger_specific) {
+  // Only deliver progress events if we have any progress listeners.
+  const uint32_t event_type = Debugger::eBroadcastBitProgress;
+  if (!debugger.GetBroadcaster().EventTypeHasListeners(event_type))
+    return;
+  EventSP event_sp(new Event(event_type, new Debugger::ProgressEventData(
+                                             progress_id, message, completed,
+                                             total, is_debugger_specific)));
+  debugger.GetBroadcaster().BroadcastEvent(event_sp);
+}
+
+void Debugger::ReportProgress(uint64_t progress_id, const std::string &message,
+                              uint64_t completed, uint64_t total,
+                              llvm::Optional<lldb::user_id_t> debugger_id) {
+  // Check if this progress is for a specific debugger.
+  if (debugger_id.hasValue()) {
+    // It is debugger specific, grab it and deliver the event if the debugger
+    // still exists.
+    DebuggerSP debugger_sp = FindDebuggerWithID(*debugger_id);
+    if (debugger_sp)
+      PrivateReportProgress(*debugger_sp, progress_id, message, completed,
+                            total, /*is_debugger_specific*/ true);
+    return;
+  }
+  // The progress event is not debugger specific, iterate over all debuggers
+  // and deliver a progress event to each one.
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    DebuggerList::iterator pos, end = g_debugger_list_ptr->end();
+    for (pos = g_debugger_list_ptr->begin(); pos != end; ++pos)
+      PrivateReportProgress(*(*pos), progress_id, message, completed, total,
+                            /*is_debugger_specific*/ false);
+  }
 }
 
 bool Debugger::EnableLog(llvm::StringRef channel,
