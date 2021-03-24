@@ -23,7 +23,6 @@ def OpenACC : DirectiveLanguage {
   let clausePrefix = "ACCC_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let includeHeader = "llvm/Frontend/OpenACC/ACC.h.inc";
   let clauseEnumSetClass = "AccClauseSet";
   let flangClauseBaseClass = "AccClause";
 }
