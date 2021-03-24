@@ -390,6 +390,12 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   return 0;
 }
 
+uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
+                                uptr num_aliases, uptr ring_buffer_size) {
+  CHECK(false && "HWASan aliasing is unimplemented on Windows");
+  return 0;
+}
+
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MEMORY_BASIC_INFORMATION mbi;
   CHECK(VirtualQuery((void *)range_start, &mbi, sizeof(mbi)));
