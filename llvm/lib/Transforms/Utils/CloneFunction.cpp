@@ -168,9 +168,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
   // recursive functions into themselves.
-  for (Function::const_iterator BI = OldFunc->begin(), BE = OldFunc->end();
-       BI != BE; ++BI) {
-    const BasicBlock &BB = *BI;
+  for (const BasicBlock &BB : *OldFunc) {
 
     // Create a new basic block and copy instructions into it!
     BasicBlock *CBB = CloneBasicBlock(&BB, VMap, NameSuffix, NewFunc, CodeInfo,
@@ -225,17 +223,15 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
            "Subprogram should be in DIFinder->subprogram_count()...");
   }
 
+  const auto RemapFlag = ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges;
   // Duplicate the metadata that is attached to the cloned function.
   // Subprograms/CUs/types that were already mapped to themselves won't be
   // duplicated.
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc->getAllMetadata(MDs);
   for (auto MD : MDs) {
-    NewFunc->addMetadata(
-        MD.first,
-        *MapMetadata(MD.second, VMap,
-                     ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                     TypeMapper, Materializer));
+    NewFunc->addMetadata(MD.first, *MapMetadata(MD.second, VMap, RemapFlag,
+                                                TypeMapper, Materializer));
   }
 
   // Loop over all of the instructions in the function, fixing up operand
@@ -246,9 +242,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
        BB != BE; ++BB)
     // Loop over all instructions, fixing each one as we find it...
     for (Instruction &II : *BB)
-      RemapInstruction(&II, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                       TypeMapper, Materializer);
+      RemapInstruction(&II, VMap, RemapFlag, TypeMapper, Materializer);
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
   // same module, the compile unit will already be listed (or not). When
