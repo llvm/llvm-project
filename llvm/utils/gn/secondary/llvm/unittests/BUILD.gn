@@ -80,6 +80,9 @@ group("unittests") {
       "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests",
     ]
   }
+  if (llvm_build_SystemZ) {
+    deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]
+  }
   if (llvm_build_WebAssembly) {
     deps += [ "Target/WebAssembly:WebAssemblyTests" ]
   }
