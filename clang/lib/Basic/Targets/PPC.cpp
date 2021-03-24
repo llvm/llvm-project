@@ -66,8 +66,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       PairedVectorMemops = true;
     } else if (Feature == "+mma") {
       HasMMA = true;
-    } else if (Feature == "+rop-protection") {
-      HasROPProtection = true;
+    } else if (Feature == "+rop-protect") {
+      HasROPProtect = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -195,8 +195,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__POWER9_VECTOR__");
   if (HasMMA)
     Builder.defineMacro("__MMA__");
-  if (HasROPProtection)
-    Builder.defineMacro("__ROP_PROTECTION__");
+  if (HasROPProtect)
+    Builder.defineMacro("__ROP_PROTECT__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
   if (HasPCRelativeMemops)
@@ -325,8 +325,8 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr8", true)
                         .Default(false);
 
-  // ROP Protection is off by default.
-  Features["rop-protection"] = false;
+  // ROP Protect is off by default.
+  Features["rop-protect"] = false;
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
@@ -365,9 +365,9 @@ bool PPCTargetInfo::initFeatureMap(
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::find(FeaturesVec, "+rop-protection") != FeaturesVec.end()) {
-    // We can turn on ROP Protection on Power 8 and above.
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protection" << CPU;
+      llvm::find(FeaturesVec, "+rop-protect") != FeaturesVec.end()) {
+    // We can turn on ROP Protect on Power 8 and above.
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
     return false;
   }
 
@@ -409,7 +409,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
-      .Case("rop-protection", HasROPProtection)
+      .Case("rop-protect", HasROPProtect)
       .Default(false);
 }
 
