@@ -694,3 +694,27 @@ func @compose_affine_maps_div_symbol(%A : memref<i64>, %i0 : index, %i1 : index)
   }
   return
 }
+
+// -----
+
+// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1, s0 * s1)>
+
+// CHECK: func @deduplicate_affine_min_expressions
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
+func @deduplicate_affine_min_expressions(%i0: index, %i1: index) -> index {
+  // CHECK:  affine.min #[[MAP]]()[%[[I0]], %[[I1]]]
+  %0 = affine.min affine_map<()[s0, s1] -> (s0 + s1, s0 * s1, s1 + s0, s0 * s1)> ()[%i0, %i1]
+  return %0: index
+}
+
+// -----
+
+// CHECK: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1, s0 * s1)>
+
+// CHECK: func @deduplicate_affine_max_expressions
+// CHECK-SAME: (%[[I0:.+]]: index, %[[I1:.+]]: index)
+func @deduplicate_affine_max_expressions(%i0: index, %i1: index) -> index {
+  // CHECK:  affine.max #[[MAP]]()[%[[I0]], %[[I1]]]
+  %0 = affine.max affine_map<()[s0, s1] -> (s0 + s1, s0 * s1, s1 + s0, s0 * s1)> ()[%i0, %i1]
+  return %0: index
+}
