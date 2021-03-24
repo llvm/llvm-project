@@ -30,3 +30,11 @@
 // THIN_LTO_OBJECT_PATH: {{ld(.exe)?"}}
 // THIN_LTO_OBJECT_PATH-SAME: "-object_path_lto"
 // THIN_LTO_OBJECT_PATH-SAME: {{thinlto\-[a-zA-Z0-9_]+}}
+
+
+// Check that we pass through -fglobal-isel flags to libLTO.
+// RUN: %clang -target arm64-apple-darwin %s -flto -fglobal-isel -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=GISEL %s
+// GISEL: {{ld(.exe)?"}}
+// GISEL: "-mllvm" "-global-isel"
+// GISEL: "-mllvm" "-global-isel-abort=0"
