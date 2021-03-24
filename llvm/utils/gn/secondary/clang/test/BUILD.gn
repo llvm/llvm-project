@@ -56,6 +56,7 @@ write_lit_config("lit_site_cfg") {
     # that's also read here -- but that should happen after multi-toolchain
     # builds exist, to make sure it's a toolchain var.
     "CMAKE_CXX_COMPILER=c++",
+    "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "LLVM_ENABLE_NEW_PASS_MANAGER=1",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",

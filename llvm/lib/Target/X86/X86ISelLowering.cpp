@@ -6338,8 +6338,8 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
 // Match (xor X, -1) -> X.
 // Match extract_subvector(xor X, -1) -> extract_subvector(X).
 // Match concat_vectors(xor X, -1, xor Y, -1) -> concat_vectors(X, Y).
-static SDValue IsNOT(SDValue V, SelectionDAG &DAG, bool OneUse = false) {
-  V = OneUse ? peekThroughOneUseBitcasts(V) : peekThroughBitcasts(V);
+static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  V = peekThroughBitcasts(V);
   if (V.getOpcode() == ISD::XOR &&
       ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
     return V.getOperand(0);
@@ -13705,9 +13705,15 @@ static SDValue lowerShuffleAsBroadcast(const SDLoc &DL, MVT VT, SDValue V1,
     V = extract128BitVector(V, ExtractIdx, DAG, DL);
   }
 
-  if (Opcode == X86ISD::MOVDDUP && !V.getValueType().isVector())
-    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64,
-                    DAG.getBitcast(MVT::f64, V));
+  // On AVX we can use VBROADCAST directly for scalar sources.
+  if (Opcode == X86ISD::MOVDDUP && !V.getValueType().isVector()) {
+    V = DAG.getBitcast(MVT::f64, V);
+    if (Subtarget.hasAVX()) {
+      V = DAG.getNode(X86ISD::VBROADCAST, DL, MVT::v2f64, V);
+      return DAG.getBitcast(VT, V);
+    }
+    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, V);
+  }
 
   // If this is a scalar, do the broadcast on this type and bitcast.
   if (!V.getValueType().isVector()) {

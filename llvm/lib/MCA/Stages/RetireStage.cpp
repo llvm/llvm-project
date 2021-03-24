@@ -38,13 +38,6 @@ llvm::Error RetireStage::cycleStart() {
     NumRetired++;
   }
 
-  // Retire instructions that are not controlled by the RCU
-  for (InstRef &IR : RetireInst) {
-    IR.getInstruction()->retire();
-    notifyInstructionRetired(IR);
-  }
-  RetireInst.resize(0);
-
   return llvm::ErrorSuccess();
 }
 
@@ -58,12 +51,9 @@ llvm::Error RetireStage::execute(InstRef &IR) {
 
   PRF.onInstructionExecuted(&IS);
   unsigned TokenID = IS.getRCUTokenID();
-  if (TokenID != RetireControlUnit::UnhandledTokenID) {
-    RCU.onInstructionExecuted(TokenID);
-    return llvm::ErrorSuccess();
-  }
+  assert(TokenID != RetireControlUnit::UnhandledTokenID);
+  RCU.onInstructionExecuted(TokenID);
 
-  RetireInst.push_back(IR);
   return llvm::ErrorSuccess();
 }
 

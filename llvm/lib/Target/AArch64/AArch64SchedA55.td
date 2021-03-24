@@ -339,5 +339,4 @@ def : InstRW<[CortexA55WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA55WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA55WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
 
-def A55RCU : RetireControlUnit<64, 0>;
 }
