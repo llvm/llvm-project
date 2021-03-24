@@ -636,17 +636,16 @@ exit:
   ret i32 %outval
 }
 
-; Merging the icmps with logic-op defeats the purpose of the metadata.
+; FIXME: Merging the icmps with logic-op defeats the purpose of the metadata.
 ; We can't tell which condition is expensive if they are combined.
 
 define void @or_icmps_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_harmful(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    br i1 [[EXPECTED_TRUE]], label [[EXIT:%.*]], label [[RARE:%.*]], !prof !19
-; CHECK:       rare:
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[EXIT]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_TRUE]], [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !19
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -669,17 +668,16 @@ exit:
   ret void
 }
 
-; Merging the icmps with logic-op defeats the purpose of the metadata.
+; FIXME: Merging the icmps with logic-op defeats the purpose of the metadata.
 ; We can't tell which condition is expensive if they are combined.
 
 define void @or_icmps_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_harmful_inverted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    br i1 [[EXPECTED_FALSE]], label [[RARE:%.*]], label [[EXIT:%.*]], !prof !20
-; CHECK:       rare:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[EXIT]], label [[FALSE:%.*]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_FALSE]], [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !19
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -702,8 +700,7 @@ exit:
   ret void
 }
 
-; The probability threshold is determined by a TTI setting.
-; In this example, we are just short of strongly expected, so speculate.
+; The probability threshold is set by a builtin_expect setting.
 
 define void @or_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_not_that_harmful(
@@ -711,7 +708,7 @@ define void @or_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_TRUE]], [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !21
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !20
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -734,16 +731,13 @@ exit:
   ret void
 }
 
-; The probability threshold is determined by a TTI setting.
-; In this example, we are just short of strongly expected, so speculate.
-
 define void @or_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_not_that_harmful_inverted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_TRUE]], [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !22
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !21
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -766,15 +760,13 @@ exit:
   ret void
 }
 
-; The 1st cmp is probably true, so speculating the 2nd is probably a win.
-
 define void @or_icmps_useful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_useful(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_TRUE]], [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !23
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !22
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -797,15 +789,13 @@ exit:
   ret void
 }
 
-; The 1st cmp is probably false, so speculating the 2nd is probably a win.
-
 define void @or_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @or_icmps_useful_inverted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[EXPECTED_FALSE]], [[EXPENSIVE]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !23
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !22
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -859,17 +849,16 @@ exit:
   ret void
 }
 
-; Merging the icmps with logic-op defeats the purpose of the metadata.
+; FIXME: Merging the icmps with logic-op defeats the purpose of the metadata.
 ; We can't tell which condition is expensive if they are combined.
 
 define void @and_icmps_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_harmful(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    br i1 [[EXPECTED_FALSE]], label [[RARE:%.*]], label [[EXIT:%.*]], !prof !20
-; CHECK:       rare:
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[FALSE:%.*]], label [[EXIT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[EXPECTED_FALSE]], [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !23
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -892,17 +881,16 @@ exit:
   ret void
 }
 
-; Merging the icmps with logic-op defeats the purpose of the metadata.
+; FIXME: Merging the icmps with logic-op defeats the purpose of the metadata.
 ; We can't tell which condition is expensive if they are combined.
 
 define void @and_icmps_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_harmful_inverted(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    br i1 [[EXPECTED_TRUE]], label [[EXIT:%.*]], label [[RARE:%.*]], !prof !19
-; CHECK:       rare:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
 ; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
-; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[FALSE:%.*]], label [[EXIT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[EXPECTED_TRUE]], [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !23
 ; CHECK:       false:
 ; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -924,9 +912,6 @@ false:
 exit:
   ret void
 }
-
-; The probability threshold is determined by a TTI setting.
-; In this example, we are just short of strongly expected, so speculate.
 
 define void @and_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_not_that_harmful(
@@ -957,9 +942,6 @@ exit:
   ret void
 }
 
-; The probability threshold is determined by a TTI setting.
-; In this example, we are just short of strongly expected, so speculate.
-
 define void @and_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_not_that_harmful_inverted(
 ; CHECK-NEXT:  entry:
@@ -989,8 +971,6 @@ exit:
   ret void
 }
 
-; The 1st cmp is probably true, so speculating the 2nd is probably a win.
-
 define void @and_icmps_useful(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_useful(
 ; CHECK-NEXT:  entry:
@@ -1019,8 +999,6 @@ false:
 exit:
   ret void
 }
-
-; The 1st cmp is probably false, so speculating the 2nd is probably a win.
 
 define void @and_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
 ; CHECK-LABEL: @and_icmps_useful_inverted(
