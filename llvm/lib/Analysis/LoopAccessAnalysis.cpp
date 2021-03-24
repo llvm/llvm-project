@@ -1223,7 +1223,6 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
     SortedIndices.resize(VL.size());
     Cnt = 0;
     for (const std::pair<int64_t, int> &Pair : Offsets) {
-      IsConsecutive = IsConsecutive && Cnt == Pair.second;
       SortedIndices[Cnt] = Pair.second;
       ++Cnt;
     }
