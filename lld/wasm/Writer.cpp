@@ -752,7 +752,7 @@ static void finalizeIndirectFunctionTable() {
   WasmLimits limits = {0, tableSize, 0};
   if (WasmSym::indirectFunctionTable->isDefined() && !config->growableTable) {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
-    limits.Maximum = limits.Initial;
+    limits.Maximum = limits.Minimum;
   }
   WasmSym::indirectFunctionTable->setLimits(limits);
 }

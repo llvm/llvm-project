@@ -67,7 +67,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Field:           memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:       0x1
+; CHECK-NEXT:           Minimum:       0x1
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
@@ -75,7 +75,7 @@ declare void @func_external()
 ; CHECK-NEXT:           Index:           0
 ; CHECK-NEXT:           ElemType:        FUNCREF
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Initial:         0x2
+; CHECK-NEXT:             Minimum:         0x2
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL

@@ -46,7 +46,7 @@ struct FileHeader {
 
 struct Limits {
   LimitFlags Flags;
-  yaml::Hex32 Initial;
+  yaml::Hex32 Minimum;
   yaml::Hex32 Maximum;
 };
 
