@@ -58,6 +58,10 @@ NodeLocationAccessors NodeIntrospection::GetLocations(
     clang::CXXBaseSpecifier const*) {
   return {};
 }
+NodeLocationAccessors NodeIntrospection::GetLocations(
+    clang::TypeLoc const&) {
+  return {};
+}
 NodeLocationAccessors
 NodeIntrospection::GetLocations(clang::DynTypedNode const &) {
   return {};
