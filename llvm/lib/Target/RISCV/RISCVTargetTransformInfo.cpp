@@ -95,6 +95,12 @@ int RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+TargetTransformInfo::PopcntSupportKind
+RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
+  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+  return ST->hasStdExtZbb() ? TTI::PSK_FastHardware : TTI::PSK_Software;
+}
+
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // Currently, the ExpandReductions pass can't expand scalable-vector
   // reductions, but we still request expansion as RVV doesn't support certain
