@@ -43,6 +43,7 @@ public:
     return !RCU.isEmpty() || !RetireInst.empty();
   }
   Error cycleStart() override;
+  Error cycleEnd() override;
   Error execute(InstRef &IR) override;
   void notifyInstructionRetired(const InstRef &IR) const;
 };
