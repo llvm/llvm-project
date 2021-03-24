@@ -1119,6 +1119,12 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
   return false;
 }
 
+bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
+  if (ReadAllImageInfosStructure())
+    return m_dyld_all_image_infos.libSystemInitialized;
+  return false;
+}
+
 void DynamicLoaderMacOSXDYLD::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance);
