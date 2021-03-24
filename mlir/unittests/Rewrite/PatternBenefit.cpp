@@ -38,8 +38,9 @@ TEST(PatternBenefitTest, BenefitOrder) {
   };
 
   struct Pattern2 : public RewritePattern {
-    Pattern2(bool *called)
-        : RewritePattern(/*benefit*/ 2, MatchAnyOpTypeTag{}), called(called) {}
+    Pattern2(MLIRContext *context, bool *called)
+        : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/2, context),
+          called(called) {}
 
     mlir::LogicalResult
     matchAndRewrite(Operation * /*op*/,
@@ -58,7 +59,7 @@ TEST(PatternBenefitTest, BenefitOrder) {
   bool called2 = false;
 
   patterns.add<Pattern1>(&context, &called1);
-  patterns.add<Pattern2>(&called2);
+  patterns.add<Pattern2>(&context, &called2);
 
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   PatternApplicator pa(frozenPatterns);

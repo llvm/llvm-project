@@ -123,7 +123,8 @@ struct UnrollVectorOptions {
 struct UnrollVectorPattern : public RewritePattern {
   using FilterConstraintType = std::function<LogicalResult(Operation *op)>;
   UnrollVectorPattern(MLIRContext *context, UnrollVectorOptions options)
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()), options(options) {}
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
+        options(options) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (options.filterConstraint && failed(options.filterConstraint(op)))
@@ -216,7 +217,7 @@ struct VectorTransferFullPartialRewriter : public RewritePattern {
       FilterConstraintType filter =
           [](VectorTransferOpInterface op) { return success(); },
       PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()), options(options),
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context), options(options),
         filter(filter) {}
 
   /// Performs the rewrite.

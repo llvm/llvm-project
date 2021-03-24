@@ -1516,6 +1516,13 @@ public:
 #endif
     return false;
   }
+  /// Provide `classof` support for other OpBase derived classes, such as
+  /// Interfaces.
+  template <typename T>
+  static std::enable_if_t<std::is_base_of<OpState, T>::value, bool>
+  classof(const T *op) {
+    return classof(const_cast<T *>(op)->getOperation());
+  }
 
   /// Expose the type we are instantiated on to template machinery that may want
   /// to introspect traits on this operation.

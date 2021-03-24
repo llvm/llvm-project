@@ -29,23 +29,49 @@ unsigned short PatternBenefit::getBenefit() const {
 // Pattern
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// OperationName Root Constructors
+
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(OperationName(rootName, context).getAsOpaquePointer(),
+              RootKind::OperationName, generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchAnyOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(nullptr, RootKind::Any, generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchInterfaceOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(interfaceID.getAsOpaquePointer(), RootKind::InterfaceID,
+              generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchTraitOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(traitID.getAsOpaquePointer(), RootKind::TraitID, generatedNames,
+              benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// General Constructors
+
+Pattern::Pattern(const void *rootValue, RootKind rootKind,
+                 ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
                  MLIRContext *context)
-    : rootKind(OperationName(rootName, context)), benefit(benefit) {}
-Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
-    : benefit(benefit) {}
-Pattern::Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
-                 PatternBenefit benefit, MLIRContext *context)
-    : Pattern(rootName, benefit, context) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
-Pattern::Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
-                 MLIRContext *context, MatchAnyOpTypeTag tag)
-    : Pattern(benefit, tag) {
+    : rootValue(rootValue), rootKind(rootKind), benefit(benefit),
+      contextAndHasBoundedRecursion(context, false) {
+  if (generatedNames.empty())
+    return;
   generatedOps.reserve(generatedNames.size());
   std::transform(generatedNames.begin(), generatedNames.end(),
                  std::back_inserter(generatedOps), [context](StringRef name) {

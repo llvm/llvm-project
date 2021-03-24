@@ -697,7 +697,7 @@ static bool isOne(mlir::Value v) { return checkIsIntegerConstant(v, 1); }
 template <typename FltOp, typename CpxOp>
 struct UndoComplexPattern : public mlir::RewritePattern {
   UndoComplexPattern(mlir::MLIRContext *ctx)
-      : mlir::RewritePattern("fir.insert_value", {}, 2, ctx) {}
+      : mlir::RewritePattern("fir.insert_value", 2, ctx) {}
 
   mlir::LogicalResult
   matchAndRewrite(mlir::Operation *op,

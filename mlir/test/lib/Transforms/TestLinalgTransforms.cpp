@@ -183,8 +183,8 @@ static void applyPatterns(FuncOp funcOp) {
   // Linalg to vector contraction patterns.
   //===--------------------------------------------------------------------===//
   patterns.add<LinalgVectorizationPattern>(
-      LinalgTransformationFilter(Identifier::get("VECTORIZE", ctx))
-          .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
+      ctx, LinalgTransformationFilter(Identifier::get("VECTORIZE", ctx))
+               .addOpFilter<MatmulOp, FillOp, CopyOp, GenericOp>());
 
   //===--------------------------------------------------------------------===//
   // Linalg generic permutation patterns.
@@ -258,8 +258,8 @@ static void fillL1TilingAndMatmulToVectorPatterns(
                MatmulOp::getOperationName(), ctx, LinalgVectorizationOptions(),
                LinalgTransformationFilter(Identifier::get("VEC", ctx))));
   patternsVector.back().add<LinalgVectorizationPattern>(
-      LinalgTransformationFilter().addFilter(
-          [](Operation *op) { return success(isa<FillOp, CopyOp>(op)); }));
+      ctx, LinalgTransformationFilter().addFilter(
+               [](Operation *op) { return success(isa<FillOp, CopyOp>(op)); }));
 }
 
 //===----------------------------------------------------------------------===//
@@ -496,6 +496,7 @@ static void applyVectorTransferForwardingPatterns(FuncOp funcOp) {
 static void applyLinalgToVectorPatterns(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   patterns.add<LinalgVectorizationPattern>(
+      funcOp.getContext(),
       LinalgTransformationFilter()
           .addOpFilter<ContractionOpInterface, FillOp, CopyOp, GenericOp>());
   patterns.add<PadTensorOpVectorizationPattern>(funcOp.getContext());

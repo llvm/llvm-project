@@ -30,12 +30,12 @@ namespace linalg {
 // or in an externally linked library.
 // This is a generic entry point for all LinalgOp, except for CopyOp and
 // IndexedGenericOp, for which omre specialized patterns are provided.
-class LinalgOpToLibraryCallRewrite : public RewritePattern {
+class LinalgOpToLibraryCallRewrite
+    : public OpInterfaceRewritePattern<LinalgOp> {
 public:
-  LinalgOpToLibraryCallRewrite()
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override;
 };
 

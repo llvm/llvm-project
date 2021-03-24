@@ -183,6 +183,9 @@ public:
     return reinterpret_cast<typename T::Concept *>(lookup(T::getInterfaceID()));
   }
 
+  /// Returns true if the interface map contains an interface for the given id.
+  bool contains(TypeID interfaceID) const { return lookup(interfaceID); }
+
 private:
   /// Compare two TypeID instances by comparing the underlying pointer.
   static bool compare(TypeID lhs, TypeID rhs) {
