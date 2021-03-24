@@ -124,7 +124,7 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
 // vends a module map, one might want to avoid hitting intermediate build
-// products containimg the the module map or avoid finding the system installed
+// products containing the the module map or avoid finding the system installed
 // modulemap for that library.
 static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
                                 StringRef ModuleName) {
