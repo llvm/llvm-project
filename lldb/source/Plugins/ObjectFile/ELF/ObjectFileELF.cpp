@@ -16,6 +16,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/LZMA.h"
@@ -37,6 +38,7 @@
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MipsABIFlags.h"
@@ -1868,7 +1870,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   // unified section list.
   if (GetType() != eTypeDebugInfo)
     unified_section_list = *m_sections_up;
-  
+
   // If there's a .gnu_debugdata section, we'll try to read the .symtab that's
   // embedded in there and replace the one in the original object file (if any).
   // If there's none in the orignal object file, we add it to it.
@@ -1930,7 +1932,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   ArchSpec spec = m_gnu_debug_data_object_file->GetArchitecture();
   if (spec && m_gnu_debug_data_object_file->SetModulesArchitecture(spec))
     return m_gnu_debug_data_object_file;
-  
+
   return nullptr;
 }
 
@@ -2713,6 +2715,9 @@ Symtab *ObjectFileELF::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
     return nullptr;
+
+  Progress progress(llvm::formatv("Parsing symbol table for {0}",
+                                  m_file.GetFilename().AsCString("<Unknown>")));
 
   // We always want to use the main object file so we (hopefully) only have one
   // cached copy of our symtab, dynamic sections, etc.

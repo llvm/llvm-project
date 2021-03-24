@@ -113,6 +113,7 @@ class DebugCommunication(object):
         self.initialize_body = None
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
+        self.progress_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -224,6 +225,13 @@ class DebugCommunication(object):
                 # in tests.
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
+                return keepGoing
+            elif event.startswith('progress'):
+                # Progress events come in as 'progressStart', 'progressUpdate',
+                # and 'progressEnd' events. Keep these around in case test
+                # cases want to verify them.
+                self.progress_events.append(packet)
+                # No need to add 'progress' event packets to our packets list.
                 return keepGoing
 
         elif packet_type == 'response':

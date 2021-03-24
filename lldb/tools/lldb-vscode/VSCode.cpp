@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <fstream>
 #include <mutex>
+#include <sstream>
 #include <stdarg.h>
 
 #include "LLDBUtils.h"
@@ -221,6 +223,146 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
   }
   body.try_emplace("category", category);
   EmplaceSafeString(body, "output", output.str());
+  event.try_emplace("body", std::move(body));
+  SendJSON(llvm::json::Value(std::move(event)));
+}
+
+// interface ProgressStartEvent extends Event {
+//   event: 'progressStart';
+//
+//   body: {
+//     /**
+//      * An ID that must be used in subsequent 'progressUpdate' and
+//      'progressEnd'
+//      * events to make them refer to the same progress reporting.
+//      * IDs must be unique within a debug session.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Mandatory (short) title of the progress reporting. Shown in the UI to
+//      * describe the long running operation.
+//      */
+//     title: string;
+//
+//     /**
+//      * The request ID that this progress report is related to. If specified a
+//      * debug adapter is expected to emit
+//      * progress events for the long running request until the request has
+//      been
+//      * either completed or cancelled.
+//      * If the request ID is omitted, the progress report is assumed to be
+//      * related to some general activity of the debug adapter.
+//      */
+//     requestId?: number;
+//
+//     /**
+//      * If true, the request that reports progress may be canceled with a
+//      * 'cancel' request.
+//      * So this property basically controls whether the client should use UX
+//      that
+//      * supports cancellation.
+//      * Clients that don't support cancellation are allowed to ignore the
+//      * setting.
+//      */
+//     cancellable?: boolean;
+//
+//     /**
+//      * Optional, more detailed progress message.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressUpdateEvent extends Event {
+//   event: 'progressUpdate';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'progressStart' event.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//
+//     /**
+//      * Optional progress percentage to display (value range: 0 to 100). If
+//      * omitted no percentage will be shown.
+//      */
+//     percentage?: number;
+//   };
+// }
+//
+// interface ProgressEndEvent extends Event {
+//   event: 'progressEnd';
+//
+//   body: {
+//     /**
+//      * The ID that was introduced in the initial 'ProgressStartEvent'.
+//      */
+//     progressId: string;
+//
+//     /**
+//      * Optional, more detailed progress message. If omitted, the previous
+//      * message (if any) is used.
+//      */
+//     message?: string;
+//   };
+// }
+
+void VSCode::SendProgressEvent(uint64_t progress_id, const char *message,
+                               uint64_t completed, uint64_t total) {
+  enum ProgressEventType {
+    progressInvalid,
+    progressStart,
+    progressUpdate,
+    progressEnd
+  };
+  const char *event_name = nullptr;
+  ProgressEventType event_type = progressInvalid;
+  if (completed == 0) {
+    event_type = progressStart;
+    event_name = "progressStart";
+  } else if (completed == total) {
+    event_type = progressEnd;
+    event_name = "progressEnd";
+  } else if (completed < total) {
+    event_type = progressUpdate;
+    event_name = "progressUpdate";
+  }
+  if (event_type == progressInvalid)
+    return;
+
+  llvm::json::Object event(CreateEventObject(event_name));
+  llvm::json::Object body;
+  std::string progress_id_str;
+  llvm::raw_string_ostream progress_id_strm(progress_id_str);
+  progress_id_strm << progress_id;
+  progress_id_strm.flush();
+  body.try_emplace("progressId", progress_id_str);
+  if (event_type == progressStart) {
+    EmplaceSafeString(body, "title", message);
+    body.try_emplace("cancellable", false);
+  }
+  auto now = std::chrono::duration<double>(
+      std::chrono::system_clock::now().time_since_epoch());
+  std::string timestamp(llvm::formatv("{0:f9}", now.count()));
+  EmplaceSafeString(body, "timestamp", timestamp);
+
+  if (0 < total && total < UINT64_MAX) {
+    uint32_t percentage = (uint32_t)(((float)completed / (float)total) * 100.0);
+    body.try_emplace("percentage", percentage);
+  }
   event.try_emplace("body", std::move(body));
   SendJSON(llvm::json::Value(std::move(event)));
 }
