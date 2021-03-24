@@ -45,10 +45,10 @@ PDLByteCodePattern PDLByteCodePattern::create(pdl_interp::RecordMatchOp matchOp,
 
   // Check to see if this is pattern matches a specific operation type.
   if (Optional<StringRef> rootKind = matchOp.rootKind())
-    return PDLByteCodePattern(rewriterAddr, *rootKind, generatedOps, benefit,
-                              ctx);
-  return PDLByteCodePattern(rewriterAddr, generatedOps, benefit, ctx,
-                            MatchAnyOpTypeTag());
+    return PDLByteCodePattern(rewriterAddr, *rootKind, benefit, ctx,
+                              generatedOps);
+  return PDLByteCodePattern(rewriterAddr, MatchAnyOpTypeTag(), benefit, ctx,
+                            generatedOps);
 }
 
 //===----------------------------------------------------------------------===//

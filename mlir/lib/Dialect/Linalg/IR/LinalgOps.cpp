@@ -2366,16 +2366,12 @@ static LogicalResult verifyNamedStructuredOp(NamedStructuredOpType op) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct EraseDeadLinalgOp : public RewritePattern {
-  EraseDeadLinalgOp(PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+struct EraseDeadLinalgOp : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      return failure();
-    for (Value v : linalgOp.getShapedOperands()) {
+    for (Value v : op.getShapedOperands()) {
       // Linalg "inputs" may be either tensor or memref type.
       // tensor<0xelt_type> is a convention that may not always mean
       // "0 iterations". Only erase in cases we see memref<...x0x...>.
@@ -2383,7 +2379,7 @@ struct EraseDeadLinalgOp : public RewritePattern {
       if (!mt)
         continue;
       if (llvm::is_contained(mt.getShape(), 0)) {
-        rewriter.eraseOp(linalgOp);
+        rewriter.eraseOp(op);
         return success();
       }
     }
@@ -2391,19 +2387,14 @@ struct EraseDeadLinalgOp : public RewritePattern {
   }
 };
 
-struct FoldTensorCastOp : public RewritePattern {
-  FoldTensorCastOp(PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+struct FoldTensorCastOp : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    auto linalgOp = dyn_cast<LinalgOp>(op);
-    if (!linalgOp)
-      return failure();
-
     // If no operand comes from a tensor::CastOp and can be folded then fail.
     bool hasTensorCastOperand =
-        llvm::any_of(linalgOp.getShapedOperands(), [&](Value v) {
+        llvm::any_of(op.getShapedOperands(), [&](Value v) {
           if (v.isa<BlockArgument>())
             return false;
           auto castOp = v.getDefiningOp<tensor::CastOp>();
@@ -2417,23 +2408,23 @@ struct FoldTensorCastOp : public RewritePattern {
     SmallVector<Value, 4> newOperands;
     newOperands.reserve(op->getNumOperands());
     // Inputs may fold.
-    for (Value v : linalgOp.getInputs()) {
+    for (Value v : op.getInputs()) {
       auto tensorCastOp = v.getDefiningOp<tensor::CastOp>();
       newOperands.push_back(
           canFoldIntoConsumerOp(tensorCastOp) ? tensorCastOp.source() : v);
     }
     // Init tensors may fold, in which case the resultType must also change.
-    for (Value v : linalgOp.getOutputs()) {
+    for (Value v : op.getOutputs()) {
       auto tensorCastOp = v.getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : v);
       newResultTypes.push_back(newOperands.back().getType());
     }
-    auto extraOperands = linalgOp.getAssumedNonShapedOperands();
+    auto extraOperands = op.getAssumedNonShapedOperands();
     newOperands.append(extraOperands.begin(), extraOperands.end());
     // Clone op.
     Operation *newOp =
-        linalgOp.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
+        op.clone(rewriter, op->getLoc(), newResultTypes, newOperands);
     SmallVector<Value, 4> replacements;
     replacements.reserve(newOp->getNumResults());
     for (auto result : llvm::zip(op->getResults(), newOp->getResults())) {
@@ -2500,17 +2491,15 @@ struct ReplaceDimOfLinalgOpResult : public OpRewritePattern<memref::DimOp> {
 namespace {
 // Deduplicate redundant args of a linalg op.
 // An arg is redundant if it has the same Value and indexing map as another.
-struct DeduplicateInputs : public RewritePattern {
-  DeduplicateInputs(PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
     // This pattern reduces the number of arguments of an op, which breaks
     // the invariants of semantically charged named ops.
     if (!isa<GenericOp, IndexedGenericOp>(op))
       return failure();
-    auto linalgOp = cast<LinalgOp>(op);
 
     // Associate each input to an equivalent "canonical" input that has the same
     // Value and indexing map.
@@ -2524,9 +2513,9 @@ struct DeduplicateInputs : public RewritePattern {
     // having a simple "inputIndex -> canonicalInputIndex" integer mapping is
     // convenient.
     SmallVector<int, 6> canonicalInputIndices;
-    for (int i = 0, e = linalgOp.getNumInputs(); i != e; i++) {
-      Value input = linalgOp.getInput(i);
-      AffineMap indexingMap = linalgOp.getInputIndexingMap(i);
+    for (int i = 0, e = op.getNumInputs(); i != e; i++) {
+      Value input = op.getInput(i);
+      AffineMap indexingMap = op.getInputIndexingMap(i);
       // STL-like maps have a convenient behavior for our use case here. In the
       // case of duplicate keys, the insertion is rejected, and the returned
       // iterator gives access to the value already in the map.
@@ -2535,20 +2524,20 @@ struct DeduplicateInputs : public RewritePattern {
     }
 
     // If there are no duplicate args, then bail out.
-    if (canonicalInput.size() == linalgOp.getNumInputs())
+    if (canonicalInput.size() == op.getNumInputs())
       return failure();
 
     // The operands for the newly canonicalized op.
     SmallVector<Value, 6> newOperands;
-    for (auto v : llvm::enumerate(linalgOp.getInputs()))
+    for (auto v : llvm::enumerate(op.getInputs()))
       if (canonicalInputIndices[v.index()] == static_cast<int>(v.index()))
         newOperands.push_back(v.value());
-    llvm::append_range(newOperands, linalgOp.getOutputs());
-    llvm::append_range(newOperands, linalgOp.getAssumedNonShapedOperands());
+    llvm::append_range(newOperands, op.getOutputs());
+    llvm::append_range(newOperands, op.getAssumedNonShapedOperands());
 
     // Clone the old op with new operands.
-    Operation *newOp = linalgOp.clone(rewriter, op->getLoc(),
-                                      op->getResultTypes(), newOperands);
+    Operation *newOp =
+        op.clone(rewriter, op->getLoc(), op->getResultTypes(), newOperands);
     auto newLinalgOp = cast<LinalgOp>(newOp);
 
     // Repair the indexing maps by filtering out the ones that have been
@@ -2573,7 +2562,7 @@ struct DeduplicateInputs : public RewritePattern {
     // Repair the payload entry block by RAUW'ing redundant arguments and
     // erasing them.
     Block &payload = newOp->getRegion(0).front();
-    for (int i = 0, e = linalgOp.getNumInputs(); i < e; i++) {
+    for (int i = 0, e = op.getNumInputs(); i < e; i++) {
       // Iterate in reverse, so that we erase later args first, preventing the
       // argument list from shifting unexpectedly and invalidating all our
       // indices.
@@ -2597,13 +2586,12 @@ struct DeduplicateInputs : public RewritePattern {
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
 ///    the arguments corresponding to the operands.
-struct RemoveIdentityLinalgOps : public RewritePattern {
-  RemoveIdentityLinalgOps(PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
+struct RemoveIdentityLinalgOps : public OpInterfaceRewritePattern<LinalgOp> {
+  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
 
-  LogicalResult matchAndRewrite(Operation *op,
+  LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    if (auto copyOp = dyn_cast<CopyOp>(op)) {
+    if (auto copyOp = dyn_cast<CopyOp>(*op)) {
       assert(copyOp.hasBufferSemantics());
       if (copyOp.input() == copyOp.output() &&
           copyOp.inputPermutation() == copyOp.outputPermutation()) {
@@ -2614,11 +2602,10 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
 
     if (!isa<GenericOp, IndexedGenericOp>(op))
       return failure();
-    LinalgOp genericOp = cast<LinalgOp>(op);
-    if (!genericOp.hasTensorSemantics())
+    if (!op.hasTensorSemantics())
       return failure();
     // Check all indexing maps are identity.
-    if (llvm::any_of(genericOp.getIndexingMaps(),
+    if (llvm::any_of(op.getIndexingMaps(),
                      [](AffineMap map) { return !map.isIdentity(); }))
       return failure();
 
@@ -2633,7 +2620,7 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
-    unsigned numIndexArgs = genericOp.getNumPayloadInductionVariables();
+    unsigned numIndexArgs = op.getNumPayloadInductionVariables();
     SmallVector<Value, 4> returnedArgs;
     for (Value yieldVal : yieldOp.values()) {
       auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
@@ -2644,9 +2631,9 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
         return failure();
       returnedArgs.push_back(op->getOperand(argumentNumber - numIndexArgs));
     }
-    if (returnedArgs.size() != genericOp.getOperation()->getNumResults())
+    if (returnedArgs.size() != op.getOperation()->getNumResults())
       return failure();
-    rewriter.replaceOp(genericOp, returnedArgs);
+    rewriter.replaceOp(op, returnedArgs);
     return success();
   }
 };
@@ -2656,8 +2643,7 @@ struct RemoveIdentityLinalgOps : public RewritePattern {
   void XXX::getCanonicalizationPatterns(RewritePatternSet &results,            \
                                         MLIRContext *context) {                \
     results.add<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,        \
-                RemoveIdentityLinalgOps>();                                    \
-    results.add<ReplaceDimOfLinalgOpResult>(context);                          \
+                RemoveIdentityLinalgOps, ReplaceDimOfLinalgOpResult>(context); \
   }                                                                            \
                                                                                \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \

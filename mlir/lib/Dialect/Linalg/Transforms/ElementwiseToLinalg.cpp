@@ -75,8 +75,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
 
 namespace {
 struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
-  ConvertAnyElementwiseMappableOpOnRankedTensors()
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()) {}
+  ConvertAnyElementwiseMappableOpOnRankedTensors(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     if (!isElementwiseMappableOpOnRankedTensors(op))
@@ -117,7 +117,8 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
 
 void mlir::populateElementwiseToLinalgConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<ConvertAnyElementwiseMappableOpOnRankedTensors>();
+  patterns.add<ConvertAnyElementwiseMappableOpOnRankedTensors>(
+      patterns.getContext());
 }
 
 namespace {
