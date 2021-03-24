@@ -41,13 +41,14 @@ public:
           GetUpmemSdkPath("/share/upmem/include/built-in/librtlto_p.a");
       PathToRtLibLTOThin =
           GetUpmemSdkPath("/share/upmem/include/built-in/librtltothin_p.a");
+      PathToBootstrap = GetUpmemSdkPath("/share/upmem/include/misc/crt0_p.o");
     } else {
       PathToRtLibLTO =
           GetUpmemSdkPath("/share/upmem/include/built-in/librtlto.a");
       PathToRtLibLTOThin =
           GetUpmemSdkPath("/share/upmem/include/built-in/librtltothin.a");
+      PathToBootstrap = GetUpmemSdkPath("/share/upmem/include/misc/crt0.o");
     }
-    PathToBootstrap = GetUpmemSdkPath("/share/upmem/include/misc/crt0.o");
     McountLibName = "rtmcount";
   }
 
