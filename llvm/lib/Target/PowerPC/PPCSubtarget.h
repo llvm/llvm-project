@@ -112,7 +112,7 @@ protected:
   bool HasPrefixInstrs;
   bool HasPCRelativeMemops;
   bool HasMMA;
-  bool HasROPProtection;
+  bool HasROPProtect;
   bool HasFCPSGN;
   bool HasFSQRT;
   bool HasFRE, HasFRES, HasFRSQRTE, HasFRSQRTES;
@@ -274,7 +274,7 @@ public:
   bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasPCRelativeMemops() const { return HasPCRelativeMemops; }
   bool hasMMA() const { return HasMMA; }
-  bool hasROPProtection() const { return HasROPProtection; }
+  bool hasROPProtect() const { return HasROPProtect; }
   bool pairedVectorMemops() const { return PairedVectorMemops; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
