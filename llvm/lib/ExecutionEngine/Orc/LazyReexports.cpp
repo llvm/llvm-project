@@ -107,9 +107,8 @@ createLocalLazyCallThroughManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddr) {
   switch (T.getArch()) {
   default:
-    return make_error<StringError>(
-        std::string("No callback manager available for ") + T.str(),
-        inconvertibleErrorCode());
+    return LocalLazyCallThroughManager::Create<OrcGenericABI>(ES,
+                                                              ErrorHandlerAddr);
 
   case Triple::aarch64:
   case Triple::aarch64_32:
