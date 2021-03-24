@@ -75,12 +75,13 @@ bool Builtin::Context::builtinIsSupported(const Builtin::Info &BuiltinInfo,
   bool OclCUnsupported = !LangOpts.OpenCL &&
                          (BuiltinInfo.Langs & ALL_OCLC_LANGUAGES);
   bool OpenMPUnsupported = !LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG;
+  bool CUDAUnsupported = !LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG;
   bool CPlusPlusUnsupported =
       !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG;
   return !BuiltinsUnsupported && !MathBuiltinsUnsupported && !OclCUnsupported &&
          !OclC1Unsupported && !OclC2Unsupported && !OpenMPUnsupported &&
          !GnuModeUnsupported && !MSModeUnsupported && !ObjCUnsupported &&
-         !CPlusPlusUnsupported;
+         !CPlusPlusUnsupported && !CUDAUnsupported;
 }
 
 /// initializeBuiltins - Mark the identifiers for all the builtins with their
