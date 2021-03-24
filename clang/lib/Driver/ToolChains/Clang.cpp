@@ -2336,7 +2336,8 @@ void Clang::DumpCompilationDatabaseFragmentToDir(
       Twine(llvm::sys::path::filename(Input.getFilename())) + ".%%%%.json");
   int FD;
   SmallString<256> TempPath;
-  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath);
+  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath,
+                                        llvm::sys::fs::OF_Text);
   if (Err) {
     Driver.Diag(diag::err_drv_compilationdatabase) << Path << Err.message();
     return;
