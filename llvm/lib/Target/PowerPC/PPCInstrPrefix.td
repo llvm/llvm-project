@@ -1867,14 +1867,6 @@ let Predicates = [PrefixInstrs] in {
                                       "xxspltidp $XT, $IMM32", IIC_VecGeneral,
                                       [(set v2f64:$XT,
                                             (PPCxxspltidp i32:$IMM32))]>;
-  def XXSPLTI32DX :
-      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
-                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
-                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
-                             [(set v2i64:$XT,
-                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
-                                                   i32:$IMM32))]>,
-                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
   def XXPERMX :
     8RR_XX4Form_IMM3_XTABC6<34, 0, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                             vsrc:$XC, u3imm:$UIM),
@@ -1896,6 +1888,19 @@ let Predicates = [PrefixInstrs] in {
     8RR_XX4Form_XTABC6<33, 3, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB,
                        vsrc:$XC), "xxblendvd $XT, $XA, $XB, $XC",
                        IIC_VecGeneral, []>;
+}
+
+// XXSPLI32DX needs extra flags to make sure the compiler does not attempt
+// to spill part of the instruction when the values are similar.
+let isReMaterializable = 1, isMoveImm = 1, Predicates = [PrefixInstrs] in {
+  def XXSPLTI32DX :
+      8RR_DForm_IMM32_XT6_IX<32, 0, (outs vsrc:$XT),
+                             (ins vsrc:$XTi, u1imm:$IX, i32imm:$IMM32),
+                             "xxsplti32dx $XT, $IX, $IMM32", IIC_VecGeneral,
+                             [(set v2i64:$XT,
+                                   (PPCxxsplti32dx v2i64:$XTi, i32:$IX,
+                                                   i32:$IMM32))]>,
+                             RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 }
 
 let Predicates = [IsISA3_1] in {
@@ -2622,6 +2627,19 @@ let AddedComplexity = 400, Predicates = [PrefixInstrs] in {
  def : Pat<(f64 nzFPImmAsi32:$A),
            (COPY_TO_REGCLASS (XXSPLTIDP (getFPAs32BitInt fpimm:$A)),
                              VSFRC)>;
+
+// To replace constant pool with XXSPLTI32DX for scalars.
+def : Pat<(f32 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX(IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSRC)>;
+
+def : Pat<(f64 nzFPImmAsi64:$A),
+          (COPY_TO_REGCLASS (XXSPLTI32DX (XXSPLTI32DX (IMPLICIT_DEF), 0,
+                                        (getFPAs64BitIntHi $A)),
+                                        1, (getFPAs64BitIntLo $A)),
+                            VSRC)>;
 
   // Anonymous patterns for XXEVAL
   // AND

@@ -1332,6 +1332,7 @@ namespace llvm {
 
   bool convertToNonDenormSingle(APInt &ArgAPInt);
   bool convertToNonDenormSingle(APFloat &ArgAPFloat);
+  bool checkConvertToNonDenormSingle(APFloat &ArgAPFloat);
 
 } // end namespace llvm
 
