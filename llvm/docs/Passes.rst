@@ -973,11 +973,6 @@ corresponding to the reverse post order traversal of current function (starting
 at 2), which effectively gives values in deep loops higher rank than values not
 in loops.
 
-``-rel-lookup-table-converter``: Relative lookup table converter
-----------------------------------------------------------------
-
-This pass converts lookup tables to PIC-friendly relative lookup tables.
-
 ``-reg2mem``: Demote all values to stack slots
 ----------------------------------------------
 
