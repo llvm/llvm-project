@@ -87,7 +87,7 @@ alias_address:
 # CHECK-NEXT:         Field:           __linear_memory
 # CHECK-NEXT:         Kind:            MEMORY
 # CHECK-NEXT:         Memory:
-# CHECK-NEXT:           Initial:         0x1
+# CHECK-NEXT:           Minimum:         0x1
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           __indirect_function_table
 # CHECK-NEXT:         Kind:            TABLE
@@ -95,7 +95,7 @@ alias_address:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x1
+# CHECK-NEXT:             Minimum:         0x1
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
 # CHECK-NEXT:   - Type:            ELEM
@@ -254,7 +254,7 @@ alias_address:
 # REF-NEXT:         Field:           __linear_memory
 # REF-NEXT:         Kind:            MEMORY
 # REF-NEXT:         Memory:
-# REF-NEXT:           Initial:         0x1
+# REF-NEXT:           Minimum:         0x1
 # REF-NEXT:       - Module:          env
 # REF-NEXT:         Field:           __indirect_function_table
 # REF-NEXT:         Kind:            TABLE
@@ -262,7 +262,7 @@ alias_address:
 # REF-NEXT:           Index:           0
 # REF-NEXT:           ElemType:        FUNCREF
 # REF-NEXT:           Limits:
-# REF-NEXT:             Initial:         0x1
+# REF-NEXT:             Minimum:         0x1
 # REF-NEXT:   - Type:            FUNCTION
 # REF-NEXT:     FunctionTypes:   [ 0, 0, 0, 0, 0 ]
 # REF-NEXT:   - Type:            ELEM

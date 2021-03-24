@@ -117,7 +117,7 @@ static int writeStringRef(const StringRef &Str, raw_ostream &OS) {
 
 static int writeLimits(const WasmYAML::Limits &Lim, raw_ostream &OS) {
   writeUint8(OS, Lim.Flags);
-  encodeULEB128(Lim.Initial, OS);
+  encodeULEB128(Lim.Minimum, OS);
   if (Lim.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     encodeULEB128(Lim.Maximum, OS);
   return 0;

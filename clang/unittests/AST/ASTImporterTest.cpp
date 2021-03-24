@@ -631,6 +631,15 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
                  fieldDecl(hasType(dependentTemplateSpecializationType())))))));
 }
 
+TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T>"
+             "class C { public: C(T); };"
+             "C declToImport(123);",
+             Lang_CXX17, "", Lang_CXX17, Verifier,
+             varDecl(hasType(deducedTemplateSpecializationType())));
+}
+
 const internal::VariadicDynCastAllOfMatcher<Stmt, SizeOfPackExpr>
     sizeOfPackExpr;
 
