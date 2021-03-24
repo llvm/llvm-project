@@ -2327,6 +2327,34 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);
 }
 
+/// Remove duplicated expressions in affine min/max ops.
+template <typename T>
+struct DeduplicateAffineMinMaxExpressions : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap oldMap = affineOp.getAffineMap();
+
+    SmallVector<AffineExpr, 4> newExprs;
+    for (AffineExpr expr : oldMap.getResults()) {
+      // This is a linear scan over newExprs, but it should be fine given that
+      // we typically just have a few expressions per op.
+      if (!llvm::is_contained(newExprs, expr))
+        newExprs.push_back(expr);
+    }
+
+    if (newExprs.size() == oldMap.getNumResults())
+      return failure();
+
+    auto newMap = AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(),
+                                 newExprs, rewriter.getContext());
+    rewriter.replaceOpWithNewOp<T>(affineOp, newMap, affineOp.getMapOperands());
+
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AffineMinOp
 //===----------------------------------------------------------------------===//
@@ -2340,7 +2368,8 @@ OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
 
 void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
-  patterns.add<SimplifyAffineOp<AffineMinOp>>(context);
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMinOp>,
+               SimplifyAffineOp<AffineMinOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2356,7 +2385,8 @@ OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
 
 void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
-  patterns.add<SimplifyAffineOp<AffineMaxOp>>(context);
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMaxOp>,
+               SimplifyAffineOp<AffineMaxOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
