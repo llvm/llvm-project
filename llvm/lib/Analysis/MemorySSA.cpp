@@ -2550,6 +2550,11 @@ bool upward_defs_iterator::IsGuaranteedLoopInvariant(Value *Ptr) const {
   };
 
   Ptr = Ptr->stripPointerCasts();
+  if (auto *I = dyn_cast<Instruction>(Ptr)) {
+    if (I->getParent() == &I->getFunction()->getEntryBlock()) {
+      return true;
+    }
+  }
   if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
     return IsGuaranteedLoopInvariantBase(GEP->getPointerOperand()) &&
            GEP->hasAllConstantIndices();
