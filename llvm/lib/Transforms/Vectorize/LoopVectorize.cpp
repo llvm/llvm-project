@@ -9599,6 +9599,21 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  if (!Requirements.canVectorizeFPMath(Hints)) {
+    ORE->emit([&]() {
+      auto *ExactFPMathInst = Requirements.getExactFPInst();
+      return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
+                                                 ExactFPMathInst->getDebugLoc(),
+                                                 ExactFPMathInst->getParent())
+             << "loop not vectorized: cannot prove it is safe to reorder "
+                "floating-point operations";
+    });
+    LLVM_DEBUG(dbgs() << "LV: loop not vectorized: cannot prove it is safe to "
+                         "reorder floating-point operations\n");
+    Hints.emitRemarkWithHints();
+    return false;
+  }
+
   bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
 

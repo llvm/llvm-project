@@ -250,16 +250,6 @@ bool LoopVectorizationRequirements::doesNotMeet(
     Function *F, Loop *L, const LoopVectorizeHints &Hints) {
   const char *PassName = Hints.vectorizeAnalysisPassName();
   bool Failed = false;
-  if (ExactFPMathInst && !Hints.allowReordering()) {
-    ORE.emit([&]() {
-      return OptimizationRemarkAnalysisFPCommute(
-                 PassName, "CantReorderFPOps", ExactFPMathInst->getDebugLoc(),
-                 ExactFPMathInst->getParent())
-             << "loop not vectorized: cannot prove it is safe to reorder "
-                "floating-point operations";
-    });
-    Failed = true;
-  }
 
   // Test if runtime memcheck thresholds are exceeded.
   bool PragmaThresholdReached =
