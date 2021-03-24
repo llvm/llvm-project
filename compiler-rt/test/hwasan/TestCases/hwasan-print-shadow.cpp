@@ -8,8 +8,7 @@
 #include <sanitizer/hwasan_interface.h>
 
 int main() {
-  char *p = (char *)mmap(nullptr, 4096, PROT_READ | PROT_WRITE,
-                         MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+  char *p = (char *)malloc(4096);
   assert(p);
 
   __hwasan_tag_memory(p, 1, 32);
@@ -26,4 +25,6 @@ int main() {
   // CHECK-NEXT:   {{.*}}0: 0
   // CHECK-NEXT:   {{.*}}0: 0
   // CHECK-NEXT:   {{.*}}0: 4
+
+  free(p);
 }
