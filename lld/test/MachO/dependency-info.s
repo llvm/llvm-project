@@ -12,7 +12,7 @@
 # RUN: llvm-ar csr  %t/bar.a %t/bar.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
 
-# RUN: %lld %t/main.o %t/bar.a %t/libfoo.dylib -lSystem -dependency_info %t/deps_info.out
+# RUN: %lld %t/main.o %t/bar.a %t/libfoo.dylib -lSystem -o %t/test.out -dependency_info %t/deps_info.out
 # RUN: %python %S/Inputs/DependencyDump.py %t/deps_info.out | FileCheck %s
 
 # CHECK: lld-version: {{.*}}LLD {{.*}}
@@ -20,12 +20,12 @@
 # CHECK-DAG: input-file: {{.*}}/libfoo.dylib
 # CHECK-DAG: input-file: {{.*}}/libSystem.tbd
 # CHECK-DAG: input-file: {{.*}}/main.o
-# CHECK-DAG: bar.o
+# CHECK-DAG: input-file: {{.*}}bar.o
 
 # CHECK-NEXT: not-found: {{.*}}/libdyld.dylib
 ## There could be more not-found here but we are not checking those because it's brittle.
 
-# CHECK: output-file: a.out
+# CHECK: output-file: {{.*}}/test.out
 
 #--- foo.s
 .globl __Z3foo
