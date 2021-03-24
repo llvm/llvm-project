@@ -58,70 +58,42 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   // regardless of what the actual target triple is.
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
-    if (IsAndroid) {
+    if (IsAndroid)
       return "arm-linux-androideabi";
-    } else if (TargetEnvironment == llvm::Triple::GNUEABIHF) {
-      if (D.getVFS().exists(SysRoot + "/lib/arm-linux-gnueabihf"))
-        return "arm-linux-gnueabihf";
-    } else {
-      if (D.getVFS().exists(SysRoot + "/lib/arm-linux-gnueabi"))
-        return "arm-linux-gnueabi";
-    }
-    break;
+    if (TargetEnvironment == llvm::Triple::GNUEABIHF)
+      return "arm-linux-gnueabihf";
+    return "arm-linux-gnueabi";
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
-    if (TargetEnvironment == llvm::Triple::GNUEABIHF) {
-      if (D.getVFS().exists(SysRoot + "/lib/armeb-linux-gnueabihf"))
-        return "armeb-linux-gnueabihf";
-    } else {
-      if (D.getVFS().exists(SysRoot + "/lib/armeb-linux-gnueabi"))
-        return "armeb-linux-gnueabi";
-    }
-    break;
+    if (TargetEnvironment == llvm::Triple::GNUEABIHF)
+      return "armeb-linux-gnueabihf";
+    return "armeb-linux-gnueabi";
   case llvm::Triple::x86:
     if (IsAndroid)
       return "i686-linux-android";
-    if (D.getVFS().exists(SysRoot + "/lib/i386-linux-gnu"))
-      return "i386-linux-gnu";
-    break;
+    return "i386-linux-gnu";
   case llvm::Triple::x86_64:
     if (IsAndroid)
       return "x86_64-linux-android";
-    // We don't want this for x32, otherwise it will match x86_64 libs
-    if (TargetEnvironment != llvm::Triple::GNUX32 &&
-        D.getVFS().exists(SysRoot + "/lib/x86_64-linux-gnu"))
-      return "x86_64-linux-gnu";
-    break;
+    if (TargetEnvironment == llvm::Triple::GNUX32)
+      return "x86_64-linux-gnux32";
+    return "x86_64-linux-gnu";
   case llvm::Triple::aarch64:
     if (IsAndroid)
       return "aarch64-linux-android";
-    if (D.getVFS().exists(SysRoot + "/lib/aarch64-linux-gnu"))
-      return "aarch64-linux-gnu";
-    break;
+    return "aarch64-linux-gnu";
   case llvm::Triple::aarch64_be:
-    if (D.getVFS().exists(SysRoot + "/lib/aarch64_be-linux-gnu"))
-      return "aarch64_be-linux-gnu";
-    break;
+    return "aarch64_be-linux-gnu";
 
   case llvm::Triple::m68k:
-    if (D.getVFS().exists(SysRoot + "/lib/m68k-linux-gnu"))
-      return "m68k-linux-gnu";
-    break;
+    return "m68k-linux-gnu";
 
-  case llvm::Triple::mips: {
-    std::string MT = IsMipsR6 ? "mipsisa32r6-linux-gnu" : "mips-linux-gnu";
-    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
-      return MT;
-    break;
-  }
-  case llvm::Triple::mipsel: {
+  case llvm::Triple::mips:
+    return IsMipsR6 ? "mipsisa32r6-linux-gnu" : "mips-linux-gnu";
+  case llvm::Triple::mipsel:
     if (IsAndroid)
       return "mipsel-linux-android";
-    std::string MT = IsMipsR6 ? "mipsisa32r6el-linux-gnu" : "mipsel-linux-gnu";
-    if (D.getVFS().exists(SysRoot + "/lib/" + MT))
-      return MT;
-    break;
-  }
+    return IsMipsR6 ? "mipsisa32r6el-linux-gnu" : "mipsel-linux-gnu";
   case llvm::Triple::mips64: {
     std::string MT = std::string(IsMipsR6 ? "mipsisa64r6" : "mips64") +
                      "-linux-" + (IsMipsN32Abi ? "gnuabin32" : "gnuabi64");
@@ -145,33 +117,19 @@ std::string Linux::getMultiarchTriple(const Driver &D,
   case llvm::Triple::ppc:
     if (D.getVFS().exists(SysRoot + "/lib/powerpc-linux-gnuspe"))
       return "powerpc-linux-gnuspe";
-    if (D.getVFS().exists(SysRoot + "/lib/powerpc-linux-gnu"))
-      return "powerpc-linux-gnu";
-    break;
+    return "powerpc-linux-gnu";
   case llvm::Triple::ppcle:
-    if (D.getVFS().exists(SysRoot + "/lib/powerpcle-linux-gnu"))
-      return "powerpcle-linux-gnu";
-    break;
+    return "powerpcle-linux-gnu";
   case llvm::Triple::ppc64:
-    if (D.getVFS().exists(SysRoot + "/lib/powerpc64-linux-gnu"))
-      return "powerpc64-linux-gnu";
-    break;
+    return "powerpc64-linux-gnu";
   case llvm::Triple::ppc64le:
-    if (D.getVFS().exists(SysRoot + "/lib/powerpc64le-linux-gnu"))
-      return "powerpc64le-linux-gnu";
-    break;
+    return "powerpc64le-linux-gnu";
   case llvm::Triple::sparc:
-    if (D.getVFS().exists(SysRoot + "/lib/sparc-linux-gnu"))
-      return "sparc-linux-gnu";
-    break;
+    return "sparc-linux-gnu";
   case llvm::Triple::sparcv9:
-    if (D.getVFS().exists(SysRoot + "/lib/sparc64-linux-gnu"))
-      return "sparc64-linux-gnu";
-    break;
+    return "sparc64-linux-gnu";
   case llvm::Triple::systemz:
-    if (D.getVFS().exists(SysRoot + "/lib/s390x-linux-gnu"))
-      return "s390x-linux-gnu";
-    break;
+    return "s390x-linux-gnu";
   }
   return TargetTriple.str();
 }
