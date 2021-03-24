@@ -18,6 +18,7 @@ include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Base class for Builtin dialect ops.
@@ -198,6 +199,12 @@ def ModuleOp : Builtin_Op<"module", [
 
     /// A ModuleOp may optionally define a symbol.
     bool isOptionalSymbol() { return true; }
+
+    //===------------------------------------------------------------------===//
+    // DataLayoutOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    DataLayoutSpecInterface getDataLayoutSpec();
   }];
   let verifier = [{ return ::verify(*this); }];
 
