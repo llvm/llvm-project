@@ -452,7 +452,7 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 struct LinalgBaseTilingPattern : public RewritePattern {
   // Entry point to match any LinalgOp OpInterface.
   LinalgBaseTilingPattern(
-      LinalgTilingOptions options,
+      MLIRContext *context, LinalgTilingOptions options,
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
       PatternBenefit benefit = 1);
   // Entry point to match a specific Linalg op.
@@ -644,7 +644,8 @@ struct LinalgVectorizationOptions {};
 
 struct LinalgBaseVectorizationPattern : public RewritePattern {
   /// MatchAnyOpTag-based constructor with a mandatory `filter`.
-  LinalgBaseVectorizationPattern(LinalgTransformationFilter filter,
+  LinalgBaseVectorizationPattern(MLIRContext *context,
+                                 LinalgTransformationFilter filter,
                                  PatternBenefit benefit = 1);
   /// Name-based constructor with an optional `filter`.
   LinalgBaseVectorizationPattern(
@@ -663,10 +664,10 @@ struct LinalgVectorizationPattern : public LinalgBaseVectorizationPattern {
   /// These constructors are available to anyone.
   /// MatchAnyOpTag-based constructor with a mandatory `filter`.
   LinalgVectorizationPattern(
-      LinalgTransformationFilter filter,
+      MLIRContext *context, LinalgTransformationFilter filter,
       LinalgVectorizationOptions options = LinalgVectorizationOptions(),
       PatternBenefit benefit = 1)
-      : LinalgBaseVectorizationPattern(filter, benefit) {}
+      : LinalgBaseVectorizationPattern(context, filter, benefit) {}
   /// Name-based constructor with an optional `filter`.
   LinalgVectorizationPattern(
       StringRef opName, MLIRContext *context,
@@ -702,8 +703,8 @@ template <typename OpType, typename = std::enable_if_t<
 void insertVectorizationPatternImpl(RewritePatternSet &patternList,
                                     linalg::LinalgVectorizationOptions options,
                                     linalg::LinalgTransformationFilter f) {
-  patternList.add<linalg::LinalgVectorizationPattern>(f.addOpFilter<OpType>(),
-                                                      options);
+  patternList.add<linalg::LinalgVectorizationPattern>(
+      patternList.getContext(), f.addOpFilter<OpType>(), options);
 }
 
 /// Variadic helper function to insert vectorization patterns for C++ ops.
@@ -737,7 +738,7 @@ struct LinalgLoweringPattern : public RewritePattern {
       MLIRContext *context, LinalgLoweringType loweringType,
       LinalgTransformationFilter filter = LinalgTransformationFilter(),
       ArrayRef<unsigned> interchangeVector = {}, PatternBenefit benefit = 1)
-      : RewritePattern(OpTy::getOperationName(), {}, benefit, context),
+      : RewritePattern(OpTy::getOperationName(), benefit, context),
         filter(filter), loweringType(loweringType),
         interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 

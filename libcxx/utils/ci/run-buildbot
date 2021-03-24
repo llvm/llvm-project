@@ -241,11 +241,11 @@ generic-singlethreaded)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake"
     check-cxx-cxxabi
 ;;
-generic-nodebug)
+generic-no-debug)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-debug.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-filesystem)

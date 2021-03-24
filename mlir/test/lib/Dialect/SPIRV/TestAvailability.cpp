@@ -149,8 +149,8 @@ void ConvertToTargetEnv::runOnFunction() {
 }
 
 ConvertToAtomCmpExchangeWeak::ConvertToAtomCmpExchangeWeak(MLIRContext *context)
-    : RewritePattern("test.convert_to_atomic_compare_exchange_weak_op",
-                     {"spv.AtomicCompareExchangeWeak"}, 1, context) {}
+    : RewritePattern("test.convert_to_atomic_compare_exchange_weak_op", 1,
+                     context, {"spv.AtomicCompareExchangeWeak"}) {}
 
 LogicalResult
 ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
@@ -170,8 +170,8 @@ ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
 }
 
 ConvertToBitReverse::ConvertToBitReverse(MLIRContext *context)
-    : RewritePattern("test.convert_to_bit_reverse_op", {"spv.BitReverse"}, 1,
-                     context) {}
+    : RewritePattern("test.convert_to_bit_reverse_op", 1, context,
+                     {"spv.BitReverse"}) {}
 
 LogicalResult
 ConvertToBitReverse::matchAndRewrite(Operation *op,
@@ -185,8 +185,8 @@ ConvertToBitReverse::matchAndRewrite(Operation *op,
 
 ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
     MLIRContext *context)
-    : RewritePattern("test.convert_to_group_non_uniform_ballot_op",
-                     {"spv.GroupNonUniformBallot"}, 1, context) {}
+    : RewritePattern("test.convert_to_group_non_uniform_ballot_op", 1, context,
+                     {"spv.GroupNonUniformBallot"}) {}
 
 LogicalResult ConvertToGroupNonUniformBallot::matchAndRewrite(
     Operation *op, PatternRewriter &rewriter) const {
@@ -198,7 +198,7 @@ LogicalResult ConvertToGroupNonUniformBallot::matchAndRewrite(
 }
 
 ConvertToModule::ConvertToModule(MLIRContext *context)
-    : RewritePattern("test.convert_to_module_op", {"spv.module"}, 1, context) {}
+    : RewritePattern("test.convert_to_module_op", 1, context, {"spv.module"}) {}
 
 LogicalResult
 ConvertToModule::matchAndRewrite(Operation *op,
@@ -210,8 +210,8 @@ ConvertToModule::matchAndRewrite(Operation *op,
 }
 
 ConvertToSubgroupBallot::ConvertToSubgroupBallot(MLIRContext *context)
-    : RewritePattern("test.convert_to_subgroup_ballot_op",
-                     {"spv.SubgroupBallotKHR"}, 1, context) {}
+    : RewritePattern("test.convert_to_subgroup_ballot_op", 1, context,
+                     {"spv.SubgroupBallotKHR"}) {}
 
 LogicalResult
 ConvertToSubgroupBallot::matchAndRewrite(Operation *op,

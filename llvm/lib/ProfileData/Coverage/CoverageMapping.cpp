@@ -281,21 +281,29 @@ Error CoverageMapping::loadFunctionRecord(
   return Error::success();
 }
 
+// This function is for memory optimization by shortening the lifetimes
+// of CoverageMappingReader instances.
+Error CoverageMapping::loadFromReaders(
+    ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage) {
+  for (const auto &CoverageReader : CoverageReaders) {
+    for (auto RecordOrErr : *CoverageReader) {
+      if (Error E = RecordOrErr.takeError())
+        return E;
+      const auto &Record = *RecordOrErr;
+      if (Error E = Coverage.loadFunctionRecord(Record, ProfileReader))
+        return E;
+    }
+  }
+  return Error::success();
+}
+
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
     IndexedInstrProfReader &ProfileReader) {
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
-
-  for (const auto &CoverageReader : CoverageReaders) {
-    for (auto RecordOrErr : *CoverageReader) {
-      if (Error E = RecordOrErr.takeError())
-        return std::move(E);
-      const auto &Record = *RecordOrErr;
-      if (Error E = Coverage->loadFunctionRecord(Record, ProfileReader))
-        return std::move(E);
-    }
-  }
-
+  if (Error E = loadFromReaders(CoverageReaders, ProfileReader, *Coverage))
+    return std::move(E);
   return std::move(Coverage);
 }
 
@@ -316,16 +324,18 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
   if (Error E = ProfileReaderOrErr.takeError())
     return std::move(E);
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
+  auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
+  bool DataFound = false;
 
-  SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
-  SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(File.value());
+    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
+        File.value(), /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
     if (std::error_code EC = CovMappingBufOrErr.getError())
       return errorCodeToError(EC);
     StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
     MemoryBufferRef CovMappingBufRef =
         CovMappingBufOrErr.get()->getMemBufferRef();
+    SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
     auto CoverageReadersOrErr =
         BinaryCoverageReader::create(CovMappingBufRef, Arch, Buffers);
     if (Error E = CoverageReadersOrErr.takeError()) {
@@ -335,15 +345,19 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
       // E == success (originally a no_data_found error).
       continue;
     }
+
+    SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
     for (auto &Reader : CoverageReadersOrErr.get())
       Readers.push_back(std::move(Reader));
-    Buffers.push_back(std::move(CovMappingBufOrErr.get()));
+    DataFound |= !Readers.empty();
+    if (Error E = loadFromReaders(Readers, *ProfileReader, *Coverage))
+      return std::move(E);
   }
   // If no readers were created, either no objects were provided or none of them
   // had coverage data. Return an error in the latter case.
-  if (Readers.empty() && !ObjectFilenames.empty())
+  if (!DataFound && !ObjectFilenames.empty())
     return make_error<CoverageMapError>(coveragemap_error::no_data_found);
-  return load(Readers, *ProfileReader);
+  return std::move(Coverage);
 }
 
 namespace {

@@ -54,11 +54,11 @@ _start:
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
 # CHECK-NEXT:           Flags:           [ HAS_MAX ]
-# CHECK-NEXT:           Initial:         0x1
+# CHECK-NEXT:           Minimum:         0x1
 # CHECK-NEXT:           Maximum:         0x1
 # CHECK-NEXT:   - Type:            MEMORY
 # CHECK-NEXT:     Memories:
-# CHECK-NEXT:       - Initial:         0x2
+# CHECK-NEXT:       - Minimum:         0x2
 # CHECK-NEXT:   - Type:            GLOBAL
 # CHECK-NEXT:     Globals:
 # CHECK-NEXT:       - Index:           0

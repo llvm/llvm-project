@@ -47,7 +47,9 @@ struct char_traits
 
 template <> struct char_traits<char>;
 template <> struct char_traits<wchar_t>;
-template <> struct char_traits<char8_t>;  // c++20
+template <> struct char_traits<char8_t>;  // C++20
+template <> struct char_traits<char16_t>;
+template <> struct char_traits<char32_t>;
 
 }  // std
 

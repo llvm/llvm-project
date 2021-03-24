@@ -573,6 +573,11 @@ class CoverageMapping {
 
   CoverageMapping() = default;
 
+  // Load coverage records from readers.
+  static Error loadFromReaders(
+      ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+      IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
+
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);

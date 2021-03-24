@@ -86,6 +86,25 @@ public:
 
 static const uptr MaxUnusedCachePages = 4U;
 
+template <typename Config>
+void mapSecondary(Options Options, uptr CommitBase, uptr CommitSize,
+                  uptr AllocPos, uptr Flags, MapPlatformData *Data) {
+  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
+  if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
+    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
+    map(reinterpret_cast<void *>(CommitBase), UntaggedPos - CommitBase,
+        "scudo:secondary", MAP_RESIZABLE | MAP_MEMTAG | Flags, Data);
+    map(reinterpret_cast<void *>(UntaggedPos),
+        CommitBase + CommitSize - UntaggedPos, "scudo:secondary",
+        MAP_RESIZABLE | Flags, Data);
+  } else {
+    map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
+        MAP_RESIZABLE | (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) |
+            Flags,
+        Data);
+  }
+}
+
 template <typename Config> class MapAllocatorCache {
 public:
   // Ensure the default maximum specified fits the array.
@@ -129,9 +148,8 @@ public:
         // Fuchsia does not support replacing mappings by creating a new mapping
         // on top so we just do the two syscalls there.
         Entry.Time = 0;
-        map(reinterpret_cast<void *>(Entry.CommitBase), Entry.CommitSize,
-            "scudo:secondary", MAP_RESIZABLE | MAP_NOACCESS | MAP_MEMTAG,
-            &Entry.Data);
+        mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
+                             Entry.CommitBase, MAP_NOACCESS, &Entry.Data);
       } else {
         setMemoryPermission(Entry.CommitBase, Entry.CommitSize, MAP_NOACCESS,
                             &Entry.Data);
@@ -530,19 +548,7 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
 
   const uptr CommitSize = MapEnd - PageSize - CommitBase;
   const uptr AllocPos = roundDownTo(CommitBase + CommitSize - Size, Alignment);
-  const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
-  if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
-    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
-    map(reinterpret_cast<void *>(CommitBase), UntaggedPos - CommitBase,
-        "scudo:secondary", MAP_RESIZABLE | MAP_MEMTAG, &Data);
-    map(reinterpret_cast<void *>(UntaggedPos),
-        CommitBase + CommitSize - UntaggedPos, "scudo:secondary", MAP_RESIZABLE,
-        &Data);
-  } else {
-    map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
-        MAP_RESIZABLE | (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0),
-        &Data);
-  }
+  mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0, &Data);
   const uptr HeaderPos =
       AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(

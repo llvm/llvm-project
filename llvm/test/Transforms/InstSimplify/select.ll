@@ -1015,6 +1015,20 @@ define i32 @select_neutral_sub_lhs(i32 %x, i32 %y) {
   ret i32 %sel
 }
 
+define i32 @select_ctpop_zero(i32 %x) {
+; CHECK-LABEL: @select_ctpop_zero(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  %0 = icmp eq i32 %x, 0
+  %1 = call i32 @llvm.ctpop.i32(i32 %x)
+  %sel = select i1 %0, i32 0, i32 %1
+  ret i32 %sel
+}
+declare i32 @llvm.ctpop.i32(i32)
+
 ; TODO: these can be optimized more
 
 define i32 @poison(i32 %x, i32 %y) {

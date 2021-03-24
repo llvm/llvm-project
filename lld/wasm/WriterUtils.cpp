@@ -67,7 +67,7 @@ std::string toString(const WasmEventType &type) {
 static std::string toString(const llvm::wasm::WasmLimits &limits) {
   std::string ret;
   ret += "flags=0x" + std::to_string(limits.Flags);
-  ret += "; initial=" + std::to_string(limits.Initial);
+  ret += "; min=" + std::to_string(limits.Minimum);
   if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     ret += "; max=" + std::to_string(limits.Maximum);
   return ret;
@@ -191,7 +191,7 @@ void writeInitExpr(raw_ostream &os, const WasmInitExpr &initExpr) {
 
 void writeLimits(raw_ostream &os, const WasmLimits &limits) {
   writeU8(os, limits.Flags, "limits flags");
-  writeUleb128(os, limits.Initial, "limits initial");
+  writeUleb128(os, limits.Minimum, "limits min");
   if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     writeUleb128(os, limits.Maximum, "limits max");
 }

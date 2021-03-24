@@ -292,3 +292,108 @@ NeedValue test_4_3() {
   return b; // cxx20-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
 }
 } // namespace test_ctor_param_rvalue_ref
+
+namespace test_lvalue_ref_is_not_moved_from {
+
+struct Target {};
+  // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable}}
+  // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable}}
+  // cxx11_14_17-note@-3 {{candidate constructor (the implicit copy constructor) not viable}}
+  // cxx11_14_17-note@-4 {{candidate constructor (the implicit move constructor) not viable}}
+
+struct CopyOnly {
+  CopyOnly(CopyOnly&&) = delete; // cxx20-note {{has been explicitly marked deleted here}}
+  CopyOnly(CopyOnly&);
+  operator Target() && = delete; // cxx20-note {{has been explicitly marked deleted here}}
+  operator Target() &;
+};
+
+struct MoveOnly {
+  MoveOnly(MoveOnly&&); // expected-note {{copy constructor is implicitly deleted because}}
+    // cxx11_14_17-note@-1 {{copy constructor is implicitly deleted because}}
+  operator Target() &&; // expected-note {{candidate function not viable}}
+    // cxx11_14_17-note@-1 {{candidate function not viable}}
+};
+
+extern CopyOnly copyonly;
+extern MoveOnly moveonly;
+
+CopyOnly t1() {
+    CopyOnly& r = copyonly;
+    return r;
+}
+
+CopyOnly t2() {
+    CopyOnly&& r = static_cast<CopyOnly&&>(copyonly);
+    return r; // cxx20-error {{call to deleted constructor}}
+}
+
+MoveOnly t3() {
+    MoveOnly& r = moveonly;
+    return r; // expected-error {{call to implicitly-deleted copy constructor}}
+}
+
+MoveOnly t4() {
+    MoveOnly&& r = static_cast<MoveOnly&&>(moveonly);
+    return r; // cxx11_14_17-error {{call to implicitly-deleted copy constructor}}
+}
+
+Target t5() {
+    CopyOnly& r = copyonly;
+    return r;
+}
+
+Target t6() {
+    CopyOnly&& r = static_cast<CopyOnly&&>(copyonly);
+    return r; // cxx20-error {{invokes a deleted function}}
+}
+
+Target t7() {
+    MoveOnly& r = moveonly;
+    return r; // expected-error {{no viable conversion}}
+}
+
+Target t8() {
+    MoveOnly&& r = static_cast<MoveOnly&&>(moveonly);
+    return r; // cxx11_14_17-error {{no viable conversion}}
+}
+
+} // namespace test_lvalue_ref_is_not_moved_from
+
+namespace test_rvalue_ref_to_nonobject {
+
+struct CopyOnly {};
+struct MoveOnly {};
+
+struct Target {
+    Target(CopyOnly (&)());
+    Target(CopyOnly (&&)()) = delete;
+    Target(MoveOnly (&)()) = delete; // expected-note {{has been explicitly marked deleted here}}
+      // expected-note@-1 {{has been explicitly marked deleted here}}
+    Target(MoveOnly (&&)());
+};
+
+CopyOnly make_copyonly();
+MoveOnly make_moveonly();
+
+Target t1() {
+    CopyOnly (&r)() = make_copyonly;
+    return r;
+}
+
+Target t2() {
+    CopyOnly (&&r)() = static_cast<CopyOnly(&&)()>(make_copyonly);
+    return r; // OK in all modes; not subject to implicit move
+}
+
+Target t3() {
+    MoveOnly (&r)() = make_moveonly;
+    return r; // expected-error {{invokes a deleted function}}
+}
+
+Target t4() {
+    MoveOnly (&&r)() = static_cast<MoveOnly(&&)()>(make_moveonly);
+    return r; // expected-error {{invokes a deleted function}}
+}
+
+} // namespace test_rvalue_ref_to_nonobject

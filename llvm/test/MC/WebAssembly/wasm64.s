@@ -148,7 +148,7 @@ test:
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
 # BIN-NEXT:           Flags:           [ IS_64 ]
-# BIN-NEXT:           Initial:         0x1
+# BIN-NEXT:           Minimum:         0x1
 # BIN-NEXT:       - Module:          env
 # BIN-NEXT:         Field:           myglob64
 # BIN-NEXT:         Kind:            GLOBAL

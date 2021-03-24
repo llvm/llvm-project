@@ -33,6 +33,7 @@ class AffineMap;
 class Builder;
 class FuncOp;
 class OpBuilder;
+class PatternRewriter;
 
 /// Return the list of Range (i.e. offset, size, stride). Each Range
 /// entry contains either the dynamic value or a ConstantIndexOp constructed

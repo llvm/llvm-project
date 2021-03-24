@@ -101,9 +101,9 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
 }
 
 LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
+    LinalgOp op, PatternRewriter &rewriter) const {
   // Only LinalgOp for which there is no specialized pattern go through this.
-  if (!isa<LinalgOp>(op) || isa<CopyOp>(op) || isa<IndexedGenericOp>(op))
+  if (isa<CopyOp>(op) || isa<IndexedGenericOp>(op))
     return failure();
 
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
@@ -199,8 +199,8 @@ void mlir::linalg::populateLinalgToStandardConversionPatterns(
   patterns.add<
       CopyOpToLibraryCallRewrite,
       CopyTransposeRewrite,
-      IndexedGenericOpToLibraryCallRewrite>(patterns.getContext());
-  patterns.add<LinalgOpToLibraryCallRewrite>();
+      IndexedGenericOpToLibraryCallRewrite,
+      LinalgOpToLibraryCallRewrite>(patterns.getContext());
   // clang-format on
 }
 

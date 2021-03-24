@@ -16,7 +16,11 @@
 
 #include "PythonDataObjects.h"
 #include "PythonReadline.h"
+#include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
+#include "ScriptedProcessPythonInterface.h"
+
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -147,8 +151,6 @@ extern "C" void *LLDBSwigPython_GetChildAtIndex(void *implementor,
 
 extern "C" int LLDBSwigPython_GetIndexOfChildWithName(void *implementor,
                                                       const char *child_name);
-
-extern "C" void *LLDBSWIGPython_CastPyObjectToSBValue(void *data);
 
 extern lldb::ValueObjectSP
 LLDBSWIGPython_GetValueObjectSPFromSBValue(void *data);
@@ -531,6 +533,9 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
       m_pty_secondary_is_open(false), m_valid_session(true), m_lock_count(0),
       m_command_thread_state(nullptr) {
   InitializePrivate();
+
+  m_scripted_process_interface_up =
+      std::make_unique<ScriptedProcessPythonInterface>(*this);
 
   m_dictionary_name.append("_dict");
   StreamString run_string;
@@ -1703,35 +1708,6 @@ StructuredData::ArraySP ScriptInterpreterPythonImpl::OSPlugin_ThreadsInfo(
   }
   return StructuredData::ArraySP();
 }
-
-// GetPythonValueFormatString provides a system independent type safe way to
-// convert a variable's type into a python value format. Python value formats
-// are defined in terms of builtin C types and could change from system to as
-// the underlying typedef for uint* types, size_t, off_t and other values
-// change.
-
-template <typename T> const char *GetPythonValueFormatString(T t);
-template <> const char *GetPythonValueFormatString(char *) { return "s"; }
-template <> const char *GetPythonValueFormatString(char) { return "b"; }
-template <> const char *GetPythonValueFormatString(unsigned char) {
-  return "B";
-}
-template <> const char *GetPythonValueFormatString(short) { return "h"; }
-template <> const char *GetPythonValueFormatString(unsigned short) {
-  return "H";
-}
-template <> const char *GetPythonValueFormatString(int) { return "i"; }
-template <> const char *GetPythonValueFormatString(unsigned int) { return "I"; }
-template <> const char *GetPythonValueFormatString(long) { return "l"; }
-template <> const char *GetPythonValueFormatString(unsigned long) {
-  return "k";
-}
-template <> const char *GetPythonValueFormatString(long long) { return "L"; }
-template <> const char *GetPythonValueFormatString(unsigned long long) {
-  return "K";
-}
-template <> const char *GetPythonValueFormatString(float t) { return "f"; }
-template <> const char *GetPythonValueFormatString(double t) { return "d"; }
 
 StructuredData::StringSP
 ScriptInterpreterPythonImpl::OSPlugin_RegisterContextData(

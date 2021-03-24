@@ -3990,7 +3990,7 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
                                                  NewOps, Q, MaxRecurse - 1));
 
-    if (auto *SI = dyn_cast<SelectInst>(I))
+    if (isa<SelectInst>(I))
       return PreventSelfSimplify(
           SimplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q,
                              MaxRecurse - 1));

@@ -54,7 +54,7 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x0
+# CHECK-NEXT:             Minimum:         0x0
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           foo
 # CHECK-NEXT:         Kind:            FUNCTION
@@ -66,20 +66,20 @@ call_indirect_explicit_tables:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
-# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:           Minimum:         0x0
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         ElemType:        EXTERNREF
 # CHECK-NEXT:         Limits:
-# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:           Minimum:         0x0
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
 # CHECK-NEXT:           Flags:           [ HAS_MAX ]
-# CHECK-NEXT:           Initial:         0x3
+# CHECK-NEXT:           Minimum:         0x3
 # CHECK-NEXT:           Maximum:         0x3
 # CHECK-NEXT:   - Type:            MEMORY
 # CHECK-NEXT:     Memories:
-# CHECK-NEXT:       - Initial:         0x2
+# CHECK-NEXT:       - Minimum:         0x2
 # CHECK-NEXT:   - Type:            GLOBAL
 # CHECK-NEXT:     Globals:
 # CHECK-NEXT:       - Index:           0

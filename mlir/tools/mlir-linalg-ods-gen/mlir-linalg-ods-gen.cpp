@@ -2075,8 +2075,8 @@ void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
     void {0}::getCanonicalizationPatterns(
         RewritePatternSet &results,
         MLIRContext *context) {{
-      results.add<EraseDeadLinalgOp>();
-      results.add<FoldTensorCastOp>();
+      results.add<EraseDeadLinalgOp>(context);
+      results.add<FoldTensorCastOp>(context);
     }
     LogicalResult {0}::fold(ArrayRef<Attribute>,
                             SmallVectorImpl<OpFoldResult> &) {{

@@ -135,6 +135,15 @@ void UnmapFromTo(uptr from, uptr to);
 uptr MapDynamicShadow(uptr shadow_size_bytes, uptr shadow_scale,
                       uptr min_shadow_base_alignment, uptr &high_mem_end);
 
+// Let S = max(shadow_size, num_aliases * alias_size, ring_buffer_size).
+// Reserves 2*S bytes of address space to the right of the returned address and
+// ring_buffer_size bytes to the left.  The returned address is aligned to 2*S.
+// Also creates num_aliases regions of accessible memory starting at offset S
+// from the returned address.  Each region has size alias_size and is backed by
+// the same physical memory.
+uptr MapDynamicShadowAndAliases(uptr shadow_size, uptr alias_size,
+                                uptr num_aliases, uptr ring_buffer_size);
+
 // Reserve memory range [beg, end]. If madvise_shadow is true then apply
 // madvise (e.g. hugepages, core dumping) requested by options.
 void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,

@@ -51,7 +51,7 @@ test0:
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
 # BIN64-NEXT:         Flags:           [ IS_64 ]
-# BIN-NEXT:           Initial:         0x1
+# BIN-NEXT:           Minimum:         0x1
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            DATACOUNT

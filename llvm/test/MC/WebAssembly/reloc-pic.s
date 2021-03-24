@@ -62,7 +62,7 @@ hidden_func:
 # CHECK-NEXT:         Field:           __linear_memory
 # CHECK-NEXT:         Kind:            MEMORY
 # CHECK-NEXT:         Memory:
-# CHECK-NEXT:           Initial:         0x1
+# CHECK-NEXT:           Minimum:         0x1
 # CHECK-NEXT:       - Module:          env
 # CHECK-NEXT:         Field:           default_func
 # CHECK-NEXT:         Kind:            FUNCTION
@@ -74,7 +74,7 @@ hidden_func:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x1
+# CHECK-NEXT:             Minimum:         0x1
 # CHECK-NEXT:       - Module:          GOT.mem
 # CHECK-NEXT:         Field:           default_data
 # CHECK-NEXT:         Kind:            GLOBAL

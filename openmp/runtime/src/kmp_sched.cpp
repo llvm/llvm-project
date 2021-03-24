@@ -167,6 +167,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
                               "signed?<%s>, loc = %%s\n",
                               traits_t<T>::spec, traits_t<T>::spec,
                               traits_t<ST>::spec, traits_t<T>::spec);
+      check_loc(loc);
       KD_TRACE(100,
                (buff, *plastiter, *plower, *pupper, *pstride, loc->psource));
       __kmp_str_free(&buff);
