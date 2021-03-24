@@ -1083,8 +1083,15 @@ bool Pattern::parsePattern(StringRef PatternStr, StringRef Prefix,
           if (IsPseudo) {
             MatchStr = OrigMatchStr;
             IsLegacyLineExpr = IsNumBlock = true;
-          } else
+          } else {
+            if (!MatchStr.empty()) {
+              SM.PrintMessage(SMLoc::getFromPointer(Name.data()),
+                              SourceMgr::DK_Error,
+                              "invalid name in string variable use");
+              return true;
+            }
             SubstStr = Name;
+          }
         }
       }
 
