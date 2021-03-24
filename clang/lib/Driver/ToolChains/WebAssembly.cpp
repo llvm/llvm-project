@@ -294,6 +294,36 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+exception-handling");
   }
+
+  for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
+    StringRef Opt = A->getValue(0);
+    if (Opt.startswith("-emscripten-cxx-exceptions-allowed")) {
+      // '-mllvm -emscripten-cxx-exceptions-allowed' should be used with
+      // '-mllvm -enable-emscripten-cxx-exceptions'
+      bool EmExceptionArgExists = false;
+      for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
+        if (StringRef(A->getValue(0)) == "-enable-emscripten-cxx-exceptions") {
+          EmExceptionArgExists = true;
+          break;
+        }
+      }
+      if (!EmExceptionArgExists)
+        getDriver().Diag(diag::err_drv_argument_only_allowed_with)
+            << "-mllvm -emscripten-cxx-exceptions-allowed"
+            << "-mllvm -enable-emscripten-cxx-exceptions";
+
+      // Prevent functions specified in -emscripten-cxx-exceptions-allowed list
+      // from being inlined before reaching the wasm backend.
+      StringRef FuncNamesStr = Opt.split('=').second;
+      SmallVector<StringRef, 4> FuncNames;
+      FuncNamesStr.split(FuncNames, ',');
+      for (auto Name : FuncNames) {
+        CC1Args.push_back("-mllvm");
+        CC1Args.push_back(DriverArgs.MakeArgString("--force-attribute=" + Name +
+                                                   ":noinline"));
+      }
+    }
+  }
 }
 
 ToolChain::RuntimeLibType WebAssembly::GetDefaultRuntimeLibType() const {
