@@ -975,7 +975,6 @@ met. Multiple instructions can be issued in one cycle according to the value of
 the ``IssueWidth`` parameter in LLVM's scheduling model.
 
 Once issued, an instruction is moved to ``IssuedInst`` set until it is ready to
-retire. If ``RetireControlUnit`` is defined in the LLVM's scheduling model,
-:program:`llvm-mca` ensures that instructions are retired in-order. However, an
-instruction is allowed to retire out-of-order if ``RetireOOO`` property is true
-for at least one of its writes.
+retire. :program:`llvm-mca` ensures that writes are committed in-order. However,
+an instruction is allowed to commit writes and retire out-of-order if
+``RetireOOO`` property is true for at least one of its writes.
