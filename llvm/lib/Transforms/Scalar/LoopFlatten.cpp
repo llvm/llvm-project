@@ -190,8 +190,7 @@ static bool findLoopComponents(
   return true;
 }
 
-static bool checkPHIs(struct FlattenInfo &FI,
-                      const TargetTransformInfo *TTI) {
+static bool checkPHIs(FlattenInfo &FI, const TargetTransformInfo *TTI) {
   // All PHIs in the inner and outer headers must either be:
   // - The induction PHI, which we are going to rewrite as one induction in
   //   the new loop. This is already checked by findLoopComponents.
@@ -272,7 +271,7 @@ static bool checkPHIs(struct FlattenInfo &FI,
 }
 
 static bool
-checkOuterLoopInsts(struct FlattenInfo &FI,
+checkOuterLoopInsts(FlattenInfo &FI,
                     SmallPtrSetImpl<Instruction *> &IterationInstructions,
                     const TargetTransformInfo *TTI) {
   // Check for instructions in the outer but not inner loop. If any of these
@@ -330,7 +329,7 @@ checkOuterLoopInsts(struct FlattenInfo &FI,
   return true;
 }
 
-static bool checkIVUsers(struct FlattenInfo &FI) {
+static bool checkIVUsers(FlattenInfo &FI) {
   // We require all uses of both induction variables to match this pattern:
   //
   //   (OuterPHI * InnerLimit) + InnerPHI
@@ -426,8 +425,8 @@ static bool checkIVUsers(struct FlattenInfo &FI) {
 
 // Return an OverflowResult dependant on if overflow of the multiplication of
 // InnerLimit and OuterLimit can be assumed not to happen.
-static OverflowResult checkOverflow(struct FlattenInfo &FI,
-                                    DominatorTree *DT, AssumptionCache *AC) {
+static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
+                                    AssumptionCache *AC) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();
 
@@ -465,9 +464,9 @@ static OverflowResult checkOverflow(struct FlattenInfo &FI,
   return OverflowResult::MayOverflow;
 }
 
-static bool CanFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                               LoopInfo *LI, ScalarEvolution *SE,
-                               AssumptionCache *AC, const TargetTransformInfo *TTI) {
+static bool CanFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                               ScalarEvolution *SE, AssumptionCache *AC,
+                               const TargetTransformInfo *TTI) {
   SmallPtrSet<Instruction *, 8> IterationInstructions;
   if (!findLoopComponents(FI.InnerLoop, IterationInstructions, FI.InnerInductionPHI,
                           FI.InnerLimit, FI.InnerIncrement, FI.InnerBranch, SE))
@@ -509,9 +508,8 @@ static bool CanFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
   return true;
 }
 
-static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              AssumptionCache *AC,
+static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, AssumptionCache *AC,
                               const TargetTransformInfo *TTI) {
   Function *F = FI.OuterLoop->getHeader()->getParent();
   LLVM_DEBUG(dbgs() << "Checks all passed, doing the transformation\n");
@@ -572,9 +570,9 @@ static bool DoFlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
   return true;
 }
 
-static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
-                       LoopInfo *LI, ScalarEvolution *SE,
-                       AssumptionCache *AC, const TargetTransformInfo *TTI) {
+static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                       ScalarEvolution *SE, AssumptionCache *AC,
+                       const TargetTransformInfo *TTI) {
   if (!WidenIV) {
     LLVM_DEBUG(dbgs() << "Widening the IVs is disabled\n");
     return false;
@@ -622,9 +620,8 @@ static bool CanWidenIV(struct FlattenInfo &FI, DominatorTree *DT,
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 }
 
-static bool FlattenLoopPair(struct FlattenInfo &FI, DominatorTree *DT,
-                            LoopInfo *LI, ScalarEvolution *SE,
-                            AssumptionCache *AC,
+static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
+                            ScalarEvolution *SE, AssumptionCache *AC,
                             const TargetTransformInfo *TTI) {
   LLVM_DEBUG(
       dbgs() << "Loop flattening running on outer loop "
@@ -664,7 +661,7 @@ bool Flatten(DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)
       continue;
-    struct FlattenInfo FI(OuterLoop, InnerLoop);
+    FlattenInfo FI(OuterLoop, InnerLoop);
     Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI);
   }
   return Changed;
