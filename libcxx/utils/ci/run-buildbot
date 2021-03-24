@@ -86,14 +86,14 @@ function generate-cmake() {
 }
 
 function check-cxx-cxxabi() {
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
     echo "+++ Running the libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
-
-    echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
@@ -183,6 +183,13 @@ generic-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
+generic-static)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake"
+    check-cxx-cxxabi
+;;
 generic-32bit)
     export CC=clang
     export CXX=clang++
@@ -194,9 +201,7 @@ generic-gcc)
     export CC=gcc
     export CXX=g++
     clean
-    # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
-    #        in which we link -lc++experimental, which causes issues.
-    generate-cmake -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    generate-cmake
     check-cxx-cxxabi
 ;;
 generic-asan)
