@@ -16,5 +16,6 @@ static_library("altera") {
     "KernelNameRestrictionCheck.cpp",
     "SingleWorkItemBarrierCheck.cpp",
     "StructPackAlignCheck.cpp",
+    "UnrollLoopsCheck.cpp",
   ]
 }
