@@ -176,8 +176,11 @@ static bool findLoopComponents(
   LLVM_DEBUG(dbgs() << "Found limit: "; Limit->dump());
 
   assert(InductionPHI->getNumIncomingValues() == 2);
-  assert(InductionPHI->getIncomingValueForBlock(Latch) == Increment &&
-         "PHI value is not increment inst");
+
+  if (InductionPHI->getIncomingValueForBlock(Latch) != Increment) {
+    LLVM_DEBUG(dbgs() << "PHI value is not increment inst");
+    return false;
+  }
 
   auto *CI = dyn_cast<ConstantInt>(
       InductionPHI->getIncomingValueForBlock(L->getLoopPreheader()));
