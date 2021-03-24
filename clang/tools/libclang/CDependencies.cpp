@@ -101,7 +101,7 @@ public:
   }
 
   void handleModuleDependency(ModuleDeps MD) override {
-    ClangModuleDeps[MD.ContextHash + MD.ModuleName] = std::move(MD);
+    ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
   }
 
   void handleContextHash(std::string Hash) override {
@@ -111,14 +111,14 @@ public:
   FullDependenciesResult getFullDependencies() const {
     FullDependencies FD;
 
-    FD.ContextHash = std::move(ContextHash);
+    FD.ID.ContextHash = std::move(ContextHash);
 
     FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
     for (auto &&M : ClangModuleDeps) {
       auto &MD = M.second;
       if (MD.ImportedByMainFile)
-        FD.ClangModuleDeps.push_back({MD.ModuleName, ContextHash});
+        FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
     }
 
     FD.AdditionalNonPathCommandLine = {
@@ -175,13 +175,13 @@ static CXFileDependencies *getFullDependencies(
     for (int I = 0; I < MDS->Count; ++I) {
       CXModuleDependency &M = MDS->Modules[I];
       const ModuleDeps &MD = FDR.DiscoveredModules[I];
-      M.Name = cxstring::createDup(MD.ModuleName);
-      M.ContextHash = cxstring::createDup(MD.ContextHash);
+      M.Name = cxstring::createDup(MD.ID.ModuleName);
+      M.ContextHash = cxstring::createDup(MD.ID.ContextHash);
       M.ModuleMapPath = cxstring::createDup(MD.ClangModuleMapFile);
       M.FileDeps = cxstring::createSet(MD.FileDeps);
       std::vector<std::string> Modules;
-      for (const ClangModuleDep &CMD : MD.ClangModuleDeps)
-        Modules.push_back(CMD.ModuleName + ":" + CMD.ContextHash);
+      for (const ModuleID &MID : MD.ClangModuleDeps)
+        Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
       M.ModuleDeps = cxstring::createSet(Modules);
       M.BuildArguments = cxstring::createSet(MD.NonPathCommandLine);
     }
@@ -190,11 +190,11 @@ static CXFileDependencies *getFullDependencies(
 
   const FullDependencies &FD = FDR.FullDeps;
   CXFileDependencies *FDeps = new CXFileDependencies;
-  FDeps->ContextHash = cxstring::createDup(FD.ContextHash);
+  FDeps->ContextHash = cxstring::createDup(FD.ID.ContextHash);
   FDeps->FileDeps = cxstring::createSet(FD.FileDeps);
   std::vector<std::string> Modules;
-  for (const ClangModuleDep &CMD : FD.ClangModuleDeps)
-    Modules.push_back(CMD.ModuleName + ":" + CMD.ContextHash);
+  for (const ModuleID &MID : FD.ClangModuleDeps)
+    Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   FDeps->ModuleDeps = cxstring::createSet(Modules);
   FDeps->AdditionalArguments =
     cxstring::createSet(FD.AdditionalNonPathCommandLine);

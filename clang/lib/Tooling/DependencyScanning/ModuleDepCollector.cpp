@@ -163,7 +163,7 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
       });
   MD.NonPathCommandLine = {
     "-remove-preceeding-explicit-module-build-incompatible-options",
-    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ModuleName,
+    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ID.ModuleName,
   };
   
   if (M->IsSystem)
