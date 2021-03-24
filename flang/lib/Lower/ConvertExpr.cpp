@@ -1423,7 +1423,7 @@ public:
           Fortran::evaluate::Expr<Fortran::evaluate::SomeType>>(arg);
       if (!expr) {
         // Absent optional.
-        operands.emplace_back(fir::UnboxedValue{});
+        operands.emplace_back(Fortran::lower::getAbsentIntrinsicArgument());
         continue;
       }
       if (!argLowering) {

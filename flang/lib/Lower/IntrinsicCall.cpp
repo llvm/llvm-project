@@ -95,6 +95,15 @@ enum class ExtremumBehavior {
   // possible to implement it without some target dependent runtime.
 };
 
+fir::ExtendedValue Fortran::lower::getAbsentIntrinsicArgument() {
+  return fir::UnboxedValue{};
+}
+
+/// Helper to test if an intrinsic argument is absent.
+static bool isAbsent(const fir::ExtendedValue &exv) {
+  return !fir::getBase(exv);
+}
+
 // TODO error handling -> return a code or directly emit messages ?
 struct IntrinsicLibrary {
 
@@ -135,6 +144,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAllocated(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAssociated(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -234,10 +245,7 @@ struct Fortran::lower::IntrinsicArgumentLoweringRules {
   constexpr bool hasDefaultRules() const { return args[0].name == nullptr; }
 };
 
-/// Table that drives the fir generation depending on the intrinsic.
-/// one to one mapping with Fortran arguments. If no mapping is
-/// defined here for a generic intrinsic, genRuntimeCall will be called
-/// to look for a match in the runtime a emit a call.
+/// Structure describing what needs to be done to lower intrinsic "name".
 struct IntrinsicHandler {
   const char *name;
   IntrinsicLibrary::Generator generator;
@@ -252,6 +260,14 @@ constexpr auto asInquired = Fortran::lower::LowerIntrinsicArgAs::Inquired;
 constexpr auto asAddr = Fortran::lower::LowerIntrinsicArgAs::Addr;
 constexpr auto asValue = Fortran::lower::LowerIntrinsicArgAs::Value;
 using I = IntrinsicLibrary;
+
+/// Table that drives the fir generation depending on the intrinsic.
+/// one to one mapping with Fortran arguments. If no mapping is
+/// defined here for a generic intrinsic, genRuntimeCall will be called
+/// to look for a match in the runtime a emit a call. Note that the argument
+/// lowering rules for an intrinsic need to be provided only if at least one
+/// argument must not be lowered by value. In which case, the lowering rules
+/// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
     {"achar", &I::genChar},
@@ -262,6 +278,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asInquired}, {"scalar", asInquired}}},
      /*isElemental=*/false},
     {"anint", &I::genAnint},
+    {"associated",
+     &I::genAssociated,
+     {{{"pointer", asInquired}, {"target", asInquired}}},
+     /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"conjg", &I::genConjg},
@@ -1121,7 +1141,8 @@ IntrinsicLibrary::genAllocated(mlir::Type resultType,
         return Fortran::lower::genIsAllocatedOrAssociatedTest(builder, loc, x);
       },
       [&](const auto &) -> fir::ExtendedValue {
-        fir::emitFatalError(loc, "allocate arg not lowered to MutableBoxValue");
+        fir::emitFatalError(loc,
+                            "allocated arg not lowered to MutableBoxValue");
       });
 }
 
@@ -1132,6 +1153,25 @@ mlir::Value IntrinsicLibrary::genAnint(mlir::Type resultType,
   // Skip optional kind argument to search the runtime; it is already reflected
   // in result type.
   return genRuntimeCall("anint", resultType, {args[0]});
+}
+
+// ASSOCIATED
+fir::ExtendedValue
+IntrinsicLibrary::genAssociated(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  // TODO: Runtime would be better to deal with all the cases with TARGET
+  // arguments.
+  if (!isAbsent(args[1]))
+    TODO(loc, "ASSOCIATED intrinsic with TARGET argument");
+  return args[0].match(
+      [&](const fir::MutableBoxValue &x) -> fir::ExtendedValue {
+        return Fortran::lower::genIsAllocatedOrAssociatedTest(builder, loc, x);
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc,
+                            "associated arg not lowered to MutableBoxValue");
+      });
 }
 
 // AINT

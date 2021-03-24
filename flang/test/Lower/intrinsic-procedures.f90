@@ -49,7 +49,7 @@ end subroutine
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>,
 ! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>)
 subroutine allocated_test(scalar, array)
-  real, allocatable  :: scalar, array(:) 
+  real, allocatable  :: scalar, array(:)
   ! CHECK: %[[scalar:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr0:.*]] = fir.box_addr %[[scalar]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[addrToInt0:.*]] = fir.convert %[[addr0]]
@@ -68,6 +68,24 @@ subroutine anint_test(a, b)
   real :: a, b
   ! CHECK: fir.call @llvm.round.f32
   b = anint(a)
+end subroutine
+
+! ASSOCIATED
+! CHECK-LABEL: associated_test
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>>,
+! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+subroutine associated_test(scalar, array)
+  real, pointer  :: scalar, array(:)
+  ! CHECK: %[[scalar:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[addr0:.*]] = fir.box_addr %[[scalar]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
+  ! CHECK: %[[addrToInt0:.*]] = fir.convert %[[addr0]]
+  ! CHECK: cmpi ne, %[[addrToInt0]], %c0{{.*}}
+  print *, associated(scalar)
+  ! CHECK: %[[array:.*]] = fir.load %[[arg1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[addr1:.*]] = fir.box_addr %[[array]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+  ! CHECK: %[[addrToInt1:.*]] = fir.convert %[[addr1]]
+  ! CHECK: cmpi ne, %[[addrToInt1]], %c0{{.*}}
+  print *, associated(array)
 end subroutine
 
 ! DBLE
@@ -112,8 +130,8 @@ subroutine dprod_test (x, y, z)
   z = dprod(x,y)
   ! CHECK-DAG: %[[x:.*]] = fir.load %arg0
   ! CHECK-DAG: %[[y:.*]] = fir.load %arg1
-  ! CHECK-DAG: %[[a:.*]] = fir.convert %[[x]] : (f32) -> f64 
-  ! CHECK-DAG: %[[b:.*]] = fir.convert %[[y]] : (f32) -> f64 
+  ! CHECK-DAG: %[[a:.*]] = fir.convert %[[x]] : (f32) -> f64
+  ! CHECK-DAG: %[[b:.*]] = fir.convert %[[y]] : (f32) -> f64
   ! CHECK: %[[res:.*]] = mulf %[[a]], %[[b]]
   ! CHECK: fir.store %[[res]] to %arg2
 end subroutine
@@ -203,7 +221,7 @@ subroutine ichar_test(c)
   ! CHECK-DAG: %[[unbox:.*]]:2 = fir.unboxchar
   ! CHECK-DAG: %[[J:.*]] = fir.alloca i32 {name = "{{.*}}Ej"}
   ! CHECK-DAG: %[[STR:.*]] = fir.alloca !fir.array{{.*}} {name = "{{.*}}Estr"}
-  ! CHECK: %[[BOX:.*]] = fir.convert %[[unbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>> 
+  ! CHECK: %[[BOX:.*]] = fir.convert %[[unbox]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1>>
   ! CHECK: %[[CHAR:.*]] = fir.load %[[BOX]] : !fir.ref<!fir.char<1>>
   ! CHECK: fir.extract_value %[[CHAR]], %c0{{.*}}
   print *, ichar(c)
@@ -228,7 +246,7 @@ end subroutine ieor_test
 ! INDEX
 ! CHECK-LABEL: func @_QPindex_test(%
 ! CHECK-SAME: [[s:[^:]+]]: !fir.boxchar<1>, %
-! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32 
+! CHECK-SAME: [[ss:[^:]+]]: !fir.boxchar<1>) -> i32
 integer function index_test(s1, s2)
   character(*) :: s1, s2
   ! CHECK: %[[st:[^:]*]]:2 = fir.unboxchar %[[s]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)

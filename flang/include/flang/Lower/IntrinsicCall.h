@@ -63,6 +63,9 @@ LowerIntrinsicArgAs
 lowerIntrinsicArgumentAs(mlir::Location, const IntrinsicArgumentLoweringRules &,
                          llvm::StringRef argName);
 
+/// Return place-holder for absent intrinsic arguments.
+fir::ExtendedValue getAbsentIntrinsicArgument();
+
 /// Get SymbolRefAttr of runtime (or wrapper function containing inlined
 // implementation) of an unrestricted intrinsic (defined by its signature
 // and generic name)
