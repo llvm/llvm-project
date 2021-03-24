@@ -813,6 +813,9 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
   if (!MDNodes.insert(&MD).second)
     return;
 
+  Assert(&MD.getContext() == &Context,
+         "MDNode context does not match Module context!", &MD);
+
   switch (MD.getMetadataID()) {
   default:
     llvm_unreachable("Invalid MDNode subclass");
