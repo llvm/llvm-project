@@ -125,6 +125,11 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttributes(),
                          OldAttrs.getRetAttributes(), NewArgAttrs));
 
+  // Everything else beyond this point deals with function instructions,
+  // so if we are dealing with a function declaration, we're done.
+  if (OldFunc->isDeclaration())
+    return;
+
   // When we remap instructions within the same module, we want to avoid
   // duplicating inlined DISubprograms, so record all subprograms we find as we
   // duplicate instructions and then freeze them in the MD map. We also record
@@ -149,7 +154,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   } else {
     assert((NewFunc->getParent() == nullptr ||
             NewFunc->getParent() != OldFunc->getParent()) &&
-           "Set SameModule to true if the new function is in the same module");
+           "Expected NewFunc to have different parents, or no parent");
 
     if (Changes == CloneFunctionChangeType::DifferentModule) {
       assert(NewFunc->getParent() &&
@@ -159,11 +164,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       DIFinder.emplace();
     }
   }
-
-  // Everything else beyond this point deals with function instructions,
-  // so if we are dealing with a function declaration, we're done.
-  if (OldFunc->isDeclaration())
-    return;
 
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.  Note that we save BE this way in order to handle cloning of
