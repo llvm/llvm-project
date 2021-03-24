@@ -3033,8 +3033,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   BasicBlock *BB = BI->getParent();
 
-  const unsigned PredCount = pred_size(BB);
-
   bool Changed = false;
 
   TargetTransformInfo::TargetCostKind CostKind =
@@ -3046,32 +3044,6 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   if (!Cond || (!isa<CmpInst>(Cond) && !isa<BinaryOperator>(Cond)) ||
       Cond->getParent() != BB || !Cond->hasOneUse())
     return Changed;
-
-  // Only allow this transformation if computing the condition doesn't involve
-  // too many instructions and these involved instructions can be executed
-  // unconditionally. We denote all involved instructions except the condition
-  // as "bonus instructions", and only allow this transformation when the
-  // number of the bonus instructions we'll need to create when cloning into
-  // each predecessor does not exceed a certain threshold.
-  unsigned NumBonusInsts = 0;
-  for (Instruction &I : *BB) {
-    // Don't check the branch condition comparison itself.
-    if (&I == Cond)
-      continue;
-    // Ignore dbg intrinsics, and the terminator.
-    if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
-      continue;
-    // I must be safe to execute unconditionally.
-    if (!isSafeToSpeculativelyExecute(&I))
-      return Changed;
-
-    // Account for the cost of duplicating this instruction into each
-    // predecessor.
-    NumBonusInsts += PredCount;
-    // Early exits once we reach the limit.
-    if (NumBonusInsts > BonusInstThreshold)
-      return Changed;
-  }
 
   // Cond is known to be a compare or binary operator.  Check to make sure that
   // neither operand is a potentially-trapping constant expression.
@@ -3086,6 +3058,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   if (is_contained(successors(BB), BB))
     return Changed;
 
+  // With which predecessors will we want to deal with?
+  SmallVector<BasicBlock *, 8> Preds;
   for (BasicBlock *PredBlock : predecessors(BB)) {
     BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
 
@@ -3116,6 +3090,40 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
         continue;
     }
 
+    // Ok, we do want to deal with this predecessor. Record it.
+    Preds.emplace_back(PredBlock);
+  }
+
+  const unsigned PredCount = Preds.size();
+  // Only allow this transformation if computing the condition doesn't involve
+  // too many instructions and these involved instructions can be executed
+  // unconditionally. We denote all involved instructions except the condition
+  // as "bonus instructions", and only allow this transformation when the
+  // number of the bonus instructions we'll need to create when cloning into
+  // each predecessor does not exceed a certain threshold.
+  unsigned NumBonusInsts = 0;
+  for (Instruction &I : *BB) {
+    // Don't check the branch condition comparison itself.
+    if (&I == Cond)
+      continue;
+    // Ignore dbg intrinsics, and the terminator.
+    if (isa<DbgInfoIntrinsic>(I) || isa<BranchInst>(I))
+      continue;
+    // I must be safe to execute unconditionally.
+    if (!isSafeToSpeculativelyExecute(&I))
+      return Changed;
+
+    // Account for the cost of duplicating this instruction into each
+    // predecessor.
+    NumBonusInsts += PredCount;
+    // Early exits once we reach the limit.
+    if (NumBonusInsts > BonusInstThreshold)
+      return Changed;
+  }
+
+  // Ok, we have the budget. Perform the transformation.
+  for (BasicBlock *PredBlock : Preds) {
+    auto *PBI = cast<BranchInst>(PredBlock->getTerminator());
     return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, PoisonSafe,
                                             TTI);
   }
