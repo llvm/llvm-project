@@ -51,6 +51,8 @@
 #define KMP_COMPILER "Intel(R) C++ Compiler 18.0"
 #elif __INTEL_COMPILER == 1900
 #define KMP_COMPILER "Intel(R) C++ Compiler 19.0"
+#elif __INTEL_COMPILER == 1910
+#define KMP_COMPILER "Intel(R) C++ Compiler 19.1"
 #elif __INTEL_COMPILER >= 9900
 #define KMP_COMPILER "Intel(R) C++ Compiler mainline"
 #endif

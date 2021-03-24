@@ -700,6 +700,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

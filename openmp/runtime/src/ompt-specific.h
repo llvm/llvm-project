@@ -103,7 +103,8 @@ inline kmp_info_t *ompt_get_thread() {
 }
 
 inline void ompt_set_thread_state(kmp_info_t *thread, ompt_state_t state) {
-  thread->th.ompt_thread_info.state = state;
+  if (thread)
+    thread->th.ompt_thread_info.state = state;
 }
 
 inline const char *ompt_get_runtime_version() {
