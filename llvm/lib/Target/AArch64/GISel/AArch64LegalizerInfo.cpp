@@ -702,7 +702,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
 
-  getActionDefinitionsBuilder({G_SBFX, G_UBFX}).legalFor({s32, s64});
+  getActionDefinitionsBuilder({G_SBFX, G_UBFX}).customFor({s32, s64});
+
   computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -729,6 +730,9 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
   case TargetOpcode::G_TRUNC:
     return legalizeVectorTrunc(MI, Helper);
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
+    return legalizeBitfieldExtract(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -947,4 +951,12 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool AArch64LegalizerInfo::legalizeBitfieldExtract(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  // Only legal if we can select immediate forms.
+  // TODO: Lower this otherwise.
+  return getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
+         getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
 }
