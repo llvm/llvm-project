@@ -12,6 +12,7 @@
 #include "KernelNameRestrictionCheck.h"
 #include "SingleWorkItemBarrierCheck.h"
 #include "StructPackAlignCheck.h"
+#include "UnrollLoopsCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -28,6 +29,7 @@ public:
         "altera-single-work-item-barrier");
     CheckFactories.registerCheck<StructPackAlignCheck>(
         "altera-struct-pack-align");
+    CheckFactories.registerCheck<UnrollLoopsCheck>("altera-unroll-loops");
   }
 };
 
