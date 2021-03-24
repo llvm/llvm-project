@@ -2420,15 +2420,17 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     llvm_unreachable("Unsupported architexture");
 
   row->GetCFAValue().SetIsDWARFExpression(expr, expr_size);
-  // The first "shard" of an async fucntion split into coroutines will take its
-  // context directly in r14 when called. The other "shards", which have
-  // .resume. in their names take the parent pointer in the ABI context register
-  // and thus it needs to be dereferenced to get to the context for the
-  // function. The debug info for locals reflects this difference, so our
-  // unwinding of the context reister needs to reflect it too.
-  bool in_resume_function =
-      sc.symbol->GetName().GetStringRef().contains(".resume.");
-  if (in_resume_function) {
+  // The coroutine funclets split from an async function have 2 different ABIs:
+  //  - Async suspend partial functions and the first funclet get their async
+  //    context directly in the async register.
+  //  - Async await resume partial functions take their context indirectly, it
+  //    needs to be dereferenced to get the actual function's context.
+  // The debug info for locals reflects this difference, so our unwinding of the
+  // context reister needs to reflect it too.
+  bool indirect_context = IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+      sc.symbol->GetMangled().GetMangledName().GetStringRef());
+
+  if (indirect_context) {
     // In a "resume" coroutine, the passed context argument needs to be
     // dereferenced once to get the context. This is reflected in the debug
     // info so we need to account for it and report am async register value
