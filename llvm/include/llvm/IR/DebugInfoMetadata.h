@@ -2582,11 +2582,10 @@ public:
     return Elements[I];
   }
 
-  /// Determine whether this represents a standalone constant value.
-  bool isConstant() const;
-
-  /// Determine whether this represents a standalone signed constant value.
-  bool isSignedConstant() const;
+  enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
+  /// Determine whether this represents a constant value, if so
+  // return it's sign information.
+  llvm::Optional<SignedOrUnsignedConstant> isConstant() const;
 
   using element_iterator = ArrayRef<uint64_t>::iterator;
 
