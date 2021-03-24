@@ -292,7 +292,10 @@ public:
   unsigned getRegUsageForType(Type *Ty) const { return 1; }
 
   bool shouldBuildLookupTables() const { return true; }
+
   bool shouldBuildLookupTablesForConstant(Constant *C) const { return true; }
+
+  bool shouldBuildRelLookupTables() const { return true; }
 
   bool useColdCCForColdCall(Function &F) const { return false; }
 
