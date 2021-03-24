@@ -2403,22 +2403,25 @@ static bool markAliveBlocks(Function &F,
                                              E = CatchSwitch->handler_end();
            I != E; ++I) {
         BasicBlock *HandlerBB = *I;
-        ++NumPerSuccessorCases[HandlerBB];
+        if (DTU)
+          ++NumPerSuccessorCases[HandlerBB];
         auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
         if (!HandlerSet.insert({CatchPad, Empty}).second) {
-          --NumPerSuccessorCases[HandlerBB];
+          if (DTU)
+            --NumPerSuccessorCases[HandlerBB];
           CatchSwitch->removeHandler(I);
           --I;
           --E;
           Changed = true;
         }
       }
-      std::vector<DominatorTree::UpdateType> Updates;
-      for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
-        if (I.second == 0)
-          Updates.push_back({DominatorTree::Delete, BB, I.first});
-      if (DTU)
+      if (DTU) {
+        std::vector<DominatorTree::UpdateType> Updates;
+        for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          if (I.second == 0)
+            Updates.push_back({DominatorTree::Delete, BB, I.first});
         DTU->applyUpdates(Updates);
+      }
     }
 
     Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);
