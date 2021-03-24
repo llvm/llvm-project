@@ -70,7 +70,7 @@ private:
   ExecutionSession &ES;
 
   using OwnedDebugObject = std::unique_ptr<DebugObject>;
-  std::map<ResourceKey, OwnedDebugObject> PendingObjs;
+  std::map<MaterializationResponsibility *, OwnedDebugObject> PendingObjs;
   std::map<ResourceKey, std::vector<OwnedDebugObject>> RegisteredObjs;
 
   std::mutex PendingObjsLock;
