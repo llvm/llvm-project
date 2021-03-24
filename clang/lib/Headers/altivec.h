@@ -11636,6 +11636,12 @@ static __inline__ vector signed __int128 __ATTRS_o_ai
 vec_subc(vector signed __int128 __a, vector signed __int128 __b) {
   return __builtin_altivec_vsubcuq(__a, __b);
 }
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_subc_u128(vector unsigned char __a, vector unsigned char __b) {
+  return (vector unsigned char)__builtin_altivec_vsubcuq(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b);
+}
 #endif // defined(__POWER8_VECTOR__) && defined(__powerpc64__)
 
 /* vec_vsubcuw */
@@ -11852,6 +11858,12 @@ vec_vsubuqm(vector unsigned __int128 __a, vector unsigned __int128 __b) {
   return __a - __b;
 }
 
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_sub_u128(vector unsigned char __a, vector unsigned char __b) {
+  return (vector unsigned char)((vector unsigned __int128)__a -
+                                (vector unsigned __int128)__b);
+}
+
 /* vec_vsubeuqm */
 
 
@@ -11877,6 +11889,14 @@ static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_sube(vector unsigned __int128 __a, vector unsigned __int128 __b,
              vector unsigned __int128 __c) {
   return __builtin_altivec_vsubeuqm(__a, __b, __c);
+}
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_sube_u128(vector unsigned char __a, vector unsigned char __b,
+              vector unsigned char __c) {
+  return (vector unsigned char)__builtin_altivec_vsubeuqm(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b,
+      (vector unsigned __int128)__c);
 }
 
 /* vec_vsubcuq */
@@ -11927,6 +11947,14 @@ static __inline__ vector unsigned __int128 __ATTRS_o_ai
 vec_subec(vector unsigned __int128 __a, vector unsigned __int128 __b,
              vector unsigned __int128 __c) {
   return __builtin_altivec_vsubecuq(__a, __b, __c);
+}
+
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+vec_subec_u128(vector unsigned char __a, vector unsigned char __b,
+               vector unsigned char __c) {
+  return (vector unsigned char)__builtin_altivec_vsubecuq(
+      (vector unsigned __int128)__a, (vector unsigned __int128)__b,
+      (vector unsigned __int128)__c);
 }
 #endif // defined(__POWER8_VECTOR__) && defined(__powerpc64__)
 
