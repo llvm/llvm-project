@@ -1045,7 +1045,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         if (isa<Defined>(sym))
           continue;
       error("undefined symbol " + cachedName.val() +
-            "\n>>> referenced from option -exported_symbo(s_list)");
+            "\n>>> referenced from option -exported_symbol(s_list)");
     }
 
     createSyntheticSections();
