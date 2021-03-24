@@ -20,4 +20,21 @@ define void @test1(i8* %P, i8* %Q) nounwind ssp {
 ; CHECK: NoModRef:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false) <->   tail call void @llvm.assume(i1 true)
 }
 
+; Same but with operand bundles
+define void @test2(i8* %P, i8* %Q) nounwind ssp {
+  tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ]
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+  ret void
+
+; CHECK-LABEL: Function: test2:
+
+; CHECK: MayAlias:	i8* %P, i8* %Q
+; CHECK: Both ModRef:  Ptr: i8* %P	<->  tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ]
+; CHECK: Both ModRef:  Ptr: i8* %Q	<->  tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ]
+; CHECK: Both ModRef:  Ptr: i8* %P	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+; CHECK: Both ModRef:  Ptr: i8* %Q	<->  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+; CHECK: Both ModRef:   tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ] <->   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
+; CHECK: Both ModRef:   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false) <->   tail call void @llvm.assume(i1 true) [ "nonnull"(i8* %P) ]
+}
+
 attributes #0 = { nounwind }
