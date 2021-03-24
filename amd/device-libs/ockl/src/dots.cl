@@ -40,6 +40,7 @@ __attribute__((target("dot7-insts"), const)) static uint amdgcn_udot8(uint a, ui
   else   return __builtin_amdgcn_udot8(a, b, c, false); }
 
 #define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100
+#define SWIDOT2 __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100 || __oclc_ISA_version == 11000
 
 #define AS_INT(X) __builtin_astype(X, int)
 #define AS_UINT(X) __builtin_astype(X, uint)
@@ -64,7 +65,7 @@ __ockl_fdot2(half2 a, half2 b, float c, bool s)
 ATTR int
 __ockl_sdot2(short2 a, short2 b, int c, bool s)
 {
-    if (SWDOT) {
+    if (SWIDOT2) {
         int p0 = (int)a.s0 * (int)b.s0;
         int p1 = (int)a.s1 * (int)b.s1;
         long r = (long)c + (long)p0 + (long)p1;
@@ -82,7 +83,7 @@ __ockl_sdot2(short2 a, short2 b, int c, bool s)
 ATTR uint
 __ockl_udot2(ushort2 a, ushort2 b, uint c, bool s)
 {
-    if (SWDOT) {
+    if (SWIDOT2) {
         uint p0 = (uint)a.s0 * (uint)b.s0;
         uint p1 = (uint)a.s1 * (uint)b.s1;
         ulong r = (ulong)c + (ulong)p0 + (ulong)p1;
