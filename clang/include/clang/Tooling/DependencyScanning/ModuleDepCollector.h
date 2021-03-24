@@ -28,16 +28,9 @@ namespace dependencies {
 
 class DependencyConsumer;
 
-/// This is used to refer to a specific module.
-///
-/// See \c ModuleDeps for details about what these members mean.
-struct ClangModuleDep {
-  std::string ModuleName;
-  std::string ContextHash;
-};
-
-struct ModuleDeps {
-  /// The name of the module. This may include `:` for C++20 module partitons,
+/// This is used to identify a specific module.
+struct ModuleID {
+  /// The name of the module. This may include `:` for C++20 module partitions,
   /// or a header-name for C++20 header units.
   std::string ModuleName;
 
@@ -48,6 +41,11 @@ struct ModuleDeps {
   /// Modules with the same name but a different \c ContextHash should be
   /// treated as separate modules for the purpose of a build.
   std::string ContextHash;
+};
+
+struct ModuleDeps {
+  /// The identifier of the module.
+  ModuleID ID;
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -62,12 +60,12 @@ struct ModuleDeps {
   /// on, not including transitive dependencies.
   llvm::StringSet<> FileDeps;
 
-  /// A list of modules this module directly depends on, not including
-  /// transitive dependencies.
+  /// A list of module identifiers this module directly depends on, not
+  /// including transitive dependencies.
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ClangModuleDep> ClangModuleDeps;
+  std::vector<ModuleID> ClangModuleDeps;
 
   /// A partial command line that can be used to build this module.
   ///
@@ -89,8 +87,8 @@ struct ModuleDeps {
   ///                         transitive set of dependencies for this
   ///                         compilation.
   std::vector<std::string> getFullCommandLine(
-      std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-      std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const;
+      std::function<StringRef(ModuleID)> LookupPCMPath,
+      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
 };
 
 namespace detail {
@@ -98,9 +96,9 @@ namespace detail {
 /// modules in \c Modules transitively, along with other needed arguments to
 /// use explicitly built modules.
 void appendCommonModuleArguments(
-    llvm::ArrayRef<ClangModuleDep> Modules,
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps,
+    llvm::ArrayRef<ModuleID> Modules,
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
     std::vector<std::string> &Result);
 } // namespace detail
 
