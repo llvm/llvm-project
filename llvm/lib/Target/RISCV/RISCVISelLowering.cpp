@@ -1132,6 +1132,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
+  unsigned NumElts = Op.getNumOperands();
+
   if (VT.getVectorElementType() == MVT::i1) {
     if (ISD::isBuildVectorAllZeros(Op.getNode())) {
       SDValue VMClr = DAG.getNode(RISCVISD::VMCLR_VL, DL, ContainerVT, VL);
@@ -1143,6 +1145,75 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, VMSet, DAG, Subtarget);
     }
 
+    // Lower constant mask BUILD_VECTORs via an integer vector type, in
+    // scalar integer chunks whose bit-width depends on the number of mask
+    // bits and XLEN.
+    // First, determine the most appropriate scalar integer type to use. This
+    // is at most XLenVT, but may be shrunk to a smaller vector element type
+    // according to the size of the final vector - use i8 chunks rather than
+    // XLenVT if we're producing a v8i1. This results in more consistent
+    // codegen across RV32 and RV64.
+    // If we have to use more than one INSERT_VECTOR_ELT then this optimization
+    // is likely to increase code size; avoid peforming it in such a case.
+    unsigned NumViaIntegerBits =
+        std::min(std::max(NumElts, 8u), Subtarget.getXLen());
+    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
+        (!DAG.shouldOptForSize() || NumElts <= NumViaIntegerBits)) {
+      // Now we can create our integer vector type. Note that it may be larger
+      // than the resulting mask type: v4i1 would use v1i8 as its integer type.
+      MVT IntegerViaVecVT =
+          MVT::getVectorVT(MVT::getIntegerVT(NumViaIntegerBits),
+                           divideCeil(NumElts, NumViaIntegerBits));
+
+      uint64_t Bits = 0;
+      unsigned BitPos = 0, IntegerEltIdx = 0;
+      MVT XLenVT = Subtarget.getXLenVT();
+      SDValue Vec = DAG.getUNDEF(IntegerViaVecVT);
+
+      for (unsigned I = 0; I < NumElts; I++, BitPos++) {
+        // Once we accumulate enough bits to fill our scalar type, insert into
+        // our vector and clear our accumulated data.
+        if (I != 0 && I % NumViaIntegerBits == 0) {
+          if (NumViaIntegerBits <= 32)
+            Bits = SignExtend64(Bits, 32);
+          SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
+          Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec,
+                            Elt, DAG.getConstant(IntegerEltIdx, DL, XLenVT));
+          Bits = 0;
+          BitPos = 0;
+          IntegerEltIdx++;
+        }
+        SDValue V = Op.getOperand(I);
+        bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
+        Bits |= ((uint64_t)BitValue << BitPos);
+      }
+
+      // Insert the (remaining) scalar value into position in our integer
+      // vector type.
+      if (NumViaIntegerBits <= 32)
+        Bits = SignExtend64(Bits, 32);
+      SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
+      Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, IntegerViaVecVT, Vec, Elt,
+                        DAG.getConstant(IntegerEltIdx, DL, XLenVT));
+
+      if (NumElts < NumViaIntegerBits) {
+        // If we're producing a smaller vector than our minimum legal integer
+        // type, bitcast to the equivalent (known-legal) mask type, and extract
+        // our final mask.
+        assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
+        Vec = DAG.getBitcast(MVT::v8i1, Vec);
+        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                          DAG.getConstant(0, DL, XLenVT));
+      } else {
+        // Else we must have produced an integer type with the same size as the
+        // mask type; bitcast for the final result.
+        assert(VT.getSizeInBits() == IntegerViaVecVT.getSizeInBits());
+        Vec = DAG.getBitcast(VT, Vec);
+      }
+
+      return Vec;
+    }
+
     return SDValue();
   }
 
@@ -1152,8 +1223,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     Splat = DAG.getNode(Opc, DL, ContainerVT, Splat, VL);
     return convertFromScalableVector(VT, Splat, DAG, Subtarget);
   }
-
-  unsigned NumElts = Op.getNumOperands();
 
   // Try and match an index sequence, which we can lower directly to the vid
   // instruction. An all-undef vector is matched by getSplatValue, above.
