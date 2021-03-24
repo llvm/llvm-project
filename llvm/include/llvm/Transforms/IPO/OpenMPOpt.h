@@ -67,6 +67,14 @@ class OpenMPOptPass : public PassInfoMixin<OpenMPOptPass> {
   omp::OpenMPInModule OMPInModule;
 
 public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class OpenMPOptCGSCCPass : public PassInfoMixin<OpenMPOptCGSCCPass> {
+  /// Helper to remember if the module contains OpenMP (runtime calls).
+  omp::OpenMPInModule OMPInModule;
+
+public:
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
