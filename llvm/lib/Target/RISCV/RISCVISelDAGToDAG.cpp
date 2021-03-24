@@ -416,11 +416,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, New.getNode());
       return;
     }
-    int64_t Imm = ConstNode->getSExtValue();
-    if (XLenVT == MVT::i64) {
-      ReplaceNode(Node, selectImm(CurDAG, DL, Imm, XLenVT));
-      return;
-    }
+    ReplaceNode(Node, selectImm(CurDAG, DL, ConstNode->getSExtValue(), XLenVT));
+    return;
     break;
   }
   case ISD::FrameIndex: {
