@@ -25,36 +25,10 @@
 // BIND(C) mangling helpers
 //===----------------------------------------------------------------------===//
 
-// Remove leading and trailing spaces from a string.
-// Bind(C) NAME= expression may have trailing and leading space that must be
-// removed according to 18.9.2 point 2.
-static std::string adjustBindCName(std::string &&str) {
-  auto first = str.find_first_not_of(" ");
-  auto last = str.find_last_not_of(" ");
-  if (first == std::string::npos || last == std::string::npos)
-    llvm::report_fatal_error("Name in Bind(C) has no non-space character");
-  return str.substr(first, last - first + 1);
-}
-
-static std::string getBindCName(const Fortran::semantics::Symbol &symbol) {
-  // bind(C) name expression, if any, must be a scalar constant of default
-  // character type as per R808.
-  using T =
-      Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, 1>;
-  const auto &ultimateSymbol = symbol.GetUltimate();
-  if (const auto *procDetails{
-          ultimateSymbol.detailsIf<Fortran::semantics::ProcEntityDetails>()}) {
-    if (auto bindName = procDetails->bindName())
-      return adjustBindCName(
-          Fortran::evaluate::GetScalarConstantValue<T>(bindName).value());
-    return procDetails->interface().symbol()->name().ToString();
-  }
-  if (auto bindName =
-          ultimateSymbol.get<Fortran::semantics::SubprogramDetails>()
-              .bindName())
-    return adjustBindCName(
-        Fortran::evaluate::GetScalarConstantValue<T>(bindName).value());
-  return ultimateSymbol.name().ToString();
+// Return the binding label (from BIND(C...)) or the mangled name of a symbol.
+static std::string getMangledName(const Fortran::semantics::Symbol &symbol) {
+  const std::string *bindName = symbol.GetBindName();
+  return bindName ? *bindName : Fortran::lower::mangle::mangleName(symbol);
 }
 
 //===----------------------------------------------------------------------===//
@@ -68,12 +42,7 @@ bool Fortran::lower::CallerInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CallerInterface::getMangledName() const {
   const auto &proc = procRef.proc();
   if (const auto *symbol = proc.GetSymbol())
-    // Do NOT mangle names for functions/subroutines with BIND(C) attribute.
-    // These could be potential calls to external RTL (i.e OpenMP), that may not
-    // follow the same mangling semantics. Return the `bindName` instead.
-    return Fortran::semantics::IsBindCProcedure(*symbol)
-               ? getBindCName(*symbol)
-               : Fortran::lower::mangle::mangleName(*symbol);
+    return ::getMangledName(symbol->GetUltimate());
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
@@ -248,12 +217,7 @@ bool Fortran::lower::CalleeInterface::hasAlternateReturns() const {
 std::string Fortran::lower::CalleeInterface::getMangledName() const {
   if (funit.isMainProgram())
     return fir::NameUniquer::doProgramEntry().str();
-  // Do NOT mangle names for functions/subroutines with BIND(C) attribute.
-  // These could be potential calls to external RTL (i.e OpenMP), that may not
-  // follow the same mangling semantics. Return the `bindName` instead.
-  if (Fortran::semantics::IsBindCProcedure(funit.getSubprogramSymbol()))
-    return getBindCName(funit.getSubprogramSymbol());
-  return Fortran::lower::mangle::mangleName(funit.getSubprogramSymbol());
+  return ::getMangledName(funit.getSubprogramSymbol());
 }
 
 const Fortran::semantics::Symbol *
