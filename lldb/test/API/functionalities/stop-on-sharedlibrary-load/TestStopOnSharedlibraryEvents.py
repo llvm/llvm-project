@@ -9,13 +9,13 @@ class TestStopOnSharedlibraryEvents(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote
-    @skipIfWindows
+    @skipUnlessDarwin
     @no_debug_info_test
     def test_stopping_breakpoints(self):
         self.do_test()
 
     @skipIfRemote
-    @skipIfWindows
+    @skipUnlessDarwin
     @no_debug_info_test
     def test_auto_continue(self):
         def auto_continue(bkpt):
@@ -23,15 +23,15 @@ class TestStopOnSharedlibraryEvents(TestBase):
         self.do_test(auto_continue)
 
     @skipIfRemote
-    @skipIfWindows
     @no_debug_info_test
+    @skipUnlessDarwin
     def test_failing_condition(self):
         def condition(bkpt):
             bkpt.SetCondition("1 == 2")
         self.do_test(condition)
         
     @skipIfRemote
-    @skipIfWindows
+    @skipUnlessDarwin
     @no_debug_info_test
     def test_continue_callback(self):
         def bkpt_callback(bkpt):
