@@ -84,6 +84,10 @@ void test1() {
 // CHECK-LE: add <2 x i64>
 // CHECK-PPC: error: call to 'vec_add' is ambiguous
 
+  res_vuc = vec_add_u128(vuc, vuc);
+// CHECK: add <1 x i128>
+// CHECK-LE: add <1 x i128>
+
   /* vec_addc */
   res_vsi = vec_addc(vsi, vsi);
 // CHECK: @llvm.ppc.altivec.vaddcuw
@@ -101,6 +105,10 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddcuq
 // CHECK-LE: @llvm.ppc.altivec.vaddcuq
 
+  res_vuc = vec_addc_u128(vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vaddcuq
+// CHECK-LE: @llvm.ppc.altivec.vaddcuq
+
   /* vec_adde */
   res_vsx = vec_adde(vsx, vsx, vsx);
 // CHECK: @llvm.ppc.altivec.vaddeuqm
@@ -110,8 +118,16 @@ void test1() {
 // CHECK: @llvm.ppc.altivec.vaddeuqm
 // CHECK-LE: @llvm.ppc.altivec.vaddeuqm
 
+  res_vuc = vec_adde_u128(vuc, vuc, vuc);
+// CHECK: @llvm.ppc.altivec.vaddeuqm
+// CHECK-LE: @llvm.ppc.altivec.vaddeuqm
+
   /* vec_addec */
   res_vsx = vec_addec(vsx, vsx, vsx);
+// CHECK: @llvm.ppc.altivec.vaddecuq
+// CHECK-LE: @llvm.ppc.altivec.vaddecuq
+
+  res_vuc = vec_addec_u128(vuc, vuc, vuc);
 // CHECK: @llvm.ppc.altivec.vaddecuq
 // CHECK-LE: @llvm.ppc.altivec.vaddecuq
 
