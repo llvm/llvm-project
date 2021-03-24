@@ -1687,24 +1687,23 @@ void SubprogramMatchHelper::Check(
             : "Module subprogram '%s' does not have NON_RECURSIVE prefix but "
               "the corresponding interface body does"_err_en_US);
   }
-  MaybeExpr bindName1{details1.bindName()};
-  MaybeExpr bindName2{details2.bindName()};
-  if (bindName1.has_value() != bindName2.has_value()) {
+  const std::string *bindName1{details1.bindName()};
+  const std::string *bindName2{details2.bindName()};
+  if (!bindName1 && !bindName2) {
+    // OK - neither has a binding label
+  } else if (!bindName1) {
     Say(symbol1, symbol2,
-        bindName1.has_value()
-            ? "Module subprogram '%s' has a binding label but the corresponding"
-              " interface body does not"_err_en_US
-            : "Module subprogram '%s' does not have a binding label but the"
-              " corresponding interface body does"_err_en_US);
-  } else if (bindName1) {
-    std::string string1{bindName1->AsFortran()};
-    std::string string2{bindName2->AsFortran()};
-    if (string1 != string2) {
-      Say(symbol1, symbol2,
-          "Module subprogram '%s' has binding label %s but the corresponding"
-          " interface body has %s"_err_en_US,
-          string1, string2);
-    }
+        "Module subprogram '%s' does not have a binding label but the"
+        " corresponding interface body does"_err_en_US);
+  } else if (!bindName2) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' has a binding label but the"
+        " corresponding interface body does not"_err_en_US);
+  } else if (*bindName1 != *bindName2) {
+    Say(symbol1, symbol2,
+        "Module subprogram '%s' has binding label '%s' but the corresponding"
+        " interface body has '%s'"_err_en_US,
+        *details1.bindName(), *details2.bindName());
   }
   const Procedure *proc1{checkHelper.Characterize(symbol1)};
   const Procedure *proc2{checkHelper.Characterize(symbol2)};
