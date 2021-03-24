@@ -109,8 +109,7 @@ addDagOperandMapping(Record *Rec, DagInit *Dag, CodeGenInstruction &Insn,
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;
     } else if (auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      auto II = dyn_cast<IntInit>(BI->convertInitializerTo(IntRecTy::get()));
-      assert(II && "Cannot convert to integer initializer");
+      auto *II = cast<IntInit>(BI->convertInitializerTo(IntRecTy::get()));
       OperandMap[BaseIdx + i].Kind = OpData::Imm;
       OperandMap[BaseIdx + i].Data.Imm = II->getValue();
       ++OpsAdded;
