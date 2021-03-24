@@ -278,9 +278,8 @@ define <4 x i64> @ext_i4_4i64(i4 %a0) {
 ;
 ; AVX2-LABEL: ext_i4_4i64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
-; AVX2-NEXT:    vmovq %rdi, %xmm0
-; AVX2-NEXT:    vpbroadcastq %xmm0, %ymm0
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,2,4,8]
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
