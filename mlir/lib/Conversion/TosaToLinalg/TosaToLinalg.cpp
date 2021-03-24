@@ -702,6 +702,11 @@ public:
     ShapedType operandTy = operands.input1().getType().cast<ShapedType>();
     ShapedType resultTy = reshape.getType().template cast<ShapedType>();
 
+    if (operandTy == resultTy) {
+      rewriter.replaceOp(reshape, args[0]);
+      return success();
+    }
+
     if (!operandTy.hasStaticShape() || !resultTy.hasStaticShape())
       return failure();
 
@@ -1086,6 +1091,70 @@ public:
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
         });
+    return success();
+  }
+};
+
+// This converter translate a tile operation to a reshape, broadcast, reshape.
+// The first reshape minimally expands each tiled dimension to include a
+// proceding size-1 dim. This dim is then broadcasted to the appropriate
+// multiple.
+struct TileConverter : public OpConversionPattern<tosa::TileOp> {
+  using OpConversionPattern<tosa::TileOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(tosa::TileOp op, ArrayRef<Value> args,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto input = op.input1();
+    auto inputTy = input.getType().cast<ShapedType>();
+    auto inputShape = inputTy.getShape();
+    auto resultTy = op.getType().cast<ShapedType>();
+    auto elementTy = inputTy.getElementType();
+    int64_t rank = inputTy.getRank();
+
+    if (!inputTy.hasStaticShape() || !resultTy.hasStaticShape())
+      return failure();
+
+    SmallVector<int64_t> multiples;
+    getValuesFromIntArrayAttribute(op.multiples(), multiples);
+
+    llvm::SmallVector<int64_t, 4> reshapeShape;
+    reshapeShape.reserve(rank * 2);
+    for (int i = 0; i < rank; i++) {
+      reshapeShape.push_back(1);
+      reshapeShape.push_back(inputShape[i]);
+    }
+
+    ShapedType reshapeTy = RankedTensorType::get(reshapeShape, elementTy);
+    Value reshape = rewriter.create<tosa::ReshapeOp>(
+        loc, reshapeTy, input, rewriter.getI64ArrayAttr(reshapeTy.getShape()));
+
+    // Broadcast the newly added dimensions to their appropriate multiple.
+    SmallVector<int64_t, 2> genericShape;
+    for (int i = 0; i < rank; i++) {
+      genericShape.push_back(multiples[i]);
+      genericShape.push_back(inputShape[i]);
+    }
+
+    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+        op.getLoc(), ArrayRef<Value>({}), genericShape, elementTy);
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        createAffineMapForType(reshapeTy, rewriter),
+        rewriter.getMultiDimIdentityMap(genericShape.size())};
+
+    auto genericOp = rewriter.create<linalg::GenericOp>(
+        loc, RankedTensorType::get(genericShape, elementTy), reshape,
+        ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(genericShape.size()),
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+          nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
+        });
+
+    rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
+        op, resultTy, genericOp.getResult(0),
+        rewriter.getI64ArrayAttr(resultTy.getShape()));
 
     return success();
   }
@@ -1119,6 +1188,6 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, ReshapeConverter,
-      RescaleConverter, ReverseConverter, TransposeConverter, MatMulConverter,
-      FullyConnectedConverter>(patterns->getContext());
+      RescaleConverter, ReverseConverter, TileConverter, TransposeConverter,
+      MatMulConverter, FullyConnectedConverter>(patterns->getContext());
 }
