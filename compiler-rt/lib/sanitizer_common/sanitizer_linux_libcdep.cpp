@@ -924,9 +924,13 @@ static uptr MmapSharedNoReserve(uptr addr, uptr size) {
 
 static uptr MremapCreateAlias(uptr base_addr, uptr alias_addr,
                               uptr alias_size) {
+#if defined(SANITIZER_LINUX)
   return internal_mremap(reinterpret_cast<void *>(base_addr), 0, alias_size,
                          MREMAP_MAYMOVE | MREMAP_FIXED,
                          reinterpret_cast<void *>(alias_addr));
+#else
+  CHECK(false && "mremap is not supported outside of Linux");
+#endif
 }
 
 static void CreateAliases(uptr start_addr, uptr alias_size, uptr num_aliases) {
