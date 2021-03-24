@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit -O0 -disable-lazy-compilation=false %s
 ; RUN: %lli -O0 -disable-lazy-compilation=false %s
 
 ; The intention of this test is to verify that symbols mapped to COMMON in ELF
