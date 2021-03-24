@@ -1,5 +1,8 @@
 ; RUN: llc -O2 -no-integrated-as < %s | FileCheck %s
 
+; XCore default subtarget does not support 8-byte alignment on stack.
+; XFAIL: xcore
+
 @G = common global i32 0, align 4
 
 define i32 @foo(i8* %p) nounwind uwtable {
