@@ -103,3 +103,41 @@ for.inc10:
 for.end12:
   ret void
 }
+
+;; The following Loop is not considered tightly nested and is not interchanged.
+;; The outer loop header does not branch to the inner loop preheader, or the
+;; inner loop header, or the outer loop latch.
+; CHECK: Not interchanging loops. Cannot prove legality.
+define void @interchange_07(i32 %k, i32 %N, i32 %ny) {
+entry:
+  br label %for1.header
+
+for1.header:
+  %j23 = phi i32 [ 0, %entry ], [ %j.next24, %for1.inc10 ]
+  %cmp21 = icmp slt i32 0, %ny
+  br label %singleSucc
+
+singleSucc:
+  br i1 %cmp21, label %preheader.j, label %for1.inc10
+
+preheader.j:
+  br label %for2
+
+for2:
+  %j = phi i32 [ %j.next, %for2 ], [ 0, %preheader.j ]
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i32 0, i32 %j, i32 %j23
+  %lv = load i32, i32* %arrayidx5
+  %add = add nsw i32 %lv, %k
+  store i32 %add, i32* %arrayidx5
+  %j.next = add nuw nsw i32 %j, 1
+  %exitcond = icmp eq i32 %j, 99
+  br i1 %exitcond, label %for1.inc10, label %for2
+
+for1.inc10:
+  %j.next24 = add nuw nsw i32 %j23, 1
+  %exitcond26 = icmp eq i32 %j23, 99
+  br i1 %exitcond26, label %for.end12, label %for1.header
+
+for.end12:
+  ret void
+}
