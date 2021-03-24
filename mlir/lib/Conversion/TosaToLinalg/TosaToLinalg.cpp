@@ -488,6 +488,15 @@ static Attribute createInitialValueForReduceOp(Operation *op, Type elementTy,
     return rewriter.getIntegerAttr(
         elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
 
+  if (isa<tosa::ArgMaxOp>(op) && elementTy.isa<FloatType>())
+    return rewriter.getFloatAttr(
+        elementTy, APFloat::getLargest(
+                       elementTy.cast<FloatType>().getFloatSemantics(), true));
+
+  if (isa<tosa::ArgMaxOp>(op) && elementTy.isa<IntegerType>())
+    return rewriter.getIntegerAttr(
+        elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
+
   return {};
 }
 
@@ -1233,6 +1242,131 @@ public:
   }
 };
 
+// Tosa argmax lowering represents the ArgMax op as an linalg.indexed_generic
+// op, producing two output buffers.
+//
+// The first output buffer contains the index of the found maximum value. It is
+// initialized to 0 and is resulting integer type.
+//
+// The second output buffer contains the maximum value found. It is initialized
+// to the minimum representable value of the input element type. After being
+// populated by indexed_generic, this buffer is disgarded as only the index is
+// requested.
+//
+// The indexed_generic op updates both the maximum value and index if the
+// current value exceeds the running max.
+class ArgMaxConverter : public OpRewritePattern<tosa::ArgMaxOp> {
+public:
+  using OpRewritePattern<tosa::ArgMaxOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::ArgMaxOp argmaxOp,
+                                PatternRewriter &rewriter) const final {
+    auto loc = argmaxOp.getLoc();
+    Value input = argmaxOp.input();
+    auto inputTy = input.getType().cast<ShapedType>();
+    auto resultTy = argmaxOp.output().getType().cast<ShapedType>();
+    auto inElementTy = inputTy.getElementType();
+    auto outElementTy = resultTy.getElementType();
+    int axis = argmaxOp.axis();
+    auto resultMaxTy = RankedTensorType::get(resultTy.getShape(), inElementTy);
+
+    if (!inputTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          argmaxOp,
+          "tosa.arg_max to linalg.* requires statically shaped input");
+
+    if (!outElementTy.isa<IntegerType>())
+      return rewriter.notifyMatchFailure(
+          argmaxOp,
+          "tosa.arg_max to linalg.* requires integer-like result type");
+
+    // First fill the output buffer for the index.
+    auto initTensorIdx =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}),
+                                          resultTy.getShape(), outElementTy)
+            .result();
+    auto fillValueIdx = rewriter.create<ConstantOp>(
+        loc, rewriter.getIntegerAttr(outElementTy, 0));
+    auto filledTensorIdx =
+        rewriter.create<linalg::FillOp>(loc, initTensorIdx, fillValueIdx)
+            .result();
+
+    // Second fill the output buffer for the running max.
+    auto initTensorMax =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>({}),
+                                          resultTy.getShape(), inElementTy)
+            .result();
+    auto fillValueMaxAttr =
+        createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
+
+    if (!fillValueMaxAttr)
+      return rewriter.notifyMatchFailure(
+          argmaxOp, "unsupported tosa.argmax element type");
+
+    auto fillValueMax = rewriter.create<ConstantOp>(loc, fillValueMaxAttr);
+    auto filledTensorMax =
+        rewriter.create<linalg::FillOp>(loc, initTensorMax, fillValueMax)
+            .result();
+
+    // We need to reduce along the arg-max axis, with parallel operations along
+    // the rest.
+    SmallVector<StringRef, 4> iteratorTypes;
+    iteratorTypes.resize(inputTy.getRank(), getParallelIteratorTypeName());
+    iteratorTypes[axis] = getReductionIteratorTypeName();
+
+    SmallVector<AffineExpr, 2> srcExprs;
+    SmallVector<AffineExpr, 2> dstExprs;
+    for (int i = 0, rank = inputTy.getRank(); i != rank; ++i) {
+      srcExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
+      if (axis != i)
+        dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
+    }
+
+    bool didEncounterError = false;
+    auto maps = AffineMap::inferFromExprList({srcExprs, dstExprs, dstExprs});
+    auto linalgOp = rewriter.create<linalg::IndexedGenericOp>(
+        loc, ArrayRef<Type>({resultTy, resultMaxTy}), input,
+        ValueRange({filledTensorIdx, filledTensorMax}), maps, iteratorTypes,
+        [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange ivs,
+            ValueRange blockArgs) {
+          auto newValue = blockArgs[0];
+          auto oldIndex = blockArgs[1];
+          auto oldValue = blockArgs[2];
+
+          Value newIndex = rewriter.create<IndexCastOp>(
+              nestedLoc, oldIndex.getType(), ivs[axis]);
+
+          Value predicate;
+          if (inElementTy.isa<FloatType>()) {
+            predicate = rewriter.create<mlir::CmpFOp>(
+                nestedLoc, CmpFPredicate::OGT, newValue, oldValue);
+          } else if (inElementTy.isa<IntegerType>()) {
+            predicate = rewriter.create<mlir::CmpIOp>(
+                nestedLoc, CmpIPredicate::sgt, newValue, oldValue);
+          } else {
+            didEncounterError = true;
+            return;
+          }
+
+          auto resultMax = rewriter.create<mlir::SelectOp>(nestedLoc, predicate,
+                                                           newValue, oldValue);
+          auto resultIndex = rewriter.create<mlir::SelectOp>(
+              nestedLoc, predicate, newIndex, oldIndex);
+          nestedBuilder.create<linalg::YieldOp>(
+              nestedLoc, ValueRange({resultIndex, resultMax}));
+        });
+
+    if (didEncounterError)
+      return rewriter.notifyMatchFailure(
+          argmaxOp, "unsupported tosa.argmax element type");
+
+    rewriter.replaceOp(argmaxOp, linalgOp.getResult(0));
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
@@ -1260,7 +1394,7 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       IdentityNConverter<tosa::IdentityOp>,
       IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>, ConcatConverter, PadConverter,
+      ReduceConverter<tosa::ReduceProdOp>, ArgMaxConverter, ConcatConverter, PadConverter,
       ReshapeConverter, RescaleConverter, ReverseConverter, TileConverter,
       TransposeConverter, MatMulConverter, FullyConnectedConverter>(
         patterns->getContext());

@@ -745,3 +745,51 @@ func @pad_quant(%arg0 : tensor<1x2xi32>) -> (tensor<4x9xi32>) {
   %1 = "tosa.pad"(%arg0, %0) { quantization_info = { input_zp = 42 : i32}} : (tensor<1x2xi32>, tensor<2x2xi32>)  -> (tensor<4x9xi32>)
   return %1 : tensor<4x9xi32>
 }
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
+// CHECK: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0)>
+// CHECK: #[[$MAP3:.*]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP4:.*]] = affine_map<(d0) -> ()>
+
+func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
+  // CHECK: [[IDX_INIT:%.+]] = linalg.init_tensor [2]
+  // CHECK: [[IDX_MIN:%.+]] = constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill([[IDX_INIT]], [[IDX_MIN]])
+  // CHECK: [[VAL_INIT:%.+]] = linalg.init_tensor [2]
+  // CHECK: [[VAL_MIN:%.+]] = constant -2147483648
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill([[VAL_INIT]], [[VAL_MIN]])
+  // CHECK: linalg.indexed_generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["reduction", "parallel"]} ins(%arg0 : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<2xi32>, tensor<2xi32>)
+  // CHECK:   [[CAST:%.+]] = index_cast %arg2
+  // CHECK:   [[CMP:%.+]] = cmpi sgt, %arg4, %arg6
+  // CHECK:   [[SELECT_VAL:%.+]] = select [[CMP]], %arg4, %arg6
+  // CHECK:   [[SELECT_IDX:%.+]] = select [[CMP]], [[CAST]], %arg5
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
+  %0 = "tosa.argmax"(%arg0) { axis = 0 : i64} : (tensor<3x2xi32>)  -> (tensor<2xi32>)
+
+  // CHECK: [[IDX_INIT:%.+]] = linalg.init_tensor [3]
+  // CHECK: [[IDX_MIN:%.+]] = constant 0 : i32
+  // CHECK: [[IDX_FILL:%.+]] = linalg.fill([[IDX_INIT]], [[IDX_MIN]])
+  // CHECK: [[VAL_INIT:%.+]] = linalg.init_tensor [3]
+  // CHECK: [[VAL_MIN:%.+]] = constant -2147483648
+  // CHECK: [[VAL_FILL:%.+]] = linalg.fill([[VAL_INIT]], [[VAL_MIN]])
+  // CHECK: linalg.indexed_generic {indexing_maps = [#map0, #map2, #map2], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<3x2xi32>) outs([[IDX_FILL]], [[VAL_FILL]] : tensor<3xi32>, tensor<3xi32>)
+  // CHECK:   [[CAST:%.+]] = index_cast %arg3
+  // CHECK:   [[CMP:%.+]] = cmpi sgt, %arg4, %arg6
+  // CHECK:   [[SELECT_VAL:%.+]] = select [[CMP]], %arg4, %arg6
+  // CHECK:   [[SELECT_IDX:%.+]] = select [[CMP]], [[CAST]], %arg5
+  // CHECK:   linalg.yield [[SELECT_IDX]], [[SELECT_VAL]]
+  %1 = "tosa.argmax"(%arg0) { axis = 1 : i64} : (tensor<3x2xi32>)  -> (tensor<3xi32>)
+
+  // CHECK: constant -3.40282347E+38 : f32
+  // CHECK: index_cast
+  // CHECK: cmpf ogt
+  // CHECK: select
+  // CHECK: select
+  // CHECK: linalg.yield
+  %2 = "tosa.argmax"(%arg1) { axis = 0 : i64} : (tensor<6xf32>)  -> (tensor<i32>)
+
+  return
+}
