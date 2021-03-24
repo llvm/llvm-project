@@ -136,6 +136,12 @@ module m2b
     end
     module subroutine s3() bind(c, name="s3")
     end
+    module subroutine s4() bind(c, name=" s4")
+    end
+    module subroutine s5() bind(c)
+    end
+    module subroutine s6() bind(c)
+    end
   end interface
 end
 
@@ -148,8 +154,15 @@ contains
   !ERROR: Module subprogram 's2' does not have a binding label but the corresponding interface body does
   module subroutine s2()
   end
-  !ERROR: Module subprogram 's3' has binding label "s3_xxx" but the corresponding interface body has "s3"
+  !ERROR: Module subprogram 's3' has binding label 's3_xxx' but the corresponding interface body has 's3'
   module subroutine s3() bind(c, name="s3" // suffix)
+  end
+  module subroutine s4() bind(c, name="s4  ")
+  end
+  module subroutine s5() bind(c, name=" s5")
+  end
+  !ERROR: Module subprogram 's6' has binding label 'not_s6' but the corresponding interface body has 's6'
+  module subroutine s6() bind(c, name="not_s6")
   end
 end
 

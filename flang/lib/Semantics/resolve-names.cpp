@@ -1528,19 +1528,26 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 bool AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!bindName_) {
+  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
     return false;
   }
-  std::visit(
-      common::visitors{
-          [&](EntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ObjectEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ProcEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](SubprogramDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](CommonBlockDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [](auto &) { common::die("unexpected bind name"); },
-      },
-      symbol.details());
+  std::optional<std::string> label{evaluate::GetScalarConstantValue<
+      evaluate::Type<TypeCategory::Character, 1>>(bindName_)};
+  // 18.9.2(2): discard leading and trailing blanks, ignore if all blank
+  if (label) {
+    auto first{label->find_first_not_of(" ")};
+    auto last{label->find_last_not_of(" ")};
+    if (first == std::string::npos) {
+      Say(currStmtSource().value(), "Blank binding label ignored"_en_US);
+      label.reset();
+    } else {
+      *label = label->substr(first, last - first + 1);
+    }
+  }
+  if (!label) {
+    *label = parser::ToLowerCaseLetters(symbol.name().ToString());
+  }
+  symbol.SetBindName(std::move(*label));
   return true;
 }
 
