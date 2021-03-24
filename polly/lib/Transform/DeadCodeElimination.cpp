@@ -31,6 +31,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "polly/DeadCodeElimination.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
@@ -50,43 +51,38 @@ cl::opt<int> DCEPreciseSteps(
              "before the actual dead code elimination."),
     cl::ZeroOrMore, cl::init(-1), cl::cat(PollyCategory));
 
-class DeadCodeElim : public ScopPass {
+class DeadCodeElimWrapperPass : public ScopPass {
 public:
   static char ID;
-  explicit DeadCodeElim() : ScopPass(ID) {}
+  explicit DeadCodeElimWrapperPass() : ScopPass(ID) {}
 
   /// Remove dead iterations from the schedule of @p S.
   bool runOnScop(Scop &S) override;
 
   /// Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-private:
-  /// Return the set of live iterations.
-  ///
-  /// The set of live iterations are all iterations that write to memory and for
-  /// which we can not prove that there will be a later write that _must_
-  /// overwrite the same memory location and is consequently the only one that
-  /// is visible after the execution of the SCoP.
-  ///
-  isl::union_set getLiveOut(Scop &S);
-  bool eliminateDeadCode(Scop &S, int PreciseSteps);
 };
-} // namespace
 
-char DeadCodeElim::ID = 0;
+char DeadCodeElimWrapperPass::ID = 0;
 
-// To compute the live outs, we compute for the data-locations that are
-// must-written to the last statement that touches these locations. On top of
-// this we add all statements that perform may-write accesses.
-//
-// We could be more precise by removing may-write accesses for which we know
-// that they are overwritten by a must-write after. However, at the moment the
-// only may-writes we introduce access the full (unbounded) array, such that
-// bounded write accesses can not overwrite all of the data-locations. As
-// this means may-writes are in the current situation always live, there is
-// no point in trying to remove them from the live-out set.
-isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
+/// Return the set of live iterations.
+///
+/// The set of live iterations are all iterations that write to memory and for
+/// which we can not prove that there will be a later write that _must_
+/// overwrite the same memory location and is consequently the only one that
+/// is visible after the execution of the SCoP.
+///
+/// To compute the live outs, we compute for the data-locations that are
+/// must-written to the last statement that touches these locations. On top of
+/// this we add all statements that perform may-write accesses.
+///
+/// We could be more precise by removing may-write accesses for which we know
+/// that they are overwritten by a must-write after. However, at the moment the
+/// only may-writes we introduce access the full (unbounded) array, such that
+/// bounded write accesses can not overwrite all of the data-locations. As
+/// this means may-writes are in the current situation always live, there is
+/// no point in trying to remove them from the live-out set.
+static isl::union_set getLiveOut(Scop &S) {
   isl::union_map Schedule = S.getSchedule();
   isl::union_map MustWrites = S.getMustWrites();
   isl::union_map WriteIterations = MustWrites.reverse();
@@ -110,10 +106,8 @@ isl::union_set DeadCodeElim::getLiveOut(Scop &S) {
 /// To ensure the set of live iterations does not get too complex we always
 /// combine a certain number of precise steps with one approximating step that
 /// simplifies the life set with an affine hull.
-bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
-  DependenceInfo &DI = getAnalysis<DependenceInfo>();
-  const Dependences &D = DI.getDependences(Dependences::AL_Statement);
-
+static bool runDeadCodeElimination(Scop &S, int PreciseSteps,
+                                   const Dependences &D) {
   if (!D.hasValidDependences())
     return false;
 
@@ -147,29 +141,60 @@ bool DeadCodeElim::eliminateDeadCode(Scop &S, int PreciseSteps) {
 
   Live = Live.coalesce();
 
-  bool Changed = S.restrictDomains(Live);
+  return S.restrictDomains(Live);
+}
+
+bool DeadCodeElimWrapperPass::runOnScop(Scop &S) {
+  auto &DI = getAnalysis<DependenceInfo>();
+  const Dependences &Deps = DI.getDependences(Dependences::AL_Statement);
+
+  bool Changed = runDeadCodeElimination(S, DCEPreciseSteps, Deps);
 
   // FIXME: We can probably avoid the recomputation of all dependences by
   // updating them explicitly.
   if (Changed)
     DI.recomputeDependences(Dependences::AL_Statement);
-  return Changed;
+
+  return false;
 }
 
-bool DeadCodeElim::runOnScop(Scop &S) {
-  return eliminateDeadCode(S, DCEPreciseSteps);
-}
-
-void DeadCodeElim::getAnalysisUsage(AnalysisUsage &AU) const {
+void DeadCodeElimWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   ScopPass::getAnalysisUsage(AU);
   AU.addRequired<DependenceInfo>();
 }
 
-Pass *polly::createDeadCodeElimPass() { return new DeadCodeElim(); }
+} // namespace
 
-INITIALIZE_PASS_BEGIN(DeadCodeElim, "polly-dce",
+Pass *polly::createDeadCodeElimWrapperPass() {
+  return new DeadCodeElimWrapperPass();
+}
+
+llvm::PreservedAnalyses DeadCodeElimPass::run(Scop &S, ScopAnalysisManager &SAM,
+                                              ScopStandardAnalysisResults &SAR,
+                                              SPMUpdater &U) {
+  DependenceAnalysis::Result &DA = SAM.getResult<DependenceAnalysis>(S, SAR);
+  const Dependences &Deps = DA.getDependences(Dependences::AL_Statement);
+
+  bool Changed = runDeadCodeElimination(S, DCEPreciseSteps, Deps);
+
+  // FIXME: We can probably avoid the recomputation of all dependences by
+  // updating them explicitly.
+  if (Changed)
+    DA.recomputeDependences(Dependences::AL_Statement);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<AllAnalysesOn<Module>>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  PA.preserveSet<AllAnalysesOn<Loop>>();
+  return PA;
+}
+
+INITIALIZE_PASS_BEGIN(DeadCodeElimWrapperPass, "polly-dce",
                       "Polly - Remove dead iterations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DependenceInfo)
 INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass)
-INITIALIZE_PASS_END(DeadCodeElim, "polly-dce", "Polly - Remove dead iterations",
-                    false, false)
+INITIALIZE_PASS_END(DeadCodeElimWrapperPass, "polly-dce",
+                    "Polly - Remove dead iterations", false, false)

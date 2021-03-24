@@ -38,4 +38,5 @@ SCOP_PASS("print<polly-delicm>", DeLICMPrinterPass(outs()))
 SCOP_PASS("polly-prune-unprofitable", PruneUnprofitablePass())
 SCOP_PASS("polly-opt-isl", IslScheduleOptimizerPass())
 SCOP_PASS("print<polly-opt-isl>", IslScheduleOptimizerPrinterPass(outs()))
+SCOP_PASS("polly-dce", DeadCodeElimPass())
 #undef SCOP_PASS
