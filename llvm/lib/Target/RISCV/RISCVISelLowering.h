@@ -479,7 +479,8 @@ private:
   SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
                                                SelectionDAG &DAG) const;
-  SDValue lowerMGATHERMSCATTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
