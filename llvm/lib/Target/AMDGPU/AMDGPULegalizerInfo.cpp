@@ -18,7 +18,9 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -4537,27 +4539,55 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
 bool AMDGPULegalizerInfo::legalizeTrapIntrinsic(MachineInstr &MI,
                                                 MachineRegisterInfo &MRI,
                                                 MachineIRBuilder &B) const {
-  // Is non-HSA path or trap-handler disabled? then, insert s_endpgm instruction
-  if (ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbiHsa ||
-      !ST.isTrapHandlerEnabled()) {
-    B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
-  } else {
-    // Pass queue pointer to trap handler as input, and insert trap instruction
-    // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
-    MachineRegisterInfo &MRI = *B.getMRI();
+  if (!ST.isTrapHandlerEnabled() ||
+      ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
+    return legalizeTrapEndpgm(MI, MRI, B);
 
-    Register LiveIn =
-      MRI.createGenericVirtualRegister(LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
-    if (!loadInputValue(LiveIn, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
-      return false;
-
-    Register SGPR01(AMDGPU::SGPR0_SGPR1);
-    B.buildCopy(SGPR01, LiveIn);
-    B.buildInstr(AMDGPU::S_TRAP)
-        .addImm(GCNSubtarget::TrapIDLLVMTrap)
-        .addReg(SGPR01, RegState::Implicit);
+  if (Optional<uint8_t> HsaAbiVer = AMDGPU::getHsaAbiVersion(&ST)) {
+    switch (*HsaAbiVer) {
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      return legalizeTrapHsaQueuePtr(MI, MRI, B);
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      return ST.supportsGetDoorbellID() ?
+          legalizeTrapHsa(MI, MRI, B) :
+          legalizeTrapHsaQueuePtr(MI, MRI, B);
+    }
   }
 
+  llvm_unreachable("Unknown trap handler");
+}
+
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  B.buildInstr(AMDGPU::S_ENDPGM).addImm(0);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  // Pass queue pointer to trap handler as input, and insert trap instruction
+  // Reference: https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+  Register LiveIn =
+    MRI.createGenericVirtualRegister(LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
+  if (!loadInputValue(LiveIn, B, AMDGPUFunctionArgInfo::QUEUE_PTR))
+    return false;
+
+  Register SGPR01(AMDGPU::SGPR0_SGPR1);
+  B.buildCopy(SGPR01, LiveIn);
+  B.buildInstr(AMDGPU::S_TRAP)
+      .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap))
+      .addReg(SGPR01, RegState::Implicit);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeTrapHsa(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  B.buildInstr(AMDGPU::S_TRAP)
+      .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSATrap));
   MI.eraseFromParent();
   return true;
 }
@@ -4566,8 +4596,8 @@ bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
     MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   // Is non-HSA path or trap-handler disabled? then, report a warning
   // accordingly
-  if (ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbiHsa ||
-      !ST.isTrapHandlerEnabled()) {
+  if (!ST.isTrapHandlerEnabled() ||
+      ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
     DiagnosticInfoUnsupported NoTrap(B.getMF().getFunction(),
                                      "debugtrap handler not supported",
                                      MI.getDebugLoc(), DS_Warning);
@@ -4575,7 +4605,8 @@ bool AMDGPULegalizerInfo::legalizeDebugTrapIntrinsic(
     Ctx.diagnose(NoTrap);
   } else {
     // Insert debug-trap instruction
-    B.buildInstr(AMDGPU::S_TRAP).addImm(GCNSubtarget::TrapIDLLVMDebugTrap);
+    B.buildInstr(AMDGPU::S_TRAP)
+        .addImm(static_cast<unsigned>(GCNSubtarget::TrapID::LLVMAMDHSADebugTrap));
   }
 
   MI.eraseFromParent();

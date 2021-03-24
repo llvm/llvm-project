@@ -932,6 +932,8 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     (void)InsertResult;
   }
 
+  getTargetParser().onBeginOfFile();
+
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);

@@ -491,6 +491,9 @@ public:
     return nullptr;
   }
 
+  // For any initialization at the beginning of parsing.
+  virtual void onBeginOfFile() {}
+
   // For any checks or cleanups at the end of parsing.
   virtual void onEndOfFile() {}
 };

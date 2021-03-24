@@ -144,7 +144,11 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTrapEndpgm(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTrapHsaQueuePtr(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTrapHsa(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
