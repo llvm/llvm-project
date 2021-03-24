@@ -31,6 +31,15 @@ static LLVM_ATTRIBUTE_NORETURN void reportMissingDataLayout(Type type) {
   llvm::report_fatal_error(os.str());
 }
 
+/// Returns the bitwidth of the index type if specified in the param list.
+/// Assumes 64-bit index otherwise.
+static unsigned getIndexBitwidth(DataLayoutEntryListRef params) {
+  if (params.empty())
+    return 64;
+  auto attr = params.front().getValue().cast<IntegerAttr>();
+  return attr.getValue().getZExtValue();
+}
+
 unsigned
 mlir::detail::getDefaultTypeSize(Type type, const DataLayout &dataLayout,
                                  ArrayRef<DataLayoutEntryInterface> params) {
@@ -43,6 +52,11 @@ unsigned mlir::detail::getDefaultTypeSizeInBits(Type type,
                                                 DataLayoutEntryListRef params) {
   if (type.isa<IntegerType, FloatType>())
     return type.getIntOrFloatBitWidth();
+
+  // Index is an integer of some bitwidth.
+  if (type.isa<IndexType>())
+    return dataLayout.getTypeSizeInBits(
+        IntegerType::get(type.getContext(), getIndexBitwidth(params)));
 
   // Sizes of vector types are rounded up to those of types with closest
   // power-of-two number of elements in the innermost dimension. We also assume
@@ -67,6 +81,11 @@ unsigned mlir::detail::getDefaultABIAlignment(
   if (type.isa<FloatType, VectorType>())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
 
+  // Index is an integer of some bitwidth.
+  if (type.isa<IndexType>())
+    return dataLayout.getTypeABIAlignment(
+        IntegerType::get(type.getContext(), getIndexBitwidth(params)));
+
   if (auto intType = type.dyn_cast<IntegerType>()) {
     return intType.getWidth() < 64
                ? llvm::PowerOf2Ceil(llvm::divideCeil(intType.getWidth(), 8))
@@ -88,7 +107,7 @@ unsigned mlir::detail::getDefaultPreferredAlignment(
 
   // Preferred alignment is the cloest power-of-two number above for integers
   // (ABI alignment may be smaller).
-  if (auto intType = type.dyn_cast<IntegerType>())
+  if (type.isa<IntegerType, IndexType>())
     return llvm::PowerOf2Ceil(dataLayout.getTypeSize(type));
 
   if (auto typeInterface = type.dyn_cast<DataLayoutTypeInterface>())
@@ -227,6 +246,8 @@ void checkMissingLayout(DataLayoutSpecInterface originalLayout, OpTy op) {
   }
 }
 
+mlir::DataLayout::DataLayout() : DataLayout(ModuleOp()) {}
+
 mlir::DataLayout::DataLayout(DataLayoutOpInterface op)
     : originalLayout(getCombinedDataLayout(op)), scope(op) {
 #ifndef NDEBUG
@@ -355,6 +376,16 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
   for (const auto &kvp : types) {
     auto sampleType = kvp.second.front().getKey().get<Type>();
+    if (sampleType.isa<IndexType>()) {
+      assert(kvp.second.size() == 1 &&
+             "expected one data layout entry for non-parametric 'index' type");
+      if (!kvp.second.front().getValue().isa<IntegerAttr>())
+        return emitError(loc)
+               << "expected integer attribute in the data layout entry for "
+               << sampleType;
+      continue;
+    }
+
     if (isa<BuiltinDialect>(&sampleType.getDialect()))
       return emitError(loc) << "unexpected data layout for a built-in type";
 

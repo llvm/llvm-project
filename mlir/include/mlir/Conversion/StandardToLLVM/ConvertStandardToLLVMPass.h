@@ -14,7 +14,9 @@
 #include <memory>
 
 namespace mlir {
+class DataLayout;
 class LLVMTypeConverter;
+class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
@@ -27,10 +29,14 @@ static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 
 /// Options to control the Standard dialect to LLVM lowering. The struct is used
 /// to share lowering options between passes, patterns, and type converter.
-struct LowerToLLVMOptions {
+class LowerToLLVMOptions {
+public:
+  explicit LowerToLLVMOptions(MLIRContext *ctx);
+  explicit LowerToLLVMOptions(MLIRContext *ctx, DataLayout dl);
+
   bool useBarePtrCallConv = false;
   bool emitCWrappers = false;
-  unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout;
+
   /// Use aligned_alloc for heap allocations.
   bool useAlignedAlloc = false;
 
@@ -39,11 +45,18 @@ struct LowerToLLVMOptions {
   // TODO: this should be replaced by MLIR data layout when one exists.
   llvm::DataLayout dataLayout = llvm::DataLayout("");
 
-  /// Get a statically allocated copy of the default LowerToLLVMOptions.
-  static const LowerToLLVMOptions &getDefaultOptions() {
-    static LowerToLLVMOptions options;
-    return options;
+  /// Set the index bitwidth to the given value.
+  void overrideIndexBitwidth(unsigned bitwidth) {
+    assert(bitwidth != kDeriveIndexBitwidthFromDataLayout &&
+           "can only override to a concrete bitwidth");
+    indexBitwidth = bitwidth;
   }
+
+  /// Get the index bitwidth.
+  unsigned getIndexBitwidth() const { return indexBitwidth; }
+
+private:
+  unsigned indexBitwidth;
 };
 
 /// Collect a set of patterns to convert memory-related operations from the
@@ -75,9 +88,9 @@ void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
 /// stdlib malloc/free is used by default for allocating memrefs allocated with
 /// memref.alloc, while LLVM's alloca is used for those allocated with
 /// memref.alloca.
+std::unique_ptr<OperationPass<ModuleOp>> createLowerToLLVMPass();
 std::unique_ptr<OperationPass<ModuleOp>>
-createLowerToLLVMPass(const LowerToLLVMOptions &options =
-                          LowerToLLVMOptions::getDefaultOptions());
+createLowerToLLVMPass(const LowerToLLVMOptions &options);
 
 } // namespace mlir
 

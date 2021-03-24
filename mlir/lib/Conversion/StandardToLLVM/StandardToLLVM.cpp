@@ -26,6 +26,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -101,7 +102,7 @@ LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
 
 /// Create an LLVMTypeConverter using default LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
-    : LLVMTypeConverter(ctx, LowerToLLVMOptions::getDefaultOptions()) {}
+    : LLVMTypeConverter(ctx, LowerToLLVMOptions(ctx)) {}
 
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
@@ -109,8 +110,6 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()),
       options(options) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
-  if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
-    this->options.indexBitwidth = options.dataLayout.getPointerSizeInBits();
 
   // Register conversions for the builtin types.
   addConversion([&](ComplexType type) { return convertComplexType(type); });
@@ -4074,9 +4073,13 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
 
     ModuleOp m = getOperation();
 
-    LowerToLLVMOptions options = {useBarePtrCallConv, emitCWrappers,
-                                  indexBitwidth, useAlignedAlloc,
-                                  llvm::DataLayout(this->dataLayout)};
+    LowerToLLVMOptions options(&getContext(), DataLayout(m));
+    options.useBarePtrCallConv = useBarePtrCallConv;
+    options.emitCWrappers = emitCWrappers;
+    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+      options.overrideIndexBitwidth(indexBitwidth);
+    options.useAlignedAlloc = useAlignedAlloc;
+    options.dataLayout = llvm::DataLayout(this->dataLayout);
     LLVMTypeConverter typeConverter(&getContext(), options);
 
     RewritePatternSet patterns(&getContext());
@@ -4098,9 +4101,21 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
   this->addIllegalOp<math::TanhOp>();
 }
 
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
+  return std::make_unique<LLVMLoweringPass>();
+}
+
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
   return std::make_unique<LLVMLoweringPass>(
-      options.useBarePtrCallConv, options.emitCWrappers, options.indexBitwidth,
-      options.useAlignedAlloc, options.dataLayout);
+      options.useBarePtrCallConv, options.emitCWrappers,
+      options.getIndexBitwidth(), options.useAlignedAlloc, options.dataLayout);
+}
+
+mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx)
+    : LowerToLLVMOptions(ctx, DataLayout()) {}
+
+mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx,
+                                             mlir::DataLayout dl) {
+  indexBitwidth = dl.getTypeSizeInBits(IndexType::get(ctx));
 }
