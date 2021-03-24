@@ -1,4 +1,4 @@
-//===-- Implementation of gmtime function ---------------------------------===//
+//===-- Implementation header of gmtime_r -----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/time/gmtime.h"
-#include "src/__support/common.h"
-#include "src/time/time_utils.h"
+#ifndef LLVM_LIBC_SRC_TIME_GMTIME_R_H
+#define LLVM_LIBC_SRC_TIME_GMTIME_R_H
+
+#include <time.h>
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(struct tm *, gmtime, (const time_t *timer)) {
-  static struct tm tm_out;
-  return time_utils::gmtime_internal(timer, &tm_out);
-}
+struct tm *gmtime_r(const time_t *timer, struct tm *result);
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_TIME_GMTIME_R_H
+
+#include "include/time.h"
