@@ -802,3 +802,19 @@ func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 //   CHECK: return
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_fill_reshape()
+func @fold_fill_reshape() -> tensor<6x4xf32> {
+  %zero = constant 0.0 : f32
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [6, 4] : tensor<6x4xf32>
+  %init = linalg.init_tensor [1, 2, 3, 4] : tensor<1x2x3x4xf32>
+  // CHECK: %[[FILL:.+]] = linalg.fill(%[[INIT]], %cst) : tensor<6x4xf32>, f32 -> tensor<6x4xf32>
+  %fill = linalg.fill(%init, %zero) : tensor<1x2x3x4xf32>, f32 -> tensor<1x2x3x4xf32>
+  %reshape = linalg.tensor_reshape %fill [
+    affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
+    affine_map<(d0, d1, d2, d3) -> (d3)>] : tensor<1x2x3x4xf32> into tensor<6x4xf32>
+  // CHECK: return %[[FILL]] : tensor<6x4xf32>
+  return %reshape : tensor<6x4xf32>
+}

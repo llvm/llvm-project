@@ -1658,12 +1658,33 @@ struct ReplaceDimOfReshapeOpResult : OpRewritePattern<memref::DimOp> {
     return success();
   }
 };
+
+/// Fold linalg.fill -> linalg.tensor_reshape chain.
+///
+/// For such op chains, we can create new linalg.fill ops with the result
+/// type of the linalg.tensor_reshape op.
+struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
+  using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto oldFill = reshapeOp.src().getDefiningOp<FillOp>();
+    if (!oldFill)
+      return failure();
+
+    auto newInit = rewriter.create<InitTensorOp>(
+        oldFill.getLoc(), reshapeOp.getResultType().getShape(),
+        reshapeOp.getResultType().getElementType());
+    rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, newInit, oldFill.value());
+
+    return success();
+  }
+};
 } // namespace
 
 void TensorReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<CollapseReshapeOps<TensorReshapeOp>, FoldReshapeWithConstant,
-              ReplaceDimOfReshapeOpResult>(context);
+  results.add<CollapseReshapeOps<TensorReshapeOp>, FoldFillWithTensorReshape,
+              FoldReshapeWithConstant, ReplaceDimOfReshapeOpResult>(context);
 }
 
 //===----------------------------------------------------------------------===//
