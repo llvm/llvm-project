@@ -6338,8 +6338,8 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
 // Match (xor X, -1) -> X.
 // Match extract_subvector(xor X, -1) -> extract_subvector(X).
 // Match concat_vectors(xor X, -1, xor Y, -1) -> concat_vectors(X, Y).
-static SDValue IsNOT(SDValue V, SelectionDAG &DAG, bool OneUse = false) {
-  V = OneUse ? peekThroughOneUseBitcasts(V) : peekThroughBitcasts(V);
+static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
+  V = peekThroughBitcasts(V);
   if (V.getOpcode() == ISD::XOR &&
       ISD::isBuildVectorAllOnes(V.getOperand(1).getNode()))
     return V.getOperand(0);
