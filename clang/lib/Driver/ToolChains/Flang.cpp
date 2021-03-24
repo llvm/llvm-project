@@ -42,7 +42,8 @@ void Flang::AddPreprocessingOptions(const ArgList &Args,
 
 void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
-                  {options::OPT_module_dir, options::OPT_fdebug_module_writer});
+                  {options::OPT_module_dir, options::OPT_fdebug_module_writer,
+                   options::OPT_fintrinsic_modules_path});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
