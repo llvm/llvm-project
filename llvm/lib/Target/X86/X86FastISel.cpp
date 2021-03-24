@@ -1446,6 +1446,10 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
   if (!isTypeLegal(I->getOperand(0)->getType(), VT))
     return false;
 
+  // Below code only works for scalars.
+  if (VT.isVector())
+    return false;
+
   // Try to optimize or fold the cmp.
   CmpInst::Predicate Predicate = optimizeCmpPredicate(CI);
   unsigned ResultReg = 0;
