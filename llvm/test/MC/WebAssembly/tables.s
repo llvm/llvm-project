@@ -16,9 +16,9 @@ bar:
     .tabletype bar, funcref
 
 table1:
-    .tabletype table1, funcref
+    .tabletype table1, funcref, 42
 table2:
-    .tabletype table2, funcref
+    .tabletype table2, funcref, 42, 100
 
 # Table instructions
 
@@ -132,11 +132,13 @@ table_fill:
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Minimum:         0x0
+# BIN-NEXT:          Minimum:         0x2A
 # BIN-NEXT:      - Index:           3
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Minimum:         0x0
+# BIN-NEXT:          Flags:           [ HAS_MAX ]
+# BIN-NEXT:          Minimum:         0x2A
+# BIN-NEXT:          Maximum:         0x64
 
 #      BIN:  - Type:            CODE
 # BIN-NEXT:    Relocations:

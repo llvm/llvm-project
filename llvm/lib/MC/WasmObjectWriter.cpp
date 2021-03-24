@@ -1338,12 +1338,7 @@ void WasmObjectWriter::prepareImports(
         Import.Module = WS.getImportModule();
         Import.Field = WS.getImportName();
         Import.Kind = wasm::WASM_EXTERNAL_TABLE;
-        wasm::ValType ElemType = WS.getTableType();
-        Import.Table.ElemType = uint8_t(ElemType);
-        // FIXME: Extend table type to include limits? For now we don't specify
-        // a min or max which does not place any restrictions on the size of the
-        // imported table.
-        Import.Table.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+        Import.Table = WS.getTableType();
         Imports.push_back(Import);
         assert(WasmIndices.count(&WS) == 0);
         WasmIndices[&WS] = NumTableImports++;
@@ -1626,9 +1621,7 @@ uint64_t WasmObjectWriter::writeOneObject(MCAssembler &Asm,
         if (WS.isDefined()) {
           wasm::WasmTable Table;
           Table.Index = NumTableImports + Tables.size();
-          Table.Type.ElemType = static_cast<uint8_t>(WS.getTableType());
-          // FIXME: Work on custom limits is ongoing
-          Table.Type.Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+          Table.Type = WS.getTableType();
           assert(WasmIndices.count(&WS) == 0);
           WasmIndices[&WS] = Table.Index;
           Tables.push_back(Table);
