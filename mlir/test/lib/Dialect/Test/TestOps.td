@@ -39,6 +39,12 @@ def Test_Dialect : Dialect {
                              Type type) const override;
     void printAttribute(Attribute attr,
                         DialectAsmPrinter &printer) const override;
+
+    // Provides a custom printing/parsing for some operations.
+    Optional<ParseOpHook>
+      getParseOperationHook(StringRef opName) const override;
+    LogicalResult printOperation(Operation *op,
+                                 OpAsmPrinter &printer) const override;
   }];
 }
 
