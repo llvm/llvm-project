@@ -171,7 +171,7 @@ static void emitInterfaceDef(const Availability &availability,
   StringRef methodName = availability.getQueryFnName();
   os << availability.getQueryFnRetType() << " "
      << availability.getInterfaceClassName() << "::" << methodName << "() {\n"
-     << "  return getImpl()->" << methodName << "(getOperation());\n"
+     << "  return getImpl()->" << methodName << "(getImpl(), getOperation());\n"
      << "}\n";
 }
 
@@ -208,23 +208,25 @@ static void emitConceptDecl(const Availability &availability, raw_ostream &os) {
      << "    virtual ~Concept() = default;\n"
      << "    virtual " << availability.getQueryFnRetType() << " "
      << availability.getQueryFnName()
-     << "(Operation *tblgen_opaque_op) const = 0;\n"
+     << "(const Concept *impl, Operation *tblgen_opaque_op) const = 0;\n"
      << "  };\n";
 }
 
 static void emitModelDecl(const Availability &availability, raw_ostream &os) {
-  os << "  template<typename ConcreteOp>\n";
-  os << "  class Model : public Concept {\n"
-     << "  public:\n"
-     << "    " << availability.getQueryFnRetType() << " "
-     << availability.getQueryFnName()
-     << "(Operation *tblgen_opaque_op) const final {\n"
-     << "      auto op = llvm::cast<ConcreteOp>(tblgen_opaque_op);\n"
-     << "      (void)op;\n"
-     // Forward to the method on the concrete operation type.
-     << "      return op." << availability.getQueryFnName() << "();\n"
-     << "    }\n"
-     << "  };\n";
+  for (const char *modelClass : {"Model", "FallbackModel"}) {
+    os << "  template<typename ConcreteOp>\n";
+    os << "  class " << modelClass << " : public Concept {\n"
+       << "  public:\n"
+       << "    " << availability.getQueryFnRetType() << " "
+       << availability.getQueryFnName()
+       << "(const Concept *impl, Operation *tblgen_opaque_op) const final {\n"
+       << "      auto op = llvm::cast<ConcreteOp>(tblgen_opaque_op);\n"
+       << "      (void)op;\n"
+       // Forward to the method on the concrete operation type.
+       << "      return op." << availability.getQueryFnName() << "();\n"
+       << "    }\n"
+       << "  };\n";
+  }
 }
 
 static void emitInterfaceDecl(const Availability &availability,
