@@ -56,7 +56,9 @@ class ProgressPredictor(object):
         total_time_remaining = self.predictable_time_remaining + unpredictable_time_remaining
         total_time = self.time_elapsed + total_time_remaining
 
-        return self.time_elapsed / total_time
+        if total_time > 0:
+            return self.time_elapsed / total_time
+        return 0
 
 
 class NopDisplay(object):
