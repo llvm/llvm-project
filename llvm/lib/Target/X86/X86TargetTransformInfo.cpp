@@ -129,26 +129,30 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
-unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) const {
+TypeSize
+X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
-  if (Vector) {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
+  case TargetTransformInfo::RGK_FixedWidthVector:
     if (ST->hasAVX512() && PreferVectorWidth >= 512)
-      return 512;
+      return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
-      return 256;
+      return TypeSize::getFixed(256);
     if (ST->hasSSE1() && PreferVectorWidth >= 128)
-      return 128;
-    return 0;
+      return TypeSize::getFixed(128);
+    return TypeSize::getFixed(0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
   }
 
-  if (ST->is64Bit())
-    return 64;
-
-  return 32;
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
-  return getRegisterBitWidth(true);
+  return getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+      .getFixedSize();
 }
 
 unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {

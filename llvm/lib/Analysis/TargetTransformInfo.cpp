@@ -577,8 +577,9 @@ const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
-unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
-  return TTIImpl->getRegisterBitWidth(Vector);
+TypeSize TargetTransformInfo::getRegisterBitWidth(
+    TargetTransformInfo::RegisterKind K) const {
+  return TTIImpl->getRegisterBitWidth(K);
 }
 
 unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
