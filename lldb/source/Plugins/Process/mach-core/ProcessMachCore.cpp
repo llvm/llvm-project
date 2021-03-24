@@ -285,14 +285,16 @@ Status ProcessMachCore::DoLoadCore() {
   ObjectFile::BinaryType type;
   if (core_objfile->GetCorefileMainBinaryInfo(objfile_binary_addr,
                                               objfile_binary_uuid, type)) {
-    if (objfile_binary_addr != LLDB_INVALID_ADDRESS)
-    {
+    if (objfile_binary_addr != LLDB_INVALID_ADDRESS) {
+      if (type == ObjectFile::eBinaryTypeUser)
+        m_dyld_addr = objfile_binary_addr;
+      else
         m_mach_kernel_addr = objfile_binary_addr;
-        found_main_binary_definitively = true;
-        LLDB_LOGF(log,
-                  "ProcessMachCore::DoLoadCore: using kernel address 0x%" PRIx64
-                  " from LC_NOTE 'main bin spec' load command.",
-                  m_mach_kernel_addr);
+      found_main_binary_definitively = true;
+      LLDB_LOGF(log,
+                "ProcessMachCore::DoLoadCore: using kernel address 0x%" PRIx64
+                " from LC_NOTE 'main bin spec' load command.",
+                m_mach_kernel_addr);
     }
   }
 
