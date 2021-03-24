@@ -272,6 +272,9 @@ class Dialect {
 
   // If this dialect overrides the hook for verifying region result attributes.
   bit hasRegionResultAttrVerify = 0;
+
+  // If this dialect overrides the hook for op interface fallback.
+  bit hasOperationInterfaceFallback = 0;
 }
 
 //===----------------------------------------------------------------------===//

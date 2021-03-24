@@ -158,6 +158,19 @@ public:
         getRegisteredInterface(InterfaceT::getInterfaceID()));
   }
 
+  /// Lookup an op interface for the given ID if one is registered, otherwise
+  /// nullptr.
+  virtual void *getRegisteredInterfaceForOp(TypeID interfaceID,
+                                            OperationName opName) {
+    return nullptr;
+  }
+  template <typename InterfaceT>
+  typename InterfaceT::Concept *
+  getRegisteredInterfaceForOp(OperationName opName) {
+    return static_cast<typename InterfaceT::Concept *>(
+        getRegisteredInterfaceForOp(InterfaceT::getInterfaceID(), opName));
+  }
+
 protected:
   /// The constructor takes a unique namespace for this dialect as well as the
   /// context to bind to.
