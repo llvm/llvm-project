@@ -97,9 +97,7 @@ define i32 @pow2b_max(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[SHX:%.*]] = shl i32 2, [[X:%.*]]
 ; CHECK-NEXT:    [[SHY:%.*]] = shl i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i32 @llvm.smax.i32(i32 [[SHX]], i32 [[SHY]])
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[M]]
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[M]], [[NEG]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[M]]
 ;
   %shx = shl i32 2, %x
   %shy = shl i32 32, %y
@@ -133,12 +131,7 @@ define <2 x i32> @pow2_decrement_commute_vec(<2 x i32> %p) {
 
 define <2 x i32> @pow2_decrement_min_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @pow2_decrement_min_vec(
-; CHECK-NEXT:    [[P1:%.*]] = and <2 x i32> [[X:%.*]], <i32 2048, i32 2048>
-; CHECK-NEXT:    [[P2:%.*]] = shl <2 x i32> <i32 1, i32 1>, [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[P1]], <2 x i32> [[P2]])
-; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[M]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[M]], [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %p1 = and <2 x i32> %x, <i32 2048, i32 2048>
   %p2 = shl <2 x i32> <i32 1, i32 1>, %y

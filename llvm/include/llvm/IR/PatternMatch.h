@@ -1735,10 +1735,10 @@ struct MaxMin_match {
       return false;
     // At this point we have a select conditioned on a comparison.  Check that
     // it is the values returned by the select that are being compared.
-    Value *TrueVal = SI->getTrueValue();
-    Value *FalseVal = SI->getFalseValue();
-    Value *LHS = Cmp->getOperand(0);
-    Value *RHS = Cmp->getOperand(1);
+    auto *TrueVal = SI->getTrueValue();
+    auto *FalseVal = SI->getFalseValue();
+    auto *LHS = Cmp->getOperand(0);
+    auto *RHS = Cmp->getOperand(1);
     if ((TrueVal != LHS || FalseVal != RHS) &&
         (TrueVal != RHS || FalseVal != LHS))
       return false;
