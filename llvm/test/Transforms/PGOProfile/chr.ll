@@ -1277,11 +1277,12 @@ define i32 @test_chr_14(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-LABEL: @test_chr_14(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I0:%.*]] = load i32, i32* [[I:%.*]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = icmp ne i32 [[Z:%.*]], 1
+; CHECK-NEXT:    [[V1:%.*]] = icmp eq i32 [[Z:%.*]], 1
+; CHECK-NEXT:    br i1 [[V1]], label [[BB1:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof !15
+; CHECK:       entry.split.nonchr:
 ; CHECK-NEXT:    [[V0:%.*]] = icmp eq i32 [[Z]], 0
 ; CHECK-NEXT:    [[V3_NONCHR:%.*]] = and i1 [[V0]], [[PRED:%.*]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[V1]], [[V3_NONCHR]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[BB0_NONCHR:%.*]], label [[BB1:%.*]], !prof !19
+; CHECK-NEXT:    br i1 [[V3_NONCHR]], label [[BB0_NONCHR:%.*]], label [[BB1]], !prof !16
 ; CHECK:       bb0.nonchr:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB1]]
@@ -1912,7 +1913,7 @@ define i32 @test_chr_21(i64 %i, i64 %k, i64 %j) !prof !14 {
 ; CHECK-NEXT:    switch i64 [[I]], label [[BB2:%.*]] [
 ; CHECK-NEXT:    i64 2, label [[BB3_NONCHR2:%.*]]
 ; CHECK-NEXT:    i64 86, label [[BB2_NONCHR1:%.*]]
-; CHECK-NEXT:    ], !prof !20
+; CHECK-NEXT:    ], !prof !19
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    call void @foo()
@@ -2489,14 +2490,14 @@ define void @test_chr_24(i32* %i) !prof !14 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[BB0:%.*]], !prof !21
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[BB0:%.*]], !prof !20
 ; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[BB3:%.*]], label [[BB2:%.*]], !prof !21
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB3:%.*]], label [[BB2:%.*]], !prof !20
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB3]]
@@ -2550,4 +2551,3 @@ bb3:
 ; CHECK: !16 = !{!"branch_weights", i32 0, i32 1}
 ; CHECK: !17 = !{!"branch_weights", i32 1, i32 1}
 ; CHECK: !18 = !{!"branch_weights", i32 1, i32 0}
-; CHECK: !19 = !{!"branch_weights", i32 0, i32 1000}
