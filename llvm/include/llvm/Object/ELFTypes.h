@@ -802,13 +802,15 @@ template <class ELFT> struct Elf_BBAddrMap_Impl {
 
     // The following fields are decoded from the Metadata field. The encoding
     // happens in AsmPrinter.cpp:getBBAddrMapMetadata.
-    bool HasReturn;   // If this block ends with a return (or tail call).
-    bool HasTailCall; // If this block ends with a tail call.
-    bool IsEHPad;     // If this is an exception handling block.
+    bool HasReturn;      // If this block ends with a return (or tail call).
+    bool HasTailCall;    // If this block ends with a tail call.
+    bool IsEHPad;        // If this is an exception handling block.
+    bool CanFallThrough; // If this block can fall through to its next.
 
     BBEntry(uint32_t Offset, uint32_t Size, uint32_t Metadata)
         : Offset(Offset), Size(Size), HasReturn(Metadata & 1),
-          HasTailCall(Metadata & (1 << 1)), IsEHPad(Metadata & (1 << 2)){};
+          HasTailCall(Metadata & (1 << 1)), IsEHPad(Metadata & (1 << 2)),
+          CanFallThrough(Metadata & (1 << 3)){};
   };
   std::vector<BBEntry> BBEntries; // Basic block entries for this function.
 };
