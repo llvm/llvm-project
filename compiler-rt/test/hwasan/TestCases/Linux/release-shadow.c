@@ -12,8 +12,6 @@
 
 #include <sanitizer/hwasan_interface.h>
 
-#include "../utils.h"
-
 const unsigned char kTag = 42;
 const size_t kNumShadowPages = 256;
 const size_t kNumPages = 16 * kNumShadowPages;
@@ -32,13 +30,13 @@ void sync_rss() {
 
 size_t current_rss() {
   sync_rss();
-  int statm_fd = open(UNTAG("/proc/self/statm"), O_RDONLY);
+  int statm_fd = open("/proc/self/statm", O_RDONLY);
   assert(statm_fd >= 0);
 
   char buf[100];
   assert(read(statm_fd, &buf, sizeof(buf)) > 0);
   size_t size, rss;
-  assert(sscanf(buf, UNTAG("%zu %zu"), &size, &rss) == 2);
+  assert(sscanf(buf, "%zu %zu", &size, &rss) == 2);
 
   close(statm_fd);
   return rss;
@@ -49,20 +47,20 @@ void test_rss_difference(void *p) {
   size_t rss_before = current_rss();
   __hwasan_tag_memory(p, 0, kMapSize);
   size_t rss_after = current_rss();
-  untag_fprintf(stderr, "%zu -> %zu\n", rss_before, rss_after);
+  fprintf(stderr, "%zu -> %zu\n", rss_before, rss_after);
   assert(rss_before > rss_after);
   size_t diff = rss_before - rss_after;
-  untag_fprintf(stderr, "diff %zu\n", diff);
+  fprintf(stderr, "diff %zu\n", diff);
   // Check that the difference is at least close to kNumShadowPages.
   assert(diff > kNumShadowPages / 4 * 3);
 }
 
 int main() {
-  untag_fprintf(stderr, "starting rss %zu\n", current_rss());
-  untag_fprintf(stderr, "shadow pages: %zu\n", kNumShadowPages);
+  fprintf(stderr, "starting rss %zu\n", current_rss());
+  fprintf(stderr, "shadow pages: %zu\n", kNumShadowPages);
 
   void *p = mmap(0, kMapSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-  untag_fprintf(stderr, "p = %p\n", p);
+  fprintf(stderr, "p = %p\n", p);
 
   test_rss_difference(p);
   test_rss_difference(p);
