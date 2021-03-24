@@ -380,7 +380,9 @@ public:
     }
   }
 
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
