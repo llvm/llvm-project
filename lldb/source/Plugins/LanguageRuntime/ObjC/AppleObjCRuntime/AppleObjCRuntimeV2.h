@@ -26,7 +26,6 @@ class AppleObjCRuntimeV2 : public AppleObjCRuntime {
 public:
   ~AppleObjCRuntimeV2() override = default;
 
-  // Static Functions
   static void Initialize();
 
   static void Terminate();
@@ -46,7 +45,6 @@ public:
     return runtime->isA(&ID);
   }
 
-  // These are generic runtime functions:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
@@ -56,7 +54,6 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  // PluginInterface protocol
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -105,8 +102,8 @@ public:
 
 protected:
   lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override;
 
 private:
   class HashTableSignature {
