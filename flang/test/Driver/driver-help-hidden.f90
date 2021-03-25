@@ -47,6 +47,8 @@
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -o <file> Write output to <file>
+! CHECK-NEXT: -pedantic              Warn on language extensions
+! CHECK-NEXT: -std=<value>           Language standard to compile for
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
 ! CHECK-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
