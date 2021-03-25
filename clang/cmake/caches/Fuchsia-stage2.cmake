@@ -263,6 +263,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-elfabi
   llvm-gsymutil
   llvm-lib
+  llvm-lipo
   llvm-mt
   llvm-nm
   llvm-objcopy

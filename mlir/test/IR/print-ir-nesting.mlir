@@ -3,7 +3,7 @@
 // CHECK: visiting op: 'module' with 0 operands and 0 results
 // CHECK:  1 nested regions:
 // CHECK:   Region with 1 blocks:
-// CHECK:     Block with 0 arguments, 0 successors, and 3 operations
+// CHECK:     Block with 0 arguments, 0 successors, and 2 operations
 module {
 
 
@@ -51,7 +51,5 @@ module {
 // CHECK:              0 nested regions:
     "dialect.innerop7"() : () -> ()
   }) : () -> ()
-
-// CHECK:       visiting op: 'module_terminator' with 0 operands and 0 results
 
 } // module

@@ -8,9 +8,6 @@
 // A-NEXT: ---p {{.*}}shadow gap]
 // A-NEXT: rw-p {{.*}}high shadow]
 
-// B-DAG: rw-p {{.*}}SizeClassAllocator: region data]
-// B-DAG: rw-p {{.*}}SizeClassAllocator: region metadata]
-// B-DAG: rw-p {{.*}}SizeClassAllocator: freearray]
 // B-DAG: rw-p {{.*}}SizeClassAllocator: region info]
 // B-DAG: rw-p {{.*}}LargeMmapAllocator]
 // B-DAG: rw-p {{.*}}stack depot]
@@ -25,7 +22,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#include "../utils.h"
+#include "utils.h"
 
 void CopyFdToFd(int in_fd, int out_fd) {
   const size_t kBufSize = 0x10000;
@@ -37,7 +34,7 @@ void CopyFdToFd(int in_fd, int out_fd) {
     } else if (got == 0) {
       break;
     } else if (errno != EAGAIN || errno != EWOULDBLOCK || errno != EINTR) {
-      untag_fprintf(stderr, "error reading file, errno %d\n", errno);
+      fprintf(stderr, "error reading file, errno %d\n", errno);
       abort();
     }
   }

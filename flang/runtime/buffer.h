@@ -27,7 +27,24 @@ void LeftShiftBufferCircularly(char *, std::size_t bytes, std::size_t shift);
 // preserve read data that may be reused by means of Tn/TLn edit descriptors
 // without needing to position the file (which may not always be possible,
 // e.g. a socket) and a general desire to reduce system call counts.
-template <typename STORE> class FileFrame {
+//
+// Possible scenario with a tiny 32-byte buffer after a ReadFrame or
+// WriteFrame with a file offset of 103 to access "DEF":
+//
+//    fileOffset_ 100 --+  +-+ frame of interest (103:105)
+//   file:  ............ABCDEFGHIJKLMNOPQRSTUVWXYZ....
+// buffer: [NOPQRSTUVWXYZ......ABCDEFGHIJKLM]   (size_ == 32)
+//                             |  +-- frame_ == 3
+//                             +----- start_ == 19, length_ == 26
+//
+// The buffer holds length_ == 26 bytes from file offsets 100:125.
+// Those 26 bytes "wrap around" the end of the circular buffer,
+// so file offsets 100:112 map to buffer offsets 19:31 ("A..M") and
+//    file offsets 113:125 map to buffer offsets  0:12 ("N..Z")
+// The 3-byte frame of file offsets 103:105 is contiguous in the buffer
+// at buffer offset (start_ + frame_) == 22 ("DEF").
+
+template <typename STORE, std::size_t minBuffer = 65536> class FileFrame {
 public:
   using FileOffset = std::int64_t;
 
@@ -50,28 +67,17 @@ public:
       FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
     Flush(handler);
     Reallocate(bytes, handler);
-    if (at < fileOffset_ || at > fileOffset_ + length_) {
+    std::int64_t newFrame{at - fileOffset_};
+    if (newFrame < 0 || newFrame > length_) {
       Reset(at);
+    } else {
+      frame_ = newFrame;
     }
-    frame_ = at - fileOffset_;
+    RUNTIME_CHECK(handler, at == fileOffset_ + frame_);
     if (static_cast<std::int64_t>(start_ + frame_ + bytes) > size_) {
       DiscardLeadingBytes(frame_, handler);
-      if (static_cast<std::int64_t>(start_ + bytes) > size_) {
-        // Frame would wrap around; shift current data (if any) to force
-        // contiguity.
-        RUNTIME_CHECK(handler, length_ < size_);
-        if (start_ + length_ <= size_) {
-          // [......abcde..] -> [abcde........]
-          std::memmove(buffer_, buffer_ + start_, length_);
-        } else {
-          // [cde........ab] -> [abcde........]
-          auto n{start_ + length_ - size_}; // 3 for cde
-          RUNTIME_CHECK(handler, length_ >= n);
-          std::memmove(buffer_ + n, buffer_ + start_, length_ - n); // cdeab
-          LeftShiftBufferCircularly(buffer_, length_, n); // abcde
-        }
-        start_ = 0;
-      }
+      MakeDataContiguous(handler, bytes);
+      RUNTIME_CHECK(handler, at == fileOffset_ + frame_);
     }
     while (FrameLength() < bytes) {
       auto next{start_ + length_};
@@ -81,7 +87,7 @@ public:
       auto got{Store().Read(
           fileOffset_ + length_, buffer_ + next, minBytes, maxBytes, handler)};
       length_ += got;
-      RUNTIME_CHECK(handler, length_ < size_);
+      RUNTIME_CHECK(handler, length_ <= size_);
       if (got < minBytes) {
         break; // error or EOF & program can handle it
       }
@@ -90,32 +96,38 @@ public:
   }
 
   void WriteFrame(FileOffset at, std::size_t bytes, IoErrorHandler &handler) {
-    if (!dirty_ || at < fileOffset_ || at > fileOffset_ + length_ ||
-        start_ + (at - fileOffset_) + static_cast<std::int64_t>(bytes) >
-            size_) {
+    Reallocate(bytes, handler);
+    std::int64_t newFrame{at - fileOffset_};
+    if (!dirty_ || newFrame < 0 || newFrame > length_) {
       Flush(handler);
       Reset(at);
-      Reallocate(bytes, handler);
+    } else if (start_ + newFrame + static_cast<std::int64_t>(bytes) > size_) {
+      // Flush leading data before "at", retain from "at" onward
+      Flush(handler, length_ - newFrame);
+      MakeDataContiguous(handler, bytes);
+    } else {
+      frame_ = newFrame;
     }
+    RUNTIME_CHECK(handler, at == fileOffset_ + frame_);
     dirty_ = true;
-    frame_ = at - fileOffset_;
     length_ = std::max<std::int64_t>(length_, frame_ + bytes);
   }
 
-  void Flush(IoErrorHandler &handler) {
+  void Flush(IoErrorHandler &handler, std::int64_t keep = 0) {
     if (dirty_) {
-      while (length_ > 0) {
-        std::size_t chunk{std::min<std::size_t>(length_, size_ - start_)};
+      while (length_ > keep) {
+        std::size_t chunk{
+            std::min<std::size_t>(length_ - keep, size_ - start_)};
         std::size_t put{
             Store().Write(fileOffset_, buffer_ + start_, chunk, handler)};
-        length_ -= put;
-        start_ += put;
-        fileOffset_ += put;
+        DiscardLeadingBytes(put, handler);
         if (put < chunk) {
           break;
         }
       }
-      Reset(fileOffset_);
+      if (length_ == 0) {
+        Reset(fileOffset_);
+      }
     }
   }
 
@@ -162,7 +174,24 @@ private:
     fileOffset_ += n;
   }
 
-  static constexpr std::size_t minBuffer{64 << 10};
+  void MakeDataContiguous(IoErrorHandler &handler, std::size_t bytes) {
+    if (static_cast<std::int64_t>(start_ + bytes) > size_) {
+      // Frame would wrap around; shift current data (if any) to force
+      // contiguity.
+      RUNTIME_CHECK(handler, length_ < size_);
+      if (start_ + length_ <= size_) {
+        // [......abcde..] -> [abcde........]
+        std::memmove(buffer_, buffer_ + start_, length_);
+      } else {
+        // [cde........ab] -> [abcde........]
+        auto n{start_ + length_ - size_}; // 3 for cde
+        RUNTIME_CHECK(handler, length_ >= n);
+        std::memmove(buffer_ + n, buffer_ + start_, length_ - n); // cdeab
+        LeftShiftBufferCircularly(buffer_, length_, n); // abcde
+      }
+      start_ = 0;
+    }
+  }
 
   char *buffer_{nullptr};
   std::int64_t size_{0}; // current allocated buffer size

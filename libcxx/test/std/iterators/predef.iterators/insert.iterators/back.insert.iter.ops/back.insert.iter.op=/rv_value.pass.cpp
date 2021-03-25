@@ -23,19 +23,24 @@
 #include <cassert>
 
 #include "test_macros.h"
+#include "test_constexpr_container.h"
 
 template <class C>
-void
+TEST_CONSTEXPR_CXX14 bool
 test(C c)
 {
     std::back_insert_iterator<C> i(c);
     i = typename C::value_type();
     assert(c.back() == typename C::value_type());
+    return true;
 }
 
 int main(int, char**)
 {
     test(std::vector<std::unique_ptr<int> >());
-
-  return 0;
+#if TEST_STD_VER >= 20
+    test(ConstexprFixedCapacityDeque<int, 10>());
+    static_assert(test(ConstexprFixedCapacityDeque<int, 10>()));
+#endif
+    return 0;
 }

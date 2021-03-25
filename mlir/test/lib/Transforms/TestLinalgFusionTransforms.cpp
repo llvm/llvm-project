@@ -179,6 +179,10 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
 namespace {
 struct TestLinalgGreedyFusion
     : public PassWrapper<TestLinalgGreedyFusion, FunctionPass> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect>();
+  }
   void runOnFunction() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns =

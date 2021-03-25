@@ -30,7 +30,8 @@ struct PotentiallyThrowingCopyAssignable {
 
 #include "test_macros.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::pair<long, char> T0;
@@ -41,6 +42,16 @@ int main(int, char**)
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == short('a'));
     }
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
     {
         // test that the implicitly generated copy assignment operator
         // is properly deleted

@@ -1723,6 +1723,7 @@ private:
 
 char IslScheduleOptimizerWrapperPass::ID = 0;
 
+#ifndef NDEBUG
 static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
                           StringRef Desc) {
   isl::ctx Ctx = Schedule.get_ctx();
@@ -1734,6 +1735,7 @@ static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
   free(Str);
   isl_printer_free(P);
 }
+#endif
 
 /// Collect statistics for the schedule tree.
 ///

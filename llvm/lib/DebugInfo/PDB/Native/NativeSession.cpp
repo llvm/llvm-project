@@ -83,7 +83,7 @@ Error NativeSession::createFromPdb(std::unique_ptr<MemoryBuffer> Buffer,
 static Expected<std::unique_ptr<PDBFile>>
 loadPdbFile(StringRef PdbPath, std::unique_ptr<BumpPtrAllocator> &Allocator) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
-      MemoryBuffer::getFile(PdbPath, /*FileSize=*/-1,
+      MemoryBuffer::getFile(PdbPath, /*IsText=*/false,
                             /*RequiresNullTerminator=*/false);
   if (!ErrorOrBuffer)
     return make_error<RawError>(ErrorOrBuffer.getError());

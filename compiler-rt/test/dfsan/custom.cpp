@@ -142,6 +142,23 @@ dfsan_label i_j_label = 0;
 #define ASSERT_SAVED_ORIGINS(val)
 #endif
 
+#ifdef ORIGIN_TRACKING
+#define DEFINE_AND_SAVE_N_ORIGINS(val, n) \
+  dfsan_origin val##_o[n];                \
+  for (int i = 0; i < n; ++i)             \
+    val##_o[i] = dfsan_get_origin((long)(val[i]));
+#else
+#define DEFINE_AND_SAVE_N_ORIGINS(val, n)
+#endif
+
+#ifdef ORIGIN_TRACKING
+#define ASSERT_SAVED_N_ORIGINS(val, n) \
+  for (int i = 0; i < n; ++i)          \
+    ASSERT_ORIGIN(val[i], val##_o[i]);
+#else
+#define ASSERT_SAVED_N_ORIGINS(val, n)
+#endif
+
 void test_stat() {
   int i = 1;
   dfsan_set_label(i_label, &i, sizeof(i));
@@ -762,28 +779,37 @@ void test_clock_gettime() {
   ASSERT_ORIGIN(((char *)&tp)[3], origin);
 }
 
-#if !defined(ORIGIN_TRACKING)
 void test_ctime_r() {
   char *buf = (char*) malloc(64);
   time_t t = 0;
+
+  DEFINE_AND_SAVE_ORIGINS(buf)
+  dfsan_origin t_o = dfsan_get_origin((long)t);
 
   char *ret = ctime_r(&t, buf);
   ASSERT_ZERO_LABEL(ret);
   assert(buf == ret);
   ASSERT_READ_ZERO_LABEL(buf, strlen(buf) + 1);
+  ASSERT_SAVED_ORIGINS(buf)
 
   dfsan_set_label(i_label, &t, sizeof(t));
+  t_o = dfsan_get_origin((long)t);
   ret = ctime_r(&t, buf);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_LABEL(buf, strlen(buf) + 1, i_label);
+  for (int i = 0; i < strlen(buf) + 1; ++i)
+    ASSERT_ORIGIN(buf[i], t_o);
 
   t = 0;
   dfsan_set_label(j_label, &buf, sizeof(&buf));
+  dfsan_origin buf_ptr_o = dfsan_get_origin((long)buf);
   ret = ctime_r(&t, buf);
   ASSERT_LABEL(ret, j_label);
+  ASSERT_ORIGIN(ret, buf_ptr_o);
   ASSERT_READ_ZERO_LABEL(buf, strlen(buf) + 1);
+  for (int i = 0; i < strlen(buf) + 1; ++i)
+    ASSERT_ORIGIN(buf[i], t_o);
 }
-#endif // !defined(ORIGIN_TRACKING)
 
 static int write_callback_count = 0;
 static int last_fd;
@@ -860,32 +886,48 @@ void test_dfsan_set_write_callback() {
   dfsan_set_write_callback(NULL);
 }
 
-#if !defined(ORIGIN_TRACKING)
 void test_fgets() {
   char *buf = (char*) malloc(128);
   FILE *f = fopen("/etc/passwd", "r");
   dfsan_set_label(j_label, buf, 1);
+  DEFINE_AND_SAVE_N_ORIGINS(buf, 128)
+
   char *ret = fgets(buf, sizeof(buf), f);
   assert(ret == buf);
   ASSERT_ZERO_LABEL(ret);
+  ASSERT_EQ_ORIGIN(ret, buf);
   ASSERT_READ_ZERO_LABEL(buf, 128);
+  ASSERT_SAVED_N_ORIGINS(buf, 128)
+
   dfsan_set_label(j_label, &buf, sizeof(&buf));
   ret = fgets(buf, sizeof(buf), f);
   ASSERT_LABEL(ret, j_label);
+  ASSERT_EQ_ORIGIN(ret, buf);
+  ASSERT_SAVED_N_ORIGINS(buf, 128)
+
   fclose(f);
+  free(buf);
 }
 
 void test_getcwd() {
   char buf[1024];
   char *ptr = buf;
   dfsan_set_label(i_label, buf + 2, 2);
+  DEFINE_AND_SAVE_ORIGINS(buf)
+
   char* ret = getcwd(buf, sizeof(buf));
   assert(ret == buf);
   assert(ret[0] == '/');
+  ASSERT_ZERO_LABEL(ret);
+  ASSERT_EQ_ORIGIN(ret, buf);
   ASSERT_READ_ZERO_LABEL(buf + 2, 2);
+  ASSERT_SAVED_ORIGINS(buf)
+
   dfsan_set_label(i_label, &ptr, sizeof(ptr));
   ret = getcwd(ptr, sizeof(buf));
   ASSERT_LABEL(ret, i_label);
+  ASSERT_EQ_ORIGIN(ret, ptr);
+  ASSERT_SAVED_ORIGINS(buf)
 }
 
 void test_get_current_dir_name() {
@@ -893,44 +935,62 @@ void test_get_current_dir_name() {
   assert(ret);
   assert(ret[0] == '/');
   ASSERT_READ_ZERO_LABEL(ret, strlen(ret) + 1);
+  ASSERT_ZERO_LABEL(ret);
 }
 
 void test_gethostname() {
   char buf[1024];
   dfsan_set_label(i_label, buf + 2, 2);
-  assert(gethostname(buf, sizeof(buf)) == 0);
+  DEFINE_AND_SAVE_ORIGINS(buf)
+  int ret = gethostname(buf, sizeof(buf));
+  assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(buf + 2, 2);
+  ASSERT_SAVED_ORIGINS(buf)
 }
 
 void test_getrlimit() {
   struct rlimit rlim;
   dfsan_set_label(i_label, &rlim, sizeof(rlim));
-  assert(getrlimit(RLIMIT_CPU, &rlim) == 0);
+  DEFINE_AND_SAVE_ORIGINS(rlim);
+  int ret = getrlimit(RLIMIT_CPU, &rlim);
+  assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&rlim, sizeof(rlim));
+  ASSERT_SAVED_ORIGINS(rlim)
 }
 
 void test_getrusage() {
   struct rusage usage;
   dfsan_set_label(i_label, &usage, sizeof(usage));
-  assert(getrusage(RUSAGE_SELF, &usage) == 0);
+  DEFINE_AND_SAVE_ORIGINS(usage);
+  int ret = getrusage(RUSAGE_SELF, &usage);
+  assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&usage, sizeof(usage));
+  ASSERT_SAVED_ORIGINS(usage)
 }
-#endif // !defined(ORIGIN_TRACKING)
 
 void test_strcpy() {
   char src[] = "hello world";
   char dst[sizeof(src) + 2];
+  char *p_dst = dst;
   dfsan_set_label(0, src, sizeof(src));
   dfsan_set_label(0, dst, sizeof(dst));
+  dfsan_set_label(k_label, &p_dst, sizeof(p_dst));
   dfsan_set_label(i_label, src + 2, 1);
   dfsan_set_label(j_label, src + 3, 1);
   dfsan_set_label(j_label, dst + 4, 1);
   dfsan_set_label(i_label, dst + 12, 1);
-  char *ret = strcpy(dst, src);
+  char *ret = strcpy(p_dst, src);
   assert(ret == dst);
   assert(strcmp(src, dst) == 0);
+  ASSERT_LABEL(ret, k_label);
+  ASSERT_EQ_ORIGIN(ret, p_dst);
   for (int i = 0; i < strlen(src) + 1; ++i) {
     assert(dfsan_get_label(dst[i]) == dfsan_get_label(src[i]));
+    if (dfsan_get_label(dst[i]))
+      assert(dfsan_get_init_origin(&dst[i]) == dfsan_get_origin(src[i]));
   }
   // Note: if strlen(src) + 1 were used instead to compute the first untouched
   // byte of dest, the label would be I|J. This is because strlen() might
@@ -1061,14 +1121,16 @@ void test_strtod() {
   ASSERT_EQ_ORIGIN(ret, buf[1]);
 }
 
-#if !defined(ORIGIN_TRACKING)
 void test_time() {
   time_t t = 0;
   dfsan_set_label(i_label, &t, 1);
+  DEFINE_AND_SAVE_ORIGINS(t)
   time_t ret = time(&t);
   assert(ret == t);
   assert(ret > 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_ZERO_LABEL(t);
+  ASSERT_SAVED_ORIGINS(t)
 }
 
 void test_inet_pton() {
@@ -1077,7 +1139,9 @@ void test_inet_pton() {
   struct in_addr in4;
   int ret4 = inet_pton(AF_INET, addr4, &in4);
   assert(ret4 == 1);
+  ASSERT_ZERO_LABEL(ret4);
   ASSERT_READ_LABEL(&in4, sizeof(in4), i_label);
+  ASSERT_ORIGINS(&in4, sizeof(in4), dfsan_get_origin((long)(addr4[3])))
   assert(in4.s_addr == htonl(0x7f000001));
 
   char addr6[] = "::1";
@@ -1085,17 +1149,27 @@ void test_inet_pton() {
   struct in6_addr in6;
   int ret6 = inet_pton(AF_INET6, addr6, &in6);
   assert(ret6 == 1);
+  ASSERT_ZERO_LABEL(ret6);
   ASSERT_READ_LABEL(((char *) &in6) + sizeof(in6) - 1, 1, j_label);
+  ASSERT_ORIGINS(&in6, sizeof(in6), dfsan_get_origin((long)(addr6[3])))
 }
 
 void test_localtime_r() {
   time_t t0 = 1384800998;
   struct tm t1;
   dfsan_set_label(i_label, &t0, sizeof(t0));
-  struct tm* ret = localtime_r(&t0, &t1);
+  dfsan_origin t0_o = dfsan_get_origin((long)t0);
+  struct tm *pt1 = &t1;
+  dfsan_set_label(j_label, &pt1, sizeof(pt1));
+  dfsan_origin pt1_o = dfsan_get_origin((long)pt1);
+  struct tm *ret = localtime_r(&t0, pt1);
   assert(ret == &t1);
   assert(t1.tm_min == 56);
+  ASSERT_LABEL(ret, j_label);
+  ASSERT_INIT_ORIGIN(&ret, pt1_o);
+  ASSERT_READ_LABEL(&ret, sizeof(ret), j_label);
   ASSERT_LABEL(t1.tm_mon, i_label);
+  ASSERT_ORIGIN(t1.tm_mon, t0_o);
 }
 
 void test_getpwuid_r() {
@@ -1104,11 +1178,16 @@ void test_getpwuid_r() {
   struct passwd *result;
 
   dfsan_set_label(i_label, &pwd, 4);
+  DEFINE_AND_SAVE_ORIGINS(pwd)
+  DEFINE_AND_SAVE_ORIGINS(buf)
   int ret = getpwuid_r(0, &pwd, buf, sizeof(buf), &result);
   assert(ret == 0);
   assert(strcmp(pwd.pw_name, "root") == 0);
   assert(result == &pwd);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&pwd, 4);
+  ASSERT_SAVED_ORIGINS(pwd)
+  ASSERT_SAVED_ORIGINS(buf)
 }
 
 void test_epoll_wait() {
@@ -1129,12 +1208,14 @@ void test_epoll_wait() {
   // Test epoll_wait when no events have occurred.
   event = {};
   dfsan_set_label(i_label, &event, sizeof(event));
+  DEFINE_AND_SAVE_ORIGINS(event)
   ret = epoll_wait(epfd, &event, /*maxevents=*/1, /*timeout=*/0);
   assert(ret == 0);
   assert(event.events == 0);
   assert(event.data.fd == 0);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_LABEL(&event, sizeof(event), i_label);
+  ASSERT_SAVED_ORIGINS(event)
 
   // Test epoll_wait when an event occurs.
   write(pipe_fds[1], "x", 1);
@@ -1144,6 +1225,7 @@ void test_epoll_wait() {
   assert(event.data.fd == pipe_fds[0]);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&event, sizeof(event));
+  ASSERT_SAVED_ORIGINS(event)
 
   // Clean up.
   close(epfd);
@@ -1156,8 +1238,11 @@ void test_poll() {
   fd.fd = 0;
   fd.events = POLLIN;
   dfsan_set_label(i_label, &fd.revents, sizeof(fd.revents));
+  DEFINE_AND_SAVE_ORIGINS(fd)
   int ret = poll(&fd, 1, 1);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_ZERO_LABEL(fd.revents);
+  ASSERT_SAVED_ORIGINS(fd)
   assert(ret >= 0);
 }
 
@@ -1168,20 +1253,27 @@ void test_select() {
   FD_SET(0, &fds);
   dfsan_set_label(i_label, &fds, sizeof(fds));
   dfsan_set_label(j_label, &t, sizeof(t));
+  DEFINE_AND_SAVE_ORIGINS(fds)
+  DEFINE_AND_SAVE_ORIGINS(t)
   int ret = select(1, &fds, NULL, NULL, &t);
   assert(ret >= 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_ZERO_LABEL(t.tv_sec);
   ASSERT_READ_ZERO_LABEL(&fds, sizeof(fds));
+  ASSERT_SAVED_ORIGINS(fds)
+  ASSERT_SAVED_ORIGINS(t)
 }
 
 void test_sched_getaffinity() {
   cpu_set_t mask;
   dfsan_set_label(j_label, &mask, 1);
+  DEFINE_AND_SAVE_ORIGINS(mask)
   int ret = sched_getaffinity(0, sizeof(mask), &mask);
   assert(ret == 0);
+  ASSERT_ZERO_LABEL(ret);
   ASSERT_READ_ZERO_LABEL(&mask, sizeof(mask));
+  ASSERT_SAVED_ORIGINS(mask)
 }
-#endif // !defined(ORIGIN_TRACKING)
 
 void test_sigemptyset() {
   sigset_t set;
@@ -1845,55 +1937,41 @@ int main(void) {
   test_bcmp();
   test_calloc();
   test_clock_gettime();
-#if !defined(ORIGIN_TRACKING)
   test_ctime_r();
-#endif // !defined(ORIGIN_TRACKING)
   test_dfsan_set_write_callback();
   test_dl_iterate_phdr();
   test_dlopen();
-#if !defined(ORIGIN_TRACKING)
   test_epoll_wait();
   test_fgets();
-#endif // !defined(ORIGIN_TRACKING)
   test_fork();
   test_fstat();
-#if !defined(ORIGIN_TRACKING)
   test_get_current_dir_name();
   test_getcwd();
   test_gethostname();
-#endif // !defined(ORIGIN_TRACKING)
   test_getpeername();
-#if !defined(ORIGIN_TRACKING)
   test_getpwuid_r();
   test_getrlimit();
   test_getrusage();
-#endif // !defined(ORIGIN_TRACKING)
   test_getsockname();
   test_getsockopt();
   test_gettimeofday();
-#if !defined(ORIGIN_TRACKING)
   test_inet_pton();
   test_localtime_r();
-#endif // !defined(ORIGIN_TRACKING)
   test_memchr();
   test_memcmp();
   test_memcpy();
   test_memmove();
   test_memset();
   test_nanosleep();
-#if !defined(ORIGIN_TRACKING)
   test_poll();
-#endif // !defined(ORIGIN_TRACKING)
   test_pread();
   test_pthread_create();
   test_pthread_join();
   test_read();
   test_recvmmsg();
   test_recvmsg();
-#if !defined(ORIGIN_TRACKING)
   test_sched_getaffinity();
   test_select();
-#endif // !defined(ORIGIN_TRACKING)
   test_sigaction();
   test_signal();
   test_sigaltstack();
@@ -1906,9 +1984,7 @@ int main(void) {
   test_strchr();
   test_strcmp();
   test_strcat();
-#if !defined(ORIGIN_TRACKING)
   test_strcpy();
-#endif // !defined(ORIGIN_TRACKING)
   test_strdup();
   test_strlen();
   test_strncasecmp();
@@ -1922,8 +1998,6 @@ int main(void) {
   test_strtoll();
   test_strtoul();
   test_strtoull();
-#if !defined(ORIGIN_TRACKING)
   test_time();
-#endif // !defined(ORIGIN_TRACKING)
   test_write();
 }

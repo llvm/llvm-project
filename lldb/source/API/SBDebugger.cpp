@@ -38,6 +38,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -147,6 +148,41 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
   return LLDB_RECORD_RESULT(*this);
+}
+
+const char *SBDebugger::GetBroadcasterClass() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBDebugger,
+                                    GetBroadcasterClass);
+
+  return Debugger::GetStaticBroadcasterClass().AsCString();
+}
+
+const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
+                                             uint64_t &progress_id,
+                                             uint64_t &completed,
+                                             uint64_t &total,
+                                             bool &is_debugger_specific) {
+  const Debugger::ProgressEventData *progress_data =
+      Debugger::ProgressEventData::GetEventDataFromEvent(event.get());
+  if (progress_data == nullptr)
+    return nullptr;
+  progress_id = progress_data->GetID();
+  completed = progress_data->GetCompleted();
+  total = progress_data->GetTotal();
+  is_debugger_specific = progress_data->IsDebuggerSpecific();
+  // We must record the static method _after_ the out paramters have been
+  // filled in.
+  LLDB_RECORD_STATIC_METHOD(
+      const char *, SBDebugger, GetProgressFromEvent,
+      (const lldb::SBEvent &, uint64_t &, uint64_t &, uint64_t &, bool &),
+      event, progress_id, completed, total, is_debugger_specific);
+  return LLDB_RECORD_RESULT(progress_data->GetMessage().c_str())
+}
+
+SBBroadcaster SBDebugger::GetBroadcaster() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBroadcaster, SBDebugger, GetBroadcaster);
+  SBBroadcaster broadcaster(&m_opaque_sp->GetBroadcaster(), false);
+  return LLDB_RECORD_RESULT(broadcaster);
 }
 
 void SBDebugger::Initialize() {
@@ -824,7 +860,7 @@ SBTarget SBDebugger::CreateTargetWithFileAndArch(const char *filename,
     if (error.Success())
       sb_target.SetSP(target_sp);
   }
-  
+
   LLDB_LOGF(log,
             "SBDebugger(%p)::CreateTargetWithFileAndArch (filename=\"%s\", "
             "arch=%s) => SBTarget(%p)",
@@ -1711,6 +1747,12 @@ template <> void RegisterMethods<SBDebugger>(Registry &R) {
   LLDB_REGISTER_METHOD(void, SBDebugger, Clear, ());
   LLDB_REGISTER_STATIC_METHOD(lldb::SBDebugger, SBDebugger, Create, ());
   LLDB_REGISTER_STATIC_METHOD(lldb::SBDebugger, SBDebugger, Create, (bool));
+  LLDB_REGISTER_STATIC_METHOD(
+      const char *, SBDebugger, GetProgressFromEvent,
+      (const lldb::SBEvent &, uint64_t &, uint64_t &, uint64_t &, bool &));
+  LLDB_REGISTER_STATIC_METHOD(const char *, SBDebugger, GetBroadcasterClass,
+                              ());
+  LLDB_REGISTER_METHOD(SBBroadcaster, SBDebugger, GetBroadcaster, ());
   LLDB_REGISTER_STATIC_METHOD(void, SBDebugger, Destroy, (lldb::SBDebugger &));
   LLDB_REGISTER_STATIC_METHOD(void, SBDebugger, MemoryPressureDetected, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBDebugger, IsValid, ());

@@ -152,14 +152,14 @@ public:
     typedef void                        reference;
     typedef void                        pointer;
 
-    explicit back_insert_iterator(Container& x);
-    back_insert_iterator& operator=(const typename Container::value_type& value);
-    back_insert_iterator& operator*();
-    back_insert_iterator& operator++();
-    back_insert_iterator  operator++(int);
+    explicit back_insert_iterator(Container& x);  // constexpr in C++20
+    back_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
+    back_insert_iterator& operator*();  // constexpr in C++20
+    back_insert_iterator& operator++();  // constexpr in C++20
+    back_insert_iterator  operator++(int);  // constexpr in C++20
 };
 
-template <class Container> back_insert_iterator<Container> back_inserter(Container& x);
+template <class Container> back_insert_iterator<Container> back_inserter(Container& x);  // constexpr in C++20
 
 template <class Container>
 class front_insert_iterator
@@ -173,14 +173,14 @@ public:
     typedef void                         reference;
     typedef void                         pointer;
 
-    explicit front_insert_iterator(Container& x);
-    front_insert_iterator& operator=(const typename Container::value_type& value);
-    front_insert_iterator& operator*();
-    front_insert_iterator& operator++();
-    front_insert_iterator  operator++(int);
+    explicit front_insert_iterator(Container& x);  // constexpr in C++20
+    front_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
+    front_insert_iterator& operator*();  // constexpr in C++20
+    front_insert_iterator& operator++();  // constexpr in C++20
+    front_insert_iterator  operator++(int);  // constexpr in C++20
 };
 
-template <class Container> front_insert_iterator<Container> front_inserter(Container& x);
+template <class Container> front_insert_iterator<Container> front_inserter(Container& x);  // constexpr in C++20
 
 template <class Container>
 class insert_iterator
@@ -195,15 +195,15 @@ public:
     typedef void                   reference;
     typedef void                   pointer;
 
-    insert_iterator(Container& x, typename Container::iterator i);
-    insert_iterator& operator=(const typename Container::value_type& value);
-    insert_iterator& operator*();
-    insert_iterator& operator++();
-    insert_iterator& operator++(int);
+    insert_iterator(Container& x, typename Container::iterator i);  // constexpr in C++20
+    insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
+    insert_iterator& operator*();  // constexpr in C++20
+    insert_iterator& operator++();  // constexpr in C++20
+    insert_iterator& operator++(int);  // constexpr in C++20
 };
 
 template <class Container, class Iterator>
-insert_iterator<Container> inserter(Container& x, Iterator i);
+insert_iterator<Container> inserter(Container& x, Iterator i);  // constexpr in C++20
 
 template <class Iterator>
 class move_iterator {
@@ -932,20 +932,20 @@ protected:
 public:
     typedef _Container container_type;
 
-    _LIBCPP_INLINE_VISIBILITY explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
-    _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator=(const typename _Container::value_type& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_back(__value_); return *this;}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator=(typename _Container::value_type&& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator=(typename _Container::value_type&& __value_)
         {container->push_back(_VSTD::move(__value_)); return *this;}
 #endif  // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator*()     {return *this;}
-    _LIBCPP_INLINE_VISIBILITY back_insert_iterator& operator++()    {return *this;}
-    _LIBCPP_INLINE_VISIBILITY back_insert_iterator  operator++(int) {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator*()     {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator++()    {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator  operator++(int) {return *this;}
 };
 
 template <class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 back_insert_iterator<_Container>
 back_inserter(_Container& __x)
 {
@@ -965,20 +965,20 @@ protected:
 public:
     typedef _Container container_type;
 
-    _LIBCPP_INLINE_VISIBILITY explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
-    _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator=(const typename _Container::value_type& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_front(__value_); return *this;}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator=(typename _Container::value_type&& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator=(typename _Container::value_type&& __value_)
         {container->push_front(_VSTD::move(__value_)); return *this;}
 #endif  // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator*()     {return *this;}
-    _LIBCPP_INLINE_VISIBILITY front_insert_iterator& operator++()    {return *this;}
-    _LIBCPP_INLINE_VISIBILITY front_insert_iterator  operator++(int) {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator*()     {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator++()    {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator  operator++(int) {return *this;}
 };
 
 template <class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 front_insert_iterator<_Container>
 front_inserter(_Container& __x)
 {
@@ -999,21 +999,21 @@ protected:
 public:
     typedef _Container container_type;
 
-    _LIBCPP_INLINE_VISIBILITY insert_iterator(_Container& __x, typename _Container::iterator __i)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator(_Container& __x, typename _Container::iterator __i)
         : container(_VSTD::addressof(__x)), iter(__i) {}
-    _LIBCPP_INLINE_VISIBILITY insert_iterator& operator=(const typename _Container::value_type& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator=(const typename _Container::value_type& __value_)
         {iter = container->insert(iter, __value_); ++iter; return *this;}
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY insert_iterator& operator=(typename _Container::value_type&& __value_)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator=(typename _Container::value_type&& __value_)
         {iter = container->insert(iter, _VSTD::move(__value_)); ++iter; return *this;}
 #endif  // _LIBCPP_CXX03_LANG
-    _LIBCPP_INLINE_VISIBILITY insert_iterator& operator*()        {return *this;}
-    _LIBCPP_INLINE_VISIBILITY insert_iterator& operator++()       {return *this;}
-    _LIBCPP_INLINE_VISIBILITY insert_iterator& operator++(int)    {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator*()        {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator++()       {return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator++(int)    {return *this;}
 };
 
 template <class _Container>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 insert_iterator<_Container>
 inserter(_Container& __x, typename _Container::iterator __i)
 {

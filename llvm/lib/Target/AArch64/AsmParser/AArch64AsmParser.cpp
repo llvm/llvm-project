@@ -2906,6 +2906,7 @@ static const struct Extension {
     {"mte", {AArch64::FeatureMTE}},
     {"memtag", {AArch64::FeatureMTE}},
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
+    {"pan", {AArch64::FeaturePAN}},
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"rcpc", {AArch64::FeatureRCPC}},
@@ -2921,7 +2922,6 @@ static const struct Extension {
     {"pauth", {AArch64::FeaturePAuth}},
     {"flagm", {AArch64::FeatureFlagM}},
     // FIXME: Unsupported extensions
-    {"pan", {}},
     {"lor", {}},
     {"rdma", {}},
     {"profile", {}},

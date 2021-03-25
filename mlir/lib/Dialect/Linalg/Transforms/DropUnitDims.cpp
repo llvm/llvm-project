@@ -294,8 +294,8 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
   LogicalResult matchAndRewrite(GenericOpTy op,
                                 PatternRewriter &rewriter) const override {
-    // TODO: support init_tensors and reductions.
-    if (!op.hasTensorSemantics() || op.getNumInitTensors() != 0)
+    // TODO: support reductions.
+    if (!op.hasTensorSemantics())
       return failure();
 
     MLIRContext *context = rewriter.getContext();
