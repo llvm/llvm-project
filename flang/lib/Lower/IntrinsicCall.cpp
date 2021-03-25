@@ -164,6 +164,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMerge(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -308,6 +309,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"merge", &I::genMerge},
     {"mod", &I::genMod},
+    {"modulo", &I::genModulo},
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"sign", &I::genSign},
@@ -1460,6 +1462,48 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   return genRuntimeCall("mod", resultType, args);
 }
 
+// MODULO
+mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
+  // In the meantime, use a simple inlined implementation based on truncated
+  // modulo (MOD(A, P) implemented by RemIOp, RemFOp). This avoids making manual
+  // division and multiplication from MODULO formula.
+  //  - If A/P > 0 or MOD(A,P)=0, then INT(A/P) = FLOOR(A/P), and MODULO = MOD.
+  //  - Otherwise, when A/P < 0 and MOD(A,P) !=0, then MODULO(A, P) =
+  //    A-FLOOR(A/P)*P = A-(INT(A/P)-1)*P = A-INT(A/P)*P+P = MOD(A,P)+P
+  // Note that A/P < 0 if and only if A and P signs are different.
+  if (resultType.isa<mlir::IntegerType>()) {
+    auto remainder = builder.create<mlir::SignedRemIOp>(loc, args[0], args[1]);
+    auto argXor = builder.create<mlir::XOrOp>(loc, args[0], args[1]);
+    auto zero = builder.createIntegerConstant(loc, argXor.getType(), 0);
+    auto argSignDifferent = builder.create<mlir::CmpIOp>(
+        loc, mlir::CmpIPredicate::slt, argXor, zero);
+    auto remainderIsNotZero = builder.create<mlir::CmpIOp>(
+        loc, mlir::CmpIPredicate::ne, remainder, zero);
+    auto mustAddP =
+        builder.create<mlir::AndOp>(loc, remainderIsNotZero, argSignDifferent);
+    auto remPlusP = builder.create<mlir::AddIOp>(loc, remainder, args[1]);
+    return builder.create<mlir::SelectOp>(loc, mustAddP, remPlusP, remainder);
+  }
+  // Real case
+  auto remainder = builder.create<mlir::RemFOp>(loc, args[0], args[1]);
+  auto zero = builder.createRealZeroConstant(loc, remainder.getType());
+  auto remainderIsNotZero = builder.create<mlir::CmpFOp>(
+      loc, mlir::CmpFPredicate::UNE, remainder, zero);
+  auto aLessThanZero = builder.create<mlir::CmpFOp>(
+      loc, mlir::CmpFPredicate::OLT, args[0], zero);
+  auto pLessThanZero = builder.create<mlir::CmpFOp>(
+      loc, mlir::CmpFPredicate::OLT, args[1], zero);
+  auto argSignDifferent =
+      builder.create<mlir::XOrOp>(loc, aLessThanZero, pLessThanZero);
+  auto mustAddP =
+      builder.create<mlir::AndOp>(loc, remainderIsNotZero, argSignDifferent);
+  auto remPlusP = builder.create<mlir::AddFOp>(loc, remainder, args[1]);
+  return builder.create<mlir::SelectOp>(loc, mustAddP, remPlusP, remainder);
+}
+
 // NINT
 mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -1491,8 +1535,7 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
     return builder.create<mlir::SelectOp>(loc, cmp, neg, abs);
   }
   // TODO: Requirements when second argument is +0./0.
-  auto zeroAttr = builder.getZeroAttr(resultType);
-  auto zero = builder.create<mlir::ConstantOp>(loc, resultType, zeroAttr);
+  auto zero = builder.createRealZeroConstant(loc, resultType);
   auto neg = builder.create<fir::NegfOp>(loc, abs);
   auto cmp =
       builder.create<fir::CmpfOp>(loc, mlir::CmpFPredicate::OLT, args[1], zero);
