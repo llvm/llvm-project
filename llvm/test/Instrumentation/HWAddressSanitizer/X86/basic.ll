@@ -15,10 +15,7 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; ABORT: call void @__hwasan_load1(i64 %[[A]])
 ; RECOVER: call void @__hwasan_load1_noabort(i64 %[[A]])
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i8*
-; CHECK: %[[G:[^ ]*]] = load i8, i8* %[[UNTAGGED_PTR]], align 4
+; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
 ; CHECK: ret i8 %[[G]]
 
 entry:
@@ -33,10 +30,7 @@ define i40 @test_load40(i40* %a) sanitize_hwaddress {
 ; ABORT: call void @__hwasan_loadN(i64 %[[A]], i64 5)
 ; RECOVER: call void @__hwasan_loadN_noabort(i64 %[[A]], i64 5)
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i40*
-; CHECK: %[[B:[^ ]*]] = load i40, i40* %[[UNTAGGED_PTR]]
+; CHECK: %[[B:[^ ]*]] = load i40, i40* %a
 ; CHECK: ret i40 %[[B]]
 
 entry:
@@ -51,10 +45,7 @@ define void @test_store8(i8* %a, i8 %b) sanitize_hwaddress {
 ; ABORT: call void @__hwasan_store1(i64 %[[A]])
 ; RECOVER: call void @__hwasan_store1_noabort(i64 %[[A]])
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i8*
-; CHECK: store i8 %b, i8* %[[UNTAGGED_PTR]], align 4
+; CHECK: store i8 %b, i8* %a, align 4
 ; CHECK: ret void
 
 entry:
@@ -69,10 +60,7 @@ define void @test_store40(i40* %a, i40 %b) sanitize_hwaddress {
 ; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 5)
 ; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 5)
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i40* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i40*
-; CHECK: store i40 %b, i40* %[[UNTAGGED_PTR]]
+; CHECK: store i40 %b, i40* %a
 ; CHECK: ret void
 
 entry:
@@ -87,10 +75,7 @@ define void @test_store_unaligned(i64* %a, i64 %b) sanitize_hwaddress {
 ; ABORT: call void @__hwasan_storeN(i64 %[[A]], i64 8)
 ; RECOVER: call void @__hwasan_storeN_noabort(i64 %[[A]], i64 8)
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i64*
-; CHECK: store i64 %b, i64* %[[UNTAGGED_PTR]], align 4
+; CHECK: store i64 %b, i64* %a, align 4
 ; CHECK: ret void
 
 entry:
