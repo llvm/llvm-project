@@ -2,7 +2,7 @@
 
 extern void foo() __attribute__((weak_import));
 
-// CHECK-LABEL: define {{.*}} void @bar()
+// CHECK-LABEL: define void @bar()
 // CHECK: br i1 icmp ne (void (...)* bitcast ({ i8*, i32, i64, i64 }* @foo.ptrauth to void (...)*), void (...)* null), label
 void bar() {
   if (foo)

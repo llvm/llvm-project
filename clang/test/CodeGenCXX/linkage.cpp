@@ -226,5 +226,5 @@ namespace test18 {
   template<template<typename> class> struct A {};
   struct B { template<typename> struct C; };
   void f(A<B::C>) {}
-  // CHECK-DAG: define dso_local void @_ZN6test181fENS_1AINS_1B1CEEE(
+  // CHECK-DAG: define void @_ZN6test181fENS_1AINS_1B1CEEE(
 }

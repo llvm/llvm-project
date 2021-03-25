@@ -14,7 +14,7 @@ void (^globalblock)(void) = ^{};
 - (int) count;
 @end
 
-// CHECK-LABEL: define {{.*}} void @test_block_call()
+// CHECK-LABEL: define void @test_block_call()
 void test_block_call() {
   // CHECK:      [[T0:%.*]] = load void ()*, void ()** @blockptr,
   // CHECK-NEXT: [[BLOCK:%.*]] = bitcast void ()* [[T0]] to [[BLOCK_T:%.*]]*{{$}}
@@ -29,7 +29,7 @@ void test_block_call() {
 
 void use_block(int (^)(void));
 
-// CHECK-LABEL: define {{.*}} void @test_block_literal(
+// CHECK-LABEL: define void @test_block_literal(
 void test_block_literal(int i) {
   // CHECK:      [[I:%.*]] = alloca i32,
   // CHECK-NEXT: [[BLOCK:%.*]] = alloca [[BLOCK_T:.*]], align
@@ -41,13 +41,13 @@ void test_block_literal(int i) {
   use_block(^{return i;});
 }
 
-// CHECK-LABEL: define {{.*}} void @test_copy_destroy
+// CHECK-LABEL: define void @test_copy_destroy
 void test_copy_destroy(A *a) {
   // CHECK: [[COPYDISPOSE_DESCRIPTOR]]
   use_block(^{return [a count];});
 }
 
-// CHECK-LABEL: define {{.*}} void @test_byref_copy_destroy
+// CHECK-LABEL: define void @test_byref_copy_destroy
 void test_byref_copy_destroy(A *a) {
   // CHECK:      [[COPY_FIELD:%.*]] = getelementptr inbounds [[BYREF_T:%.*]], {{%.*}}* [[BYREF:%.*]], i32 0, i32 4
   // CHECK-NEXT: [[T0:%.*]] = ptrtoint i8** [[COPY_FIELD]] to i64

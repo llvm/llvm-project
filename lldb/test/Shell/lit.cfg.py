@@ -36,7 +36,7 @@ config.excludes = ['Inputs', 'CMakeLists.txt', 'README.txt', 'LICENSE.txt']
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.lldb_obj_root, 'test')
+config.test_exec_root = os.path.join(config.lldb_obj_root, 'test', 'Shell')
 
 # Begin Swift mod.
 # Swift's libReflection builds without ASAN, which causes a known

@@ -19,7 +19,7 @@ void (*const fp)(void) = (void (*)(void))((int *)&f + 2); // Error in C mode.
 
 #endif
 
-// CHECK-LABEL: define {{.*}} void @t1()
+// CHECK-LABEL: define void @t1()
 void t1() {
   // CHECK: [[PF:%.*]] = alloca void ()*
   // CHECK: store void ()* bitcast (i32* getelementptr inbounds (i32, i32* bitcast ({ i8*, i32, i64, i64 }* @f.ptrauth to i32*), i64 2) to void ()*), void ()** [[PF]]
