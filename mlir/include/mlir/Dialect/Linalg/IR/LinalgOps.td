@@ -584,6 +584,9 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
     }
     unsigned getNumLoops() { return step().size(); }
   }];
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 
