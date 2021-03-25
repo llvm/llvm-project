@@ -390,11 +390,11 @@ static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenMP);
   }
 
-  //-fpedantic
+  // -pedantic
   if (args.hasArg(clang::driver::options::OPT_pedantic)) {
     res.set_EnableConformanceChecks();
   }
-  // -std=f2018.  Current behaviour is same as -fpedantic
+  // -std=f2018 (currently this implies -pedantic)
   // TODO: Set proper options when more fortran standards
   // are supported.
   if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
@@ -560,7 +560,6 @@ void CompilerInvocation::setFortranOpts() {
   if (frontendOptions.instrumentedParse_)
     fortranOptions.instrumentedParse = true;
 
-  // Set the standard
   if (enableConformanceChecks()) {
     fortranOptions.features.WarnOnAllNonstandard();
   }
