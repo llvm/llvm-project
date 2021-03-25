@@ -398,6 +398,9 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
       ArchName = "armeb";
       IsArm = true;
       break;
+    case llvm::Triple::x86:
+      ArchName = "i386";
+      break;
     default:
       ArchName = Triple.getArchName().str();
     }
