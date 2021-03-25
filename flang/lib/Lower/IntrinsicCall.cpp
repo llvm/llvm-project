@@ -1305,9 +1305,15 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
   // Call the descriptor-based Index implementation
   auto string = builder.createBox(loc, args[0]);
   auto substring = builder.createBox(loc, args[1]);
-  auto backOpt = builder.createBox(loc, args[2]);
-  mlir::Value kindVal = /* FIXME: get default from KindMap or ... */
-      builder.createIntegerConstant(loc, builder.getIndexType(), 4);
+  auto backOpt = fir::isUnboxedValue(args[2])
+                     ? builder.createBox(loc, args[2])
+                     : builder.create<fir::AbsentOp>(
+                           loc, fir::BoxType::get(builder.getI1Type()));
+  auto kindVal = fir::isUnboxedValue(args[3])
+                     ? fir::getBase(args[3])
+                     : builder.createIntegerConstant(
+                           loc, builder.getIndexType(),
+                           builder.getKindMap().defaultIntegerKind());
   // Create mutable fir.box to be passed to the runtime for the result.
   auto resultMutableBox =
       Fortran::lower::createTempMutableBox(builder, loc, resultType);
