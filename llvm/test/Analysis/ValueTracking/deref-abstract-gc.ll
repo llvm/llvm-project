@@ -7,13 +7,12 @@ target datalayout = "e-i32:32:64"
 ; conceptually live forever.  But there may be non-managed objects which are
 ; freed.
 ; CHECK-LABEL: 'abstract_model'
-; CHECK-NOT: %gc_ptr
+; CHECK: %gc_ptr
 ; CHECK-NOT: %other_ptr
 ; FIXME: Can infer the gc pointer case
 define void @abstract_model(i32 addrspace(1)* dereferenceable(8) %gc_ptr,
                             i32* dereferenceable(8) %other_ptr)
     gc "statepoint-example" {
-; CHECK: The following are dereferenceable:
 entry:
   call void @mayfree()
   load i32, i32 addrspace(1)* %gc_ptr
