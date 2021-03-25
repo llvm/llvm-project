@@ -432,6 +432,12 @@ HANDLE_TARGET_OPCODE(G_FSHL)
 // Generic funnel right shift
 HANDLE_TARGET_OPCODE(G_FSHR)
 
+// Generic right rotate
+HANDLE_TARGET_OPCODE(G_ROTR)
+
+// Generic left rotate
+HANDLE_TARGET_OPCODE(G_ROTL)
+
 /// Generic integer-base comparison, also applicable to vectors of integers.
 HANDLE_TARGET_OPCODE(G_ICMP)
 
