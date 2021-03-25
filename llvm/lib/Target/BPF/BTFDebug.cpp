@@ -1224,8 +1224,8 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     const DataLayout &DL = Global.getParent()->getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getType()->getElementType());
 
-    DataSecEntries[std::string(SecName)]->addVar(VarId, Asm->getSymbol(&Global),
-                                                 Size);
+    DataSecEntries[std::string(SecName)]->addDataSecEntry(VarId,
+        Asm->getSymbol(&Global), Size);
   }
 }
 
@@ -1303,7 +1303,19 @@ void BTFDebug::processFuncPrototypes(const Function *F) {
   uint8_t Scope = BTF::FUNC_EXTERN;
   auto FuncTypeEntry =
       std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
-  addType(std::move(FuncTypeEntry));
+  uint32_t FuncId = addType(std::move(FuncTypeEntry));
+  if (F->hasSection()) {
+    StringRef SecName = F->getSection();
+
+    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+      DataSecEntries[std::string(SecName)] =
+          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
+    }
+
+    // We really don't know func size, set it to 0.
+    DataSecEntries[std::string(SecName)]->addDataSecEntry(FuncId,
+        Asm->getSymbol(F), 0);
+  }
 }
 
 void BTFDebug::endModule() {
