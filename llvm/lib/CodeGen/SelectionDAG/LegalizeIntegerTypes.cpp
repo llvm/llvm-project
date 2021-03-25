@@ -110,6 +110,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_SCALAR_TO_VECTOR(N); break;
   case ISD::SPLAT_VECTOR:
                          Res = PromoteIntRes_SPLAT_VECTOR(N); break;
+  case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
   case ISD::CONCAT_VECTORS:
                          Res = PromoteIntRes_CONCAT_VECTORS(N); break;
 
@@ -4780,6 +4781,18 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SPLAT_VECTOR(SDNode *N) {
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, SplatVal);
 
   return DAG.getNode(ISD::SPLAT_VECTOR, dl, NOutVT, Op);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_STEP_VECTOR(SDNode *N) {
+  SDLoc dl(N);
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  assert(NOutVT.isVector() && "Type must be promoted to a vector type");
+  EVT NOutElemVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                            NOutVT.getVectorElementType());
+  APInt StepVal = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
+  SDValue Step = DAG.getConstant(StepVal.getZExtValue(), dl, NOutElemVT);
+  return DAG.getStepVector(dl, NOutVT, Step);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CONCAT_VECTORS(SDNode *N) {

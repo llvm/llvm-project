@@ -1,0 +1,88 @@
+; Check handling of diagnostics for problematic matches (e.g., variable capture
+; overflow) in the case of excluded patterns (e.g., CHECK-NOT).
+;
+; At one time, FileCheck's exit status for the following example was zero even
+; though the excluded pattern does match (it's just capturing that fails).
+; Moreover, it printed the error diagnostic only if -vv was specified and input
+; dumps were disabled.  Test every combination as the logic is hard to get
+; right. 
+;
+; TODO: Capturing from an excluded pattern probably shouldn't be permitted
+; because it seems useless: it's captured only if the pattern matches, but then
+; FileCheck fails.  The helpfulness of reporting overflow from that capture is
+; perhaps questionable then, but it doesn't seem harmful either.  Anyway, the
+; goal of this test is simply to exercise the error propagation mechanism for a
+; matched excluded pattern.  In the future, if we have a more interesting error
+; to exercise in that case, we should instead use it in this test, and then we
+; might want to think more about where that error should be presented in the
+; list of diagnostics.
+
+RUN: echo > %t.chk 'CHECK-NOT: [[#122+1]] [[STR:abc]] [[#NUM:]]'
+RUN: echo > %t.in '123 abc 1000000000000000000000000000000000000000000000000000'
+
+     ERR-NOT:{{.}}
+      ERR-VV:{{.*}}: remark: implicit EOF: expected string found in input
+ ERR-VV-NEXT:CHECK-NOT: {{.*}}
+ ERR-VV-NEXT:{{ *}}^
+ ERR-VV-NEXT:{{.*}}: note: found here
+ERR-VV-EMPTY:
+ ERR-VV-NEXT:^
+     ERR-NOT:{{.}}
+         ERR:{{.*}}: error: CHECK-NOT: excluded string found in input
+    ERR-NEXT:CHECK-NOT: {{.*}}
+    ERR-NEXT:{{ *}}^
+    ERR-NEXT:<stdin>:1:1: note: found here
+    ERR-NEXT:123 abc 10{{0*}}
+    ERR-NEXT:^~~~~~~~~{{~*}}
+    ERR-NEXT:<stdin>:1:1: note: with "122+1" equal to "123"
+    ERR-NEXT:123 abc 10{{0*}}
+    ERR-NEXT:^
+    ERR-NEXT:<stdin>:1:5: note: captured var "STR"
+    ERR-NEXT:123 abc 10{{0*}}
+    ERR-NEXT:    ^~~
+    ERR-NEXT:<stdin>:1:9: error: unable to represent numeric value
+    ERR-NEXT:123 abc 10{{0*}}
+    ERR-NEXT:        ^
+     ERR-NOT:{{error|note|remark}}:
+
+        DUMP:<<<<<<
+   DUMP-NEXT:         1: 123 abc 10{{0*}} 
+   DUMP-NEXT:not:1'0     !~~~~~~~~~{{~*}}  error: no match expected
+   DUMP-NEXT:not:1'1                       with "122+1" equal to "123"
+   DUMP-NEXT:not:1'2         !~~           captured var "STR"
+   DUMP-NEXT:not:1'3             !~{{~*}}  error: unable to represent numeric value
+DUMP-VV-NEXT:         2: 
+DUMP-VV-NEXT:eof:1       ^
+   DUMP-NEXT:>>>>>>
+
+;--------------------------------------------------
+; Check -dump-input=never cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=never -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,ERR-VV
+
+;--------------------------------------------------
+; Check -dump-input=fail cases.
+;--------------------------------------------------
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -v %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input=fail -vv %t.chk < %t.in 2>&1 \
+RUN: | FileCheck %s -match-full-lines -check-prefixes=ERR,DUMP,DUMP-VV

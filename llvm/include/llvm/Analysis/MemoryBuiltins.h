@@ -212,6 +212,10 @@ struct ObjectSizeOpts {
 /// object size in Size if successful, and false otherwise. In this context, by
 /// object we mean the region of memory starting at Ptr to the end of the
 /// underlying object pointed to by Ptr.
+///
+/// WARNING: The object size returned is the allocation size.  This does not
+/// imply dereferenceability at site of use since the object may be freeed in
+/// between.
 bool getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
                    const TargetLibraryInfo *TLI, ObjectSizeOpts Opts = {});
 

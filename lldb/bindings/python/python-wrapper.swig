@@ -276,6 +276,72 @@ LLDBSwigPythonCreateCommandObject
 }
 
 SWIGEXPORT void*
+LLDBSwigPythonCreateScriptedProcess
+(
+    const char *python_class_name,
+    const char *session_dictionary_name,
+    const lldb::TargetSP& target_sp,
+    lldb_private::StructuredDataImpl *args_impl,
+    std::string &error_string
+)
+{
+    if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
+        Py_RETURN_NONE;
+
+
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
+    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
+
+    if (!pfunc.IsAllocated()) {
+        error_string.append("could not find script class: ");
+        error_string.append(python_class_name);
+        return nullptr;
+    }
+
+    // I do not want the SBTarget to be deallocated when going out of scope
+    // because python has ownership of it and will manage memory for this
+    // object by itself
+    PythonObject target_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBTarget(target_sp)));
+
+    if (!target_arg.IsAllocated())
+        Py_RETURN_NONE;
+
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+    if (!arg_info) {
+        llvm::handleAllErrors(
+            arg_info.takeError(),
+            [&](PythonException &E) {
+                error_string.append(E.ReadBacktrace());
+            },
+            [&](const llvm::ErrorInfoBase &E) {
+                error_string.append(E.message());
+            });
+        Py_RETURN_NONE;
+    }
+
+    PythonObject result = {};
+    if (arg_info.get().max_positional_args == 2) {
+        if (args_impl != nullptr) {
+           error_string.assign("args passed, but __init__ does not take an args dictionary");
+           Py_RETURN_NONE;
+        }
+        result = pfunc(target_arg, dict);
+    } else if (arg_info.get().max_positional_args >= 3) {
+        PythonObject args_arg(PyRefType::Owned, SBTypeToSWIGWrapper(new lldb::SBStructuredData(args_impl)));
+        result = pfunc(target_arg, args_arg, dict);
+    } else {
+        error_string.assign("wrong number of arguments in __init__, should be 2 or 3 (not including self)");
+        Py_RETURN_NONE;
+    }
+
+    if (result.IsAllocated())
+        return result.release();
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT void*
 LLDBSwigPythonCreateScriptedThreadPlan
 (
     const char *python_class_name,
@@ -801,6 +867,40 @@ LLDBSwigPython_GetValueSynthProviderInstance
     Py_XDECREF(py_return);
     return ret_val;
 }
+
+SWIGEXPORT void*
+LLDBSWIGPython_CastPyObjectToSBData
+(
+    PyObject* data
+)
+{
+    lldb::SBData* sb_ptr = nullptr;
+
+    int valid_cast = SWIG_ConvertPtr(data, (void**)&sb_ptr, SWIGTYPE_p_lldb__SBData, 0);
+
+    if (valid_cast == -1)
+        return NULL;
+
+    return sb_ptr;
+}
+
+
+SWIGEXPORT void*
+LLDBSWIGPython_CastPyObjectToSBError
+(
+    PyObject* data
+)
+{
+    lldb::SBError* sb_ptr = nullptr;
+
+    int valid_cast = SWIG_ConvertPtr(data, (void**)&sb_ptr, SWIGTYPE_p_lldb__SBError, 0);
+
+    if (valid_cast == -1)
+        return NULL;
+
+    return sb_ptr;
+}
+
 
 SWIGEXPORT void*
 LLDBSWIGPython_CastPyObjectToSBValue

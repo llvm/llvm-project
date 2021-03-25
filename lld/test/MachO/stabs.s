@@ -60,6 +60,7 @@
 # CHECK-NEXT:  [[#ZERO]]        S _zero
 # CHECK-NEXT:  [[#FOO]]         T _foo
 # CHECK-NEXT:  {{[0-9af]+}}     T _no_debug
+# CHECK-NEXT:  {{0+}}           A __mh_execute_header
 # CHECK-EMPTY:
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections

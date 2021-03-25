@@ -18,8 +18,9 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 class MLIRContext;
-class OwningRewritePatternList;
 class TypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Create a pass to convert Async operations to the LLVM dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
@@ -33,8 +34,8 @@ std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
 /// the TypeConverter, but otherwise don't care what type conversions are
 /// happening.
 void populateAsyncStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target);
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
 
 } // namespace mlir
 

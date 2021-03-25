@@ -1977,6 +1977,12 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     return isKnownToBeAPowerOfTwo(SI->getTrueValue(), OrZero, Depth, Q) &&
            isKnownToBeAPowerOfTwo(SI->getFalseValue(), OrZero, Depth, Q);
 
+  // Peek through min/max.
+  if (match(V, m_MaxOrMin(m_Value(X), m_Value(Y)))) {
+    return isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q);
+  }
+
   if (OrZero && match(V, m_And(m_Value(X), m_Value(Y)))) {
     // A power of two and'd with anything is a power of two or zero.
     if (isKnownToBeAPowerOfTwo(X, /*OrZero*/ true, Depth, Q) ||
@@ -2450,21 +2456,19 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   else if (const PHINode *PN = dyn_cast<PHINode>(V)) {
     // Try and detect a recurrence that monotonically increases from a
     // starting value, as these are common as induction variables.
-    if (PN->getNumIncomingValues() == 2) {
-      Value *Start = PN->getIncomingValue(0);
-      Value *Induction = PN->getIncomingValue(1);
-      if (isa<ConstantInt>(Induction) && !isa<ConstantInt>(Start))
-        std::swap(Start, Induction);
-      if (ConstantInt *C = dyn_cast<ConstantInt>(Start)) {
-        if (!C->isZero() && !C->isNegative()) {
-          ConstantInt *X;
-          if (Q.IIQ.UseInstrInfo &&
-              (match(Induction, m_NSWAdd(m_Specific(PN), m_ConstantInt(X))) ||
-               match(Induction, m_NUWAdd(m_Specific(PN), m_ConstantInt(X)))) &&
-              !X->isNegative())
-            return true;
-        }
-      }
+    BinaryOperator *BO = nullptr;
+    Value *Start = nullptr, *Step = nullptr;
+    const APInt *StartC, *StepC;
+    if (Q.IIQ.UseInstrInfo && matchSimpleRecurrence(PN, BO, Start, Step) &&
+        match(Start, m_APInt(StartC)) && match(Step, m_APInt(StepC))) {
+      if (BO->getOpcode() == Instruction::Add &&
+          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
+          StartC->isStrictlyPositive() && !StepC->isNegative())
+        return true;
+      if (BO->getOpcode() == Instruction::Mul &&
+          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
+          !StartC->isNullValue() && StepC->isStrictlyPositive())
+        return true;
     }
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
@@ -2530,6 +2534,19 @@ static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
   return isKnownNonZero(Op, Depth + 1, Q);
 }
 
+/// Return true if V2 == V1 * C, where V1 is known non-zero, C is not 0/1 and
+/// the multiplication is nuw or nsw.
+static bool isNonEqualMul(const Value *V1, const Value *V2, unsigned Depth,
+                          const Query &Q) {
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
+    const APInt *C;
+    return match(OBO, m_Mul(m_Specific(V1), m_APInt(C))) &&
+           (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
+           !C->isNullValue() && !C->isOneValue() &&
+           isKnownNonZero(V1, Depth + 1, Q);
+  }
+  return false;
+}
 
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
@@ -2589,6 +2606,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   }
   
   if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
@@ -4391,7 +4411,8 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
 
 bool llvm::isSafeToSpeculativelyExecute(const Value *V,
                                         const Instruction *CtxI,
-                                        const DominatorTree *DT) {
+                                        const DominatorTree *DT,
+                                        const TargetLibraryInfo *TLI) {
   const Operator *Inst = dyn_cast<Operator>(V);
   if (!Inst)
     return false;
@@ -4438,7 +4459,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
     const DataLayout &DL = LI->getModule()->getDataLayout();
     return isDereferenceableAndAlignedPointer(
         LI->getPointerOperand(), LI->getType(), MaybeAlign(LI->getAlignment()),
-        DL, CtxI, DT);
+        DL, CtxI, DT, TLI);
   }
   case Instruction::Call: {
     auto *CI = cast<const CallInst>(Inst);
@@ -4778,6 +4799,14 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
     // destination type.
     return true;
   case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(Op)) {
+      switch (II->getIntrinsicID()) {
+      // TODO: Add more intrinsics.
+      case Intrinsic::ctpop:
+        return false;
+      }
+    }
+    LLVM_FALLTHROUGH;
   case Instruction::CallBr:
   case Instruction::Invoke: {
     const auto *CB = cast<CallBase>(Op);

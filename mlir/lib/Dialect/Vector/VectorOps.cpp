@@ -714,11 +714,10 @@ struct CanonicalizeContractAdd : public OpRewritePattern<AddOpType> {
   }
 };
 
-void ContractionOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results
-      .insert<CanonicalizeContractAdd<AddIOp>, CanonicalizeContractAdd<AddFOp>>(
-          context);
+void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<CanonicalizeContractAdd<AddIOp>, CanonicalizeContractAdd<AddFOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1332,9 +1331,9 @@ public:
 
 } // namespace
 
-void BroadcastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<BroadcastToShapeCast>(context);
+  results.add<BroadcastToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2150,11 +2149,11 @@ public:
 } // end anonymous namespace
 
 void ExtractStridedSliceOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+    RewritePatternSet &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
-  results.insert<StridedSliceConstantMaskFolder, StridedSliceConstantFolder,
-                 StridedSliceBroadcast>(context);
+  results.add<StridedSliceConstantMaskFolder, StridedSliceConstantFolder,
+              StridedSliceBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2294,8 +2293,7 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 2> elidedAttrs;
-  if (op.permutation_map() ==
-      getTransferMinorIdentityMap(op.getShapedType(), op.getVectorType()))
+  if (op.permutation_map().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrName());
   bool elideMasked = true;
   if (auto maybeMasked = op.masked()) {
@@ -2779,9 +2777,9 @@ public:
 };
 } // namespace
 
-void MaskedLoadOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<MaskedLoadFolder>(context);
+void MaskedLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<MaskedLoadFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2824,9 +2822,9 @@ public:
 };
 } // namespace
 
-void MaskedStoreOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<MaskedStoreFolder>(context);
+void MaskedStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<MaskedStoreFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2872,9 +2870,9 @@ public:
 };
 } // namespace
 
-void GatherOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.insert<GatherFolder>(context);
+  results.add<GatherFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2918,9 +2916,9 @@ public:
 };
 } // namespace
 
-void ScatterOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<ScatterFolder>(context);
+  results.add<ScatterFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2966,9 +2964,9 @@ public:
 };
 } // namespace
 
-void ExpandLoadOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ExpandLoadFolder>(context);
+void ExpandLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<ExpandLoadFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3012,9 +3010,9 @@ public:
 };
 } // namespace
 
-void CompressStoreOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<CompressStoreFolder>(context);
+void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<CompressStoreFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3148,10 +3146,10 @@ public:
 
 } // namespace
 
-void ShapeCastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   // Pattern to rewrite a ShapeCastOp(ConstantOp) -> ConstantOp.
-  results.insert<ShapeCastConstantFolder>(context);
+  results.add<ShapeCastConstantFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3237,7 +3235,7 @@ void TypeCastOp::build(OpBuilder &builder, OperationState &result,
       VectorType::get(extractShape(memRefType),
                       getElementTypeOrSelf(getElementTypeOrSelf(memRefType)));
   result.addTypes(
-      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpaceAsInt()));
+      MemRefType::get({}, vectorType, {}, memRefType.getMemorySpace()));
 }
 
 static LogicalResult verify(TypeCastOp op) {
@@ -3246,8 +3244,8 @@ static LogicalResult verify(TypeCastOp op) {
     return op.emitOpError("expects operand to be a memref with no layout");
   if (!op.getResultMemRefType().getAffineMaps().empty())
     return op.emitOpError("expects result to be a memref with no layout");
-  if (op.getResultMemRefType().getMemorySpaceAsInt() !=
-      op.getMemRefType().getMemorySpaceAsInt())
+  if (op.getResultMemRefType().getMemorySpace() !=
+      op.getMemRefType().getMemorySpace())
     return op.emitOpError("expects result in same memory space");
 
   auto sourceType = op.getMemRefType();
@@ -3394,8 +3392,8 @@ public:
 } // end anonymous namespace
 
 void vector::TransposeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<TransposeFolder>(context);
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<TransposeFolder>(context);
 }
 
 void vector::TransposeOp::getTransp(SmallVectorImpl<int64_t> &results) {
@@ -3529,17 +3527,18 @@ public:
 
 } // end anonymous namespace
 
-void CreateMaskOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<CreateMaskFolder>(context);
+void CreateMaskOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<CreateMaskFolder>(context);
 }
 
 void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<CreateMaskFolder, MaskedLoadFolder, MaskedStoreFolder,
-                  GatherFolder, ScatterFolder, ExpandLoadFolder,
-                  CompressStoreFolder, StridedSliceConstantMaskFolder,
-                  TransposeFolder>(context);
+    RewritePatternSet &patterns) {
+  patterns
+      .add<CreateMaskFolder, MaskedLoadFolder, MaskedStoreFolder, GatherFolder,
+           ScatterFolder, ExpandLoadFolder, CompressStoreFolder,
+           StridedSliceConstantMaskFolder, TransposeFolder>(
+          patterns.getContext());
 }
 
 #define GET_OP_CLASSES

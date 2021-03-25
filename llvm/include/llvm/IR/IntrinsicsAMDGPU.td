@@ -1469,11 +1469,6 @@ def int_amdgcn_live_mask : Intrinsic <[llvm_i1_ty],
   [], [IntrReadMem, IntrInaccessibleMemOnly, IntrWillReturn]
 >;
 
-// Clone of int_amdgcn_live_mask for capability.
-def int_amdgcn_wqm_helper : Intrinsic <[llvm_i1_ty],
-  [], [IntrReadMem, IntrInaccessibleMemOnly]
->;
-
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],

@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10 %s
+; RUN: llc -march=amdgcn -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.struct.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32, i32)

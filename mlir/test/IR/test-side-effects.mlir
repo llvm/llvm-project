@@ -30,3 +30,9 @@
 %4 = "test.side_effect_op"() {
   effect_parameter = affine_map<(i, j) -> (j, i)>
 } : () -> i32
+
+// Check with this unregistered operation to test the fallback on the dialect.
+// expected-remark@+1 {{found a parametric effect with affine_map<(d0, d1) -> (d1, d0)>}}
+%5 = "test.unregistered_side_effect_op"() {
+  effect_parameter = affine_map<(i, j) -> (j, i)>
+} : () -> i32

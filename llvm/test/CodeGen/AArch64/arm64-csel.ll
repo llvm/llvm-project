@@ -269,3 +269,44 @@ define i64 @foo23(i64 %x) {
   %res = select i1 %cmp, i64 1, i64 6
   ret i64 %res
 }
+
+define i16 @foo24(i8* nocapture readonly %A, i8* nocapture readonly %B) {
+; CHECK-LABEL: foo24:
+; CHECK:       ldrb    w[[W8:[0-9]+]], [x1]
+; CHECK-NEXT:  ldrb    w[[W9:[0-9]+]], [x0]
+; CHECK-NEXT:  cmp     w[[W8]], #33
+; CHECK-NEXT:  cset    w[[W8]], hi
+; CHECK-NEXT:  cmp     w[[W9]], #3
+; CHECK-NEXT:  cinc    w0, w[[W8]], hi
+; CHECK-NEXT:  ret
+entry:
+  %0 = load i8, i8* %A, align 1
+  %cmp = icmp ugt i8 %0, 3
+  %conv1 = zext i1 %cmp to i16
+  %1 = load i8, i8* %B, align 1
+  %cmp4 = icmp ugt i8 %1, 33
+  %conv5 = zext i1 %cmp4 to i16
+  %add = add nuw nsw i16 %conv5, %conv1
+  ret i16 %add
+}
+
+define i64 @foo25(i64* nocapture readonly %A, i64* nocapture readonly %B) {
+; CHECK-LABEL: foo25:
+; CHECK:       ldr    x[[X8:[0-9]+]], [x1]
+; CHECK-NEXT:  ldr    x[[X9:[0-9]+]], [x0]
+; CHECK-NEXT:  cmp    x[[X8]], #33
+; CHECK-NEXT:  cset   w[[W8]], hi
+; CHECK-NEXT:  cmp    x[[X9]], #3
+; CHECK-NEXT:  cinc   x0, x[[X8]], hi
+; CHECK-NEXT:  ret
+entry:
+  %0 = load i64, i64* %A, align 1
+  %cmp = icmp ugt i64 %0, 3
+  %conv1 = zext i1 %cmp to i64
+  %1 = load i64, i64* %B, align 1
+  %cmp4 = icmp ugt i64 %1, 33
+  %conv5 = zext i1 %cmp4 to i64
+  %add = add nuw nsw i64 %conv5, %conv1
+  ret i64 %add
+}
+

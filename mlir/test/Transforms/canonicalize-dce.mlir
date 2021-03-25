@@ -156,3 +156,20 @@ func @f(
   "foo.print"(%t4) : (tensor<4xf32>) -> ()
   return
 }
+
+// -----
+
+// Test case: Test values with use-def cycles are deleted properly.
+
+// CHECK:      func @f()
+// CHECK-NEXT:   test.graph_region
+// CHECK-NEXT:     "test.terminator"() : () -> ()
+
+func @f() {
+  test.graph_region {
+    %0 = "math.exp"(%1) : (f32) -> f32
+    %1 = "math.exp"(%0) : (f32) -> f32
+    "test.terminator"() : ()->()
+  }
+  return
+}

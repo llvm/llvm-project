@@ -13,7 +13,7 @@
 #ifndef MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 #define MLIR_TRANSFORMS_DIALECTCONVERSION_H_
 
-#include "mlir/Rewrite/FrozenRewritePatternList.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -351,20 +351,12 @@ protected:
   /// See `RewritePattern::RewritePattern` for information on the other
   /// available constructors.
   using RewritePattern::RewritePattern;
-  /// Construct a conversion pattern that matches an operation with the given
-  /// root name. This constructor allows for providing a type converter to use
-  /// within the pattern.
-  ConversionPattern(StringRef rootName, PatternBenefit benefit,
-                    TypeConverter &typeConverter, MLIRContext *ctx)
-      : RewritePattern(rootName, benefit, ctx), typeConverter(&typeConverter) {}
-  /// Construct a conversion pattern that matches any operation type. This
-  /// constructor allows for providing a type converter to use within the
-  /// pattern. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
-  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
-  /// always be supplied here.
-  ConversionPattern(PatternBenefit benefit, TypeConverter &typeConverter,
-                    MatchAnyOpTypeTag tag)
-      : RewritePattern(benefit, tag), typeConverter(&typeConverter) {}
+  /// Construct a conversion pattern with the given converter, and forward the
+  /// remaining arguments to RewritePattern.
+  template <typename... Args>
+  ConversionPattern(TypeConverter &typeConverter, Args &&... args)
+      : RewritePattern(std::forward<Args>(args)...),
+        typeConverter(&typeConverter) {}
 
 protected:
   /// An optional type converter for use by this pattern.
@@ -374,17 +366,13 @@ private:
   using RewritePattern::rewrite;
 };
 
-/// OpConversionPattern is a wrapper around ConversionPattern that allows for
-/// matching and rewriting against an instance of a derived operation class as
-/// opposed to a raw Operation.
+namespace detail {
+/// OpOrInterfaceConversionPatternBase is a wrapper around ConversionPattern
+/// that allows for matching and rewriting against an instance of a derived
+/// operation class or an Interface as opposed to a raw Operation.
 template <typename SourceOp>
-struct OpConversionPattern : public ConversionPattern {
-  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : ConversionPattern(SourceOp::getOperationName(), benefit, context) {}
-  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
-                      PatternBenefit benefit = 1)
-      : ConversionPattern(SourceOp::getOperationName(), benefit, typeConverter,
-                          context) {}
+struct OpOrInterfaceConversionPatternBase : public ConversionPattern {
+  using ConversionPattern::ConversionPattern;
 
   /// Wrappers around the ConversionPattern methods that pass the derived op
   /// type.
@@ -419,26 +407,57 @@ struct OpConversionPattern : public ConversionPattern {
 private:
   using ConversionPattern::matchAndRewrite;
 };
+} // namespace detail
+
+/// OpConversionPattern is a wrapper around ConversionPattern that allows for
+/// matching and rewriting against an instance of a derived operation class as
+/// opposed to a raw Operation.
+template <typename SourceOp>
+struct OpConversionPattern
+    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
+  OpConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            SourceOp::getOperationName(), benefit, context) {}
+  OpConversionPattern(TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            typeConverter, SourceOp::getOperationName(), benefit, context) {}
+};
+
+/// OpInterfaceConversionPattern is a wrapper around ConversionPattern that
+/// allows for matching and rewriting against an instance of an OpInterface
+/// class as opposed to a raw Operation.
+template <typename SourceOp>
+struct OpInterfaceConversionPattern
+    : public detail::OpOrInterfaceConversionPatternBase<SourceOp> {
+  OpInterfaceConversionPattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
+            benefit, context) {}
+  OpInterfaceConversionPattern(TypeConverter &typeConverter,
+                               MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceConversionPatternBase<SourceOp>(
+            typeConverter, Pattern::MatchInterfaceOpTypeTag(),
+            SourceOp::getInterfaceID(), benefit, context) {}
+};
 
 /// Add a pattern to the given pattern list to convert the signature of a
 /// FunctionLike op with the given type converter. This only supports
 /// FunctionLike ops which use FunctionType to represent their type.
-void populateFunctionLikeTypeConversionPattern(
-    StringRef functionLikeOpName, OwningRewritePatternList &patterns,
-    MLIRContext *ctx, TypeConverter &converter);
+void populateFunctionLikeTypeConversionPattern(StringRef functionLikeOpName,
+                                               RewritePatternSet &patterns,
+                                               TypeConverter &converter);
 
 template <typename FuncOpT>
-void populateFunctionLikeTypeConversionPattern(
-    OwningRewritePatternList &patterns, MLIRContext *ctx,
-    TypeConverter &converter) {
+void populateFunctionLikeTypeConversionPattern(RewritePatternSet &patterns,
+                                               TypeConverter &converter) {
   populateFunctionLikeTypeConversionPattern(FuncOpT::getOperationName(),
-                                            patterns, ctx, converter);
+                                            patterns, converter);
 }
 
 /// Add a pattern to the given pattern list to convert the signature of a FuncOp
 /// with the given type converter.
-void populateFuncOpTypeConversionPattern(OwningRewritePatternList &patterns,
-                                         MLIRContext *ctx,
+void populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
                                          TypeConverter &converter);
 
 //===----------------------------------------------------------------------===//
@@ -604,22 +623,26 @@ public:
 
   /// Register a legality action for the given operation.
   void setOpAction(OperationName op, LegalizationAction action);
-  template <typename OpT> void setOpAction(LegalizationAction action) {
+  template <typename OpT>
+  void setOpAction(LegalizationAction action) {
     setOpAction(OperationName(OpT::getOperationName(), &ctx), action);
   }
 
   /// Register the given operations as legal.
-  template <typename OpT> void addLegalOp() {
+  template <typename OpT>
+  void addLegalOp() {
     setOpAction<OpT>(LegalizationAction::Legal);
   }
-  template <typename OpT, typename OpT2, typename... OpTs> void addLegalOp() {
+  template <typename OpT, typename OpT2, typename... OpTs>
+  void addLegalOp() {
     addLegalOp<OpT>();
     addLegalOp<OpT2, OpTs...>();
   }
 
   /// Register the given operation as dynamically legal, i.e. requiring custom
   /// handling by the target via 'isDynamicallyLegal'.
-  template <typename OpT> void addDynamicallyLegalOp() {
+  template <typename OpT>
+  void addDynamicallyLegalOp() {
     setOpAction<OpT>(LegalizationAction::Dynamic);
   }
   template <typename OpT, typename OpT2, typename... OpTs>
@@ -651,10 +674,12 @@ public:
 
   /// Register the given operation as illegal, i.e. this operation is known to
   /// not be supported by this target.
-  template <typename OpT> void addIllegalOp() {
+  template <typename OpT>
+  void addIllegalOp() {
     setOpAction<OpT>(LegalizationAction::Illegal);
   }
-  template <typename OpT, typename OpT2, typename... OpTs> void addIllegalOp() {
+  template <typename OpT, typename OpT2, typename... OpTs>
+  void addIllegalOp() {
     addIllegalOp<OpT>();
     addIllegalOp<OpT2, OpTs...>();
   }
@@ -692,7 +717,8 @@ public:
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Legal);
   }
-  template <typename... Args> void addLegalDialect() {
+  template <typename... Args>
+  void addLegalDialect() {
     SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
     setDialectAction(dialectNames, LegalizationAction::Legal);
   }
@@ -736,7 +762,8 @@ public:
     SmallVector<StringRef, 2> dialectNames({name, names...});
     setDialectAction(dialectNames, LegalizationAction::Illegal);
   }
-  template <typename... Args> void addIllegalDialect() {
+  template <typename... Args>
+  void addIllegalDialect() {
     SmallVector<StringRef, 2> dialectNames({Args::getDialectNamespace()...});
     setDialectAction(dialectNames, LegalizationAction::Illegal);
   }
@@ -836,11 +863,11 @@ private:
 /// the `unconvertedOps` set will not necessarily be complete.)
 LogicalResult
 applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                       const FrozenRewritePatternList &patterns,
+                       const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LogicalResult
 applyPartialConversion(Operation *op, ConversionTarget &target,
-                       const FrozenRewritePatternList &patterns,
+                       const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
 /// Apply a complete conversion on the given operations, and all nested
@@ -849,9 +876,9 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
                                   ConversionTarget &target,
-                                  const FrozenRewritePatternList &patterns);
+                                  const FrozenRewritePatternSet &patterns);
 LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
-                                  const FrozenRewritePatternList &patterns);
+                                  const FrozenRewritePatternSet &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested
 /// operations. This method analyzes which operations would be successfully
@@ -863,10 +890,10 @@ LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
 /// the regions nested within 'ops'.
 LogicalResult applyAnalysisConversion(ArrayRef<Operation *> ops,
                                       ConversionTarget &target,
-                                      const FrozenRewritePatternList &patterns,
+                                      const FrozenRewritePatternSet &patterns,
                                       DenseSet<Operation *> &convertedOps);
 LogicalResult applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                                      const FrozenRewritePatternList &patterns,
+                                      const FrozenRewritePatternSet &patterns,
                                       DenseSet<Operation *> &convertedOps);
 } // end namespace mlir
 

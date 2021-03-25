@@ -4492,7 +4492,8 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
 
   // Find expected alignment, and the actual alignment of the passed object.
   // getTypeAlignInChars requires complete types
-  if (ParamTy->isIncompleteType() || ArgTy->isIncompleteType())
+  if (ParamTy->isIncompleteType() || ArgTy->isIncompleteType() ||
+      ParamTy->isUndeducedType() || ArgTy->isUndeducedType())
     return;
 
   CharUnits ParamAlign = Context.getTypeAlignInChars(ParamTy);

@@ -34,14 +34,14 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" pre-pruning:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   prune(*G);
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" post-pruning:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Run post-pruning passes.
@@ -58,7 +58,7 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
            << "\" before post-allocation passes:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Run post-allocation passes.
@@ -66,14 +66,27 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
     return Ctx->notifyFailed(std::move(Err));
 
   // Notify client that the defined symbols have been assigned addresses.
-  LLVM_DEBUG(
-      { dbgs() << "Resolving symbols defined in " << G->getName() << "\n"; });
+  LLVM_DEBUG(dbgs() << "Resolving symbols defined in " << G->getName() << "\n");
 
   if (auto Err = Ctx->notifyResolved(*G))
     return Ctx->notifyFailed(std::move(Err));
 
   auto ExternalSymbols = getExternalSymbolNames();
 
+  // If there are no external symbols then proceed immediately with phase 2.
+  if (ExternalSymbols.empty()) {
+    LLVM_DEBUG({
+      dbgs() << "No external symbols for " << G->getName()
+             << ". Proceeding immediately with link phase 2.\n";
+    });
+    // FIXME: Once callee expressions are defined to be sequenced before
+    //        argument expressions (c++17) we can simplify this. See below.
+    auto &TmpSelf = *Self;
+    TmpSelf.linkPhase2(std::move(Self), AsyncLookupResult(), std::move(Layout));
+    return;
+  }
+
+  // Otherwise look up the externals.
   LLVM_DEBUG({
     dbgs() << "Issuing lookup for external symbols for " << G->getName()
            << " (may trigger materialization/linking of other graphs)...\n";
@@ -121,7 +134,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
            << "\" before pre-fixup passes:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   if (auto Err = runPasses(Passes.PreFixupPasses))
@@ -129,7 +142,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" before copy-and-fixup:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   // Fix up block content.
@@ -138,7 +151,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName() << "\" after copy-and-fixup:\n";
-    dumpGraph(dbgs());
+    G->dump(dbgs());
   });
 
   if (auto Err = runPasses(Passes.PostFixupPasses))
@@ -413,11 +426,6 @@ void JITLinkerBase::deallocateAndBailOut(Error Err) {
   assert(Err && "Should not be bailing out on success value");
   assert(Alloc && "can not call deallocateAndBailOut before allocation");
   Ctx->notifyFailed(joinErrors(std::move(Err), Alloc->deallocate()));
-}
-
-void JITLinkerBase::dumpGraph(raw_ostream &OS) {
-  assert(G && "Graph is not set yet");
-  G->dump(dbgs(), [this](Edge::Kind K) { return getEdgeKindName(K); });
 }
 
 void prune(LinkGraph &G) {

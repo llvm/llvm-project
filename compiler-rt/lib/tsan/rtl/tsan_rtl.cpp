@@ -11,17 +11,19 @@
 // Main file (entry points) for the TSan run-time.
 //===----------------------------------------------------------------------===//
 
+#include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_stackdepot.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
 #include "tsan_defs.h"
-#include "tsan_platform.h"
-#include "tsan_rtl.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
+#include "tsan_platform.h"
 #include "tsan_suppressions.h"
 #include "tsan_symbolize.h"
 #include "ubsan/ubsan_init.h"
@@ -56,12 +58,23 @@ Context *ctx;
 bool OnFinalize(bool failed);
 void OnInitialize();
 #else
+#include <dlfcn.h>
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
 bool OnFinalize(bool failed) {
+#if !SANITIZER_GO
+  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_finalize"))
+    return reinterpret_cast<decltype(&__tsan_on_finalize)>(ptr)(failed);
+#endif
   return failed;
 }
 SANITIZER_WEAK_CXX_DEFAULT_IMPL
-void OnInitialize() {}
+void OnInitialize() {
+#if !SANITIZER_GO
+  if (auto *ptr = dlsym(RTLD_DEFAULT, "__tsan_on_initialize")) {
+    return reinterpret_cast<decltype(&__tsan_on_initialize)>(ptr)();
+  }
+#endif
+}
 #endif
 
 static char thread_registry_placeholder[sizeof(ThreadRegistry)];
@@ -167,12 +180,12 @@ static void *BackgroundThread(void *arg) {
     } else if (internal_strcmp(flags()->profile_memory, "stderr") == 0) {
       mprof_fd = 2;
     } else {
-      InternalScopedString filename(kMaxPathLength);
+      InternalScopedString filename;
       filename.append("%s.%d", flags()->profile_memory, (int)internal_getpid());
       fd_t fd = OpenFile(filename.data(), WrOnly);
       if (fd == kInvalidFd) {
         Printf("ThreadSanitizer: failed to open memory profile file '%s'\n",
-            &filename[0]);
+               filename.data());
       } else {
         mprof_fd = fd;
       }

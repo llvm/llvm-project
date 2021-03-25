@@ -124,7 +124,7 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
 // vends a module map, one might want to avoid hitting intermediate build
-// products containimg the the module map or avoid finding the system installed
+// products containing the the module map or avoid finding the system installed
 // modulemap for that library.
 static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
                                 StringRef ModuleName) {
@@ -441,9 +441,9 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     CurLexer->Lex(Tok);
 
     if (Tok.is(tok::code_completion)) {
+      setCodeCompletionReached();
       if (CodeComplete)
         CodeComplete->CodeCompleteInConditionalExclusion();
-      setCodeCompletionReached();
       continue;
     }
 
@@ -966,10 +966,10 @@ void Preprocessor::HandleDirective(Token &Result) {
   case tok::eod:
     return;   // null directive.
   case tok::code_completion:
+    setCodeCompletionReached();
     if (CodeComplete)
       CodeComplete->CodeCompleteDirective(
                                     CurPPLexer->getConditionalStackDepth() > 0);
-    setCodeCompletionReached();
     return;
   case tok::numeric_constant:  // # 7  GNU line marker directive.
     if (getLangOpts().AsmPreprocessor)
@@ -1045,12 +1045,12 @@ void Preprocessor::HandleDirective(Token &Result) {
       break;
 
     case tok::pp___public_macro:
-      if (getLangOpts().Modules)
+      if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
         return HandleMacroPublicDirective(Result);
       break;
 
     case tok::pp___private_macro:
-      if (getLangOpts().Modules)
+      if (getLangOpts().Modules || getLangOpts().ModulesLocalVisibility)
         return HandleMacroPrivateDirective();
       break;
     }

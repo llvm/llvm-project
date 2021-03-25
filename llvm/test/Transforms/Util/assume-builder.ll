@@ -18,6 +18,7 @@ declare void @func_cold(i32*) cold willreturn nounwind
 declare void @func_strbool(i32*) "no-jump-tables"
 declare void @func_many(i32*) "no-jump-tables" nounwind "less-precise-fpmad" willreturn norecurse
 declare void @func_argattr(i32* align 8, i32* nonnull) nounwind
+declare void @func_argattr2(i32* noundef align 8, i32* noundef nonnull) nounwind
 declare void @may_throw()
 
 define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
@@ -35,12 +36,15 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; BASIC-NEXT:    call void @func_strbool(i32* [[P1]])
 ; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 32) ]
 ; BASIC-NEXT:    call void @func(i32* dereferenceable(32) [[P]], i32* dereferenceable(8) [[P]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8) ]
 ; BASIC-NEXT:    call void @func_many(i32* align 8 [[P1]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2]], i64 8), "nonnull"(i32* [[P3]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
+; BASIC-NEXT:    call void @func_many(i32* noundef align 8 [[P1]])
 ; BASIC-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P2]]), "align"(i32* [[P2]], i64 8), "noundef"(i32* [[P3]]), "nonnull"(i32* [[P3]]) ]
+; BASIC-NEXT:    call void @func_argattr2(i32* [[P2]], i32* [[P3]])
 ; BASIC-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "noundef"(i32* [[P]]) ]
+; BASIC-NEXT:    call void @func(i32* noundef nonnull [[P1]], i32* noundef nonnull [[P]])
 ; BASIC-NEXT:    ret void
 ;
 ; ALL-LABEL: define {{[^@]+}}@test
@@ -57,12 +61,17 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; ALL-NEXT:    call void @func_strbool(i32* [[P1]])
 ; ALL-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 32) ]
 ; ALL-NEXT:    call void @func(i32* dereferenceable(32) [[P]], i32* dereferenceable(8) [[P]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "norecurse"(), "nounwind"(), "willreturn"() ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "norecurse"(), "nounwind"(), "willreturn"() ]
 ; ALL-NEXT:    call void @func_many(i32* align 8 [[P1]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2]], i64 8), "nonnull"(i32* [[P3]]), "nounwind"() ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P1]]), "align"(i32* [[P1]], i64 8), "norecurse"(), "nounwind"(), "willreturn"() ]
+; ALL-NEXT:    call void @func_many(i32* noundef align 8 [[P1]])
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nounwind"() ]
 ; ALL-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]) ]
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P2]]), "align"(i32* [[P2]], i64 8), "noundef"(i32* [[P3]]), "nonnull"(i32* [[P3]]), "nounwind"() ]
+; ALL-NEXT:    call void @func_argattr2(i32* [[P2]], i32* [[P3]])
 ; ALL-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
+; ALL-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "noundef"(i32* [[P]]) ]
+; ALL-NEXT:    call void @func(i32* noundef nonnull [[P1]], i32* noundef nonnull [[P]])
 ; ALL-NEXT:    ret void
 ;
 ; WITH-AC-LABEL: define {{[^@]+}}@test
@@ -79,12 +88,15 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; WITH-AC-NEXT:    call void @func_strbool(i32* [[P1]])
 ; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 32) ]
 ; WITH-AC-NEXT:    call void @func(i32* dereferenceable(32) [[P]], i32* dereferenceable(8) [[P]])
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8) ]
 ; WITH-AC-NEXT:    call void @func_many(i32* align 8 [[P1]])
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2]], i64 8), "nonnull"(i32* [[P3]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
+; WITH-AC-NEXT:    call void @func_many(i32* noundef align 8 [[P1]])
 ; WITH-AC-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P2]]), "align"(i32* [[P2]], i64 8), "noundef"(i32* [[P3]]), "nonnull"(i32* [[P3]]) ]
+; WITH-AC-NEXT:    call void @func_argattr2(i32* [[P2]], i32* [[P3]])
 ; WITH-AC-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "noundef"(i32* [[P]]) ]
+; WITH-AC-NEXT:    call void @func(i32* noundef nonnull [[P1]], i32* noundef nonnull [[P]])
 ; WITH-AC-NEXT:    ret void
 ;
 ; CROSS-BLOCK-LABEL: define {{[^@]+}}@test
@@ -101,12 +113,15 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; CROSS-BLOCK-NEXT:    call void @func_strbool(i32* [[P1]])
 ; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 32) ]
 ; CROSS-BLOCK-NEXT:    call void @func(i32* dereferenceable(32) [[P]], i32* dereferenceable(8) [[P]])
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8) ]
 ; CROSS-BLOCK-NEXT:    call void @func_many(i32* align 8 [[P1]])
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P2]], i64 8), "nonnull"(i32* [[P3]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
+; CROSS-BLOCK-NEXT:    call void @func_many(i32* noundef align 8 [[P1]])
 ; CROSS-BLOCK-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P2]]), "align"(i32* [[P2]], i64 8), "noundef"(i32* [[P3]]), "nonnull"(i32* [[P3]]) ]
+; CROSS-BLOCK-NEXT:    call void @func_argattr2(i32* [[P2]], i32* [[P3]])
 ; CROSS-BLOCK-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "noundef"(i32* [[P]]) ]
+; CROSS-BLOCK-NEXT:    call void @func(i32* noundef nonnull [[P1]], i32* noundef nonnull [[P]])
 ; CROSS-BLOCK-NEXT:    ret void
 ;
 ; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test
@@ -121,11 +136,15 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
 ; FULL-SIMPLIFY-NEXT:    call void @func_strbool(i32* [[P1]])
 ; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(i32* [[P]], i64 32) ]
 ; FULL-SIMPLIFY-NEXT:    call void @func(i32* dereferenceable(32) [[P]], i32* dereferenceable(8) [[P]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[P1]], i64 8), "align"(i32* [[P2]], i64 8), "nonnull"(i32* [[P3]]) ]
 ; FULL-SIMPLIFY-NEXT:    call void @func_many(i32* align 8 [[P1]])
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P1]]), "align"(i32* [[P1]], i64 8) ]
+; FULL-SIMPLIFY-NEXT:    call void @func_many(i32* noundef align 8 [[P1]])
 ; FULL-SIMPLIFY-NEXT:    call void @func_argattr(i32* [[P2]], i32* [[P3]])
-; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]) ]
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32* [[P2]]), "align"(i32* [[P2]], i64 8), "noundef"(i32* [[P3]]), "nonnull"(i32* [[P3]]) ]
+; FULL-SIMPLIFY-NEXT:    call void @func_argattr2(i32* [[P2]], i32* [[P3]])
 ; FULL-SIMPLIFY-NEXT:    call void @func(i32* nonnull [[P1]], i32* nonnull [[P]])
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P1]]), "noundef"(i32* [[P]]) ]
+; FULL-SIMPLIFY-NEXT:    call void @func(i32* noundef nonnull [[P1]], i32* noundef nonnull [[P]])
 ; FULL-SIMPLIFY-NEXT:    ret void
 ;
   call void @func(i32* nonnull dereferenceable(16) %P, i32* null)
@@ -136,8 +155,11 @@ define void @test(i32* %P, i32* %P1, i32* %P2, i32* %P3) {
   call void @func_strbool(i32* %P1)
   call void @func(i32* dereferenceable(32) %P, i32* dereferenceable(8) %P)
   call void @func_many(i32* align 8 %P1)
+  call void @func_many(i32* align 8 noundef %P1)
   call void @func_argattr(i32* %P2, i32* %P3)
+  call void @func_argattr2(i32* %P2, i32* %P3)
   call void @func(i32* nonnull %P1, i32* nonnull %P)
+  call void @func(i32* nonnull noundef %P1, i32* nonnull noundef %P)
   ret void
 }
 

@@ -401,7 +401,6 @@ struct GpuAllReduceConversion : public RewritePattern {
 };
 } // namespace
 
-void mlir::populateGpuAllReducePatterns(MLIRContext *context,
-                                        OwningRewritePatternList &patterns) {
-  patterns.insert<GpuAllReduceConversion>(context);
+void mlir::populateGpuAllReducePatterns(RewritePatternSet &patterns) {
+  patterns.add<GpuAllReduceConversion>(patterns.getContext());
 }

@@ -45,9 +45,8 @@ void MergedOutputSection::finalize() {
 }
 
 void MergedOutputSection::writeTo(uint8_t *buf) const {
-  for (InputSection *isec : inputs) {
+  for (InputSection *isec : inputs)
     isec->writeTo(buf + isec->outSecFileOff);
-  }
 }
 
 // TODO: this is most likely wrong; reconsider how section flags

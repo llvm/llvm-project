@@ -62,7 +62,9 @@ struct FunctionTypeStorage : public TypeStorage {
   /// The hash key used for uniquing.
   using KeyTy = std::pair<TypeRange, TypeRange>;
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(getInputs(), getResults());
+    if (std::get<0>(key) == getInputs())
+      return std::get<1>(key) == getResults();
+    return false;
   }
 
   /// Construction.

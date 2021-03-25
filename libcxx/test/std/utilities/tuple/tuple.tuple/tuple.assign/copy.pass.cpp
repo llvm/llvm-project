@@ -45,7 +45,8 @@ struct CopyAssignableInt {
   CopyAssignableInt& operator=(int&) { return *this; }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<> T;
@@ -69,15 +70,6 @@ int main(int, char**)
         assert(std::get<1>(t) == 'a');
     }
     {
-        typedef std::tuple<int, char, std::string> T;
-        const T t0(2, 'a', "some text");
-        T t;
-        t = t0;
-        assert(std::get<0>(t) == 2);
-        assert(std::get<1>(t) == 'a');
-        assert(std::get<2>(t) == "some text");
-    }
-    {
         // test reference assignment.
         using T = std::tuple<int&, int&&>;
         int x = 42;
@@ -92,6 +84,27 @@ int main(int, char**)
         assert(std::get<1>(t) == y2);
         assert(&std::get<1>(t) == &y);
     }
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
+    {
+        // cannot be constexpr because of std::string
+        typedef std::tuple<int, char, std::string> T;
+        const T t0(2, 'a', "some text");
+        T t;
+        t = t0;
+        assert(std::get<0>(t) == 2);
+        assert(std::get<1>(t) == 'a');
+        assert(std::get<2>(t) == "some text");
+    }
     {
         // test that the implicitly generated copy assignment operator
         // is properly deleted
@@ -99,8 +112,8 @@ int main(int, char**)
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
-      using T = std::tuple<int, NonAssignable>;
-      static_assert(!std::is_copy_assignable<T>::value, "");
+        using T = std::tuple<int, NonAssignable>;
+        static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
         using T = std::tuple<int, CopyAssignable>;
@@ -132,6 +145,7 @@ int main(int, char**)
     }
     {
         using T = std::tuple<PotentiallyThrowingCopyAssignable, int>;
+        static_assert(std::is_copy_assignable<T>::value, "");
         static_assert(!std::is_nothrow_copy_assignable<T>::value, "");
     }
 

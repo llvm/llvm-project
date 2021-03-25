@@ -2925,6 +2925,28 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
   launch_info.GetFlags().Set(eLaunchFlagDebug);
 
+  if (launch_info.IsScriptedProcess()) {
+    TargetPropertiesSP properties_sp = GetGlobalProperties();
+
+    if (!properties_sp) {
+      LLDB_LOGF(log, "Target::%s Couldn't fetch target global properties.",
+                __FUNCTION__);
+      return error;
+    }
+
+    // Only copy scripted process launch options.
+    ProcessLaunchInfo &default_launch_info =
+        const_cast<ProcessLaunchInfo &>(properties_sp->GetProcessLaunchInfo());
+
+    default_launch_info.SetProcessPluginName("ScriptedProcess");
+    default_launch_info.SetScriptedProcessClassName(
+        launch_info.GetScriptedProcessClassName());
+    default_launch_info.SetScriptedProcessDictionarySP(
+        launch_info.GetScriptedProcessDictionarySP());
+
+    SetProcessLaunchInfo(launch_info);
+  }
+
   // Get the value of synchronous execution here.  If you wait till after you
   // have started to run, then you could have hit a breakpoint, whose command
   // might switch the value, and then you'll pick up that incorrect value.

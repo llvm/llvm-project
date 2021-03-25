@@ -817,13 +817,12 @@ int ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
 
   if (ST->hasMVEIntegerOps() && (Opcode == Instruction::InsertElement ||
                                  Opcode == Instruction::ExtractElement)) {
-    // We say MVE moves costs at least the MVEVectorCostFactor, even though
-    // they are scalar instructions. This helps prevent mixing scalar and
-    // vector, to prevent vectorising where we end up just scalarising the
-    // result anyway.
-    return std::max(BaseT::getVectorInstrCost(Opcode, ValTy, Index),
-                    ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)) *
-           cast<FixedVectorType>(ValTy)->getNumElements() / 2;
+    // Integer cross-lane moves are more expensive than float, which can
+    // sometimes just be vmovs. Integer involve being passes to GPR registers,
+    // causing more of a delay.
+    std::pair<unsigned, MVT> LT =
+        getTLI()->getTypeLegalizationCost(DL, ValTy->getScalarType());
+    return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
   return BaseT::getVectorInstrCost(Opcode, ValTy, Index);
@@ -1131,7 +1130,8 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
 }
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                               int Index, VectorType *SubTp) {
+                               ArrayRef<int> Mask, int Index,
+                               VectorType *SubTp) {
   if (ST->hasNEON()) {
     if (Kind == TTI::SK_Broadcast) {
       static const CostTblEntry NEONDupTbl[] = {
@@ -1218,11 +1218,20 @@ int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
         return LT.first * Entry->Cost *
                ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput);
     }
+
+    if (!Mask.empty()) {
+      std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+      if (Mask.size() <= LT.second.getVectorNumElements() &&
+          (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
+           isVREVMask(Mask, LT.second, 64)))
+        return ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput) * LT.first;
+    }
   }
+
   int BaseCost = ST->hasMVEIntegerOps() && Tp->isVectorTy()
                      ? ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)
                      : 1;
-  return BaseCost * BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseCost * BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 
 int ARMTTIImpl::getArithmeticInstrCost(unsigned Opcode, Type *Ty,
@@ -2116,6 +2125,10 @@ bool ARMTTIImpl::emitGetActiveLaneMask() const {
 }
 void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                          TTI::UnrollingPreferences &UP) {
+  // Enable Upper bound unrolling universally, not dependant upon the conditions
+  // below.
+  UP.UpperBound = true;
+
   // Only currently enable these preferences for M-Class cores.
   if (!ST->isMClass())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP);
@@ -2178,7 +2191,6 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   UP.Partial = true;
   UP.Runtime = true;
-  UP.UpperBound = true;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = 4;
   UP.UnrollAndJam = true;

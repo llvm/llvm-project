@@ -41,24 +41,16 @@ class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
   using AMDGPUSubtarget::getMaxWavesPerEU;
 
 public:
-  enum TrapHandlerAbi {
-    TrapHandlerAbiNone = 0,
-    TrapHandlerAbiHsa = 1
+  // Following 2 enums are documented at:
+  //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+  enum class TrapHandlerAbi {
+    NONE   = 0x00,
+    AMDHSA = 0x01,
   };
 
-  enum TrapID {
-    TrapIDHardwareReserved = 0,
-    TrapIDHSADebugTrap = 1,
-    TrapIDLLVMTrap = 2,
-    TrapIDLLVMDebugTrap = 3,
-    TrapIDDebugBreakpoint = 7,
-    TrapIDDebugReserved8 = 8,
-    TrapIDDebugReservedFE = 0xfe,
-    TrapIDDebugReservedFF = 0xff
-  };
-
-  enum TrapRegValues {
-    LLVMTrapHandlerRegValue = 1
+  enum class TrapID {
+    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSADebugTrap = 0x03,
   };
 
 private:
@@ -152,6 +144,7 @@ protected:
   bool HasDot4Insts;
   bool HasDot5Insts;
   bool HasDot6Insts;
+  bool HasDot7Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddRtnInsts;
@@ -258,6 +251,10 @@ public:
 
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
+  }
+
+  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
+    return TargetID;
   }
 
   // Nothing implemented, just prevent crashes on use.
@@ -393,7 +390,12 @@ public:
   }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
-    return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+    return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
+  }
+
+  bool supportsGetDoorbellID() const {
+    // The S_GETREG DOORBELL_ID is supported by all GFX9 onward targets.
+    return getGeneration() >= GFX9;
   }
 
   /// True if the offset field of DS instructions works as expected. On SI, the
@@ -693,6 +695,10 @@ public:
     return HasDot6Insts;
   }
 
+  bool hasDot7Insts() const {
+    return HasDot7Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -952,6 +958,8 @@ public:
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
 
   bool hasGFX90AInsts() const { return GFX90AInsts; }
+
+  bool hasVOP3DPP() const { return getGeneration() >= GFX11; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }

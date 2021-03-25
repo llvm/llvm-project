@@ -16,6 +16,7 @@
 #include "M68kInstrBuilder.h"
 #include "M68kMachineFunction.h"
 #include "M68kTargetMachine.h"
+#include "MCTargetDesc/M68kMCCodeEmitter.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"

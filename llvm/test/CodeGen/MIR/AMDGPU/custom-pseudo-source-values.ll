@@ -4,8 +4,8 @@
 ; Test that custom pseudo source values can be round trip serialized through MIR.
 
 ; CHECK-LABEL: {{^}}name: shader
-; CHECK: %[[#]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed %17, %18, 4, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 4, align 1, addrspace 4)
-; CHECK: IMAGE_STORE_V4_V3_nsa_gfx10 killed %[[#]], %[[#]], %[[#]], %[[#]], killed %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom "ImageResource")
+; CHECK: %[[#]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET killed %17, %18, 4, 0, 0, 0, implicit $exec :: (dereferenceable load 4 from custom "BufferResource" + 4, align 1, addrspace 4)
+; CHECK: IMAGE_STORE_V4_V3_nsa_gfx10 killed %[[#]], %[[#]], %[[#]], %[[#]], killed %[[#]], 15, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 16 into custom "ImageResource")
 ; CHECK: DS_GWS_BARRIER %[[#]], 63, implicit $m0, implicit $exec :: (load 4 from custom "GWSResource")
 define amdgpu_cs void @shader(i32 %arg0, i32 %arg1, <8 x i32> inreg %arg2, <4 x i32> inreg %arg3) {
   %bload0 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> %arg3, i32 4, i32 0, i32 0)

@@ -55,7 +55,7 @@ local_struct_internal_ptr:
 # CHECK:        - Type:            MEMORY
 # CHECK-NEXT:     Memories:
 # CHK64-NEXT:       - Flags:           [ IS_64 ]
-# CHECK-NEXT:         Initial:         0x2
+# CHECK-NEXT:         Minimum:         0x2
 # CHECK-NEXT:   - Type:            GLOBAL
 # CHECK-NEXT:     Globals:
 # CHECK-NEXT:       - Index:           0
@@ -104,7 +104,7 @@ local_struct_internal_ptr:
 # CHECK-MAX:        - Type:            MEMORY
 # CHECK-MAX-NEXT:     Memories:
 # CHECK-MAX-NEXT:       - Flags:           [ HAS_MAX ]
-# CHECK-MAX-NEXT:         Initial:         0x2
+# CHECK-MAX-NEXT:         Minimum:         0x2
 # CHECK-MAX-NEXT:         Maximum:         0x2
 
 # RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
@@ -115,7 +115,7 @@ local_struct_internal_ptr:
 # CHECK-SHARED:        - Type:            MEMORY
 # CHECK-SHARED-NEXT:     Memories:
 # CHECK-SHARED-NEXT:       - Flags:           [ HAS_MAX, IS_SHARED ]
-# CHECK-SHARED-NEXT:         Initial:         0x2
+# CHECK-SHARED-NEXT:         Minimum:         0x2
 # CHECK-SHARED-NEXT:         Maximum:         0x2
 
 # XUN: wasm-ld --relocatable -o %t_reloc.wasm %t32.o %t.hello32.o

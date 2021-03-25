@@ -181,7 +181,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       auto *concept = getInterfaceFor(op);
       if (!concept)
         return false;
-      return !concept->isOptionalSymbol(op) ||
+      return !concept->isOptionalSymbol(concept, op) ||
              op->getAttr(::mlir::SymbolTable::getSymbolAttrName());
     }
   }];

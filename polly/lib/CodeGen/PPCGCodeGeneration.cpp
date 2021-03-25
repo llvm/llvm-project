@@ -1317,12 +1317,13 @@ void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
   Index = isl_ast_expr_address_of(Index);
   Value *GlobalAddr = ExprBuilder.create(Index);
+  Type *IndexTy = cast<PointerType>(GlobalAddr->getType())->getElementType();
 
   if (KernelStmt->u.c.read) {
-    LoadInst *Load = Builder.CreateLoad(GlobalAddr, "shared.read");
+    LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
     Builder.CreateStore(Load, LocalAddr);
   } else {
-    LoadInst *Load = Builder.CreateLoad(LocalAddr, "shared.write");
+    LoadInst *Load = Builder.CreateLoad(IndexTy, LocalAddr, "shared.write");
     Builder.CreateStore(Load, GlobalAddr);
   }
 }
@@ -2177,7 +2178,7 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
     if (!gpu_array_is_read_only_scalar(&Prog->array[i])) {
       Type *TypePtr = SAI->getElementType()->getPointerTo();
       Value *TypedArgPtr = Builder.CreatePointerCast(Val, TypePtr);
-      Val = Builder.CreateLoad(TypedArgPtr);
+      Val = Builder.CreateLoad(SAI->getElementType(), TypedArgPtr);
     }
 
     Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
@@ -2214,7 +2215,7 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
     Value *ArgPtr = &*Arg;
     Type *TypePtr = SAI->getElementType()->getPointerTo();
     Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
-    Value *Val = Builder.CreateLoad(Alloca);
+    Value *Val = Builder.CreateLoad(SAI->getElementType(), Alloca);
     Builder.CreateStore(Val, TypedArgPtr);
     StoredScalar = true;
 

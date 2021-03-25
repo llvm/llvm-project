@@ -53,7 +53,12 @@ SyntheticSection::SyntheticSection(const char *segname, const char *name)
 // dyld3's MachOLoaded::getSlide() assumes that the __TEXT segment starts
 // from the beginning of the file (i.e. the header).
 MachHeaderSection::MachHeaderSection()
-    : SyntheticSection(segment_names::text, section_names::header) {}
+    : SyntheticSection(segment_names::text, section_names::header) {
+  // XXX: This is a hack. (See D97007)
+  // Setting the index to 1 to pretend that this section is the text
+  // section.
+  index = 1;
+}
 
 void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
   loadCommands.push_back(lc);
@@ -205,6 +210,24 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
     : SyntheticSection(segname, name) {
   align = WordSize;
   flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+void macho::addNonLazyBindingEntries(const Symbol *sym,
+                                     const InputSection *isec, uint64_t offset,
+                                     int64_t addend) {
+  if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    in.binding->addEntry(dysym, isec, offset, addend);
+    if (dysym->isWeakDef())
+      in.weakBinding->addEntry(sym, isec, offset, addend);
+  } else if (const auto *defined = dyn_cast<Defined>(sym)) {
+    in.rebase->addEntry(isec, offset);
+    if (defined->isExternalWeakDef())
+      in.weakBinding->addEntry(sym, isec, offset, addend);
+  } else {
+    // Undefined symbols are filtered out in scanRelocations(); we should never
+    // get here
+    llvm_unreachable("cannot bind to an undefined symbol");
+  }
 }
 
 void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
@@ -370,32 +393,6 @@ void WeakBindingSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-bool macho::needsBinding(const Symbol *sym) {
-  if (isa<DylibSymbol>(sym))
-    return true;
-  if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef();
-  return false;
-}
-
-void macho::addNonLazyBindingEntries(const Symbol *sym,
-                                     const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    in.binding->addEntry(dysym, isec, offset, addend);
-    if (dysym->isWeakDef())
-      in.weakBinding->addEntry(sym, isec, offset, addend);
-  } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    in.rebase->addEntry(isec, offset);
-    if (defined->isExternalWeakDef())
-      in.weakBinding->addEntry(sym, isec, offset, addend);
-  } else {
-    // Undefined symbols are filtered out in scanRelocations(); we should never
-    // get here
-    llvm_unreachable("cannot bind to an undefined symbol");
-  }
-}
-
 StubsSection::StubsSection()
     : SyntheticSection(segment_names::text, "__stubs") {
   flags = S_SYMBOL_STUBS | S_ATTR_SOME_INSTRUCTIONS | S_ATTR_PURE_INSTRUCTIONS;
@@ -549,44 +546,40 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   return opstreamOffset;
 }
 
-void macho::prepareBranchTarget(Symbol *sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    if (in.stubs->addEntry(dysym)) {
-      if (sym->isWeakDef()) {
-        in.binding->addEntry(dysym, in.lazyPointers->isec,
-                             sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * WordSize);
-      } else {
-        in.lazyBinding->addEntry(dysym);
-      }
-    }
-  } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    if (defined->isExternalWeakDef()) {
-      if (in.stubs->addEntry(sym)) {
-        in.rebase->addEntry(in.lazyPointers->isec, sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * WordSize);
-      }
-    }
-  }
-}
-
 ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
+
+static void validateExportSymbol(const Defined *defined) {
+  StringRef symbolName = defined->getName();
+  if (defined->privateExtern && config->exportedSymbols.match(symbolName))
+    error("cannot export hidden symbol " + symbolName + "\n>>> defined in " +
+          toString(defined->getFile()));
+}
+
+static bool shouldExportSymbol(const Defined *defined) {
+  if (defined->privateExtern)
+    return false;
+  // TODO: Is this a performance bottleneck? If a build has mostly
+  // global symbols in the input but uses -exported_symbols to filter
+  // out most of them, then it would be better to set the value of
+  // privateExtern at parse time instead of calling
+  // exportedSymbols.match() more than once.
+  //
+  // Measurements show that symbol ordering (which again looks up
+  // every symbol in a hashmap) is the biggest bottleneck when linking
+  // chromium_framework, so this will likely be worth optimizing.
+  return config->exportedSymbols.empty()
+             ? !config->unexportedSymbols.match(defined->getName())
+             : config->exportedSymbols.match(defined->getName());
+}
 
 void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (config->exportedSymbols.empty()) {
-        if (defined->privateExtern ||
-            config->unexportedSymbols.match(defined->getName()))
-          continue;
-      } else {
-        if (!config->exportedSymbols.match(defined->getName()))
-          continue;
-      }
+      validateExportSymbol(defined);
+      if (!shouldExportSymbol(defined))
+        continue;
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }
@@ -766,7 +759,7 @@ void SymtabSection::finalizeContents() {
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->linkerInternal)
+      if (!defined->includeInSymtab)
         continue;
       assert(defined->isExternal());
       addSymbol(externalSymbols, defined);
@@ -808,7 +801,7 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       uint8_t scope = 0;
-      if (defined->privateExtern) {
+      if (!shouldExportSymbol(defined)) {
         // Private external -- dylib scoped symbol.
         // Promote to non-external at link time.
         assert(defined->isExternal() && "invalid input file");
@@ -1004,4 +997,57 @@ void CodeSignatureSection::writeTo(uint8_t *buf) const {
   auto *id = reinterpret_cast<char *>(&codeDirectory[1]);
   memcpy(id, fileName.begin(), fileName.size());
   memset(id + fileName.size(), 0, fileNamePad);
+}
+
+void macho::createSyntheticSymbols() {
+  auto addHeaderSymbol = [](const char *name) {
+    symtab->addSynthetic(name, in.header->isec, 0,
+                         /*privateExtern=*/true,
+                         /*includeInSymtab*/ false);
+  };
+
+  switch (config->outputType) {
+    // FIXME: Assign the right address value for these symbols
+    // (rather than 0). But we need to do that after assignAddresses().
+  case MH_EXECUTE:
+    // If linking PIE, __mh_execute_header is a defined symbol in
+    //  __TEXT, __text)
+    // Otherwise, it's an absolute symbol.
+    if (config->isPic)
+      symtab->addSynthetic("__mh_execute_header", in.header->isec, 0,
+                           /*privateExtern*/ false,
+                           /*includeInSymbtab*/ true);
+    else
+      symtab->addSynthetic("__mh_execute_header",
+                           /*isec*/ nullptr, 0,
+                           /*privateExtern*/ false,
+                           /*includeInSymbtab*/ true);
+    break;
+
+    // The following symbols are  N_SECT symbols, even though the header is not
+    // part of any section and that they are private to the bundle/dylib/object
+    // they are part of.
+  case MH_BUNDLE:
+    addHeaderSymbol("__mh_bundle_header");
+    break;
+  case MH_DYLIB:
+    addHeaderSymbol("__mh_dylib_header");
+    break;
+  case MH_DYLINKER:
+    addHeaderSymbol("__mh_dylinker_header");
+    break;
+  case MH_OBJECT:
+    addHeaderSymbol("__mh_object_header");
+    break;
+  default:
+    llvm_unreachable("unexpected outputType");
+    break;
+  }
+
+  // The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit
+  // which does e.g. cleanup of static global variables. The ABI document
+  // says that the pointer can point to any address in one of the dylib's
+  // segments, but in practice ld64 seems to set it to point to the header,
+  // so that's what's implemented here.
+  addHeaderSymbol("___dso_handle");
 }

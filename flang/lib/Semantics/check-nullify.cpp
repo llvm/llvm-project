@@ -40,13 +40,12 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
               }
             },
             [&](const parser::StructureComponent &structureComponent) {
-              evaluate::ExpressionAnalyzer analyzer{context_};
-              if (MaybeExpr checked{analyzer.Analyze(structureComponent)}) {
+              if (const auto *checkedExpr{GetExpr(pointerObject)}) {
                 if (!IsPointer(*structureComponent.component.symbol)) { // C951
                   messages.Say(structureComponent.component.source,
                       "component in NULLIFY statement must have the POINTER attribute"_err_en_US);
                 } else if (pure) {
-                  if (const Symbol * symbol{GetFirstSymbol(checked)}) {
+                  if (const Symbol * symbol{GetFirstSymbol(*checkedExpr)}) {
                     CheckDefinabilityInPureScope(
                         messages, *symbol, scope, *pure);
                   }

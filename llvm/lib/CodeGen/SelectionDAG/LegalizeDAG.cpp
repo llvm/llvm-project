@@ -1259,6 +1259,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
           return;
 
         if (Node->getNumValues() == 1) {
+          // Verify the new types match the original. Glue is waived because
+          // ISD::ADDC can be legalized by replacing Glue with an integer type.
+          assert((Res.getValueType() == Node->getValueType(0) ||
+                  Node->getValueType(0) == MVT::Glue) &&
+                 "Type mismatch for custom legalized operation");
           LLVM_DEBUG(dbgs() << "Successfully custom legalized node\n");
           // We can just directly replace this node with the lowered value.
           ReplaceNode(SDValue(Node, 0), Res);
@@ -1266,8 +1271,14 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         }
 
         SmallVector<SDValue, 8> ResultVals;
-        for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
+        for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i) {
+          // Verify the new types match the original. Glue is waived because
+          // ISD::ADDC can be legalized by replacing Glue with an integer type.
+          assert((Res->getValueType(i) == Node->getValueType(i) ||
+                  Node->getValueType(i) == MVT::Glue) &&
+                 "Type mismatch for custom legalized operation");
           ResultVals.push_back(Res.getValue(i));
+        }
         LLVM_DEBUG(dbgs() << "Successfully custom legalized node\n");
         ReplaceNode(Node, ResultVals.data());
         return;

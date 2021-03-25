@@ -32,8 +32,7 @@ static Value cloneMemref(Location loc, Value memref, OpBuilder &b) {
 }
 
 static LogicalResult
-allocateBuffersForResults(Location loc, LinalgOp linalgOp,
-                          linalg::GenericOpAdaptor &adaptor,
+allocateBuffersForResults(Location loc, LinalgOp linalgOp, ValueRange outputs,
                           SmallVectorImpl<Value> &resultBuffers, OpBuilder &b) {
   // Lazily compute loopRanges.
   SmallVector<Range, 4> loopRanges;
@@ -52,7 +51,7 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp,
     }
     auto tensorShape = tensorType.getShape();
     auto memrefType = MemRefType::get(tensorShape, tensorType.getElementType());
-    Value resultTensor = adaptor.outputs()[resultIndex];
+    Value resultTensor = outputs[resultIndex];
 
     // Clone output buffers whose value is actually used.
     if (linalgOp.payloadUsesValueFromOutputOperandIndex(resultIndex)) {
@@ -138,8 +137,7 @@ static void finalizeBufferAllocation(ConversionPatternRewriter &rewriter,
 
 namespace {
 
-/// Generic conversion pattern that matches any LinalgOp. This avoids template
-/// instantiating one pattern for each LinalgOp.
+/// Conversion pattern that replaces `linalg.init_tensor` with allocation.
 class BufferizeInitTensorOp : public OpConversionPattern<InitTensorOp> {
 public:
   using OpConversionPattern<InitTensorOp>::OpConversionPattern;
@@ -155,19 +153,37 @@ public:
   }
 };
 
-/// Generic conversion pattern that matches any LinalgOp. This avoids template
-/// instantiating one pattern for each LinalgOp.
-class BufferizeAnyLinalgOp : public ConversionPattern {
+/// Conversion pattern that bufferizes `linalg.fill` operation.
+class BufferizeFillOp : public OpConversionPattern<FillOp> {
 public:
-  BufferizeAnyLinalgOp(TypeConverter &typeConverter)
-      : ConversionPattern(/*benefit=*/1, typeConverter, MatchAnyOpTypeTag()) {}
+  using OpConversionPattern<FillOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(FillOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
+    linalg::FillOpAdaptor adaptor(operands, op->getAttrDictionary());
+    if (!op.output().getType().isa<TensorType>())
+      return rewriter.notifyMatchFailure(op,
+                                         "operand must be of a tensor type");
 
-    LinalgOp linalgOp = dyn_cast<linalg::LinalgOp>(op);
-    if (!linalgOp)
+    rewriter.create<FillOp>(op.getLoc(), adaptor.output(), adaptor.value());
+    rewriter.replaceOp(op, adaptor.output());
+
+    return success();
+  }
+};
+
+/// Generic conversion pattern that matches any LinalgOp. This avoids template
+/// instantiating one pattern for each LinalgOp.
+class BufferizeAnyLinalgOp : public OpInterfaceConversionPattern<LinalgOp> {
+public:
+  using OpInterfaceConversionPattern<LinalgOp>::OpInterfaceConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(LinalgOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // GenericOpAdaptor below expects an `operand_segment_sizes` attribute.
+    if (!op->hasAttr("operand_segment_sizes"))
       return failure();
 
     // We abuse the GenericOpAdaptor here.
@@ -175,32 +191,30 @@ public:
     // linalg::LinalgOp interface ops.
     linalg::GenericOpAdaptor adaptor(operands, op->getAttrDictionary());
 
-    Location loc = linalgOp.getLoc();
+    Location loc = op.getLoc();
     SmallVector<Value, 2> newOutputBuffers;
 
-    if (failed(allocateBuffersForResults(loc, linalgOp, adaptor,
+    if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
                                          newOutputBuffers, rewriter))) {
-      linalgOp.emitOpError()
-          << "Failed to allocate buffers for tensor results.";
-      return failure();
+      return op.emitOpError()
+             << "Failed to allocate buffers for tensor results.";
     }
 
     // Delegate to the linalg generic pattern.
-    if (auto genericOp = dyn_cast<linalg::GenericOp>(op)) {
+    if (auto genericOp = dyn_cast<linalg::GenericOp>(*op)) {
       finalizeBufferAllocationForGenericOp<GenericOp>(
           rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
       return success();
     }
 
     // Delegate to the linalg indexed generic pattern.
-    if (auto genericOp = dyn_cast<linalg::IndexedGenericOp>(op)) {
+    if (auto genericOp = dyn_cast<linalg::IndexedGenericOp>(*op)) {
       finalizeBufferAllocationForGenericOp<IndexedGenericOp>(
           rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
       return success();
     }
 
-    finalizeBufferAllocation(rewriter, linalgOp, adaptor.inputs(),
-                             newOutputBuffers);
+    finalizeBufferAllocation(rewriter, op, adaptor.inputs(), newOutputBuffers);
     return success();
   }
 };
@@ -305,8 +319,8 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
-    OwningRewritePatternList patterns;
-    populateLinalgBufferizePatterns(&context, typeConverter, patterns);
+    RewritePatternSet patterns(&context);
+    populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -319,15 +333,15 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgBufferizePass() {
 }
 
 void mlir::linalg::populateLinalgBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeAnyLinalgOp>(typeConverter);
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   // TODO: Drop this once tensor constants work in standard.
   // clang-format off
-  patterns.insert<
+  patterns.add<
+      BufferizeAnyLinalgOp,
+      BufferizeFillOp,
       BufferizeInitTensorOp,
       SubTensorOpConverter,
       SubTensorInsertOpConverter
-    >(typeConverter, context);
+    >(typeConverter, patterns.getContext());
   // clang-format on
 }

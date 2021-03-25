@@ -358,6 +358,8 @@ namespace clang {
     ExpectedType VisitDecltypeType(const DecltypeType *T);
     ExpectedType VisitUnaryTransformType(const UnaryTransformType *T);
     ExpectedType VisitAutoType(const AutoType *T);
+    ExpectedType VisitDeducedTemplateSpecializationType(
+        const DeducedTemplateSpecializationType *T);
     ExpectedType VisitInjectedClassNameType(const InjectedClassNameType *T);
     // FIXME: DependentDecltypeType
     ExpectedType VisitRecordType(const RecordType *T);
@@ -574,6 +576,7 @@ namespace clang {
 
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
+    ExpectedStmt VisitSourceLocExpr(SourceLocExpr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
@@ -1373,6 +1376,20 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
       *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
       /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
       ToTemplateArgs);
+}
+
+ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
+    const DeducedTemplateSpecializationType *T) {
+  // FIXME: Make sure that the "to" context supports C++17!
+  Expected<TemplateName> ToTemplateNameOrErr = import(T->getTemplateName());
+  if (!ToTemplateNameOrErr)
+    return ToTemplateNameOrErr.takeError();
+  ExpectedType ToDeducedTypeOrErr = import(T->getDeducedType());
+  if (!ToDeducedTypeOrErr)
+    return ToDeducedTypeOrErr.takeError();
+
+  return Importer.getToContext().getDeducedTemplateSpecializationType(
+      *ToTemplateNameOrErr, *ToDeducedTypeOrErr, T->isDependentType());
 }
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
@@ -3631,6 +3648,10 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   auto ToInitializer = importChecked(Err, D->getInClassInitializer());
   if (Err)
     return std::move(Err);
+  const Type *ToCapturedVLAType = nullptr;
+  if (Error Err = Importer.importInto(
+          ToCapturedVLAType, cast_or_null<Type>(D->getCapturedVLAType())))
+    return std::move(Err);
 
   FieldDecl *ToField;
   if (GetImportedOrCreateDecl(ToField, D, Importer.getToContext(), DC,
@@ -3644,6 +3665,8 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   if (ToInitializer)
     ToField->setInClassInitializer(ToInitializer);
   ToField->setImplicit(D->isImplicit());
+  if (ToCapturedVLAType)
+    ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);
   return ToField;
 }
@@ -4018,6 +4041,7 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
                               D->getStorageClass()))
     return ToVar;
 
+  ToVar->setTSCSpec(D->getTSCSpec());
   ToVar->setQualifierInfo(ToQualifierLoc);
   ToVar->setAccess(D->getAccess());
   ToVar->setLexicalDeclContext(LexicalDC);
@@ -5064,6 +5088,11 @@ ExpectedDecl ASTNodeImporter::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
   auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
   for (auto *FoundDecl : FoundDecls) {
     if (auto *FoundProp = dyn_cast<ObjCPropertyDecl>(FoundDecl)) {
+      // Instance and class properties can share the same name but are different
+      // declarations.
+      if (FoundProp->isInstanceProperty() != D->isInstanceProperty())
+        continue;
+
       // Check property types.
       if (!Importer.IsStructurallyEquivalent(D->getType(),
                                              FoundProp->getType())) {
@@ -6480,6 +6509,21 @@ ExpectedStmt ASTNodeImporter::VisitExpr(Expr *E) {
   Importer.FromDiag(E->getBeginLoc(), diag::err_unsupported_ast_node)
       << E->getStmtClassName();
   return make_error<ImportError>(ImportError::UnsupportedConstruct);
+}
+
+ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
+  Error Err = Error::success();
+  auto BLoc = importChecked(Err, E->getBeginLoc());
+  auto RParenLoc = importChecked(Err, E->getEndLoc());
+  if (Err)
+    return std::move(Err);
+  auto ParentContextOrErr = Importer.ImportContext(E->getParentContext());
+  if (!ParentContextOrErr)
+    return ParentContextOrErr.takeError();
+
+  return new (Importer.getToContext())
+      SourceLocExpr(Importer.getToContext(), E->getIdentKind(), BLoc, RParenLoc,
+                    *ParentContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {
@@ -8151,28 +8195,37 @@ ASTImporter::Import(ExprWithCleanups::CleanupObject From) {
   return make_error<ImportError>(ImportError::UnsupportedConstruct);
 }
 
-Expected<QualType> ASTImporter::Import(QualType FromT) {
-  if (FromT.isNull())
-    return QualType{};
-
-  const Type *FromTy = FromT.getTypePtr();
+Expected<const Type *> ASTImporter::Import(const Type *FromT) {
+  if (!FromT)
+    return FromT;
 
   // Check whether we've already imported this type.
-  llvm::DenseMap<const Type *, const Type *>::iterator Pos
-    = ImportedTypes.find(FromTy);
+  llvm::DenseMap<const Type *, const Type *>::iterator Pos =
+      ImportedTypes.find(FromT);
   if (Pos != ImportedTypes.end())
-    return ToContext.getQualifiedType(Pos->second, FromT.getLocalQualifiers());
+    return Pos->second;
 
   // Import the type
   ASTNodeImporter Importer(*this);
-  ExpectedType ToTOrErr = Importer.Visit(FromTy);
+  ExpectedType ToTOrErr = Importer.Visit(FromT);
   if (!ToTOrErr)
     return ToTOrErr.takeError();
 
   // Record the imported type.
-  ImportedTypes[FromTy] = (*ToTOrErr).getTypePtr();
+  ImportedTypes[FromT] = ToTOrErr->getTypePtr();
 
-  return ToContext.getQualifiedType(*ToTOrErr, FromT.getLocalQualifiers());
+  return ToTOrErr->getTypePtr();
+}
+
+Expected<QualType> ASTImporter::Import(QualType FromT) {
+  if (FromT.isNull())
+    return QualType{};
+
+  Expected<const Type *> ToTyOrErr = Import(FromT.getTypePtr());
+  if (!ToTyOrErr)
+    return ToTyOrErr.takeError();
+
+  return ToContext.getQualifiedType(*ToTyOrErr, FromT.getLocalQualifiers());
 }
 
 Expected<TypeSourceInfo *> ASTImporter::Import(TypeSourceInfo *FromTSI) {

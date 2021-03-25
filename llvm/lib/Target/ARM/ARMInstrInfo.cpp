@@ -32,7 +32,8 @@ ARMInstrInfo::ARMInstrInfo(const ARMSubtarget &STI)
     : ARMBaseInstrInfo(STI), RI() {}
 
 /// Return the noop instruction to use for a noop.
-void ARMInstrInfo::getNoop(MCInst &NopInst) const {
+MCInst ARMInstrInfo::getNop() const {
+  MCInst NopInst;
   if (hasNOP()) {
     NopInst.setOpcode(ARM::HINT);
     NopInst.addOperand(MCOperand::createImm(0));
@@ -46,6 +47,7 @@ void ARMInstrInfo::getNoop(MCInst &NopInst) const {
     NopInst.addOperand(MCOperand::createReg(0));
     NopInst.addOperand(MCOperand::createReg(0));
   }
+  return NopInst;
 }
 
 unsigned ARMInstrInfo::getUnindexedOpcode(unsigned Opc) const {

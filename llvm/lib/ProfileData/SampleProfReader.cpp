@@ -38,6 +38,7 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
+#include <set>
 #include <system_error>
 #include <vector>
 
@@ -87,13 +88,22 @@ static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 /// Possible metadata:
 /// - CFG Checksum information:
 ///     !CFGChecksum: 12345
+/// - CFG Checksum information:
+///     !Attributes: 1
 /// Stores the FunctionHash (a.k.a. CFG Checksum) into \p FunctionHash.
-static bool parseMetadata(const StringRef &Input, uint64_t &FunctionHash) {
-  if (!Input.startswith("!CFGChecksum:"))
-    return false;
+static bool parseMetadata(const StringRef &Input, uint64_t &FunctionHash,
+                          uint32_t &Attributes) {
+  if (Input.startswith("!CFGChecksum:")) {
+    StringRef CFGInfo = Input.substr(strlen("!CFGChecksum:")).trim();
+    return !CFGInfo.getAsInteger(10, FunctionHash);
+  }
 
-  StringRef CFGInfo = Input.substr(strlen("!CFGChecksum:")).trim();
-  return !CFGInfo.getAsInteger(10, FunctionHash);
+  if (Input.startswith("!Attributes:")) {
+    StringRef Attrib = Input.substr(strlen("!Attributes:")).trim();
+    return !Attrib.getAsInteger(10, Attributes);
+  }
+
+  return false;
 }
 
 enum class LineType {
@@ -118,7 +128,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
                       uint64_t &NumSamples, uint32_t &LineOffset,
                       uint32_t &Discriminator, StringRef &CalleeName,
                       DenseMap<StringRef, uint64_t> &TargetCountMap,
-                      uint64_t &FunctionHash) {
+                      uint64_t &FunctionHash, uint32_t &Attributes) {
   for (Depth = 0; Input[Depth] == ' '; Depth++)
     ;
   if (Depth == 0)
@@ -126,7 +136,7 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
 
   if (Depth == 1 && Input[Depth] == '!') {
     LineTy = LineType::Metadata;
-    return parseMetadata(Input.substr(Depth), FunctionHash);
+    return parseMetadata(Input.substr(Depth), FunctionHash, Attributes);
   }
 
   size_t n1 = Input.find(':');
@@ -269,9 +279,11 @@ std::error_code SampleProfileReaderText::readImpl() {
       DenseMap<StringRef, uint64_t> TargetCountMap;
       uint32_t Depth, LineOffset, Discriminator;
       LineType LineTy;
-      uint64_t FunctionHash;
+      uint64_t FunctionHash = 0;
+      uint32_t Attributes = 0;
       if (!ParseLine(*LineIt, LineTy, Depth, NumSamples, LineOffset,
-                     Discriminator, FName, TargetCountMap, FunctionHash)) {
+                     Discriminator, FName, TargetCountMap, FunctionHash,
+                     Attributes)) {
         reportError(LineIt.line_number(),
                     "Expected 'NUM[.NUM]: NUM[ mangled_name:NUM]*', found " +
                         *LineIt);
@@ -311,8 +323,12 @@ std::error_code SampleProfileReaderText::readImpl() {
       }
       case LineType::Metadata: {
         FunctionSamples &FProfile = *InlineStack.back();
-        FProfile.setFunctionHash(FunctionHash);
-        ++ProbeProfileCount;
+        if (FunctionHash) {
+          FProfile.setFunctionHash(FunctionHash);
+          ++ProbeProfileCount;
+        }
+        if (Attributes)
+          FProfile.getContext().setAllAttributes(Attributes);
         SeenMetadata = true;
         break;
       }
@@ -577,6 +593,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       return EC;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Summary->setPartialProfile(true);
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
+      FunctionSamples::ProfileIsCS = ProfileIsCS = true;
     break;
   case SecNameTable: {
     FixedLengthMD5 =
@@ -598,13 +616,16 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     if (std::error_code EC = readFuncOffsetTable())
       return EC;
     break;
-  case SecFuncMetadata:
+  case SecFuncMetadata: {
     ProfileIsProbeBased =
         hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased);
     FunctionSamples::ProfileIsProbeBased = ProfileIsProbeBased;
-    if (std::error_code EC = readFuncMetadata())
+    bool HasAttribute =
+        hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute);
+    if (std::error_code EC = readFuncMetadata(HasAttribute))
       return EC;
     break;
+  }
   case SecProfileSymbolList:
     if (std::error_code EC = readProfileSymbolList())
       return EC;
@@ -687,6 +708,46 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         if (std::error_code EC = readFuncProfile(FuncProfileAddr))
           return EC;
       }
+    } else if (FunctionSamples::ProfileIsCS) {
+      // Compute the ordered set of names, so we can
+      // get all context profiles under a subtree by
+      // iterating through the ordered names.
+      struct Comparer {
+        // Ignore the closing ']' when ordering context
+        bool operator()(const StringRef &L, const StringRef &R) const {
+          return L.substr(0, L.size() - 1) < R.substr(0, R.size() - 1);
+        }
+      };
+      std::set<StringRef, Comparer> OrderedNames;
+      for (auto Name : FuncOffsetTable) {
+        OrderedNames.insert(Name.first);
+      }
+
+      // For each function in current module, load all
+      // context profiles for the function.
+      for (auto NameOffset : FuncOffsetTable) {
+        StringRef ContextName = NameOffset.first;
+        SampleContext FContext(ContextName);
+        auto FuncName = FContext.getNameWithoutContext();
+        if (!FuncsToUse.count(FuncName) &&
+            (!Remapper || !Remapper->exist(FuncName)))
+          continue;
+
+        // For each context profile we need, try to load
+        // all context profile in the subtree. This can
+        // help profile guided importing for ThinLTO.
+        auto It = OrderedNames.find(ContextName);
+        while (It != OrderedNames.end() &&
+               It->startswith(ContextName.substr(0, ContextName.size() - 1))) {
+          const uint8_t *FuncProfileAddr = Start + FuncOffsetTable[*It];
+          assert(FuncProfileAddr < End && "out of LBRProfile section");
+          if (std::error_code EC = readFuncProfile(FuncProfileAddr))
+            return EC;
+          // Remove loaded context profile so we won't
+          // load it repeatedly.
+          It = OrderedNames.erase(It);
+        }
+      }
     } else {
       for (auto NameOffset : FuncOffsetTable) {
         SampleContext FContext(NameOffset.first);
@@ -704,8 +765,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
   }
   assert((CSProfileCount == 0 || CSProfileCount == Profiles.size()) &&
          "Cannot have both context-sensitive and regular profile");
-  ProfileIsCS = (CSProfileCount > 0);
-  FunctionSamples::ProfileIsCS = ProfileIsCS;
+  assert(ProfileIsCS == (CSProfileCount > 0) &&
+         "Section flag should be consistent with actual profile");
   return sampleprof_error::success;
 }
 
@@ -898,23 +959,31 @@ std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5) {
   return SampleProfileReaderBinary::readNameTable();
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata() {
-  if (!ProfileIsProbeBased)
-    return sampleprof_error::success;
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute) {
   while (Data < End) {
     auto FName(readStringFromTable());
     if (std::error_code EC = FName.getError())
       return EC;
 
-    auto Checksum = readNumber<uint64_t>();
-    if (std::error_code EC = Checksum.getError())
-      return EC;
-
     SampleContext FContext(*FName);
-    // No need to load metadata for profiles that are not loaded in the current
-    // module.
-    if (Profiles.count(FContext))
-      Profiles[FContext].setFunctionHash(*Checksum);
+    bool ProfileInMap = Profiles.count(FContext);
+
+    if (ProfileIsProbeBased) {
+      auto Checksum = readNumber<uint64_t>();
+      if (std::error_code EC = Checksum.getError())
+        return EC;
+      if (ProfileInMap)
+        Profiles[FContext].setFunctionHash(*Checksum);
+    }
+
+    if (ProfileHasAttribute) {
+      auto Attributes = readNumber<uint32_t>();
+      if (std::error_code EC = Attributes.getError())
+        return EC;
+      if (ProfileInMap)
+        Profiles[FContext].getContext().setAllAttributes(*Attributes);
+    }
   }
 
   assert(Data == End && "More data is read than expected");
@@ -1034,6 +1103,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
   case SecProfSummary:
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagPartial))
       Flags.append("partial,");
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFullContext))
+      Flags.append("context,");
     break;
   default:
     break;

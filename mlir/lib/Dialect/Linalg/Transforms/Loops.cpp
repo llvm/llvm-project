@@ -520,8 +520,9 @@ namespace {
 template <typename LoopType>
 class LinalgRewritePattern : public RewritePattern {
 public:
-  LinalgRewritePattern(ArrayRef<unsigned> interchangeVector)
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()),
+  LinalgRewritePattern(MLIRContext *context,
+                       ArrayRef<unsigned> interchangeVector)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
         interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 
   LogicalResult matchAndRewrite(Operation *op,
@@ -545,11 +546,11 @@ template <typename LoopType>
 static void lowerLinalgToLoopsImpl(FuncOp funcOp,
                                    ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
-  OwningRewritePatternList patterns;
-  patterns.insert<LinalgRewritePattern<LoopType>>(interchangeVector);
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(context, interchangeVector);
   memref::DimOp::getCanonicalizationPatterns(patterns, context);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.insert<FoldAffineOp>(context);
+  patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }

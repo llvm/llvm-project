@@ -68,7 +68,10 @@ typedef llvm::DenseMap<uint32_t, SourceBreakpoint> SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 enum class OutputType { Console, Stdout, Stderr, Telemetry };
 
-enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
+enum VSCodeBroadcasterBits {
+  eBroadcastBitStopEventThread = 1u << 0,
+  eBroadcastBitStopProgressThread = 1u << 1
+};
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
 
@@ -91,6 +94,7 @@ struct VSCode {
   int64_t num_locals;
   int64_t num_globals;
   std::thread event_thread;
+  std::thread progress_event_thread;
   std::unique_ptr<std::ofstream> log;
   llvm::DenseMap<lldb::addr_t, int64_t> addr_to_source_ref;
   llvm::DenseMap<int64_t, SourceReference> source_map;
@@ -131,6 +135,9 @@ struct VSCode {
   std::string ReadJSON();
 
   void SendOutput(OutputType o, const llvm::StringRef output);
+
+  void SendProgressEvent(uint64_t progress_id, const char *message,
+                         uint64_t completed, uint64_t total);
 
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);

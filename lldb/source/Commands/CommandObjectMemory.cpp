@@ -608,7 +608,7 @@ protected:
       } else if (end_addr <= addr) {
         result.AppendErrorWithFormat(
             "end address (0x%" PRIx64
-            ") must be greater that the start address (0x%" PRIx64 ").\n",
+            ") must be greater than the start address (0x%" PRIx64 ").\n",
             end_addr, addr);
         result.SetStatus(eReturnStatusFailed);
         return false;
@@ -1505,7 +1505,7 @@ protected:
 
       case eFormatUnsigned:
 
-        if (!entry.ref().getAsInteger(0, uval64)) {
+        if (entry.ref().getAsInteger(0, uval64)) {
           result.AppendErrorWithFormat(
               "'%s' is not a valid unsigned decimal string value.\n",
               entry.c_str());

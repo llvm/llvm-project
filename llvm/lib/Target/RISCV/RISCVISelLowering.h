@@ -36,6 +36,7 @@ enum NodeType : unsigned {
   /// The lhs and rhs are XLenVT integers. The true and false values can be
   /// integer or floating point.
   SELECT_CC,
+  BR_CC,
   BuildPairF64,
   SplitF64,
   TAIL,
@@ -431,6 +432,8 @@ public:
   static MVT getContainerForFixedLengthVector(SelectionDAG &DAG, MVT VT,
                                               const RISCVSubtarget &Subtarget);
 
+  bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
+
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -452,6 +455,7 @@ private:
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -471,8 +475,12 @@ private:
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerABS(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
                                                SelectionDAG &DAG) const;
+  SDValue lowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;

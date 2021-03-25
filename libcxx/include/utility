@@ -76,15 +76,15 @@ struct pair
     template <class U, class V> explicit(see-below) pair(pair<U, V>&& p);        // constexpr in C++14
     template <class... Args1, class... Args2>
         pair(piecewise_construct_t, tuple<Args1...> first_args,
-             tuple<Args2...> second_args);
+             tuple<Args2...> second_args);                                       // constexpr in C++20
 
-    template <class U, class V> pair& operator=(const pair<U, V>& p);
+    template <class U, class V> pair& operator=(const pair<U, V>& p);            // constexpr in C++20
     pair& operator=(pair&& p) noexcept(is_nothrow_move_assignable<T1>::value &&
-                                       is_nothrow_move_assignable<T2>::value);
-    template <class U, class V> pair& operator=(pair<U, V>&& p);
+                                       is_nothrow_move_assignable<T2>::value);   // constexpr in C++20
+    template <class U, class V> pair& operator=(pair<U, V>&& p);                 // constexpr in C++20
 
     void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
-                                is_nothrow_swappable_v<T2>);
+                                is_nothrow_swappable_v<T2>);                     // constexpr in C++20
 };
 
 template <class T1, class T2> bool operator==(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
@@ -94,10 +94,10 @@ template <class T1, class T2> bool operator> (const pair<T1,T2>&, const pair<T1,
 template <class T1, class T2> bool operator>=(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
 template <class T1, class T2> bool operator<=(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
 
-template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);   // constexpr in C++14
+template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);                // constexpr in C++14
 template <class T1, class T2>
 void
-swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));
+swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));            // constexpr in C++20
 
 struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 inline constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();

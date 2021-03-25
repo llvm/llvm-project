@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/GPU/Passes.h"
+
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
@@ -18,38 +16,54 @@
 using namespace mlir;
 
 #if MLIR_ROCM_CONVERSIONS_ENABLED
-static OwnedBlob compileIsaToHsacoForTesting(const std::string &, Location,
-                                             StringRef) {
-  const char data[] = "HSACO";
-  return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
+namespace {
+class TestSerializeToHsacoPass
+    : public PassWrapper<TestSerializeToHsacoPass, gpu::SerializeToBlobPass> {
+public:
+  TestSerializeToHsacoPass();
+
+private:
+  void getDependentDialects(DialectRegistry &registry) const override;
+
+  // Serializes ROCDL IR to HSACO.
+  std::unique_ptr<std::vector<char>>
+  serializeISA(const std::string &isa) override;
+};
+} // namespace
+
+TestSerializeToHsacoPass::TestSerializeToHsacoPass() {
+  this->triple = "amdgcn-amd-amdhsa";
+  this->chip = "gfx900";
 }
 
-static std::unique_ptr<llvm::Module>
-translateModuleToROCDL(Operation *m, llvm::LLVMContext &llvmContext,
-                       StringRef moduleName) {
-  registerLLVMDialectTranslation(*m->getContext());
-  registerROCDLDialectTranslation(*m->getContext());
-  return translateModuleToLLVMIR(m, llvmContext, moduleName);
+void TestSerializeToHsacoPass::getDependentDialects(
+    DialectRegistry &registry) const {
+  registerROCDLDialectTranslation(registry);
+  gpu::SerializeToBlobPass::getDependentDialects(registry);
+}
+
+std::unique_ptr<std::vector<char>>
+TestSerializeToHsacoPass::serializeISA(const std::string &) {
+  std::string data = "HSACO";
+  return std::make_unique<std::vector<char>>(data.begin(), data.end());
 }
 
 namespace mlir {
 namespace test {
-void registerTestConvertGPUKernelToHsacoPass() {
-  PassPipelineRegistration<>(
-      "test-kernel-to-hsaco",
-      "Convert all kernel functions to ROCm hsaco blobs",
-      [](OpPassManager &pm) {
+// Register test pass to serialize GPU module to a HSAco binary annotation.
+void registerTestGpuSerializeToHsacoPass() {
+  PassRegistration<TestSerializeToHsacoPass> registerSerializeToHsaco(
+      "test-gpu-to-hsaco",
+      "Lower GPU kernel function to HSAco binary annotations", [] {
         // Initialize LLVM AMDGPU backend.
         LLVMInitializeAMDGPUTarget();
         LLVMInitializeAMDGPUTargetInfo();
         LLVMInitializeAMDGPUTargetMC();
         LLVMInitializeAMDGPUAsmPrinter();
 
-        pm.addPass(createConvertGPUKernelToBlobPass(
-            translateModuleToROCDL, compileIsaToHsacoForTesting,
-            "amdgcn-amd-amdhsa", "gfx900", "-code-object-v3", "rocdl.hsaco"));
+        return std::make_unique<TestSerializeToHsacoPass>();
       });
 }
 } // namespace test
 } // namespace mlir
-#endif
+#endif // MLIR_ROCM_CONVERSIONS_ENABLED

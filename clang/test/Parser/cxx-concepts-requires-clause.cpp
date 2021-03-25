@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2b -x c++ %s -verify
 
 // Test parsing of the optional requires-clause in a template-declaration.
 
@@ -154,4 +155,6 @@ auto lambda1 = [] (auto x) requires (sizeof(decltype(x)) == 1) { };
 auto lambda2 = [] (auto x) constexpr -> int requires (sizeof(decltype(x)) == 1) { return 0; };
 
 auto lambda3 = [] requires (sizeof(char) == 1) { };
-// expected-error@-1{{lambda requires '()' before 'requires' clause}}
+#if __cplusplus <= 202002L
+// expected-warning@-2{{is a C++2b extension}}
+#endif

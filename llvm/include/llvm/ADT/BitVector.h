@@ -568,6 +568,20 @@ public:
     return false;
   }
 
+  template <class F, class... ArgTys>
+  static BitVector &apply(F &&f, BitVector &Out, BitVector const &Arg,
+                          ArgTys const &...Args) {
+    assert(llvm::all_of(
+               std::initializer_list<unsigned>{Args.size()...},
+               [&Arg](auto const &BV) { return Arg.size() == BV; }) &&
+           "consistent sizes");
+    Out.resize(Arg.size());
+    for (size_t i = 0, e = Out.NumBitWords(Arg.size()); i != e; ++i)
+      Out.Bits[i] = f(Arg.Bits[i], Args.Bits[i]...);
+    Out.clear_unused_bits();
+    return Out;
+  }
+
   BitVector &operator|=(const BitVector &RHS) {
     if (size() < RHS.size())
       resize(RHS.size());

@@ -311,7 +311,8 @@ struct ContextKey {
 // String based context id
 struct StringBasedCtxKey : public ContextKey {
   std::string Context;
-  StringBasedCtxKey() : ContextKey(CK_StringBased){};
+  bool WasLeafInlined;
+  StringBasedCtxKey() : ContextKey(CK_StringBased), WasLeafInlined(false){};
   static bool classof(const ContextKey *K) {
     return K->getKind() == CK_StringBased;
   }

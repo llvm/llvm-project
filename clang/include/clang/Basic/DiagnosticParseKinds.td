@@ -949,9 +949,6 @@ def err_expected_lambda_body : Error<"expected body of lambda expression">;
 def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
-def err_lambda_missing_parens : Error<
-  "lambda requires '()' before %select{'mutable'|return type|"
-  "attribute specifier|'constexpr'|'consteval'|'requires' clause}0">;
 def err_lambda_decl_specifier_repeated : Error<
   "%select{'mutable'|'constexpr'|'consteval'}0 cannot appear multiple times in a lambda declarator">;
 def err_lambda_capture_misplaced_ellipsis : Error<
@@ -963,6 +960,9 @@ def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
   "an attribute specifier sequence in this position is a C++2b extension">,
+  InGroup<CXX2b>;
+def ext_lambda_missing_parens : ExtWarn<
+  "lambda without a parameter clause is a C++2b extension">,
   InGroup<CXX2b>;
 def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
   "an attribute specifier sequence in this position is incompatible with C++ "
@@ -1400,6 +1400,13 @@ def err_omp_variant_ctx_second_match_extension : Error<
   "only a single match extension allowed per OpenMP context selector">;
 def err_omp_invalid_dsa: Error<
   "data-sharing attribute '%0' in '%1' clause requires OpenMP version %2 or above">;
+def err_omp_expected_punc_after_interop_mod : Error<
+  "expected ',' after interop modifier">;
+def err_omp_expected_interop_type : Error<
+  "expected interop type: 'target' and/or 'targetsync'">;
+def warn_omp_more_one_interop_type
+  : Warning<"interop type '%0' cannot be specified more than once">,
+    InGroup<OpenMPClauses>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

@@ -474,7 +474,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       Builder.defineMacro("__FAST_RELAXED_MATH__");
   }
 
-  if (LangOpts.SYCL) {
+  if (LangOpts.SYCLIsDevice || LangOpts.SYCLIsHost) {
     // SYCL Version is set to a value when building SYCL applications
     if (LangOpts.getSYCLVersion() == LangOptions::SYCL_2017)
       Builder.defineMacro("CL_SYCL_LANGUAGE_VERSION", "121");

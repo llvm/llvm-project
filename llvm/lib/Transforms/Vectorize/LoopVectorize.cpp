@@ -360,6 +360,10 @@ cl::opt<bool> llvm::EnableLoopVectorization(
     "vectorize-loops", cl::init(true), cl::Hidden,
     cl::desc("Run the Loop vectorization passes"));
 
+cl::opt<bool> PrintVPlansInDotFormat(
+    "vplan-print-in-dot-format", cl::init(false), cl::Hidden,
+    cl::desc("Use dot format instead of plain text when dumping VPlans"));
+
 /// A helper function that returns the type of loaded or stored value.
 static Type *getMemInstValueType(Value *I) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
@@ -371,19 +375,11 @@ static Type *getMemInstValueType(Value *I) {
 
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
-/// element of the corresponding vector type at the given vectorization factor.
-static bool hasIrregularType(Type *Ty, const DataLayout &DL, ElementCount VF) {
-  // Determine if an array of VF elements of type Ty is "bitcast compatible"
-  // with a <VF x Ty> vector.
-  if (VF.isVector()) {
-    auto *VectorTy = VectorType::get(Ty, VF);
-    return TypeSize::get(VF.getKnownMinValue() *
-                             DL.getTypeAllocSize(Ty).getFixedValue(),
-                         VF.isScalable()) != DL.getTypeStoreSize(VectorTy);
-  }
-
-  // If the vectorization factor is one, we just check if an array of type Ty
-  // requires padding between elements.
+/// element of the corresponding vector type.
+static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
@@ -614,7 +610,8 @@ protected:
   /// represented as.
   void truncateToMinimalBitwidths(VPTransformState &State);
 
-  /// This function adds (StartIdx, StartIdx + Step, StartIdx + 2*Step, ...)
+  /// This function adds
+  /// (StartIdx * Step, (StartIdx + 1) * Step, (StartIdx + 2) * Step, ...)
   /// to each vector element of Val. The sequence starts at StartIndex.
   /// \p Opcode is relevant for FP induction variable.
   virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step,
@@ -2456,8 +2453,10 @@ void InnerLoopVectorizer::widenIntOrFpInduction(PHINode *IV, Value *Start,
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
                                           Instruction::BinaryOps BinOp) {
   // Create and check the types.
-  auto *ValVTy = cast<FixedVectorType>(Val->getType());
-  int VLen = ValVTy->getNumElements();
+  assert(isa<FixedVectorType>(Val->getType()) &&
+         "Creation of scalable step vector not yet supported");
+  auto *ValVTy = cast<VectorType>(Val->getType());
+  ElementCount VLen = ValVTy->getElementCount();
 
   Type *STy = Val->getType()->getScalarType();
   assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
@@ -2466,34 +2465,36 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
 
   SmallVector<Constant *, 8> Indices;
 
-  if (STy->isIntegerTy()) {
-    // Create a vector of consecutive numbers from zero to VF.
-    for (int i = 0; i < VLen; ++i)
-      Indices.push_back(ConstantInt::get(STy, StartIdx + i));
+  // Create a vector of consecutive numbers from zero to VF.
+  VectorType *InitVecValVTy = ValVTy;
+  Type *InitVecValSTy = STy;
+  if (STy->isFloatingPointTy()) {
+    InitVecValSTy =
+        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
+    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
+  }
+  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
-    // Add the consecutive indices to the vector value.
-    Constant *Cv = ConstantVector::get(Indices);
-    assert(Cv->getType() == Val->getType() && "Invalid consecutive vec");
+  // Add on StartIdx
+  Value *StartIdxSplat = Builder.CreateVectorSplat(
+      VLen, ConstantInt::get(InitVecValSTy, StartIdx));
+  InitVec = Builder.CreateAdd(InitVec, StartIdxSplat);
+
+  if (STy->isIntegerTy()) {
     Step = Builder.CreateVectorSplat(VLen, Step);
     assert(Step->getType() == Val->getType() && "Invalid step vec");
     // FIXME: The newly created binary instructions should contain nsw/nuw flags,
     // which can be found from the original scalar operations.
-    Step = Builder.CreateMul(Cv, Step);
+    Step = Builder.CreateMul(InitVec, Step);
     return Builder.CreateAdd(Val, Step, "induction");
   }
 
   // Floating point induction.
   assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
          "Binary Opcode should be specified for FP induction");
-  // Create a vector of consecutive numbers from zero to VF.
-  for (int i = 0; i < VLen; ++i)
-    Indices.push_back(ConstantFP::get(STy, (double)(StartIdx + i)));
-
-  // Add the consecutive indices to the vector value.
-  // Floating-point operations inherit FMF via the builder's flags.
-  Constant *Cv = ConstantVector::get(Indices);
+  InitVec = Builder.CreateUIToFP(InitVec, ValVTy);
   Step = Builder.CreateVectorSplat(VLen, Step);
-  Value *MulOp = Builder.CreateFMul(Cv, Step);
+  Value *MulOp = Builder.CreateFMul(InitVec, Step);
   return Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
 }
 
@@ -2568,12 +2569,7 @@ void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
 
 Value *InnerLoopVectorizer::reverseVector(Value *Vec) {
   assert(Vec->getType()->isVectorTy() && "Invalid type");
-  assert(!VF.isScalable() && "Cannot reverse scalable vectors");
-  SmallVector<int, 8> ShuffleMask;
-  for (unsigned i = 0; i < VF.getKnownMinValue(); ++i)
-    ShuffleMask.push_back(VF.getKnownMinValue() - i - 1);
-
-  return Builder.CreateShuffleVector(Vec, ShuffleMask, "reverse");
+  return Builder.CreateVectorReverse(Vec, "reverse");
 }
 
 // Return whether we allow using masked interleave-groups (for dealing with
@@ -2854,18 +2850,21 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
     bool InBounds = false;
     if (auto *gep = dyn_cast<GetElementPtrInst>(Ptr->stripPointerCasts()))
       InBounds = gep->isInBounds();
-
     if (Reverse) {
-      assert(!VF.isScalable() &&
-             "Reversing vectors is not yet supported for scalable vectors.");
-
       // If the address is consecutive but reversed, then the
       // wide store needs to start at the last vector element.
-      PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, Ptr, Builder.getInt32(-Part * VF.getKnownMinValue())));
+      // RunTimeVF =  VScale * VF.getKnownMinValue()
+      // For fixed-width VScale is 1, then RunTimeVF = VF.getKnownMinValue()
+      Value *RunTimeVF = getRuntimeVF(Builder, Builder.getInt32Ty(), VF);
+      // NumElt = -Part * RunTimeVF
+      Value *NumElt = Builder.CreateMul(Builder.getInt32(-Part), RunTimeVF);
+      // LastLane = 1 - RunTimeVF
+      Value *LastLane = Builder.CreateSub(Builder.getInt32(1), RunTimeVF);
+      PartPtr =
+          cast<GetElementPtrInst>(Builder.CreateGEP(ScalarDataTy, Ptr, NumElt));
       PartPtr->setIsInBounds(InBounds);
-      PartPtr = cast<GetElementPtrInst>(Builder.CreateGEP(
-          ScalarDataTy, PartPtr, Builder.getInt32(1 - VF.getKnownMinValue())));
+      PartPtr = cast<GetElementPtrInst>(
+          Builder.CreateGEP(ScalarDataTy, PartPtr, LastLane));
       PartPtr->setIsInBounds(InBounds);
       if (isMaskRequired) // Reverse of a null all-one mask is a null mask.
         BlockInMaskParts[Part] = reverseVector(BlockInMaskParts[Part]);
@@ -4269,6 +4268,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
 
   setDebugLocFromInst(Builder, LoopExitInst);
 
+  Type *PhiTy = Phi->getType();
   // If tail is folded by masking, the vector value to leave the loop should be
   // a Select choosing between the vectorized LoopExitInst and vectorized Phi,
   // instead of the former. For an inloop reduction the reduction will already
@@ -4292,10 +4292,9 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
       // cheaper for the select to remain in the loop than be sunk out of it,
       // and so use the select value for the phi instead of the old
       // LoopExitValue.
-      RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[Phi];
       if (PreferPredicatedReductionSelect ||
           TTI->preferPredicatedReductionSelect(
-              RdxDesc.getOpcode(), Phi->getType(),
+              RdxDesc.getOpcode(), PhiTy,
               TargetTransformInfo::ReductionFlags())) {
         auto *VecRdxPhi =
             cast<PHINode>(State.get(State.Plan->getVPValue(Phi), Part));
@@ -4308,7 +4307,7 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
   // If the vector reduction can be performed in a smaller type, we truncate
   // then extend the loop exit value to enable InstCombine to evaluate the
   // entire expression in the smaller type.
-  if (VF.isVector() && Phi->getType() != RdxDesc.getRecurrenceType()) {
+  if (VF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
     assert(!IsInLoopReductionPhi && "Unexpected truncated inloop reduction!");
     assert(!VF.isScalable() && "scalable vectors not yet supported.");
     Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), VF);
@@ -4370,16 +4369,15 @@ void InnerLoopVectorizer::fixReduction(PHINode *Phi, VPTransformState &State) {
         createTargetReduction(Builder, TTI, RdxDesc, ReducedPartRdx);
     // If the reduction can be performed in a smaller type, we need to extend
     // the reduction to the wider type before we branch to the original loop.
-    if (Phi->getType() != RdxDesc.getRecurrenceType())
-      ReducedPartRdx =
-        RdxDesc.isSigned()
-        ? Builder.CreateSExt(ReducedPartRdx, Phi->getType())
-        : Builder.CreateZExt(ReducedPartRdx, Phi->getType());
+    if (PhiTy != RdxDesc.getRecurrenceType())
+      ReducedPartRdx = RdxDesc.isSigned()
+                           ? Builder.CreateSExt(ReducedPartRdx, PhiTy)
+                           : Builder.CreateZExt(ReducedPartRdx, PhiTy);
   }
 
   // Create a phi node that merges control-flow from the backedge-taken check
   // block and the middle block.
-  PHINode *BCBlockPhi = PHINode::Create(Phi->getType(), 2, "bc.merge.rdx",
+  PHINode *BCBlockPhi = PHINode::Create(PhiTy, 2, "bc.merge.rdx",
                                         LoopScalarPreHeader->getTerminator());
   for (unsigned I = 0, E = LoopBypassBlocks.size(); I != E; ++I)
     BCBlockPhi->addIncoming(ReductionStartValue, LoopBypassBlocks[I]);
@@ -4772,12 +4770,12 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     // phi as base and a vectorized version of the step value
     // (<step*0, ..., step*N>) as offset.
     for (unsigned Part = 0; Part < State.UF; ++Part) {
-      SmallVector<Constant *, 8> Indices;
+      Type *VecPhiType = VectorType::get(PhiType, State.VF);
+      Value *StartOffset =
+          ConstantInt::get(VecPhiType, Part * State.VF.getKnownMinValue());
       // Create a vector of consecutive numbers from zero to VF.
-      for (unsigned i = 0; i < State.VF.getKnownMinValue(); ++i)
-        Indices.push_back(
-            ConstantInt::get(PhiType, i + Part * State.VF.getKnownMinValue()));
-      Constant *StartOffset = ConstantVector::get(Indices);
+      StartOffset =
+          Builder.CreateAdd(StartOffset, Builder.CreateStepVector(VecPhiType));
 
       Value *GEP = Builder.CreateGEP(
           ScStValueType->getPointerElementType(), NewPointerPhi,
@@ -5247,7 +5245,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // requires padding and will be scalarized.
   auto &DL = I->getModule()->getDataLayout();
   auto *ScalarTy = getMemInstValueType(I);
-  if (hasIrregularType(ScalarTy, DL, VF))
+  if (hasIrregularType(ScalarTy, DL))
     return false;
 
   // Check if masking is required.
@@ -5294,7 +5292,7 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   // requires padding and will be scalarized.
   auto &DL = I->getModule()->getDataLayout();
   auto *ScalarTy = LI ? LI->getType() : SI->getValueOperand()->getType();
-  if (hasIrregularType(ScalarTy, DL, VF))
+  if (hasIrregularType(ScalarTy, DL))
     return false;
 
   return true;
@@ -5701,7 +5699,9 @@ LoopVectorizationCostModel::computeFeasibleMaxVF(unsigned ConstTripCount,
   MinBWs = computeMinimumValueSizes(TheLoop->getBlocks(), *DB, &TTI);
   unsigned SmallestType, WidestType;
   std::tie(SmallestType, WidestType) = getSmallestAndWidestTypes();
-  unsigned WidestRegister = TTI.getRegisterBitWidth(true);
+  unsigned WidestRegister =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+          .getFixedSize();
 
   // Get the maximum safe dependence distance in bits computed by LAA.
   // It is computed by MaxVF * sizeOf(type) * 8, where type is taken from
@@ -6758,11 +6758,19 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // we might create due to scalarization.
   Cost += getScalarizationOverhead(I, VF);
 
-  // If we have a predicated store, it may not be executed for each vector
-  // lane. Scale the cost by the probability of executing the predicated
-  // block.
+  // If we have a predicated load/store, it will need extra i1 extracts and
+  // conditional branches, but may not be executed for each vector lane. Scale
+  // the cost by the probability of executing the predicated block.
   if (isPredicatedInst(I)) {
     Cost /= getReciprocalPredBlockProb();
+
+    // Add the cost of an i1 extract and a branch
+    auto *Vec_i1Ty =
+        VectorType::get(IntegerType::getInt1Ty(ValTy->getContext()), VF);
+    Cost += TTI.getScalarizationOverhead(
+        Vec_i1Ty, APInt::getAllOnesValue(VF.getKnownMinValue()),
+        /*Insert=*/false, /*Extract=*/true);
+    Cost += TTI.getCFInstrCost(Instruction::Br, TTI::TCK_RecipThroughput);
 
     if (useEmulatedMaskMemRefHack(I))
       // Artificially setting to a high enough value to practically disable
@@ -6796,7 +6804,8 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
+    Cost +=
+        TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None, 0);
   return Cost;
 }
 
@@ -6880,8 +6889,9 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
     // TODO: Add support for reversed masked interleaved access.
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
-    Cost += Group->getNumMembers() *
-            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, 0);
+    Cost +=
+        Group->getNumMembers() *
+        TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None, 0);
   }
   return Cost;
 }
@@ -7294,7 +7304,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     if (VF.isVector() && Legal->isFirstOrderRecurrence(Phi))
       return TTI.getShuffleCost(
           TargetTransformInfo::SK_ExtractSubvector, cast<VectorType>(VectorTy),
-          VF.getKnownMinValue() - 1, FixedVectorType::get(RetTy, 1));
+          None, VF.getKnownMinValue() - 1, FixedVectorType::get(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi
@@ -7663,8 +7673,10 @@ LoopVectorizationPlanner::planInVPlanNativePath(ElementCount UserVF) {
     // If the user doesn't provide a vectorization factor, determine a
     // reasonable one.
     if (UserVF.isZero()) {
-      VF = ElementCount::getFixed(
-          determineVPlanVF(TTI->getRegisterBitWidth(true /* Vector*/), CM));
+      VF = ElementCount::getFixed(determineVPlanVF(
+          TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+              .getFixedSize(),
+          CM));
       LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 
       // Make sure we have a VF > 1 for stress testing.
@@ -7808,6 +7820,16 @@ void LoopVectorizationPlanner::executePlan(InnerLoopVectorizer &ILV,
 
   ILV.printDebugTracesAtEnd();
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
+  for (const auto &Plan : VPlans)
+    if (PrintVPlansInDotFormat)
+      Plan->printDOT(O);
+    else
+      Plan->print(O);
+}
+#endif
 
 void LoopVectorizationPlanner::collectTriviallyDeadInstructions(
     SmallPtrSetImpl<Instruction *> &DeadInstructions) {
@@ -8536,7 +8558,6 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VPlan &Plan) const {
 
 VPBasicBlock *VPRecipeBuilder::handleReplication(
     Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-    DenseMap<Instruction *, VPReplicateRecipe *> &PredInst2Recipe,
     VPlanPtr &Plan) {
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
@@ -8554,10 +8575,16 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   // Find if I uses a predicated instruction. If so, it will use its scalar
   // value. Avoid hoisting the insert-element which packs the scalar value into
   // a vector value, as that happens iff all users use the vector value.
-  for (auto &Op : I->operands())
-    if (auto *PredInst = dyn_cast<Instruction>(Op))
-      if (PredInst2Recipe.find(PredInst) != PredInst2Recipe.end())
-        PredInst2Recipe[PredInst]->setAlsoPack(false);
+  for (VPValue *Op : Recipe->operands()) {
+    auto *PredR = dyn_cast_or_null<VPPredInstPHIRecipe>(Op->getDef());
+    if (!PredR)
+      continue;
+    auto *RepR =
+        cast_or_null<VPReplicateRecipe>(PredR->getOperand(0)->getDef());
+    assert(RepR->isPredicated() &&
+           "expected Replicate recipe to be predicated");
+    RepR->setAlsoPack(false);
+  }
 
   // Finalize the recipe for Instr, first if it is not predicated.
   if (!IsPredicated) {
@@ -8569,7 +8596,6 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
   assert(VPBB->getSuccessors().empty() &&
          "VPBB has successors when handling predicated replication.");
   // Record predicated instructions for above packing optimizations.
-  PredInst2Recipe[I] = Recipe;
   VPBlockBase *Region = createReplicateRegion(I, Recipe, Plan);
   VPBlockUtils::insertBlockAfter(Region, VPBB);
   auto *RegSucc = new VPBasicBlock();
@@ -8697,11 +8723,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions,
     const DenseMap<Instruction *, Instruction *> &SinkAfter) {
 
-  // Hold a mapping from predicated instructions to their recipes, in order to
-  // fix their AlsoPack behavior if a user is determined to replicate and use a
-  // scalar instead of vector value.
-  DenseMap<Instruction *, VPReplicateRecipe *> PredInst2Recipe;
-
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
   VPRecipeBuilder RecipeBuilder(OrigLoop, TLI, Legal, CM, PSE, Builder);
@@ -8805,8 +8826,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
       // Otherwise, if all widening options failed, Instruction is to be
       // replicated. This may create a successor for VPBB.
-      VPBasicBlock *NextVPBB = RecipeBuilder.handleReplication(
-          Instr, Range, VPBB, PredInst2Recipe, Plan);
+      VPBasicBlock *NextVPBB =
+          RecipeBuilder.handleReplication(Instr, Range, VPBB, Plan);
       if (NextVPBB != VPBB) {
         VPBB = NextVPBB;
         VPBB->setName(BB->hasName() ? BB->getName() + "." + Twine(VPBBsForBB++)
@@ -9006,9 +9027,10 @@ void LoopVectorizationPlanner::adjustRecipesForInLoopReductions(
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
                                VPSlotTracker &SlotTracker) const {
-  O << Indent << "\"INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
+  O << Indent << "INTERLEAVE-GROUP with factor " << IG->getFactor() << " at ";
   IG->getInsertPos()->printAsOperand(O, false);
   O << ", ";
   getAddr()->printAsOperand(O, SlotTracker);
@@ -9019,8 +9041,9 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
   }
   for (unsigned i = 0; i < IG->getFactor(); ++i)
     if (Instruction *I = IG->getMember(i))
-      O << "\\l\" +\n" << Indent << "\"  " << VPlanIngredient(I) << " " << i;
+      O << "\n" << Indent << "  " << VPlanIngredient(I) << " " << i;
 }
+#endif
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.ILV->widenCallInstruction(*cast<CallInst>(getUnderlyingInstr()), this,
@@ -9575,6 +9598,21 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         "Potentially unsafe FP op prevents vectorization",
         "loop not vectorized due to unsafe FP support.",
         "UnsafeFP", ORE, L);
+    Hints.emitRemarkWithHints();
+    return false;
+  }
+
+  if (!Requirements.canVectorizeFPMath(Hints)) {
+    ORE->emit([&]() {
+      auto *ExactFPMathInst = Requirements.getExactFPInst();
+      return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
+                                                 ExactFPMathInst->getDebugLoc(),
+                                                 ExactFPMathInst->getParent())
+             << "loop not vectorized: cannot prove it is safe to reorder "
+                "floating-point operations";
+    });
+    LLVM_DEBUG(dbgs() << "LV: loop not vectorized: cannot prove it is safe to "
+                         "reorder floating-point operations\n");
     Hints.emitRemarkWithHints();
     return false;
   }

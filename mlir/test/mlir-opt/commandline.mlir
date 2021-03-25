@@ -2,6 +2,7 @@
 // CHECK: Available Dialects:
 // CHECK-NEXT: acc
 // CHECK-NEXT: affine
+// CHECK-NEXT: amx
 // CHECK-NEXT: arm_neon
 // CHECK-NEXT: arm_sve
 // CHECK-NEXT: async

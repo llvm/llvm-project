@@ -260,8 +260,8 @@ public:
         break;
     }
 
-    BR.EmitBasicReport(AC->getDecl(), Checker, BugType, "Dead store", os.str(),
-                       L, R, Fixits);
+    BR.EmitBasicReport(AC->getDecl(), Checker, BugType, categories::UnusedCode,
+                       os.str(), L, R, Fixits);
   }
 
   void CheckVarDecl(const VarDecl *VD, const Expr *Ex, const Expr *Val,

@@ -12,6 +12,8 @@
 
 // ~ctype();
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <locale>
 #include <cassert>
 

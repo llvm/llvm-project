@@ -12,6 +12,8 @@
 
 // static const mask* classic_table() throw();
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <locale>
 #include <cassert>
 

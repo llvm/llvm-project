@@ -8820,6 +8820,18 @@ bool llvm::convertToNonDenormSingle(APInt &ArgAPInt) {
   return Success;
 }
 
+// Nondestructive check for convertTonNonDenormSingle.
+bool llvm::checkConvertToNonDenormSingle(APFloat &ArgAPFloat) {
+  // Only convert if it loses info, since XXSPLTIDP should
+  // handle the other case.
+  APFloat APFloatToConvert = ArgAPFloat;
+  bool LosesInfo = true;
+  APFloatToConvert.convert(APFloat::IEEEsingle(), APFloat::rmNearestTiesToEven,
+                           &LosesInfo);
+
+  return (!LosesInfo && !APFloatToConvert.isDenormal());
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.  If we CAN select this case, and if it
 // selects to a single instruction, return Op.  Otherwise, if we can codegen
@@ -10111,7 +10123,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, WideVec,
           DAG.getConstant(Subtarget.isLittleEndian() ? NumVecs - 1 - VecNo
                                                      : VecNo,
-                          dl, MVT::i64));
+                          dl, getPointerTy(DAG.getDataLayout())));
       RetOps.push_back(Extract);
     }
     return DAG.getMergeValues(RetOps, dl);
@@ -10395,7 +10407,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   for (unsigned Idx = 0; Idx < NumVecs; ++Idx) {
     unsigned VecNum = Subtarget.isLittleEndian() ? NumVecs - 1 - Idx : Idx;
     SDValue Elt = DAG.getNode(PPCISD::EXTRACT_VSX_REG, dl, MVT::v16i8, Value,
-                              DAG.getConstant(VecNum, dl, MVT::i64));
+                              DAG.getConstant(VecNum, dl, getPointerTy(DAG.getDataLayout())));
     SDValue Store =
         DAG.getStore(StoreChain, dl, Elt, BasePtr,
                      SN->getPointerInfo().getWithOffset(Idx * 16),
@@ -16115,10 +16127,8 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   case MVT::f32:
   case MVT::f64:
     if (Subtarget.hasPrefixInstrs()) {
-      // With prefixed instructions, we can materialize anything that can be
-      // represented with a 32-bit immediate, not just positive zero.
-      APFloat APFloatOfImm = Imm;
-      return convertToNonDenormSingle(APFloatOfImm);
+      // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
+      return true;
     }
     LLVM_FALLTHROUGH;
   case MVT::ppcf128:

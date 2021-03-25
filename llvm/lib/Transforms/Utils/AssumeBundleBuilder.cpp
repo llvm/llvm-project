@@ -204,8 +204,12 @@ struct AssumeBuilderState {
     auto addAttrList = [&](AttributeList AttrList) {
       for (unsigned Idx = AttributeList::FirstArgIndex;
            Idx < AttrList.getNumAttrSets(); Idx++)
-        for (Attribute Attr : AttrList.getAttributes(Idx))
-          addAttribute(Attr, Call->getArgOperand(Idx - 1));
+        for (Attribute Attr : AttrList.getAttributes(Idx)) {
+          bool IsPoisonAttr = Attr.hasAttribute(Attribute::NonNull) ||
+                              Attr.hasAttribute(Attribute::Alignment);
+          if (!IsPoisonAttr || Call->isPassingUndefUB(Idx - 1))
+            addAttribute(Attr, Call->getArgOperand(Idx - 1));
+        }
       for (Attribute Attr : AttrList.getFnAttributes())
         addAttribute(Attr, nullptr);
     };

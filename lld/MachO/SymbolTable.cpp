@@ -17,8 +17,8 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-Symbol *SymbolTable::find(StringRef name) {
-  auto it = symMap.find(CachedHashStringRef(name));
+Symbol *SymbolTable::find(CachedHashStringRef cachedName) {
+  auto it = symMap.find(cachedName);
   if (it == symMap.end())
     return nullptr;
   return symVector[it->second];
@@ -54,11 +54,10 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->privateExtern &= isPrivateExtern;
         return defined;
       }
-      if (!defined->isWeakDef()) {
+      if (!defined->isWeakDef())
         error("duplicate symbol: " + name + "\n>>> defined in " +
               toString(defined->getFile()) + "\n>>> defined in " +
               toString(file));
-      }
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
     }
@@ -160,10 +159,10 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
 
 Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
                                    uint32_t value, bool isPrivateExtern,
-                                   bool isLinkerInternal) {
-  Defined *s = addDefined(name, nullptr, isec, value, /*isWeakDef=*/false,
-                          isPrivateExtern);
-  s->linkerInternal = isLinkerInternal;
+                                   bool includeInSymtab) {
+  Defined *s = addDefined(name, nullptr, isec, value,
+                          /*isWeakDef=*/false, isPrivateExtern);
+  s->includeInSymtab = includeInSymtab;
   return s;
 }
 

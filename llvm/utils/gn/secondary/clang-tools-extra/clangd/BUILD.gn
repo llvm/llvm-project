@@ -14,6 +14,7 @@ write_cmake_config("features") {
   values = [
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_MALLOC_TRIM=1",
+    "ENABLE_GRPC_REFLECTION=0",
   ]
   if (clangd_build_xpc) {
     values += [ "CLANGD_BUILD_XPC=1" ]

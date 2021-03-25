@@ -323,12 +323,18 @@ unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 0;
 }
 
-unsigned SystemZTTIImpl::getRegisterBitWidth(bool Vector) const {
-  if (!Vector)
-    return 64;
-  if (ST->hasVector())
-    return 128;
-  return 0;
+TypeSize
+SystemZTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(64);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(ST->hasVector() ? 128 : 0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
+
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
@@ -548,7 +554,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 }
 
 int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                   int Index, VectorType *SubTp) {
+                                   ArrayRef<int> Mask, int Index,
+                                   VectorType *SubTp) {
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 
@@ -581,7 +588,7 @@ int SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }
 
 // Return the log2 difference of the element sizes of the two vector types.
@@ -749,8 +756,13 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     }
   }
   else if (ST->hasVector()) {
+    // Vector to scalar cast.
     auto *SrcVecTy = cast<FixedVectorType>(Src);
-    auto *DstVecTy = cast<FixedVectorType>(Dst);
+    auto *DstVecTy = dyn_cast<FixedVectorType>(Dst);
+    if (!DstVecTy) {
+      // TODO: tune vector-to-scalar cast.
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+    }
     unsigned VF = SrcVecTy->getNumElements();
     unsigned NumDstVectors = getNumVectorRegs(Dst);
     unsigned NumSrcVectors = getNumVectorRegs(Src);

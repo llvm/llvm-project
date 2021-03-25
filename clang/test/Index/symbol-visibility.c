@@ -1,4 +1,4 @@
-// RUN: c-index-test -test-print-visibility %s | FileCheck %s
+// RUN: c-index-test -test-print-visibility  -fvisibility=default %s | FileCheck %s
 
 __attribute__ ((visibility ("default"))) void foo1();
 __attribute__ ((visibility ("hidden"))) void foo2();

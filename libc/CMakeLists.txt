@@ -5,14 +5,16 @@ cmake_minimum_required(VERSION 3.13.4)
 cmake_policy(SET CMP0076 OLD)
 list(APPEND CMAKE_MODULE_PATH  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# The top-level source directory of libc.
+# The top-level sourse and binary directories.
 set(LIBC_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
+set(LIBC_INSTALL_PREFIX "" CACHE STRING "Define libc destination prefix.")
 
 set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
 string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)

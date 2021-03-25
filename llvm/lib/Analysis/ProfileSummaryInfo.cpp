@@ -95,13 +95,13 @@ void ProfileSummaryInfo::refresh() {
   if (hasProfileSummary())
     return;
   // First try to get context sensitive ProfileSummary.
-  auto *SummaryMD = M.getProfileSummary(/* IsCS */ true);
+  auto *SummaryMD = M->getProfileSummary(/* IsCS */ true);
   if (SummaryMD)
     Summary.reset(ProfileSummary::getFromMD(SummaryMD));
 
   if (!hasProfileSummary()) {
     // This will actually return PSK_Instr or PSK_Sample summary.
-    SummaryMD = M.getProfileSummary(/* IsCS */ false);
+    SummaryMD = M->getProfileSummary(/* IsCS */ false);
     if (SummaryMD)
       Summary.reset(ProfileSummary::getFromMD(SummaryMD));
   }

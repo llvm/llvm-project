@@ -254,7 +254,7 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 }
 
 /// Return operands used when entering the region at 'index'. These operands
-/// correspond to the loop iterator operands, i.e., those exclusing the
+/// correspond to the loop iterator operands, i.e., those excluding the
 /// induction variable. LoopOp only has one region, so 0 is the only valid value
 /// for `index`.
 OperandRange ForOp::getSuccessorEntryOperands(unsigned index) {
@@ -408,9 +408,16 @@ static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
 }
 
 namespace {
-// Fold away ForOp iter arguments that are also yielded by the op.
-// These arguments must be defined outside of the ForOp region and can just be
-// forwarded after simplifying the op inits, yields and returns.
+// Fold away ForOp iter arguments when:
+// 1) The op yields the iter arguments.
+// 2) The iter arguments have no use and the corresponding outer region
+// iterators (inputs) are yielded.
+// 3) The iter arguments have no use and the corresponding (operation) results
+// have no use.
+//
+// These arguments must be defined outside of
+// the ForOp region and can just be forwarded after simplifying the op inits,
+// yields and returns.
 //
 // The implementation uses `mergeBlockBefore` to steal the content of the
 // original ForOp and avoid cloning.
@@ -439,10 +446,19 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     newResultValues.reserve(forOp.getNumResults());
     for (auto it : llvm::zip(forOp.getIterOperands(),   // iter from outside
                              forOp.getRegionIterArgs(), // iter inside region
+                             forOp.getResults(),        // op results
                              yieldOp.getOperands()      // iter yield
                              )) {
-      // Forwarded is `true` when the region `iter` argument is yielded.
-      bool forwarded = (std::get<1>(it) == std::get<2>(it));
+      // Forwarded is `true` when:
+      // 1) The region `iter` argument is yielded.
+      // 2) The region `iter` argument has no use, and the corresponding iter
+      // operand (input) is yielded.
+      // 3) The region `iter` argument has no use, and the corresponding op
+      // result has no use.
+      bool forwarded = ((std::get<1>(it) == std::get<3>(it)) ||
+                        (std::get<1>(it).use_empty() &&
+                         (std::get<0>(it) == std::get<3>(it) ||
+                          std::get<2>(it).use_empty())));
       keepMask.push_back(!forwarded);
       canonicalize |= forwarded;
       if (forwarded) {
@@ -451,7 +467,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
         continue;
       }
       newIterArgs.push_back(std::get<0>(it));
-      newYieldValues.push_back(std::get<2>(it));
+      newYieldValues.push_back(std::get<3>(it));
       newBlockTransferArgs.push_back(Value()); // placeholder with null value
       newResultValues.push_back(Value());      // placeholder with null value
     }
@@ -483,7 +499,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
            "unexpected argument size mismatch");
 
     // No results case: the scf::ForOp builder already created a zero
-    // reult terminator. Merge before this terminator and just get rid of the
+    // result terminator. Merge before this terminator and just get rid of the
     // original terminator that has been merged in.
     if (newIterArgs.empty()) {
       auto newYieldOp = cast<scf::YieldOp>(newBlock.getTerminator());
@@ -687,10 +703,10 @@ struct LastTensorLoadCanonicalization : public OpRewritePattern<ForOp> {
 };
 } // namespace
 
-void ForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.insert<ForOpIterArgsFolder, SimplifyTrivialLoops,
-                 LastTensorLoadCanonicalization>(context);
+  results.add<ForOpIterArgsFolder, SimplifyTrivialLoops,
+              LastTensorLoadCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -918,11 +934,49 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
     return success();
   }
 };
+
+struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumResults() == 0)
+      return failure();
+
+    if (!llvm::hasSingleElement(op.thenRegion().front()) ||
+        !llvm::hasSingleElement(op.elseRegion().front()))
+      return failure();
+
+    auto cond = op.condition();
+    auto thenYieldArgs =
+        cast<scf::YieldOp>(op.thenRegion().front().getTerminator())
+            .getOperands();
+    auto elseYieldArgs =
+        cast<scf::YieldOp>(op.elseRegion().front().getTerminator())
+            .getOperands();
+    SmallVector<Value> results(op->getNumResults());
+    assert(thenYieldArgs.size() == results.size());
+    assert(elseYieldArgs.size() == results.size());
+    for (auto it : llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+      Value trueVal = std::get<0>(it.value());
+      Value falseVal = std::get<1>(it.value());
+      if (trueVal == falseVal)
+        results[it.index()] = trueVal;
+      else
+        results[it.index()] =
+            rewriter.create<SelectOp>(op.getLoc(), cond, trueVal, falseVal);
+    }
+
+    rewriter.replaceOp(op, results);
+    return success();
+  }
+};
 } // namespace
 
-void IfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.insert<RemoveUnusedResults, RemoveStaticCondition>(context);
+  results.add<RemoveUnusedResults, RemoveStaticCondition,
+              ConvertTrivialIfToSelect>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1221,10 +1275,9 @@ struct RemoveEmptyParallelLoops : public OpRewritePattern<ParallelOp> {
 
 } // namespace
 
-void ParallelOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(
-      context);
+  results.add<CollapseSingleIterationLoops, RemoveEmptyParallelLoops>(context);
 }
 
 //===----------------------------------------------------------------------===//

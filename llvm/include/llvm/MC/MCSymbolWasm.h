@@ -26,7 +26,7 @@ class MCSymbolWasm : public MCSymbol {
   Optional<StringRef> ExportName;
   wasm::WasmSignature *Signature = nullptr;
   Optional<wasm::WasmGlobalType> GlobalType;
-  Optional<wasm::ValType> TableType;
+  Optional<wasm::WasmTableType> TableType;
   Optional<wasm::WasmEventType> EventType;
 
   /// An expression describing how to calculate the size of a symbol. If a
@@ -108,7 +108,7 @@ public:
 
   bool isFunctionTable() const {
     return isTable() && hasTableType() &&
-           getTableType() == wasm::ValType::FUNCREF;
+           getTableType().ElemType == wasm::WASM_TYPE_FUNCREF;
   }
   void setFunctionTable() {
     setType(wasm::WASM_SYMBOL_TYPE_TABLE);
@@ -131,11 +131,17 @@ public:
   void setGlobalType(wasm::WasmGlobalType GT) { GlobalType = GT; }
 
   bool hasTableType() const { return TableType.hasValue(); }
-  wasm::ValType getTableType() const {
+  const wasm::WasmTableType &getTableType() const {
     assert(hasTableType());
     return TableType.getValue();
   }
-  void setTableType(wasm::ValType TT) { TableType = TT; }
+  void setTableType(wasm::WasmTableType TT) { TableType = TT; }
+  void setTableType(wasm::ValType VT) {
+    // Declare a table with element type VT and no limits (min size 0, no max
+    // size).
+    wasm::WasmLimits Limits = {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+    setTableType({uint8_t(VT), Limits});
+  }
 
   const wasm::WasmEventType &getEventType() const {
     assert(EventType.hasValue());

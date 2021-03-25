@@ -293,7 +293,7 @@ int collectStats(MlirOperation operation) {
   fprintf(stderr, "Number of op results: %u\n", stats.numOpResults);
   // clang-format off
   // CHECK-LABEL: @stats
-  // CHECK: Number of operations: 13
+  // CHECK: Number of operations: 12
   // CHECK: Number of attributes: 4
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3
@@ -449,7 +449,7 @@ static void printFirstOfEach(MlirContext ctx, MlirOperation operation) {
   mlirOperationPrintWithFlags(operation, flags, printToStderr, NULL);
   fprintf(stderr, "\n");
   // clang-format off
-  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
+  // CHECK: Op print with all flags: %{{.*}} = "std.constant"() {elts = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>, value = 0 : index} : () -> index loc(unknown)
   // clang-format on
 
   mlirOpPrintingFlagsDestroy(flags);

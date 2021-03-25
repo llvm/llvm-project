@@ -5645,6 +5645,77 @@ void ScalarEvolution::setNoWrapFlags(SCEVAddRecExpr *AddRec,
   }
 }
 
+ConstantRange ScalarEvolution::
+getRangeForUnknownRecurrence(const SCEVUnknown *U) {
+  const DataLayout &DL = getDataLayout();
+
+  unsigned BitWidth = getTypeSizeInBits(U->getType());
+  ConstantRange CR(BitWidth, /*isFullSet=*/true);
+
+  // Match a simple recurrence of the form: <start, ShiftOp, Step>, and then
+  // use information about the trip count to improve our available range.  Note
+  // that the trip count independent cases are already handled by known bits.
+  // WARNING: The definition of recurrence used here is subtly different than
+  // the one used by AddRec (and thus most of this file).  Step is allowed to
+  // be arbitrarily loop varying here, where AddRec allows only loop invariant
+  // and other addrecs in the same loop (for non-affine addrecs).  The code
+  // below intentionally handles the case where step is not loop invariant.
+  auto *P = dyn_cast<PHINode>(U->getValue());
+  if (!P)
+    return CR;
+
+  BinaryOperator *BO;
+  Value *Start, *Step;
+  if (!matchSimpleRecurrence(P, BO, Start, Step))
+    return CR;
+
+  // If we found a recurrence, we must be in a loop -- unless we're
+  // in unreachable code where dominance collapses.  Note that BO might
+  // be in some subloop of L, and that's completely okay.
+  auto *L = LI.getLoopFor(P->getParent());
+  if (!L)
+    return CR;
+  assert(L->getHeader() == P->getParent());
+  if (!L->contains(BO->getParent()))
+    // NOTE: This bailout should be an assert instead.  However, asserting
+    // the condition here exposes a case where LoopFusion is querying SCEV
+    // with malformed loop information during the midst of the transform.
+    // There doesn't appear to be an obvious fix, so for the moment bailout
+    // until the caller issue can be fixed.  PR49566 tracks the bug.
+    return CR;
+
+  // TODO: Handle ashr and lshr cases to increase minimum value reported
+  if (BO->getOpcode() != Instruction::Shl || BO->getOperand(0) != P)
+    return CR;
+
+  unsigned TC = getSmallConstantMaxTripCount(L);
+  if (!TC || TC >= BitWidth)
+    return CR;
+
+  auto KnownStart = computeKnownBits(Start, DL, 0, &AC, nullptr, &DT);
+  auto KnownStep = computeKnownBits(Step, DL, 0, &AC, nullptr, &DT);
+  assert(KnownStart.getBitWidth() == BitWidth &&
+         KnownStep.getBitWidth() == BitWidth);
+
+  // Compute total shift amount, being careful of overflow and bitwidths.
+  auto MaxShiftAmt = KnownStep.getMaxValue();
+  APInt TCAP(BitWidth, TC-1);
+  bool Overflow = false;
+  auto TotalShift = MaxShiftAmt.umul_ov(TCAP, Overflow);
+  if (Overflow)
+    return CR;
+
+  // Iff no bits are shifted out, value increases on every shift.
+  auto KnownEnd = KnownBits::shl(KnownStart,
+                                 KnownBits::makeConstant(TotalShift));
+  if (TotalShift.ult(KnownStart.countMinLeadingZeros()))
+    CR = CR.intersectWith(ConstantRange(KnownStart.getMinValue(),
+                                        KnownEnd.getMaxValue() + 1));
+  return CR;
+}
+
+
+
 /// Determine the range for a particular SCEV.  If SignHint is
 /// HINT_RANGE_UNSIGNED (resp. HINT_RANGE_SIGNED) then getRange prefers ranges
 /// with a "cleaner" unsigned (resp. signed) representation.
@@ -5845,11 +5916,18 @@ ScalarEvolution::getRangeRef(const SCEV *S,
   }
 
   if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(S)) {
+
     // Check if the IR explicitly contains !range metadata.
     Optional<ConstantRange> MDRange = GetRangeFromMetadata(U->getValue());
     if (MDRange.hasValue())
       ConservativeResult = ConservativeResult.intersectWith(MDRange.getValue(),
                                                             RangeType);
+
+    // Use facts about recurrences in the underlying IR.  Note that add
+    // recurrences are AddRecExprs and thus don't hit this path.  This
+    // primarily handles shift recurrences.
+    auto CR = getRangeForUnknownRecurrence(U);
+    ConservativeResult = ConservativeResult.intersectWith(CR);
 
     // See if ValueTracking can give us a useful range.
     const DataLayout &DL = getDataLayout();
@@ -9534,12 +9612,39 @@ bool ScalarEvolution::isKnownPredicate(ICmpInst::Predicate Pred,
   return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
 
+Optional<bool> ScalarEvolution::evaluatePredicate(ICmpInst::Predicate Pred,
+                                                  const SCEV *LHS,
+                                                  const SCEV *RHS) {
+  if (isKnownPredicate(Pred, LHS, RHS))
+    return true;
+  else if (isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHS, RHS))
+    return false;
+  return None;
+}
+
 bool ScalarEvolution::isKnownPredicateAt(ICmpInst::Predicate Pred,
                                          const SCEV *LHS, const SCEV *RHS,
                                          const Instruction *Context) {
   // TODO: Analyze guards and assumes from Context's block.
   return isKnownPredicate(Pred, LHS, RHS) ||
          isBasicBlockEntryGuardedByCond(Context->getParent(), Pred, LHS, RHS);
+}
+
+Optional<bool>
+ScalarEvolution::evaluatePredicateAt(ICmpInst::Predicate Pred, const SCEV *LHS,
+                                     const SCEV *RHS,
+                                     const Instruction *Context) {
+  Optional<bool> KnownWithoutContext = evaluatePredicate(Pred, LHS, RHS);
+  if (KnownWithoutContext)
+    return KnownWithoutContext;
+
+  if (isBasicBlockEntryGuardedByCond(Context->getParent(), Pred, LHS, RHS))
+    return true;
+  else if (isBasicBlockEntryGuardedByCond(Context->getParent(),
+                                          ICmpInst::getInversePredicate(Pred),
+                                          LHS, RHS))
+    return false;
+  return None;
 }
 
 bool ScalarEvolution::isKnownOnEveryIteration(ICmpInst::Predicate Pred,
@@ -9991,9 +10096,6 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     assert(!verifyFunction(*BB->getParent(), &dbgs()) &&
            "This cannot be done on broken IR!");
 
-  if (isKnownViaNonRecursiveReasoning(Pred, LHS, RHS))
-    return true;
-
   // If we cannot prove strict comparison (e.g. a > b), maybe we can prove
   // the facts (a >= b && a != b) separately. A typical situation is when the
   // non-strict comparison is known from ranges and non-equality is known from
@@ -10004,12 +10106,22 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
-  if (ProvingStrictComparison) {
-    ProvedNonStrictComparison =
-        isKnownViaNonRecursiveReasoning(NonStrictPredicate, LHS, RHS);
-    ProvedNonEquality =
-        isKnownViaNonRecursiveReasoning(ICmpInst::ICMP_NE, LHS, RHS);
+  auto SplitAndProve =
+    [&](std::function<bool(ICmpInst::Predicate)> Fn) -> bool {
+    if (!ProvedNonStrictComparison)
+      ProvedNonStrictComparison = Fn(NonStrictPredicate);
+    if (!ProvedNonEquality)
+      ProvedNonEquality = Fn(ICmpInst::ICMP_NE);
     if (ProvedNonStrictComparison && ProvedNonEquality)
+      return true;
+    return false;
+  };
+
+  if (ProvingStrictComparison) {
+    auto ProofFn = [&](ICmpInst::Predicate P) {
+      return isKnownViaNonRecursiveReasoning(P, LHS, RHS);
+    };
+    if (SplitAndProve(ProofFn))
       return true;
   }
 
@@ -10018,13 +10130,10 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     if (isImpliedViaGuard(Block, Pred, LHS, RHS))
       return true;
     if (ProvingStrictComparison) {
-      if (!ProvedNonStrictComparison)
-        ProvedNonStrictComparison =
-            isImpliedViaGuard(Block, NonStrictPredicate, LHS, RHS);
-      if (!ProvedNonEquality)
-        ProvedNonEquality =
-            isImpliedViaGuard(Block, ICmpInst::ICMP_NE, LHS, RHS);
-      if (ProvedNonStrictComparison && ProvedNonEquality)
+      auto ProofFn = [&](ICmpInst::Predicate P) {
+        return isImpliedViaGuard(Block, P, LHS, RHS);
+      };
+      if (SplitAndProve(ProofFn))
         return true;
     }
     return false;
@@ -10036,13 +10145,10 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
     if (isImpliedCond(Pred, LHS, RHS, Condition, Inverse, Context))
       return true;
     if (ProvingStrictComparison) {
-      if (!ProvedNonStrictComparison)
-        ProvedNonStrictComparison = isImpliedCond(NonStrictPredicate, LHS, RHS,
-                                                  Condition, Inverse, Context);
-      if (!ProvedNonEquality)
-        ProvedNonEquality = isImpliedCond(ICmpInst::ICMP_NE, LHS, RHS,
-                                          Condition, Inverse, Context);
-      if (ProvedNonStrictComparison && ProvedNonEquality)
+      auto ProofFn = [&](ICmpInst::Predicate P) {
+        return isImpliedCond(P, LHS, RHS, Condition, Inverse, Context);
+      };
+      if (SplitAndProve(ProofFn))
         return true;
     }
     return false;
@@ -10102,6 +10208,10 @@ bool ScalarEvolution::isLoopEntryGuardedByCond(const Loop *L,
          "LHS is not available at Loop Entry");
   assert(isAvailableAtLoopEntry(RHS, L) &&
          "RHS is not available at Loop Entry");
+
+  if (isKnownViaNonRecursiveReasoning(Pred, LHS, RHS))
+    return true;
+
   return isBasicBlockEntryGuardedByCond(L->getHeader(), Pred, LHS, RHS);
 }
 
@@ -10109,6 +10219,11 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
                                     const SCEV *RHS,
                                     const Value *FoundCondValue, bool Inverse,
                                     const Instruction *Context) {
+  // False conditions implies anything. Do not bother analyzing it further.
+  if (FoundCondValue ==
+      ConstantInt::getBool(FoundCondValue->getContext(), Inverse))
+    return true;
+
   if (!PendingLoopPredicates.insert(FoundCondValue).second)
     return false;
 
@@ -10116,20 +10231,15 @@ bool ScalarEvolution::isImpliedCond(ICmpInst::Predicate Pred, const SCEV *LHS,
       make_scope_exit([&]() { PendingLoopPredicates.erase(FoundCondValue); });
 
   // Recursively handle And and Or conditions.
-  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(FoundCondValue)) {
-    if (BO->getOpcode() == Instruction::And) {
-      if (!Inverse)
-        return isImpliedCond(Pred, LHS, RHS, BO->getOperand(0), Inverse,
-                             Context) ||
-               isImpliedCond(Pred, LHS, RHS, BO->getOperand(1), Inverse,
-                             Context);
-    } else if (BO->getOpcode() == Instruction::Or) {
-      if (Inverse)
-        return isImpliedCond(Pred, LHS, RHS, BO->getOperand(0), Inverse,
-                             Context) ||
-               isImpliedCond(Pred, LHS, RHS, BO->getOperand(1), Inverse,
-                             Context);
-    }
+  const Value *Op0, *Op1;
+  if (match(FoundCondValue, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+    if (!Inverse)
+      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, Context) ||
+              isImpliedCond(Pred, LHS, RHS, Op1, Inverse, Context);
+  } else if (match(FoundCondValue, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+    if (Inverse)
+      return isImpliedCond(Pred, LHS, RHS, Op0, Inverse, Context) ||
+              isImpliedCond(Pred, LHS, RHS, Op1, Inverse, Context);
   }
 
   const ICmpInst *ICI = dyn_cast<ICmpInst>(FoundCondValue);
@@ -10231,11 +10341,26 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   // Check whether swapping the found predicate makes it the same as the
   // desired predicate.
   if (ICmpInst::getSwappedPredicate(FoundPred) == Pred) {
-    if (isa<SCEVConstant>(RHS))
+    // We can write the implication
+    // 0.  LHS Pred      RHS  <-   FoundLHS SwapPred  FoundRHS
+    // using one of the following ways:
+    // 1.  LHS Pred      RHS  <-   FoundRHS Pred      FoundLHS
+    // 2.  RHS SwapPred  LHS  <-   FoundLHS SwapPred  FoundRHS
+    // 3.  LHS Pred      RHS  <-  ~FoundLHS Pred     ~FoundRHS
+    // 4. ~LHS SwapPred ~RHS  <-   FoundLHS SwapPred  FoundRHS
+    // Forms 1. and 2. require swapping the operands of one condition. Don't
+    // do this if it would break canonical constant/addrec ordering.
+    if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
+      return isImpliedCondOperands(FoundPred, RHS, LHS, FoundLHS, FoundRHS,
+                                   Context);
+    if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
       return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, Context);
-    else
-      return isImpliedCondOperands(ICmpInst::getSwappedPredicate(Pred), RHS,
-                                   LHS, FoundLHS, FoundRHS, Context);
+
+    // There's no clear preference between forms 3. and 4., try both.
+    return isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
+                                 FoundLHS, FoundRHS, Context) ||
+           isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
+                                 getNotSCEV(FoundRHS), Context);
   }
 
   // Unsigned comparison is the same as signed comparison when both the operands
@@ -10658,11 +10783,7 @@ bool ScalarEvolution::isImpliedCondOperands(ICmpInst::Predicate Pred,
     return true;
 
   return isImpliedCondOperandsHelper(Pred, LHS, RHS,
-                                     FoundLHS, FoundRHS) ||
-         // ~x < ~y --> x > y
-         isImpliedCondOperandsHelper(Pred, LHS, RHS,
-                                     getNotSCEV(FoundRHS),
-                                     getNotSCEV(FoundLHS));
+                                     FoundLHS, FoundRHS);
 }
 
 /// Is MaybeMinMaxExpr an (U|S)(Min|Max) of Candidate and some other values?

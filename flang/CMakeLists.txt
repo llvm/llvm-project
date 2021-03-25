@@ -48,9 +48,23 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
 
   if(FLANG_BUILD_NEW_DRIVER)
+    # Users might specify a path to CLANG_DIR that's:
+    #   * a full path, or
+    #   * a path relative to the path of this script.
+    # Append the absolute path to CLANG_DIR so that find_package works in both
+    # cases.
+    get_filename_component(
+      CLANG_DIR_ABSOLUTE
+      ${CLANG_DIR}
+      REALPATH
+      ${CMAKE_CURRENT_SOURCE_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
+
     # TODO: Remove when libclangDriver is lifted out of Clang
-    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR})
-    find_package(Clang REQUIRED HINTS "${CLANG_DIR}")
+    find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
+    if (NOT Clang_FOUND)
+      message(FATAL_ERROR "Failed to find Clang")
+    endif()
   endif()
 
   # If LLVM links to zlib we need the imported targets so we can too.
@@ -190,6 +204,7 @@ else()
   include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
+set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 
 if(FLANG_BUILD_NEW_DRIVER)
     # TODO: Remove when libclangDriver is lifted out of Clang

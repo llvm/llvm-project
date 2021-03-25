@@ -343,30 +343,29 @@ bool DummyProcedure::operator==(const DummyProcedure &that) const {
       procedure.value() == that.procedure.value();
 }
 
-static std::string GetSeenProcs(const semantics::SymbolSet &seenProcs) {
+static std::string GetSeenProcs(
+    const semantics::UnorderedSymbolSet &seenProcs) {
   // Sort the symbols so that they appear in the same order on all platforms
-  std::vector<SymbolRef> sorter{seenProcs.begin(), seenProcs.end()};
-  std::sort(sorter.begin(), sorter.end());
-
+  auto ordered{semantics::OrderBySourcePosition(seenProcs)};
   std::string result;
   llvm::interleave(
-      sorter,
+      ordered,
       [&](const SymbolRef p) { result += '\'' + p->name().ToString() + '\''; },
       [&]() { result += ", "; });
   return result;
 }
 
-// These functions with arguments of type SymbolSet are used with mutually
-// recursive calls when characterizing a Procedure, a DummyArgument, or a
-// DummyProcedure to detect circularly defined procedures as required by
+// These functions with arguments of type UnorderedSymbolSet are used with
+// mutually recursive calls when characterizing a Procedure, a DummyArgument,
+// or a DummyProcedure to detect circularly defined procedures as required by
 // 15.4.3.6, paragraph 2.
 static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::SymbolSet &seenProcs);
+    semantics::UnorderedSymbolSet &seenProcs);
 
 static std::optional<Procedure> CharacterizeProcedure(
     const semantics::Symbol &original, FoldingContext &context,
-    semantics::SymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet &seenProcs) {
   Procedure result;
   const auto &symbol{original.GetUltimate()};
   if (seenProcs.find(symbol) != seenProcs.end()) {
@@ -475,7 +474,7 @@ static std::optional<Procedure> CharacterizeProcedure(
 
 static std::optional<DummyProcedure> CharacterizeDummyProcedure(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::SymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet &seenProcs) {
   if (auto procedure{CharacterizeProcedure(symbol, context, seenProcs)}) {
     // Dummy procedures may not be elemental.  Elemental dummy procedure
     // interfaces are errors when the interface is not intrinsic, and that
@@ -516,7 +515,7 @@ bool DummyArgument::operator==(const DummyArgument &that) const {
 
 static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::SymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet &seenProcs) {
   auto name{symbol.name().ToString()};
   if (symbol.has<semantics::ObjectEntityDetails>()) {
     if (auto obj{DummyDataObject::Characterize(symbol, context)}) {
@@ -779,7 +778,7 @@ bool Procedure::CanOverride(
 
 std::optional<Procedure> Procedure::Characterize(
     const semantics::Symbol &original, FoldingContext &context) {
-  semantics::SymbolSet seenProcs;
+  semantics::UnorderedSymbolSet seenProcs;
   return CharacterizeProcedure(original, context, seenProcs);
 }
 

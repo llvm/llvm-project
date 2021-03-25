@@ -23,4 +23,3 @@ service SymbolIndex {
 
   rpc Relations(RelationsRequest) returns (stream RelationsReply) {}
 }
-

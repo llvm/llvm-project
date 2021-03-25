@@ -176,7 +176,7 @@ def config():
   return args, parser
 
 
-def get_function_body(builder, args, filename, clang_args, extra_commands, 
+def get_function_body(builder, args, filename, clang_args, extra_commands,
                       prefixes):
   # TODO Clean up duplication of asm/common build_function_body_dictionary
   # Invoke external tool and extract function bodies.
@@ -221,6 +221,13 @@ def main():
     # Build a list of clang command lines and check prefixes from RUN lines.
     run_list = []
     line2spell_and_mangled_list = collections.defaultdict(list)
+
+    subs = {
+      '%s' : ti.path,
+      '%t' : tempfile.NamedTemporaryFile().name,
+      '%S' : os.getcwd(),
+    }
+
     for l in ti.run_lines:
       commands = [cmd.strip() for cmd in l.split('|')]
 
@@ -234,15 +241,18 @@ def main():
       # Execute non-clang runline.
       if exec_args[0] not in SUBST:
         print('NOTE: Executing non-clang RUN line: ' + l, file=sys.stderr)
-        # Replace %s by `filename`.
-        exec_args = [i.replace('%s', ti.path) if '%s' in i else i for i in exec_args]
+        # Do lit-like substitutions.
+        for s in subs:
+          exec_args = [i.replace(s, subs[s]) if s in i else i for i in exec_args]
         exec_run_line(exec_args)
         continue
-      # This is a clang runline, apply %clang substitution rule, replace %s by `filename`,
+      # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
       # and append args.clang_args
       clang_args = exec_args
       clang_args[0:1] = SUBST[clang_args[0]]
-      clang_args = [i.replace('%s', ti.path) if '%s' in i else i for i in clang_args] + ti.args.clang_args
+      for s in subs:
+        clang_args = [i.replace(s, subs[s]) if s in i else i for i in clang_args]
+      clang_args += ti.args.clang_args
 
       # Extract -check-prefix in FileCheck args
       filecheck_cmd = commands[-1]
@@ -271,7 +281,7 @@ def main():
       common.debug('Extracted clang cmd: clang {}'.format(clang_args))
       common.debug('Extracted FileCheck prefixes: {}'.format(prefixes))
 
-      get_function_body(builder, ti.args, ti.path, clang_args, extra_commands, 
+      get_function_body(builder, ti.args, ti.path, clang_args, extra_commands,
                         prefixes)
 
       # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
@@ -315,7 +325,7 @@ def main():
                              prefixes,
                              func_dict, func)
 
-      common.add_checks_at_end(output_lines, run_list, builder.func_order(), 
+      common.add_checks_at_end(output_lines, run_list, builder.func_order(),
                                '//', lambda my_output_lines, prefixes, func:
                                check_generator(my_output_lines,
                                                prefixes, func))

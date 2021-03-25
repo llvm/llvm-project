@@ -350,7 +350,7 @@ TEST(SanitizerCommon, RemoveANSIEscapeSequencesFromString) {
 }
 
 TEST(SanitizerCommon, InternalScopedString) {
-  InternalScopedString str(10);
+  InternalScopedString str;
   EXPECT_EQ(0U, str.length());
   EXPECT_STREQ("", str.data());
 
@@ -364,20 +364,37 @@ TEST(SanitizerCommon, InternalScopedString) {
   EXPECT_STREQ("foo1234", str.data());
 
   str.append("%d", x);
-  EXPECT_EQ(9U, str.length());
-  EXPECT_STREQ("foo123412", str.data());
+  EXPECT_EQ(11U, str.length());
+  EXPECT_STREQ("foo12341234", str.data());
 
   str.clear();
   EXPECT_EQ(0U, str.length());
   EXPECT_STREQ("", str.data());
-
-  str.append("0123456789");
-  EXPECT_EQ(9U, str.length());
-  EXPECT_STREQ("012345678", str.data());
 }
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || \
-  SANITIZER_MAC || SANITIZER_IOS
+TEST(SanitizerCommon, InternalScopedStringLarge) {
+  InternalScopedString str;
+  std::string expected;
+  for (int i = 0; i < 1000; ++i) {
+    std::string append(i, 'a' + i % 26);
+    expected += append;
+    str.append(append.c_str());
+    EXPECT_EQ(expected, str.data());
+  }
+}
+
+TEST(SanitizerCommon, InternalScopedStringLargeFormat) {
+  InternalScopedString str;
+  std::string expected;
+  for (int i = 0; i < 1000; ++i) {
+    std::string append(i, 'a' + i % 26);
+    expected += append;
+    str.append("%s", append.c_str());
+    EXPECT_EQ(expected, str.data());
+  }
+}
+
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_MAC || SANITIZER_IOS
 TEST(SanitizerCommon, GetRandom) {
   u8 buffer_1[32], buffer_2[32];
   for (bool blocking : { false, true }) {

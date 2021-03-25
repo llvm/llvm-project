@@ -26,7 +26,6 @@ class AppleObjCRuntimeV2 : public AppleObjCRuntime {
 public:
   ~AppleObjCRuntimeV2() override = default;
 
-  // Static Functions
   static void Initialize();
 
   static void Terminate();
@@ -46,7 +45,6 @@ public:
     return runtime->isA(&ID);
   }
 
-  // These are generic runtime functions:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
@@ -56,7 +54,6 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  // PluginInterface protocol
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -105,8 +102,8 @@ public:
 
 protected:
   lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override;
 
 private:
   class HashTableSignature {
@@ -323,7 +320,16 @@ private:
 
   bool GetCFBooleanValuesIfNeeded();
 
+  NonPointerISACache *GetNonPointerIsaCache() {
+    if (!m_non_pointer_isa_cache_up)
+      m_non_pointer_isa_cache_up.reset(
+          NonPointerISACache::CreateInstance(*this, m_objc_module_sp));
+    return m_non_pointer_isa_cache_up.get();
+  }
+
   friend class ClassDescriptorV2;
+
+  lldb::ModuleSP m_objc_module_sp;
 
   std::unique_ptr<UtilityFunction> m_get_class_info_code;
   lldb::addr_t m_get_class_info_args;

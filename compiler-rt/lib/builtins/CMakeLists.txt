@@ -627,7 +627,12 @@ if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
 endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
-set(riscv_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
+set(riscv_SOURCES
+  riscv/save.S
+  riscv/restore.S
+  ${GENERIC_SOURCES}
+  ${GENERIC_TF_SOURCES}
+)
 set(riscv32_SOURCES
   riscv/mulsi3.S
   ${riscv_SOURCES}
@@ -702,10 +707,11 @@ else ()
           list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES} ${arm_Thumb1_VFPv2_SP_SOURCES} ${arm_Thumb1_SjLj_EH_SOURCES})
         else()
           # Exclude any double-precision builtins if VFP is single-precision-only
-          check_c_source_compiles("#if !(__ARM_FP & 0x8)
+          try_compile_only(COMPILER_RT_HAS_${arch}_VFP_DP
+                           SOURCE "#if !(__ARM_FP & 0x8)
                                    #error No double-precision support!
                                    #endif
-                                   int main() { return 0; }" COMPILER_RT_HAS_${arch}_VFP_DP)
+                                   int main() { return 0; }")
           if(NOT COMPILER_RT_HAS_${arch}_VFP_DP)
             list(REMOVE_ITEM ${arch}_SOURCES ${arm_Thumb1_VFPv2_DP_SOURCES})
           endif()

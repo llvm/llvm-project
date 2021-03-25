@@ -113,6 +113,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   include(TableGen)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(GetErrcMessages)
   include(LLVMDistributionSupport)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
@@ -131,7 +132,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
   if(LLVM_INCLUDE_TESTS)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+      COMPONENTS Interpreter)
 
     # Check prebuilt llvm/utils.
     if(EXISTS ${LLVM_TOOLS_BINARY_DIR}/FileCheck${CMAKE_EXECUTABLE_SUFFIX}
@@ -175,6 +177,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
         set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
       endif()
       set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+      get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
       # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
       if( WIN32 AND NOT CYGWIN )
@@ -636,6 +640,11 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
   if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    # adding lld to clang-bootstrap-deps without having it enabled in
+    # LLVM_ENABLE_PROJECTS just generates a cryptic error message.
+    if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(FATAL_ERROR "LLD is enabled in the boostrap build, but lld is not in LLVM_ENABLE_PROJECTS")
+    endif()
     add_dependencies(clang-bootstrap-deps lld)
   endif()
 

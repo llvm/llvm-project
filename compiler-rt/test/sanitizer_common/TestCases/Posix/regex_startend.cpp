@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/// REG_STARTEND is a BSD extension not supported everywhere.
+#ifdef REG_STARTEND
 void test_matched(const regex_t *preg, const char *string, size_t start,
                   size_t end, const char *expected) {
   regmatch_t match[1];
@@ -59,3 +61,8 @@ int main(void) {
   printf("Successful test\n");
   return 0;
 }
+#else
+int main(void) {
+  return 0;
+}
+#endif

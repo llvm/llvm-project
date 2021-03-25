@@ -772,8 +772,13 @@ When a variable is optional, the provided value may be null.
 In certain situations operations may have "optional" information, e.g.
 attributes or an empty set of variadic operands. In these situations a section
 of the assembly format can be marked as `optional` based on the presence of this
-information. An optional group is defined by wrapping a set of elements within
-`()` followed by a `?` and has the following requirements:
+information. An optional group is defined as follows:
+
+```
+optional-group: `(` elements `)` (`:` `(` else-elements `)`)? `?`
+```
+
+The `elements` of an optional group have the following requirements:
 
 *   The first element of the group must either be a attribute, literal, operand,
     or region.
@@ -837,6 +842,32 @@ foo.op is_read_only
 foo.op
 ```
 
+##### Optional "else" Group
+
+Optional groups also have support for an "else" group of elements. These are
+elements that are parsed/printed if the `anchor` element of the optional group
+is *not* present. Unlike the main element group, the "else" group has no
+restriction on the first element and none of the elements may act as the
+`anchor` for the optional. An example is shown below:
+
+```tablegen
+def FooOp : ... {
+  let arguments = (ins UnitAttr:$foo);
+
+  let assemblyFormat = "attr-dict (`foo_is_present` $foo^):(`foo_is_absent`)?";
+}
+```
+
+would be formatted as such:
+
+```mlir
+// When the `foo` attribute is present:
+foo.op foo_is_present
+
+// When the `foo` attribute is not present:
+foo.op foo_is_absent
+```
+
 #### Requirements
 
 The format specification has a certain set of requirements that must be adhered
@@ -887,6 +918,13 @@ supported traits are: `AllTypesMatch`, `TypesMatchWith`, `SameTypeOperands`, and
 This boolean field indicate whether canonicalization patterns have been defined
 for this operation. If it is `1`, then `::getCanonicalizationPatterns()` should
 be defined.
+
+### `hasCanonicalizeMethod`
+
+When this boolean field is set to `true`, it indicates that the op implements a
+`canonicalize` method for simple "matchAndRewrite" style canonicalization
+patterns.  If `hasCanonicalizer` is 0, then an implementation of
+`::getCanonicalizationPatterns()` is implemented to call this function.
 
 ### `hasFolder`
 
@@ -1441,8 +1479,9 @@ need allocation in the storage constructor, there are two options:
 ### TypeParameter tablegen class
 
 This is used to further specify attributes about each of the types parameters.
-It includes documentation (`summary` and `syntax`), the C++ type to use, and a
-custom allocator to use in the storage constructor method.
+It includes documentation (`summary` and `syntax`), the C++ type to use, a
+custom allocator to use in the storage constructor method, and a custom
+comparator to decide if two instances of the parameter type are equal.
 
 ```tablegen
 // DO NOT DO THIS!
@@ -1471,6 +1510,11 @@ The `allocator` code block has the following substitutions:
 
 -   `$_allocator` is the TypeStorageAllocator in which to allocate objects.
 -   `$_dst` is the variable in which to place the allocated data.
+
+The `comparator` code block has the following substitutions:
+
+-   `$_lhs` is an instance of the parameter type.
+-   `$_rhs` is an instance of the parameter type.
 
 MLIR includes several specialized classes for common situations:
 

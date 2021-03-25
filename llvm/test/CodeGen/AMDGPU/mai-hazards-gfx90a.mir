@@ -401,7 +401,7 @@ name:            smfma4x4_write_vgpr_vm_read
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfma4x4_write_vgpr_flat_read
 # GCN:      V_MFMA
@@ -411,7 +411,7 @@ name:            smfma4x4_write_vgpr_flat_read
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: smfma4x4_write_vgpr_lds_read
 # GCN:      V_MFMA
@@ -442,7 +442,7 @@ name:            smfma16x16_write_vgpr_flat_read
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr16_vgpr17, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr16_vgpr17, $vgpr1, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_flat_read
 # GCN:      V_MFMA
@@ -454,7 +454,7 @@ name:            smfma32x32_write_vgpr_flat_read
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr16_vgpr17, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr16_vgpr17, $vgpr1, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_vgpr_flat_read_overlap
 # GCN:      V_MFMA
@@ -465,7 +465,7 @@ name:            dmfma4x4_write_vgpr_flat_read_overlap
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_vgpr_flat_read_full
 # GCN:      V_MFMA
@@ -476,7 +476,7 @@ name:            dmfma4x4_write_vgpr_flat_read_full
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_flat_read
 # GCN:      V_MFMA
@@ -488,7 +488,7 @@ name:            dmfma16x16_write_vgpr_flat_read
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: smfma4x4_write_vgpr_valu_read
 # GCN:      V_MFMA
@@ -897,7 +897,7 @@ body:             |
 name: flat_store_data_agpr_overwritten
 body: |
   bb.0:
-    FLAT_STORE_DWORDX4 $vgpr4_vgpr5, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX4 $vgpr4_vgpr5, $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_accv_read
@@ -1203,7 +1203,7 @@ name:            dmfma4x4_write_agpr_flat_read_overlap
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $agpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $agpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_flat_read_full
 # GCN:      V_MFMA
@@ -1214,7 +1214,7 @@ name:            dmfma4x4_write_agpr_flat_read_full
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $agpr4_agpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX2 $vgpr0_vgpr1, $agpr4_agpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_flat_read
 # GCN:      V_MFMA
@@ -1226,7 +1226,7 @@ name:            dmfma16x16_write_agpr_flat_read
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $agpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_vgpr1, $agpr4, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_valu_read
 # GCN:      V_MFMA

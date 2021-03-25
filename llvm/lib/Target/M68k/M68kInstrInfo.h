@@ -30,9 +30,6 @@ namespace llvm {
 class M68kSubtarget;
 
 namespace M68k {
-// Forward declaration
-const uint8_t *getMCInstrBeads(unsigned Opcode);
-
 // These MUST be kept in sync with codes definitions in M68kInstrInfo.td
 enum CondCode {
   COND_T = 0,   // True

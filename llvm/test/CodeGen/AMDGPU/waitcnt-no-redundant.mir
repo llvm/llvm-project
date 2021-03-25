@@ -17,7 +17,7 @@ body: |
 
   bb.1:
     S_WAITCNT 3952
-    FLAT_ATOMIC_CMPSWAP undef renamable $vgpr0_vgpr1, renamable $vgpr0_vgpr1, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_ATOMIC_CMPSWAP undef renamable $vgpr0_vgpr1, renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 3952
     BUFFER_WBINVL1 implicit $exec
     S_BRANCH %bb.1

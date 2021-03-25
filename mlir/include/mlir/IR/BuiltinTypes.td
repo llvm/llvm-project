@@ -131,7 +131,6 @@ def Builtin_Function : Builtin_Type<"Function"> {
 
     The function type can be thought of as a function signature. It consists of
     a list of formal parameter types and a list of formal result types.
-    ```
   }];
   let parameters = (ins "ArrayRef<Type>":$inputs, "ArrayRef<Type>":$results);
   let builders = [

@@ -2425,13 +2425,21 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     // analysis of unions. If "A" is also a bitcast, wait for A/X to be merged.
     unsigned OffsetBits = DL.getIndexTypeSizeInBits(GEPType);
     APInt Offset(OffsetBits, 0);
-    if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset)) {
+
+    // If the bitcast argument is an allocation, The bitcast is for convertion
+    // to actual type of allocation. Removing such bitcasts, results in having
+    // GEPs with i8* base and pure byte offsets. That means GEP is not aware of
+    // struct or array hierarchy.
+    // By avoiding such GEPs, phi translation and MemoryDependencyAnalysis have
+    // a better chance to succeed.
+    if (!isa<BitCastInst>(SrcOp) && GEP.accumulateConstantOffset(DL, Offset) &&
+        !isAllocationFn(SrcOp, &TLI)) {
       // If this GEP instruction doesn't move the pointer, just replace the GEP
       // with a bitcast of the real input to the dest type.
       if (!Offset) {
         // If the bitcast is of an allocation, and the allocation will be
         // converted to match the type of the cast, don't touch this.
-        if (isa<AllocaInst>(SrcOp) || isAllocationFn(SrcOp, &TLI)) {
+        if (isa<AllocaInst>(SrcOp)) {
           // See if the bitcast simplifies, if so, don't nuke this GEP yet.
           if (Instruction *I = visitBitCast(*BCI)) {
             if (I != BCI) {

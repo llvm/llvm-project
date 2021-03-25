@@ -2336,7 +2336,8 @@ void Clang::DumpCompilationDatabaseFragmentToDir(
       Twine(llvm::sys::path::filename(Input.getFilename())) + ".%%%%.json");
   int FD;
   SmallString<256> TempPath;
-  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath);
+  Err = llvm::sys::fs::createUniqueFile(Path, FD, TempPath,
+                                        llvm::sys::fs::OF_Text);
   if (Err) {
     Driver.Diag(diag::err_drv_compilationdatabase) << Path << Err.message();
     return;
@@ -4251,7 +4252,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
-    CmdArgs.push_back("-fsycl");
     CmdArgs.push_back("-fsycl-is-device");
 
     if (Arg *A = Args.getLastArg(options::OPT_sycl_std_EQ)) {
@@ -4873,8 +4873,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_experimental_relative_cxx_abi_vtables);
 
   // Handle segmented stacks.
-  if (Args.hasArg(options::OPT_fsplit_stack))
-    CmdArgs.push_back("-split-stacks");
+  if (Args.hasFlag(options::OPT_fsplit_stack, options::OPT_fno_split_stack,
+                   false))
+    CmdArgs.push_back("-fsplit-stack");
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
 
@@ -5614,8 +5615,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ)) {
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
-    if (!Triple.isAArch64() && Triple.getArch() != llvm::Triple::x86 &&
-        Triple.getArch() != llvm::Triple::x86_64)
+    if (!Triple.isAArch64() && !Triple.isRISCV() && !Triple.isX86())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||

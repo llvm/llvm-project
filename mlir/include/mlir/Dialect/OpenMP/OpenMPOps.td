@@ -116,7 +116,8 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 
-def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
+def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
+                         AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
   let summary = "workshare loop construct";
   let description = [{
     The workshare loop construct specifies that the iterations of the loop(s)
@@ -130,13 +131,13 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
     by "omp.yield" instruction without operands.
 
     ```
-      omp.wsloop (%i1, %i2) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
-        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-        %sum = addf %a, %b : f32
-        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
-        omp.yield
-      }
+    omp.wsloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+      %sum = addf %a, %b : f32
+      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+      omp.yield
+    }
     ```
 
     `private_vars`, `firstprivate_vars`, `lastprivate_vars` and `linear_vars`
@@ -181,10 +182,23 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
              OptionalAttr<OrderKind>:$order_val,
              UnitAttr:$inclusive);
 
+  let skipDefaultBuilders = 1;
+
   let builders = [
     OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
-                  "ValueRange":$step,
-                  CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
+               "ValueRange":$step,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$lowerBound,
+               "ValueRange":$upperBound, "ValueRange":$step,
+               "ValueRange":$privateVars, "ValueRange":$firstprivateVars,
+               "ValueRange":$lastprivate_vars, "ValueRange":$linear_vars,
+               "ValueRange":$linear_step_vars, "StringAttr":$schedule_val,
+               "Value":$schedule_chunk_var, "IntegerAttr":$collapse_val,
+               "UnitAttr":$nowait, "IntegerAttr":$ordered_val,
+               "StringAttr":$order_val, "UnitAttr":$inclusive, CArg<"bool",
+               "true">:$buildBody)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$operands,
+               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
 
   let regions = (region AnyRegion:$region);
@@ -193,6 +207,8 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments]> {
     /// Returns the number of loops in the workshape loop nest.
     unsigned getNumLoops() { return lowerBound().size(); }
   }];
+  let parser = [{ return parseWsLoopOp(parser, result); }];
+  let printer = [{ return printWsLoopOp(p, *this); }];
 }
 
 def YieldOp : OpenMP_Op<"yield", [NoSideEffect, ReturnLike, Terminator,

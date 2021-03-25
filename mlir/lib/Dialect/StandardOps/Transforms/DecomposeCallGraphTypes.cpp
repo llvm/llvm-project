@@ -188,9 +188,9 @@ struct DecomposeCallGraphTypesForCallOp
 
 void mlir::populateDecomposeCallGraphTypesPatterns(
     MLIRContext *context, TypeConverter &typeConverter,
-    ValueDecomposer &decomposer, OwningRewritePatternList &patterns) {
-  patterns.insert<DecomposeCallGraphTypesForCallOp,
-                  DecomposeCallGraphTypesForFuncArgs,
-                  DecomposeCallGraphTypesForReturnOp>(typeConverter, context,
-                                                      decomposer);
+    ValueDecomposer &decomposer, RewritePatternSet &patterns) {
+  patterns
+      .add<DecomposeCallGraphTypesForCallOp, DecomposeCallGraphTypesForFuncArgs,
+           DecomposeCallGraphTypesForReturnOp>(typeConverter, context,
+                                               decomposer);
 }

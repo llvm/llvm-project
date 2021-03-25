@@ -174,8 +174,8 @@ INLINE static uint32_t roundToWarpsize(uint32_t s) {
 
 INLINE static uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-DEVICE static volatile uint32_t IterCnt = 0;
-DEVICE static volatile uint32_t Cnt = 0;
+static volatile uint32_t IterCnt = 0;
+static volatile uint32_t Cnt = 0;
 EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_Ident *loc, int32_t global_tid, void *global_buffer,
     int32_t num_of_records, void *reduce_data, kmp_ShuffleReductFctPtr shflFct,

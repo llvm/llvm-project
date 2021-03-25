@@ -2061,7 +2061,7 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
     if (C == '\\')
       C = getAndAdvanceChar(CurPtr, Result);
 
-    if (C == '\n' || C == '\r' ||                // Newline.
+    if (isVerticalWhitespace(C) ||               // Newline.
         (C == 0 && (CurPtr - 1 == BufferEnd))) { // End of file.
       // If the filename is unterminated, then it must just be a lone <
       // character.  Return this as such.
@@ -3208,10 +3208,10 @@ LexNextToken:
   const char *CurPtr = BufferPtr;
 
   // Small amounts of horizontal whitespace is very common between tokens.
-  if ((*CurPtr == ' ') || (*CurPtr == '\t')) {
-    ++CurPtr;
-    while ((*CurPtr == ' ') || (*CurPtr == '\t'))
+  if (isHorizontalWhitespace(*CurPtr)) {
+    do {
       ++CurPtr;
+    } while (isHorizontalWhitespace(*CurPtr));
 
     // If we are keeping whitespace and other tokens, just return what we just
     // skipped.  The next lexer invocation will return the token after the

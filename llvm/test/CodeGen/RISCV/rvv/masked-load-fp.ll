@@ -126,7 +126,7 @@ declare <vscale x 8 x float> @llvm.masked.load.nxv8f32(<vscale x 8 x float>*, i3
 define <vscale x 8 x double> @masked_load_nxv8f64(<vscale x 8 x double>* %a, <vscale x 8 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e64,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 8 x double> @llvm.masked.load.nxv8f64(<vscale x 8 x double>* %a, i32 8, <vscale x 8 x i1> %mask, <vscale x 8 x double> undef)
@@ -148,7 +148,7 @@ declare <vscale x 16 x half> @llvm.masked.load.nxv16f16(<vscale x 16 x half>*, i
 define <vscale x 16 x float> @masked_load_nxv16f32(<vscale x 16 x float>* %a, <vscale x 16 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 16 x float> @llvm.masked.load.nxv16f32(<vscale x 16 x float>* %a, i32 4, <vscale x 16 x i1> %mask, <vscale x 16 x float> undef)
@@ -159,7 +159,7 @@ declare <vscale x 16 x float> @llvm.masked.load.nxv16f32(<vscale x 16 x float>*,
 define <vscale x 32 x half> @masked_load_nxv32f16(<vscale x 32 x half>* %a, <vscale x 32 x i1> %mask) nounwind {
 ; CHECK-LABEL: masked_load_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16,m8,tu,mu
+; CHECK-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; CHECK-NEXT:    vle16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %load = call <vscale x 32 x half> @llvm.masked.load.nxv32f16(<vscale x 32 x half>* %a, i32 2, <vscale x 32 x i1> %mask, <vscale x 32 x half> undef)

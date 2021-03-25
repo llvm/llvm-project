@@ -204,6 +204,9 @@ void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const Register Op1,
                                   const Register Op2,
                                   const MachineRegisterInfo &MRI);
+Optional<APFloat> ConstantFoldFPBinOp(unsigned Opcode, const Register Op1,
+                                      const Register Op2,
+                                      const MachineRegisterInfo &MRI);
 
 Optional<APInt> ConstantFoldExtOp(unsigned Opcode, const Register Op1,
                                   uint64_t Imm, const MachineRegisterInfo &MRI);
@@ -324,6 +327,13 @@ bool isBuildVectorAllOnes(const MachineInstr &MI,
 /// In the above case, this will return a RegOrConstant containing 4.
 Optional<RegOrConstant> getVectorSplat(const MachineInstr &MI,
                                        const MachineRegisterInfo &MRI);
+
+/// Attempt to match a unary predicate against a scalar/splat constant or every
+/// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
+/// value was undef.
+bool matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
+                         std::function<bool(const Constant *ConstVal)> Match,
+                         bool AllowUndefs = false);
 
 /// Returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a true value.

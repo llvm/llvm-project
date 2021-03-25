@@ -1108,6 +1108,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::XXLXORspz:
   case PPC::XXLXORdpz:
   case PPC::XXLEQVOnes:
+  case PPC::XXSPLTI32DX:
   case PPC::V_SET0B:
   case PPC::V_SET0H:
   case PPC::V_SET0:
@@ -1258,8 +1259,10 @@ void PPCInstrInfo::insertNoop(MachineBasicBlock &MBB,
 }
 
 /// Return the noop instruction to use for a noop.
-void PPCInstrInfo::getNoop(MCInst &NopInst) const {
-  NopInst.setOpcode(PPC::NOP);
+MCInst PPCInstrInfo::getNop() const {
+  MCInst Nop;
+  Nop.setOpcode(PPC::NOP);
+  return Nop;
 }
 
 // Branch analysis.
@@ -4414,21 +4417,17 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
     // Sign-extend to 64-bits.
     // DefMI may be folded with another imm form instruction, the result Imm is
     // the sum of Imm of DefMI and BaseImm which is from imm form instruction.
+    APInt ActualValue(64, ImmMO.getImm() + BaseImm, true);
+    if (III.SignedImm && !ActualValue.isSignedIntN(III.ImmWidth))
+      return false;
+    if (!III.SignedImm && !ActualValue.isIntN(III.ImmWidth))
+      return false;
     Imm = SignExtend64<16>(ImmMO.getImm() + BaseImm);
 
     if (Imm % III.ImmMustBeMultipleOf)
       return false;
     if (III.TruncateImmTo)
       Imm &= ((1 << III.TruncateImmTo) - 1);
-    if (III.SignedImm) {
-      APInt ActualValue(64, Imm, true);
-      if (!ActualValue.isSignedIntN(III.ImmWidth))
-        return false;
-    } else {
-      uint64_t UnsignedMax = (1 << III.ImmWidth) - 1;
-      if ((uint64_t)Imm > UnsignedMax)
-        return false;
-    }
   }
   else
     return false;
@@ -5158,7 +5157,8 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
   unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
   unsigned StackOffset = MI.getOperand(1).getImm();
   Register StackReg = MI.getOperand(2).getReg();
-  if (StackReg == PPC::X1 && StackOffset == TOCSaveOffset)
+  Register SPReg = Subtarget.isPPC64() ? PPC::X1 : PPC::R1;
+  if (StackReg == SPReg && StackOffset == TOCSaveOffset)
     return true;
 
   return false;

@@ -120,7 +120,7 @@ func @block_redef() {
 
 // -----
 
-func @no_terminator() {   // expected-error {{block with no terminator}}
+func @no_terminator() {   // expected-error {{empty block: expect at least a terminator}}
 ^bb40:
   return
 ^bb41:
@@ -766,21 +766,14 @@ func @elementsattr_malformed_opaque() -> () {
 
 func @elementsattr_malformed_opaque1() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
+  "foo"(){bar = opaque<"_", "0xQZz123"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
 
 func @elementsattr_malformed_opaque2() -> () {
 ^bb0:
-  "foo"(){bar = opaque<"", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
-}
-
-// -----
-
-func @elementsattr_malformed_opaque3() -> () {
-^bb0:
-  "foo"(){bar = opaque<"t", "0xabc"> : tensor<1xi8>} : () -> () // expected-error {{no registered dialect with namespace 't'}}
+  "foo"(){bar = opaque<"_", "00abc"> : tensor<1xi8>} : () -> () // expected-error {{expected string containing hex digits starting with `0x`}}
 }
 
 // -----
@@ -881,7 +874,7 @@ func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefined s
 func @complex_loops() {
   affine.for %i1 = 1 to 100 {
   // expected-error @+1 {{expected '"' in string literal}}
-  "opaqueIntTensor"(){bar = opaque<"", "0x686]> : tensor<2x1x4xi32>} : () -> ()
+  "opaqueIntTensor"(){bar = opaque<"_", "0x686]> : tensor<2x1x4xi32>} : () -> ()
 
 // -----
 
@@ -1198,7 +1191,7 @@ func @hexadecimal_float_literal_overflow() {
 // -----
 
 func @decimal_float_literal() {
-  // expected-error @+2 {{unexpected decimal integer literal for a float attribute}}
+  // expected-error @+2 {{unexpected decimal integer literal for a floating point value}}
   // expected-note @+1 {{add a trailing dot to make the literal a float}}
   "foo"() {value = 42 : f32} : () -> ()
 }
@@ -1251,7 +1244,7 @@ func @hexadecimal_float_too_wide_for_type_in_tensor() {
 
 // Check that we report an error when a value is too wide to be parsed.
 func @hexadecimal_float_too_wide_in_tensor() {
-  // expected-error @+1 {{hexadecimal float constant out of range for attribute}}
+  // expected-error @+1 {{hexadecimal float constant out of range for type}}
   "foo"() {bar = dense<0x7FFFFFF0000000000000> : tensor<2xf32>} : () -> ()
 }
 

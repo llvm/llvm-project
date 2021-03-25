@@ -53,7 +53,8 @@ struct CountAssign {
 int CountAssign::copied = 0;
 int CountAssign::moved = 0;
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<> T;
@@ -100,6 +101,16 @@ int main(int, char**)
         assert(std::get<1>(t) == y2);
         assert(&std::get<1>(t) == &y);
     }
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
     {
         // test that the implicitly generated move assignment operator
         // is properly deleted
@@ -108,8 +119,8 @@ int main(int, char**)
         static_assert(!std::is_copy_assignable<T>::value, "");
     }
     {
-      using T = std::tuple<int, NonAssignable>;
-      static_assert(!std::is_move_assignable<T>::value, "");
+        using T = std::tuple<int, NonAssignable>;
+        static_assert(!std::is_move_assignable<T>::value, "");
     }
     {
         using T = std::tuple<int, MoveAssignable>;

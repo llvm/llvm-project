@@ -22,14 +22,14 @@ namespace {
 
 namespace mlir {
 namespace spirv {
-void populateSPIRVGLSLCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ConvertComparisonIntoClampSPV_FOrdLessThanOp,
-                 ConvertComparisonIntoClampSPV_FOrdLessThanEqualOp,
-                 ConvertComparisonIntoClampSPV_SLessThanOp,
-                 ConvertComparisonIntoClampSPV_SLessThanEqualOp,
-                 ConvertComparisonIntoClampSPV_ULessThanOp,
-                 ConvertComparisonIntoClampSPV_ULessThanEqualOp>(context);
+void populateSPIRVGLSLCanonicalizationPatterns(RewritePatternSet &results) {
+  results.add<ConvertComparisonIntoClampSPV_FOrdLessThanOp,
+              ConvertComparisonIntoClampSPV_FOrdLessThanEqualOp,
+              ConvertComparisonIntoClampSPV_SLessThanOp,
+              ConvertComparisonIntoClampSPV_SLessThanEqualOp,
+              ConvertComparisonIntoClampSPV_ULessThanOp,
+              ConvertComparisonIntoClampSPV_ULessThanEqualOp>(
+      results.getContext());
 }
 } // namespace spirv
 } // namespace mlir

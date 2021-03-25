@@ -9,6 +9,8 @@
 #ifndef LLD_MACHO_SYMBOL_TABLE_H
 #define LLD_MACHO_SYMBOL_TABLE_H
 
+#include "Symbols.h"
+
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
@@ -50,10 +52,11 @@ public:
                   const llvm::object::Archive::Symbol &sym);
 
   Defined *addSynthetic(StringRef name, InputSection *, uint32_t value,
-                        bool isPrivateExtern, bool isLinkerInternal);
+                        bool isPrivateExtern, bool includeInSymtab);
 
   ArrayRef<Symbol *> getSymbols() const { return symVector; }
-  Symbol *find(StringRef name);
+  Symbol *find(llvm::CachedHashStringRef name);
+  Symbol *find(StringRef name) { return find(llvm::CachedHashStringRef(name)); }
 
 private:
   std::pair<Symbol *, bool> insert(StringRef name);

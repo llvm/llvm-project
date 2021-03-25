@@ -177,9 +177,9 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
 
 } // namespace
 
-void CastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<ChainedTensorCast>(context);
+  results.add<ChainedTensorCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,9 +275,9 @@ struct ExtractElementFromTensorFromElements
 
 } // namespace
 
-void FromElementsOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ExtractElementFromTensorFromElements>(context);
+void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
+  results.add<ExtractElementFromTensorFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -435,11 +435,11 @@ struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
 
 } // namespace
 
-void GenerateOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void GenerateOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
   // TODO: Move extract patterns to tensor::ExtractOp.
-  results.insert<ExtractFromTensorGenerate, ExtractFromTensorCast,
-                 StaticTensorGenerate>(context);
+  results.add<ExtractFromTensorGenerate, ExtractFromTensorCast,
+              StaticTensorGenerate>(context);
 }
 
 //===----------------------------------------------------------------------===//

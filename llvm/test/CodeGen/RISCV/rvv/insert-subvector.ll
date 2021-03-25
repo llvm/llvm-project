@@ -458,6 +458,46 @@ define <vscale x 4 x i1> @insert_nxv4i1_nxv1i1_2(<vscale x 4 x i1> %v, <vscale x
   ret <vscale x 4 x i1> %vec
 }
 
+declare <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64)
+
+define void @insert_nxv8i64_nxv16i64(<vscale x 8 x i64> %sv0, <vscale x 8 x i64> %sv1, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_nxv8i64_nxv16i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    ret
+  %v0 = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> %v0, <vscale x 8 x i64> %sv1, i64 8)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
+define void @insert_nxv8i64_nxv16i64_lo(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_nxv8i64_nxv16i64_lo:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 0)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
+define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x i64>* %out) {
+; CHECK-LABEL: insert_nxv8i64_nxv16i64_hi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    vs8r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %v = call <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64> undef, <vscale x 8 x i64> %sv0, i64 8)
+  store <vscale x 16 x i64> %v, <vscale x 16 x i64>* %out
+  ret void
+}
+
 declare <vscale x 4 x i1> @llvm.experimental.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
 declare <vscale x 32 x i1> @llvm.experimental.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1>, <vscale x 8 x i1>, i64)
 

@@ -182,6 +182,8 @@ public:
   virtual void setParsingMSInlineAsm(bool V) = 0;
   virtual bool isParsingMSInlineAsm() = 0;
 
+  virtual bool discardLTOSymbol(StringRef) const { return false; }
+
   virtual bool isParsingMasm() const { return false; }
 
   virtual bool defineMacro(StringRef Name, StringRef Value) { return true; }

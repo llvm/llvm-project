@@ -50,7 +50,7 @@ std::string EquivalenceObject::AsFortran() const {
 }
 
 Scope &Scope::MakeScope(Kind kind, Symbol *symbol) {
-  return children_.emplace_back(*this, kind, symbol);
+  return children_.emplace_back(*this, kind, symbol, context_);
 }
 
 template <typename T>
@@ -61,7 +61,7 @@ static std::vector<common::Reference<T>> GetSortedSymbols(
   for (auto &pair : symbols) {
     result.push_back(*pair.second);
   }
-  std::sort(result.begin(), result.end());
+  std::sort(result.begin(), result.end(), SymbolSourcePositionCompare{});
   return result;
 }
 
@@ -404,11 +404,11 @@ const Scope &Scope::GetDerivedTypeBase() const {
   return *child;
 }
 
-void Scope::InstantiateDerivedTypes(SemanticsContext &context) {
+void Scope::InstantiateDerivedTypes() {
   for (DeclTypeSpec &type : declTypeSpecs_) {
     if (type.category() == DeclTypeSpec::TypeDerived ||
         type.category() == DeclTypeSpec::ClassDerived) {
-      type.derivedTypeSpec().Instantiate(*this, context);
+      type.derivedTypeSpec().Instantiate(*this, context_);
     }
   }
 }

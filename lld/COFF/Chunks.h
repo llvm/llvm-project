@@ -293,8 +293,12 @@ public:
 
   // Allow iteration over the associated child chunks for this section.
   llvm::iterator_range<AssociatedIterator> children() const {
-    return llvm::make_range(AssociatedIterator(assocChildren),
-                            AssociatedIterator(nullptr));
+    // Associated sections do not have children. The assocChildren field is
+    // part of the parent's list of children.
+    bool isAssoc = selection == llvm::COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    return llvm::make_range(
+        AssociatedIterator(isAssoc ? nullptr : assocChildren),
+        AssociatedIterator(nullptr));
   }
 
   // The section ID this chunk belongs to in its Obj.

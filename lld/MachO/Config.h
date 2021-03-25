@@ -51,12 +51,12 @@ enum class UndefinedSymbolTreatment {
 };
 
 class SymbolPatterns {
+public:
   // GlobPattern can also match literals,
   // but we prefer the O(1) lookup of DenseSet.
   llvm::DenseSet<llvm::CachedHashStringRef> literals;
   std::vector<llvm::GlobPattern> globs;
 
-public:
   bool empty() const { return literals.empty() && globs.empty(); }
   void clear();
   void insert(llvm::StringRef symbolName);
@@ -88,6 +88,7 @@ struct Configuration {
   uint32_t timeTraceGranularity;
   std::string progName;
   llvm::StringRef installName;
+  llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   bool demangle = false;

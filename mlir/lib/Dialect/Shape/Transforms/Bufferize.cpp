@@ -19,13 +19,13 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(&ctx);
     BufferizeTypeConverter typeConverter;
-    ConversionTarget target(getContext());
+    ConversionTarget target(ctx);
 
     populateBufferizeMaterializationLegality(target);
-    populateShapeStructuralTypeConversionsAndLegality(&ctx, typeConverter,
-                                                      patterns, target);
+    populateShapeStructuralTypeConversionsAndLegality(typeConverter, patterns,
+                                                      target);
 
     if (failed(
             applyPartialConversion(getFunction(), target, std::move(patterns))))

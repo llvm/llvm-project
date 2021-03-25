@@ -25,16 +25,11 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64I-LABEL: func32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 32
-; RV64I-NEXT:    srli a0, a0, 32
 ; RV64I-NEXT:    mul a1, a1, a2
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    srli a1, a1, 32
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    addi a1, zero, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    bltu a0, a1, .LBB0_2
+; RV64I-NEXT:    addw a1, a0, a1
+; RV64I-NEXT:    sext.w a2, a0
+; RV64I-NEXT:    addi a0, zero, -1
+; RV64I-NEXT:    bltu a1, a2, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB0_2:
@@ -50,16 +45,11 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64IZbb-LABEL: func32:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    slli a0, a0, 32
-; RV64IZbb-NEXT:    srli a0, a0, 32
-; RV64IZbb-NEXT:    mul a1, a1, a2
-; RV64IZbb-NEXT:    slli a1, a1, 32
-; RV64IZbb-NEXT:    srli a1, a1, 32
+; RV64IZbb-NEXT:    mulw a1, a1, a2
+; RV64IZbb-NEXT:    not a2, a1
+; RV64IZbb-NEXT:    sext.w a0, a0
+; RV64IZbb-NEXT:    minu a0, a0, a2
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    addi a1, zero, 1
-; RV64IZbb-NEXT:    slli a1, a1, 32
-; RV64IZbb-NEXT:    addi a1, a1, -1
-; RV64IZbb-NEXT:    minu a0, a0, a1
 ; RV64IZbb-NEXT:    ret
   %a = mul i32 %y, %z
   %tmp = call i32 @llvm.uadd.sat.i32(i32 %x, i32 %a)

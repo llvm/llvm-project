@@ -2287,7 +2287,7 @@ float64x2_t test_vcvt_high_f64_f32(float32x4_t a) {
 
 // CHECK-LABEL: @test_vrndnq_f64(
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x double> %a to <16 x i8>
-// CHECK:   [[VRNDN1_I:%.*]] = call <2 x double> @llvm.aarch64.neon.frintn.v2f64(<2 x double> %a)
+// CHECK:   [[VRNDN1_I:%.*]] = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %a)
 // CHECK:   ret <2 x double> [[VRNDN1_I]]
 float64x2_t test_vrndnq_f64(float64x2_t a) {
   return vrndnq_f64(a);

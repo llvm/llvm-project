@@ -38,6 +38,11 @@
 
 using namespace llvm;
 
+static cl::opt<unsigned> UseDerefAtPointSemantics(
+    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
+    cl::desc("Deref attributes and metadata infer facts at definition only"));
+
+
 static cl::opt<unsigned> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
@@ -723,12 +728,72 @@ Value::stripInBoundsOffsets(function_ref<void(const Value *)> Func) const {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this, Func);
 }
 
+// Return true if the memory object referred to by V can by freed in the scope
+// for which the SSA value defining the allocation is statically defined.  E.g.
+// deallocation after the static scope of a value does not count.
+static bool canBeFreed(const Value *V) {
+  assert(V->getType()->isPointerTy());
+
+  // Cases that can simply never be deallocated
+  // *) Constants aren't allocated per se, thus not deallocated either.
+  if (isa<Constant>(V))
+    return false;
+
+  const Function *F = nullptr;
+  if (auto *I = dyn_cast<Instruction>(V))
+    F = I->getFunction();
+  if (auto *A = dyn_cast<Argument>(V))
+    F = A->getParent();
+
+  if (!F)
+    return true;
+
+  // A pointer to an object in a function which neither frees, nor can arrange
+  // for another thread to free on its behalf, can not be freed in the scope
+  // of the function.
+  if (F->doesNotFreeMemory() && F->hasNoSync())
+    return false;
+
+  // With garbage collection, deallocation typically occurs solely at or after
+  // safepoints.  If we're compiling for a collector which uses the
+  // gc.statepoint infrastructure, safepoints aren't explicitly present
+  // in the IR until after lowering from abstract to physical machine model.
+  // The collector could chose to mix explicit deallocation and gc'd objects
+  // which is why we need the explicit opt in on a per collector basis.
+  if (!F->hasGC())
+    return true;
+  
+  const auto &GCName = F->getGC();
+  const StringRef StatepointExampleName("statepoint-example");
+  if (GCName != StatepointExampleName)
+    return true;
+
+  auto *PT = cast<PointerType>(V->getType());
+  if (PT->getAddressSpace() != 1)
+    // For the sake of this example GC, we arbitrarily pick addrspace(1) as our
+    // GC managed heap.  This must match the same check in
+    // RewriteStatepointsForGC (and probably needs better factored.)
+    return true;
+
+  // It is cheaper to scan for a declaration than to scan for a use in this
+  // function.  Note that gc.statepoint is a type overloaded function so the
+  // usual trick of requesting declaration of the intrinsic from the module
+  // doesn't work.
+  for (auto &Fn : *F->getParent())
+    if (Fn.getIntrinsicID() == Intrinsic::experimental_gc_statepoint)
+      return true;
+  return false;
+}
+
+
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
-                                               bool &CanBeNull) const {
+                                               bool &CanBeNull,
+                                               bool &CanBeFreed) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   uint64_t DerefBytes = 0;
   CanBeNull = false;
+  CanBeFreed = UseDerefAtPointSemantics && canBeFreed(this);
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
     if (DerefBytes == 0) {
@@ -783,6 +848,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       DerefBytes =
           DL.getTypeStoreSize(AI->getAllocatedType()).getKnownMinSize();
       CanBeNull = false;
+      CanBeFreed = false;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {

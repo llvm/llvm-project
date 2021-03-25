@@ -12,6 +12,18 @@ func @address_space(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>, 7>) {
 
 // -----
 
+// CHECK-LABEL: func @log1p(
+// CHECK-SAME: f32
+func @log1p(%arg0 : f32) {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[ADD:.*]] = llvm.fadd %[[ONE]], %arg0 : f32
+  // CHECK: %[[LOG:.*]] = "llvm.intr.log"(%[[ADD]]) : (f32) -> f32
+  %0 = math.log1p %arg0 : f32
+  std.return
+}
+
+// -----
+
 // CHECK-LABEL: func @rsqrt(
 // CHECK-SAME: f32
 func @rsqrt(%arg0 : f32) {

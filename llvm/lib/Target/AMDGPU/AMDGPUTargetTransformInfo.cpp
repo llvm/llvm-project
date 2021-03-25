@@ -310,8 +310,17 @@ unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   return getHardwareNumberOfRegisters(false) / NumVGPRs;
 }
 
-unsigned GCNTTIImpl::getRegisterBitWidth(bool Vector) const {
-  return (Vector && ST->hasPackedFP32Ops()) ? 64 : 32;
+TypeSize
+GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(32);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(ST->hasPackedFP32Ops() ? 64 : 32);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
@@ -1106,7 +1115,8 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 }
 
 unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
-                                    int Index, VectorType *SubTp) {
+                                    ArrayRef<int> Mask, int Index,
+                                    VectorType *SubTp) {
   if (ST->hasVOP3PInsts()) {
     if (cast<FixedVectorType>(VT)->getNumElements() == 2 &&
         DL.getTypeSizeInBits(VT->getElementType()) == 16) {
@@ -1124,7 +1134,7 @@ unsigned GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *VT,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, VT, Mask, Index, SubTp);
 }
 
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
@@ -1226,8 +1236,9 @@ unsigned R600TTIImpl::getNumberOfRegisters(bool Vec) const {
   return getHardwareNumberOfRegisters(Vec);
 }
 
-unsigned R600TTIImpl::getRegisterBitWidth(bool Vector) const {
-  return 32;
+TypeSize
+R600TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  return TypeSize::getFixed(32);
 }
 
 unsigned R600TTIImpl::getMinVectorRegisterBitWidth() const {

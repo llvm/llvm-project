@@ -56,6 +56,16 @@
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: __mh_execute_header (81)
+# CHECK-NEXT:    Extern
+# CHECK-NEXT:    Type: Abs (0x2)
+# CHECK-NEXT:    Section:  (0x0)
+# CHECK-NEXT:    RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:    Flags [ (0x0)
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:  }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: dyld_stub_binder
 # CHECK-NEXT:     Extern
@@ -82,8 +92,8 @@
 # CHECK-NEXT:   ilocalsym: 0
 # CHECK-NEXT:   nlocalsym: 2
 # CHECK-NEXT:   iextdefsym: 2
-# CHECK-NEXT:   nextdefsym: 3
-# CHECK-NEXT:   iundefsym: 5
+# CHECK-NEXT:   nextdefsym: 4
+# CHECK-NEXT:   iundefsym: 6
 # CHECK-NEXT:   nundefsym: 2
 
 ## Verify that the first entry in the StringTable is a space, and that

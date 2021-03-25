@@ -143,7 +143,7 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    ParamType const Param;                                                     \
+    ParamType Param;                                                           \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::Matcher<Type> DefineMatcher(         \
@@ -151,7 +151,7 @@
     return ::clang::ast_matchers::internal::makeMatcher(                       \
         new internal::matcher_##DefineMatcher##OverloadId##Matcher(Param));    \
   }                                                                            \
-  typedef ::clang::ast_matchers::internal::Matcher<Type>(                      \
+  typedef ::clang::ast_matchers::internal::Matcher<Type> (                     \
       &DefineMatcher##_Type##OverloadId)(ParamType const &Param);              \
   inline bool internal::matcher_##DefineMatcher##OverloadId##Matcher::matches( \
       const Type &Node,                                                        \
@@ -192,8 +192,8 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    ParamType1 const Param1;                                                   \
-    ParamType2 const Param2;                                                   \
+    ParamType1 Param1;                                                         \
+    ParamType2 Param2;                                                         \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::Matcher<Type> DefineMatcher(         \
@@ -202,7 +202,7 @@
         new internal::matcher_##DefineMatcher##OverloadId##Matcher(Param1,     \
                                                                    Param2));   \
   }                                                                            \
-  typedef ::clang::ast_matchers::internal::Matcher<Type>(                      \
+  typedef ::clang::ast_matchers::internal::Matcher<Type> (                     \
       &DefineMatcher##_Type##OverloadId)(ParamType1 const &Param1,             \
                                          ParamType2 const &Param2);            \
   inline bool internal::matcher_##DefineMatcher##OverloadId##Matcher::matches( \
@@ -281,7 +281,7 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    ParamType const Param;                                                     \
+    ParamType Param;                                                           \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::PolymorphicMatcher<                  \
@@ -333,8 +333,8 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    ParamType1 const Param1;                                                   \
-    ParamType2 const Param2;                                                   \
+    ParamType1 Param1;                                                         \
+    ParamType2 Param2;                                                         \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::PolymorphicMatcher<                  \
@@ -469,7 +469,7 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    std::shared_ptr<llvm::Regex> const Param;                                  \
+    std::shared_ptr<llvm::Regex> Param;                                        \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::Matcher<Type> DefineMatcher(         \
@@ -521,7 +521,7 @@
                      *Builder) const override;                                 \
                                                                                \
   private:                                                                     \
-    std::shared_ptr<llvm::Regex> const Param;                                  \
+    std::shared_ptr<llvm::Regex> Param;                                        \
   };                                                                           \
   }                                                                            \
   inline ::clang::ast_matchers::internal::PolymorphicMatcher<                  \

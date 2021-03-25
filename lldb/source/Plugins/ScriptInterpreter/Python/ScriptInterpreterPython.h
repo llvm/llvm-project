@@ -13,6 +13,8 @@
 
 #if LLDB_ENABLE_PYTHON
 
+#include "ScriptedProcessPythonInterface.h"
+
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/StructuredDataImpl.h"

@@ -21,6 +21,7 @@ from .yaml_helper import *
 __all__ = [
     "LinalgStructuredOpConfig",
     "LinalgOpConfig",
+    "TensorDefConfig",
 ]
 
 
@@ -51,17 +52,17 @@ class TensorDefConfig(YAMLObject):
     self.shape_map = shape_map
     self.indexing_map = None  # type: Optional[_ir.AffineMap]
 
+  @property
+  def usage(self) -> str:
+    if self.tensor_def.output:
+      return "output"
+    else:
+      return "input"
+
   def to_yaml_custom_dict(self):
-
-    def get_usage():
-      if self.tensor_def.output:
-        return "output"
-      else:
-        return "input"
-
     return dict(
         name=self.tensor_def.tensor_name,
-        usage=get_usage(),
+        usage=self.usage,
         shape=_serialize_affine_map(self.shape_map),
         element_type_var=self.tensor_def.type_var.name,
     )

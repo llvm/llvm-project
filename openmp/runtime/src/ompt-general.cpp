@@ -102,6 +102,14 @@ ompt_callbacks_internal_t ompt_callbacks;
 
 static ompt_start_tool_result_t *ompt_start_tool_result = NULL;
 
+#if KMP_OS_WINDOWS
+static HMODULE ompt_tool_module = NULL;
+#define OMPT_DLCLOSE(Lib) FreeLibrary(Lib)
+#else
+static void *ompt_tool_module = NULL;
+#define OMPT_DLCLOSE(Lib) dlclose(Lib)
+#endif
+
 /*****************************************************************************
  * forward declarations
  ****************************************************************************/
@@ -314,12 +322,14 @@ ompt_try_start_tool(unsigned int omp_version, const char *runtime_version) {
             OMPT_VERBOSE_INIT_CONTINUED_PRINT("Success.\n");
             OMPT_VERBOSE_INIT_PRINT(
                 "Tool was started and is using the OMPT interface.\n");
+            ompt_tool_module = h;
             break;
           }
           OMPT_VERBOSE_INIT_CONTINUED_PRINT(
               "Found but not using the OMPT interface.\n");
           OMPT_VERBOSE_INIT_PRINT("Continuing search...\n");
         }
+        OMPT_DLCLOSE(h);
       }
       fname = __kmp_str_token(NULL, sep, &buf);
     }
@@ -495,6 +505,8 @@ void ompt_fini() {
     ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
   }
 
+  if (ompt_tool_module)
+    OMPT_DLCLOSE(ompt_tool_module);
   memset(&ompt_enabled, 0, sizeof(ompt_enabled));
 }
 
@@ -675,6 +687,8 @@ OMPT_API_ROUTINE int ompt_get_place_proc_ids(int place_num, int ids_size,
 #else
   int i, count;
   int tmp_ids[ids_size];
+  for (int j = 0; j < ids_size; j++)
+    tmp_ids[j] = 0;
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
   if (place_num < 0 || place_num >= (int)__kmp_affinity_num_masks)

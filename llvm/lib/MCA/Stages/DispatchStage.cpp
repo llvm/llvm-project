@@ -136,8 +136,8 @@ Error DispatchStage::dispatch(InstRef IR) {
 }
 
 Error DispatchStage::cycleStart() {
-  PRF.cycleStart();
-
+  // The retire stage is responsible for calling method `cycleStart`
+  // on the PRF.
   if (!CarryOver) {
     AvailableEntries = DispatchWidth;
     return ErrorSuccess();

@@ -79,6 +79,7 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -152,6 +153,12 @@ def VOP1_F64_I32 : VOPProfileI2F <f64, i32>;
 def VOP1_F32_I32 : VOPProfileI2F <f32, i32>;
 def VOP1_F16_I16 : VOPProfileI2F <f16, i16>;
 
+def VOP_NOP_PROFILE : VOPProfile <[untyped, untyped, untyped, untyped]>{
+  let HasExtVOP3DPP = 0;
+}
+
+// OMod clears exceptions when set. OMod was always an operand, but its
+// now explicitly set.
 class VOP_SPECIAL_OMOD_PROF<ValueType dstVt, ValueType srcVt> :
   VOPProfile<[dstVt, srcVt, untyped, untyped]> {
 
@@ -160,10 +167,6 @@ class VOP_SPECIAL_OMOD_PROF<ValueType dstVt, ValueType srcVt> :
 def VOP_I32_F32_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f32>;
 def VOP_I32_F64_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i32, f64>;
 def VOP_I16_F16_SPECIAL_OMOD : VOP_SPECIAL_OMOD_PROF<i16, f16>;
-
-def VOP_NOP_PROFILE : VOPProfile <[untyped, untyped, untyped, untyped]>{
-  let HasExtVOP3DPP = 0;
-}
 
 //===----------------------------------------------------------------------===//
 // VOP1 Instructions
@@ -603,7 +606,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       let DecoderNamespace = "DPPGFX11";
     }
   }
-  multiclass VOP1_Real_dpp_with_name_gfx11<bits<10> op, string opName,
+  multiclass VOP1_Real_dpp_with_name_gfx11<bits<9> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
     let AsmString = asmName # ps.Pfl.AsmDPP16, DecoderNamespace = "DPPGFX11" in {
@@ -617,7 +620,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       let DecoderNamespace = "DPP8GFX11";
     }
   }
-  multiclass VOP1_Real_dpp8_with_name_gfx11<bits<10> op, string opName,
+  multiclass VOP1_Real_dpp8_with_name_gfx11<bits<9> op, string opName,
                                            string asmName> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
     let AsmString = asmName # ps.Pfl.AsmDPP8, DecoderNamespace = "DPP8GFX11" in {

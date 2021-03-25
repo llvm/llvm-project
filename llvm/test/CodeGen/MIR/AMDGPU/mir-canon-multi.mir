@@ -12,14 +12,14 @@ body:             |
     ; CHECK: %bb0_{{[0-9]+}}__1:sreg_32_xm0 = S_MOV_B32 0
     ; CHECK: %bb0_{{[0-9]+}}__1:vgpr_32 = COPY $vgpr0
     ; CHECK: %bb0_{{[0-9]+}}__1:sgpr_64 = COPY $sgpr0_sgpr1
-    ; CHECK: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9]+}}__1, 9, 0, 0
-    ; CHECK: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9]+}}__1, 11, 0, 0
+    ; CHECK: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9]+}}__1, 9, 0
+    ; CHECK: %bb0_{{[0-9]+}}__1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %bb0_{{[0-9]+}}__1, 11, 0
     ; CHECK: %bb0_{{[0-9]+}}__1:vgpr_32 = COPY %bb0_{{[0-9]+}}__1
     ; CHECK: %bb0_{{[0-9]+}}__1:vgpr_32 = COPY %bb0_{{[0-9]+}}__1
     ; CHECK: %bb0_{{[0-9]+}}__2:vgpr_32 = COPY %bb0_{{[0-9]+}}__1
     ; CHECK: %bb0_{{[0-9]+}}__1:vreg_64 = REG_SEQUENCE %bb0_{{[0-9]+}}__1, %subreg.sub0, %bb0_{{[0-9]+}}__1, %subreg.sub1
     ; CHECK: %bb0_{{[0-9]+}}__1:sgpr_128 = REG_SEQUENCE %bb0_{{[0-9]+}}__1, %subreg.sub0, %bb0_{{[0-9]+}}__1, %subreg.sub1, %bb0_{{[0-9]+}}__1, %subreg.sub2, %bb0_{{[0-9]+}}__2, %subreg.sub3
-    ; CHECK: BUFFER_STORE_DWORD_ADDR64 %bb0_{{[0-9]+}}__1, %bb0_{{[0-9]+}}__1, %bb0_{{[0-9]+}}__1, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK: BUFFER_STORE_DWORD_ADDR64 %bb0_{{[0-9]+}}__1, %bb0_{{[0-9]+}}__1, %bb0_{{[0-9]+}}__1, 0, 0, 0, 0, 0, implicit $exec
     ; CHECK: S_ENDPGM 0
     %10:sreg_32_xm0 = S_MOV_B32 61440
     %11:sreg_32_xm0 = S_MOV_B32 0
@@ -29,13 +29,13 @@ body:             |
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %vreg123_1:vgpr_32 = COPY %11
     %27:vreg_64 = REG_SEQUENCE %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1
-    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0, 0
+    %4:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 9, 0
     %vreg123_2:vgpr_32 = COPY %4
-    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 11, 0, 0
+    %5:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 11, 0
     %vreg123_3:vgpr_32 = COPY %5
     %16:sgpr_128 = REG_SEQUENCE killed %vreg123_0, %subreg.sub0, %vreg123_1, %subreg.sub1, %vreg123_2, %subreg.sub2, %vreg123_3, %subreg.sub3
 
-    BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 %vreg123_1, %27, killed %16, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

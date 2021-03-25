@@ -46,7 +46,7 @@ body:             |
     %15:sreg_32_xm0 = S_MOV_B32 61440
     %16:sreg_32_xm0 = S_MOV_B32 -1
     %17:sgpr_128 = REG_SEQUENCE undef %14:sreg_32_xm0, %subreg.sub0, undef %12:sreg_32_xm0, %subreg.sub1, %16, %subreg.sub2, %15, %subreg.sub3
-    BUFFER_STORE_DWORD_OFFSET %4, %17, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %4, %17, 0, 0, 0, 0, 0, implicit $exec :: (volatile store 4 into `i32 addrspace(1)* undef`, addrspace 1)
     %19:vgpr_32 = COPY %4
     %20:sreg_64 = SI_IF %0, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.3

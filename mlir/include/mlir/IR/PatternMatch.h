@@ -68,6 +68,19 @@ private:
 /// used to interface with the metadata of a pattern, such as the benefit or
 /// root operation.
 class Pattern {
+  /// This enum represents the kind of value used to select the root operations
+  /// that match this pattern.
+  enum class RootKind {
+    /// The pattern root matches "any" operation.
+    Any,
+    /// The pattern root is matched using a concrete operation name.
+    OperationName,
+    /// The pattern root is matched using an interface ID.
+    InterfaceID,
+    /// The patter root is matched using a trait ID.
+    TraitID
+  };
+
 public:
   /// Return a list of operations that may be generated when rewriting an
   /// operation instance with this pattern.
@@ -75,7 +88,29 @@ public:
 
   /// Return the root node that this pattern matches. Patterns that can match
   /// multiple root types return None.
-  Optional<OperationName> getRootKind() const { return rootKind; }
+  Optional<OperationName> getRootKind() const {
+    if (rootKind == RootKind::OperationName)
+      return OperationName::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
+
+  /// Return the interface ID used to match the root operation of this pattern.
+  /// If the pattern does not use an interface ID for deciding the root match,
+  /// this returns None.
+  Optional<TypeID> getRootInterfaceID() const {
+    if (rootKind == RootKind::InterfaceID)
+      return TypeID::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
+
+  /// Return the trait ID used to match the root operation of this pattern.
+  /// If the pattern does not use a trait ID for deciding the root match, this
+  /// returns None.
+  Optional<TypeID> getRootTraitID() const {
+    if (rootKind == RootKind::TraitID)
+      return TypeID::getFromOpaquePointer(rootValue);
+    return llvm::None;
+  }
 
   /// Return the benefit (the inverse of "cost") of matching this pattern.  The
   /// benefit of a Pattern is always static - rewrites that may have dynamic
@@ -88,56 +123,85 @@ public:
   /// i.e. this pattern may generate IR that also matches this pattern, but is
   /// known to bound the recursion. This signals to a rewrite driver that it is
   /// safe to apply this pattern recursively to generated IR.
-  bool hasBoundedRewriteRecursion() const { return hasBoundedRecursion; }
+  bool hasBoundedRewriteRecursion() const {
+    return contextAndHasBoundedRecursion.getInt();
+  }
+
+  /// Return the MLIRContext used to create this pattern.
+  MLIRContext *getContext() const {
+    return contextAndHasBoundedRecursion.getPointer();
+  }
 
 protected:
   /// This class acts as a special tag that makes the desire to match "any"
   /// operation type explicit. This helps to avoid unnecessary usages of this
   /// feature, and ensures that the user is making a conscious decision.
   struct MatchAnyOpTypeTag {};
+  /// This class acts as a special tag that makes the desire to match any
+  /// operation that implements a given interface explicit. This helps to avoid
+  /// unnecessary usages of this feature, and ensures that the user is making a
+  /// conscious decision.
+  struct MatchInterfaceOpTypeTag {};
+  /// This class acts as a special tag that makes the desire to match any
+  /// operation that implements a given trait explicit. This helps to avoid
+  /// unnecessary usages of this feature, and ensures that the user is making a
+  /// conscious decision.
+  struct MatchTraitOpTypeTag {};
 
   /// Construct a pattern with a certain benefit that matches the operation
   /// with the given root name.
-  Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context);
-  /// Construct a pattern with a certain benefit that matches any operation
-  /// type. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
-  /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
-  /// always be supplied here.
-  Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag);
-  /// Construct a pattern with a certain benefit that matches the operation with
-  /// the given root name. `generatedNames` contains the names of operations
-  /// that may be generated during a successful rewrite.
-  Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
-          PatternBenefit benefit, MLIRContext *context);
+  Pattern(StringRef rootName, PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
   /// Construct a pattern that may match any operation type. `generatedNames`
   /// contains the names of operations that may be generated during a successful
   /// rewrite. `MatchAnyOpTypeTag` is just a tag to ensure that the "match any"
   /// behavior is what the user actually desired, `MatchAnyOpTypeTag()` should
   /// always be supplied here.
-  Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
-          MLIRContext *context, MatchAnyOpTypeTag tag);
+  Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
+  /// Construct a pattern that may match any operation that implements the
+  /// interface defined by the provided `interfaceID`. `generatedNames` contains
+  /// the names of operations that may be generated during a successful rewrite.
+  /// `MatchInterfaceOpTypeTag` is just a tag to ensure that the "match
+  /// interface" behavior is what the user actually desired,
+  /// `MatchInterfaceOpTypeTag()` should always be supplied here.
+  Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
+          PatternBenefit benefit, MLIRContext *context,
+          ArrayRef<StringRef> generatedNames = {});
+  /// Construct a pattern that may match any operation that implements the
+  /// trait defined by the provided `traitID`. `generatedNames` contains the
+  /// names of operations that may be generated during a successful rewrite.
+  /// `MatchTraitOpTypeTag` is just a tag to ensure that the "match trait"
+  /// behavior is what the user actually desired, `MatchTraitOpTypeTag()` should
+  /// always be supplied here.
+  Pattern(MatchTraitOpTypeTag tag, TypeID traitID, PatternBenefit benefit,
+          MLIRContext *context, ArrayRef<StringRef> generatedNames = {});
 
   /// Set the flag detailing if this pattern has bounded rewrite recursion or
   /// not.
   void setHasBoundedRewriteRecursion(bool hasBoundedRecursionArg = true) {
-    hasBoundedRecursion = hasBoundedRecursionArg;
+    contextAndHasBoundedRecursion.setInt(hasBoundedRecursionArg);
   }
 
 private:
-  /// A list of the potential operations that may be generated when rewriting
-  /// an op with this pattern.
-  SmallVector<OperationName, 2> generatedOps;
+  Pattern(const void *rootValue, RootKind rootKind,
+          ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
+          MLIRContext *context);
 
-  /// The root operation of the pattern. If the pattern matches a specific
-  /// operation, this contains the name of that operation. Contains None
-  /// otherwise.
-  Optional<OperationName> rootKind;
+  /// The value used to match the root operation of the pattern.
+  const void *rootValue;
+  RootKind rootKind;
 
   /// The expected benefit of matching this pattern.
   const PatternBenefit benefit;
 
-  /// A boolean flag of whether this pattern has bounded recursion or not.
-  bool hasBoundedRecursion = false;
+  /// The context this pattern was created from, and a boolean flag indicating
+  /// whether this pattern has bounded recursion or not.
+  llvm::PointerIntPair<MLIRContext *, 1, bool> contextAndHasBoundedRecursion;
+
+  /// A list of the potential operations that may be generated when rewriting
+  /// an op with this pattern.
+  SmallVector<OperationName, 2> generatedOps;
 };
 
 //===----------------------------------------------------------------------===//
@@ -188,15 +252,13 @@ protected:
   virtual void anchor();
 };
 
-/// OpRewritePattern is a wrapper around RewritePattern that allows for
-/// matching and rewriting against an instance of a derived operation class as
-/// opposed to a raw Operation.
+namespace detail {
+/// OpOrInterfaceRewritePatternBase is a wrapper around RewritePattern that
+/// allows for matching and rewriting against an instance of a derived operation
+/// class or Interface.
 template <typename SourceOp>
-struct OpRewritePattern : public RewritePattern {
-  /// Patterns must specify the root operation name they match against, and can
-  /// also specify the benefit of the pattern matching.
-  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : RewritePattern(SourceOp::getOperationName(), benefit, context) {}
+struct OpOrInterfaceRewritePatternBase : public RewritePattern {
+  using RewritePattern::RewritePattern;
 
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, PatternRewriter &rewriter) const final {
@@ -227,6 +289,43 @@ struct OpRewritePattern : public RewritePattern {
     return failure();
   }
 };
+} // namespace detail
+
+/// OpRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against an instance of a derived operation class as
+/// opposed to a raw Operation.
+template <typename SourceOp>
+struct OpRewritePattern
+    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  /// Patterns must specify the root operation name they match against, and can
+  /// also specify the benefit of the pattern matching.
+  OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+            SourceOp::getOperationName(), benefit, context) {}
+};
+
+/// OpInterfaceRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against an instance of an operation interface instead
+/// of a raw Operation.
+template <typename SourceOp>
+struct OpInterfaceRewritePattern
+    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+  OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+            Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
+            benefit, context) {}
+};
+
+/// OpTraitRewritePattern is a wrapper around RewritePattern that allows for
+/// matching and rewriting against instances of an operation that possess a
+/// given trait.
+template <template <typename> class TraitType>
+class OpTraitRewritePattern : public RewritePattern {
+public:
+  OpTraitRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
+      : RewritePattern(Pattern::MatchTraitOpTypeTag(), TypeID::get<TraitType>(),
+                       benefit, context) {}
+};
 
 //===----------------------------------------------------------------------===//
 // PDLPatternModule
@@ -238,69 +337,181 @@ struct OpRewritePattern : public RewritePattern {
 /// Storage type of byte-code interpreter values. These are passed to constraint
 /// functions as arguments.
 class PDLValue {
-  /// The internal implementation type when the value is an Attribute,
-  /// Operation*, or Type. See `impl` below for more details.
-  using AttrOpTypeImplT = llvm::PointerUnion<Attribute, Operation *, Type>;
-
 public:
-  PDLValue(const PDLValue &other) : impl(other.impl) {}
-  PDLValue(std::nullptr_t = nullptr) : impl() {}
-  PDLValue(Attribute value) : impl(value) {}
-  PDLValue(Operation *value) : impl(value) {}
-  PDLValue(Type value) : impl(value) {}
-  PDLValue(Value value) : impl(value) {}
+  /// The underlying kind of a PDL value.
+  enum class Kind { Attribute, Operation, Type, TypeRange, Value, ValueRange };
+
+  /// Construct a new PDL value.
+  PDLValue(const PDLValue &other) = default;
+  PDLValue(std::nullptr_t = nullptr) : value(nullptr), kind(Kind::Attribute) {}
+  PDLValue(Attribute value)
+      : value(value.getAsOpaquePointer()), kind(Kind::Attribute) {}
+  PDLValue(Operation *value) : value(value), kind(Kind::Operation) {}
+  PDLValue(Type value) : value(value.getAsOpaquePointer()), kind(Kind::Type) {}
+  PDLValue(TypeRange *value) : value(value), kind(Kind::TypeRange) {}
+  PDLValue(Value value)
+      : value(value.getAsOpaquePointer()), kind(Kind::Value) {}
+  PDLValue(ValueRange *value) : value(value), kind(Kind::ValueRange) {}
 
   /// Returns true if the type of the held value is `T`.
   template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, bool> isa() const {
-    return impl.is<Value>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, bool> isa() const {
-    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
-    return attrOpTypeImpl && attrOpTypeImpl.is<T>();
+  bool isa() const {
+    assert(value && "isa<> used on a null value");
+    return kind == getKindOf<T>();
   }
 
   /// Attempt to dynamically cast this value to type `T`, returns null if this
   /// value is not an instance of `T`.
-  template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, T> dyn_cast() const {
-    return impl.dyn_cast<T>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, T> dyn_cast() const {
-    auto attrOpTypeImpl = impl.dyn_cast<AttrOpTypeImplT>();
-    return attrOpTypeImpl && attrOpTypeImpl.dyn_cast<T>();
+  template <typename T,
+            typename ResultT = std::conditional_t<
+                std::is_convertible<T, bool>::value, T, Optional<T>>>
+  ResultT dyn_cast() const {
+    return isa<T>() ? castImpl<T>() : ResultT();
   }
 
   /// Cast this value to type `T`, asserts if this value is not an instance of
   /// `T`.
   template <typename T>
-  std::enable_if_t<std::is_same<T, Value>::value, T> cast() const {
-    return impl.get<T>();
-  }
-  template <typename T>
-  std::enable_if_t<!std::is_same<T, Value>::value, T> cast() const {
-    return impl.get<AttrOpTypeImplT>().get<T>();
+  T cast() const {
+    assert(isa<T>() && "expected value to be of type `T`");
+    return castImpl<T>();
   }
 
   /// Get an opaque pointer to the value.
-  void *getAsOpaquePointer() { return impl.getOpaqueValue(); }
+  const void *getAsOpaquePointer() const { return value; }
+
+  /// Return if this value is null or not.
+  explicit operator bool() const { return value; }
+
+  /// Return the kind of this value.
+  Kind getKind() const { return kind; }
 
   /// Print this value to the provided output stream.
-  void print(raw_ostream &os);
+  void print(raw_ostream &os) const;
 
 private:
-  /// The internal opaque representation of a PDLValue. We use a nested
-  /// PointerUnion structure here because `Value` only has 1 low bit
-  /// available, where as the remaining types all have 3.
-  llvm::PointerUnion<AttrOpTypeImplT, Value> impl;
+  /// Find the index of a given type in a range of other types.
+  template <typename...>
+  struct index_of_t;
+  template <typename T, typename... R>
+  struct index_of_t<T, T, R...> : std::integral_constant<size_t, 0> {};
+  template <typename T, typename F, typename... R>
+  struct index_of_t<T, F, R...>
+      : std::integral_constant<size_t, 1 + index_of_t<T, R...>::value> {};
+
+  /// Return the kind used for the given T.
+  template <typename T>
+  static Kind getKindOf() {
+    return static_cast<Kind>(index_of_t<T, Attribute, Operation *, Type,
+                                        TypeRange, Value, ValueRange>::value);
+  }
+
+  /// The internal implementation of `cast`, that returns the underlying value
+  /// as the given type `T`.
+  template <typename T>
+  std::enable_if_t<llvm::is_one_of<T, Attribute, Type, Value>::value, T>
+  castImpl() const {
+    return T::getFromOpaquePointer(value);
+  }
+  template <typename T>
+  std::enable_if_t<llvm::is_one_of<T, TypeRange, ValueRange>::value, T>
+  castImpl() const {
+    return *reinterpret_cast<T *>(const_cast<void *>(value));
+  }
+  template <typename T>
+  std::enable_if_t<std::is_pointer<T>::value, T> castImpl() const {
+    return reinterpret_cast<T>(const_cast<void *>(value));
+  }
+
+  /// The internal opaque representation of a PDLValue.
+  const void *value;
+  /// The kind of the opaque value.
+  Kind kind;
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
   value.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// PDLResultList
+
+/// The class represents a list of PDL results, returned by a native rewrite
+/// method. It provides the mechanism with which to pass PDLValues back to the
+/// PDL bytecode.
+class PDLResultList {
+public:
+  /// Push a new Attribute value onto the result list.
+  void push_back(Attribute value) { results.push_back(value); }
+
+  /// Push a new Operation onto the result list.
+  void push_back(Operation *value) { results.push_back(value); }
+
+  /// Push a new Type onto the result list.
+  void push_back(Type value) { results.push_back(value); }
+
+  /// Push a new TypeRange onto the result list.
+  void push_back(TypeRange value) {
+    // The lifetime of a TypeRange can't be guaranteed, so we'll need to
+    // allocate a storage for it.
+    llvm::OwningArrayRef<Type> storage(value.size());
+    llvm::copy(value, storage.begin());
+    allocatedTypeRanges.emplace_back(std::move(storage));
+    typeRanges.push_back(allocatedTypeRanges.back());
+    results.push_back(&typeRanges.back());
+  }
+  void push_back(ValueTypeRange<OperandRange> value) {
+    typeRanges.push_back(value);
+    results.push_back(&typeRanges.back());
+  }
+  void push_back(ValueTypeRange<ResultRange> value) {
+    typeRanges.push_back(value);
+    results.push_back(&typeRanges.back());
+  }
+
+  /// Push a new Value onto the result list.
+  void push_back(Value value) { results.push_back(value); }
+
+  /// Push a new ValueRange onto the result list.
+  void push_back(ValueRange value) {
+    // The lifetime of a ValueRange can't be guaranteed, so we'll need to
+    // allocate a storage for it.
+    llvm::OwningArrayRef<Value> storage(value.size());
+    llvm::copy(value, storage.begin());
+    allocatedValueRanges.emplace_back(std::move(storage));
+    valueRanges.push_back(allocatedValueRanges.back());
+    results.push_back(&valueRanges.back());
+  }
+  void push_back(OperandRange value) {
+    valueRanges.push_back(value);
+    results.push_back(&valueRanges.back());
+  }
+  void push_back(ResultRange value) {
+    valueRanges.push_back(value);
+    results.push_back(&valueRanges.back());
+  }
+
+protected:
+  /// Create a new result list with the expected number of results.
+  PDLResultList(unsigned maxNumResults) {
+    // For now just reserve enough space for all of the results. We could do
+    // separate counts per range type, but it isn't really worth it unless there
+    // are a "large" number of results.
+    typeRanges.reserve(maxNumResults);
+    valueRanges.reserve(maxNumResults);
+  }
+
+  /// The PDL results held by this list.
+  SmallVector<PDLValue> results;
+  /// Memory used to store ranges held by the list.
+  SmallVector<TypeRange> typeRanges;
+  SmallVector<ValueRange> valueRanges;
+  /// Memory allocated to store ranges in the result list whose lifetime was
+  /// generated in the native function.
+  SmallVector<llvm::OwningArrayRef<Type>> allocatedTypeRanges;
+  SmallVector<llvm::OwningArrayRef<Value>> allocatedValueRanges;
+};
 
 //===----------------------------------------------------------------------===//
 // PDLPatternModule
@@ -311,16 +522,13 @@ inline raw_ostream &operator<<(raw_ostream &os, PDLValue value) {
 /// success if the constraint successfully held, failure otherwise.
 using PDLConstraintFunction = std::function<LogicalResult(
     ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
-/// A native PDL creation function. This function creates a new PDLValue given
-/// a set of existing PDL values, a set of constant parameters specified in
-/// Attribute form, and a PatternRewriter. Returns the newly created PDLValue.
-using PDLCreateFunction =
-    std::function<PDLValue(ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &)>;
-/// A native PDL rewrite function. This function rewrites the given root
-/// operation using the provided PatternRewriter. This method is only invoked
-/// when the corresponding match was successful.
-using PDLRewriteFunction = std::function<void(Operation *, ArrayRef<PDLValue>,
-                                              ArrayAttr, PatternRewriter &)>;
+/// A native PDL rewrite function. This function performs a rewrite on the
+/// given set of values and constant parameters. Any results from this rewrite
+/// that should be passed back to PDL should be added to the provided result
+/// list. This method is only invoked when the corresponding match was
+/// successful.
+using PDLRewriteFunction = std::function<void(
+    ArrayRef<PDLValue>, ArrayAttr, PatternRewriter &, PDLResultList &)>;
 /// A generic PDL pattern constraint function. This function applies a
 /// constraint to a given opaque PDLValue entity. The second parameter is a set
 /// of constant value parameters specified in Attribute form. Returns success if
@@ -367,9 +575,6 @@ public:
         });
   }
 
-  /// Register a creation function.
-  void registerCreateFunction(StringRef name, PDLCreateFunction createFn);
-
   /// Register a rewrite function.
   void registerRewriteFunction(StringRef name, PDLRewriteFunction rewriteFn);
 
@@ -379,13 +584,6 @@ public:
   }
   llvm::StringMap<PDLConstraintFunction> takeConstraintFunctions() {
     return constraintFunctions;
-  }
-  /// Return the set of the registered create functions.
-  const llvm::StringMap<PDLCreateFunction> &getCreateFunctions() const {
-    return createFunctions;
-  }
-  llvm::StringMap<PDLCreateFunction> takeCreateFunctions() {
-    return createFunctions;
   }
   /// Return the set of the registered rewrite functions.
   const llvm::StringMap<PDLRewriteFunction> &getRewriteFunctions() const {
@@ -399,7 +597,6 @@ public:
   void clear() {
     pdlModule = nullptr;
     constraintFunctions.clear();
-    createFunctions.clear();
     rewriteFunctions.clear();
   }
 
@@ -409,7 +606,6 @@ private:
 
   /// The external functions referenced from within the PDL module.
   llvm::StringMap<PDLConstraintFunction> constraintFunctions;
-  llvm::StringMap<PDLCreateFunction> createFunctions;
   llvm::StringMap<PDLRewriteFunction> rewriteFunctions;
 };
 
@@ -618,21 +814,26 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// OwningRewritePatternList
+// RewritePatternSet
 //===----------------------------------------------------------------------===//
 
-class OwningRewritePatternList {
+class RewritePatternSet {
   using NativePatternListT = std::vector<std::unique_ptr<RewritePattern>>;
 
 public:
-  OwningRewritePatternList() = default;
+  RewritePatternSet(MLIRContext *context) : context(context) {}
 
-  /// Construct a OwningRewritePatternList populated with the given pattern.
-  OwningRewritePatternList(std::unique_ptr<RewritePattern> pattern) {
+  /// Construct a RewritePatternSet populated with the given pattern.
+  RewritePatternSet(MLIRContext *context,
+                    std::unique_ptr<RewritePattern> pattern)
+      : context(context) {
     nativePatterns.emplace_back(std::move(pattern));
   }
-  OwningRewritePatternList(PDLPatternModule &&pattern)
-      : pdlPatterns(std::move(pattern)) {}
+  RewritePatternSet(PDLPatternModule &&pattern)
+      : context(pattern.getModule()->getContext()),
+        pdlPatterns(std::move(pattern)) {}
+
+  MLIRContext *getContext() const { return context; }
 
   /// Return the native patterns held in this list.
   NativePatternListT &getNativePatterns() { return nativePatterns; }
@@ -647,7 +848,7 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
-  // Pattern Insertion
+  // 'add' methods for adding patterns to the set.
   //===--------------------------------------------------------------------===//
 
   /// Add an instance of each of the pattern types 'Ts' to the pattern list with
@@ -656,34 +857,119 @@ public:
   template <typename... Ts, typename ConstructorArg,
             typename... ConstructorArgs,
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
-  OwningRewritePatternList &insert(ConstructorArg &&arg,
-                                   ConstructorArgs &&...args) {
+  RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&... args) {
     // The following expands a call to emplace_back for each of the pattern
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{0, (insertImpl<Ts>(arg, args...), 0)...};
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
     return *this;
   }
 
   /// Add an instance of each of the pattern types 'Ts'. Return a reference to
   /// `this` for chaining insertions.
-  template <typename... Ts> OwningRewritePatternList &insert() {
-    (void)std::initializer_list<int>{0, (insertImpl<Ts>(), 0)...};
+  template <typename... Ts>
+  RewritePatternSet &add() {
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
     return *this;
   }
 
   /// Add the given native pattern to the pattern list. Return a reference to
   /// `this` for chaining insertions.
-  OwningRewritePatternList &insert(std::unique_ptr<RewritePattern> pattern) {
+  RewritePatternSet &add(std::unique_ptr<RewritePattern> pattern) {
     nativePatterns.emplace_back(std::move(pattern));
     return *this;
   }
 
   /// Add the given PDL pattern to the pattern list. Return a reference to
   /// `this` for chaining insertions.
-  OwningRewritePatternList &insert(PDLPatternModule &&pattern) {
+  RewritePatternSet &add(PDLPatternModule &&pattern) {
     pdlPatterns.mergeIn(std::move(pattern));
+    return *this;
+  }
+
+  // Add a matchAndRewrite style pattern represented as a C function pointer.
+  template <typename OpType>
+  RewritePatternSet &add(LogicalResult (*implFn)(OpType,
+                                                 PatternRewriter &rewriter)) {
+    struct FnPattern final : public OpRewritePattern<OpType> {
+      FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+                MLIRContext *context)
+          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+
+      LogicalResult matchAndRewrite(OpType op,
+                                    PatternRewriter &rewriter) const override {
+        return implFn(op, rewriter);
+      }
+
+    private:
+      LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
+    };
+    add(std::make_unique<FnPattern>(std::move(implFn), getContext()));
+    return *this;
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Pattern Insertion
+  //===--------------------------------------------------------------------===//
+
+  // TODO: These are soft deprecated in favor of the 'add' methods above.
+
+  /// Add an instance of each of the pattern types 'Ts' to the pattern list with
+  /// the given arguments. Return a reference to `this` for chaining insertions.
+  /// Note: ConstructorArg is necessary here to separate the two variadic lists.
+  template <typename... Ts, typename ConstructorArg,
+            typename... ConstructorArgs,
+            typename = std::enable_if_t<sizeof...(Ts) != 0>>
+  RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&... args) {
+    // The following expands a call to emplace_back for each of the pattern
+    // types 'Ts'. This magic is necessary due to a limitation in the places
+    // that a parameter pack can be expanded in c++11.
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
+    return *this;
+  }
+
+  /// Add an instance of each of the pattern types 'Ts'. Return a reference to
+  /// `this` for chaining insertions.
+  template <typename... Ts>
+  RewritePatternSet &insert() {
+    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
+    return *this;
+  }
+
+  /// Add the given native pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  RewritePatternSet &insert(std::unique_ptr<RewritePattern> pattern) {
+    nativePatterns.emplace_back(std::move(pattern));
+    return *this;
+  }
+
+  /// Add the given PDL pattern to the pattern list. Return a reference to
+  /// `this` for chaining insertions.
+  RewritePatternSet &insert(PDLPatternModule &&pattern) {
+    pdlPatterns.mergeIn(std::move(pattern));
+    return *this;
+  }
+
+  // Add a matchAndRewrite style pattern represented as a C function pointer.
+  template <typename OpType>
+  RewritePatternSet &
+  insert(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter)) {
+    struct FnPattern final : public OpRewritePattern<OpType> {
+      FnPattern(LogicalResult (*implFn)(OpType, PatternRewriter &rewriter),
+                MLIRContext *context)
+          : OpRewritePattern<OpType>(context), implFn(implFn) {}
+
+      LogicalResult matchAndRewrite(OpType op,
+                                    PatternRewriter &rewriter) const override {
+        return implFn(op, rewriter);
+      }
+
+    private:
+      LogicalResult (*implFn)(OpType, PatternRewriter &rewriter);
+    };
+    insert(std::make_unique<FnPattern>(std::move(implFn), getContext()));
     return *this;
   }
 
@@ -692,19 +978,24 @@ private:
   /// chaining insertions.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
-  insertImpl(Args &&...args) {
+  addImpl(Args &&... args) {
     nativePatterns.emplace_back(
         std::make_unique<T>(std::forward<Args>(args)...));
   }
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
-  insertImpl(Args &&...args) {
+  addImpl(Args &&... args) {
     pdlPatterns.mergeIn(T(std::forward<Args>(args)...));
   }
 
+  MLIRContext *const context;
   NativePatternListT nativePatterns;
   PDLPatternModule pdlPatterns;
 };
+
+// TODO: OwningRewritePatternList is soft-deprecated and will be removed in the
+// future.
+using OwningRewritePatternList = RewritePatternSet;
 
 } // end namespace mlir
 

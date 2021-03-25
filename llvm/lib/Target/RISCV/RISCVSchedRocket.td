@@ -52,8 +52,10 @@ def : WriteRes<WriteJmpReg, [RocketUnitB]>;
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [RocketUnitALU]>;
 def : WriteRes<WriteIALU, [RocketUnitALU]>;
-def : WriteRes<WriteShift32, [RocketUnitALU]>;
-def : WriteRes<WriteShift, [RocketUnitALU]>;
+def : WriteRes<WriteShiftImm32, [RocketUnitALU]>;
+def : WriteRes<WriteShiftImm, [RocketUnitALU]>;
+def : WriteRes<WriteShiftReg32, [RocketUnitALU]>;
+def : WriteRes<WriteShiftReg, [RocketUnitALU]>;
 
 // Integer multiplication
 let Latency = 4 in {
@@ -181,8 +183,10 @@ def : ReadAdvance<ReadStoreData, 0>;
 def : ReadAdvance<ReadMemBase, 0>;
 def : ReadAdvance<ReadIALU, 0>;
 def : ReadAdvance<ReadIALU32, 0>;
-def : ReadAdvance<ReadShift, 0>;
-def : ReadAdvance<ReadShift32, 0>;
+def : ReadAdvance<ReadShiftImm, 0>;
+def : ReadAdvance<ReadShiftImm32, 0>;
+def : ReadAdvance<ReadShiftReg, 0>;
+def : ReadAdvance<ReadShiftReg32, 0>;
 def : ReadAdvance<ReadIDiv, 0>;
 def : ReadAdvance<ReadIDiv32, 0>;
 def : ReadAdvance<ReadIMul, 0>;
@@ -230,4 +234,51 @@ def : ReadAdvance<ReadFMovF64ToI64, 0>;
 def : ReadAdvance<ReadFMovI64ToF64, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
+
+// Zfh is unsupported
+let Unsupported = true in {
+def : WriteRes<WriteFALU16, []>;
+def : WriteRes<WriteFClass16, []>;
+def : WriteRes<WriteFCvtF16ToF64, []>;
+def : WriteRes<WriteFCvtF64ToF16, []>;
+def : WriteRes<WriteFCvtI64ToF16, []>;
+def : WriteRes<WriteFCvtF32ToF16, []>;
+def : WriteRes<WriteFCvtI32ToF16, []>;
+def : WriteRes<WriteFCvtF16ToI64, []>;
+def : WriteRes<WriteFCvtF16ToF32, []>;
+def : WriteRes<WriteFCvtF16ToI32, []>;
+def : WriteRes<WriteFDiv16, []>;
+def : WriteRes<WriteFCmp16, []>;
+def : WriteRes<WriteFLD16, []>;
+def : WriteRes<WriteFMulAdd16, []>;
+def : WriteRes<WriteFMinMax16, []>;
+def : WriteRes<WriteFMulSub16, []>;
+def : WriteRes<WriteFMul16, []>;
+def : WriteRes<WriteFMovI16ToF16, []>;
+def : WriteRes<WriteFMovF16ToI16, []>;
+def : WriteRes<WriteFSGNJ16, []>;
+def : WriteRes<WriteFST16, []>;
+def : WriteRes<WriteFSqrt16, []>;
+
+def : ReadAdvance<ReadFALU16, 0>;
+def : ReadAdvance<ReadFClass16, 0>;
+def : ReadAdvance<ReadFCvtF16ToF64, 0>;
+def : ReadAdvance<ReadFCvtF64ToF16, 0>;
+def : ReadAdvance<ReadFCvtI64ToF16, 0>;
+def : ReadAdvance<ReadFCvtF32ToF16, 0>;
+def : ReadAdvance<ReadFCvtI32ToF16, 0>;
+def : ReadAdvance<ReadFCvtF16ToI64, 0>;
+def : ReadAdvance<ReadFCvtF16ToF32, 0>;
+def : ReadAdvance<ReadFCvtF16ToI32, 0>;
+def : ReadAdvance<ReadFDiv16, 0>;
+def : ReadAdvance<ReadFCmp16, 0>;
+def : ReadAdvance<ReadFMulAdd16, 0>;
+def : ReadAdvance<ReadFMinMax16, 0>;
+def : ReadAdvance<ReadFMulSub16, 0>;
+def : ReadAdvance<ReadFMul16, 0>;
+def : ReadAdvance<ReadFMovI16ToF16, 0>;
+def : ReadAdvance<ReadFMovF16ToI16, 0>;
+def : ReadAdvance<ReadFSGNJ16, 0>;
+def : ReadAdvance<ReadFSqrt16, 0>;
+} // Unsupported = true
 }

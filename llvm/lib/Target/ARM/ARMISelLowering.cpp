@@ -21,6 +21,7 @@
 #include "ARMRegisterInfo.h"
 #include "ARMSelectionDAGInfo.h"
 #include "ARMSubtarget.h"
+#include "ARMTargetTransformInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -6962,35 +6963,6 @@ static bool isVEXTMask(ArrayRef<int> M, EVT VT,
   // Adjust the index value if the source operands will be swapped.
   if (ReverseVEXT)
     Imm -= NumElts;
-
-  return true;
-}
-
-/// isVREVMask - Check if a vector shuffle corresponds to a VREV
-/// instruction with the specified blocksize.  (The order of the elements
-/// within each block of the vector is reversed.)
-static bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
-  assert((BlockSize==16 || BlockSize==32 || BlockSize==64) &&
-         "Only possible block sizes for VREV are: 16, 32, 64");
-
-  unsigned EltSz = VT.getScalarSizeInBits();
-  if (EltSz == 64)
-    return false;
-
-  unsigned NumElts = VT.getVectorNumElements();
-  unsigned BlockElts = M[0] + 1;
-  // If the first shuffle index is UNDEF, be optimistic.
-  if (M[0] < 0)
-    BlockElts = BlockSize / EltSz;
-
-  if (BlockSize <= EltSz || BlockSize != BlockElts * EltSz)
-    return false;
-
-  for (unsigned i = 0; i < NumElts; ++i) {
-    if (M[i] < 0) continue; // ignore UNDEF indices
-    if ((unsigned) M[i] != (i - i%BlockElts) + (BlockElts - 1 - i%BlockElts))
-      return false;
-  }
 
   return true;
 }

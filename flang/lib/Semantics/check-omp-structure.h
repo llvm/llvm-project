@@ -73,6 +73,9 @@ static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
+static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
+    Directive::OMPD_ordered, Directive::OMPD_atomic, Directive::OMPD_task,
+    Directive::OMPD_taskloop};
 static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{
@@ -153,6 +156,13 @@ public:
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
+  // Get the OpenMP Clause Kind for the corresponding Parser class
+  template <typename A>
+  llvm::omp::Clause GetClauseKindForParserClass(const A &) {
+#define GEN_FLANG_CLAUSE_PARSER_KIND_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+  }
+
 private:
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
@@ -197,6 +207,7 @@ private:
       const parser::Name &name, const llvm::omp::Clause clause);
   void CheckMultipleAppearanceAcrossContext(
       const parser::OmpObjectList &ompObjectList);
+  const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

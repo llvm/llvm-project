@@ -111,17 +111,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_string_view != 201811L
-#     error "__cpp_lib_constexpr_string_view should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_string_view != 201811L
+#   error "__cpp_lib_constexpr_string_view should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_starts_ends_with
@@ -157,17 +151,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_string_view != 201811L
-#     error "__cpp_lib_constexpr_string_view should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_string_view != 201811L
+#   error "__cpp_lib_constexpr_string_view should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_starts_ends_with

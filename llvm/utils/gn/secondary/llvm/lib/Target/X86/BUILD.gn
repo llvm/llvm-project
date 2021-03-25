@@ -108,6 +108,7 @@ static_library("LLVMX86CodeGen") {
     "X86LegalizerInfo.cpp",
     "X86LoadValueInjectionLoadHardening.cpp",
     "X86LoadValueInjectionRetHardening.cpp",
+    "X86LowerAMXIntrinsics.cpp",
     "X86LowerAMXType.cpp",
     "X86LowerTileCopy.cpp",
     "X86MCInstLower.cpp",

@@ -87,7 +87,8 @@ void PPCSubtarget::initializeEnvironment() {
   HasP9Vector = false;
   HasP9Altivec = false;
   HasMMA = false;
-  HasROPProtection = false;
+  HasROPProtect = false;
+  HasPrivileged = false;
   HasP10Vector = false;
   HasPrefixInstrs = false;
   HasPCRelativeMemops = false;
@@ -182,9 +183,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   StackAlignment = getPlatformStackAlignment();
 
   // Determine endianness.
-  // FIXME: Part of the TargetMachine.
-  IsLittleEndian = (TargetTriple.getArch() == Triple::ppc64le ||
-                    TargetTriple.getArch() == Triple::ppcle);
+  IsLittleEndian = TM.isLittleEndian();
 }
 
 bool PPCSubtarget::enableMachineScheduler() const { return true; }

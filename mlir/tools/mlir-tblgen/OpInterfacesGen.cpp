@@ -43,9 +43,13 @@ static void emitMethodNameAndArgs(const InterfaceMethod &method,
                                   raw_ostream &os, StringRef valueType,
                                   bool addThisArg, bool addConst) {
   os << method.getName() << '(';
-  if (addThisArg)
+  if (addThisArg) {
+    if (addConst)
+      os << "const ";
+    os << "const Concept *impl, ";
     emitCPPType(valueType, os)
         << "tablegen_opaque_val" << (method.arg_empty() ? "" : ", ");
+  }
   llvm::interleaveComma(method.getArguments(), os,
                         [&](const InterfaceMethod::Argument &arg) {
                           os << arg.type << " " << arg.name;
@@ -124,7 +128,9 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
     interfaceBaseType = "OpInterface";
     valueTemplate = "ConcreteOp";
     StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
-    nonStaticMethodFmt.withOp(castCode).withSelf(castCode);
+    nonStaticMethodFmt.addSubst("_this", "impl")
+        .withOp(castCode)
+        .withSelf(castCode);
     traitMethodFmt.withOp("(*static_cast<ConcreteOp *>(this))");
   }
 };
@@ -167,6 +173,7 @@ static void emitInterfaceDef(Interface interface, StringRef valueType,
     // Forward to the method on the concrete operation type.
     os << " {\n      return getImpl()->" << method.getName() << '(';
     if (!method.isStatic()) {
+      os << "getImpl(), ";
       os << (isOpInterface ? "getOperation()" : "*this");
       os << (method.arg_empty() ? "" : ", ");
     }
@@ -197,8 +204,10 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
     os << "    ";
     emitCPPType(method.getReturnType(), os);
     os << "(*" << method.getName() << ")(";
-    if (!method.isStatic())
+    if (!method.isStatic()) {
+      os << "const Concept *impl, ";
       emitCPPType(valueType, os) << (method.arg_empty() ? "" : ", ");
+    }
     llvm::interleaveComma(
         method.getArguments(), os,
         [&](const InterfaceMethod::Argument &arg) { os << arg.type; });
@@ -208,23 +217,25 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
 }
 
 void InterfaceGenerator::emitModelDecl(Interface &interface) {
-  os << "  template<typename " << valueTemplate << ">\n";
-  os << "  class Model : public Concept {\n  public:\n";
-  os << "    Model() : Concept{";
-  llvm::interleaveComma(
-      interface.getMethods(), os,
-      [&](const InterfaceMethod &method) { os << method.getName(); });
-  os << "} {}\n\n";
+  for (const char *modelClass : {"Model", "FallbackModel"}) {
+    os << "  template<typename " << valueTemplate << ">\n";
+    os << "  class " << modelClass << " : public Concept {\n  public:\n";
+    os << "    " << modelClass << "() : Concept{";
+    llvm::interleaveComma(
+        interface.getMethods(), os,
+        [&](const InterfaceMethod &method) { os << method.getName(); });
+    os << "} {}\n\n";
 
-  // Insert each of the virtual method overrides.
-  for (auto &method : interface.getMethods()) {
-    emitCPPType(method.getReturnType(), os << "    static inline ");
-    emitMethodNameAndArgs(method, os, valueType,
-                          /*addThisArg=*/!method.isStatic(),
-                          /*addConst=*/false);
-    os << ";\n";
+    // Insert each of the virtual method overrides.
+    for (auto &method : interface.getMethods()) {
+      emitCPPType(method.getReturnType(), os << "    static inline ");
+      emitMethodNameAndArgs(method, os, valueType,
+                            /*addThisArg=*/!method.isStatic(),
+                            /*addConst=*/false);
+      os << ";\n";
+    }
+    os << "  };\n";
   }
-  os << "  };\n";
 }
 
 void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
@@ -256,6 +267,32 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
 
     // Add the arguments to the call.
     os << method.getName() << '(';
+    llvm::interleaveComma(
+        method.getArguments(), os,
+        [&](const InterfaceMethod::Argument &arg) { os << arg.name; });
+    os << ");\n}\n";
+  }
+
+  for (auto &method : interface.getMethods()) {
+    os << "template<typename " << valueTemplate << ">\n";
+    emitCPPType(method.getReturnType(), os);
+    os << "detail::" << interface.getName() << "InterfaceTraits::FallbackModel<"
+       << valueTemplate << ">::";
+    emitMethodNameAndArgs(method, os, valueType,
+                          /*addThisArg=*/!method.isStatic(),
+                          /*addConst=*/false);
+    os << " {\n  ";
+
+    // Forward to the method on the concrete Model implementation.
+    if (method.isStatic())
+      os << "return " << valueTemplate << "::";
+    else
+      os << "return static_cast<const " << valueTemplate << " *>(impl)->";
+
+    // Add the arguments to the call.
+    os << method.getName() << '(';
+    if (!method.isStatic())
+      os << "tablegen_opaque_val" << (method.arg_empty() ? "" : ", ");
     llvm::interleaveComma(
         method.getArguments(), os,
         [&](const InterfaceMethod::Argument &arg) { os << arg.name; });

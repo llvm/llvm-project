@@ -8,12 +8,12 @@ add      w1, w0, #4
 
 # CHECK:      Iterations:        2
 # CHECK-NEXT: Instructions:      8
-# CHECK-NEXT: Total Cycles:      10
+# CHECK-NEXT: Total Cycles:      9
 # CHECK-NEXT: Total uOps:        8
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.80
-# CHECK-NEXT: IPC:               0.80
+# CHECK-NEXT: uOps Per Cycle:    0.89
+# CHECK-NEXT: IPC:               0.89
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -56,16 +56,16 @@ add      w1, w0, #4
 # CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -     add	w1, w0, #4
 
 # CHECK:      Timeline view:
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeeER.   .   add	w2, w3, #1
-# CHECK-NEXT: [0,1]     DeeER.   .   add	w4, w3, #2, lsl #12
-# CHECK-NEXT: [0,2]     .DeeER   .   add	w0, w4, #3
-# CHECK-NEXT: [0,3]     . DeeER  .   add	w1, w0, #4
-# CHECK-NEXT: [1,0]     . DeeER  .   add	w2, w3, #1
-# CHECK-NEXT: [1,1]     .  DeeER .   add	w4, w3, #2, lsl #12
-# CHECK-NEXT: [1,2]     .   DeeER.   add	w0, w4, #3
-# CHECK-NEXT: [1,3]     .    DeeER   add	w1, w0, #4
+# CHECK:      [0,0]     DeeE .  .   add	w2, w3, #1
+# CHECK-NEXT: [0,1]     DeeE .  .   add	w4, w3, #2, lsl #12
+# CHECK-NEXT: [0,2]     .DeeE.  .   add	w0, w4, #3
+# CHECK-NEXT: [0,3]     . DeeE  .   add	w1, w0, #4
+# CHECK-NEXT: [1,0]     . DeeE  .   add	w2, w3, #1
+# CHECK-NEXT: [1,1]     .  DeeE .   add	w4, w3, #2, lsl #12
+# CHECK-NEXT: [1,2]     .   DeeE.   add	w0, w4, #3
+# CHECK-NEXT: [1,3]     .    DeeE   add	w1, w0, #4
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

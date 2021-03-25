@@ -22,14 +22,17 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include <algorithm>
 
 namespace clang {
@@ -178,8 +181,7 @@ enum class ReasonToReject {
   UnsupportedSymbol,
   AmbiguousSymbol,
 
-  // name validation.
-  RenameToKeywords,
+  // name validation. FIXME: reconcile with InvalidName
   SameName,
 };
 
@@ -241,8 +243,6 @@ llvm::Error makeError(ReasonToReject Reason) {
       return "symbol is not a supported kind (e.g. namespace, macro)";
     case ReasonToReject::AmbiguousSymbol:
       return "there are multiple symbols at the given location";
-    case ReasonToReject::RenameToKeywords:
-      return "the chosen name is a keyword";
     case ReasonToReject::SameName:
       return "new name is the same as the old name";
     }
@@ -437,6 +437,7 @@ struct InvalidName {
   enum Kind {
     Keywords,
     Conflict,
+    BadIdentifier,
   };
   Kind K;
   std::string Details;
@@ -447,6 +448,8 @@ std::string toString(InvalidName::Kind K) {
     return "Keywords";
   case InvalidName::Conflict:
     return "Conflict";
+  case InvalidName::BadIdentifier:
+    return "BadIdentifier";
   }
   llvm_unreachable("unhandled InvalidName kind");
 }
@@ -459,10 +462,29 @@ llvm::Error makeError(InvalidName Reason) {
                            Reason.Details);
     case InvalidName::Conflict:
       return llvm::formatv("conflict with the symbol in {0}", Reason.Details);
+    case InvalidName::BadIdentifier:
+      return llvm::formatv("the chosen name \"{0}\" is not a valid identifier",
+                           Reason.Details);
     }
     llvm_unreachable("unhandled InvalidName kind");
   };
   return error("invalid name: {0}", Message(Reason));
+}
+
+static bool mayBeValidIdentifier(llvm::StringRef Ident) {
+  assert(llvm::json::isUTF8(Ident));
+  if (Ident.empty())
+    return false;
+  // We don't check all the rules for non-ascii characters (most are allowed).
+  bool AllowDollar = true; // lenient
+  if (llvm::isASCII(Ident.front()) &&
+      !isIdentifierHead(Ident.front(), AllowDollar))
+    return false;
+  for (char C : Ident) {
+    if (llvm::isASCII(C) && !isIdentifierBody(C, AllowDollar))
+      return false;
+  }
+  return true;
 }
 
 // Check if we can rename the given RenameDecl into NewName.
@@ -476,6 +498,8 @@ llvm::Optional<InvalidName> checkName(const NamedDecl &RenameDecl,
   llvm::Optional<InvalidName> Result;
   if (isKeyword(NewName, ASTCtx.getLangOpts()))
     Result = InvalidName{InvalidName::Keywords, NewName.str()};
+  else if (!mayBeValidIdentifier(NewName))
+    Result = InvalidName{InvalidName::BadIdentifier, NewName.str()};
   else {
     // Name conflict detection.
     // Function conflicts are subtle (overloading), so ignore them.

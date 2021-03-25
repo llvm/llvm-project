@@ -12472,25 +12472,6 @@ void DataRecursiveIntBinOpEvaluator::process(EvalResult &Result) {
 }
 
 namespace {
-/// Used when we determine that we should fail, but can keep evaluating prior to
-/// noting that we had a failure.
-class DelayedNoteFailureRAII {
-  EvalInfo &Info;
-  bool NoteFailure;
-
-public:
-  DelayedNoteFailureRAII(EvalInfo &Info, bool NoteFailure = true)
-      : Info(Info), NoteFailure(NoteFailure) {}
-  ~DelayedNoteFailureRAII() {
-    if (NoteFailure) {
-      bool ContinueAfterFailure = Info.noteFailure();
-      (void)ContinueAfterFailure;
-      assert(ContinueAfterFailure &&
-             "Shouldn't have kept evaluating on failure.");
-    }
-  }
-};
-
 enum class CmpResult {
   Unequal,
   Less,
@@ -12858,12 +12839,14 @@ bool RecordExprEvaluator::VisitBinCmp(const BinaryOperator *E) {
 }
 
 bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
-  // We don't call noteFailure immediately because the assignment happens after
-  // we evaluate LHS and RHS.
-  if (!Info.keepEvaluatingAfterFailure() && E->isAssignmentOp())
-    return Error(E);
+  // We don't support assignment in C. C++ assignments don't get here because
+  // assignment is an lvalue in C++.
+  if (E->isAssignmentOp()) {
+    Error(E);
+    if (!Info.noteFailure())
+      return false;
+  }
 
-  DelayedNoteFailureRAII MaybeNoteFailureLater(Info, E->isAssignmentOp());
   if (DataRecursiveIntBinOpEvaluator::shouldEnqueue(E))
     return DataRecursiveIntBinOpEvaluator(*this, Result).Traverse(E);
 

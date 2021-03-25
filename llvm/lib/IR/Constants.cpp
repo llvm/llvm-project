@@ -419,6 +419,9 @@ Constant *Constant::getAllOnesValue(Type *Ty) {
 }
 
 Constant *Constant::getAggregateElement(unsigned Elt) const {
+  assert((getType()->isAggregateType() || getType()->isVectorTy()) &&
+         "Must be an aggregate/vector constant");
+
   if (const auto *CC = dyn_cast<ConstantAggregate>(this))
     return Elt < CC->getNumOperands() ? CC->getOperand(Elt) : nullptr;
 

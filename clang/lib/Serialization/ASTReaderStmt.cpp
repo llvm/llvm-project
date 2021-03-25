@@ -2588,6 +2588,11 @@ void ASTStmtReader::VisitOMPTargetTeamsDistributeSimdDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPInteropDirective(OMPInteropDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -3502,6 +3507,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
           Context, NumClauses, CollapsedNum, Empty);
       break;
     }
+
+    case STMT_OMP_INTEROP_DIRECTIVE:
+      S = OMPInteropDirective::CreateEmpty(
+          Context, Record[ASTStmtReader::NumStmtFields], Empty);
+      break;
 
     case EXPR_CXX_OPERATOR_CALL:
       S = CXXOperatorCallExpr::CreateEmpty(

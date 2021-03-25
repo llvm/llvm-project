@@ -17,43 +17,43 @@ v_permlanex16_b32 v0, lds_direct, s0, s0
 // NOGFX10: error: invalid operand for instruction
 
 v_ashrrev_i16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_ashrrev_i32 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_lshlrev_b16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_lshlrev_b32 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_lshrrev_b16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_lshrrev_b32 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_pk_ashrrev_i16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_pk_lshlrev_b16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_pk_lshrrev_b16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_subrev_co_ci_u32 v0, vcc_lo, src_lds_direct, v0, vcc_lo
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_subrev_co_u32 v0, s0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_subrev_f16 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_subrev_f32 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction
 
 v_subrev_nc_u32 v0, src_lds_direct, v0
-// NOGFX10: error: invalid use of lds_direct
+// NOGFX10: error: lds_direct cannot be used with this instruction

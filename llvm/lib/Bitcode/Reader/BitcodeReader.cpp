@@ -1526,6 +1526,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SwiftSelf;
   case bitc::ATTR_KIND_UW_TABLE:
     return Attribute::UWTable;
+  case bitc::ATTR_KIND_VSCALE_RANGE:
+    return Attribute::VScaleRange;
   case bitc::ATTR_KIND_WILLRETURN:
     return Attribute::WillReturn;
   case bitc::ATTR_KIND_WRITEONLY:
@@ -1638,6 +1640,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addDereferenceableOrNullAttr(Record[++i]);
           else if (Kind == Attribute::AllocSize)
             B.addAllocSizeAttrFromRawRepr(Record[++i]);
+          else if (Kind == Attribute::VScaleRange)
+            B.addVScaleRangeAttrFromRawRepr(Record[++i]);
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;

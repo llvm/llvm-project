@@ -5776,6 +5776,9 @@ def note_goto_ms_asm_label : Note<
 def warn_unused_label : Warning<"unused label %0">,
   InGroup<UnusedLabel>, DefaultIgnore;
 
+def err_continue_from_cond_var_init : Error<
+  "cannot jump from this continue statement to the loop increment; "
+  "jump bypasses initialization of loop condition variable">;
 def err_goto_into_protected_scope : Error<
   "cannot jump from this goto statement to its label">;
 def ext_goto_into_protected_scope : ExtWarn<
@@ -8383,6 +8386,9 @@ def note_change_calling_conv_fixit : Note<
 def warn_bad_function_cast : Warning<
   "cast from function call of type %0 to non-matching type %1">,
   InGroup<BadFunctionCast>, DefaultIgnore;
+def warn_cast_function_type : Warning<
+  "cast from %0 to %1 converts to incompatible function types">,
+  InGroup<CastFunctionType>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
   "pointer cannot be cast to type %0">;
 def err_cast_to_bfloat16 : Error<"cannot type-cast to __bf16">;
@@ -8603,6 +8609,15 @@ def warn_initializer_out_of_order : Warning<
   "%select{field|base class}0 %1 will be initialized after "
   "%select{field|base}2 %3">,
   InGroup<ReorderCtor>, DefaultIgnore;
+
+def warn_some_initializers_out_of_order : Warning<
+  "initializer order does not match the declaration order">,
+  InGroup<ReorderCtor>, DefaultIgnore;
+
+def note_initializer_out_of_order : Note<
+  "%select{field|base class}0 %1 will be initialized after "
+  "%select{field|base}2 %3">;
+
 def warn_abstract_vbase_init_ignored : Warning<
   "initializer for virtual base class %0 of abstract class %1 "
   "will never be used">,
@@ -10587,6 +10602,17 @@ def note_omp_protected_structured_block
     : Note<"jump bypasses OpenMP structured block">;
 def note_omp_exits_structured_block
     : Note<"jump exits scope of OpenMP structured block">;
+def err_omp_interop_variable_expected : Error<
+  "expected%select{| non-const}0 variable of type 'omp_interop_t'">;
+def err_omp_interop_variable_wrong_type : Error<
+  "interop variable must be of type 'omp_interop_t'">;
+def err_omp_interop_prefer_type : Error<
+  "prefer_list item must be a string literal or constant integral "
+  "expression">;
+def err_omp_interop_bad_depend_clause : Error<
+  "'depend' clause requires the 'targetsync' interop type">;
+def err_omp_interop_var_multiple_actions : Error<
+  "interop variable %0 used in multiple action clauses">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

@@ -187,12 +187,16 @@ enum class SecProfSummaryFlags : uint32_t {
   /// SecFlagPartial means the profile is for common/shared code.
   /// The common profile is usually merged from profiles collected
   /// from running other targets.
-  SecFlagPartial = (1 << 0)
+  SecFlagPartial = (1 << 0),
+  /// SecFlagContext means this is context-sensitive profile for
+  /// CSSPGO
+  SecFlagFullContext = (1 << 1)
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
   SecFlagInvalid = 0,
   SecFlagIsProbeBased = (1 << 0),
+  SecFlagHasAttribute = (1 << 1)
 };
 
 // Verify section specific flag is used for the correct section.
@@ -382,6 +386,13 @@ enum ContextStateMask {
   MergedContext = 0x8     // Profile for context merged into base profile
 };
 
+// Attribute of context associated with FunctionSamples
+enum ContextAttributeMask {
+  ContextNone = 0x0,
+  ContextWasInlined = 0x1,      // Leaf of context was inlined in previous build
+  ContextShouldBeInlined = 0x2, // Leaf of context should be inlined
+};
+
 // Sample context for FunctionSamples. It consists of the calling context,
 // the function name and context state. Internally sample context is represented
 // using StringRef, which is also the input for constructing a `SampleContext`.
@@ -393,9 +404,9 @@ enum ContextStateMask {
 //    `_Z8funcLeafi`
 class SampleContext {
 public:
-  SampleContext() : State(UnknownContext) {}
-  SampleContext(StringRef ContextStr,
-                ContextStateMask CState = UnknownContext) {
+  SampleContext() : State(UnknownContext), Attributes(ContextNone) {}
+  SampleContext(StringRef ContextStr, ContextStateMask CState = UnknownContext)
+      : Attributes(ContextNone) {
     setContext(ContextStr, CState);
   }
 
@@ -440,6 +451,10 @@ public:
   }
 
   operator StringRef() const { return FullContext; }
+  bool hasAttribute(ContextAttributeMask A) { return Attributes & (uint32_t)A; }
+  void setAttribute(ContextAttributeMask A) { Attributes |= (uint32_t)A; }
+  uint32_t getAllAttributes() { return Attributes; }
+  void setAllAttributes(uint32_t A) { Attributes = A; }
   bool hasState(ContextStateMask S) { return State & (uint32_t)S; }
   void setState(ContextStateMask S) { State |= (uint32_t)S; }
   void clearState(ContextStateMask S) { State &= (uint32_t)~S; }
@@ -500,6 +515,8 @@ private:
   StringRef CallingContext;
   // State of the associated sample profile
   uint32_t State;
+  // Attribute of the associated sample profile
+  uint32_t Attributes;
 };
 
 class FunctionSamples;
@@ -730,7 +747,7 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S, const Module *M,
+  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
                             const StringMap<Function *> &SymbolMap,
                             uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
@@ -753,7 +770,7 @@ public:
         }
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, M, SymbolMap, Threshold);
+        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold);
   }
 
   /// Set the name of the function.

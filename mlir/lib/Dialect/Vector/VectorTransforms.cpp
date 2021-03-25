@@ -2784,7 +2784,7 @@ struct TransferReadToVectorLoadLowering
       // If broadcasting is required and the number of loaded elements is 1 then
       // we can create `memref.load` instead of `vector.load`.
       loadOp = rewriter.create<memref::LoadOp>(read.getLoc(), read.source(),
-                                             read.indices());
+                                               read.indices());
     } else {
       // Otherwise create `vector.load`.
       loadOp = rewriter.create<vector::LoadOp>(read.getLoc(),
@@ -3263,60 +3263,60 @@ struct BubbleUpBitCastForStridedSliceInsert
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.
 void mlir::vector::populateVectorToVectorTransformationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<ShapeCastOpDecomposer, ShapeCastOpFolder, TupleGetFolderOp,
-                  TransferReadExtractPattern, TransferWriteInsertPattern>(
-      context);
+    RewritePatternSet &patterns) {
+  patterns.add<ShapeCastOpDecomposer, ShapeCastOpFolder, TupleGetFolderOp,
+               TransferReadExtractPattern, TransferWriteInsertPattern>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateSplitVectorTransferPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
+    RewritePatternSet &patterns,
     std::function<bool(Operation *)> ignoreFilter) {
-  patterns.insert<SplitTransferReadOp, SplitTransferWriteOp>(context,
-                                                             ignoreFilter);
+  patterns.add<SplitTransferReadOp, SplitTransferWriteOp>(patterns.getContext(),
+                                                          ignoreFilter);
 }
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<CastAwayExtractStridedSliceLeadingOneDim,
-                  CastAwayInsertStridedSliceLeadingOneDim,
-                  CastAwayTransferReadLeadingOneDim,
-                  CastAwayTransferWriteLeadingOneDim, ShapeCastOpFolder>(
-      context);
+    RewritePatternSet &patterns) {
+  patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
+               CastAwayInsertStridedSliceLeadingOneDim,
+               CastAwayTransferReadLeadingOneDim,
+               CastAwayTransferWriteLeadingOneDim, ShapeCastOpFolder>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateBubbleVectorBitCastOpPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<BubbleDownVectorBitCastForExtract,
-                  BubbleDownBitCastForStridedSliceExtract,
-                  BubbleUpBitCastForStridedSliceInsert>(context);
+    RewritePatternSet &patterns) {
+  patterns.add<BubbleDownVectorBitCastForExtract,
+               BubbleDownBitCastForStridedSliceExtract,
+               BubbleUpBitCastForStridedSliceInsert>(patterns.getContext());
 }
 
 void mlir::vector::populateVectorSlicesLoweringPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<ExtractSlicesOpLowering, InsertSlicesOpLowering>(context);
+    RewritePatternSet &patterns) {
+  patterns.add<ExtractSlicesOpLowering, InsertSlicesOpLowering>(
+      patterns.getContext());
 }
 
 void mlir::vector::populateVectorContractLoweringPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context,
-    VectorTransformsOptions parameters) {
+    RewritePatternSet &patterns, VectorTransformsOptions parameters) {
   // clang-format off
-  patterns.insert<BroadcastOpLowering,
+  patterns.add<BroadcastOpLowering,
                   CreateMaskOpLowering,
                   ConstantMaskOpLowering,
                   OuterProductOpLowering,
                   ShapeCastOp2DDownCastRewritePattern,
                   ShapeCastOp2DUpCastRewritePattern,
-                  ShapeCastOpRewritePattern>(context);
-  patterns.insert<TransposeOpLowering,
+                  ShapeCastOpRewritePattern>(patterns.getContext());
+  patterns.add<TransposeOpLowering,
                   ContractionOpLowering,
                   ContractionOpToMatmulOpLowering,
-                  ContractionOpToOuterProductOpLowering>(parameters, context);
+                  ContractionOpToOuterProductOpLowering>(parameters, patterns.getContext());
   // clang-format on
 }
 
 void mlir::vector::populateVectorTransferLoweringPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<TransferReadToVectorLoadLowering,
-                  TransferWriteToVectorStoreLowering>(context);
+    RewritePatternSet &patterns) {
+  patterns.add<TransferReadToVectorLoadLowering,
+               TransferWriteToVectorStoreLowering>(patterns.getContext());
 }

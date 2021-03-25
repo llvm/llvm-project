@@ -37,8 +37,10 @@ namespace {
 class GreedyPatternRewriteDriver : public PatternRewriter {
 public:
   explicit GreedyPatternRewriteDriver(MLIRContext *ctx,
-                                      const FrozenRewritePatternList &patterns)
-      : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
+                                      const FrozenRewritePatternSet &patterns,
+                                      bool useTopDownTraversal)
+      : PatternRewriter(ctx), matcher(patterns), folder(ctx),
+        useTopDownTraversal(useTopDownTraversal) {
     worklist.reserve(64);
 
     // Apply a simple cost model based solely on pattern benefit.
@@ -107,14 +109,15 @@ private:
   // be re-added to the worklist. This function should be called when an
   // operation is modified or removed, as it may trigger further
   // simplifications.
-  template <typename Operands> void addToWorklist(Operands &&operands) {
+  template <typename Operands>
+  void addToWorklist(Operands &&operands) {
     for (Value operand : operands) {
       // If the use count of this operand is now < 2, we re-add the defining
       // operation to the worklist.
       // TODO: This is based on the fact that zero use operations
       // may be deleted, and that single use values often have more
       // canonicalization opportunities.
-      if (!operand.use_empty() && !operand.hasOneUse())
+      if (!operand || (!operand.use_empty() && !operand.hasOneUse()))
         continue;
       if (auto *defInst = operand.getDefiningOp())
         addToWorklist(defInst);
@@ -133,6 +136,9 @@ private:
 
   /// Non-pattern based folder for operations.
   OperationFolder folder;
+
+  // Whether to use top-down or bottom-up traversal order.
+  bool useTopDownTraversal;
 };
 } // end anonymous namespace
 
@@ -140,15 +146,31 @@ private:
 /// if the rewrite converges in `maxIterations`.
 bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
                                           int maxIterations) {
-  // Add the given operation to the worklist.
-  auto collectOps = [this](Operation *op) { addToWorklist(op); };
+  // Perform a prepass over the IR to discover constants.
+  for (auto &region : regions)
+    folder.processExistingConstants(region);
 
   bool changed = false;
-  int i = 0;
+  int iteration = 0;
   do {
-    // Add all nested operations to the worklist.
+    worklist.clear();
+    worklistMap.clear();
+
+    // Add all nested operations to the worklist in preorder.
     for (auto &region : regions)
-      region.walk(collectOps);
+      if (useTopDownTraversal)
+        region.walk<WalkOrder::PreOrder>(
+            [this](Operation *op) { worklist.push_back(op); });
+      else
+        region.walk([this](Operation *op) { addToWorklist(op); });
+
+    if (useTopDownTraversal) {
+      // Reverse the list so our pop-back loop processes them in-order.
+      std::reverse(worklist.begin(), worklist.end());
+      // Remember the reverse index.
+      for (unsigned i = 0, e = worklist.size(); i != e; ++i)
+        worklistMap[worklist[i]] = i;
+    }
 
     // These are scratch vectors used in the folding loop below.
     SmallVector<Value, 8> originalOperands, resultValues;
@@ -186,6 +208,9 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
         notifyOperationRemoved(op);
       };
 
+      // Add the given operation to the worklist.
+      auto collectOps = [this](Operation *op) { addToWorklist(op); };
+
       // Try to fold this op.
       bool inPlaceUpdate;
       if ((succeeded(folder.tryToFold(op, collectOps, preReplaceAction,
@@ -202,11 +227,9 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 
     // After applying patterns, make sure that the CFG of each of the regions is
     // kept up to date.
-    if (succeeded(simplifyRegions(regions))) {
-      folder.clear();
-      changed = true;
-    }
-  } while (changed && ++i < maxIterations);
+    changed |= succeeded(simplifyRegions(*this, regions));
+  } while (changed && ++iteration < maxIterations);
+
   // Whether the rewrite converges, i.e. wasn't changed in the last iteration.
   return !changed;
 }
@@ -219,27 +242,28 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
 ///
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(Operation *op,
-                                   const FrozenRewritePatternList &patterns) {
-  return applyPatternsAndFoldGreedily(op, patterns, maxPatternMatchIterations);
+                                   const FrozenRewritePatternSet &patterns,
+                                   bool useTopDownTraversal) {
+  return applyPatternsAndFoldGreedily(op, patterns, maxPatternMatchIterations,
+                                      useTopDownTraversal);
 }
-LogicalResult
-mlir::applyPatternsAndFoldGreedily(Operation *op,
-                                   const FrozenRewritePatternList &patterns,
-                                   unsigned maxIterations) {
-  return applyPatternsAndFoldGreedily(op->getRegions(), patterns,
-                                      maxIterations);
+LogicalResult mlir::applyPatternsAndFoldGreedily(
+    Operation *op, const FrozenRewritePatternSet &patterns,
+    unsigned maxIterations, bool useTopDownTraversal) {
+  return applyPatternsAndFoldGreedily(op->getRegions(), patterns, maxIterations,
+                                      useTopDownTraversal);
 }
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                                   const FrozenRewritePatternList &patterns) {
-  return applyPatternsAndFoldGreedily(regions, patterns,
-                                      maxPatternMatchIterations);
+                                   const FrozenRewritePatternSet &patterns,
+                                   bool useTopDownTraversal) {
+  return applyPatternsAndFoldGreedily(
+      regions, patterns, maxPatternMatchIterations, useTopDownTraversal);
 }
-LogicalResult
-mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                                   const FrozenRewritePatternList &patterns,
-                                   unsigned maxIterations) {
+LogicalResult mlir::applyPatternsAndFoldGreedily(
+    MutableArrayRef<Region> regions, const FrozenRewritePatternSet &patterns,
+    unsigned maxIterations, bool useTopDownTraversal) {
   if (regions.empty())
     return success();
 
@@ -254,7 +278,8 @@ mlir::applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
          "patterns can only be applied to operations IsolatedFromAbove");
 
   // Start the pattern driver.
-  GreedyPatternRewriteDriver driver(regions[0].getContext(), patterns);
+  GreedyPatternRewriteDriver driver(regions[0].getContext(), patterns,
+                                    useTopDownTraversal);
   bool converged = driver.simplify(regions, maxIterations);
   LLVM_DEBUG(if (!converged) {
     llvm::dbgs() << "The pattern rewrite doesn't converge after scanning "
@@ -273,7 +298,7 @@ namespace {
 class OpPatternRewriteDriver : public PatternRewriter {
 public:
   explicit OpPatternRewriteDriver(MLIRContext *ctx,
-                                  const FrozenRewritePatternList &patterns)
+                                  const FrozenRewritePatternSet &patterns)
       : PatternRewriter(ctx), matcher(patterns), folder(ctx) {
     // Apply a simple cost model based solely on pattern benefit.
     matcher.applyDefaultCostModel();
@@ -357,7 +382,7 @@ LogicalResult OpPatternRewriteDriver::simplifyLocally(Operation *op,
 /// folding. `erased` is set to true if the op is erased as a result of being
 /// folded, replaced, or dead.
 LogicalResult mlir::applyOpPatternsAndFold(
-    Operation *op, const FrozenRewritePatternList &patterns, bool *erased) {
+    Operation *op, const FrozenRewritePatternSet &patterns, bool *erased) {
   // Start the pattern driver.
   OpPatternRewriteDriver driver(op->getContext(), patterns);
   bool opErased;

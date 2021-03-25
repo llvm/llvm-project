@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTStructuralEquivalence.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallVector.h"
 #include <set>
 using namespace clang;
@@ -1035,6 +1036,90 @@ static void DiagnoseReinterpretUpDownCast(Sema &Self, const Expr *SrcExpr,
     << FixItHint::CreateReplacement(BeginLoc, "static_cast");
 }
 
+static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
+                                   ASTContext &Context) {
+  if (SrcType->isPointerType() && DestType->isPointerType())
+    return true;
+
+  // Allow integral type mismatch if their size are equal.
+  if (SrcType->isIntegralType(Context) && DestType->isIntegralType(Context))
+    if (Context.getTypeInfoInChars(SrcType).Width ==
+        Context.getTypeInfoInChars(DestType).Width)
+      return true;
+
+  return Context.hasSameUnqualifiedType(SrcType, DestType);
+}
+
+static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
+                                  QualType DestType) {
+  if (Self.Diags.isIgnored(diag::warn_cast_function_type,
+                           SrcExpr.get()->getExprLoc()))
+    return true;
+
+  QualType SrcType = SrcExpr.get()->getType();
+  const FunctionType *SrcFTy = nullptr;
+  const FunctionType *DstFTy = nullptr;
+  if (((SrcType->isBlockPointerType() || SrcType->isFunctionPointerType()) &&
+       DestType->isFunctionPointerType()) ||
+      (SrcType->isMemberFunctionPointerType() &&
+       DestType->isMemberFunctionPointerType())) {
+    SrcFTy = SrcType->getPointeeType()->castAs<FunctionType>();
+    DstFTy = DestType->getPointeeType()->castAs<FunctionType>();
+  } else if (SrcType->isFunctionType() && DestType->isFunctionReferenceType()) {
+    SrcFTy = SrcType->castAs<FunctionType>();
+    DstFTy = DestType.getNonReferenceType()->castAs<FunctionType>();
+  } else {
+    return true;
+  }
+  assert(SrcFTy && DstFTy);
+
+  auto IsVoidVoid = [](const FunctionType *T) {
+    if (!T->getReturnType()->isVoidType())
+      return false;
+    if (const auto *PT = T->getAs<FunctionProtoType>())
+      return !PT->isVariadic() && PT->getNumParams() == 0;
+    return false;
+  };
+
+  // Skip if either function type is void(*)(void)
+  if (IsVoidVoid(SrcFTy) || IsVoidVoid(DstFTy))
+    return true;
+
+  // Check return type.
+  if (!argTypeIsABIEquivalent(SrcFTy->getReturnType(), DstFTy->getReturnType(),
+                              Self.Context))
+    return false;
+
+  // Check if either has unspecified number of parameters
+  if (SrcFTy->isFunctionNoProtoType() || DstFTy->isFunctionNoProtoType())
+    return true;
+
+  // Check parameter types.
+
+  const auto *SrcFPTy = cast<FunctionProtoType>(SrcFTy);
+  const auto *DstFPTy = cast<FunctionProtoType>(DstFTy);
+
+  // In a cast involving function types with a variable argument list only the
+  // types of initial arguments that are provided are considered.
+  unsigned NumParams = SrcFPTy->getNumParams();
+  unsigned DstNumParams = DstFPTy->getNumParams();
+  if (NumParams > DstNumParams) {
+    if (!DstFPTy->isVariadic())
+      return false;
+    NumParams = DstNumParams;
+  } else if (NumParams < DstNumParams) {
+    if (!SrcFPTy->isVariadic())
+      return false;
+  }
+
+  for (unsigned i = 0; i < NumParams; ++i)
+    if (!argTypeIsABIEquivalent(SrcFPTy->getParamType(i),
+                                DstFPTy->getParamType(i), Self.Context))
+      return false;
+
+  return true;
+}
+
 /// CheckReinterpretCast - Check that a reinterpret_cast\<DestType\>(SrcExpr) is
 /// valid.
 /// Refer to C++ 5.2.10 for details. reinterpret_cast is typically used in code
@@ -1072,6 +1157,10 @@ void CastOperation::CheckReinterpretCast() {
     if (Self.getLangOpts().allowsNonTrivialObjCLifetimeQualifiers())
       checkObjCConversion(Sema::CCK_OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
+
+    if (!checkCastFunctionType(Self, SrcExpr, DestType))
+      Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
+          << SrcExpr.get()->getType() << DestType << OpRange;
   } else {
     SrcExpr = ExprError();
   }
@@ -2645,6 +2734,11 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   if (isValidCast(tcr)) {
     if (Kind == CK_BitCast)
       checkCastAlign();
+
+    if (!checkCastFunctionType(Self, SrcExpr, DestType))
+      Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
+          << SrcExpr.get()->getType() << DestType << OpRange;
+
   } else {
     SrcExpr = ExprError();
   }
@@ -2956,6 +3050,10 @@ void CastOperation::CheckCStyleCast() {
       return;
     }
   }
+
+  if (!checkCastFunctionType(Self, SrcExpr, DestType))
+    Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
+        << SrcType << DestType << OpRange;
 
   DiagnoseCastOfObjCSEL(Self, SrcExpr, DestType);
   DiagnoseCallingConvCast(Self, SrcExpr, DestType, OpRange);

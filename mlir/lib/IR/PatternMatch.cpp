@@ -29,23 +29,49 @@ unsigned short PatternBenefit::getBenefit() const {
 // Pattern
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// OperationName Root Constructors
+
 Pattern::Pattern(StringRef rootName, PatternBenefit benefit,
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(OperationName(rootName, context).getAsOpaquePointer(),
+              RootKind::OperationName, generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchAnyOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchAnyOpTypeTag tag, PatternBenefit benefit,
+                 MLIRContext *context, ArrayRef<StringRef> generatedNames)
+    : Pattern(nullptr, RootKind::Any, generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchInterfaceOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchInterfaceOpTypeTag tag, TypeID interfaceID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(interfaceID.getAsOpaquePointer(), RootKind::InterfaceID,
+              generatedNames, benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// MatchTraitOpTypeTag Root Constructors
+
+Pattern::Pattern(MatchTraitOpTypeTag tag, TypeID traitID,
+                 PatternBenefit benefit, MLIRContext *context,
+                 ArrayRef<StringRef> generatedNames)
+    : Pattern(traitID.getAsOpaquePointer(), RootKind::TraitID, generatedNames,
+              benefit, context) {}
+
+//===----------------------------------------------------------------------===//
+// General Constructors
+
+Pattern::Pattern(const void *rootValue, RootKind rootKind,
+                 ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
                  MLIRContext *context)
-    : rootKind(OperationName(rootName, context)), benefit(benefit) {}
-Pattern::Pattern(PatternBenefit benefit, MatchAnyOpTypeTag tag)
-    : benefit(benefit) {}
-Pattern::Pattern(StringRef rootName, ArrayRef<StringRef> generatedNames,
-                 PatternBenefit benefit, MLIRContext *context)
-    : Pattern(rootName, benefit, context) {
-  generatedOps.reserve(generatedNames.size());
-  std::transform(generatedNames.begin(), generatedNames.end(),
-                 std::back_inserter(generatedOps), [context](StringRef name) {
-                   return OperationName(name, context);
-                 });
-}
-Pattern::Pattern(ArrayRef<StringRef> generatedNames, PatternBenefit benefit,
-                 MLIRContext *context, MatchAnyOpTypeTag tag)
-    : Pattern(benefit, tag) {
+    : rootValue(rootValue), rootKind(rootKind), benefit(benefit),
+      contextAndHasBoundedRecursion(context, false) {
+  if (generatedNames.empty())
+    return;
   generatedOps.reserve(generatedNames.size());
   std::transform(generatedNames.begin(), generatedNames.end(),
                  std::back_inserter(generatedOps), [context](StringRef name) {
@@ -73,22 +99,31 @@ void RewritePattern::anchor() {}
 // PDLValue
 //===----------------------------------------------------------------------===//
 
-void PDLValue::print(raw_ostream &os) {
-  if (!impl) {
-    os << "<Null-PDLValue>";
+void PDLValue::print(raw_ostream &os) const {
+  if (!value) {
+    os << "<NULL-PDLValue>";
     return;
   }
-  if (Value val = impl.dyn_cast<Value>()) {
-    os << val;
-    return;
+  switch (kind) {
+  case Kind::Attribute:
+    os << cast<Attribute>();
+    break;
+  case Kind::Operation:
+    os << *cast<Operation *>();
+    break;
+  case Kind::Type:
+    os << cast<Type>();
+    break;
+  case Kind::TypeRange:
+    llvm::interleaveComma(cast<TypeRange>(), os);
+    break;
+  case Kind::Value:
+    os << cast<Value>();
+    break;
+  case Kind::ValueRange:
+    llvm::interleaveComma(cast<ValueRange>(), os);
+    break;
   }
-  AttrOpTypeImplT aotImpl = impl.get<AttrOpTypeImplT>();
-  if (Attribute attr = aotImpl.dyn_cast<Attribute>())
-    os << attr;
-  else if (Operation *op = aotImpl.dyn_cast<Operation *>())
-    os << *op;
-  else
-    os << aotImpl.get<Type>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -102,7 +137,6 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   // Steal the other state if we have no patterns.
   if (!pdlModule) {
     constraintFunctions = std::move(other.constraintFunctions);
-    createFunctions = std::move(other.createFunctions);
     rewriteFunctions = std::move(other.rewriteFunctions);
     pdlModule = std::move(other.pdlModule);
     return;
@@ -110,8 +144,6 @@ void PDLPatternModule::mergeIn(PDLPatternModule &&other) {
   // Steal the functions of the other module.
   for (auto &it : constraintFunctions)
     registerConstraintFunction(it.first(), std::move(it.second));
-  for (auto &it : createFunctions)
-    registerCreateFunction(it.first(), std::move(it.second));
   for (auto &it : rewriteFunctions)
     registerRewriteFunction(it.first(), std::move(it.second));
 
@@ -132,13 +164,7 @@ void PDLPatternModule::registerConstraintFunction(
   assert(it.second &&
          "constraint with the given name has already been registered");
 }
-void PDLPatternModule::registerCreateFunction(StringRef name,
-                                              PDLCreateFunction createFn) {
-  auto it = createFunctions.try_emplace(name, std::move(createFn));
-  (void)it;
-  assert(it.second && "native create function with the given name has "
-                      "already been registered");
-}
+
 void PDLPatternModule::registerRewriteFunction(StringRef name,
                                                PDLRewriteFunction rewriteFn) {
   auto it = rewriteFunctions.try_emplace(name, std::move(rewriteFn));

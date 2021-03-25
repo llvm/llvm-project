@@ -11,7 +11,9 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
+#include <memory>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -65,31 +67,7 @@ public:
       : BinarySampleCounters(Counters){};
 
 public:
-  void generateProfile() override {
-    for (const auto &BI : BinarySampleCounters) {
-      ProfiledBinary *Binary = BI.first;
-      for (const auto &CI : BI.second) {
-        const StringBasedCtxKey *CtxKey =
-            dyn_cast<StringBasedCtxKey>(CI.first.getPtr());
-        StringRef ContextId(CtxKey->Context);
-        // Get or create function profile for the range
-        FunctionSamples &FunctionProfile =
-            getFunctionProfileForContext(ContextId);
-
-        // Fill in function body samples
-        populateFunctionBodySamples(FunctionProfile, CI.second.RangeCounter,
-                                    Binary);
-        // Fill in boundary sample counts as well as call site samples for calls
-        populateFunctionBoundarySamples(ContextId, FunctionProfile,
-                                        CI.second.BranchCounter, Binary);
-      }
-    }
-    // Fill in call site value sample for inlined calls and also use context to
-    // infer missing samples. Since we don't have call count for inlined
-    // functions, we estimate it from inlinee's profile using the entry of the
-    // body sample.
-    populateInferredFunctionSamples();
-  }
+  void generateProfile() override;
 
   // Remove adjacent repeated context sequences up to a given sequence length,
   // -1 means no size limit. Note that repeated sequences are identified based
@@ -198,10 +176,12 @@ public:
 
 protected:
   // Lookup or create FunctionSamples for the context
-  FunctionSamples &getFunctionProfileForContext(StringRef ContextId);
+  FunctionSamples &getFunctionProfileForContext(StringRef ContextId,
+                                                bool WasLeafInlined = false);
   // Merge cold context profile whose total sample is below threshold
   // into base profile.
   void mergeAndTrimColdProfile(StringMap<FunctionSamples> &ProfileMap);
+  void computeSummaryAndThreshold();
   void write(std::unique_ptr<SampleProfileWriter> Writer,
              StringMap<FunctionSamples> &ProfileMap) override;
 
@@ -219,6 +199,9 @@ private:
                                        const BranchSample &BranchCounters,
                                        ProfiledBinary *Binary);
   void populateInferredFunctionSamples();
+
+  // Profile summary to answer isHotCount and isColdCount queries.
+  std::unique_ptr<ProfileSummaryInfo> PSI;
 
 public:
   // Deduplicate adjacent repeated context sequences up to a given sequence
@@ -253,7 +236,8 @@ private:
   // Helper function to get FunctionSamples for the leaf inlined context
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,
-                                 const PseudoProbeFuncDesc *LeafFuncDesc);
+                                 const PseudoProbeFuncDesc *LeafFuncDesc,
+                                 bool WasLeafInlined);
   // Helper function to get FunctionSamples for the leaf probe
   FunctionSamples &
   getFunctionProfileForLeafProbe(SmallVectorImpl<std::string> &ContextStrStack,

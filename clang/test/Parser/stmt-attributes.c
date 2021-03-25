@@ -40,7 +40,7 @@ void foo(int i) {
 
   __attribute__((unused)) switch (i) {         // expected-error {{'unused' attribute cannot be applied to a statement}}
   __attribute__((uuid)) case 0:                // expected-warning {{unknown attribute 'uuid' ignored}}
-  __attribute__((visibility)) default:         // expected-error {{'visibility' attribute cannot be applied to a statement}}
+  __attribute__((visibility(""))) default:         // expected-error {{'visibility' attribute cannot be applied to a statement}}
     __attribute__((carries_dependency)) break; // expected-error {{'carries_dependency' attribute cannot be applied to a statement}}
   }
 

@@ -394,9 +394,6 @@ def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>
 } // End Defs = [EXEC,SCC]
 } // End Uses = [EXEC]
 
-// FIXME: temporarily support old version of live mask intrinsic:
-def : GCNPat<(int_amdgcn_wqm_helper), (SI_LIVE_MASK)>;
-
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
   "; divergent unreachable"> {
@@ -484,7 +481,7 @@ def SI_CALL : SPseudoInstSI <
 
 // Tail call handling pseudo
 def SI_TCRETURN : SPseudoInstSI <(outs),
-  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff),
+  (ins SReg_64:$src0, unknown:$callee, i32imm:$fpdiff),
   [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let isCall = 1;
@@ -2665,7 +2662,8 @@ def : FPMed3Pat<f32, V_MED3_F32_e64>;
 class
 IntMinMaxPat<Instruction minmaxInst, SDPatternOperator min_or_max,
              SDPatternOperator max_or_min_oneuse> : AMDGPUPat <
-  (min_or_max (max_or_min_oneuse i32:$src0, i32:$src1), i32:$src2),
+  (DivergentBinFrag<min_or_max> (max_or_min_oneuse i32:$src0, i32:$src1),
+                                i32:$src2),
   (minmaxInst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
 >;
 

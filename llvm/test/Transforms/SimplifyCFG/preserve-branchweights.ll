@@ -8,7 +8,7 @@ define void @test1(i1 %a, i1 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A_NOT]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A_NOT]], i1 [[C]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !0
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -40,7 +40,7 @@ define void @fake_weights(i1 %a, i1 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A_NOT]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A_NOT]], i1 [[C]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -68,7 +68,7 @@ define void @test2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A:%.*]], i1 [[C]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !2
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -97,7 +97,7 @@ define void @test3(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A:%.*]], i1 [[C]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -126,7 +126,7 @@ define void @test4(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A:%.*]], i1 [[C]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -257,7 +257,7 @@ define void @test1_swap(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1_swap(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[A:%.*]], i1 true, i1 [[C]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[Y:%.*]], label [[Z:%.*]], !prof !5
 ; CHECK:       Y:
 ; CHECK-NEXT:    call void @helper(i32 0)
@@ -318,10 +318,10 @@ define void @test8(i64 %x, i64 %y) nounwind {
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[LT]], label [[A:%.*]], label [[B:%.*]], !prof !7
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1:#.*]]
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       b:
-; CHECK-NEXT:    call void @helper(i32 1) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 1) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -355,14 +355,14 @@ define i1 @test9(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    i32 92, label [[END]]
 ; CHECK-NEXT:    ], !prof !8
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1]]
 ; CHECK-NEXT:    [[RETA:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[RETA]]
 ; CHECK:       bees:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[BEES]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
-; CHECK-NEXT:    call void @helper(i32 2) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 2) #[[ATTR1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
@@ -394,10 +394,10 @@ define void @test10(i32 %x) nounwind readnone ssp noredzone {
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]], !prof !9
 ; CHECK:       lor.rhs:
-; CHECK-NEXT:    call void @helper(i32 1) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 1) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       lor.end:
-; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -424,10 +424,10 @@ define void @test11(i32 %x) nounwind {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], 24
 ; CHECK-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[A:%.*]], !prof !10
 ; CHECK:       a:
-; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       c:
-; CHECK-NEXT:    call void @helper(i32 2) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 2) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %i = shl i32 %x, 1
@@ -472,7 +472,7 @@ sw.epilog:
 define void @test13(i32 %x) nounwind {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @helper(i32 0) [[ATTR1]]
+; CHECK-NEXT:    call void @helper(i32 0) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -507,7 +507,7 @@ define void @test14(i32* %old, i32 %final) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[BIT_0]], 0
 ; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* @max_regno, align 4
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[I_1]], [[V3]]
-; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[CMP4]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL]], i1 true, i1 [[CMP4]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_EXIT:%.*]], label [[FOR_INC]], !prof !11
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[SHL]] = shl i32 [[BIT_0]], 1
@@ -636,6 +636,422 @@ exit:
   ret i32 %outval
 }
 
+; Merging the icmps with logic-op defeats the purpose of the metadata.
+; We can't tell which condition is expensive if they are combined.
+
+define void @or_icmps_harmful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_harmful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[EXPECTED_TRUE]], label [[EXIT:%.*]], label [[RARE:%.*]], !prof !19
+; CHECK:       rare:
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[EXIT]], label [[FALSE:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !15
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Merging the icmps with logic-op defeats the purpose of the metadata.
+; We can't tell which condition is expensive if they are combined.
+
+define void @or_icmps_harmful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_harmful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[EXPECTED_FALSE]], label [[RARE:%.*]], label [[EXIT:%.*]], !prof !20
+; CHECK:       rare:
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[EXIT]], label [[FALSE:%.*]]
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_false = icmp sgt i32 %x, -1
+  br i1 %expected_false, label %rare, label %exit, !prof !16
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The probability threshold is determined by a TTI setting.
+; In this example, we are just short of strongly expected, so speculate.
+
+define void @or_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_not_that_harmful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !21
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !17
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The probability threshold is determined by a TTI setting.
+; In this example, we are just short of strongly expected, so speculate.
+
+define void @or_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_not_that_harmful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !22
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !18
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The 1st cmp is probably true, so speculating the 2nd is probably a win.
+
+define void @or_icmps_useful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_useful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !23
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %likely, label %exit, !prof !15
+
+likely:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The 1st cmp is probably false, so speculating the 2nd is probably a win.
+
+define void @or_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_useful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[FALSE:%.*]], !prof !23
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_false = icmp sgt i32 %x, -1
+  br i1 %expected_false, label %exit, label %likely, !prof !16
+
+likely:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %false
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Don't crash processing degenerate metadata.
+
+define void @or_icmps_empty_metadata(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @or_icmps_empty_metadata(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 true, i1 [[EXPENSIVE]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[EXIT:%.*]], label [[MORE_RARE:%.*]]
+; CHECK:       more_rare:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !19
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %exit, label %more_rare
+
+more_rare:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Merging the icmps with logic-op defeats the purpose of the metadata.
+; We can't tell which condition is expensive if they are combined.
+
+define void @and_icmps_harmful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_harmful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[EXPECTED_FALSE]], label [[RARE:%.*]], label [[EXIT:%.*]], !prof !20
+; CHECK:       rare:
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[FALSE:%.*]], label [[EXIT]]
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_false = icmp sgt i32 %x, -1
+  br i1 %expected_false, label %rare, label %exit, !prof !16
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; Merging the icmps with logic-op defeats the purpose of the metadata.
+; We can't tell which condition is expensive if they are combined.
+
+define void @and_icmps_harmful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_harmful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    br i1 [[EXPECTED_TRUE]], label [[EXIT:%.*]], label [[RARE:%.*]], !prof !19
+; CHECK:       rare:
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    br i1 [[EXPENSIVE]], label [[FALSE:%.*]], label [[EXIT]]
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !15
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The probability threshold is determined by a TTI setting.
+; In this example, we are just short of strongly expected, so speculate.
+
+define void @and_icmps_not_that_harmful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_not_that_harmful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 [[EXPENSIVE]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !24
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_false = icmp sgt i32 %x, -1
+  br i1 %expected_false, label %rare, label %exit, !prof !18
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The probability threshold is determined by a TTI setting.
+; In this example, we are just short of strongly expected, so speculate.
+
+define void @and_icmps_not_that_harmful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_not_that_harmful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sle i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 [[EXPENSIVE]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !24
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %exit, label %rare, !prof !17
+
+rare:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The 1st cmp is probably true, so speculating the 2nd is probably a win.
+
+define void @and_icmps_useful(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_useful(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_TRUE:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_TRUE]], i1 [[EXPENSIVE]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !25
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_true = icmp sgt i32 %x, -1
+  br i1 %expected_true, label %likely, label %exit, !prof !15
+
+likely:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+; The 1st cmp is probably false, so speculating the 2nd is probably a win.
+
+define void @and_icmps_useful_inverted(i32 %x, i32 %y, i8* %p) {
+; CHECK-LABEL: @and_icmps_useful_inverted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[EXPECTED_FALSE:%.*]] = icmp sle i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[EXPENSIVE:%.*]] = icmp eq i32 [[Y:%.*]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[EXPECTED_FALSE]], i1 [[EXPENSIVE]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FALSE:%.*]], label [[EXIT:%.*]], !prof !25
+; CHECK:       false:
+; CHECK-NEXT:    store i8 42, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %expected_false = icmp sgt i32 %x, -1
+  br i1 %expected_false, label %exit, label %likely, !prof !16
+
+likely:
+  %expensive = icmp eq i32 %y, 0
+  br i1 %expensive, label %false, label %exit
+
+false:
+  store i8 42, i8* %p, align 1
+  br label %exit
+
+exit:
+  ret void
+}
+
+
 !0 = !{!"branch_weights", i32 3, i32 5}
 !1 = !{!"branch_weights", i32 1, i32 1}
 !2 = !{!"branch_weights", i32 1, i32 2}
@@ -651,6 +1067,11 @@ exit:
 !12 = !{!"these_are_not_the_branch_weights_you_are_looking_for", i32 3, i32 5}
 !13 = !{!"branch_weights", i32 2, i32 3}
 !14 = !{!"branch_weights", i32 4, i32 7}
+!15 = !{!"branch_weights", i32 99, i32 1}
+!16 = !{!"branch_weights", i32 1, i32 99}
+!17 = !{!"branch_weights", i32 98, i32 1}
+!18 = !{!"branch_weights", i32 1, i32 98}
+!19 = !{!"branch_weights", i32 0, i32 0}
 
 ; CHECK: !0 = !{!"branch_weights", i32 5, i32 11}
 ; CHECK: !1 = !{!"branch_weights", i32 1, i32 3}

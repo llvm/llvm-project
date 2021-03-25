@@ -113,17 +113,36 @@ LogicalResult OperationVerifier::verifyRegion(Region &region) {
   return success();
 }
 
+/// Returns true if this block may be valid without terminator. That is if:
+/// - it does not have a parent region.
+/// - Or the parent region have a single block and:
+///    - This region does not have a parent op.
+///    - Or the parent op is unregistered.
+///    - Or the parent op has the NoTerminator trait.
+static bool mayNotHaveTerminator(Block *block) {
+  if (!block->getParent())
+    return true;
+  if (!llvm::hasSingleElement(*block->getParent()))
+    return false;
+  Operation *op = block->getParentOp();
+  return !op || op->mightHaveTrait<OpTrait::NoTerminator>();
+}
+
 LogicalResult OperationVerifier::verifyBlock(Block &block) {
   for (auto arg : block.getArguments())
     if (arg.getOwner() != &block)
       return emitError(block, "block argument not owned by block");
 
   // Verify that this block has a terminator.
-  if (block.empty())
-    return emitError(block, "block with no terminator");
+
+  if (block.empty()) {
+    if (mayNotHaveTerminator(&block))
+      return success();
+    return emitError(block, "empty block: expect at least a terminator");
+  }
 
   // Verify the non-terminator operations separately so that we can verify
-  // they has no successors.
+  // they have no successors.
   for (auto &op : llvm::make_range(block.begin(), std::prev(block.end()))) {
     if (op.getNumSuccessors() != 0)
       return op.emitError(
@@ -137,8 +156,13 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
   Operation &terminator = block.back();
   if (failed(verifyOperation(terminator)))
     return failure();
+
+  if (mayNotHaveTerminator(&block))
+    return success();
+
   if (!terminator.mightHaveTrait<OpTrait::IsTerminator>())
-    return block.back().emitError("block with no terminator");
+    return block.back().emitError("block with no terminator, has ")
+           << terminator;
 
   // Verify that this block is not branching to a block of a different
   // region.
@@ -176,13 +200,14 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   unsigned numRegions = op.getNumRegions();
   for (unsigned i = 0; i < numRegions; i++) {
     Region &region = op.getRegion(i);
+    RegionKind kind =
+        kindInterface ? kindInterface.getRegionKind(i) : RegionKind::SSACFG;
     // Check that Graph Regions only have a single basic block. This is
     // similar to the code in SingleBlockImplicitTerminator, but doesn't
     // require the trait to be specified. This arbitrary limitation is
     // designed to limit the number of cases that have to be handled by
     // transforms and conversions until the concept stabilizes.
-    if (op.isRegistered() && kindInterface &&
-        kindInterface.getRegionKind(i) == RegionKind::Graph) {
+    if (op.isRegistered() && kind == RegionKind::Graph) {
       // Empty regions are fine.
       if (region.empty())
         continue;

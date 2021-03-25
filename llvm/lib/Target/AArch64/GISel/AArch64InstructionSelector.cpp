@@ -2305,6 +2305,30 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   MachineIRBuilder MIB(I);
 
   switch (Opcode) {
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX: {
+    static const unsigned OpcTable[2][2] = {
+        {AArch64::UBFMWri, AArch64::UBFMXri},
+        {AArch64::SBFMWri, AArch64::SBFMXri}};
+    bool IsSigned = Opcode == TargetOpcode::G_SBFX;
+    unsigned Size = Ty.getSizeInBits();
+    unsigned Opc = OpcTable[IsSigned][Size == 64];
+    auto Cst1 =
+        getConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI);
+    assert(Cst1 && "Should have gotten a constant for src 1?");
+    auto Cst2 =
+        getConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI);
+    assert(Cst2 && "Should have gotten a constant for src 2?");
+    auto LSB = Cst1->Value.getZExtValue();
+    auto Width = Cst2->Value.getZExtValue();
+    MachineIRBuilder MIB(I);
+    auto BitfieldInst =
+        MIB.buildInstr(Opc, {I.getOperand(0)}, {I.getOperand(1)})
+            .addImm(LSB)
+            .addImm(Width);
+    I.eraseFromParent();
+    return constrainSelectedInstRegOperands(*BitfieldInst, TII, TRI, RBI);
+  }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
 
@@ -5654,8 +5678,10 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
     return None;
 
   // TODO: add heuristics like isWorthFoldingADDlow() from SelectionDAG.
-  // TODO: Need to check GV's offset % size if doing offset folding into globals.
-  assert(Adrp.getOperand(1).getOffset() == 0 && "Unexpected offset in global");
+  auto Offset = Adrp.getOperand(1).getOffset();
+  if (Offset % Size != 0)
+    return None;
+
   auto GV = Adrp.getOperand(1).getGlobal();
   if (GV->isThreadLocal())
     return None;
@@ -5669,7 +5695,7 @@ AArch64InstructionSelector::tryFoldAddLowIntoImm(MachineInstr &RootDef,
   Register AdrpReg = Adrp.getOperand(0).getReg();
   return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(AdrpReg); },
            [=](MachineInstrBuilder &MIB) {
-             MIB.addGlobalAddress(GV, /* Offset */ 0,
+             MIB.addGlobalAddress(GV, Offset,
                                   OpFlags | AArch64II::MO_PAGEOFF |
                                       AArch64II::MO_NC);
            }}};

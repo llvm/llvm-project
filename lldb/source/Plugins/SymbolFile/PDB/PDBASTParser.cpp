@@ -326,7 +326,7 @@ GetDeclFromContextByName(const clang::ASTContext &ast,
   if (result.empty())
     return nullptr;
 
-  return result[0];
+  return *result.begin();
 }
 
 static bool IsAnonymousNamespaceName(llvm::StringRef name) {

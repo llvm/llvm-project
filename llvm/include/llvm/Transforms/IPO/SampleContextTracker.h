@@ -115,6 +115,8 @@ public:
                                      bool MergeContext = true);
   // Query base profile for a given function by name.
   FunctionSamples *getBaseSamplesFor(StringRef Name, bool MergeContext);
+  // Retrieve the context trie node for given profile context
+  ContextTrieNode *getContextFor(const SampleContext &Context);
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
@@ -127,7 +129,6 @@ public:
 
 private:
   ContextTrieNode *getContextFor(const DILocation *DIL);
-  ContextTrieNode *getContextFor(const SampleContext &Context);
   ContextTrieNode *getCalleeContextFor(const DILocation *DIL,
                                        StringRef CalleeName);
   ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,

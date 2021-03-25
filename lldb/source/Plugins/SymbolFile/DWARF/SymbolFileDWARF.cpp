@@ -16,6 +16,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
@@ -74,6 +75,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #include <algorithm>
 #include <map>
@@ -467,22 +469,32 @@ void SymbolFileDWARF::InitializeObject() {
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
 
   if (!GetGlobalPluginProperties()->IgnoreFileIndexes()) {
+    StreamString module_desc;
+    GetObjectFile()->GetModule()->GetDescription(module_desc.AsRawOstream(),
+                                                 lldb::eDescriptionLevelBrief);
     DWARFDataExtractor apple_names, apple_namespaces, apple_types, apple_objc;
     LoadSectionData(eSectionTypeDWARFAppleNames, apple_names);
     LoadSectionData(eSectionTypeDWARFAppleNamespaces, apple_namespaces);
     LoadSectionData(eSectionTypeDWARFAppleTypes, apple_types);
     LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
 
-    m_index = AppleDWARFIndex::Create(
-        *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
-        apple_types, apple_objc, m_context.getOrLoadStrData());
+    if (apple_names.GetByteSize() > 0 || apple_namespaces.GetByteSize() > 0 ||
+        apple_types.GetByteSize() > 0 || apple_objc.GetByteSize() > 0) {
+      Progress progress(llvm::formatv("Loading Apple DWARF index for {0}",
+                                      module_desc.GetData()));
+      m_index = AppleDWARFIndex::Create(
+          *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
+          apple_types, apple_objc, m_context.getOrLoadStrData());
 
-    if (m_index)
-      return;
+      if (m_index)
+        return;
+    }
 
     DWARFDataExtractor debug_names;
     LoadSectionData(eSectionTypeDWARFDebugNames, debug_names);
     if (debug_names.GetByteSize() > 0) {
+      Progress progress(
+          llvm::formatv("Loading DWARF5 index for {0}", module_desc.GetData()));
       llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>> index_or =
           DebugNamesDWARFIndex::Create(*GetObjectFile()->GetModule(),
                                        debug_names,
@@ -1966,66 +1978,8 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
       bool file_spec_matches_cu_file_spec =
           FileSpec::Match(file_spec, dc_cu->GetPrimaryFile());
       if (check_inlines || file_spec_matches_cu_file_spec) {
-        SymbolContext sc(m_objfile_sp->GetModule());
-        sc.comp_unit = dc_cu;
-        uint32_t file_idx = UINT32_MAX;
-
-        // If we are looking for inline functions only and we don't find it
-        // in the support files, we are done.
-        if (check_inlines) {
-          file_idx =
-              sc.comp_unit->GetSupportFiles().FindFileIndex(1, file_spec, true);
-          if (file_idx == UINT32_MAX)
-            continue;
-        }
-
-        if (line != 0) {
-          LineTable *line_table = sc.comp_unit->GetLineTable();
-
-          if (line_table != nullptr && line != 0) {
-            // We will have already looked up the file index if we are
-            // searching for inline entries.
-            if (!check_inlines)
-              file_idx = sc.comp_unit->GetSupportFiles().FindFileIndex(
-                  1, file_spec, true);
-
-            if (file_idx != UINT32_MAX) {
-              uint32_t found_line;
-              uint32_t line_idx = line_table->FindLineEntryIndexByFileIndex(
-                  0, file_idx, line, false, &sc.line_entry);
-              found_line = sc.line_entry.line;
-
-              while (line_idx != UINT32_MAX) {
-                sc.function = nullptr;
-                sc.block = nullptr;
-                if (resolve_scope &
-                    (eSymbolContextFunction | eSymbolContextBlock)) {
-                  const lldb::addr_t file_vm_addr =
-                      sc.line_entry.range.GetBaseAddress().GetFileAddress();
-                  if (file_vm_addr != LLDB_INVALID_ADDRESS) {
-                    ResolveFunctionAndBlock(
-                        file_vm_addr, resolve_scope & eSymbolContextBlock, sc);
-                  }
-                }
-
-                sc_list.Append(sc);
-                line_idx = line_table->FindLineEntryIndexByFileIndex(
-                    line_idx + 1, file_idx, found_line, true, &sc.line_entry);
-              }
-            }
-          } else if (file_spec_matches_cu_file_spec && !check_inlines) {
-            // only append the context if we aren't looking for inline call
-            // sites by file and line and if the file spec matches that of
-            // the compile unit
-            sc_list.Append(sc);
-          }
-        } else if (file_spec_matches_cu_file_spec && !check_inlines) {
-          // only append the context if we aren't looking for inline call
-          // sites by file and line and if the file spec matches that of
-          // the compile unit
-          sc_list.Append(sc);
-        }
-
+        dc_cu->ResolveSymbolContext(file_spec, line, check_inlines, false,
+                                    resolve_scope, sc_list);
         if (!check_inlines)
           break;
       }

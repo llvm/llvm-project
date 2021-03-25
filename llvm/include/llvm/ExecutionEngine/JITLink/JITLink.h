@@ -122,11 +122,16 @@ public:
   void setAddress(JITTargetAddress Address) { this->Address = Address; }
 
   /// Returns true if this is a defined addressable, in which case you
-  /// can downcast this to a .
+  /// can downcast this to a Block.
   bool isDefined() const { return static_cast<bool>(IsDefined); }
   bool isAbsolute() const { return static_cast<bool>(IsAbsolute); }
 
 private:
+  void setAbsolute(bool IsAbsolute) {
+    assert(!IsDefined && "Cannot change the Absolute flag on a defined block");
+    this->IsAbsolute = IsAbsolute;
+  }
+
   JITTargetAddress Address = 0;
   uint64_t IsDefined : 1;
   uint64_t IsAbsolute : 1;
@@ -282,7 +287,11 @@ const char *getLinkageName(Linkage L);
 ///   Default -- Visible in the public interface of the linkage unit.
 ///   Hidden -- Visible within the linkage unit, but not exported from it.
 ///   Local -- Visible only within the LinkGraph.
-enum class Scope : uint8_t { Default, Hidden, Local };
+enum class Scope : uint8_t {
+  Default,
+  Hidden,
+  Local
+};
 
 /// For debugging output.
 const char *getScopeName(Scope S);
@@ -437,7 +446,7 @@ public:
   /// Returns true if the underlying addressable is an absolute symbol.
   bool isAbsolute() const {
     assert(Base && "Attempt to access null symbol");
-    return !Base->isDefined() && Base->isAbsolute();
+    return Base->isAbsolute();
   }
 
   /// Return the addressable that this symbol points to.
@@ -475,6 +484,16 @@ public:
   /// Returns the size of this symbol.
   JITTargetAddress getSize() const { return Size; }
 
+  /// Set the size of this symbol.
+  void setSize(JITTargetAddress Size) {
+    assert(Base && "Cannot set size for null Symbol");
+    assert((Size == 0 || Base->isDefined()) &&
+           "Non-zero size can only be set for defined symbols");
+    assert((Offset + Size <= static_cast<const Block &>(*Base).getSize()) &&
+           "Symbol size cannot extend past the end of its containing block");
+    this->Size = Size;
+  }
+
   /// Returns true if this symbol is backed by a zero-fill block.
   /// This method may only be called on defined symbols.
   bool isSymbolZeroFill() const { return getBlock().isZeroFill(); }
@@ -509,13 +528,20 @@ public:
 
 private:
   void makeExternal(Addressable &A) {
-    assert(!A.isDefined() && "Attempting to make external with defined block");
+    assert(!A.isDefined() && !A.isAbsolute() &&
+           "Attempting to make external with defined or absolute block");
     Base = &A;
     Offset = 0;
-    setLinkage(Linkage::Strong);
     setScope(Scope::Default);
     IsLive = 0;
-    // note: Size and IsCallable fields left unchanged.
+    // note: Size, Linkage and IsCallable fields left unchanged.
+  }
+
+  void makeAbsolute(Addressable &A) {
+    assert(!A.isDefined() && A.isAbsolute() &&
+           "Attempting to make absolute with defined or external block");
+    Base = &A;
+    Offset = 0;
   }
 
   void setBlock(Block &B) { Base = &B; }
@@ -648,7 +674,7 @@ public:
     assert((First || !Last) && "Last can not be null if start is non-null");
     return Last;
   }
-  bool isEmpty() const {
+  bool empty() const {
     assert((First || !Last) && "Last can not be null if start is non-null");
     return !First;
   }
@@ -792,10 +818,13 @@ public:
                                  Section::const_block_iterator, const Block *,
                                  getSectionConstBlocks>;
 
+  using GetEdgeKindNameFunction = const char *(*)(Edge::Kind);
+
   LinkGraph(std::string Name, const Triple &TT, unsigned PointerSize,
-            support::endianness Endianness)
+            support::endianness Endianness,
+            GetEdgeKindNameFunction GetEdgeKindName)
       : Name(std::move(Name)), TT(TT), PointerSize(PointerSize),
-        Endianness(Endianness) {}
+        Endianness(Endianness), GetEdgeKindName(std::move(GetEdgeKindName)) {}
 
   /// Returns the name of this graph (usually the name of the original
   /// underlying MemoryBuffer).
@@ -809,6 +838,8 @@ public:
 
   /// Returns the endianness of content in this graph.
   support::endianness getEndianness() const { return Endianness; }
+
+  const char *getEdgeKindName(Edge::Kind K) const { return GetEdgeKindName(K); }
 
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   /// This can be useful when renaming symbols or adding new content to the
@@ -897,6 +928,11 @@ public:
   /// an error will be emitted. Externals with weak linkage are permitted to
   /// be undefined, in which case they are assigned a value of 0.
   Symbol &addExternalSymbol(StringRef Name, uint64_t Size, Linkage L) {
+    assert(llvm::count_if(ExternalSymbols,
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate external symbol");
     auto &Sym =
         Symbol::constructExternal(Allocator.Allocate<Symbol>(),
                                   createAddressable(0, false), Name, Size, L);
@@ -907,6 +943,11 @@ public:
   /// Add an absolute symbol.
   Symbol &addAbsoluteSymbol(StringRef Name, JITTargetAddress Address,
                             uint64_t Size, Linkage L, Scope S, bool IsLive) {
+    assert(llvm::count_if(AbsoluteSymbols,
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator.Allocate<Symbol>(),
                                           createAddressable(Address), Name,
                                           Size, L, S, IsLive);
@@ -918,6 +959,11 @@ public:
   Symbol &addCommonSymbol(StringRef Name, Scope S, Section &Section,
                           JITTargetAddress Address, uint64_t Size,
                           uint64_t Alignment, bool IsLive) {
+    assert(llvm::count_if(defined_symbols(),
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate defined symbol");
     auto &Sym = Symbol::constructCommon(
         Allocator.Allocate<Symbol>(),
         createBlock(Section, Size, Address, Alignment, 0), Name, Size, S,
@@ -940,6 +986,11 @@ public:
   Symbol &addDefinedSymbol(Block &Content, JITTargetAddress Offset,
                            StringRef Name, JITTargetAddress Size, Linkage L,
                            Scope S, bool IsCallable, bool IsLive) {
+    assert(llvm::count_if(defined_symbols(),
+                          [&](const Symbol *Sym) {
+                            return Sym->getName() == Name;
+                          }) == 0 &&
+           "Duplicate defined symbol");
     auto &Sym =
         Symbol::constructNamedDef(Allocator.Allocate<Symbol>(), Content, Offset,
                                   Name, Size, L, S, IsLive, IsCallable);
@@ -990,19 +1041,72 @@ public:
         const_defined_symbol_iterator(Sections.end(), Sections.end()));
   }
 
-  /// Turn a defined symbol into an external one.
+  /// Make the given symbol external (must not already be external).
+  ///
+  /// Symbol size, linkage and callability will be left unchanged. Symbol scope
+  /// will be set to Default, and offset will be reset to 0.
   void makeExternal(Symbol &Sym) {
-    if (Sym.getAddressable().isAbsolute()) {
+    assert(!Sym.isExternal() && "Symbol is already external");
+    if (Sym.isAbsolute()) {
       assert(AbsoluteSymbols.count(&Sym) &&
              "Sym is not in the absolute symbols set");
+      assert(Sym.getOffset() == 0 && "Absolute not at offset 0");
       AbsoluteSymbols.erase(&Sym);
+      Sym.getAddressable().setAbsolute(false);
     } else {
       assert(Sym.isDefined() && "Sym is not a defined symbol");
       Section &Sec = Sym.getBlock().getSection();
       Sec.removeSymbol(Sym);
+      Sym.makeExternal(createAddressable(0, false));
     }
-    Sym.makeExternal(createAddressable(0, false));
     ExternalSymbols.insert(&Sym);
+  }
+
+  /// Make the given symbol an absolute with the given address (must not already
+  /// be absolute).
+  ///
+  /// Symbol size, linkage, scope, and callability, and liveness will be left
+  /// unchanged. Symbol offset will be reset to 0.
+  void makeAbsolute(Symbol &Sym, JITTargetAddress Address) {
+    assert(!Sym.isAbsolute() && "Symbol is already absolute");
+    if (Sym.isExternal()) {
+      assert(ExternalSymbols.count(&Sym) &&
+             "Sym is not in the absolute symbols set");
+      assert(Sym.getOffset() == 0 && "External is not at offset 0");
+      ExternalSymbols.erase(&Sym);
+      Sym.getAddressable().setAbsolute(true);
+    } else {
+      assert(Sym.isDefined() && "Sym is not a defined symbol");
+      Section &Sec = Sym.getBlock().getSection();
+      Sec.removeSymbol(Sym);
+      Sym.makeAbsolute(createAddressable(Address));
+    }
+    AbsoluteSymbols.insert(&Sym);
+  }
+
+  /// Turn an absolute or external symbol into a defined one by attaching it to
+  /// a block. Symbol must not already be defined.
+  void makeDefined(Symbol &Sym, Block &Content, JITTargetAddress Offset,
+                   JITTargetAddress Size, Linkage L, Scope S, bool IsLive) {
+    assert(!Sym.isDefined() && "Sym is already a defined symbol");
+    if (Sym.isAbsolute()) {
+      assert(AbsoluteSymbols.count(&Sym) &&
+             "Symbol is not in the absolutes set");
+      AbsoluteSymbols.erase(&Sym);
+    } else {
+      assert(ExternalSymbols.count(&Sym) &&
+             "Symbol is not in the externals set");
+      ExternalSymbols.erase(&Sym);
+    }
+    Addressable &OldBase = *Sym.Base;
+    Sym.setBlock(Content);
+    Sym.setOffset(Offset);
+    Sym.setSize(Size);
+    Sym.setLinkage(L);
+    Sym.setScope(S);
+    Sym.setLive(IsLive);
+    Content.getSection().addSymbol(Sym);
+    destroyAddressable(OldBase);
   }
 
   /// Removes an external symbol. Also removes the underlying Addressable.
@@ -1055,13 +1159,7 @@ public:
   }
 
   /// Dump the graph.
-  ///
-  /// If supplied, the EdgeKindToName function will be used to name edge
-  /// kinds in the debug output. Otherwise raw edge kind numbers will be
-  /// displayed.
-  void dump(raw_ostream &OS,
-            std::function<StringRef(Edge::Kind)> EdegKindToName =
-                std::function<StringRef(Edge::Kind)>());
+  void dump(raw_ostream &OS);
 
 private:
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
@@ -1072,6 +1170,7 @@ private:
   Triple TT;
   unsigned PointerSize;
   support::endianness Endianness;
+  GetEdgeKindNameFunction GetEdgeKindName = nullptr;
   SectionList Sections;
   ExternalSymbolSet ExternalSymbols;
   ExternalSymbolSet AbsoluteSymbols;
@@ -1386,6 +1485,10 @@ private:
 /// Marks all symbols in a graph live. This can be used as a default,
 /// conservative mark-live implementation.
 Error markAllSymbolsLive(LinkGraph &G);
+
+/// Create an out of range error for the given edge in the given block.
+Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
+                                const Edge &E);
 
 /// Create a LinkGraph from the given object buffer.
 ///

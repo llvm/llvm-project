@@ -81,6 +81,7 @@
 #include "llvm/Transforms/Scalar/LowerMatrixIntrinsics.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
+#include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
@@ -945,7 +946,16 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   if (TM)
     TheModule->setDataLayout(TM->createDataLayout());
 
-  legacy::PassManager PerModulePasses;
+  DebugifyCustomPassManager PerModulePasses;
+  DebugInfoPerPassMap DIPreservationMap;
+  if (CodeGenOpts.EnableDIPreservationVerify) {
+    PerModulePasses.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
+    PerModulePasses.setDIPreservationMap(DIPreservationMap);
+
+    if (!CodeGenOpts.DIBugsReportFilePath.empty())
+      PerModulePasses.setOrigDIVerifyBugsReportFilePath(
+          CodeGenOpts.DIBugsReportFilePath);
+  }
   PerModulePasses.add(
       createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
 

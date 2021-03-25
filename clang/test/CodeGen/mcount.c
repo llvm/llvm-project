@@ -12,6 +12,13 @@
 // RUN: %clang_cc1 -pg -triple mipsel-unknown-gnu-linux -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
 // RUN: %clang_cc1 -pg -triple mips64-unknown-gnu-linux -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
 // RUN: %clang_cc1 -pg -triple mips64el-unknown-gnu-linux -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv32-elf -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv64-elf -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv32-linux -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv64-linux -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv64-freebsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv64-freebsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
+// RUN: %clang_cc1 -pg -triple riscv64-openbsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-PREFIXED,NO-MCOUNT1 %s
 // RUN: %clang_cc1 -pg -triple powerpc-netbsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-DOUBLE-PREFIXED,NO-MCOUNT1 %s
 // RUN: %clang_cc1 -pg -triple powerpc64-netbsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-DOUBLE-PREFIXED,NO-MCOUNT1 %s
 // RUN: %clang_cc1 -pg -triple powerpc64le-netbsd -emit-llvm -o - %s | FileCheck -check-prefixes=CHECK-DOUBLE-PREFIXED,NO-MCOUNT1 %s

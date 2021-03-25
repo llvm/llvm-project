@@ -37,7 +37,7 @@ public:
                    ArrayRef<Register> VRegs, FunctionLoweringInfo &FLI,
                    Register SwiftErrorVReg) const override;
 
-  bool fallBackToDAGISel(const Function &F) const override;
+  bool fallBackToDAGISel(const MachineFunction &MF) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<ArrayRef<Register>> VRegs,

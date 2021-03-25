@@ -162,6 +162,7 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let SchedRW              = ps.SchedRW;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -531,7 +532,6 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
 
   let Defs = ps.Defs;
   let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
@@ -547,6 +547,7 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -575,6 +576,7 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -744,6 +746,7 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let Constraints          = ps.Constraints;
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOP_DPP_Base <string OpName, VOPProfile P, bit IsDPP16,
@@ -1106,7 +1109,7 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             ""));
 }
 
-multiclass VOP3Inst<string OpName, VOP3_Profile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> {
+multiclass VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0, bit IsVOP2 = 0> {
   def _e64 : VOP3InstBase<OpName, P, node, VOP3Only, IsVOP2>;
   let SubtargetPredicate = isGFX11Plus in {
     foreach _ = BoolToList<P.HasExtVOP3DPP>.ret in

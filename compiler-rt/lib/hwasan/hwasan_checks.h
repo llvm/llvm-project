@@ -13,6 +13,7 @@
 #ifndef HWASAN_CHECKS_H
 #define HWASAN_CHECKS_H
 
+#include "hwasan_allocator.h"
 #include "hwasan_mapping.h"
 #include "sanitizer_common/sanitizer_common.h"
 
@@ -81,6 +82,8 @@ enum class AccessType { Load, Store };
 
 template <ErrorAction EA, AccessType AT, unsigned LogSize>
 __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
+  if (!InTaggableRegion(p))
+    return;
   uptr ptr_raw = p & ~kAddressTagMask;
   tag_t mem_tag = *(tag_t *)MemToShadow(ptr_raw);
   if (UNLIKELY(!PossiblyShortTagMatches(mem_tag, p, 1 << LogSize))) {
@@ -94,7 +97,7 @@ __attribute__((always_inline, nodebug)) static void CheckAddress(uptr p) {
 template <ErrorAction EA, AccessType AT>
 __attribute__((always_inline, nodebug)) static void CheckAddressSized(uptr p,
                                                                       uptr sz) {
-  if (sz == 0)
+  if (sz == 0 || !InTaggableRegion(p))
     return;
   tag_t ptr_tag = GetTagFromPointer(p);
   uptr ptr_raw = p & ~kAddressTagMask;

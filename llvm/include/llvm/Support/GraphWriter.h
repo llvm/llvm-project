@@ -318,8 +318,8 @@ raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
 
 std::string createGraphFilename(const Twine &Name, int &FD);
 
-/// Writes graph into a provided {@code Filename}.
-/// If {@code Filename} is empty, generates a random one.
+/// Writes graph into a provided @c Filename.
+/// If @c Filename is empty, generates a random one.
 /// \return The resulting filename, or an empty string if writing
 /// failed.
 template <typename GraphType>

@@ -162,6 +162,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
                  OptimizationRemarkEmitter *ORE);
 static bool isSafeToExecuteUnconditionally(Instruction &Inst,
                                            const DominatorTree *DT,
+                                           const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
                                            const LoopSafetyInfo *SafetyInfo,
                                            OptimizationRemarkEmitter *ORE,
@@ -921,7 +922,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                              ORE) &&
           worthSinkOrHoistInst(I, CurLoop->getLoopPreheader(), ORE, BFI) &&
           isSafeToExecuteUnconditionally(
-              I, DT, CurLoop, SafetyInfo, ORE,
+              I, DT, TLI, CurLoop, SafetyInfo, ORE,
               CurLoop->getLoopPreheader()->getTerminator())) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
@@ -1502,24 +1503,23 @@ static Instruction *cloneInstructionInExitBlock(
     }
   }
 
-  // Build LCSSA PHI nodes for any in-loop operands. Note that this is
-  // particularly cheap because we can rip off the PHI node that we're
+  // Build LCSSA PHI nodes for any in-loop operands (if legal).  Note that
+  // this is particularly cheap because we can rip off the PHI node that we're
   // replacing for the number and blocks of the predecessors.
   // OPT: If this shows up in a profile, we can instead finish sinking all
   // invariant instructions, and then walk their operands to re-establish
   // LCSSA. That will eliminate creating PHI nodes just to nuke them when
   // sinking bottom-up.
   for (Use &Op : New->operands())
-    if (Instruction *OInst = dyn_cast<Instruction>(Op))
-      if (Loop *OLoop = LI->getLoopFor(OInst->getParent()))
-        if (!OLoop->contains(&PN)) {
-          PHINode *OpPN =
-              PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
-                              OInst->getName() + ".lcssa", &ExitBlock.front());
-          for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
-            OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
-          Op = OpPN;
-        }
+    if (LI->wouldBeOutOfLoopUseRequiringLCSSA(Op.get(), PN.getParent())) {
+      auto *OInst = cast<Instruction>(Op.get());
+      PHINode *OpPN =
+        PHINode::Create(OInst->getType(), PN.getNumIncomingValues(),
+                        OInst->getName() + ".lcssa", &ExitBlock.front());
+      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i)
+        OpPN->addIncoming(OInst, PN.getIncomingBlock(i));
+      Op = OpPN;
+    }
   return New;
 }
 
@@ -1662,17 +1662,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
                  BlockFrequencyInfo *BFI, const Loop *CurLoop,
                  ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater *MSSAU,
                  OptimizationRemarkEmitter *ORE) {
-  LLVM_DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
-  ORE->emit([&]() {
-    return OptimizationRemark(DEBUG_TYPE, "InstSunk", &I)
-           << "sinking " << ore::NV("Inst", &I);
-  });
   bool Changed = false;
-  if (isa<LoadInst>(I))
-    ++NumMovedLoads;
-  else if (isa<CallInst>(I))
-    ++NumMovedCalls;
-  ++NumSunk;
+  LLVM_DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
 
   // Iterate over users to be ready for actual sinking. Replace users via
   // unreachable blocks with undef and make all user PHIs trivially replaceable.
@@ -1723,6 +1714,16 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 
   if (VisitedUsers.empty())
     return Changed;
+
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "InstSunk", &I)
+           << "sinking " << ore::NV("Inst", &I);
+  });
+  if (isa<LoadInst>(I))
+    ++NumMovedLoads;
+  else if (isa<CallInst>(I))
+    ++NumMovedCalls;
+  ++NumSunk;
 
 #ifndef NDEBUG
   SmallVector<BasicBlock *, 32> ExitBlocks;
@@ -1815,11 +1816,12 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
 /// or if it is a trapping instruction and is guaranteed to execute.
 static bool isSafeToExecuteUnconditionally(Instruction &Inst,
                                            const DominatorTree *DT,
+                                           const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
                                            const LoopSafetyInfo *SafetyInfo,
                                            OptimizationRemarkEmitter *ORE,
                                            const Instruction *CtxI) {
-  if (isSafeToSpeculativelyExecute(&Inst, CtxI, DT))
+  if (isSafeToSpeculativelyExecute(&Inst, CtxI, DT, TLI))
     return true;
 
   bool GuaranteedToExecute =
@@ -1856,19 +1858,21 @@ class LoopPromoter : public LoadAndStorePromoter {
   AAMDNodes AATags;
   ICFLoopSafetyInfo &SafetyInfo;
 
+  // We're about to add a use of V in a loop exit block.  Insert an LCSSA phi
+  // (if legal) if doing so would add an out-of-loop use to an instruction
+  // defined in-loop.
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      if (Loop *L = LI.getLoopFor(I->getParent()))
-        if (!L->contains(BB)) {
-          // We need to create an LCSSA PHI node for the incoming value and
-          // store that.
-          PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
-                                        I->getName() + ".lcssa", &BB->front());
-          for (BasicBlock *Pred : PredCache.get(BB))
-            PN->addIncoming(I, Pred);
-          return PN;
-        }
-    return V;
+    if (!LI.wouldBeOutOfLoopUseRequiringLCSSA(V, BB))
+      return V;
+
+    Instruction *I = cast<Instruction>(V);
+    // We need to create an LCSSA PHI node for the incoming value and
+    // store that.
+    PHINode *PN = PHINode::Create(I->getType(), PredCache.size(BB),
+                                  I->getName() + ".lcssa", &BB->front());
+    for (BasicBlock *Pred : PredCache.get(BB))
+      PN->addIncoming(I, Pred);
+    return PN;
   }
 
 public:
@@ -2091,8 +2095,9 @@ bool llvm::promoteLoopAccessesToScalars(
         // to execute does as well.  Thus we can increase our guaranteed
         // alignment as well. 
         if (!DereferenceableInPH || (InstAlignment > Alignment))
-          if (isSafeToExecuteUnconditionally(*Load, DT, CurLoop, SafetyInfo,
-                                             ORE, Preheader->getTerminator())) {
+          if (isSafeToExecuteUnconditionally(*Load, DT, TLI, CurLoop,
+                                             SafetyInfo, ORE,
+                                             Preheader->getTerminator())) {
             DereferenceableInPH = true;
             Alignment = std::max(Alignment, InstAlignment);
           }
@@ -2139,7 +2144,7 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getValueOperand()->getType(),
-              Store->getAlign(), MDL, Preheader->getTerminator(), DT);
+              Store->getAlign(), MDL, Preheader->getTerminator(), DT, TLI);
         }
       } else
         return false; // Not a load or store.

@@ -79,11 +79,11 @@ mlir::createSimplifyAffineStructuresPass() {
 void SimplifyAffineStructures::runOnFunction() {
   auto func = getFunction();
   simplifiedAttributes.clear();
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(func.getContext());
   AffineForOp::getCanonicalizationPatterns(patterns, func.getContext());
   AffineIfOp::getCanonicalizationPatterns(patterns, func.getContext());
   AffineApplyOp::getCanonicalizationPatterns(patterns, func.getContext());
-  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   func.walk([&](Operation *op) {
     for (auto attr : op->getAttrs()) {
       if (auto mapAttr = attr.second.dyn_cast<AffineMapAttr>())

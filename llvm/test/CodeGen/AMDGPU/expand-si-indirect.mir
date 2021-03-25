@@ -24,8 +24,8 @@ body:             |
 
     %0:sgpr_64 = COPY killed $sgpr0_sgpr1
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 36, 0, 0
-    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0(p4), 44, 0, 0
+    %2:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0(p4), 36, 0
+    %3:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0(p4), 44, 0
     %4:sreg_32 = S_ADD_I32 %3, 1, implicit-def dead $scc
     %5:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
     %6:vgpr_32 = V_MOV_B32_e32 1073741824, implicit $exec
@@ -53,49 +53,49 @@ body:             |
     %28:vgpr_32 = COPY %23.sub13
     %29:vgpr_32 = COPY %23.sub12
     %30:vreg_128 = REG_SEQUENCE killed %29, %subreg.sub0, killed %28, %subreg.sub1, killed %27, %subreg.sub2, killed %26, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %30, %2, 48, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %30, %2, 48, 0, implicit $exec
     %31:vgpr_32 = COPY %23.sub11
     %32:vgpr_32 = COPY %23.sub10
     %33:vgpr_32 = COPY %23.sub9
     %34:vgpr_32 = COPY %23.sub8
     %35:vreg_128 = REG_SEQUENCE killed %34, %subreg.sub0, killed %33, %subreg.sub1, killed %32, %subreg.sub2, killed %31, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %35, %2, 32, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %35, %2, 32, 0, implicit $exec
     %36:vgpr_32 = COPY %23.sub7
     %37:vgpr_32 = COPY %23.sub6
     %38:vgpr_32 = COPY %23.sub5
     %39:vgpr_32 = COPY %23.sub4
     %40:vreg_128 = REG_SEQUENCE killed %39, %subreg.sub0, killed %38, %subreg.sub1, killed %37, %subreg.sub2, killed %36, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %40, %2, 16, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %40, %2, 16, 0, implicit $exec
     %41:vgpr_32 = COPY %23.sub3
     %42:vgpr_32 = COPY %23.sub2
     %43:vgpr_32 = COPY %23.sub1
     %44:vgpr_32 = COPY killed %23.sub0
     %45:vreg_128 = REG_SEQUENCE killed %44, %subreg.sub0, killed %43, %subreg.sub1, killed %42, %subreg.sub2, killed %41, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %45, %2, 0, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %45, %2, 0, 0, implicit $exec
     %46:vgpr_32 = COPY %25.sub15
     %47:vgpr_32 = COPY %25.sub14
     %48:vgpr_32 = COPY %25.sub13
     %49:vgpr_32 = COPY %25.sub12
     %50:vreg_128 = REG_SEQUENCE killed %49, %subreg.sub0, killed %48, %subreg.sub1, killed %47, %subreg.sub2, killed %46, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %50, %2, 112, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %50, %2, 112, 0, implicit $exec
     %51:vgpr_32 = COPY %25.sub11
     %52:vgpr_32 = COPY %25.sub10
     %53:vgpr_32 = COPY %25.sub9
     %54:vgpr_32 = COPY %25.sub8
     %55:vreg_128 = REG_SEQUENCE killed %54, %subreg.sub0, killed %53, %subreg.sub1, killed %52, %subreg.sub2, killed %51, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %55, %2, 96, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %55, %2, 96, 0, implicit $exec
     %56:vgpr_32 = COPY %25.sub7
     %57:vgpr_32 = COPY %25.sub6
     %58:vgpr_32 = COPY %25.sub5
     %59:vgpr_32 = COPY %25.sub4
     %60:vreg_128 = REG_SEQUENCE killed %59, %subreg.sub0, killed %58, %subreg.sub1, killed %57, %subreg.sub2, killed %56, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %1, killed %60, %2, 80, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %1, killed %60, %2, 80, 0, implicit $exec
     %61:vgpr_32 = COPY %25.sub3
     %62:vgpr_32 = COPY %25.sub2
     %63:vgpr_32 = COPY %25.sub1
     %64:vgpr_32 = COPY killed %25.sub0
     %65:vreg_128 = REG_SEQUENCE killed %64, %subreg.sub0, killed %63, %subreg.sub1, killed %62, %subreg.sub2, killed %61, %subreg.sub3
-    GLOBAL_STORE_DWORDX4_SADDR killed %1, killed %65, killed %2, 64, 0, 0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR killed %1, killed %65, killed %2, 64, 0, implicit $exec
     S_ENDPGM 0
 
 ...

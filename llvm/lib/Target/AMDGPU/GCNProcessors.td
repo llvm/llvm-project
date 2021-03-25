@@ -228,7 +228,6 @@ def : ProcessorModel<"gfx1033", GFX10SpeedModel,
 // GCN GFX11.
 //===----------------------------------------------------------------------===//
 
-// TODO-GFX11: speed model
-def : ProcessorModel<"gfx1100", GFX10SpeedModel,
+def : ProcessorModel<"gfx1100", GFX11SpeedModel,
   FeatureISAVersion11_0_0.Features
 >;

@@ -67,9 +67,8 @@ private:
 /// `func` op to the SPIR-V dialect. These patterns do not handle shader
 /// interface/ABI; they convert function parameters to be of SPIR-V allowed
 /// types.
-void populateBuiltinFuncToSPIRVPatterns(MLIRContext *context,
-                                        SPIRVTypeConverter &typeConverter,
-                                        OwningRewritePatternList &patterns);
+void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                        RewritePatternSet &patterns);
 
 namespace spirv {
 class AccessChainOp;

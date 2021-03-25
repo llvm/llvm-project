@@ -99,7 +99,7 @@ We then register our dialect interface directly on the Toy dialect, similarly to
 how we did for operations.
 
 ```c++
-ToyDialect::ToyDialect(mlir::MLIRContext *ctx) : mlir::Dialect("toy", ctx) {
+void ToyDialect::initialize() {
   addInterfaces<ToyInlinerInterface>();
 }
 ```

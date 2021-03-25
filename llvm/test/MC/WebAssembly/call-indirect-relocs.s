@@ -45,7 +45,7 @@ empty_fref_table:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
-# BIN-NEXT:           Initial:         0x0
+# BIN-NEXT:           Minimum:         0x0
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            TABLE
@@ -53,7 +53,7 @@ empty_fref_table:
 # BIN-NEXT:       - Index:           0
 # BIN-NEXT:         ElemType:        FUNCREF
 # BIN-NEXT:         Limits:
-# BIN-NEXT:           Initial:         0x0
+# BIN-NEXT:           Minimum:         0x0
 # BIN-NEXT:   - Type:            CODE
 # BIN-NEXT:     Relocations:
 # BIN-NEXT:       - Type:            R_WASM_TYPE_INDEX_LEB

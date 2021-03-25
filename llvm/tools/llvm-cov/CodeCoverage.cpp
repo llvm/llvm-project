@@ -475,7 +475,7 @@ void CodeCoverageTool::remapPathNames(const CoverageMapping &Coverage) {
     SmallString<128> NativePath;
     sys::path::native(Path, NativePath);
     sys::path::remove_dots(NativePath, true);
-    if (!sys::path::is_separator(NativePath.back()))
+    if (!NativePath.empty() && !sys::path::is_separator(NativePath.back()))
       NativePath += sys::path::get_separator();
     return NativePath.c_str();
   };

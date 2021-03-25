@@ -5,7 +5,7 @@
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t | \
 # RUN:   FileCheck --check-prefixes=CHECK,ORDERED %s
 
-# RUN: ld.lld %t.o --shuffle-sections=1 -o %t1
+# RUN: ld.lld %t.o --shuffle-sections '*=1' -o %t1
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t1 | \
 # RUN:   FileCheck --check-prefixes=CHECK,SHUFFLED %s
 
@@ -21,12 +21,12 @@
 # CHECK:      Hex dump of section '.init_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
 # ORDERED-SAME: 000102 03040506 0708090a 0b
-# SHUFFLED-SAME: 04000b 06010a08 09070203 05
+# SHUFFLED-SAME: 080301 04050907 0b020a06 00
 
 # CHECK:      Hex dump of section '.fini_array'
 # CHECK-NEXT: 0x{{[0-9a-f]+}} ff
 # ORDERED-SAME:  000102 03040506 0708090a 0b
-# SHUFFLED-SAME: 090401 070b0003 080a0605 02
+# SHUFFLED-SAME: 0a0405 08070b02 03090006 01
 
 ## With a SECTIONS command, SHT_INIT_ARRAY prirotities are ignored.
 ## All .init_array* are shuffled together.
@@ -36,13 +36,13 @@
 # RUN: ld.lld -T %t.script %t.o -o %t2
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t2 | \
 # RUN:   FileCheck --check-prefixes=CHECK2,ORDERED2 %s
-# RUN: ld.lld -T %t.script %t.o --shuffle-sections=1 -o %t3
+# RUN: ld.lld -T %t.script %t.o --shuffle-sections '*=1' -o %t3
 # RUN: llvm-readelf -x .init -x .fini -x .init_array -x .fini_array %t3 | \
 # RUN:   FileCheck --check-prefixes=CHECK2,SHUFFLED2 %s
 
 # CHECK2:       Hex dump of section '.init_array'
 # ORDERED2-NEXT:  0x{{[0-9a-f]+}} 00010203 04050607 08090a0b ff
-# SHUFFLED2-NEXT: 0x{{[0-9a-f]+}} 04000b06 010a0809 07ff0203 05
+# SHUFFLED2-NEXT: 0x{{[0-9a-f]+}} 08030104 0509070b 02ff0a06 00
 
 .irp i,0,1,2,3,4,5,6,7,8,9,10,11
   .section .init,"ax",@progbits,unique,\i

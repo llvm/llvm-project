@@ -211,9 +211,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
-    if (SE.isKnownPredicate(Pred, LeftSCEV, RightSCEV) ||
-        SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LeftSCEV,
-                            RightSCEV))
+    if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
       continue;
 
     // Check if we have a condition with one AddRec and one non AddRec

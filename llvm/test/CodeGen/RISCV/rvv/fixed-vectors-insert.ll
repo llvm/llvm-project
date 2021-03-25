@@ -43,20 +43,17 @@ define void @insertelt_v4i64(<4 x i64>* %x, i64 %y) {
 define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-LABEL: insertelt_v3i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    addi a3, a0, 16
-; RV32-NEXT:    vsetivli a4, 2, e32,m1,ta,mu
-; RV32-NEXT:    vle32.v v25, (a3)
-; RV32-NEXT:    vse32.v v25, (sp)
 ; RV32-NEXT:    vsetivli a3, 2, e64,m1,ta,mu
 ; RV32-NEXT:    vle64.v v26, (a0)
 ; RV32-NEXT:    vsetivli a3, 8, e32,m2,ta,mu
 ; RV32-NEXT:    vmv.v.i v28, 0
 ; RV32-NEXT:    vsetivli a3, 2, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 0
-; RV32-NEXT:    vsetivli a3, 4, e32,m1,ta,mu
-; RV32-NEXT:    vle32.v v26, (sp)
+; RV32-NEXT:    lw a3, 20(a0)
+; RV32-NEXT:    vsetivli a4, 4, e32,m1,ta,mu
+; RV32-NEXT:    lw a4, 16(a0)
+; RV32-NEXT:    vmv.v.x v26, a3
+; RV32-NEXT:    vmv.s.x v26, a4
 ; RV32-NEXT:    vsetivli a3, 4, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 2
 ; RV32-NEXT:    vsetivli a3, 2, e32,m2,ta,mu
@@ -69,7 +66,6 @@ define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    vse64.v v28, (a0)
 ; RV32-NEXT:    sw a1, 16(a0)
 ; RV32-NEXT:    sw a2, 20(a0)
-; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v3i64:
@@ -181,7 +177,7 @@ define void @insertelt_v8i64_0(<8 x i64>* %x) {
 ; RV32-NEXT:    vle64.v v28, (a0)
 ; RV32-NEXT:    addi a1, zero, -1
 ; RV32-NEXT:    vmv.s.x v28, a1
-; RV32-NEXT:    vs4r.v v28, (a0)
+; RV32-NEXT:    vse64.v v28, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_v8i64_0:
@@ -238,7 +234,7 @@ define void @insertelt_c6_v8i64_0(<8 x i64>* %x) {
 ; RV32-NEXT:    vle64.v v28, (a0)
 ; RV32-NEXT:    addi a1, zero, 6
 ; RV32-NEXT:    vmv.s.x v28, a1
-; RV32-NEXT:    vs4r.v v28, (a0)
+; RV32-NEXT:    vse64.v v28, (a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: insertelt_c6_v8i64_0:
@@ -285,5 +281,37 @@ define void @insertelt_c6_v8i64(<8 x i64>* %x, i32 %idx) {
   %a = load <8 x i64>, <8 x i64>* %x
   %b = insertelement <8 x i64> %a, i64 6, i32 %idx
   store <8 x i64> %b, <8 x i64>* %x
+  ret void
+}
+
+; Test that using a insertelement at element 0 by a later operation doesn't
+; crash the compiler.
+define void @insertelt_c6_v8i64_0_add(<8 x i64>* %x, <8 x i64>* %y) {
+; RV32-LABEL: insertelt_c6_v8i64_0_add:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV32-NEXT:    vle64.v v28, (a0)
+; RV32-NEXT:    vle64.v v8, (a1)
+; RV32-NEXT:    addi a1, zero, 6
+; RV32-NEXT:    vmv.s.x v28, a1
+; RV32-NEXT:    vadd.vv v28, v28, v8
+; RV32-NEXT:    vse64.v v28, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_c6_v8i64_0_add:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
+; RV64-NEXT:    vle64.v v28, (a0)
+; RV64-NEXT:    vle64.v v8, (a1)
+; RV64-NEXT:    addi a1, zero, 6
+; RV64-NEXT:    vmv.s.x v28, a1
+; RV64-NEXT:    vadd.vv v28, v28, v8
+; RV64-NEXT:    vse64.v v28, (a0)
+; RV64-NEXT:    ret
+  %a = load <8 x i64>, <8 x i64>* %x
+  %b = insertelement <8 x i64> %a, i64 6, i32 0
+  %c = load <8 x i64>, <8 x i64>* %y
+  %d = add <8 x i64> %b, %c
+  store <8 x i64> %d, <8 x i64>* %x
   ret void
 }

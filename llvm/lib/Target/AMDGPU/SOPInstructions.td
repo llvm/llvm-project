@@ -66,6 +66,7 @@ class SOP1_Real<bits<8> op, SOP1_Pseudo ps, string real_name = ps.Mnemonic> :
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;
   let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SchedRW            = ps.SchedRW;
 
   // encoding
   bits<7> sdst;
@@ -384,10 +385,11 @@ class SOP2_Real<bits<7> op, SOP_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 
   // encoding
   bits<7> sdst;
@@ -722,6 +724,7 @@ class SOPK_Real<bits<5> op, SOPK_Pseudo ps> :
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let DisableEncoding    = ps.DisableEncoding;
   let Constraints        = ps.Constraints;
+  let SchedRW            = ps.SchedRW;
 
   // encoding
   bits<7>  sdst;
@@ -972,11 +975,12 @@ class SOPC_Real<bits<7> op, SOPC_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let OtherPredicates    = ps.OtherPredicates;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
 
   // encoding
   bits<8> src0;
@@ -1100,11 +1104,12 @@ class SOPP_Real<bits<7> op, SOPP_Pseudo ps, string real_name = ps.Mnemonic> :
   let isCodeGenOnly = 0;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ps.SubtargetPredicate;
-  let OtherPredicates    = ps.OtherPredicates;
-  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let OtherPredicates      = ps.OtherPredicates;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
-  let TSFlags = ps.TSFlags;
+  let TSFlags              = ps.TSFlags;
+  let SchedRW              = ps.SchedRW;
   bits <16> simm16;
 }
 

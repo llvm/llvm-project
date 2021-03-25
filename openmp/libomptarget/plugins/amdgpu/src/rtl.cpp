@@ -1759,6 +1759,19 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
+  std::string kernel_name = std::string(KernelInfo->Name);
+  uint32_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
+
+  {
+    assert(KernelInfoTable[device_id].find(kernel_name) !=
+           KernelInfoTable[device_id].end());
+    auto it = KernelInfoTable[device_id][kernel_name];
+    sgpr_count = it.sgpr_count;
+    vgpr_count = it.vgpr_count;
+    sgpr_spill_count = it.sgpr_spill_count;
+    vgpr_spill_count = it.vgpr_spill_count;
+  }
+
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
@@ -1780,10 +1793,12 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
     fprintf(traceToStdout ? stdout : stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
-            "reqd:(%4dX%4d) n:%s\n",
+            "reqd:(%4dX%4d) sgpr_count:%u vgpr_count:%u sgpr_spill_count:%u "
+            "vgpr_spill_count:%u tripcount:%lu n:%s\n",
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
             arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
-            KernelInfo->Name);
+            sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count,
+            loop_tripcount, KernelInfo->Name);
   }
 
   // Run on the device.
@@ -1812,7 +1827,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->reserved2 = 0;           // atmi writes id_ here
     packet->completion_signal = {0}; // may want a pool of signals
 
-    std::string kernel_name = std::string(KernelInfo->Name);
     {
       assert(KernelInfoTable[device_id].find(kernel_name) !=
              KernelInfoTable[device_id].end());

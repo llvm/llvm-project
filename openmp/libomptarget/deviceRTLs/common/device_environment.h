@@ -19,6 +19,6 @@ struct omptarget_device_environmentTy {
   int32_t debug_level;
 };
 
-extern DEVICE omptarget_device_environmentTy omptarget_device_environment;
+extern omptarget_device_environmentTy omptarget_device_environment;
 
 #endif

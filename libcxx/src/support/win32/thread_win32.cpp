@@ -246,10 +246,8 @@ void __libcpp_thread_yield()
 
 void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
 {
-  using namespace chrono;
-  // round-up to the nearest milisecond
-  milliseconds __ms =
-      duration_cast<milliseconds>(__ns + chrono::nanoseconds(999999));
+  // round-up to the nearest millisecond
+  chrono::milliseconds __ms = chrono::ceil<chrono::milliseconds>(__ns);
   // FIXME(compnerd) this should be an alertable sleep (WFSO or SleepEx)
   Sleep(__ms.count());
 }
@@ -305,7 +303,7 @@ bool __libcpp_semaphore_wait(__libcpp_semaphore_t* __sem)
 bool __libcpp_semaphore_wait_timed(__libcpp_semaphore_t* __sem,
                                    chrono::nanoseconds const& __ns)
 {
-  chrono::milliseconds __ms = std::chrono::ceil<chrono::milliseconds>(__ns);
+  chrono::milliseconds __ms = chrono::ceil<chrono::milliseconds>(__ns);
   return WaitForSingleObjectEx(*(PHANDLE)__sem, __ms.count(), false) ==
          WAIT_OBJECT_0;
 }

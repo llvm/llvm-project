@@ -33,6 +33,7 @@ Clang-Tidy Checks
    `altera-kernel-name-restriction <altera-kernel-name-restriction.html>`_,
    `altera-single-work-item-barrier <altera-single-work-item-barrier.html>`_,
    `altera-struct-pack-align <altera-struct-pack-align.html>`_, "Yes"
+   `altera-unroll-loops <altera-unroll-loops.html>`_,
    `android-cloexec-accept <android-cloexec-accept.html>`_, "Yes"
    `android-cloexec-accept4 <android-cloexec-accept4.html>`_,
    `android-cloexec-creat <android-cloexec-creat.html>`_, "Yes"
@@ -280,7 +281,6 @@ Clang-Tidy Checks
    `readability-container-size-empty <readability-container-size-empty.html>`_, "Yes"
    `readability-convert-member-functions-to-static <readability-convert-member-functions-to-static.html>`_,
    `readability-delete-null-pointer <readability-delete-null-pointer.html>`_, "Yes"
-   `readability-deleted-default <readability-deleted-default.html>`_,
    `readability-else-after-return <readability-else-after-return.html>`_, "Yes"
    `readability-function-cognitive-complexity <readability-function-cognitive-complexity.html>`_,
    `readability-function-size <readability-function-size.html>`_,

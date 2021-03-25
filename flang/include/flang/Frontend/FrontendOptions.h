@@ -58,7 +58,10 @@ enum ActionKind {
   DebugMeasureParseTree,
 
   /// Parse, run semantics and then output the pre-FIR tree
-  DebugPreFIRTree
+  DebugPreFIRTree,
+
+  /// Parse, run semantics and then dump symbol sources map
+  GetSymbolsSources
 
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)

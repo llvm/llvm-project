@@ -182,24 +182,6 @@ class FloatTernaryOp<string mnemonic, list<OpTrait> traits = []> :
                   [DeclareOpInterfaceMethods<VectorUnrollOpInterface>])>,
     Arguments<(ins FloatLike:$a, FloatLike:$b, FloatLike:$c)>;
 
-// Base class for ops with static/dynamic offset, sizes and strides
-// attributes/arguments.
-class BaseOpWithOffsetSizesAndStrides<string mnemonic, list<OpTrait> traits = []> :
-    Std_Op<mnemonic,
-           !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments])> {
-  code extraBaseClassDeclaration = [{
-    /// Returns the dynamic sizes for this subview operation if specified.
-    operand_range getDynamicSizes() { return sizes(); }
-
-    /// Return the list of Range (i.e. offset, size, stride). Each
-    /// Range entry contains either the dynamic value or a ConstantIndexOp
-    /// constructed with `b` at location `loc`.
-    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
-      return mlir::getOrCreateRanges(*this, b, loc);
-    }
-  }];
-}
-
 //===----------------------------------------------------------------------===//
 // AbsFOp
 //===----------------------------------------------------------------------===//
@@ -357,7 +339,7 @@ def AssertOp : Std_Op<"assert"> {
   // AssertOp is fully verified by its traits.
   let verifier = ?;
 
-  let hasCanonicalizer = 1;
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -518,7 +500,7 @@ def BranchOp : Std_Op<"br",
     void eraseOperand(unsigned index);
   }];
 
-  let hasCanonicalizer = 1;
+  let hasCanonicalizeMethod = 1;
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
   }];
@@ -647,7 +629,7 @@ def CallIndirectOp : Std_Op<"call_indirect", [
   }];
 
   let verifier = ?;
-  let hasCanonicalizer = 1;
+  let hasCanonicalizeMethod = 1;
 
   let assemblyFormat = "$callee `(` $operands `)` attr-dict `:` type($callee)";
 }
@@ -1815,7 +1797,8 @@ def SubIOp : IntBinaryOp<"subi"> {
 //===----------------------------------------------------------------------===//
 
 def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
-    "subtensor", [OffsetSizeAndStrideOpInterface]> {
+    StandardOps_Dialect, "subtensor", [NoSideEffect, AttrSizedOperandSegments,
+                                       OffsetSizeAndStrideOpInterface]> {
   let summary = "subtensor operation";
   let description = [{
     The "subtensor" operation extract a tensor from another tensor as
@@ -1951,8 +1934,8 @@ def SubTensorOp : BaseOpWithOffsetSizesAndStrides<
 //===----------------------------------------------------------------------===//
 
 def SubTensorInsertOp : BaseOpWithOffsetSizesAndStrides<
-    "subtensor_insert",
-    [OffsetSizeAndStrideOpInterface,
+    StandardOps_Dialect, "subtensor_insert",
+    [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
      TypesMatchWith<"expected result type to match dest type",
                     "dest", "result", "$_self">]> {
   let summary = "subtensor_insert operation";

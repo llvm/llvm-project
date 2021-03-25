@@ -532,7 +532,8 @@ public:
                 : rewriter.create<ConstantIntOp>(loc, /*value=*/1, /*width=*/1);
 
     bool hasElseRegion = !op.elseRegion().empty();
-    auto ifOp = rewriter.create<scf::IfOp>(loc, cond, hasElseRegion);
+    auto ifOp = rewriter.create<scf::IfOp>(loc, op.getResultTypes(), cond,
+                                           hasElseRegion);
     rewriter.inlineRegionBefore(op.thenRegion(), &ifOp.thenRegion().back());
     rewriter.eraseBlock(&ifOp.thenRegion().back());
     if (hasElseRegion) {
@@ -540,8 +541,8 @@ public:
       rewriter.eraseBlock(&ifOp.elseRegion().back());
     }
 
-    // Ok, we're done!
-    rewriter.eraseOp(op);
+    // Replace the Affine IfOp finally.
+    rewriter.replaceOp(op, ifOp.results());
     return success();
   }
 };
@@ -745,10 +746,9 @@ public:
 
 } // end namespace
 
-void mlir::populateAffineToStdConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+void mlir::populateAffineToStdConversionPatterns(RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AffineApplyLowering,
       AffineDmaStartLowering,
       AffineDmaWaitLowering,
@@ -760,25 +760,25 @@ void mlir::populateAffineToStdConversionPatterns(
       AffineStoreLowering,
       AffineForLowering,
       AffineIfLowering,
-      AffineYieldOpLowering>(ctx);
+      AffineYieldOpLowering>(patterns.getContext());
   // clang-format on
 }
 
 void mlir::populateAffineToVectorConversionPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *ctx) {
+    RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AffineVectorLoadLowering,
-      AffineVectorStoreLowering>(ctx);
+      AffineVectorStoreLowering>(patterns.getContext());
   // clang-format on
 }
 
 namespace {
 class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
-    populateAffineToStdConversionPatterns(patterns, &getContext());
-    populateAffineToVectorConversionPatterns(patterns, &getContext());
+    RewritePatternSet patterns(&getContext());
+    populateAffineToStdConversionPatterns(patterns);
+    populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect,
                            StandardOpsDialect, VectorDialect>();

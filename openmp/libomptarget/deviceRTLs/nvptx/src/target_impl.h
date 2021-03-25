@@ -18,8 +18,7 @@
 
 #include "nvptx_interface.h"
 
-#define DEVICE
-#define INLINE inline __attribute__((always_inline)) DEVICE
+#define INLINE inline __attribute__((always_inline))
 #define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
 

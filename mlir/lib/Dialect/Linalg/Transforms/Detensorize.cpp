@@ -83,7 +83,7 @@ public:
 struct FunctionNonEntryBlockConversion : public ConversionPattern {
   FunctionNonEntryBlockConversion(StringRef functionLikeOpName,
                                   MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern(functionLikeOpName, /*benefit=*/1, converter, ctx) {}
+      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -163,7 +163,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   void runOnFunction() override {
     auto *context = &getContext();
     DetensorizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     target.addDynamicallyLegalOp<GenericOp>([&](GenericOp op) {
@@ -194,19 +194,18 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
                  op, typeConverter, /*returnOpAlwaysLegal*/ true);
     });
 
-    patterns.insert<DetensorizeGenericOp>(typeConverter, context);
-    patterns.insert<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
-                                                     context, typeConverter);
+    patterns.add<DetensorizeGenericOp>(typeConverter, context);
+    patterns.add<FunctionNonEntryBlockConversion>(FuncOp::getOperationName(),
+                                                  context, typeConverter);
     // Since non-entry block arguments get detensorized, we also need to update
     // the control flow inside the function to reflect the correct types.
-    populateBranchOpInterfaceTypeConversionPattern(patterns, context,
-                                                   typeConverter);
+    populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
 
     if (failed(applyFullConversion(getFunction(), target, std::move(patterns))))
       signalPassFailure();
 
-    OwningRewritePatternList canonPatterns;
-    canonPatterns.insert<ExtractFromReshapeFromElements>(context);
+    RewritePatternSet canonPatterns(context);
+    canonPatterns.add<ExtractFromReshapeFromElements>(context);
     if (failed(applyPatternsAndFoldGreedily(getFunction(),
                                             std::move(canonPatterns))))
       signalPassFailure();

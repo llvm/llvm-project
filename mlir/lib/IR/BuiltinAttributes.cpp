@@ -202,26 +202,6 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
 // FloatAttr
 //===----------------------------------------------------------------------===//
 
-FloatAttr FloatAttr::get(Type type, double value) {
-  return Base::get(type.getContext(), type, value);
-}
-
-FloatAttr FloatAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                                Type type, double value) {
-  return Base::getChecked(emitError, type.getContext(), type, value);
-}
-
-FloatAttr FloatAttr::get(Type type, const APFloat &value) {
-  return Base::get(type.getContext(), type, value);
-}
-
-FloatAttr FloatAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                                Type type, const APFloat &value) {
-  return Base::getChecked(emitError, type.getContext(), type, value);
-}
-
-APFloat FloatAttr::getValue() const { return getImpl()->getValue(); }
-
 double FloatAttr::getValueAsDouble() const {
   return getValueAsDouble(getValue());
 }
@@ -234,25 +214,11 @@ double FloatAttr::getValueAsDouble(APFloat value) {
   return value.convertToDouble();
 }
 
-/// Verify construction invariants.
-static LogicalResult
-verifyFloatTypeInvariants(function_ref<InFlightDiagnostic()> emitError,
-                          Type type) {
+LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                Type type, APFloat value) {
+  // Verify that the type is correct.
   if (!type.isa<FloatType>())
     return emitError() << "expected floating point type";
-  return success();
-}
-
-LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                Type type, double value) {
-  return verifyFloatTypeInvariants(emitError, type);
-}
-
-LogicalResult FloatAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                Type type, const APFloat &value) {
-  // Verify that the type is correct.
-  if (failed(verifyFloatTypeInvariants(emitError, type)))
-    return failure();
 
   // Verify that the type semantics match that of the value.
   if (&type.cast<FloatType>().getFloatSemantics() != &value.getSemantics()) {
@@ -279,72 +245,47 @@ StringRef SymbolRefAttr::getLeafReference() const {
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
-IntegerAttr IntegerAttr::get(Type type, const APInt &value) {
-  if (type.isSignlessInteger(1))
-    return BoolAttr::get(type.getContext(), value.getBoolValue());
-  return Base::get(type.getContext(), type, value);
-}
-
-IntegerAttr IntegerAttr::get(Type type, int64_t value) {
-  // This uses 64 bit APInts by default for index type.
-  if (type.isIndex())
-    return get(type, APInt(IndexType::kInternalStorageBitWidth, value));
-
-  auto intType = type.cast<IntegerType>();
-  return get(type, APInt(intType.getWidth(), value, intType.isSignedInteger()));
-}
-
-APInt IntegerAttr::getValue() const { return getImpl()->getValue(); }
-
 int64_t IntegerAttr::getInt() const {
-  assert((getImpl()->getType().isIndex() ||
-          getImpl()->getType().isSignlessInteger()) &&
+  assert((getType().isIndex() || getType().isSignlessInteger()) &&
          "must be signless integer");
   return getValue().getSExtValue();
 }
 
 int64_t IntegerAttr::getSInt() const {
-  assert(getImpl()->getType().isSignedInteger() && "must be signed integer");
+  assert(getType().isSignedInteger() && "must be signed integer");
   return getValue().getSExtValue();
 }
 
 uint64_t IntegerAttr::getUInt() const {
-  assert(getImpl()->getType().isUnsignedInteger() &&
-         "must be unsigned integer");
+  assert(getType().isUnsignedInteger() && "must be unsigned integer");
   return getValue().getZExtValue();
 }
 
-static LogicalResult
-verifyIntegerTypeInvariants(function_ref<InFlightDiagnostic()> emitError,
-                            Type type) {
-  if (type.isa<IntegerType, IndexType>())
-    return success();
-  return emitError() << "expected integer or index type";
-}
-
 LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                  Type type, int64_t value) {
-  return verifyIntegerTypeInvariants(emitError, type);
-}
-
-LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                                  Type type, const APInt &value) {
-  if (failed(verifyIntegerTypeInvariants(emitError, type)))
-    return failure();
-  if (auto integerType = type.dyn_cast<IntegerType>())
+                                  Type type, APInt value) {
+  if (IntegerType integerType = type.dyn_cast<IntegerType>()) {
     if (integerType.getWidth() != value.getBitWidth())
       return emitError() << "integer type bit width (" << integerType.getWidth()
                          << ") doesn't match value bit width ("
                          << value.getBitWidth() << ")";
-  return success();
+    return success();
+  }
+  if (type.isa<IndexType>())
+    return success();
+  return emitError() << "expected integer or index type";
+}
+
+BoolAttr IntegerAttr::getBoolAttrUnchecked(IntegerType type, bool value) {
+  auto attr = Base::get(type.getContext(), type, APInt(/*numBits=*/1, value));
+  return attr.cast<BoolAttr>();
 }
 
 //===----------------------------------------------------------------------===//
 // BoolAttr
 
 bool BoolAttr::getValue() const {
-  auto *storage = reinterpret_cast<IntegerAttributeStorage *>(impl);
-  return storage->getValue().getBoolValue();
+  auto *storage = reinterpret_cast<IntegerAttrStorage *>(impl);
+  return storage->value.getBoolValue();
 }
 
 bool BoolAttr::classof(Attribute attr) {
@@ -987,11 +928,11 @@ auto DenseElementsAttr::getComplexFloatValues() const
 
 /// Return the raw storage data held by this attribute.
 ArrayRef<char> DenseElementsAttr::getRawData() const {
-  return static_cast<DenseIntOrFPElementsAttributeStorage *>(impl)->data;
+  return static_cast<DenseIntOrFPElementsAttrStorage *>(impl)->data;
 }
 
 ArrayRef<StringRef> DenseElementsAttr::getRawStringData() const {
-  return static_cast<DenseStringElementsAttributeStorage *>(impl)->data;
+  return static_cast<DenseStringElementsAttrStorage *>(impl)->data;
 }
 
 /// Return a new DenseElementsAttr that has the same data as the current
@@ -1019,15 +960,6 @@ DenseElementsAttr::mapValues(Type newElementType,
 DenseElementsAttr DenseElementsAttr::mapValues(
     Type newElementType, function_ref<APInt(const APFloat &)> mapping) const {
   return cast<DenseFPElementsAttr>().mapValues(newElementType, mapping);
-}
-
-//===----------------------------------------------------------------------===//
-// DenseStringElementsAttr
-//===----------------------------------------------------------------------===//
-
-DenseStringElementsAttr
-DenseStringElementsAttr::get(ShapedType type, ArrayRef<StringRef> values) {
-  return Base::get(type.getContext(), type, values, (values.size() == 1));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1254,15 +1186,6 @@ bool DenseIntElementsAttr::classof(Attribute attr) {
 // OpaqueElementsAttr
 //===----------------------------------------------------------------------===//
 
-OpaqueElementsAttr OpaqueElementsAttr::get(Dialect *dialect, ShapedType type,
-                                           StringRef bytes) {
-  assert(TensorType::isValidElementType(type.getElementType()) &&
-         "Input element type should be a valid tensor element type");
-  return Base::get(type.getContext(), type, dialect, bytes);
-}
-
-StringRef OpaqueElementsAttr::getValue() const { return getImpl()->bytes; }
-
 /// Return the value at the given index. If index does not refer to a valid
 /// element, then a null attribute is returned.
 Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
@@ -1270,42 +1193,29 @@ Attribute OpaqueElementsAttr::getValue(ArrayRef<uint64_t> index) const {
   return Attribute();
 }
 
-Dialect *OpaqueElementsAttr::getDialect() const { return getImpl()->dialect; }
-
 bool OpaqueElementsAttr::decode(ElementsAttr &result) {
-  auto *d = getDialect();
-  if (!d)
+  Dialect *dialect = getDialect().getDialect();
+  if (!dialect)
     return true;
   auto *interface =
-      d->getRegisteredInterface<DialectDecodeAttributesInterface>();
+      dialect->getRegisteredInterface<DialectDecodeAttributesInterface>();
   if (!interface)
     return true;
   return failed(interface->decode(*this, result));
 }
 
+LogicalResult
+OpaqueElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Identifier dialect, StringRef value,
+                           ShapedType type) {
+  if (!Dialect::isValidNamespace(dialect.strref()))
+    return emitError() << "invalid dialect namespace '" << dialect << "'";
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // SparseElementsAttr
 //===----------------------------------------------------------------------===//
-
-SparseElementsAttr SparseElementsAttr::get(ShapedType type,
-                                           DenseElementsAttr indices,
-                                           DenseElementsAttr values) {
-  assert(indices.getType().getElementType().isInteger(64) &&
-         "expected sparse indices to be 64-bit integer values");
-  assert((type.isa<RankedTensorType, VectorType>()) &&
-         "type must be ranked tensor or vector");
-  assert(type.hasStaticShape() && "type must have static shape");
-  return Base::get(type.getContext(), type,
-                   indices.cast<DenseIntElementsAttr>(), values);
-}
-
-DenseIntElementsAttr SparseElementsAttr::getIndices() const {
-  return getImpl()->indices;
-}
-
-DenseElementsAttr SparseElementsAttr::getValues() const {
-  return getImpl()->values;
-}
 
 /// Return the value of the element at the given index.
 Attribute SparseElementsAttr::getValue(ArrayRef<uint64_t> index) const {

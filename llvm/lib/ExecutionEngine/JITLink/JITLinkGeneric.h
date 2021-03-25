@@ -51,6 +51,12 @@ protected:
 
   using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
 
+  // Returns the PassConfiguration for this instance. This can be used by
+  // JITLinkerBase implementations to add late passes that reference their
+  // own data structures (e.g. for ELF implementations to locate / construct
+  // a GOT start symbol prior to fixup).
+  PassConfiguration &getPassConfig() { return Passes; }
+
   // Phase 1:
   //   1.1: Run pre-prune passes
   //   1.2: Prune graph
@@ -75,9 +81,6 @@ protected:
   // Phase 3:
   //   3.1: Call OnFinalized callback, handing off allocation.
   void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
-
-  // For debug dumping of the link graph.
-  virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
 
   // Align a JITTargetAddress to conform with block alignment requirements.
   static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
@@ -108,8 +111,6 @@ private:
   void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
                                        JITLinkMemoryManager::Allocation &Alloc);
   void deallocateAndBailOut(Error Err);
-
-  void dumpGraph(raw_ostream &OS);
 
   std::unique_ptr<JITLinkContext> Ctx;
   std::unique_ptr<LinkGraph> G;
@@ -159,7 +160,7 @@ private:
 
         // Dispatch to LinkerImpl for fixup.
         auto *BlockData = const_cast<char *>(B->getContent().data());
-        if (auto Err = impl().applyFixup(*B, E, BlockData))
+        if (auto Err = impl().applyFixup(G, *B, E, BlockData))
           return Err;
       }
     }

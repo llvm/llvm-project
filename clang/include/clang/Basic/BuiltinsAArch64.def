@@ -109,6 +109,10 @@ BUILTIN(__builtin_arm_frint32x, "dd", "")
 BUILTIN(__builtin_arm_frint64xf, "ff", "")
 BUILTIN(__builtin_arm_frint64x, "dd", "")
 
+// Armv8.5-A Random number generation intrinsics
+BUILTIN(__builtin_arm_rndr,   "iWUi*", "n")
+BUILTIN(__builtin_arm_rndrrs, "iWUi*", "n")
+
 // Armv8.7-A load/store 64-byte intrinsics
 BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n")
 BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n")

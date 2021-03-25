@@ -1492,6 +1492,11 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
   bits<16> systemreg;
   let Inst{20-5} = systemreg;
   let DecoderNamespace = "Fallback";
+  // The MRS is set as a NZCV setting instruction. Not all MRS instructions
+  // require doing this. The alternative was to explicitly model each one, but
+  // it feels like it is unnecessary because it seems there are no negative
+  // consequences setting these flags for all.
+  let Defs = [NZCV];
 }
 
 // FIXME: Some of these def NZCV, others don't. Best way to model that?

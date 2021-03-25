@@ -74,14 +74,13 @@ struct SetExprHelper {
     x.Reset(new GenericExprWrapper{std::move(expr_)},
         evaluate::GenericExprWrapper::Deleter);
   }
-  void Set(const parser::Expr &x) { Set(x.typedExpr); }
-  void Set(const parser::Variable &x) { Set(x.typedExpr); }
-  void Set(const parser::DataStmtConstant &x) { Set(x.typedExpr); }
   template <typename T> void Set(const common::Indirection<T> &x) {
     Set(x.value());
   }
   template <typename T> void Set(const T &x) {
-    if constexpr (ConstraintTrait<T>) {
+    if constexpr (parser::HasTypedExpr<T>::value) {
+      Set(x.typedExpr);
+    } else if constexpr (ConstraintTrait<T>) {
       Set(x.thing);
     } else if constexpr (WrapperTrait<T>) {
       Set(x.v);
@@ -157,6 +156,8 @@ public:
   MaybeExpr Analyze(const parser::Variable &);
   MaybeExpr Analyze(const parser::Designator &);
   MaybeExpr Analyze(const parser::DataStmtValue &);
+  MaybeExpr Analyze(const parser::AllocateObject &);
+  MaybeExpr Analyze(const parser::PointerObject &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -448,6 +449,14 @@ public:
     return false;
   }
   bool Pre(const parser::DataStmtValue &x) {
+    exprAnalyzer_.Analyze(x);
+    return false;
+  }
+  bool Pre(const parser::AllocateObject &x) {
+    exprAnalyzer_.Analyze(x);
+    return false;
+  }
+  bool Pre(const parser::PointerObject &x) {
     exprAnalyzer_.Analyze(x);
     return false;
   }

@@ -29,7 +29,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: undef_identity_copy
-    ; CHECK: renamable $vgpr40_vgpr41_vgpr42_vgpr43 = FLAT_LOAD_DWORDX4 undef renamable $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
+    ; CHECK: renamable $vgpr40_vgpr41_vgpr42_vgpr43 = FLAT_LOAD_DWORDX4 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
     ; CHECK: renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
     ; CHECK: ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
     ; CHECK: $sgpr4 = COPY $sgpr95
@@ -44,9 +44,9 @@ body:             |
     ; CHECK: $vgpr3 = KILL undef renamable $vgpr3
     ; CHECK: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     ; CHECK: ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
-    ; CHECK: FLAT_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; CHECK: FLAT_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     ; CHECK: S_ENDPGM 0
-    %0:vreg_128 = FLAT_LOAD_DWORDX4 undef %1:vreg_64, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
+    %0:vreg_128 = FLAT_LOAD_DWORDX4 undef %1:vreg_64, 0, 0, implicit $exec, implicit $flat_scr :: (load 16, addrspace 1)
     %2:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @foo + 4, target-flags(amdgpu-rel32-hi) @foo + 4, implicit-def dead $scc
     ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95, implicit-def $scc
     $sgpr4 = COPY $sgpr95
@@ -62,7 +62,7 @@ body:             |
     dead $sgpr30_sgpr31 = SI_CALL %3, @bar, csr_amdgpu_highregs, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit-def $vgpr0
     %5:vgpr_32 = COPY $vgpr0
     ADJCALLSTACKDOWN 0, 4, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32, implicit $sgpr95
-    FLAT_STORE_DWORD undef %6:vreg_64, %5, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    FLAT_STORE_DWORD undef %6:vreg_64, %5, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     S_ENDPGM 0
 
 ...

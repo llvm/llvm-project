@@ -99,7 +99,7 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
 
 LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
     Location loc, gpu::LaunchFuncOp launchOp) {
-  OpBuilder builder(getOperation().getBody()->getTerminator());
+  auto builder = OpBuilder::atBlockEnd(getOperation().getBody());
 
   // Workgroup size is written into the kernel. So to properly modelling
   // vulkan launch, we have to skip local workgroup size configuration here.

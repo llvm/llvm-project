@@ -412,8 +412,8 @@ define <4 x i32> @phaddd_single_source5(<4 x i32> %x) {
 ; SSSE3-SLOW-LABEL: phaddd_single_source5:
 ; SSSE3-SLOW:       # %bb.0:
 ; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,2,2]
-; SSSE3-SLOW-NEXT:    paddd %xmm0, %xmm1
-; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
+; SSSE3-SLOW-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; SSSE3-SLOW-NEXT:    paddd %xmm1, %xmm0
 ; SSSE3-SLOW-NEXT:    retq
 ;
 ; SSSE3-FAST-LABEL: phaddd_single_source5:
@@ -425,8 +425,8 @@ define <4 x i32> @phaddd_single_source5(<4 x i32> %x) {
 ; AVX-SLOW-LABEL: phaddd_single_source5:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,2,2,2]
-; AVX-SLOW-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
 ; AVX-FAST-LABEL: phaddd_single_source5:
@@ -438,8 +438,8 @@ define <4 x i32> @phaddd_single_source5(<4 x i32> %x) {
 ; AVX2-SHUF-LABEL: phaddd_single_source5:
 ; AVX2-SHUF:       # %bb.0:
 ; AVX2-SHUF-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,2,2,2]
-; AVX2-SHUF-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX2-SHUF-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX2-SHUF-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX2-SHUF-NEXT:    retq
   %l = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> <i32 undef, i32 undef, i32 undef, i32 2>
   %add = add <4 x i32> %l, %x

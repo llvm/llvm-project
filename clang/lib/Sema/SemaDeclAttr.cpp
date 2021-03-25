@@ -390,10 +390,10 @@ appendDiagnostics(const Sema::SemaDiagnosticBuilder &Bldr, T &&ExtraArg,
                            std::forward<DiagnosticArgs>(ExtraArgs)...);
 }
 
-/// Add an attribute {@code AttrType} to declaration {@code D}, provided that
-/// {@code PassesCheck} is true.
-/// Otherwise, emit diagnostic {@code DiagID}, passing in all parameters
-/// specified in {@code ExtraArgs}.
+/// Add an attribute @c AttrType to declaration @c D, provided that
+/// @c PassesCheck is true.
+/// Otherwise, emit diagnostic @c DiagID, passing in all parameters
+/// specified in @c ExtraArgs.
 template <typename AttrType, typename... DiagnosticArgs>
 static void handleSimpleAttributeOrDiagnose(Sema &S, Decl *D,
                                             const AttributeCommonInfo &CI,
@@ -513,16 +513,9 @@ static bool checkRecordDeclForAttr(const RecordDecl *RD) {
 
   // Else check if any base classes have the attribute.
   if (const auto *CRD = dyn_cast<CXXRecordDecl>(RD)) {
-    CXXBasePaths BPaths(false, false);
-    if (CRD->lookupInBases(
-            [](const CXXBaseSpecifier *BS, CXXBasePath &) {
-              const auto &Ty = *BS->getType();
-              // If it's type-dependent, we assume it could have the attribute.
-              if (Ty.isDependentType())
-                return true;
-              return Ty.castAs<RecordType>()->getDecl()->hasAttr<AttrType>();
-            },
-            BPaths, true))
+    if (!CRD->forallBases([](const CXXRecordDecl *Base) {
+          return !Base->hasAttr<AttrType>();
+        }))
       return true;
   }
   return false;
@@ -7371,48 +7364,6 @@ static void handleOpenCLNoSVMAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                                                    << "2.0";
 }
 
-/// Handles semantic checking for features that are common to all attributes,
-/// such as checking whether a parameter was properly specified, or the correct
-/// number of arguments were passed, etc.
-static bool handleCommonAttributeFeatures(Sema &S, Decl *D,
-                                          const ParsedAttr &AL) {
-  // Several attributes carry different semantics than the parsing requires, so
-  // those are opted out of the common argument checks.
-  //
-  // We also bail on unknown and ignored attributes because those are handled
-  // as part of the target-specific handling logic.
-  if (AL.getKind() == ParsedAttr::UnknownAttribute)
-    return false;
-  // Check whether the attribute requires specific language extensions to be
-  // enabled.
-  if (!AL.diagnoseLangOpts(S))
-    return true;
-  // Check whether the attribute appertains to the given subject.
-  if (!AL.diagnoseAppertainsTo(S, D))
-    return true;
-  if (AL.hasCustomParsing())
-    return false;
-
-  if (AL.getMinArgs() == AL.getMaxArgs()) {
-    // If there are no optional arguments, then checking for the argument count
-    // is trivial.
-    if (!AL.checkExactlyNumArgs(S, AL.getMinArgs()))
-      return true;
-  } else {
-    // There are optional arguments, so checking is slightly more involved.
-    if (AL.getMinArgs() && !AL.checkAtLeastNumArgs(S, AL.getMinArgs()))
-      return true;
-    else if (!AL.hasVariadicArg() && AL.getMaxArgs() &&
-             !AL.checkAtMostNumArgs(S, AL.getMaxArgs()))
-      return true;
-  }
-
-  if (S.CheckAttrTarget(AL))
-    return true;
-
-  return false;
-}
-
 static void handleOpenCLAccessAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (D->isInvalidDecl())
     return;
@@ -7766,7 +7717,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
     return;
   }
 
-  if (handleCommonAttributeFeatures(S, D, AL))
+  if (S.checkCommonAttributeFeatures(D, AL))
     return;
 
   switch (AL.getKind()) {
@@ -7778,6 +7729,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
       assert(AL.isTypeAttr() && "Non-type attribute not handled");
       break;
     }
+    // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
+    // statement attribute is not written on a declaration, but this code is
+    // needed for attributes in Attr.td that do not list any subjects.
     S.Diag(AL.getLoc(), diag::err_stmt_attribute_invalid_on_decl)
         << AL << D->getLocation();
     break;

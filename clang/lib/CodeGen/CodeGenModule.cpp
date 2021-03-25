@@ -978,20 +978,14 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   if (TT.isOSBinFormatCOFF() || (TT.isOSWindows() && TT.isOSBinFormatMachO()))
     return true;
 
-  const auto &CGOpts = CGM.getCodeGenOpts();
-  llvm::Reloc::Model RM = CGOpts.RelocationModel;
-  const auto &LOpts = CGM.getLangOpts();
-
-  if (TT.isOSBinFormatMachO()) {
-    if (RM == llvm::Reloc::Static)
-      return true;
-    return GV->isStrongDefinitionForLinker();
-  }
-
   // Only handle COFF and ELF for now.
   if (!TT.isOSBinFormatELF())
     return false;
 
+  // If this is not an executable, don't assume anything is local.
+  const auto &CGOpts = CGM.getCodeGenOpts();
+  llvm::Reloc::Model RM = CGOpts.RelocationModel;
+  const auto &LOpts = CGM.getLangOpts();
   if (RM != llvm::Reloc::Static && !LOpts.PIE) {
     // On ELF, if -fno-semantic-interposition is specified and the target
     // supports local aliases, there will be neither CC1
@@ -6258,15 +6252,16 @@ llvm::SanitizerStatReport &CodeGenModule::getSanStats() {
 
   return *SanStats;
 }
+
 llvm::Value *
 CodeGenModule::createOpenCLIntToSamplerConversion(const Expr *E,
                                                   CodeGenFunction &CGF) {
   llvm::Constant *C = ConstantEmitter(CGF).emitAbstract(E, E->getType());
-  auto SamplerT = getOpenCLRuntime().getSamplerType(E->getType().getTypePtr());
-  auto FTy = llvm::FunctionType::get(SamplerT, {C->getType()}, false);
-  return CGF.Builder.CreateCall(CreateRuntimeFunction(FTy,
-                                "__translate_sampler_initializer"),
-                                {C});
+  auto *SamplerT = getOpenCLRuntime().getSamplerType(E->getType().getTypePtr());
+  auto *FTy = llvm::FunctionType::get(SamplerT, {C->getType()}, false);
+  auto *Call = CGF.EmitRuntimeCall(
+      CreateRuntimeFunction(FTy, "__translate_sampler_initializer"), {C});
+  return Call;
 }
 
 CharUnits CodeGenModule::getNaturalPointeeTypeAlignment(

@@ -19,11 +19,11 @@
 
 namespace mlir {
 
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
-void populateStdBufferizePatterns(MLIRContext *context,
-                                  BufferizeTypeConverter &typeConverter,
-                                  OwningRewritePatternList &patterns);
+void populateStdBufferizePatterns(BufferizeTypeConverter &typeConverter,
+                                  RewritePatternSet &patterns);
 
 /// Creates an instance of std bufferization pass.
 std::unique_ptr<Pass> createStdBufferizePass();
@@ -42,8 +42,7 @@ std::unique_ptr<Pass> createTensorConstantBufferizePass();
 std::unique_ptr<Pass> createStdExpandOpsPass();
 
 /// Collects a set of patterns to rewrite ops within the Std dialect.
-void populateStdExpandOpsPatterns(MLIRContext *context,
-                                  OwningRewritePatternList &patterns);
+void populateStdExpandOpsPatterns(RewritePatternSet &patterns);
 
 //===----------------------------------------------------------------------===//
 // Registration

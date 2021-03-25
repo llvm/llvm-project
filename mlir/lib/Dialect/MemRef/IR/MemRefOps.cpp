@@ -209,14 +209,14 @@ struct SimplifyDeadAlloc : public OpRewritePattern<AllocOp> {
 };
 } // end anonymous namespace.
 
-void AllocOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.insert<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
+  results.add<SimplifyAllocConst<AllocOp>, SimplifyDeadAlloc>(context);
 }
 
-void AllocaOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.insert<SimplifyAllocConst<AllocaOp>>(context);
+  results.add<SimplifyAllocConst<AllocaOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -290,9 +290,9 @@ struct TensorLoadToMemRef : public OpRewritePattern<BufferCastOp> {
 
 } // namespace
 
-void BufferCastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<BufferCast, TensorLoadToMemRef>(context);
+void BufferCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<BufferCast, TensorLoadToMemRef>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,7 +420,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
         if (!checkCompatible(aStride.value(), bStrides[aStride.index()]))
           return false;
     }
-    if (aT.getMemorySpaceAsInt() != bT.getMemorySpaceAsInt())
+    if (aT.getMemorySpace() != bT.getMemorySpace())
       return false;
 
     // They must have the same rank, and any specified dimensions must match.
@@ -447,10 +447,8 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
     if (aEltType != bEltType)
       return false;
 
-    auto aMemSpace =
-        (aT) ? aT.getMemorySpaceAsInt() : uaT.getMemorySpaceAsInt();
-    auto bMemSpace =
-        (bT) ? bT.getMemorySpaceAsInt() : ubT.getMemorySpaceAsInt();
+    auto aMemSpace = (aT) ? aT.getMemorySpace() : uaT.getMemorySpace();
+    auto bMemSpace = (bT) ? bT.getMemorySpace() : ubT.getMemorySpace();
     if (aMemSpace != bMemSpace)
       return false;
 
@@ -498,9 +496,9 @@ static LogicalResult verify(DeallocOp op) {
   return success();
 }
 
-void DeallocOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<SimplifyDeadDealloc>(context);
+  results.add<SimplifyDeadDealloc>(context);
 }
 
 LogicalResult DeallocOp::fold(ArrayRef<Attribute> cstOperands,
@@ -617,6 +615,10 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return *(alloc.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
 
+  if (auto alloca = dyn_cast_or_null<AllocaOp>(definingOp))
+    return *(alloca.getDynamicSizes().begin() +
+             memrefType.getDynamicDimIndex(unsignedIndex));
+
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
@@ -673,10 +675,10 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
 };
 } // end anonymous namespace.
 
-void DimOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.insert<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
-                 DimOfCastOp<tensor::CastOp>>(context);
+  results.add<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
+              DimOfCastOp<tensor::CastOp>>(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -1065,9 +1067,9 @@ struct LoadOfBufferCast : public OpRewritePattern<LoadOp> {
 };
 } // end anonymous namespace.
 
-void LoadOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void LoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<LoadOfBufferCast>(context);
+  results.add<LoadOfBufferCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1200,7 +1202,7 @@ static LogicalResult verify(ReinterpretCastOp op) {
   // The source and result memrefs should be in the same memory space.
   auto srcType = op.source().getType().cast<BaseMemRefType>();
   auto resultType = op.getType().cast<MemRefType>();
-  if (srcType.getMemorySpaceAsInt() != resultType.getMemorySpaceAsInt())
+  if (srcType.getMemorySpace() != resultType.getMemorySpace())
     return op.emitError("different memory spaces specified for source type ")
            << srcType << " and result memref type " << resultType;
   if (srcType.getElementType() != resultType.getElementType())
@@ -1385,7 +1387,7 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
       staticSizes, sourceMemRefType.getElementType(),
       makeStridedLinearLayoutMap(targetStrides, targetOffset,
                                  sourceMemRefType.getContext()),
-      sourceMemRefType.getMemorySpaceAsInt());
+      sourceMemRefType.getMemorySpace());
 }
 
 Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
@@ -1431,7 +1433,7 @@ Type SubViewOp::inferRankReducedResultType(
       map = getProjectedMap(maps.front(), dimsToProject);
     inferredType =
         MemRefType::get(projectedShape, inferredType.getElementType(), map,
-                        inferredType.getMemorySpaceAsInt());
+                        inferredType.getMemorySpace());
   }
   return inferredType;
 }
@@ -1609,7 +1611,7 @@ isRankReducedType(Type originalType, Type candidateReducedType,
   // Strided layout logic is relevant for MemRefType only.
   MemRefType original = originalType.cast<MemRefType>();
   MemRefType candidateReduced = candidateReducedType.cast<MemRefType>();
-  if (original.getMemorySpaceAsInt() != candidateReduced.getMemorySpaceAsInt())
+  if (original.getMemorySpace() != candidateReduced.getMemorySpace())
     return SubViewVerificationResult::MemSpaceMismatch;
 
   llvm::SmallDenseSet<unsigned> unusedDims = optionalUnusedDimsMask.getValue();
@@ -1683,7 +1685,7 @@ static LogicalResult verify(SubViewOp op) {
   MemRefType subViewType = op.getType();
 
   // The base memref and the view memref should be in the same memory space.
-  if (baseType.getMemorySpaceAsInt() != subViewType.getMemorySpaceAsInt())
+  if (baseType.getMemorySpace() != subViewType.getMemorySpace())
     return op.emitError("different memory spaces specified for base memref "
                         "type ")
            << baseType << " and subview memref type " << subViewType;
@@ -1798,11 +1800,11 @@ struct SubViewCanonicalizer {
   }
 };
 
-void SubViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                     SubViewOp, SubViewCanonicalizer>,
-                 SubViewOpMemRefCastFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  SubViewOp, SubViewCanonicalizer>,
+              SubViewOpMemRefCastFolder>(context);
 }
 
 OpFoldResult SubViewOp::fold(ArrayRef<Attribute> operands) {
@@ -1975,7 +1977,7 @@ static LogicalResult verify(ViewOp op) {
     return op.emitError("unsupported map for result memref type ") << viewType;
 
   // The base memref and the view memref should be in the same memory space.
-  if (baseType.getMemorySpaceAsInt() != viewType.getMemorySpaceAsInt())
+  if (baseType.getMemorySpace() != viewType.getMemorySpace())
     return op.emitError("different memory spaces specified for base memref "
                         "type ")
            << baseType << " and view memref type " << viewType;
@@ -2081,9 +2083,9 @@ struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
 
 } // end anonymous namespace
 
-void ViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void ViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
+  results.add<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

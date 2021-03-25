@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/M68kMCCodeEmitter.h"
 #include "MCTargetDesc/M68kBaseInfo.h"
 #include "MCTargetDesc/M68kFixupKinds.h"
 #include "MCTargetDesc/M68kMCTargetDesc.h"
@@ -26,13 +27,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
-
-namespace llvm {
-namespace M68k {
-// Forward declarations
-const uint8_t *getMCInstrBeads(unsigned);
-} // end namespace M68k
-} // end namespace llvm
 
 using namespace llvm;
 
@@ -127,6 +121,7 @@ unsigned M68kMCCodeEmitter::encodeReg(unsigned ThisByte, uint8_t Bead,
     Reg = false;
     DA = true;
     break;
+  case M68kBeads::DReg:
   case M68kBeads::Reg:
     Reg = true;
     DA = false;
@@ -357,6 +352,7 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       break;
     case M68kBeads::DAReg:
     case M68kBeads::DA:
+    case M68kBeads::DReg:
     case M68kBeads::Reg:
       Offset +=
           encodeReg(ThisByte, Bead, MI, Desc, Buffer, Offset, Fixups, STI);

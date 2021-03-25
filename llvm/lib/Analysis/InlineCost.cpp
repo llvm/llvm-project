@@ -489,6 +489,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   // sense that it's not weighted by profile counts at all.
   int ColdSize = 0;
 
+  // Whether inlining is decided by cost-benefit analysis.
+  bool DecidedByCostBenefit = false;
+
   bool SingleBB = true;
 
   unsigned SROACostSavings = 0;
@@ -672,14 +675,21 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   bool isCostBenefitAnalysisEnabled() {
-    if (!InlineEnableCostBenefitAnalysis)
-      return false;
-
     if (!PSI || !PSI->hasProfileSummary())
       return false;
 
     if (!GetBFI)
       return false;
+
+    if (InlineEnableCostBenefitAnalysis.getNumOccurrences()) {
+      // Honor the explicit request from the user.
+      if (!InlineEnableCostBenefitAnalysis)
+        return false;
+    } else {
+      // Otherwise, require instrumentation profile.
+      if (!PSI->hasInstrumentationProfile())
+        return false;
+    }
 
     auto *Caller = CandidateCall.getParent()->getParent();
     if (!Caller->getEntryCount())
@@ -825,6 +835,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       Threshold -= VectorBonus / 2;
 
     if (auto Result = costBenefitAnalysis()) {
+      DecidedByCostBenefit = true;
       if (Result.getValue())
         return InlineResult::success();
       else
@@ -926,6 +937,7 @@ public:
   virtual ~InlineCostCallAnalyzer() {}
   int getThreshold() { return Threshold; }
   int getCost() { return Cost; }
+  bool wasDecidedByCostBenefit() { return DecidedByCostBenefit; }
 };
 } // namespace
 
@@ -2608,6 +2620,16 @@ InlineCost llvm::getInlineCost(
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
+
+  // Always make cost benefit based decision explicit.
+  // We use always/never here since threshold is not meaningful,
+  // as it's not what drives cost-benefit analysis.
+  if (CA.wasDecidedByCostBenefit()) {
+    if (ShouldInline.isSuccess())
+      return InlineCost::getAlways("benefit over cost");
+    else
+      return InlineCost::getNever("cost over benefit");
+  }
 
   // Check if there was a reason to force inlining or no inlining.
   if (!ShouldInline.isSuccess() && CA.getCost() < CA.getThreshold())

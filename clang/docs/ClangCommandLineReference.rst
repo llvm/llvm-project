@@ -18,9 +18,9 @@ GCC-compatible ``clang`` and ``clang++`` drivers.
 
 
 .. program:: clang
-.. option:: -B<dir>, --prefix <arg>, --prefix=<arg>
+.. option:: -B<prefix>, --prefix <arg>, --prefix=<arg>
 
-Add <dir> to search path for binaries and object files used implicitly
+Search $prefix/$triple-$file and $prefix$file for executables, libraries, includes, and data files used by the compiler. $prefix may or may not be a directory
 
 .. option:: -F<arg>
 
@@ -256,7 +256,7 @@ Build this module as a system module. Only used with -emit-module
 
 .. option:: --gcc-toolchain=<arg>, -gcc-toolchain <arg>
 
-Use the gcc toolchain at the given directory
+Search for GCC installation in the specified directory on targets which commonly use GCC. The directory usually contains 'lib{,32,64}/gcc{,-cross}/$triple' and 'include'. If specified, sysroot is skipped for GCC detection. Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation
 
 .. option:: -gcodeview
 
@@ -2797,10 +2797,6 @@ Use packed stack layout (SystemZ only).
 
 Specify maximum number of prefixes to use for padding
 
-.. option:: -mpie-copy-relocations, -mno-pie-copy-relocations
-
-Use copy relocations support for PIE builds
-
 .. option:: -mprefer-vector-width=<arg>
 
 Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.
@@ -3798,4 +3794,3 @@ undef all system defines
 .. option:: -z <arg>
 
 Pass -z <arg> to the linker
-

@@ -5,6 +5,7 @@ def StdC : StandardSpec<"stdc"> {
   RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
+  PtrType TimeTTypePtr = PtrType<TimeTType>;
 
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
@@ -597,6 +598,19 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [], // Enumerations
       [
+          FunctionSpec<
+              "gmtime",
+              RetValSpec<StructTmPtr>,
+              [ArgSpec<TimeTTypePtr>]
+          >,
+          FunctionSpec<
+              "gmtime_r",
+              RetValSpec<StructTmPtr>,
+              [
+                  ArgSpec<TimeTTypePtr>,
+                  ArgSpec<StructTmPtr>,
+              ]
+          >,
           FunctionSpec<
               "mktime",
               RetValSpec<TimeTType>,

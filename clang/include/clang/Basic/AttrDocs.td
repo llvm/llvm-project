@@ -3026,16 +3026,55 @@ It is only supported when using the Microsoft C++ ABI.
 def LifetimeBoundDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``lifetimebound`` attribute indicates that a resource owned by
-a function parameter or implicit object parameter
-is retained by the return value of the annotated function
-(or, for a parameter of a constructor, in the value of the constructed object).
-It is only supported in C++.
+The ``lifetimebound`` attribute on a function parameter or implicit object
+parameter indicates that objects that are referred to by that parameter may
+also be referred to by the return value of the annotated function (or, for a
+parameter of a constructor, by the value of the constructed object). It is only
+supported in C++.
 
-This attribute provides an experimental implementation of the facility
-described in the C++ committee paper `P0936R0 <http://wg21.link/p0936r0>`_,
-and is subject to change as the design of the corresponding functionality
-changes.
+By default, a reference is considered to refer to its referenced object, a
+pointer is considered to refer to its pointee, a ``std::initializer_list<T>``
+is considered to refer to its underlying array, and aggregates (arrays and
+simple ``struct``s) are considered to refer to all objects that their
+transitive subobjects refer to.
+
+Clang warns if it is able to detect that an object or reference refers to
+another object with a shorter lifetime. For example, Clang will warn if a
+function returns a reference to a local variable, or if a reference is bound to
+a temporary object whose lifetime is not extended. By using the
+``lifetimebound`` attribute, this determination can be extended to look through
+user-declared functions. For example:
+
+.. code-block:: c++
+
+    // Returns m[key] if key is present, or default_value if not.
+    template<typename T, typename U>
+    const U &get_or_default(const std::map<T, U> &m [[clang::lifetimebound]],
+                            const T &key, /* note, not lifetimebound */
+                            const U &default_value [[clang::lifetimebound]]);
+
+    std::map<std::string, std::string> m;
+    // warning: temporary "bar"s that might be bound to local reference 'val'
+    // will be destroyed at the end of the full-expression
+    const std::string &val = get_or_default(m, "foo"s, "bar"s);
+
+    // No warning in this case.
+    std::string def_val = "bar"s;
+    const std::string &val = get_or_default(m, "foo"s, def_val);
+
+The attribute can be applied to the implicit ``this`` parameter of a member
+function by writing the attribute after the function type:
+
+.. code-block:: c++
+
+    struct string {
+      // The returned pointer should not outlive ``*this``.
+      const char *data() const [[clang::lifetimebound]];
+    };
+
+This attribute is inspired by the C++ committee paper `P0936R0
+<http://wg21.link/p0936r0>`_, but does not affect whether temporary objects
+have their lifetimes extended.
   }];
 }
 
@@ -4810,6 +4849,9 @@ def PatchableFunctionEntryDocs : Documentation {
 before the function entry and N-M NOPs after the function entry. This attribute
 takes precedence over the command line option ``-fpatchable-function-entry=N,M``.
 ``M`` defaults to 0 if omitted.
+
+This attribute is only supported on
+aarch64/aarch64-be/riscv32/riscv64/i386/x86-64 targets.
 }];
 }
 

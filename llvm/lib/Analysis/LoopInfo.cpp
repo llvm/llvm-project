@@ -924,6 +924,31 @@ void LoopInfo::erase(Loop *Unloop) {
   }
 }
 
+bool
+LoopInfo::wouldBeOutOfLoopUseRequiringLCSSA(const Value *V,
+                                            const BasicBlock *ExitBB) const {
+  if (V->getType()->isTokenTy())
+    // We can't form PHIs of token type, so the definition of LCSSA excludes
+    // values of that type.
+    return false;
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+  const Loop *L = getLoopFor(I->getParent());
+  if (!L)
+    return false;
+  if (L->contains(ExitBB))
+    // Could be an exit bb of a subloop and contained in defining loop
+    return false;
+
+  // We found a (new) out-of-loop use location, for a value defined in-loop.
+  // (Note that because of LCSSA, we don't have to account for values defined
+  // in sibling loops.  Such values will have LCSSA phis of their own in the
+  // common parent loop.)
+  return true;
+}
+
 AnalysisKey LoopAnalysis::Key;
 
 LoopInfo LoopAnalysis::run(Function &F, FunctionAnalysisManager &AM) {

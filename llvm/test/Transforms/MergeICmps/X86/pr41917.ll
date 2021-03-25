@@ -10,10 +10,10 @@ target triple = "i386-pc-windows-msvc19.11.0"
 define dso_local zeroext i1 @pr41917(%class.a* byval(%class.a) nocapture readonly align 4 %g, %class.a* byval(%class.a) nocapture readonly align 4 %p2) local_unnamed_addr #0 {
 ; CHECK-LABEL: @pr41917(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2() #3
+; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br i1 [[CALL]], label [[LAND_RHS:%.*]], label %"land.end+land.rhs3"
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @f2() #3
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @f2() #[[ATTR3]]
 ; CHECK-NEXT:    br label %"land.end+land.rhs3"
 ; CHECK:       "land.end+land.rhs3":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], %class.a* [[G:%.*]], i32 0, i32 1

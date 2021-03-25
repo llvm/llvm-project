@@ -224,7 +224,7 @@ static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
 
   // We didn't find any locals. Most likely we don't have symbols, so dump
   // the information that we have for offline analysis.
-  InternalScopedString frame_desc(GetPageSizeCached() * 2);
+  InternalScopedString frame_desc;
   Printf("Previously allocated frames:\n");
   for (uptr i = 0; i < frames; i++) {
     const uptr *record_addr = &(*sa)[i];
@@ -459,7 +459,7 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
       RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
   tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
   tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
-  InternalScopedString s(GetPageSizeCached() * 8);
+  InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
     s.append("%p:", row);
@@ -547,7 +547,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
     GetStackTraceFromId(chunk.GetAllocStackId()).Print();
   }
 
-  InternalScopedString s(GetPageSizeCached() * 8);
+  InternalScopedString s;
   CHECK_GT(tail_size, 0U);
   CHECK_LT(tail_size, kShadowAlignment);
   u8 *tail = reinterpret_cast<u8*>(untagged_addr + orig_size);

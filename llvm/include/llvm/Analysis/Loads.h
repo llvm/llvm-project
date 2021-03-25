@@ -25,6 +25,7 @@ class Instruction;
 class LoadInst;
 class Loop;
 class MDNode;
+class MemoryLocation;
 class ScalarEvolution;
 class TargetLibraryInfo;
 
@@ -147,7 +148,7 @@ Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
 /// this function, if ScanFrom points at the beginning of the block, it's safe
 /// to continue scanning the predecessors.
 ///
-/// \param Ptr The pointer we want the load and store to originate from.
+/// \param Loc The location we want the load and store to originate from.
 /// \param AccessTy The access type of the pointer.
 /// \param AtLeastAtomic Are we looking for at-least an atomic load/store ? In
 /// case it is false, we can return an atomic or non-atomic load or store. In
@@ -163,8 +164,8 @@ Value *FindAvailableLoadedValue(LoadInst *Load, AAResults &AA, bool *IsLoadCSE,
 /// location in memory, as opposed to the value operand of a store.
 ///
 /// \returns The found value, or nullptr if no value is found.
-Value *FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy, bool AtLeastAtomic,
-                                 BasicBlock *ScanBB,
+Value *findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
+                                 bool AtLeastAtomic, BasicBlock *ScanBB,
                                  BasicBlock::iterator &ScanFrom,
                                  unsigned MaxInstsToScan, AAResults *AA,
                                  bool *IsLoadCSE, unsigned *NumScanedInst);

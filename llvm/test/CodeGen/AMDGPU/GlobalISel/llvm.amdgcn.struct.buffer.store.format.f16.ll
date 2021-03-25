@@ -16,7 +16,7 @@ define amdgpu_ps void @struct_buffer_store_format_f16__vgpr_val__sgpr_rsrc__vgpr
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: struct_buffer_store_format_f16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED: bb.1 (%ir-block.0):
@@ -31,7 +31,7 @@ define amdgpu_ps void @struct_buffer_store_format_f16__vgpr_val__sgpr_rsrc__vgpr
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.f16(half %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -55,7 +55,7 @@ define amdgpu_ps void @struct_buffer_store_format_v2f16__vgpr_val__sgpr_rsrc__vg
   ; UNPACKED:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY8]], [[COPY]], implicit $exec
   ; UNPACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_LSHRREV_B32_e64_]], %subreg.sub1
   ; UNPACKED:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_XY_gfx80_BOTHEN_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_XY_gfx80_BOTHEN_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: struct_buffer_store_format_v2f16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED: bb.1 (%ir-block.0):
@@ -70,7 +70,7 @@ define amdgpu_ps void @struct_buffer_store_format_v2f16__vgpr_val__sgpr_rsrc__vg
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_XY_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 4 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -103,7 +103,7 @@ define amdgpu_ps void @struct_buffer_store_format_v4f16__vgpr_val__sgpr_rsrc__vg
   ; UNPACKED:   [[V_LSHRREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY10]], [[COPY1]], implicit $exec
   ; UNPACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_LSHRREV_B32_e64_]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[V_LSHRREV_B32_e64_1]], %subreg.sub3
   ; UNPACKED:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_XYZW_gfx80_BOTHEN_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], [[COPY8]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "BufferResource", align 1, addrspace 4)
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_XYZW_gfx80_BOTHEN_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], [[COPY8]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: struct_buffer_store_format_v4f16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED: bb.1 (%ir-block.0):
@@ -120,7 +120,7 @@ define amdgpu_ps void @struct_buffer_store_format_v4f16__vgpr_val__sgpr_rsrc__vg
   ; PACKED:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY $vgpr3
   ; PACKED:   [[COPY8:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY6]], %subreg.sub0, [[COPY7]], %subreg.sub1
-  ; PACKED:   BUFFER_STORE_FORMAT_D16_XYZW_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "BufferResource", align 1, addrspace 4)
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_XYZW_BOTHEN_exact [[REG_SEQUENCE]], [[REG_SEQUENCE2]], [[REG_SEQUENCE1]], [[COPY8]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 8 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -162,7 +162,7 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; UNPACKED:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; UNPACKED:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
   ; UNPACKED:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; UNPACKED:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -206,7 +206,7 @@ define amdgpu_ps void @struct_buffer_store_format_f16__sgpr_val__vgpr_rsrc__sgpr
   ; PACKED:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY7]], implicit $exec
   ; PACKED:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U32_e64_]], [[S_AND_B64_]], implicit-def $scc
   ; PACKED:   [[REG_SEQUENCE4:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY10]], %subreg.sub1
-  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY8]], [[REG_SEQUENCE4]], [[REG_SEQUENCE3]], [[V_READFIRSTLANE_B32_4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; PACKED:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
@@ -233,7 +233,7 @@ define amdgpu_ps void @struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr
   ; UNPACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; UNPACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; UNPACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; UNPACKED:   BUFFER_STORE_FORMAT_D16_X_gfx80_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; UNPACKED:   S_ENDPGM 0
   ; PACKED-LABEL: name: struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr_vindex__vgpr_voffset__sgpr_soffset
   ; PACKED: bb.1 (%ir-block.0):
@@ -248,7 +248,7 @@ define amdgpu_ps void @struct_buffer_store_format_i16__vgpr_val__sgpr_rsrc__vgpr
   ; PACKED:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
   ; PACKED:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY6]], %subreg.sub1
-  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
+  ; PACKED:   BUFFER_STORE_FORMAT_D16_X_BOTHEN_exact [[COPY]], [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store 2 into custom "BufferResource", align 1, addrspace 4)
   ; PACKED:   S_ENDPGM 0
   call void @llvm.amdgcn.struct.buffer.store.format.i16(i16 %val, <4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   ret void

@@ -607,7 +607,9 @@ def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMa
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
-
+def AArch64mrs : SDNode<"AArch64ISD::MRS",
+                        SDTypeProfile<1, 1, [SDTCisVT<0, i64>, SDTCisVT<1, i32>]>,
+                        [SDNPHasChain, SDNPOutGlue]>;
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
@@ -1265,6 +1267,9 @@ def MRS    : MRSI;
 def MSR    : MSRI;
 def MSRpstateImm1 : MSRpstateImm0_1;
 def MSRpstateImm4 : MSRpstateImm0_15;
+
+def : Pat<(AArch64mrs imm:$id),
+          (MRS imm:$id)>;
 
 // The thread pointer (on Linux, at least, where this has been implemented) is
 // TPIDR_EL0.
@@ -2156,6 +2161,11 @@ def : Pat<(AArch64csel (i32 -1), GPR32:$fval, (i32 imm:$cc), NZCV),
           (CSINVWr GPR32:$fval, WZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 def : Pat<(AArch64csel (i64 -1), GPR64:$fval, (i32 imm:$cc), NZCV),
           (CSINVXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
+
+def : Pat<(add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+          (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
+def : Pat<(add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+          (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
 
 // The inverse of the condition code from the alias instruction is what is used
 // in the aliased instruction. The parser all ready inverts the condition code
@@ -3791,11 +3801,8 @@ defm FNEG   : SingleOperandFPData<0b0010, "fneg", fneg>;
 defm FRINTA : SingleOperandFPData<0b1100, "frinta", fround>;
 defm FRINTI : SingleOperandFPData<0b1111, "frinti", fnearbyint>;
 defm FRINTM : SingleOperandFPData<0b1010, "frintm", ffloor>;
-defm FRINTN : SingleOperandFPData<0b1000, "frintn", int_aarch64_neon_frintn>;
+defm FRINTN : SingleOperandFPData<0b1000, "frintn", froundeven>;
 defm FRINTP : SingleOperandFPData<0b1001, "frintp", fceil>;
-
-def : Pat<(v1f64 (int_aarch64_neon_frintn (v1f64 FPR64:$Rn))),
-          (FRINTNDr FPR64:$Rn)>;
 
 defm FRINTX : SingleOperandFPData<0b1110, "frintx", frint>;
 defm FRINTZ : SingleOperandFPData<0b1011, "frintz", ftrunc>;
@@ -4085,7 +4092,7 @@ defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
 defm FRINTA : SIMDTwoVectorFP<1, 0, 0b11000, "frinta", fround>;
 defm FRINTI : SIMDTwoVectorFP<1, 1, 0b11001, "frinti", fnearbyint>;
 defm FRINTM : SIMDTwoVectorFP<0, 0, 0b11001, "frintm", ffloor>;
-defm FRINTN : SIMDTwoVectorFP<0, 0, 0b11000, "frintn", int_aarch64_neon_frintn>;
+defm FRINTN : SIMDTwoVectorFP<0, 0, 0b11000, "frintn", froundeven>;
 defm FRINTP : SIMDTwoVectorFP<0, 1, 0b11000, "frintp", fceil>;
 defm FRINTX : SIMDTwoVectorFP<1, 0, 0b11001, "frintx", frint>;
 defm FRINTZ : SIMDTwoVectorFP<0, 1, 0b11001, "frintz", ftrunc>;
@@ -4739,6 +4746,27 @@ def : Pat<(f64 (AArch64frsqrts (f64 FPR64:$Rn), (f64 FPR64:$Rm))),
 def : Pat<(v2f64 (AArch64frsqrts (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm))),
           (FRSQRTSv2f64 FPR128:$Rn, FPR128:$Rm)>;
 
+// Some float -> int -> float conversion patterns for which we want to keep the
+// int values in FP registers using the corresponding NEON instructions to
+// avoid more costly int <-> fp register transfers.
+let Predicates = [HasNEON] in {
+def : Pat<(f64 (sint_to_fp (i64 (fp_to_sint f64:$Rn)))),
+          (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
+def : Pat<(f32 (sint_to_fp (i32 (fp_to_sint f32:$Rn)))),
+          (SCVTFv1i32 (i32 (FCVTZSv1i32 f32:$Rn)))>;
+def : Pat<(f64 (uint_to_fp (i64 (fp_to_uint f64:$Rn)))),
+          (UCVTFv1i64 (i64 (FCVTZUv1i64 f64:$Rn)))>;
+def : Pat<(f32 (uint_to_fp (i32 (fp_to_uint f32:$Rn)))),
+          (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
+
+let Predicates = [HasFullFP16] in {
+def : Pat<(f16 (sint_to_fp (i32 (fp_to_sint f16:$Rn)))),
+          (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
+def : Pat<(f16 (uint_to_fp (i32 (fp_to_uint f16:$Rn)))),
+          (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
+}
+}
+
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
 // Here are the patterns for 8 and 16-bits to float.
@@ -5328,6 +5356,13 @@ def : Pat<(and (vector_extract (v16i8 V128:$Rn), VectorIndexB:$idx),
 def : Pat<(and (vector_extract (v8i16 V128:$Rn), VectorIndexH:$idx),
                (i32 0xffff)),
           (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx))>;
+
+def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v16i8 V128:$Rn),
+            VectorIndexB:$idx)))), (i64 0xff))),
+          (SUBREG_TO_REG (i64 0), (i32 (UMOVvi8 V128:$Rn, VectorIndexB:$idx)), sub_32)>;
+def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
+            VectorIndexH:$idx)))), (i64 0xffff))),
+          (SUBREG_TO_REG (i64 0), (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx)), sub_32)>;
 
 defm INS : SIMDIns;
 

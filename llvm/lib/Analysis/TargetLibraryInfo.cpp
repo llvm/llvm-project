@@ -547,6 +547,17 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isNVPTX()) {
     TLI.disableAllFunctions();
     TLI.setAvailable(LibFunc_nvvm_reflect);
+    TLI.setAvailable(llvm::LibFunc_malloc);
+    TLI.setAvailable(llvm::LibFunc_free);
+
+    // TODO: We could enable the following two according to [0] but we haven't
+    //       done an evaluation wrt. the performance implications.
+    // [0]
+    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#dynamic-global-memory-allocation-and-operations
+    //
+    //    TLI.setAvailable(llvm::LibFunc_memcpy);
+    //    TLI.setAvailable(llvm::LibFunc_memset);
+
   } else {
     TLI.setUnavailable(LibFunc_nvvm_reflect);
   }

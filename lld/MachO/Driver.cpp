@@ -54,7 +54,8 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-Configuration *lld::macho::config;
+Configuration *macho::config;
+DependencyTracker *macho::depTracker;
 
 static HeaderFileType getOutputType(const InputArgList &args) {
   // TODO: -r, -dylinker, -preload...
@@ -84,6 +85,8 @@ findAlongPathsWithExtensions(StringRef name, ArrayRef<StringRef> extensions) {
       Twine location = base + ext;
       if (fs::exists(location))
         return location.str();
+      else
+        depTracker->logFileNotFound(location);
     }
   }
   return {};
@@ -815,6 +818,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   symtab = make<SymbolTable>();
   target = createTargetInfo(args);
 
+  depTracker =
+      make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
+
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
                                        /*isWeakRef=*/false);
@@ -826,6 +832,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   for (const Arg *arg : args.filtered(OPT_U))
     symtab->addDynamicLookup(arg->getValue());
 
+  config->mapFile = args.getLastArgValue(OPT_map);
   config->outputFile = args.getLastArgValue(OPT_o, "a.out");
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
@@ -1030,16 +1037,19 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         return false;
       }
     }
+    // Literal exported-symbol names must be defined, but glob
+    // patterns need not match.
+    for (const CachedHashStringRef &cachedName :
+         config->exportedSymbols.literals) {
+      if (const Symbol *sym = symtab->find(cachedName))
+        if (isa<Defined>(sym))
+          continue;
+      error("undefined symbol " + cachedName.val() +
+            "\n>>> referenced from option -exported_symbo(s_list)");
+    }
 
     createSyntheticSections();
-
-    // The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit
-    // which does e.g. cleanup of static global variables. The ABI document says
-    // that the pointer can point to any address in one of the dylib's segments,
-    // but in practice ld64 seems to set it to point to the header, so that's
-    // what's implemented here.
-    symtab->addSynthetic("___dso_handle", in.header->isec, 0,
-                         /*privateExtern=*/true, /*linkerInternal=*/true);
+    createSyntheticSymbols();
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);
@@ -1062,6 +1072,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Write to an output file.
     writeResult();
+
+    depTracker->write(getLLDVersion(), inputFiles, config->outputFile);
   }
 
   if (config->timeTraceEnabled) {

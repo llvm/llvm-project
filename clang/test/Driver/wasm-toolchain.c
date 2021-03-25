@@ -79,6 +79,21 @@
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
 // PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
+// '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
+// '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -mllvm -enable-emscripten-cxx-exceptions \
+// RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
+// EMSCRIPTEN_EH_ALLOWED_NOINLINE: clang{{.*}}" "-cc1" {{.*}} "-mllvm" "--force-attribute=foo:noinline" "-mllvm" "--force-attribute=bar:noinline"
+
+// '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with
+// '-mllvm -enable-emscripten-cxx-exceptions'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -mllvm -emscripten-cxx-exceptions-allowed 2>&1 \
+// RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
+// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+
 // '-fwasm-exceptions' sets +exception-handling
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \

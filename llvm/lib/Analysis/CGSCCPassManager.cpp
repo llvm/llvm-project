@@ -720,7 +720,7 @@ bool FunctionAnalysisManagerCGSCCProxy::Result::invalidate(
   auto PAC = PA.getChecker<FunctionAnalysisManagerCGSCCProxy>();
   if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<LazyCallGraph::SCC>>()) {
     for (LazyCallGraph::Node &N : C)
-      FAM->clear(N.getFunction(), N.getFunction().getName());
+      FAM->invalidate(N.getFunction(), PA);
 
     return false;
   }
@@ -1043,9 +1043,9 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     if (&TargetRC == RC)
       return false;
 
-    RC->removeOutgoingEdge(N, *TargetN);
     LLVM_DEBUG(dbgs() << "Deleting outgoing edge from '" << N << "' to '"
-                      << TargetN << "'\n");
+                      << *TargetN << "'\n");
+    RC->removeOutgoingEdge(N, *TargetN);
     return true;
   });
 

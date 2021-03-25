@@ -58,11 +58,12 @@ enum {
   DAReg = 0x5,
   DA = 0x6,
   Reg = 0x7,
-  Disp8 = 0x8,
-  Imm8 = 0x9,
-  Imm16 = 0xA,
-  Imm32 = 0xB,
-  Imm3 = 0xC,
+  DReg = 0x8,
+  Disp8 = 0x9,
+  Imm8 = 0xA,
+  Imm16 = 0xB,
+  Imm32 = 0xC,
+  Imm3 = 0xD,
 };
 
 // Ctrl payload
@@ -181,7 +182,7 @@ static inline bool isAddressRegister(unsigned RegNo) {
   case M68k::WA4:
   case M68k::WA5:
   case M68k::WA6:
-  case M68k::WA7:
+  case M68k::WSP:
   case M68k::A0:
   case M68k::A1:
   case M68k::A2:
@@ -189,7 +190,6 @@ static inline bool isAddressRegister(unsigned RegNo) {
   case M68k::A4:
   case M68k::A5:
   case M68k::A6:
-  case M68k::A7:
   case M68k::SP:
     return true;
   default:
@@ -236,7 +236,7 @@ static inline unsigned getMaskedSpillRegister(unsigned order) {
   case 14:
     return M68k::A6;
   case 15:
-    return M68k::A7;
+    return M68k::SP;
   }
 }
 

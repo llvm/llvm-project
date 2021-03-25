@@ -647,6 +647,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct(
           {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .scalarize(1);
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
@@ -699,6 +700,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  getActionDefinitionsBuilder({G_SBFX, G_UBFX}).customFor({s32, s64});
+
   computeTables();
   verify(*ST.getInstrInfo());
 }
@@ -725,6 +730,9 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
   case TargetOpcode::G_TRUNC:
     return legalizeVectorTrunc(MI, Helper);
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
+    return legalizeBitfieldExtract(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -785,7 +793,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // G_ADD_LOW instructions.
   // By splitting this here, we can optimize accesses in the small code model by
   // folding in the G_ADD_LOW into the load/store offset.
-  auto GV = MI.getOperand(1).getGlobal();
+  auto &GlobalOp = MI.getOperand(1);
+  const auto* GV = GlobalOp.getGlobal();
   if (GV->isThreadLocal())
     return true; // Don't want to modify TLS vars.
 
@@ -795,9 +804,10 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   if (OpFlags & AArch64II::MO_GOT)
     return true;
 
+  auto Offset = GlobalOp.getOffset();
   Register DstReg = MI.getOperand(0).getReg();
   auto ADRP = MIRBuilder.buildInstr(AArch64::ADRP, {LLT::pointer(0, 64)}, {})
-                  .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
+                  .addGlobalAddress(GV, Offset, OpFlags | AArch64II::MO_PAGE);
   // Set the regclass on the dest reg too.
   MRI.setRegClass(ADRP.getReg(0), &AArch64::GPR64RegClass);
 
@@ -815,6 +825,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // binary must also be loaded into address range [0, 2^48). Both of these
   // properties need to be ensured at runtime when using tagged addresses.
   if (OpFlags & AArch64II::MO_TAGGED) {
+    assert(!Offset &&
+           "Should not have folded in an offset for a tagged global!");
     ADRP = MIRBuilder.buildInstr(AArch64::MOVKXi, {LLT::pointer(0, 64)}, {ADRP})
                .addGlobalAddress(GV, 0x100000000,
                                  AArch64II::MO_PREL | AArch64II::MO_G3)
@@ -823,7 +835,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   }
 
   MIRBuilder.buildInstr(AArch64::G_ADD_LOW, {DstReg}, {ADRP})
-      .addGlobalAddress(GV, 0,
+      .addGlobalAddress(GV, Offset,
                         OpFlags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
   MI.eraseFromParent();
   return true;
@@ -939,4 +951,12 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool AArch64LegalizerInfo::legalizeBitfieldExtract(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  // Only legal if we can select immediate forms.
+  // TODO: Lower this otherwise.
+  return getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
+         getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
 }

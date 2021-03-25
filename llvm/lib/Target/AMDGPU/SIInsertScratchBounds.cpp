@@ -170,7 +170,7 @@ bool SIInsertScratchBounds::insertBoundsCheck(MachineFunction &MF,
   Register VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
   Register SavedVCCReg;
   auto Liveness = MI->getParent()->computeRegisterLiveness(TRI, VCCReg, MI, 16);
-  if (Liveness != MachineBasicBlock::LQR_Dead)
+  if (Liveness == MachineBasicBlock::LQR_Live)
     SavedVCCReg = MRI->createVirtualRegister(RI->getWaveMaskRegClass());
 
   // Setup new block structure

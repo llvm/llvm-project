@@ -18,6 +18,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
@@ -107,6 +108,8 @@ public:
   static Attribute getWithAllocSizeArgs(LLVMContext &Context,
                                         unsigned ElemSizeArg,
                                         const Optional<unsigned> &NumElemsArg);
+  static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
+                                          unsigned MinValue, unsigned MaxValue);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
   static Attribute getWithStructRetType(LLVMContext &Context, Type *Ty);
   static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
@@ -195,6 +198,10 @@ public:
   /// Returns the argument numbers for the allocsize attribute (or pair(0, 0)
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+
+  /// Returns the argument numbers for the vscale_range attribute (or pair(0, 0)
+  /// if not known).
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -319,6 +326,7 @@ public:
   Type *getByRefType() const;
   Type *getPreallocatedType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   using iterator = const Attribute *;
@@ -571,6 +579,13 @@ public:
     return addAllocSizeAttr(C, ArgNo + FirstArgIndex, ElemSizeArg, NumElemsArg);
   }
 
+  /// Add the vscale_range attribute to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addVScaleRangeAttr(LLVMContext &C,
+                                                  unsigned Index,
+                                                  unsigned MinValue,
+                                                  unsigned MaxValue);
+
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors
   //===--------------------------------------------------------------------===//
@@ -689,6 +704,9 @@ public:
   std::pair<unsigned, Optional<unsigned>>
   getAllocSizeArgs(unsigned Index) const;
 
+  /// Get the vscale_range argument numbers (or pair(0, 0) if unknown).
+  std::pair<unsigned, unsigned> getVScaleRangeArgs(unsigned Index) const;
+
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
 
@@ -756,12 +774,13 @@ template <> struct DenseMapInfo<AttributeList> {
 /// equality, presence of attributes, etc.
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::map<std::string, std::string, std::less<>> TargetDepAttrs;
+  std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
   MaybeAlign Alignment;
   MaybeAlign StackAlignment;
   uint64_t DerefBytes = 0;
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
+  uint64_t VScaleRangeArgs = 0;
   Type *ByValType = nullptr;
   Type *StructRetType = nullptr;
   Type *ByRefType = nullptr;
@@ -864,6 +883,10 @@ public:
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
+  /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
+  /// it doesn't exist, pair(0, 0) is returned.
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
+
   /// This turns an alignment into the form used internally in Attribute.
   /// This call has no effect if Align is not set.
   AttrBuilder &addAlignmentAttr(MaybeAlign Align);
@@ -900,6 +923,9 @@ public:
   AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
                                 const Optional<unsigned> &NumElemsArg);
 
+  /// This turns two ints into the form used internally in Attribute.
+  AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+
   /// This turns a byval type into the form used internally in Attribute.
   AttrBuilder &addByValAttr(Type *Ty);
 
@@ -916,12 +942,16 @@ public:
   /// Attribute.getIntValue().
   AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
 
+  /// Add a vscale_range attribute, using the representation returned by
+  /// Attribute.getIntValue().
+  AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
+
   /// Return true if the builder contains no target-independent
   /// attributes.
   bool empty() const { return Attrs.none(); }
 
   // Iterators for target-dependent attributes.
-  using td_type = std::pair<std::string, std::string>;
+  using td_type = decltype(TargetDepAttrs)::value_type;
   using td_iterator = decltype(TargetDepAttrs)::iterator;
   using td_const_iterator = decltype(TargetDepAttrs)::const_iterator;
   using td_range = iterator_range<td_iterator>;

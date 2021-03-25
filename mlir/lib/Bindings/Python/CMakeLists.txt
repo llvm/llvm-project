@@ -42,6 +42,11 @@ add_mlir_dialect_python_bindings(MLIRBindingsPythonLinalgOps
   DEPENDS LinalgOdsGen)
 add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonLinalgOps)
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonMemRefOps
+  TD_FILE MemRefOps.td
+  DIALECT_NAME memref)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonMemRefOps)
+
 add_mlir_dialect_python_bindings(MLIRBindingsPythonShapeOps
   TD_FILE ShapeOps.td
   DIALECT_NAME shape)
@@ -65,7 +70,10 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
     python
   SOURCES
     MainModule.cpp
-    IRModules.cpp
+    IRAffine.cpp
+    IRAttributes.cpp
+    IRCore.cpp
+    IRTypes.cpp
     PybindUtils.cpp
     Pass.cpp
     ExecutionEngine.cpp

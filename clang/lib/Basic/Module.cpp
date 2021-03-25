@@ -429,7 +429,7 @@ void Module::buildVisibleModulesCache() const {
   }
 }
 
-void Module::print(raw_ostream &OS, unsigned Indent) const {
+void Module::print(raw_ostream &OS, unsigned Indent, bool Dump) const {
   OS.indent(Indent);
   if (IsFramework)
     OS << "framework ";
@@ -535,7 +535,7 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
     // the module. Regular inferred submodules are OK, as we need to look at all
     // those header files anyway.
     if (!(*MI)->IsInferred || (*MI)->IsFramework)
-      (*MI)->print(OS, Indent + 2);
+      (*MI)->print(OS, Indent + 2, Dump);
 
   for (unsigned I = 0, N = Exports.size(); I != N; ++I) {
     OS.indent(Indent + 2);
@@ -557,6 +557,13 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
     if (UnresolvedExports[I].Wildcard)
       OS << (UnresolvedExports[I].Id.empty() ? "*" : ".*");
     OS << "\n";
+  }
+
+  if (Dump) {
+    for (Module *M : Imports) {
+      OS.indent(Indent + 2);
+      llvm::errs() << "import " << M->getFullModuleName() << "\n";
+    }
   }
 
   for (unsigned I = 0, N = DirectUses.size(); I != N; ++I) {
@@ -619,7 +626,7 @@ void Module::print(raw_ostream &OS, unsigned Indent) const {
 }
 
 LLVM_DUMP_METHOD void Module::dump() const {
-  print(llvm::errs());
+  print(llvm::errs(), 0, true);
 }
 
 void VisibleModuleSet::setVisible(Module *M, SourceLocation Loc,

@@ -103,7 +103,7 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToSCFConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns) {
-  patterns->insert<IfOpConverter>(context);
-  patterns->insert<WhileOpConverter>(context);
+    RewritePatternSet *patterns) {
+  patterns->add<IfOpConverter>(patterns->getContext());
+  patterns->add<WhileOpConverter>(patterns->getContext());
 }

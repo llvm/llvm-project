@@ -624,6 +624,14 @@ public:
     addFnAttr(Attribute::NoFree);
   }
 
+  /// Determine if the call can synchroize with other threads
+  bool hasNoSync() const {
+    return hasFnAttribute(Attribute::NoSync);
+  }
+  void setNoSync() {
+    addFnAttr(Attribute::NoSync);
+  }
+
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.
   bool doesNotRecurse() const {

@@ -78,6 +78,16 @@ public:
     return TTI::TCC_Expensive;
   }
 
+  // Although this default value is arbitrary, it is not random. It is assumed
+  // that a condition that evaluates the same way by a higher percentage than
+  // this is best represented as control flow. Therefore, the default value N
+  // should be set such that the win from N% correct executions is greater than
+  // the loss from (100 - N)% mispredicted executions for the majority of
+  //  intended targets.
+  BranchProbability getPredictableBranchThreshold() const {
+    return BranchProbability(99, 100);
+  }
+
   bool hasBranchDivergence() const { return false; }
 
   bool useGPUDivergenceAnalysis() const { return false; }
@@ -370,7 +380,9 @@ public:
     }
   }
 
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
@@ -451,7 +463,8 @@ public:
     return 1;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, int Index,
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty,
+                          ArrayRef<int> Mask, int Index,
                           VectorType *SubTp) const {
     return 1;
   }
@@ -1043,25 +1056,30 @@ public:
       int SubIndex;
       if (Shuffle->isExtractSubvectorMask(SubIndex))
         return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                         SubIndex, VecTy);
+                                         Shuffle->getShuffleMask(), SubIndex,
+                                         VecTy);
       else if (Shuffle->changesLength())
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       else if (Shuffle->isIdentity())
         return 0;
       else if (Shuffle->isReverse())
-        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isTranspose())
-        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isZeroEltSplat())
-        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSingleSource())
-        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, 0,
-                                         nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
 
-      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, 0,
-                                       nullptr);
+      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
+                                       Shuffle->getShuffleMask(), 0, nullptr);
     }
     case Instruction::ExtractElement: {
       unsigned Idx = -1;

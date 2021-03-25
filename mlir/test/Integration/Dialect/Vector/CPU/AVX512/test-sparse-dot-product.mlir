@@ -394,15 +394,15 @@ func @memref_dot_while_branchless(%m_A : memref<?xi64>, %m_B : memref<?xf64>,
 func @entry() -> i32 {
   // Initialize large buffers that can be used for multiple test cases of
   // different sizes.
-  %b_A = alloc() : memref<128xi64>
-  %b_B = alloc() : memref<128xf64>
-  %b_C = alloc() : memref<128xi64>
-  %b_D = alloc() : memref<128xf64>
+  %b_A = memref.alloc() : memref<128xi64>
+  %b_B = memref.alloc() : memref<128xf64>
+  %b_C = memref.alloc() : memref<128xi64>
+  %b_D = memref.alloc() : memref<128xf64>
 
-  %m_A = memref_cast %b_A : memref<128xi64> to memref<?xi64>
-  %m_B = memref_cast %b_B : memref<128xf64> to memref<?xf64>
-  %m_C = memref_cast %b_C : memref<128xi64> to memref<?xi64>
-  %m_D = memref_cast %b_D : memref<128xf64> to memref<?xf64>
+  %m_A = memref.cast %b_A : memref<128xi64> to memref<?xi64>
+  %m_B = memref.cast %b_B : memref<128xf64> to memref<?xf64>
+  %m_C = memref.cast %b_C : memref<128xi64> to memref<?xi64>
+  %m_D = memref.cast %b_D : memref<128xf64> to memref<?xf64>
 
   // --- Test case 1 ---.
   // M and N must be a multiple of 8 if smaller than 128.
@@ -467,10 +467,10 @@ func @entry() -> i32 {
   // CHECK: 111
 
   // Release all resources.
-  dealloc %b_A : memref<128xi64>
-  dealloc %b_B : memref<128xf64>
-  dealloc %b_C : memref<128xi64>
-  dealloc %b_D : memref<128xf64>
+  memref.dealloc %b_A : memref<128xi64>
+  memref.dealloc %b_B : memref<128xf64>
+  memref.dealloc %b_C : memref<128xi64>
+  memref.dealloc %b_D : memref<128xf64>
 
   %r = constant 0 : i32
   return %r : i32

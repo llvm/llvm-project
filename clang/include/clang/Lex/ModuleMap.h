@@ -696,6 +696,9 @@ public:
 
   module_iterator module_begin() const { return Modules.begin(); }
   module_iterator module_end()   const { return Modules.end(); }
+  llvm::iterator_range<module_iterator> modules() const {
+    return {module_begin(), module_end()};
+  }
 
   /// Cache a module load.  M might be nullptr.
   void cacheModuleLoad(const IdentifierInfo &II, Module *M) {

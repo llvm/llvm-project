@@ -348,14 +348,14 @@ float16x8_t test_vrndmq_f16(float16x8_t a) {
 }
 
 // CHECK-LABEL: test_vrndn_f16
-// CHECK:  [[RND:%.*]] =  call <4 x half> @llvm.aarch64.neon.frintn.v4f16(<4 x half> %a)
+// CHECK:  [[RND:%.*]] =  call <4 x half> @llvm.roundeven.v4f16(<4 x half> %a)
 // CHECK:  ret <4 x half> [[RND]]
 float16x4_t test_vrndn_f16(float16x4_t a) {
   return vrndn_f16(a);
 }
 
 // CHECK-LABEL: test_vrndnq_f16
-// CHECK:  [[RND:%.*]] =  call <8 x half> @llvm.aarch64.neon.frintn.v8f16(<8 x half> %a)
+// CHECK:  [[RND:%.*]] =  call <8 x half> @llvm.roundeven.v8f16(<8 x half> %a)
 // CHECK:  ret <8 x half> [[RND]]
 float16x8_t test_vrndnq_f16(float16x8_t a) {
   return vrndnq_f16(a);

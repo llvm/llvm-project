@@ -752,6 +752,18 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 
 #endif /* __ARM_FEATURE_TME */
 
+/* Armv8.5-A Random number generation intrinsics */
+#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_RNG)
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__rndr(uint64_t *__p) {
+  return __builtin_arm_rndr(__p);
+}
+static __inline__ int __attribute__((__always_inline__, __nodebug__))
+__rndrrs(uint64_t *__p) {
+  return __builtin_arm_rndrrs(__p);
+}
+#endif
+
 #if defined(__cplusplus)
 }
 #endif

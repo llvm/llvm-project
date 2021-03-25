@@ -203,7 +203,7 @@ body:             |
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY [[S_MOV_B64_term1]]
-  ; CHECK:   dead %7:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4, addrspace 1)
+  ; CHECK:   dead %7:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, implicit $exec :: (volatile load 4, addrspace 1)
   ; CHECK:   [[COPY4:%[0-9]+]]:sreg_64_xexec = COPY [[COPY3]]
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.3(0x80000000)
@@ -233,7 +233,7 @@ body:             |
 
   bb.1:
     %11:sreg_64_xexec = COPY %13
-    dead %6:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4, addrspace 1)
+    dead %6:vgpr_32 = GLOBAL_LOAD_DWORD undef %8:vreg_64, 0, 0, implicit $exec :: (volatile load 4, addrspace 1)
     %14:sreg_64_xexec = COPY %11
 
   bb.2:

@@ -1824,6 +1824,15 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
+  if (C.getArgs().hasArg(options::OPT_print_runtime_dir)) {
+    if (auto RuntimePath = TC.getRuntimePath()) {
+      llvm::outs() << *RuntimePath << '\n';
+      return false;
+    }
+    llvm::outs() << TC.getCompilerRTPath() << '\n';
+    return false;
+  }
+
   // FIXME: The following handlers should use a callback mechanism, we don't
   // know what the client would like to do.
   if (Arg *A = C.getArgs().getLastArg(options::OPT_print_file_name_EQ)) {
@@ -3086,8 +3095,16 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : OpenMPDeviceActions)
+      for (unsigned I = 0; I < ToolChains.size(); ++I) {
+        Action *&A = OpenMPDeviceActions[I];
+        // AMDGPU does not support linking of object files, so we skip
+        // assemble and backend actions to produce LLVM IR.
+        if (ToolChains[I]->getTriple().isAMDGCN() &&
+            (CurPhase == phases::Assemble || CurPhase == phases::Backend))
+          continue;
+
         A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A);
+      }
 
       return ABRT_Success;
     }
@@ -4064,7 +4081,8 @@ void Driver::BuildJobs(Compilation &C) const {
         Out.flush();
         std::error_code EC;
         llvm::raw_fd_ostream OS(CCPrintStatReportFilename, EC,
-                                llvm::sys::fs::OF_Append);
+                                llvm::sys::fs::OF_Append |
+                                    llvm::sys::fs::OF_Text);
         if (EC)
           return;
         auto L = OS.lock();

@@ -42,6 +42,7 @@ extern cl::opt<std::string> MCPU;
 extern cl::opt<bool> NoShowRawInsn;
 extern cl::opt<bool> NoLeadingAddr;
 extern cl::opt<std::string> Prefix;
+extern cl::opt<uint32_t> PrefixStrip;
 extern cl::opt<bool> PrintImmHex;
 extern cl::opt<bool> PrivateHeaders;
 extern cl::opt<bool> Relocations;

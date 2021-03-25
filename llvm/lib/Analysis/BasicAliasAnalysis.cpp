@@ -23,7 +23,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstructionSimplify.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PhiValues.h"
@@ -104,7 +103,6 @@ bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
   // depend on them.
   if (Inv.invalidate<AssumptionAnalysis>(Fn, PA) ||
       (DT && Inv.invalidate<DominatorTreeAnalysis>(Fn, PA)) ||
-      (LI && Inv.invalidate<LoopAnalysis>(Fn, PA)) ||
       (PV && Inv.invalidate<PhiValuesAnalysis>(Fn, PA)))
     return true;
 
@@ -201,9 +199,11 @@ static uint64_t getMinimalExtentFrom(const Value &V,
   // If we have dereferenceability information we know a lower bound for the
   // extent as accesses for a lower offset would be valid. We need to exclude
   // the "or null" part if null is a valid pointer.
-  bool CanBeNull;
-  uint64_t DerefBytes = V.getPointerDereferenceableBytes(DL, CanBeNull);
+  bool CanBeNull, CanBeFreed;
+  uint64_t DerefBytes =
+    V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
+  DerefBytes = CanBeFreed ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
   if (LocSize.isPrecise())
@@ -672,11 +672,21 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return Worklist.empty();
 }
 
+static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
+  return II && II->getIntrinsicID() == IID;
+}
+
 /// Returns the behavior when calling the given call site.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->doesNotAccessMemory())
     // Can't do better than this.
     return FMRB_DoesNotAccessMemory;
+
+  // The assume intrinsic can have operand bundles, but still only accesses
+  // inaccessible memory in that case (to maintain control dependencies).
+  if (isIntrinsicCall(Call, Intrinsic::assume))
+    return FMRB_OnlyAccessesInaccessibleMem;
 
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
@@ -769,11 +779,6 @@ ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   return AAResultBase::getArgModRefInfo(Call, ArgIdx);
-}
-
-static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
-  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
-  return II && II->getIntrinsicID() == IID;
 }
 
 #ifndef NDEBUG
@@ -939,15 +944,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     return rv;
   }
 
-  // While the assume intrinsic is marked as arbitrarily writing so that
-  // proper control dependencies will be maintained, it never aliases any
-  // particular memory location.
-  if (isIntrinsicCall(Call, Intrinsic::assume))
-    return ModRefInfo::NoModRef;
-
-  // Like assumes, guard intrinsics are also marked as arbitrarily writing so
-  // that proper control dependencies are maintained but they never mods any
-  // particular memory location.
+  // Guard intrinsics are marked as arbitrarily writing so that proper control
+  // dependencies are maintained but they never mods any particular memory
+  // location.
   //
   // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
   // heap state at the point the guard is issued needs to be consistent in case
@@ -991,16 +990,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
                                         const CallBase *Call2,
                                         AAQueryInfo &AAQI) {
-  // While the assume intrinsic is marked as arbitrarily writing so that
-  // proper control dependencies will be maintained, it never aliases any
-  // particular memory location.
-  if (isIntrinsicCall(Call1, Intrinsic::assume) ||
-      isIntrinsicCall(Call2, Intrinsic::assume))
-    return ModRefInfo::NoModRef;
-
-  // Like assumes, guard intrinsics are also marked as arbitrarily writing so
-  // that proper control dependencies are maintained but they never mod any
-  // particular memory location.
+  // Guard intrinsics are marked as arbitrarily writing so that proper control
+  // dependencies are maintained but they never mods any particular memory
+  // location.
   //
   // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
   // heap state at the point the guard is issued needs to be consistent in case
@@ -1690,7 +1682,7 @@ bool BasicAAResult::isValueEqualInPotentialCycles(const Value *V,
   // the Values cannot come from different iterations of a potential cycle the
   // phi nodes could be involved in.
   for (auto *P : VisitedPhiBBs)
-    if (isPotentiallyReachable(&P->front(), Inst, nullptr, DT, LI))
+    if (isPotentiallyReachable(&P->front(), Inst, nullptr, DT))
       return false;
 
   return true;
@@ -1804,9 +1796,8 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);
-  auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto *PV = AM.getCachedResult<PhiValuesAnalysis>(F);
-  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT, LI, PV);
+  return BasicAAResult(F.getParent()->getDataLayout(), F, TLI, AC, DT, PV);
 }
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
@@ -1834,13 +1825,11 @@ bool BasicAAWrapperPass::runOnFunction(Function &F) {
   auto &ACT = getAnalysis<AssumptionCacheTracker>();
   auto &TLIWP = getAnalysis<TargetLibraryInfoWrapperPass>();
   auto &DTWP = getAnalysis<DominatorTreeWrapperPass>();
-  auto *LIWP = getAnalysisIfAvailable<LoopInfoWrapperPass>();
   auto *PVWP = getAnalysisIfAvailable<PhiValuesWrapperPass>();
 
   Result.reset(new BasicAAResult(F.getParent()->getDataLayout(), F,
                                  TLIWP.getTLI(F), ACT.getAssumptionCache(F),
                                  &DTWP.getDomTree(),
-                                 LIWP ? &LIWP->getLoopInfo() : nullptr,
                                  PVWP ? &PVWP->getResult() : nullptr));
 
   return false;

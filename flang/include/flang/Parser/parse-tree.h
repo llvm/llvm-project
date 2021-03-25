@@ -1836,6 +1836,7 @@ struct ArrayElement {
 // R933 allocate-object -> variable-name | structure-component
 struct AllocateObject {
   UNION_CLASS_BOILERPLATE(AllocateObject);
+  mutable TypedExpr typedExpr;
   std::variant<Name, StructureComponent> u;
 };
 
@@ -1907,6 +1908,7 @@ struct AllocateStmt {
 //        variable-name | structure-component | proc-pointer-name
 struct PointerObject {
   UNION_CLASS_BOILERPLATE(PointerObject);
+  mutable TypedExpr typedExpr;
   std::variant<Name, StructureComponent> u;
 };
 

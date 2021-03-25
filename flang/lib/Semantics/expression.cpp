@@ -2139,17 +2139,47 @@ template <typename A> static const Symbol *AssumedTypeDummy(const A &x) {
     if (const auto *dataRef{
             std::get_if<parser::DataRef>(&designator->value().u)}) {
       if (const auto *name{std::get_if<parser::Name>(&dataRef->u)}) {
-        if (const Symbol * symbol{name->symbol}) {
-          if (const auto *type{symbol->GetType()}) {
-            if (type->category() == semantics::DeclTypeSpec::TypeStar) {
-              return symbol;
-            }
-          }
-        }
+        return AssumedTypeDummy(*name);
       }
     }
   }
   return nullptr;
+}
+template <>
+const Symbol *AssumedTypeDummy<parser::Name>(const parser::Name &name) {
+  if (const Symbol * symbol{name.symbol}) {
+    if (const auto *type{symbol->GetType()}) {
+      if (type->category() == semantics::DeclTypeSpec::TypeStar) {
+        return symbol;
+      }
+    }
+  }
+  return nullptr;
+}
+template <typename A>
+static const Symbol *AssumedTypePointerOrAllocatableDummy(const A &object) {
+  // It is illegal for allocatable of pointer objects to be TYPE(*), but at that
+  // point it is is not guaranteed that it has been checked the object has
+  // POINTER or ALLOCATABLE attribute, so do not assume nullptr can be directly
+  // returned.
+  return std::visit(
+      common::visitors{
+          [&](const parser::StructureComponent &x) {
+            return AssumedTypeDummy(x.component);
+          },
+          [&](const parser::Name &x) { return AssumedTypeDummy(x); },
+      },
+      object.u);
+}
+template <>
+const Symbol *AssumedTypeDummy<parser::AllocateObject>(
+    const parser::AllocateObject &x) {
+  return AssumedTypePointerOrAllocatableDummy(x);
+}
+template <>
+const Symbol *AssumedTypeDummy<parser::PointerObject>(
+    const parser::PointerObject &x) {
+  return AssumedTypePointerOrAllocatableDummy(x);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
@@ -2735,6 +2765,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Variable &variable) {
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
   auto restorer{GetContextualMessages().SetLocation(x.source)};
   return ExprOrVariable(x, x.source);
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateObject &x) {
+  parser::CharBlock source{parser::FindSourceLocation(x)};
+  auto restorer{GetContextualMessages().SetLocation(source)};
+  return ExprOrVariable(x, source);
+}
+
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
+  parser::CharBlock source{parser::FindSourceLocation(x)};
+  auto restorer{GetContextualMessages().SetLocation(source)};
+  return ExprOrVariable(x, source);
 }
 
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(

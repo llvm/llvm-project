@@ -3000,6 +3000,12 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
   }
+  if (S->getFlags() & Scope::ConditionVarScope) {
+    // We cannot 'continue;' from within a statement expression in the
+    // initializer of a condition variable because we would jump past the
+    // initialization of that variable.
+    return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
+  }
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
   return new (Context) ContinueStmt(ContinueLoc);
@@ -3086,24 +3092,30 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
   if (VD->hasAttr<BlocksAttr>())
     return false;
 
-  // ...non-volatile...
-  if (VD->getType().isVolatileQualified())
+  if (VDType->isObjectType()) {
+    // C++17 [class.copy.elision]p3:
+    // ...non-volatile automatic object...
+    if (VDType.isVolatileQualified())
+      return false;
+  } else if (VDType->isRValueReferenceType()) {
+    // C++20 [class.copy.elision]p3:
+    // ...either a non-volatile object or an rvalue reference to a non-volatile object type...
+    if (!(CESK & CES_AllowRValueReferenceType))
+      return false;
+    QualType VDReferencedType = VDType.getNonReferenceType();
+    if (VDReferencedType.isVolatileQualified() || !VDReferencedType->isObjectType())
+      return false;
+  } else {
     return false;
-
-  // C++20 [class.copy.elision]p3:
-  // ...rvalue reference to a non-volatile...
-  if (VD->getType()->isRValueReferenceType() &&
-      (!(CESK & CES_AllowRValueReferenceType) ||
-       VD->getType().getNonReferenceType().isVolatileQualified()))
-    return false;
+  }
 
   if (CESK & CES_AllowDifferentTypes)
     return true;
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
-  if (!VD->getType()->isDependentType() && VD->hasAttr<AlignedAttr>() &&
-      Context.getDeclAlign(VD) > Context.getTypeAlignInChars(VD->getType()))
+  if (!VDType->isDependentType() && VD->hasAttr<AlignedAttr>() &&
+      Context.getDeclAlign(VD) > Context.getTypeAlignInChars(VDType))
     return false;
 
   return true;

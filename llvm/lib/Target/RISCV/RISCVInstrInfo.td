@@ -25,6 +25,9 @@ def SDT_RISCVCall     : SDTypeProfile<0, -1, [SDTCisVT<0, XLenVT>]>;
 def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
                                              SDTCisSameAs<0, 4>,
                                              SDTCisSameAs<4, 5>]>;
+def SDT_RISCVBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                         SDTCisVT<2, OtherVT>,
+                                         SDTCisVT<3, OtherVT>]>;
 def SDT_RISCVReadCycleWide : SDTypeProfile<2, 0, [SDTCisVT<0, i32>,
                                                   SDTCisVT<1, i32>]>;
 def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
@@ -50,6 +53,8 @@ def riscv_sret_flag : SDNode<"RISCVISD::SRET_FLAG", SDTNone,
 def riscv_mret_flag : SDNode<"RISCVISD::MRET_FLAG", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
+def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
+                             [SDNPHasChain]>;
 def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                               SDNPVariadic]>;
@@ -303,21 +308,6 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
-// Extract least significant 12 bits from an immediate value and sign extend
-// them.
-def LO12Sext : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(SignExtend64<12>(N->getZExtValue()),
-                                   SDLoc(N), N->getValueType(0));
-}]>;
-
-// Extract the most significant 20 bits from an immediate value. Add 1 if bit
-// 11 is 1, to compensate for the low 12 bits in the matching immediate addi
-// or ld/st being negative.
-def HI20 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
-                                   SDLoc(N), N->getValueType(0));
-}]>;
-
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N),
@@ -388,7 +378,7 @@ class Shift_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShift<arithshift, funct3, OPC_OP_IMM, (outs GPR:$rd),
                    (ins GPR:$rs1, uimmlog2xlen:$shamt), opcodestr,
                    "$rd, $rs1, $shamt">,
-      Sched<[WriteShift, ReadShift]>;
+      Sched<[WriteShiftImm, ReadShiftImm]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALU_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -413,7 +403,7 @@ class ShiftW_ri<bit arithshift, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<arithshift, funct3, OPC_OP_IMM_32, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt), opcodestr,
                     "$rd, $rs1, $shamt">,
-      Sched<[WriteShift32, ReadShift32]>;
+      Sched<[WriteShiftImm32, ReadShiftImm32]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class ALUW_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -486,12 +476,12 @@ def SRAI : Shift_ri<1, 0b101, "srai">;
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SUB  : ALU_rr<0b0100000, 0b000, "sub">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SLL  : ALU_rr<0b0000000, 0b001, "sll">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SLL  : ALU_rr<0b0000000, 0b001, "sll">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 def SLT  : ALU_rr<0b0000000, 0b010, "slt">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def SLTU : ALU_rr<0b0000000, 0b011, "sltu">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def XOR  : ALU_rr<0b0000000, 0b100, "xor">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SRL  : ALU_rr<0b0000000, 0b101, "srl">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def SRA  : ALU_rr<0b0100000, 0b101, "sra">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def SRL  : ALU_rr<0b0000000, 0b101, "srl">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
+def SRA  : ALU_rr<0b0100000, 0b101, "sra">, Sched<[WriteShiftReg, ReadShiftReg, ReadShiftReg]>;
 def OR   : ALU_rr<0b0000000, 0b110, "or">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 def AND  : ALU_rr<0b0000000, 0b111, "and">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
@@ -573,11 +563,11 @@ def ADDW  : ALUW_rr<0b0000000, 0b000, "addw">,
 def SUBW  : ALUW_rr<0b0100000, 0b000, "subw">,
             Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 def SLLW  : ALUW_rr<0b0000000, 0b001, "sllw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 def SRLW  : ALUW_rr<0b0000000, 0b101, "srlw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 def SRAW  : ALUW_rr<0b0100000, 0b101, "sraw">,
-            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+            Sched<[WriteShiftReg32, ReadShiftReg32, ReadShiftReg32]>;
 } // Predicates = [IsRV64]
 
 //===----------------------------------------------------------------------===//
@@ -869,13 +859,6 @@ def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
   return MatchSLLIUW(N);
 }]>;
 
-/// Immediates
-
-def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
-def : Pat<(simm32hi20:$imm), (LUI (HI20 imm:$imm))>;
-def : Pat<(i32 (simm32:$imm)), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>,
-      Requires<[IsRV32]>;
-
 /// Simple arithmetic operations
 
 def : PatGprGpr<add, ADD>;
@@ -961,41 +944,17 @@ def Select_GPR_Using_CC_GPR : SelectCC_rrirr<GPR, GPR>;
 
 /// Branches and jumps
 
-// Match `(brcond (CondOp ..), ..)` and lower to the appropriate RISC-V branch
-// instruction.
-class BccPat<PatFrag CondOp, RVInstB Inst>
-    : Pat<(brcond (XLenVT (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
+// Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
+class BccPat<CondCode Cond, RVInstB Inst>
+    : Pat<(riscv_brcc GPR:$rs1, GPR:$rs2, Cond, bb:$imm12),
           (Inst GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12)>;
 
-def : BccPat<seteq, BEQ>;
-def : BccPat<setne, BNE>;
-def : BccPat<setlt, BLT>;
-def : BccPat<setge, BGE>;
-def : BccPat<setult, BLTU>;
-def : BccPat<setuge, BGEU>;
-
-class BccSwapPat<PatFrag CondOp, RVInst InstBcc>
-    : Pat<(brcond (XLenVT (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
-          (InstBcc GPR:$rs2, GPR:$rs1, bb:$imm12)>;
-
-// Condition codes that don't have matching RISC-V branch instructions, but
-// are trivially supported by swapping the two input operands
-def : BccSwapPat<setgt, BLT>;
-def : BccSwapPat<setle, BGE>;
-def : BccSwapPat<setugt, BLTU>;
-def : BccSwapPat<setule, BGEU>;
-
-// Extra patterns are needed for a brcond without a setcc (i.e. where the
-// condition was calculated elsewhere).
-def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
-// In this pattern, the `(xor $cond, 1)` functions like (boolean) `not`, as the
-// `brcond` only uses the lowest bit.
-def : Pat<(brcond (XLenVT (xor GPR:$cond, 1)), bb:$imm12),
-          (BEQ GPR:$cond, X0, bb:$imm12)>;
-
-// Match X > -1, the canonical form of X >= 0, to the bgez pattern.
-def : Pat<(brcond (XLenVT (setgt GPR:$rs1, -1)), bb:$imm12),
-          (BGE GPR:$rs1, X0, bb:$imm12)>;
+def : BccPat<SETEQ, BEQ>;
+def : BccPat<SETNE, BNE>;
+def : BccPat<SETLT, BLT>;
+def : BccPat<SETGE, BGE>;
+def : BccPat<SETULT, BLTU>;
+def : BccPat<SETUGE, BGEU>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm21_lsb0_jal:$imm20), [(br bb:$imm20)]>,

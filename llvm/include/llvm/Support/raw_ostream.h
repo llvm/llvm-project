@@ -714,6 +714,17 @@ public:
   ~buffer_unique_ostream() override { *OS << str(); }
 };
 
+class Error;
+
+/// This helper creates an output stream and then passes it to \p Write.
+/// The stream created is based on the specified \p OutputFileName:
+/// llvm::outs for "-", raw_null_ostream for "/dev/null", and raw_fd_ostream
+/// for other names. For raw_fd_ostream instances, the stream writes to
+/// a temporary file. The final output file is atomically replaced with the
+/// temporary file after the \p Write function is finished.
+Error writeToOutput(StringRef OutputFileName,
+                    std::function<Error(raw_ostream &)> Write);
+
 } // end namespace llvm
 
 #endif // LLVM_SUPPORT_RAW_OSTREAM_H

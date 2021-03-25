@@ -693,7 +693,8 @@ set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER TRUE CACHE BOOL
 
 include(HandleLLVMOptions)
 
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+    COMPONENTS Interpreter)
 
 ######
 
@@ -757,6 +758,11 @@ configure_file(
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+
+if(LLVM_INCLUDE_TESTS)
+  include(GetErrcMessages)
+  get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
+endif()
 
 # For up-to-date instructions for installing the Tensorflow dependency, refer to
 # the bot setup script: https://github.com/google/ml-compiler-opt/blob/master/buildbot/buildbot_init.sh

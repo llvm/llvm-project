@@ -41,7 +41,7 @@ body:             |
     %2 = COPY $sgpr30_sgpr31
     %1 = COPY $vgpr2_vgpr3
     %0 = COPY $vgpr0_vgpr1
-    %3 = FLAT_LOAD_DWORD %1, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
+    %3 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load 4)
 
     %12 = V_LSHRREV_B32_e64 16, %3, implicit $exec
     %13 = V_BCNT_U32_B32_e64 %3, killed %12, implicit-def $vcc, implicit $exec
@@ -56,6 +56,6 @@ body:             |
     %19 = V_READLANE_B32 killed %18, 0, implicit-def $vcc, implicit $exec
     %20 = V_MOV_B32_e64 %19, implicit $exec
 
-    FLAT_STORE_DWORD %0, %20, 0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
+    FLAT_STORE_DWORD %0, %20, 0, 0, implicit $exec, implicit $flat_scr :: (store 4)
     $sgpr30_sgpr31 = COPY %2
     S_SETPC_B64_return $sgpr30_sgpr31

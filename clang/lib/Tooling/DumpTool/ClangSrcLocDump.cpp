@@ -48,7 +48,13 @@ class ASTSrcLocGenerationAction : public clang::ASTFrontendAction {
 public:
   ASTSrcLocGenerationAction() : Processor(JsonOutputPath) {}
 
-  ~ASTSrcLocGenerationAction() { Processor.generate(); }
+  void ExecuteAction() override {
+    clang::ASTFrontendAction::ExecuteAction();
+    if (getCompilerInstance().getDiagnostics().getNumErrors() > 0)
+      Processor.generateEmpty();
+    else
+      Processor.generate();
+  }
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
@@ -92,7 +98,13 @@ int main(int argc, const char **argv) {
   auto ParsedArgs = Opts.ParseArgs(llvm::makeArrayRef(Argv).slice(1),
                                    MissingArgIndex, MissingArgCount);
   ParseDiagnosticArgs(*DiagOpts, ParsedArgs);
-  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), &*DiagOpts);
+
+  // Don't output diagnostics, because common scenarios such as
+  // cross-compiling fail with diagnostics.  This is not fatal, but
+  // just causes attempts to use the introspection API to return no data.
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  TextDiagnosticPrinter DiagnosticPrinter(OS, &*DiagOpts);
   DiagnosticsEngine Diagnostics(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
       &DiagnosticPrinter, false);
@@ -129,6 +141,8 @@ int main(int argc, const char **argv) {
   if (!Compiler.hasDiagnostics())
     return 1;
 
+  // Suppress "2 errors generated" or similar messages
+  Compiler.getDiagnosticOpts().ShowCarets = false;
   Compiler.createSourceManager(Files);
 
   ASTSrcLocGenerationAction ScopedToolAction;

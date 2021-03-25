@@ -160,109 +160,100 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, i32* [[TMP25]], align 4
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i32> poison, i32 [[TMP26]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
-; CHECK-NEXT:    [[TMP28:%.*]] = phi <4 x i32> [ poison, [[VECTOR_BODY9]] ], [ [[TMP27]], [[PRED_LOAD_IF]] ]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
-; CHECK-NEXT:    br i1 [[TMP29]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
+; CHECK-NEXT:    [[TMP27:%.*]] = phi i32 [ poison, [[VECTOR_BODY9]] ], [ [[TMP26]], [[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
+; CHECK-NEXT:    br i1 [[TMP28]], label [[PRED_LOAD_IF30:%.*]], label [[PRED_LOAD_CONTINUE31:%.*]]
 ; CHECK:       pred.load.if30:
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP31:%.*]] = load i32, i32* [[TMP30]], align 4
-; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> [[TMP28]], i32 [[TMP31]], i32 1
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP30:%.*]] = load i32, i32* [[TMP29]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE31]]
 ; CHECK:       pred.load.continue31:
-; CHECK-NEXT:    [[TMP33:%.*]] = phi <4 x i32> [ [[TMP28]], [[PRED_LOAD_CONTINUE]] ], [ [[TMP32]], [[PRED_LOAD_IF30]] ]
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
-; CHECK-NEXT:    br i1 [[TMP34]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
+; CHECK-NEXT:    [[TMP31:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE]] ], [ [[TMP30]], [[PRED_LOAD_IF30]] ]
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
+; CHECK-NEXT:    br i1 [[TMP32]], label [[PRED_LOAD_IF32:%.*]], label [[PRED_LOAD_CONTINUE33:%.*]]
 ; CHECK:       pred.load.if32:
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP36:%.*]] = load i32, i32* [[TMP35]], align 4
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP33]], i32 [[TMP36]], i32 2
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP34:%.*]] = load i32, i32* [[TMP33]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE33]]
 ; CHECK:       pred.load.continue33:
-; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i32> [ [[TMP33]], [[PRED_LOAD_CONTINUE31]] ], [ [[TMP37]], [[PRED_LOAD_IF32]] ]
-; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
-; CHECK-NEXT:    br i1 [[TMP39]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
+; CHECK-NEXT:    [[TMP35:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE31]] ], [ [[TMP34]], [[PRED_LOAD_IF32]] ]
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
+; CHECK-NEXT:    br i1 [[TMP36]], label [[PRED_LOAD_IF34:%.*]], label [[PRED_LOAD_CONTINUE35:%.*]]
 ; CHECK:       pred.load.if34:
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP41:%.*]] = load i32, i32* [[TMP40]], align 4
-; CHECK-NEXT:    [[TMP42:%.*]] = insertelement <4 x i32> [[TMP38]], i32 [[TMP41]], i32 3
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i64 0, i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP38:%.*]] = load i32, i32* [[TMP37]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE35]]
 ; CHECK:       pred.load.continue35:
-; CHECK-NEXT:    [[TMP43:%.*]] = phi <4 x i32> [ [[TMP38]], [[PRED_LOAD_CONTINUE33]] ], [ [[TMP42]], [[PRED_LOAD_IF34]] ]
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i1> [[TMP23]], i32 0
-; CHECK-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF36:%.*]], label [[PRED_LOAD_CONTINUE37:%.*]]
+; CHECK-NEXT:    [[TMP39:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE33]] ], [ [[TMP38]], [[PRED_LOAD_IF34]] ]
+; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <4 x i1> [[TMP23]], i32 0
+; CHECK-NEXT:    br i1 [[TMP40]], label [[PRED_LOAD_IF36:%.*]], label [[PRED_LOAD_CONTINUE37:%.*]]
 ; CHECK:       pred.load.if36:
-; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP46:%.*]] = load i32, i32* [[TMP45]], align 4
-; CHECK-NEXT:    [[TMP47:%.*]] = insertelement <4 x i32> poison, i32 [[TMP46]], i32 0
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP42:%.*]] = load i32, i32* [[TMP41]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE37]]
 ; CHECK:       pred.load.continue37:
-; CHECK-NEXT:    [[TMP48:%.*]] = phi <4 x i32> [ poison, [[PRED_LOAD_CONTINUE35]] ], [ [[TMP47]], [[PRED_LOAD_IF36]] ]
-; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
-; CHECK-NEXT:    br i1 [[TMP49]], label [[PRED_LOAD_IF38:%.*]], label [[PRED_LOAD_CONTINUE39:%.*]]
+; CHECK-NEXT:    [[TMP43:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE35]] ], [ [[TMP42]], [[PRED_LOAD_IF36]] ]
+; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
+; CHECK-NEXT:    br i1 [[TMP44]], label [[PRED_LOAD_IF38:%.*]], label [[PRED_LOAD_CONTINUE39:%.*]]
 ; CHECK:       pred.load.if38:
-; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP51:%.*]] = load i32, i32* [[TMP50]], align 4
-; CHECK-NEXT:    [[TMP52:%.*]] = insertelement <4 x i32> [[TMP48]], i32 [[TMP51]], i32 1
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP46:%.*]] = load i32, i32* [[TMP45]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE39]]
 ; CHECK:       pred.load.continue39:
-; CHECK-NEXT:    [[TMP53:%.*]] = phi <4 x i32> [ [[TMP48]], [[PRED_LOAD_CONTINUE37]] ], [ [[TMP52]], [[PRED_LOAD_IF38]] ]
-; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
-; CHECK-NEXT:    br i1 [[TMP54]], label [[PRED_LOAD_IF40:%.*]], label [[PRED_LOAD_CONTINUE41:%.*]]
+; CHECK-NEXT:    [[TMP47:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE37]] ], [ [[TMP46]], [[PRED_LOAD_IF38]] ]
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
+; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_LOAD_IF40:%.*]], label [[PRED_LOAD_CONTINUE41:%.*]]
 ; CHECK:       pred.load.if40:
-; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP56:%.*]] = load i32, i32* [[TMP55]], align 4
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <4 x i32> [[TMP53]], i32 [[TMP56]], i32 2
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP50:%.*]] = load i32, i32* [[TMP49]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE41]]
 ; CHECK:       pred.load.continue41:
-; CHECK-NEXT:    [[TMP58:%.*]] = phi <4 x i32> [ [[TMP53]], [[PRED_LOAD_CONTINUE39]] ], [ [[TMP57]], [[PRED_LOAD_IF40]] ]
-; CHECK-NEXT:    [[TMP59:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
-; CHECK-NEXT:    br i1 [[TMP59]], label [[PRED_LOAD_IF42:%.*]], label [[PRED_LOAD_CONTINUE43:%.*]]
+; CHECK-NEXT:    [[TMP51:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE39]] ], [ [[TMP50]], [[PRED_LOAD_IF40]] ]
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
+; CHECK-NEXT:    br i1 [[TMP52]], label [[PRED_LOAD_IF42:%.*]], label [[PRED_LOAD_CONTINUE43:%.*]]
 ; CHECK:       pred.load.if42:
-; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP61:%.*]] = load i32, i32* [[TMP60]], align 4
-; CHECK-NEXT:    [[TMP62:%.*]] = insertelement <4 x i32> [[TMP58]], i32 [[TMP61]], i32 3
+; CHECK-NEXT:    [[TMP53:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i64 0, i64 [[TMP22]]
+; CHECK-NEXT:    [[TMP54:%.*]] = load i32, i32* [[TMP53]], align 4
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE43]]
 ; CHECK:       pred.load.continue43:
-; CHECK-NEXT:    [[TMP63:%.*]] = phi <4 x i32> [ [[TMP58]], [[PRED_LOAD_CONTINUE41]] ], [ [[TMP62]], [[PRED_LOAD_IF42]] ]
-; CHECK-NEXT:    [[TMP64:%.*]] = and <4 x i32> [[TMP63]], [[TMP43]]
-; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i1> [[TMP23]], i32 0
-; CHECK-NEXT:    br i1 [[TMP65]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
+; CHECK-NEXT:    [[TMP55:%.*]] = phi i32 [ poison, [[PRED_LOAD_CONTINUE41]] ], [ [[TMP54]], [[PRED_LOAD_IF42]] ]
+; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP23]], i32 0
+; CHECK-NEXT:    br i1 [[TMP56]], label [[PRED_STORE_IF44:%.*]], label [[PRED_STORE_CONTINUE45:%.*]]
 ; CHECK:       pred.store.if44:
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP67:%.*]] = extractelement <4 x i32> [[TMP64]], i32 0
-; CHECK-NEXT:    store i32 [[TMP67]], i32* [[TMP66]], align 4
+; CHECK-NEXT:    [[TMP57:%.*]] = and i32 [[TMP43]], [[TMP27]]
+; CHECK-NEXT:    [[TMP58:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    store i32 [[TMP57]], i32* [[TMP58]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE45]]
 ; CHECK:       pred.store.continue45:
-; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
-; CHECK-NEXT:    br i1 [[TMP68]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
+; CHECK-NEXT:    [[TMP59:%.*]] = extractelement <4 x i1> [[TMP23]], i32 1
+; CHECK-NEXT:    br i1 [[TMP59]], label [[PRED_STORE_IF46:%.*]], label [[PRED_STORE_CONTINUE47:%.*]]
 ; CHECK:       pred.store.if46:
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP20]]
-; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <4 x i32> [[TMP64]], i32 1
-; CHECK-NEXT:    store i32 [[TMP70]], i32* [[TMP69]], align 4
+; CHECK-NEXT:    [[TMP60:%.*]] = and i32 [[TMP47]], [[TMP31]]
+; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP20]]
+; CHECK-NEXT:    store i32 [[TMP60]], i32* [[TMP61]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE47]]
 ; CHECK:       pred.store.continue47:
-; CHECK-NEXT:    [[TMP71:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
-; CHECK-NEXT:    br i1 [[TMP71]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
+; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <4 x i1> [[TMP23]], i32 2
+; CHECK-NEXT:    br i1 [[TMP62]], label [[PRED_STORE_IF48:%.*]], label [[PRED_STORE_CONTINUE49:%.*]]
 ; CHECK:       pred.store.if48:
-; CHECK-NEXT:    [[TMP72:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <4 x i32> [[TMP64]], i32 2
-; CHECK-NEXT:    store i32 [[TMP73]], i32* [[TMP72]], align 4
+; CHECK-NEXT:    [[TMP63:%.*]] = and i32 [[TMP51]], [[TMP35]]
+; CHECK-NEXT:    [[TMP64:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP21]]
+; CHECK-NEXT:    store i32 [[TMP63]], i32* [[TMP64]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE49]]
 ; CHECK:       pred.store.continue49:
-; CHECK-NEXT:    [[TMP74:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
-; CHECK-NEXT:    br i1 [[TMP74]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51]]
+; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i1> [[TMP23]], i32 3
+; CHECK-NEXT:    br i1 [[TMP65]], label [[PRED_STORE_IF50:%.*]], label [[PRED_STORE_CONTINUE51]]
 ; CHECK:       pred.store.if50:
-; CHECK-NEXT:    [[TMP75:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP76:%.*]] = extractelement <4 x i32> [[TMP64]], i32 3
-; CHECK-NEXT:    store i32 [[TMP76]], i32* [[TMP75]], align 4
+; CHECK-NEXT:    [[TMP66:%.*]] = and i32 [[TMP55]], [[TMP39]]
+; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 [[TMP22]]
+; CHECK-NEXT:    store i32 [[TMP66]], i32* [[TMP67]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE51]]
 ; CHECK:       pred.store.continue51:
 ; CHECK-NEXT:    [[INDEX_NEXT15]] = add i64 [[INDEX14]], 4
-; CHECK-NEXT:    [[TMP77:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC13]]
-; CHECK-NEXT:    br i1 [[TMP77]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY9]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    [[TMP68:%.*]] = icmp eq i64 [[INDEX_NEXT15]], [[N_VEC13]]
+; CHECK-NEXT:    br i1 [[TMP68]], label [[MIDDLE_BLOCK7:%.*]], label [[VECTOR_BODY9]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block7:
 ; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE_LOOPEXIT:%.*]], label [[SCALAR_PH8]]
 ; CHECK:       scalar.ph8:

@@ -38,9 +38,8 @@ static uint32_t maxProt(StringRef name) {
 
 size_t OutputSegment::numNonHiddenSections() const {
   size_t count = 0;
-  for (const OutputSection *osec : sections) {
+  for (const OutputSection *osec : sections)
     count += (!osec->isHidden() ? 1 : 0);
-  }
   return count;
 }
 

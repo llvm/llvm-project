@@ -198,8 +198,9 @@ private:
     parser::CharBlock location;
     IndexVarKind kind;
   };
-  std::map<SymbolRef, const IndexVarInfo> activeIndexVars_;
-  SymbolSet errorSymbols_;
+  std::map<SymbolRef, const IndexVarInfo, SymbolAddressCompare>
+      activeIndexVars_;
+  UnorderedSymbolSet errorSymbols_;
   std::set<std::string> tempNames_;
 };
 

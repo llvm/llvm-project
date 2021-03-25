@@ -9,12 +9,9 @@ define void @atomicrmw(i64* %ptr) sanitize_hwaddress {
 ; CHECK-LABEL: @atomicrmw(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
 
-; CHECK: call void asm sideeffect "int3\0Anopl 83(%rax)", "{rdi}"(i64 %[[A]])
+; CHECK: call void @__hwasan_store8(i64 %[[A]])
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i64*
-; CHECK: atomicrmw add i64* %[[UNTAGGED_PTR]], i64 1 seq_cst
+; CHECK: atomicrmw add i64* %ptr, i64 1 seq_cst
 ; CHECK: ret void
 
 entry:
@@ -26,12 +23,9 @@ define void @cmpxchg(i64* %ptr, i64 %compare_to, i64 %new_value) sanitize_hwaddr
 ; CHECK-LABEL: @cmpxchg(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
 
-; CHECK: call void asm sideeffect "int3\0Anopl 83(%rax)", "{rdi}"(i64 %[[A]])
+; CHECK: call void @__hwasan_store8(i64 %[[A]])
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i64* %ptr to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = and i64 %[[A]], 72057594037927935
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i64*
-; CHECK: cmpxchg i64* %[[UNTAGGED_PTR]], i64 %compare_to, i64 %new_value seq_cst seq_cst
+; CHECK: cmpxchg i64* %ptr, i64 %compare_to, i64 %new_value seq_cst seq_cst
 ; CHECK: ret void
 
 entry:

@@ -106,6 +106,6 @@
 
 #define ompt_callback_dispatch_implemented ompt_event_UNIMPLEMENTED
 
-#define ompt_callback_error_implemented ompt_event_UNIMPLEMENTED
+#define ompt_callback_error_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
 #endif

@@ -548,14 +548,14 @@ let test_global_variables () =
            set_initializer forty_two32 in
     insist (not (is_declaration g));
     insist (not (is_declaration g2));
-    insist ((global_initializer g) == (global_initializer g2));
+    insist ((global_initializer g) = (global_initializer g2));
 
     let g = define_qualified_global "QGVar02" forty_two32 3 m in
     let g2 = declare_qualified_global i32_type "QGVar03" 3 m ++
            set_initializer forty_two32 in
     insist (not (is_declaration g));
     insist (not (is_declaration g2));
-    insist ((global_initializer g) == (global_initializer g2));
+    insist ((global_initializer g) = (global_initializer g2));
   end;
 
   (* CHECK: GVar04{{.*}}thread_local
@@ -595,6 +595,10 @@ let test_global_variables () =
 
   begin group "iteration";
     let m = create_module context "temp" in
+
+    insist (get_module_identifier m = "temp");
+    set_module_identifer m "temp2";
+    insist (get_module_identifier m = "temp2");
 
     insist (At_end m = global_begin m);
     insist (At_start m = global_end m);

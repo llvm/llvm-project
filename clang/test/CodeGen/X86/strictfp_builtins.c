@@ -26,6 +26,42 @@ void p(char *str, int x) {
 
 #define P(n,args) p(#n #args, __builtin_##n args)
 
+// CHECK-LABEL: @test_long_double_isinf(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
+// CHECK-NEXT:    store x86_fp80 [[D:%.*]], x86_fp80* [[LD_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, x86_fp80* [[LD_ADDR]], align 16
+// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast x86_fp80 [[TMP0]] to i80
+// CHECK-NEXT:    [[SHL1:%.*]] = shl i80 [[BITCAST]], 1
+// CHECK-NEXT:    [[CMP:%.*]] = icmp eq i80 [[SHL1]], -18446744073709551616
+// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i32
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.[[#STRID:1]], i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
+// CHECK-NEXT:    ret void
+//
+void test_long_double_isinf(long double ld) {
+  P(isinf, (ld));
+
+  return;
+}
+
+// CHECK-LABEL: @test_long_double_isfinite(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
+// CHECK-NEXT:    store x86_fp80 [[D:%.*]], x86_fp80* [[LD_ADDR]], align 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load x86_fp80, x86_fp80* [[LD_ADDR]], align 16
+// CHECK-NEXT:    [[BITCAST:%.*]] = bitcast x86_fp80 [[TMP0]] to i80
+// CHECK-NEXT:    [[SHL1:%.*]] = shl i80 [[BITCAST]], 1
+// CHECK-NEXT:    [[CMP:%.*]] = icmp ult i80 [[SHL1]], -18446744073709551616
+// CHECK-NEXT:    [[RES:%.*]] = zext i1 [[CMP]] to i32
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str.[[#STRID:STRID+1]], i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
+// CHECK-NEXT:    ret void
+//
+void test_long_double_isfinite(long double ld) {
+  P(isfinite, (ld));
+
+  return;
+}
+
 // CHECK-LABEL: @test_long_double_isnan(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LD_ADDR:%.*]] = alloca x86_fp80, align 16
@@ -36,7 +72,7 @@ void p(char *str, int x) {
 // CHECK-NEXT:    [[TMP1:%.*]] = sub i80 604453686435277732577280, [[ABS]]
 // CHECK-NEXT:    [[ISNAN:%.*]] = lshr i80 [[TMP1]], 79
 // CHECK-NEXT:    [[RES:%.*]] = trunc i80 [[ISNAN]] to i32
-// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.1, i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
+// CHECK-NEXT:    call void @p(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @.str.[[#STRID:STRID+1]], i64 0, i64 0), i32 [[RES]]) [[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void test_long_double_isnan(long double ld) {

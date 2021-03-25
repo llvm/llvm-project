@@ -1,5 +1,5 @@
-# RUN: llvm-mc -preserve-comments -triple amdgcn-amd-amdhsa %s >%t-1.s
-# RUN: llvm-mc -preserve-comments -triple amdgcn-amd-amdhsa %t-1.s >%t-2.s
+# RUN: llvm-mc -preserve-comments -triple amdgcn-amd- %s >%t-1.s
+# RUN: llvm-mc -preserve-comments -triple amdgcn-amd- %t-1.s >%t-2.s
 # RUN: diff %t-1.s %t-2.s
 
 # Test that AMDGPU assembly round-trips when run through MC; the first

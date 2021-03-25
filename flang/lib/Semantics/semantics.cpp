@@ -185,8 +185,9 @@ SemanticsContext::SemanticsContext(
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
-      foldingContext_{
-          parser::ContextualMessages{&messages_}, defaultKinds_, intrinsics_} {}
+      globalScope_{*this}, foldingContext_{
+                               parser::ContextualMessages{&messages_},
+                               defaultKinds_, intrinsics_} {}
 
 SemanticsContext::~SemanticsContext() {}
 

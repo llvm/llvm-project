@@ -272,6 +272,9 @@ class Dialect {
 
   // If this dialect overrides the hook for verifying region result attributes.
   bit hasRegionResultAttrVerify = 0;
+
+  // If this dialect overrides the hook for op interface fallback.
+  bit hasOperationInterfaceFallback = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1142,7 +1145,9 @@ class BitEnumAttrCase<string sym, int val, string str = sym> :
 }
 
 // Additional information for an enum attribute.
-class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
+class EnumAttrInfo<
+    string name, list<EnumAttrCaseInfo> cases, Attr baseClass> :
+      Attr<baseClass.predicate, baseClass.summary> {
   // The C++ enum class name
   string className = name;
 
@@ -1188,6 +1193,28 @@ class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
   // static constexpr unsigned <fn-name>();
   // ```
   string maxEnumValFnName = "getMaxEnumValFor" # name;
+
+  // Generate specialized Attribute class
+  bit genSpecializedAttr = 1;
+  // The underlying Attribute class, which holds the enum value
+  Attr baseAttrClass = baseClass;
+  // The name of specialized Enum Attribute class
+  string specializedAttrClassName = name # Attr;
+
+  // Override Attr class fields for specialized class
+  let predicate = !if(genSpecializedAttr,
+    CPred<"$_self.isa<" # cppNamespace # "::" # specializedAttrClassName # ">()">,
+    baseAttrClass.predicate);
+  let storageType = !if(genSpecializedAttr,
+    cppNamespace # "::" # specializedAttrClassName,
+    baseAttrClass.storageType);
+  let returnType = !if(genSpecializedAttr,
+    cppNamespace # "::" # className,
+    baseAttrClass.returnType);
+  let constBuilderCall = !if(genSpecializedAttr,
+    cppNamespace # "::" # specializedAttrClassName # "::get($_builder.getContext(), $0)",
+    baseAttrClass.constBuilderCall);
+  let valueType = baseAttrClass.valueType;
 }
 
 // An enum attribute backed by StringAttr.
@@ -1195,47 +1222,44 @@ class EnumAttrInfo<string name, list<EnumAttrCaseInfo> cases> {
 // Op attributes of this kind are stored as StringAttr. Extra verification will
 // be generated on the string though: only the symbols of the allowed cases are
 // permitted as the string value.
-class StrEnumAttr<string name, string summary, list<StrEnumAttrCase> cases>
-  : EnumAttrInfo<name, cases>,
+class StrEnumAttr<string name, string summary, list<StrEnumAttrCase> cases> :
+  EnumAttrInfo<name, cases,
     StringBasedAttr<
       And<[StrAttr.predicate, Or<!foreach(case, cases, case.predicate)>]>,
       !if(!empty(summary), "allowed string cases: " #
           !interleave(!foreach(case, cases, "'" # case.symbol # "'"), ", "),
-          summary)>;
+          summary)>> {
+  // Disable specialized Attribute class for `StringAttr` backend by default.
+  let genSpecializedAttr = 0;
+}
 
 // An enum attribute backed by IntegerAttr.
 //
 // Op attributes of this kind are stored as IntegerAttr. Extra verification will
 // be generated on the integer though: only the values of the allowed cases are
 // permitted as the integer value.
-class IntEnumAttr<I intType, string name, string summary,
-                  list<IntEnumAttrCaseBase> cases> :
-    EnumAttrInfo<name, cases>,
-    SignlessIntegerAttrBase<intType,
-      !if(!empty(summary), "allowed " # intType.summary # " cases: " #
-          !interleave(!foreach(case, cases, case.value), ", "), summary)> {
+class IntEnumAttrBase<I intType, list<IntEnumAttrCaseBase> cases, string summary> :
+    SignlessIntegerAttrBase<intType, summary> {
   let predicate = And<[
-    SignlessIntegerAttrBase<intType, "">.predicate,
+    SignlessIntegerAttrBase<intType, summary>.predicate,
     Or<!foreach(case, cases, case.predicate)>]>;
 }
 
-class I32EnumAttr<string name, string summary,
-                  list<I32EnumAttrCase> cases> :
+class IntEnumAttr<I intType, string name, string summary,
+                  list<IntEnumAttrCaseBase> cases> :
+  EnumAttrInfo<name, cases,
+    IntEnumAttrBase<intType, cases,
+      !if(!empty(summary), "allowed " # intType.summary # " cases: " #
+          !interleave(!foreach(case, cases, case.value), ", "),
+          summary)>>;
+
+class I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases> :
     IntEnumAttr<I32, name, summary, cases> {
-  let returnType = cppNamespace # "::" # name;
   let underlyingType = "uint32_t";
-  let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
-  let constBuilderCall =
-          "$_builder.getI32IntegerAttr(static_cast<int32_t>($0))";
 }
-class I64EnumAttr<string name, string summary,
-                  list<I64EnumAttrCase> cases> :
+class I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases> :
     IntEnumAttr<I64, name, summary, cases> {
-  let returnType = cppNamespace # "::" # name;
   let underlyingType = "uint64_t";
-  let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
-  let constBuilderCall =
-          "$_builder.getI64IntegerAttr(static_cast<int64_t>($0))";
 }
 
 // A bit enum stored with 32-bit IntegerAttr.
@@ -1244,9 +1268,8 @@ class I64EnumAttr<string name, string summary,
 // be generated on the integer to make sure only allowed bit are set. Besides,
 // helper methods are generated to parse a string separated with a specified
 // delimiter to a symbol and vice versa.
-class BitEnumAttr<string name, string summary,
-                  list<BitEnumAttrCase> cases> :
-    EnumAttrInfo<name, cases>, SignlessIntegerAttrBase<I32, summary> {
+class BitEnumAttrBase<list<BitEnumAttrCase> cases, string summary> :
+    SignlessIntegerAttrBase<I32, summary> {
   let predicate = And<[
     I32Attr.predicate,
     // Make sure we don't have unknown bit set.
@@ -1254,12 +1277,11 @@ class BitEnumAttr<string name, string summary,
           # !interleave(!foreach(case, cases, case.value # "u"), "|") #
           ")))">
   ]>;
+}
 
-  let returnType = cppNamespace # "::" # name;
+class BitEnumAttr<string name, string summary, list<BitEnumAttrCase> cases> :
+    EnumAttrInfo<name, cases, BitEnumAttrBase<cases, summary>> {
   let underlyingType = "uint32_t";
-  let convertFromStorage = "static_cast<" # returnType # ">($_self.getInt())";
-  let constBuilderCall =
-          "$_builder.getI32IntegerAttr(static_cast<int32_t>($0))";
 
   // We need to return a string because we may concatenate symbols for multiple
   // bits together.
@@ -1439,7 +1461,7 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
       CPred<"$_self.isa<::mlir::ArrayAttr>()">,
       // Guarantee all elements satisfy the constraints from `element`
       Concat<"::llvm::all_of($_self.cast<::mlir::ArrayAttr>(), "
-                            "[](::mlir::Attribute attr) { return ",
+                            "[&](::mlir::Attribute attr) { return ",
                                SubstLeaves<"$_self", "attr", element.predicate>,
                             "; })">]>,
     summary> {
@@ -1805,9 +1827,15 @@ def ElementwiseMappable {
   ];
 }
 
+// Op's regions have a single block.
+def SingleBlock : NativeOpTrait<"SingleBlock">;
+
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
     : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op>;
+
+// Op's regions don't have terminator.
+def NoTerminator : NativeOpTrait<"NoTerminator">;
 
 // Op's parent operation is the provided one.
 class HasParent<string op>
@@ -2122,10 +2150,11 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
-  // TODO: figure out a better way to write canonicalization patterns in
-  // TableGen rules directly instead of using this marker and C++
-  // implementations.
   bit hasCanonicalizer = 0;
+
+  // Whether this op has a static "canonicalize" method to perform "match and
+  // rewrite patterns".
+  bit hasCanonicalizeMethod = 0;
 
   // Whether this op has a folder.
   bit hasFolder = 0;
@@ -2137,6 +2166,35 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // Additional code that will be added to the public part of the generated
   // C++ code of the op declaration.
   code extraClassDeclaration = ?;
+}
+
+// Base class for ops with static/dynamic offset, sizes and strides
+// attributes/arguments.
+class BaseOpWithOffsetSizesAndStrides<Dialect dialect, string mnemonic,
+                                      list<OpTrait> traits = []> :
+  Op<dialect, mnemonic, traits> {
+
+  // For every such op, there needs to be a:
+  //   * void print(OpAsmPrinter &p, ${C++ class of Op} op)
+  //   * LogicalResult verify(${C++ class of Op} op)
+  //   * ParseResult parse${C++ class of Op}(OpAsmParser &parser,
+  //                                         OperationState &result)
+  // functions.
+  let printer = [{ return ::print(p, *this); }];
+  let verifier = [{ return ::verify(*this); }];
+  let parser = [{ return ::parse$cppClass(parser, result); }];
+
+  code extraBaseClassDeclaration = [{
+    /// Returns the dynamic sizes for this subview operation if specified.
+    operand_range getDynamicSizes() { return sizes(); }
+
+    /// Return the list of Range (i.e. offset, size, stride). Each
+    /// Range entry contains either the dynamic value or a ConstantIndexOp
+    /// constructed with `b` at location `loc`.
+    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
+      return mlir::getOrCreateRanges(*this, b, loc);
+    }
+  }];
 }
 
 // The arguments of an op.
@@ -2673,6 +2731,8 @@ class TypeDef<Dialect dialect, string name,
 class AttrOrTypeParameter<string type, string desc> {
   // Custom memory allocation code for storage constructor.
   code allocator = ?;
+  // Custom comparator used to compare two instances for equality.
+  code comparator = ?;
   // The C++ type of this parameter.
   string cppType = type;
   // One-line human-readable description of the argument.
@@ -2687,6 +2747,12 @@ class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+}
+
+// For APFloats, which require comparison.
+class APFloatParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APFloat", desc> {
+  let comparator = "$_lhs.bitwiseIsEqual($_rhs)";
 }
 
 // For standard ArrayRefs, which require allocation.
@@ -2715,7 +2781,8 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
 // This is a special parameter used for AttrDefs that represents a `mlir::Type`
 // that is also used as the value `Type` of the attribute. Only one parameter
 // of the attribute may be of this type.
-class AttributeSelfTypeParameter<string desc> :
-    AttrOrTypeParameter<"::mlir::Type", desc> {}
+class AttributeSelfTypeParameter<string desc,
+                                 string derivedType = "::mlir::Type"> :
+    AttrOrTypeParameter<derivedType, desc> {}
 
 #endif // OP_BASE

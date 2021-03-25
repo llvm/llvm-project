@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "MapFile.h"
 #include "MergedOutputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -47,6 +48,8 @@ public:
   void scanSymbols();
   void createOutputSections();
   void createLoadCommands();
+  void finalizeAddressses();
+  void finalizeLinkEditSegment();
   void assignAddresses(OutputSegment *);
 
   void openFile();
@@ -66,6 +69,7 @@ public:
   CodeSignatureSection *codeSignatureSection = nullptr;
   UnwindInfoSection *unwindInfoSection = nullptr;
   LCUuid *uuidCommand = nullptr;
+  OutputSegment *linkEditSegment = nullptr;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -442,6 +446,40 @@ public:
 
 } // namespace
 
+// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// DylibSymbol.)
+static void prepareBranchTarget(Symbol *sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    if (in.stubs->addEntry(dysym)) {
+      if (sym->isWeakDef()) {
+        in.binding->addEntry(dysym, in.lazyPointers->isec,
+                             sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                                 sym->stubsIndex * WordSize);
+      } else {
+        in.lazyBinding->addEntry(dysym);
+      }
+    }
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isExternalWeakDef()) {
+      if (in.stubs->addEntry(sym)) {
+        in.rebase->addEntry(in.lazyPointers->isec, sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                                 sym->stubsIndex * WordSize);
+      }
+    }
+  }
+}
+
+// Can a symbol's address can only be resolved at runtime?
+static bool needsBinding(const Symbol *sym) {
+  if (isa<DylibSymbol>(sym))
+    return true;
+  if (const auto *defined = dyn_cast<Defined>(sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
 static void prepareSymbolRelocation(lld::macho::Symbol *sym,
                                     const InputSection *isec, const Reloc &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
@@ -671,11 +709,12 @@ static int sectionOrder(OutputSection *osec) {
     }
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::rebase, -8)
-        .Case(section_names::binding, -7)
-        .Case(section_names::weakBinding, -6)
-        .Case(section_names::lazyBinding, -5)
-        .Case(section_names::export_, -4)
+        .Case(section_names::rebase, -9)
+        .Case(section_names::binding, -8)
+        .Case(section_names::weakBinding, -7)
+        .Case(section_names::lazyBinding, -6)
+        .Case(section_names::export_, -5)
+        .Case(section_names::functionStarts, -4)
         .Case(section_names::symbolTable, -3)
         .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
@@ -712,7 +751,6 @@ static void sortSegmentsAndSections() {
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
-
       if (!firstTLVDataSection && isThreadLocalData(osec->flags))
         firstTLVDataSection = osec;
 
@@ -790,6 +828,39 @@ void Writer::createOutputSections() {
             ssec->name);
     }
   }
+
+  // dyld requires __LINKEDIT segment to always exist (even if empty).
+  linkEditSegment = getOrCreateOutputSegment(segment_names::linkEdit);
+}
+
+void Writer::finalizeAddressses() {
+  // Ensure that segments (and the sections they contain) are allocated
+  // addresses in ascending order, which dyld requires.
+  //
+  // Note that at this point, __LINKEDIT sections are empty, but we need to
+  // determine addresses of other segments/sections before generating its
+  // contents.
+  for (OutputSegment *seg : outputSegments)
+    if (seg != linkEditSegment)
+      assignAddresses(seg);
+
+  // FIXME(gkm): create branch-extension thunks here, then adjust addresses
+}
+
+void Writer::finalizeLinkEditSegment() {
+  // Fill __LINKEDIT contents.
+  in.rebase->finalizeContents();
+  in.binding->finalizeContents();
+  in.weakBinding->finalizeContents();
+  in.lazyBinding->finalizeContents();
+  in.exports->finalizeContents();
+  in.functionStarts->finalizeContents();
+  symtabSection->finalizeContents();
+  indirectSymtabSection->finalizeContents();
+
+  // Now that __LINKEDIT is filled out, do a proper calculation of its
+  // addresses and offsets.
+  assignAddresses(linkEditSegment);
 }
 
 void Writer::assignAddresses(OutputSegment *seg) {
@@ -844,51 +915,21 @@ void Writer::writeCodeSignature() {
 }
 
 void Writer::run() {
-  // dyld requires __LINKEDIT segment to always exist (even if empty).
-  OutputSegment *linkEditSegment =
-      getOrCreateOutputSegment(segment_names::linkEdit);
-
   prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
   scanSymbols();
-
-  // Sort and assign sections to their respective segments. No more sections nor
-  // segments may be created after these methods run.
   createOutputSections();
+  // No more sections nor segments are created beyond this point.
   sortSegmentsAndSections();
-
   createLoadCommands();
-
-  // Ensure that segments (and the sections they contain) are allocated
-  // addresses in ascending order, which dyld requires.
-  //
-  // Note that at this point, __LINKEDIT sections are empty, but we need to
-  // determine addresses of other segments/sections before generating its
-  // contents.
-  for (OutputSegment *seg : outputSegments)
-    if (seg != linkEditSegment)
-      assignAddresses(seg);
-
-  // Fill __LINKEDIT contents.
-  in.rebase->finalizeContents();
-  in.binding->finalizeContents();
-  in.weakBinding->finalizeContents();
-  in.lazyBinding->finalizeContents();
-  in.exports->finalizeContents();
-  in.functionStarts->finalizeContents();
-  symtabSection->finalizeContents();
-  indirectSymtabSection->finalizeContents();
-
-  // Now that __LINKEDIT is filled out, do a proper calculation of its
-  // addresses and offsets.
-  assignAddresses(linkEditSegment);
-
+  finalizeAddressses();
+  finalizeLinkEditSegment();
+  writeMapFile();
   openFile();
   if (errorCount())
     return;
-
   writeSections();
   writeUuid();
   writeCodeSignature();

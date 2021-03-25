@@ -52,13 +52,11 @@ class VINTERP_Pseudo <string OpName, VOPProfile P, list<dag> pattern = []> :
 
   let VOP3_OPSEL = 1;
   let VINTERP = 1;
-  let WQM = 1;
 }
 
 class VINTERP_Real <VOP_Pseudo ps, int EncodingFamily> :
   VOP3_Real <ps, EncodingFamily> {
   let VINTERP = 1;
-  let WQM = 1;
 }
 
 def VOP3_VINTERP_F32 : VOPProfile<[f32, f32, f32, f32]> {

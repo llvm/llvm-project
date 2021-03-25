@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
@@ -39,7 +40,8 @@ public:
   // Return the C/C++ string representation of LMUL
   std::string str() const;
   Optional<unsigned> getScale(unsigned ElementBitwidth) const;
-  LMULType &operator*=(unsigned RHS);
+  void MulLog2LMUL(int Log2LMUL);
+  LMULType &operator*=(uint32_t RHS);
 };
 
 // This class is compact representation of a valid and invalid RVVType.
@@ -88,7 +90,13 @@ public:
   const std::string &getTypeStr() const { return Str; }
 
   // Return the short name of a type for C/C++ name suffix.
-  const std::string &getShortStr() const { return ShortStr; }
+  const std::string &getShortStr() {
+    // Not all types are used in short name, so compute the short name by
+    // demanded.
+    if (ShortStr.empty())
+      initShortStr();
+    return ShortStr;
+  }
 
   bool isValid() const { return Valid; }
   bool isScalar() const { return Scale.hasValue() && Scale.getValue() == 0; }
@@ -145,6 +153,8 @@ private:
   bool HasMaskedOffOperand;
   bool HasVL;
   bool HasGeneric;
+  bool HasAutoDef; // There is automiatic definition in header
+  std::string ManualCodegen;
   RVVTypePtr OutputType; // Builtin output type
   RVVTypes InputTypes;   // Builtin input types
   // The types we use to obtain the specific LLVM intrinsic. They are index of
@@ -159,8 +169,9 @@ public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
                StringRef IRName, bool HasSideEffects, bool IsMask,
                bool HasMaskedOffOperand, bool HasVL, bool HasGeneric,
-               const RVVTypes &Types,
-               const std::vector<int64_t> &RVVIntrinsicTypes);
+               bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
+               const std::vector<int64_t> &IntrinsicTypes,
+               const std::vector<int64_t> &PermuteOperands);
   ~RVVIntrinsic() = default;
 
   StringRef getName() const { return Name; }
@@ -169,6 +180,8 @@ public:
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
   bool hasGeneric() const { return HasGeneric; }
+  bool hasManualCodegen() const { return !ManualCodegen.empty(); }
+  bool hasAutoDef() const { return HasAutoDef; }
   size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
@@ -190,6 +203,7 @@ public:
 class RVVEmitter {
 private:
   RecordKeeper &Records;
+  std::string HeaderCode;
   // Concat BasicType, LMUL and Proto as key
   StringMap<RVVType> LegalTypes;
   StringSet<> IllegalTypes;
@@ -208,6 +222,8 @@ public:
 
   /// Emit all the information needed to map builtin -> LLVM IR intrinsic.
   void createCodeGen(raw_ostream &o);
+
+  std::string getSuffixStr(char Type, int Log2LMUL, StringRef Prototypes);
 
 private:
   /// Create all intrinsics and add them to \p Out
@@ -228,6 +244,10 @@ private:
   // Emit the architecture preprocessor definitions. Return true when emits
   // non-empty string.
   bool emitExtDefStr(uint8_t Extensions, raw_ostream &o);
+  // Slice Prototypes string into sub prototype string and process each sub
+  // prototype string individually in the Handler.
+  void parsePrototypes(StringRef Prototypes,
+                       std::function<void(StringRef)> Handler);
 };
 
 } // namespace
@@ -272,6 +292,8 @@ VScaleVal LMULType::getScale(unsigned ElementBitwidth) const {
   return 1 << Log2ScaleResult;
 }
 
+void LMULType::MulLog2LMUL(int log2LMUL) { Log2LMUL += log2LMUL; }
+
 LMULType &LMULType::operator*=(uint32_t RHS) {
   assert(isPowerOf2_32(RHS));
   this->Log2LMUL = this->Log2LMUL + Log2_32(RHS);
@@ -288,7 +310,6 @@ RVVType::RVVType(BasicType BT, int Log2LMUL, StringRef prototype)
     initTypeStr();
     if (isVector()) {
       initClangBuiltinStr();
-      initShortStr();
     }
   }
 }
@@ -311,6 +332,8 @@ RVVType::RVVType(BasicType BT, int Log2LMUL, StringRef prototype)
 // clang-format on
 
 bool RVVType::verifyType() const {
+  if (ScalarType == Invalid)
+    return false;
   if (isScalar())
     return true;
   if (!Scale.hasValue())
@@ -546,7 +569,8 @@ void RVVType::applyModifier(StringRef Transformer) {
   if (Transformer.empty())
     return;
   // Handle primitive type transformer
-  switch (Transformer.back()) {
+  auto PType = Transformer.back();
+  switch (PType) {
   case 'e':
     Scale = 0;
     break;
@@ -592,7 +616,40 @@ void RVVType::applyModifier(StringRef Transformer) {
   }
   Transformer = Transformer.drop_back();
 
-  // Compute type transformers
+  // Extract and compute complex type transformer. It can only appear one time.
+  if (Transformer.startswith("(")) {
+    size_t Idx = Transformer.find(')');
+    assert(Idx != StringRef::npos);
+    StringRef ComplexType = Transformer.slice(1, Idx);
+    Transformer = Transformer.drop_front(Idx + 1);
+    assert(Transformer.find('(') == StringRef::npos &&
+           "Only allow one complex type transformer");
+
+    auto UpdateAndCheckComplexProto = [&]() {
+      Scale = LMUL.getScale(ElementBitwidth);
+      const StringRef VectorPrototypes("vwqom");
+      if (!VectorPrototypes.contains(PType))
+        PrintFatalError("Complex type transformer only supports vector type!");
+      if (Transformer.find_first_of("PCKWS") != StringRef::npos)
+        PrintFatalError(
+            "Illegal type transformer for Complex type transformer");
+    };
+    auto ComplexTT = ComplexType.split(":");
+    if (ComplexTT.first == "Log2EEW") {
+      uint32_t Log2EEW;
+      ComplexTT.second.getAsInteger(10, Log2EEW);
+      // update new elmul = (eew/sew) * lmul
+      LMUL.MulLog2LMUL(Log2EEW - Log2_32(ElementBitwidth));
+      // update new eew
+      ElementBitwidth = 1 << Log2EEW;
+      ScalarType = ScalarTypeKind::SignedInteger;
+      UpdateAndCheckComplexProto();
+    } else {
+      PrintFatalError("Illegal complex type transformers!");
+    }
+  }
+
+  // Compute the remain type transformers
   for (char I : Transformer) {
     switch (I) {
     case 'P':
@@ -637,11 +694,14 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef IRName,
                            bool HasSideEffects, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL,
-                           bool HasGeneric, const RVVTypes &OutInTypes,
-                           const std::vector<int64_t> &NewIntrinsicTypes)
+                           bool HasGeneric, bool HasAutoDef,
+                           StringRef ManualCodegen, const RVVTypes &OutInTypes,
+                           const std::vector<int64_t> &NewIntrinsicTypes,
+                           const std::vector<int64_t> &PermuteOperands)
     : IRName(IRName), HasSideEffects(HasSideEffects),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
-      HasGeneric(HasGeneric) {
+      HasGeneric(HasGeneric), HasAutoDef(HasAutoDef),
+      ManualCodegen(ManualCodegen.str()) {
 
   // Init Name and MangledName
   Name = NewName.str();
@@ -670,6 +730,29 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
   InputTypes.assign(OutInTypes.begin() + 1, OutInTypes.end());
   CTypeOrder.resize(InputTypes.size());
   std::iota(CTypeOrder.begin(), CTypeOrder.end(), 0);
+  // Update default order if we need permutate.
+  if (!PermuteOperands.empty()) {
+    // PermuteOperands is nonmasked version index. Update index when there is
+    // maskedoff operand which is always in first operand.
+
+    unsigned Skew = HasMaskedOffOperand ? 1 : 0;
+    for (unsigned i = 0; i < PermuteOperands.size(); ++i) {
+      if (i != PermuteOperands[i])
+        CTypeOrder[i] = PermuteOperands[i] + Skew;
+    }
+    // Verify the result of CTypeOrder has legal value.
+    if (*std::max_element(CTypeOrder.begin(), CTypeOrder.end()) >=
+        CTypeOrder.size())
+      PrintFatalError(
+          "The index of PermuteOperand is bigger than the operand number");
+    SmallSet<unsigned, 8> Seen;
+    for (auto Idx : CTypeOrder) {
+      if (!Seen.insert(Idx).second)
+        PrintFatalError(
+            "The different element in PermuteOperand could not be equal");
+    }
+  }
+
   if (IsMask) {
     if (HasVL)
       // Builtin type order: op0, op1, ..., mask, vl
@@ -681,6 +764,7 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
       // C type order: mask, op0, op1, ...,
       std::rotate(CTypeOrder.begin(), CTypeOrder.end() - 1, CTypeOrder.end());
   }
+
   // IntrinsicTypes is nonmasked version index. Need to update it
   // if there is maskedoff operand (It is always in first operand).
   IntrinsicTypes = NewIntrinsicTypes;
@@ -702,7 +786,13 @@ std::string RVVIntrinsic::getBuiltinTypeStr() const {
 }
 
 void RVVIntrinsic::emitCodeGenSwitchBody(raw_ostream &OS) const {
+
   OS << "  ID = Intrinsic::riscv_" + getIRName() + ";\n";
+  if (hasManualCodegen()) {
+    OS << ManualCodegen;
+    OS << "break;\n";
+    return;
+  }
   OS << "  IntrinsicTypes = {";
   ListSeparator LS;
   for (const auto &Idx : IntrinsicTypes) {
@@ -792,6 +882,11 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
   createRVVIntrinsics(Defs);
 
+  // Print header code
+  if (!HeaderCode.empty()) {
+    OS << HeaderCode;
+  }
+
   auto printType = [&](auto T) {
     OS << "typedef " << T->getClangBuiltinStr() << " " << T->getTypeStr()
        << ";\n";
@@ -832,8 +927,8 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   OS << "#endif\n";
 
   OS << "#if defined(__riscv_d)\n";
-  for (int ELMul : Log2LMULs) {
-    auto T = computeType('d', ELMul, "v");
+  for (int Log2LMUL : Log2LMULs) {
+    auto T = computeType('d', Log2LMUL, "v");
     if (T.hasValue())
       printType(T.getValue());
   }
@@ -881,7 +976,6 @@ void RVVEmitter::createBuiltins(raw_ostream &OS) {
     else
       OS << "\"\")\n";
   }
-  OS << "\n#undef BUILTIN\n";
   OS << "#undef RISCVV_BUILTIN\n";
 }
 
@@ -909,13 +1003,38 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
   OS << "\n";
 }
 
+void RVVEmitter::parsePrototypes(StringRef Prototypes,
+                                 std::function<void(StringRef)> Handler) {
+  const StringRef Primaries("evwqom0ztc");
+  while (!Prototypes.empty()) {
+    size_t Idx = 0;
+    // Skip over complex prototype because it could contain primitive type
+    // character.
+    if (Prototypes[0] == '(')
+      Idx = Prototypes.find_first_of(')');
+    Idx = Prototypes.find_first_of(Primaries, Idx);
+    assert(Idx != StringRef::npos);
+    Handler(Prototypes.slice(0, Idx + 1));
+    Prototypes = Prototypes.drop_front(Idx + 1);
+  }
+}
+
+std::string RVVEmitter::getSuffixStr(char Type, int Log2LMUL,
+                                     StringRef Prototypes) {
+  SmallVector<std::string> SuffixStrs;
+  parsePrototypes(Prototypes, [&](StringRef Proto) {
+    auto T = computeType(Type, Log2LMUL, Proto);
+    SuffixStrs.push_back(T.getValue()->getShortStr());
+  });
+  return join(SuffixStrs, "_");
+}
+
 void RVVEmitter::createRVVIntrinsics(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Out) {
-
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("RVVBuiltin");
   for (auto *R : RV) {
     StringRef Name = R->getValueAsString("Name");
-    StringRef Suffix = R->getValueAsString("Suffix");
+    StringRef SuffixProto = R->getValueAsString("Suffix");
     StringRef MangledName = R->getValueAsString("MangledName");
     StringRef Prototypes = R->getValueAsString("Prototype");
     StringRef TypeRange = R->getValueAsString("TypeRange");
@@ -925,24 +1044,29 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasGeneric = R->getValueAsBit("HasGeneric");
     bool HasSideEffects = R->getValueAsBit("HasSideEffects");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
+    StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
+    StringRef ManualCodegenMask = R->getValueAsString("ManualCodegenMask");
     std::vector<int64_t> IntrinsicTypes =
         R->getValueAsListOfInts("IntrinsicTypes");
+    std::vector<int64_t> PermuteOperands =
+        R->getValueAsListOfInts("PermuteOperands");
     StringRef IRName = R->getValueAsString("IRName");
     StringRef IRNameMask = R->getValueAsString("IRNameMask");
 
+    StringRef HeaderCodeStr = R->getValueAsString("HeaderCode");
+    bool HasAutoDef = HeaderCodeStr.empty();
+    if (!HeaderCodeStr.empty()) {
+      HeaderCode += HeaderCodeStr.str();
+    }
     // Parse prototype and create a list of primitive type with transformers
     // (operand) in ProtoSeq. ProtoSeq[0] is output operand.
-    SmallVector<std::string, 8> ProtoSeq;
-    const StringRef Primaries("evwqom0ztc");
-    while (!Prototypes.empty()) {
-      auto Idx = Prototypes.find_first_of(Primaries);
-      assert(Idx != StringRef::npos);
-      ProtoSeq.push_back(Prototypes.slice(0, Idx + 1).str());
-      Prototypes = Prototypes.drop_front(Idx + 1);
-    }
+    SmallVector<std::string> ProtoSeq;
+    parsePrototypes(Prototypes, [&ProtoSeq](StringRef Proto) {
+      ProtoSeq.push_back(Proto.str());
+    });
 
     // Compute Builtin types
-    SmallVector<std::string, 8> ProtoMaskSeq = ProtoSeq;
+    SmallVector<std::string> ProtoMaskSeq = ProtoSeq;
     if (HasMask) {
       // If HasMask, append 'm' to last operand.
       ProtoMaskSeq.push_back("m");
@@ -956,7 +1080,7 @@ void RVVEmitter::createRVVIntrinsics(
       ProtoMaskSeq.push_back("z");
     }
 
-    // Create intrinsics for each type and LMUL.
+    // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
       for (int Log2LMUL : Log2LMULList) {
         Optional<RVVTypes> Types = computeTypes(I, Log2LMUL, ProtoSeq);
@@ -964,13 +1088,13 @@ void RVVEmitter::createRVVIntrinsics(
         if (!Types.hasValue())
           continue;
 
-        auto SuffixStr =
-            computeType(I, Log2LMUL, Suffix).getValue()->getShortStr();
-        // Create a non-mask intrinsic.
+        auto SuffixStr = getSuffixStr(I, Log2LMUL, SuffixProto);
+        // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
             /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasGeneric,
-            Types.getValue(), IntrinsicTypes));
+            HasAutoDef, ManualCodegen, Types.getValue(), IntrinsicTypes,
+            PermuteOperands));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
@@ -978,9 +1102,10 @@ void RVVEmitter::createRVVIntrinsics(
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
               /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasGeneric,
-              MaskTypes.getValue(), IntrinsicTypes));
+              HasAutoDef, ManualCodegenMask, MaskTypes.getValue(),
+              IntrinsicTypes, PermuteOperands));
         }
-      } // end for Log2LMUL
+      } // end for Log2LMULList
     }   // end for TypeRange
   }
 }
@@ -1040,7 +1165,8 @@ void RVVEmitter::emitArchMacroAndBody(
       NeedEndif = emitExtDefStr(CurExt, OS);
       PrevExt = CurExt;
     }
-    PrintBody(OS, *Def);
+    if (Def->hasAutoDef())
+      PrintBody(OS, *Def);
   }
   if (NeedEndif)
     OS << "#endif\n\n";

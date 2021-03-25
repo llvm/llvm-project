@@ -1885,6 +1885,9 @@ private:
   /// in a schedule tree is given in the isl manual.
   isl::schedule Schedule = nullptr;
 
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  bool HasDisableHeuristicsHint = false;
+
   /// Whether the schedule has been modified after derived from the CFG by
   /// ScopBuilder.
   bool ScheduleModified = false;
@@ -2035,7 +2038,6 @@ public:
   ///
   /// A new statement will be created and added to the statement vector.
   ///
-  /// @param Stmt       The parent statement.
   /// @param SourceRel  The source location.
   /// @param TargetRel  The target location.
   /// @param Domain     The original domain under which the copy statement would
@@ -2744,6 +2746,13 @@ public:
   /// various places. If statistics are disabled, only zeros are returned to
   /// avoid the overhead.
   ScopStatistics getStatistics() const;
+
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  /// In this case, only user-directed transformations are allowed.
+  bool hasDisableHeuristicsHint() const { return HasDisableHeuristicsHint; }
+
+  /// Mark this Scop to not apply an optimization heuristic.
+  void markDisableHeuristics() { HasDisableHeuristicsHint = true; }
 };
 
 /// Print Scop scop to raw_ostream OS.

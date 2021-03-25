@@ -50,7 +50,7 @@ TEST(LlvmLibcMkTime, FailureSetsErrno) {
   EXPECT_THAT(__llvm_libc::mktime(&tm_data), Fails(EOVERFLOW));
 }
 
-TEST(LlvmLibcMkTime, MkTimesInvalidSeconds) {
+TEST(LlvmLibcMkTime, InvalidSeconds) {
   struct tm tm_data;
   // -1 second from 1970-01-01 00:00:00 returns 1969-12-31 23:59:59.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -96,7 +96,7 @@ TEST(LlvmLibcMkTime, MkTimesInvalidSeconds) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidMinutes) {
+TEST(LlvmLibcMkTime, InvalidMinutes) {
   struct tm tm_data;
   // -1 minute from 1970-01-01 00:00:00 returns 1969-12-31 23:59:00.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -142,7 +142,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidMinutes) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidHours) {
+TEST(LlvmLibcMkTime, InvalidHours) {
   struct tm tm_data;
   // -1 hour from 1970-01-01 00:00:00 returns 1969-12-31 23:00:00.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -188,7 +188,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidHours) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidYear) {
+TEST(LlvmLibcMkTime, InvalidYear) {
   struct tm tm_data;
   // -1 year from 1970-01-01 00:00:00 returns 1969-01-01 00:00:00.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -214,7 +214,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidYear) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidEndOf32BitEpochYear) {
+TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
   if (sizeof(size_t) != 4)
     return;
   struct tm tm_data;
@@ -238,7 +238,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidEndOf32BitEpochYear) {
               Succeeds(TimeConstants::OutOfRangeReturnValue));
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidMonths) {
+TEST(LlvmLibcMkTime, InvalidMonths) {
   struct tm tm_data;
   // -1 month from 1970-01-01 00:00:00 returns 1969-12-01 00:00:00.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -285,7 +285,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidMonths) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsInvalidDays) {
+TEST(LlvmLibcMkTime, InvalidDays) {
   struct tm tm_data;
   // -1 day from 1970-01-01 00:00:00 returns 1969-12-31 00:00:00.
   EXPECT_THAT(call_mktime(&tm_data,
@@ -377,7 +377,7 @@ TEST(LlvmLibcMkTime, MktimeTestsInvalidDays) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTestsEndOf32BitEpochYear) {
+TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
   struct tm tm_data;
   // Test for maximum value of a signed 32-bit integer.
   // Test implementation can encode time for Tue 19 January 2038 03:14:07 UTC.
@@ -403,7 +403,7 @@ TEST(LlvmLibcMkTime, MktimeTestsEndOf32BitEpochYear) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, MktimeTests64BitYear) {
+TEST(LlvmLibcMkTime, Max64BitYear) {
   if (sizeof(time_t) == 4)
     return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),

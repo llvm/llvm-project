@@ -270,10 +270,10 @@ struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
 };
 } // namespace
 
-void AssumingOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void AssumingOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                              MLIRContext *context) {
   // If taking a passing witness, inline region.
-  patterns.insert<AssumingWithTrue>(context);
+  patterns.add<AssumingWithTrue>(context);
 }
 
 // See RegionBranchOpInterface in Interfaces/ControlFlowInterfaces.td
@@ -311,13 +311,34 @@ void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
   rewriter.mergeBlocks(blockAfterAssuming, blockBeforeAssuming);
 }
 
+void AssumingOp::build(
+    OpBuilder &builder, OperationState &result, Value witness,
+    function_ref<SmallVector<Value, 2>(OpBuilder &, Location)> bodyBuilder) {
+
+  result.addOperands(witness);
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+
+  // Build body.
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&bodyBlock);
+  SmallVector<Value, 2> yieldValues = bodyBuilder(builder, result.location);
+  builder.create<AssumingYieldOp>(result.location, yieldValues);
+
+  SmallVector<Type, 2> assumingTypes;
+  for (Value v : yieldValues)
+    assumingTypes.push_back(v.getType());
+  result.addTypes(assumingTypes);
+}
+
 //===----------------------------------------------------------------------===//
 // AssumingAllOp
 //===----------------------------------------------------------------------===//
 
-void AssumingAllOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<AssumingAllOneOp>(context);
+void AssumingAllOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<AssumingAllOneOp>(context);
 }
 
 OpFoldResult AssumingAllOp::fold(ArrayRef<Attribute> operands) {
@@ -414,11 +435,26 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
     return failure();
   }
 };
+
+struct BroadcastForwardSingleOperandPattern
+    : public OpRewritePattern<BroadcastOp> {
+  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BroadcastOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getNumOperands() == 1) {
+      rewriter.replaceOp(op, op.shapes().front());
+      return success();
+    }
+    return failure();
+  }
+};
 } // namespace
 
-void BroadcastOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<RemoveDuplicateOperandsPattern<BroadcastOp>>(context);
+void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<BroadcastForwardSingleOperandPattern,
+               RemoveDuplicateOperandsPattern<BroadcastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -485,9 +521,9 @@ static ParseResult parseConstShapeOp(OpAsmParser &parser,
 
 OpFoldResult ConstShapeOp::fold(ArrayRef<Attribute>) { return shapeAttr(); }
 
-void ConstShapeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<TensorCastConstShape>(context);
+void ConstShapeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                               MLIRContext *context) {
+  patterns.add<TensorCastConstShape>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -513,11 +549,12 @@ LogicalResult getShapeVec(Value input, SmallVectorImpl<int64_t> &shapeValues) {
 } // namespace
 
 void CstrBroadcastableOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
+    RewritePatternSet &patterns, MLIRContext *context) {
   // Canonicalization patterns have overlap with the considerations during
   // folding in case additional shape information is inferred at some point that
   // does not result in folding.
-  patterns.insert<CstrBroadcastableEqOps>(context);
+  patterns.add<CstrBroadcastableEqOps,
+               RemoveDuplicateOperandsPattern<CstrBroadcastableOp>>(context);
 }
 
 // Return true if there is exactly one attribute not representing a scalar
@@ -555,9 +592,9 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // on the input shapes.
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
-        for (const auto &shape : shapes()) {
+        for (auto shapeValue : shapes()) {
           extents.emplace_back();
-          if (failed(getShapeVec(shape, extents.back())))
+          if (failed(getShapeVec(shapeValue, extents.back())))
             return false;
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
@@ -580,10 +617,10 @@ static LogicalResult verify(CstrBroadcastableOp op) {
 // CstrEqOp
 //===----------------------------------------------------------------------===//
 
-void CstrEqOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void CstrEqOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                            MLIRContext *context) {
   // If inputs are equal, return passing witness
-  patterns.insert<CstrEqEqOps>(context);
+  patterns.add<CstrEqEqOps>(context);
 }
 
 OpFoldResult CstrEqOp::fold(ArrayRef<Attribute> operands) {
@@ -682,9 +719,9 @@ OpFoldResult IndexToSizeOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
-void IndexToSizeOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SizeToIndexToSizeCanonicalization>(context);
+void IndexToSizeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<SizeToIndexToSizeCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -802,9 +839,9 @@ void GetExtentOp::build(OpBuilder &builder, OperationState &result, Value shape,
 // IsBroadcastableOp
 //===----------------------------------------------------------------------===//
 
-void IsBroadcastableOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<RemoveDuplicateOperandsPattern<IsBroadcastableOp>>(context);
+void IsBroadcastableOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                    MLIRContext *context) {
+  patterns.add<RemoveDuplicateOperandsPattern<IsBroadcastableOp>>(context);
 }
 
 OpFoldResult IsBroadcastableOp::fold(ArrayRef<Attribute> operands) {
@@ -870,9 +907,9 @@ struct RankShapeOfCanonicalizationPattern
 };
 } // namespace
 
-void shape::RankOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<RankShapeOfCanonicalizationPattern>(context);
+void shape::RankOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<RankShapeOfCanonicalizationPattern>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -955,9 +992,9 @@ struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
 };
 } // namespace
 
-void ShapeOfOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
+void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.insert<ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfWithTensor>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -972,9 +1009,9 @@ OpFoldResult SizeToIndexOp::fold(ArrayRef<Attribute> operands) {
   return impl::foldCastOp(*this);
 }
 
-void SizeToIndexOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<IndexToSizeToIndexCanonicalization>(context);
+void SizeToIndexOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                                MLIRContext *context) {
+  patterns.add<IndexToSizeToIndexCanonicalization>(context);
 }
 
 //===----------------------------------------------------------------------===//

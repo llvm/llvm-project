@@ -188,16 +188,9 @@ private:
                           SDValue &Offset1, unsigned Size) const;
   bool SelectMUBUF(SDValue Addr, SDValue &SRsrc, SDValue &VAddr,
                    SDValue &SOffset, SDValue &Offset, SDValue &Offen,
-                   SDValue &Idxen, SDValue &Addr64, SDValue &GLC, SDValue &SLC,
-                   SDValue &TFE, SDValue &DLC, SDValue &SWZ,
-                   SDValue &SCCB) const;
+                   SDValue &Idxen, SDValue &Addr64) const;
   bool SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc, SDValue &VAddr,
-                         SDValue &SOffset, SDValue &Offset, SDValue &GLC,
-                         SDValue &SLC, SDValue &TFE, SDValue &DLC,
-                         SDValue &SWZ, SDValue &SCCB) const;
-  bool SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
-                         SDValue &VAddr, SDValue &SOffset, SDValue &Offset,
-                         SDValue &SLC) const;
+                         SDValue &SOffset, SDValue &Offset) const;
   bool SelectMUBUFScratchOffen(SDNode *Parent,
                                SDValue Addr, SDValue &RSrc, SDValue &VAddr,
                                SDValue &SOffset, SDValue &ImmOffset) const;
@@ -205,12 +198,6 @@ private:
                                 SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                                 SDValue &Offset) const;
 
-  bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &SOffset,
-                         SDValue &Offset, SDValue &GLC, SDValue &SLC,
-                         SDValue &TFE, SDValue &DLC, SDValue &SWZ,
-                         SDValue &SCCB) const;
-  bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
-                         SDValue &Offset, SDValue &SLC) const;
   bool SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc, SDValue &Soffset,
                          SDValue &Offset) const;
 
@@ -1400,28 +1387,16 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr,
-                                     SDValue &VAddr, SDValue &SOffset,
-                                     SDValue &Offset, SDValue &Offen,
-                                     SDValue &Idxen, SDValue &Addr64,
-                                     SDValue &GLC, SDValue &SLC,
-                                     SDValue &TFE, SDValue &DLC,
-                                     SDValue &SWZ, SDValue &SCCB) const {
+bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr, SDValue &VAddr,
+                                     SDValue &SOffset, SDValue &Offset,
+                                     SDValue &Offen, SDValue &Idxen,
+                                     SDValue &Addr64) const {
   // Subtarget prefers to use flat instruction
   // FIXME: This should be a pattern predicate and not reach here
   if (Subtarget->useFlatForGlobal())
     return false;
 
   SDLoc DL(Addr);
-
-  if (!GLC.getNode())
-    GLC = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  if (!SLC.getNode())
-    SLC = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  TFE = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  DLC = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  SWZ = CurDAG->getTargetConstant(0, DL, MVT::i1);
-  SCCB = CurDAG->getTargetConstant(0, DL, MVT::i1);
 
   Idxen = CurDAG->getTargetConstant(0, DL, MVT::i1);
   Offen = CurDAG->getTargetConstant(0, DL, MVT::i1);
@@ -1499,10 +1474,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr,
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
                                            SDValue &VAddr, SDValue &SOffset,
-                                           SDValue &Offset, SDValue &GLC,
-                                           SDValue &SLC, SDValue &TFE,
-                                           SDValue &DLC, SDValue &SWZ,
-                                           SDValue &SCCB) const {
+                                           SDValue &Offset) const {
   SDValue Ptr, Offen, Idxen, Addr64;
 
   // addr64 bit was removed for volcanic islands.
@@ -1510,8 +1482,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
   if (!Subtarget->hasAddr64())
     return false;
 
-  if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64,
-              GLC, SLC, TFE, DLC, SWZ, SCCB))
+  if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64))
     return false;
 
   ConstantSDNode *C = cast<ConstantSDNode>(Addr64);
@@ -1526,16 +1497,6 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
   }
 
   return false;
-}
-
-bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
-                                           SDValue &VAddr, SDValue &SOffset,
-                                           SDValue &Offset,
-                                           SDValue &SLC) const {
-  SLC = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i1);
-  SDValue GLC, TFE, DLC, SWZ, SCCB;
-
-  return SelectMUBUFAddr64(Addr, SRsrc, VAddr, SOffset, Offset, GLC, SLC, TFE, DLC, SWZ, SCCB);
 }
 
 static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
@@ -1656,16 +1617,13 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFScratchOffset(SDNode *Parent,
 }
 
 bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
-                                           SDValue &SOffset, SDValue &Offset,
-                                           SDValue &GLC, SDValue &SLC,
-                                           SDValue &TFE, SDValue &DLC,
-                                           SDValue &SWZ, SDValue &SCCB) const {
+                                           SDValue &SOffset, SDValue &Offset
+                                           ) const {
   SDValue Ptr, VAddr, Offen, Idxen, Addr64;
   const SIInstrInfo *TII =
     static_cast<const SIInstrInfo *>(Subtarget->getInstrInfo());
 
-  if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64,
-              GLC, SLC, TFE, DLC, SWZ, SCCB))
+  if (!SelectMUBUF(Addr, Ptr, VAddr, SOffset, Offset, Offen, Idxen, Addr64))
     return false;
 
   if (!cast<ConstantSDNode>(Offen)->getSExtValue() &&
@@ -1682,21 +1640,6 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
     return true;
   }
   return false;
-}
-
-bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
-                                           SDValue &Soffset, SDValue &Offset
-                                           ) const {
-  SDValue GLC, SLC, TFE, DLC, SWZ, SCCB;
-
-  return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE, DLC, SWZ, SCCB);
-}
-bool AMDGPUDAGToDAGISel::SelectMUBUFOffset(SDValue Addr, SDValue &SRsrc,
-                                           SDValue &Soffset, SDValue &Offset,
-                                           SDValue &SLC) const {
-  SDValue GLC, TFE, DLC, SWZ, SCCB;
-
-  return SelectMUBUFOffset(Addr, SRsrc, Soffset, Offset, GLC, SLC, TFE, DLC, SWZ, SCCB);
 }
 
 // Find a load or store from corresponding pattern root.
@@ -2450,35 +2393,32 @@ void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
 
   MachineSDNode *CmpSwap = nullptr;
   if (Subtarget->hasAddr64()) {
-    SDValue SRsrc, VAddr, SOffset, Offset, SLC;
+    SDValue SRsrc, VAddr, SOffset, Offset;
 
-    if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset, SLC)) {
+    if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset)) {
       unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :
         AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_ADDR64_RTN;
       SDValue CmpVal = Mem->getOperand(2);
-      SDValue GLC = CurDAG->getTargetConstant(1, SL, MVT::i1);
+      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
 
       // XXX - Do we care about glue operands?
 
-      SDValue Ops[] = {
-        CmpVal, VAddr, SRsrc, SOffset, Offset, GLC, SLC, Mem->getChain()
-      };
+      SDValue Ops[] = {CmpVal, VAddr, SRsrc, SOffset, Offset, CPol,
+                       Mem->getChain()};
 
       CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
     }
   }
 
   if (!CmpSwap) {
-    SDValue SRsrc, SOffset, Offset, SLC;
-    if (SelectMUBUFOffset(Mem->getBasePtr(), SRsrc, SOffset, Offset, SLC)) {
+    SDValue SRsrc, SOffset, Offset;
+    if (SelectMUBUFOffset(Mem->getBasePtr(), SRsrc, SOffset, Offset)) {
       unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN :
         AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_OFFSET_RTN;
 
       SDValue CmpVal = Mem->getOperand(2);
-      SDValue GLC = CurDAG->getTargetConstant(1, SL, MVT::i1);
-      SDValue Ops[] = {
-        CmpVal, SRsrc, SOffset, Offset, GLC, SLC, Mem->getChain()
-      };
+      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
+      SDValue Ops[] = {CmpVal, SRsrc, SOffset, Offset, CPol, Mem->getChain()};
 
       CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
     }

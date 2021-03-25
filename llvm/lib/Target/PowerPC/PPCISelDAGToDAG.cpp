@@ -1167,7 +1167,10 @@ static SDNode *selectI64Imm(SelectionDAG *CurDAG, const SDLoc &dl, uint64_t Imm,
   const PPCSubtarget &Subtarget =
       CurDAG->getMachineFunction().getSubtarget<PPCSubtarget>();
 
-  if (Subtarget.hasPrefixInstrs()) {
+  // If we have prefixed instructions and there is a chance we can
+  // materialize the constant with fewer prefixed instructions than
+  // non-prefixed, try that.
+  if (Subtarget.hasPrefixInstrs() && InstCntDirect != 1) {
     unsigned InstCntDirectP = 0;
     SDNode *ResultP = selectI64ImmDirectPrefix(CurDAG, dl, Imm, InstCntDirectP);
     // Use the prefix case in either of two cases:

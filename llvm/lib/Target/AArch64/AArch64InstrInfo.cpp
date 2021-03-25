@@ -35,6 +35,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -4054,9 +4055,8 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return false;
 }
 
-void AArch64InstrInfo::getNoop(MCInst &NopInst) const {
-  NopInst.setOpcode(AArch64::HINT);
-  NopInst.addOperand(MCOperand::createImm(0));
+MCInst AArch64InstrInfo::getNop() const {
+  return MCInstBuilder(AArch64::HINT).addImm(0);
 }
 
 // AArch64 supports MachineCombiner.

@@ -1846,7 +1846,7 @@ static const MemRegion *getLocationRegionIfReference(const Expr *E,
   return nullptr;
 }
 
-/// \return A subexpression of {@code Ex} which represents the
+/// \return A subexpression of @c Ex which represents the
 /// expression-of-interest.
 static const Expr *peelOffOuterExpr(const Expr *Ex,
                                     const ExplodedNode *N) {
@@ -1942,7 +1942,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
   const StackFrameContext *SFC = LVNode->getStackFrame();
 
   // We only track expressions if we believe that they are important. Chances
-  // are good that control dependencies to the tracking point are also improtant
+  // are good that control dependencies to the tracking point are also important
   // because of this, let's explain why we believe control reached this point.
   // TODO: Shouldn't we track control dependencies of every bug location, rather
   // than only tracked expressions?

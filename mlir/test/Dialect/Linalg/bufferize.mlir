@@ -265,3 +265,16 @@ func @bufferize_subtensor_insert(%t : tensor<?x?xf32>, %st0 : tensor<2x3xf32>, %
   return %t0, %t1: tensor<?x?xf32>, tensor<?x?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @bufferize_fill(
+// CHECK-SAME:    %[[IN:.*]]: tensor<?xf32>
+func @bufferize_fill(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  %c0 = constant 0.0 : f32
+  // CHECK: %[[MEMREF:.*]] = memref.buffer_cast %[[IN]] : memref<?xf32>
+  // CHECK: linalg.fill(%[[MEMREF]], %cst) : memref<?xf32>, f32
+  // CHECK: %[[TENSOR:.*]] = memref.tensor_load %[[MEMREF]] : memref<?xf32>
+  // CHECK: return %[[TENSOR]]
+  %0 = linalg.fill(%arg0, %c0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}

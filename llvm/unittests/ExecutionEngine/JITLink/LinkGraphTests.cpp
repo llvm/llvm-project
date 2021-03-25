@@ -25,7 +25,8 @@ static StringRef BlockContent(BlockContentBytes);
 
 TEST(LinkGraphTest, Construction) {
   // Check that LinkGraph construction works as expected.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   EXPECT_EQ(G.getName(), "foo");
   EXPECT_EQ(G.getTargetTriple().str(), "x86_64-apple-darwin");
   EXPECT_EQ(G.getPointerSize(), 8U);
@@ -38,7 +39,8 @@ TEST(LinkGraphTest, Construction) {
 
 TEST(LinkGraphTest, AddressAccess) {
   // Check that we can get addresses for blocks, symbols, and edges.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
 
   auto Sec1 = G.createSection("__data.1", RWFlags);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
@@ -54,7 +56,8 @@ TEST(LinkGraphTest, AddressAccess) {
 
 TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   auto &Sec1 = G.createSection("__data.1", RWFlags);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   auto &B2 = G.createContentBlock(Sec1, BlockContent, 0x2000, 8, 0);
@@ -98,15 +101,99 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   EXPECT_TRUE(llvm::count(G.defined_symbols(), &S4));
 }
 
+TEST(LinkGraphTest, MakeExternal) {
+  // Check that we can make a defined symbol external.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec = G.createSection("__data", RWFlags);
+
+  // Create an initial block.
+  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+
+  // Add a symbol to the block.
+  auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
+                                false, false);
+
+  EXPECT_TRUE(S1.isDefined()) << "Symbol should be defined";
+  EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
+  EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
+  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      0U)
+      << "Unexpected number of external symbols";
+
+  // Make S1 external, confirm that the its flags are updated and that it is
+  // moved from the defined symbols to the externals list.
+  G.makeExternal(S1);
+
+  EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
+  EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
+  EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      1U)
+      << "Unexpected number of external symbols";
+}
+
+TEST(LinkGraphTest, MakeDefined) {
+  // Check that we can make an external symbol defined.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec = G.createSection("__data", RWFlags);
+
+  // Create an initial block.
+  auto &B1 = G.createContentBlock(Sec, BlockContent, 0x1000, 8, 0);
+
+  // Add an external symbol.
+  auto &S1 = G.addExternalSymbol("S1", 4, Linkage::Strong);
+
+  EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
+  EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
+  EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_EQ(S1.getAddress(), 0U) << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      1U)
+      << "Unexpected number of external symbols";
+
+  // Make S1 defined, confirm that its flags are updated and that it is
+  // moved from the defined symbols to the externals list.
+  G.makeDefined(S1, B1, 0, 4, Linkage::Strong, Scope::Default, false);
+
+  EXPECT_TRUE(S1.isDefined()) << "Symbol should be defined";
+  EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
+  EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
+  EXPECT_EQ(S1.getAddress(), 0x1000U) << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      0U)
+      << "Unexpected number of external symbols";
+}
+
 TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
-
-  const char BlockContentBytes[] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
-                                    0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B,
-                                    0x1C, 0x1D, 0x1E, 0x1F, 0x00};
-  StringRef BlockContent(BlockContentBytes);
-
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little);
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
   auto &Sec = G.createSection("__data", RWFlags);
 
   // Create the block to split.

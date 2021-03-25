@@ -27,6 +27,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/InstructionCost.h"
 #include <functional>
@@ -327,6 +328,10 @@ public:
     SmallVector<const Value *, 4> Operands(U->operand_values());
     return getUserCost(U, Operands, CostKind);
   }
+
+  /// If a branch or a select condition is skewed in one direction by more than
+  /// this factor, it is very likely to be predicted correctly.
+  BranchProbability getPredictableBranchThreshold() const;
 
   /// Return true if branch divergence exists.
   ///
@@ -915,8 +920,10 @@ public:
   /// \return the target-provided register class name
   const char *getRegisterClassName(unsigned ClassID) const;
 
+  enum RegisterKind { RGK_Scalar, RGK_FixedWidthVector, RGK_ScalableVector };
+
   /// \return The width of the largest scalar or vector register type.
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(RegisterKind K) const;
 
   /// \return The width of the smallest vector register type.
   unsigned getMinVectorRegisterBitWidth() const;
@@ -1039,11 +1046,13 @@ public:
       const Instruction *CxtI = nullptr) const;
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
+  /// The exact mask may be passed as Mask, or else the array will be empty.
   /// The index and subtype parameters are used by the subvector insertion and
   /// extraction shuffle kinds to show the insert/extract point and the type of
   /// the subvector being inserted/extracted.
   /// NOTE: For subvector extractions Tp represents the source type.
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index = 0,
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                     ArrayRef<int> Mask = None, int Index = 0,
                      VectorType *SubTp = nullptr) const;
 
   /// Represents a hint about the context in which a cast is used.
@@ -1398,6 +1407,7 @@ public:
                                    BlockFrequencyInfo *BFI) = 0;
   virtual int getUserCost(const User *U, ArrayRef<const Value *> Operands,
                           TargetCostKind CostKind) = 0;
+  virtual BranchProbability getPredictableBranchThreshold() = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
@@ -1510,7 +1520,7 @@ public:
   virtual unsigned getRegisterClassForType(bool Vector,
                                            Type *Ty = nullptr) const = 0;
   virtual const char *getRegisterClassName(unsigned ClassID) const = 0;
-  virtual unsigned getRegisterBitWidth(bool Vector) const = 0;
+  virtual TypeSize getRegisterBitWidth(RegisterKind K) const = 0;
   virtual unsigned getMinVectorRegisterBitWidth() = 0;
   virtual Optional<unsigned> getMaxVScale() const = 0;
   virtual bool shouldMaximizeVectorBandwidth(bool OptSize) const = 0;
@@ -1555,7 +1565,8 @@ public:
       OperandValueKind Opd2Info, OperandValueProperties Opd1PropInfo,
       OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) = 0;
-  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
+  virtual int getShuffleCost(ShuffleKind Kind, VectorType *Tp,
+                             ArrayRef<int> Mask, int Index,
                              VectorType *SubTp) = 0;
   virtual int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                CastContextHint CCH,
@@ -1687,6 +1698,9 @@ public:
   int getUserCost(const User *U, ArrayRef<const Value *> Operands,
                   TargetCostKind CostKind) override {
     return Impl.getUserCost(U, Operands, CostKind);
+  }
+  BranchProbability getPredictableBranchThreshold() override {
+    return Impl.getPredictableBranchThreshold();
   }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
   bool useGPUDivergenceAnalysis() override {
@@ -1932,8 +1946,8 @@ public:
   const char *getRegisterClassName(unsigned ClassID) const override {
     return Impl.getRegisterClassName(ClassID);
   }
-  unsigned getRegisterBitWidth(bool Vector) const override {
-    return Impl.getRegisterBitWidth(Vector);
+  TypeSize getRegisterBitWidth(RegisterKind K) const override {
+    return Impl.getRegisterBitWidth(K);
   }
   unsigned getMinVectorRegisterBitWidth() override {
     return Impl.getMinVectorRegisterBitWidth();
@@ -2013,9 +2027,9 @@ public:
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
-  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp) override {
-    return Impl.getShuffleCost(Kind, Tp, Index, SubTp);
+  int getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                     int Index, VectorType *SubTp) override {
+    return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp);
   }
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        CastContextHint CCH, TTI::TargetCostKind CostKind,

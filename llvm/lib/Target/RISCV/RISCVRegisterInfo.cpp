@@ -195,7 +195,8 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
   bool isRVV = RISCVVPseudosTable::getPseudoInfo(MI.getOpcode()) ||
-               isRVVWholeLoadStore(MI.getOpcode());
+               isRVVWholeLoadStore(MI.getOpcode()) ||
+               TII->isRVVSpillForZvlsseg(MI.getOpcode());
   if (!isRVV)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
@@ -212,6 +213,13 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // Modify Offset and FrameReg appropriately
     Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     TII->movImm(MBB, II, DL, ScratchReg, Offset.getFixed());
+    if (MI.getOpcode() == RISCV::ADDI) {
+      BuildMI(MBB, II, DL, TII->get(RISCV::ADD), MI.getOperand(0).getReg())
+        .addReg(FrameReg)
+        .addReg(ScratchReg, RegState::Kill);
+      MI.eraseFromParent();
+      return;
+    }
     BuildMI(MBB, II, DL, TII->get(RISCV::ADD), ScratchReg)
         .addReg(FrameReg)
         .addReg(ScratchReg, RegState::Kill);
@@ -267,6 +275,16 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI.getOperand(FIOperandNum).ChangeToRegister(VL, false, false, true);
     if (!isRVV)
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+  }
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto ZvlssegInfo = TII->isRVVSpillForZvlsseg(MI.getOpcode());
+  if (ZvlssegInfo) {
+    int64_t ScalableValue = MFI.getObjectSize(FrameIndex) / ZvlssegInfo->first;
+    Register FactorRegister =
+        TII->getVLENFactoredAmount(MF, MBB, II, ScalableValue);
+    MI.getOperand(FIOperandNum + 1)
+        .ChangeToRegister(FactorRegister, /*isDef=*/false);
   }
 }
 

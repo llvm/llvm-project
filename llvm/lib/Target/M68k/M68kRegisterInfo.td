@@ -15,8 +15,8 @@
 
 class MxReg<string N, bits<16> ENC,
             list<Register> SUBREGS = [], list<SubRegIndex> SUBIDX,
-            list<int> DWREGS = []>
-    : Register<N>, DwarfRegNum<DWREGS> {
+            list<int> DWREGS = [], list<string> ALTNAMES = []>
+    : Register<N, ALTNAMES>, DwarfRegNum<DWREGS> {
   let Namespace     = "M68k";
   let HWEncoding    = ENC;
   let SubRegs       = SUBREGS;
@@ -29,46 +29,45 @@ let Namespace = "M68k" in {
   def MxSubRegIndex16Lo : SubRegIndex<16, 0>;
 }
 
-// Generate Data registers and theirs smaller variants
-foreach Index = 0-7 in {
-  def "BD"#Index : MxReg<"d"#Index, Index, [], [], [Index]>;
-
-  def "WD"#Index
-    : MxReg<"d"#Index, Index,
-            [!cast<Register>("BD"#Index)], [MxSubRegIndex8Lo],
-            [Index]>;
-
-  def "D"#Index
-    : MxReg<"d"#Index, Index,
-            [!cast<Register>("WD"#Index)], [MxSubRegIndex16Lo],
-            [Index]>;
-
-} // foreach
-
-// Generate Address registers and theirs smaller variants
-foreach Index = 0-7 in {
-  def "WA"#Index
-     : MxReg<"a"#Index, Index, [], [], [!add(8,Index)]>;
-
-  def "A"#Index
-     : MxReg<"a"#Index, Index,
-             [!cast<Register>("WA"#Index)], [MxSubRegIndex16Lo],
-             [!add(8,Index)]>;
+multiclass MxDataRegister<int INDEX, string REG_NAME, list<string> ALTNAMES = []> {
+  def "B"#NAME : MxReg<REG_NAME, INDEX, [], [], [INDEX], ALTNAMES>;
+  def "W"#NAME
+    : MxReg<REG_NAME, INDEX,
+            [!cast<Register>("B"#NAME)], [MxSubRegIndex8Lo],
+            [INDEX], ALTNAMES>;
+  def NAME
+    : MxReg<REG_NAME, INDEX,
+            [!cast<Register>("W"#NAME)], [MxSubRegIndex16Lo],
+            [INDEX], ALTNAMES>;
 }
 
-// Alias Registers
-class MxAliasReg<string N, MxReg REG>
-    : MxReg<N, REG.HWEncoding, [], [], REG.DwarfNumbers> {
-  let Aliases = [REG];
+multiclass MxAddressRegister<int INDEX, string REG_NAME, list<string> ALTNAMES = []> {
+  def "W"#NAME
+    : MxReg<REG_NAME, INDEX, [], [], [!add(8,INDEX)], ALTNAMES>;
+  def NAME
+    : MxReg<REG_NAME, INDEX,
+            [!cast<Register>("W"#NAME)], [MxSubRegIndex16Lo],
+            [!add(8,INDEX)], ALTNAMES>;
 }
 
-def BP  : MxAliasReg<"bp",  A5>;
-def FP  : MxAliasReg<"fp",  A6>;
-def SP : MxAliasReg<"sp", A7>;
+defm D0 : MxDataRegister<0, "d0">;
+defm D1 : MxDataRegister<1, "d1">;
+defm D2 : MxDataRegister<2, "d2">;
+defm D3 : MxDataRegister<3, "d3">;
+defm D4 : MxDataRegister<4, "d4">;
+defm D5 : MxDataRegister<5, "d5">;
+defm D6 : MxDataRegister<6, "d6">;
+defm D7 : MxDataRegister<7, "d7">;
 
-def USP : MxAliasReg<"usp", A7>;
-def SSP : MxAliasReg<"ssp", A7>;
-def ISP : MxAliasReg<"isp", A7>;
+defm A0 : MxAddressRegister<0, "a0">;
+defm A1 : MxAddressRegister<1, "a1">;
+defm A2 : MxAddressRegister<2, "a2">;
+defm A3 : MxAddressRegister<3, "a3">;
+defm A4 : MxAddressRegister<4, "a4">;
+defm A5 : MxAddressRegister<5, "a5", ["bp"]>;
+defm A6 : MxAddressRegister<6, "a6", ["fp"]>;
+defm SP : MxAddressRegister<7, "sp", ["usp", "ssp", "isp", "a7"]>;
+
 
 // Pseudo Registers
 class MxPseudoReg<string N, list<Register> SUBREGS = [], list<SubRegIndex> SUBIDX = []>
@@ -92,10 +91,10 @@ def DR16 : MxRegClass<[i16], 16, (sequence "WD%u", 0, 7)>;
 def DR32 : MxRegClass<[i32], 32, (sequence "D%u",  0, 7)>;
 
 // Address Registers
-def AR16 : MxRegClass<[i16], 16, (sequence "WA%u", 0, 6)>;
+def AR16 : MxRegClass<[i16], 16, (add (sequence "WA%u", 0, 6), WSP)>;
 def AR32 : MxRegClass<[i32], 32, (add (sequence "A%u", 0, 6), SP)>;
 
-def AR32_NOSP : MxRegClass<[i32], 32, (add (sequence "A%u", 0, 6))>;
+def AR32_NOSP : MxRegClass<[i32], 32, (sequence "A%u", 0, 6)>;
 
 // Index Register Classes
 // FIXME try alternative ordering like `D0, D1, A0, A1, ...`
@@ -124,7 +123,5 @@ def XR16_TC : MxRegClass<[i16], 16, (add DR16_TC, AR16_TC)>;
 def XR32_TC : MxRegClass<[i32], 32, (add DR32_TC, AR32_TC)>;
 
 // These classes provide spill/restore order if used with MOVEM instruction
-def SPILL   : MxRegClass<[i32], 32, (add (add (sequence "D%u", 0, 7),
-                                              (sequence "A%u", 0, 6)), SP)>;
-def SPILL_R : MxRegClass<[i32], 32, (add SP, (add (sequence "A%u", 6, 0),
-                                                  (sequence "D%u", 7, 0)))>;
+def SPILL   : MxRegClass<[i32], 32, (add XR32)>;
+def SPILL_R : MxRegClass<[i32], 32, (add SP, (sequence "A%u", 6, 0), (sequence "D%u", 7, 0))>;

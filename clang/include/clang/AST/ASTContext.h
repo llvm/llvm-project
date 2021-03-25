@@ -604,6 +604,9 @@ private:
   std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
+  /// Keeps track of the deallocated DeclListNodes for future reuse.
+  DeclListNode *ListNodeFreeList = nullptr;
+
 public:
   IdentifierTable &Idents;
   SelectorTable &Selectors;
@@ -654,6 +657,24 @@ public:
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
   void Deallocate(void *Ptr) const {}
+
+  /// Allocates a \c DeclListNode or returns one from the \c ListNodeFreeList
+  /// pool.
+  DeclListNode *AllocateDeclListNode(clang::NamedDecl *ND) {
+    if (DeclListNode *Alloc = ListNodeFreeList) {
+      ListNodeFreeList = Alloc->Rest.dyn_cast<DeclListNode*>();
+      Alloc->D = ND;
+      Alloc->Rest = nullptr;
+      return Alloc;
+    }
+    return new (*this) DeclListNode(ND);
+  }
+  /// Deallcates a \c DeclListNode by returning it to the \c ListNodeFreeList
+  /// pool.
+  void DeallocateDeclListNode(DeclListNode *N) {
+    N->Rest = ListNodeFreeList;
+    ListNodeFreeList = N;
+  }
 
   /// Return the total amount of physical memory allocated for representing
   /// AST nodes and type information.

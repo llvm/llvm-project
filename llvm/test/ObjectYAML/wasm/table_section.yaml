@@ -9,7 +9,7 @@ Sections:
         ElemType:        FUNCREF
         Limits:
           Flags:           [ HAS_MAX ]
-          Initial:         0x00000010
+          Minimum:         0x00000010
           Maximum:         0x00000011
 ...
 # CHECK: --- !WASM
@@ -22,6 +22,6 @@ Sections:
 # CHECK:        ElemType:        FUNCREF
 # CHECK:        Limits:
 # CHECK:          Flags:           [ HAS_MAX ]
-# CHECK:          Initial:         0x10
+# CHECK:          Minimum:         0x10
 # CHECK:          Maximum:         0x11
 # CHECK: ...

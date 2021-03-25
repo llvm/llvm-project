@@ -62,6 +62,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeGlobalISel(PR);
   initializeWinEHStatePassPass(PR);
@@ -260,7 +261,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     StringRef Val = PreferVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
-      Key += "prefer-vector-width=";
+      Key += 'p';
       Key += Val;
       PreferVectorWidthOverride = Width;
     }
@@ -273,7 +274,7 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     StringRef Val = MinLegalVecWidthAttr.getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
-      Key += "min-legal-vector-width=";
+      Key += 'm';
       Key += Val;
       RequiredVectorWidth = Width;
     }
@@ -283,7 +284,6 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += CPU;
 
   // Add tune CPU to the Key.
-  Key += "tune=";
   Key += TuneCPU;
 
   // Keep track of the start of the feature portion of the string.
@@ -411,6 +411,10 @@ TargetPassConfig *X86TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 void X86PassConfig::addIRPasses() {
   addPass(createAtomicExpandPass());
+
+  // We add both pass anyway and when these two passes run, we skip the pass
+  // based on the option level and option attribute.
+  addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
 
   TargetPassConfig::addIRPasses();

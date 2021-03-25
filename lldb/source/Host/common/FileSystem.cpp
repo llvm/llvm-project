@@ -307,7 +307,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
   std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
   if (size == 0) {
     auto buffer_or_error =
-        llvm::WritableMemoryBuffer::getFile(*external_path, -1, is_volatile);
+        llvm::WritableMemoryBuffer::getFile(*external_path, is_volatile);
     if (!buffer_or_error)
       return nullptr;
     buffer = std::move(*buffer_or_error);

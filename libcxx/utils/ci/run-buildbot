@@ -86,30 +86,30 @@ function generate-cmake() {
 }
 
 function check-cxx-cxxabi() {
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ${NINJA} -vC "${BUILD_DIR}" install-cxx install-cxxabi
+
     echo "+++ Running the libc++ tests"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}" check-cxxabi
-
-    echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}" check-cxxabi
 }
 
 # TODO: The goal is to test this against all configurations. We should also move
 #       this to the Lit test suite instead of being a separate CMake target.
 function check-abi-list() {
     echo "+++ Running the libc++ ABI list test"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx-abilist || (
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx-abilist || (
         echo "+++ Generating the libc++ ABI list after failed check"
-        ${NINJA} -C "${BUILD_DIR}" generate-cxx-abilist
+        ${NINJA} -vC "${BUILD_DIR}" generate-cxx-abilist
         false
     )
 }
 
 function check-cxx-benchmarks() {
     echo "--- Running the benchmarks"
-    ${NINJA} -C "${BUILD_DIR}" check-cxx-benchmarks
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
 case "${BUILDER}" in
@@ -183,6 +183,13 @@ generic-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
+generic-static)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake"
+    check-cxx-cxxabi
+;;
 generic-32bit)
     export CC=clang
     export CXX=clang++
@@ -194,9 +201,7 @@ generic-gcc)
     export CC=gcc
     export CXX=g++
     clean
-    # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
-    #        in which we link -lc++experimental, which causes issues.
-    generate-cmake -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    generate-cmake
     check-cxx-cxxabi
 ;;
 generic-asan)
@@ -241,11 +246,11 @@ generic-singlethreaded)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-singlethreaded.cmake"
     check-cxx-cxxabi
 ;;
-generic-nodebug)
+generic-no-debug)
     export CC=clang
     export CXX=clang++
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-nodebug.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-debug.cmake"
     check-cxx-cxxabi
 ;;
 generic-no-filesystem)
@@ -330,7 +335,7 @@ documentation)
     generate-cmake -DLLVM_ENABLE_SPHINX=ON
 
     echo "+++ Generating documentation"
-    ${NINJA} -C "${BUILD_DIR}" docs-libcxx-html
+    ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
 ;;
 unified-standalone)
     export CC=clang
@@ -376,16 +381,16 @@ legacy-standalone)
           -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
 
     echo "+++ Building libc++abi"
-    ${NINJA} -C "${BUILD_DIR}/libcxxabi" cxxabi
+    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" cxxabi
 
     echo "+++ Building libc++"
-    ${NINJA} -C "${BUILD_DIR}/libcxx" cxx
+    ${NINJA} -vC "${BUILD_DIR}/libcxx" cxx
 
     echo "+++ Running the libc++ tests"
-    ${NINJA} -C "${BUILD_DIR}/libcxx" check-cxx
+    ${NINJA} -vC "${BUILD_DIR}/libcxx" check-cxx
 
     echo "+++ Running the libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}/libcxxabi" check-cxxabi
+    ${NINJA} -vC "${BUILD_DIR}/libcxxabi" check-cxxabi
 ;;
 aarch64)
     clean
@@ -402,35 +407,23 @@ aarch64-noexceptions)
 # Aka Armv8 32 bit
 armv8)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8.cmake" \
-    -DCMAKE_CXX_FLAGS="-marm" \
-    -DCMAKE_C_FLAGS="-marm"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv8-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8.cmake" \
-    -DCMAKE_CXX_FLAGS="-mthumb" \
-    -DCMAKE_C_FLAGS="-mthumb" \
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7.cmake" \
-    -DCMAKE_CXX_FLAGS="-marm" \
-    -DCMAKE_C_FLAGS="-marm"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake"
     check-cxx-cxxabi
 ;;
 armv7-noexceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7.cmake" \
-    -DCMAKE_CXX_FLAGS="-mthumb" \
-    -DCMAKE_C_FLAGS="-mthumb" \
-    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
 *)

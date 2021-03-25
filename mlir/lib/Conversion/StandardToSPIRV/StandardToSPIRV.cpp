@@ -1017,7 +1017,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp,
                                                    srcBits, dstBits, rewriter);
   Value spvLoadOp = rewriter.create<spirv::LoadOp>(
       loc, dstType, adjustedPtr,
-      loadOp->getAttrOfType<IntegerAttr>(
+      loadOp->getAttrOfType<spirv::MemoryAccessAttr>(
           spirv::attributeName<spirv::MemoryAccess>()),
       loadOp->getAttrOfType<IntegerAttr>("alignment"));
 
@@ -1224,10 +1224,11 @@ XOrOpPattern::matchAndRewrite(XOrOp xorOp, ArrayRef<Value> operands,
 //===----------------------------------------------------------------------===//
 
 namespace mlir {
-void populateStandardToSPIRVPatterns(MLIRContext *context,
-                                     SPIRVTypeConverter &typeConverter,
-                                     OwningRewritePatternList &patterns) {
-  patterns.insert<
+void populateStandardToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                     RewritePatternSet &patterns) {
+  MLIRContext *context = patterns.getContext();
+
+  patterns.add<
       // Math dialect operations.
       // TODO: Move to separate pass.
       UnaryAndBinaryOpPattern<math::CosOp, spirv::GLSLCosOp>,
@@ -1289,16 +1290,15 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
 
   // Give CmpFOpNanKernelPattern a higher benefit so it can prevail when Kernel
   // capability is available.
-  patterns.insert<CmpFOpNanKernelPattern>(typeConverter, context,
-                                          /*benefit=*/2);
+  patterns.add<CmpFOpNanKernelPattern>(typeConverter, context,
+                                       /*benefit=*/2);
 }
 
-void populateTensorToSPIRVPatterns(MLIRContext *context,
-                                   SPIRVTypeConverter &typeConverter,
+void populateTensorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    int64_t byteCountThreshold,
-                                   OwningRewritePatternList &patterns) {
-  patterns.insert<TensorExtractPattern>(typeConverter, context,
-                                        byteCountThreshold);
+                                   RewritePatternSet &patterns) {
+  patterns.add<TensorExtractPattern>(typeConverter, patterns.getContext(),
+                                     byteCountThreshold);
 }
 
 } // namespace mlir

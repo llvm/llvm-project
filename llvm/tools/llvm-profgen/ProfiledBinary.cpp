@@ -30,6 +30,10 @@ cl::opt<bool> ShowSourceLocations("show-source-locations", cl::ReallyHidden,
                                   cl::init(false), cl::ZeroOrMore,
                                   cl::desc("Print source locations."));
 
+cl::opt<bool> ShowCanonicalFnName("show-canonical-fname", cl::ReallyHidden,
+                                  cl::init(false), cl::ZeroOrMore,
+                                  cl::desc("Print canonical function name."));
+
 cl::opt<bool> ShowPseudoProbe(
     "show-pseudo-probe", cl::ReallyHidden, cl::init(false), cl::ZeroOrMore,
     cl::desc("Print pseudo probe section and disassembled info."));
@@ -127,8 +131,9 @@ bool ProfiledBinary::inlineContextEqual(uint64_t Address1,
                     Context2.begin(), Context2.begin() + Context2.size() - 1);
 }
 
-std::string ProfiledBinary::getExpandedContextStr(
-    const SmallVectorImpl<uint64_t> &Stack) const {
+std::string
+ProfiledBinary::getExpandedContextStr(const SmallVectorImpl<uint64_t> &Stack,
+                                      bool &WasLeafInlined) const {
   std::string ContextStr;
   SmallVector<std::string, 16> ContextVec;
   // Process from frame root to leaf
@@ -139,6 +144,9 @@ std::string ProfiledBinary::getExpandedContextStr(
     // processing
     if (ExpandedContext.empty())
       return std::string();
+    // Set WasLeafInlined to the size of inlined frame count for the last
+    // address which is leaf
+    WasLeafInlined = (ExpandedContext.size() > 1);
     for (const auto &Loc : ExpandedContext) {
       ContextVec.push_back(getCallSite(Loc));
     }
@@ -213,7 +221,10 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   if (StartOffset >= EndOffset)
     return true;
 
-  std::string &&SymbolName = Symbols[SI].Name.str();
+  StringRef SymbolName =
+      ShowCanonicalFnName
+          ? FunctionSamples::getCanonicalFnName(Symbols[SI].Name)
+          : Symbols[SI].Name;
   if (ShowDisassemblyOnly)
     outs() << '<' << SymbolName << ">:\n";
 
@@ -253,7 +264,7 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (Cur < 40)
           outs().indent(40 - Cur);
         InstructionPointer IP(this, Offset);
-        outs() << getReversedLocWithContext(symbolize(IP));
+        outs() << getReversedLocWithContext(symbolize(IP, ShowCanonicalFnName));
       }
       outs() << "\n";
     }

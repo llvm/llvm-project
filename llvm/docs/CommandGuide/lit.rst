@@ -20,7 +20,7 @@ user interface as possible.
 command line.  Tests can be either individual test files or directories to
 search for tests (see :ref:`test-discovery`).
 
-Each specified test will be executed (potentially in parallel) and once all
+Each specified test will be executed (potentially concurrently) and once all
 tests have been run :program:`lit` will print summary information on the number
 of tests which passed or failed (see :ref:`test-status-results`).  The
 :program:`lit` program will execute with a non-zero exit code if any tests
@@ -151,8 +151,7 @@ EXECUTION OPTIONS
 
  Track the wall time individual tests take to execute and includes the results
  in the summary output.  This is useful for determining which tests in a test
- suite take the most time to execute.  Note that this option is most useful
- with ``-j 1``.
+ suite take the most time to execute.
 
 .. option:: --ignore-fail
 
@@ -167,6 +166,17 @@ EXECUTION OPTIONS
 
 SELECTION OPTIONS
 -----------------
+
+By default, `lit` will run failing tests first, then run tests in descending
+execution time order to optimize concurrency.
+
+The timing data is stored in the `test_exec_root` in a file named
+`.lit_test_times.txt`. If this file does not exist, then `lit` checks the
+`test_source_root` for the file to optionally accelerate clean builds.
+
+.. option:: --shuffle
+
+ Run the tests in a random order, not failing/slowest first.
 
 .. option:: --max-failures N
 
@@ -200,10 +210,6 @@ SELECTION OPTIONS
  provided. The two options must be used together, and the value of ``N``
  must be in the range ``1..M``. The environment variable
  ``LIT_RUN_SHARD`` can also be used in place of this option.
-
-.. option:: --shuffle
-
- Run the tests in a random order.
 
 .. option:: --timeout=N
 
@@ -415,13 +421,6 @@ executed, two important global variables are predefined:
 
  **root** The root configuration.  This is the top-most :program:`lit` configuration in
  the project.
-
- **is_early** Whether the test suite as a whole should be given a head start
- before other test suites run.
-
- **early_tests** An explicit set of '/' separated test paths that should be
- given a head start before other tests run. For example, the top five or so
- slowest tests. See also: `--time-tests`
 
  **pipefail** Normally a test using a shell pipe fails if any of the commands
  on the pipe fail. If this is not desired, setting this variable to false

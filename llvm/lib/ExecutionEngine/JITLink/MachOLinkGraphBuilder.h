@@ -81,7 +81,8 @@ protected:
 
   using SectionParserFunction = std::function<Error(NormalizedSection &S)>;
 
-  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT);
+  MachOLinkGraphBuilder(const object::MachOObjectFile &Obj, Triple TT,
+                        LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
   LinkGraph &getGraph() const { return *G; }
 

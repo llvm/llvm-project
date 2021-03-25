@@ -156,8 +156,8 @@ struct AsyncAPI {
 
 /// Adds Async Runtime C API declarations to the module.
 static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
-  auto builder = ImplicitLocOpBuilder::atBlockTerminator(module.getLoc(),
-                                                         module.getBody());
+  auto builder =
+      ImplicitLocOpBuilder::atBlockEnd(module.getLoc(), module.getBody());
 
   auto addFuncDecl = [&](StringRef name, FunctionType type) {
     if (module.lookupSymbol(name))
@@ -207,8 +207,8 @@ static void addCRuntimeDeclarations(ModuleOp module) {
   using namespace mlir::LLVM;
 
   MLIRContext *ctx = module.getContext();
-  ImplicitLocOpBuilder builder(module.getLoc(),
-                               module.getBody()->getTerminator());
+  auto builder =
+      ImplicitLocOpBuilder::atBlockEnd(module.getLoc(), module.getBody());
 
   auto voidTy = LLVMVoidType::get(ctx);
   auto i64 = IntegerType::get(ctx, 64);
@@ -232,15 +232,14 @@ static void addResumeFunction(ModuleOp module) {
     return;
 
   MLIRContext *ctx = module.getContext();
-
-  OpBuilder moduleBuilder(module.getBody()->getTerminator());
-  Location loc = module.getLoc();
+  auto loc = module.getLoc();
+  auto moduleBuilder = ImplicitLocOpBuilder::atBlockEnd(loc, module.getBody());
 
   auto voidTy = LLVM::LLVMVoidType::get(ctx);
   auto i8Ptr = LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
 
   auto resumeOp = moduleBuilder.create<LLVM::LLVMFuncOp>(
-      loc, kResume, LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}));
+      kResume, LLVM::LLVMFunctionType::get(voidTy, {i8Ptr}));
   resumeOp.setPrivate();
 
   auto *block = resumeOp.addEntryBlock();
@@ -875,7 +874,7 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
 
   // Convert async dialect types and operations to LLVM dialect.
   AsyncRuntimeTypeConverter converter;
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(ctx);
 
   // We use conversion to LLVM type to lower async.runtime load and store
   // operations.
@@ -883,28 +882,28 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   llvmConverter.addConversion(AsyncRuntimeTypeConverter::convertAsyncTypes);
 
   // Convert async types in function signatures and function calls.
-  populateFuncOpTypeConversionPattern(patterns, ctx, converter);
-  populateCallOpTypeConversionPattern(patterns, ctx, converter);
+  populateFuncOpTypeConversionPattern(patterns, converter);
+  populateCallOpTypeConversionPattern(patterns, converter);
 
   // Convert return operations inside async.execute regions.
-  patterns.insert<ReturnOpOpConversion>(converter, ctx);
+  patterns.add<ReturnOpOpConversion>(converter, ctx);
 
   // Lower async.runtime operations to the async runtime API calls.
-  patterns.insert<RuntimeSetAvailableOpLowering, RuntimeAwaitOpLowering,
-                  RuntimeAwaitAndResumeOpLowering, RuntimeResumeOpLowering,
-                  RuntimeAddToGroupOpLowering, RuntimeAddRefOpLowering,
-                  RuntimeDropRefOpLowering>(converter, ctx);
+  patterns.add<RuntimeSetAvailableOpLowering, RuntimeAwaitOpLowering,
+               RuntimeAwaitAndResumeOpLowering, RuntimeResumeOpLowering,
+               RuntimeAddToGroupOpLowering, RuntimeAddRefOpLowering,
+               RuntimeDropRefOpLowering>(converter, ctx);
 
   // Lower async.runtime operations that rely on LLVM type converter to convert
   // from async value payload type to the LLVM type.
-  patterns.insert<RuntimeCreateOpLowering, RuntimeStoreOpLowering,
-                  RuntimeLoadOpLowering>(llvmConverter, ctx);
+  patterns.add<RuntimeCreateOpLowering, RuntimeStoreOpLowering,
+               RuntimeLoadOpLowering>(llvmConverter, ctx);
 
   // Lower async coroutine operations to LLVM coroutine intrinsics.
-  patterns.insert<CoroIdOpConversion, CoroBeginOpConversion,
-                  CoroFreeOpConversion, CoroEndOpConversion,
-                  CoroSaveOpConversion, CoroSuspendOpConversion>(converter,
-                                                                 ctx);
+  patterns
+      .add<CoroIdOpConversion, CoroBeginOpConversion, CoroFreeOpConversion,
+           CoroEndOpConversion, CoroSaveOpConversion, CoroSuspendOpConversion>(
+          converter, ctx);
 
   ConversionTarget target(*ctx);
   target.addLegalOp<ConstantOp>();
@@ -985,16 +984,15 @@ std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
 }
 
 void mlir::populateAsyncStructuralTypeConversionsAndLegality(
-    MLIRContext *context, TypeConverter &typeConverter,
-    OwningRewritePatternList &patterns, ConversionTarget &target) {
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target) {
   typeConverter.addConversion([&](TokenType type) { return type; });
   typeConverter.addConversion([&](ValueType type) {
     return ValueType::get(typeConverter.convertType(type.getValueType()));
   });
 
-  patterns
-      .insert<ConvertExecuteOpTypes, ConvertAwaitOpTypes, ConvertYieldOpTypes>(
-          typeConverter, context);
+  patterns.add<ConvertExecuteOpTypes, ConvertAwaitOpTypes, ConvertYieldOpTypes>(
+      typeConverter, patterns.getContext());
 
   target.addDynamicallyLegalOp<AwaitOp, ExecuteOp, async::YieldOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });

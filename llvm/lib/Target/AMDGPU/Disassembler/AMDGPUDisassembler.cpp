@@ -381,13 +381,15 @@ template <typename T> static inline T eatBytes(ArrayRef<uint8_t>& Bytes) {
   return Res;
 }
 
-static inline DecoderBigInt<96> eat12Bytes(ArrayRef<uint8_t>& Bytes) {
+static inline DecoderUInt128 eat12Bytes(ArrayRef<uint8_t> &Bytes) {
   assert(Bytes.size() >= 12);
-  const auto Res1 = support::endian::read<uint64_t, support::endianness::little>(Bytes.data());
+  uint64_t Lo = support::endian::read<uint64_t, support::endianness::little>(
+      Bytes.data());
   Bytes = Bytes.slice(8);
-  const auto Res2 = support::endian::read<uint32_t, support::endianness::little>(Bytes.data());
+  uint64_t Hi = support::endian::read<uint32_t, support::endianness::little>(
+      Bytes.data());
   Bytes = Bytes.slice(4);
-  return DecoderBigInt<96>(APInt(96, {Res1, Res2}));
+  return DecoderUInt128(Lo, Hi);
 }
 
 static bool isValidDPP8(const MCInst &MI) {
@@ -418,12 +420,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
-      DecoderBigInt<96> DecW = eat12Bytes(Bytes);
-      Res = tryDecodeInst<DecoderBigInt<96>>(DecoderTableDPP8GFX1196, MI, DecW, Address);
+      DecoderUInt128 DecW = eat12Bytes(Bytes);
+      Res = tryDecodeInst<DecoderUInt128>(DecoderTableDPP8GFX1196, MI, DecW,
+                                          Address);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
-      Res = tryDecodeInst<DecoderBigInt<96>>(DecoderTableDPPGFX1196, MI, DecW, Address);
+      Res = tryDecodeInst<DecoderUInt128>(DecoderTableDPPGFX1196, MI, DecW,
+                                          Address);
       if (Res) break;
     }
     // Reinitialize Bytes
@@ -562,9 +566,20 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   }
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
-                        (SIInstrFlags::MUBUF | SIInstrFlags::FLAT)) &&
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::glc1) != -1) {
-    insertNamedMCOperand(MI, MCOperand::createImm(1), AMDGPU::OpName::glc1);
+          (SIInstrFlags::MUBUF | SIInstrFlags::FLAT | SIInstrFlags::SMRD))) {
+    int CPolPos = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                             AMDGPU::OpName::cpol);
+    if (CPolPos != -1) {
+      unsigned CPol =
+          (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::IsAtomicRet) ?
+              AMDGPU::CPol::GLC : 0;
+      if (MI.getNumOperands() <= (unsigned)CPolPos) {
+        insertNamedMCOperand(MI, MCOperand::createImm(CPol),
+                             AMDGPU::OpName::cpol);
+      } else if (CPol) {
+        MI.getOperand(CPolPos).setImm(MI.getOperand(CPolPos).getImm() | CPol);
+      }
+    }
   }
 
   if (Res && (MCII->get(MI.getOpcode()).TSFlags &
@@ -577,20 +592,6 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       auto TFEIter = MI.begin();
       std::advance(TFEIter, TFEOpIdx);
       MI.insert(TFEIter, MCOperand::createImm(0));
-    }
-  }
-
-  if (Res && (MCII->get(MI.getOpcode()).TSFlags &
-              (SIInstrFlags::FLAT |
-               SIInstrFlags::MTBUF | SIInstrFlags::MUBUF))) {
-    if (!isGFX10Plus()) {
-      int DLCOpIdx =
-          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dlc);
-      if (DLCOpIdx != -1) {
-        auto DLCIter = MI.begin();
-        std::advance(DLCIter, DLCOpIdx);
-        MI.insert(DLCIter, MCOperand::createImm(0));
-      }
     }
   }
 
@@ -1700,7 +1701,6 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
 
   uint16_t TwoByteBuffer = 0;
   uint32_t FourByteBuffer = 0;
-  uint64_t EightByteBuffer = 0;
 
   StringRef ReservedBytes;
   StringRef Indent = "\t";
@@ -1721,11 +1721,19 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
              << FourByteBuffer << '\n';
     return MCDisassembler::Success;
 
+  case amdhsa::KERNARG_SIZE_OFFSET:
+    FourByteBuffer = DE.getU32(Cursor);
+    KdStream << Indent << ".amdhsa_kernarg_size "
+             << FourByteBuffer << '\n';
+    return MCDisassembler::Success;
+
   case amdhsa::RESERVED0_OFFSET:
-    // 8 reserved bytes, must be 0.
-    EightByteBuffer = DE.getU64(Cursor);
-    if (EightByteBuffer) {
-      return MCDisassembler::Fail;
+    // 4 reserved bytes, must be 0.
+    ReservedBytes = DE.getBytes(Cursor, 4);
+    for (int I = 0; I < 4; ++I) {
+      if (ReservedBytes[I] != 0) {
+        return MCDisassembler::Fail;
+      }
     }
     return MCDisassembler::Success;
 

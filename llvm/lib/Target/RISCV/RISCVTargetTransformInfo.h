@@ -48,17 +48,84 @@ public:
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                           Type *Ty, TTI::TargetCostKind CostKind);
 
+  TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasStdExtV(); }
   Optional<unsigned> getMaxVScale() const;
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
-      if (ST->hasStdExtV())
-        return ST->getMinRVVVectorSizeInBits();
-      return 0;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(ST->getXLen());
+    case TargetTransformInfo::RGK_FixedWidthVector:
+      return TypeSize::getFixed(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
     }
-    return ST->getXLen();
+
+    llvm_unreachable("Unsupported register kind");
+  }
+
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, bool VariableMask,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
+                                  const Instruction *I);
+
+  bool isLegalElementTypeForRVV(Type *ScalarTy) {
+    if (ScalarTy->isPointerTy())
+      return true;
+
+    if (ScalarTy->isIntegerTy(8) || ScalarTy->isIntegerTy(16) ||
+        ScalarTy->isIntegerTy(32) || ScalarTy->isIntegerTy(64))
+      return true;
+
+    if (ScalarTy->isHalfTy())
+      return ST->hasStdExtZfh();
+    if (ScalarTy->isFloatTy())
+      return ST->hasStdExtF();
+    if (ScalarTy->isDoubleTy())
+      return ST->hasStdExtD();
+
+    return false;
+  }
+
+  bool isLegalMaskedLoadStore(Type *DataType, Align Alignment) {
+    if (!ST->hasStdExtV())
+      return false;
+
+    // Only support fixed vectors if we know the minimum vector size.
+    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    return isLegalElementTypeForRVV(DataType->getScalarType());
+  }
+
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+    return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+    return isLegalMaskedLoadStore(DataType, Alignment);
+  }
+
+  bool isLegalMaskedGatherScatter(Type *DataType, Align Alignment) {
+    if (!ST->hasStdExtV())
+      return false;
+
+    // Only support fixed vectors if we know the minimum vector size.
+    if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    return isLegalElementTypeForRVV(DataType->getScalarType());
+  }
+
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) {
+    return isLegalMaskedGatherScatter(DataType, Alignment);
+  }
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) {
+    return isLegalMaskedGatherScatter(DataType, Alignment);
   }
 };
 

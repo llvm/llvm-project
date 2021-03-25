@@ -13,6 +13,8 @@
 #include "mlir/Conversion/ArmSVEToLLVM/ArmSVEToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/AMX/AMXDialect.h"
+#include "mlir/Dialect/AMX/Transforms.h"
 #include "mlir/Dialect/AVX512/AVX512Dialect.h"
 #include "mlir/Dialect/AVX512/Transforms.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
@@ -35,6 +37,7 @@ struct LowerVectorToLLVMPass
     this->enableIndexOptimizations = options.enableIndexOptimizations;
     this->enableArmNeon = options.enableArmNeon;
     this->enableArmSVE = options.enableArmSVE;
+    this->enableAMX = options.enableAMX;
     this->enableAVX512 = options.enableAVX512;
   }
   // Override explicitly to allow conditional dialect dependence.
@@ -45,6 +48,8 @@ struct LowerVectorToLLVMPass
       registry.insert<arm_neon::ArmNeonDialect>();
     if (enableArmSVE)
       registry.insert<LLVM::LLVMArmSVEDialect>();
+    if (enableAMX)
+      registry.insert<amx::AMXDialect>();
     if (enableAVX512)
       registry.insert<avx512::AVX512Dialect>();
   }
@@ -56,16 +61,16 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {
-    OwningRewritePatternList patterns;
-    populateVectorToVectorCanonicalizationPatterns(patterns, &getContext());
-    populateVectorSlicesLoweringPatterns(patterns, &getContext());
-    populateVectorContractLoweringPatterns(patterns, &getContext());
+    RewritePatternSet patterns(&getContext());
+    populateVectorToVectorCanonicalizationPatterns(patterns);
+    populateVectorSlicesLoweringPatterns(patterns);
+    populateVectorContractLoweringPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 
   // Convert to the LLVM IR dialect.
   LLVMTypeConverter converter(&getContext());
-  OwningRewritePatternList patterns;
+  RewritePatternSet patterns(&getContext());
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(
       converter, patterns, reassociateFPReductions, enableIndexOptimizations);
@@ -93,7 +98,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
       return false;
     };
     // Remove any ArmSVE-specific types from function signatures and results.
-    populateFuncOpTypeConversionPattern(patterns, &getContext(), converter);
+    populateFuncOpTypeConversionPattern(patterns, converter);
     target.addDynamicallyLegalOp<FuncOp>([hasScalableVectorType](FuncOp op) {
       return !hasScalableVectorType(op.getType().getInputs()) &&
              !hasScalableVectorType(op.getType().getResults());
@@ -104,6 +109,10 @@ void LowerVectorToLLVMPass::runOnOperation() {
                  !hasScalableVectorType(op->getResultTypes());
         });
     populateArmSVEToLLVMConversionPatterns(converter, patterns);
+  }
+  if (enableAMX) {
+    configureAMXLegalizeForExportTarget(target);
+    populateAMXLegalizeForLLVMExportPatterns(converter, patterns);
   }
   if (enableAVX512) {
     configureAVX512LegalizeForExportTarget(target);

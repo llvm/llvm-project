@@ -881,8 +881,8 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   return None;
 }
 
-/// \return Whether the chain of typedefs starting from {@code QT}
-/// has a typedef with a given name {@code Name}.
+/// \return Whether the chain of typedefs starting from @c QT
+/// has a typedef with a given name @c Name.
 static bool hasTypedefNamed(QualType QT,
                             StringRef Name) {
   while (auto *T = dyn_cast<TypedefType>(QT)) {

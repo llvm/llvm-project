@@ -228,6 +228,10 @@ int TargetTransformInfo::getUserCost(const User *U,
   return Cost;
 }
 
+BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
+  return TTIImpl->getPredictableBranchThreshold();
+}
+
 bool TargetTransformInfo::hasBranchDivergence() const {
   return TTIImpl->hasBranchDivergence();
 }
@@ -573,8 +577,9 @@ const char *TargetTransformInfo::getRegisterClassName(unsigned ClassID) const {
   return TTIImpl->getRegisterClassName(ClassID);
 }
 
-unsigned TargetTransformInfo::getRegisterBitWidth(bool Vector) const {
-  return TTIImpl->getRegisterBitWidth(Vector);
+TypeSize TargetTransformInfo::getRegisterBitWidth(
+    TargetTransformInfo::RegisterKind K) const {
+  return TTIImpl->getRegisterBitWidth(K);
 }
 
 unsigned TargetTransformInfo::getMinVectorRegisterBitWidth() const {
@@ -706,8 +711,9 @@ int TargetTransformInfo::getArithmeticInstrCost(
 }
 
 int TargetTransformInfo::getShuffleCost(ShuffleKind Kind, VectorType *Ty,
-                                        int Index, VectorType *SubTp) const {
-  int Cost = TTIImpl->getShuffleCost(Kind, Ty, Index, SubTp);
+                                        ArrayRef<int> Mask, int Index,
+                                        VectorType *SubTp) const {
+  int Cost = TTIImpl->getShuffleCost(Kind, Ty, Mask, Index, SubTp);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

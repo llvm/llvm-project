@@ -36,7 +36,8 @@ else()
   )
 endif()
 
-if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN))
+if (LIBCXXABI_ENABLE_THREADS AND (UNIX OR FUCHSIA) AND NOT (APPLE OR CYGWIN)
+    AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
   list(APPEND LIBCXXABI_SOURCES
     cxa_thread_atexit.cpp
   )
@@ -302,6 +303,7 @@ if (LIBCXXABI_ENABLE_STATIC)
         "$<TARGET_LINKER_FILE:cxxabi_static>"
         "$<TARGET_LINKER_FILE:unwind_static>"
       WORKING_DIRECTORY ${LIBCXXABI_BUILD_DIR}
+      DEPENDS unwind_static
     )
   endif()
 endif()

@@ -463,7 +463,9 @@ MATCHER_P2(hasFlag, Flag, Path, "") {
   return true;
 }
 
-auto hasFlag(llvm::StringRef Flag) { return hasFlag(Flag, "dummy.cc"); }
+auto hasFlag(llvm::StringRef Flag) {
+  return hasFlag(Flag, "mock_file_name.cc");
+}
 
 TEST_F(DirectoryBasedGlobalCompilationDatabaseCacheTest, Cacheable) {
   MockFS FS;
@@ -507,15 +509,15 @@ TEST_F(DirectoryBasedGlobalCompilationDatabaseCacheTest, Cacheable) {
   // compile_commands.json takes precedence over compile_flags.txt.
   FS.Files["foo/compile_commands.json"] =
       llvm::formatv(R"json([{
-    "file": "{0}/foo/dummy.cc",
-    "command": "clang -DBAZ dummy.cc",
+    "file": "{0}/foo/mock_file.cc",
+    "command": "clang -DBAZ mock_file.cc",
     "directory": "{0}/foo",
   }])json",
                     llvm::sys::path::convert_to_slash(testRoot()));
   EXPECT_EQ(FooBar, lookupCDB(GDB, testPath("foo/test.cc"), Stale))
       << "cache still valid";
   auto Baz = lookupCDB(GDB, testPath("foo/test.cc"), Fresh);
-  EXPECT_THAT(Baz, hasFlag("-DBAZ", testPath("foo/dummy.cc")))
+  EXPECT_THAT(Baz, hasFlag("-DBAZ", testPath("foo/mock_file.cc")))
       << "compile_commands overrides compile_flags";
 
   // Removing compile_commands.json reveals compile_flags.txt again.

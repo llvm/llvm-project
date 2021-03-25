@@ -18,13 +18,15 @@
 
 #include "amdgcn_interface.h"
 
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define DEVICE
-#define INLINE inline DEVICE
-#define NOINLINE __attribute__((noinline)) DEVICE
+// subset of inttypes.h
+#define PRId64 "ld"
+#define PRIu64 "lu"
+
+#define INLINE inline
+#define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////

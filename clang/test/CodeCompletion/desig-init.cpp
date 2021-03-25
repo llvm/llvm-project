@@ -62,3 +62,18 @@ void aux() {
   Test<T> X{.x = T(2)};
   // RUN: %clang_cc1 -fsyntax-only -code-completion-patterns -code-completion-at=%s:62:14 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-CC3 %s
 }
+
+namespace signature_regression {
+  // Verify that an old bug is gone: passing an init-list as a constructor arg
+  // would emit overloads as a side-effect.
+  struct S{int x;};
+  int wrongFunction(S);
+  int rightFunction();
+  int dummy = wrongFunction({1});
+  int x = rightFunction();
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:73:25 %s -o - -std=c++2a | FileCheck -check-prefix=CHECK-SIGNATURE-REGRESSION %s
+  // CHECK-SIGNATURE-REGRESSION-NOT: OVERLOAD: [#int#]wrongFunction
+  // CHECK-SIGNATURE-REGRESSION:     OVERLOAD: [#int#]rightFunction
+  // CHECK-SIGNATURE-REGRESSION-NOT: OVERLOAD: [#int#]wrongFunction
+}
+

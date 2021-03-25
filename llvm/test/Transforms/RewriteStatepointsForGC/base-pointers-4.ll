@@ -27,12 +27,9 @@ define void @test(i32 %condition) gc "statepoint-example" {
 ; CHECK:       dest_c:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[OBJ_TO_CONSUME_BASE:%.*]] = phi i64 addrspace(1)* [ [[TMP0]], [[DEST_A]] ], [ null, [[DEST_B]] ], [ null, [[DEST_C]] ], !is_base_value !0
 ; CHECK-NEXT:    [[OBJ_TO_CONSUME:%.*]] = phi i64 addrspace(1)* [ [[TMP0]], [[DEST_A]] ], [ null, [[DEST_B]] ], [ null, [[DEST_C]] ]
-; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 2882400000, i32 0, void (i64 addrspace(1)*)* @consume_obj, i32 1, i32 0, i64 addrspace(1)* [[OBJ_TO_CONSUME]], i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[OBJ_TO_CONSUME_BASE]], i64 addrspace(1)* [[OBJ_TO_CONSUME]]) ]
-; CHECK-NEXT:    [[OBJ_TO_CONSUME_BASE_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
-; CHECK-NEXT:    [[OBJ_TO_CONSUME_BASE_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[OBJ_TO_CONSUME_BASE_RELOCATED]] to i64 addrspace(1)*
-; CHECK-NEXT:    [[OBJ_TO_CONSUME_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN1]], i32 0, i32 1)
+; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, void (i64 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i64f(i64 2882400000, i32 0, void (i64 addrspace(1)*)* @consume_obj, i32 1, i32 0, i64 addrspace(1)* [[OBJ_TO_CONSUME]], i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(i64 addrspace(1)* [[OBJ_TO_CONSUME]]) ]
+; CHECK-NEXT:    [[OBJ_TO_CONSUME_RELOCATED:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[STATEPOINT_TOKEN1]], i32 0, i32 0)
 ; CHECK-NEXT:    [[OBJ_TO_CONSUME_RELOCATED_CASTED:%.*]] = bitcast i8 addrspace(1)* [[OBJ_TO_CONSUME_RELOCATED]] to i64 addrspace(1)*
 ; CHECK-NEXT:    br label [[MERGE_SPLIT:%.*]]
 ; CHECK:       merge.split:

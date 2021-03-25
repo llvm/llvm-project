@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -pedantic -verify=cxx17-pedantic -x c++ %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify=cxx98 -x c++ %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -pedantic -verify=cxx98-pedantic -x c++ %s
-// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wc++98-c++11-c++14-compat -verify=cxx17-compat -x c++ %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -Wpre-c++17-compat -verify=cxx17-compat -x c++ %s
 
 // cxx17-no-diagnostics
 

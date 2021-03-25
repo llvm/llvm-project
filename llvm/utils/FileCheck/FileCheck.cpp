@@ -212,10 +212,19 @@ static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
   case FileCheckDiag::MatchFoundButDiscarded:
     return MarkerStyle('!', raw_ostream::CYAN,
                        "discard: overlaps earlier match");
+  case FileCheckDiag::MatchFoundErrorNote:
+    // Note should always be overridden within the FileCheckDiag.
+    return MarkerStyle('!', raw_ostream::RED,
+                       "error: unknown error after match",
+                       /*FiltersAsError=*/true);
   case FileCheckDiag::MatchNoneAndExcluded:
     return MarkerStyle('X', raw_ostream::GREEN);
   case FileCheckDiag::MatchNoneButExpected:
     return MarkerStyle('X', raw_ostream::RED, "error: no match found",
+                       /*FiltersAsError=*/true);
+  case FileCheckDiag::MatchNoneForInvalidPattern:
+    return MarkerStyle('X', raw_ostream::RED,
+                       "error: match failed for invalid pattern",
                        /*FiltersAsError=*/true);
   case FileCheckDiag::MatchFuzzy:
     return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
@@ -420,6 +429,11 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
       if (DiagItr->InputStartLine == DiagItr->InputEndLine &&
           DiagItr->InputStartCol == DiagItr->InputEndCol)
         A.Marker.Lead = ' ';
+    }
+    if (DiagItr->MatchTy == FileCheckDiag::MatchFoundErrorNote) {
+      assert(!DiagItr->Note.empty() &&
+             "expected custom note for MatchFoundErrorNote");
+      A.Marker.Note = "error: " + A.Marker.Note;
     }
     A.FoundAndExpectedMatch =
         DiagItr->MatchTy == FileCheckDiag::MatchFoundAndExpected;
@@ -807,7 +821,7 @@ int main(int argc, char **argv) {
 
   // Read the expected strings from the check file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CheckFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(CheckFilename);
+      MemoryBuffer::getFileOrSTDIN(CheckFilename, /*IsText=*/true);
   if (std::error_code EC = CheckFileOrErr.getError()) {
     errs() << "Could not open check file '" << CheckFilename
            << "': " << EC.message() << '\n';
@@ -829,7 +843,7 @@ int main(int argc, char **argv) {
 
   // Open the file to check and add it to SourceMgr.
   ErrorOr<std::unique_ptr<MemoryBuffer>> InputFileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (InputFilename == "-")
     InputFilename = "<stdin>"; // Overwrite for improved diagnostic messages
   if (std::error_code EC = InputFileOrErr.getError()) {

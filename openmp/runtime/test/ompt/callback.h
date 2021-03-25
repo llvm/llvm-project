@@ -1124,6 +1124,15 @@ on_ompt_callback_control_tool(
   return 0; //success
 }
 
+static void on_ompt_callback_error(ompt_severity_t severity,
+                                   const char *message, size_t length,
+                                   const void *codeptr_ra) {
+  printf("%" PRIu64 ": ompt_event_runtime_error: severity=%" PRIu32
+         ", message=%s, length=%" PRIu64 ", codeptr_ra=%p\n",
+         ompt_get_thread_data()->value, severity, message, (uint64_t)length,
+         codeptr_ra);
+}
+
 int ompt_initialize(
   ompt_function_lookup_t lookup,
   int initial_device_num,
@@ -1173,6 +1182,7 @@ int ompt_initialize(
   register_ompt_callback(ompt_callback_task_dependence);
   register_ompt_callback(ompt_callback_thread_begin);
   register_ompt_callback(ompt_callback_thread_end);
+  register_ompt_callback(ompt_callback_error);
   printf("0: NULL_POINTER=%p\n", (void*)NULL);
   return 1; //success
 }

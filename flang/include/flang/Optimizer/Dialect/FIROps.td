@@ -2795,18 +2795,7 @@ class RealArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
       Arguments<(ins AnyRealLike:$lhs, AnyRealLike:$rhs)>;
 
-def fir_AddfOp : RealArithmeticOp<"addf", [Commutative]> {
-  let hasFolder = 1;
-}
-def fir_SubfOp : RealArithmeticOp<"subf"> {
-  let hasFolder = 1;
-}
-def fir_MulfOp : RealArithmeticOp<"mulf", [Commutative]> {
-  let hasFolder = 1;
-}
-def fir_DivfOp : RealArithmeticOp<"divf">;
 def fir_ModfOp : RealArithmeticOp<"modf">;
-// Pow is a builtin call and not a primitive
 
 def fir_CmpfOp : fir_Op<"cmpf",
     [NoSideEffect, SameTypeOperands, SameOperandsAndResultShape]> {

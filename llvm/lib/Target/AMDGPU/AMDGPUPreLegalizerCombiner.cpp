@@ -249,6 +249,9 @@ void AMDGPUPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<MachineDominatorTree>();
     AU.addPreserved<MachineDominatorTree>();
   }
+
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -270,8 +273,13 @@ bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
   AMDGPUPreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
                                         F.hasMinSize(), KB, MDT);
+  // Enable CSE.
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
+
   Combiner C(PCInfo, TPC);
-  return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
+  return C.combineMachineInstrs(MF, CSEInfo);
 }
 
 char AMDGPUPreLegalizerCombiner::ID = 0;

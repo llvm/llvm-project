@@ -68,6 +68,8 @@ static Value *SimplifyCastInst(unsigned, Value *, Type *,
                                const SimplifyQuery &, unsigned);
 static Value *SimplifyGEPInst(Type *, ArrayRef<Value *>, const SimplifyQuery &,
                               unsigned);
+static Value *SimplifySelectInst(Value *, Value *, Value *,
+                                 const SimplifyQuery &, unsigned);
 
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
@@ -3928,103 +3930,104 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     return nullptr;
 
   auto *I = dyn_cast<Instruction>(V);
-  if (!I)
+  if (!I || !is_contained(I->operands(), Op))
     return nullptr;
+
+  // Replace Op with RepOp in instruction operands.
+  SmallVector<Value *, 8> NewOps(I->getNumOperands());
+  transform(I->operands(), NewOps.begin(),
+            [&](Value *V) { return V == Op ? RepOp : V; });
+
+  if (!AllowRefinement) {
+    // General InstSimplify functions may refine the result, e.g. by returning
+    // a constant for a potentially poison value. To avoid this, implement only
+    // a few non-refining but profitable transforms here.
+
+    if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      unsigned Opcode = BO->getOpcode();
+      // id op x -> x, x op id -> x
+      if (NewOps[0] == ConstantExpr::getBinOpIdentity(Opcode, I->getType()))
+        return NewOps[1];
+      if (NewOps[1] == ConstantExpr::getBinOpIdentity(Opcode, I->getType(),
+                                                      /* RHS */ true))
+        return NewOps[0];
+
+      // x & x -> x, x | x -> x
+      if ((Opcode == Instruction::And || Opcode == Instruction::Or) &&
+          NewOps[0] == NewOps[1])
+        return NewOps[0];
+    }
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
+      // getelementptr x, 0 -> x
+      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()) &&
+          !GEP->isInBounds())
+        return NewOps[0];
+    }
+  } else if (MaxRecurse) {
+    // The simplification queries below may return the original value. Consider:
+    //   %div = udiv i32 %arg, %arg2
+    //   %mul = mul nsw i32 %div, %arg2
+    //   %cmp = icmp eq i32 %mul, %arg
+    //   %sel = select i1 %cmp, i32 %div, i32 undef
+    // Replacing %arg by %mul, %div becomes "udiv i32 %mul, %arg2", which
+    // simplifies back to %arg. This can only happen because %mul does not
+    // dominate %div. To ensure a consistent return value contract, we make sure
+    // that this case returns nullptr as well.
+    auto PreventSelfSimplify = [V](Value *Simplified) {
+      return Simplified != V ? Simplified : nullptr;
+    };
+
+    if (auto *B = dyn_cast<BinaryOperator>(I))
+      return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(), NewOps[0],
+                                               NewOps[1], Q, MaxRecurse - 1));
+
+    if (CmpInst *C = dyn_cast<CmpInst>(I))
+      return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(), NewOps[0],
+                                                 NewOps[1], Q, MaxRecurse - 1));
+
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I))
+      return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
+                                                 NewOps, Q, MaxRecurse - 1));
+
+    if (isa<SelectInst>(I))
+      return PreventSelfSimplify(
+          SimplifySelectInst(NewOps[0], NewOps[1], NewOps[2], Q,
+                             MaxRecurse - 1));
+    // TODO: We could hand off more cases to instsimplify here.
+  }
+
+  // If all operands are constant after substituting Op for RepOp then we can
+  // constant fold the instruction.
+  SmallVector<Constant *, 8> ConstOps;
+  for (Value *NewOp : NewOps) {
+    if (Constant *ConstOp = dyn_cast<Constant>(NewOp))
+      ConstOps.push_back(ConstOp);
+    else
+      return nullptr;
+  }
 
   // Consider:
   //   %cmp = icmp eq i32 %x, 2147483647
   //   %add = add nsw i32 %x, 1
   //   %sel = select i1 %cmp, i32 -2147483648, i32 %add
   //
-  // We can't replace %sel with %add unless we strip away the flags (which will
-  // be done in InstCombine).
-  // TODO: This is unsound, because it only catches some forms of refinement.
+  // We can't replace %sel with %add unless we strip away the flags (which
+  // will be done in InstCombine).
+  // TODO: This may be unsound, because it only catches some forms of
+  // refinement.
   if (!AllowRefinement && canCreatePoison(cast<Operator>(I)))
     return nullptr;
 
-  // The simplification queries below may return the original value. Consider:
-  //   %div = udiv i32 %arg, %arg2
-  //   %mul = mul nsw i32 %div, %arg2
-  //   %cmp = icmp eq i32 %mul, %arg
-  //   %sel = select i1 %cmp, i32 %div, i32 undef
-  // Replacing %arg by %mul, %div becomes "udiv i32 %mul, %arg2", which
-  // simplifies back to %arg. This can only happen because %mul does not
-  // dominate %div. To ensure a consistent return value contract, we make sure
-  // that this case returns nullptr as well.
-  auto PreventSelfSimplify = [V](Value *Simplified) {
-    return Simplified != V ? Simplified : nullptr;
-  };
+  if (CmpInst *C = dyn_cast<CmpInst>(I))
+    return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
+                                           ConstOps[1], Q.DL, Q.TLI);
 
-  // If this is a binary operator, try to simplify it with the replaced op.
-  if (auto *B = dyn_cast<BinaryOperator>(I)) {
-    if (MaxRecurse) {
-      if (B->getOperand(0) == Op)
-        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(), RepOp,
-                                                 B->getOperand(1), Q,
-                                                 MaxRecurse - 1));
-      if (B->getOperand(1) == Op)
-        return PreventSelfSimplify(SimplifyBinOp(B->getOpcode(),
-                                                 B->getOperand(0), RepOp, Q,
-                                                 MaxRecurse - 1));
-    }
-  }
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    if (!LI->isVolatile())
+      return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
 
-  // Same for CmpInsts.
-  if (CmpInst *C = dyn_cast<CmpInst>(I)) {
-    if (MaxRecurse) {
-      if (C->getOperand(0) == Op)
-        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(), RepOp,
-                                                   C->getOperand(1), Q,
-                                                   MaxRecurse - 1));
-      if (C->getOperand(1) == Op)
-        return PreventSelfSimplify(SimplifyCmpInst(C->getPredicate(),
-                                                   C->getOperand(0), RepOp, Q,
-                                                   MaxRecurse - 1));
-    }
-  }
-
-  // Same for GEPs.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-    if (MaxRecurse) {
-      SmallVector<Value *, 8> NewOps(GEP->getNumOperands());
-      transform(GEP->operands(), NewOps.begin(),
-                [&](Value *V) { return V == Op ? RepOp : V; });
-      return PreventSelfSimplify(SimplifyGEPInst(GEP->getSourceElementType(),
-                                                 NewOps, Q, MaxRecurse - 1));
-    }
-  }
-
-  // TODO: We could hand off more cases to instsimplify here.
-
-  // If all operands are constant after substituting Op for RepOp then we can
-  // constant fold the instruction.
-  if (Constant *CRepOp = dyn_cast<Constant>(RepOp)) {
-    // Build a list of all constant operands.
-    SmallVector<Constant *, 8> ConstOps;
-    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i) {
-      if (I->getOperand(i) == Op)
-        ConstOps.push_back(CRepOp);
-      else if (Constant *COp = dyn_cast<Constant>(I->getOperand(i)))
-        ConstOps.push_back(COp);
-      else
-        break;
-    }
-
-    // All operands were constants, fold it.
-    if (ConstOps.size() == I->getNumOperands()) {
-      if (CmpInst *C = dyn_cast<CmpInst>(I))
-        return ConstantFoldCompareInstOperands(C->getPredicate(), ConstOps[0],
-                                               ConstOps[1], Q.DL, Q.TLI);
-
-      if (LoadInst *LI = dyn_cast<LoadInst>(I))
-        if (!LI->isVolatile())
-          return ConstantFoldLoadFromConstPtr(ConstOps[0], LI->getType(), Q.DL);
-
-      return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
-    }
-  }
-
-  return nullptr;
+  return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 
 Value *llvm::SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
@@ -4349,40 +4352,32 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
       // doesn't truncate the pointers.
       if (Ops[1]->getType()->getScalarSizeInBits() ==
           Q.DL.getPointerSizeInBits(AS)) {
-        auto PtrToInt = [GEPTy](Value *P) -> Value * {
-          Value *Temp;
-          if (match(P, m_PtrToInt(m_Value(Temp))))
-            if (Temp->getType() == GEPTy)
-              return Temp;
-          return nullptr;
+        auto CanSimplify = [GEPTy, &P, V = Ops[0]]() -> bool {
+          return P->getType() == GEPTy &&
+                 getUnderlyingObject(P) == getUnderlyingObject(V);
         };
-
-        // FIXME: The following transforms are only legal if P and V have the
-        // same provenance (PR44403). Check whether getUnderlyingObject() is
-        // the same?
-
         // getelementptr V, (sub P, V) -> P if P points to a type of size 1.
         if (TyAllocSize == 1 &&
-            match(Ops[1], m_Sub(m_Value(P), m_PtrToInt(m_Specific(Ops[0])))))
-          if (Value *R = PtrToInt(P))
-            return R;
+            match(Ops[1], m_Sub(m_PtrToInt(m_Value(P)),
+                                m_PtrToInt(m_Specific(Ops[0])))) &&
+            CanSimplify())
+          return P;
 
-        // getelementptr V, (ashr (sub P, V), C) -> Q
-        // if P points to a type of size 1 << C.
-        if (match(Ops[1],
-                  m_AShr(m_Sub(m_Value(P), m_PtrToInt(m_Specific(Ops[0]))),
-                         m_ConstantInt(C))) &&
-            TyAllocSize == 1ULL << C)
-          if (Value *R = PtrToInt(P))
-            return R;
+        // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
+        // size 1 << C.
+        if (match(Ops[1], m_AShr(m_Sub(m_PtrToInt(m_Value(P)),
+                                       m_PtrToInt(m_Specific(Ops[0]))),
+                                 m_ConstantInt(C))) &&
+            TyAllocSize == 1ULL << C && CanSimplify())
+          return P;
 
-        // getelementptr V, (sdiv (sub P, V), C) -> Q
-        // if P points to a type of size C.
-        if (match(Ops[1],
-                  m_SDiv(m_Sub(m_Value(P), m_PtrToInt(m_Specific(Ops[0]))),
-                         m_SpecificInt(TyAllocSize))))
-          if (Value *R = PtrToInt(P))
-            return R;
+        // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
+        // size C.
+        if (match(Ops[1], m_SDiv(m_Sub(m_PtrToInt(m_Value(P)),
+                                       m_PtrToInt(m_Specific(Ops[0]))),
+                                 m_SpecificInt(TyAllocSize))) &&
+            CanSimplify())
+          return P;
       }
     }
   }
@@ -5467,6 +5462,12 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   case Intrinsic::cttz: {
     Value *X;
     if (match(Op0, m_Shl(m_One(), m_Value(X))))
+      return X;
+    break;
+  }
+  case Intrinsic::ctlz: {
+    Value *X;
+    if (match(Op0, m_LShr(m_SignMask(), m_Value(X))))
       return X;
     break;
   }

@@ -56,6 +56,8 @@ private:
     int32_t getTotalNumVGPRs(const GCNSubtarget &ST) const;
   };
 
+  void initializeTargetID(const Module &M);
+
   SIProgramInfo CurrentProgramInfo;
   DenseMap<const Function *, SIFunctionResourceInfo> CallGraphResourceInfo;
 

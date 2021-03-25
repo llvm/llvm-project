@@ -63,6 +63,7 @@ if (MLIR_VULKAN_RUNNER_ENABLED)
     MLIRJitRunner
     MLIRLLVMIR
     MLIRLLVMToLLVMIRTranslation
+    MLIRMemRef
     MLIRParser
     MLIRSPIRV
     MLIRSPIRVTransforms

@@ -18,8 +18,8 @@ using namespace tooling;
 using namespace dependencies;
 
 std::vector<std::string> ModuleDeps::getFullCommandLine(
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const {
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
   std::vector<std::string> Ret = NonPathCommandLine;
 
   // TODO: Build full command line. That also means capturing the original
@@ -32,21 +32,21 @@ std::vector<std::string> ModuleDeps::getFullCommandLine(
 }
 
 void dependencies::detail::appendCommonModuleArguments(
-    llvm::ArrayRef<ClangModuleDep> Modules,
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps,
+    llvm::ArrayRef<ModuleID> Modules,
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
     std::vector<std::string> &Result) {
   llvm::StringSet<> AlreadyAdded;
 
-  std::function<void(llvm::ArrayRef<ClangModuleDep>)> AddArgs =
-      [&](llvm::ArrayRef<ClangModuleDep> Modules) {
-        for (const ClangModuleDep &CMD : Modules) {
-          if (!AlreadyAdded.insert(CMD.ModuleName + CMD.ContextHash).second)
+  std::function<void(llvm::ArrayRef<ModuleID>)> AddArgs =
+      [&](llvm::ArrayRef<ModuleID> Modules) {
+        for (const ModuleID &MID : Modules) {
+          if (!AlreadyAdded.insert(MID.ModuleName + MID.ContextHash).second)
             continue;
-          const ModuleDeps &M = LookupModuleDeps(CMD);
+          const ModuleDeps &M = LookupModuleDeps(MID);
           // Depth first traversal.
           AddArgs(M.ClangModuleDeps);
-          Result.push_back(("-fmodule-file=" + LookupPCMPath(CMD)).str());
+          Result.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
           if (!M.ClangModuleMapFile.empty()) {
             Result.push_back("-fmodule-map-file=" + M.ClangModuleMapFile);
           }
@@ -79,7 +79,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // We do not want #line markers to affect dependency generation!
   if (Optional<StringRef> Filename =
           SM.getNonBuiltinFilenameForID(SM.getFileID(SM.getExpansionLoc(Loc))))
-    MDC.MainDeps.push_back(
+    MDC.FileDeps.push_back(
         std::string(llvm::sys::path::remove_leading_dotslash(*Filename)));
 }
 
@@ -91,7 +91,7 @@ void ModuleDepCollectorPP::InclusionDirective(
   if (!File && !Imported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
-    MDC.MainDeps.push_back(std::string(FileName));
+    MDC.FileDeps.push_back(std::string(FileName));
   }
   handleImport(Imported);
 }
@@ -106,9 +106,10 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
   if (!Imported)
     return;
 
-  MDC.Deps[MDC.ContextHash + Imported->getTopLevelModule()->getFullModuleName()]
+  const Module *TopLevelModule = Imported->getTopLevelModule();
+  MDC.ModularDeps[MDC.ContextHash + TopLevelModule->getFullModuleName()]
       .ImportedByMainFile = true;
-  DirectDeps.insert(Imported->getTopLevelModule());
+  DirectModularDeps.insert(TopLevelModule);
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -116,24 +117,23 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   MDC.MainFile = std::string(
       Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
-  for (const Module *M : DirectDeps) {
+  for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
-  }
 
-  for (auto &&I : MDC.Deps)
+  for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(I.second);
 
-  for (auto &&I : MDC.MainDeps)
+  for (auto &&I : MDC.FileDeps)
     MDC.Consumer.handleFileDependency(*MDC.Opts, I);
 }
 
 void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
 
-  auto ModI = MDC.Deps.insert(
+  auto ModI = MDC.ModularDeps.insert(
       std::make_pair(MDC.ContextHash + M->getFullModuleName(), ModuleDeps{}));
 
-  if (!ModI.first->second.ModuleName.empty())
+  if (!ModI.first->second.ID.ModuleName.empty())
     return;
 
   ModuleDeps &MD = ModI.first->second;
@@ -144,9 +144,9 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    .getContainingModuleMapFile(M);
 
   MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
-  MD.ModuleName = M->getFullModuleName();
+  MD.ID.ModuleName = M->getFullModuleName();
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
-  MD.ContextHash = MDC.ContextHash;
+  MD.ID.ContextHash = MDC.ContextHash;
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(

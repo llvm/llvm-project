@@ -1394,39 +1394,7 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
     DC->reconcileExternalVisibleStorage();
 
   StoredDeclsList &List = (*Map)[Name];
-
-  // Clear out any old external visible declarations, to avoid quadratic
-  // performance in the redeclaration checks below.
-  List.removeExternalDecls();
-
-  if (!List.isNull()) {
-    // We have both existing declarations and new declarations for this name.
-    // Some of the declarations may simply replace existing ones. Handle those
-    // first.
-    llvm::SmallVector<unsigned, 8> Skip;
-    for (unsigned I = 0, N = Decls.size(); I != N; ++I)
-      if (List.HandleRedeclaration(Decls[I], /*IsKnownNewer*/false))
-        Skip.push_back(I);
-    Skip.push_back(Decls.size());
-
-    // Add in any new declarations.
-    unsigned SkipPos = 0;
-    for (unsigned I = 0, N = Decls.size(); I != N; ++I) {
-      if (I == Skip[SkipPos])
-        ++SkipPos;
-      else
-        List.AddSubsequentDecl(Decls[I]);
-    }
-  } else {
-    // Convert the array to a StoredDeclsList.
-    for (auto *D : Decls) {
-      if (List.isNull())
-        List.setOnlyValue(D);
-      else
-        List.AddSubsequentDecl(D);
-    }
-  }
-
+  List.replaceExternalDecls(Decls);
   return List.getLookupResult();
 }
 
@@ -1538,10 +1506,7 @@ void DeclContext::removeDecl(Decl *D) {
       if (Map) {
         StoredDeclsMap::iterator Pos = Map->find(ND->getDeclName());
         assert(Pos != Map->end() && "no lookup entry for decl");
-        // Remove the decl only if it is contained.
-        StoredDeclsList::DeclsTy *Vec = Pos->second.getAsVector();
-        if ((Vec && is_contained(*Vec, ND)) || Pos->second.getAsDecl() == ND)
-          Pos->second.remove(ND);
+        Pos->second.remove(ND);
       }
     } while (DC->isTransparentContext() && (DC = DC->getParent()));
   }
@@ -1657,8 +1622,6 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
         buildLookupImpl(InnerCtx, Internal);
   }
 }
-
-NamedDecl *const DeclContextLookupResult::SingleElementDummyList = nullptr;
 
 DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
@@ -1935,23 +1898,11 @@ void DeclContext::makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal) {
     // In this case, we never try to replace an existing declaration; we'll
     // handle that when we finalize the list of declarations for this name.
     DeclNameEntries.setHasExternalDecls();
-    DeclNameEntries.AddSubsequentDecl(D);
+    DeclNameEntries.prependDeclNoReplace(D);
     return;
   }
 
-  if (DeclNameEntries.isNull()) {
-    DeclNameEntries.setOnlyValue(D);
-    return;
-  }
-
-  if (DeclNameEntries.HandleRedeclaration(D, /*IsKnownNewer*/!Internal)) {
-    // This declaration has replaced an existing one for which
-    // declarationReplaces returns true.
-    return;
-  }
-
-  // Put this declaration into the appropriate slot.
-  DeclNameEntries.AddSubsequentDecl(D);
+  DeclNameEntries.addOrReplaceDecl(D);
 }
 
 UsingDirectiveDecl *DeclContext::udir_iterator::operator*() const {

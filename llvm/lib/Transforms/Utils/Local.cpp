@@ -1614,8 +1614,8 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   // so that if a dbg.value is being rewritten to use more than one of the
   // inserted PHIs in the same destination BB, we can update the same dbg.value
   // with all the new PHIs instead of creating one copy for each.
-  SmallDenseMap<std::pair<BasicBlock *, DbgVariableIntrinsic *>,
-                DbgVariableIntrinsic *>
+  MapVector<std::pair<BasicBlock *, DbgVariableIntrinsic *>,
+            DbgVariableIntrinsic *>
       NewDbgValueMap;
   // Then iterate through the new PHIs and look to see if they use one of the
   // previously mapped PHIs. If so, create a new dbg.value intrinsic that will
@@ -2403,22 +2403,25 @@ static bool markAliveBlocks(Function &F,
                                              E = CatchSwitch->handler_end();
            I != E; ++I) {
         BasicBlock *HandlerBB = *I;
-        ++NumPerSuccessorCases[HandlerBB];
+        if (DTU)
+          ++NumPerSuccessorCases[HandlerBB];
         auto *CatchPad = cast<CatchPadInst>(HandlerBB->getFirstNonPHI());
         if (!HandlerSet.insert({CatchPad, Empty}).second) {
-          --NumPerSuccessorCases[HandlerBB];
+          if (DTU)
+            --NumPerSuccessorCases[HandlerBB];
           CatchSwitch->removeHandler(I);
           --I;
           --E;
           Changed = true;
         }
       }
-      std::vector<DominatorTree::UpdateType> Updates;
-      for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
-        if (I.second == 0)
-          Updates.push_back({DominatorTree::Delete, BB, I.first});
-      if (DTU)
+      if (DTU) {
+        std::vector<DominatorTree::UpdateType> Updates;
+        for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          if (I.second == 0)
+            Updates.push_back({DominatorTree::Delete, BB, I.first});
         DTU->applyUpdates(Updates);
+      }
     }
 
     Changed |= ConstantFoldTerminator(BB, true, nullptr, DTU);

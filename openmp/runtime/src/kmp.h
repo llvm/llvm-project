@@ -1221,7 +1221,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
   int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
-  int cpu_stackoffset;
   int apic_id;
   int physical_id;
   int logical_id;
@@ -4087,6 +4086,13 @@ extern void __kmp_hidden_helper_main_thread_release();
 // main thread, is skipped.
 #define KMP_GTID_TO_SHADOW_GTID(gtid)                                          \
   ((gtid) % (__kmp_hidden_helper_threads_num - 1) + 2)
+
+// Support for error directive
+typedef enum kmp_severity_t {
+  severity_warning = 1,
+  severity_fatal = 2
+} kmp_severity_t;
+extern void __kmpc_error(ident_t *loc, int severity, const char *message);
 
 #ifdef __cplusplus
 }

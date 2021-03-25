@@ -274,8 +274,12 @@ TEST(PreamblePatchTest, Define) {
 
     auto AST = createPatchedAST("", Modified.code());
     ASSERT_TRUE(AST);
-    EXPECT_THAT(AST->getDiagnostics(),
-                Not(Contains(Field(&Diag::Range, Modified.range()))));
+    std::vector<Range> MacroRefRanges;
+    for (auto &M : AST->getMacros().MacroRefs) {
+      for (auto &O : M.getSecond())
+        MacroRefRanges.push_back(O.Rng);
+    }
+    EXPECT_THAT(MacroRefRanges, Contains(Modified.range()));
   }
 }
 
@@ -298,8 +302,6 @@ TEST(PreamblePatchTest, OrderingPreserved) {
 
   auto AST = createPatchedAST(Baseline, Modified.code());
   ASSERT_TRUE(AST);
-  EXPECT_THAT(AST->getDiagnostics(),
-              Not(Contains(Field(&Diag::Range, Modified.range()))));
 }
 
 TEST(PreamblePatchTest, LocateMacroAtWorks) {
@@ -534,6 +536,15 @@ TEST(PreamblePatch, ModifiedBounds) {
     EXPECT_EQ(PP.modifiedBounds().PreambleEndsAtStartOfLine,
               ExpectedBounds.PreambleEndsAtStartOfLine);
   }
+}
+
+TEST(PreamblePatch, DropsDiagnostics) {
+  llvm::StringLiteral Code = "#define FOO\nx;/* error-ok */";
+  // First check that this code generates diagnostics.
+  EXPECT_THAT(*TestTU::withCode(Code).build().getDiagnostics(),
+              testing::Not(testing::IsEmpty()));
+  // Ensure they are dropeed when a patched preamble is used.
+  EXPECT_FALSE(createPatchedAST("", Code)->getDiagnostics());
 }
 } // namespace
 } // namespace clangd

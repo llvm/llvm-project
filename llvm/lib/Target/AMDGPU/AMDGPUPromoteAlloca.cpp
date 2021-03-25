@@ -126,8 +126,13 @@ public:
 char AMDGPUPromoteAlloca::ID = 0;
 char AMDGPUPromoteAllocaToVector::ID = 0;
 
-INITIALIZE_PASS(AMDGPUPromoteAlloca, DEBUG_TYPE,
-                "AMDGPU promote alloca to vector or LDS", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUPromoteAlloca, DEBUG_TYPE,
+                      "AMDGPU promote alloca to vector or LDS", false, false)
+// Move LDS uses from functions to kernels before promote alloca for accurate
+// estimation of LDS available
+INITIALIZE_PASS_DEPENDENCY(AMDGPULowerModuleLDS)
+INITIALIZE_PASS_END(AMDGPUPromoteAlloca, DEBUG_TYPE,
+                    "AMDGPU promote alloca to vector or LDS", false, false)
 
 INITIALIZE_PASS(AMDGPUPromoteAllocaToVector, DEBUG_TYPE "-to-vector",
                 "AMDGPU promote alloca to vector", false, false)

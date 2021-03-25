@@ -854,6 +854,9 @@ public:
   /// will be the same type as that of \p Scaling.
   Value *CreateVScale(Constant *Scaling, const Twine &Name = "");
 
+  /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>
+  Value *CreateStepVector(Type *DstType, const Twine &Name = "");
+
   /// Create a call to intrinsic \p ID with 1 operand which is mangled on its
   /// type.
   CallInst *CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
@@ -2503,6 +2506,9 @@ public:
   /// different from pointer to i8, it's casted to pointer to i8 in the same
   /// address space before call and casted back to Ptr type after call.
   Value *CreateStripInvariantGroup(Value *Ptr);
+
+  /// Return a vector value that contains the vector V reversed
+  Value *CreateVectorReverse(Value *V, const Twine &Name = "");
 
   /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.

@@ -599,7 +599,7 @@ lex(llvm::StringRef Code, const LangOptions &LangOpts,
         Action) {
   // FIXME: InMemoryFileAdapter crashes unless the buffer is null terminated!
   std::string NullTerminatedCode = Code.str();
-  SourceManagerForFile FileSM("dummy.cpp", NullTerminatedCode);
+  SourceManagerForFile FileSM("mock_file_name.cpp", NullTerminatedCode);
   auto &SM = FileSM.get();
   for (const auto &Tok : syntax::tokenize(SM.getMainFileID(), SM, LangOpts))
     Action(Tok, SM);

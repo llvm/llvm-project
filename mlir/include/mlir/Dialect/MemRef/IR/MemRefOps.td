@@ -10,6 +10,7 @@
 #define MEMREF_OPS
 
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
+include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -104,28 +105,6 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
   let results = (outs);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
-}
-
-//===----------------------------------------------------------------------===//
-// BaseOpWithOffsetSizesAndStrides
-//===----------------------------------------------------------------------===//
-
-// Base class for ops with static/dynamic offset, sizes and strides
-// attributes/arguments.
-class BaseOpWithOffsetSizesAndStrides<string mnemonic, list<OpTrait> traits = []> :
-    MemRef_Op<mnemonic,
-           !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments])> {
-  code extraBaseClassDeclaration = [{
-    /// Returns the dynamic sizes for this subview operation if specified.
-    operand_range getDynamicSizes() { return sizes(); }
-
-    /// Return the list of Range (i.e. offset, size, stride). Each
-    /// Range entry contains either the dynamic value or a ConstantIndexOp
-    /// constructed with `b` at location `loc`.
-    SmallVector<Range, 8> getOrCreateRanges(OpBuilder &b, Location loc) {
-      return mlir::getOrCreateRanges(*this, b, loc);
-    }
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,7 +233,8 @@ def MemRef_BufferCastOp : MemRef_Op<"buffer_cast",
 
 def MemRef_CastOp : MemRef_Op<"cast", [
       NoSideEffect, SameOperandsAndResultShape,
-      DeclareOpInterfaceMethods<CastOpInterface>
+      DeclareOpInterfaceMethods<CastOpInterface>,
+      ViewLikeOpInterface
     ]> {
   let summary = "memref cast operation";
   let description = [{
@@ -325,6 +305,8 @@ def MemRef_CastOp : MemRef_Op<"cast", [
   let extraClassDeclaration = [{
     /// Fold the given CastOp into consumer op.
     static bool canFoldIntoConsumerOp(CastOp castOp);
+
+    Value getViewSource() { return source(); }
   }];
 
   let hasFolder = 1;
@@ -624,8 +606,9 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 //===----------------------------------------------------------------------===//
 
 def MemRef_ReinterpretCastOp:
-    BaseOpWithOffsetSizesAndStrides<"reinterpret_cast", [
-      NoSideEffect, ViewLikeOpInterface, OffsetSizeAndStrideOpInterface
+    BaseOpWithOffsetSizesAndStrides<MemRef_Dialect, "reinterpret_cast", [
+      NoSideEffect, AttrSizedOperandSegments, ViewLikeOpInterface,
+      OffsetSizeAndStrideOpInterface
     ]> {
   let summary = "memref reinterpret cast operation";
   let description = [{
@@ -852,8 +835,9 @@ def MemRef_StoreOp : MemRef_Op<"store",
 //===----------------------------------------------------------------------===//
 
 def SubViewOp : BaseOpWithOffsetSizesAndStrides<
-    "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>,
-                NoSideEffect, OffsetSizeAndStrideOpInterface] >  {
+    MemRef_Dialect, "subview", [DeclareOpInterfaceMethods<ViewLikeOpInterface>,
+                NoSideEffect, AttrSizedOperandSegments,
+		OffsetSizeAndStrideOpInterface] >  {
   let summary = "memref subview operation";
   let description = [{
     The "subview" operation converts a memref type to another memref type

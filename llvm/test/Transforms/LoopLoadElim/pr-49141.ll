@@ -8,12 +8,10 @@ define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    br i1 true, label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[A_01:%.*]] = phi i16 [ undef, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[INC]] = add nsw i16 [[A_01]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i16 [[INC]], 2
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 false, [[CMP]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 false, label [[FOR_COND:%.*]], label [[FOR_END]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
 ;

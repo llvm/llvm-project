@@ -139,12 +139,9 @@ private:
     case MVT::v8i16:
     case MVT::v4i32:
     case MVT::v4f32:
-      if (Subtarget->hasSIMD128())
-        return VT;
-      break;
     case MVT::v2i64:
     case MVT::v2f64:
-      if (Subtarget->hasUnimplementedSIMD128())
+      if (Subtarget->hasSIMD128())
         return VT;
       break;
     default:

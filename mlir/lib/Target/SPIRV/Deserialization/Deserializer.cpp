@@ -1640,7 +1640,7 @@ ControlFlowStructurizer::createSelectionOp(uint32_t selectionControl) {
   // merge block so that the newly created SelectionOp will be inserted there.
   OpBuilder builder(&mergeBlock->front());
 
-  auto control = builder.getI32IntegerAttr(selectionControl);
+  auto control = static_cast<spirv::SelectionControl>(selectionControl);
   auto selectionOp = builder.create<spirv::SelectionOp>(location, control);
   selectionOp.addMergeBlock();
 
@@ -1652,7 +1652,7 @@ spirv::LoopOp ControlFlowStructurizer::createLoopOp(uint32_t loopControl) {
   // merge block so that the newly created LoopOp will be inserted there.
   OpBuilder builder(&mergeBlock->front());
 
-  auto control = builder.getI32IntegerAttr(loopControl);
+  auto control = static_cast<spirv::LoopControl>(loopControl);
   auto loopOp = builder.create<spirv::LoopOp>(location, control);
   loopOp.addEntryAndMergeBlock();
 

@@ -407,6 +407,8 @@ static bool isParamInMainLikeFunction(const ParmVarDecl &ParmDecl,
 static std::string
 fixupWithStyle(StringRef Name,
                const IdentifierNamingCheck::NamingStyle &Style) {
+  Name.consume_front(Style.Prefix);
+  Name.consume_back(Style.Suffix);
   const std::string Fixed = fixupWithCase(
       Name, Style.Case.getValueOr(IdentifierNamingCheck::CaseType::CT_AnyCase));
   StringRef Mid = StringRef(Fixed).trim("_");

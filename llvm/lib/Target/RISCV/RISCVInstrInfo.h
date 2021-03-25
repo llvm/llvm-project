@@ -29,6 +29,8 @@ class RISCVInstrInfo : public RISCVGenInstrInfo {
 public:
   explicit RISCVInstrInfo(RISCVSubtarget &STI);
 
+  MCInst getNop() const override;
+
   unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
   unsigned isStoreToStackSlot(const MachineInstr &MI,
@@ -144,6 +146,9 @@ public:
   Register getVLENFactoredAmount(MachineFunction &MF, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator II,
                                  int64_t Amount) const;
+
+  Optional<std::pair<unsigned, unsigned>>
+  isRVVSpillForZvlsseg(unsigned Opcode) const;
 
 protected:
   const RISCVSubtarget &STI;

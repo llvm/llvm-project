@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03
 // ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src/filesystem
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // class directory_entry

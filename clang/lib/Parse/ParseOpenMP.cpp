@@ -441,9 +441,9 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     ConsumeToken();
 
     if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
       Actions.CodeCompleteInitializer(getCurScope(), OmpPrivParm);
       Actions.FinalizeDeclaration(OmpPrivParm);
-      cutOffParsing();
       return;
     }
 
@@ -2115,9 +2115,18 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 
     ParsingOpenMPDirectiveRAII NormalScope(*this, /*Value=*/false);
     llvm::SmallVector<Decl *, 4> Decls;
-    DKind = parseOpenMPDirectiveKind(*this);
-    while (DKind != OMPD_end_declare_target && Tok.isNot(tok::eof) &&
-           Tok.isNot(tok::r_brace)) {
+    while (Tok.isNot(tok::eof) && Tok.isNot(tok::r_brace)) {
+      if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
+        TentativeParsingAction TPA(*this);
+        ConsumeAnnotationToken();
+        DKind = parseOpenMPDirectiveKind(*this);
+        if (DKind != OMPD_end_declare_target)
+          TPA.Revert();
+        else
+          TPA.Commit();
+      }
+      if (DKind == OMPD_end_declare_target)
+        break;
       DeclGroupPtrTy Ptr;
       // Here we expect to see some function declaration.
       if (AS == AS_none) {
@@ -2132,15 +2141,6 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
       if (Ptr) {
         DeclGroupRef Ref = Ptr.get();
         Decls.append(Ref.begin(), Ref.end());
-      }
-      if (Tok.isAnnotation() && Tok.is(tok::annot_pragma_openmp)) {
-        TentativeParsingAction TPA(*this);
-        ConsumeAnnotationToken();
-        DKind = parseOpenMPDirectiveKind(*this);
-        if (DKind != OMPD_end_declare_target)
-          TPA.Revert();
-        else
-          TPA.Commit();
       }
     }
 
@@ -2378,6 +2378,7 @@ Parser::ParseOpenMPDeclarativeOrExecutableDirective(ParsedStmtContext StmtCtx) {
   case OMPD_target_enter_data:
   case OMPD_target_exit_data:
   case OMPD_target_update:
+  case OMPD_interop:
     if ((StmtCtx & ParsedStmtContext::AllowStandaloneOpenMPDirectives) ==
         ParsedStmtContext()) {
       Diag(Tok, diag::err_omp_immediate_directive)
@@ -2864,7 +2865,6 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
-  case OMPC_destroy:
     // OpenMP [2.7.1, Restrictions, p. 9]
     //  Only one ordered clause can appear on a loop directive.
     // OpenMP [2.7.1, Restrictions, C/C++, p. 4]
@@ -2927,6 +2927,21 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
     break;
   case OMPC_uses_allocators:
     Clause = ParseOpenMPUsesAllocatorClause(DKind);
+    break;
+  case OMPC_destroy:
+    if (DKind != OMPD_interop) {
+      if (!FirstClause) {
+        Diag(Tok, diag::err_omp_more_one_clause)
+            << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+        ErrorFound = true;
+      }
+      Clause = ParseOpenMPClause(CKind, WrongDirective);
+      break;
+    }
+    LLVM_FALLTHROUGH;
+  case OMPC_init:
+  case OMPC_use:
+    Clause = ParseOpenMPInteropClause(CKind, WrongDirective);
     break;
   case OMPC_device_type:
   case OMPC_unknown:
@@ -3022,6 +3037,144 @@ OMPClause *Parser::ParseOpenMPSingleExprClause(OpenMPClauseKind Kind,
   if (ParseOnly)
     return nullptr;
   return Actions.ActOnOpenMPSingleExprClause(Kind, Val.get(), Loc, LLoc, RLoc);
+}
+
+/// Parsing of OpenMP clauses that use an interop-var.
+///
+/// init-clause:
+///   init([interop-modifier, ]interop-type[[, interop-type] ... ]:interop-var)
+///
+/// destroy-clause:
+///   destroy(interop-var)
+///
+/// use-clause:
+///   use(interop-var)
+///
+/// interop-modifier:
+///   prefer_type(preference-list)
+///
+/// preference-list:
+///   foreign-runtime-id [, foreign-runtime-id]...
+///
+/// foreign-runtime-id:
+///   <string-literal> | <constant-integral-expression>
+///
+/// interop-type:
+///   target | targetsync
+///
+OMPClause *Parser::ParseOpenMPInteropClause(OpenMPClauseKind Kind,
+                                            bool ParseOnly) {
+  SourceLocation Loc = ConsumeToken();
+  // Parse '('.
+  BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
+  if (T.expectAndConsume(diag::err_expected_lparen_after,
+                         getOpenMPClauseName(Kind).data()))
+    return nullptr;
+
+  bool IsTarget = false;
+  bool IsTargetSync = false;
+  SmallVector<Expr *, 4> Prefs;
+
+  if (Kind == OMPC_init) {
+
+    // Parse optional interop-modifier.
+    if (Tok.is(tok::identifier) && PP.getSpelling(Tok) == "prefer_type") {
+      ConsumeToken();
+      BalancedDelimiterTracker PT(*this, tok::l_paren,
+                                  tok::annot_pragma_openmp_end);
+      if (PT.expectAndConsume(diag::err_expected_lparen_after, "prefer_type"))
+        return nullptr;
+
+      while (Tok.isNot(tok::r_paren)) {
+        SourceLocation Loc = Tok.getLocation();
+        ExprResult LHS = ParseCastExpression(AnyCastExpr);
+        ExprResult PTExpr = Actions.CorrectDelayedTyposInExpr(
+            ParseRHSOfBinaryExpression(LHS, prec::Conditional));
+        PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
+                                             /*DiscardedValue=*/false);
+        if (PTExpr.isUsable())
+          Prefs.push_back(PTExpr.get());
+        else
+          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                    StopBeforeMatch);
+
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+      }
+      PT.consumeClose();
+    }
+
+    if (!Prefs.empty()) {
+      if (Tok.is(tok::comma))
+        ConsumeToken();
+      else
+        Diag(Tok, diag::err_omp_expected_punc_after_interop_mod);
+    }
+
+    // Parse the interop-types.
+    bool HasError = false;
+    while (Tok.is(tok::identifier)) {
+      if (PP.getSpelling(Tok) == "target") {
+        // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+        // Each interop-type may be specified on an action-clause at most
+        // once.
+        if (IsTarget)
+          Diag(Tok, diag::warn_omp_more_one_interop_type) << "target";
+        IsTarget = true;
+      } else if (PP.getSpelling(Tok) == "targetsync") {
+        if (IsTargetSync)
+          Diag(Tok, diag::warn_omp_more_one_interop_type) << "targetsync";
+        IsTargetSync = true;
+      } else {
+        HasError = true;
+        Diag(Tok, diag::err_omp_expected_interop_type);
+      }
+      ConsumeToken();
+
+      if (!Tok.is(tok::comma))
+        break;
+      ConsumeToken();
+    }
+    if (!HasError && !IsTarget && !IsTargetSync)
+      Diag(Tok, diag::err_omp_expected_interop_type);
+
+    if (Tok.is(tok::colon))
+      ConsumeToken();
+    else if (IsTarget || IsTargetSync)
+      Diag(Tok, diag::warn_pragma_expected_colon) << "interop types";
+  }
+
+  // Parse the variable.
+  SourceLocation VarLoc = Tok.getLocation();
+  ExprResult InteropVarExpr =
+      Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression());
+  if (!InteropVarExpr.isUsable()) {
+    SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+              StopBeforeMatch);
+  }
+
+  // Parse ')'.
+  SourceLocation RLoc = Tok.getLocation();
+  if (!T.consumeClose())
+    RLoc = T.getCloseLocation();
+
+  if (ParseOnly || !InteropVarExpr.isUsable() ||
+      (Kind == OMPC_init && !IsTarget && !IsTargetSync))
+    return nullptr;
+
+  if (Kind == OMPC_init)
+    return Actions.ActOnOpenMPInitClause(InteropVarExpr.get(), Prefs, IsTarget,
+                                         IsTargetSync, Loc, T.getOpenLocation(),
+                                         VarLoc, RLoc);
+  if (Kind == OMPC_use)
+    return Actions.ActOnOpenMPUseClause(InteropVarExpr.get(), Loc,
+                                        T.getOpenLocation(), VarLoc, RLoc);
+
+  if (Kind == OMPC_destroy)
+    return Actions.ActOnOpenMPDestroyClause(InteropVarExpr.get(), Loc,
+                                            T.getOpenLocation(), VarLoc, RLoc);
+
+  llvm_unreachable("Unexpected interop variable clause.");
 }
 
 /// Parsing of simple OpenMP clauses like 'default' or 'proc_bind'.

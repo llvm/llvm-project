@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+reference-types,+simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+reference-types,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefix=BIN %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+reference-types,+simd128,+nontrapping-fptoint,+exception-handling < %s | obj2yaml | FileCheck -check-prefix=BIN %s
 
 # Minimal test for type indices and table references in call_indirect.
 
@@ -37,7 +37,7 @@ test0:
 # BIN-NEXT:         Field:           __linear_memory
 # BIN-NEXT:         Kind:            MEMORY
 # BIN-NEXT:         Memory:
-# BIN-NEXT:           Initial:         0x0
+# BIN-NEXT:           Minimum:         0x0
 # BIN-NEXT:       - Module:          env
 # BIN-NEXT:         Field:           __indirect_function_table
 # BIN-NEXT:         Kind:            TABLE
@@ -45,7 +45,7 @@ test0:
 # BIN-NEXT:           Index:           0
 # BIN-NEXT:           ElemType:        FUNCREF
 # BIN-NEXT:           Limits:
-# BIN-NEXT:             Initial:         0x0
+# BIN-NEXT:             Minimum:         0x0
 # BIN-NEXT:   - Type:            FUNCTION
 # BIN-NEXT:     FunctionTypes:   [ 0 ]
 # BIN-NEXT:   - Type:            CODE

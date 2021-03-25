@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops -split-input-file -verify-each=0 | FileCheck %s
+// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=false" -split-input-file -verify-each=0 | FileCheck %s
+// RUN: mlir-opt %s -linalg-fusion-for-tensor-ops="allow-folding-unit-dim-reshapes=true" -split-input-file -verify-each=0 | FileCheck %s --check-prefix=FOLDUNITDIM
 
 #map0 = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
@@ -300,7 +301,7 @@ func @reshape_as_consumer_permutation
          %5 = addi %3, %4 : i32
          %6 = index_cast %arg2 : index to i32
          %7 = addi %5, %6 : i32
-	 linalg.yield %7 : i32
+         linalg.yield %7 : i32
        } -> tensor<6x4x210xi32>
   %d = linalg.tensor_reshape %c
          [affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1)>,
@@ -531,3 +532,11 @@ func @unit_dim_reshape_expansion_full
 //  CHECK-DAG:   linalg.tensor_reshape
 //  CHECK-DAG:   linalg.init_tensor
 //      CHECK:   linalg.generic
+// CHECK-SAME:     ins(%{{.+}}, %{{.+}} : tensor<?x2x4xf32>, tensor<?x2x4xf32>)
+
+//         FOLDUNITDIM: func @unit_dim_reshape_expansion_full
+//         FOLDUNITDIM:   linalg.init_tensor
+// FOLDUNITDIM-COUNT-2:   linalg.tensor_reshape
+//         FOLDUNITDIM:   linalg.generic
+//    FOLDUNITDIM-SAME:     ins(%{{.+}}, %{{.+}} : tensor<1x?x1x2x1x4xf32>, tensor<1x?x1x2x1x4xf32>)
+

@@ -162,7 +162,6 @@ public:
   /// \p Range.Start to \p Range.End.
   VPBasicBlock *handleReplication(
       Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      DenseMap<Instruction *, VPReplicateRecipe *> &PredInst2Recipe,
       VPlanPtr &Plan);
 };
 } // end namespace llvm

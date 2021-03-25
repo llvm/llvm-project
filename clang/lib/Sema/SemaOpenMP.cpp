@@ -6115,6 +6115,11 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     if (LangOpts.OpenMP >= 50)
       AllowedNameModifiers.push_back(OMPD_simd);
     break;
+  case OMPD_interop:
+    assert(AStmt == nullptr &&
+           "No associated statement allowed for 'omp interop' directive");
+    Res = ActOnOpenMPInteropDirective(ClausesWithImplicit, StartLoc, EndLoc);
+    break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_threadprivate:
@@ -13347,6 +13352,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       CaptureRegion = OMPD_task;
       break;
     case OMPD_target_data:
+    case OMPD_interop:
       // Do not capture device-clause expressions.
       break;
     case OMPD_teams_distribute_parallel_for:
@@ -14435,7 +14441,9 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPDynamicAllocatorsClause(StartLoc, EndLoc);
     break;
   case OMPC_destroy:
-    Res = ActOnOpenMPDestroyClause(StartLoc, EndLoc);
+    Res = ActOnOpenMPDestroyClause(/*InteropVar=*/nullptr, StartLoc,
+                                   /*LParenLoc=*/SourceLocation(),
+                                   /*VarLoc=*/SourceLocation(), EndLoc);
     break;
   case OMPC_if:
   case OMPC_final:
@@ -14593,9 +14601,187 @@ OMPClause *Sema::ActOnOpenMPDynamicAllocatorsClause(SourceLocation StartLoc,
   return new (Context) OMPDynamicAllocatorsClause(StartLoc, EndLoc);
 }
 
-OMPClause *Sema::ActOnOpenMPDestroyClause(SourceLocation StartLoc,
+StmtResult Sema::ActOnOpenMPInteropDirective(ArrayRef<OMPClause *> Clauses,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc) {
+
+  // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+  // At least one action-clause must appear on a directive.
+  if (!hasClauses(Clauses, OMPC_init, OMPC_use, OMPC_destroy, OMPC_nowait)) {
+    StringRef Expected = "'init', 'use', 'destroy', or 'nowait'";
+    Diag(StartLoc, diag::err_omp_no_clause_for_directive)
+        << Expected << getOpenMPDirectiveName(OMPD_interop);
+    return StmtError();
+  }
+
+  // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+  // A depend clause can only appear on the directive if a targetsync
+  // interop-type is present or the interop-var was initialized with
+  // the targetsync interop-type.
+
+  // If there is any 'init' clause diagnose if there is no 'init' clause with
+  // interop-type of 'targetsync'. Cases involving other directives cannot be
+  // diagnosed.
+  const OMPDependClause *DependClause = nullptr;
+  bool HasInitClause = false;
+  bool IsTargetSync = false;
+  for (const OMPClause *C : Clauses) {
+    if (IsTargetSync)
+      break;
+    if (const auto *InitClause = dyn_cast<OMPInitClause>(C)) {
+      HasInitClause = true;
+      if (InitClause->getIsTargetSync())
+        IsTargetSync = true;
+    } else if (const auto *DC = dyn_cast<OMPDependClause>(C)) {
+      DependClause = DC;
+    }
+  }
+  if (DependClause && HasInitClause && !IsTargetSync) {
+    Diag(DependClause->getBeginLoc(), diag::err_omp_interop_bad_depend_clause);
+    return StmtError();
+  }
+
+  // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+  // Each interop-var may be specified for at most one action-clause of each
+  // interop construct.
+  llvm::SmallPtrSet<const VarDecl *, 4> InteropVars;
+  for (const OMPClause *C : Clauses) {
+    OpenMPClauseKind ClauseKind = C->getClauseKind();
+    const DeclRefExpr *DRE = nullptr;
+    SourceLocation VarLoc;
+
+    if (ClauseKind == OMPC_init) {
+      const auto *IC = cast<OMPInitClause>(C);
+      VarLoc = IC->getVarLoc();
+      DRE = dyn_cast_or_null<DeclRefExpr>(IC->getInteropVar());
+    } else if (ClauseKind == OMPC_use) {
+      const auto *UC = cast<OMPUseClause>(C);
+      VarLoc = UC->getVarLoc();
+      DRE = dyn_cast_or_null<DeclRefExpr>(UC->getInteropVar());
+    } else if (ClauseKind == OMPC_destroy) {
+      const auto *DC = cast<OMPDestroyClause>(C);
+      VarLoc = DC->getVarLoc();
+      DRE = dyn_cast_or_null<DeclRefExpr>(DC->getInteropVar());
+    }
+
+    if (!DRE)
+      continue;
+
+    if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (!InteropVars.insert(VD->getCanonicalDecl()).second) {
+        Diag(VarLoc, diag::err_omp_interop_var_multiple_actions) << VD;
+        return StmtError();
+      }
+    }
+  }
+
+  return OMPInteropDirective::Create(Context, StartLoc, EndLoc, Clauses);
+}
+
+static bool isValidInteropVariable(Sema &SemaRef, Expr *InteropVarExpr,
+                                   SourceLocation VarLoc,
+                                   OpenMPClauseKind Kind) {
+  if (InteropVarExpr->isValueDependent() || InteropVarExpr->isTypeDependent() ||
+      InteropVarExpr->isInstantiationDependent() ||
+      InteropVarExpr->containsUnexpandedParameterPack())
+    return true;
+
+  const auto *DRE = dyn_cast<DeclRefExpr>(InteropVarExpr);
+  if (!DRE || !isa<VarDecl>(DRE->getDecl())) {
+    SemaRef.Diag(VarLoc, diag::err_omp_interop_variable_expected) << 0;
+    return false;
+  }
+
+  // Interop variable should be of type omp_interop_t.
+  bool HasError = false;
+  QualType InteropType;
+  LookupResult Result(SemaRef, &SemaRef.Context.Idents.get("omp_interop_t"),
+                      VarLoc, Sema::LookupOrdinaryName);
+  if (SemaRef.LookupName(Result, SemaRef.getCurScope())) {
+    NamedDecl *ND = Result.getFoundDecl();
+    if (const auto *TD = dyn_cast<TypeDecl>(ND)) {
+      InteropType = QualType(TD->getTypeForDecl(), 0);
+    } else {
+      HasError = true;
+    }
+  } else {
+    HasError = true;
+  }
+
+  if (HasError) {
+    SemaRef.Diag(VarLoc, diag::err_omp_implied_type_not_found)
+        << "omp_interop_t";
+    return false;
+  }
+
+  QualType VarType = InteropVarExpr->getType().getUnqualifiedType();
+  if (!SemaRef.Context.hasSameType(InteropType, VarType)) {
+    SemaRef.Diag(VarLoc, diag::err_omp_interop_variable_wrong_type);
+    return false;
+  }
+
+  // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
+  // The interop-var passed to init or destroy must be non-const.
+  if ((Kind == OMPC_init || Kind == OMPC_destroy) &&
+      isConstNotMutableType(SemaRef, InteropVarExpr->getType())) {
+    SemaRef.Diag(VarLoc, diag::err_omp_interop_variable_expected)
+        << /*non-const*/ 1;
+    return false;
+  }
+  return true;
+}
+
+OMPClause *
+Sema::ActOnOpenMPInitClause(Expr *InteropVar, ArrayRef<Expr *> PrefExprs,
+                            bool IsTarget, bool IsTargetSync,
+                            SourceLocation StartLoc, SourceLocation LParenLoc,
+                            SourceLocation VarLoc, SourceLocation EndLoc) {
+
+  if (!isValidInteropVariable(*this, InteropVar, VarLoc, OMPC_init))
+    return nullptr;
+
+  // Check prefer_type values.  These foreign-runtime-id values are either
+  // string literals or constant integral expressions.
+  for (const Expr *E : PrefExprs) {
+    if (E->isValueDependent() || E->isTypeDependent() ||
+        E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
+      continue;
+    if (E->isIntegerConstantExpr(Context))
+      continue;
+    if (isa<StringLiteral>(E))
+      continue;
+    Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+    return nullptr;
+  }
+
+  return OMPInitClause::Create(Context, InteropVar, PrefExprs, IsTarget,
+                               IsTargetSync, StartLoc, LParenLoc, VarLoc,
+                               EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
+                                      SourceLocation LParenLoc,
+                                      SourceLocation VarLoc,
+                                      SourceLocation EndLoc) {
+
+  if (!isValidInteropVariable(*this, InteropVar, VarLoc, OMPC_use))
+    return nullptr;
+
+  return new (Context)
+      OMPUseClause(InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPDestroyClause(Expr *InteropVar,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation VarLoc,
                                           SourceLocation EndLoc) {
-  return new (Context) OMPDestroyClause(StartLoc, EndLoc);
+  if (InteropVar &&
+      !isValidInteropVariable(*this, InteropVar, VarLoc, OMPC_destroy))
+    return nullptr;
+
+  return new (Context)
+      OMPDestroyClause(InteropVar, StartLoc, LParenLoc, VarLoc, EndLoc);
 }
 
 OMPClause *Sema::ActOnOpenMPVarListClause(

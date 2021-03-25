@@ -75,7 +75,8 @@ computeConversionSet(iterator_range<Region::iterator> region,
 
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
-static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
+static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
+                       Args &&... args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> SUCCESS";
@@ -88,7 +89,8 @@ static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
 
 /// A utility function to log a failure result for the given reason.
 template <typename... Args>
-static void logFailure(llvm::ScopedPrinter &os, StringRef fmt, Args &&...args) {
+static void logFailure(llvm::ScopedPrinter &os, StringRef fmt,
+                       Args &&... args) {
   LLVM_DEBUG({
     os.unindent();
     os.startLine() << "} -> FAILURE : "
@@ -1504,7 +1506,7 @@ public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
   OperationLegalizer(ConversionTarget &targetInfo,
-                     const FrozenRewritePatternList &patterns);
+                     const FrozenRewritePatternSet &patterns);
 
   /// Returns true if the given operation is known to be illegal on the target.
   bool isIllegal(Operation *op) const;
@@ -1600,7 +1602,7 @@ private:
 } // namespace
 
 OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
-                                       const FrozenRewritePatternList &patterns)
+                                       const FrozenRewritePatternSet &patterns)
     : target(targetInfo), applicator(patterns) {
   // The set of patterns that can be applied to illegal operations to transform
   // them into legal ones.
@@ -2123,7 +2125,7 @@ enum OpConversionMode {
 // conversion mode.
 struct OperationConverter {
   explicit OperationConverter(ConversionTarget &target,
-                              const FrozenRewritePatternList &patterns,
+                              const FrozenRewritePatternSet &patterns,
                               OpConversionMode mode,
                               DenseSet<Operation *> *trackedOps = nullptr)
       : opLegalizer(target, patterns), mode(mode), trackedOps(trackedOps) {}
@@ -2580,7 +2582,7 @@ namespace {
 struct FunctionLikeSignatureConversion : public ConversionPattern {
   FunctionLikeSignatureConversion(StringRef functionLikeOpName,
                                   MLIRContext *ctx, TypeConverter &converter)
-      : ConversionPattern(functionLikeOpName, /*benefit=*/1, converter, ctx) {}
+      : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   /// Hook to implement combined matching and rewriting for FunctionLike ops.
   LogicalResult
@@ -2610,16 +2612,15 @@ struct FunctionLikeSignatureConversion : public ConversionPattern {
 } // end anonymous namespace
 
 void mlir::populateFunctionLikeTypeConversionPattern(
-    StringRef functionLikeOpName, OwningRewritePatternList &patterns,
-    MLIRContext *ctx, TypeConverter &converter) {
-  patterns.insert<FunctionLikeSignatureConversion>(functionLikeOpName, ctx,
-                                                   converter);
+    StringRef functionLikeOpName, RewritePatternSet &patterns,
+    TypeConverter &converter) {
+  patterns.add<FunctionLikeSignatureConversion>(
+      functionLikeOpName, patterns.getContext(), converter);
 }
 
-void mlir::populateFuncOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, MLIRContext *ctx,
-    TypeConverter &converter) {
-  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, ctx, converter);
+void mlir::populateFuncOpTypeConversionPattern(RewritePatternSet &patterns,
+                                               TypeConverter &converter) {
+  populateFunctionLikeTypeConversionPattern<FuncOp>(patterns, converter);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2754,7 +2755,7 @@ auto ConversionTarget::getOpInfo(OperationName op) const
 LogicalResult
 mlir::applyPartialConversion(ArrayRef<Operation *> ops,
                              ConversionTarget &target,
-                             const FrozenRewritePatternList &patterns,
+                             const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Partial,
                                  unconvertedOps);
@@ -2762,7 +2763,7 @@ mlir::applyPartialConversion(ArrayRef<Operation *> ops,
 }
 LogicalResult
 mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
-                             const FrozenRewritePatternList &patterns,
+                             const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   return applyPartialConversion(llvm::makeArrayRef(op), target, patterns,
                                 unconvertedOps);
@@ -2773,13 +2774,13 @@ mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
 /// operation fails.
 LogicalResult
 mlir::applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
-                          const FrozenRewritePatternList &patterns) {
+                          const FrozenRewritePatternSet &patterns) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Full);
   return opConverter.convertOperations(ops);
 }
 LogicalResult
 mlir::applyFullConversion(Operation *op, ConversionTarget &target,
-                          const FrozenRewritePatternList &patterns) {
+                          const FrozenRewritePatternSet &patterns) {
   return applyFullConversion(llvm::makeArrayRef(op), target, patterns);
 }
 
@@ -2792,7 +2793,7 @@ mlir::applyFullConversion(Operation *op, ConversionTarget &target,
 LogicalResult
 mlir::applyAnalysisConversion(ArrayRef<Operation *> ops,
                               ConversionTarget &target,
-                              const FrozenRewritePatternList &patterns,
+                              const FrozenRewritePatternSet &patterns,
                               DenseSet<Operation *> &convertedOps) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Analysis,
                                  &convertedOps);
@@ -2800,7 +2801,7 @@ mlir::applyAnalysisConversion(ArrayRef<Operation *> ops,
 }
 LogicalResult
 mlir::applyAnalysisConversion(Operation *op, ConversionTarget &target,
-                              const FrozenRewritePatternList &patterns,
+                              const FrozenRewritePatternSet &patterns,
                               DenseSet<Operation *> &convertedOps) {
   return applyAnalysisConversion(llvm::makeArrayRef(op), target, patterns,
                                  convertedOps);

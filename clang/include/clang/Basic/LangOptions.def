@@ -109,6 +109,7 @@ LANGOPT(Bool              , 1, 0, "bool, true, and false keywords")
 LANGOPT(Half              , 1, 0, "half keyword")
 LANGOPT(WChar             , 1, CPlusPlus, "wchar_t keyword")
 LANGOPT(Char8             , 1, 0, "char8_t keyword")
+LANGOPT(IEEE128           , 1, 0, "__ieee128 keyword")
 LANGOPT(DeclSpecKeyword   , 1, 0, "__declspec keyword")
 BENIGN_LANGOPT(DollarIdents   , 1, 1, "'$' in identifiers")
 BENIGN_LANGOPT(AsmPreprocessor, 1, 0, "preprocessor in asm mode")
@@ -248,8 +249,8 @@ LANGOPT(GPUMaxThreadsPerBlock, 32, 1024, "default max threads per block for kern
 LANGOPT(GPUDeferDiag, 1, 0, "defer host/device related diagnostic messages for CUDA/HIP")
 LANGOPT(GPUExcludeWrongSideOverloads, 1, 0, "always exclude wrong side overloads in overloading resolution for CUDA/HIP")
 
-LANGOPT(SYCL              , 1, 0, "SYCL")
 LANGOPT(SYCLIsDevice      , 1, 0, "Generate code for SYCL device")
+LANGOPT(SYCLIsHost        , 1, 0, "SYCL host compilation")
 ENUM_LANGOPT(SYCLVersion  , SYCLMajorVersion, 1, SYCL_None, "Version of the SYCL standard used")
 
 LANGOPT(HIPUseNewLaunchAPI, 1, 0, "Use new kernel launching API for HIP")

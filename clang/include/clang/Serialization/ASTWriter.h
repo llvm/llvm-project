@@ -84,7 +84,7 @@ class RecordDecl;
 class Sema;
 class SourceManager;
 class Stmt;
-struct StoredDeclsList;
+class StoredDeclsList;
 class SwitchCase;
 class TemplateParameterList;
 class Token;
