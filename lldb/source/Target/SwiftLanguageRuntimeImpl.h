@@ -248,6 +248,14 @@ protected:
 
   void PopLocalBuffer();
 
+  // These are the helper functions for GetObjectDescription for various
+  // types of swift objects.
+  std::string GetObjectDescriptionExpr_Result(ValueObject &object);
+  std::string GetObjectDescriptionExpr_Ref(ValueObject &object);
+  std::string GetObjectDescriptionExpr_Copy(ValueObject &object, 
+      lldb::addr_t &copy_location);
+  bool RunObjectDescriptionExpr(ValueObject &object, std::string &expr_string, 
+                                Stream &result);
   /// We have to load swift dependent libraries by hand, but if they
   /// are missing, we shouldn't keep trying.
   llvm::StringSet<> m_library_negative_cache;
