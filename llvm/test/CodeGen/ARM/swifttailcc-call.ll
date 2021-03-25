@@ -191,3 +191,11 @@ define swifttailcc void @fromtail_toC() {
   call void @Ccallee_stack4([4 x i32] undef, i32 42)
   ret void
 }
+
+declare swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
+define swiftcc i8* @CallSwiftSelf(i8* swiftself %closure, i8* %context) {
+; CHECK-LABEL: CallSwiftSelf:
+; CHECK: push{{.*}}r10
+  %res = call swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
+  ret i8* %res
+}
