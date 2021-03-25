@@ -449,14 +449,8 @@ inline uptr Log2(uptr x) {
 
 // Don't use std::min, std::max or std::swap, to minimize dependency
 // on libstdc++.
-template <class T>
-constexpr T Min(T a, T b) {
-  return a < b ? a : b;
-}
-template <class T>
-constexpr T Max(T a, T b) {
-  return a > b ? a : b;
-}
+template<class T> T Min(T a, T b) { return a < b ? a : b; }
+template<class T> T Max(T a, T b) { return a > b ? a : b; }
 template<class T> void Swap(T& a, T& b) {
   T tmp = a;
   a = b;

@@ -3,9 +3,6 @@
 
 // REQUIRES: aarch64-target-arch || x86_64-target-arch
 
-// Aliasing mode does not support stack tagging.
-// XFAIL: x86_64
-
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/wait.h>

@@ -84,8 +84,7 @@ void HwasanAllocatorInit() {
   atomic_store_relaxed(&hwasan_allocator_tagging_enabled,
                        !flags()->disable_allocator_tagging);
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
-  allocator.Init(common_flags()->allocator_release_to_os_interval_ms,
-                 kAliasRegionStart);
+  allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
   for (uptr i = 0; i < sizeof(tail_magic); i++)
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }
@@ -375,7 +374,7 @@ int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
     // OOM error is already taken care of by HwasanAllocate.
     return errno_ENOMEM;
   CHECK(IsAligned((uptr)ptr, alignment));
-  *memptr = ptr;
+  *(void **)UntagPtr(memptr) = ptr;
   return 0;
 }
 
