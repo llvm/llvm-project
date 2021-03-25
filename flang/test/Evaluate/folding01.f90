@@ -30,6 +30,9 @@ module m
   logical, parameter :: test_neqv3 = .NOT.(.false..NEQV..false.)
   logical, parameter :: test_neqv4 = .NOT.(.true..NEQV..true.)
 
+  logical, parameter :: test_logical1 = logical(logical(.true., 2))
+  logical, parameter :: test_logical2 = .NOT.logical(logical(.false., 2))
+
 ! Check integer intrinsic operator folding
 
 ! Check integer relational intrinsic operation folding
