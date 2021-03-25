@@ -851,6 +851,13 @@ This diagnostic is enabled by default.
 |:warning:`warning:` |nbsp| :diagtext:`cast from function call of type` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to non-matching type` |nbsp| :placeholder:`B`|
 +--------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
+-Wcast-function-type
+-------------------
+**Diagnostic text:**
+
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|:warning:`warning:` |nbsp| :diagtext:`cast from` |nbsp| :placeholder:`A` |nbsp| :diagtext:`to` |nbsp| :placeholder:`B` |nbsp| :diagtext:`converts to incompatible function types`|
++--------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 -Wbinary-literal
 ----------------
