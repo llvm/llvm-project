@@ -649,7 +649,6 @@ void UnwrappedLineParser::parseBlock(bool MustBeDeclaration, unsigned AddLevels,
     nextToken();
 
   Line->Level = InitialLevel;
-  FormatTok->setBlockKind(BK_Block);
 
   if (PPStartHash == PPEndHash) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
