@@ -23,24 +23,19 @@
 
 #include "test_macros.h"
 
-struct B
-{
+struct B {
     int id_;
-
-    explicit B(int i= 0) : id_(i) {}
-
+    explicit B(int i = 0) : id_(i) {}
     virtual ~B() {}
 };
 
-struct D
-    : B
-{
+struct D : B {
     explicit D(int i) : B(i) {}
 };
 
 struct E {
-  E() = default;
-  E& operator=(int) {
+  constexpr E() = default;
+  TEST_CONSTEXPR_CXX14 E& operator=(int) {
       return *this;
   }
 };
@@ -92,7 +87,8 @@ struct TrackMove
     bool moved_from;
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     {
         typedef std::tuple<long> T0;
@@ -111,6 +107,29 @@ int main(int, char**)
         assert(std::get<0>(t1) == 2);
         assert(std::get<1>(t1) == int('a'));
     }
+    {
+        // Test that tuple evaluates correctly applies an lvalue reference
+        // before evaluating is_assignable (i.e. 'is_assignable<int&, int&&>')
+        // instead of evaluating 'is_assignable<int&&, int&&>' which is false.
+        int x = 42;
+        int y = 43;
+        std::tuple<int&&, E> t(std::move(x), E{});
+        std::tuple<int&&, int> t2(std::move(y), 44);
+        t = std::move(t2);
+        assert(std::get<0>(t) == 43);
+        assert(&std::get<0>(t) == &x);
+    }
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
     {
         typedef std::tuple<long, char, D> T0;
         typedef std::tuple<long long, int, B> T1;
@@ -143,18 +162,7 @@ int main(int, char**)
         assert(std::get<1>(t1) == int('a'));
         assert(std::get<2>(t1)->id_ == 3);
     }
-    {
-        // Test that tuple evaluates correctly applies an lvalue reference
-        // before evaluating is_assignable (i.e. 'is_assignable<int&, int&&>')
-        // instead of evaluating 'is_assignable<int&&, int&&>' which is false.
-        int x = 42;
-        int y = 43;
-        std::tuple<int&&, E> t(std::move(x), E{});
-        std::tuple<int&&, int> t2(std::move(y), 44);
-        t = std::move(t2);
-        assert(std::get<0>(t) == 43);
-        assert(&std::get<0>(t) == &x);
-    }
+
     {
         using T = std::tuple<int, NonAssignable>;
         using U = std::tuple<NonAssignable, int>;
@@ -169,6 +177,7 @@ int main(int, char**)
     {
         typedef std::tuple<PotentiallyThrowingMoveAssignable, long> T0;
         typedef std::tuple<PotentiallyThrowingMoveAssignable, int> T1;
+        static_assert(std::is_assignable<T0&, T1&&>::value, "");
         static_assert(!std::is_nothrow_assignable<T0&, T1&&>::value, "");
     }
     {
