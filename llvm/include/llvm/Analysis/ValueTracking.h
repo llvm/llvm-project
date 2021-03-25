@@ -461,7 +461,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// for such instructions, moving them may change the resulting value.
   bool isSafeToSpeculativelyExecute(const Value *V,
                                     const Instruction *CtxI = nullptr,
-                                    const DominatorTree *DT = nullptr);
+                                    const DominatorTree *DT = nullptr,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
   /// Returns true if the result or effects of the given instructions \p I
   /// depend on or influence global memory.
