@@ -77,24 +77,38 @@ static inline bool isLoopStart(MachineInstr &MI) {
 
 // WhileLoopStart holds the exit block, so produce a subs Op0, Op1, 0 and then a
 // beq that branches to the exit branch.
+// If UseCmp is true, this will create a t2CMP instead of a t2SUBri, meaning the
+// value of LR into the loop will not be setup. This is used if the LR setup is
+// done via another means (via a t2DoLoopStart, for example).
 inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
-                                   unsigned BrOpc = ARM::t2Bcc) {
+                                   unsigned BrOpc = ARM::t2Bcc,
+                                   bool UseCmp = false) {
   MachineBasicBlock *MBB = MI->getParent();
   assert(MI->getOpcode() == ARM::t2WhileLoopStartLR &&
          "Only expected a t2WhileLoopStartLR in RevertWhileLoopStartLR!");
 
-  // Subs
-  MachineInstrBuilder MIB =
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
-  MIB.add(MI->getOperand(0));
-  MIB.add(MI->getOperand(1));
-  MIB.addImm(0);
-  MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
-  MIB.addReg(ARM::CPSR, RegState::Define);
+  // Subs/Cmp
+  if (UseCmp) {
+    MachineInstrBuilder MIB =
+        BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2CMPri));
+    MIB.add(MI->getOperand(1));
+    MIB.addImm(0);
+    MIB.addImm(ARMCC::AL);
+    MIB.addReg(ARM::NoRegister);
+  } else {
+    MachineInstrBuilder MIB =
+        BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2SUBri));
+    MIB.add(MI->getOperand(0));
+    MIB.add(MI->getOperand(1));
+    MIB.addImm(0);
+    MIB.addImm(ARMCC::AL);
+    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(ARM::CPSR, RegState::Define);
+  }
 
   // Branch
-  MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
   MIB.add(MI->getOperand(2)); // branch target
   MIB.addImm(ARMCC::EQ);      // condition code
   MIB.addReg(ARM::CPSR);
