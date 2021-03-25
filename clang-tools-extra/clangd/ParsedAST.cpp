@@ -423,6 +423,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   // tokens from running the preprocessor inside the checks (only
   // modernize-use-trailing-return-type does that today).
   syntax::TokenBuffer Tokens = std::move(CollectTokens).consume();
+  // Makes SelectionTree build much faster.
+  Tokens.indexExpandedTokens();
   std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   // AST traversals should exclude the preamble, to avoid performance cliffs.
   Clang->getASTContext().setTraversalScope(ParsedDecls);
