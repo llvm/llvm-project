@@ -215,6 +215,12 @@ struct Configuration {
   // Used for /lto-obj-path:
   llvm::StringRef ltoObjPath;
 
+  // Used for /lto-cs-profile-generate:
+  bool ltoCSProfileGenerate = false;
+
+  // Used for /lto-cs-profile-path
+  llvm::StringRef ltoCSProfileFile;
+
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,
                   uint64_t>
