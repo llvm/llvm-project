@@ -347,8 +347,6 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent - 4;
-          // -
-          //   (1 << (*MachORelocKind - MachOPCRel32Minus1));
           Kind = x86_64::Delta32;
           break;
         case MachOPCRel32Anon: {
