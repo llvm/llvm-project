@@ -2013,12 +2013,7 @@ public:
 
   /// Return true if this operand bundle user has operand bundles that
   /// may read from the heap.
-  bool hasReadingOperandBundles() const {
-    // Implementation note: this is a conservative implementation of operand
-    // bundle semantics, where *any* operand bundle forces a callsite to be at
-    // least readonly.
-    return hasOperandBundles();
-  }
+  bool hasReadingOperandBundles() const;
 
   /// Return true if this operand bundle user has operand bundles that
   /// may write to the heap.

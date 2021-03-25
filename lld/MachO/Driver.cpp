@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -496,6 +497,7 @@ static void initLLVM() {
 }
 
 static void compileBitcodeFiles() {
+  TimeTraceScope timeScope("LTO");
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
     if (auto *bitcodeFile = dyn_cast<BitcodeFile>(file))
@@ -510,6 +512,7 @@ static void compileBitcodeFiles() {
 // all InputFiles have been loaded.) As a result, later operations won't see
 // any CommonSymbols.
 static void replaceCommonSymbols() {
+  TimeTraceScope timeScope("Replace common symbols");
   for (macho::Symbol *sym : symtab->getSymbols()) {
     auto *common = dyn_cast<CommonSymbol>(sym);
     if (common == nullptr)
@@ -772,6 +775,44 @@ static void handleSymbolPatterns(InputArgList &args,
   }
 }
 
+void createFiles(const InputArgList &args) {
+  TimeTraceScope timeScope("Load input files");
+  // This loop should be reserved for options whose exact ordering matters.
+  // Other options should be handled via filtered() and/or getLastArg().
+  for (const Arg *arg : args) {
+    const Option &opt = arg->getOption();
+    warnIfDeprecatedOption(opt);
+    warnIfUnimplementedOption(opt);
+
+    switch (opt.getID()) {
+    case OPT_INPUT:
+      addFile(arg->getValue(), false);
+      break;
+    case OPT_weak_library:
+      if (auto *dylibFile =
+              dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
+        dylibFile->forceWeakImport = true;
+      break;
+    case OPT_filelist:
+      addFileList(arg->getValue());
+      break;
+    case OPT_force_load:
+      addFile(arg->getValue(), true);
+      break;
+    case OPT_l:
+    case OPT_weak_l:
+      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
+      break;
+    case OPT_framework:
+    case OPT_weak_framework:
+      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
+      break;
+    default:
+      break;
+    }
+  }
+}
+
 bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                  raw_ostream &stdoutOS, raw_ostream &stderrOS) {
   lld::stdoutOS = &stdoutOS;
@@ -820,6 +861,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
+
+  if (auto *arg = args.getLastArg(OPT_threads_eq)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads == 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    parallel::strategy = hardware_concurrency(threads);
+    // FIXME: use this to configure ThinLTO concurrency too
+  }
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
@@ -952,44 +1003,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     timeTraceProfilerInitialize(config->timeTraceGranularity, config->progName);
 
   {
-    llvm::TimeTraceScope timeScope("Link", StringRef("ExecuteLinker"));
+    TimeTraceScope timeScope("Link", StringRef("ExecuteLinker"));
 
     initLLVM(); // must be run before any call to addFile()
-
-    // This loop should be reserved for options whose exact ordering matters.
-    // Other options should be handled via filtered() and/or getLastArg().
-    for (const Arg *arg : args) {
-      const Option &opt = arg->getOption();
-      warnIfDeprecatedOption(opt);
-      warnIfUnimplementedOption(opt);
-
-      switch (opt.getID()) {
-      case OPT_INPUT:
-        addFile(arg->getValue(), false);
-        break;
-      case OPT_weak_library:
-        if (auto *dylibFile =
-                dyn_cast_or_null<DylibFile>(addFile(arg->getValue(), false)))
-          dylibFile->forceWeakImport = true;
-        break;
-      case OPT_filelist:
-        addFileList(arg->getValue());
-        break;
-      case OPT_force_load:
-        addFile(arg->getValue(), true);
-        break;
-      case OPT_l:
-      case OPT_weak_l:
-        addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
-        break;
-      case OPT_framework:
-      case OPT_weak_framework:
-        addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
-        break;
-      default:
-        break;
-      }
-    }
+    createFiles(args);
 
     config->isPic = config->outputType == MH_DYLIB ||
                     config->outputType == MH_BUNDLE || isPie(args);
@@ -1045,7 +1062,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         if (isa<Defined>(sym))
           continue;
       error("undefined symbol " + cachedName.val() +
-            "\n>>> referenced from option -exported_symbo(s_list)");
+            "\n>>> referenced from option -exported_symbol(s_list)");
     }
 
     createSyntheticSections();
@@ -1060,12 +1077,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         inputFiles.insert(make<OpaqueFile>(*buffer, segName, sectName));
     }
 
-    // Initialize InputSections.
-    for (const InputFile *file : inputFiles) {
-      for (const SubsectionMap &map : file->subsections) {
-        for (const auto &p : map) {
-          InputSection *isec = p.second;
-          inputSections.push_back(isec);
+    {
+      TimeTraceScope timeScope("Gathering input sections");
+      // Gather all InputSections into one vector.
+      for (const InputFile *file : inputFiles) {
+        for (const SubsectionMap &map : file->subsections) {
+          for (const auto &p : map) {
+            InputSection *isec = p.second;
+            inputSections.push_back(isec);
+          }
         }
       }
     }

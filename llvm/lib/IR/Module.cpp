@@ -571,9 +571,9 @@ unsigned Module::getCodeViewFlag() const {
   return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
 
-unsigned Module::getInstructionCount() {
+unsigned Module::getInstructionCount() const {
   unsigned NumInstrs = 0;
-  for (Function &F : FunctionList)
+  for (const Function &F : FunctionList)
     NumInstrs += F.getInstructionCount();
   return NumInstrs;
 }

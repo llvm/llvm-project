@@ -106,6 +106,7 @@ public:
       void EndSourceFileAction() override {
         assert(Collector && "BeginSourceFileAction was never called");
         Result = std::move(*Collector).consume();
+        Result.indexExpandedTokens();
       }
 
       std::unique_ptr<ASTConsumer>

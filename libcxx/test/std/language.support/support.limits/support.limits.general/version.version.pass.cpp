@@ -150,7 +150,7 @@
     __cpp_lib_uncaught_exceptions                  201411L [C++17]
     __cpp_lib_unordered_map_try_emplace            201411L [C++17]
     __cpp_lib_unwrap_ref                           201811L [C++20]
-    __cpp_lib_variant                              201606L [C++17]
+    __cpp_lib_variant                              202102L [C++17]
     __cpp_lib_void_t                               201411L [C++17]
 */
 
@@ -2090,8 +2090,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++17"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++17"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++17"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -3277,8 +3277,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++20"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++20"
 # endif
 
 # ifndef __cpp_lib_void_t
@@ -4491,8 +4491,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++2b"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++2b"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++2b"
 # endif
 
 # ifndef __cpp_lib_void_t

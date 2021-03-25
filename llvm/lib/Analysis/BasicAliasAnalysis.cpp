@@ -683,11 +683,6 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
     // Can't do better than this.
     return FMRB_DoesNotAccessMemory;
 
-  // The assume intrinsic can have operand bundles, but still only accesses
-  // inaccessible memory in that case (to maintain control dependencies).
-  if (isIntrinsicCall(Call, Intrinsic::assume))
-    return FMRB_OnlyAccessesInaccessibleMem;
-
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
   // If the callsite knows it only reads memory, don't return worse

@@ -18,7 +18,7 @@
 # RUN:     FileCheck --check-prefix=UNDEF %s
 
 # UNDEF: error: undefined symbol absent_literal
-# UNDEF-NEXT: >>> referenced from option -exported_symbo(s_list)
+# UNDEF-NEXT: >>> referenced from option -exported_symbol(s_list)
 # UNDEF-NOT: error: {{.*}} absent_gl{{.}}b
 
 ## Check that exported symbol is global

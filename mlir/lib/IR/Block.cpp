@@ -294,21 +294,6 @@ Block *Block::splitBlock(iterator splitBefore) {
   return newBB;
 }
 
-/// Returns true if this block may be valid without terminator. That is if:
-/// - it does not have a parent region.
-/// - Or the parent region have a single block and:
-///    - This region does not have a parent op.
-///    - Or the parent op is unregistered.
-///    - Or the parent op has the NoTerminator trait.
-static bool mayNotHaveTerminator(Block *block) {
-  if (!block->getParent())
-    return true;
-  if (!llvm::hasSingleElement(*block->getParent()))
-    return false;
-  Operation *op = block->getParentOp();
-  return !op || op->mightHaveTrait<OpTrait::NoTerminator>();
-}
-
 //===----------------------------------------------------------------------===//
 // Predecessors
 //===----------------------------------------------------------------------===//

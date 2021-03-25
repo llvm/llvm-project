@@ -17,6 +17,7 @@
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -43,9 +44,14 @@
 
 using namespace llvm;
 
-static cl::opt<unsigned> FrameIndexSearchLimit(
-    "hexagon-frame-index-search-limit", cl::init(32), cl::Hidden,
-    cl::desc("Limit on instruction search in frame index elimination"));
+static cl::opt<unsigned> FrameIndexSearchRange(
+    "hexagon-frame-index-search-range", cl::init(32), cl::Hidden,
+    cl::desc("Limit on instruction search range in frame index elimination"));
+
+static cl::opt<unsigned> FrameIndexReuseLimit(
+    "hexagon-frame-index-reuse-limit", cl::init(~0), cl::Hidden,
+    cl::desc("Limit on the number of reused registers in frame index "
+    "elimination"));
 
 HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
@@ -197,6 +203,7 @@ BitVector HexagonRegisterInfo::getReservedRegs(const MachineFunction &MF)
 void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                               int SPAdj, unsigned FIOp,
                                               RegScavenger *RS) const {
+  static unsigned ReuseCount = 0;
   //
   // Hexagon_TODO: Do we need to enforce this for Hexagon?
   assert(SPAdj == 0 && "Unexpected");
@@ -274,35 +281,50 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // Search backwards in the block for "Reg = A2_addi BP, RealOffset".
     // This will give us a chance to avoid creating a new register.
     Register ReuseBP;
-    unsigned SearchCount = 0, SearchLimit = FrameIndexSearchLimit;
-    bool PassedCall = false;
-    LiveRegUnits Defs(*this), Uses(*this);
 
-    for (auto I = std::next(II.getReverse()), E = MB.rend(); I != E; ++I) {
-      if (SearchCount == SearchLimit)
+    if (ReuseCount < FrameIndexReuseLimit) {
+      unsigned SearchCount = 0, SearchRange = FrameIndexSearchRange;
+      SmallSet<Register,2> SeenVRegs;
+      bool PassedCall = false;
+      LiveRegUnits Defs(*this), Uses(*this);
+
+      for (auto I = std::next(II.getReverse()), E = MB.rend(); I != E; ++I) {
+        if (SearchCount == SearchRange)
+          break;
+        ++SearchCount;
+        const MachineInstr &BI = *I;
+        LiveRegUnits::accumulateUsedDefed(BI, Defs, Uses, this);
+        PassedCall |= BI.isCall();
+        for (const MachineOperand &Op : BI.operands()) {
+          if (SeenVRegs.size() > 1)
+            break;
+          if (Op.isReg() && Op.getReg().isVirtual())
+            SeenVRegs.insert(Op.getReg());
+        }
+        if (BI.getOpcode() != Hexagon::A2_addi)
+          continue;
+        if (BI.getOperand(1).getReg() != BP)
+          continue;
+        const auto &Op2 = BI.getOperand(2);
+        if (!Op2.isImm() || Op2.getImm() != RealOffset)
+          continue;
+
+        Register R = BI.getOperand(0).getReg();
+        if (R.isPhysical()) {
+          if (Defs.available(R))
+            ReuseBP = R;
+        } else if (R.isVirtual()) {
+          // Extending a range of a virtual register can be dangerous,
+          // since the scavenger will need to find a physical register
+          // for it. Avoid extending the range past a function call,
+          // and avoid overlapping it with another virtual register.
+          if (!PassedCall && SeenVRegs.size() <= 1)
+            ReuseBP = R;
+        }
         break;
-      ++SearchCount;
-      const MachineInstr &BI = *I;
-      LiveRegUnits::accumulateUsedDefed(BI, Defs, Uses, this);
-      PassedCall |= BI.isCall();
-
-      if (BI.getOpcode() != Hexagon::A2_addi)
-        continue;
-      if (BI.getOperand(1).getReg() != BP)
-        continue;
-      const auto &Op2 = BI.getOperand(2);
-      if (!Op2.isImm() || Op2.getImm() != RealOffset)
-        continue;
-
-      Register R = BI.getOperand(0).getReg();
-      if (R.isPhysical()) {
-        if (Defs.available(R))
-          ReuseBP = R;
-      } else if (R.isVirtual()) {
-        if (!PassedCall)
-          ReuseBP = R;
       }
-      break;
+      if (ReuseBP)
+        ++ReuseCount;
     }
 
     auto &MRI = MF.getRegInfo();

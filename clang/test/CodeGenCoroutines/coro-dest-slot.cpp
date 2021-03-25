@@ -17,10 +17,24 @@ struct coro {
 extern "C" coro f(int) { co_return; }
 // Verify that cleanup.dest.slot is eliminated in a coroutine.
 // CHECK-LABEL: f(
+// CHECK: %[[INIT_SUSPEND:.+]] = call i8 @llvm.coro.suspend(
+// CHECK-NEXT: switch i8 %[[INIT_SUSPEND]], label
+// CHECK-NEXT:   i8 0, label %[[INIT_READY:.+]]
+// CHECK-NEXT:   i8 1, label %[[INIT_CLEANUP:.+]]
+// CHECK-NEXT: ]
+// CHECK: %[[CLEANUP_DEST0:.+]] = phi i32 [ 0, %[[INIT_READY]] ], [ 2, %[[INIT_CLEANUP]] ]
+
+// CHECK: %[[FINAL_SUSPEND:.+]] = call i8 @llvm.coro.suspend(
+// CHECK-NEXT: switch i8 %29, label %coro.ret [
+// CHECK-NEXT:   i8 0, label %[[FINAL_READY:.+]]
+// CHECK-NEXT:   i8 1, label %[[FINAL_CLEANUP:.+]]
+// CHECK-NEXT: ]
+
 // CHECK: call void @_ZNSt12experimental13coroutines_v113suspend_never12await_resumeEv(
-// CHECK: %[[CLEANUP_DEST:.+]] = phi i32 [ 0, %{{.+}} ], [ 2, %{{.+}} ], [ 2, %{{.+}} ]
+// CHECK: %[[CLEANUP_DEST1:.+]] = phi i32 [ 0, %[[FINAL_READY]] ], [ 2, %[[FINAL_CLEANUP]] ]
+// CHECK: %[[CLEANUP_DEST2:.+]] = phi i32 [ %[[CLEANUP_DEST0]], %{{.+}} ], [ %[[CLEANUP_DEST1]], %{{.+}} ], [ 0, %{{.+}} ]
 // CHECK: call i8* @llvm.coro.free(
-// CHECK: switch i32 %cleanup.dest.slot.0, label %{{.+}} [
+// CHECK: switch i32 %[[CLEANUP_DEST2]], label %{{.+}} [
 // CHECK-NEXT: i32 0
 // CHECK-NEXT: i32 2
 // CHECK-NEXT: ]
