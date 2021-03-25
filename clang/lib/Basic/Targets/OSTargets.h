@@ -261,6 +261,9 @@ public:
     case llvm::Triple::arm:
       this->MCountName = "__mcount";
       break;
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
+      break;
     }
   }
 };
@@ -490,6 +493,9 @@ public:
     case llvm::Triple::ppc64le:
     case llvm::Triple::sparcv9:
       this->MCountName = "_mcount";
+      break;
+    case llvm::Triple::riscv32:
+    case llvm::Triple::riscv64:
       break;
     }
   }
