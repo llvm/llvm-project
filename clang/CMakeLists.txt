@@ -864,9 +864,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # exclude from main target
-    set_target_properties(${NEXT_CLANG_STAGE} PROPERTIES _EP_${target}_EXCLUDE_FROM_MAIN On)
-
     # Install targets have side effects, so we always want to execute them.
     # "install" is reserved by CMake and can't be used as a step name for
     # ExternalProject_Add_Step, so we can match against "^install-" instead of
@@ -884,6 +881,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
       ALWAYS ${step_always}
+      EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )
 
