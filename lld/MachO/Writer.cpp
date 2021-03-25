@@ -27,6 +27,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
@@ -56,6 +57,7 @@ public:
   void writeSections();
   void writeUuid();
   void writeCodeSignature();
+  void writeOutputFile();
 
   void run();
 
@@ -502,6 +504,7 @@ static void prepareSymbolRelocation(lld::macho::Symbol *sym,
 }
 
 void Writer::scanRelocations() {
+  TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
     if (isec->segname == segment_names::ld) {
       prepareCompactUnwind(isec);
@@ -534,6 +537,7 @@ void Writer::scanRelocations() {
 }
 
 void Writer::scanSymbols() {
+  TimeTraceScope timeScope("Scan symbols");
   for (const macho::Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->overridesWeakDef)
@@ -737,6 +741,8 @@ static std::function<bool(T, T)> compareByOrder(F ord) {
 // segments, output sections within each segment, and input sections within each
 // output segment.
 static void sortSegmentsAndSections() {
+  TimeTraceScope timeScope("Sort segments and sections");
+
   llvm::stable_sort(outputSegments,
                     compareByOrder<OutputSegment *>(segmentOrder));
 
@@ -777,6 +783,7 @@ static NamePair maybeRenameSection(NamePair key) {
 }
 
 void Writer::createOutputSections() {
+  TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
@@ -834,6 +841,7 @@ void Writer::createOutputSections() {
 }
 
 void Writer::finalizeAddressses() {
+  TimeTraceScope timeScope("Finalize addresses");
   // Ensure that segments (and the sections they contain) are allocated
   // addresses in ascending order, which dyld requires.
   //
@@ -848,6 +856,7 @@ void Writer::finalizeAddressses() {
 }
 
 void Writer::finalizeLinkEditSegment() {
+  TimeTraceScope timeScope("Finalize __LINKEDIT segment");
   // Fill __LINKEDIT contents.
   in.rebase->finalizeContents();
   in.binding->finalizeContents();
@@ -904,6 +913,7 @@ void Writer::writeSections() {
 }
 
 void Writer::writeUuid() {
+  TimeTraceScope timeScope("Computing UUID");
   uint64_t digest =
       xxHash64({buffer->getBufferStart(), buffer->getBufferEnd()});
   uuidCommand->writeUuid(digest);
@@ -912,6 +922,19 @@ void Writer::writeUuid() {
 void Writer::writeCodeSignature() {
   if (codeSignatureSection)
     codeSignatureSection->writeHashes(buffer->getBufferStart());
+}
+
+void Writer::writeOutputFile() {
+  TimeTraceScope timeScope("Write output file");
+  openFile();
+  if (errorCount())
+    return;
+  writeSections();
+  writeUuid();
+  writeCodeSignature();
+
+  if (auto e = buffer->commit())
+    error("failed to write to the output file: " + toString(std::move(e)));
 }
 
 void Writer::run() {
@@ -927,15 +950,7 @@ void Writer::run() {
   finalizeAddressses();
   finalizeLinkEditSegment();
   writeMapFile();
-  openFile();
-  if (errorCount())
-    return;
-  writeSections();
-  writeUuid();
-  writeCodeSignature();
-
-  if (auto e = buffer->commit())
-    error("failed to write to the output file: " + toString(std::move(e)));
+  writeOutputFile();
 }
 
 void macho::writeResult() { Writer().run(); }
