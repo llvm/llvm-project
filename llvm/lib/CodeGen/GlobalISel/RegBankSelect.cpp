@@ -719,6 +719,10 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isDebugInstr())
         continue;
 
+      // Ignore IMPLICIT_DEF which must have a regclass.
+      if (MI.isImplicitDef())
+        continue;
+
       if (!assignInstr(MI)) {
         reportGISelFailure(MF, *TPC, *MORE, "gisel-regbankselect",
                            "unable to map instruction", MI);
