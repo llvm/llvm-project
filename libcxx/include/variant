@@ -318,6 +318,33 @@ using __variant_index_t =
 template <class _IndexType>
 constexpr _IndexType __variant_npos = static_cast<_IndexType>(-1);
 
+template <class... _Types>
+class _LIBCPP_TEMPLATE_VIS variant;
+
+template <class... _Types>
+_LIBCPP_INLINE_VISIBILITY constexpr variant<_Types...>&
+__as_variant(variant<_Types...>& __vs) noexcept {
+  return __vs;
+}
+
+template <class... _Types>
+_LIBCPP_INLINE_VISIBILITY constexpr const variant<_Types...>&
+__as_variant(const variant<_Types...>& __vs) noexcept {
+  return __vs;
+}
+
+template <class... _Types>
+_LIBCPP_INLINE_VISIBILITY constexpr variant<_Types...>&&
+__as_variant(variant<_Types...>&& __vs) noexcept {
+  return _VSTD::move(__vs);
+}
+
+template <class... _Types>
+_LIBCPP_INLINE_VISIBILITY constexpr const variant<_Types...>&&
+__as_variant(const variant<_Types...>&& __vs) noexcept {
+  return _VSTD::move(__vs);
+}
+
 namespace __find_detail {
 
 template <class _Tp, class... _Types>
@@ -564,8 +591,9 @@ struct __variant {
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr decltype(auto) __visit_alt(_Visitor&& __visitor,
                                               _Vs&&... __vs) {
-    return __base::__visit_alt(_VSTD::forward<_Visitor>(__visitor),
-                               _VSTD::forward<_Vs>(__vs).__impl...);
+    return __base::__visit_alt(
+        _VSTD::forward<_Visitor>(__visitor),
+        _VSTD::__as_variant(_VSTD::forward<_Vs>(__vs)).__impl...);
   }
 
   template <class _Visitor, class... _Vs>
@@ -586,6 +614,7 @@ struct __variant {
         __make_value_visitor(_VSTD::forward<_Visitor>(__visitor)),
         _VSTD::forward<_Vs>(__vs)...);
   }
+
 #if _LIBCPP_STD_VER > 17
   template <class _Rp, class _Visitor, class... _Vs>
   inline _LIBCPP_INLINE_VISIBILITY
@@ -1637,18 +1666,21 @@ constexpr bool operator>=(const variant<_Types...>& __lhs,
 
 template <class... _Vs>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-constexpr void __throw_if_valueless(_Vs&&... __vs) {
-  const bool __valueless = (... || __vs.valueless_by_exception());
+    _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr void
+    __throw_if_valueless(_Vs&&... __vs) {
+  const bool __valueless =
+      (... || _VSTD::__as_variant(__vs).valueless_by_exception());
   if (__valueless) {
-      __throw_bad_variant_access();
+    __throw_bad_variant_access();
   }
 }
 
-template <class _Visitor, class... _Vs>
+template <
+    class _Visitor, class... _Vs,
+    typename = void_t<decltype(_VSTD::__as_variant(_VSTD::declval<_Vs>()))...> >
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
+    _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr
+    decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   _VSTD::__throw_if_valueless(_VSTD::forward<_Vs>(__vs)...);
   return __variant::__visit_value(_VSTD::forward<_Visitor>(__visitor),
@@ -1656,10 +1688,12 @@ constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
 }
 
 #if _LIBCPP_STD_VER > 17
-template <class _Rp, class _Visitor, class... _Vs>
+template <
+    class _Rp, class _Visitor, class... _Vs,
+    typename = void_t<decltype(_VSTD::__as_variant(_VSTD::declval<_Vs>()))...> >
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
-constexpr _Rp visit(_Visitor&& __visitor, _Vs&&... __vs) {
+    _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS constexpr _Rp
+    visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   _VSTD::__throw_if_valueless(_VSTD::forward<_Vs>(__vs)...);
   return __variant::__visit_value<_Rp>(_VSTD::forward<_Visitor>(__visitor),
