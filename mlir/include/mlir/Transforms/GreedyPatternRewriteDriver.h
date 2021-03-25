@@ -35,26 +35,26 @@ namespace mlir {
 ///       before attempting to match any of the provided patterns.
 LogicalResult
 applyPatternsAndFoldGreedily(Operation *op,
-                             const FrozenRewritePatternSet &patterns,
-                             bool useTopDownTraversal = true);
+                             const FrozenRewritePatternSet &patterns);
 
 /// Rewrite the regions of the specified operation, with a user-provided limit
 /// on iterations to attempt before reaching convergence.
-LogicalResult applyPatternsAndFoldGreedily(
-    Operation *op, const FrozenRewritePatternSet &patterns,
-    unsigned maxIterations, bool useTopDownTraversal = true);
+LogicalResult
+applyPatternsAndFoldGreedily(Operation *op,
+                             const FrozenRewritePatternSet &patterns,
+                             unsigned maxIterations);
 
 /// Rewrite the given regions, which must be isolated from above.
 LogicalResult
 applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
-                             const FrozenRewritePatternSet &patterns,
-                             bool useTopDownTraversal = true);
+                             const FrozenRewritePatternSet &patterns);
 
 /// Rewrite the given regions, with a user-provided limit on iterations to
 /// attempt before reaching convergence.
-LogicalResult applyPatternsAndFoldGreedily(
-    MutableArrayRef<Region> regions, const FrozenRewritePatternSet &patterns,
-    unsigned maxIterations, bool useTopDownTraversal = true);
+LogicalResult
+applyPatternsAndFoldGreedily(MutableArrayRef<Region> regions,
+                             const FrozenRewritePatternSet &patterns,
+                             unsigned maxIterations);
 
 /// Applies the specified patterns on `op` alone while also trying to fold it,
 /// by selecting the highest benefits patterns in a greedy manner. Returns
