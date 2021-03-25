@@ -321,11 +321,16 @@ struct CandidateComparer {
     if (LHS.CallsiteCount != RHS.CallsiteCount)
       return LHS.CallsiteCount < RHS.CallsiteCount;
 
+    const FunctionSamples *LCS = LHS.CalleeSamples;
+    const FunctionSamples *RCS = RHS.CalleeSamples;
+    assert(LCS && RCS && "Expect non-null FunctionSamples");
+
+    // Tie breaker using number of samples try to favor smaller functions first
+    if (LCS->getBodySamples().size() != RCS->getBodySamples().size())
+      return LCS->getBodySamples().size() > RCS->getBodySamples().size();
+
     // Tie breaker using GUID so we have stable/deterministic inlining order
-    assert(LHS.CalleeSamples && RHS.CalleeSamples &&
-           "Expect non-null FunctionSamples");
-    return LHS.CalleeSamples->getGUID(LHS.CalleeSamples->getName()) <
-           RHS.CalleeSamples->getGUID(RHS.CalleeSamples->getName());
+    return LCS->getGUID(LCS->getName()) < RCS->getGUID(RCS->getName());
   }
 };
 
