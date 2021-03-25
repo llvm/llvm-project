@@ -93,9 +93,7 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
 
   Records.startTimer("Parse, build records");
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*FileSize=*/-1,
-                                   /*RequiresNullTerminator=*/true,
-                                   /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");
@@ -139,9 +137,8 @@ int llvm::TableGenMain(const char *argv0, TableGenMainFn *MainFn) {
     // Only updates the real output file if there are any differences.
     // This prevents recompilation of all the files depending on it if there
     // aren't any.
-    if (auto ExistingOrErr = MemoryBuffer::getFile(
-            OutputFilename, /*FileSize=*/-1, /*RequiresNullTerminator=*/true,
-            /*IsVolatile=*/false, /*IsText=*/true))
+    if (auto ExistingOrErr =
+            MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
       if (std::move(ExistingOrErr.get())->getBuffer() == Out.str())
         WriteFile = false;
   }
