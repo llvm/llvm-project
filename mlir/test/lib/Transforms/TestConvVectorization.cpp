@@ -56,7 +56,7 @@ void TestConvVectorization::runOnOperation() {
   ConversionTarget target(*context);
   target.addLegalDialect<AffineDialect, scf::SCFDialect, StandardOpsDialect,
                          VectorDialect>();
-  target.addLegalOp<ModuleOp, FuncOp, ModuleTerminatorOp, ReturnOp>();
+  target.addLegalOp<ModuleOp, FuncOp, ReturnOp>();
   target.addLegalOp<linalg::FillOp, linalg::YieldOp>();
 
   SmallVector<RewritePatternSet, 4> stage1Patterns;

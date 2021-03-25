@@ -323,13 +323,20 @@ index expression that can express the equivalent of the memory-layout
 specification of the MemRef type. See [the -normalize-memrefs pass].
 (https://mlir.llvm.org/docs/Passes/#-normalize-memrefs-normalize-memrefs)
 
-### Single Block with Implicit Terminator
+### Single Block Region
 
-*   `OpTrait::SingleBlockImplicitTerminator<typename TerminatorOpType>` :
-    `SingleBlockImplicitTerminator<string op>`
+*   `OpTrait::SingleBlock` -- `SingleBlock`
 
 This trait provides APIs and verifiers for operations with regions that have a
-single block that must terminate with `TerminatorOpType`.
+single block.
+
+### Single Block with Implicit Terminator
+
+*   `OpTrait::SingleBlockImplicitTerminator<typename TerminatorOpType>` --
+    `SingleBlockImplicitTerminator<string op>`
+
+This trait implies the `SingleBlock` above, but adds the additional requirement
+that the single block must terminate with `TerminatorOpType`.
 
 ### SymbolTable
 
@@ -344,3 +351,10 @@ This trait is used for operations that define a
 
 This trait provides verification and functionality for operations that are known
 to be [terminators](LangRef.md#terminator-operations).
+
+*   `OpTrait::NoTerminator` -- `NoTerminator`
+
+This trait removes the requirement on regions held by an operation to have
+[terminator operations](LangRef.md#terminator-operations) at the end of a block.
+This requires that these regions have a single block. An example of operation
+using this trait is the top-level `ModuleOp`.

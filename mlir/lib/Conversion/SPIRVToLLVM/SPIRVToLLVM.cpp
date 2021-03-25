@@ -1358,7 +1358,7 @@ public:
   matchAndRewrite(spirv::ModuleEndOp moduleEndOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
 
-    rewriter.replaceOpWithNewOp<ModuleTerminatorOp>(moduleEndOp);
+    rewriter.eraseOp(moduleEndOp);
     return success();
   }
 };

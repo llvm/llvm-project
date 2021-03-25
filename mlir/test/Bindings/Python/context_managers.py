@@ -62,7 +62,7 @@ run(testLocationEnterExit)
 def testInsertionPointEnterExit():
   ctx1 = Context()
   m = Module.create(Location.unknown(ctx1))
-  ip = InsertionPoint.at_block_terminator(m.body)
+  ip = InsertionPoint(m.body)
 
   with ip:
     assert InsertionPoint.current is ip

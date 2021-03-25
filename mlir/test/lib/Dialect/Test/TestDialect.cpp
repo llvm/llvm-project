@@ -33,6 +33,16 @@ void mlir::test::registerTestDialect(DialectRegistry &registry) {
 
 namespace {
 
+/// Testing the correctness of some traits.
+static_assert(
+    llvm::is_detected<OpTrait::has_implicit_terminator_t,
+                      SingleBlockImplicitTerminatorOp>::value,
+    "has_implicit_terminator_t does not match SingleBlockImplicitTerminatorOp");
+static_assert(OpTrait::hasSingleBlockImplicitTerminator<
+                  SingleBlockImplicitTerminatorOp>::value,
+              "hasSingleBlockImplicitTerminator does not match "
+              "SingleBlockImplicitTerminatorOp");
+
 // Test support for interacting with the AsmPrinter.
 struct TestOpAsmInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;

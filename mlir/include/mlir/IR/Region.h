@@ -43,6 +43,10 @@ public:
 
   using BlockListType = llvm::iplist<Block>;
   BlockListType &getBlocks() { return blocks; }
+  Block &emplaceBlock() {
+    push_back(new Block);
+    return back();
+  }
 
   // Iteration over the blocks in the region.
   using iterator = BlockListType::iterator;

@@ -16,8 +16,6 @@ class ModuleOp:
     super().__init__(self.build_generic(results=[], operands=[], loc=loc,
                                         ip=ip))
     body = self.regions[0].blocks.append()
-    with InsertionPoint(body):
-      Operation.create("module_terminator")
 
   @property
   def body(self):
