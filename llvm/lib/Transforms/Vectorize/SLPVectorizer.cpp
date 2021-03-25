@@ -6629,10 +6629,9 @@ class HorizontalReduction {
                          Value *RHS, const Twine &Name, Instruction *I) {
     Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name);
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
-      if (auto *Sel = dyn_cast<SelectInst>(Op)) {
-        propagateIRFlags(Sel->getCondition(),
-                         cast<SelectInst>(I)->getCondition());
-      }
+      if (auto *Sel = dyn_cast<SelectInst>(Op))
+        if (auto *SelI = dyn_cast<SelectInst>(I))
+          propagateIRFlags(Sel->getCondition(), SelI->getCondition());
     }
     propagateIRFlags(Op, I);
     return Op;
