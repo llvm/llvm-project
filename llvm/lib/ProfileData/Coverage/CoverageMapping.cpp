@@ -329,7 +329,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
 
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
     auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
-        File.value(), /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+        File.value(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
     if (std::error_code EC = CovMappingBufOrErr.getError())
       return errorCodeToError(EC);
     StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
