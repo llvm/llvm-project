@@ -34507,7 +34507,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     Known = Known.trunc(BitWidth / 2).zext(BitWidth);
     Known2 = Known2.trunc(BitWidth / 2).zext(BitWidth);
-    Known = KnownBits::computeForMul(Known, Known2);
+    Known = KnownBits::mul(Known, Known2);
     break;
   }
   case X86ISD::CMOV: {
