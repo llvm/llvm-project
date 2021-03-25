@@ -10,6 +10,10 @@
 
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
+// The string reported on errors changed, which makes those tests fail when run
+// against already-released libc++'s.
+// XFAIL: with_system_cxx_lib=macosx10.15
+
 // <filesystem>
 
 // file_time_type last_write_time(const path& p);
