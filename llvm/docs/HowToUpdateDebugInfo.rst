@@ -376,6 +376,17 @@ as follows:
 
   $ llvm-original-di-preservation.py sample.json sample.html
 
+Testing of original debug info preservation can be invoked from front-end level
+as follows:
+
+.. code-block:: bash
+
+  # Test each pass.
+  $ clang -Xclang -fverify-debuginfo-preserve -g -O2 sample.c
+
+  # Test each pass and export the issues report into the JSON file.
+  $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
+
 Mutation testing for MIR-level transformations
 ----------------------------------------------
 

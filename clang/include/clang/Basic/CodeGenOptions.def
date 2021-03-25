@@ -70,6 +70,10 @@ CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
 CODEGENOPT(DisableRedZone    , 1, 0) ///< Set when -mno-red-zone is enabled.
 CODEGENOPT(EmitCallSiteInfo, 1, 0) ///< Emit call site info only in the case of
                                    ///< '-g' + 'O>0' level.
+CODEGENOPT(EnableDIPreservationVerify, 1, 0) ///< Enable di preservation verify
+                                             ///< each (it means check
+                                             ///< the original debug info
+                                             ///< metadata preservation).
 CODEGENOPT(IndirectTlsSegRefs, 1, 0) ///< Set when -mno-tls-direct-seg-refs
                                      ///< is specified.
 CODEGENOPT(DisableTailCalls  , 1, 0) ///< Do not emit tail calls.
