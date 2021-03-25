@@ -449,6 +449,14 @@ struct OperationFormat {
         llvm::any_of(op.getTraits(), [](const OpTrait &trait) {
           return trait.getDef().isSubClassOf("SingleBlockImplicitTerminator");
         });
+
+    hasSingleBlockTrait =
+        hasImplicitTermTrait ||
+        llvm::any_of(op.getTraits(), [](const OpTrait &trait) {
+          if (auto *native = dyn_cast<NativeOpTrait>(&trait))
+            return native->getTrait() == "::mlir::OpTrait::SingleBlock";
+          return false;
+        });
   }
 
   /// Generate the operation parser from this format.
@@ -483,6 +491,9 @@ struct OperationFormat {
   /// A flag indicating if this operation has the SingleBlockImplicitTerminator
   /// trait.
   bool hasImplicitTermTrait;
+
+  /// A flag indicating if this operation has the SingleBlock trait.
+  bool hasSingleBlockTrait;
 
   /// A map of buildable types to indices.
   llvm::MapVector<StringRef, int, llvm::StringMap<int>> buildableTypes;
@@ -679,6 +690,14 @@ const char *regionListEnsureTerminatorParserCode = R"(
     ensureTerminator(*region, parser.getBuilder(), result.location);
 )";
 
+/// The code snippet used to ensure a list of regions have a block.
+///
+/// {0}: The name of the region list.
+const char *regionListEnsureSingleBlockParserCode = R"(
+  for (auto &region : {0}Regions)
+    if (region.empty()) *{0}Region.emplaceBlock();
+)";
+
 /// The code snippet used to generate a parser call for an optional region.
 ///
 /// {0}: The name of the region.
@@ -703,6 +722,13 @@ const char *regionParserCode = R"(
 /// {0}: The name of the region.
 const char *regionEnsureTerminatorParserCode = R"(
   ensureTerminator(*{0}Region, parser.getBuilder(), result.location);
+)";
+
+/// The code snippet used to ensure a region has a block.
+///
+/// {0}: The name of the region.
+const char *regionEnsureSingleBlockParserCode = R"(
+  if ({0}Region->empty()) {0}Region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for a successor list.
@@ -1134,6 +1160,9 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
         body << "  if (!" << region->name << "Region->empty()) {\n  ";
         if (hasImplicitTermTrait)
           body << llvm::formatv(regionEnsureTerminatorParserCode, region->name);
+        else if (hasSingleBlockTrait)
+          body << llvm::formatv(regionEnsureSingleBlockParserCode,
+                                region->name);
       }
     }
 
@@ -1217,11 +1246,14 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     bool isVariadic = region->getVar()->isVariadic();
     body << llvm::formatv(isVariadic ? regionListParserCode : regionParserCode,
                           region->getVar()->name);
-    if (hasImplicitTermTrait) {
+    if (hasImplicitTermTrait)
       body << llvm::formatv(isVariadic ? regionListEnsureTerminatorParserCode
                                        : regionEnsureTerminatorParserCode,
                             region->getVar()->name);
-    }
+    else if (hasSingleBlockTrait)
+      body << llvm::formatv(isVariadic ? regionListEnsureSingleBlockParserCode
+                                       : regionEnsureSingleBlockParserCode,
+                            region->getVar()->name);
 
   } else if (auto *successor = dyn_cast<SuccessorVariable>(element)) {
     bool isVariadic = successor->getVar()->isVariadic();
@@ -1246,6 +1278,8 @@ void OperationFormat::genElementParser(Element *element, OpMethodBody &body,
     body << llvm::formatv(regionListParserCode, "full");
     if (hasImplicitTermTrait)
       body << llvm::formatv(regionListEnsureTerminatorParserCode, "full");
+    else if (hasSingleBlockTrait)
+      body << llvm::formatv(regionListEnsureSingleBlockParserCode, "full");
 
   } else if (isa<SuccessorsDirective>(element)) {
     body << llvm::formatv(successorListParserCode, "full");

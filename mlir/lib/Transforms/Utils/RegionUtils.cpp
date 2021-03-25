@@ -314,6 +314,7 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
   for (Region &region : regions) {
     if (region.empty())
       continue;
+    bool hasSingleBlock = llvm::hasSingleElement(region);
 
     // Delete every operation that is not live. Graph regions may have cycles
     // in the use-def graph, so we must explicitly dropAllUses() from each
@@ -321,7 +322,8 @@ static LogicalResult deleteDeadness(RewriterBase &rewriter,
     // guarantees that in SSA CFG regions value uses are removed before defs,
     // which makes dropAllUses() a no-op.
     for (Block *block : llvm::post_order(&region.front())) {
-      eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
+      if (!hasSingleBlock)
+        eraseTerminatorSuccessorOperands(block->getTerminator(), liveMap);
       for (Operation &childOp :
            llvm::make_early_inc_range(llvm::reverse(block->getOperations()))) {
         if (!liveMap.wasProvenLive(&childOp)) {

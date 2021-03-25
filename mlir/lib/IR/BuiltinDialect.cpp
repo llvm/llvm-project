@@ -209,7 +209,7 @@ FuncOp FuncOp::clone() {
 
 void ModuleOp::build(OpBuilder &builder, OperationState &state,
                      Optional<StringRef> name) {
-  ensureTerminator(*state.addRegion(), builder, state.location);
+  state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
         mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));

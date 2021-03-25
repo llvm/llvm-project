@@ -4,15 +4,13 @@
 module {
 }
 
-// CHECK: module {
-// CHECK-NEXT: }
-module {
-  "module_terminator"() : () -> ()
-}
+// -----
 
 // CHECK: module attributes {foo.attr = true} {
 module attributes {foo.attr = true} {
 }
+
+// -----
 
 // CHECK: module {
 module {

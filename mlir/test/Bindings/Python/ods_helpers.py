@@ -29,7 +29,7 @@ def testOdsBuildDefaultImplicitRegions():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       op = TestFixedRegionsOp.build_generic(results=[], operands=[])
       # CHECK: NUM_REGIONS: 2
       print(f"NUM_REGIONS: {len(op.regions)}")
@@ -84,7 +84,7 @@ def testOdsBuildDefaultNonVariadic():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       t0 = IntegerType.get_signless(8)
@@ -111,7 +111,7 @@ def testOdsBuildDefaultSizedVariadic():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       v2 = add_dummy_value()
@@ -187,7 +187,7 @@ def testOdsBuildDefaultCastError():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       t0 = IntegerType.get_signless(8)

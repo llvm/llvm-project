@@ -91,6 +91,5 @@ def testRunPipeline():
 # CHECK: Operations encountered:
 # CHECK: func              , 1
 # CHECK: module            , 1
-# CHECK: module_terminator , 1
 # CHECK: std.return        , 1
 run(testRunPipeline)
