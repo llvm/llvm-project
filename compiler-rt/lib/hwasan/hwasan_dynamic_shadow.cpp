@@ -12,14 +12,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "hwasan.h"
 #include "hwasan_dynamic_shadow.h"
-#include "hwasan_mapping.h"
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_posix.h"
 
 #include <elf.h>
 #include <link.h>
+
+#include "hwasan.h"
+#include "hwasan_mapping.h"
+#include "hwasan_thread_list.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_posix.h"
 
 // The code in this file needs to run in an unrelocated binary. It should not
 // access any external symbol, including its own non-hidden globals.
@@ -117,6 +119,12 @@ namespace __hwasan {
 void InitShadowGOT() {}
 
 uptr FindDynamicShadowStart(uptr shadow_size_bytes) {
+#if defined(__x86_64__)
+  constexpr uptr kAliasSize = 1ULL << kAddressTagShift;
+  constexpr uptr kNumAliases = 1ULL << kTagBits;
+  return MapDynamicShadowAndAliases(shadow_size_bytes, kAliasSize, kNumAliases,
+                                    RingBufferSize());
+#endif
   return MapDynamicShadow(shadow_size_bytes, kShadowScale, kShadowBaseAlignment,
                           kHighMemEnd);
 }

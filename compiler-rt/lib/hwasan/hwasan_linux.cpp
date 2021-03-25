@@ -76,6 +76,8 @@ uptr kHighShadowEnd;
 uptr kHighMemStart;
 uptr kHighMemEnd;
 
+uptr kAliasRegionStart;  // Always 0 on non-x86.
+
 static void PrintRange(uptr start, uptr end, const char *name) {
   Printf("|| [%p, %p] || %.*s ||\n", (void *)start, (void *)end, 10, name);
 }
@@ -123,7 +125,7 @@ void InitPrctl() {
   if (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
                        &local_errno) &&
       local_errno == EINVAL) {
-#if SANITIZER_ANDROID
+#if SANITIZER_ANDROID || defined(__x86_64__)
     // Some older Android kernels have the tagged pointer ABI on
     // unconditionally, and hence don't have the tagged-addr prctl while still
     // allow the ABI.
@@ -178,6 +180,18 @@ bool InitShadow() {
 
   // High memory starts where allocated shadow allows.
   kHighMemStart = ShadowToMem(kHighShadowStart);
+
+#if defined(__x86_64__)
+  constexpr uptr kAliasRegionOffset = 1ULL << (kTaggableRegionCheckShift - 1);
+  kAliasRegionStart =
+      __hwasan_shadow_memory_dynamic_address + kAliasRegionOffset;
+
+  CHECK_EQ(kAliasRegionStart >> kTaggableRegionCheckShift,
+           __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
+  CHECK_EQ(
+      (kAliasRegionStart + kAliasRegionOffset - 1) >> kTaggableRegionCheckShift,
+      __hwasan_shadow_memory_dynamic_address >> kTaggableRegionCheckShift);
+#endif
 
   // Check the sanity of the defined memory ranges (there might be gaps).
   CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);
