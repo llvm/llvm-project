@@ -499,8 +499,13 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(progressStart_ids == progressEnd_ids,
                         ('Make sure we got a "progressEnd" for each '
                          '"progressStart" event that we have.'))
+
+        ignored_libraries = {"[vdso]"}
+
         # Verify we got a symbol table parsing progress event for each shared
         # library in our target.
         for target_shlib_basename in target_shlibs.keys():
-            self.assertTrue(target_shlib_basename in symtab_progress_shlibs,
+            if target_shlib_basename in ignored_libraries:
+                continue
+            self.assertIn(target_shlib_basename, symtab_progress_shlibs,
                             'Make sure we got a symbol table progress event for "%s"' % (target_shlib_basename))
