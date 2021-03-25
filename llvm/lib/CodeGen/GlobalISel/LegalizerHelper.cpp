@@ -582,7 +582,11 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
   auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
-  switch (MI.getOpcode()) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_BZERO:
+    RTLibcall = RTLIB::BZERO;
+    break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
     break;
@@ -596,6 +600,13 @@ llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
     return LegalizerHelper::UnableToLegalize;
   }
   const char *Name = TLI.getLibcallName(RTLibcall);
+
+  // Unsupported libcall on the target.
+  if (!Name) {
+    LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
+                      << MIRBuilder.getTII().getName(Opc) << "\n");
+    return LegalizerHelper::UnableToLegalize;
+  }
 
   CallLowering::CallLoweringInfo Info;
   Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
@@ -748,10 +759,14 @@ LegalizerHelper::libcall(MachineInstr &MI) {
       return Status;
     break;
   }
+  case TargetOpcode::G_BZERO:
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET: {
-    LegalizeResult Result = createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI);
+    LegalizeResult Result =
+        createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI);
+    if (Result != Legalized)
+      return Result;
     MI.eraseFromParent();
     return Result;
   }
