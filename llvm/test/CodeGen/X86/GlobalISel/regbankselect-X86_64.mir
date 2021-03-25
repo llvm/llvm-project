@@ -625,29 +625,29 @@ body:             |
   bb.1 (%ir-block.0):
 
     ; FAST-LABEL: name: test_mul_gpr
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
-    ; FAST: [[DEF1:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; FAST: [[DEF2:%[0-9]+]]:gpr(s16) = IMPLICIT_DEF
-    ; FAST: [[DEF3:%[0-9]+]]:gpr(s8) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
+    ; FAST: [[DEF1:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; FAST: [[DEF2:%[0-9]+]]:gpr(s16) = G_IMPLICIT_DEF
+    ; FAST: [[DEF3:%[0-9]+]]:gpr(s8) = G_IMPLICIT_DEF
     ; FAST: [[MUL:%[0-9]+]]:gpr(s64) = G_MUL [[DEF]], [[DEF]]
     ; FAST: [[MUL1:%[0-9]+]]:gpr(s32) = G_MUL [[DEF1]], [[DEF1]]
     ; FAST: [[MUL2:%[0-9]+]]:gpr(s16) = G_MUL [[DEF2]], [[DEF2]]
     ; FAST: [[MUL3:%[0-9]+]]:gpr(s8) = G_MUL [[DEF3]], [[DEF3]]
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_mul_gpr
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
-    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; GREEDY: [[DEF2:%[0-9]+]]:gpr(s16) = IMPLICIT_DEF
-    ; GREEDY: [[DEF3:%[0-9]+]]:gpr(s8) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF2:%[0-9]+]]:gpr(s16) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF3:%[0-9]+]]:gpr(s8) = G_IMPLICIT_DEF
     ; GREEDY: [[MUL:%[0-9]+]]:gpr(s64) = G_MUL [[DEF]], [[DEF]]
     ; GREEDY: [[MUL1:%[0-9]+]]:gpr(s32) = G_MUL [[DEF1]], [[DEF1]]
     ; GREEDY: [[MUL2:%[0-9]+]]:gpr(s16) = G_MUL [[DEF2]], [[DEF2]]
     ; GREEDY: [[MUL3:%[0-9]+]]:gpr(s8) = G_MUL [[DEF3]], [[DEF3]]
     ; GREEDY: RET 0
-    %0(s64) = IMPLICIT_DEF
-    %1(s32) = IMPLICIT_DEF
-    %2(s16) = IMPLICIT_DEF
-    %3(s8)  = IMPLICIT_DEF
+    %0(s64) = G_IMPLICIT_DEF
+    %1(s32) = G_IMPLICIT_DEF
+    %2(s16) = G_IMPLICIT_DEF
+    %3(s8)  = G_IMPLICIT_DEF
     %4(s64) = G_MUL %0, %0
     %5(s32) = G_MUL %1, %1
     %6(s16) = G_MUL %2, %2
@@ -767,8 +767,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_fsub_float
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; FAST: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[FSUB:%[0-9]+]]:vecr(s32) = G_FSUB [[COPY]], [[COPY1]]
@@ -777,8 +777,8 @@ body:             |
     ; FAST: [[FSUB1:%[0-9]+]]:vecr(s64) = G_FSUB [[COPY2]], [[COPY3]]
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_fsub_float
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; GREEDY: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[FSUB:%[0-9]+]]:vecr(s32) = G_FSUB [[COPY]], [[COPY1]]
@@ -786,8 +786,8 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FSUB1:%[0-9]+]]:vecr(s64) = G_FSUB [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = IMPLICIT_DEF
-    %2(s64) = IMPLICIT_DEF
+    %0(s32) = G_IMPLICIT_DEF
+    %2(s64) = G_IMPLICIT_DEF
     %1(s32) = G_FSUB %0, %0
     %3(s64) = G_FSUB %2, %2
     RET 0
@@ -810,8 +810,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_fmul_float
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; FAST: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[FMUL:%[0-9]+]]:vecr(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -820,8 +820,8 @@ body:             |
     ; FAST: [[FMUL1:%[0-9]+]]:vecr(s64) = G_FMUL [[COPY2]], [[COPY3]]
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_fmul_float
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; GREEDY: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[FMUL:%[0-9]+]]:vecr(s32) = G_FMUL [[COPY]], [[COPY1]]
@@ -829,8 +829,8 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FMUL1:%[0-9]+]]:vecr(s64) = G_FMUL [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = IMPLICIT_DEF
-    %2(s64) = IMPLICIT_DEF
+    %0(s32) = G_IMPLICIT_DEF
+    %2(s64) = G_IMPLICIT_DEF
     %1(s32) = G_FMUL %0, %0
     %3(s64) = G_FMUL %2, %2
     RET 0
@@ -853,8 +853,8 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_fdiv_float
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; FAST: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; FAST: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; FAST: [[FDIV:%[0-9]+]]:vecr(s32) = G_FDIV [[COPY]], [[COPY1]]
@@ -863,8 +863,8 @@ body:             |
     ; FAST: [[FDIV1:%[0-9]+]]:vecr(s64) = G_FDIV [[COPY2]], [[COPY3]]
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_fdiv_float
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
-    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
+    ; GREEDY: [[DEF1:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; GREEDY: [[COPY:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[COPY1:%[0-9]+]]:vecr(s32) = COPY [[DEF]](s32)
     ; GREEDY: [[FDIV:%[0-9]+]]:vecr(s32) = G_FDIV [[COPY]], [[COPY1]]
@@ -872,8 +872,8 @@ body:             |
     ; GREEDY: [[COPY3:%[0-9]+]]:vecr(s64) = COPY [[DEF1]](s64)
     ; GREEDY: [[FDIV1:%[0-9]+]]:vecr(s64) = G_FDIV [[COPY2]], [[COPY3]]
     ; GREEDY: RET 0
-    %0(s32) = IMPLICIT_DEF
-    %2(s64) = IMPLICIT_DEF
+    %0(s32) = G_IMPLICIT_DEF
+    %2(s64) = G_IMPLICIT_DEF
     %1(s32) = G_FDIV %0, %0
     %3(s64) = G_FDIV %2, %2
     RET 0
@@ -1349,18 +1349,18 @@ registers:
 body:             |
   bb.0 (%ir-block.0):
     ; FAST-LABEL: name: trunc_check
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
     ; FAST: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[DEF]](s32)
     ; FAST: [[TRUNC1:%[0-9]+]]:gpr(s8) = G_TRUNC [[DEF]](s32)
     ; FAST: [[TRUNC2:%[0-9]+]]:gpr(s16) = G_TRUNC [[DEF]](s32)
     ; FAST: RET 0
     ; GREEDY-LABEL: name: trunc_check
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
     ; GREEDY: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[DEF]](s32)
     ; GREEDY: [[TRUNC1:%[0-9]+]]:gpr(s8) = G_TRUNC [[DEF]](s32)
     ; GREEDY: [[TRUNC2:%[0-9]+]]:gpr(s16) = G_TRUNC [[DEF]](s32)
     ; GREEDY: RET 0
-    %0(s32) = IMPLICIT_DEF
+    %0(s32) = G_IMPLICIT_DEF
     %1(s1) = G_TRUNC %0(s32)
     %2(s8) = G_TRUNC %0(s32)
     %3(s16) = G_TRUNC %0(s32)
@@ -1379,20 +1379,20 @@ registers:
 body:             |
   bb.0 (%ir-block.0):
     ; FAST-LABEL: name: test_gep
-    ; FAST: [[DEF:%[0-9]+]]:gpr(p0) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(p0) = G_IMPLICIT_DEF
     ; FAST: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 20
     ; FAST: [[PTR_ADD:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
     ; FAST: [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 20
     ; FAST: [[PTR_ADD1:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C1]](s64)
     ; FAST: RET 0
     ; GREEDY-LABEL: name: test_gep
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(p0) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(p0) = G_IMPLICIT_DEF
     ; GREEDY: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 20
     ; GREEDY: [[PTR_ADD:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C]](s32)
     ; GREEDY: [[C1:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 20
     ; GREEDY: [[PTR_ADD1:%[0-9]+]]:gpr(p0) = G_PTR_ADD [[DEF]], [[C1]](s64)
     ; GREEDY: RET 0
-    %0(p0) = IMPLICIT_DEF
+    %0(p0) = G_IMPLICIT_DEF
     %1(s32) = G_CONSTANT i32 20
     %2(p0) = G_PTR_ADD %0, %1(s32)
     %3(s64) = G_CONSTANT i64 20
@@ -1567,16 +1567,16 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_xor_i8
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s8) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s8) = G_IMPLICIT_DEF
     ; FAST: [[XOR:%[0-9]+]]:gpr(s8) = G_XOR [[DEF]], [[DEF]]
     ; FAST: $al = COPY [[XOR]](s8)
     ; FAST: RET 0, implicit $al
     ; GREEDY-LABEL: name: test_xor_i8
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s8) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s8) = G_IMPLICIT_DEF
     ; GREEDY: [[XOR:%[0-9]+]]:gpr(s8) = G_XOR [[DEF]], [[DEF]]
     ; GREEDY: $al = COPY [[XOR]](s8)
     ; GREEDY: RET 0, implicit $al
-    %0(s8) = IMPLICIT_DEF
+    %0(s8) = G_IMPLICIT_DEF
     %1(s8) = G_XOR %0, %0
     $al = COPY %1(s8)
     RET 0, implicit $al
@@ -1597,16 +1597,16 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_or_i16
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s16) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s16) = G_IMPLICIT_DEF
     ; FAST: [[OR:%[0-9]+]]:gpr(s16) = G_OR [[DEF]], [[DEF]]
     ; FAST: $ax = COPY [[OR]](s16)
     ; FAST: RET 0, implicit $ax
     ; GREEDY-LABEL: name: test_or_i16
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s16) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s16) = G_IMPLICIT_DEF
     ; GREEDY: [[OR:%[0-9]+]]:gpr(s16) = G_OR [[DEF]], [[DEF]]
     ; GREEDY: $ax = COPY [[OR]](s16)
     ; GREEDY: RET 0, implicit $ax
-    %0(s16) = IMPLICIT_DEF
+    %0(s16) = G_IMPLICIT_DEF
     %1(s16) = G_OR %0, %0
     $ax = COPY %1(s16)
     RET 0, implicit $ax
@@ -1627,16 +1627,16 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_and_i32
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
     ; FAST: [[AND:%[0-9]+]]:gpr(s32) = G_AND [[DEF]], [[DEF]]
     ; FAST: $eax = COPY [[AND]](s32)
     ; FAST: RET 0, implicit $eax
     ; GREEDY-LABEL: name: test_and_i32
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s32) = G_IMPLICIT_DEF
     ; GREEDY: [[AND:%[0-9]+]]:gpr(s32) = G_AND [[DEF]], [[DEF]]
     ; GREEDY: $eax = COPY [[AND]](s32)
     ; GREEDY: RET 0, implicit $eax
-    %0(s32) = IMPLICIT_DEF
+    %0(s32) = G_IMPLICIT_DEF
     %1(s32) = G_AND %0, %0
     $eax = COPY %1(s32)
     RET 0, implicit $eax
@@ -1657,16 +1657,16 @@ constants:
 body:             |
   bb.1 (%ir-block.0):
     ; FAST-LABEL: name: test_and_i64
-    ; FAST: [[DEF:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; FAST: [[DEF:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; FAST: [[AND:%[0-9]+]]:gpr(s64) = G_AND [[DEF]], [[DEF]]
     ; FAST: $rax = COPY [[AND]](s64)
     ; FAST: RET 0, implicit $rax
     ; GREEDY-LABEL: name: test_and_i64
-    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s64) = IMPLICIT_DEF
+    ; GREEDY: [[DEF:%[0-9]+]]:gpr(s64) = G_IMPLICIT_DEF
     ; GREEDY: [[AND:%[0-9]+]]:gpr(s64) = G_AND [[DEF]], [[DEF]]
     ; GREEDY: $rax = COPY [[AND]](s64)
     ; GREEDY: RET 0, implicit $rax
-    %0(s64) = IMPLICIT_DEF
+    %0(s64) = G_IMPLICIT_DEF
     %1(s64) = G_AND %0, %0
     $rax = COPY %1(s64)
     RET 0, implicit $rax
