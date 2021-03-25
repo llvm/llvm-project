@@ -414,16 +414,15 @@ static void RegisterObjCExceptionRecognizer(Process *process);
 
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
                                        const ModuleSP &objc_module_sp)
-    : AppleObjCRuntime(process), m_get_class_info_code(),
-      m_get_class_info_args(LLDB_INVALID_ADDRESS),
+    : AppleObjCRuntime(process), m_objc_module_sp(objc_module_sp),
+      m_get_class_info_code(), m_get_class_info_args(LLDB_INVALID_ADDRESS),
       m_get_class_info_args_mutex(), m_get_shared_cache_class_info_code(),
       m_get_shared_cache_class_info_args(LLDB_INVALID_ADDRESS),
       m_get_shared_cache_class_info_args_mutex(), m_decl_vendor_up(),
       m_tagged_pointer_obfuscator(LLDB_INVALID_ADDRESS),
       m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS), m_hash_signature(),
       m_has_object_getClass(false), m_loaded_objc_opt(false),
-      m_non_pointer_isa_cache_up(
-          NonPointerISACache::CreateInstance(*this, objc_module_sp)),
+      m_non_pointer_isa_cache_up(),
       m_tagged_pointer_vendor_up(
           TaggedPointerVendorV2::CreateInstance(*this, objc_module_sp)),
       m_encoding_to_type_sp(), m_noclasses_warning_emitted(false),
@@ -642,6 +641,7 @@ protected:
                   ivar.m_type.GetDisplayTypeName().AsCString("<unknown>"),
                   ivar.m_size, ivar.m_offset);
             }
+
             iterator->second->Describe(
                 nullptr,
                 [&std_out](const char *name, const char *type) -> bool {
@@ -1179,8 +1179,8 @@ bool AppleObjCRuntimeV2::HashTableSignature::NeedsUpdate(
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
   ObjCLanguageRuntime::ClassDescriptorSP class_descriptor_sp;
-  if (m_non_pointer_isa_cache_up)
-    class_descriptor_sp = m_non_pointer_isa_cache_up->GetClassDescriptor(isa);
+  if (auto *non_pointer_isa_cache = GetNonPointerIsaCache())
+    class_descriptor_sp = non_pointer_isa_cache->GetClassDescriptor(isa);
   if (!class_descriptor_sp)
     class_descriptor_sp = ObjCLanguageRuntime::GetClassDescriptorFromISA(isa);
   return class_descriptor_sp;
@@ -2561,8 +2561,8 @@ lldb_private::AppleObjCRuntime::ObjCISA
 AppleObjCRuntimeV2::GetPointerISA(ObjCISA isa) {
   ObjCISA ret = isa;
 
-  if (m_non_pointer_isa_cache_up)
-    m_non_pointer_isa_cache_up->EvaluateNonPointerISA(isa, ret);
+  if (auto *non_pointer_isa_cache = GetNonPointerIsaCache())
+    non_pointer_isa_cache->EvaluateNonPointerISA(isa, ret);
 
   return ret;
 }
