@@ -867,10 +867,23 @@ if (CLANG_ENABLE_BOOTSTRAP)
     # exclude from main target
     set_target_properties(${NEXT_CLANG_STAGE} PROPERTIES _EP_${target}_EXCLUDE_FROM_MAIN On)
 
+    # Install targets have side effects, so we always want to execute them.
+    # "install" is reserved by CMake and can't be used as a step name for
+    # ExternalProject_Add_Step, so we can match against "^install-" instead of
+    # "^install" to get a tighter match. CMake's installation scripts already
+    # skip up-to-date files, so there's no behavior change if you install to the
+    # same destination multiple times.
+    if(target MATCHES "^install-")
+      set(step_always ON)
+    else()
+      set(step_always OFF)
+    endif()
+
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
+      ALWAYS ${step_always}
       USES_TERMINAL 1
     )
 
