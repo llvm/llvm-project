@@ -227,6 +227,11 @@ public:
   bool isCharacter() const { return getEleTy().isa<fir::CharacterType>(); };
   /// Is this a derived type entity ?
   bool isDerived() const { return getEleTy().isa<fir::RecordType>(); };
+
+  bool isDerivedWithLengthParameters() const {
+    auto record = getEleTy().dyn_cast<fir::RecordType>();
+    return record && record.getNumLenParams() != 0;
+  };
   /// Is this a CLASS(*)/TYPE(*) ?
   bool isUnlimitedPolymorphic() const {
     return getEleTy().isa<mlir::NoneType>();

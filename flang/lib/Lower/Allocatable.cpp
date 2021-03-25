@@ -137,11 +137,9 @@ static void genAllocatableInitCharacter(Fortran::lower::FirOpBuilder &builder,
       Fortran::lower::getRuntimeFunc<mkRTKey(AllocatableInitCharacter)>(
           loc, builder);
   auto inputTypes = callee.getType().getInputs();
-  if (inputTypes.size() != 5) {
-    mlir::emitError(
+  if (inputTypes.size() != 5)
+    fir::emitFatalError(
         loc, "AllocatableInitCharacter runtime interface not as expected");
-    return;
-  }
   llvm::SmallVector<mlir::Value> args;
   args.push_back(builder.createConvert(loc, inputTypes[0], box.getAddr()));
   args.push_back(builder.createConvert(loc, inputTypes[1], len));
@@ -263,9 +261,8 @@ public:
     }
     if (box.isCharacter())
       lengths.emplace_back(readCharacterLength());
-    else if (box.isDerived())
-      mlir::emitError(
-          loc, "TODO: read allocatable or pointer derived type LEN parameters");
+    else if (box.isDerivedWithLengthParameters())
+      TODO(loc, "read allocatable or pointer derived type LEN parameters");
     return readBaseAddress();
   }
 
@@ -429,9 +426,8 @@ private:
       for (auto [len, lenVar] :
            llvm::zip(lengths, mutableProperties.deferredParams))
         builder.create<fir::StoreOp>(loc, len, lenVar);
-    else if (box.isDerived())
-      mlir::emitError(
-          loc, "TODO: update allocatable derived type length parameters");
+    else if (box.isDerivedWithLengthParameters())
+      TODO(loc, "update allocatable derived type length parameters");
   }
   Fortran::lower::FirOpBuilder &builder;
   mlir::Location loc;
@@ -461,6 +457,8 @@ static fir::MutableBoxValue
 genMutableBoxValue(Fortran::lower::AbstractConverter &converter,
                    mlir::Location loc,
                    const Fortran::parser::AllocateObject &allocObj) {
+  if (std::holds_alternative<Fortran::parser::StructureComponent>(allocObj.u))
+    TODO(loc, "allocatable or pointer components");
   const auto &symbol = unwrapSymbol(allocObj);
   Fortran::evaluate::DataRef ref(symbol);
   auto dyType = Fortran::evaluate::DynamicType::From(symbol);
@@ -617,7 +615,7 @@ private:
         else if (!lenParams.empty())
           lengths.emplace_back(builder.createConvert(loc, idxTy, lenParams[0]));
         else
-          mlir::emitError(
+          fir::emitFatalError(
               loc,
               "could not deduce character lengths in character allocation");
       }
@@ -680,10 +678,9 @@ private:
     const auto *typeSpec = getIfAllocateStmtTypeSpec();
     if (!typeSpec)
       return;
-    if (typeSpec->AsDerived()) {
-      mlir::emitError(loc, "TODO: setting derived type params in allocation");
-      return;
-    }
+    if (const auto *derived = typeSpec->AsDerived())
+      if (Fortran::semantics::CountLenParameters(*derived) > 0)
+        TODO(loc, "TODO: setting derived type params in allocation");
     if (typeSpec->category() ==
         Fortran::semantics::DeclTypeSpec::Category::Character) {
       auto lenParam = typeSpec->characterTypeSpec().length();
@@ -821,7 +818,7 @@ Fortran::lower::createUnallocatedBox(Fortran::lower::FirOpBuilder &builder,
   if (auto seqType = eleTy.dyn_cast<fir::SequenceType>())
     eleTy = seqType.getEleTy();
   if (eleTy.isa<fir::RecordType>())
-    mlir::emitError(loc, "TODO: Derived type allocatable initialization");
+    TODO(loc, "Derived type allocatable initialization");
   auto nullAddr = builder.createNullConstant(loc, heapType);
   mlir::Value shape;
   if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
@@ -910,9 +907,9 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
     eleTy = newTy;
   if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
     eleTy = seqTy.getEleTy();
-  if (eleTy.isa<fir::RecordType>()) {
-    mlir::emitError(loc, "TODO: deferred length type parameters.");
-  }
+  if (auto record = eleTy.dyn_cast<fir::RecordType>())
+    if (record.getNumLenParams() != 0)
+      TODO(loc, "deferred length type parameters.");
   if (eleTy.isa<fir::CharacterType>() && nonDeferredParams.empty()) {
     auto lenVar = builder.allocateLocal(loc, builder.getCharacterLengthType(),
                                         name + ".len", /*shape=*/llvm::None,
