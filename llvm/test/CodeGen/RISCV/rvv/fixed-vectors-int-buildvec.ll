@@ -173,3 +173,139 @@ define void @buildvec_dominant1_optsize_v2i32(<2 x i64>* %x) optsize {
   store <2 x i64> <i64 2049638230412172402, i64 -1>, <2 x i64>* %x
   ret void
 }
+
+define void @buildvec_seq_v8i8_v4i16(<8 x i8>* %x) {
+; CHECK-LABEL: buildvec_seq_v8i8_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, 513
+; CHECK-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vse8.v v25, (a0)
+; CHECK-NEXT:    ret
+  store <8 x i8> <i8 1, i8 2, i8 1, i8 2, i8 1, i8 2, i8 undef, i8 2>, <8 x i8>* %x
+  ret void
+}
+
+define void @buildvec_seq_v8i8_v2i32(<8 x i8>* %x) {
+; RV32-LABEL: buildvec_seq_v8i8_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 48
+; RV32-NEXT:    addi a1, a1, 513
+; RV32-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; RV32-NEXT:    vmv.v.x v25, a1
+; RV32-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; RV32-NEXT:    vse8.v v25, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_seq_v8i8_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 48
+; RV64-NEXT:    addiw a1, a1, 513
+; RV64-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; RV64-NEXT:    vmv.v.x v25, a1
+; RV64-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; RV64-NEXT:    vse8.v v25, (a0)
+; RV64-NEXT:    ret
+  store <8 x i8> <i8 1, i8 2, i8 3, i8 undef, i8 1, i8 2, i8 3, i8 undef>, <8 x i8>* %x
+  ret void
+}
+
+define void @buildvec_seq_v16i8_v2i64(<16 x i8>* %x) {
+; RV32-LABEL: buildvec_seq_v16i8_v2i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, %hi(.LCPI14_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI14_0)
+; RV32-NEXT:    vsetivli a2, 16, e8,m1,ta,mu
+; RV32-NEXT:    vle8.v v25, (a1)
+; RV32-NEXT:    vse8.v v25, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_seq_v16i8_v2i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 32880
+; RV64-NEXT:    addiw a1, a1, 1541
+; RV64-NEXT:    slli a1, a1, 16
+; RV64-NEXT:    addi a1, a1, 1027
+; RV64-NEXT:    slli a1, a1, 16
+; RV64-NEXT:    addi a1, a1, 513
+; RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; RV64-NEXT:    vmv.v.x v25, a1
+; RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
+; RV64-NEXT:    vse8.v v25, (a0)
+; RV64-NEXT:    ret
+  store <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8>, <16 x i8>* %x
+  ret void
+}
+
+define void @buildvec_seq2_v16i8_v2i64(<16 x i8>* %x) {
+; RV32-LABEL: buildvec_seq2_v16i8_v2i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lui a1, 528432
+; RV32-NEXT:    addi a1, a1, 513
+; RV32-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; RV32-NEXT:    vmv.v.x v25, a1
+; RV32-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
+; RV32-NEXT:    vse8.v v25, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_seq2_v16i8_v2i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, 528432
+; RV64-NEXT:    addiw a1, a1, 513
+; RV64-NEXT:    vsetivli a2, 2, e64,m1,ta,mu
+; RV64-NEXT:    vmv.v.x v25, a1
+; RV64-NEXT:    vsetivli a1, 16, e8,m1,ta,mu
+; RV64-NEXT:    vse8.v v25, (a0)
+; RV64-NEXT:    ret
+  store <16 x i8> <i8 1, i8 2, i8 3, i8 129, i8 -1, i8 -1, i8 -1, i8 -1, i8 1, i8 2, i8 3, i8 129, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8>* %x
+  ret void
+}
+
+define void @buildvec_seq_v9i8(<9 x i8>* %x) {
+; RV32-LABEL: buildvec_seq_v9i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, zero, 73
+; RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
+; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; RV32-NEXT:    vmv.v.i v25, 2
+; RV32-NEXT:    vmerge.vim v25, v25, 1, v0
+; RV32-NEXT:    addi a1, zero, 36
+; RV32-NEXT:    vsetivli a2, 1, e8,m1,ta,mu
+; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    vsetivli a1, 8, e8,m1,ta,mu
+; RV32-NEXT:    vmerge.vim v25, v25, 3, v0
+; RV32-NEXT:    vse8.v v25, (a0)
+; RV32-NEXT:    addi a1, zero, 3
+; RV32-NEXT:    sb a1, 8(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: buildvec_seq_v9i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi a1, zero, 3
+; RV64-NEXT:    sb a1, 8(a0)
+; RV64-NEXT:    lui a1, 4104
+; RV64-NEXT:    addiw a1, a1, 385
+; RV64-NEXT:    slli a1, a1, 17
+; RV64-NEXT:    addi a1, a1, 259
+; RV64-NEXT:    slli a1, a1, 16
+; RV64-NEXT:    addi a1, a1, 513
+; RV64-NEXT:    sd a1, 0(a0)
+; RV64-NEXT:    ret
+  store <9 x i8> <i8 1, i8 2, i8 3, i8 1, i8 2, i8 3, i8 1, i8 2, i8 3>, <9 x i8>* %x
+  ret void
+}
+
+define void @buildvec_seq_v4i16_v2i32(<4 x i16>* %x) {
+; CHECK-LABEL: buildvec_seq_v4i16_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a1, zero, -127
+; CHECK-NEXT:    vsetivli a2, 2, e32,m1,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vsetivli a1, 4, e16,m1,ta,mu
+; CHECK-NEXT:    vse16.v v25, (a0)
+; CHECK-NEXT:    ret
+  store <4 x i16> <i16 -127, i16 -1, i16 -127, i16 -1>, <4 x i16>* %x
+  ret void
+}
