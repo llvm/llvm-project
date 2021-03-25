@@ -7,6 +7,8 @@
 
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 void *BoringThread(void *arg) {
   char * volatile x = (char*)malloc(10);
   x[5] = 0;
@@ -23,7 +25,7 @@ void *BoringThread(void *arg) {
 
 void *UAFThread(void *arg) {
   char * volatile x = (char*)malloc(10);
-  fprintf(stderr, "ZZZ %p\n", x);
+  untag_fprintf(stderr, "ZZZ %p\n", x);
   free(x);
   x[5] = 42;
   // CHECK: ERROR: HWAddressSanitizer: tag-mismatch on address

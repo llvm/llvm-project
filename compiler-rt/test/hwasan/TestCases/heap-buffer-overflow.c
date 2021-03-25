@@ -15,6 +15,8 @@
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 static volatile char sink;
 
 int main(int argc, char **argv) {
@@ -22,20 +24,8 @@ int main(int argc, char **argv) {
   int offset = argc < 2 ? 40 : atoi(argv[1]);
   int size = argc < 3 ? 30 : atoi(argv[2]);
   char * volatile x = (char*)malloc(size);
-  fprintf(stderr, "base: %p access: %p\n", x, &x[offset]);
+  untag_fprintf(stderr, "base: %p access: %p\n", x, &x[offset]);
   sink = x[offset];
-
-#if defined(__x86_64__)
-  // Aliasing mode doesn't support the secondary allocator, so we fake a HWASan
-  // report instead of disabling the entire test.
-  if (size == 1000000) {
-    fprintf(stderr, "is a large allocated heap chunk; size: 1003520 offset: %d\n",
-            offset);
-    fprintf(stderr, "is located %s of 1000000-byte region\n",
-            offset == -30 ? "30 bytes to the left" : "0 bytes to the right");
-    return -1;
-  }
-#endif
 
 // CHECK40: allocated heap chunk; size: 32 offset: 8
 // CHECK40: is located 10 bytes to the right of 30-byte region

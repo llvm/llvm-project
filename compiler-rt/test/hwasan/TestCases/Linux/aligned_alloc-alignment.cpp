@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../utils.h"
+
 extern void *aligned_alloc(size_t alignment, size_t size);
 
 int main() {
@@ -18,7 +20,7 @@ int main() {
   // CHECK: {{#1 0x.* in main .*aligned_alloc-alignment.cpp:}}[[@LINE-3]]
   // CHECK: SUMMARY: HWAddressSanitizer: invalid-aligned-alloc-alignment
 
-  printf("pointer after failed aligned_alloc: %zd\n", (size_t)p);
+  untag_printf("pointer after failed aligned_alloc: %zd\n", (size_t)p);
   // CHECK-NULL: pointer after failed aligned_alloc: 0
 
   return 0;

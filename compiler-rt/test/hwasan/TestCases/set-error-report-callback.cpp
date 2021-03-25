@@ -5,8 +5,10 @@
 
 #include <sanitizer/hwasan_interface.h>
 
+#include "utils.h"
+
 __attribute__((no_sanitize("hwaddress"))) extern "C" void callback(const char *msg) {
-  fprintf(stderr, "== error start\n%s\n== error end\n", msg);
+  untag_fprintf(stderr, "== error start\n%s\n== error end\n", msg);
 }
 
 int main() {
