@@ -291,6 +291,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (!frame) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError,
+                                 "couldn't start parsing - no stack frame");
     LLDB_LOG(log, "no stack frame");
     return false;
   }

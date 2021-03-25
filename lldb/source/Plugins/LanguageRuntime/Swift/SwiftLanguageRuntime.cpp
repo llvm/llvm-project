@@ -661,223 +661,32 @@ void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
     });
 }
 
-static bool GetObjectDescription_ResultVariable(Process &process, Stream &str,
-                                                ValueObject &object) {
+std::string 
+SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Result(ValueObject &object) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-
-  StreamString expr_string;
-  expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(%s)",
-                     object.GetName().GetCString());
-
+  std::string expr_string
+      = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject({0})",
+                      object.GetName().GetCString()).str();
   if (log)
-    log->Printf("[GetObjectDescription_ResultVariable] expression: %s",
-                expr_string.GetData());
-
-  ValueObjectSP result_sp;
-  EvaluateExpressionOptions eval_options;
-  eval_options.SetLanguage(lldb::eLanguageTypeSwift);
-  eval_options.SetResultIsInternal(true);
-  eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
-  auto eval_result = process.GetTarget().EvaluateExpression(
-      expr_string.GetData(),
-      process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
-      result_sp, eval_options);
-
-  if (log) {
-    switch (eval_result) {
-    case eExpressionCompleted:
-      log->Printf("[GetObjectDescription_ResultVariable] eExpressionCompleted");
-      break;
-    case eExpressionSetupError:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionSetupError");
-      break;
-    case eExpressionParseError:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionParseError");
-      break;
-    case eExpressionDiscarded:
-      log->Printf("[GetObjectDescription_ResultVariable] eExpressionDiscarded");
-      break;
-    case eExpressionInterrupted:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionInterrupted");
-      break;
-    case eExpressionHitBreakpoint:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionHitBreakpoint");
-      break;
-    case eExpressionTimedOut:
-      log->Printf("[GetObjectDescription_ResultVariable] eExpressionTimedOut");
-      break;
-    case eExpressionResultUnavailable:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionResultUnavailable");
-      break;
-    case eExpressionStoppedForDebug:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionStoppedForDebug");
-      break;
-    case eExpressionThreadVanished:
-      log->Printf(
-          "[GetObjectDescription_ResultVariable] eExpressionThreadVanished");
-      break;
-    }
-  }
-
-  // sanitize the result of the expression before moving forward
-  if (!result_sp) {
-    if (log)
-      log->Printf("[GetObjectDescription_ResultVariable] expression generated "
-                  "no result");
-    return false;
-  }
-  if (result_sp->GetError().Fail()) {
-    if (log)
-      log->Printf("[GetObjectDescription_ResultVariable] expression generated "
-                  "error: %s",
-                  result_sp->GetError().AsCString());
-    return false;
-  }
-  if (false == result_sp->GetCompilerType().IsValid()) {
-    if (log)
-      log->Printf("[GetObjectDescription_ResultVariable] expression generated "
-                  "invalid type");
-    return false;
-  }
-
-  formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
-  dump_options.SetEscapeNonPrintables(false);
-  dump_options.SetQuote('\0');
-  dump_options.SetPrefixToken(nullptr);
-  if (formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str,
-          TypeSummaryOptions()
-              .SetLanguage(lldb::eLanguageTypeSwift)
-              .SetCapping(eTypeSummaryUncapped),
-          dump_options)) {
-    if (log)
-      log->Printf("[GetObjectDescription_ResultVariable] expression completed "
-                  "successfully");
-    return true;
-  } else {
-    if (log)
-      log->Printf("[GetObjectDescription_ResultVariable] expression generated "
-                  "invalid string data");
-    return false;
-  }
+    log->Printf("[GetObjectDescriptionExpr_Result] expression: %s",
+                expr_string.c_str());
+  return expr_string;
 }
 
-static bool GetObjectDescription_ObjectReference(Process &process, Stream &str,
-                                                 ValueObject &object) {
+std::string 
+SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Ref(ValueObject &object) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
 
   StreamString expr_string;
-  expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(Swift."
-                     "unsafeBitCast(0x%" PRIx64 ", to: AnyObject.self))",
-                     object.GetValueAsUnsigned(0));
+  std::string expr_str 
+      = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject(Swift."
+                      "unsafeBitCast({0:x}, to: AnyObject.self))",
+                      object.GetValueAsUnsigned(0)).str();
 
   if (log)
-    log->Printf("[GetObjectDescription_ObjectReference] expression: %s",
+    log->Printf("[GetObjectDescriptionExpr_Result] expression: %s",
                 expr_string.GetData());
-
-  ValueObjectSP result_sp;
-  EvaluateExpressionOptions eval_options;
-  eval_options.SetLanguage(lldb::eLanguageTypeSwift);
-  eval_options.SetResultIsInternal(true);
-  eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
-  auto eval_result = process.GetTarget().EvaluateExpression(
-      expr_string.GetData(),
-      process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
-      result_sp, eval_options);
-
-  if (log) {
-    switch (eval_result) {
-    case eExpressionCompleted:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionCompleted");
-      break;
-    case eExpressionSetupError:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionSetupError");
-      break;
-    case eExpressionParseError:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionParseError");
-      break;
-    case eExpressionDiscarded:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionDiscarded");
-      break;
-    case eExpressionInterrupted:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionInterrupted");
-      break;
-    case eExpressionHitBreakpoint:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionHitBreakpoint");
-      break;
-    case eExpressionTimedOut:
-      log->Printf("[GetObjectDescription_ObjectReference] eExpressionTimedOut");
-      break;
-    case eExpressionResultUnavailable:
-      log->Printf("[GetObjectDescription_ObjectReference] "
-                  "eExpressionResultUnavailable");
-      break;
-    case eExpressionStoppedForDebug:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionStoppedForDebug");
-      break;
-    case eExpressionThreadVanished:
-      log->Printf(
-          "[GetObjectDescription_ObjectReference] eExpressionThreadVanished");
-      break;
-    }
-  }
-
-  // sanitize the result of the expression before moving forward
-  if (!result_sp) {
-    if (log)
-      log->Printf("[GetObjectDescription_ObjectReference] expression generated "
-                  "no result");
-    return false;
-  }
-  if (result_sp->GetError().Fail()) {
-    if (log)
-      log->Printf("[GetObjectDescription_ObjectReference] expression generated "
-                  "error: %s",
-                  result_sp->GetError().AsCString());
-    return false;
-  }
-  if (false == result_sp->GetCompilerType().IsValid()) {
-    if (log)
-      log->Printf("[GetObjectDescription_ObjectReference] expression generated "
-                  "invalid type");
-    return false;
-  }
-
-  formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
-  dump_options.SetEscapeNonPrintables(false);
-  dump_options.SetQuote('\0');
-  dump_options.SetPrefixToken(nullptr);
-  if (formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str,
-          TypeSummaryOptions()
-              .SetLanguage(lldb::eLanguageTypeSwift)
-              .SetCapping(eTypeSummaryUncapped),
-          dump_options)) {
-    if (log)
-      log->Printf("[GetObjectDescription_ObjectReference] expression completed "
-                  "successfully");
-    return true;
-  } else {
-    if (log)
-      log->Printf("[GetObjectDescription_ObjectReference] expression generated "
-                  "invalid string data");
-    return false;
-  }
+  return expr_str;
 }
 
 static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
@@ -886,9 +695,10 @@ static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
              : nullptr;
 }
 
-static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
-                                            Process &process, Stream &str,
-                                            ValueObject &object) {
+std::string 
+SwiftLanguageRuntimeImpl::GetObjectDescriptionExpr_Copy(ValueObject &object,
+    lldb::addr_t &copy_location)
+{
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
 
   ValueObjectSP static_sp(object.GetStaticValue());
@@ -897,19 +707,20 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
   if (auto non_reference_type = static_type.GetNonReferenceType())
     static_type = non_reference_type;
 
-  Status error;
-
   // If we are in a generic context, here the static type of the object
   // might end up being generic (i.e. <T>). We want to make sure that
   // we correctly map the type into context before asking questions or
   // printing, as IRGen requires a fully realized type to work on.
-  auto frame_sp =
-      process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
+  StackFrameSP frame_sp = object.GetFrameSP();
+  if (!frame_sp)
+      frame_sp 
+          = m_process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
+
   auto *swift_ast_ctx =
       llvm::dyn_cast_or_null<TypeSystemSwift>(static_type.GetTypeSystem());
   if (swift_ast_ctx) {
     SwiftASTContextLock lock(GetSwiftExeCtx(object));
-    static_type = runtime->BindGenericTypeParameters(*frame_sp, static_type);
+    static_type = BindGenericTypeParameters(*frame_sp, static_type);
   }
 
   auto stride = 0;
@@ -917,114 +728,94 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
   if (opt_stride)
     stride = *opt_stride;
 
-  lldb::addr_t copy_location = process.AllocateMemory(
+  Status error;
+  copy_location = m_process.AllocateMemory(
       stride, ePermissionsReadable | ePermissionsWritable, error);
   if (copy_location == LLDB_INVALID_ADDRESS) {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] copy_location invalid");
-    return false;
+      log->Printf("[GetObjectDescriptionExpr_Copy] copy_location invalid");
+    return {};
   }
-  auto cleanup =
-      llvm::make_scope_exit([&]() { process.DeallocateMemory(copy_location); });
 
   DataExtractor data_extractor;
   if (0 == static_sp->GetData(data_extractor, error)) {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] data extraction failed");
-    return false;
+      log->Printf("[GetObjectDescriptionExpr_Copy] data extraction failed");
+    return {};
   }
 
-  if (0 == process.WriteMemory(copy_location, data_extractor.GetDataStart(),
+  if (0 == m_process.WriteMemory(copy_location, data_extractor.GetDataStart(),
                                data_extractor.GetByteSize(), error)) {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] memory copy failed");
-    return false;
+      log->Printf("[GetObjectDescriptionExpr_Copy] memory copy failed");
+    return {};
   }
 
-  StreamString expr_string;
-  expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(Swift."
-                     "UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ")!.pointee)",
-                     static_type.GetTypeName().GetCString(), copy_location);
-
+  std::string expr_string 
+      = llvm::formatv("Swift._DebuggerSupport.stringForPrintObject(Swift."
+                      "UnsafePointer<{0}>(bitPattern: {1:x})!.pointee)",
+                      static_type.GetTypeName().GetCString(), copy_location).str();
   if (log)
-    log->Printf("[GetObjectDescription_ObjectCopy] expression: %s",
-                expr_string.GetData());
+    log->Printf("[GetObjectDescriptionExpr_Copy] expression: %s",
+                expr_string.c_str());
+                
+  return expr_string;
+}
 
+bool 
+SwiftLanguageRuntimeImpl::RunObjectDescriptionExpr(ValueObject &object, 
+    std::string &expr_string, 
+    Stream &result)
+{
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
   ValueObjectSP result_sp;
   EvaluateExpressionOptions eval_options;
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetResultIsInternal(true);
   eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
-  auto eval_result = process.GetTarget().EvaluateExpression(
-      expr_string.GetData(),
-      process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
+  eval_options.SetTimeout(m_process.GetUtilityExpressionTimeout());
+  
+  StackFrameSP frame_sp = object.GetFrameSP();
+  if (!frame_sp)
+    frame_sp 
+        = m_process.GetThreadList().GetSelectedThread()->GetSelectedFrame();
+  auto eval_result = m_process.GetTarget().EvaluateExpression(
+      expr_string,
+      frame_sp.get(),
       result_sp, eval_options);
 
   if (log) {
-    switch (eval_result) {
-    case eExpressionCompleted:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionCompleted");
-      break;
-    case eExpressionSetupError:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionSetupError");
-      break;
-    case eExpressionParseError:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionParseError");
-      break;
-    case eExpressionDiscarded:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionDiscarded");
-      break;
-    case eExpressionInterrupted:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionInterrupted");
-      break;
-    case eExpressionHitBreakpoint:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionHitBreakpoint");
-      break;
-    case eExpressionTimedOut:
-      log->Printf("[GetObjectDescription_ObjectCopy] eExpressionTimedOut");
-      break;
-    case eExpressionResultUnavailable:
-      log->Printf(
-          "[GetObjectDescription_ObjectCopy] eExpressionResultUnavailable");
-      break;
-    case eExpressionStoppedForDebug:
-      log->Printf(
-          "[GetObjectDescription_ObjectCopy] eExpressionStoppedForDebug");
-      break;
-    case eExpressionThreadVanished:
-      log->Printf(
-          "[GetObjectDescription_ObjectCopy] eExpressionThreadVanished");
-      break;
-    }
+    const char *eval_result_str 
+        = m_process.ExecutionResultAsCString(eval_result);
+    log->Printf("[RunObjectDescriptionExpr] %s", eval_result_str);
   }
 
-  // sanitize the result of the expression before moving forward
+  // Sanity check the result of the expression before moving forward
   if (!result_sp) {
     if (log)
       log->Printf(
-          "[GetObjectDescription_ObjectCopy] expression generated no result");
+          "[RunObjectDescriptionExpr] expression generated no result");
 
-    str.Printf("expression produced no result");
-    return true;
+    result.Printf("expression produced no result");
+    return false;
   }
   if (result_sp->GetError().Fail()) {
     if (log)
       log->Printf(
-          "[GetObjectDescription_ObjectCopy] expression generated error: %s",
+          "[RunObjectDescriptionExpr] expression generated error: %s",
           result_sp->GetError().AsCString());
 
-    str.Printf("expression produced error: %s",
+    result.Printf("expression produced error: %s",
                result_sp->GetError().AsCString());
-    return true;
+    return false;
   }
   if (false == result_sp->GetCompilerType().IsValid()) {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] expression generated "
+      log->Printf("[RunObjectDescriptionExpr] expression generated "
                   "invalid type");
 
-    str.Printf("expression produced invalid result type");
-    return true;
+    result.Printf("expression produced invalid result type");
+    return false;
   }
 
   formatters::StringPrinter::ReadStringAndDumpToStreamOptions dump_options;
@@ -1032,22 +823,23 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
   dump_options.SetQuote('\0');
   dump_options.SetPrefixToken(nullptr);
   if (formatters::swift::String_SummaryProvider(
-          *result_sp.get(), str,
+          *result_sp.get(), result,
           TypeSummaryOptions()
               .SetLanguage(lldb::eLanguageTypeSwift)
               .SetCapping(eTypeSummaryUncapped),
           dump_options)) {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] expression completed "
+      log->Printf("[RunObjectDescriptionExpr] expression completed "
                   "successfully");
+    return true;
   } else {
     if (log)
-      log->Printf("[GetObjectDescription_ObjectCopy] expression generated "
+      log->Printf("[RunObjectDescriptionExpr] expression generated "
                   "invalid string data");
 
-    str.Printf("expression produced unprintable string");
+    result.Printf("expression produced unprintable string");
+    return false;
   }
-  return true;
 }
 
 static bool IsSwiftResultVariable(ConstString name) {
@@ -1079,6 +871,8 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
     return true;
   }
 
+  std::string expr_string;
+  
   if (::IsSwiftResultVariable(object.GetName())) {
     // if this thing is a Swift expression result variable, it has two
     // properties:
@@ -1086,26 +880,37 @@ bool SwiftLanguageRuntimeImpl::GetObjectDescription(Stream &str,
     // b) its type may be something we can't actually talk about in expressions
     // so, just use the result variable's name in the expression and be done
     // with it
-    StreamString probe_stream;
-    if (GetObjectDescription_ResultVariable(m_process, probe_stream, object)) {
-      str.Printf("%s", probe_stream.GetData());
-      return true;
-    }
+    expr_string = GetObjectDescriptionExpr_Result(object);
   } else if (::IsSwiftReferenceType(object)) {
     // if this is a Swift class, it has two properties:
     // a) we do not need its type name, AnyObject is just as good
     // b) its value is something we can directly use to refer to it
     // so, just use the ValueObject's pointer-value and be done with it
+    expr_string = GetObjectDescriptionExpr_Ref(object);
+  }
+  if (!expr_string.empty()) {
     StreamString probe_stream;
-    if (GetObjectDescription_ObjectReference(m_process, probe_stream, object)) {
+    if (RunObjectDescriptionExpr(object, expr_string, probe_stream)) {
       str.Printf("%s", probe_stream.GetData());
       return true;
     }
   }
+  // In general, don't try to use the name of the ValueObject as it might end up
+  // referring to the wrong thing.  Instead, copy the object data into the
+  // target and call object description on the copy.
+  lldb::addr_t copy_location = LLDB_INVALID_ADDRESS;
+  expr_string = GetObjectDescriptionExpr_Copy(object, copy_location);
+  if (copy_location == LLDB_INVALID_ADDRESS) {
+    str.Printf("Failed to allocate memory for copy object.");
+    return false;
+  }
 
-  // in general, don't try to use the name of the ValueObject as it might end up
-  // referring to the wrong thing
-  return GetObjectDescription_ObjectCopy(this, m_process, str, object);
+  auto cleanup =
+      llvm::make_scope_exit([&]() { m_process.DeallocateMemory(copy_location); });
+
+  if (expr_string.empty())
+    return false;
+  return RunObjectDescriptionExpr(object, expr_string, str);
 }
 
 StructuredDataImpl *
