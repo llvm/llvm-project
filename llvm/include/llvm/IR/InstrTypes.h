@@ -1555,6 +1555,15 @@ public:
     setAttributes(PAL);
   }
 
+  /// Removes noundef and other attributes that imply undefined behavior if a
+  /// `undef` or `poison` value is passed from the given argument.
+  void removeParamUndefImplyingAttrs(unsigned ArgNo) {
+    assert(ArgNo < getNumArgOperands() && "Out of bounds");
+    AttributeList PAL = getAttributes();
+    PAL = PAL.removeParamUndefImplyingAttributes(getContext(), ArgNo);
+    setAttributes(PAL);
+  }
+
   /// adds the dereferenceable attribute to the list of attributes.
   void addDereferenceableAttr(unsigned i, uint64_t Bytes) {
     AttributeList PAL = getAttributes();

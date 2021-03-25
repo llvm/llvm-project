@@ -562,6 +562,12 @@ void Function::removeParamAttrs(unsigned ArgNo, const AttrBuilder &Attrs) {
   setAttributes(PAL);
 }
 
+void Function::removeParamUndefImplyingAttrs(unsigned ArgNo) {
+  AttributeList PAL = getAttributes();
+  PAL = PAL.removeParamUndefImplyingAttributes(getContext(), ArgNo);
+  setAttributes(PAL);
+}
+
 void Function::addDereferenceableAttr(unsigned i, uint64_t Bytes) {
   AttributeList PAL = getAttributes();
   PAL = PAL.addDereferenceableAttr(getContext(), i, Bytes);

@@ -37,7 +37,7 @@ done:
 
 define i32 @compute(i8* noundef nonnull %ptr, i32 %x) #1 {
 ; CHECK-LABEL: define {{[^@]+}}@compute
-; CHECK-SAME: (i8* nocapture noundef nonnull readnone [[PTR:%.*]], i32 returned [[X:%.*]]) local_unnamed_addr #1
+; CHECK-SAME: (i8* nocapture readnone [[PTR:%.*]], i32 returned [[X:%.*]]) local_unnamed_addr #1
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   ret i32 %x
