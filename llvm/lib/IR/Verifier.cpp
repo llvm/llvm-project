@@ -922,8 +922,10 @@ void Verifier::visitDISubrange(const DISubrange &N) {
            "Subrange must contain count or upperBound", &N);
   AssertDI(!N.getRawCountNode() || !N.getRawUpperBound(),
            "Subrange can have any one of count or upperBound", &N);
-  AssertDI(!N.getRawCountNode() || N.getCount(),
-           "Count must either be a signed constant or a DIVariable", &N);
+  auto *CBound = N.getRawCountNode();
+  AssertDI(!CBound || isa<ConstantAsMetadata>(CBound) ||
+               isa<DIVariable>(CBound) || isa<DIExpression>(CBound),
+           "Count must be signed constant or DIVariable or DIExpression", &N);
   auto Count = N.getCount();
   AssertDI(!Count || !Count.is<ConstantInt *>() ||
                Count.get<ConstantInt *>()->getSExtValue() >= -1,

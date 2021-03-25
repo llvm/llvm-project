@@ -1313,9 +1313,6 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
   // Count == -1 then the array is unbounded and we do not emit
   // DW_AT_lower_bound and DW_AT_count attributes.
   int64_t DefaultLowerBound = getDefaultLowerBound();
-  int64_t Count = -1;
-  if (auto *CI = SR->getCount().dyn_cast<ConstantInt*>())
-    Count = CI->getSExtValue();
 
   auto AddBoundTypeEntry = [&](dwarf::Attribute Attr,
                                DISubrange::BoundType Bound) -> void {
@@ -1329,19 +1326,18 @@ void DwarfUnit::constructSubrangeDIE(DIE &Buffer, const DISubrange *SR,
       DwarfExpr.addExpression(BE);
       addBlock(DW_Subrange, Attr, DwarfExpr.finalize());
     } else if (auto *BI = Bound.dyn_cast<ConstantInt *>()) {
-      if (Attr != dwarf::DW_AT_lower_bound || DefaultLowerBound == -1 ||
-          BI->getSExtValue() != DefaultLowerBound)
+      if (Attr == dwarf::DW_AT_count) {
+        if (BI->getSExtValue() != -1)
+          addUInt(DW_Subrange, Attr, None, BI->getSExtValue());
+      } else if (Attr != dwarf::DW_AT_lower_bound || DefaultLowerBound == -1 ||
+                 BI->getSExtValue() != DefaultLowerBound)
         addSInt(DW_Subrange, Attr, dwarf::DW_FORM_sdata, BI->getSExtValue());
     }
   };
 
   AddBoundTypeEntry(dwarf::DW_AT_lower_bound, SR->getLowerBound());
 
-  if (auto *CV = SR->getCount().dyn_cast<DIVariable*>()) {
-    if (auto *CountVarDIE = getDIE(CV))
-      addDIEEntry(DW_Subrange, dwarf::DW_AT_count, *CountVarDIE);
-  } else if (Count != -1)
-    addUInt(DW_Subrange, dwarf::DW_AT_count, None, Count);
+  AddBoundTypeEntry(dwarf::DW_AT_count, SR->getCount());
 
   AddBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
 
