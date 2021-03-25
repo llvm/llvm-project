@@ -68,7 +68,7 @@
 "`P1006R1 <https://wg21.link/P1006R1>`__","LWG","Constexpr in std::pointer_traits","San Diego","|Complete|","8.0"
 "`P1007R3 <https://wg21.link/P1007R3>`__","LWG","``std::assume_aligned``\ ","San Diego","* *",""
 "`P1020R1 <https://wg21.link/P1020R1>`__","LWG","Smart pointer creation with default initialization","San Diego","* *",""
-"`P1032R1 <https://wg21.link/P1032R1>`__","LWG","Misc constexpr bits","San Diego","* *",""
+"`P1032R1 <https://wg21.link/P1032R1>`__","LWG","Misc constexpr bits","San Diego","|Complete|","13.0"
 "`P1085R2 <https://wg21.link/P1085R2>`__","LWG","Should Span be Regular?","San Diego","|Complete|","8.0"
 "`P1123R0 <https://wg21.link/P1123R0>`__","LWG","Editorial Guidance for merging P0019r8 and P0528r3","San Diego","* *",""
 "`P1148R0 <https://wg21.link/P1148R0>`__","LWG","Cleaning up Clause 20","San Diego","* *",""

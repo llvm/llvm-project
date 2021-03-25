@@ -26,9 +26,9 @@ class A
     int i_;
     char c_;
 public:
-    A(int i, char c) : i_(i), c_(c) {}
-    int get_i() const {return i_;}
-    char get_c() const {return c_;}
+    constexpr A(int i, char c) : i_(i), c_(c) {}
+    constexpr int get_i() const {return i_;}
+    constexpr char get_c() const {return c_;}
 };
 
 class B
@@ -37,13 +37,14 @@ class B
     unsigned u1_;
     unsigned u2_;
 public:
-    B(double d, unsigned u1, unsigned u2) : d_(d), u1_(u1), u2_(u2) {}
-    double get_d() const {return d_;}
-    unsigned get_u1() const {return u1_;}
-    unsigned get_u2() const {return u2_;}
+    constexpr explicit B(double d, unsigned u1, unsigned u2) : d_(d), u1_(u1), u2_(u2) {}
+    constexpr double get_d() const {return d_;}
+    constexpr unsigned get_u1() const {return u1_;}
+    constexpr unsigned get_u2() const {return u2_;}
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20
+bool test()
 {
     std::pair<A, B> p(std::piecewise_construct,
                       std::make_tuple(4, 'a'),
@@ -54,5 +55,15 @@ int main(int, char**)
     assert(p.second.get_u1() == 6u);
     assert(p.second.get_u2() == 2u);
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER >= 20
+    static_assert(test());
+#endif
+
+    return 0;
 }
