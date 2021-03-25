@@ -20,6 +20,9 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
     HelpText<"Use colors in diagnostics (default: auto)">,
     MetaVarName<"[auto,always,never]">,
     Group<grp_lld>;
+def threads_eq : Joined<["--"], "threads=">,
+    HelpText<"Number of threads. '1' disables multi-threading. By default all available hardware threads are used">,
+    Group<grp_lld>;
 def reproduce: Separate<["--"], "reproduce">,
     Group<grp_lld>;
 def reproduce_eq: Joined<["--"], "reproduce=">,

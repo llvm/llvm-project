@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
@@ -860,6 +861,16 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info, ""));
+
+  if (auto *arg = args.getLastArg(OPT_threads_eq)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads == 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    parallel::strategy = hardware_concurrency(threads);
+    // FIXME: use this to configure ThinLTO concurrency too
+  }
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
