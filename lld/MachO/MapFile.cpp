@@ -33,6 +33,7 @@
 #include "Symbols.h"
 #include "Target.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -92,6 +93,8 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
 void macho::writeMapFile() {
   if (config->mapFile.empty())
     return;
+
+  TimeTraceScope timeScope("Write map file");
 
   // Open a map file for writing.
   std::error_code ec;
