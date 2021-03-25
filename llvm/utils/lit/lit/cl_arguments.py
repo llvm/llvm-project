@@ -9,8 +9,10 @@ import lit.util
 
 
 class TestOrder(enum.Enum):
-    DEFAULT = enum.auto()
-    RANDOM = enum.auto()
+    # Older Python versions don't have enum.auto().
+    # Does upstream LLVM not have a build bot with Python 3.5?
+    DEFAULT = 1
+    RANDOM = 2
 
 
 def parse_args():
