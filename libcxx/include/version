@@ -160,7 +160,7 @@ __cpp_lib_type_trait_variable_templates                 201510L <type_traits>
 __cpp_lib_uncaught_exceptions                           201411L <exception>
 __cpp_lib_unordered_map_try_emplace                     201411L <unordered_map>
 __cpp_lib_unwrap_ref                                    201811L <functional>
-__cpp_lib_variant                                       201606L <variant>
+__cpp_lib_variant                                       202102L <variant>
 __cpp_lib_void_t                                        201411L <type_traits>
 
 */
@@ -259,7 +259,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_type_trait_variable_templates        201510L
 # define __cpp_lib_uncaught_exceptions                  201411L
 # define __cpp_lib_unordered_map_try_emplace            201411L
-# define __cpp_lib_variant                              201606L
+# define __cpp_lib_variant                              202102L
 # define __cpp_lib_void_t                               201411L
 #endif
 

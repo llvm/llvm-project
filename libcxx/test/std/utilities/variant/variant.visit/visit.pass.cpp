@@ -348,6 +348,86 @@ void test_caller_accepts_nonconst() {
   std::visit(Visitor{}, v);
 }
 
+struct MyVariant : std::variant<short, long, float> {};
+
+namespace std {
+template <size_t Index>
+void get(const MyVariant&) {
+  assert(false);
+}
+} // namespace std
+
+void test_derived_from_variant() {
+  auto v1 = MyVariant{42};
+  const auto cv1 = MyVariant{142};
+  std::visit([](auto x) { assert(x == 42); }, v1);
+  std::visit([](auto x) { assert(x == 142); }, cv1);
+  std::visit([](auto x) { assert(x == -1.25f); }, MyVariant{-1.25f});
+  std::visit([](auto x) { assert(x == 42); }, std::move(v1));
+  std::visit([](auto x) { assert(x == 142); }, std::move(cv1));
+
+  // Check that visit does not take index nor valueless_by_exception members from the base class.
+  struct EvilVariantBase {
+    int index;
+    char valueless_by_exception;
+  };
+
+  struct EvilVariant1 : std::variant<int, long, double>,
+                        std::tuple<int>,
+                        EvilVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant1{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant1{12.3});
+
+  // Check that visit unambiguously picks the variant, even if the other base has __impl member.
+  struct ImplVariantBase {
+    struct Callable {
+      bool operator()();
+    };
+
+    Callable __impl;
+  };
+
+  struct EvilVariant2 : std::variant<int, long, double>, ImplVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit([](auto x) { assert(x == 12); }, EvilVariant2{12});
+  std::visit([](auto x) { assert(x == 12.3); }, EvilVariant2{12.3});
+}
+
+struct any_visitor {
+  template <typename T>
+  void operator()(const T&) const {}
+};
+
+template <typename T, typename = decltype(std::visit(
+                          std::declval<any_visitor&>(), std::declval<T>()))>
+constexpr bool has_visit(int) {
+  return true;
+}
+
+template <typename T>
+constexpr bool has_visit(...) {
+  return false;
+}
+
+void test_sfinae() {
+  struct BadVariant : std::variant<short>, std::variant<long, float> {};
+  struct BadVariant2 : private std::variant<long, float> {};
+  struct GoodVariant : std::variant<long, float> {};
+  struct GoodVariant2 : GoodVariant {};
+
+  static_assert(!has_visit<int>(0));
+  static_assert(!has_visit<BadVariant>(0));
+  static_assert(!has_visit<BadVariant2>(0));
+  static_assert(has_visit<std::variant<int>>(0));
+  static_assert(has_visit<GoodVariant>(0));
+  static_assert(has_visit<GoodVariant2>(0));
+}
+
 int main(int, char**) {
   test_call_operator_forwarding();
   test_argument_forwarding();
@@ -355,6 +435,8 @@ int main(int, char**) {
   test_constexpr();
   test_exceptions();
   test_caller_accepts_nonconst();
+  test_derived_from_variant();
+  test_sfinae();
 
   return 0;
 }
