@@ -131,7 +131,10 @@ public:
 
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
-  
+
+  static bool
+  IsSwiftAsyncAwaitResumePartialFunctionSymbol(llvm::StringRef name);
+
   enum DemangleMode { eSimplified, eTypeName, eDisplayTypeName };
   static std::string DemangleSymbolAsString(llvm::StringRef symbol,
                                             DemangleMode mode,

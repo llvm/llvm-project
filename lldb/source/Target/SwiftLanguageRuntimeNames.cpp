@@ -93,6 +93,16 @@ bool SwiftLanguageRuntime::IsSwiftAsyncFunctionSymbol(StringRef name) {
   return ::IsSwiftAsyncFunctionSymbol(node);
 }
 
+bool SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+    StringRef name) {
+  if (!IsSwiftMangledName(name))
+    return false;
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = ctx.demangleSymbolAsNode(name);
+  return hasChild(node, Node::Kind::AsyncAwaitResumePartialFunction);
+}
+
 static ThunkKind GetThunkKind(Symbol *symbol) {
   auto symbol_name = symbol->GetMangled().GetMangledName().GetStringRef();
 
