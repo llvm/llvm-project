@@ -2121,7 +2121,7 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
       auto &parsedOps = (*topLevelOp)->getRegion(0).front().getOperations();
       auto &destOps = topLevelBlock->getOperations();
       destOps.splice(destOps.empty() ? destOps.end() : std::prev(destOps.end()),
-                     parsedOps, parsedOps.begin(), std::prev(parsedOps.end()));
+                     parsedOps, parsedOps.begin(), parsedOps.end());
       return success();
     }
 

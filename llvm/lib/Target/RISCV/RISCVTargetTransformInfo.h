@@ -48,18 +48,31 @@ public:
   int getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                           Type *Ty, TTI::TargetCostKind CostKind);
 
+  TargetTransformInfo::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+
   bool shouldExpandReduction(const IntrinsicInst *II) const;
   bool supportsScalableVectors() const { return ST->hasStdExtV(); }
   Optional<unsigned> getMaxVScale() const;
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
-      if (ST->hasStdExtV())
-        return ST->getMinRVVVectorSizeInBits();
-      return 0;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(ST->getXLen());
+    case TargetTransformInfo::RGK_FixedWidthVector:
+      return TypeSize::getFixed(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(
+          ST->hasStdExtV() ? ST->getMinRVVVectorSizeInBits() : 0);
     }
-    return ST->getXLen();
+
+    llvm_unreachable("Unsupported register kind");
   }
+
+  unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
+                                  const Value *Ptr, bool VariableMask,
+                                  Align Alignment, TTI::TargetCostKind CostKind,
+                                  const Instruction *I);
 
   bool isLegalElementTypeForRVV(Type *ScalarTy) {
     if (ScalarTy->isPointerTy())

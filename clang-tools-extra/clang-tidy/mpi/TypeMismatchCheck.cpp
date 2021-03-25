@@ -8,7 +8,6 @@
 
 #include "TypeMismatchCheck.h"
 #include "clang/Lex/Lexer.h"
-#include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include "clang/Tooling/FixIt.h"
 #include <map>
 #include <unordered_set>
@@ -241,13 +240,15 @@ void TypeMismatchCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void TypeMismatchCheck::check(const MatchFinder::MatchResult &Result) {
-  static ento::mpi::MPIFunctionClassifier FuncClassifier(*Result.Context);
   const auto *const CE = Result.Nodes.getNodeAs<CallExpr>("CE");
   if (!CE->getDirectCallee())
     return;
 
+  if (!FuncClassifier)
+    FuncClassifier.emplace(*Result.Context);
+
   const IdentifierInfo *Identifier = CE->getDirectCallee()->getIdentifier();
-  if (!Identifier || !FuncClassifier.isMPIType(Identifier))
+  if (!Identifier || !FuncClassifier->isMPIType(Identifier))
     return;
 
   // These containers are used, to capture buffer, MPI datatype pairs.
@@ -281,18 +282,18 @@ void TypeMismatchCheck::check(const MatchFinder::MatchResult &Result) {
   };
 
   // Collect all buffer, MPI datatype pairs for the inspected call expression.
-  if (FuncClassifier.isPointToPointType(Identifier)) {
+  if (FuncClassifier->isPointToPointType(Identifier)) {
     AddPair(0, 2);
-  } else if (FuncClassifier.isCollectiveType(Identifier)) {
-    if (FuncClassifier.isReduceType(Identifier)) {
+  } else if (FuncClassifier->isCollectiveType(Identifier)) {
+    if (FuncClassifier->isReduceType(Identifier)) {
       AddPair(0, 3);
       AddPair(1, 3);
-    } else if (FuncClassifier.isScatterType(Identifier) ||
-               FuncClassifier.isGatherType(Identifier) ||
-               FuncClassifier.isAlltoallType(Identifier)) {
+    } else if (FuncClassifier->isScatterType(Identifier) ||
+               FuncClassifier->isGatherType(Identifier) ||
+               FuncClassifier->isAlltoallType(Identifier)) {
       AddPair(0, 2);
       AddPair(3, 5);
-    } else if (FuncClassifier.isBcastType(Identifier)) {
+    } else if (FuncClassifier->isBcastType(Identifier)) {
       AddPair(0, 2);
     }
   }
@@ -331,6 +332,7 @@ void TypeMismatchCheck::checkArguments(ArrayRef<const Type *> BufferTypes,
   }
 }
 
+void TypeMismatchCheck::onEndOfTranslationUnit() { FuncClassifier.reset(); }
 } // namespace mpi
 } // namespace tidy
 } // namespace clang

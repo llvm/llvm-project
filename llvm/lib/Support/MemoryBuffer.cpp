@@ -105,9 +105,8 @@ public:
 
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
-getFileAux(const Twine &Filename, int64_t FileSize, uint64_t MapSize,
-           uint64_t Offset, bool RequiresNullTerminator, bool IsVolatile,
-           bool IsText);
+getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
+           bool IsText, bool RequiresNullTerminator, bool IsVolatile);
 
 std::unique_ptr<MemoryBuffer>
 MemoryBuffer::getMemBuffer(StringRef InputData, StringRef BufferName,
@@ -141,21 +140,22 @@ MemoryBuffer::getMemBufferCopy(StringRef InputData, const Twine &BufferName) {
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFileOrSTDIN(const Twine &Filename, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsText) {
+MemoryBuffer::getFileOrSTDIN(const Twine &Filename, bool IsText,
+                             bool RequiresNullTerminator) {
   SmallString<256> NameBuf;
   StringRef NameRef = Filename.toStringRef(NameBuf);
 
   if (NameRef == "-")
     return getSTDIN();
-  return getFile(Filename, FileSize, RequiresNullTerminator, false, IsText);
+  return getFile(Filename, IsText, RequiresNullTerminator,
+                 /*IsVolatile=*/false);
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 MemoryBuffer::getFileSlice(const Twine &FilePath, uint64_t MapSize,
                            uint64_t Offset, bool IsVolatile) {
-  return getFileAux<MemoryBuffer>(FilePath, -1, MapSize, Offset, false,
-                                  IsVolatile, false);
+  return getFileAux<MemoryBuffer>(FilePath, MapSize, Offset, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false, IsVolatile);
 }
 
 //===----------------------------------------------------------------------===//
@@ -242,11 +242,10 @@ getMemoryBufferForStream(sys::fs::file_t FD, const Twine &BufferName) {
 }
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
-MemoryBuffer::getFile(const Twine &Filename, int64_t FileSize,
-                      bool RequiresNullTerminator, bool IsVolatile,
-                      bool IsText) {
-  return getFileAux<MemoryBuffer>(Filename, FileSize, FileSize, 0,
-                                  RequiresNullTerminator, IsVolatile, IsText);
+MemoryBuffer::getFile(const Twine &Filename, bool IsText,
+                      bool RequiresNullTerminator, bool IsVolatile) {
+  return getFileAux<MemoryBuffer>(Filename, /*MapSize=*/-1, /*Offset=*/0,
+                                  IsText, RequiresNullTerminator, IsVolatile);
 }
 
 template <typename MB>
@@ -257,33 +256,32 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
 
 template <typename MB>
 static ErrorOr<std::unique_ptr<MB>>
-getFileAux(const Twine &Filename, int64_t FileSize, uint64_t MapSize,
-           uint64_t Offset, bool RequiresNullTerminator, bool IsVolatile,
-           bool IsText) {
+getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
+           bool IsText, bool RequiresNullTerminator, bool IsVolatile) {
   Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForRead(
       Filename, IsText ? sys::fs::OF_Text : sys::fs::OF_None);
   if (!FDOrErr)
     return errorToErrorCode(FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;
-  auto Ret = getOpenFileImpl<MB>(FD, Filename, FileSize, MapSize, Offset,
+  auto Ret = getOpenFileImpl<MB>(FD, Filename, /*FileSize=*/-1, MapSize, Offset,
                                  RequiresNullTerminator, IsVolatile);
   sys::fs::closeFile(FD);
   return Ret;
 }
 
 ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
-WritableMemoryBuffer::getFile(const Twine &Filename, int64_t FileSize,
-                              bool IsVolatile) {
-  return getFileAux<WritableMemoryBuffer>(Filename, FileSize, FileSize, 0,
-                                          /*RequiresNullTerminator*/ false,
-                                          IsVolatile, false);
+WritableMemoryBuffer::getFile(const Twine &Filename, bool IsVolatile) {
+  return getFileAux<WritableMemoryBuffer>(
+      Filename, /*MapSize=*/-1, /*Offset=*/0, /*IsText=*/false,
+      /*RequiresNullTerminator=*/false, IsVolatile);
 }
 
 ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 WritableMemoryBuffer::getFileSlice(const Twine &Filename, uint64_t MapSize,
                                    uint64_t Offset, bool IsVolatile) {
-  return getFileAux<WritableMemoryBuffer>(Filename, -1, MapSize, Offset, false,
-                                          IsVolatile, false);
+  return getFileAux<WritableMemoryBuffer>(
+      Filename, MapSize, Offset, /*IsText=*/false,
+      /*RequiresNullTerminator=*/false, IsVolatile);
 }
 
 std::unique_ptr<WritableMemoryBuffer>

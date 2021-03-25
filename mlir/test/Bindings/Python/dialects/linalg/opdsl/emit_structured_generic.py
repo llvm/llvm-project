@@ -32,7 +32,7 @@ with Context() as ctx, Location.unknown():
   i8 = IntegerType.get_signless(8)
   i16 = IntegerType.get_signless(16)
   i32 = IntegerType.get_signless(32)
-  with InsertionPoint.at_block_terminator(module.body):
+  with InsertionPoint(module.body):
 
     # Note that these all have the same indexing maps. We verify the first and
     # then do more permutation tests on casting and body generation

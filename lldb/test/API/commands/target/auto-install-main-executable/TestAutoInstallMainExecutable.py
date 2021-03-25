@@ -15,6 +15,7 @@ class TestAutoInstallMainExecutable(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @llgs_test
     @skipIfRemote
     @expectedFailureAll(oslist=["windows"]) # process modules not loaded
     def test_target_auto_install_main_executable(self):

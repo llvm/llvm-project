@@ -19,19 +19,21 @@
 
 #include "functions.h"
 
+// clang-format off
 template <class F, class... Args>
-requires std::invocable<F, Args...> constexpr void
-ModelsRegularInvocable(F, Args&&...) noexcept{};
+requires std::regular_invocable<F, Args...>
+constexpr void ModelsRegularInvocable(F, Args&&...) noexcept {}
 
 template <class F, class... Args>
-requires(!std::invocable<F, Args...>) constexpr
-    void NotRegularInvocable(F, Args&&...) noexcept {}
+requires (!std::regular_invocable<F, Args...>)
+constexpr void NotRegularInvocable(F, Args&&...) noexcept {}
+// clang-format on
 
-static_assert(!std::invocable<void>);
-static_assert(!std::invocable<void*>);
-static_assert(!std::invocable<int>);
-static_assert(!std::invocable<int&>);
-static_assert(!std::invocable<int&&>);
+static_assert(!std::regular_invocable<void>);
+static_assert(!std::regular_invocable<void*>);
+static_assert(!std::regular_invocable<int>);
+static_assert(!std::regular_invocable<int&>);
+static_assert(!std::regular_invocable<int&&>);
 
 int main(int, char**) {
   {

@@ -399,6 +399,30 @@ def getFPAs32BitInt : SDNodeXForm<fpimm, [{
                                    SDLoc(N), MVT::i32);
 }]>;
 
+// Check if the value can be converted to be single precision immediate, which
+// can be exploited by XXSPLTIDP. Ensure that it cannot be converted to single
+// precision before exploiting with XXSPLTI32DX.
+def nzFPImmAsi64 : PatLeaf<(fpimm), [{
+  APFloat APFloatOfN = N->getValueAPF();
+  return !N->isExactlyValue(+0.0) && !checkConvertToNonDenormSingle(APFloatOfN);
+}]>;
+
+// Get the Hi bits of a 64 bit immediate.
+def getFPAs64BitIntHi : SDNodeXForm<fpimm, [{
+  APFloat APFloatOfN = N->getValueAPF();
+  uint32_t Hi = (uint32_t)((APFloatOfN.bitcastToAPInt().getZExtValue() &
+                            0xFFFFFFFF00000000LL) >> 32);
+  return CurDAG->getTargetConstant(Hi, SDLoc(N), MVT::i32);
+}]>;
+
+// Get the Lo bits of a 64 bit immediate.
+def getFPAs64BitIntLo : SDNodeXForm<fpimm, [{
+  APFloat APFloatOfN = N->getValueAPF();
+  uint32_t Lo = (uint32_t)(APFloatOfN.bitcastToAPInt().getZExtValue() &
+                           0xFFFFFFFF);
+  return CurDAG->getTargetConstant(Lo, SDLoc(N), MVT::i32);
+}]>;
+
 def imm34 : PatLeaf<(imm), [{
   return isInt<34>(N->getSExtValue());
 }]>;

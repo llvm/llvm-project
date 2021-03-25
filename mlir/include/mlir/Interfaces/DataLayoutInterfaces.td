@@ -208,7 +208,23 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
                     "::mlir::DataLayoutEntryListRef":$params),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::detail::getDefaultTypeSize(type, dataLayout, params);
+        unsigned bits = ConcreteOp::getTypeSizeInBits(type, dataLayout, params);
+        return ::llvm::divideCeil(bits, 8);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the size of the given type in bits computed "
+                      "using the relevant entries. The data layout object can "
+                      "be used for recursive queries.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getTypeSizeInBits",
+      /*args=*/(ins "::mlir::Type":$type,
+                    "const ::mlir::DataLayout &":$dataLayout,
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultTypeSizeInBits(type, dataLayout,
+                                                        params);
       }]
     >,
     StaticInterfaceMethod<
@@ -281,6 +297,18 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*description=*/"Returns the size of this type in bytes.",
       /*retTy=*/"unsigned",
       /*methodName=*/"getTypeSize",
+      /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        unsigned bits = $_type.getTypeSizeInBits(dataLayout, params);
+        return ::llvm::divideCeil(bits, 8);
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the size of this type in bits.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getTypeSizeInBits",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
                     "::mlir::DataLayoutEntryListRef":$params)
     >,

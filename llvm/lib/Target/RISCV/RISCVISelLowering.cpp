@@ -1132,6 +1132,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   SDValue Mask, VL;
   std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
+  MVT XLenVT = Subtarget.getXLenVT();
   unsigned NumElts = Op.getNumOperands();
 
   if (VT.getVectorElementType() == MVT::i1) {
@@ -1167,7 +1168,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       uint64_t Bits = 0;
       unsigned BitPos = 0, IntegerEltIdx = 0;
-      MVT XLenVT = Subtarget.getXLenVT();
       SDValue Vec = DAG.getUNDEF(IntegerViaVecVT);
 
       for (unsigned I = 0; I < NumElts; I++, BitPos++) {
@@ -1239,6 +1239,64 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to detect "hidden" splats, which only reveal themselves as splats
+  // when re-interpreted as a vector with a larger element type. For example,
+  //   v4i16 = build_vector i16 0, i16 1, i16 0, i16 1
+  // could be instead splat as
+  //   v2i32 = build_vector i32 0x00010000, i32 0x00010000
+  // TODO: This optimization could also work on non-constant splats, but it
+  // would require bit-manipulation instructions to construct the splat value.
+  SmallVector<SDValue> Sequence;
+  unsigned EltBitSize = VT.getScalarSizeInBits();
+  const auto *BV = cast<BuildVectorSDNode>(Op);
+  if (VT.isInteger() && EltBitSize < 64 &&
+      ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
+      BV->getRepeatedSequence(Sequence) &&
+      (Sequence.size() * EltBitSize) <= 64) {
+    unsigned SeqLen = Sequence.size();
+    MVT ViaIntVT = MVT::getIntegerVT(EltBitSize * SeqLen);
+    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, NumElts / SeqLen);
+    assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32 ||
+            ViaIntVT == MVT::i64) &&
+           "Unexpected sequence type");
+
+    unsigned EltIdx = 0;
+    uint64_t EltMask = maskTrailingOnes<uint64_t>(EltBitSize);
+    uint64_t SplatValue = 0;
+    // Construct the amalgamated value which can be splatted as this larger
+    // vector type.
+    for (const auto &SeqV : Sequence) {
+      if (!SeqV.isUndef())
+        SplatValue |= ((cast<ConstantSDNode>(SeqV)->getZExtValue() & EltMask)
+                       << (EltIdx * EltBitSize));
+      EltIdx++;
+    }
+
+    // On RV64, sign-extend from 32 to 64 bits where possible in order to
+    // achieve better constant materializion.
+    if (Subtarget.is64Bit() && ViaIntVT == MVT::i32)
+      SplatValue = SignExtend64(SplatValue, 32);
+
+    // Since we can't introduce illegal i64 types at this stage, we can only
+    // perform an i64 splat on RV32 if it is its own sign-extended value. That
+    // way we can use RVV instructions to splat.
+    assert((ViaIntVT.bitsLE(XLenVT) ||
+            (!Subtarget.is64Bit() && ViaIntVT == MVT::i64)) &&
+           "Unexpected bitcast sequence");
+    if (ViaIntVT.bitsLE(XLenVT) || isInt<32>(SplatValue)) {
+      SDValue ViaVL =
+          DAG.getConstant(ViaVecVT.getVectorNumElements(), DL, XLenVT);
+      MVT ViaContainerVT =
+          RISCVTargetLowering::getContainerForFixedLengthVector(DAG, ViaVecVT,
+                                                                Subtarget);
+      SDValue Splat =
+          DAG.getNode(RISCVISD::VMV_V_X_VL, DL, ViaContainerVT,
+                      DAG.getConstant(SplatValue, DL, XLenVT), ViaVL);
+      Splat = convertFromScalableVector(ViaVecVT, Splat, DAG, Subtarget);
+      return DAG.getBitcast(VT, Splat);
+    }
+  }
+
   // Try and optimize BUILD_VECTORs with "dominant values" - these are values
   // which constitute a large proportion of the elements. In such cases we can
   // splat a vector with the dominant element and make up the shortfall with
@@ -1270,7 +1328,6 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   }
 
   assert(DominantValue && "Not expecting an all-undef BUILD_VECTOR");
-  MVT XLenVT = Subtarget.getXLenVT();
   unsigned NumDefElts = NumElts - NumUndefElts;
   unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
 
@@ -1314,8 +1371,11 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
+  SDValue V2 = Op.getOperand(1);
   SDLoc DL(Op);
+  MVT XLenVT = Subtarget.getXLenVT();
   MVT VT = Op.getSimpleValueType();
+  unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
   if (SVN->isSplat()) {
@@ -1325,16 +1385,38 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
           DAG, VT, Subtarget);
 
       V1 = convertToScalableVector(ContainerVT, V1, DAG, Subtarget);
-      assert(Lane < (int)VT.getVectorNumElements() && "Unexpected lane!");
+      assert(Lane < (int)NumElts && "Unexpected lane!");
 
       SDValue Mask, VL;
       std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-      MVT XLenVT = Subtarget.getXLenVT();
       SDValue Gather =
           DAG.getNode(RISCVISD::VRGATHER_VX_VL, DL, ContainerVT, V1,
                       DAG.getConstant(Lane, DL, XLenVT), Mask, VL);
       return convertFromScalableVector(VT, Gather, DAG, Subtarget);
     }
+  }
+
+  // Detect shuffles which can be re-expressed as vector selects.
+  SmallVector<SDValue> MaskVals;
+  // By default we preserve the original operand order, and select LHS as true
+  // and RHS as false. However, since RVV vector selects may feature splats but
+  // only on the LHS, we may choose to invert our mask and instead select
+  // between RHS and LHS.
+  bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
+
+  bool IsSelect = all_of(enumerate(SVN->getMask()), [&](const auto &MaskIdx) {
+    int MaskIndex = MaskIdx.value();
+    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ SwapOps;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
+  });
+
+  if (IsSelect) {
+    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, SwapOps ? V2 : V1,
+                       SwapOps ? V1 : V2);
   }
 
   return SDValue();
@@ -3894,7 +3976,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     bool IsAdd = N->getOpcode() == ISD::UADDO;
-    SDLoc DL(N);
     // Create an ADDW or SUBW.
     SDValue LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
@@ -3918,7 +3999,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::USUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    SDLoc DL(N);
     if (Subtarget.hasStdExtZbb()) {
       // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
       // sign extend allows overflow of the lower 32 bits to be detected on
@@ -3966,7 +4046,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // This is similar to customLegalizeToWOp, except that we pass the second
     // operand (a TargetConstant) straight through: it is already of type
     // XLenVT.
-    SDLoc DL(N);
     RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
@@ -3981,7 +4060,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // There is no SHFLIW instruction, but we can just promote the operation.
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    SDLoc DL(N);
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue NewRes =
@@ -4033,7 +4111,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // transferred to the destination register. We issue two of these from the
     // upper- and lower- halves of the SEW-bit vector element, slid down to the
     // first element.
-    SDLoc DL(N);
     SDValue Vec = N->getOperand(0);
     SDValue Idx = N->getOperand(1);
 

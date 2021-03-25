@@ -477,6 +477,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::OpenCL:
       LangStd = LangStandard::lang_opencl10;
       break;
+    case clang::Language::OpenCLCXX:
+      LangStd = LangStandard::lang_openclcpp;
+      break;
     case clang::Language::CUDA:
       LangStd = LangStandard::lang_cuda;
       break;

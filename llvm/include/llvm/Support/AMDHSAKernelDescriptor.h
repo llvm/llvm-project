@@ -165,7 +165,8 @@ enum : int32_t {
 struct kernel_descriptor_t {
   uint32_t group_segment_fixed_size;
   uint32_t private_segment_fixed_size;
-  uint8_t reserved0[8];
+  uint32_t kernarg_size;
+  uint8_t reserved0[4];
   int64_t kernel_code_entry_byte_offset;
   uint8_t reserved1[20];
   uint32_t compute_pgm_rsrc3; // GFX10+ and GFX90A+
@@ -178,7 +179,8 @@ struct kernel_descriptor_t {
 enum : uint32_t {
   GROUP_SEGMENT_FIXED_SIZE_OFFSET = 0,
   PRIVATE_SEGMENT_FIXED_SIZE_OFFSET = 4,
-  RESERVED0_OFFSET = 8,
+  KERNARG_SIZE_OFFSET = 8,
+  RESERVED0_OFFSET = 12,
   KERNEL_CODE_ENTRY_BYTE_OFFSET_OFFSET = 16,
   RESERVED1_OFFSET = 24,
   COMPUTE_PGM_RSRC3_OFFSET = 44,
@@ -197,6 +199,9 @@ static_assert(offsetof(kernel_descriptor_t, group_segment_fixed_size) ==
 static_assert(offsetof(kernel_descriptor_t, private_segment_fixed_size) ==
                   PRIVATE_SEGMENT_FIXED_SIZE_OFFSET,
               "invalid offset for private_segment_fixed_size");
+static_assert(offsetof(kernel_descriptor_t, kernarg_size) ==
+                  KERNARG_SIZE_OFFSET,
+              "invalid offset for kernarg_size");
 static_assert(offsetof(kernel_descriptor_t, reserved0) == RESERVED0_OFFSET,
               "invalid offset for reserved0");
 static_assert(offsetof(kernel_descriptor_t, kernel_code_entry_byte_offset) ==

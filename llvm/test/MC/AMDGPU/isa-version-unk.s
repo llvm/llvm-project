@@ -7,7 +7,7 @@
 // RUN: not llvm-mc -triple amdgcn-amd-amdpal -mcpu=iceland %s 2>&1 | FileCheck --check-prefix=OSABI-PAL-ERR %s
 
 // OSABI-UNK: .amd_amdgpu_isa "amdgcn-amd-unknown--gfx802"
-// OSABI-UNK-ERR: error: .amd_amdgpu_isa directive does not match triple and/or mcpu arguments specified through the command line
-// OSABI-HSA-ERR: error: .amd_amdgpu_isa directive does not match triple and/or mcpu arguments specified through the command line
-// OSABI-PAL-ERR: error: .amd_amdgpu_isa directive does not match triple and/or mcpu arguments specified through the command line
+// OSABI-UNK-ERR: error: target id must match options
+// OSABI-HSA-ERR: error: target id must match options
+// OSABI-PAL-ERR: error: target id must match options
 .amd_amdgpu_isa "amdgcn-amd-unknown--gfx802"

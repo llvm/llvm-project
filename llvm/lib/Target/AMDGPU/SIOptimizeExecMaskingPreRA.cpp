@@ -416,15 +416,20 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       Register SavedExec = I->getOperand(0).getReg();
-      if (SavedExec.isVirtual() && MRI->hasOneNonDBGUse(SavedExec) &&
-          MRI->use_instr_nodbg_begin(SavedExec)->getParent() ==
-              I->getParent()) {
-        LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
-        LIS->RemoveMachineInstrFromMaps(*I);
-        I->eraseFromParent();
-        MRI->replaceRegWith(SavedExec, ExecReg);
-        LIS->removeInterval(SavedExec);
-        Changed = true;
+      if (SavedExec.isVirtual() && MRI->hasOneNonDBGUse(SavedExec)) {
+        MachineInstr *SingleExecUser = &*MRI->use_instr_nodbg_begin(SavedExec);
+        int Idx = SingleExecUser->findRegisterUseOperandIdx(SavedExec);
+        assert(Idx != -1);
+        if (SingleExecUser->getParent() == I->getParent() &&
+            !SingleExecUser->getOperand(Idx).isImplicit() &&
+            TII->isOperandLegal(*SingleExecUser, Idx, &I->getOperand(1))) {
+          LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
+          LIS->RemoveMachineInstrFromMaps(*I);
+          I->eraseFromParent();
+          MRI->replaceRegWith(SavedExec, ExecReg);
+          LIS->removeInterval(SavedExec);
+          Changed = true;
+        }
       }
       break;
     }

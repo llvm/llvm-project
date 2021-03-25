@@ -17144,6 +17144,8 @@ vec_revb(vector unsigned __int128 __a) {
 
 /* vec_xl */
 
+#define vec_xld2 vec_xl
+#define vec_xlw4 vec_xl
 typedef vector signed char unaligned_vec_schar __attribute__((aligned(1)));
 typedef vector unsigned char unaligned_vec_uchar __attribute__((aligned(1)));
 typedef vector signed short unaligned_vec_sshort __attribute__((aligned(1)));
@@ -17362,6 +17364,8 @@ vec_xl_zext(ptrdiff_t __offset, const unsigned long long *__pointer) {
 
 /* vec_xst */
 
+#define vec_xstd2 vec_xst
+#define vec_xstw4 vec_xst
 static inline __ATTRS_o_ai void
 vec_xst(vector signed char __vec, ptrdiff_t __offset, signed char *__ptr) {
   *(unaligned_vec_schar *)(__ptr + __offset) = __vec;

@@ -65,7 +65,8 @@ std::unique_ptr<Pass> createLinalgDetensorizePass();
 /// Patterns to fold an expanding (collapsing) tensor_reshape operation with its
 /// producer (consumer) generic operation by expanding the dimensionality of the
 /// loop in the generic op.
-void populateFoldReshapeOpsByExpansionPatterns(RewritePatternSet &patterns);
+void populateFoldReshapeOpsByExpansionPatterns(
+    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes = false);
 
 /// Patterns to fold a collapsing (expanding) tensor_reshape operation with its
 /// producer (consumer) generic/indexed_generic operation by linearizing the
@@ -83,7 +84,8 @@ void populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns);
 
 /// Patterns for fusing linalg operation on tensors.
-void populateLinalgTensorOpsFusionPatterns(RewritePatternSet &patterns);
+void populateLinalgTensorOpsFusionPatterns(
+    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes = false);
 
 /// Patterns to fold unit-extent dimensions in operands/results of linalg ops on
 /// tensors.

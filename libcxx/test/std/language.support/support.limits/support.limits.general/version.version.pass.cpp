@@ -53,7 +53,7 @@
     __cpp_lib_constexpr_iterator                   201811L [C++20]
     __cpp_lib_constexpr_memory                     201811L [C++20]
     __cpp_lib_constexpr_numeric                    201911L [C++20]
-    __cpp_lib_constexpr_string                     201907L [C++20]
+    __cpp_lib_constexpr_string                     201811L [C++20]
     __cpp_lib_constexpr_string_view                201811L [C++20]
     __cpp_lib_constexpr_tuple                      201811L [C++20]
     __cpp_lib_constexpr_utility                    201811L [C++20]
@@ -2436,17 +2436,11 @@
 #   error "__cpp_lib_constexpr_functional should have the value 201907L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_iterator
-#     error "__cpp_lib_constexpr_iterator should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_iterator != 201811L
-#     error "__cpp_lib_constexpr_iterator should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_iterator
-#     error "__cpp_lib_constexpr_iterator should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_iterator
+#   error "__cpp_lib_constexpr_iterator should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_iterator != 201811L
+#   error "__cpp_lib_constexpr_iterator should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_constexpr_memory
@@ -2463,43 +2457,25 @@
 #   error "__cpp_lib_constexpr_numeric should have the value 201911L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string
-#     error "__cpp_lib_constexpr_string should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_string != 201907L
-#     error "__cpp_lib_constexpr_string should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string
-#     error "__cpp_lib_constexpr_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string
+#   error "__cpp_lib_constexpr_string should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_string != 201811L
+#   error "__cpp_lib_constexpr_string should have the value 201811L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_string_view != 201811L
-#     error "__cpp_lib_constexpr_string_view should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_string_view != 201811L
+#   error "__cpp_lib_constexpr_string_view should have the value 201811L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_tuple
-#     error "__cpp_lib_constexpr_tuple should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_tuple != 201811L
-#     error "__cpp_lib_constexpr_tuple should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_tuple
-#     error "__cpp_lib_constexpr_tuple should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_tuple
+#   error "__cpp_lib_constexpr_tuple should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_tuple != 201811L
+#   error "__cpp_lib_constexpr_tuple should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_constexpr_utility
@@ -3647,17 +3623,11 @@
 #   error "__cpp_lib_constexpr_functional should have the value 201907L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_iterator
-#     error "__cpp_lib_constexpr_iterator should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_iterator != 201811L
-#     error "__cpp_lib_constexpr_iterator should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_iterator
-#     error "__cpp_lib_constexpr_iterator should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_iterator
+#   error "__cpp_lib_constexpr_iterator should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_iterator != 201811L
+#   error "__cpp_lib_constexpr_iterator should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_constexpr_memory
@@ -3674,43 +3644,25 @@
 #   error "__cpp_lib_constexpr_numeric should have the value 201911L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string
-#     error "__cpp_lib_constexpr_string should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_string != 201907L
-#     error "__cpp_lib_constexpr_string should have the value 201907L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string
-#     error "__cpp_lib_constexpr_string should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string
+#   error "__cpp_lib_constexpr_string should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_string != 201811L
+#   error "__cpp_lib_constexpr_string should have the value 201811L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_string_view != 201811L
-#     error "__cpp_lib_constexpr_string_view should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_string_view
-#     error "__cpp_lib_constexpr_string_view should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_string_view
+#   error "__cpp_lib_constexpr_string_view should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_string_view != 201811L
+#   error "__cpp_lib_constexpr_string_view should have the value 201811L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_tuple
-#     error "__cpp_lib_constexpr_tuple should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_tuple != 201811L
-#     error "__cpp_lib_constexpr_tuple should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_tuple
-#     error "__cpp_lib_constexpr_tuple should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_tuple
+#   error "__cpp_lib_constexpr_tuple should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_tuple != 201811L
+#   error "__cpp_lib_constexpr_tuple should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_constexpr_utility

@@ -278,7 +278,8 @@ static void processViewOptions(bool IsOutOfOrder) {
   processOptionImpl(PrintRegisterFileStats, Default);
   processOptionImpl(PrintDispatchStats, Default);
   processOptionImpl(PrintSchedulerStats, Default);
-  processOptionImpl(PrintRetireStats, Default);
+  if (IsOutOfOrder)
+    processOptionImpl(PrintRetireStats, Default);
 }
 
 // Returns true on success.

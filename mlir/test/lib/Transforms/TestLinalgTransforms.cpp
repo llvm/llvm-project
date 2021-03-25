@@ -84,9 +84,9 @@ struct TestLinalgTransforms
   Option<bool> testTileAndPadPattern{
       *this, "test-tile-and-pad-pattern",
       llvm::cl::desc("Test tile and pad pattern"), llvm::cl::init(false)};
-  Option<bool> testHoistPadding2Levels{*this, "test-hoist-padding-2-level",
-                                       llvm::cl::desc("Test hoist padding"),
-                                       llvm::cl::init(false)};
+  Option<int> testHoistPadding{*this, "test-hoist-padding",
+                               llvm::cl::desc("Test hoist padding"),
+                               llvm::cl::init(0)};
 };
 } // end anonymous namespace
 
@@ -571,9 +571,9 @@ void TestLinalgTransforms::runOnFunction() {
     return applyAffineMinSCFCanonicalizationPatterns(getFunction());
   if (testTileAndPadPattern)
     return applyTileAndPadPattern(getFunction());
-  if (testHoistPadding2Levels) {
-    getFunction().walk([](linalg::PadTensorOp padTensorOp) {
-      (void)linalg::hoistPaddingOnTensors(padTensorOp, 2);
+  if (testHoistPadding) {
+    getFunction().walk([&](linalg::PadTensorOp padTensorOp) {
+      (void)linalg::hoistPaddingOnTensors(padTensorOp, testHoistPadding);
     });
   }
 }

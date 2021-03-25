@@ -189,6 +189,11 @@ public:
 
   bool doesNotMeet(Function *F, Loop *L, const LoopVectorizeHints &Hints);
 
+  Instruction *getExactFPInst() { return ExactFPMathInst; }
+  bool canVectorizeFPMath(const LoopVectorizeHints &Hints) const {
+    return !ExactFPMathInst || Hints.allowReordering();
+  }
+
 private:
   unsigned NumRuntimePointerChecks = 0;
   Instruction *ExactFPMathInst = nullptr;

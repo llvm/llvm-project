@@ -126,6 +126,40 @@ define i64 @zextw_i64(i64 %a) nounwind {
   ret i64 %and
 }
 
+; FIXME: This can use zext.w, but we need targetShrinkDemandedConstant to
+; to adjust the immediate.
+define i64 @zextw_demandedbits_i64(i64 %0) {
+; RV64I-LABEL: zextw_demandedbits_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a1, zero, 1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    addi a1, a1, -2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ori a0, a0, 1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: zextw_demandedbits_i64:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    addi a1, zero, 1
+; RV64IB-NEXT:    slli a1, a1, 32
+; RV64IB-NEXT:    addi a1, a1, -2
+; RV64IB-NEXT:    and a0, a0, a1
+; RV64IB-NEXT:    ori a0, a0, 1
+; RV64IB-NEXT:    ret
+;
+; RV64IBA-LABEL: zextw_demandedbits_i64:
+; RV64IBA:       # %bb.0:
+; RV64IBA-NEXT:    addi a1, zero, 1
+; RV64IBA-NEXT:    slli a1, a1, 32
+; RV64IBA-NEXT:    addi a1, a1, -2
+; RV64IBA-NEXT:    and a0, a0, a1
+; RV64IBA-NEXT:    ori a0, a0, 1
+; RV64IBA-NEXT:    ret
+  %2 = and i64 %0, 4294967294
+  %3 = or i64 %2, 1
+  ret i64 %3
+}
+
 define signext i16 @sh1add(i64 %0, i16* %1) {
 ; RV64I-LABEL: sh1add:
 ; RV64I:       # %bb.0:

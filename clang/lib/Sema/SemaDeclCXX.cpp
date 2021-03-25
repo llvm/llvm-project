@@ -5234,6 +5234,20 @@ static const void *GetKeyForMember(ASTContext &Context,
   return Member->getAnyMember()->getCanonicalDecl();
 }
 
+static void AddInitializerToDiag(const Sema::SemaDiagnosticBuilder &Diag,
+                                 const CXXCtorInitializer *Previous,
+                                 const CXXCtorInitializer *Current) {
+  if (Previous->isAnyMemberInitializer())
+    Diag << 0 << Previous->getAnyMember();
+  else
+    Diag << 1 << Previous->getTypeSourceInfo()->getType();
+
+  if (Current->isAnyMemberInitializer())
+    Diag << 0 << Current->getAnyMember();
+  else
+    Diag << 1 << Current->getTypeSourceInfo()->getType();
+}
+
 static void DiagnoseBaseOrMemInitializerOrder(
     Sema &SemaRef, const CXXConstructorDecl *Constructor,
     ArrayRef<CXXCtorInitializer *> Inits) {
@@ -5283,10 +5297,15 @@ static void DiagnoseBaseOrMemInitializerOrder(
   unsigned NumIdealInits = IdealInitKeys.size();
   unsigned IdealIndex = 0;
 
-  CXXCtorInitializer *PrevInit = nullptr;
+  // Track initializers that are in an incorrect order for either a warning or
+  // note if multiple ones occur.
+  SmallVector<unsigned> WarnIndexes;
+  // Correlates the index of an initializer in the init-list to the index of
+  // the field/base in the class.
+  SmallVector<std::pair<unsigned, unsigned>, 32> CorrelatedInitOrder;
+
   for (unsigned InitIndex = 0; InitIndex != Inits.size(); ++InitIndex) {
-    CXXCtorInitializer *Init = Inits[InitIndex];
-    const void *InitKey = GetKeyForMember(SemaRef.Context, Init);
+    const void *InitKey = GetKeyForMember(SemaRef.Context, Inits[InitIndex]);
 
     // Scan forward to try to find this initializer in the idealized
     // initializers list.
@@ -5297,20 +5316,8 @@ static void DiagnoseBaseOrMemInitializerOrder(
     // If we didn't find this initializer, it must be because we
     // scanned past it on a previous iteration.  That can only
     // happen if we're out of order;  emit a warning.
-    if (IdealIndex == NumIdealInits && PrevInit) {
-      Sema::SemaDiagnosticBuilder D =
-        SemaRef.Diag(PrevInit->getSourceLocation(),
-                     diag::warn_initializer_out_of_order);
-
-      if (PrevInit->isAnyMemberInitializer())
-        D << 0 << PrevInit->getAnyMember()->getDeclName();
-      else
-        D << 1 << PrevInit->getTypeSourceInfo()->getType();
-
-      if (Init->isAnyMemberInitializer())
-        D << 0 << Init->getAnyMember()->getDeclName();
-      else
-        D << 1 << Init->getTypeSourceInfo()->getType();
+    if (IdealIndex == NumIdealInits && InitIndex) {
+      WarnIndexes.push_back(InitIndex);
 
       // Move back to the initializer's location in the ideal list.
       for (IdealIndex = 0; IdealIndex != NumIdealInits; ++IdealIndex)
@@ -5320,8 +5327,54 @@ static void DiagnoseBaseOrMemInitializerOrder(
       assert(IdealIndex < NumIdealInits &&
              "initializer not found in initializer list");
     }
+    CorrelatedInitOrder.emplace_back(IdealIndex, InitIndex);
+  }
 
-    PrevInit = Init;
+  if (WarnIndexes.empty())
+    return;
+
+  // Sort based on the ideal order, first in the pair.
+  llvm::sort(CorrelatedInitOrder,
+             [](auto &LHS, auto &RHS) { return LHS.first < RHS.first; });
+
+  // Introduce a new scope as SemaDiagnosticBuilder needs to be destroyed to
+  // emit the diagnostic before we can try adding notes.
+  {
+    Sema::SemaDiagnosticBuilder D = SemaRef.Diag(
+        Inits[WarnIndexes.front() - 1]->getSourceLocation(),
+        WarnIndexes.size() == 1 ? diag::warn_initializer_out_of_order
+                                : diag::warn_some_initializers_out_of_order);
+
+    for (unsigned I = 0; I < CorrelatedInitOrder.size(); ++I) {
+      if (CorrelatedInitOrder[I].second == I)
+        continue;
+      // Ideally we would be using InsertFromRange here, but clang doesn't
+      // appear to handle InsertFromRange correctly when the source range is
+      // modified by another fix-it.
+      D << FixItHint::CreateReplacement(
+          Inits[I]->getSourceRange(),
+          Lexer::getSourceText(
+              CharSourceRange::getTokenRange(
+                  Inits[CorrelatedInitOrder[I].second]->getSourceRange()),
+              SemaRef.getSourceManager(), SemaRef.getLangOpts()));
+    }
+
+    // If there is only 1 item out of order, the warning expects the name and
+    // type of each being added to it.
+    if (WarnIndexes.size() == 1) {
+      AddInitializerToDiag(D, Inits[WarnIndexes.front() - 1],
+                           Inits[WarnIndexes.front()]);
+      return;
+    }
+  }
+  // More than 1 item to warn, create notes letting the user know which ones
+  // are bad.
+  for (unsigned WarnIndex : WarnIndexes) {
+    const clang::CXXCtorInitializer *PrevInit = Inits[WarnIndex - 1];
+    auto D = SemaRef.Diag(PrevInit->getSourceLocation(),
+                          diag::note_initializer_out_of_order);
+    AddInitializerToDiag(D, PrevInit, Inits[WarnIndex]);
+    D << PrevInit->getSourceRange();
   }
 }
 
@@ -5389,7 +5442,7 @@ bool CheckRedundantUnionInit(Sema &S,
 
   return false;
 }
-}
+} // namespace
 
 /// ActOnMemInitializers - Handle the member initializers for a constructor.
 void Sema::ActOnMemInitializers(Decl *ConstructorDecl,

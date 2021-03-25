@@ -95,7 +95,7 @@ public:
   const char *getVendor() const;
 
   // Get .note record type of metadata blob to be emitted:
-  // ELF::NT_AMD_AMDGPU_PAL_METADATA (legacy key=val format), or
+  // ELF::NT_AMD_PAL_METADATA (legacy key=val format), or
   // ELF::NT_AMDGPU_METADATA (MsgPack format), or
   // 0 (no PAL metadata).
   unsigned getType() const;

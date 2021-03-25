@@ -1827,9 +1827,15 @@ def ElementwiseMappable {
   ];
 }
 
+// Op's regions have a single block.
+def SingleBlock : NativeOpTrait<"SingleBlock">;
+
 // Op's regions have a single block with the specified terminator.
 class SingleBlockImplicitTerminator<string op>
     : ParamNativeOpTrait<"SingleBlockImplicitTerminator", op>;
+
+// Op's regions don't have terminator.
+def NoTerminator : NativeOpTrait<"NoTerminator">;
 
 // Op's parent operation is the provided one.
 class HasParent<string op>

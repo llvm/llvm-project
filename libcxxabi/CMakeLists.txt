@@ -156,23 +156,9 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: This is a workaround for the fact that Standalone builds can't use
-# targets from the other runtimes (so the cxx-headers target doesn't exist).
-set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
+set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
     "Specify path to libc++ includes.")
-if (LIBCXXABI_STANDALONE_BUILD)
-  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
-    message(FATAL_ERROR
-      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
-      "Please provide the path to where the libc++ headers have been installed.")
-  endif()
-  add_library(cxx-headers INTERFACE)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  else()
-    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
-  endif()
-endif()
+message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)

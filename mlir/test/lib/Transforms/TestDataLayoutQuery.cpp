@@ -36,13 +36,22 @@ struct TestDataLayoutQuery
             scope, scope ? cast<DataLayoutOpInterface>(scope.getOperation())
                          : nullptr);
       }
+      auto module = op->getParentOfType<ModuleOp>();
+      if (!layouts.count(module))
+        layouts.try_emplace(module, module);
 
-      const DataLayout &layout = layouts.find(scope)->getSecond();
+      Operation *closest = (scope && module && module->isProperAncestor(scope))
+                               ? scope.getOperation()
+                               : module.getOperation();
+
+      const DataLayout &layout = layouts.find(closest)->getSecond();
       unsigned size = layout.getTypeSize(op.getType());
+      unsigned bitsize = layout.getTypeSizeInBits(op.getType());
       unsigned alignment = layout.getTypeABIAlignment(op.getType());
       unsigned preferred = layout.getTypePreferredAlignment(op.getType());
       op->setAttrs(
           {builder.getNamedAttr("size", builder.getIndexAttr(size)),
+           builder.getNamedAttr("bitsize", builder.getIndexAttr(bitsize)),
            builder.getNamedAttr("alignment", builder.getIndexAttr(alignment)),
            builder.getNamedAttr("preferred", builder.getIndexAttr(preferred))});
     });

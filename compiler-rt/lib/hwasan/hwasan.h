@@ -14,11 +14,12 @@
 #ifndef HWASAN_H
 #define HWASAN_H
 
+#include "hwasan_flags.h"
+#include "hwasan_interface_internal.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
-#include "hwasan_interface_internal.h"
-#include "hwasan_flags.h"
 #include "ubsan/ubsan_platform.h"
 
 #ifndef HWASAN_CONTAINS_UBSAN
@@ -35,15 +36,30 @@
 
 typedef u8 tag_t;
 
+#if defined(__x86_64__)
+// Tags are done in middle bits using userspace aliasing.
+constexpr unsigned kAddressTagShift = 39;
+constexpr unsigned kTagBits = 3;
+
+// The alias region is placed next to the shadow so the upper bits of all
+// taggable addresses matches the upper bits of the shadow base.  This shift
+// value determines which upper bits must match.  It has a floor of 44 since the
+// shadow is always 8TB.
+// TODO(morehouse): In alias mode we can shrink the shadow and use a
+// simpler/faster shadow calculation.
+constexpr unsigned kTaggableRegionCheckShift =
+    __sanitizer::Max(kAddressTagShift + kTagBits + 1U, 44U);
+#else
 // TBI (Top Byte Ignore) feature of AArch64: bits [63:56] are ignored in address
 // translation and can be used to store a tag.
 constexpr unsigned kAddressTagShift = 56;
 constexpr unsigned kTagBits = 8;
+#endif  // defined(__x86_64__)
 
 // Mask for extracting tag bits from the lower 8 bits.
 constexpr uptr kTagMask = (1UL << kTagBits) - 1;
 
-// Masks for extracting and removing tags from full pointers.
+// Mask for extracting tag bits from full pointers.
 constexpr uptr kAddressTagMask = kTagMask << kAddressTagShift;
 
 // Minimal alignment of the shadow base address. Determines the space available

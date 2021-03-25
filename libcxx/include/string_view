@@ -107,7 +107,7 @@ namespace std {
       constexpr void remove_suffix(size_type n);
       constexpr void swap(basic_string_view& s) noexcept;
 
-      size_type copy(charT* s, size_type n, size_type pos = 0) const;
+      size_type copy(charT* s, size_type n, size_type pos = 0) const;  // constexpr in C++20
 
       constexpr basic_string_view substr(size_type pos = 0, size_type n = npos) const;
       constexpr int compare(basic_string_view s) const noexcept;
@@ -359,7 +359,7 @@ public:
         __other.__size = __sz;
     }
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     size_type copy(_CharT* __s, size_type __n, size_type __pos = 0) const
     {
         if (__pos > size())

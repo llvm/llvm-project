@@ -36,11 +36,18 @@ unsigned WebAssemblyTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return Result;
 }
 
-unsigned WebAssemblyTTIImpl::getRegisterBitWidth(bool Vector) const {
-  if (Vector && getST()->hasSIMD128())
-    return 128;
+TypeSize WebAssemblyTTIImpl::getRegisterBitWidth(
+    TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(64);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(getST()->hasSIMD128() ? 128 : 64);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
 
-  return 64;
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned WebAssemblyTTIImpl::getArithmeticInstrCost(

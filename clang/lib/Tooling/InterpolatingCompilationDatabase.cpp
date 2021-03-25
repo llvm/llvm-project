@@ -177,6 +177,10 @@ struct TransferableCommand {
                            Opt.matches(OPT__SLASH_Fo))))
         continue;
 
+      // ...including when the inputs are passed after --.
+      if (Opt.matches(OPT__DASH_DASH))
+        break;
+
       // Strip -x, but record the overridden language.
       if (const auto GivenType = tryParseTypeArg(*Arg)) {
         Type = *GivenType;
@@ -235,6 +239,8 @@ struct TransferableCommand {
           llvm::Twine(ClangCLMode ? "/std:" : "-std=") +
           LangStandard::getLangStandardForKind(Std).getName()).str());
     }
+    if (Filename.startswith("-") || (ClangCLMode && Filename.startswith("/")))
+      Result.CommandLine.push_back("--");
     Result.CommandLine.push_back(std::string(Filename));
     return Result;
   }

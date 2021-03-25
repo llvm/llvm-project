@@ -13,8 +13,6 @@
 
 // <complex>
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // Test the feature test macros defined by <complex>
 
 /*  Constant                       Value

@@ -198,7 +198,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_constexpr_iterator",
     "values": { "c++20": 201811 },
     "headers": ["iterator"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_memory",
     "values": { "c++20": 201811 },
@@ -209,19 +208,16 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["numeric"],
   }, {
     "name": "__cpp_lib_constexpr_string",
-    "values": { "c++20": 201907 },
+    "values": { "c++20": 201811 },  # because P1032R1 is implemented; but should become 201907 after P0980R1
     "headers": ["string"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_string_view",
     "values": { "c++20": 201811 },
     "headers": ["string_view"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_tuple",
     "values": { "c++20": 201811 },
     "headers": ["tuple"],
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_constexpr_utility",
     "values": { "c++20": 201811 },

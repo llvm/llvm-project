@@ -25,7 +25,8 @@ namespace mca {
 const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
 
 WriteRef::WriteRef(unsigned SourceIndex, WriteState *WS)
-    : IID(SourceIndex), WriteBackCycle(), WriteResID(), Write(WS) {}
+    : IID(SourceIndex), WriteBackCycle(), WriteResID(), RegisterID(),
+      Write(WS) {}
 
 void WriteRef::commit() {
   assert(Write && Write->isExecuted() && "Cannot commit before write back!");

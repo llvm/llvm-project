@@ -45,7 +45,9 @@ class WriteRef {
   static const unsigned INVALID_IID;
 
 public:
-  WriteRef() : IID(INVALID_IID), WriteBackCycle(), WriteResID(), Write() {}
+  WriteRef()
+      : IID(INVALID_IID), WriteBackCycle(), WriteResID(), RegisterID(),
+        Write() {}
   WriteRef(unsigned SourceIndex, WriteState *WS);
 
   unsigned getSourceIndex() const { return IID; }

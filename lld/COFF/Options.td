@@ -239,6 +239,10 @@ def thinlto_prefix_replace: P<
 def lto_obj_path : P<
     "lto-obj-path",
     "output native object for merged LTO unit to this path">;
+def lto_cs_profile_generate: F<"lto-cs-profile-generate">,
+    HelpText<"Perform context sensitive PGO instrumentation">;
+def lto_cs_profile_file : P<"lto-cs-profile-file",
+    "Context sensitive profile file path">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Display the version number and exit">;
 def threads

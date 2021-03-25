@@ -68,6 +68,13 @@ protected:
                         const SCEV *&RHS) {
     return SE.matchURem(Expr, LHS, RHS);
   }
+
+  static bool isImpliedCond(
+      ScalarEvolution &SE, ICmpInst::Predicate Pred, const SCEV *LHS,
+      const SCEV *RHS, ICmpInst::Predicate FoundPred, const SCEV *FoundLHS,
+      const SCEV *FoundRHS) {
+    return SE.isImpliedCond(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS);
+  }
 };
 
 TEST_F(ScalarEvolutionsTest, SCEVUnknownRAUW) {
@@ -1365,6 +1372,45 @@ TEST_F(ScalarEvolutionsTest, ProveImplicationViaNarrowing) {
     // EXPECT_TRUE(SE.isBasicBlockEntryGuardedByCond(Backedge,
     //                                               ICmpInst::ICMP_UGT,
     //                                               IV, Zero));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ImpliedCond) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 %len) { "
+      "entry: "
+      "  br label %loop "
+      "loop: "
+      "  %iv = phi i32 [ 0, %entry], [%iv.next, %loop] "
+      "  %iv.next = add nsw i32 %iv, 1 "
+      "  %cmp = icmp slt i32 %iv, %len "
+      "  br i1 %cmp, label %loop, label %exit "
+      "exit:"
+      "  ret void "
+      "}",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Instruction *IV = getInstructionByName(F, "iv");
+    Type *Ty = IV->getType();
+    const SCEV *Zero = SE.getZero(Ty);
+    const SCEV *MinusOne = SE.getMinusOne(Ty);
+    // {0,+,1}<nuw><nsw>
+    const SCEV *AddRec_0_1 = SE.getSCEV(IV);
+    // {0,+,-1}<nw>
+    const SCEV *AddRec_0_N1 = SE.getNegativeSCEV(AddRec_0_1);
+
+    // {0,+,1}<nuw><nsw> > 0  ->  {0,+,-1}<nw> < 0
+    EXPECT_TRUE(isImpliedCond(SE, ICmpInst::ICMP_SLT, AddRec_0_N1, Zero,
+                                  ICmpInst::ICMP_SGT, AddRec_0_1, Zero));
+    // {0,+,-1}<nw> < -1  ->  {0,+,1}<nuw><nsw> > 0
+    EXPECT_TRUE(isImpliedCond(SE, ICmpInst::ICMP_SGT, AddRec_0_1, Zero,
+                                  ICmpInst::ICMP_SLT, AddRec_0_N1, MinusOne));
   });
 }
 

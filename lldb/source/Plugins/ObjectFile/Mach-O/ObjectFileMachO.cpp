@@ -17,6 +17,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/Host.h"
@@ -43,6 +44,7 @@
 
 #include "lldb/Host/SafeMachO.h"
 
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ObjectFileMachO.h"
@@ -2166,6 +2168,9 @@ size_t ObjectFileMachO::ParseSymtab() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
     return 0;
+
+  Progress progress(llvm::formatv("Parsing symbol table for {0}",
+                                  m_file.GetFilename().AsCString("<Unknown>")));
 
   struct symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   struct linkedit_data_command function_starts_load_command = {0, 0, 0, 0};

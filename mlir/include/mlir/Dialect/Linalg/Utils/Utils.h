@@ -17,12 +17,8 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-
-using mlir::edsc::intrinsics::AffineIndexedValue;
-using mlir::edsc::intrinsics::MemRefIndexedValue;
 
 namespace mlir {
 class AffineExpr;
@@ -34,33 +30,32 @@ class PatternRewriter;
 namespace linalg {
 class LinalgDependenceGraph;
 
-/// A struct containing the Linalg producer before and after fusion.
-/// When operating on tensors, `fusedProducer` may feed into a `tensor.cast` op
-/// before the consumer Linalg op, until enough canonicalizations have applied.
-struct FusionInfo {
-  LinalgOp originalProducer;
-  LinalgOp fusedProducer;
-};
+//===----------------------------------------------------------------------===//
+// General utilities
+//===----------------------------------------------------------------------===//
 
-/// A struct containing common matchers over linalg op's region.
-struct RegionMatcher {
-  enum class BinaryOpKind {
-    IAdd,
-  };
+/// Apply the permutation defined by `permutation` to `inVec`.
+/// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
+/// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
+/// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
+template <typename T, unsigned N>
+void applyPermutationToVector(SmallVector<T, N> &inVec,
+                              ArrayRef<unsigned> permutation) {
+  SmallVector<T, N> auxVec(inVec.size());
+  for (unsigned i = 0; i < permutation.size(); ++i)
+    auxVec[i] = inVec[permutation[i]];
+  inVec = auxVec;
+}
 
-  /// Matches the given linalg op if its body is performing binary operation on
-  /// int or float scalar values and returns the binary op kind.
-  ///
-  /// The linalg op's region is expected to be
-  /// ```
-  /// {
-  ///   ^bb(%a: <scalar-type>, %b: <scalar-type>):
-  ///     %0 = <binary-op> %a, %b: <scalar-type>
-  ///     linalg.yield %0: <scalar-type>
-  /// }
-  /// ```
-  static Optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
-};
+/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
+/// is a constant then return a new value set to the smallest such constant.
+/// If `size` comes from a ConstantOp, return the constant.
+/// Otherwise return nullptr.
+IntegerAttr getSmallestBoundingIndex(Value size);
+
+//===----------------------------------------------------------------------===//
+// Iterator type utilities
+//===----------------------------------------------------------------------===//
 
 /// Checks if an iterator_type attribute is parallel.
 bool isParallelIteratorType(Attribute attr);
@@ -70,6 +65,10 @@ bool isReductionIteratorType(Attribute attr);
 
 /// Checks if an iterator_type attribute is parallel.
 bool isWindowIteratorType(Attribute attr);
+
+//===----------------------------------------------------------------------===//
+// Fusion utilities
+//===----------------------------------------------------------------------===//
 
 /// Checks whether the specific `producer` is the last write to exactly the
 /// whole `consumedView`. This checks structural dominance, that the dependence
@@ -84,12 +83,35 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
+/// Creates subtensor/subview ops for all `tiledOperands` of the given
+/// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
+/// nest for tiling with the given induction variables `ivs` and tile sizes
+/// `tileSizes`. `sizeBounds` are the iteration space bounds for *all* the
+/// implicit loops in `linalgOp`.
+///
+/// Note that a constant zero in `tileSizes` means no tiling at that implicit
+/// loop. The number of non-zero values in `tileSizes` should be equal to the
+/// number of values in `ivs`.
+SmallVector<Value, 4> makeTiledShapes(OpBuilder &builder, Location loc,
+                                      LinalgOp linalgOp,
+                                      ArrayRef<Value> tiledOperands,
+                                      ValueRange ivs, ValueRange tileSizes,
+                                      ArrayRef<Value> sizeBounds);
+
 using FusableOpDependencesTy = llvm::MapVector<
     Operation *,
     SmallVector<LinalgDependenceGraph::LinalgDependenceGraphElem, 1>>;
 FusableOpDependencesTy
 findAllFusableDependences(ArrayRef<LinalgOp> ops,
                           const LinalgDependenceGraph &dependenceGraph);
+
+/// A struct containing the Linalg producer before and after fusion.
+/// When operating on tensors, `fusedProducer` may feed into a `tensor.cast` op
+/// before the consumer Linalg op, until enough canonicalizations have applied.
+struct FusionInfo {
+  LinalgOp originalProducer;
+  LinalgOp fusedProducer;
+};
 
 /// Fuses producer into consumer if the producer is structurally feasible and
 /// the fusion would not violate dependencies.
@@ -119,24 +141,9 @@ Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
 Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
                                               OpOperand &consumerOpOperand);
 
-/// Apply the permutation defined by `permutation` to `inVec`.
-/// Element `i` in `inVec` is mapped to location `j = permutation[i]`.
-/// E.g.: for an input vector `inVec = ['a', 'b', 'c']` and a permutation vector
-/// `permutation = [2, 0, 1]`, this function leaves `inVec = ['c', 'a', 'b']`.
-template <typename T, unsigned N>
-void applyPermutationToVector(SmallVector<T, N> &inVec,
-                              ArrayRef<unsigned> permutation) {
-  SmallVector<T, N> auxVec(inVec.size());
-  for (unsigned i = 0; i < permutation.size(); ++i)
-    auxVec[i] = inVec[permutation[i]];
-  inVec = auxVec;
-}
-
-/// If `size` comes from an AffineMinOp and one of the values of AffineMinOp
-/// is a constant then return a new value set to the smallest such constant.
-/// If `size` comes from a ConstantOp, return the constant.
-/// Otherwise return nullptr.
-IntegerAttr getSmallestBoundingIndex(Value size);
+//===----------------------------------------------------------------------===//
+// Distribution utilities
+//===----------------------------------------------------------------------===//
 
 /// Scheme used to distribute loops to processors.
 enum class DistributionMethod {
@@ -206,6 +213,34 @@ struct LinalgLoopDistributionOptions {
   SmallVector<DistributionMethod, 0> distributionMethod = {};
 };
 
+//===----------------------------------------------------------------------===//
+// Generic op region utilities
+//===----------------------------------------------------------------------===//
+
+/// A struct containing common matchers over linalg op's region.
+struct RegionMatcher {
+  enum class BinaryOpKind {
+    IAdd,
+  };
+
+  /// Matches the given linalg op if its body is performing binary operation on
+  /// int or float scalar values and returns the binary op kind.
+  ///
+  /// The linalg op's region is expected to be
+  /// ```
+  /// {
+  ///   ^bb(%a: <scalar-type>, %b: <scalar-type>):
+  ///     %0 = <binary-op> %a, %b: <scalar-type>
+  ///     linalg.yield %0: <scalar-type>
+  /// }
+  /// ```
+  static Optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
+};
+
+//===----------------------------------------------------------------------===//
+// Loop nest utilities
+//===----------------------------------------------------------------------===//
+
 /// Utility class used to generate nested loops with ranges described by
 /// `loopRanges` and loop type described by the `iteratorTypes`. `bodyBuilderFn`
 /// is used to generate the body of the innermost loop. It is passed a range
@@ -214,7 +249,8 @@ template <typename LoopTy>
 struct GenerateLoopNest {
   using IndexedValueTy =
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
-                                AffineIndexedValue, MemRefIndexedValue>::type;
+                                edsc::intrinsics::AffineIndexedValue,
+                                edsc::intrinsics::MemRefIndexedValue>::type;
 
   static void
   doit(ArrayRef<Range> loopRanges, ValueRange iterArgInitValues,

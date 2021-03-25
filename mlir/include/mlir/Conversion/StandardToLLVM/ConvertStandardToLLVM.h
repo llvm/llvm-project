@@ -129,7 +129,7 @@ public:
   Type getIndexType();
 
   /// Gets the bitwidth of the index type when converted to LLVM.
-  unsigned getIndexTypeBitwidth() { return options.indexBitwidth; }
+  unsigned getIndexTypeBitwidth() { return options.getIndexBitwidth(); }
 
   /// Gets the pointer bitwidth.
   unsigned getPointerBitwidth(unsigned addressSpace = 0);

@@ -73,58 +73,15 @@ while.end:                                        ; preds = %if.end, %entry
 define i32 @test2(i32 %l86) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY_I_I:%.*]]
-; CHECK:       for.body.i.i:
-; CHECK-NEXT:    [[I_0137_I_I:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_I_3_I:%.*]], [[FOR_BODY_I_3_I:%.*]] ]
-; CHECK-NEXT:    [[ADD_I_I:%.*]] = or i32 [[I_0137_I_I]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[ADD_I_I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds [50 x i32], [50 x i32]* @data, i64 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[L93:%.*]] = load i32, i32* [[ARRAYIDX_I_I]], align 4
-; CHECK-NEXT:    [[CMP1_I_I:%.*]] = icmp sgt i32 [[L93]], [[L86:%.*]]
-; CHECK-NEXT:    br i1 [[CMP1_I_I]], label [[LAND_LHS_TRUE_I_I:%.*]], label [[FOR_INC_I_I:%.*]]
-; CHECK:       land.lhs.true.i.i:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[I_0137_I_I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX2_I_I:%.*]] = getelementptr inbounds [50 x i32], [50 x i32]* @data, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[L94:%.*]] = load i32, i32* [[ARRAYIDX2_I_I]], align 4
-; CHECK-NEXT:    [[CMP3_NOT_I_I:%.*]] = icmp sgt i32 [[L94]], [[L86]]
-; CHECK-NEXT:    br i1 [[CMP3_NOT_I_I]], label [[FOR_INC_I_I]], label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I:%.*]]
-; CHECK:       for.inc.i.i:
-; CHECK-NEXT:    [[EXITCOND_NOT_I_I:%.*]] = icmp eq i32 [[ADD_I_I]], 25
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_I_I]], label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I]], label [[FOR_BODY_I_1_I:%.*]]
-; CHECK:       for.body.i.1.i:
-; CHECK-NEXT:    [[ADD_I_1_I:%.*]] = or i32 [[I_0137_I_I]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[ADD_I_1_I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_I_1_I:%.*]] = getelementptr inbounds [50 x i32], [50 x i32]* @data, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[L345:%.*]] = load i32, i32* [[ARRAYIDX_I_1_I]], align 4
-; CHECK-NEXT:    [[CMP1_I_1_I:%.*]] = icmp sgt i32 [[L345]], [[L86]]
-; CHECK-NEXT:    [[CMP1_I_1_I_NOT:%.*]] = xor i1 [[CMP1_I_1_I]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMP1_I_I]], [[CMP1_I_1_I_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[FOR_INC_I_1_I:%.*]], label [[FOR_END_I_I:%.*]]
-; CHECK:       for.inc.i.1.i:
-; CHECK-NEXT:    [[ADD_I_2_I:%.*]] = or i32 [[I_0137_I_I]], 3
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[ADD_I_2_I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_I_2_I:%.*]] = getelementptr inbounds [50 x i32], [50 x i32]* @data, i64 0, i64 [[TMP3]]
-; CHECK-NEXT:    [[L346:%.*]] = load i32, i32* [[ARRAYIDX_I_2_I]], align 4
-; CHECK-NEXT:    [[CMP1_I_2_I:%.*]] = icmp sgt i32 [[L346]], [[L86]]
-; CHECK-NEXT:    [[CMP1_I_2_I_NOT:%.*]] = xor i1 [[CMP1_I_2_I]], true
-; CHECK-NEXT:    [[BRMERGE1:%.*]] = or i1 [[CMP1_I_1_I]], [[CMP1_I_2_I_NOT]]
-; CHECK-NEXT:    br i1 [[BRMERGE1]], label [[FOR_BODY_I_3_I]], label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I]]
-; CHECK:       for.body.i.3.i:
-; CHECK-NEXT:    [[ADD_I_3_I]] = add nuw nsw i32 [[I_0137_I_I]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[ADD_I_3_I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX_I_3_I:%.*]] = getelementptr inbounds [50 x i32], [50 x i32]* @data, i64 0, i64 [[TMP4]]
-; CHECK-NEXT:    [[L347:%.*]] = load i32, i32* [[ARRAYIDX_I_3_I]], align 4
-; CHECK-NEXT:    [[CMP1_I_3_I:%.*]] = icmp sle i32 [[L347]], [[L86]]
-; CHECK-NEXT:    [[BRMERGE2:%.*]] = or i1 [[CMP1_I_3_I]], [[CMP1_I_2_I]]
-; CHECK-NEXT:    br i1 [[BRMERGE2]], label [[FOR_BODY_I_I]], label [[FOR_END_I_I]]
-; CHECK:       for.end.i.i:
-; CHECK-NEXT:    [[I_0_LCSSA_I_I:%.*]] = phi i32 [ [[ADD_I_I]], [[FOR_BODY_I_1_I]] ], [ [[ADD_I_2_I]], [[FOR_BODY_I_3_I]] ]
-; CHECK-NEXT:    [[CMP5_I_I:%.*]] = icmp eq i32 [[I_0_LCSSA_I_I]], 25
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP5_I_I]], i32 2, i32 0
-; CHECK-NEXT:    br label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I]]
+; CHECK-NEXT:    [[L86_OFF:%.*]] = add i32 [[L86:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[L86_OFF]], 24
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[FOR_END_I_IF_END8_I_CRIT_EDGE_I:%.*]], label [[FOR_INC_I_3_I_5:%.*]]
 ; CHECK:       for.end.i.if.end8.i_crit_edge.i:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 0, [[FOR_INC_I_1_I]] ], [ 0, [[LAND_LHS_TRUE_I_I]] ], [ 1, [[FOR_INC_I_I]] ], [ [[SPEC_SELECT]], [[FOR_END_I_I]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK-NEXT:    ret i32 0
+; CHECK:       for.inc.i.3.i.5:
+; CHECK-NEXT:    [[DOTNOT30:%.*]] = icmp ne i32 [[L86]], 25
+; CHECK-NEXT:    [[SPEC_SELECT24:%.*]] = zext i1 [[DOTNOT30]] to i32
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT24]]
 ;
 entry:
   br label %for.body.i.i
