@@ -9,7 +9,6 @@
 #include "BufferDerefCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
@@ -23,13 +22,15 @@ void BufferDerefCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
-  static ento::mpi::MPIFunctionClassifier FuncClassifier(*Result.Context);
   const auto *CE = Result.Nodes.getNodeAs<CallExpr>("CE");
   if (!CE->getDirectCallee())
     return;
 
+  if (!FuncClassifier)
+    FuncClassifier.emplace(*Result.Context);
+
   const IdentifierInfo *Identifier = CE->getDirectCallee()->getIdentifier();
-  if (!Identifier || !FuncClassifier.isMPIType(Identifier))
+  if (!Identifier || !FuncClassifier->isMPIType(Identifier))
     return;
 
   // These containers are used, to capture the type and expression of a buffer.
@@ -60,18 +61,18 @@ void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
   // Collect buffer types and argument expressions for all buffers used in the
   // MPI call expression. The number passed to the lambda corresponds to the
   // argument index of the currently verified MPI function call.
-  if (FuncClassifier.isPointToPointType(Identifier)) {
+  if (FuncClassifier->isPointToPointType(Identifier)) {
     AddBuffer(0);
-  } else if (FuncClassifier.isCollectiveType(Identifier)) {
-    if (FuncClassifier.isReduceType(Identifier)) {
+  } else if (FuncClassifier->isCollectiveType(Identifier)) {
+    if (FuncClassifier->isReduceType(Identifier)) {
       AddBuffer(0);
       AddBuffer(1);
-    } else if (FuncClassifier.isScatterType(Identifier) ||
-               FuncClassifier.isGatherType(Identifier) ||
-               FuncClassifier.isAlltoallType(Identifier)) {
+    } else if (FuncClassifier->isScatterType(Identifier) ||
+               FuncClassifier->isGatherType(Identifier) ||
+               FuncClassifier->isAlltoallType(Identifier)) {
       AddBuffer(0);
       AddBuffer(3);
-    } else if (FuncClassifier.isBcastType(Identifier)) {
+    } else if (FuncClassifier->isBcastType(Identifier)) {
       AddBuffer(0);
     }
   }
@@ -126,6 +127,7 @@ void BufferDerefCheck::checkBuffers(ArrayRef<const Type *> BufferTypes,
   }
 }
 
+void BufferDerefCheck::onEndOfTranslationUnit() { FuncClassifier.reset(); }
 } // namespace mpi
 } // namespace tidy
 } // namespace clang
