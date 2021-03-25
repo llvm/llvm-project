@@ -1143,27 +1143,6 @@ bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   return false;
 }
 
-// Match (srl (and val, mask), imm) where the result would be a
-// zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
-// is equivalent to this (SimplifyDemandedBits may have removed lower bits
-// from the mask that aren't necessary due to the right-shifting).
-bool RISCVDAGToDAGISel::MatchSRLIW(SDNode *N) const {
-  assert(N->getOpcode() == ISD::SRL);
-  assert(N->getOperand(0).getOpcode() == ISD::AND);
-  assert(isa<ConstantSDNode>(N->getOperand(1)));
-  assert(isa<ConstantSDNode>(N->getOperand(0).getOperand(1)));
-
-  // The IsRV64 predicate is checked after PatFrag predicates so we can get
-  // here even on RV32.
-  if (!Subtarget->is64Bit())
-    return false;
-
-  SDValue And = N->getOperand(0);
-  uint64_t ShAmt = N->getConstantOperandVal(1);
-  uint64_t Mask = And.getConstantOperandVal(1);
-  return (Mask | maskTrailingOnes<uint64_t>(ShAmt)) == 0xffffffff;
-}
-
 // Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
 // on RV64).
 // SLLIUW is the same as SLLI except for the fact that it clears the bits
