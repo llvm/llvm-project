@@ -46145,10 +46145,8 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
   EVT InVT = In.getValueType();
   unsigned NumElems = OutVT.getVectorNumElements();
 
-  // TODO: On AVX2, the behavior of X86ISD::PACKUS is different from that on
-  // SSE2, and we need to take care of it specially.
-  // AVX512 provides vpmovdb.
-  if (!Subtarget.hasSSE2() || Subtarget.hasAVX2())
+  // AVX512 provides fast truncate ops.
+  if (!Subtarget.hasSSE2() || Subtarget.hasAVX512())
     return SDValue();
 
   EVT OutSVT = OutVT.getVectorElementType();
