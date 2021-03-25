@@ -70,3 +70,8 @@
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../.."
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_AARCH64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
+
+/// LDSO_ARCH is i386 for all x86-32 variants.
+// RUN: %clang -### %s --target=i686-linux-musl --sysroot= \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_I686
+// MUSL_I686: "-dynamic-linker" "/lib/ld-musl-i386.so.1"
