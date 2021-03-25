@@ -3894,7 +3894,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     bool IsAdd = N->getOpcode() == ISD::UADDO;
-    SDLoc DL(N);
     // Create an ADDW or SUBW.
     SDValue LHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue RHS = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
@@ -3918,7 +3917,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::USUBSAT: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    SDLoc DL(N);
     if (Subtarget.hasStdExtZbb()) {
       // With Zbb we can sign extend and let LegalizeDAG use minu/maxu. Using
       // sign extend allows overflow of the lower 32 bits to be detected on
@@ -3966,7 +3964,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // This is similar to customLegalizeToWOp, except that we pass the second
     // operand (a TargetConstant) straight through: it is already of type
     // XLenVT.
-    SDLoc DL(N);
     RISCVISD::NodeType WOpcode = getRISCVWOpcode(N->getOpcode());
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
@@ -3981,7 +3978,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // There is no SHFLIW instruction, but we can just promote the operation.
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-    SDLoc DL(N);
     SDValue NewOp0 =
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     SDValue NewRes =
@@ -4033,7 +4029,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     // transferred to the destination register. We issue two of these from the
     // upper- and lower- halves of the SEW-bit vector element, slid down to the
     // first element.
-    SDLoc DL(N);
     SDValue Vec = N->getOperand(0);
     SDValue Idx = N->getOperand(1);
 
