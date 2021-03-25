@@ -4,11 +4,11 @@
 // RUN: %clang_cc1 -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -x c++ -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -x c++ -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -x c++ -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -x c++ -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -x c++ -triple x86_64-apple-darwin10 -target-cpu core2 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple arm64-apple-ios9 -target-cpu cyclone -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7-apple-darwin9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7s-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
+// RUN: %clang_cc1 -x c++ -triple armv7k-apple-ios9 -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=CPPONLY
 
 // Test tail call behavior when a swiftasynccall function is called
 // from another swiftasynccall function.
@@ -136,3 +136,49 @@ char c_calling_async(MYBOOL b, unsigned u) {
   return x;
 }
 
+#if __cplusplus
+struct S {
+  SWIFTASYNCCALL void (*fptr)(char * ASYNC_CONTEXT);
+
+  SWIFTASYNCCALL void async_leaf_method(char * ASYNC_CONTEXT ctx) {
+    *ctx += 1;
+  }
+  SWIFTASYNCCALL void async_nonleaf_method1(char * ASYNC_CONTEXT ctx) {
+    return async_leaf_method(ctx);
+  }
+  SWIFTASYNCCALL void async_nonleaf_method2(char * ASYNC_CONTEXT ctx) {
+    return this->async_leaf_method(ctx);
+  }
+};
+
+SWIFTASYNCCALL void (S::*async_leaf_method_ptr)(char * ASYNC_CONTEXT) = &S::async_leaf_method;
+
+// CPPONLY-LABEL: swifttailcc void {{.*}}async_struct_field_and_methods
+// CPPONLY: musttail call swifttailcc void %{{[0-9]+}}
+// CPPONLY: musttail call swifttailcc void @{{.*}}async_nonleaf_method1
+// CPPONLY: musttail call swifttailcc void %{{[0-9]+}}
+// CPPONLY: musttail call swifttailcc void @{{.*}}async_nonleaf_method2
+// CPPONLY-NOT: musttail call swifttailcc void @{{.*}}async_leaf_method
+// ^ TODO: Member pointers should also work.
+SWIFTASYNCCALL void async_struct_field_and_methods(int i, S &sref, S *sptr) {
+  char x = 'a';
+  if (i == 0) {
+    return (*sref.fptr)(&x);
+  } else if (i == 1) {
+    return sref.async_nonleaf_method1(&x);
+  } else if (i == 2) {
+    return (*(sptr->fptr))(&x);
+  } else if (i == 3) {
+    return sptr->async_nonleaf_method2(&x);
+  } else if (i == 4) {
+    return (sref.*async_leaf_method_ptr)(&x);
+  }
+  return (sptr->*async_leaf_method_ptr)(&x);
+}
+
+// CPPONLY-LABEL: define{{.*}} swifttailcc void @{{.*}}async_nonleaf_method1
+// CPPONLY: musttail call swifttailcc void @{{.*}}async_leaf_method
+
+// CPPONLY-LABEL: define{{.*}} swifttailcc void @{{.*}}async_nonleaf_method2
+// CPPONLY: musttail call swifttailcc void @{{.*}}async_leaf_method
+#endif
