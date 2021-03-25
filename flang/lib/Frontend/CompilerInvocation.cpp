@@ -389,6 +389,26 @@ static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.frontendOpts().features_.Enable(
         Fortran::common::LanguageFeature::OpenMP);
   }
+
+  //-fpedantic
+  if (args.hasArg(clang::driver::options::OPT_pedantic)) {
+    res.set_EnableConformanceChecks();
+  }
+  // -std=f2018.  Current behaviour is same as -fpedantic
+  // TODO: Set proper options when more fortran standards
+  // are supported.
+  if (args.hasArg(clang::driver::options::OPT_std_EQ)) {
+    auto standard = args.getLastArgValue(clang::driver::options::OPT_std_EQ);
+    // We only allow f2018 as the given standard
+    if (standard.equals("f2018")) {
+      res.set_EnableConformanceChecks();
+    } else {
+      const unsigned diagID =
+          diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+              "Only -std=f2018 is allowed currently.");
+      diags.Report(diagID);
+    }
+  }
   return;
 }
 
@@ -539,6 +559,11 @@ void CompilerInvocation::setFortranOpts() {
 
   if (frontendOptions.instrumentedParse_)
     fortranOptions.instrumentedParse = true;
+
+  // Set the standard
+  if (enableConformanceChecks()) {
+    fortranOptions.features.WarnOnAllNonstandard();
+  }
 }
 
 void CompilerInvocation::setSemanticsOpts(
@@ -549,5 +574,6 @@ void CompilerInvocation::setSemanticsOpts(
       defaultKinds(), fortranOptions.features, allCookedSources);
 
   semanticsContext_->set_moduleDirectory(moduleDir())
-      .set_searchDirectories(fortranOptions.searchDirectories);
+      .set_searchDirectories(fortranOptions.searchDirectories)
+      .set_warnOnNonstandardUsage(enableConformanceChecks());
 }
