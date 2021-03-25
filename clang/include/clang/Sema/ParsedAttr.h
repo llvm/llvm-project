@@ -1034,6 +1034,27 @@ private:
   mutable AttributePool pool;
 };
 
+struct ParsedAttributesWithRange : ParsedAttributes {
+  ParsedAttributesWithRange(AttributeFactory &factory)
+      : ParsedAttributes(factory) {}
+
+  void clear() {
+    ParsedAttributes::clear();
+    Range = SourceRange();
+  }
+
+  SourceRange Range;
+};
+struct ParsedAttributesViewWithRange : ParsedAttributesView {
+  ParsedAttributesViewWithRange() : ParsedAttributesView() {}
+  void clearListOnly() {
+    ParsedAttributesView::clearListOnly();
+    Range = SourceRange();
+  }
+
+  SourceRange Range;
+};
+
 /// These constants match the enumerated choices of
 /// err_attribute_argument_n_type and err_attribute_argument_type.
 enum AttributeArgumentNType {
