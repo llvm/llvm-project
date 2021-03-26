@@ -406,13 +406,7 @@ define i1 @shl_op_may_be_zero(i16 %x) {
 
 define i1 @shl_shl_nuw(i8 %B, i8 %shift) {
 ; CHECK-LABEL: @shl_shl_nuw(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[A_OP:%.*]] = shl nuw i8 [[A]], [[SHIFT:%.*]]
-; CHECK-NEXT:    [[B_OP:%.*]] = shl nuw i8 [[B]], [[SHIFT]]
-; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
-; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = add i8 %B, 1
   %A.op = shl nuw i8 %A, %shift
@@ -425,13 +419,7 @@ define i1 @shl_shl_nuw(i8 %B, i8 %shift) {
 
 define i1 @shl_shl_nsw(i8 %B, i8 %shift) {
 ; CHECK-LABEL: @shl_shl_nsw(
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
-; CHECK-NEXT:    [[A_OP:%.*]] = shl nsw i8 [[A]], [[SHIFT:%.*]]
-; CHECK-NEXT:    [[B_OP:%.*]] = shl nsw i8 [[B]], [[SHIFT]]
-; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
-; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %A = add i8 %B, 1
   %A.op = shl nsw i8 %A, %shift
