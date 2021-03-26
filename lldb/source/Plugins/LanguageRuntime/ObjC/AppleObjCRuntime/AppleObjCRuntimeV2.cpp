@@ -482,9 +482,8 @@ static void RegisterObjCExceptionRecognizer(Process *process);
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
                                        const ModuleSP &objc_module_sp)
     : AppleObjCRuntime(process), m_objc_module_sp(objc_module_sp),
-      m_class_info_extractor(*this), m_get_shared_cache_class_info_code(),
-      m_get_shared_cache_class_info_args(LLDB_INVALID_ADDRESS),
-      m_get_shared_cache_class_info_args_mutex(), m_decl_vendor_up(),
+      m_dynamic_class_info_extractor(*this),
+      m_shared_cache_class_info_extractor(*this), m_decl_vendor_up(),
       m_tagged_pointer_obfuscator(LLDB_INVALID_ADDRESS),
       m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS), m_hash_signature(),
       m_has_object_getClass(false), m_has_objc_copyRealizedClassList(false),
@@ -1419,18 +1418,20 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunction(
     ExecutionContext &exe_ctx, Helper helper) {
   switch (helper) {
   case gdb_objc_realized_classes: {
-    if (!m_get_class_info_code)
-      m_get_class_info_code = GetClassInfoUtilityFunctionImpl(
-          exe_ctx, g_get_dynamic_class_info_body,
-          g_get_dynamic_class_info_name);
-    return m_get_class_info_code.get();
+    if (!m_gdb_objc_realized_classes_helper.utility_function)
+      m_gdb_objc_realized_classes_helper.utility_function =
+          GetClassInfoUtilityFunctionImpl(exe_ctx,
+                                          g_get_dynamic_class_info_body,
+                                          g_get_dynamic_class_info_name);
+    return m_gdb_objc_realized_classes_helper.utility_function.get();
   }
   case objc_copyRealizedClassList: {
-    if (!m_get_class_info2_code)
-      m_get_class_info2_code = GetClassInfoUtilityFunctionImpl(
-          exe_ctx, g_get_dynamic_class_info2_body,
-          g_get_dynamic_class_info2_name);
-    return m_get_class_info2_code.get();
+    if (!m_objc_copyRealizedClassList_helper.utility_function)
+      m_objc_copyRealizedClassList_helper.utility_function =
+          GetClassInfoUtilityFunctionImpl(exe_ctx,
+                                          g_get_dynamic_class_info2_body,
+                                          g_get_dynamic_class_info2_name);
+    return m_objc_copyRealizedClassList_helper.utility_function.get();
   }
   };
 }
@@ -1439,9 +1440,9 @@ lldb::addr_t &
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoArgs(Helper helper) {
   switch (helper) {
   case gdb_objc_realized_classes:
-    return m_get_class_info_args;
+    return m_gdb_objc_realized_classes_helper.args;
   case objc_copyRealizedClassList:
-    return m_get_class_info2_args;
+    return m_objc_copyRealizedClassList_helper.args;
   }
 }
 
@@ -1458,6 +1459,95 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
   }
 
   return DynamicClassInfoExtractor::gdb_objc_realized_classes;
+}
+
+std::unique_ptr<UtilityFunction>
+AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
+
+  LLDB_LOG(log, "Creating utility function {0}",
+           g_get_shared_cache_class_info_name);
+
+  TypeSystemClang *ast =
+      ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
+  if (!ast)
+    return {};
+
+  // If the inferior objc.dylib has the class_getNameRaw function, use that in
+  // our jitted expression.  Else fall back to the old class_getName.
+  static ConstString g_class_getName_symbol_name("class_getName");
+  static ConstString g_class_getNameRaw_symbol_name(
+      "objc_debug_class_getNameRaw");
+
+  ConstString class_name_getter_function_name =
+      m_runtime.HasSymbol(g_class_getNameRaw_symbol_name)
+          ? g_class_getNameRaw_symbol_name
+          : g_class_getName_symbol_name;
+
+  // Substitute in the correct class_getName / class_getNameRaw function name,
+  // concatenate the two parts of our expression text.  The format string has
+  // two %s's, so provide the name twice.
+  std::string shared_class_expression;
+  llvm::raw_string_ostream(shared_class_expression)
+      << llvm::format(g_shared_cache_class_name_funcptr,
+                      class_name_getter_function_name.AsCString(),
+                      class_name_getter_function_name.AsCString());
+
+  shared_class_expression += g_get_shared_cache_class_info_body;
+
+  auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
+      std::move(shared_class_expression), g_get_shared_cache_class_info_name,
+      eLanguageTypeC, exe_ctx);
+
+  if (!utility_fn_or_error) {
+    LLDB_LOG_ERROR(
+        log, utility_fn_or_error.takeError(),
+        "Failed to get utility function for implementation lookup: {0}");
+    return nullptr;
+  }
+
+  // Make some types for our arguments.
+  CompilerType clang_uint32_t_type =
+      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
+  CompilerType clang_void_pointer_type =
+      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  // Next make the function caller for our implementation utility function.
+  ValueList arguments;
+  Value value;
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetCompilerType(clang_void_pointer_type);
+  arguments.PushValue(value);
+  arguments.PushValue(value);
+
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetCompilerType(clang_uint32_t_type);
+  arguments.PushValue(value);
+  arguments.PushValue(value);
+
+  std::unique_ptr<UtilityFunction> utility_fn = std::move(*utility_fn_or_error);
+
+  Status error;
+  utility_fn->MakeFunctionCaller(clang_uint32_t_type, arguments,
+                                 exe_ctx.GetThreadSP(), error);
+
+  if (error.Fail()) {
+    LLDB_LOG(log,
+             "Failed to make function caller for implementation lookup: {0}.",
+             error.AsCString());
+    return {};
+  }
+
+  return utility_fn;
+}
+
+UtilityFunction *
+AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::GetClassInfoUtilityFunction(
+    ExecutionContext &exe_ctx) {
+  if (!m_utility_function)
+    m_utility_function = GetClassInfoUtilityFunctionImpl(exe_ctx);
+  return m_utility_function.get();
 }
 
 AppleObjCRuntimeV2::DescriptorMapUpdateResult
@@ -1494,7 +1584,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
   // Compute which helper we're going to use for this update.
   const DynamicClassInfoExtractor::Helper helper =
-      m_class_info_extractor.ComputeHelper();
+      m_dynamic_class_info_extractor.ComputeHelper();
 
   // Read the total number of classes from the hash table
   const uint32_t num_classes =
@@ -1507,7 +1597,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
   }
 
   UtilityFunction *get_class_info_code =
-      m_class_info_extractor.GetClassInfoUtilityFunction(exe_ctx, helper);
+      m_dynamic_class_info_extractor.GetClassInfoUtilityFunction(exe_ctx,
+                                                                 helper);
   if (!get_class_info_code) {
     // The callee will have already logged a useful error message.
     return DescriptorMapUpdateResult::Fail();
@@ -1538,7 +1629,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
     return DescriptorMapUpdateResult::Fail();
   }
 
-  std::lock_guard<std::mutex> guard(m_class_info_extractor.GetMutex());
+  std::lock_guard<std::mutex> guard(m_dynamic_class_info_extractor.GetMutex());
 
   // Fill in our function argument values
   arguments.GetValueAtIndex(0)->GetScalar() = hash_table.GetTableLoadAddress();
@@ -1558,8 +1649,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
   // Write our function arguments into the process so we can run our function
   if (get_class_info_function->WriteFunctionArguments(
-          exe_ctx, m_class_info_extractor.GetClassInfoArgs(helper), arguments,
-          diagnostics)) {
+          exe_ctx, m_dynamic_class_info_extractor.GetClassInfoArgs(helper),
+          arguments, diagnostics)) {
     EvaluateExpressionOptions options;
     options.SetUnwindOnError(true);
     options.SetTryAllThreads(false);
@@ -1580,8 +1671,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(
 
     // Run the function
     ExpressionResults results = get_class_info_function->ExecuteFunction(
-        exe_ctx, &m_class_info_extractor.GetClassInfoArgs(helper), options,
-        diagnostics, return_value);
+        exe_ctx, &m_dynamic_class_info_extractor.GetClassInfoArgs(helper),
+        options, diagnostics, return_value);
 
     if (results == eExpressionCompleted) {
       // The result is the number of ClassInfo structures that were filled in
@@ -1734,79 +1825,18 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
   const uint32_t num_classes = 128 * 1024;
 
-  // Make some types for our arguments
-  CompilerType clang_uint32_t_type =
-      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
-  CompilerType clang_void_pointer_type =
-      ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+  UtilityFunction *get_class_info_code =
+      m_shared_cache_class_info_extractor.GetClassInfoUtilityFunction(exe_ctx);
+  FunctionCaller *get_shared_cache_class_info_function =
+      get_class_info_code->GetFunctionCaller();
 
-  ValueList arguments;
-  FunctionCaller *get_shared_cache_class_info_function = nullptr;
-
-  if (!m_get_shared_cache_class_info_code) {
-    Status error;
-
-    // If the inferior objc.dylib has the class_getNameRaw function,
-    // use that in our jitted expression.  Else fall back to the old
-    // class_getName.
-    static ConstString g_class_getName_symbol_name("class_getName");
-    static ConstString g_class_getNameRaw_symbol_name(
-        "objc_debug_class_getNameRaw");
-
-    ConstString class_name_getter_function_name =
-        HasSymbol(g_class_getNameRaw_symbol_name)
-            ? g_class_getNameRaw_symbol_name
-            : g_class_getName_symbol_name;
-
-    // Substitute in the correct class_getName / class_getNameRaw function name,
-    // concatenate the two parts of our expression text.  The format string
-    // has two %s's, so provide the name twice.
-    std::string shared_class_expression;
-    llvm::raw_string_ostream(shared_class_expression)
-        << llvm::format(g_shared_cache_class_name_funcptr,
-                        class_name_getter_function_name.AsCString(),
-                        class_name_getter_function_name.AsCString());
-
-    shared_class_expression += g_get_shared_cache_class_info_body;
-
-    auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
-        std::move(shared_class_expression), g_get_shared_cache_class_info_name,
-        eLanguageTypeC, exe_ctx);
-    if (!utility_fn_or_error) {
-      LLDB_LOG_ERROR(
-          log, utility_fn_or_error.takeError(),
-          "Failed to get utility function for implementation lookup: {0}");
-      return DescriptorMapUpdateResult::Fail();
-    }
-
-    m_get_shared_cache_class_info_code = std::move(*utility_fn_or_error);
-
-    // Next make the function caller for our implementation utility function.
-    Value value;
-    value.SetValueType(Value::ValueType::Scalar);
-    value.SetCompilerType(clang_void_pointer_type);
-    arguments.PushValue(value);
-    arguments.PushValue(value);
-
-    value.SetValueType(Value::ValueType::Scalar);
-    value.SetCompilerType(clang_uint32_t_type);
-    arguments.PushValue(value);
-    arguments.PushValue(value);
-
-    get_shared_cache_class_info_function =
-        m_get_shared_cache_class_info_code->MakeFunctionCaller(
-            clang_uint32_t_type, arguments, thread_sp, error);
-
-    if (get_shared_cache_class_info_function == nullptr)
-      return DescriptorMapUpdateResult::Fail();
-
-  } else {
-    get_shared_cache_class_info_function =
-        m_get_shared_cache_class_info_code->GetFunctionCaller();
-    if (get_shared_cache_class_info_function == nullptr)
-      return DescriptorMapUpdateResult::Fail();
-    arguments = get_shared_cache_class_info_function->GetArgumentValues();
+  if (!get_shared_cache_class_info_function) {
+    LLDB_LOGF(log, "Failed to get implementation lookup function caller.");
+    return DescriptorMapUpdateResult::Fail();
   }
+
+  ValueList arguments =
+      get_shared_cache_class_info_function->GetArgumentValues();
 
   DiagnosticManager diagnostics;
 
@@ -1823,7 +1853,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     return DescriptorMapUpdateResult::Fail();
   }
 
-  std::lock_guard<std::mutex> guard(m_get_shared_cache_class_info_args_mutex);
+  std::lock_guard<std::mutex> guard(
+      m_shared_cache_class_info_extractor.GetMutex());
 
   // Fill in our function argument values
   arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
@@ -1842,8 +1873,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
 
   // Write our function arguments into the process so we can run our function
   if (get_shared_cache_class_info_function->WriteFunctionArguments(
-          exe_ctx, m_get_shared_cache_class_info_args, arguments,
-          diagnostics)) {
+          exe_ctx, m_shared_cache_class_info_extractor.GetClassInfoArgs(),
+          arguments, diagnostics)) {
     EvaluateExpressionOptions options;
     options.SetUnwindOnError(true);
     options.SetTryAllThreads(false);
@@ -1851,6 +1882,9 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     options.SetIgnoreBreakpoints(true);
     options.SetTimeout(process->GetUtilityExpressionTimeout());
     options.SetIsForUtilityExpr(true);
+
+    CompilerType clang_uint32_t_type =
+        ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
 
     Value return_value;
     return_value.SetValueType(Value::ValueType::Scalar);
@@ -1862,8 +1896,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
     // Run the function
     ExpressionResults results =
         get_shared_cache_class_info_function->ExecuteFunction(
-            exe_ctx, &m_get_shared_cache_class_info_args, options, diagnostics,
-            return_value);
+            exe_ctx, &m_shared_cache_class_info_extractor.GetClassInfoArgs(),
+            options, diagnostics, return_value);
 
     if (results == eExpressionCompleted) {
       // The result is the number of ClassInfo structures that were filled in
