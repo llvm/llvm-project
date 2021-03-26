@@ -81,6 +81,7 @@ struct Configuration {
   bool searchDylibsFirst = false;
   bool saveTemps = false;
   bool adhocCodesign = false;
+  bool emitFunctionStarts = false;
   bool timeTraceEnabled = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
