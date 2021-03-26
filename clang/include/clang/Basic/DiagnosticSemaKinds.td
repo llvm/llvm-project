@@ -10893,6 +10893,8 @@ def err_omp_clause_requires_dispatch_construct : Error<
   "'%0' clause requires 'dispatch' context selector">;
 def err_omp_append_args_with_varargs : Error<
   "'append_args' is not allowed with varargs functions">;
+def err_openmp_vla_in_task_untied : Error<
+  "variable length arrays are not supported in OpenMP tasking regions with 'untied' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
