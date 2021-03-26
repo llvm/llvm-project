@@ -10,7 +10,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
-#include "llvm/Pass.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
@@ -19,19 +18,47 @@
 using namespace llvm;
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
-  outs() << "Basic blocks of " << F.getName() << " in bf-order:\n";
-  for (bf_iterator<BasicBlock *> I = bf_begin(&F.getEntryBlock()),
-                                 IE = bf_end(&F.getEntryBlock());
-       I != IE; ++I) {
-    outs() << "  " << (*I)->getName() << "\n";
+  outs() << "Basic blocks of " << F.getName() << " in bf_iterator:\n";
+  for (bf_iterator<BasicBlock *> iterator = bf_begin(&F.getEntryBlock()),
+           IE = bf_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
   }
 
   outs() << "===============================================\n";
-  outs() << "Basic blocks of " << F.getName() << " in post-order:\n";
-  for (po_iterator<BasicBlock *> I = po_begin(&F.getEntryBlock()),
-                                 IE = po_end(&F.getEntryBlock());
-       I != IE; ++I) {
-    outs() << "  " << (*I)->getName() << "\n";
+  outs() << "Basic blocks of " << F.getName() << " in po_iterator:\n";
+  for (po_iterator<BasicBlock *> iterator = po_begin(&F.getEntryBlock()),
+           IE = po_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
+  }
+
+  outs() << "===============================================\n";
+  outs() << "Basic blocks of " << F.getName() << " in pred_iterator:\n";
+  for (auto iterator = pred_begin(&F.getEntryBlock()),
+           IE = pred_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
+  }
+
+  outs() << "===============================================\n";
+  outs() << "Basic blocks of " << F.getName() << " in succ_iterator:\n";
+  for (auto iterator = succ_begin(&F.getEntryBlock()),
+           IE = succ_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
   }
 
   // Use LLVM's Strongly Connected Components (SCCs) iterator to produce
@@ -44,16 +71,18 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
     const std::vector<BasicBlock *> &SCCBBs = *I;
     outs() << "  SCC: ";
     for (std::vector<BasicBlock *>::const_iterator BBI = SCCBBs.begin(),
-                                                   BBIE = SCCBBs.end();
+             BBIE = SCCBBs.end();
          BBI != BBIE; ++BBI) {
-      outs() << (*BBI)->getName() << "  ";
+      outs() << (*BBI) << "  ";
+      for (auto &ii: **BBI) {
+        outs() << "Instruction in this ssc post order: " << ii << "\n";
+      }
     }
     outs() << "\n";
   }
 
   outs() << "===============================================\n";
   outs() << "===============================================\n";
-  outs() << "Function: " << F.getName() << "\n";
   outs() << "Instruction count: " << F.getInstructionCount() << "\n";
 
   for (auto &bb : F) {
@@ -83,6 +112,11 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
   outs() << "Trying to be customized GrapTraits #######################\n";
   GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
+  outs() << "===============================================\n";
+  outs() << "Updated again one more time!!\n\n";
+  outs() << "===============================================\n";
+
+  outs() << "This is the last update 14\n";
 
   return PreservedAnalyses::all();
 }
