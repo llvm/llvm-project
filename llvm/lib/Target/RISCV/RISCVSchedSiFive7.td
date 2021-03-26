@@ -162,7 +162,6 @@ def : WriteRes<WriteNop, []>;
 
 def : InstRW<[WriteIALU], (instrs COPY)>;
 
-
 //===----------------------------------------------------------------------===//
 // Bypass and advance
 def : ReadAdvance<ReadJmp, 0>;
@@ -270,4 +269,7 @@ def : ReadAdvance<ReadFMovF16ToI16, 0>;
 def : ReadAdvance<ReadFSGNJ16, 0>;
 def : ReadAdvance<ReadFSqrt16, 0>;
 } // Unsupported = true
+
+defm : UnsupportedSchedZba;
+defm : UnsupportedSchedZbb;
 }

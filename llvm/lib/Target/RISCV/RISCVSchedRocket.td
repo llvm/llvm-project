@@ -281,4 +281,7 @@ def : ReadAdvance<ReadFMovF16ToI16, 0>;
 def : ReadAdvance<ReadFSGNJ16, 0>;
 def : ReadAdvance<ReadFSqrt16, 0>;
 } // Unsupported = true
+
+defm : UnsupportedSchedZba;
+defm : UnsupportedSchedZbb;
 }
