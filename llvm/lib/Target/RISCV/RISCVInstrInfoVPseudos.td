@@ -670,7 +670,7 @@ class VPseudoSLoadMask<VReg RetClass, bits<7> EEW>:
 }
 
 class VPseudoILoadNoMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL,
-                         bit Ordered>:
+                         bit Ordered, bit EarlyClobber>:
       Pseudo<(outs RetClass:$rd),
              (ins GPR:$rs1, IdxClass:$rs2, GPR:$vl, ixlenimm:$sew),[]>,
       RISCVVPseudo,
@@ -683,11 +683,12 @@ class VPseudoILoadNoMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasDummyMask = 1;
+  let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd", "");
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
 class VPseudoILoadMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL,
-                       bit Ordered>:
+                       bit Ordered, bit EarlyClobber>:
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
               (ins GetVRegNoV0<RetClass>.R:$merge,
                    GPR:$rs1, IdxClass:$rs2,
@@ -698,7 +699,7 @@ class VPseudoILoadMask<VReg RetClass, VReg IdxClass, bits<7> EEW, bits<3> LMUL,
   let mayStore = 0;
   let hasSideEffects = 0;
   let usesCustomInserter = 1;
-  let Constraints = "$rd = $merge";
+  let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $merge", "$rd = $merge");
   let Uses = [VL, VTYPE];
   let HasVLOp = 1;
   let HasSEWOp = 1;
@@ -1364,11 +1365,12 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar idx_lmul = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = lmul.vrclass;
           defvar IdxVreg = idx_lmul.vrclass;
+          defvar HasConstraint = !ne(sew, eew);
           let VLMul = lmul.value in {
             def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo :
-              VPseudoILoadNoMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered>;
+              VPseudoILoadNoMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>;
             def "EI" # eew # "_V_" # IdxLInfo # "_" # LInfo # "_MASK" :
-              VPseudoILoadMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered>;
+              VPseudoILoadMask<Vreg, IdxVreg, eew, idx_lmul.value, Ordered, HasConstraint>;
           }
         }
       }

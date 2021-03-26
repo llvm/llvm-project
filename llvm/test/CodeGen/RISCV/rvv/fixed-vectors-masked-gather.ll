@@ -194,13 +194,15 @@ define <4 x i8> @mgather_truemask_v4i8(<4 x i8*> %ptrs, <4 x i8> %passthru) {
 ; RV32-LABEL: mgather_truemask_v4i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
-; RV32-NEXT:    vloxei32.v v8, (zero), v8
+; RV32-NEXT:    vloxei32.v v25, (zero), v8
+; RV32-NEXT:    vmv1r.v v8, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_truemask_v4i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 4, e8,mf4,ta,mu
-; RV64-NEXT:    vloxei64.v v8, (zero), v8
+; RV64-NEXT:    vloxei64.v v25, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> undef, <4 x i32> zeroinitializer
@@ -413,13 +415,15 @@ define <4 x i16> @mgather_truemask_v4i16(<4 x i16*> %ptrs, <4 x i16> %passthru) 
 ; RV32-LABEL: mgather_truemask_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
-; RV32-NEXT:    vloxei32.v v8, (zero), v8
+; RV32-NEXT:    vloxei32.v v25, (zero), v8
+; RV32-NEXT:    vmv1r.v v8, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_truemask_v4i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
-; RV64-NEXT:    vloxei64.v v8, (zero), v8
+; RV64-NEXT:    vloxei64.v v25, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> undef, <4 x i32> zeroinitializer
@@ -675,7 +679,8 @@ define <4 x i32> @mgather_truemask_v4i32(<4 x i32*> %ptrs, <4 x i32> %passthru) 
 ; RV64-LABEL: mgather_truemask_v4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 4, e32,m1,ta,mu
-; RV64-NEXT:    vloxei64.v v8, (zero), v8
+; RV64-NEXT:    vloxei64.v v25, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> undef, <4 x i32> zeroinitializer
@@ -959,7 +964,8 @@ define <4 x i64> @mgather_truemask_v4i64(<4 x i64*> %ptrs, <4 x i64> %passthru) 
 ; RV32-LABEL: mgather_truemask_v4i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
-; RV32-NEXT:    vloxei32.v v8, (zero), v8
+; RV32-NEXT:    vloxei32.v v26, (zero), v8
+; RV32-NEXT:    vmv2r.v v8, v26
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_truemask_v4i64:
@@ -1324,13 +1330,15 @@ define <4 x half> @mgather_truemask_v4f16(<4 x half*> %ptrs, <4 x half> %passthr
 ; RV32-LABEL: mgather_truemask_v4f16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
-; RV32-NEXT:    vloxei32.v v8, (zero), v8
+; RV32-NEXT:    vloxei32.v v25, (zero), v8
+; RV32-NEXT:    vmv1r.v v8, v25
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_truemask_v4f16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
-; RV64-NEXT:    vloxei64.v v8, (zero), v8
+; RV64-NEXT:    vloxei64.v v25, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> undef, <4 x i32> zeroinitializer
@@ -1544,7 +1552,8 @@ define <4 x float> @mgather_truemask_v4f32(<4 x float*> %ptrs, <4 x float> %pass
 ; RV64-LABEL: mgather_truemask_v4f32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli a0, 4, e32,m1,ta,mu
-; RV64-NEXT:    vloxei64.v v8, (zero), v8
+; RV64-NEXT:    vloxei64.v v25, (zero), v8
+; RV64-NEXT:    vmv1r.v v8, v25
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> undef, i1 1, i32 0
   %mtrue = shufflevector <4 x i1> %mhead, <4 x i1> undef, <4 x i32> zeroinitializer
@@ -1828,7 +1837,8 @@ define <4 x double> @mgather_truemask_v4f64(<4 x double*> %ptrs, <4 x double> %p
 ; RV32-LABEL: mgather_truemask_v4f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
-; RV32-NEXT:    vloxei32.v v8, (zero), v8
+; RV32-NEXT:    vloxei32.v v26, (zero), v8
+; RV32-NEXT:    vmv2r.v v8, v26
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mgather_truemask_v4f64:
