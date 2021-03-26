@@ -2213,6 +2213,31 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
+static bool isNonZeroRecurrence(const PHINode *PN) {
+  // Try and detect a recurrence that monotonically increases from a
+  // starting value, as these are common as induction variables.
+  BinaryOperator *BO = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  const APInt *StartC, *StepC;
+  if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
+      !match(Start, m_APInt(StartC)) || !match(Step, m_APInt(StepC)))
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Add:
+    return (BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
+            !StepC->isNullValue()) ||
+           (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
+            StepC->isNonNegative());
+  case Instruction::Mul:
+    return !StartC->isNullValue() &&
+           ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StepC->isStrictlyPositive()));
+  default:
+    return false;
+  }
+}
+
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every demanded element is known to be non-zero when
 /// defined. For pointers, if the context instruction and dominator tree are
@@ -2454,22 +2479,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   }
   // PHI
   else if (const PHINode *PN = dyn_cast<PHINode>(V)) {
-    // Try and detect a recurrence that monotonically increases from a
-    // starting value, as these are common as induction variables.
-    BinaryOperator *BO = nullptr;
-    Value *Start = nullptr, *Step = nullptr;
-    const APInt *StartC, *StepC;
-    if (Q.IIQ.UseInstrInfo && matchSimpleRecurrence(PN, BO, Start, Step) &&
-        match(Start, m_APInt(StartC)) && match(Step, m_APInt(StepC))) {
-      if (BO->getOpcode() == Instruction::Add &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          StartC->isStrictlyPositive() && !StepC->isNegative())
-        return true;
-      if (BO->getOpcode() == Instruction::Mul &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          !StartC->isNullValue() && StepC->isStrictlyPositive())
-        return true;
-    }
+    if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
+      return true;
+
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
