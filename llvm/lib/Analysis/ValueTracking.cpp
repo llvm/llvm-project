@@ -2220,19 +2220,23 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   Value *Start = nullptr, *Step = nullptr;
   const APInt *StartC, *StepC;
   if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
-      !match(Start, m_APInt(StartC)) || !match(Step, m_APInt(StepC)))
+      !match(Start, m_APInt(StartC)))
     return false;
 
   switch (BO->getOpcode()) {
   case Instruction::Add:
-    return (BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
-            !StepC->isNullValue()) ||
-           (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
-            StepC->isNonNegative());
+    return match(Step, m_APInt(StepC)) &&
+           ((BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
+             !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
+             StepC->isNonNegative()));
   case Instruction::Mul:
-    return !StartC->isNullValue() &&
+    return !StartC->isNullValue() && match(Step, m_APInt(StepC)) &&
            ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
             (BO->hasNoSignedWrap() && StepC->isStrictlyPositive()));
+  case Instruction::Shl:
+    return !StartC->isNullValue() &&
+           (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
   default:
     return false;
   }
