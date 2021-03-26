@@ -1886,8 +1886,9 @@ private:
   /// function attribute.
   unsigned LargestVectorWidth = 0;
 
-  /// True if we need emit the life-time markers.
-  const bool ShouldEmitLifetimeMarkers;
+  /// True if we need emit the life-time markers. This is initially set in
+  /// the constructor, but could be overwritten to true if this is a coroutine.
+  bool ShouldEmitLifetimeMarkers;
 
   /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
   /// the function metadata.

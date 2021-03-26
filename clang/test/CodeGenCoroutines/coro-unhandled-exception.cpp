@@ -50,6 +50,8 @@ coro_t f() {
 // CHECK: [[TRYCONT]]:
 // CHECK-NEXT: br label %[[COROFIN:.+]]
 // CHECK: [[COROFIN]]:
+// CHECK-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
 // CHECK-NEXT: call void @"?final_suspend@promise_type@coro_t@@QEAA?AUsuspend_never@coroutines_v1@experimental@std@@XZ"(
 
 // CHECK-LPAD: @_Z1fv(
@@ -69,4 +71,6 @@ coro_t f() {
 // CHECK-LPAD: [[TRYCONT]]:
 // CHECK-LPAD: br label %[[COROFIN:.+]]
 // CHECK-LPAD: [[COROFIN]]:
+// CHECK-LPAD-NEXT: bitcast %"struct.std::experimental::coroutines_v1::suspend_never"* %{{.+}} to i8*
+// CHECK-LPAD-NEXT: call void @llvm.lifetime.start.p0i8(
 // CHECK-LPAD-NEXT: call void @_ZN6coro_t12promise_type13final_suspendEv(
