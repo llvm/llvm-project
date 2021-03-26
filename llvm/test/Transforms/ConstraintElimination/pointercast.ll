@@ -174,19 +174,19 @@ define i1 @addrspacecast_and_cmp(i32* readonly %src, i32* readnone %min, i32* re
 ; CHECK:       checks:
 ; CHECK-NEXT:    [[C_3_MIN:%.*]] = icmp ult i32* [[GEP_3]], [[MIN]]
 ; CHECK-NEXT:    [[C_3_MAX:%.*]] = icmp ult i32* [[GEP_3]], [[MAX]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 false, [[C_3_MAX]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_3_MIN]], [[C_3_MAX]]
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 1
 ; CHECK-NEXT:    [[C_1_MIN:%.*]] = icmp ult i32* [[GEP_1]], [[MIN]]
 ; CHECK-NEXT:    [[C_1_MAX:%.*]] = icmp ult i32* [[GEP_1]], [[MAX]]
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 false, true
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[C_1_MIN]], [[C_1_MAX]]
 ; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 2
 ; CHECK-NEXT:    [[C_2_MIN:%.*]] = icmp ult i32* [[GEP_2]], [[MIN]]
 ; CHECK-NEXT:    [[C_2_MAX:%.*]] = icmp ult i32* [[GEP_2]], [[MAX]]
-; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 false, true
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[C_2_MIN]], [[C_2_MAX]]
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, i32* [[SRC]], i64 4
 ; CHECK-NEXT:    [[C_4_MIN:%.*]] = icmp ult i32* [[GEP_4]], [[MIN]]
 ; CHECK-NEXT:    [[C_4_MAX:%.*]] = icmp ult i32* [[GEP_4]], [[MAX]]
-; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 false, [[C_4_MAX]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[C_4_MIN]], [[C_4_MAX]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_1]], [[RES_2]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[RES_3]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[RES_4]]
