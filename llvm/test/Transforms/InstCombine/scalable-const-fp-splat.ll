@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S -o - < %s 2>%t | FileCheck %s
+; RUN: opt -instcombine -S -o - < %s 2>%t | FileCheck %s
 ; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
 
 ; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
