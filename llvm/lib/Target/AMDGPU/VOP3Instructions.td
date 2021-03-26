@@ -21,29 +21,21 @@ def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
 
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let Asm64 = " $vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
-}
-
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32> {
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
+  let Asm64 = "$vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
+  let IsSingle = 1;
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
 }
 
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VReg_64>;
-}
+def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
 
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VReg_64>;
-
+  let IsSingle = 1;
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let Asm64 = " $vdst, $sdst, $src0, $src1, $src2$clamp";
+  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
 class V_MUL_PROF<VOPProfile P> : VOP3_Profile<P> {
@@ -809,6 +801,7 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
       VOP3e_gfx10<op, !cast<VOP3_Pseudo>(opName#"_e64").Pfl> {
         VOP3_Pseudo ps = !cast<VOP3_Pseudo>(opName#"_e64");
         let AsmString = asmName # ps.AsmOperands;
+        let IsSingle = 1;
       }
   }
   multiclass VOP3be_Real_gfx10<bits<10> op> {

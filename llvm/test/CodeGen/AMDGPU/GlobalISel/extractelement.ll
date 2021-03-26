@@ -4175,7 +4175,7 @@ define i32 @v_extract_v64i32_37(<64 x i32> addrspace(1)* %ptr) {
 ; GFX10-NEXT:    s_mov_b32 s5, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s5
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, v2
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)

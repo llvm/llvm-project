@@ -296,11 +296,11 @@ v_subrev_co_ci_u32_dpp v5, vcc, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 ban
 // GFX1064: v_subrev_co_ci_u32_dpp v5, vcc, v1, v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 ; encoding: [0xfa,0x04,0x0a,0x54,0x01,0xe4,0x00,0x00]
 
 v_add_co_u32 v0, s0, v0, v2
-// GFX1032: v_add_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_add_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:26: error: invalid operand for instruction
 
 v_add_co_u32_e64 v0, s0, v0, v2
-// GFX1032: v_add_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_add_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:30: error: invalid operand for instruction
 
 v_add_co_ci_u32_e64 v4, s0, v1, v5, s2
@@ -308,11 +308,11 @@ v_add_co_ci_u32_e64 v4, s0, v1, v5, s2
 // GFX1064-ERR: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_sub_co_u32 v0, s0, v0, v2
-// GFX1032: v_sub_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_sub_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:26: error: invalid operand for instruction
 
 v_sub_co_u32_e64 v0, s0, v0, v2
-// GFX1032: v_sub_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_sub_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:30: error: invalid operand for instruction
 
 v_sub_co_ci_u32_e64 v4, s0, v1, v5, s2
@@ -320,11 +320,11 @@ v_sub_co_ci_u32_e64 v4, s0, v1, v5, s2
 // GFX1064-ERR: :[[@LINE-2]]:25: error: invalid operand for instruction
 
 v_subrev_co_u32 v0, s0, v0, v2
-// GFX1032: v_subrev_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_subrev_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_subrev_co_u32_e64 v0, s0, v0, v2
-// GFX1032: v_subrev_co_u32_e64 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
+// GFX1032: v_subrev_co_u32 v0, s0, v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
 // GFX1064-ERR: :[[@LINE-2]]:33: error: invalid operand for instruction
 
 v_subrev_co_ci_u32_e64 v4, s0, v1, v5, s2
@@ -333,11 +333,11 @@ v_subrev_co_ci_u32_e64 v4, s0, v1, v5, s2
 
 v_add_co_u32 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
-// GFX1064: v_add_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_add_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
 
 v_add_co_u32_e64 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:22: error: invalid operand for instruction
-// GFX1064: v_add_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_add_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x0f,0xd7,0x00,0x05,0x02,0x00]
 
 v_add_co_ci_u32_e64 v4, s[0:1], v1, v5, s[2:3]
 // GFX1032-ERR: :[[@LINE-1]]:25: error: invalid operand for instruction
@@ -345,11 +345,11 @@ v_add_co_ci_u32_e64 v4, s[0:1], v1, v5, s[2:3]
 
 v_sub_co_u32 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:18: error: invalid operand for instruction
-// GFX1064: v_sub_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_sub_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
 
 v_sub_co_u32_e64 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:22: error: invalid operand for instruction
-// GFX1064: v_sub_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_sub_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x10,0xd7,0x00,0x05,0x02,0x00]
 
 v_sub_co_ci_u32_e64 v4, s[0:1], v1, v5, s[2:3]
 // GFX1032-ERR: :[[@LINE-1]]:25: error: invalid operand for instruction
@@ -357,11 +357,11 @@ v_sub_co_ci_u32_e64 v4, s[0:1], v1, v5, s[2:3]
 
 v_subrev_co_u32 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:21: error: invalid operand for instruction
-// GFX1064: v_subrev_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_subrev_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
 
 v_subrev_co_u32_e64 v0, s[0:1], v0, v2
 // GFX1032-ERR: :[[@LINE-1]]:25: error: invalid operand for instruction
-// GFX1064: v_subrev_co_u32_e64 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
+// GFX1064: v_subrev_co_u32 v0, s[0:1], v0, v2 ; encoding: [0x00,0x00,0x19,0xd7,0x00,0x05,0x02,0x00]
 
 v_subrev_co_ci_u32_e64 v4, s[0:1], v1, v5, s[2:3]
 // GFX1032-ERR: :[[@LINE-1]]:28: error: invalid operand for instruction
