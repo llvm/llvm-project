@@ -1349,14 +1349,7 @@ CAMLprim value llvm_delete_global(LLVMValueRef GlobalVar) {
 
 /* llvalue -> llvalue option */
 CAMLprim value llvm_global_initializer(LLVMValueRef GlobalVar) {
-  CAMLparam0();
-  LLVMValueRef Init;
-  if ((Init = LLVMGetInitializer(GlobalVar))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Init;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  return ptr_to_option(LLVMGetInitializer(GlobalVar));
 }
 
 /* llvalue -> llvalue -> unit */
