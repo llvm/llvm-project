@@ -284,8 +284,8 @@ void macho::DependencyTracker::write(llvm::StringRef version,
   inputNames.reserve(inputs.size());
   for (InputFile *f : inputs)
     inputNames.push_back(f->getName());
-  llvm::sort(inputNames,
-             [](const StringRef &a, const StringRef &b) { return a < b; });
+  llvm::sort(inputNames);
+
   for (const StringRef &in : inputNames)
     addDep(DepOpCode::Input, in);
 
