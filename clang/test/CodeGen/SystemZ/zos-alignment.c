@@ -83,6 +83,35 @@ struct s6 {
 // CHECK-NEXT:         8 |   char *[] b
 // CHECK-NEXT:           | [sizeof=8, align=8]
 
+struct s7 {
+  long  :0;
+  short a;
+} S7;
+// CHECK:              0 | struct s7
+// CHECK-NEXT:       0:- |   long
+// CHECK-NEXT:         0 |   short a
+// CHECK-NEXT:           | [sizeof=2, align=2]
+
+#pragma pack(2)
+struct s8 {
+  unsigned long       :0;
+  long long           a;
+} S8;
+#pragma pack()
+// CHECK:              0 | struct s8
+// CHECK-NEXT:       0:- |   unsigned long
+// CHECK-NEXT:         0 |   long long a
+// CHECK-NEXT:           | [sizeof=8, align=2]
+
+struct s9 {
+  unsigned int   :0;
+  unsigned short :0;
+} S9;
+// CHECK:              0 | struct s9
+// CHECK-NEXT:       0:- |   unsigned int
+// CHECK-NEXT:       0:- |   unsigned short
+// CHECK-NEXT:           | [sizeof=0, align=1]
+
 struct s10 {
  unsigned int __attribute__((aligned)) a;
 } S10;
