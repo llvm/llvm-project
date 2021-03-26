@@ -1257,22 +1257,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Observer.changedInstr(MI);
     return Legalized;
   }
-  case TargetOpcode::G_FPTOUI: {
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-    Observer.changingInstr(MI);
-    narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_ZEXT);
-    Observer.changedInstr(MI);
-    return Legalized;
-  }
-  case TargetOpcode::G_FPTOSI: {
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-    Observer.changingInstr(MI);
-    narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_SEXT);
-    Observer.changedInstr(MI);
-    return Legalized;
-  }
+  case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_FPTOSI:
+    return narrowScalarFPTOI(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_FPEXT:
     if (TypeIdx != 0)
       return UnableToLegalize;
@@ -4493,6 +4480,31 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
       IsMulHigh ? &DstTmpRegs[DstTmpParts / 2] : &DstTmpRegs[0], NumDstParts);
   MIRBuilder.buildMerge(DstReg, DstRegs);
   MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarFPTOI(MachineInstr &MI, unsigned TypeIdx,
+                                   LLT NarrowTy) {
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_FPTOSI;
+
+  Register Src = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+
+  // If all finite floats fit into the narrowed integer type, we can just swap
+  // out the result type. This is practically only useful for conversions from
+  // half to at least 16-bits, so just handle the one case.
+  if (SrcTy.getScalarType() != LLT::scalar(16) ||
+      NarrowTy.getScalarSizeInBits() < (IsSigned ? 17 : 16))
+    return UnableToLegalize;
+
+  Observer.changingInstr(MI);
+  narrowScalarDst(MI, NarrowTy, 0,
+                  IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT);
+  Observer.changedInstr(MI);
   return Legalized;
 }
 
