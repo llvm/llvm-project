@@ -1,7 +1,5 @@
 # Test handling of DWARF5 file index 0.
 # REQUIRES: x86
-# XFAIL: target-arm && linux-gnu
-# XFAIL: system-windows
 
 # RUN: llvm-mc -filetype=obj -o %t -triple x86_64-pc-linux %s
 # RUN: %lldb %t -o "image lookup -f hello.c -l 1" \
@@ -19,7 +17,7 @@
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
-	.byte	1                               # DW_CHILDREN_no
+	.byte	0                               # DW_CHILDREN_no
 	.byte	37                              # DW_AT_producer
 	.byte	37                              # DW_FORM_strx1
 	.byte	19                              # DW_AT_language
