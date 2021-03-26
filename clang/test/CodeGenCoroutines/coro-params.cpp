@@ -70,7 +70,11 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
 
   // CHECK: call i8* @llvm.coro.begin(
   // CHECK: call void @_ZN8MoveOnlyC1EOS_(%struct.MoveOnly* {{[^,]*}} %[[MoCopy]], %struct.MoveOnly* nonnull align 4 dereferenceable(4) %[[MoParam]])
+  // CHECK-NEXT: bitcast %struct.MoveAndCopy* %[[McCopy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyC1EOS_(%struct.MoveAndCopy* {{[^,]*}} %[[McCopy]], %struct.MoveAndCopy* nonnull align 4 dereferenceable(4) %[[McParam]]) #
+  // CHECK-NEXT: bitcast %"struct.std::experimental::coroutine_traits<void, int, MoveOnly, MoveAndCopy>::promise_type"* %__promise to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeC1Ev(
 
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
@@ -89,9 +93,17 @@ void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: call void @_ZN14suspend_always12await_resumeEv(
 
   // Destroy promise, then parameter copies:
-  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeD1Ev(%"struct.std::experimental::coroutine_traits<void, int, MoveOnly, MoveAndCopy>::promise_type"* {{[^,]*}} %__promise) #2
+  // CHECK: call void @_ZNSt12experimental16coroutine_traitsIJvi8MoveOnly11MoveAndCopyEE12promise_typeD1Ev(%"struct.std::experimental::coroutine_traits<void, int, MoveOnly, MoveAndCopy>::promise_type"* {{[^,]*}} %__promise)
+  // CHECK-NEXT: bitcast %"struct.std::experimental::coroutine_traits<void, int, MoveOnly, MoveAndCopy>::promise_type"* %__promise to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(
   // CHECK-NEXT: call void @_ZN11MoveAndCopyD1Ev(%struct.MoveAndCopy* {{[^,]*}} %[[McCopy]])
+  // CHECK-NEXT: bitcast %struct.MoveAndCopy* %[[McCopy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(
   // CHECK-NEXT: call void @_ZN8MoveOnlyD1Ev(%struct.MoveOnly* {{[^,]*}} %[[MoCopy]]
+  // CHECK-NEXT: bitcast %struct.MoveOnly* %[[MoCopy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(
+  // CHECK-NEXT: bitcast i32* %{{.+}} to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(
   // CHECK-NEXT: call i8* @llvm.coro.free(
 }
 
@@ -103,9 +115,17 @@ void dependent_params(T x, U, U y) {
   // CHECK-NEXT: %[[y_copy:.+]] = alloca %struct.B
 
   // CHECK: call i8* @llvm.coro.begin
+  // CHECK-NEXT: bitcast %struct.A* %[[x_copy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN1AC1EOS_(%struct.A* {{[^,]*}} %[[x_copy]], %struct.A* nonnull align 4 dereferenceable(512) %x)
+  // CHECK-NEXT: bitcast %struct.B* %[[unnamed_copy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* {{[^,]*}} %[[unnamed_copy]], %struct.B* nonnull align 4 dereferenceable(512) %0)
+  // CHECK-NEXT: %10 = bitcast %struct.B* %[[y_copy]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: call void @_ZN1BC1EOS_(%struct.B* {{[^,]*}} %[[y_copy]], %struct.B* nonnull align 4 dereferenceable(512) %y)
+  // CHECK-NEXT: bitcast %"struct.std::experimental::coroutine_traits<void, A, B, B>::promise_type"* %__promise to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(
   // CHECK-NEXT: invoke void @_ZNSt12experimental16coroutine_traitsIJv1A1BS2_EE12promise_typeC1Ev(
 
   co_return;
