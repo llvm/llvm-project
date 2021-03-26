@@ -68,6 +68,8 @@ public:
 
   uint32_t GetPluginVersion() override;
 
+  bool IsFullyInitialized() override;
+
 protected:
   void PutToLog(lldb_private::Log *log) const;
 
