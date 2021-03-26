@@ -13,6 +13,8 @@ declare i32 @llvm.smax.i32(i32, i32)
 declare i16 @llvm.smin.i16(i16, i16)
 declare i64 @llvm.umax.i64(i64, i64)
 declare i8 @llvm.umin.i8(i8, i8)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
 
 define i32 @maxi8(i32) {
 ; CHECK-LABEL: @maxi8(
@@ -1233,4 +1235,43 @@ define i8 @umin_intrinsic_rdx_v16i8(i8* %p0) {
   %mh = tail call i8 @llvm.umin.i8(i8 %mfeba, i8 %mdc98)
   %m = tail call i8 @llvm.umin.i8(i8 %mh, i8 %ml)
   ret i8 %m
+}
+
+; This should not crash.
+
+define void @PR49730() {
+; CHECK-LABEL: @PR49730(
+; CHECK-NEXT:    [[T:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 2)
+; CHECK-NEXT:    [[T1:%.*]] = sub nsw i32 undef, [[T]]
+; CHECK-NEXT:    [[T2:%.*]] = call i32 @llvm.umin.i32(i32 undef, i32 [[T1]])
+; CHECK-NEXT:    [[T3:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 2)
+; CHECK-NEXT:    [[T4:%.*]] = sub nsw i32 undef, [[T3]]
+; CHECK-NEXT:    [[T5:%.*]] = call i32 @llvm.umin.i32(i32 [[T2]], i32 [[T4]])
+; CHECK-NEXT:    [[T6:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 1)
+; CHECK-NEXT:    [[T7:%.*]] = sub nuw nsw i32 undef, [[T6]]
+; CHECK-NEXT:    [[T8:%.*]] = call i32 @llvm.umin.i32(i32 [[T5]], i32 [[T7]])
+; CHECK-NEXT:    [[T9:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 1)
+; CHECK-NEXT:    [[T10:%.*]] = sub nsw i32 undef, [[T9]]
+; CHECK-NEXT:    [[T11:%.*]] = call i32 @llvm.umin.i32(i32 [[T8]], i32 [[T10]])
+; CHECK-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
+; CHECK-NEXT:    [[T13:%.*]] = call i32 @llvm.umin.i32(i32 [[T11]], i32 [[T12]])
+; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.umin.i32(i32 [[T13]], i32 93)
+; CHECK-NEXT:    ret void
+;
+  %t = call i32 @llvm.smin.i32(i32 undef, i32 2)
+  %t1 = sub nsw i32 undef, %t
+  %t2 = call i32 @llvm.umin.i32(i32 undef, i32 %t1)
+  %t3 = call i32 @llvm.smin.i32(i32 undef, i32 2)
+  %t4 = sub nsw i32 undef, %t3
+  %t5 = call i32 @llvm.umin.i32(i32 %t2, i32 %t4)
+  %t6 = call i32 @llvm.smin.i32(i32 undef, i32 1)
+  %t7 = sub nuw nsw i32 undef, %t6
+  %t8 = call i32 @llvm.umin.i32(i32 %t5, i32 %t7)
+  %t9 = call i32 @llvm.smin.i32(i32 undef, i32 1)
+  %t10 = sub nsw i32 undef, %t9
+  %t11 = call i32 @llvm.umin.i32(i32 %t8, i32 %t10)
+  %t12 = sub nsw i32 undef, undef
+  %t13 = call i32 @llvm.umin.i32(i32 %t11, i32 %t12)
+  %t14 = call i32 @llvm.umin.i32(i32 %t13, i32 93)
+  ret void
 }
