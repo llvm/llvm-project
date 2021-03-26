@@ -625,10 +625,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add eh-frame passses.
-    Config.PrePrunePasses.push_back(EHFrameSplitter("__eh_frame"));
+    StringRef EHFrameSectionName = "__TEXT,__eh_frame";
+    Config.PrePrunePasses.push_back(EHFrameSplitter(EHFrameSectionName));
     Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer("__eh_frame", G->getPointerSize(), x86_64::Delta64,
-                         x86_64::Delta32, x86_64::NegDelta32));
+        EHFrameEdgeFixer(EHFrameSectionName, G->getPointerSize(),
+                         x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))
