@@ -744,7 +744,6 @@ OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
 
 void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
                               StringRef name) {
-  ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
@@ -773,8 +772,6 @@ ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
   if (parser.parseRegion(*bodyRegion))
     return failure();
 
-  FunctionLibraryOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
-                                      result.location);
   if (parser.parseKeyword("mapping"))
     return failure();
 
