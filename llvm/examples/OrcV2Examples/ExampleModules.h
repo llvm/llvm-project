@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_EXAMPLES_HOWTOUSELLJIT_EXAMPLEMODULES_H
-#define LLVM_EXAMPLES_HOWTOUSELLJIT_EXAMPLEMODULES_H
+#ifndef LLVM_EXAMPLES_ORCV2EXAMPLES_EXAMPLEMODULES_H
+#define LLVM_EXAMPLES_ORCV2EXAMPLES_EXAMPLEMODULES_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -52,4 +52,4 @@ parseExampleModule(llvm::StringRef Source, llvm::StringRef Name) {
   return ThreadSafeModule(std::move(M), std::move(Ctx));
 }
 
-#endif // LLVM_EXAMPLES_HOWTOUSELLJIT_EXAMPLEMODULES_H
+#endif // LLVM_EXAMPLES_ORCV2EXAMPLES_EXAMPLEMODULES_H
