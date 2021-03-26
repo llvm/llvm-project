@@ -4,7 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -debug-only=machine-scheduler < %s 2> %t | FileCheck --enable-var-scope --check-prefixes=GFX10PLUS,GFX10 %s
 ; RUN: FileCheck --enable-var-scope --check-prefix=DBG %s < %t
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -debug-only=machine-scheduler < %s 2> %t | FileCheck --enable-var-scope --check-prefixes=GFX10PLUS,GFX11 %s
-; RUN: FileCheck --enable-var-scope --check-prefix=DBG %s < %t
+; RUN: FileCheck --enable-var-scope --check-prefixes=DBG,DBG11 %s < %t
 ; REQUIRES: asserts
 
 ; FIXME: Verifier error with xnack enabled.
@@ -23,6 +23,10 @@
 ; DBG: Cluster ld/st SU([[L1:[0-9]+]]) - SU([[L2:[0-9]+]])
 ; DBG: Cluster ld/st SU([[L2]]) - SU([[L3:[0-9]+]])
 ; DBG: Cluster ld/st SU([[L3]]) - SU([[L4:[0-9]+]])
+
+; DBG11: Cluster ld/st SU([[S1:[0-9]+]]) - SU([[S2:[0-9]+]])
+; DBG11: Cluster ld/st SU([[S2]]) - SU([[S3:[0-9]+]])
+; DBG11: Cluster ld/st SU([[S3]]) - SU([[S4:[0-9]+]])
 
 ; DBG-NOT: Cluster ld/st
 
@@ -157,6 +161,10 @@ bb:
 ; DBG: Cluster ld/st SU([[L2]]) - SU([[L3:[0-9]+]])
 ; DBG: Cluster ld/st SU([[L3]]) - SU([[L4:[0-9]+]])
 
+; DBG11: Cluster ld/st SU([[S1:[0-9]+]]) - SU([[S2:[0-9]+]])
+; DBG11: Cluster ld/st SU([[S2]]) - SU([[S3:[0-9]+]])
+; DBG11: Cluster ld/st SU([[S3]]) - SU([[S4:[0-9]+]])
+
 ; DBG-NOT: Cluster ld/st
 
 define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32* noalias %sb) {
@@ -250,9 +258,9 @@ define amdgpu_kernel void @cluster_load_valu_cluster_store(i32* noalias %lb, i32
 ; GFX11-NEXT:    v_add_nc_u32_e32 v2, 1, v2
 ; GFX11-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v3
-; GFX11-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(2)
-; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v2 offset:8
+; GFX11-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(3)
+; GFX11-NEXT:    flat_store_b32 v[0:1], v4 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(3)
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v5 offset:24
 ; GFX11-NEXT:    s_endpgm

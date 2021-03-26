@@ -135,38 +135,38 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX11-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX11-NEXT:    s_movk_i32 s4, 0xc0
-; GFX11-NEXT:    v_mov_b32_e32 v3, s4
-; GFX11-NEXT:    v_mov_b32_e32 v4, s5
+; GFX11-NEXT:    v_mov_b32_e32 v6, s5
+; GFX11-NEXT:    v_mov_b32_e32 v5, s4
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v6, s1
-; GFX11-NEXT:    v_mov_b32_e32 v5, s0
-; GFX11-NEXT:    s_clause 0x4
+; GFX11-NEXT:    v_mov_b32_e32 v4, s1
+; GFX11-NEXT:    v_mov_b32_e32 v3, s0
+; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[32:35], v64, s[0:1]
 ; GFX11-NEXT:    global_load_b128 v[36:39], v64, s[0:1] offset:16
-; GFX11-NEXT:    global_load_b128 v[40:43], v64, s[0:1] offset:32
-; GFX11-NEXT:    global_load_b128 v[44:47], v64, s[0:1] offset:48
-; GFX11-NEXT:    global_load_b128 v[48:51], v64, s[0:1] offset:64
-; GFX11-NEXT:    v_add_co_u32_e64 v7, vcc_lo, v5, v64
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, 0, v6, vcc_lo
-; GFX11-NEXT:    v_add_co_u32_e64 v5, vcc_lo, v7, 64
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v8, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v7, vcc_lo, v3, v64
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, 0, v4, vcc_lo
+; GFX11-NEXT:    v_add_co_u32_e64 v3, vcc_lo, v7, 64
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v8, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v7, v1
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v8, v2, vcc_lo
-; GFX11-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v7, v3
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v8, v4, vcc_lo
-; GFX11-NEXT:    s_clause 0xa
-; GFX11-NEXT:    global_load_b128 v[52:55], v[5:6], off offset:16
-; GFX11-NEXT:    global_load_b128 v[56:59], v[5:6], off offset:32
-; GFX11-NEXT:    global_load_b128 v[60:63], v[5:6], off offset:48
+; GFX11-NEXT:    v_add_co_u32_e64 v16, vcc_lo, v7, v5
+; GFX11-NEXT:    v_add_co_ci_u32_e32 v17, vcc_lo, v8, v6, vcc_lo
+; GFX11-NEXT:    s_clause 0xd
+; GFX11-NEXT:    global_load_b128 v[40:43], v[3:4], off offset:16
+; GFX11-NEXT:    global_load_b128 v[44:47], v[3:4], off offset:32
+; GFX11-NEXT:    global_load_b128 v[48:51], v[3:4], off offset:48
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
 ; GFX11-NEXT:    global_load_b128 v[8:11], v[0:1], off offset:32
+; GFX11-NEXT:    global_load_b128 v[52:55], v64, s[0:1] offset:32
+; GFX11-NEXT:    global_load_b128 v[56:59], v64, s[0:1] offset:48
+; GFX11-NEXT:    global_load_b128 v[60:63], v64, s[0:1] offset:64
 ; GFX11-NEXT:    global_load_b128 v[12:15], v[0:1], off offset:48
-; GFX11-NEXT:    global_load_b128 v[20:23], v[2:3], off offset:16
-; GFX11-NEXT:    global_load_b128 v[24:27], v[2:3], off offset:32
-; GFX11-NEXT:    global_load_b128 v[28:31], v[2:3], off offset:48
+; GFX11-NEXT:    global_load_b128 v[20:23], v[16:17], off offset:16
+; GFX11-NEXT:    global_load_b128 v[24:27], v[16:17], off offset:32
+; GFX11-NEXT:    global_load_b128 v[28:31], v[16:17], off offset:48
 ; GFX11-NEXT:    global_load_b128 v[0:3], v64, s[0:1] offset:128
 ; GFX11-NEXT:    global_load_b128 v[16:19], v64, s[0:1] offset:192
-; GFX11-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-NEXT:    s_waitcnt vmcnt(10)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, 0x3e7
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v64, v[0:3], s[2:3] offset:128
@@ -178,12 +178,12 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX11-NEXT:    global_store_b128 v64, v[20:23], s[2:3] offset:208
 ; GFX11-NEXT:    global_store_b128 v64, v[32:35], s[2:3]
 ; GFX11-NEXT:    global_store_b128 v64, v[36:39], s[2:3] offset:16
-; GFX11-NEXT:    global_store_b128 v64, v[40:43], s[2:3] offset:32
-; GFX11-NEXT:    global_store_b128 v64, v[44:47], s[2:3] offset:48
-; GFX11-NEXT:    global_store_b128 v64, v[48:51], s[2:3] offset:64
-; GFX11-NEXT:    global_store_b128 v64, v[52:55], s[2:3] offset:80
-; GFX11-NEXT:    global_store_b128 v64, v[56:59], s[2:3] offset:96
-; GFX11-NEXT:    global_store_b128 v64, v[60:63], s[2:3] offset:112
+; GFX11-NEXT:    global_store_b128 v64, v[52:55], s[2:3] offset:32
+; GFX11-NEXT:    global_store_b128 v64, v[56:59], s[2:3] offset:48
+; GFX11-NEXT:    global_store_b128 v64, v[60:63], s[2:3] offset:64
+; GFX11-NEXT:    global_store_b128 v64, v[40:43], s[2:3] offset:80
+; GFX11-NEXT:    global_store_b128 v64, v[44:47], s[2:3] offset:96
+; GFX11-NEXT:    global_store_b128 v64, v[48:51], s[2:3] offset:112
 ; GFX11-NEXT:    global_store_b128 v64, v[24:27], s[2:3] offset:224
 ; GFX11-NEXT:    global_store_b128 v64, v[28:31], s[2:3] offset:240
 ; GFX11-NEXT:    s_endpgm
