@@ -1,7 +1,7 @@
 ; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefix=UNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefix=NOUNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefix=UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,UNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-sections=labels | FileCheck %s --check-prefixes=CHECK,NOUNIQ
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-sections=labels -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ
 
 define void @_Z3bazb(i1 zeroext) personality i32 (...)* @__gxx_personality_v0 {
   br i1 %0, label %2, label %7
@@ -50,10 +50,10 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:	.byte	4
 ; CHECK-NEXT:	.uleb128 .Lfunc_begin0-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_0-.Lfunc_begin0
-; CHECK-NEXT:	.byte	0
+; CHECK-NEXT:	.byte	8
 ; CHECK-NEXT:	.uleb128 .LBB0_1-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1
-; CHECK-NEXT:	.byte	0
+; CHECK-NEXT:	.byte	8
 ; CHECK-NEXT:	.uleb128 .LBB0_2-.Lfunc_begin0
 ; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2
 ; CHECK-NEXT:	.byte	1

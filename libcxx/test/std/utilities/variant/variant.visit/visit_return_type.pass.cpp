@@ -411,6 +411,99 @@ void test_constexpr_explicit_side_effect() {
   static_assert(test_lambda(202) == 202, "");
 }
 
+void test_derived_from_variant() {
+  struct MyVariant : std::variant<short, long, float> {};
+
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == 42);
+        return true;
+      },
+      MyVariant{42});
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == -1.3f);
+        return true;
+      },
+      MyVariant{-1.3f});
+
+  // Check that visit does not take index nor valueless_by_exception members from the base class.
+  struct EvilVariantBase {
+    int index;
+    char valueless_by_exception;
+  };
+
+  struct EvilVariant1 : std::variant<int, long, double>,
+                        std::tuple<int>,
+                        EvilVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == 12);
+        return true;
+      },
+      EvilVariant1{12});
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == 12.3);
+        return true;
+      },
+      EvilVariant1{12.3});
+
+  // Check that visit unambiguously picks the variant, even if the other base has __impl member.
+  struct ImplVariantBase {
+    struct Callable {
+      bool operator()();
+    };
+
+    Callable __impl;
+  };
+
+  struct EvilVariant2 : std::variant<int, long, double>, ImplVariantBase {
+    using std::variant<int, long, double>::variant;
+  };
+
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == 12);
+        return true;
+      },
+      EvilVariant2{12});
+  std::visit<bool>(
+      [](auto x) {
+        assert(x == 12.3);
+        return true;
+      },
+      EvilVariant2{12.3});
+}
+
+struct any_visitor {
+  template <typename T>
+  bool operator()(const T&) {
+    return true;
+  }
+};
+
+template <typename T, typename = decltype(std::visit<bool>(
+                          std::declval<any_visitor&>(), std::declval<T>()))>
+constexpr bool has_visit(int) {
+  return true;
+}
+
+template <typename T>
+constexpr bool has_visit(...) {
+  return false;
+}
+
+void test_sfinae() {
+  struct BadVariant : std::variant<short>, std::variant<long, float> {};
+
+  static_assert(has_visit<std::variant<int> >(int()));
+  static_assert(!has_visit<BadVariant>(int()));
+}
+
 int main(int, char**) {
   test_call_operator_forwarding<void>();
   test_argument_forwarding<void>();
@@ -425,6 +518,8 @@ int main(int, char**) {
   test_exceptions<int>();
   test_caller_accepts_nonconst<int>();
   test_constexpr_explicit_side_effect();
+  test_derived_from_variant();
+  test_sfinae();
 
   return 0;
 }

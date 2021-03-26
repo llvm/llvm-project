@@ -67,13 +67,10 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   if (const char *PathExtEnv = std::getenv("PATHEXT"))
     SplitString(PathExtEnv, PathExts, ";");
 
-  SmallVector<wchar_t, MAX_PATH> U16Result;
-  DWORD Len = MAX_PATH;
+  SmallVector<char, MAX_PATH> U8Result;
   for (StringRef Ext : PathExts) {
-    SmallVector<wchar_t, MAX_PATH> U16Ext;
-    if (std::error_code EC = windows::UTF8ToUTF16(Ext, U16Ext))
-      return EC;
-
+    SmallVector<wchar_t, MAX_PATH> U16Result;
+    DWORD Len = MAX_PATH;
     do {
       U16Result.reserve(Len);
       // Lets attach the extension manually. That is needed for files
@@ -88,19 +85,23 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
                           U16Result.capacity(), U16Result.data(), nullptr);
     } while (Len > U16Result.capacity());
 
-    if (Len != 0)
+    if (Len == 0)
+      continue;
+
+    U16Result.set_size(Len);
+
+    if (std::error_code EC =
+        windows::UTF16ToUTF8(U16Result.data(), U16Result.size(), U8Result))
+      return EC;
+
+    if (sys::fs::can_execute(U8Result))
       break; // Found it.
+
+    U8Result.clear();
   }
 
-  if (Len == 0)
+  if (U8Result.empty())
     return mapWindowsError(::GetLastError());
-
-  U16Result.set_size(Len);
-
-  SmallVector<char, MAX_PATH> U8Result;
-  if (std::error_code EC =
-          windows::UTF16ToUTF8(U16Result.data(), U16Result.size(), U8Result))
-    return EC;
 
   return std::string(U8Result.begin(), U8Result.end());
 }

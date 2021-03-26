@@ -1,7 +1,4 @@
 # REQUIRES: x86
-## FIXME: Paths on windows have both `\` and '/', as a result, they are in a different
-## order when sorted. Maybe create a separate test for that?
-# UNSUPPORTED: system-windows
 #
 # RUN: rm -rf %t
 # RUN: split-file %s %t
@@ -16,16 +13,17 @@
 # RUN: %python %S/Inputs/DependencyDump.py %t/deps_info.out | FileCheck %s
 
 # CHECK: lld-version: {{.*}}LLD {{.*}}
-# CHECK-DAG: input-file: {{.*}}/bar.a
-# CHECK-DAG: input-file: {{.*}}/libfoo.dylib
-# CHECK-DAG: input-file: {{.*}}/libSystem.tbd
-# CHECK-DAG: input-file: {{.*}}/main.o
+
+# CHECK-DAG: input-file: {{.*}}{{[/\]}}bar.a
+# CHECK-DAG: input-file: {{.*}}{{[/\]}}libfoo.dylib
+# CHECK-DAG: input-file: {{.*}}{{[/\]}}libSystem.tbd
+# CHECK-DAG: input-file: {{.*}}{{[/\]}}main.o
 # CHECK-DAG: input-file: {{.*}}bar.o
 
-# CHECK-NEXT: not-found: {{.*}}/libdyld.dylib
+# CHECK-NEXT: not-found: {{.*}}{{[/\]}}libdyld.{{.*}}
 ## There could be more not-found here but we are not checking those because it's brittle.
 
-# CHECK: output-file: {{.*}}/test.out
+# CHECK: output-file: {{.*}}{{[/\]}}test.out
 
 #--- foo.s
 .globl __Z3foo

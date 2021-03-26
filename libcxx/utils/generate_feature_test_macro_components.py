@@ -627,7 +627,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["functional"],
   }, {
     "name": "__cpp_lib_variant",
-    "values": { "c++17": 201606 },
+    "values": { "c++17": 202102 },
     "headers": ["variant"],
   }, {
     "name": "__cpp_lib_void_t",

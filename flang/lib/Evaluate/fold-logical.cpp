@@ -106,6 +106,10 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
         }
       }
     }
+  } else if (name == "logical") {
+    if (auto *expr{UnwrapExpr<Expr<SomeLogical>>(args[0])}) {
+      return Fold(context, ConvertToType<T>(std::move(*expr)));
+    }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "__builtin_ieee_support_datatype" ||

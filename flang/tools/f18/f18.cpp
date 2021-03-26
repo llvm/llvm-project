@@ -487,7 +487,8 @@ int main(int argc, char *const argv[]) {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes, true);
     } else if (arg == "-Mstandard" || arg == "-std=f95" ||
-        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy") {
+        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy" ||
+        arg == "-std=f2018" || arg == "-pedantic") {
       driver.warnOnNonstandardUsage = true;
     } else if (arg == "-fopenacc") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenACC);

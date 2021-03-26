@@ -98,7 +98,6 @@ extern "C" void __lsan_init() {
   InitCommonLsan();
   InitializeAllocator();
   ReplaceSystemMalloc();
-  InitTlsSize();
   InitializeInterceptors();
   InitializeThreadRegistry();
   InstallDeadlySignalHandlers(LsanOnDeadlySignal);

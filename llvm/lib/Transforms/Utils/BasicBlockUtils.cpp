@@ -228,8 +228,7 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // These dominator edges will be redirected from Pred.
   std::vector<DominatorTree::UpdateType> Updates;
   if (DTU) {
-    SmallSetVector<BasicBlock *, 2> UniqueSuccessors(succ_begin(BB),
-                                                     succ_end(BB));
+    SmallPtrSet<BasicBlock *, 2> UniqueSuccessors(succ_begin(BB), succ_end(BB));
     Updates.reserve(1 + (2 * UniqueSuccessors.size()));
     // Add insert edges first. Experimentally, for the particular case of two
     // blocks that can be merged, with a single successor and single predecessor
@@ -569,8 +568,8 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, Instruction *SplitPt,
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 8> Updates;
     // Old dominates New. New node dominates all other nodes dominated by Old.
-    SmallSetVector<BasicBlock *, 8> UniqueSuccessorsOfOld(succ_begin(New),
-                                                          succ_end(New));
+    SmallPtrSet<BasicBlock *, 8> UniqueSuccessorsOfOld(succ_begin(New),
+                                                       succ_end(New));
     Updates.push_back({DominatorTree::Insert, Old, New});
     Updates.reserve(Updates.size() + 2 * UniqueSuccessorsOfOld.size());
     for (BasicBlock *UniqueSuccessorOfOld : UniqueSuccessorsOfOld) {
@@ -635,8 +634,8 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, Instruction *SplitPt,
     SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
     // New dominates Old. The predecessor nodes of the Old node dominate
     // New node.
-    SmallSetVector<BasicBlock *, 8> UniquePredecessorsOfOld(pred_begin(New),
-                                                            pred_end(New));
+    SmallPtrSet<BasicBlock *, 8> UniquePredecessorsOfOld(pred_begin(New),
+                                                         pred_end(New));
     DTUpdates.push_back({DominatorTree::Insert, New, Old});
     DTUpdates.reserve(DTUpdates.size() + 2 * UniquePredecessorsOfOld.size());
     for (BasicBlock *UniquePredecessorOfOld : UniquePredecessorsOfOld) {
@@ -675,7 +674,7 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
     } else {
       // Split block expects NewBB to have a non-empty set of predecessors.
       SmallVector<DominatorTree::UpdateType, 8> Updates;
-      SmallSetVector<BasicBlock *, 8> UniquePreds(Preds.begin(), Preds.end());
+      SmallPtrSet<BasicBlock *, 8> UniquePreds(Preds.begin(), Preds.end());
       Updates.push_back({DominatorTree::Insert, NewBB, OldBB});
       Updates.reserve(Updates.size() + 2 * UniquePreds.size());
       for (auto *UniquePred : UniquePreds) {
@@ -1141,8 +1140,8 @@ SplitBlockAndInsertIfThenImpl(Value *Cond, Instruction *SplitBefore,
   BasicBlock *Head = SplitBefore->getParent();
   BasicBlock *Tail = Head->splitBasicBlock(SplitBefore->getIterator());
   if (DTU) {
-    SmallSetVector<BasicBlock *, 8> UniqueSuccessorsOfHead(succ_begin(Tail),
-                                                           succ_end(Tail));
+    SmallPtrSet<BasicBlock *, 8> UniqueSuccessorsOfHead(succ_begin(Tail),
+                                                        succ_end(Tail));
     Updates.push_back({DominatorTree::Insert, Head, Tail});
     Updates.reserve(Updates.size() + 2 * UniqueSuccessorsOfHead.size());
     for (BasicBlock *UniqueSuccessorOfHead : UniqueSuccessorsOfHead) {

@@ -245,6 +245,8 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
 
   // CHECK: %[[Tmp1:.*]] = load i32, i32* %[[Gro]]
   // CHECK-NEXT: store i32 %[[Tmp1]], i32* %[[RetVal]]
+  // CHECK-NEXT: %[[Gro_CAST:.+]] = bitcast i32* %[[Gro]] to i8*
+  // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* %[[Gro_CAST]]) #2
   // CHECK-NEXT: br label %[[RetBB]]
 
   // CHECK: [[RetBB]]:

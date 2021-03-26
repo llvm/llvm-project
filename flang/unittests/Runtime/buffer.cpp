@@ -31,7 +31,7 @@ public:
           static_cast<int>(at), static_cast<int>(minBytes),
           static_cast<int>(maxBytes));
     }
-    auto result{std::min(maxBytes, bytes_ - at)};
+    auto result{std::min<std::size_t>(maxBytes, bytes_ - at)};
     std::memcpy(to, &data_[at], result);
     expect_ = at + result;
     return result;

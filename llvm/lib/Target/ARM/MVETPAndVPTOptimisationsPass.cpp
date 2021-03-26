@@ -273,11 +273,28 @@ bool MVETPAndVPTOptimisations::MergeLoopEnd(MachineLoop *ML) {
 
   // Check if there is an illegal instruction (a call) in the low overhead loop
   // and if so revert it now before we get any further. While loops also need to
-  // check the preheaders.
-  SmallPtrSet<MachineBasicBlock *, 4> MBBs(ML->block_begin(), ML->block_end());
-  if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR)
-    MBBs.insert(ML->getHeader()->pred_begin(), ML->getHeader()->pred_end());
-  for (MachineBasicBlock *MBB : MBBs) {
+  // check the preheaders, but can be reverted to a DLS loop if needed.
+  auto *PreHeader = ML->getLoopPreheader();
+  if (LoopStart->getOpcode() == ARM::t2WhileLoopStartLR && PreHeader &&
+      LoopStart->getParent() != PreHeader) {
+    for (MachineInstr &MI : *PreHeader) {
+      if (MI.isCall()) {
+        // Create a t2DoLoopStart at the end of the preheader.
+        MachineInstrBuilder MIB =
+            BuildMI(*PreHeader, PreHeader->getFirstTerminator(),
+                    LoopStart->getDebugLoc(), TII->get(ARM::t2DoLoopStart));
+        MIB.add(LoopStart->getOperand(0));
+        MIB.add(LoopStart->getOperand(1));
+
+        // Revert the t2WhileLoopStartLR to a CMP and Br.
+        RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
+        LoopStart = MIB;
+        break;
+      }
+    }
+  }
+
+  for (MachineBasicBlock *MBB : ML->blocks()) {
     for (MachineInstr &MI : *MBB) {
       if (MI.isCall()) {
         LLVM_DEBUG(dbgs() << "Found call in loop, reverting: " << MI);

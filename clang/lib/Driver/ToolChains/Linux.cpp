@@ -401,6 +401,11 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     case llvm::Triple::x86:
       ArchName = "i386";
       break;
+    case llvm::Triple::x86_64:
+      ArchName = Triple.getEnvironment() == llvm::Triple::MuslX32
+                     ? "x32"
+                     : Triple.getArchName().str();
+      break;
     default:
       ArchName = Triple.getArchName().str();
     }

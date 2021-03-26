@@ -16,7 +16,7 @@
 // Test the feature test macros defined by <variant>
 
 /*  Constant             Value
-    __cpp_lib_variant    201606L [C++17]
+    __cpp_lib_variant    202102L [C++17]
 */
 
 #include <variant>
@@ -39,8 +39,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++17"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++17"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++17"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -48,8 +48,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++20"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++20"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++20"
 # endif
 
 #elif TEST_STD_VER > 20
@@ -57,8 +57,8 @@
 # ifndef __cpp_lib_variant
 #   error "__cpp_lib_variant should be defined in c++2b"
 # endif
-# if __cpp_lib_variant != 201606L
-#   error "__cpp_lib_variant should have the value 201606L in c++2b"
+# if __cpp_lib_variant != 202102L
+#   error "__cpp_lib_variant should have the value 202102L in c++2b"
 # endif
 
 #endif // TEST_STD_VER > 20

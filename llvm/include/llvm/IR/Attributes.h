@@ -521,6 +521,12 @@ public:
     return removeAttributes(C, ArgNo + FirstArgIndex, AttrsToRemove);
   }
 
+  /// Remove noundef attribute and other attributes that imply undefined
+  /// behavior if a `undef` or `poison` value is passed from this attribute
+  /// list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeParamUndefImplyingAttributes(LLVMContext &C, unsigned ArgNo) const;
+
   /// Remove all attributes at the specified arg index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeParamAttributes(LLVMContext &C,

@@ -4954,16 +4954,36 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   // Clear all non-demanded bits initially.
   APInt ShrunkMask = Mask & DemandedBits;
 
+  // Try to make a smaller immediate by setting undemanded bits.
+
+  APInt ExpandedMask = Mask | ~DemandedBits;
+
+  auto IsLegalMask = [ShrunkMask, ExpandedMask](const APInt &Mask) -> bool {
+    return ShrunkMask.isSubsetOf(Mask) && Mask.isSubsetOf(ExpandedMask);
+  };
+  auto UseMask = [Mask, Op, VT, &TLO](const APInt &NewMask) -> bool {
+    if (NewMask == Mask)
+      return true;
+    SDLoc DL(Op);
+    SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
+    SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
+    return TLO.CombineTo(Op, NewOp);
+  };
+
   // If the shrunk mask fits in sign extended 12 bits, let the target
   // independent code apply it.
   if (ShrunkMask.isSignedIntN(12))
     return false;
 
-  // Try to make a smaller immediate by setting undemanded bits.
+  // Try to preserve (and X, 0xffffffff), the (zext_inreg X, i32) pattern.
+  if (VT == MVT::i64) {
+    APInt NewMask = APInt(64, 0xffffffff);
+    if (IsLegalMask(NewMask))
+      return UseMask(NewMask);
+  }
 
-  // We need to be able to make a negative number through a combination of mask
-  // and undemanded bits.
-  APInt ExpandedMask = Mask | ~DemandedBits;
+  // For the remaining optimizations, we need to be able to make a negative
+  // number through a combination of mask and undemanded bits.
   if (!ExpandedMask.isNegative())
     return false;
 
@@ -4981,18 +5001,8 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
     return false;
 
   // Sanity check that our new mask is a subset of the demanded mask.
-  assert(NewMask.isSubsetOf(ExpandedMask));
-
-  // If we aren't changing the mask, just return true to keep it and prevent
-  // the caller from optimizing.
-  if (NewMask == Mask)
-    return true;
-
-  // Replace the constant with the new mask.
-  SDLoc DL(Op);
-  SDValue NewC = TLO.DAG.getConstant(NewMask, DL, VT);
-  SDValue NewOp = TLO.DAG.getNode(ISD::AND, DL, VT, Op.getOperand(0), NewC);
-  return TLO.CombineTo(Op, NewOp);
+  assert(IsLegalMask(NewMask));
+  return UseMask(NewMask);
 }
 
 void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,

@@ -1,4 +1,5 @@
-; RUN: opt -mtriple=amdgcn-- -O3 -S %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -O3 -S -enable-new-pm=1 %s | FileCheck %s
+; XFAIL: *
 
 ; Check that loop unswitch happened and condition hoisted out of the loop.
 ; Condition is uniform so even targets with divergence should perform unswitching.
@@ -9,8 +10,6 @@
 ; unswitched on all targets) requires access to the function-level
 ; divergence analysis from a loop transform, which is currently not
 ; supported in the new pass manager.
-;
-; Seems to have started passing on the amd-gfx-upstream+npi branch.
 
 ; CHECK-LABEL: {{^}}define amdgpu_kernel void @uniform_unswitch
 ; CHECK: entry:
