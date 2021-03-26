@@ -244,25 +244,28 @@ static void getCLEnvVarOptions(std::string &EnvValue, llvm::StringSaver &Saver,
 }
 
 static void SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
-  // Handle CC_PRINT_OPTIONS and CC_PRINT_OPTIONS_FILE.
-  TheDriver.CCPrintOptions = !!::getenv("CC_PRINT_OPTIONS");
-  if (TheDriver.CCPrintOptions)
-    TheDriver.CCPrintOptionsFilename = ::getenv("CC_PRINT_OPTIONS_FILE");
+  auto CheckEnvVar = [](const char *EnvOptSet, const char *EnvOptFile,
+                        std::string &OptFile) {
+    bool OptSet = !!::getenv(EnvOptSet);
+    if (OptSet) {
+      if (const char *Var = ::getenv(EnvOptFile))
+        OptFile = Var;
+    }
+    return OptSet;
+  };
 
-  // Handle CC_PRINT_HEADERS and CC_PRINT_HEADERS_FILE.
-  TheDriver.CCPrintHeaders = !!::getenv("CC_PRINT_HEADERS");
-  if (TheDriver.CCPrintHeaders)
-    TheDriver.CCPrintHeadersFilename = ::getenv("CC_PRINT_HEADERS_FILE");
-
-  // Handle CC_LOG_DIAGNOSTICS and CC_LOG_DIAGNOSTICS_FILE.
-  TheDriver.CCLogDiagnostics = !!::getenv("CC_LOG_DIAGNOSTICS");
-  if (TheDriver.CCLogDiagnostics)
-    TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
-
-  // Handle CC_PRINT_PROC_STAT and CC_PRINT_PROC_STAT_FILE.
-  TheDriver.CCPrintProcessStats = !!::getenv("CC_PRINT_PROC_STAT");
-  if (TheDriver.CCPrintProcessStats)
-    TheDriver.CCPrintStatReportFilename = ::getenv("CC_PRINT_PROC_STAT_FILE");
+  TheDriver.CCPrintOptions =
+      CheckEnvVar("CC_PRINT_OPTIONS", "CC_PRINT_OPTIONS_FILE",
+                  TheDriver.CCPrintOptionsFilename);
+  TheDriver.CCPrintHeaders =
+      CheckEnvVar("CC_PRINT_HEADERS", "CC_PRINT_HEADERS_FILE",
+                  TheDriver.CCPrintHeadersFilename);
+  TheDriver.CCLogDiagnostics =
+      CheckEnvVar("CC_LOG_DIAGNOSTICS", "CC_LOG_DIAGNOSTICS_FILE",
+                  TheDriver.CCLogDiagnosticsFilename);
+  TheDriver.CCPrintProcessStats =
+      CheckEnvVar("CC_PRINT_PROC_STAT", "CC_PRINT_PROC_STAT_FILE",
+                  TheDriver.CCPrintStatReportFilename);
 }
 
 static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
