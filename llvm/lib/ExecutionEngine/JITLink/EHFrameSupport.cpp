@@ -774,7 +774,7 @@ createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
   if (TT.getObjectFormat() == Triple::MachO)
-    EHFrameSectionName = "__eh_frame";
+    EHFrameSectionName = "__TEXT,__eh_frame";
   else
     EHFrameSectionName = ".eh_frame";
 
@@ -791,8 +791,9 @@ createEHFrameRecorderPass(const Triple &TT,
       Size = R.getSize();
     }
     if (Addr == 0 && Size != 0)
-      return make_error<JITLinkError>("__eh_frame section can not have zero "
-                                      "address with non-zero size");
+      return make_error<JITLinkError>(
+          StringRef(EHFrameSectionName) +
+          " section can not have zero address with non-zero size");
     StoreFrameRange(Addr, Size);
     return Error::success();
   };
