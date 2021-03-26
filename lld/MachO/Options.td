@@ -39,9 +39,9 @@ def no_lto_legacy_pass_manager : Flag<["--"], "no-lto-legacy-pass-manager">,
     HelpText<"Use the new pass manager in LLVM">,
     Group<grp_lld>;
 def time_trace: Flag<["--"], "time-trace">, HelpText<"Record time trace">;
-def time_trace_granularity: Flag<["--"], "time-trace-granularity">,
+def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
     HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
-def time_trace_file_eq: Flag<["--"], "time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace_file_eq: Joined<["--"], "time-trace-file=">, HelpText<"Specify time trace output file">;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

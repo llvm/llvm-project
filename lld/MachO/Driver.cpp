@@ -998,13 +998,15 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->progName = argsArr[0];
 
   config->timeTraceEnabled = args.hasArg(OPT_time_trace);
+  config->timeTraceGranularity =
+      args::getInteger(args, OPT_time_trace_granularity_eq, 500);
 
   // Initialize time trace profiler.
   if (config->timeTraceEnabled)
     timeTraceProfilerInitialize(config->timeTraceGranularity, config->progName);
 
   {
-    TimeTraceScope timeScope("Link", StringRef("ExecuteLinker"));
+    TimeTraceScope timeScope("ExecuteLinker");
 
     initLLVM(); // must be run before any call to addFile()
     createFiles(args);
