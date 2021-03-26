@@ -359,16 +359,16 @@ class OpMetadataDef(YAMLObject):
   """Metadata about the op (generally not behavior impacting)."""
   yaml_tag = "!LinalgOpMetadata"
 
-  def __init__(self, name: str, cpp_op_name: Optional[str], doc: Optional[str]):
+  def __init__(self, name: str, cpp_class_name: Optional[str], doc: Optional[str]):
     self.name = name
-    self.cpp_op_name = cpp_op_name if cpp_op_name is not None else name
+    self.cpp_class_name = cpp_class_name if cpp_class_name is not None else name
     self.doc = doc
     self.implements = []  # type: List[OpInterfaceDef]
 
   def to_yaml_custom_dict(self):
     d = dict(
         name=self.name,
-        cpp_op_name=self.cpp_op_name,
+        cpp_class_name=self.cpp_class_name,
         doc=self.doc,
     )
     if self.implements:
@@ -381,9 +381,9 @@ class LinalgOpDef:
 
   def __init__(self,
                name: str,
-               cpp_op_name: Optional[str] = None,
+               cpp_class_name: Optional[str] = None,
                doc: Optional[str] = None):
-    self.metadata = OpMetadataDef(name=name, cpp_op_name=cpp_op_name, doc=doc)
+    self.metadata = OpMetadataDef(name=name, cpp_class_name=cpp_class_name, doc=doc)
     self.registered_tensors = dict()  # type: Dict[str, TensorDef]
     self.comprehensions = list()  # type: List[Comprehension]
     self._affine_state = AffineBuildState()
@@ -413,7 +413,7 @@ class LinalgOpDef:
 
   def __repr__(self):
     lines = [
-        f"LinalgOpDef({self.metadata.name} -> {self.metadata.cpp_op_name},"
+        f"LinalgOpDef({self.metadata.name} -> {self.metadata.cpp_class_name},"
     ]
     for name, tensor in self.registered_tensors.items():
       lines.append(f"  {tensor}")
