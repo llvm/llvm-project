@@ -845,7 +845,7 @@ CAMLprim value llvm_set_subprogram(LLVMValueRef Func, LLVMMetadataRef SP) {
 }
 
 CAMLprim value llvm_di_subprogram_get_line(LLVMMetadataRef Subprogram) {
-  return Int_val(LLVMDISubprogramGetLine(Subprogram));
+  return Val_int(LLVMDISubprogramGetLine(Subprogram));
 }
 
 CAMLprim value llvm_instr_get_debug_loc(LLVMValueRef Inst) {
@@ -856,6 +856,40 @@ CAMLprim value llvm_instr_set_debug_loc(LLVMValueRef Inst,
                                         LLVMMetadataRef Loc) {
   LLVMInstructionSetDebugLoc(Inst, Loc);
   return Val_unit;
+}
+
+CAMLprim LLVMMetadataRef
+llvm_dibuild_create_constant_value_expression(value Builder, value Value) {
+  return LLVMDIBuilderCreateConstantValueExpression(DIBuilder_val(Builder),
+                                                    (int64_t)Int_val(Value));
+}
+
+CAMLprim LLVMMetadataRef llvm_dibuild_create_global_variable_expression_native(
+    value Builder, LLVMMetadataRef Scope, value Name, value Linkage,
+    LLVMMetadataRef File, value Line, LLVMMetadataRef Ty, value LocalToUnit,
+    LLVMMetadataRef Expr, LLVMMetadataRef Decl, value AlignInBits) {
+  return LLVMDIBuilderCreateGlobalVariableExpression(
+      DIBuilder_val(Builder), Scope, String_val(Name), caml_string_length(Name),
+      String_val(Linkage), caml_string_length(Linkage), File, Int_val(Line), Ty,
+      Bool_val(LocalToUnit), Expr, Decl, Int_val(AlignInBits));
+}
+
+CAMLprim LLVMMetadataRef
+llvm_dibuild_create_global_variable_expression_bytecode(value *argv, int arg) {
+
+  return llvm_dibuild_create_global_variable_expression_native(
+      argv[0],                  // Builder
+      (LLVMMetadataRef)argv[1], // Scope
+      argv[2],                  // Name
+      argv[3],                  // Linkage
+      (LLVMMetadataRef)argv[4], // File
+      argv[5],                  // Line
+      (LLVMMetadataRef)argv[6], // Ty
+      argv[7],                  // LocalToUnit
+      (LLVMMetadataRef)argv[8], // Expr
+      (LLVMMetadataRef)argv[9], // Decl
+      argv[10]                  // AlignInBits
+  );
 }
 
 CAMLprim value

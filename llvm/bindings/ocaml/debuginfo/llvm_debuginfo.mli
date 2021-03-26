@@ -202,7 +202,7 @@ val dibuild_create_namespace :
   lldibuilder ->
   parent_ref:Llvm.llmetadata ->
   name:string ->
-  bool:string ->
+  export_symbols:bool ->
   Llvm.llmetadata
 (** [dibuild_create_namespace] Create a new descriptor for a namespace with
     the specified parent scope. See LLVMDIBuilderCreateNameSpace *)
@@ -233,6 +233,11 @@ val dibuild_create_lexical_block :
   Llvm.llmetadata
 (** [dibuild_create_lexical_block] Create a descriptor for a lexical block with
     the specified parent context. See LLVMDIBuilderCreateLexicalBlock *)
+
+val llmetadata_null : unit -> Llvm.llmetadata
+(** [llmetadata_null ()] llmetadata is a wrapper around "llvm::Metadata *".
+    This function returns a nullptr valued llmetadata. For example, it
+    can be used to convey an llmetadata for "void" type. *)
 
 val dibuild_create_debug_location :
   ?inlined_at:Llvm.llmetadata ->
@@ -276,6 +281,28 @@ val dibuild_get_or_create_type_array :
   lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
 (** [dibuild_get_or_create_type_array] Create a type array.
     See LLVMDIBuilderGetOrCreateTypeArray. *)
+
+val dibuild_create_constant_value_expression :
+  lldibuilder -> int -> Llvm.llmetadata
+(** [dibuild_create_constant_value_expression] Create a new descriptor for
+    the specified variable that does not have an address, but does have
+    a constant value. See LLVMDIBuilderCreateConstantValueExpression. *)
+
+val dibuild_create_global_variable_expression :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  linkage:string ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  is_local_to_unit:bool ->
+  expr:Llvm.llmetadata ->
+  decl:Llvm.llmetadata ->
+  align_in_bits:int ->
+  Llvm.llmetadata
+(** [dibuild_create_global_variable_expression] Create a new descriptor for
+    the specified variable. See LLVMDIBuilderCreateGlobalVariableExpression. *)
 
 val di_global_variable_expression_get_variable :
   Llvm.llmetadata -> Llvm.llmetadata option
@@ -391,7 +418,7 @@ val dibuild_create_struct_type :
   lldiflags ->
   derived_from:Llvm.llmetadata ->
   elements:Llvm.llmetadata array ->
-  run_time_lang:int ->
+  DWARFSourceLanguageKind.t ->
   vtable_holder:Llvm.llmetadata ->
   unique_id:string ->
   Llvm.llmetadata
@@ -471,7 +498,7 @@ val dibuild_create_typedef :
 (** [dibuild_create_typedef] Create debugging information entry for a typedef.
     See LLVMDIBuilderCreateTypedef. *)
 
-val dibuild_create_inheritance_native :
+val dibuild_create_inheritance :
   lldibuilder ->
   ty:Llvm.llmetadata ->
   base_ty:Llvm.llmetadata ->
@@ -479,7 +506,7 @@ val dibuild_create_inheritance_native :
   vb_ptr_offset:int ->
   lldiflags ->
   Llvm.llmetadata
-(** [dibuild_create_inheritance_native] Create debugging information entry
+(** [dibuild_create_inheritance] Create debugging information entry
     to establish inheritance relationship between two types.
     See LLVMDIBuilderCreateInheritance. *)
 
