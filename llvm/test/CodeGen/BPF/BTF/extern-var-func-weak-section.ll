@@ -23,9 +23,9 @@ declare !dbg !4 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .long   24
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   88
-; CHECK-NEXT:        .long   88
-; CHECK-NEXT:        .long   72
+; CHECK-NEXT:        .long   112
+; CHECK-NEXT:        .long   112
+; CHECK-NEXT:        .long   76
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
@@ -48,6 +48,12 @@ declare !dbg !4 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed
 ; CHECK-NEXT:        .long   60                      # BTF_KIND_FUNC(id = 6)
 ; CHECK-NEXT:        .long   201326594               # 0xc000002
 ; CHECK-NEXT:        .long   4
+; CHECK-NEXT:        .long   72                      # BTF_KIND_DATASEC(id = 7)
+; CHECK-NEXT:        .long   251658241               # 0xf000001
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   6
+; CHECK-NEXT:        .long   global_func
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
@@ -61,6 +67,7 @@ declare !dbg !4 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "global_func"           # string offset=60
 ; CHECK-NEXT:        .byte   0
+; CHECK-NEXT:        .ascii  "abc"                   # string offset=72
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
