@@ -1531,7 +1531,13 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
                                              bool InstrumentWithCalls) {
   Scale = kDefaultShadowScale;
-  if (ClMappingOffset.getNumOccurrences() > 0) {
+  if (TargetTriple.isOSFuchsia()) {
+    // Fuchsia is always PIE, which means that the beginning of the address
+    // space is always available.
+    InGlobal = false;
+    InTls = false;
+    Offset = 0;
+  } else if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
     InTls = false;
     Offset = ClMappingOffset;

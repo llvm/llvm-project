@@ -454,6 +454,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
+    @skipIf(oslist=["linux"], archs=["arm"])
     def test_progress_events(self):
         '''
             Tests the progress events to ensure we are receiving them.

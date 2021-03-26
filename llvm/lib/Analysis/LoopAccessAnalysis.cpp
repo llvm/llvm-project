@@ -1204,7 +1204,8 @@ bool llvm::sortPtrAccesses(ArrayRef<Value *> VL, const DataLayout &DL,
   int Cnt = 1;
   bool IsConsecutive = true;
   for (auto *Ptr : VL.drop_front()) {
-    Optional<int> Diff = getPointersDiff(Ptr0, Ptr, DL, SE);
+    Optional<int> Diff =
+        getPointersDiff(Ptr0, Ptr, DL, SE, /*StrictCheck=*/true);
     if (!Diff)
       return false;
 

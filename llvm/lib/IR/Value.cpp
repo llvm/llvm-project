@@ -739,6 +739,12 @@ static bool canBeFreed(const Value *V) {
   if (isa<Constant>(V))
     return false;
 
+  // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
+  // lifetime is guaranteed to be longer than the callee's lifetime.
+  if (auto *A = dyn_cast<Argument>(V))
+    if (A->hasPointeeInMemoryValueAttr())
+      return false;
+
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(V))
     F = I->getFunction();

@@ -45,6 +45,11 @@ class InOrderIssueStage final : public Stage {
   InstRef StalledInst;
   unsigned StallCyclesLeft;
 
+  /// Instruction that is issued in more than 1 cycle.
+  InstRef CarriedOver;
+  /// Number of CarriedOver uops left to issue.
+  unsigned CarryOver;
+
   /// Number of instructions that can be issued in the current cycle.
   unsigned Bandwidth;
 
@@ -67,6 +72,9 @@ class InOrderIssueStage final : public Stage {
   /// Update status of instructions from IssuedInst.
   void updateIssuedInst();
 
+  /// Continue to issue the CarriedOver instruction.
+  void updateCarriedOver();
+
   /// Retire instruction once it is executed.
   void retireInstruction(InstRef &IR);
 
@@ -74,7 +82,8 @@ public:
   InOrderIssueStage(RegisterFile &PRF, const MCSchedModel &SM,
                     const MCSubtargetInfo &STI)
       : SM(SM), STI(STI), PRF(PRF), RM(std::make_unique<ResourceManager>(SM)),
-        NumIssued(0), StallCyclesLeft(0), Bandwidth(0), LastWriteBackCycle(0) {}
+        NumIssued(0), StallCyclesLeft(0), CarryOver(0), Bandwidth(0),
+        LastWriteBackCycle(0) {}
 
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;
