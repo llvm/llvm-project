@@ -381,7 +381,9 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     StringRef SectionName;
-    std::tie(SectionName, RemainingExpr) = parseSymbol(RemainingExpr);
+    size_t CloseParensIdx = RemainingExpr.find(')');
+    SectionName = RemainingExpr.substr(0, CloseParensIdx).rtrim();
+    RemainingExpr = RemainingExpr.substr(CloseParensIdx).ltrim();
 
     if (!RemainingExpr.startswith(")"))
       return std::make_pair(

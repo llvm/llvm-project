@@ -306,9 +306,12 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
 
   Config.PrePrunePasses.push_back([this, &MR](jitlink::LinkGraph &G) -> Error {
     JITLinkSymbolVector InitSectionSymbols;
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__mod_init_func");
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_selrefs");
-    preserveInitSectionIfPresent(InitSectionSymbols, G, "__objc_classlist");
+    preserveInitSectionIfPresent(InitSectionSymbols, G,
+                                 "__DATA,__mod_init_func");
+    preserveInitSectionIfPresent(InitSectionSymbols, G,
+                                 "__DATA,__objc_selrefs");
+    preserveInitSectionIfPresent(InitSectionSymbols, G,
+                                 "__DATA,__objc_classlist");
 
     if (!InitSectionSymbols.empty()) {
       std::lock_guard<std::mutex> Lock(InitScraperMutex);
@@ -327,25 +330,27 @@ void MachOPlatform::InitScraperPlugin::modifyPassConfig(
         ObjCClassList;
 
     JITTargetAddress ObjCImageInfoAddr = 0;
-    if (auto *ObjCImageInfoSec = G.findSectionByName("__objc_image_info")) {
+    if (auto *ObjCImageInfoSec =
+            G.findSectionByName("__DATA,__objc_image_info")) {
       if (auto Addr = jitlink::SectionRange(*ObjCImageInfoSec).getStart())
         ObjCImageInfoAddr = Addr;
     }
 
     // Record __mod_init_func.
-    if (auto ModInitsOrErr = getSectionExtent(G, "__mod_init_func"))
+    if (auto ModInitsOrErr = getSectionExtent(G, "__DATA,__mod_init_func"))
       ModInits = std::move(*ModInitsOrErr);
     else
       return ModInitsOrErr.takeError();
 
     // Record __objc_selrefs.
-    if (auto ObjCSelRefsOrErr = getSectionExtent(G, "__objc_selrefs"))
+    if (auto ObjCSelRefsOrErr = getSectionExtent(G, "__DATA,__objc_selrefs"))
       ObjCSelRefs = std::move(*ObjCSelRefsOrErr);
     else
       return ObjCSelRefsOrErr.takeError();
 
     // Record __objc_classlist.
-    if (auto ObjCClassListOrErr = getSectionExtent(G, "__objc_classlist"))
+    if (auto ObjCClassListOrErr =
+            getSectionExtent(G, "__DATA,__objc_classlist"))
       ObjCClassList = std::move(*ObjCClassListOrErr);
     else
       return ObjCClassListOrErr.takeError();

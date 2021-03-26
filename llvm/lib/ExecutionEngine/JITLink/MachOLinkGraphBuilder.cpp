@@ -116,10 +116,6 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
 
     auto SecIndex = Obj.getSectionIndex(SecRef.getRawDataRefImpl());
 
-    auto Name = SecRef.getName();
-    if (!Name)
-      return Name.takeError();
-
     if (Obj.is64Bit()) {
       const MachO::section_64 &Sec64 =
           Obj.getSection64(SecRef.getRawDataRefImpl());
@@ -150,8 +146,9 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     }
 
     LLVM_DEBUG({
-      dbgs() << "  " << *Name << ": " << formatv("{0:x16}", NSec.Address)
-             << " -- " << formatv("{0:x16}", NSec.Address + NSec.Size)
+      dbgs() << "  " << NSec.SegName << "," << NSec.SectName << ": "
+             << formatv("{0:x16}", NSec.Address) << " -- "
+             << formatv("{0:x16}", NSec.Address + NSec.Size)
              << ", align: " << NSec.Alignment << ", index: " << SecIndex
              << "\n";
     });
@@ -182,10 +179,12 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
                                                        sys::Memory::MF_WRITE);
 
     if (!isDebugSection(NSec))
-      NSec.GraphSection = &G->createSection(*Name, Prot);
+      NSec.GraphSection = &G->createSection(
+          G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName),
+          Prot);
     else
       LLVM_DEBUG({
-        dbgs() << "    " << *Name
+        dbgs() << "    " << NSec.SegName << "," << NSec.SectName
                << " is a debug section: No graph section will be created.\n";
       });
 
