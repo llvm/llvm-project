@@ -696,7 +696,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     if (!PSI->isHotCallSite(CandidateCall, CallerBFI))
       return false;
 
-    if (!F.getEntryCount())
+    // Make sure we have a nonzero entry count.
+    auto EntryCount = F.getEntryCount();
+    if (!EntryCount || !EntryCount.getCount())
       return false;
 
     BlockFrequencyInfo *CalleeBFI = &(GetBFI(F));
@@ -765,7 +767,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Compute the cycle savings per call.
     auto EntryProfileCount = F.getEntryCount();
-    assert(EntryProfileCount.hasValue());
+    assert(EntryProfileCount.hasValue() && EntryProfileCount.getCount());
     auto EntryCount = EntryProfileCount.getCount();
     CycleSavings += EntryCount / 2;
     CycleSavings = CycleSavings.udiv(EntryCount);
