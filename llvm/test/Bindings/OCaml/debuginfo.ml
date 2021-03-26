@@ -183,10 +183,10 @@ let test_bbinstr f f_di file_di dibuilder =
     let file_of_f_di = Llvm_debuginfo.di_scope_get_file ~scope:f_di in
     let file_of_scope = Llvm_debuginfo.di_scope_get_file ~scope in
     insist
-      ( Option.is_some file_of_f_di
-      && Option.get file_of_f_di = file_di
-      && Option.is_some file_of_scope
-      && Option.get file_of_f_di = file_di );
+      ( match (file_of_f_di, file_of_scope) with
+      | Some file_of_f_di', Some file_of_scope' ->
+          file_of_f_di' = file_di && file_of_scope' = file_di
+      | _ -> false );
     let foocall = Llvm.build_call foodecl [| arg0 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
