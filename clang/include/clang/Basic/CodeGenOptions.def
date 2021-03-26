@@ -340,7 +340,7 @@ ENUM_CODEGENOPT(DebugInfo, codegenoptions::DebugInfoKind, 4, codegenoptions::NoD
 CODEGENOPT(MacroDebugInfo, 1, 0)
 
 /// Tune the debug info for this debugger.
-ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 2,
+ENUM_CODEGENOPT(DebuggerTuning, llvm::DebuggerKind, 3,
                 llvm::DebuggerKind::Default)
 
 /// Dwarf version. Version zero indicates to LLVM that no DWARF should be

@@ -2573,13 +2573,12 @@ While Clang generally emits standard DWARF debug info (http://dwarfstd.org),
 different debuggers may know how to take advantage of different specific DWARF
 features. You can "tune" the debug info for one of several different debuggers.
 
-.. option:: -ggdb, -glldb, -gsce
+.. option:: -ggdb, -glldb, -gsce, -gdbx
 
-  Tune the debug info for the ``gdb``, ``lldb``, or Sony PlayStation\ |reg|
-  debugger, respectively. Each of these options implies **-g**. (Therefore, if
-  you want both **-gline-tables-only** and debugger tuning, the tuning option
-  must come first.)
-
+  Tune the debug info for the ``gdb``, ``lldb``, Sony PlayStation\ |reg|
+  debugger, or ``dbx``, respectively. Each of these options implies **-g**.
+  (Therefore, if you want both **-gline-tables-only** and debugger tuning, the
+  tuning option must come first.)
 
 Controlling LLVM IR Output
 --------------------------
