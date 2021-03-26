@@ -170,20 +170,28 @@ class RVBTernaryImm5<bits<2> funct2, bits<3> funct3_b, RISCVOpcode opcode,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZbbOrZbp] in {
-def ANDN  : ALU_rr<0b0100000, 0b111, "andn">, Sched<[]>;
-def ORN   : ALU_rr<0b0100000, 0b110, "orn">, Sched<[]>;
-def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">, Sched<[]>;
+def ANDN  : ALU_rr<0b0100000, 0b111, "andn">,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def ORN   : ALU_rr<0b0100000, 0b110, "orn">,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def XNOR  : ALU_rr<0b0100000, 0b100, "xnor">,
+            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZba] in {
-def SH1ADD : ALU_rr<0b0010000, 0b010, "sh1add">, Sched<[]>;
-def SH2ADD : ALU_rr<0b0010000, 0b100, "sh2add">, Sched<[]>;
-def SH3ADD : ALU_rr<0b0010000, 0b110, "sh3add">, Sched<[]>;
+def SH1ADD : ALU_rr<0b0010000, 0b010, "sh1add">,
+             Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
+def SH2ADD : ALU_rr<0b0010000, 0b100, "sh2add">,
+             Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
+def SH3ADD : ALU_rr<0b0010000, 0b110, "sh3add">,
+             Sched<[WriteSHXADD, ReadSHXADD, ReadSHXADD]>;
 } // Predicates = [HasStdExtZba]
 
 let Predicates = [HasStdExtZbbOrZbp] in {
-def ROL   : ALU_rr<0b0110000, 0b001, "rol">, Sched<[]>;
-def ROR   : ALU_rr<0b0110000, 0b101, "ror">, Sched<[]>;
+def ROL   : ALU_rr<0b0110000, 0b001, "rol">,
+            Sched<[WriteRotateReg, ReadRotateReg, ReadRotateReg]>;
+def ROR   : ALU_rr<0b0110000, 0b101, "ror">,
+            Sched<[WriteRotateReg, ReadRotateReg, ReadRotateReg]>;
 } // Predicates = [HasStdExtZbbOrZbp]
 
 let Predicates = [HasStdExtZbs] in {
@@ -205,7 +213,8 @@ def XPERMH : ALU_rr<0b0010100, 0b110, "xperm.h">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbbOrZbp] in
-def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">, Sched<[]>;
+def RORI  : RVBShift_ri<0b01100, 0b101, OPC_OP_IMM, "rori">,
+            Sched<[WriteRotateImm, ReadRotateImm]>;
 
 let Predicates = [HasStdExtZbs] in {
 def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">, Sched<[]>;
@@ -234,11 +243,11 @@ def FSRI : RVBTernaryImm6<0b101, OPC_OP_IMM, "fsri",
 
 let Predicates = [HasStdExtZbb] in {
 def CLZ  : RVBUnary<0b0110000, 0b00000, 0b001, RISCVOpcode<0b0010011>, "clz">,
-           Sched<[]>;
+           Sched<[WriteCLZ, ReadCLZ]>;
 def CTZ  : RVBUnary<0b0110000, 0b00001, 0b001, RISCVOpcode<0b0010011>, "ctz">,
-           Sched<[]>;
+           Sched<[WriteCTZ, ReadCTZ]>;
 def CPOP : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0010011>, "cpop">,
-           Sched<[]>;
+           Sched<[WriteCPOP, ReadCPOP]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbm, IsRV64] in
@@ -247,9 +256,9 @@ def BMATFLIP : RVBUnary<0b0110000, 0b00011, 0b001, RISCVOpcode<0b0010011>,
 
 let Predicates = [HasStdExtZbb] in {
 def SEXTB : RVBUnary<0b0110000, 0b00100, 0b001, RISCVOpcode<0b0010011>,
-                     "sext.b">, Sched<[]>;
+                     "sext.b">, Sched<[WriteIALU, ReadIALU]>;
 def SEXTH : RVBUnary<0b0110000, 0b00101, 0b001, RISCVOpcode<0b0010011>,
-                     "sext.h">, Sched<[]>;
+                     "sext.h">, Sched<[WriteIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbr] in {
@@ -285,10 +294,14 @@ def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh">, Sched<[]>;
 } // Predicates = [HasStdExtZbc]
 
 let Predicates = [HasStdExtZbb] in {
-def MIN  : ALU_rr<0b0000101, 0b100, "min">, Sched<[]>;
-def MINU : ALU_rr<0b0000101, 0b101, "minu">, Sched<[]>;
-def MAX  : ALU_rr<0b0000101, 0b110, "max">, Sched<[]>;
-def MAXU : ALU_rr<0b0000101, 0b111, "maxu">, Sched<[]>;
+def MIN  : ALU_rr<0b0000101, 0b100, "min">,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def MINU : ALU_rr<0b0000101, 0b101, "minu">,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def MAX  : ALU_rr<0b0000101, 0b110, "max">,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def MAXU : ALU_rr<0b0000101, 0b111, "maxu">,
+           Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbp] in {
@@ -323,16 +336,23 @@ def UNSHFLI : RVBShfl_ri<0b000010, 0b101, OPC_OP_IMM, "unshfli">, Sched<[]>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
-def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slli.uw">, Sched<[]>;
-def ADDUW : ALUW_rr<0b0000100, 0b000, "add.uw">, Sched<[]>;
-def SH1ADDUW : ALUW_rr<0b0010000, 0b010, "sh1add.uw">, Sched<[]>;
-def SH2ADDUW : ALUW_rr<0b0010000, 0b100, "sh2add.uw">, Sched<[]>;
-def SH3ADDUW : ALUW_rr<0b0010000, 0b110, "sh3add.uw">, Sched<[]>;
+def SLLIUW : RVBShift_ri<0b00001, 0b001, OPC_OP_IMM_32, "slli.uw">,
+             Sched<[WriteShiftImm32, ReadShiftImm32]>;
+def ADDUW : ALUW_rr<0b0000100, 0b000, "add.uw">,
+            Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
+def SH1ADDUW : ALUW_rr<0b0010000, 0b010, "sh1add.uw">,
+               Sched<[WriteSHXADD32, ReadSHXADD32, ReadSHXADD32]>;
+def SH2ADDUW : ALUW_rr<0b0010000, 0b100, "sh2add.uw">,
+               Sched<[WriteSHXADD32, ReadSHXADD32, ReadSHXADD32]>;
+def SH3ADDUW : ALUW_rr<0b0010000, 0b110, "sh3add.uw">,
+               Sched<[WriteSHXADD32, ReadSHXADD32, ReadSHXADD32]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
-def ROLW  : ALUW_rr<0b0110000, 0b001, "rolw">, Sched<[]>;
-def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">, Sched<[]>;
+def ROLW  : ALUW_rr<0b0110000, 0b001, "rolw">,
+            Sched<[WriteRotateReg32, ReadRotateReg32, ReadRotateReg32]>;
+def RORW  : ALUW_rr<0b0110000, 0b101, "rorw">,
+            Sched<[WriteRotateReg32, ReadRotateReg32, ReadRotateReg32]>;
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
@@ -354,7 +374,8 @@ def XPERMW : ALU_rr<0b0010100, 0b000, "xperm.w">, Sched<[]>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in
-def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">, Sched<[]>;
+def RORIW : RVBShiftW_ri<0b0110000, 0b101, OPC_OP_IMM_32, "roriw">,
+            Sched<[WriteRotateImm32, ReadRotateImm32]>;
 
 let Predicates = [HasStdExtZbs, IsRV64] in {
 // NOTE: These instructions have been removed from the 0.94 spec. As a result
@@ -383,11 +404,11 @@ def FSRIW : RVBTernaryImm5<0b10, 0b101, OPC_OP_IMM_32,
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
 def CLZW   : RVBUnary<0b0110000, 0b00000, 0b001, RISCVOpcode<0b0011011>,
-                      "clzw">, Sched<[]>;
+                      "clzw">, Sched<[WriteCLZ32, ReadCLZ32]>;
 def CTZW   : RVBUnary<0b0110000, 0b00001, 0b001, RISCVOpcode<0b0011011>,
-                      "ctzw">, Sched<[]>;
+                      "ctzw">, Sched<[WriteCTZ32, ReadCTZ32]>;
 def CPOPW  : RVBUnary<0b0110000, 0b00010, 0b001, RISCVOpcode<0b0011011>,
-                      "cpopw">, Sched<[]>;
+                      "cpopw">, Sched<[WriteCPOP32, ReadCPOP32]>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {
@@ -413,7 +434,8 @@ def BFPW : ALUW_rr<0b0100100, 0b111, "bfpw">, Sched<[]>;
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def ZEXTH_RV32 : RVInstR<0b0000100, 0b100, OPC_OP, (outs GPR:$rd),
-                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">, Sched<[]> {
+                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">,
+                 Sched<[WriteIALU, ReadIALU]> {
   let rs2 = 0b00000;
 }
 } // Predicates = [HasStdExtZbbOrZbp, IsRV32]
@@ -421,7 +443,8 @@ def ZEXTH_RV32 : RVInstR<0b0000100, 0b100, OPC_OP, (outs GPR:$rd),
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
-                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">, Sched<[]> {
+                         (ins GPR:$rs1), "zext.h", "$rd, $rs1">,
+                 Sched<[WriteIALU, ReadIALU]> {
   let rs2 = 0b00000;
 }
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
@@ -436,7 +459,7 @@ def ZEXTH_RV64 : RVInstR<0b0000100, 0b100, OPC_OP_32, (outs GPR:$rd),
 let Predicates = [HasStdExtZbbOrZbp, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def REV8_RV32 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[]> {
+                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
   let imm12 = { 0b01101, 0b0011000 };
 }
 } // Predicates = [HasStdExtZbbOrZbp, IsRV32]
@@ -444,7 +467,7 @@ def REV8_RV32 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
 let Predicates = [HasStdExtZbbOrZbp, IsRV64] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def REV8_RV64 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                        "rev8", "$rd, $rs1">, Sched<[]> {
+                        "rev8", "$rd, $rs1">, Sched<[WriteREV8, ReadREV8]> {
   let imm12 = { 0b01101, 0b0111000 };
 }
 } // Predicates = [HasStdExtZbbOrZbp, IsRV64]
@@ -452,7 +475,7 @@ def REV8_RV64 : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
 let Predicates = [HasStdExtZbbOrZbp] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def ORCB : RVInstI<0b101, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-                   "orc.b", "$rd, $rs1">, Sched<[]> {
+                   "orc.b", "$rd, $rs1">, Sched<[WriteORCB, ReadORCB]> {
   let imm12 = { 0b00101, 0b0000111 };
 }
 } // Predicates = [HasStdExtZbbOrZbp]
