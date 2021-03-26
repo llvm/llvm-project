@@ -1947,42 +1947,6 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
   return DescriptorMapUpdateResult(success, num_class_infos);
 }
 
-bool AppleObjCRuntimeV2::UpdateISAToDescriptorMapFromMemory(
-    RemoteNXMapTable &hash_table) {
-  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_TYPES));
-
-  Process *process = GetProcess();
-
-  if (process == nullptr)
-    return false;
-
-  uint32_t num_map_table_isas = 0;
-
-  ModuleSP objc_module_sp(GetObjCModule());
-
-  if (objc_module_sp) {
-    for (RemoteNXMapTable::element elt : hash_table) {
-      ++num_map_table_isas;
-
-      if (ISAIsCached(elt.second))
-        continue;
-
-      ClassDescriptorSP descriptor_sp = ClassDescriptorSP(
-          new ClassDescriptorV2(*this, elt.second, elt.first.AsCString()));
-
-      if (log && log->GetVerbose())
-        LLDB_LOGF(log,
-                  "AppleObjCRuntimeV2 added (ObjCISA)0x%" PRIx64
-                  " (%s) from dynamic table to isa->descriptor cache",
-                  elt.second, elt.first.AsCString());
-
-      AddClass(elt.second, descriptor_sp, elt.first.AsCString());
-    }
-  }
-
-  return num_map_table_isas > 0;
-}
-
 lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
   Process *process = GetProcess();
 

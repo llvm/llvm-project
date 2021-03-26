@@ -375,8 +375,6 @@ private:
 
   lldb::addr_t GetISAHashTablePointer();
 
-  bool UpdateISAToDescriptorMapFromMemory(RemoteNXMapTable &hash_table);
-
   /// Update the generation count of realized classes. This is not an exact
   /// count but rather a value that is incremented when new classes are realized
   /// or destroyed. Unlike the count in gdb_objc_realized_classes, it will
