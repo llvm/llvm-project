@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -O3 -S %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-- -O3 -S -enable-new-pm=1 %s | FileCheck %s
 ; XFAIL: *
 
 ; Check that loop unswitch happened and condition hoisted out of the loop.
