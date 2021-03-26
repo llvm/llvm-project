@@ -115,9 +115,7 @@ define i1 @test_add_nuw_negative_start(i8 %p, i8* %pq, i8 %n, i8 %r) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[ADD:%.*]] = or i8 [[A]], [[R:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %loop
@@ -292,8 +290,7 @@ define i1 @test_mul_nuw_negative_step(i8 %p, i8* %pq, i8 %n, i8 %r) {
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br label %loop
