@@ -334,6 +334,22 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// NoTerminator Operation
+//===----------------------------------------------------------------------===//
+
+def SingleNoTerminatorOp : TEST_Op<"single_no_terminator_op", GraphRegionNoTerminator.traits> {
+  let regions = (region SizedRegion<1>:$my_region);
+
+  let assemblyFormat = "attr-dict `:` $my_region";
+}
+
+def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op", GraphRegionNoTerminator.traits> {
+  let regions = (region VariadicRegion<SizedRegion<1>>:$my_regions);
+
+  let assemblyFormat = "attr-dict `:` $my_regions";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Call Interfaces
 //===----------------------------------------------------------------------===//
 

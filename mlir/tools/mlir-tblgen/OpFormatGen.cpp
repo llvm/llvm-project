@@ -695,7 +695,7 @@ const char *regionListEnsureTerminatorParserCode = R"(
 /// {0}: The name of the region list.
 const char *regionListEnsureSingleBlockParserCode = R"(
   for (auto &region : {0}Regions)
-    if (region.empty()) *{0}Region.emplaceBlock();
+    if (region->empty()) region->emplaceBlock();
 )";
 
 /// The code snippet used to generate a parser call for an optional region.
