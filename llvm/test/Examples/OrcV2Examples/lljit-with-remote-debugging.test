@@ -1,0 +1,10 @@
+# This test makes sure that the example builds and executes as expected.
+# Instructions for debugging can be found in LLJITWithRemoteDebugging.cpp
+
+# RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll
+# CHECK: Running: {{.*}}/Inputs/argc_sub1_elf.ll
+# CHECK: Exit code: 0
+
+# RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1_elf.ll --args 2nd 3rd 4th
+# CHECK: Running: {{.*}}/Inputs/argc_sub1_elf.ll 2nd 3rd 4th
+# CHECK: Exit code: 3
