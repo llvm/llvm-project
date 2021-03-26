@@ -1856,6 +1856,18 @@ public:
     return buildInstr(TargetOpcode::G_UBFX, {Dst}, {Src, LSB, Width});
   }
 
+  /// Build and insert \p Dst = G_ROTR \p Src, \p Amt
+  MachineInstrBuilder buildRotateRight(const DstOp &Dst, const SrcOp &Src,
+                                       const SrcOp &Amt) {
+    return buildInstr(TargetOpcode::G_ROTR, {Dst}, {Src, Amt});
+  }
+
+  /// Build and insert \p Dst = G_ROTL \p Src, \p Amt
+  MachineInstrBuilder buildRotateLeft(const DstOp &Dst, const SrcOp &Src,
+                                      const SrcOp &Amt) {
+    return buildInstr(TargetOpcode::G_ROTL, {Dst}, {Src, Amt});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);
