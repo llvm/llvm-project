@@ -1354,6 +1354,13 @@ def G_MEMSET : GenericInstruction {
   let mayStore = true;
 }
 
+def G_BZERO : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, type1:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
 //------------------------------------------------------------------------------
 // Bitfield extraction.
 //------------------------------------------------------------------------------
