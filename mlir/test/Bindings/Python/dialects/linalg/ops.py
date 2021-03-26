@@ -9,9 +9,39 @@ from mlir.dialects import std
 def run(f):
   print("\nTEST:", f.__name__)
   f()
+  return f
+
+
+# CHECK-LABEL: TEST: testInitTensor
+@run
+def testInitTensor():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      # CHECK-LABEL: func @static_sizes
+      # CHECK: %0 = linalg.init_tensor [3, 4] : tensor<3x4xf32>
+      @builtin.FuncOp.from_py_func()
+      def static_sizes():
+        return linalg.InitTensorOp([3, 4], f32)
+
+      # CHECK-LABEL: func @dynamic_sizes
+      # CHECK: %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+      @builtin.FuncOp.from_py_func(IndexType.get(), IndexType.get())
+      def dynamic_sizes(d0, d1):
+        return linalg.InitTensorOp([d0, d1], f32)
+
+      # CHECK-LABEL: func @zero_d
+      # CHECK: %0 = linalg.init_tensor [] : tensor<f32>
+      @builtin.FuncOp.from_py_func()
+      def zero_d():
+        return linalg.InitTensorOp([], f32)
+
+  print(module)
 
 
 # CHECK-LABEL: TEST: testStructuredOpOnTensors
+@run
 def testStructuredOpOnTensors():
   with Context() as ctx, Location.unknown():
     module = Module.create()
@@ -31,10 +61,8 @@ def testStructuredOpOnTensors():
   print(module)
 
 
-run(testStructuredOpOnTensors)
-
-
 # CHECK-LABEL: TEST: testStructuredOpOnBuffers
+@run
 def testStructuredOpOnBuffers():
   with Context() as ctx, Location.unknown():
     module = Module.create()
@@ -52,6 +80,3 @@ def testStructuredOpOnBuffers():
 
   # CHECK: linalg.matmul ins(%arg0, %arg1 : memref<2x3x4xf32>, memref<2x3x4xf32>) outs(%arg2 : memref<2x3x4xf32>)
   print(module)
-
-
-run(testStructuredOpOnBuffers)
