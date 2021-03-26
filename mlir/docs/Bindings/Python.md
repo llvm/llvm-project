@@ -449,7 +449,7 @@ defaults on `OpView`):
   variadics. Used by `OpView._ods_build_default` to decode operand and result
   lists that contain lists.
 
-#### Builders
+#### Default Builder
 
 Presently, only a single, default builder is mapped to the `__init__` method.
 The intent is that this `__init__` method represents the *most specific* of
@@ -475,3 +475,90 @@ construction via a (nested in the case of variadic) sequence of `results` and
 `operands`. This can be used to get some default construction semantics for
 operations that are otherwise unsupported in Python, at the expense of having
 a very generic signature.
+
+#### Extending Generated Op Classes
+
+Note that this is a rather complex mechanism and this section errs on the side
+of explicitness. Users are encouraged to find an example and duplicate it if
+they don't feel the need to understand the subtlety. The `builtin` dialect
+provides some relatively simple examples.
+
+As mentioned above, the build system generates Python sources like
+`_{DIALECT_NAMESPACE}_ops_gen.py` for each dialect with Python bindings. It
+is often desirable to to use these generated classes as a starting point for
+further customization, so an extension mechanism is provided to make this
+easy (you are always free to do ad-hoc patching in your `{DIALECT_NAMESPACE}.py`
+file but we prefer a more standard mechanism that is applied uniformly).
+
+To provide extensions, add a `_{DIALECT_NAMESPACE}_ops_ext.py` file to the
+`dialects` module (i.e. adjacent to your `{DIALECT_NAMESPACE}.py` top-level
+and the `*_ops_gen.py` file). Using the `builtin` dialect and `FuncOp` as an
+example, the generated code will include an import like this:
+
+```python
+try:
+  from . import _builtin_ops_ext as _ods_ext_module
+except ImportError:
+  _ods_ext_module = None
+```
+
+Then for each generated concrete `OpView` subclass, it will apply a decorator
+like:
+
+```python
+@_ods_cext.register_operation(_Dialect)
+@_ods_extend_opview_class(_ods_ext_module)
+class FuncOp(_ods_ir.OpView):
+```
+
+See the `_ods_common.py` `extend_opview_class` function for details of the
+mechanism. At a high level:
+
+* If the extension module exists, locate an extension class for the op (in
+  this example, `FuncOp`):
+  * First by looking for an attribute with the exact name in the extension
+    module.
+  * Falling back to calling a `select_opview_mixin(parent_opview_cls)`
+    function defined in the extension module.
+* If a mixin class is found, a new subclass is dynamically created that multiply
+  inherits from `({_builtin_ops_ext.FuncOp}, _builtin_ops_gen.FuncOp)`.
+
+The mixin class should not inherit from anything (i.e. directly extends
+`object` only). The facility is typically used to define custom `__init__`
+methods, properties, instance methods and static methods. Due to the
+inheritance ordering, the mixin class can act as though it extends the
+generated `OpView` subclass in most contexts (i.e.
+`issubclass(_builtin_ops_ext.FuncOp, OpView)` will return `False` but usage
+generally allows you treat it as duck typed as an `OpView`).
+
+There are a couple of recommendations, given how the class hierarchy is
+defined:
+
+* For static methods that need to instantiate the actual "leaf" op (which
+  is dynamically generated and would result in circular dependencies to try
+  to reference by name), prefer to use `@classmethod` and the concrete
+  subclass will be provided as your first `cls` argument. See
+  `_builtin_ops_ext.FuncOp.from_py_func` as an example.
+* If seeking to replace the generated `__init__` method entirely, you may
+  actually want to invoke the super-super-class `mlir.ir.OpView` constructor
+  directly, as it takes an `mlir.ir.Operation`, which is likely what you
+  are constructing (i.e. the generated `__init__` method likely adds more
+  API constraints than you want to expose in a custom builder).
+
+A pattern that comes up frequently is wanting to provide a sugared `__init__`
+method which has optional or type-polymorphism/implicit conversions but to
+otherwise want to invoke the default op building logic. For such cases,
+it is recommended to use an idiom such as:
+
+```python
+  def __init__(self, sugar, spice, *, loc=None, ip=None):
+    ... massage into result_type, operands, attributes ...
+    OpView.__init__(self, self.build_generic(
+        results=[result_type],
+        operands=operands,
+        attributes=attributes,
+        loc=loc,
+        ip=ip))
+```
+
+Refer to the documentation for `build_generic` for more information.
