@@ -43,12 +43,19 @@ declare i32 @llvm.umin.i32(i32, i32)
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> undef, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = icmp ult i32 [[TMP2]], 77
-; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP2]], i32 77
-; CHECK-NEXT:    [[E:%.*]] = icmp ugt i32 [[OP_EXTRA1]], 1
+; CHECK-NEXT:    [[SMIN0:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 0)
+; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 1)
+; CHECK-NEXT:    [[SMIN2:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 2)
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i32 @llvm.smin.i32(i32 undef, i32 3)
+; CHECK-NEXT:    [[A:%.*]] = sub nsw i32 undef, [[SMIN0]]
+; CHECK-NEXT:    [[B:%.*]] = sub nsw i32 undef, [[SMIN1]]
+; CHECK-NEXT:    [[C:%.*]] = sub nsw i32 undef, [[SMIN2]]
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i32 undef, [[SMIN3]]
+; CHECK-NEXT:    [[UMIN0:%.*]] = call i32 @llvm.umin.i32(i32 [[D]], i32 [[C]])
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN0]], i32 [[B]])
+; CHECK-NEXT:    [[UMIN2:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN1]], i32 [[A]])
+; CHECK-NEXT:    [[UMIN3:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN2]], i32 77)
+; CHECK-NEXT:    [[E:%.*]] = icmp ugt i32 [[UMIN3]], 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
