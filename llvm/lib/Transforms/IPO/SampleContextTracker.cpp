@@ -542,8 +542,11 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
   } else {
     // Destination node exists, merge samples for the context tree
     mergeContextNode(FromNode, *ToNode, ContextStrToRemove);
-    LLVM_DEBUG(dbgs() << "  Context promoted and merged to: "
-                      << ToNode->getFunctionSamples()->getContext() << "\n");
+    LLVM_DEBUG({
+      if (ToNode->getFunctionSamples())
+        dbgs() << "  Context promoted and merged to: "
+               << ToNode->getFunctionSamples()->getContext() << "\n";
+    });
 
     // Recursively promote and merge children
     for (auto &It : FromNode.getAllChildContext()) {
