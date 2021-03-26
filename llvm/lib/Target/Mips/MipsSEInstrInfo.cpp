@@ -290,6 +290,8 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     Opc = Mips::SD;
   else if (Mips::DSPRRegClass.hasSubClassEq(RC))
     Opc = Mips::SWDSP;
+  else if (Mips::GPR32NMRegClass.hasSubClassEq(RC))
+    Opc = Mips::SW; // FIXME: Implement nanoMIPS store to stack.
 
   // Hi, Lo are normally caller save but they are callee save
   // for interrupt handling.
@@ -368,6 +370,8 @@ loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     Opc = Mips::LD;
   else if (Mips::DSPRRegClass.hasSubClassEq(RC))
     Opc = Mips::LWDSP;
+  else if (Mips::GPR32NMRegClass.hasSubClassEq(RC))
+    Opc = Mips::LW; // FIXME: Implement nanoMIPS load from stack.
 
   assert(Opc && "Register class not handled!");
 

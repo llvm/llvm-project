@@ -48,7 +48,7 @@ ArrayRef<MCPhysReg> MipsABIInfo::GetVarArgRegs() const {
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   if (IsO32())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsN32() || IsN64() || IsP32())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -67,6 +67,8 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
 
   if (TT.isMIPS64())
     return MipsABIInfo::N64();
+  if (TT.isNanoMips())
+    return MipsABIInfo::P32();
   return MipsABIInfo::O32();
 }
 

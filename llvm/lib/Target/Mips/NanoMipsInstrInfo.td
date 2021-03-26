@@ -42,15 +42,14 @@ class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
 
 let isCodeGenOnly = 1 in {
 
-def ADDu_NM : ArithLogicRNM<"addu", GPR32Opnd, add>, ISA_NANOMIPS;
-def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32Opnd,
+def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>, ISA_NANOMIPS;
+def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
-  def JRC_NM : IndirectBranch<"jrc", GPR32Opnd>, ISA_NANOMIPS;
+  def JRC_NM : IndirectBranch<"jrc", GPR32NMOpnd>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
-  def PseudoReturnNM : PseudoReturnBase<GPR32Opnd>, ISA_NANOMIPS;
+  def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
 }
-

@@ -151,6 +151,40 @@ let Namespace = "Mips" in {
   def FP_64   : Mips64GPRReg< 30, "fp",  [FP]>, DwarfRegNum<[30]>;
   def RA_64   : Mips64GPRReg< 31, "ra",  [RA]>, DwarfRegNum<[31]>;
 
+  // General Purpose nanoMIPS Registers
+  def ZERO_NM : MipsGPRReg< 0, "zero">, DwarfRegNum<[0]>;
+  def AT_NM   : MipsGPRReg< 1, "1">,    DwarfRegNum<[1]>;
+  def T4_NM   : MipsGPRReg< 2, "2">,    DwarfRegNum<[2]>;
+  def T5_NM   : MipsGPRReg< 3, "3">,    DwarfRegNum<[3]>;
+  def A0_NM   : MipsGPRReg< 4, "4">,    DwarfRegNum<[4]>;
+  def A1_NM   : MipsGPRReg< 5, "5">,    DwarfRegNum<[5]>;
+  def A2_NM   : MipsGPRReg< 6, "6">,    DwarfRegNum<[6]>;
+  def A3_NM   : MipsGPRReg< 7, "7">,    DwarfRegNum<[7]>;
+  def A4_NM   : MipsGPRReg< 8, "8">,    DwarfRegNum<[8]>;
+  def A5_NM   : MipsGPRReg< 9, "9">,    DwarfRegNum<[9]>;
+  def A6_NM   : MipsGPRReg< 10, "10">,  DwarfRegNum<[10]>;
+  def A7_NM   : MipsGPRReg< 11, "11">,  DwarfRegNum<[11]>;
+  def T0_NM   : MipsGPRReg< 12, "12">,  DwarfRegNum<[12]>;
+  def T1_NM   : MipsGPRReg< 13, "13">,  DwarfRegNum<[13]>;
+  def T2_NM   : MipsGPRReg< 14, "14">,  DwarfRegNum<[14]>;
+  def T3_NM   : MipsGPRReg< 15, "15">,  DwarfRegNum<[15]>;
+  def S0_NM   : MipsGPRReg< 16, "16">,  DwarfRegNum<[16]>;
+  def S1_NM   : MipsGPRReg< 17, "17">,  DwarfRegNum<[17]>;
+  def S2_NM   : MipsGPRReg< 18, "18">,  DwarfRegNum<[18]>;
+  def S3_NM   : MipsGPRReg< 19, "19">,  DwarfRegNum<[19]>;
+  def S4_NM   : MipsGPRReg< 20, "20">,  DwarfRegNum<[20]>;
+  def S5_NM   : MipsGPRReg< 21, "21">,  DwarfRegNum<[21]>;
+  def S6_NM   : MipsGPRReg< 22, "22">,  DwarfRegNum<[22]>;
+  def S7_NM   : MipsGPRReg< 23, "23">,  DwarfRegNum<[23]>;
+  def T8_NM   : MipsGPRReg< 24, "24">,  DwarfRegNum<[24]>;
+  def T9_NM   : MipsGPRReg< 25, "25">,  DwarfRegNum<[25]>;
+  def K0_NM   : MipsGPRReg< 26, "26">,  DwarfRegNum<[26]>;
+  def K1_NM   : MipsGPRReg< 27, "27">,  DwarfRegNum<[27]>;
+  def GP_NM   : MipsGPRReg< 28, "gp">,  DwarfRegNum<[28]>;
+  def SP_NM   : MipsGPRReg< 29, "sp">,  DwarfRegNum<[29]>;
+  def FP_NM   : MipsGPRReg< 30, "fp">,  DwarfRegNum<[30]>;
+  def RA_NM   : MipsGPRReg< 31, "ra">,  DwarfRegNum<[31]>;
+
   /// Mips Single point precision FPU Registers
   foreach I = 0-31 in
   def F#I : FPR<I, "f"#I>, DwarfRegNum<[!add(I, 32)]>;
@@ -277,6 +311,23 @@ let Namespace = "Mips" in {
 //===----------------------------------------------------------------------===//
 // Register Classes
 //===----------------------------------------------------------------------===//
+
+class GPR32ClassNM<list<ValueType> regTypes> :
+  RegisterClass<"Mips", regTypes, 32, (add
+  // Reserved
+  ZERO_NM, AT_NM,
+  // Return Values and Arguments
+  A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM,
+  // Not preserved across procedure calls
+  T0_NM, T1_NM, T2_NM, T3_NM, T4_NM, T5_NM, T8_NM, T9_NM,
+  // Callee save
+  S0_NM, S1_NM, S2_NM, S3_NM, S4_NM, S5_NM, S6_NM, S7_NM,
+  // Not preserved across procedure calls
+  T8_NM, T9_NM,
+  // Reserved
+  K0_NM, K1_NM, GP_NM, SP_NM, FP_NM, RA_NM)>;
+
+def GPR32NM : GPR32ClassNM<[i32]>;
 
 class GPR32Class<list<ValueType> regTypes> :
   RegisterClass<"Mips", regTypes, 32, (add
@@ -524,6 +575,11 @@ def GPR32AsmOperand : MipsAsmRegOperand {
   let PredicateMethod = "isGPRAsmReg";
 }
 
+def GPR32NMAsmOperand : MipsAsmRegOperand {
+  let Name = "GPR32NMAsmReg";
+  let PredicateMethod = "isGPRAsmReg";
+}
+
 def GPRMM16AsmOperand : MipsAsmRegOperand {
   let Name = "GPRMM16AsmReg";
   let PredicateMethod = "isMM16AsmReg";
@@ -619,6 +675,10 @@ def GPR32NonZeroOpnd : RegisterOperand<GPR32NONZERO> {
 }
 
 def GPR32Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPR32AsmOperand;
+}
+
+def GPR32NMOpnd : RegisterOperand<GPR32NM> {
   let ParserMatchClass = GPR32AsmOperand;
 }
 

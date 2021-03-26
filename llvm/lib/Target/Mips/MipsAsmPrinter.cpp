@@ -397,6 +397,7 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
   case MipsABIInfo::ABI::O32:  return "abi32";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
+  case MipsABIInfo::ABI::P32:  return "abiP32";
   default: llvm_unreachable("Unknown Mips ABI");
   }
 }
