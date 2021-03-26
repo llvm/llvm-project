@@ -69,6 +69,9 @@ struct char_traits
 
 template <> struct char_traits<char>;
 template <> struct char_traits<wchar_t>;
+template <> struct char_traits<char8_t>;  // C++20
+template <> struct char_traits<char16_t>;
+template <> struct char_traits<char32_t>;
 
 template<class charT, class traits = char_traits<charT>, class Allocator = allocator<charT> >
 class basic_string
@@ -450,6 +453,7 @@ erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
 
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
+typedef basic_string<char8_t> u8string; // C++20
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
 
@@ -494,12 +498,14 @@ wstring to_wstring(double val);
 wstring to_wstring(long double val);
 
 template <> struct hash<string>;
+template <> struct hash<u8string>; // C++20
 template <> struct hash<u16string>;
 template <> struct hash<u32string>;
 template <> struct hash<wstring>;
 
 basic_string<char>     operator "" s( const char *str,     size_t len ); // C++14
 basic_string<wchar_t>  operator "" s( const wchar_t *str,  size_t len ); // C++14
+basic_string<char8_t>  operator "" s( const char8_t *str,  size_t len ); // C++20
 basic_string<char16_t> operator "" s( const char16_t *str, size_t len ); // C++14
 basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++14
 

@@ -362,8 +362,8 @@ class FunctionTestBuilder:
             func_repl = regex
             # Replace any capture groups with their matched strings.
             for g in match.groups():
-              func_repl = group_regex.sub(g, func_repl, count=1)
-            func = '{{' + func_repl + '}}'
+              func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
+            func = re.sub(func_repl, '{{' + func_repl + '}}', func)
 
           # Replace all calls to regex matching functions.
           matches = re.finditer(regex, scrubbed_body)
@@ -371,7 +371,7 @@ class FunctionTestBuilder:
             func_repl = regex
             # Replace any capture groups with their matched strings.
             for g in match.groups():
-                func_repl = group_regex.sub(g, func_repl, count=1)
+                func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
             # Substitute function call names that match the regex with the same
             # capture groups set.
             scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}', scrubbed_body)
@@ -504,11 +504,11 @@ def get_ir_prefix_from_ir_value_re_match(match):
         return nameless_values[idx].ir_regexp
     return nameless_values[idx].global_ir_prefix_regexp
 
-# Return true if this kind or IR value is "local", basically if it matches '%{{.*}}'.
+# Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
 def is_local_def_ir_value_match(match):
     return nameless_values[get_idx_from_ir_value_match(match)].ir_prefix == '%'
 
-# Return true if this kind or IR value is "local", basically if it matches '%{{.*}}'.
+# Return true if this kind of IR value is "global", basically if it matches '#{{.*}}'.
 def is_global_scope_ir_value_match(match):
     return nameless_values[get_idx_from_ir_value_match(match)].global_ir_prefix is not None
 

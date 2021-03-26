@@ -155,6 +155,10 @@ protected:
   /// zero-length bitfield.
   unsigned UseZeroLengthBitfieldAlignment : 1;
 
+  /// Whether zero length bitfield alignment is respected if they are the
+  /// leading members.
+  unsigned UseLeadingZeroLengthBitfield : 1;
+
   ///  Whether explicit bit field alignment attributes are honored.
   unsigned UseExplicitBitFieldAlignment : 1;
 
@@ -766,6 +770,12 @@ public:
   /// the next member.
   bool useZeroLengthBitfieldAlignment() const {
     return UseZeroLengthBitfieldAlignment;
+  }
+
+  /// Check whether zero length bitfield alignment is respected if they are
+  /// leading members.
+  bool useLeadingZeroLengthBitfield() const {
+    return UseLeadingZeroLengthBitfield;
   }
 
   /// Get the fixed alignment value in bits for a member that follows

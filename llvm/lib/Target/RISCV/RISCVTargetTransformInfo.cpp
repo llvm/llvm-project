@@ -95,6 +95,12 @@ int RISCVTTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   return TTI::TCC_Free;
 }
 
+TargetTransformInfo::PopcntSupportKind
+RISCVTTIImpl::getPopcntSupport(unsigned TyWidth) {
+  assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
+  return ST->hasStdExtZbb() ? TTI::PSK_FastHardware : TTI::PSK_Software;
+}
+
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   // Currently, the ExpandReductions pass can't expand scalable-vector
   // reductions, but we still request expansion as RVV doesn't support certain
@@ -133,4 +139,30 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
   if (ST->hasStdExtV() && MaxVectorSizeInBits != 0)
     return MaxVectorSizeInBits / RISCV::RVVBitsPerBlock;
   return BaseT::getMaxVScale();
+}
+
+unsigned RISCVTTIImpl::getGatherScatterOpCost(
+    unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
+    Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  if ((Opcode == Instruction::Load &&
+       !isLegalMaskedGather(DataTy, Align(Alignment))) ||
+      (Opcode == Instruction::Store &&
+       !isLegalMaskedScatter(DataTy, Align(Alignment))))
+    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  // FIXME: Only supporting fixed vectors for now.
+  if (!isa<FixedVectorType>(DataTy))
+    return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
+                                         Alignment, CostKind, I);
+
+  auto *VTy = cast<FixedVectorType>(DataTy);
+  unsigned NumLoads = VTy->getNumElements();
+  unsigned MemOpCost =
+      getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
+  return NumLoads * MemOpCost;
 }

@@ -295,12 +295,14 @@ TEST(SanitizerCommon, SizeClassAllocator64Dynamic) {
   TestSizeClassAllocator<Allocator64Dynamic>();
 }
 
+#if !SANITIZER_ANDROID
+// Android only has 39-bit address space, so mapping 2 * kAllocatorSize
+// sometimes fails.
 TEST(SanitizerCommon, SizeClassAllocator64DynamicPremapped) {
   ScopedPremappedHeap h;
   TestSizeClassAllocator<Allocator64Dynamic>(h.Addr());
 }
 
-#if !SANITIZER_ANDROID
 //FIXME(kostyak): find values so that those work on Android as well.
 TEST(SanitizerCommon, SizeClassAllocator64Compact) {
   TestSizeClassAllocator<Allocator64Compact>();
@@ -385,12 +387,12 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Dynamic>();
 }
 
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedMetadataStress) {
   ScopedPremappedHeap h;
   SizeClassAllocatorMetadataStress<Allocator64Dynamic>(h.Addr());
 }
 
-#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactMetadataStress) {
   SizeClassAllocatorMetadataStress<Allocator64Compact>();
 }
@@ -438,12 +440,12 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>(
       1ULL << (SANITIZER_ANDROID ? 31 : 33));
 }
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedGetBlockBegin) {
   ScopedPremappedHeap h;
   SizeClassAllocatorGetBlockBeginStress<Allocator64Dynamic>(
       1ULL << (SANITIZER_ANDROID ? 31 : 33), h.Addr());
 }
-#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactGetBlockBegin) {
   SizeClassAllocatorGetBlockBeginStress<Allocator64Compact>(1ULL << 33);
 }
@@ -733,12 +735,15 @@ TEST(SanitizerCommon, CombinedAllocator64Dynamic) {
   TestCombinedAllocator<Allocator64Dynamic>();
 }
 
+#if !SANITIZER_ANDROID
+#if !SANITIZER_WINDOWS
+// Windows fails to map 1TB, so disable this test.
 TEST(SanitizerCommon, CombinedAllocator64DynamicPremapped) {
   ScopedPremappedHeap h;
   TestCombinedAllocator<Allocator64Dynamic>(h.Addr());
 }
+#endif
 
-#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, CombinedAllocator64Compact) {
   TestCombinedAllocator<Allocator64Compact>();
 }
@@ -799,12 +804,12 @@ TEST(SanitizerCommon, SizeClassAllocator64DynamicLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Dynamic>();
 }
 
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedLocalCache) {
   ScopedPremappedHeap h;
   TestSizeClassAllocatorLocalCache<Allocator64Dynamic>(h.Addr());
 }
 
-#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64CompactLocalCache) {
   TestSizeClassAllocatorLocalCache<Allocator64Compact>();
 }
@@ -987,10 +992,12 @@ TEST(SanitizerCommon, SizeClassAllocator64Iteration) {
 TEST(SanitizerCommon, SizeClassAllocator64DynamicIteration) {
   TestSizeClassAllocatorIteration<Allocator64Dynamic>();
 }
+#if !SANITIZER_ANDROID
 TEST(SanitizerCommon, SizeClassAllocator64DynamicPremappedIteration) {
   ScopedPremappedHeap h;
   TestSizeClassAllocatorIteration<Allocator64Dynamic>(h.Addr());
 }
+#endif
 #endif
 #endif
 

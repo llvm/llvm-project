@@ -55,7 +55,7 @@
 
 // Mismatching entries don't combine.
 "test.op_with_data_layout"() ({
-  // expected-error@below {{data layout is not a refinement of the layouts in enclosing ops}}
+  // expected-error@below {{data layout does not combine with layouts of enclosing ops}}
   // expected-note@above {{enclosing op with data layout}}
   "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>> } : () -> ()
   "test.maybe_terminator_op"() : () -> ()
@@ -71,3 +71,22 @@
 
 // expected-error@below {{data layout specified for a type that does not support it}}
 "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!test.test_type, 32>> } : () -> ()
+
+// -----
+
+// Mismatching entries are checked on module ops as well.
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 33>>} {
+  // expected-error@below {{data layout does not combine with layouts of enclosing ops}}
+  // expected-note@above {{enclosing op with data layout}}
+  module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>>} {
+  }
+}
+
+// -----
+
+// Mismatching entries are checked on a combination of modules and other ops.
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 33>>} {
+  // expected-error@below {{data layout does not combine with layouts of enclosing ops}}
+  // expected-note@above {{enclosing op with data layout}}
+  "test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"unknown.unknown", 32>>} : () -> ()
+}

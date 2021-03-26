@@ -74,6 +74,8 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds_;
 
+  bool EnableConformanceChecks_ = false;
+
 public:
   CompilerInvocation() = default;
 
@@ -96,6 +98,11 @@ public:
   bool &debugModuleDir() { return debugModuleDir_; }
   const bool &debugModuleDir() const { return debugModuleDir_; }
 
+  bool &enableConformanceChecks() { return EnableConformanceChecks_; }
+  const bool &enableConformanceChecks() const {
+    return EnableConformanceChecks_;
+  }
+
   Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds() {
     return defaultKinds_;
   }
@@ -110,6 +117,9 @@ public:
   static bool CreateFromArgs(CompilerInvocation &res,
       llvm::ArrayRef<const char *> commandLineArgs,
       clang::DiagnosticsEngine &diags);
+
+  // Enables the std=f2018 conformance check
+  void set_EnableConformanceChecks() { EnableConformanceChecks_ = true; }
 
   /// Useful setters
   void SetModuleDir(std::string &moduleDir) { moduleDir_ = moduleDir; }

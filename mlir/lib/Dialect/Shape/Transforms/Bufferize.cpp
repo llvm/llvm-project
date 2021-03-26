@@ -19,7 +19,7 @@ struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
   void runOnFunction() override {
     MLIRContext &ctx = getContext();
 
-    OwningRewritePatternList patterns(&ctx);
+    RewritePatternSet patterns(&ctx);
     BufferizeTypeConverter typeConverter;
     ConversionTarget target(ctx);
 

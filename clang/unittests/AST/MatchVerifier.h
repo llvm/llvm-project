@@ -117,6 +117,7 @@ MatchVerifier<NodeType>::match(const std::string &Code,
     FileName = "input.cc";
     break;
   case Lang_OpenCL:
+    Args.push_back("-cl-no-stdinc");
     FileName = "input.cl";
     break;
   case Lang_OBJCXX:

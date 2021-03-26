@@ -32,7 +32,7 @@ with Context() as ctx, Location.unknown():
   i8 = IntegerType.get_signless(8)
   i16 = IntegerType.get_signless(16)
   i32 = IntegerType.get_signless(32)
-  with InsertionPoint.at_block_terminator(module.body):
+  with InsertionPoint(module.body):
 
     # Note that these all have the same indexing maps. We verify the first and
     # then do more permutation tests on casting and body generation
@@ -55,15 +55,7 @@ with Context() as ctx, Location.unknown():
     @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
                                  RankedTensorType.get((16, 8), f32))
     def test_matmul_mono(lhs, rhs):
-      # TODO: Enable outs inference and add sugar for InitTensorOp
-      # construction.
-      init_result = linalg.InitTensorOp(result=RankedTensorType.get((4, 8),
-                                                                    f32),
-                                        static_sizes=ArrayAttr.get([
-                                            IntegerAttr.get(IndexType.get(), 4),
-                                            IntegerAttr.get(IndexType.get(), 8)
-                                        ]),
-                                        sizes=[])
+      init_result = linalg.InitTensorOp([4, 8], f32)
       return matmul_mono(lhs, rhs, outs=[init_result.result])
 
     # CHECK-LABEL: @test_i8i8i32_matmul

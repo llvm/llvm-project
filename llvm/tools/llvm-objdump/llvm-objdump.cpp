@@ -358,6 +358,12 @@ cl::opt<std::string> objdump::Prefix("prefix",
                                      cl::desc("Add prefix to absolute paths"),
                                      cl::cat(ObjdumpCat));
 
+cl::opt<uint32_t>
+    objdump::PrefixStrip("prefix-strip",
+                         cl::desc("Strip out initial directories from absolute "
+                                  "paths. No effect without --prefix"),
+                         cl::init(0), cl::cat(ObjdumpCat));
+
 enum DebugVarsFormat {
   DVDisabled,
   DVUnicode,
@@ -1031,6 +1037,27 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
   }
 
   if (!Prefix.empty() && sys::path::is_absolute_gnu(LineInfo.FileName)) {
+    // FileName has at least one character since is_absolute_gnu is false for
+    // an empty string.
+    assert(!LineInfo.FileName.empty());
+    if (PrefixStrip > 0) {
+      uint32_t Level = 0;
+      auto StrippedNameStart = LineInfo.FileName.begin();
+
+      // Path.h iterator skips extra separators. Therefore it cannot be used
+      // here to keep compatibility with GNU Objdump.
+      for (auto Pos = StrippedNameStart + 1, End = LineInfo.FileName.end();
+           Pos != End && Level < PrefixStrip; ++Pos) {
+        if (sys::path::is_separator(*Pos)) {
+          StrippedNameStart = Pos;
+          ++Level;
+        }
+      }
+
+      LineInfo.FileName =
+          std::string(StrippedNameStart, LineInfo.FileName.end());
+    }
+
     SmallString<128> FilePath;
     sys::path::append(FilePath, Prefix, LineInfo.FileName);
 

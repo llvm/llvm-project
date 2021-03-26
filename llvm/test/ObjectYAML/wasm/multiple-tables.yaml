@@ -18,7 +18,7 @@ Sections:
           Index:           0
           ElemType:        FUNCREF
           Limits:
-            Initial:         0x0
+            Minimum:         0x0
   - Type:            FUNCTION
     FunctionTypes:   [ 0 ]
   - Type:            TABLE
@@ -26,16 +26,16 @@ Sections:
       - Index:           1
         ElemType:        FUNCREF
         Limits:
-          Initial:         0x0
+          Minimum:         0x0
       - Index:           2
         ElemType:        EXTERNREF
         Limits:
-          Initial:         0x0
+          Minimum:         0x0
       - Index:           3
         ElemType:        FUNCREF
         Limits:
           Flags:           [ HAS_MAX ]
-          Initial:         0x3
+          Minimum:         0x3
           Maximum:         0x3
   - Type:            EXPORT
     Exports:
@@ -79,7 +79,7 @@ Sections:
 # CHECK-NEXT:           Index:           0
 # CHECK-NEXT:           ElemType:        FUNCREF
 # CHECK-NEXT:           Limits:
-# CHECK-NEXT:             Initial:         0x0
+# CHECK-NEXT:             Minimum:         0x0
 # CHECK-NEXT:   - Type:            FUNCTION
 # CHECK-NEXT:     FunctionTypes:   [ 0 ]
 # CHECK-NEXT:   - Type:            TABLE
@@ -87,16 +87,16 @@ Sections:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
-# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:           Minimum:         0x0
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         ElemType:        EXTERNREF
 # CHECK-NEXT:         Limits:
-# CHECK-NEXT:           Initial:         0x0
+# CHECK-NEXT:           Minimum:         0x0
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         ElemType:        FUNCREF
 # CHECK-NEXT:         Limits:
 # CHECK-NEXT:           Flags:           [ HAS_MAX ]
-# CHECK-NEXT:           Initial:         0x3
+# CHECK-NEXT:           Minimum:         0x3
 # CHECK-NEXT:           Maximum:         0x3
 # CHECK-NEXT:   - Type:            EXPORT
 # CHECK-NEXT:     Exports:

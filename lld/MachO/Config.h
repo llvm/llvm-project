@@ -85,7 +85,7 @@ struct Configuration {
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
-  uint32_t timeTraceGranularity;
+  uint32_t timeTraceGranularity = 0;
   std::string progName;
   llvm::StringRef installName;
   llvm::StringRef mapFile;

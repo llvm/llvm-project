@@ -308,25 +308,13 @@ OpFoldResult AndOp::fold(ArrayRef<Attribute> operands) {
 // AssertOp
 //===----------------------------------------------------------------------===//
 
-namespace {
-struct EraseRedundantAssertions : public OpRewritePattern<AssertOp> {
-  using OpRewritePattern<AssertOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(AssertOp op,
-                                PatternRewriter &rewriter) const override {
-    // Erase assertion if argument is constant true.
-    if (matchPattern(op.arg(), m_One())) {
-      rewriter.eraseOp(op);
-      return success();
-    }
-    return failure();
+LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
+  // Erase assertion if argument is constant true.
+  if (matchPattern(op.arg(), m_One())) {
+    rewriter.eraseOp(op);
+    return success();
   }
-};
-} // namespace
-
-void AssertOp::getCanonicalizationPatterns(OwningRewritePatternList &patterns,
-                                           MLIRContext *context) {
-  patterns.insert<EraseRedundantAssertions>(context);
+  return failure();
 }
 
 //===----------------------------------------------------------------------===//
@@ -498,26 +486,21 @@ static LogicalResult collapseBranch(Block *&successor,
   return success();
 }
 
-namespace {
 /// Simplify a branch to a block that has a single predecessor. This effectively
 /// merges the two blocks.
-struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
-  using OpRewritePattern<BranchOp>::OpRewritePattern;
+static LogicalResult
+simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
+  // Check that the successor block has a single predecessor.
+  Block *succ = op.getDest();
+  Block *opParent = op->getBlock();
+  if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
+    return failure();
 
-  LogicalResult matchAndRewrite(BranchOp op,
-                                PatternRewriter &rewriter) const override {
-    // Check that the successor block has a single predecessor.
-    Block *succ = op.getDest();
-    Block *opParent = op->getBlock();
-    if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
-      return failure();
-
-    // Merge the successor into the current block and erase the branch.
-    rewriter.mergeBlocks(succ, opParent, op.getOperands());
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
+  // Merge the successor into the current block and erase the branch.
+  rewriter.mergeBlocks(succ, opParent, op.getOperands());
+  rewriter.eraseOp(op);
+  return success();
+}
 
 ///   br ^bb1
 /// ^bb1
@@ -525,39 +508,33 @@ struct SimplifyBrToBlockWithSinglePred : public OpRewritePattern<BranchOp> {
 ///
 ///  -> br ^bbN(...)
 ///
-struct SimplifyPassThroughBr : public OpRewritePattern<BranchOp> {
-  using OpRewritePattern<BranchOp>::OpRewritePattern;
+static LogicalResult simplifyPassThroughBr(BranchOp op,
+                                           PatternRewriter &rewriter) {
+  Block *dest = op.getDest();
+  ValueRange destOperands = op.getOperands();
+  SmallVector<Value, 4> destOperandStorage;
 
-  LogicalResult matchAndRewrite(BranchOp op,
-                                PatternRewriter &rewriter) const override {
-    Block *dest = op.getDest();
-    ValueRange destOperands = op.getOperands();
-    SmallVector<Value, 4> destOperandStorage;
+  // Try to collapse the successor if it points somewhere other than this
+  // block.
+  if (dest == op->getBlock() ||
+      failed(collapseBranch(dest, destOperands, destOperandStorage)))
+    return failure();
 
-    // Try to collapse the successor if it points somewhere other than this
-    // block.
-    if (dest == op->getBlock() ||
-        failed(collapseBranch(dest, destOperands, destOperandStorage)))
-      return failure();
+  // Create a new branch with the collapsed successor.
+  rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
+  return success();
+}
 
-    // Create a new branch with the collapsed successor.
-    rewriter.replaceOpWithNewOp<BranchOp>(op, dest, destOperands);
-    return success();
-  }
-};
-} // end anonymous namespace.
+LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
+  return success(succeeded(simplifyBrToBlockWithSinglePred(op, rewriter)) ||
+                 succeeded(simplifyPassThroughBr(op, rewriter)));
+}
 
 Block *BranchOp::getDest() { return getSuccessor(); }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
 
 void BranchOp::eraseOperand(unsigned index) { (*this)->eraseOperand(index); }
-
-void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                           MLIRContext *context) {
-  results.insert<SimplifyBrToBlockWithSinglePred, SimplifyPassThroughBr>(
-      context);
-}
 
 Optional<MutableOperandRange>
 BranchOp::getMutableSuccessorOperands(unsigned index) {
@@ -609,31 +586,20 @@ FunctionType CallOp::getCalleeType() {
 //===----------------------------------------------------------------------===//
 // CallIndirectOp
 //===----------------------------------------------------------------------===//
-namespace {
+
 /// Fold indirect calls that have a constant function as the callee operand.
-struct SimplifyIndirectCallWithKnownCallee
-    : public OpRewritePattern<CallIndirectOp> {
-  using OpRewritePattern<CallIndirectOp>::OpRewritePattern;
+LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
+                                           PatternRewriter &rewriter) {
+  // Check that the callee is a constant callee.
+  SymbolRefAttr calledFn;
+  if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
+    return failure();
 
-  LogicalResult matchAndRewrite(CallIndirectOp indirectCall,
-                                PatternRewriter &rewriter) const override {
-    // Check that the callee is a constant callee.
-    SymbolRefAttr calledFn;
-    if (!matchPattern(indirectCall.getCallee(), m_Constant(&calledFn)))
-      return failure();
-
-    // Replace with a direct call.
-    rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
-                                        indirectCall.getResultTypes(),
-                                        indirectCall.getArgOperands());
-    return success();
-  }
-};
-} // end anonymous namespace.
-
-void CallIndirectOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyIndirectCallWithKnownCallee>(context);
+  // Replace with a direct call.
+  rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
+                                      indirectCall.getResultTypes(),
+                                      indirectCall.getArgOperands());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -965,11 +931,11 @@ struct SimplifyCondBranchFromCondBranchOnSameCondition
 };
 } // end anonymous namespace
 
-void CondBranchOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
-                 SimplifyCondBranchIdenticalSuccessors,
-                 SimplifyCondBranchFromCondBranchOnSameCondition>(context);
+void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
+              SimplifyCondBranchIdenticalSuccessors,
+              SimplifyCondBranchFromCondBranchOnSameCondition>(context);
 }
 
 Optional<MutableOperandRange>
@@ -2017,11 +1983,11 @@ struct SubTensorCanonicalizer {
   }
 };
 
-void SubTensorOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void SubTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                     SubTensorOp, SubTensorCanonicalizer>,
-                 SubTensorOpCastFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  SubTensorOp, SubTensorCanonicalizer>,
+              SubTensorOpCastFolder>(context);
 }
 
 //
@@ -2188,10 +2154,10 @@ struct SubTensorInsertOpCastFolder final
 };
 } // namespace
 
-void SubTensorInsertOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SubTensorInsertOpConstantArgumentFolder,
-                 SubTensorInsertOpCastFolder>(context);
+void SubTensorInsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                    MLIRContext *context) {
+  results.add<SubTensorInsertOpConstantArgumentFolder,
+              SubTensorInsertOpCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//

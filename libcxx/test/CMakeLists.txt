@@ -103,7 +103,7 @@ if (LIBCXX_INCLUDE_TESTS)
     DEPENDS cxx ${LIBCXX_TEST_DEPS}
     COMMENT "Builds dependencies required to run the test suite.")
 
-  add_lit_target(check-cxx
+  add_lit_testsuite(check-cxx
     "Running libcxx tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS cxx-test-depends

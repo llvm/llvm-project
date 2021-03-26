@@ -14,7 +14,7 @@
 // NOOPTION-NEXT:        Field:           memory
 // NOOPTION-NEXT:        Kind:            MEMORY
 // NOOPTION-NEXT:        Memory:
-// NOOPTION-NEXT:          Initial:         0x1
+// NOOPTION-NEXT:          Minimum:         0x1
 // NOOPTION-NEXT:      - Module:          env
 // NOOPTION-NEXT:        Field:           __memory_base
 // NOOPTION-NEXT:        Kind:            GLOBAL
@@ -56,7 +56,7 @@
 // SYMBOLIC-NEXT:        Field:           memory
 // SYMBOLIC-NEXT:        Kind:            MEMORY
 // SYMBOLIC-NEXT:        Memory:
-// SYMBOLIC-NEXT:          Initial:         0x1
+// SYMBOLIC-NEXT:          Minimum:         0x1
 // SYMBOLIC-NEXT:      - Module:          env
 // SYMBOLIC-NEXT:        Field:           __memory_base
 // SYMBOLIC-NEXT:        Kind:            GLOBAL
@@ -74,7 +74,7 @@
 // SYMBOLIC-NEXT:          Index:           0
 // SYMBOLIC-NEXT:          ElemType:        FUNCREF
 // SYMBOLIC-NEXT:          Limits:
-// SYMBOLIC-NEXT:            Initial:         0x1
+// SYMBOLIC-NEXT:            Minimum:         0x1
 // SYMBOLIC-NEXT:  - Type:            FUNCTION
 
 // SYMBOLIC:       - Type:            GLOBAL

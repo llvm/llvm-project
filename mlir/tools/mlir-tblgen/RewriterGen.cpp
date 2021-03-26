@@ -626,8 +626,8 @@ void PatternEmitter::emit(StringRef rewriteName) {
                 make_range(locs.rbegin(), locs.rend()));
   os << formatv(R"(struct {0} : public ::mlir::RewritePattern {
   {0}(::mlir::MLIRContext *context)
-      : ::mlir::RewritePattern("{1}", {{)",
-                rewriteName, rootName);
+      : ::mlir::RewritePattern("{1}", {2}, context, {{)",
+                rewriteName, rootName, pattern.getBenefit());
   // Sort result operators by name.
   llvm::SmallVector<const Operator *, 4> sortedResultOps(resultOps.begin(),
                                                          resultOps.end());
@@ -637,7 +637,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   llvm::interleaveComma(sortedResultOps, os, [&](const Operator *op) {
     os << '"' << op->getOperationName() << '"';
   });
-  os << formatv(R"(}, {0}, context) {{})", pattern.getBenefit()) << "\n";
+  os << "}) {}\n";
 
   // Emit matchAndRewrite() function.
   {
@@ -1291,9 +1291,9 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
 
   // Emit function to add the generated matchers to the pattern list.
   os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated("
-        "::mlir::OwningRewritePatternList &patterns) {\n";
+        "::mlir::RewritePatternSet &patterns) {\n";
   for (const auto &name : rewriterNames) {
-    os << "  patterns.insert<" << name << ">(patterns.getContext());\n";
+    os << "  patterns.add<" << name << ">(patterns.getContext());\n";
   }
   os << "}\n";
 }

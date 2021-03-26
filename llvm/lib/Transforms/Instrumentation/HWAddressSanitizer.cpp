@@ -708,7 +708,7 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
 }
 
 void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
-  if (TargetTriple.isAArch64())
+  if (TargetTriple.isAArch64() || TargetTriple.getArch() == Triple::x86_64)
     return;
 
   IRBuilder<> IRB(I);
@@ -1004,6 +1004,7 @@ Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
 
 // Remove tag from an address.
 Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
+  assert(!UsePageAliases);
   Value *UntaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
@@ -1530,7 +1531,13 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
 void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
                                              bool InstrumentWithCalls) {
   Scale = kDefaultShadowScale;
-  if (ClMappingOffset.getNumOccurrences() > 0) {
+  if (TargetTriple.isOSFuchsia()) {
+    // Fuchsia is always PIE, which means that the beginning of the address
+    // space is always available.
+    InGlobal = false;
+    InTls = false;
+    Offset = 0;
+  } else if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
     InTls = false;
     Offset = ClMappingOffset;

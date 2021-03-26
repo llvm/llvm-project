@@ -1217,7 +1217,8 @@ getMicroKernelParams(const TargetTransformInfo *TTI, MatMulInfoTy MMI) {
   long RegisterBitwidth = VectorRegisterBitwidth;
 
   if (RegisterBitwidth == -1)
-    RegisterBitwidth = TTI->getRegisterBitWidth(true);
+    RegisterBitwidth =
+        TTI->getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
   auto ElementSize = getMatMulTypeSize(MMI);
   assert(ElementSize > 0 && "The element size of the matrix multiplication "
                             "operands should be greater than zero.");
@@ -1722,6 +1723,7 @@ private:
 
 char IslScheduleOptimizerWrapperPass::ID = 0;
 
+#ifndef NDEBUG
 static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
                           StringRef Desc) {
   isl::ctx Ctx = Schedule.get_ctx();
@@ -1733,6 +1735,7 @@ static void printSchedule(llvm::raw_ostream &OS, const isl::schedule &Schedule,
   free(Str);
   isl_printer_free(P);
 }
+#endif
 
 /// Collect statistics for the schedule tree.
 ///

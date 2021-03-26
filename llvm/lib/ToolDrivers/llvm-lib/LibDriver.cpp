@@ -112,8 +112,8 @@ static void doList(opt::InputArgList& Args) {
   std::unique_ptr<MemoryBuffer> B;
   for (auto *Arg : Args.filtered(OPT_INPUT)) {
     // Create or open the archive object.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf =
-        MemoryBuffer::getFile(Arg->getValue(), -1, false);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MaybeBuf = MemoryBuffer::getFile(
+        Arg->getValue(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MaybeBuf.getError()), Arg->getValue());
 
     if (identify_magic(MaybeBuf.get()->getBuffer()) == file_magic::archive) {
@@ -339,8 +339,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       continue;
 
     // Open a file.
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MOrErr =
-        MemoryBuffer::getFile(Path, -1, false);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MOrErr = MemoryBuffer::getFile(
+        Path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
     fatalOpenError(errorCodeToError(MOrErr.getError()), Path);
     MemoryBufferRef MBRef = (*MOrErr)->getMemBufferRef();
 

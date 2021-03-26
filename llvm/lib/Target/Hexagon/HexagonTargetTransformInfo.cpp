@@ -98,8 +98,18 @@ unsigned HexagonTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return useHVX() ? 2 : 1;
 }
 
-unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {
-  return Vector ? getMinVectorRegisterBitWidth() : 32;
+TypeSize
+HexagonTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(32);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(getMinVectorRegisterBitWidth());
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
+
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
@@ -162,7 +172,9 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     VectorType *VecTy = cast<VectorType>(Src);
     unsigned VecWidth = VecTy->getPrimitiveSizeInBits().getFixedSize();
     if (useHVX() && ST.isTypeForHVX(VecTy)) {
-      unsigned RegWidth = getRegisterBitWidth(true);
+      unsigned RegWidth =
+          getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+              .getFixedSize();
       assert(RegWidth && "Non-zero vector register width expected");
       // Cost of HVX loads.
       if (VecWidth % RegWidth == 0)

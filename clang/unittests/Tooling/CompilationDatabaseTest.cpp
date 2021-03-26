@@ -725,14 +725,14 @@ class InterpolateTest : public MemDBTest {
 protected:
   // Look up the command from a relative path, and return it in string form.
   // The input file is not included in the returned command.
-  std::string getCommand(llvm::StringRef F) {
+  std::string getCommand(llvm::StringRef F, bool MakeNative = true) {
     auto Results =
         inferMissingCompileCommands(std::make_unique<MemCDB>(Entries))
-            ->getCompileCommands(path(F));
+            ->getCompileCommands(MakeNative ? path(F) : F);
     if (Results.empty())
       return "none";
     // drop the input file argument, so tests don't have to deal with path().
-    EXPECT_EQ(Results[0].CommandLine.back(), path(F))
+    EXPECT_EQ(Results[0].CommandLine.back(), MakeNative ? path(F) : F)
         << "Last arg should be the file";
     Results[0].CommandLine.pop_back();
     return llvm::join(Results[0].CommandLine, " ");
@@ -812,6 +812,28 @@ TEST_F(InterpolateTest, Strip) {
   EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall");
 }
 
+TEST_F(InterpolateTest, StripDoubleDash) {
+  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall -- dir/foo.cpp");
+  // input file and output option are removed
+  // -Wall flag isn't
+  // -std option gets re-added as the last argument before the input file
+  // -- is removed as it's not necessary - the new input file doesn't start with
+  // a dash
+  EXPECT_EQ(getCommand("dir/bar.cpp"), "clang -D dir/foo.cpp -Wall -std=c++14");
+}
+
+TEST_F(InterpolateTest, InsertDoubleDash) {
+  add("dir/foo.cpp", "-o foo.o -std=c++14 -Wall");
+  EXPECT_EQ(getCommand("-dir/bar.cpp", false),
+            "clang -D dir/foo.cpp -Wall -std=c++14 --");
+}
+
+TEST_F(InterpolateTest, InsertDoubleDashForClangCL) {
+  add("dir/foo.cpp", "clang-cl", "/std:c++14 /W4");
+  EXPECT_EQ(getCommand("/dir/bar.cpp", false),
+            "clang-cl -D dir/foo.cpp /W4 /std:c++14 --");
+}
+
 TEST_F(InterpolateTest, Case) {
   add("FOO/BAR/BAZ/SHOUT.cc");
   add("foo/bar/baz/quiet.cc");
@@ -831,7 +853,7 @@ TEST_F(InterpolateTest, ClangCL) {
   add("foo.cpp", "clang-cl", "/W4");
 
   // Language flags should be added with CL syntax.
-  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp /W4 /TP");
+  EXPECT_EQ(getCommand("foo.h", false), "clang-cl -D foo.cpp /W4 /TP");
 }
 
 TEST_F(InterpolateTest, DriverModes) {
@@ -839,8 +861,10 @@ TEST_F(InterpolateTest, DriverModes) {
   add("bar.cpp", "clang", "--driver-mode=cl");
 
   // --driver-mode overrides should be respected.
-  EXPECT_EQ(getCommand("foo.h"), "clang-cl -D foo.cpp --driver-mode=gcc -x c++-header");
-  EXPECT_EQ(getCommand("bar.h"), "clang -D bar.cpp --driver-mode=cl /TP");
+  EXPECT_EQ(getCommand("foo.h"),
+            "clang-cl -D foo.cpp --driver-mode=gcc -x c++-header");
+  EXPECT_EQ(getCommand("bar.h", false),
+            "clang -D bar.cpp --driver-mode=cl /TP");
 }
 
 TEST(TransferCompileCommandTest, Smoke) {

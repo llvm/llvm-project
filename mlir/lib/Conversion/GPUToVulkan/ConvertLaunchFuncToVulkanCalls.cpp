@@ -291,7 +291,7 @@ LogicalResult VulkanLaunchFuncToVulkanCallsPass::deduceMemRefRankAndType(
 
 void VulkanLaunchFuncToVulkanCallsPass::declareVulkanFunctions(Location loc) {
   ModuleOp module = getOperation();
-  OpBuilder builder(module.getBody()->getTerminator());
+  auto builder = OpBuilder::atBlockEnd(module.getBody());
 
   if (!module.lookupSymbol(kSetEntryPoint)) {
     builder.create<LLVM::LLVMFuncOp>(

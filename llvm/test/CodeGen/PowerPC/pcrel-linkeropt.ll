@@ -35,6 +35,9 @@
 @FuncPtrOut = external local_unnamed_addr global void (...)*, align 8
 
 define dso_local void @ReadWrite8() local_unnamed_addr #0 {
+; In this test the stb r3, 0(r4) cannot be optimized because it
+; uses the register r3 and that register is defined by lbz r3, 0(r3)
+; which is defined between the pld and the stb.
 ; CHECK-LABEL: ReadWrite8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input8@got@pcrel(0), 1
@@ -44,9 +47,6 @@ define dso_local void @ReadWrite8() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lbz r3, 0(r3)
 ; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
-; In this test the stb r3, 0(r4) cannot be optimized because it
-; uses the register r3 and that register is defined by lbz r3, 0(r3)
-; which is defined between the pld and the stb.
 entry:
   %0 = load i8, i8* @input8, align 1
   store i8 %0, i8* @output8, align 1
@@ -54,6 +54,9 @@ entry:
 }
 
 define dso_local void @ReadWrite16() local_unnamed_addr #0 {
+; In this test the sth r3, 0(r4) cannot be optimized because it
+; uses the register r3 and that register is defined by lhz r3, 0(r3)
+; which is defined between the pld and the sth.
 ; CHECK-LABEL: ReadWrite16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input16@got@pcrel(0), 1
@@ -63,9 +66,6 @@ define dso_local void @ReadWrite16() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lhz r3, 0(r3)
 ; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
-; In this test the sth r3, 0(r4) cannot be optimized because it
-; uses the register r3 and that register is defined by lhz r3, 0(r3)
-; which is defined between the pld and the sth.
 entry:
   %0 = load i16, i16* @input16, align 2
   store i16 %0, i16* @output16, align 2
@@ -144,7 +144,8 @@ define dso_local void @ReadWritef64() local_unnamed_addr #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, inputf64@got@pcrel(0), 1
 ; CHECK-NEXT:  .Lpcrel5:
-; CHECK-NEXT:    plfd f1, .LCPI6_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1075524403
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 858993459
 ; CHECK-NEXT:    .reloc .Lpcrel5-8,R_PPC64_PCREL_OPT,.-(.Lpcrel5-8)
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    pld r3, outputf64@got@pcrel(0), 1

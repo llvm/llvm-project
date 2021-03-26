@@ -175,17 +175,15 @@ public:
 
 /// Generic conversion pattern that matches any LinalgOp. This avoids template
 /// instantiating one pattern for each LinalgOp.
-class BufferizeAnyLinalgOp : public ConversionPattern {
+class BufferizeAnyLinalgOp : public OpInterfaceConversionPattern<LinalgOp> {
 public:
-  BufferizeAnyLinalgOp(TypeConverter &typeConverter)
-      : ConversionPattern(/*benefit=*/1, typeConverter, MatchAnyOpTypeTag()) {}
+  using OpInterfaceConversionPattern<LinalgOp>::OpInterfaceConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(LinalgOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-
-    LinalgOp linalgOp = dyn_cast<linalg::LinalgOp>(op);
-    if (!linalgOp)
+    // GenericOpAdaptor below expects an `operand_segment_sizes` attribute.
+    if (!op->hasAttr("operand_segment_sizes"))
       return failure();
 
     // We abuse the GenericOpAdaptor here.
@@ -193,32 +191,30 @@ public:
     // linalg::LinalgOp interface ops.
     linalg::GenericOpAdaptor adaptor(operands, op->getAttrDictionary());
 
-    Location loc = linalgOp.getLoc();
+    Location loc = op.getLoc();
     SmallVector<Value, 2> newOutputBuffers;
 
-    if (failed(allocateBuffersForResults(loc, linalgOp, adaptor.outputs(),
+    if (failed(allocateBuffersForResults(loc, op, adaptor.outputs(),
                                          newOutputBuffers, rewriter))) {
-      linalgOp.emitOpError()
-          << "Failed to allocate buffers for tensor results.";
-      return failure();
+      return op.emitOpError()
+             << "Failed to allocate buffers for tensor results.";
     }
 
     // Delegate to the linalg generic pattern.
-    if (auto genericOp = dyn_cast<linalg::GenericOp>(op)) {
+    if (auto genericOp = dyn_cast<linalg::GenericOp>(*op)) {
       finalizeBufferAllocationForGenericOp<GenericOp>(
           rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
       return success();
     }
 
     // Delegate to the linalg indexed generic pattern.
-    if (auto genericOp = dyn_cast<linalg::IndexedGenericOp>(op)) {
+    if (auto genericOp = dyn_cast<linalg::IndexedGenericOp>(*op)) {
       finalizeBufferAllocationForGenericOp<IndexedGenericOp>(
           rewriter, genericOp, adaptor.inputs(), newOutputBuffers);
       return success();
     }
 
-    finalizeBufferAllocation(rewriter, linalgOp, adaptor.inputs(),
-                             newOutputBuffers);
+    finalizeBufferAllocation(rewriter, op, adaptor.inputs(), newOutputBuffers);
     return success();
   }
 };
@@ -323,7 +319,7 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     target.addDynamicallyLegalDialect<linalg::LinalgDialect>(isLegalOperation);
     target.addDynamicallyLegalOp<ConstantOp>(isLegalOperation);
 
-    OwningRewritePatternList patterns(&context);
+    RewritePatternSet patterns(&context);
     populateLinalgBufferizePatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -337,11 +333,11 @@ std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgBufferizePass() {
 }
 
 void mlir::linalg::populateLinalgBufferizePatterns(
-    BufferizeTypeConverter &typeConverter, OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeAnyLinalgOp>(typeConverter);
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
   // TODO: Drop this once tensor constants work in standard.
   // clang-format off
-  patterns.insert<
+  patterns.add<
+      BufferizeAnyLinalgOp,
       BufferizeFillOp,
       BufferizeInitTensorOp,
       SubTensorOpConverter,

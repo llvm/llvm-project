@@ -27,12 +27,10 @@ class MCSubtargetInfo;
 namespace mca {
 class RegisterFile;
 class ResourceManager;
-struct RetireControlUnit;
 
 class InOrderIssueStage final : public Stage {
   const MCSchedModel &SM;
   const MCSubtargetInfo &STI;
-  RetireControlUnit &RCU;
   RegisterFile &PRF;
   std::unique_ptr<ResourceManager> RM;
 
@@ -46,6 +44,11 @@ class InOrderIssueStage final : public Stage {
   /// dependency, the it is stalled for StallCyclesLeft.
   InstRef StalledInst;
   unsigned StallCyclesLeft;
+
+  /// Instruction that is issued in more than 1 cycle.
+  InstRef CarriedOver;
+  /// Number of CarriedOver uops left to issue.
+  unsigned CarryOver;
 
   /// Number of instructions that can be issued in the current cycle.
   unsigned Bandwidth;
@@ -67,14 +70,20 @@ class InOrderIssueStage final : public Stage {
   Error tryIssue(InstRef &IR, unsigned *StallCycles);
 
   /// Update status of instructions from IssuedInst.
-  Error updateIssuedInst();
+  void updateIssuedInst();
+
+  /// Continue to issue the CarriedOver instruction.
+  void updateCarriedOver();
+
+  /// Retire instruction once it is executed.
+  void retireInstruction(InstRef &IR);
 
 public:
-  InOrderIssueStage(RetireControlUnit &RCU, RegisterFile &PRF,
-                    const MCSchedModel &SM, const MCSubtargetInfo &STI)
-      : SM(SM), STI(STI), RCU(RCU), PRF(PRF),
-        RM(std::make_unique<ResourceManager>(SM)), NumIssued(0),
-        StallCyclesLeft(0), Bandwidth(0), LastWriteBackCycle(0) {}
+  InOrderIssueStage(RegisterFile &PRF, const MCSchedModel &SM,
+                    const MCSubtargetInfo &STI)
+      : SM(SM), STI(STI), PRF(PRF), RM(std::make_unique<ResourceManager>(SM)),
+        NumIssued(0), StallCyclesLeft(0), CarryOver(0), Bandwidth(0),
+        LastWriteBackCycle(0) {}
 
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;

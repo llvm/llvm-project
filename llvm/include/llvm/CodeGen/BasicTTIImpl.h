@@ -45,7 +45,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -380,25 +379,6 @@ public:
            TLI->isOperationLegalOrCustom(ISD::BRIND, MVT::Other);
   }
 
-  bool shouldBuildRelLookupTables() {
-    const TargetMachine &TM = getTLI()->getTargetMachine();
-    // If non-PIC mode, do not generate a relative lookup table.
-    if (!TM.isPositionIndependent())
-      return false;
-
-    if (!TM.getTargetTriple().isArch64Bit())
-      return false;
-
-    /// Relative lookup table entries consist of 32-bit offsets.
-    /// Do not generate relative lookup tables for large code models
-    /// in 64-bit achitectures where 32-bit offsets might not be enough.
-    if (TM.getCodeModel() == CodeModel::Medium ||
-        TM.getCodeModel() == CodeModel::Large)
-      return false;
-
-    return true;
-  }
-
   bool haveFastSqrt(Type *Ty) {
     const TargetLoweringBase *TLI = getTLI();
     EVT VT = TLI->getValueType(DL, Ty);
@@ -590,7 +570,9 @@ public:
   /// \name Vector TTI Implementations
   /// @{
 
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
 
   Optional<unsigned> getMaxVScale() const { return None; }
 
@@ -1268,6 +1250,12 @@ public:
       Align Alignment = cast<ConstantInt>(Args[1])->getAlignValue();
       return thisT()->getGatherScatterOpCost(Instruction::Load, RetTy, Args[0],
                                              VarMask, Alignment, CostKind, I);
+    }
+    case Intrinsic::experimental_stepvector: {
+      if (isa<ScalableVectorType>(RetTy))
+        return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+      // The cost of materialising a constant integer vector.
+      return TargetTransformInfo::TCC_Basic;
     }
     case Intrinsic::experimental_vector_extract: {
       // FIXME: Handle case where a scalable vector is extracted from a scalable

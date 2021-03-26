@@ -93,7 +93,7 @@ enum class TrackingKind {
   /// gathered about the tracked expression value as possible.
   Thorough,
   /// Specifies that a more moderate tracking should be used for the expression
-  /// value. This will essentially make sure that functions relevant to the it
+  /// value. This will essentially make sure that functions relevant to it
   /// aren't pruned, but otherwise relies on the user reading the code or
   /// following the arrows.
   Condition

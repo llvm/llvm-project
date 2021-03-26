@@ -57,9 +57,9 @@ public:
 } // namespace
 
 void mlir::populateShapeStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target) {
-  patterns.insert<ConvertAssumingOpTypes, ConvertAssumingYieldOpTypes>(
+  patterns.add<ConvertAssumingOpTypes, ConvertAssumingYieldOpTypes>(
       typeConverter, patterns.getContext());
   target.addDynamicallyLegalOp<AssumingOp>([&](AssumingOp op) {
     return typeConverter.isLegal(op.getResultTypes());

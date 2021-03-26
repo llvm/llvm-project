@@ -71,23 +71,16 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
 std::unique_ptr<Pipeline>
 Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
   const MCSchedModel &SM = STI.getSchedModel();
-  auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
-  auto LSU = std::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
-                                      Opts.StoreQueueSize, Opts.AssumeNoAlias);
 
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto InOrderIssue = std::make_unique<InOrderIssueStage>(*RCU, *PRF, SM, STI);
-  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(*PRF, SM, STI);
 
   auto StagePipeline = std::make_unique<Pipeline>();
   StagePipeline->appendStage(std::move(Entry));
   StagePipeline->appendStage(std::move(InOrderIssue));
-  StagePipeline->appendStage(std::move(Retire));
 
-  addHardwareUnit(std::move(RCU));
   addHardwareUnit(std::move(PRF));
-  addHardwareUnit(std::move(LSU));
 
   return StagePipeline;
 }

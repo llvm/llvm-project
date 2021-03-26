@@ -647,6 +647,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForCartesianProduct(
           {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .scalarize(1);
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
@@ -681,7 +682,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+  getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
+      .libcall();
 
   getActionDefinitionsBuilder(G_ABS).lowerIf(
       [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
@@ -698,6 +700,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
+
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  getActionDefinitionsBuilder({G_SBFX, G_UBFX}).customFor({s32, s64});
 
   computeTables();
   verify(*ST.getInstrInfo());
@@ -725,6 +731,9 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeSmallCMGlobalValue(MI, MRI, MIRBuilder, Observer);
   case TargetOpcode::G_TRUNC:
     return legalizeVectorTrunc(MI, Helper);
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX:
+    return legalizeBitfieldExtract(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -943,4 +952,12 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool AArch64LegalizerInfo::legalizeBitfieldExtract(
+    MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
+  // Only legal if we can select immediate forms.
+  // TODO: Lower this otherwise.
+  return getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI) &&
+         getConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
 }

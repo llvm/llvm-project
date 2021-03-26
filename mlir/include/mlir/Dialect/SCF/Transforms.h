@@ -19,9 +19,10 @@ namespace mlir {
 
 class ConversionTarget;
 class MLIRContext;
-class OwningRewritePatternList;
 class Region;
 class TypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 
@@ -60,7 +61,7 @@ tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes);
 /// corresponding scf.yield ops need to update their types accordingly to the
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, OwningRewritePatternList &patterns,
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
 } // namespace scf

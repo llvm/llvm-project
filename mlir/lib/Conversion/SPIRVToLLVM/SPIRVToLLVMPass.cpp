@@ -36,7 +36,7 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   // Encode global variable's descriptor set and binding if they exist.
   encodeBindAttribute(module);
 
-  OwningRewritePatternList patterns(context);
+  RewritePatternSet patterns(context);
 
   populateSPIRVToLLVMTypeConversion(converter);
 
@@ -48,10 +48,8 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
   target.addIllegalDialect<spirv::SPIRVDialect>();
   target.addLegalDialect<LLVM::LLVMDialect>();
 
-  // Set `ModuleOp` and `ModuleTerminatorOp` as legal for `spv.module`
-  // conversion.
+  // Set `ModuleOp` as legal for `spv.module` conversion.
   target.addLegalOp<ModuleOp>();
-  target.addLegalOp<ModuleTerminatorOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

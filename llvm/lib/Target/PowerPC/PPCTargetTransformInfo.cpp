@@ -871,16 +871,18 @@ const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
   }
 }
 
-unsigned PPCTTIImpl::getRegisterBitWidth(bool Vector) const {
-  if (Vector) {
-    if (ST->hasAltivec()) return 128;
-    return 0;
+TypeSize
+PPCTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(ST->isPPC64() ? 64 : 32);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(ST->hasAltivec() ? 128 : 0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
   }
 
-  if (ST->isPPC64())
-    return 64;
-  return 32;
-
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned PPCTTIImpl::getCacheLineSize() const {

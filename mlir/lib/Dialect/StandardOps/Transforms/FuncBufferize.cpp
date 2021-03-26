@@ -28,7 +28,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateFuncOpTypeConversionPattern(patterns, typeConverter);
@@ -42,8 +42,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
 
     populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter);
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addLegalOp<ModuleOp, ModuleTerminatorOp, memref::TensorLoadOp,
-                      memref::BufferCastOp>();
+    target.addLegalOp<ModuleOp, memref::TensorLoadOp, memref::BufferCastOp>();
 
     target.markUnknownOpDynamicallyLegal([&](Operation *op) {
       return isNotBranchOpInterfaceOrReturnLikeOp(op) ||

@@ -905,9 +905,9 @@ void SimplifyAffineOp<AffineOpTy>::replaceAffineOp(
 }
 } // end anonymous namespace.
 
-void AffineApplyOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineApplyOp>>(context);
+void AffineApplyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineApplyOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1611,9 +1611,9 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
 };
 } // end anonymous namespace
 
-void AffineForOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results.insert<AffineForEmptyLoopFolder>(context);
+  results.add<AffineForEmptyLoopFolder>(context);
 }
 
 LogicalResult AffineForOp::fold(ArrayRef<Attribute> operands,
@@ -2033,9 +2033,9 @@ LogicalResult AffineIfOp::fold(ArrayRef<Attribute>,
   return failure();
 }
 
-void AffineIfOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void AffineIfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.insert<SimplifyDeadElse>(context);
+  results.add<SimplifyDeadElse>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2149,9 +2149,9 @@ LogicalResult verify(AffineLoadOp op) {
   return success();
 }
 
-void AffineLoadOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineLoadOp>>(context);
+void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineLoadOp>>(context);
 }
 
 OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
@@ -2239,9 +2239,9 @@ LogicalResult verify(AffineStoreOp op) {
   return success();
 }
 
-void AffineStoreOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<SimplifyAffineOp<AffineStoreOp>>(context);
+void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<SimplifyAffineOp<AffineStoreOp>>(context);
 }
 
 LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
@@ -2327,6 +2327,130 @@ static OpFoldResult foldMinMaxOp(T op, ArrayRef<Attribute> operands) {
   return IntegerAttr::get(IndexType::get(op.getContext()), *resultIt);
 }
 
+/// Remove duplicated expressions in affine min/max ops.
+template <typename T>
+struct DeduplicateAffineMinMaxExpressions : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap oldMap = affineOp.getAffineMap();
+
+    SmallVector<AffineExpr, 4> newExprs;
+    for (AffineExpr expr : oldMap.getResults()) {
+      // This is a linear scan over newExprs, but it should be fine given that
+      // we typically just have a few expressions per op.
+      if (!llvm::is_contained(newExprs, expr))
+        newExprs.push_back(expr);
+    }
+
+    if (newExprs.size() == oldMap.getNumResults())
+      return failure();
+
+    auto newMap = AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(),
+                                 newExprs, rewriter.getContext());
+    rewriter.replaceOpWithNewOp<T>(affineOp, newMap, affineOp.getMapOperands());
+
+    return success();
+  }
+};
+
+/// Merge an affine min/max op to its consumers if its consumer is also an
+/// affine min/max op.
+///
+/// This pattern requires the producer affine min/max op is bound to a
+/// dimension/symbol that is used as a standalone expression in the consumer
+/// affine op's map.
+///
+/// For example, a pattern like the following:
+///
+///   %0 = affine.min affine_map<()[s0] -> (s0 + 16, s0 * 8)> ()[%sym1]
+///   %1 = affine.min affine_map<(d0)[s0] -> (s0 + 4, d0)> (%0)[%sym2]
+///
+/// Can be turned into:
+///
+///   %1 = affine.min affine_map<
+///          ()[s0, s1] -> (s0 + 4, s1 + 16, s1 * 8)> ()[%sym2, %sym1]
+template <typename T>
+struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap oldMap = affineOp.getAffineMap();
+    ValueRange dimOperands =
+        affineOp.getMapOperands().take_front(oldMap.getNumDims());
+    ValueRange symOperands =
+        affineOp.getMapOperands().take_back(oldMap.getNumSymbols());
+
+    auto newDimOperands = llvm::to_vector<8>(dimOperands);
+    auto newSymOperands = llvm::to_vector<8>(symOperands);
+    SmallVector<AffineExpr, 4> newExprs;
+    SmallVector<T, 4> producerOps;
+
+    // Go over each expression to see whether it's a single dimension/symbol
+    // with the corresponding operand which is the result of another affine
+    // min/max op. If So it can be merged into this affine op.
+    for (AffineExpr expr : oldMap.getResults()) {
+      if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>()) {
+        Value symValue = symOperands[symExpr.getPosition()];
+        if (auto producerOp = symValue.getDefiningOp<T>()) {
+          producerOps.push_back(producerOp);
+          continue;
+        }
+      } else if (auto dimExpr = expr.dyn_cast<AffineDimExpr>()) {
+        Value dimValue = dimOperands[dimExpr.getPosition()];
+        if (auto producerOp = dimValue.getDefiningOp<T>()) {
+          producerOps.push_back(producerOp);
+          continue;
+        }
+      }
+      // For the above cases we will remove the expression by merging the
+      // producer affine min/max's affine expressions. Otherwise we need to
+      // keep the existing expression.
+      newExprs.push_back(expr);
+    }
+
+    if (producerOps.empty())
+      return failure();
+
+    unsigned numUsedDims = oldMap.getNumDims();
+    unsigned numUsedSyms = oldMap.getNumSymbols();
+
+    // Now go over all producer affine ops and merge their expressions.
+    for (T producerOp : producerOps) {
+      AffineMap producerMap = producerOp.getAffineMap();
+      unsigned numProducerDims = producerMap.getNumDims();
+      unsigned numProducerSyms = producerMap.getNumSymbols();
+
+      // Collect all dimension/symbol values.
+      ValueRange dimValues =
+          producerOp.getMapOperands().take_front(numProducerDims);
+      ValueRange symValues =
+          producerOp.getMapOperands().take_back(numProducerSyms);
+      newDimOperands.append(dimValues.begin(), dimValues.end());
+      newSymOperands.append(symValues.begin(), symValues.end());
+
+      // For expressions we need to shift to avoid overlap.
+      for (AffineExpr expr : producerMap.getResults()) {
+        newExprs.push_back(expr.shiftDims(numProducerDims, numUsedDims)
+                               .shiftSymbols(numProducerSyms, numUsedSyms));
+      }
+
+      numUsedDims += numProducerDims;
+      numUsedSyms += numProducerSyms;
+    }
+
+    auto newMap = AffineMap::get(numUsedDims, numUsedSyms, newExprs,
+                                 rewriter.getContext());
+    auto newOperands =
+        llvm::to_vector<8>(llvm::concat<Value>(newDimOperands, newSymOperands));
+    rewriter.replaceOpWithNewOp<T>(affineOp, newMap, newOperands);
+
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // AffineMinOp
 //===----------------------------------------------------------------------===//
@@ -2338,9 +2462,11 @@ OpFoldResult AffineMinOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMinOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMinOp>>(context);
+void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMinOp>,
+               MergeAffineMinMaxOp<AffineMinOp>, SimplifyAffineOp<AffineMinOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2354,9 +2480,11 @@ OpFoldResult AffineMaxOp::fold(ArrayRef<Attribute> operands) {
   return foldMinMaxOp(*this, operands);
 }
 
-void AffineMaxOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<SimplifyAffineOp<AffineMaxOp>>(context);
+void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+                                              MLIRContext *context) {
+  patterns.add<DeduplicateAffineMinMaxExpressions<AffineMaxOp>,
+               MergeAffineMinMaxOp<AffineMaxOp>, SimplifyAffineOp<AffineMaxOp>>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2454,10 +2582,10 @@ static LogicalResult verify(AffinePrefetchOp op) {
   return success();
 }
 
-void AffinePrefetchOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
+void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                   MLIRContext *context) {
   // prefetch(memrefcast) -> prefetch
-  results.insert<SimplifyAffineOp<AffinePrefetchOp>>(context);
+  results.add<SimplifyAffineOp<AffinePrefetchOp>>(context);
 }
 
 LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,

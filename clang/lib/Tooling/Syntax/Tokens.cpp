@@ -183,7 +183,31 @@ llvm::StringRef FileRange::text(const SourceManager &SM) const {
   return Text.substr(Begin, length());
 }
 
+void TokenBuffer::indexExpandedTokens() {
+  // No-op if the index is already created.
+  if (!ExpandedTokIndex.empty())
+    return;
+  ExpandedTokIndex.reserve(ExpandedTokens.size());
+  // Index ExpandedTokens for faster lookups by SourceLocation.
+  for (size_t I = 0, E = ExpandedTokens.size(); I != E; ++I)
+    ExpandedTokIndex[ExpandedTokens[I].location()] = I;
+}
+
 llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
+  if (!ExpandedTokIndex.empty()) {
+    // Quick lookup if `R` is a token range.
+    // This is a huge win since majority of the users use ranges provided by an
+    // AST. Ranges in AST are token ranges from expanded token stream.
+    const auto B = ExpandedTokIndex.find(R.getBegin());
+    const auto E = ExpandedTokIndex.find(R.getEnd());
+    if (B != ExpandedTokIndex.end() && E != ExpandedTokIndex.end()) {
+      // Add 1 to End to make a half-open range.
+      return {ExpandedTokens.data() + B->getSecond(),
+              ExpandedTokens.data() + E->getSecond() + 1};
+    }
+  }
+  // Slow case. Use `isBeforeInTranslationUnit` to binary search for the
+  // required range.
   return getTokensCovering(expandedTokens(), R, *SourceMgr);
 }
 

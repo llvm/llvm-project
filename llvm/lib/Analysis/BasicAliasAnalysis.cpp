@@ -672,6 +672,11 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return Worklist.empty();
 }
 
+static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
+  return II && II->getIntrinsicID() == IID;
+}
+
 /// Returns the behavior when calling the given call site.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->doesNotAccessMemory())
@@ -769,11 +774,6 @@ ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   return AAResultBase::getArgModRefInfo(Call, ArgIdx);
-}
-
-static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
-  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Call);
-  return II && II->getIntrinsicID() == IID;
 }
 
 #ifndef NDEBUG

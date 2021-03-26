@@ -327,8 +327,8 @@ using ChangedIRData = OrderedChangedData<ChangedFuncData>;
 class ChangedIRComparer {
 public:
   ChangedIRComparer(raw_ostream &OS, const ChangedIRData &Before,
-                    const ChangedIRData &After)
-      : Before(Before), After(After), Out(OS) {}
+                    const ChangedIRData &After, bool ColourMode)
+      : Before(Before), After(After), Out(OS), UseColour(ColourMode) {}
 
   // Compare the 2 IRs.
   void compare(Any IR, StringRef Prefix, StringRef PassID, StringRef Name);
@@ -353,6 +353,7 @@ protected:
   const ChangedIRData &Before;
   const ChangedIRData &After;
   raw_ostream &Out;
+  bool UseColour;
 };
 
 // A change printer that prints out in-line differences in the basic
@@ -363,8 +364,8 @@ protected:
 // -print-module-scope does not affect this change reporter.
 class InLineChangePrinter : public TextChangeReporter<ChangedIRData> {
 public:
-  InLineChangePrinter(bool VerboseMode)
-      : TextChangeReporter<ChangedIRData>(VerboseMode) {}
+  InLineChangePrinter(bool VerboseMode, bool ColourMode)
+      : TextChangeReporter<ChangedIRData>(VerboseMode), UseColour(ColourMode) {}
   ~InLineChangePrinter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
@@ -380,6 +381,8 @@ protected:
   // Called to compare the before and after representations of the IR.
   virtual bool same(const ChangedIRData &Before,
                     const ChangedIRData &After) override;
+
+  bool UseColour;
 };
 
 class VerifyInstrumentation {

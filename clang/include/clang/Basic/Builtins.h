@@ -36,6 +36,7 @@ enum LanguageID {
   OCLC20_LANG = 0x20, // builtin for OpenCL C 2.0 only.
   OCLC1X_LANG = 0x40, // builtin for OpenCL C 1.x only.
   OMP_LANG = 0x80,    // builtin requires OpenMP.
+  CUDA_LANG = 0x100,  // builtin requires CUDA.
   ALL_LANGUAGES = C_LANG | CXX_LANG | OBJC_LANG, // builtin for all languages.
   ALL_GNU_LANGUAGES = ALL_LANGUAGES | GNU_LANG,  // builtin requires GNU mode.
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG,    // builtin requires MS mode.

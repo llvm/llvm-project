@@ -66,14 +66,12 @@ def Tosa_Int32Or64 : AnyTypeOf<[Tosa_Int32,
 //===----------------------------------------------------------------------===//
 // Name    Symmetry   Grouping                Sign
 //===----------------------------------------------------------------------===//
-// aint8 : asymmetric per tensor,             signed
 // uint8 : asymmetric per tensor ,            unsigned
 // int4  : symmetric  per channel,            signed
 // int8  : symmetric  per tensor/per channel, signed
 // int16 : symmetric  per tensor,             signed
 //===----------------------------------------------------------------------===//
-def Tosa_QuantizedInt	: AnyTypeOf<[Tosa_QuantizedType<"aint8", [8], 1>,
-                                     Tosa_QuantizedType<"uint8", [8], 0>,
+def Tosa_QuantizedInt	: AnyTypeOf<[ Tosa_QuantizedType<"uint8", [8], 0>,
                                      Tosa_QuantizedType<"int4", [4, 0], 1>,
                                      Tosa_QuantizedType<"int8", [8, 0], 1>,
                                      Tosa_QuantizedType<"int16", [16, 0], 1>]>;
@@ -114,6 +112,7 @@ class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
 // Must be listed rank.
 def Tosa_Tensor1D : 1DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor2D : 2DTensorOf<[Tosa_AnyNumber]>;
+def Tosa_Tensor3D : 3DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor4D : 4DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor5D : TensorRankOf<[Tosa_AnyNumber], [5]>;
 def Tosa_Tensor6D : TensorRankOf<[Tosa_AnyNumber], [6]>;
@@ -148,6 +147,12 @@ def Tosa_Int64Like : Tosa_TypeLike<[Tosa_Int64], "signless-integer-64-bit-like">
 class ArrayMaxCt<int n> : AttrConstraint<
     CPred<"$_self.cast<::mlir::ArrayAttr>().size() <= " # n>,
     "with at least " # n # " elements">;
+
+def Tosa_Fp32ArrayAttr2 : Confined<F32ArrayAttr, [ArrayCount<2>]>;
+def Tosa_Fp32ArrayAttr3 : Confined<F32ArrayAttr, [ArrayCount<3>]>;
+def Tosa_Fp32ArrayAttr4 : Confined<F32ArrayAttr, [ArrayCount<4>]>;
+def Tosa_Fp32ArrayAttr5 : Confined<F32ArrayAttr, [ArrayCount<5>]>;
+def Tosa_Fp32ArrayAttr6 : Confined<F32ArrayAttr, [ArrayCount<6>]>;
 
 def Tosa_IntArrayAttr2 : Confined<I64ArrayAttr, [ArrayCount<2>]>;
 def Tosa_IntArrayAttr3 : Confined<I64ArrayAttr, [ArrayCount<3>]>;

@@ -90,11 +90,11 @@ struct TensorConstantBufferizePass
 
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns(context);
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     target.addLegalDialect<memref::MemRefDialect>();
-    patterns.insert<BufferizeTensorConstantOp>(globals, typeConverter, context);
+    patterns.add<BufferizeTensorConstantOp>(globals, typeConverter, context);
     target.addDynamicallyLegalOp<ConstantOp>(
         [&](ConstantOp op) { return typeConverter.isLegal(op.getType()); });
     if (failed(applyPartialConversion(module, target, std::move(patterns))))

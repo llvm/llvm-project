@@ -291,4 +291,56 @@ define i1 @mul_other_may_be_zero_or_one(i16 %x, i16 %y) {
   ret i1 %cmp
 }
 
+define i1 @known_non_equal_phis(i8 %p, i8* %pq, i8 %n, i8 %r) {
+; CHECK-LABEL: @known_non_equal_phis(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = mul nsw i8 [[A]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 2, %entry ], [ %next, %loop ]
+  %B = phi i8 [ 3, %entry ], [ %A, %loop ]
+  %next = mul nsw i8 %A, 2
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp ne i8 %A, %B
+  ret i1 %cmp
+}
+
+define i1 @known_non_equal_phis_fail(i8 %p, i8* %pq, i8 %n, i8 %r) {
+; CHECK-LABEL: @known_non_equal_phis_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i8 [ 2, [[ENTRY]] ], [ [[A]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = mul nsw i8 [[A]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 2, %entry ], [ %next, %loop ]
+  %B = phi i8 [ 2, %entry ], [ %A, %loop ]
+  %next = mul nsw i8 %A, 2
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp ne i8 %A, %B
+  ret i1 %cmp
+}
+
 !0 = !{ i8 1, i8 5 }

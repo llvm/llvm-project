@@ -190,6 +190,10 @@ public:
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
 
+  /// The file to use for dumping bug report by `Debugify` for original
+  /// debug info.
+  std::string DIBugsReportFilePath;
+
   /// The floating-point denormal mode to use.
   llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::getIEEE();
 

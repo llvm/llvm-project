@@ -156,19 +156,19 @@ is very small, and follows the basic pattern of any dialect conversion pass.
 
 ```
 void mlir::populateTensorBufferizePatterns(
-    MLIRContext *context, BufferizeTypeConverter &typeConverter,
-    OwningRewritePatternList &patterns) {
-  patterns.insert<BufferizeCastOp, BufferizeExtractOp>(typeConverter, context);
+    BufferizeTypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.add<BufferizeCastOp, BufferizeExtractOp>(typeConverter,
+                                                    patterns.getContext());
 }
 
 struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnFunction() override {
     auto *context = &getContext();
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
-    populateTensorBufferizePatterns(context, typeConverter, patterns);
+    populateTensorBufferizePatterns(typeConverter, patterns);
     target.addIllegalOp<tensor::CastOp, tensor::ExtractOp>();
     target.addLegalDialect<StandardOpsDialect>();
 
@@ -180,7 +180,7 @@ struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
 ```
 
 The pass has all the hallmarks of a dialect conversion pass that does type
-conversions: a `TypeConverter`, a `OwningRewritePatternList`, and a
+conversions: a `TypeConverter`, a `RewritePatternSet`, and a
 `ConversionTarget`, and a call to `applyPartialConversion`. Note that a function
 `populateTensorBufferizePatterns` is separated, so that power users can use the
 patterns independently, if necessary (such as to combine multiple sets of

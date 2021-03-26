@@ -26,6 +26,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -101,7 +102,7 @@ LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
 
 /// Create an LLVMTypeConverter using default LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
-    : LLVMTypeConverter(ctx, LowerToLLVMOptions::getDefaultOptions()) {}
+    : LLVMTypeConverter(ctx, LowerToLLVMOptions(ctx)) {}
 
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
@@ -109,8 +110,6 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()),
       options(options) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
-  if (options.indexBitwidth == kDeriveIndexBitwidthFromDataLayout)
-    this->options.indexBitwidth = options.dataLayout.getPointerSizeInBits();
 
   // Register conversions for the builtin types.
   addConversion([&](ComplexType type) { return convertComplexType(type); });
@@ -450,7 +449,7 @@ ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
                                            PatternBenefit benefit)
-    : ConversionPattern(rootOpName, benefit, typeConverter, context) {}
+    : ConversionPattern(typeConverter, rootOpName, benefit, context) {}
 
 //===----------------------------------------------------------------------===//
 // StructBuilder implementation
@@ -3856,10 +3855,10 @@ private:
 
 /// Collect a set of patterns to convert from the Standard dialect to LLVM.
 void mlir::populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // FIXME: this should be tablegen'ed
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AbsFOpLowering,
       AddFOpLowering,
       AddIOpLowering,
@@ -3926,9 +3925,9 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
 }
 
 void mlir::populateStdToLLVMMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
-  patterns.insert<
+  patterns.add<
       AssumeAlignmentOpLowering,
       DeallocOpLowering,
       DimOpLowering,
@@ -3945,21 +3944,21 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       ViewOpLowering>(converter);
   // clang-format on
   if (converter.getOptions().useAlignedAlloc)
-    patterns.insert<AlignedAllocOpLowering>(converter);
+    patterns.add<AlignedAllocOpLowering>(converter);
   else
-    patterns.insert<AllocOpLowering>(converter);
+    patterns.add<AllocOpLowering>(converter);
 }
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   if (converter.getOptions().useBarePtrCallConv)
-    patterns.insert<BarePtrFuncOpConversion>(converter);
+    patterns.add<BarePtrFuncOpConversion>(converter);
   else
-    patterns.insert<FuncOpConversion>(converter);
+    patterns.add<FuncOpConversion>(converter);
 }
 
-void mlir::populateStdToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+void mlir::populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
+                                               RewritePatternSet &patterns) {
   populateStdToLLVMFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
   populateStdToLLVMMemoryConversionPatterns(converter, patterns);
@@ -4074,12 +4073,16 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
 
     ModuleOp m = getOperation();
 
-    LowerToLLVMOptions options = {useBarePtrCallConv, emitCWrappers,
-                                  indexBitwidth, useAlignedAlloc,
-                                  llvm::DataLayout(this->dataLayout)};
+    LowerToLLVMOptions options(&getContext(), DataLayout(m));
+    options.useBarePtrCallConv = useBarePtrCallConv;
+    options.emitCWrappers = emitCWrappers;
+    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
+      options.overrideIndexBitwidth(indexBitwidth);
+    options.useAlignedAlloc = useAlignedAlloc;
+    options.dataLayout = llvm::DataLayout(this->dataLayout);
     LLVMTypeConverter typeConverter(&getContext(), options);
 
-    OwningRewritePatternList patterns(&getContext());
+    RewritePatternSet patterns(&getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());
@@ -4098,9 +4101,21 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
   this->addIllegalOp<math::TanhOp>();
 }
 
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
+  return std::make_unique<LLVMLoweringPass>();
+}
+
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
   return std::make_unique<LLVMLoweringPass>(
-      options.useBarePtrCallConv, options.emitCWrappers, options.indexBitwidth,
-      options.useAlignedAlloc, options.dataLayout);
+      options.useBarePtrCallConv, options.emitCWrappers,
+      options.getIndexBitwidth(), options.useAlignedAlloc, options.dataLayout);
+}
+
+mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx)
+    : LowerToLLVMOptions(ctx, DataLayout()) {}
+
+mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx,
+                                             mlir::DataLayout dl) {
+  indexBitwidth = dl.getTypeSizeInBits(IndexType::get(ctx));
 }

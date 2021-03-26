@@ -3223,7 +3223,7 @@ element zero is put in the most significant bits.
 
 Using a vector such as ``<i4 1, i4 2, i4 3, i4 5>`` as an example, together
 with the analogy that we can replace a vector store by a bitcast followed by
-an integer store, we ge this for big endian:
+an integer store, we get this for big endian:
 
 .. code-block:: llvm
 
@@ -3260,7 +3260,7 @@ The same example for little endian:
 When ``<N*M>`` isn't evenly divisible by the byte size the exact memory layout
 is unspecified (just like it is for an integral type of the same size). This
 is because different targets could put the padding at different positions when
-the type size is smaller than the types store size.
+the type size is smaller than the type's store size.
 
 :Syntax:
 
@@ -9768,8 +9768,7 @@ this ``cmpxchg`` with other :ref:`volatile operations <volatile>`.
 
 The success and failure :ref:`ordering <ordering>` arguments specify how this
 ``cmpxchg`` synchronizes with other atomic operations. Both ordering parameters
-must be at least ``monotonic``, the ordering constraint on failure must be no
-stronger than that on success, and the failure ordering cannot be either
+must be at least ``monotonic``, the failure ordering cannot be either
 ``release`` or ``acq_rel``.
 
 A ``cmpxchg`` instruction can also take an optional
@@ -16672,6 +16671,36 @@ The first two operands are vectors with the same type. The third argument
 ``imm`` is the start index, modulo VL, where VL is the runtime vector length of
 the source/result vector. The ``imm`` is a signed integer constant in the range
 ``-VL <= imm < VL``. For values outside of this range the result is poison.
+
+
+'``llvm.experimental.stepvector``' Intrinsic
+
+This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
+to generate a vector whose lane values comprise the linear sequence
+<0, 1, 2, ...>. It is primarily intended for scalable vectors.
+
+::
+
+      declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+      declare <vscale x 8 x i16> @llvm.experimental.stepvector.nxv8i16()
+
+The '``llvm.experimental.stepvector``' intrinsics are used to create vectors
+of integers whose elements contain a linear sequence of values starting from 0
+with a step of 1.  This experimental intrinsic can only be used for vectors
+with integer elements that are at least 8 bits in size. If the sequence value
+exceeds the allowed limit for the element type then the result for that lane is
+undefined.
+
+These intrinsics work for both fixed and scalable vectors. While this intrinsic
+is marked as experimental, the recommended way to express this operation for
+fixed-width vectors is still to generate a constant vector instead.
+
+
+Arguments:
+""""""""""
+
+None.
+
 
 Matrix Intrinsics
 -----------------

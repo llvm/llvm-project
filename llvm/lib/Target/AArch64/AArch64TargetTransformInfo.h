@@ -100,15 +100,19 @@ public:
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  TTI::TargetCostKind CostKind);
 
-  unsigned getRegisterBitWidth(bool Vector) const {
-    if (Vector) {
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    switch (K) {
+    case TargetTransformInfo::RGK_Scalar:
+      return TypeSize::getFixed(64);
+    case TargetTransformInfo::RGK_FixedWidthVector:
       if (ST->hasSVE())
-        return std::max(ST->getMinSVEVectorSizeInBits(), 128u);
-      if (ST->hasNEON())
-        return 128;
-      return 0;
+        return TypeSize::getFixed(
+            std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+      return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    case TargetTransformInfo::RGK_ScalableVector:
+      return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
     }
-    return 64;
+    llvm_unreachable("Unsupported register kind");
   }
 
   unsigned getMinVectorRegisterBitWidth() {

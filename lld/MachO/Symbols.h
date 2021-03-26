@@ -43,7 +43,7 @@ public:
 
   virtual ~Symbol() {}
 
-  Kind kind() const { return static_cast<Kind>(symbolKind); }
+  Kind kind() const { return symbolKind; }
 
   StringRef getName() const {
     if (nameSize == (uint32_t)-1)

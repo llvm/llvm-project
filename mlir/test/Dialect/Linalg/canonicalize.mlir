@@ -802,3 +802,62 @@ func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 //   CHECK: return
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_fill_reshape()
+func @fold_fill_reshape() -> tensor<6x4xf32> {
+  %zero = constant 0.0 : f32
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [6, 4] : tensor<6x4xf32>
+  %init = linalg.init_tensor [1, 2, 3, 4] : tensor<1x2x3x4xf32>
+  // CHECK: %[[FILL:.+]] = linalg.fill(%[[INIT]], %cst) : tensor<6x4xf32>, f32 -> tensor<6x4xf32>
+  %fill = linalg.fill(%init, %zero) : tensor<1x2x3x4xf32>, f32 -> tensor<1x2x3x4xf32>
+  %reshape = linalg.tensor_reshape %fill [
+    affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>,
+    affine_map<(d0, d1, d2, d3) -> (d3)>] : tensor<1x2x3x4xf32> into tensor<6x4xf32>
+  // CHECK: return %[[FILL]] : tensor<6x4xf32>
+  return %reshape : tensor<6x4xf32>
+}
+
+// -----
+
+#map0 = affine_map<(d0) -> (24, -d0 + 192)>
+#map1 = affine_map<(d0, d1)[s0] -> (d0 * 192 + s0 + d1)>
+#map2 = affine_map<(d0) -> (16, -d0 + 192)>
+
+func private @foo(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
+                  %C: memref<192x192xf32>) -> ()
+
+func @fold_tiled_loop_results(%A: memref<192x192xf32>, %B: memref<192x192xf32>,
+                              %C: memref<192x192xf32>,
+                              %C_tensor: tensor<192x192xf32>) {
+  %cst = constant 0.000000e+00 : f32
+  %c24 = constant 24 : index
+  %c16 = constant 16 : index
+  %c0 = constant 0 : index
+  %c192 = constant 192 : index
+  %useless = linalg.tiled_loop (%i, %j) = (%c0, %c0) to (%c192, %c192)
+      step (%c24, %c16)
+      ins (%A, %B: memref<192x192xf32>, memref<192x192xf32>)
+      outs (%C_tensor, %C :tensor<192x192xf32>, memref<192x192xf32>) {
+        call @foo(%A, %B, %C) : (memref<192x192xf32>, memref<192x192xf32>, memref<192x192xf32>)-> ()
+    linalg.yield %C_tensor : tensor<192x192xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @fold_tiled_loop_results(
+// CHECK-SAME:    %[[A:.*]]: [[TY:.*]], %[[B:.*]]: [[TY]], %[[C:.*]]: [[TY]],
+// CHECK-SAME:    %[[C_TENSOR:.*]]: tensor<{{.*}}>) {
+// CHECK:  %[[C24:.*]] = constant 24 : index
+// CHECK:  %[[C16:.*]] = constant 16 : index
+// CHECK:  %[[C0:.*]] = constant 0 : index
+// CHECK:  %[[C192:.*]] = constant 192 : index
+
+// CHECK-NOT: %{{.*}} = linalg.tiled_loop
+// CHECK:  linalg.tiled_loop (%{{.*}}, %{{.*}}) = (%[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C192]], %[[C192]]) step (%[[C24]], %[[C16]])
+// CHECK-SAME: ins (%[[A]], %[[B]]: memref<192x192xf32>, memref<192x192xf32>)
+// CHECK-SAME: outs (%[[C]]:memref<192x192xf32>) {
+// CHECK-NEXT:   call @foo(%[[A]], %[[B]], %[[C]])
+// CHECK-NEXT:   linalg.yield

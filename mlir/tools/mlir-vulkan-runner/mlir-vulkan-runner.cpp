@@ -46,10 +46,8 @@ static LogicalResult runMLIRPasses(ModuleOp module) {
   modulePM.addPass(spirv::createLowerABIAttributesPass());
   modulePM.addPass(spirv::createUpdateVersionCapabilityExtensionPass());
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  LowerToLLVMOptions llvmOptions = {
-      /*useBarePtrCallConv =*/false,
-      /*emitCWrappers = */ true,
-      /*indexBitwidth =*/kDeriveIndexBitwidthFromDataLayout};
+  LowerToLLVMOptions llvmOptions(module.getContext(), DataLayout(module));
+  llvmOptions.emitCWrappers = true;
   passManager.addPass(createLowerToLLVMPass(llvmOptions));
   passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
   return passManager.run(module);

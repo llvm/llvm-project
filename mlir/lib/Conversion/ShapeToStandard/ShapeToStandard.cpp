@@ -675,10 +675,10 @@ void ConvertShapeToStandardPass::runOnOperation() {
   ConversionTarget target(ctx);
   target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, SCFDialect,
                          tensor::TensorDialect>();
-  target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp, ModuleTerminatorOp>();
+  target.addLegalOp<CstrRequireOp, FuncOp, ModuleOp>();
 
   // Setup conversion patterns.
-  OwningRewritePatternList patterns(&ctx);
+  RewritePatternSet patterns(&ctx);
   populateShapeToStandardConversionPatterns(patterns);
 
   // Apply conversion.
@@ -688,10 +688,10 @@ void ConvertShapeToStandardPass::runOnOperation() {
 }
 
 void mlir::populateShapeToStandardConversionPatterns(
-    OwningRewritePatternList &patterns) {
+    RewritePatternSet &patterns) {
   // clang-format off
   populateWithGenerated(patterns);
-  patterns.insert<
+  patterns.add<
       AnyOpConversion,
       BinaryOpConversion<AddOp, AddIOp>,
       BinaryOpConversion<MulOp, MulIOp>,

@@ -330,13 +330,18 @@ ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
   // Use ExternalWeak so that if all sections are discarded due to section
   // garbage collection, the linker will not report undefined symbol errors.
-  GlobalVariable *SecStart = new GlobalVariable(
-      M, Ty->getPointerElementType(), false,
-      GlobalVariable::ExternalWeakLinkage, nullptr, getSectionStart(Section));
+  // Windows defines the start/stop symbols in compiler-rt so no need for
+  // ExternalWeak.
+  GlobalValue::LinkageTypes Linkage = TargetTriple.isOSBinFormatCOFF()
+                                          ? GlobalVariable::ExternalLinkage
+                                          : GlobalVariable::ExternalWeakLinkage;
+  GlobalVariable *SecStart =
+      new GlobalVariable(M, Ty->getPointerElementType(), false, Linkage,
+                         nullptr, getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
-  GlobalVariable *SecEnd = new GlobalVariable(
-      M, Ty->getPointerElementType(), false,
-      GlobalVariable::ExternalWeakLinkage, nullptr, getSectionEnd(Section));
+  GlobalVariable *SecEnd =
+      new GlobalVariable(M, Ty->getPointerElementType(), false, Linkage,
+                         nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())

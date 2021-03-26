@@ -18,24 +18,26 @@ system. At the top level, it consists of:
     types.
 
 Built-in types are handled specially to decrease the overall query cost.
+Similarly, built-in `ModuleOp` supports data layouts without going through the
+interface.
 
 ## Usage
 
 ### Scoping
 
 Following MLIR's nested structure, data layout properties are _scoped_ to
-regions belonging to specific operations that implement the
-`DataLayoutOpInterface`. Such scoping operations partially control the data
-layout properties and may have attributes that affect them, typically organized
-in a data layout specification.
+regions belonging to either operations that implement the
+`DataLayoutOpInterface` or `ModuleOp` operations. Such scoping operations
+partially control the data layout properties and may have attributes that affect
+them, typically organized in a data layout specification.
 
 Types may have a different data layout in different scopes, including scopes
 that are nested in other scopes such as modules contained in other modules. At
 the same time, within the given scope excluding any nested scope, a given type
 has fixed data layout properties. Types are also expected to have a default,
 "natural" data layout in case they are used outside of any operation that
-provides data layout scope for them. This ensure data layout queries always have
-a valid result.
+provides data layout scope for them. This ensures that data layout queries
+always have a valid result.
 
 ### Compatibility and Transformations
 
@@ -70,6 +72,7 @@ public:
   explicit DataLayout(DataLayoutOpInterface scope);
 
   unsigned getTypeSize(Type type) const;
+  unsigned getTypeSizeInBits(Type type) const;
   unsigned getTypeABIAlignment(Type type) const;
   unsigned getTypePreferredAlignment(Type type) const;
 };
@@ -176,30 +179,51 @@ dialect is expected to implement the `DataLayoutDialectInterface`. This dialect
 provides hooks for verifying the validity of the entry value attributes and for
 and the compatibility of nested entries.
 
+### Bits and Bytes
+
+Two versions of hooks are provided for sizes: in bits and in bytes. The version
+in bytes has a default implementation that derives the size in bytes by rounding
+up the result of division of the size in bits by 8. Types exclusively targeting
+architectures with different assumptions can override this. Operations can
+redefine this for all types, providing scoped versions for cases of byte sizes
+other than eight without having to modify types, including built-in types.
+
 ### Query Dispatch
 
 The overall flow of a data layout property query is as follows.
 
--   The user constructs a `DataLayout` at the given scope. The constructor
+1.  The user constructs a `DataLayout` at the given scope. The constructor
     fetches the data layout specification and combines it with those of
     enclosing scopes (layouts are expected to be compatible).
--   The user calls `DataLayout::query(Type ty)`.
--   If `DataLayout` has a cached response, this response is returned
+2.  The user calls `DataLayout::query(Type ty)`.
+3.  If `DataLayout` has a cached response, this response is returned
     immediately.
--   Otherwise, the query is handed down by `DataLayout` to
-    `DataLayoutOpInterface::query(ty, *this, relevantEntries)` where the
-    relevant entries are computed as described above.
--   Unless the `query` hook is reimplemented by the op interface, the query is
+4.  Otherwise, the query is handed down by `DataLayout` to the closest layout
+    scoping operation. If it implements `DataLayoutOpInterface`, then the query
+    is forwarded to`DataLayoutOpInterface::query(ty, *this, relevantEntries)`
+    where the relevant entries are computed as described above. If it does not
+    implement `DataLayoutOpInterface`, it must be a `ModuleOp`, and the query is
+    forwarded to `DataLayoutTypeInterface::query(dataLayout, relevantEntries)`
+    after casting `ty` to the type interface.
+5.  Unless the `query` hook is reimplemented by the op interface, the query is
     handled further down to `DataLayoutTypeInterface::query(dataLayout,
     relevantEntries)` after casting `ty` to the type interface. If the type does
     not implement the interface, an unrecoverable fatal error is produced.
--   The type is expected to always provide the response, which is returned up
+6.  The type is expected to always provide the response, which is returned up
     the call stack and cached by the `DataLayout.`
 
 ## Default Implementation
 
 The default implementation of the data layout interfaces directly handles
 queries for a subset of built-in types.
+
+### Built-in Modules
+
+Built-in `ModuleOp` allows at most one attribute that implements
+`DataLayoutSpecInterface`. It does not implement the entire interface for
+efficiency and layering reasons. Instead, `DataLayout` can be constructed for
+`ModuleOp` and handles modules transparently alongside other operations that
+implement the interface.
 
 ### Built-in Types
 
@@ -228,6 +252,28 @@ which MLIR assumed until the introduction of proper data layout modeling, and
 with the
 [modeling of n-D vectors](https://mlir.llvm.org/docs/Dialects/Vector/#deeperdive).
 They **may change** in the future.
+
+#### `index` type
+
+Index type is an integer type used for target-specific size information in,
+e.g., `memref` operations. Its data layout is parameterized by a single integer
+data layout entry that specifies its bitwidth. For example,
+
+```
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<index, 32>
+>} {}
+```
+
+specifies that `index` has 32 bits. All other layout properties of `index` match
+those of the integer type with the same bitwidth defined above.
+
+In absence of the corresponding entry, `index` is assumed to be a 64-bit
+integer.
+
+### Byte Size
+
+The default data layout assumes 8-bit bytes.
 
 ### DLTI Dialect
 

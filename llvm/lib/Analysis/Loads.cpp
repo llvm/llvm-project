@@ -16,6 +16,7 @@
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -437,21 +438,24 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
   if (!Load->isUnordered())
     return nullptr;
 
-  return FindAvailablePtrLoadStore(
-      Load->getPointerOperand(), Load->getType(), Load->isAtomic(), ScanBB,
-      ScanFrom, MaxInstsToScan, AA, IsLoad, NumScanedInst);
+  MemoryLocation Loc = MemoryLocation::get(Load);
+  return findAvailablePtrLoadStore(Loc, Load->getType(), Load->isAtomic(),
+                                   ScanBB, ScanFrom, MaxInstsToScan, AA, IsLoad,
+                                   NumScanedInst);
 }
 
 // Check if the load and the store have the same base, constant offsets and
 // non-overlapping access ranges.
-static bool AreNonOverlapSameBaseLoadAndStore(
-    Value *LoadPtr, Type *LoadTy, Value *StorePtr, Type *StoreTy,
-    const DataLayout &DL) {
+static bool areNonOverlapSameBaseLoadAndStore(const Value *LoadPtr,
+                                              Type *LoadTy,
+                                              const Value *StorePtr,
+                                              Type *StoreTy,
+                                              const DataLayout &DL) {
   APInt LoadOffset(DL.getTypeSizeInBits(LoadPtr->getType()), 0);
   APInt StoreOffset(DL.getTypeSizeInBits(StorePtr->getType()), 0);
-  Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
+  const Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
       DL, LoadOffset, /* AllowNonInbounds */ false);
-  Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
+  const Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
       DL, StoreOffset, /* AllowNonInbounds */ false);
   if (LoadBase != StoreBase)
     return false;
@@ -464,7 +468,7 @@ static bool AreNonOverlapSameBaseLoadAndStore(
   return LoadRange.intersectWith(StoreRange).isEmptySet();
 }
 
-static Value *getAvailableLoadStore(Instruction *Inst, Value *Ptr,
+static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
                                     Type *AccessTy, bool AtLeastAtomic,
                                     const DataLayout &DL, bool *IsLoadCSE) {
   // If this is a load of Ptr, the loaded value is available.
@@ -511,17 +515,15 @@ static Value *getAvailableLoadStore(Instruction *Inst, Value *Ptr,
   return nullptr;
 }
 
-Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
-                                       bool AtLeastAtomic, BasicBlock *ScanBB,
-                                       BasicBlock::iterator &ScanFrom,
-                                       unsigned MaxInstsToScan,
-                                       AAResults *AA, bool *IsLoadCSE,
-                                       unsigned *NumScanedInst) {
+Value *llvm::findAvailablePtrLoadStore(
+    const MemoryLocation &Loc, Type *AccessTy, bool AtLeastAtomic,
+    BasicBlock *ScanBB, BasicBlock::iterator &ScanFrom, unsigned MaxInstsToScan,
+    AAResults *AA, bool *IsLoadCSE, unsigned *NumScanedInst) {
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
 
   const DataLayout &DL = ScanBB->getModule()->getDataLayout();
-  Value *StrippedPtr = Ptr->stripPointerCasts();
+  const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
     // We must ignore debug info directives when counting (otherwise they
@@ -547,8 +549,6 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
       return Available;
 
     // Try to get the store size for the type.
-    auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
-
     if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *StorePtr = SI->getPointerOperand()->stripPointerCasts();
 
@@ -565,14 +565,14 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
         // base, constant offsets and non-overlapping access ranges, ignore the
         // store. This is a simple form of alias analysis that is used by the
         // inliner. FIXME: use BasicAA if possible.
-        if (AreNonOverlapSameBaseLoadAndStore(
-                Ptr, AccessTy, SI->getPointerOperand(),
+        if (areNonOverlapSameBaseLoadAndStore(
+                Loc.Ptr, AccessTy, SI->getPointerOperand(),
                 SI->getValueOperand()->getType(), DL))
           continue;
       } else {
         // If we have alias analysis and it says the store won't modify the
         // loaded value, ignore the store.
-        if (!isModSet(AA->getModRefInfo(SI, StrippedPtr, AccessSize)))
+        if (!isModSet(AA->getModRefInfo(SI, Loc)))
           continue;
       }
 
@@ -585,7 +585,7 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
     if (Inst->mayWriteToMemory()) {
       // If alias analysis claims that it really won't modify the load,
       // ignore it.
-      if (AA && !isModSet(AA->getModRefInfo(Inst, StrippedPtr, AccessSize)))
+      if (AA && !isModSet(AA->getModRefInfo(Inst, Loc)))
         continue;
 
       // May modify the pointer, bail out.
@@ -635,9 +635,9 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
   // If we found an available value, ensure that the instructions in between
   // did not modify the memory location.
   if (Available) {
-    auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
+    MemoryLocation Loc = MemoryLocation::get(Load);
     for (Instruction *Inst : MustNotAliasInsts)
-      if (isModSet(AA.getModRefInfo(Inst, StrippedPtr, AccessSize)))
+      if (isModSet(AA.getModRefInfo(Inst, Loc)))
         return nullptr;
   }
 

@@ -1363,17 +1363,38 @@ def Tosa_GatherOp : Tosa_Op<"gather", [NoSideEffect]> {
 
   let description = [{
     Generate a tensor for which each element in the output is a subtensor of the
-    values tensor along the given axis, based on the value of indices.
+    values tensor based on the value of indices.
   }];
 
   let arguments = (ins
-    Tosa_Int32Or64Tensor:$indices,
-    Tosa_Tensor1Dto4D:$values,
-    I32Attr:$axis
+    Tosa_Tensor3D:$values,
+    2DTensorOf<[Tosa_Int32]>:$indices
   );
 
   let results = (outs
-    Tosa_Tensor1Dto4D:$output
+    Tosa_Tensor3D:$output
+  );
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: scatter
+//===----------------------------------------------------------------------===//
+def Tosa_ScatterOp : Tosa_Op<"scatter", [NoSideEffect]> {
+  let summary = "Scatter operation,";
+
+  let description = [{
+    The values_out tensor is set to the values_in tensor with data modified as follows:
+    data from the input tensor is inserted at the positions specified by the indices tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_Tensor3D:$values_in,
+    2DTensorOf<[Tosa_Int32]>:$indices,
+    Tosa_Tensor3D:$input
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$values_out
   );
 }
 
@@ -1402,6 +1423,8 @@ def Tosa_ResizeOp : Tosa_Op<"resize", [NoSideEffect]> {
     Tosa_IntArrayAttr2:$stride,
     Tosa_IntArrayAttr2:$offset,
     I32Attr:$shift,
+    Tosa_Fp32ArrayAttr2:$stride_fp,
+    Tosa_Fp32ArrayAttr2:$offset_fp,
     Tosa_ResizeTypeAttr:$mode
   );
 
@@ -1462,20 +1485,20 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   let description = [{
     Rescale quantized values into a new domain. Supported rescalings are:
     Mode                    Input   Output
-    signed 8 to 8           aint8   aint8
-    signed 8 to 16          aint8   int16
-    signed 8 to 32          aint8   int32
-    signed 16 to 8          int16   aint8
+    signed 8 to 8           int8    int8
+    signed 8 to 16          int8    int16
+    signed 8 to 32          int8    int32
+    signed 16 to 8          int16   int8
     signed 16 to 16         int16   int16
     signed 16 to 32         int16   int32
-    signed 32 to 8          int32   aint8
+    signed 32 to 8          int32   int8
     signed 32 to 16         int32   int16
     signed 32 to 32         int32   int32
-    signed 48 to 8          int48   aint8
+    signed 48 to 8          int48   int8
     signed 48 to 16         int48   int16
     signed 48 to 32         int48   int32
-    unsigned 8 to signed 8  uint8   aint8
-    signed 8 to unsigned 8  aint8   uint8
+    unsigned 8 to signed 8  uint8   int8
+    signed 8 to unsigned 8  int8    uint8
   }];
 
   let arguments = (ins

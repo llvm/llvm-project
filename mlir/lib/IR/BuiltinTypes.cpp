@@ -673,25 +673,22 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
                                         SmallVectorImpl<AffineExpr> &strides,
                                         AffineExpr &offset) {
   auto affineMaps = t.getAffineMaps();
-  // For now strides are only computed on a single affine map with a single
-  // result (i.e. the closed subset of linearization maps that are compatible
-  // with striding semantics).
-  // TODO: support more forms on a per-need basis.
-  if (affineMaps.size() > 1)
+
+  if (!affineMaps.empty() && affineMaps.back().getNumResults() != 1)
     return failure();
-  if (affineMaps.size() == 1 && affineMaps[0].getNumResults() != 1)
-    return failure();
+
+  AffineMap m;
+  if (!affineMaps.empty()) {
+    m = affineMaps.back();
+    for (size_t i = affineMaps.size() - 1; i > 0; --i)
+      m = m.compose(affineMaps[i - 1]);
+    assert(!m.isIdentity() && "unexpected identity map");
+  }
 
   auto zero = getAffineConstantExpr(0, t.getContext());
   auto one = getAffineConstantExpr(1, t.getContext());
   offset = zero;
   strides.assign(t.getRank(), zero);
-
-  AffineMap m;
-  if (!affineMaps.empty()) {
-    m = affineMaps.front();
-    assert(!m.isIdentity() && "unexpected identity map");
-  }
 
   // Canonical case for empty map.
   if (!m) {

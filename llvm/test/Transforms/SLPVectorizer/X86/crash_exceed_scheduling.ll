@@ -44,13 +44,9 @@ define void @exceed(double %0, double %1) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[LABEL:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP16]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[TMP17]], i32 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP16]], i32 1
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP19]], i32 1
 ; CHECK-NEXT:    br label [[LABEL]]
 ; CHECK:       label:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP20]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP16]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

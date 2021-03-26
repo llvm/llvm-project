@@ -742,16 +742,6 @@ static void writeFileName(raw_ostream &S, StringRef ArchiveName,
   }
 }
 
-static bool isSpecialSym(SymbolicFile &Obj, StringRef Name) {
-  auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ELFObj)
-    return false;
-  uint16_t EMachine = ELFObj->getEMachine();
-  if (EMachine != ELF::EM_ARM && EMachine != ELF::EM_AARCH64)
-    return false;
-  return !Name.empty() && Name[0] == '$';
-}
-
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    StringRef ArchiveName,
                                    StringRef ArchitectureName) {
@@ -840,9 +830,10 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
+    bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
-        (!SpecialSyms && isSpecialSym(Obj, Name)))
+        (FormatSpecific && !(SpecialSyms || DebugSyms)))
       continue;
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
@@ -1812,7 +1803,14 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         error(SymFlagsOrErr.takeError(), Obj.getFileName());
         return;
       }
-      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
+
+      // Don't drop format specifc symbols for ARM and AArch64 ELF targets, they
+      // are used to repesent mapping symbols and needed to honor the
+      // --special-syms option.
+      auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+      if ((!ELFObj || (ELFObj->getEMachine() != ELF::EM_ARM &&
+                       ELFObj->getEMachine() != ELF::EM_AARCH64)) &&
+          !DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;

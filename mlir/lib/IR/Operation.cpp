@@ -1001,8 +1001,10 @@ static LogicalResult verifyValueSizeAttr(Operation *op, StringRef attrName,
     return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
 
   auto sizeAttrType = sizeAttr.getType().dyn_cast<VectorType>();
-  if (!sizeAttrType || sizeAttrType.getRank() != 1)
-    return op->emitOpError("requires 1D vector attribute '") << attrName << "'";
+  if (!sizeAttrType || sizeAttrType.getRank() != 1 ||
+      !sizeAttrType.getElementType().isInteger(32))
+    return op->emitOpError("requires 1D vector of i32 attribute '")
+           << attrName << "'";
 
   if (llvm::any_of(sizeAttr.getIntValues(), [](const APInt &element) {
         return !element.isNonNegative();

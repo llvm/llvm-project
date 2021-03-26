@@ -18,7 +18,7 @@ def testFromPyFunc():
     m = builtin.ModuleOp()
     f32 = F32Type.get()
     f64 = F64Type.get()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       # CHECK-LABEL: func @unary_return(%arg0: f64) -> f64
       # CHECK: return %arg0 : f64
       @builtin.FuncOp.from_py_func(f64)
@@ -95,7 +95,7 @@ def testFromPyFuncErrors():
     m = builtin.ModuleOp()
     f32 = F32Type.get()
     f64 = F64Type.get()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       try:
 
         @builtin.FuncOp.from_py_func(f64, results=[f64])

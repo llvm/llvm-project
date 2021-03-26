@@ -129,6 +129,25 @@ define i32 @srli(i32 %a) nounwind {
   ret i32 %1
 }
 
+; This makes sure SimplifyDemandedBits doesn't prevent us from matching SRLIW
+; on RV64.
+define i32 @srli_demandedbits(i32 %0) {
+; RV32I-LABEL: srli_demandedbits:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 3
+; RV32I-NEXT:    ori a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: srli_demandedbits:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a0, a0, 3
+; RV64I-NEXT:    ori a0, a0, 1
+; RV64I-NEXT:    ret
+  %2 = lshr i32 %0, 3
+  %3 = or i32 %2, 1
+  ret i32 %3
+}
+
 define i32 @srai(i32 %a) nounwind {
 ; RV32I-LABEL: srai:
 ; RV32I:       # %bb.0:

@@ -35,6 +35,8 @@
 ! CHECK-NEXT: -ffree-form            Process source files in free form
 ! CHECK-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
+! CHECK-NEXT: -fintrinsic-modules-path <dir>
+! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -fno-color-diagnostics Disable colors in diagnostics
@@ -45,6 +47,8 @@
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -o <file> Write output to <file>
+! CHECK-NEXT: -pedantic              Warn on language extensions
+! CHECK-NEXT: -std=<value>           Language standard to compile for
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
 ! CHECK-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler

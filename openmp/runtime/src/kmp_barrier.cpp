@@ -300,7 +300,7 @@ static void __kmp_tree_barrier_gather(
   kmp_uint32 branch_factor = 1 << branch_bits;
   kmp_uint32 child;
   kmp_uint32 child_tid;
-  kmp_uint64 new_state;
+  kmp_uint64 new_state = 0;
 
   KA_TRACE(
       20, ("__kmp_tree_barrier_gather: T#%d(%d:%d) enter for barrier type %d\n",
@@ -873,7 +873,7 @@ static void __kmp_hierarchical_barrier_gather(
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
   kmp_uint32 nproc = this_thr->th.th_team_nproc;
   kmp_info_t **other_threads = team->t.t_threads;
-  kmp_uint64 new_state;
+  kmp_uint64 new_state = 0;
 
   int level = team->t.t_level;
   if (other_threads[0]
@@ -1629,6 +1629,7 @@ int __kmp_barrier_gomp_cancel(int gtid) {
 void __kmp_end_split_barrier(enum barrier_type bt, int gtid) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_end_split_barrier);
   KMP_SET_THREAD_STATE_BLOCK(PLAIN_BARRIER);
+  KMP_DEBUG_ASSERT(bt < bs_last_barrier);
   int tid = __kmp_tid_from_gtid(gtid);
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
@@ -1670,6 +1671,9 @@ void __kmp_end_split_barrier(enum barrier_type bt, int gtid) {
 void __kmp_join_barrier(int gtid) {
   KMP_TIME_PARTITIONED_BLOCK(OMP_join_barrier);
   KMP_SET_THREAD_STATE_BLOCK(FORK_JOIN_BARRIER);
+
+  KMP_DEBUG_ASSERT(__kmp_threads && __kmp_threads[gtid]);
+
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team;
   kmp_uint nproc;
@@ -1706,7 +1710,6 @@ void __kmp_join_barrier(int gtid) {
   KMP_MB();
 
   // Verify state
-  KMP_DEBUG_ASSERT(__kmp_threads && __kmp_threads[gtid]);
   KMP_DEBUG_ASSERT(TCR_PTR(this_thr->th.th_team));
   KMP_DEBUG_ASSERT(TCR_PTR(this_thr->th.th_root));
   KMP_DEBUG_ASSERT(this_thr == team->t.t_threads[tid]);
@@ -1931,6 +1934,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
 
 #ifdef KMP_DEBUG
+    KMP_DEBUG_ASSERT(team);
     kmp_info_t **other_threads = team->t.t_threads;
     int i;
 
@@ -2011,7 +2015,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
     if (KMP_MASTER_TID(ds_tid) &&
         (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
          ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
-      codeptr = team->t.ompt_team_info.master_return_address;
+      codeptr = team ? team->t.ompt_team_info.master_return_address : NULL;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
           ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,

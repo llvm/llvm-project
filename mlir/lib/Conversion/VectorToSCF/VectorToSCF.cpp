@@ -116,11 +116,9 @@ public:
         VectorType::get(vectorType.getShape().take_back(minorRank),
                         vectorType.getElementType());
     /// Memref of minor vector type is used for individual transfers.
-    memRefMinorVectorType =
-        MemRefType::get(majorVectorType.getShape(), minorVectorType, {},
-                        xferOp.getShapedType()
-                            .template cast<MemRefType>()
-                            .getMemorySpaceAsInt());
+    memRefMinorVectorType = MemRefType::get(
+        majorVectorType.getShape(), minorVectorType, {},
+        xferOp.getShapedType().template cast<MemRefType>().getMemorySpace());
   }
 
   LogicalResult doReplace();
@@ -694,10 +692,9 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
 }
 
 void populateVectorToSCFConversionPatterns(
-    OwningRewritePatternList &patterns,
-    const VectorTransferToSCFOptions &options) {
-  patterns.insert<VectorTransferRewriter<vector::TransferReadOp>,
-                  VectorTransferRewriter<vector::TransferWriteOp>>(
+    RewritePatternSet &patterns, const VectorTransferToSCFOptions &options) {
+  patterns.add<VectorTransferRewriter<vector::TransferReadOp>,
+               VectorTransferRewriter<vector::TransferWriteOp>>(
       options, patterns.getContext());
 }
 
@@ -713,7 +710,7 @@ struct ConvertVectorToSCFPass
   }
 
   void runOnFunction() override {
-    OwningRewritePatternList patterns(getFunction().getContext());
+    RewritePatternSet patterns(getFunction().getContext());
     populateVectorToSCFConversionPatterns(
         patterns, VectorTransferToSCFOptions().setUnroll(fullUnroll));
     (void)applyPatternsAndFoldGreedily(getFunction(), std::move(patterns));

@@ -211,8 +211,11 @@ def featureTestMacros(config, flags=''):
   return {m: int(v.rstrip('LlUu')) for (m, v) in allMacros.items() if m.startswith('__cpp_')}
 
 
-def _addToSubstitution(substitutions, key, value):
+def _appendToSubstitution(substitutions, key, value):
   return [(k, v + ' ' + value) if k == key else (k, v) for (k, v) in substitutions]
+
+def _prependToSubstitution(substitutions, key, value):
+  return [(k, value + ' ' + v) if k == key else (k, v) for (k, v) in substitutions]
 
 
 class ConfigAction(object):
@@ -285,7 +288,7 @@ class AddFlag(ConfigAction):
   def applyTo(self, config):
     flag = self._getFlag(config)
     assert hasCompileFlag(config, flag), "Trying to enable flag {}, which is not supported".format(flag)
-    config.substitutions = _addToSubstitution(config.substitutions, '%{flags}', flag)
+    config.substitutions = _appendToSubstitution(config.substitutions, '%{flags}', flag)
 
   def pretty(self, config, litParams):
     return 'add {} to %{{flags}}'.format(self._getFlag(config))
@@ -304,7 +307,7 @@ class AddCompileFlag(ConfigAction):
   def applyTo(self, config):
     flag = self._getFlag(config)
     assert hasCompileFlag(config, flag), "Trying to enable compile flag {}, which is not supported".format(flag)
-    config.substitutions = _addToSubstitution(config.substitutions, '%{compile_flags}', flag)
+    config.substitutions = _appendToSubstitution(config.substitutions, '%{compile_flags}', flag)
 
   def pretty(self, config, litParams):
     return 'add {} to %{{compile_flags}}'.format(self._getFlag(config))
@@ -312,7 +315,7 @@ class AddCompileFlag(ConfigAction):
 
 class AddLinkFlag(ConfigAction):
   """
-  This action adds the given flag to the %{link_flags} substitution.
+  This action appends the given flag to the %{link_flags} substitution.
 
   The flag can be a string or a callable, in which case it is called with the
   configuration to produce the actual flag (as a string).
@@ -323,10 +326,29 @@ class AddLinkFlag(ConfigAction):
   def applyTo(self, config):
     flag = self._getFlag(config)
     assert hasCompileFlag(config, flag), "Trying to enable link flag {}, which is not supported".format(flag)
-    config.substitutions = _addToSubstitution(config.substitutions, '%{link_flags}', flag)
+    config.substitutions = _appendToSubstitution(config.substitutions, '%{link_flags}', flag)
 
   def pretty(self, config, litParams):
-    return 'add {} to %{{link_flags}}'.format(self._getFlag(config))
+    return 'append {} to %{{link_flags}}'.format(self._getFlag(config))
+
+
+class PrependLinkFlag(ConfigAction):
+  """
+  This action prepends the given flag to the %{link_flags} substitution.
+
+  The flag can be a string or a callable, in which case it is called with the
+  configuration to produce the actual flag (as a string).
+  """
+  def __init__(self, flag):
+    self._getFlag = lambda config: flag(config) if callable(flag) else flag
+
+  def applyTo(self, config):
+    flag = self._getFlag(config)
+    assert hasCompileFlag(config, flag), "Trying to enable link flag {}, which is not supported".format(flag)
+    config.substitutions = _prependToSubstitution(config.substitutions, '%{link_flags}', flag)
+
+  def pretty(self, config, litParams):
+    return 'prepend {} to %{{link_flags}}'.format(self._getFlag(config))
 
 
 class AddOptionalWarningFlag(ConfigAction):
@@ -344,7 +366,7 @@ class AddOptionalWarningFlag(ConfigAction):
     flag = self._getFlag(config)
     # Use -Werror to make sure we see an error about the flag being unsupported.
     if hasCompileFlag(config, '-Werror ' + flag):
-      config.substitutions = _addToSubstitution(config.substitutions, '%{compile_flags}', flag)
+      config.substitutions = _appendToSubstitution(config.substitutions, '%{compile_flags}', flag)
 
   def pretty(self, config, litParams):
     return 'add {} to %{{compile_flags}}'.format(self._getFlag(config))

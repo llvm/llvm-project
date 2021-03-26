@@ -41,15 +41,27 @@ static cl::opt<bool>
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
+  // Get the function's current attributes.
+  auto Attrs = Fn.getAttributes();
+  auto FnAttrs = Attrs.getFnAttributes();
+  auto RetAttrs = Attrs.getRetAttributes();
+  SmallVector<AttributeSet, 4> ArgAttrs;
+  for (size_t ArgNo = 0; ArgNo < Fn.arg_size(); ++ArgNo)
+    ArgAttrs.emplace_back(Attrs.getParamAttributes(ArgNo));
+
 #define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-  // Add attributes to the new declaration.
+  // Add attributes to the function declaration.
   switch (FnID) {
 #define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
   case Enum:                                                                   \
-    Fn.setAttributes(                                                          \
-        AttributeList::get(Ctx, FnAttrSet, RetAttrSet, ArgAttrSets));          \
+    FnAttrs = FnAttrs.addAttributes(Ctx, FnAttrSet);                           \
+    RetAttrs = RetAttrs.addAttributes(Ctx, RetAttrSet);                        \
+    for (size_t ArgNo = 0; ArgNo < ArgAttrSets.size(); ++ArgNo)                \
+      ArgAttrs[ArgNo] =                                                        \
+          ArgAttrs[ArgNo].addAttributes(Ctx, ArgAttrSets[ArgNo]);              \
+    Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));    \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   default:
