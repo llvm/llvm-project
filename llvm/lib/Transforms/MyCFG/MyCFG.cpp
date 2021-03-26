@@ -10,6 +10,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFGPrinter.h"
@@ -17,6 +18,18 @@
 
 using namespace llvm;
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
+  outs() << "===============================================\n";
+  outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
+  for (df_iterator<BasicBlock *> iterator = df_begin(&F.getEntryBlock()),
+           IE = df_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+    outs() << *iterator << "\n";
+    for (auto &instruction : **iterator) {
+      outs() << instruction << "\n";
+    }
+  }
+
+  outs() << "\n\n";
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in bf_iterator:\n";
   for (bf_iterator<BasicBlock *> iterator = bf_begin(&F.getEntryBlock()),
@@ -27,6 +40,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       outs() << instruction << "\n";
     }
   }
+  outs() << "\n\n";
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in po_iterator:\n";
@@ -38,6 +52,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       outs() << instruction << "\n";
     }
   }
+  outs() << "\n\n";
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in pred_iterator:\n";
@@ -49,6 +64,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       outs() << instruction << "\n";
     }
   }
+  outs() << "\n\n";
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in succ_iterator:\n";
@@ -60,6 +76,7 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
       outs() << instruction << "\n";
     }
   }
+  outs() << "\n\n";
 
   // Use LLVM's Strongly Connected Components (SCCs) iterator to produce
   // a reverse topological sort of SCCs.
@@ -112,11 +129,6 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   outs() << "===============================================\n";
   outs() << "Trying to be customized GrapTraits #######################\n";
   GraphHelper<DOTFuncInfo*>::wg(outs(), &CFGInfo);
-  outs() << "===============================================\n";
-  outs() << "Updated again one more time!!\n\n";
-  outs() << "===============================================\n";
-
-  outs() << "This is the last update 14\n";
 
   return PreservedAnalyses::all();
 }
