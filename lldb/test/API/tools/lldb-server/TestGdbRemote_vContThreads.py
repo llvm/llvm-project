@@ -51,6 +51,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureDarwin # No signals delivered
     def test_signal_process_without_tid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -74,6 +75,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @expectedFailureDarwin # Only one signal delivered
     def test_signal_all_threads(self):
         self.build()
         self.set_inferior_startup_launch()
