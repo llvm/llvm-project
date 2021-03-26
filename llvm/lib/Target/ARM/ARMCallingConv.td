@@ -278,6 +278,9 @@ def CSR_Win_AAPCS_CFGuard_Check : CalleeSavedRegs<(add LR, R11, R10, R9, R8, R7,
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_AAPCS_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS, R8)>;
 
+// R10 is used to pass swiftself, remove it from CSR.
+def CSR_AAPCS_SwiftTail : CalleeSavedRegs<(sub CSR_AAPCS, R10)>;
+
 // The order of callee-saved registers needs to match the order we actually push
 // them in FrameLowering, because this order is what's used by
 // PrologEpilogInserter to allocate frame index slots. So when R7 is the frame
@@ -289,6 +292,10 @@ def CSR_AAPCS_SplitPush : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_AAPCS_SplitPush_SwiftError : CalleeSavedRegs<(sub CSR_AAPCS_SplitPush,
                                                       R8)>;
+
+// R10 is used to pass swifterror, remove it from CSR.
+def CSR_AAPCS_SplitPush_SwiftTail : CalleeSavedRegs<(sub CSR_AAPCS_SplitPush,
+                                                     R10)>;
 
 // Constructors and destructors return 'this' in the ARM C++ ABI; since 'this'
 // and the pointer return value are both passed in R0 in these cases, this can
@@ -304,6 +311,9 @@ def CSR_iOS : CalleeSavedRegs<(add LR, R7, R6, R5, R4, (sub CSR_AAPCS, R9))>;
 
 // R8 is used to pass swifterror, remove it from CSR.
 def CSR_iOS_SwiftError : CalleeSavedRegs<(sub CSR_iOS, R8)>;
+
+// R10 is used to pass swiftself, remove it from CSR.
+def CSR_iOS_SwiftTail : CalleeSavedRegs<(sub CSR_iOS, R10)>;
 
 def CSR_iOS_ThisReturn : CalleeSavedRegs<(add LR, R7, R6, R5, R4,
                                          (sub CSR_AAPCS_ThisReturn, R9))>;
