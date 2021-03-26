@@ -68,7 +68,7 @@ OPENCL_OPTIONALCOREFEATURE(cl_khr_fp64, true, 100, OCL_C_12P)
 OPENCL_EXTENSION(cl_khr_fp16, true, 100)
 OPENCL_EXTENSION(cl_khr_int64_base_atomics, true, 100)
 OPENCL_EXTENSION(cl_khr_int64_extended_atomics, true, 100)
-OPENCL_COREFEATURE(cl_khr_3d_image_writes, true, 100, OCL_C_20)
+OPENCL_GENERIC_EXTENSION(cl_khr_3d_image_writes, true, 100, OCL_C_20, OCL_C_30)
 
 // EMBEDDED_PROFILE
 OPENCL_EXTENSION(cles_khr_int64, true, 110)
