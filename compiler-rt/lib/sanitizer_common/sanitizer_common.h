@@ -284,7 +284,6 @@ void SetSandboxingCallback(void (*f)());
 
 void InitializeCoverage(bool enabled, const char *coverage_dir);
 
-void InitTlsSize();
 uptr GetTlsSize();
 
 // Other
