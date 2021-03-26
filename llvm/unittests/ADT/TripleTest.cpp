@@ -111,6 +111,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::Musl, T.getEnvironment());
 
+  T = Triple("x86_64-pc-linux-muslx32");
+  EXPECT_EQ(Triple::x86_64, T.getArch());
+  EXPECT_EQ(Triple::PC, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::MuslX32, T.getEnvironment());
+
   // PS4 has two spellings for the vendor.
   T = Triple("x86_64-scei-ps4");
   EXPECT_EQ(Triple::x86_64, T.getArch());
