@@ -1,6 +1,7 @@
 # TODO: Make the check source feature optional as an argument on *_add_library.
 set(LLVM_OPTIONAL_SOURCES
   Linalg.cpp
+  LinalgPasses.cpp
   SCF.cpp
   Shape.cpp
   Standard.cpp
@@ -9,10 +10,16 @@ set(LLVM_OPTIONAL_SOURCES
 
 add_mlir_public_c_api_library(MLIRCAPILinalg
   Linalg.cpp
+  LinalgPasses.cpp
+
+  DEPENDS
+  MLIRLinalgPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRLinalg
+  MLIRPass
+  MLIRLinalgTransforms
 )
 
 add_mlir_public_c_api_library(MLIRCAPISCF
