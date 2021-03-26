@@ -362,6 +362,20 @@ def G_FSHR : GenericInstruction {
   let hasSideEffects = false;
 }
 
+/// Rotate bits right.
+def G_ROTR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
+/// Rotate bits left.
+def G_ROTL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = false;
+}
+
 // Generic integer comparison.
 def G_ICMP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
