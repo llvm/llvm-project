@@ -345,10 +345,7 @@ exit:
 
 define i1 @shl_nuw(i16 %x) {
 ; CHECK-LABEL: @shl_nuw(
-; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw i16 [[NZ]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %nz = or i16 %x, 2
   %mul = shl nuw i16 %nz, 1
@@ -358,10 +355,7 @@ define i1 @shl_nuw(i16 %x) {
 
 define i1 @shl_nsw(i16 %x) {
 ; CHECK-LABEL: @shl_nsw(
-; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i16 [[NZ]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %nz = or i16 %x, 2
   %mul = shl nsw i16 %nz, 1
