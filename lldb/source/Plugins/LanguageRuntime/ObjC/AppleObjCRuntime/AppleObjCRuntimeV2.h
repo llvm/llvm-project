@@ -293,19 +293,30 @@ private:
     }
   };
 
+  /// Abstraction to read the Objective-C class info.
+  class ClassInfoExtractor {
+  public:
+    ClassInfoExtractor(AppleObjCRuntimeV2 &runtime) : m_runtime(runtime) {}
+    std::mutex &GetMutex() { return m_mutex; }
+
+  protected:
+    /// The lifetime of this object is tied to that of the runtime.
+    AppleObjCRuntimeV2 &m_runtime;
+    std::mutex m_mutex;
+  };
+
   /// We can read the class info from the Objective-C runtime using
   /// gdb_objc_realized_classes or objc_copyRealizedClassList. The latter is
   /// preferred because it includes lazily named classes, but it's not always
   /// available or safe to call.
   ///
-  /// We potentially need both for the same process,
-  /// because we may need to use gdb_objc_realized_classes until dyld is
-  /// initialized and then switch over to objc_copyRealizedClassList for lazily
-  /// named classes.
-  class DynamicClassInfoExtractor {
+  /// We potentially need both for the same process, because we may need to use
+  /// gdb_objc_realized_classes until dyld is initialized and then switch over
+  /// to objc_copyRealizedClassList for lazily named classes.
+  class DynamicClassInfoExtractor : public ClassInfoExtractor {
   public:
     DynamicClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
-        : m_runtime(runtime) {}
+        : ClassInfoExtractor(runtime) {}
 
     enum Helper { gdb_objc_realized_classes, objc_copyRealizedClassList };
 
@@ -317,24 +328,45 @@ private:
     UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx,
                                                  Helper helper);
     lldb::addr_t &GetClassInfoArgs(Helper helper);
-    std::mutex &GetMutex() { return m_mutex; }
 
   private:
     std::unique_ptr<UtilityFunction>
     GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, std::string code,
                                     std::string name);
 
-    /// The lifetime of this object is tied to that of the runtime.
-    AppleObjCRuntimeV2 &m_runtime;
+    /// Helper to read class info using the gdb_objc_realized_classes.
+    struct gdb_objc_realized_classes_helper {
+      std::unique_ptr<UtilityFunction> utility_function;
+      lldb::addr_t args = LLDB_INVALID_ADDRESS;
+    };
+
+    /// Helper to read class info using objc_copyRealizedClassList.
+    struct objc_copyRealizedClassList_helper {
+      std::unique_ptr<UtilityFunction> utility_function;
+      lldb::addr_t args = LLDB_INVALID_ADDRESS;
+    };
+
+    gdb_objc_realized_classes_helper m_gdb_objc_realized_classes_helper;
+    objc_copyRealizedClassList_helper m_objc_copyRealizedClassList_helper;
+  };
+
+  /// Abstraction to read the Objective-C class info from the shared cache.
+  class SharedCacheClassInfoExtractor : public ClassInfoExtractor {
+  public:
+    SharedCacheClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
+        : ClassInfoExtractor(runtime) {}
+
+    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx);
+    lldb::addr_t &GetClassInfoArgs() { return m_args; }
+    std::mutex &GetMutex() { return m_mutex; }
+
+  private:
+    std::unique_ptr<UtilityFunction>
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx);
+
+    std::unique_ptr<UtilityFunction> m_utility_function;
+    lldb::addr_t m_args = LLDB_INVALID_ADDRESS;
     std::mutex m_mutex;
-
-    /// Utility function to read class info using gdb_objc_realized_classes.
-    std::unique_ptr<UtilityFunction> m_get_class_info_code;
-    lldb::addr_t m_get_class_info_args = LLDB_INVALID_ADDRESS;
-
-    /// Utility function to read class info using objc_copyRealizedClassList.
-    std::unique_ptr<UtilityFunction> m_get_class_info2_code;
-    lldb::addr_t m_get_class_info2_args = LLDB_INVALID_ADDRESS;
   };
 
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
@@ -383,11 +415,8 @@ private:
 
   lldb::ModuleSP m_objc_module_sp;
 
-  DynamicClassInfoExtractor m_class_info_extractor;
-
-  std::unique_ptr<UtilityFunction> m_get_shared_cache_class_info_code;
-  lldb::addr_t m_get_shared_cache_class_info_args;
-  std::mutex m_get_shared_cache_class_info_args_mutex;
+  DynamicClassInfoExtractor m_dynamic_class_info_extractor;
+  SharedCacheClassInfoExtractor m_shared_cache_class_info_extractor;
 
   std::unique_ptr<DeclVendor> m_decl_vendor_up;
   lldb::addr_t m_tagged_pointer_obfuscator;
