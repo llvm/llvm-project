@@ -1128,7 +1128,7 @@ bool RISCVDAGToDAGISel::selectSExti32(SDValue N, SDValue &Val) {
 bool RISCVDAGToDAGISel::selectZExti32(SDValue N, SDValue &Val) {
   if (N.getOpcode() == ISD::AND) {
     auto *C = dyn_cast<ConstantSDNode>(N.getOperand(1));
-    if (C && CheckAndMask(N.getOperand(0), C, UINT64_C(0xFFFFFFFF))) {
+    if (C && C->getZExtValue() == UINT64_C(0xFFFFFFFF)) {
       Val = N.getOperand(0);
       return true;
     }
