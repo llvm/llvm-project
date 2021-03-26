@@ -389,7 +389,7 @@ entry:
 }
 
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 define void @vec_powi_f32(float* %a, float* %b, float* %c, i32 %P) {
 ; CHECK-LABEL: @vec_powi_f32(
 ; CHECK-NEXT:  entry:
@@ -398,7 +398,7 @@ define void @vec_powi_f32(float* %a, float* %b, float* %c, i32 %P) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32(<4 x float> [[TMP4]], i32 [[P:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP4]], i32 [[P:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[C:%.*]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP5]], <4 x float>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
@@ -407,28 +407,28 @@ entry:
   %i0 = load float, float* %a, align 4
   %i1 = load float, float* %b, align 4
   %add1 = fadd float %i0, %i1
-  %call1 = tail call float @llvm.powi.f32(float %add1,i32 %P) nounwind readnone
+  %call1 = tail call float @llvm.powi.f32.i32(float %add1,i32 %P) nounwind readnone
 
   %arrayidx2 = getelementptr inbounds float, float* %a, i32 1
   %i2 = load float, float* %arrayidx2, align 4
   %arrayidx3 = getelementptr inbounds float, float* %b, i32 1
   %i3 = load float, float* %arrayidx3, align 4
   %add2 = fadd float %i2, %i3
-  %call2 = tail call float @llvm.powi.f32(float %add2,i32 %P) nounwind readnone
+  %call2 = tail call float @llvm.powi.f32.i32(float %add2,i32 %P) nounwind readnone
 
   %arrayidx4 = getelementptr inbounds float, float* %a, i32 2
   %i4 = load float, float* %arrayidx4, align 4
   %arrayidx5 = getelementptr inbounds float, float* %b, i32 2
   %i5 = load float, float* %arrayidx5, align 4
   %add3 = fadd float %i4, %i5
-  %call3 = tail call float @llvm.powi.f32(float %add3,i32 %P) nounwind readnone
+  %call3 = tail call float @llvm.powi.f32.i32(float %add3,i32 %P) nounwind readnone
 
   %arrayidx6 = getelementptr inbounds float, float* %a, i32 3
   %i6 = load float, float* %arrayidx6, align 4
   %arrayidx7 = getelementptr inbounds float, float* %b, i32 3
   %i7 = load float, float* %arrayidx7, align 4
   %add4 = fadd float %i6, %i7
-  %call4 = tail call float @llvm.powi.f32(float %add4,i32 %P) nounwind readnone
+  %call4 = tail call float @llvm.powi.f32.i32(float %add4,i32 %P) nounwind readnone
 
   store float %call1, float* %c, align 4
   %arrayidx8 = getelementptr inbounds float, float* %c, i32 1
@@ -448,25 +448,25 @@ define void @vec_powi_f32_neg(float* %a, float* %b, float* %c, i32 %P, i32 %Q) {
 ; CHECK-NEXT:    [[I0:%.*]] = load float, float* [[A:%.*]], align 4
 ; CHECK-NEXT:    [[I1:%.*]] = load float, float* [[B:%.*]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = fadd float [[I0]], [[I1]]
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32(float [[ADD1]], i32 [[P:%.*]]) #3
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD1]], i32 [[P:%.*]]) #3
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A]], i32 1
 ; CHECK-NEXT:    [[I2:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, float* [[B]], i32 1
 ; CHECK-NEXT:    [[I3:%.*]] = load float, float* [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[I2]], [[I3]]
-; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32(float [[ADD2]], i32 [[Q:%.*]]) #3
+; CHECK-NEXT:    [[CALL2:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD2]], i32 [[Q:%.*]]) #3
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[A]], i32 2
 ; CHECK-NEXT:    [[I4:%.*]] = load float, float* [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[B]], i32 2
 ; CHECK-NEXT:    [[I5:%.*]] = load float, float* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[I4]], [[I5]]
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32(float [[ADD3]], i32 [[P]]) #3
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD3]], i32 [[P]]) #3
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i32 3
 ; CHECK-NEXT:    [[I6:%.*]] = load float, float* [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[B]], i32 3
 ; CHECK-NEXT:    [[I7:%.*]] = load float, float* [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[ADD4:%.*]] = fadd float [[I6]], [[I7]]
-; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32(float [[ADD4]], i32 [[Q]]) #3
+; CHECK-NEXT:    [[CALL4:%.*]] = tail call float @llvm.powi.f32.i32(float [[ADD4]], i32 [[Q]]) #3
 ; CHECK-NEXT:    store float [[CALL1]], float* [[C:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C]], i32 1
 ; CHECK-NEXT:    store float [[CALL2]], float* [[ARRAYIDX8]], align 4
@@ -480,28 +480,28 @@ entry:
   %i0 = load float, float* %a, align 4
   %i1 = load float, float* %b, align 4
   %add1 = fadd float %i0, %i1
-  %call1 = tail call float @llvm.powi.f32(float %add1,i32 %P) nounwind readnone
+  %call1 = tail call float @llvm.powi.f32.i32(float %add1,i32 %P) nounwind readnone
 
   %arrayidx2 = getelementptr inbounds float, float* %a, i32 1
   %i2 = load float, float* %arrayidx2, align 4
   %arrayidx3 = getelementptr inbounds float, float* %b, i32 1
   %i3 = load float, float* %arrayidx3, align 4
   %add2 = fadd float %i2, %i3
-  %call2 = tail call float @llvm.powi.f32(float %add2,i32 %Q) nounwind readnone
+  %call2 = tail call float @llvm.powi.f32.i32(float %add2,i32 %Q) nounwind readnone
 
   %arrayidx4 = getelementptr inbounds float, float* %a, i32 2
   %i4 = load float, float* %arrayidx4, align 4
   %arrayidx5 = getelementptr inbounds float, float* %b, i32 2
   %i5 = load float, float* %arrayidx5, align 4
   %add3 = fadd float %i4, %i5
-  %call3 = tail call float @llvm.powi.f32(float %add3,i32 %P) nounwind readnone
+  %call3 = tail call float @llvm.powi.f32.i32(float %add3,i32 %P) nounwind readnone
 
   %arrayidx6 = getelementptr inbounds float, float* %a, i32 3
   %i6 = load float, float* %arrayidx6, align 4
   %arrayidx7 = getelementptr inbounds float, float* %b, i32 3
   %i7 = load float, float* %arrayidx7, align 4
   %add4 = fadd float %i6, %i7
-  %call4 = tail call float @llvm.powi.f32(float %add4,i32 %Q) nounwind readnone
+  %call4 = tail call float @llvm.powi.f32.i32(float %add4,i32 %Q) nounwind readnone
 
   store float %call1, float* %c, align 4
   %arrayidx8 = getelementptr inbounds float, float* %c, i32 1

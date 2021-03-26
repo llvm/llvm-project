@@ -510,8 +510,8 @@ static bool isTriviallyScalariable(Intrinsic::ID ID) {
 // All of the current scalarizable intrinsics only have one mangled type.
 static Function *getScalarIntrinsicDeclaration(Module *M,
                                                Intrinsic::ID ID,
-                                               VectorType *Ty) {
-  return Intrinsic::getDeclaration(M, ID, { Ty->getScalarType() });
+                                               ArrayRef<Type*> Tys) {
+  return Intrinsic::getDeclaration(M, ID, Tys);
 }
 
 /// If a call to a vector typed intrinsic function, split into a scalar call per
@@ -537,6 +537,9 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
 
   Scattered.resize(NumArgs);
 
+  SmallVector<llvm::Type *, 3> Tys;
+  Tys.push_back(VT->getScalarType());
+
   // Assumes that any vector type has the same number of elements as the return
   // vector type, which is true for all current intrinsics.
   for (unsigned I = 0; I != NumArgs; ++I) {
@@ -546,13 +549,15 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
       assert(Scattered[I].size() == NumElems && "mismatched call operands");
     } else {
       ScalarOperands[I] = OpI;
+      if (hasVectorInstrinsicOverloadedScalarOpd(ID, I))
+        Tys.push_back(OpI->getType());
     }
   }
 
   ValueVector Res(NumElems);
   ValueVector ScalarCallOps(NumArgs);
 
-  Function *NewIntrin = getScalarIntrinsicDeclaration(F->getParent(), ID, VT);
+  Function *NewIntrin = getScalarIntrinsicDeclaration(F->getParent(), ID, Tys);
   IRBuilder<> Builder(&CI);
 
   // Perform actual scalarization, taking care to preserve any scalar operands.

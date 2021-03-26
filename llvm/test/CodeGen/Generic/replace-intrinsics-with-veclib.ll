@@ -79,14 +79,14 @@ declare double @llvm.exp.f64(double) #0
 define <4 x double> @powi_v4(<4 x double> %in){
 ; COMMON-LABEL: define {{[^@]+}}@powi_v4
 ; COMMON-SAME: (<4 x double> [[IN:%.*]]) {
-; COMMON-NEXT:    [[CALL:%.*]] = call <4 x double> @llvm.powi.v4f64(<4 x double> [[IN]], i32 3)
+; COMMON-NEXT:    [[CALL:%.*]] = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> [[IN]], i32 3)
 ; COMMON-NEXT:    ret <4 x double> [[CALL]]
 ;
-  %call = call <4 x double> @llvm.powi.v4f64(<4 x double> %in, i32 3)
+  %call = call <4 x double> @llvm.powi.v4f64.i32(<4 x double> %in, i32 3)
   ret <4 x double> %call
 }
 
-declare <4 x double> @llvm.powi.v4f64(<4 x double>, i32) #0
+declare <4 x double> @llvm.powi.v4f64.i32(<4 x double>, i32) #0
 
 ; Replacement should not take place if the vector length
 ; does not match exactly.

@@ -1009,7 +1009,7 @@ entry:
   ret void
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define void @fpowi() {
 ; MIPS32-LABEL: fpowi:
@@ -1073,7 +1073,7 @@ entry:
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %powi = call float @llvm.powi.f32(float %1, i32 2)
+  %powi = call float @llvm.powi.f32.i32(float %1, i32 2)
 
 
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)
@@ -1184,7 +1184,7 @@ entry:
   %1 = call float @llvm.convert.from.fp16.f32(i16 %0)
 
 
-  %powi = call float @llvm.powi.f32(float %1, i32 %var)
+  %powi = call float @llvm.powi.f32.i32(float %1, i32 %var)
 
 
   %2 = call i16 @llvm.convert.to.fp16.f32(float %powi)

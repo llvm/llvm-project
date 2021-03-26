@@ -104,3 +104,24 @@ unsigned long long byteswap64(unsigned long long x) {
 
 // CHECK: define{{.*}} i64 @byteswap64
 // CHECK: i64 @llvm.bswap.i64(i64
+
+double powi(double x, int y) {
+  return __builtin_powi(x, y);
+}
+
+// CHECK: define{{.*}} float @powi
+// CHECK: float @llvm.powi.f32.i16(float %0, i16 %1)
+
+float powif(float x, int y) {
+    return __builtin_powif(x, y);
+}
+
+// CHECK: define{{.*}} float @powif
+// CHECK: float @llvm.powi.f32.i16(float %0, i16 %1)
+
+long double powil(long double x, int y) {
+    return __builtin_powil(x, y);
+}
+
+// CHECK: define{{.*}} float @powil
+// CHECK: float @llvm.powi.f32.i16(float %0, i16 %1)

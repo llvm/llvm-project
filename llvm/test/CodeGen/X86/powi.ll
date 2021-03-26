@@ -49,7 +49,7 @@ define double @pow_wrapper(double %a) nounwind readonly ssp noredzone {
 ; X64-NEXT:    mulsd %xmm0, %xmm1
 ; X64-NEXT:    movapd %xmm1, %xmm0
 ; X64-NEXT:    retq
-  %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
+  %ret = tail call double @llvm.powi.f64.i32(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret
 }
 
@@ -82,7 +82,7 @@ define double @pow_wrapper_optsize(double %a) optsize {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $15, %edi
 ; X64-NEXT:    jmp __powidf2@PLT # TAILCALL
-  %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
+  %ret = tail call double @llvm.powi.f64.i32(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret
 }
 
@@ -115,7 +115,7 @@ define double @pow_wrapper_pgso(double %a) !prof !14 {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $15, %edi
 ; X64-NEXT:    jmp __powidf2@PLT # TAILCALL
-  %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
+  %ret = tail call double @llvm.powi.f64.i32(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret
 }
 
@@ -151,11 +151,11 @@ define double @pow_wrapper_minsize(double %a) minsize {
 ; X64-NEXT:    popq %rdi
 ; X64-NEXT:    .cfi_adjust_cfa_offset -8
 ; X64-NEXT:    jmp __powidf2@PLT # TAILCALL
-  %ret = tail call double @llvm.powi.f64(double %a, i32 15) nounwind ; <double> [#uses=1]
+  %ret = tail call double @llvm.powi.f64.i32(double %a, i32 15) nounwind ; <double> [#uses=1]
   ret double %ret
 }
 
-declare double @llvm.powi.f64(double, i32) nounwind readonly
+declare double @llvm.powi.f64.i32(double, i32) nounwind readonly
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

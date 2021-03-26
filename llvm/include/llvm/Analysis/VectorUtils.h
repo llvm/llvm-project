@@ -317,6 +317,11 @@ bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
 
+/// Identifies if the vector form of the intrinsic has a scalar operand that has
+/// an overloaded type.
+bool hasVectorInstrinsicOverloadedScalarOpd(Intrinsic::ID ID,
+                                            unsigned ScalarOpdIdx);
+
 /// Returns intrinsic ID for call.
 /// For the input call instruction it finds mapping intrinsic and returns
 /// its intrinsic ID, in case it does not found it return not_intrinsic.

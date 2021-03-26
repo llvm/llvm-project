@@ -30,7 +30,7 @@ define double @sqrt_f64(double %a) nounwind {
   ret double %1
 }
 
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 
 define double @powi_f64(double %a, i32 %b) nounwind {
 ; RV32IFD-LABEL: powi_f64:
@@ -51,7 +51,7 @@ define double @powi_f64(double %a, i32 %b) nounwind {
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    addi sp, sp, 16
 ; RV64IFD-NEXT:    ret
-  %1 = call double @llvm.powi.f64(double %a, i32 %b)
+  %1 = call double @llvm.powi.f64.i32(double %a, i32 %b)
   ret double %1
 }
 

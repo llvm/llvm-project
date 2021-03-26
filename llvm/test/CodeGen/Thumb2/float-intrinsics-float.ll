@@ -15,12 +15,12 @@ define float @sqrt_f(float %a) {
   ret float %1
 }
 
-declare float     @llvm.powi.f32(float %Val, i32 %power)
+declare float     @llvm.powi.f32.i32(float %Val, i32 %power)
 define float @powi_f(float %a, i32 %b) {
 ; CHECK-LABEL: powi_f:
 ; SOFT: bl __powisf2
 ; HARD: b __powisf2
-  %1 = call float @llvm.powi.f32(float %a, i32 %b)
+  %1 = call float @llvm.powi.f32.i32(float %a, i32 %b)
   ret float %1
 }
 

@@ -1141,7 +1141,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-declare double @llvm.powi.f64(double %Val, i32 %power) nounwind readnone
+declare double @llvm.powi.f64.i32(double %Val, i32 %power) nounwind readnone
 
 ;CHECK-LABEL: @powi_f64(
 ;CHECK: llvm.powi.v4f64
@@ -1155,7 +1155,7 @@ for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds double, double* %y, i64 %indvars.iv
   %0 = load double, double* %arrayidx, align 8
-  %call = tail call double @llvm.powi.f64(double %0, i32  %P) nounwind readnone
+  %call = tail call double @llvm.powi.f64.i32(double %0, i32  %P) nounwind readnone
   %arrayidx4 = getelementptr inbounds double, double* %x, i64 %indvars.iv
   store double %call, double* %arrayidx4, align 8
   %indvars.iv.next = add i64 %indvars.iv, 1
@@ -1180,7 +1180,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds double, double* %y, i64 %indvars.iv
   %0 = load double, double* %arrayidx, align 8
   %1 = trunc i64 %indvars.iv to i32
-  %call = tail call double @llvm.powi.f64(double %0, i32  %1) nounwind readnone
+  %call = tail call double @llvm.powi.f64.i32(double %0, i32  %1) nounwind readnone
   %arrayidx4 = getelementptr inbounds double, double* %x, i64 %indvars.iv
   store double %call, double* %arrayidx4, align 8
   %indvars.iv.next = add i64 %indvars.iv, 1
