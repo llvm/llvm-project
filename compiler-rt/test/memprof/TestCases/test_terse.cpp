@@ -8,7 +8,7 @@
 // RUN: %clangxx_memprof -DFREE -O0 %s -o %t
 // RUN: %env_memprof_opts=log_path=stderr:print_terse=1 %run %t 2>&1 | FileCheck %s
 
-// CHECK: MIB:[[STACKID:[0-9]+]]/1/40.00/40/40/20.00/20/20/[[AVELIFETIME:[0-9]+]].00/[[AVELIFETIME]]/[[AVELIFETIME]]/0/0/0/0
+// CHECK: MIB:[[STACKID:[0-9]+]]/1/40.00/40/40/20.00/20/20/[[AVELIFETIME:[0-9]+]].00/[[AVELIFETIME]]/[[AVELIFETIME]]/{{[01]}}/0/0/0
 // CHECK: Stack for id [[STACKID]]:
 // CHECK-NEXT: #0 {{.*}} in operator new
 // CHECK-NEXT: #1 {{.*}} in main {{.*}}:[[@LINE+6]]
