@@ -532,7 +532,10 @@ def MULADD_UINT24_eg : R600_3OP <0x10, "MULADD_UINT24",
 def : UMad24Pat<MULADD_UINT24_eg>;
 
 def BIT_ALIGN_INT_eg : R600_3OP <0xC, "BIT_ALIGN_INT", [], VecALU>;
-def : FSHRPattern <BIT_ALIGN_INT_eg>;
+def : AMDGPUPat <
+  (fshr i32:$src0, i32:$src1, i32:$src2),
+  (BIT_ALIGN_INT_eg $src0, $src1, $src2)
+>;
 def : ROTRPattern <BIT_ALIGN_INT_eg>;
 def MULADD_eg : MULADD_Common<0x14>;
 def MULADD_IEEE_eg : MULADD_IEEE_Common<0x18>;
