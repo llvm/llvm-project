@@ -217,6 +217,46 @@ static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+/// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
+/// supported and beneficial to do so.
+///
+/// \note This only applies on Darwin.
+///
+/// \returns true if \p MI was replaced with a G_BZERO.
+static bool tryEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                         bool MinSize) {
+  assert(MI.getOpcode() == TargetOpcode::G_MEMSET);
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  if (!TLI.getLibcallName(RTLIB::BZERO))
+    return false;
+  auto Zero = getConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI);
+  if (!Zero || Zero->Value.getSExtValue() != 0)
+    return false;
+
+  // It's not faster to use bzero rather than memset for sizes <= 256.
+  // However, it *does* save us a mov from wzr, so if we're going for
+  // minsize, use bzero even if it's slower.
+  if (!MinSize) {
+    // If the size is known, check it. If it is not known, assume using bzero is
+    // better.
+    if (auto Size =
+            getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI)) {
+      if (Size->Value.getSExtValue() <= 256)
+        return false;
+    }
+  }
+
+  MIRBuilder.setInstrAndDebugLoc(MI);
+  MIRBuilder
+      .buildInstr(TargetOpcode::G_BZERO, {},
+                  {MI.getOperand(0), MI.getOperand(2)})
+      .addImm(MI.getOperand(3).getImm())
+      .addMemOperand(*MI.memoperands_begin());
+  MI.eraseFromParent();
+  return true;
+}
+
 class AArch64PreLegalizerCombinerHelperState {
 protected:
   CombinerHelper &Helper;
@@ -263,7 +303,8 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   if (Generated.tryCombineAll(Observer, MI, B))
     return true;
 
-  switch (MI.getOpcode()) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
   case TargetOpcode::G_CONCAT_VECTORS:
     return Helper.tryCombineConcatVectors(MI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
@@ -275,7 +316,11 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
     // heuristics decide.
     unsigned MaxLen = EnableOpt ? 0 : 32;
     // Try to inline memcpy type calls if optimizations are enabled.
-    return !EnableMinSize ? Helper.tryCombineMemCpyFamily(MI, MaxLen) : false;
+    if (!EnableMinSize && Helper.tryCombineMemCpyFamily(MI, MaxLen))
+      return true;
+    if (Opc == TargetOpcode::G_MEMSET)
+      return tryEmitBZero(MI, B, EnableMinSize);
+    return false;
   }
   }
 

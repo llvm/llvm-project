@@ -1509,26 +1509,28 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_BZERO:
   case TargetOpcode::G_MEMSET: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
+    std::string Name = Opc == TargetOpcode::G_MEMSET ? "memset" : "bzero";
     if (MMOs.size() != 1) {
-      report("memset must have 1 memory operand", MI);
+      report(Twine(Name, " must have 1 memory operand"), MI);
       break;
     }
 
     if ((!MMOs[0]->isStore() || MMOs[0]->isLoad())) {
-      report("memset memory operand must be a store", MI);
+      report(Twine(Name, " memory operand must be a store"), MI);
       break;
     }
 
     LLT DstPtrTy = MRI->getType(MI->getOperand(0).getReg());
     if (!DstPtrTy.isPointer()) {
-      report("memset operand must be a pointer", MI);
+      report(Twine(Name, " operand must be a pointer"), MI);
       break;
     }
 
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
-      report("inconsistent memset address space", MI);
+      report("inconsistent " + Twine(Name, " address space"), MI);
 
     break;
   }
