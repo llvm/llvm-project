@@ -8315,8 +8315,8 @@ bool SwiftASTContext::GetImplicitImports(
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
-  if (!GetCompileUnitImports(swift_ast_context, sc, stack_frame_wp, modules,
-                             error)) {
+  if (!swift_ast_context.GetCompileUnitImports(sc, stack_frame_wp, modules,
+                                               error)) {
     return false;
   }
 
@@ -8388,22 +8388,54 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
 }
 
 bool SwiftASTContext::GetCompileUnitImports(
-    SwiftASTContext &swift_ast_context, SymbolContext &sc,
-    lldb::StackFrameWP &stack_frame_wp,
+    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
+  return GetCompileUnitImportsImpl(sc, stack_frame_wp, &modules, error);
+}
+
+void SwiftASTContext::PerformCompileUnitImports(
+    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp, Status &error) {
+  GetCompileUnitImportsImpl(sc, stack_frame_wp, nullptr, error);
+}
+
+static std::pair<Module *, lldb::user_id_t>
+GetCUSignature(CompileUnit &compile_unit) {
+  return {compile_unit.GetModule().get(), compile_unit.GetID()};
+}
+
+bool SwiftASTContext::GetCompileUnitImportsImpl(
+    SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+    llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+        *modules,
+    Status &error) {
+  CompileUnit *compile_unit = sc.comp_unit;
+  if (compile_unit)
+    // Check the cache if this compile unit's imports were previously
+    // requested.  If the caller didn't request the list of imported
+    // modules then there is nothing left to do for subsequent
+    // GetCompileUnitImportsImpl() calls as the previously loaded
+    // modules should still be loaded.  The fact the we
+    // unconditionally return true does not matter because the only
+    // way to get here is through void PerformCompileUnitImports(),
+    // which discards the return value.
+    if (!m_cu_imports.insert(GetCUSignature(*compile_unit)).second)
+      // List of imports isn't requested and we already processed this CU?
+      if (!modules)
+        return true;
+
   // Import the Swift standard library and its dependencies.
   SourceModule swift_module;
   swift_module.path.emplace_back("Swift");
   auto *stdlib =
-      LoadOneModule(swift_module, swift_ast_context, stack_frame_wp, error);
+      LoadOneModule(swift_module, *this, stack_frame_wp, error);
   if (!stdlib)
     return false;
 
-  modules.emplace_back(swift::ImportedModule(stdlib));
+  if (modules)
+    modules->emplace_back(swift::ImportedModule(stdlib));
 
-  CompileUnit *compile_unit = sc.comp_unit;
   if (!compile_unit || compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
     return true;
 
@@ -8418,11 +8450,12 @@ bool SwiftASTContext::GetCompileUnitImports(
       continue;
 
     auto *loaded_module =
-        LoadOneModule(module, swift_ast_context, stack_frame_wp, error);
+        LoadOneModule(module, *this, stack_frame_wp, error);
     if (!loaded_module)
       return false;
 
-    modules.emplace_back(swift::ImportedModule(loaded_module));
+    if (modules)
+      modules->emplace_back(swift::ImportedModule(loaded_module));
   }
   return true;
 }

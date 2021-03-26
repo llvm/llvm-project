@@ -2557,10 +2557,7 @@ llvm::Optional<SwiftASTContextReader> Target::GetScratchSwiftASTContext(
       !swift_ast_ctx->HasFatalErrors()) {
     StackFrameWP frame_wp(frame_sp);
     SymbolContext sc = frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
-    llvm::SmallVector<swift::AttributedImport<swift::ImportedModule>, 16>
-        modules;
-    swift_ast_ctx->GetCompileUnitImports(*swift_ast_ctx, sc, frame_wp, modules,
-                                         error);
+    swift_ast_ctx->PerformCompileUnitImports(sc, frame_wp, error);
   }
 
   if (!swift_ast_ctx)

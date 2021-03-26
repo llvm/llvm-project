@@ -773,15 +773,26 @@ public:
                                lldb::StackFrameWP &stack_frame_wp,
                                swift::SourceFile &source_file, Status &error);
 
-  /// Retrieve the modules imported by the compilation unit.
-  static bool GetCompileUnitImports(
-      SwiftASTContext &swift_ast_context, SymbolContext &sc,
-      lldb::StackFrameWP &stack_frame_wp,
+  /// Retrieve/import the modules imported by the compilation
+  /// unit. Early-exists with false if there was an import failure.
+  bool GetCompileUnitImports(
+      SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           &modules,
       Status &error);
 
+  /// Perform all the implicit imports for the current frame.
+  void PerformCompileUnitImports(SymbolContext &sc,
+                                 lldb::StackFrameWP &stack_frame_wp,
+                                 Status &error);
+
 protected:
+  bool GetCompileUnitImportsImpl(
+      SymbolContext &sc, lldb::StackFrameWP &stack_frame_wp,
+      llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
+          *modules,
+      Status &error);
+
   /// This map uses the string value of ConstStrings as the key, and the
   /// TypeBase
   /// * as the value. Since the ConstString strings are uniqued, we can use
@@ -867,6 +878,8 @@ protected:
   /// respective result (true = loaded, false = failed to load).
   std::unordered_map<detail::SwiftLibraryLookupRequest, bool>
       library_load_cache;
+  /// A cache for GetCompileUnitImports();
+  llvm::DenseSet<std::pair<Module *, lldb::user_id_t>> m_cu_imports;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
