@@ -3871,9 +3871,9 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(<8 x i64>* %p0) "min-legal-vector-width
 ; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpand %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -4274,9 +4274,9 @@ define void @trunc_packus_v8i64_v8i8_store(<8 x i64>* %p0, <8 x i8> *%p1) "min-l
 ; AVX2-NEXT:    vpcmpgtq %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpand %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovq %xmm0, (%rsi)
 ; AVX2-NEXT:    vzeroupper

@@ -16,6 +16,7 @@ else:
 
 
 _verbose = False
+_prefix_filecheck_ir_name = ''
 
 def parse_commandline_args(parser):
   parser.add_argument('--include-generated-funcs', action='store_true',
@@ -32,6 +33,8 @@ def parse_commandline_args(parser):
                       help='Deactivate CHECK line generation from this point forward')
   parser.add_argument('--replace-function-regex', nargs='+', default=[],
                       help='List of regular expressions to replace matching function names')
+  parser.add_argument('--prefix-filecheck-ir-name', default='',
+                      help='Add a prefix to FileCheck IR value names to avoid conflicts with scripted names')
   args = parser.parse_args()
   global _verbose
   _verbose = args.verbose
@@ -53,6 +56,9 @@ class TestInfo(object):
     self.argparse_callback = argparse_callback
     self.path = test
     self.args = args
+    if args.prefix_filecheck_ir_name:
+      global _prefix_filecheck_ir_name
+      _prefix_filecheck_ir_name = args.prefix_filecheck_ir_name
     self.argv = argv
     self.input_lines = input_lines
     self.run_lines = find_run_lines(test, self.input_lines)
@@ -512,11 +518,21 @@ def is_local_def_ir_value_match(match):
 def is_global_scope_ir_value_match(match):
     return nameless_values[get_idx_from_ir_value_match(match)].global_ir_prefix is not None
 
+# Return true if var clashes with the scripted FileCheck check_prefix.
+def may_clash_with_default_check_prefix_name(check_prefix, var):
+  return check_prefix and re.match(r'^' + check_prefix + r'[0-9]+?$', var, re.IGNORECASE)
+
 # Create a FileCheck variable name based on an IR name.
 def get_value_name(var, check_prefix):
   var = var.replace('!', '')
+  # This is a nameless value, prepend check_prefix.
   if var.isdigit():
     var = check_prefix + var
+  else:
+    # This is a named value that clashes with the check_prefix, prepend with _prefix_filecheck_ir_name,
+    # if it has been defined.
+    if may_clash_with_default_check_prefix_name(check_prefix, var) and _prefix_filecheck_ir_name:
+      var = _prefix_filecheck_ir_name + var
   var = var.replace('.', '_')
   var = var.replace('-', '_')
   return var.upper()
@@ -546,8 +562,9 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
     pre, check = get_ir_prefix_from_ir_value_match(match)
     var = get_name_from_ir_value_match(match)
     for nameless_value in nameless_values:
-        if nameless_value.check_prefix and re.match(r'^' + nameless_value.check_prefix + r'[0-9]+?$', var, re.IGNORECASE):
-            warn("Change IR value name '%s' to prevent possible conflict with scripted FileCheck name." % (var,))
+        if may_clash_with_default_check_prefix_name(nameless_value.check_prefix, var):
+          warn("Change IR value name '%s' or use -prefix-ir-filecheck-name to prevent possible conflict"
+            " with scripted FileCheck name." % (var,))
     key = (var, get_check_key_from_ir_value_match(match))
     is_local_def = is_local_def_ir_value_match(match)
     if is_local_def and key in vars_seen:

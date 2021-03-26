@@ -43213,35 +43213,41 @@ static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
   SDValue N1 = N->getOperand(1);
   EVT SrcVT = N0.getValueType();
 
+  SDValue BC0 = peekThroughBitcasts(N0);
+  SDValue BC1 = peekThroughBitcasts(N1);
+
   // Attempt to fold HOP(LOSUBVECTOR(SHUFFLE(X)),HISUBVECTOR(SHUFFLE(X)))
   // to SHUFFLE(HOP(LOSUBVECTOR(X),HISUBVECTOR(X))), this is mainly for
   // truncation trees that help us avoid lane crossing shuffles.
   // TODO: There's a lot more we can do for PACK/HADD style shuffle combines.
   // TODO: We don't handle vXf64 shuffles yet.
-  if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-      N0.getConstantOperandAPInt(1) == 0 &&
-      N1.getConstantOperandAPInt(1) == SrcVT.getVectorNumElements() &&
-      N0.getOperand(0) == N1.getOperand(0) && VT.is128BitVector() &&
-      N0.getOperand(0).getValueType().is256BitVector() &&
-      SrcVT.getScalarSizeInBits() <= 32) {
-    // TODO - support target/faux shuffles.
-    SDValue Vec = peekThroughBitcasts(N0.getOperand(0));
-    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(Vec)) {
+  if (VT.is128BitVector() && SrcVT.getScalarSizeInBits() <= 32 &&
+      BC0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      BC1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      BC0.getOperand(0) == BC1.getOperand(0) &&
+      BC0.getOperand(0).getValueType().is256BitVector() &&
+      BC0.getConstantOperandAPInt(1) == 0 &&
+      BC1.getConstantOperandAPInt(1) ==
+          BC0.getValueType().getVectorNumElements()) {
+    SmallVector<SDValue> ShuffleOps;
+    SmallVector<int> ShuffleMask, ScaledMask;
+    SDValue Vec = peekThroughBitcasts(BC0.getOperand(0));
+    if (getTargetShuffleInputs(Vec, ShuffleOps, ShuffleMask, DAG)) {
+      resolveTargetShuffleInputsAndMask(ShuffleOps, ShuffleMask);
       // To keep the HOP LHS/RHS coherency, we must be able to scale the unary
-      // shuffle to a vXi64 width - we can probably relax this in the future.
-      SmallVector<int, 4> ShuffleMask;
-      if (SVN->getOperand(1).isUndef() &&
-          scaleShuffleElements(SVN->getMask(), 4, ShuffleMask)) {
+      // shuffle to a v4X64 width - we can probably relax this in the future.
+      if (!isAnyZero(ShuffleMask) && ShuffleOps.size() == 1 &&
+          ShuffleOps[0].getValueType().is256BitVector() &&
+          scaleShuffleElements(ShuffleMask, 4, ScaledMask)) {
         SDLoc DL(N);
         SDValue Lo, Hi;
         MVT ShufVT = VT.isFloatingPoint() ? MVT::v4f32 : MVT::v4i32;
-        std::tie(Lo, Hi) = DAG.SplitVector(SVN->getOperand(0), DL);
-        Lo = DAG.getBitcast(N0.getValueType(), Lo);
-        Hi = DAG.getBitcast(N1.getValueType(), Hi);
+        std::tie(Lo, Hi) = DAG.SplitVector(ShuffleOps[0], DL);
+        Lo = DAG.getBitcast(SrcVT, Lo);
+        Hi = DAG.getBitcast(SrcVT, Hi);
         SDValue Res = DAG.getNode(Opcode, DL, VT, Lo, Hi);
         Res = DAG.getBitcast(ShufVT, Res);
-        Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ShuffleMask);
+        Res = DAG.getVectorShuffle(ShufVT, DL, Res, Res, ScaledMask);
         return DAG.getBitcast(VT, Res);
       }
     }
