@@ -812,6 +812,9 @@ public:
     return GFX8Insts;
   }
 
+  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
+  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
+
   bool hasDPP() const {
     return HasDPP;
   }
