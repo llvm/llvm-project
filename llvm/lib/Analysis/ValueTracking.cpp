@@ -2564,6 +2564,19 @@ static bool isNonEqualMul(const Value *V1, const Value *V2, unsigned Depth,
   return false;
 }
 
+/// Return true if V2 == V1 << C, where V1 is known non-zero, C is not 0 and
+/// the shift is nuw or nsw.
+static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
+                          const Query &Q) {
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
+    const APInt *C;
+    return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
+           (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
+           !C->isNullValue() && isKnownNonZero(V1, Depth + 1, Q);
+  }
+  return false;
+}
+
 static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
                            unsigned Depth, const Query &Q) {
   // Check two PHIs are in same block.
@@ -2642,6 +2655,20 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                                Depth + 1, Q);
       break;
     }
+    case Instruction::Shl: {
+      // Same as multiplies, with the difference that we don't need to check
+      // for a non-zero multiply. Shifts always multiply by non-zero.
+      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
+        break;
+
+      if (O1->getOperand(1) == O2->getOperand(1))
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    }
     case Instruction::SExt:
     case Instruction::ZExt:
       if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
@@ -2663,6 +2690,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     return true;
 
   if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualShl(V1, V2, Depth, Q) || isNonEqualShl(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
