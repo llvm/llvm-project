@@ -14,7 +14,7 @@ this module). Loose module files can be specified via `--file <filepath>`.
 Sample usage:
   # Dump the YAML op definitions for the core named ops (as in the dialect
   # source tree).
-  python -m mlir.tools.linalg_opdsl.dump_oplib .ops.core_named_ops
+  python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
 
 Note: YAML output is emitted in "document list" format with each operation
 as its own "document". Practically, this means that each operation (or group
