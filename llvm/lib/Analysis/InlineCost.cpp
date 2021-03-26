@@ -675,21 +675,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   bool isCostBenefitAnalysisEnabled() {
+    if (!InlineEnableCostBenefitAnalysis)
+      return false;
+
     if (!PSI || !PSI->hasProfileSummary())
       return false;
 
     if (!GetBFI)
       return false;
-
-    if (InlineEnableCostBenefitAnalysis.getNumOccurrences()) {
-      // Honor the explicit request from the user.
-      if (!InlineEnableCostBenefitAnalysis)
-        return false;
-    } else {
-      // Otherwise, require instrumentation profile.
-      if (!PSI->hasInstrumentationProfile())
-        return false;
-    }
 
     auto *Caller = CandidateCall.getParent()->getParent();
     if (!Caller->getEntryCount())
