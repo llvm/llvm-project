@@ -406,18 +406,24 @@ func @test_transpose(%arg0: tensor<13x21x3xf32>) -> tensor<3x13x21xf32> {
 
 // -----
 // CHECK-LABEL: gather
-func @test_gather(%arg0: tensor<13x21x3xi32>, %arg1: tensor<26xi32>) -> tensor<26x21x3xi32> {
-  %0 = "tosa.gather"(%arg0, %arg1) {axis = 0 : i32, batch_dims = 0 : i64} : (tensor<13x21x3xi32>, tensor<26xi32>) -> tensor<26x21x3xi32>
-  return %0 : tensor<26x21x3xi32>
+func @test_gather(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
+  %0 = "tosa.gather"(%arg0, %arg1) : (tensor<13x21x3xf32>, tensor<13x26xi32>) -> tensor<13x26x3xf32>
+  return %0 : tensor<13x26x3xf32>
 }
 
-// Test TBD
-// DISABLED-CHECK-LABEL: resize
-//func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
-//  %0 = "tosa.const"() {value = dense<64> : tensor<2xi32>} : () -> tensor<2xi32>
-//  %1 = "tosa.resize"(%arg0, %0) {align_corners = false, half_pixel_centers = true} : (tensor<1x32x32x8xf32>, tensor<2xi32>) -> tensor<1x64x64x8xf32>
-//  return %1 : tensor<1x64x64x8xf32>
-//}
+// -----
+// CHECK-LABEL: scatter
+func @test_scatter(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %arg2: tensor<13x26x3xf32>) -> tensor<13x21x3xf32> {
+  %0 = "tosa.scatter"(%arg0, %arg1, %arg2) : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<13x26x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+// CHECK-LABEL: resize
+func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
+  %1 = "tosa.resize"(%arg0) {output_size = [64, 64], stride = [1024, 1024], offset = [0, 0], shift = 10 : i32, stride_fp = [0.0 : f32, 0.0 : f32], offset_fp = [0.0 : f32, 0.0 : f32], mode = "BILINEAR"} : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
+  return %1 : tensor<1x64x64x8xf32>
+}
 
 // -----
 // CHECK-LABEL: cast
