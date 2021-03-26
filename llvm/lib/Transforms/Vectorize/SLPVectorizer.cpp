@@ -7098,10 +7098,9 @@ public:
       // select, we also have to RAUW for the compare instruction feeding the
       // reduction root. That's because the original compare may have extra uses
       // besides the final select of the reduction.
-      if (isa<SelectInst>(ReductionRoot)) {
+      if (auto *ScalarSelect = dyn_cast<SelectInst>(ReductionRoot)) {
         if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
-          Instruction *ScalarCmp =
-              getCmpForMinMaxReduction(cast<Instruction>(ReductionRoot));
+          Instruction *ScalarCmp = getCmpForMinMaxReduction(ScalarSelect);
           ScalarCmp->replaceAllUsesWith(VecSelect->getCondition());
         }
       }
