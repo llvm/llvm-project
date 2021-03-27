@@ -2872,11 +2872,6 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
     addPathIfExists(
         D, LibPath + "/../" + GCCTriple.str() + "/lib" + Multilib.osSuffix(),
                     Paths);
-
-    // See comments above on the multilib variant for details of why this is
-    // only included from within the sysroot.
-    if (StringRef(LibPath).startswith(SysRoot))
-      addPathIfExists(D, LibPath, Paths);
   }
 }
 
