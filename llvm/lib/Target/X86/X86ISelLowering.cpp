@@ -36076,6 +36076,12 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
   if (!isHoriz && !isPack)
     return SDValue();
 
+  // Do all ops have a single use?
+  bool OneUseOps = llvm::all_of(Ops, [](SDValue Op) {
+    return Op.hasOneUse() &&
+           peekThroughBitcasts(Op) == peekThroughOneUseBitcasts(Op);
+  });
+
   int NumElts = VT0.getVectorNumElements();
   int NumLanes = VT0.getSizeInBits() / 128;
   int NumEltsPerLane = NumElts / NumLanes;
@@ -36170,7 +36176,8 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
       scaleShuffleElements(TargetMask128, 2, WideMask128)) {
     assert(isUndefOrZeroOrInRange(WideMask128, 0, 4) && "Illegal shuffle");
     bool SingleOp = (Ops.size() == 1);
-    if (!isHoriz || shouldUseHorizontalOp(SingleOp, DAG, Subtarget)) {
+    if (!isHoriz || OneUseOps ||
+        shouldUseHorizontalOp(SingleOp, DAG, Subtarget)) {
       SDValue Lo = isInRange(WideMask128[0], 0, 2) ? BC0 : BC1;
       SDValue Hi = isInRange(WideMask128[1], 0, 2) ? BC0 : BC1;
       Lo = Lo.getOperand(WideMask128[0] & 1);
@@ -37875,28 +37882,15 @@ static SDValue combineShuffleOfConcatUndef(SDNode *N, SelectionDAG &DAG,
   return DAG.getVectorShuffle(VT, DL, Concat, DAG.getUNDEF(VT), Mask);
 }
 
-/// Eliminate a redundant shuffle of a horizontal math op.
+// Eliminate a redundant shuffle of a horizontal math op.
+// TODO: Merge this into canonicalizeShuffleMaskWithHorizOp.
 static SDValue foldShuffleOfHorizOp(SDNode *N, SelectionDAG &DAG) {
-  // TODO: Can we use getTargetShuffleInputs instead?
   unsigned Opcode = N->getOpcode();
-  if (Opcode != X86ISD::MOVDDUP && Opcode != X86ISD::VBROADCAST)
-    if (Opcode != X86ISD::UNPCKL && Opcode != X86ISD::UNPCKH)
-      if (Opcode != X86ISD::SHUFP)
-        if (Opcode != ISD::VECTOR_SHUFFLE || !N->getOperand(1).isUndef())
-          return SDValue();
+  if (Opcode != X86ISD::UNPCKL && Opcode != X86ISD::UNPCKH)
+    if (Opcode != X86ISD::SHUFP)
+      return SDValue();
 
-  // For a broadcast, peek through an extract element of index 0 to find the
-  // horizontal op: broadcast (ext_vec_elt HOp, 0)
   EVT VT = N->getValueType(0);
-  if (Opcode == X86ISD::VBROADCAST) {
-    SDValue SrcOp = N->getOperand(0);
-    if (SrcOp.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        SrcOp.getValueType() == MVT::f64 &&
-        SrcOp.getOperand(0).getValueType() == VT &&
-        isNullConstant(SrcOp.getOperand(1)))
-      N = SrcOp.getNode();
-  }
-
   SDValue HOp = N->getOperand(0);
   if (HOp.getOpcode() != X86ISD::HADD && HOp.getOpcode() != X86ISD::FHADD &&
       HOp.getOpcode() != X86ISD::HSUB && HOp.getOpcode() != X86ISD::FHSUB)
@@ -37949,67 +37943,6 @@ static SDValue foldShuffleOfHorizOp(SDNode *N, SelectionDAG &DAG) {
     }
     return SDValue();
   }
-
-  // 128-bit horizontal math instructions are defined to operate on adjacent
-  // lanes of each operand as:
-  // v4X32: A[0] + A[1] , A[2] + A[3] , B[0] + B[1] , B[2] + B[3]
-  // ...similarly for v2f64 and v8i16.
-  if (!HOp.getOperand(0).isUndef() && !HOp.getOperand(1).isUndef() &&
-      HOp.getOperand(0) != HOp.getOperand(1))
-    return SDValue();
-
-  // The shuffle that we are eliminating may have allowed the horizontal op to
-  // have an undemanded (undefined) operand. Duplicate the other (defined)
-  // operand to ensure that the results are defined across all lanes without the
-  // shuffle.
-  auto updateHOp = [](SDValue HorizOp, SelectionDAG &DAG) {
-    SDValue X;
-    if (HorizOp.getOperand(0).isUndef()) {
-      assert(!HorizOp.getOperand(1).isUndef() && "Not expecting foldable h-op");
-      X = HorizOp.getOperand(1);
-    } else if (HorizOp.getOperand(1).isUndef()) {
-      assert(!HorizOp.getOperand(0).isUndef() && "Not expecting foldable h-op");
-      X = HorizOp.getOperand(0);
-    } else {
-      return HorizOp;
-    }
-    return DAG.getNode(HorizOp.getOpcode(), SDLoc(HorizOp),
-                       HorizOp.getValueType(), X, X);
-  };
-
-  // When the operands of a horizontal math op are identical, the low half of
-  // the result is the same as the high half. If a target shuffle is also
-  // replicating low and high halves (and without changing the type/length of
-  // the vector), we don't need the shuffle.
-  if (Opcode == X86ISD::MOVDDUP || Opcode == X86ISD::VBROADCAST) {
-    if (HOp.getScalarValueSizeInBits() == 64 && HOp.getValueType() == VT) {
-      // movddup (hadd X, X) --> hadd X, X
-      // broadcast (extract_vec_elt (hadd X, X), 0) --> hadd X, X
-      assert((HOp.getValueType() == MVT::v2f64 ||
-              HOp.getValueType() == MVT::v4f64) && "Unexpected type for h-op");
-      return updateHOp(HOp, DAG);
-    }
-    return SDValue();
-  }
-
-  // shuffle (hadd X, X), undef, [low half...high half] --> hadd X, X
-  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
-
-  // TODO: Other mask possibilities like {1,1} and {1,0} could be added here,
-  // but this should be tied to whatever horizontal op matching and shuffle
-  // canonicalization are producing.
-  if (HOp.getValueSizeInBits() == 128 &&
-      (isShuffleEquivalent(Mask, {0, 0}) ||
-       isShuffleEquivalent(Mask, {0, 1, 0, 1}) ||
-       isShuffleEquivalent(Mask, {0, 1, 2, 3, 0, 1, 2, 3})))
-    return updateHOp(HOp, DAG);
-
-  if (HOp.getValueSizeInBits() == 256 &&
-      (isShuffleEquivalent(Mask, {0, 0, 2, 2}) ||
-       isShuffleEquivalent(Mask, {0, 1, 0, 1, 4, 5, 4, 5}) ||
-       isShuffleEquivalent(
-           Mask, {0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 8, 9, 10, 11})))
-    return updateHOp(HOp, DAG);
 
   return SDValue();
 }
