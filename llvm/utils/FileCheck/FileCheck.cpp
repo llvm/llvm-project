@@ -380,7 +380,7 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
   struct CompareSMLoc {
-    bool operator()(const SMLoc &LHS, const SMLoc &RHS) {
+    bool operator()(const SMLoc &LHS, const SMLoc &RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
