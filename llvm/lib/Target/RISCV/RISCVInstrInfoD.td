@@ -82,16 +82,16 @@ def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
           Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_D  : FPFMAD_rrr_frm<OPC_MADD, "fmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMADD_D, "fmadd.d">;
 def FMSUB_D  : FPFMAD_rrr_frm<OPC_MSUB, "fmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMSUB_D, "fmsub.d">;
 def FNMSUB_D : FPFMAD_rrr_frm<OPC_NMSUB, "fnmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMSUB_D, "fnmsub.d">;
 def FNMADD_D : FPFMAD_rrr_frm<OPC_NMADD, "fnmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMADD_D, "fnmadd.d">;
 
 def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">,

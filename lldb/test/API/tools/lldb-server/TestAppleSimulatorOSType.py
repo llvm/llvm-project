@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 import json
 import platform
+import re
 
 @skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
@@ -140,5 +141,4 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfRemote
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform_name='watchos',
-                                    arch='i386')
+                                    platform_name='watchos')

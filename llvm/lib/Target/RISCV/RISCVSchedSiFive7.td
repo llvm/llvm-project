@@ -103,8 +103,7 @@ def : WriteRes<WriteAtomicLDD, [SiFive7PipeA]>;
 let Latency = 5 in {
 def : WriteRes<WriteFALU32, [SiFive7PipeB]>;
 def : WriteRes<WriteFMul32, [SiFive7PipeB]>;
-def : WriteRes<WriteFMulAdd32, [SiFive7PipeB]>;
-def : WriteRes<WriteFMulSub32, [SiFive7PipeB]>;
+def : WriteRes<WriteFMA32, [SiFive7PipeB]>;
 }
 let Latency = 3 in {
 def : WriteRes<WriteFSGNJ32, [SiFive7PipeB]>;
@@ -120,8 +119,7 @@ def : WriteRes<WriteFSqrt32, [SiFive7PipeB, SiFive7FDiv]> { let Latency = 27;
 let Latency = 7 in {
 def : WriteRes<WriteFALU64, [SiFive7PipeB]>;
 def : WriteRes<WriteFMul64, [SiFive7PipeB]>;
-def : WriteRes<WriteFMulAdd64, [SiFive7PipeB]>;
-def : WriteRes<WriteFMulSub64, [SiFive7PipeB]>;
+def : WriteRes<WriteFMA64, [SiFive7PipeB]>;
 }
 let Latency = 3 in {
 def : WriteRes<WriteFSGNJ64, [SiFive7PipeB]>;
@@ -191,11 +189,9 @@ def : ReadAdvance<ReadFMemBase, 0>;
 def : ReadAdvance<ReadFALU32, 0>;
 def : ReadAdvance<ReadFALU64, 0>;
 def : ReadAdvance<ReadFMul32, 0>;
-def : ReadAdvance<ReadFMulAdd32, 0>;
-def : ReadAdvance<ReadFMulSub32, 0>;
+def : ReadAdvance<ReadFMA32, 0>;
 def : ReadAdvance<ReadFMul64, 0>;
-def : ReadAdvance<ReadFMulAdd64, 0>;
-def : ReadAdvance<ReadFMulSub64, 0>;
+def : ReadAdvance<ReadFMA64, 0>;
 def : ReadAdvance<ReadFDiv32, 0>;
 def : ReadAdvance<ReadFDiv64, 0>;
 def : ReadAdvance<ReadFSqrt32, 0>;
@@ -238,9 +234,8 @@ def : WriteRes<WriteFCvtF16ToI32, []>;
 def : WriteRes<WriteFDiv16, []>;
 def : WriteRes<WriteFCmp16, []>;
 def : WriteRes<WriteFLD16, []>;
-def : WriteRes<WriteFMulAdd16, []>;
+def : WriteRes<WriteFMA16, []>;
 def : WriteRes<WriteFMinMax16, []>;
-def : WriteRes<WriteFMulSub16, []>;
 def : WriteRes<WriteFMul16, []>;
 def : WriteRes<WriteFMovI16ToF16, []>;
 def : WriteRes<WriteFMovF16ToI16, []>;
@@ -260,9 +255,8 @@ def : ReadAdvance<ReadFCvtF16ToF32, 0>;
 def : ReadAdvance<ReadFCvtF16ToI32, 0>;
 def : ReadAdvance<ReadFDiv16, 0>;
 def : ReadAdvance<ReadFCmp16, 0>;
-def : ReadAdvance<ReadFMulAdd16, 0>;
+def : ReadAdvance<ReadFMA16, 0>;
 def : ReadAdvance<ReadFMinMax16, 0>;
-def : ReadAdvance<ReadFMulSub16, 0>;
 def : ReadAdvance<ReadFMul16, 0>;
 def : ReadAdvance<ReadFMovI16ToF16, 0>;
 def : ReadAdvance<ReadFMovF16ToI16, 0>;
