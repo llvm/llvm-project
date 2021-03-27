@@ -264,5 +264,17 @@ define void @test_shl_nsw_sext(i8* %p, i32 %x) {
   ret void
 }
 
+; CHECK-LABEL: Function: test_implicit_sext
+; CHECK: MustAlias: i8* %p.1, i8* %p.2
+; TODO: Should be MayAlias.
+define void @test_implicit_sext(i8* %p, i32 %x) {
+  %add = add i32 %x, 1
+  %ext = sext i32 %x to i64
+  %ext.add = add i64 %ext, 1
+  %p.1 = getelementptr i8, i8* %p, i32 %add
+  %p.2 = getelementptr i8, i8* %p, i64 %ext.add
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare noalias i8* @malloc(i64)

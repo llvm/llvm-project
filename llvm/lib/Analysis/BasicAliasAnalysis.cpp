@@ -237,6 +237,9 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
     unsigned &SExtBits, const DataLayout &DL, unsigned Depth,
     AssumptionCache *AC, DominatorTree *DT, bool &NSW, bool &NUW) {
   assert(V->getType()->isIntegerTy() && "Not an integer value");
+  // TODO: SExtBits can be non-zero on entry.
+  assert(Scale == 0 && Offset == 0 && ZExtBits == 0 && NSW == true &&
+         NUW == true && "Incorrect default values");
 
   // Limit our recursion depth.
   if (Depth == 6) {
@@ -251,7 +254,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
     // than the constant's (the Offset's always as wide as the outermost call),
     // so we'll zext here and process any extension in the isa<SExtInst> &
     // isa<ZExtInst> cases below.
-    Offset += Const->getValue().zextOrSelf(Offset.getBitWidth());
+    Offset = Const->getValue().zextOrSelf(Offset.getBitWidth());
     assert(Scale == 0 && "Constant values don't have a scale");
     return V;
   }
