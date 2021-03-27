@@ -236,6 +236,11 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   if (!m_die_array.empty()) {
+    // The last die cannot have children (if it did, it wouldn't be the last one).
+    // This only makes a difference for malformed dwarf that does not have a
+    // terminating null die.
+    m_die_array.back().SetHasChildren(false);
+
     if (m_first_die) {
       // Only needed for the assertion.
       m_first_die.SetHasChildren(m_die_array.front().HasChildren());
