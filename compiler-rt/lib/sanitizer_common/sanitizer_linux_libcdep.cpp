@@ -420,7 +420,15 @@ static void GetTls(uptr *addr, uptr *size) {
 #else
   if (SANITIZER_GLIBC)
     *size += 1664;
-#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#if defined(__powerpc64__)
+  // TODO Figure out why *addr may be zero and use TlsPreTcbSize.
+  void *ptr = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  uptr tls_size, tls_align;
+  ((void (*)(size_t *, size_t *))ptr)(&tls_size, &tls_align);
+  asm("addi %0,13,-0x7000" : "=r"(*addr));
+  *addr -= TlsPreTcbSize();
+  *size = RoundUpTo(tls_size + TlsPreTcbSize(), 16);
+#elif defined(__mips__) || SANITIZER_RISCV64
   const uptr pre_tcb_size = TlsPreTcbSize();
   *addr -= pre_tcb_size;
   *size += pre_tcb_size;
