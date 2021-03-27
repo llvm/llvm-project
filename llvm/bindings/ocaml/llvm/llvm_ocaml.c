@@ -279,18 +279,14 @@ CAMLprim value llvm_is_string_attr(LLVMAttributeRef A) {
 CAMLprim value llvm_get_string_attr_kind(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeKind(A, &Length);
-  value Result = caml_alloc_string(Length);
-  memcpy((char *)String_val(Result), String, Length);
-  return Result;
+  return cstr_to_string (String, Length);
 }
 
 /* llattribute -> string */
 CAMLprim value llvm_get_string_attr_value(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeValue(A, &Length);
-  value Result = caml_alloc_string(Length);
-  memcpy((char *)String_val(Result), String, Length);
-  return Result;
+  return cstr_to_string (String, Length);
 }
 
 /*===-- Modules -----------------------------------------------------------===*/
@@ -2512,11 +2508,9 @@ CAMLprim LLVMMemoryBufferRef llvm_memorybuffer_of_string(value Name, value Strin
 
 /* llmemorybuffer -> string */
 CAMLprim value llvm_memorybuffer_as_string(LLVMMemoryBufferRef MemBuf) {
-  value String = caml_alloc_string(LLVMGetBufferSize(MemBuf));
-  memcpy((char *)String_val(String), LLVMGetBufferStart(MemBuf),
-         LLVMGetBufferSize(MemBuf));
-
-  return String;
+  size_t BufferSize = LLVMGetBufferSize(MemBuf);
+  const char *BufferStart = LLVMGetBufferStart(MemBuf);
+  return cstr_to_string(BufferStart, BufferSize);
 }
 
 /* llmemorybuffer -> unit */
