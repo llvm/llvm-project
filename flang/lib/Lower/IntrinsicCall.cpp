@@ -1367,8 +1367,14 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
   // Call the descriptor-based Index implementation
   auto string = builder.createBox(loc, args[0]);
   auto substring = builder.createBox(loc, args[1]);
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    auto temp = builder.createTemporary(loc, builder.getI1Type());
+    auto castb = builder.createConvert(loc, builder.getI1Type(), b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
   auto backOpt = fir::isUnboxedValue(args[2])
-                     ? builder.createBox(loc, args[2])
+                     ? makeRefThenEmbox(*args[2].getUnboxed())
                      : builder.create<fir::AbsentOp>(
                            loc, fir::BoxType::get(builder.getI1Type()));
   auto kindVal = fir::isUnboxedValue(args[3])
@@ -1377,24 +1383,22 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
                            loc, builder.getIndexType(),
                            builder.getKindMap().defaultIntegerKind());
   // Create mutable fir.box to be passed to the runtime for the result.
-  auto resultMutableBox =
-      Fortran::lower::createTempMutableBox(builder, loc, resultType);
-  auto resultIrBox =
-      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+  auto mutBox = Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resBox = Fortran::lower::getMutableIRBox(builder, loc, mutBox);
   // Call runtime. The runtime is allocating the result.
-  Fortran::lower::genIndexDescriptor(builder, loc, resultIrBox, string,
-                                     substring, backOpt, kindVal);
-  // Read result from mutable fir.box and add it to the list of temps to be
-  // finalized by the StatementContext.
-  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
-  return res.match(
-      [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-        addCleanUpForTemp(loc, fir::getBase(box));
-        return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
-      },
-      [&](const auto &) -> fir::ExtendedValue {
-        fir::emitFatalError(loc, "result of INDEX is not a scalar integer");
-      });
+  Fortran::lower::genIndexDescriptor(builder, loc, resBox, string, substring,
+                                     backOpt, kindVal);
+  // Read back the result from the mutable box.
+  return Fortran::lower::genMutableBoxRead(builder, loc, mutBox)
+      .match(
+          [&](const fir::AbstractBox &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
+            return builder.createConvert(loc, resultType, ldVal);
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, "result of INDEX is not a scalar integer");
+          });
 }
 
 // IOR
