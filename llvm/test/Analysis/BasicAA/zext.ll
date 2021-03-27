@@ -265,8 +265,7 @@ define void @test_shl_nsw_sext(i8* %p, i32 %x) {
 }
 
 ; CHECK-LABEL: Function: test_implicit_sext
-; CHECK: MustAlias: i8* %p.1, i8* %p.2
-; TODO: Should be MayAlias.
+; CHECK: MayAlias: i8* %p.1, i8* %p.2
 define void @test_implicit_sext(i8* %p, i32 %x) {
   %add = add i32 %x, 1
   %ext = sext i32 %x to i64
