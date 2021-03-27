@@ -2491,6 +2491,70 @@ public:
     return nullptr;
   }
 
+  /// Get the declared lower bound value of the array `x` in dimension `dim`.
+  /// The argument `one` must be an ssa-value for the constant 1.
+  mlir::Value getLBound(const Fortran::lower::SymbolBox &x, unsigned dim,
+                        mlir::Value one) {
+    auto loc = getLoc();
+    auto getLB = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
+      return box.lboundsAllOne() ? one : box.getLBounds()[dim];
+    };
+    return x.match(
+        [&](const fir::ArrayBoxValue &box) { return getLB(box); },
+        [&](const fir::CharArrayBoxValue &box) { return getLB(box); },
+        [&](const fir::BoxValue &box) { return getLB(box); },
+        [&](const fir::MutableBoxValue &) -> mlir::Value {
+          fir::emitFatalError(loc, "mutable");
+        },
+        [&](const auto &) -> mlir::Value {
+          x.dump();
+          fir::emitFatalError(loc, "not an array");
+        });
+  }
+
+  /// Get the declared upper bound value of the array `x` in dimension `dim`.
+  /// The argument `one` must be an ssa-value for the constant 1.
+  mlir::Value getUBound(const Fortran::lower::SymbolBox &x, unsigned dim,
+                        mlir::Value one) {
+    auto lb = getLBound(x, dim, one);
+    auto loc = getLoc();
+    auto adjustExtent = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
+      auto up = box.getExtents()[dim];
+      auto add = builder.create<mlir::AddIOp>(loc, lb, up);
+      return builder.create<mlir::SubIOp>(loc, add, one);
+    };
+    return x.match(
+        [&](const fir::ArrayBoxValue &box) { return adjustExtent(box); },
+        [&](const fir::CharArrayBoxValue &box) { return adjustExtent(box); },
+        [&](const fir::BoxValue &box) { return adjustExtent(box); },
+        [&](const fir::MutableBoxValue &) -> mlir::Value {
+          fir::emitFatalError(loc, "mutable");
+        },
+        [&](const auto &) -> mlir::Value {
+          x.dump();
+          fir::emitFatalError(loc, "not an array");
+        });
+  }
+
+  /// Return the extent of the boxed array `x` in dimesion `dim`.
+  mlir::Value getExtent(const Fortran::lower::SymbolBox &x, unsigned dim) {
+    auto loc = getLoc();
+    auto getRange = [&](const fir::AbstractArrayBox &box) -> mlir::Value {
+      return box.getExtents()[dim];
+    };
+    return x.match(
+        [&](const fir::ArrayBoxValue &box) { return getRange(box); },
+        [&](const fir::CharArrayBoxValue &box) { return getRange(box); },
+        [&](const fir::BoxValue &box) { return getRange(box); },
+        [&](const fir::MutableBoxValue &) -> mlir::Value {
+          fir::emitFatalError(loc, "mutable");
+        },
+        [&](const auto &) -> mlir::Value {
+          x.dump();
+          fir::emitFatalError(loc, "not an array");
+        });
+  }
+
   /// Array reference with subscripts. Since this has rank > 0, this is a form
   /// of an array section (slice).
   ///
@@ -2504,6 +2568,8 @@ public:
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
+    const auto &arrSym = x.GetFirstSymbol();
+    LLVM_DEBUG(llvm::dbgs() << "array symbol: " << arrSym << '\n');
     PC pc = [=](IterSpace s) { return s; };
     for (auto sub : llvm::enumerate(x.subscript())) {
       std::visit(
@@ -2516,11 +2582,13 @@ public:
                 if (auto optLo = t.lower())
                   trips.push_back(fir::getBase(asScalar(*optLo)));
                 else
-                  TODO(loc, "lbound");
+                  trips.push_back(
+                      getLBound(symMap.lookupSymbol(arrSym), sub.index(), one));
                 if (auto optUp = t.upper())
                   trips.push_back(fir::getBase(asScalar(*optUp)));
                 else
-                  TODO(loc, "ubound");
+                  trips.push_back(
+                      getUBound(symMap.lookupSymbol(arrSym), sub.index(), one));
                 trips.push_back(fir::getBase(asScalar(t.stride())));
               },
               [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &ie) {
@@ -2556,28 +2624,18 @@ public:
                     return newIters;
                   };
                   auto useInexactRange = [&]() {
-                    // FIXME: Just using MAX_INT here as a fallback.
+                    // Get the range of the array in this dimension, [1:n:1].
                     trips.push_back(one);
-                    auto dummy = builder.createIntegerConstant(
-                        loc, idxTy, std::numeric_limits<std::int64_t>::max());
-                    trips.push_back(dummy);
+                    trips.push_back(
+                        getExtent(symMap.lookupSymbol(arrSym), sub.index()));
                     trips.push_back(one);
                   };
                   if (const auto *sym = extractSubscriptSymbol(arrExpr)) {
                     auto symVal = symMap.lookupSymbol(*sym);
                     symVal.match(
                         [&](const fir::ArrayBoxValue &v) {
-                          auto orig = builder.createConvert(
-                              loc, idxTy,
-                              v.getLBounds().empty() ? one : v.getLBounds()[0]);
-                          trips.push_back(orig);
-                          auto extent = builder.createConvert(
-                              loc, idxTy, v.getExtents()[0]);
-                          auto sum = builder.create<mlir::AddIOp>(loc, idxTy,
-                                                                  orig, extent);
-                          mlir::Value ubound = builder.create<mlir::SubIOp>(
-                              loc, idxTy, sum, one);
-                          trips.push_back(ubound);
+                          trips.push_back(getLBound(v, 0, one));
+                          trips.push_back(getUBound(v, 0, one));
                           trips.push_back(one);
                         },
                         [&](auto) { useInexactRange(); });
