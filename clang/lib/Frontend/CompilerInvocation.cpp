@@ -1608,6 +1608,10 @@ void CompilerInvocation::GenerateCodeGenArgs(
   if (!Opts.EmitVersionIdentMetadata)
     GenerateArg(Args, OPT_Qn, SA);
 
+  if (!Opts.SplitColdCode && (Opts.OptimizationLevel > 0) &&
+      (Opts.OptimizeSize != 2))
+    GenerateArg(Args, OPT_fno_split_cold_code, SA);
+
   switch (Opts.FiniteLoops) {
   case CodeGenOptions::FiniteLoopsKind::Language:
     break;
@@ -2100,7 +2104,6 @@ static bool ParseDependencyOutputArgs(DependencyOutputOptions &Opts,
 #include "clang/Driver/Options.inc"
 #undef DEPENDENCY_OUTPUT_OPTION_WITH_MARSHALLING
 
-  Opts.SkipUnusedModuleMaps = Args.hasArg(OPT_skip_unused_modulemap_file_deps);
   if (Args.hasArg(OPT_show_includes)) {
     // Writing both /showIncludes and preprocessor output to stdout
     // would produce interleaved output, so use stderr for /showIncludes.
@@ -2791,11 +2794,6 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       << "ARC migration" << "ObjC migration";
   }
 
-  Opts.IndexStorePath = std::string(Args.getLastArgValue(OPT_index_store_path));
-  Opts.IndexUnitOutputPath = std::string(Args.getLastArgValue(OPT_index_unit_output_path));
-  Opts.IndexIgnoreSystemSymbols = Args.hasArg(OPT_index_ignore_system_symbols);
-  Opts.IndexRecordCodegenName = Args.hasArg(OPT_index_record_codegen_name);
-
   InputKind DashX(Language::Unknown);
   if (const Arg *A = Args.getLastArg(OPT_x)) {
     StringRef XValue = A->getValue();
@@ -3061,9 +3059,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
 
-  Opts.ImplicitModuleMaps = Args.hasFlag(OPT_fimplicit_module_maps,
-                                         OPT_fno_implicit_module_maps, false);
-
   for (const auto *A : Args.filtered(OPT_fmodules_ignore_macro)) {
     StringRef MacroDef = A->getValue();
     Opts.ModulesIgnoreMacros.insert(
@@ -3155,6 +3150,17 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   return Success;
 }
 
+static void GenerateAPINotesArgs(const APINotesOptions &Opts,
+                                 SmallVectorImpl<const char *> &Args,
+                                 CompilerInvocation::StringAllocator SA) {
+  if (!Opts.SwiftVersion.empty())
+    GenerateArg(Args, OPT_fapinotes_swift_version,
+                Opts.SwiftVersion.getAsString(), SA);
+
+  for (const auto &Path : Opts.ModuleSearchPaths)
+    GenerateArg(Args, OPT_iapinotes_modules, Path, SA);
+}
+
 static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
                               DiagnosticsEngine &diags) {
   using namespace options;
@@ -3165,6 +3171,23 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
   }
   for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
     Opts.ModuleSearchPaths.push_back(A->getValue());
+}
+
+static void GeneratePointerAuthArgs(LangOptions &Opts,
+                                    SmallVectorImpl<const char *> &Args,
+                                    CompilerInvocation::StringAllocator SA) {
+  if (Opts.PointerAuthIntrinsics)
+    GenerateArg(Args, OPT_fptrauth_intrinsics, SA);
+  if (Opts.PointerAuthCalls)
+    GenerateArg(Args, OPT_fptrauth_calls, SA);
+  if (Opts.PointerAuthReturns)
+    GenerateArg(Args, OPT_fptrauth_returns, SA);
+  if (Opts.PointerAuthIndirectGotos)
+    GenerateArg(Args, OPT_fptrauth_indirect_gotos, SA);
+  if (Opts.PointerAuthAuthTraps)
+    GenerateArg(Args, OPT_fptrauth_auth_traps, SA);
+  if (Opts.SoftPointerAuth)
+    GenerateArg(Args, OPT_fptrauth_soft, SA);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args) {
@@ -3841,8 +3864,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                              Opts.SYCLIsDevice ||
                              Args.hasArg(OPT_fconvergent_functions);
 
-  Opts.ModulesHashErrorDiags = Args.hasArg(OPT_fmodules_hash_error_diagnostics);
-
   Opts.NoBuiltin = Args.hasArg(OPT_fno_builtin) || Opts.Freestanding;
   if (!Opts.NoBuiltin)
     getAllNoBuiltinFuncValues(Args, Opts.NoBuiltinFuncs);
@@ -3852,8 +3873,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (Opts.FastRelaxedMath)
     Opts.setDefaultFPContractMode(LangOptions::FPM_Fast);
   llvm::sort(Opts.ModuleFeatures);
-  Opts.APINotes = Args.hasArg(OPT_fapinotes);
-  Opts.APINotesModules = Args.hasArg(OPT_fapinotes_modules);
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
@@ -4728,6 +4747,8 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateFrontendArgs(FrontendOpts, Args, SA, LangOpts->IsHeaderFile);
   GenerateTargetArgs(*TargetOpts, Args, SA);
   GenerateHeaderSearchArgs(*HeaderSearchOpts, Args, SA);
+  GenerateAPINotesArgs(APINotesOpts, Args, SA);
+  GeneratePointerAuthArgs(*LangOpts, Args, SA);
 
   InputKind DashX = FrontendOpts.DashX;
   if (DashX.getFormat() == InputKind::Precompiled ||

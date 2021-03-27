@@ -592,13 +592,17 @@ def : Joined<["-"], "objcmt-white-list-dir-path=">, Flags<[CC1Option]>,
     Alias<objcmt_whitelist_dir_path>;
 
 def index_store_path : Separate<["-"], "index-store-path">, Flags<[CC1Option]>,
-  HelpText<"Enable indexing with the specified data store path">;
+  HelpText<"Enable indexing with the specified data store path">,
+  MarshallingInfoString<FrontendOpts<"IndexStorePath">>;
 def index_ignore_system_symbols : Flag<["-"], "index-ignore-system-symbols">, Flags<[CC1Option]>,
-  HelpText<"Ignore symbols from system headers">;
+  HelpText<"Ignore symbols from system headers">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnoreSystemSymbols">>;
 def index_record_codegen_name : Flag<["-"], "index-record-codegen-name">, Flags<[CC1Option]>,
-  HelpText<"Record the codegen name for symbols">;
+  HelpText<"Record the codegen name for symbols">,
+  MarshallingInfoFlag<FrontendOpts<"IndexRecordCodegenName">>;
 def index_unit_output_path : Separate<["-"], "index-unit-output-path">, MetaVarName<"<path>">, Flags<[CC1Option]>,
-  HelpText<"Use <path> as the output path for this compilation unit in the index unit file">;
+  HelpText<"Use <path> as the output path for this compilation unit in the index unit file">,
+  MarshallingInfoString<FrontendOpts<"IndexUnitOutputPath">>;
 
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;
@@ -1220,14 +1224,16 @@ def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     HelpText<"Filename defining the list of functions/files to instrument">,
     MarshallingInfoStringVector<LangOpts<"ProfileListFiles">>;
 
-def fapinotes : Flag<["-"], "fapinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable external API notes support">;
-def fapinotes_modules : Flag<["-"], "fapinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Enable module-based external API notes support">;
-def fno_apinotes : Flag<["-"], "fno-apinotes">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable external API notes support">;
-def fno_apinotes_modules : Flag<["-"], "fno-apinotes-modules">, Group<f_clang_Group>,
-  Flags<[CC1Option]>, HelpText<"Disable module-based external API notes support">;
+defm apinotes : BoolOption<"f", "apinotes",
+  LangOpts<"APINotes">, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[CC1Option], " external API notes support">>,
+  Group<f_clang_Group>;
+defm apinotes_modules : BoolOption<"f", "apinotes-modules",
+  LangOpts<"APINotesModules">, DefaultFalse,
+  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
+  BothFlags<[CC1Option], " module-based external API notes support">>,
+  Group<f_clang_Group>;
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
   HelpText<"Does nothing; API notes are no longer cached separately from modules">;
@@ -2050,10 +2056,10 @@ defm pch_codegen: OptInFFlag<"pch-codegen", "Generate ", "Do not generate ",
 defm pch_debuginfo: OptInFFlag<"pch-debuginfo", "Generate ", "Do not generate ",
   "debug info for types in an object file built from this PCH and do not generate them elsewhere">;
 
-def fimplicit_module_maps : Flag <["-"], "fimplicit-module-maps">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>,
-  HelpText<"Implicitly search the file system for module map files.">,
-  MarshallingInfoFlag<HeaderSearchOpts<"ImplicitModuleMaps">>;
+defm implicit_module_maps : BoolFOption<"implicit-module-maps",
+  HeaderSearchOpts<"ImplicitModuleMaps">, DefaultFalse,
+  PosFlag<SetTrue, [], "Implicitly search the file system for module map files.">,
+  NegFlag<SetFalse>, BothFlags<[NoXarchOption, CC1Option]>>;
 def fmodules_ts : Flag <["-"], "fmodules-ts">, Group<f_Group>,
   Flags<[CC1Option]>, HelpText<"Enable support for the C++ Modules TS">,
   MarshallingInfoFlag<LangOpts<"ModulesTS">>;
@@ -2138,8 +2144,6 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>, Flags<[CC1Option]>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
-def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
-  Flags<[NoXarchOption, CC1Option]>;
 def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module_maps>;
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>,
   Flags<[NoXarchOption]>;
@@ -5171,7 +5175,8 @@ def fmodule_format_EQ : Joined<["-"], "fmodule-format=">,
            "Supported options are 'raw' and 'obj'.">,
   MarshallingInfoString<HeaderSearchOpts<"ModuleFormat">, [{"raw"}]>;
 def fmodules_hash_error_diagnostics : Flag<["-"], "fmodules-hash-error-diagnostics">,
-  HelpText<"Use a separate module cache for modules compiled with conflicting -Werror options">;
+  HelpText<"Use a separate module cache for modules compiled with conflicting -Werror options">,
+  MarshallingInfoFlag<LangOpts<"ModulesHashErrorDiags">>;
 def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
