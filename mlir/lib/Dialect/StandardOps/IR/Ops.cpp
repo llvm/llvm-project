@@ -2181,6 +2181,14 @@ static LogicalResult verify(TruncateIOp op) {
   return success();
 }
 
+OpFoldResult TruncateIOp::fold(ArrayRef<Attribute> operands) {
+  // trunci(zexti(a)) -> a
+  if (matchPattern(getOperand(), m_Op<ZeroExtendIOp>()))
+    return getOperand().getDefiningOp()->getOperand(0);
+
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // UnsignedDivIOp
 //===----------------------------------------------------------------------===//

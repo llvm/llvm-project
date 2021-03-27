@@ -1059,3 +1059,53 @@ func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
   return %2 : tensor<?x?x?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @fold_trunci
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @fold_trunci(%arg0: i1) -> i1 attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : i1
+  %0 = zexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i1
+  return %1 : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_trunci_vector
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
+func @fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi1> attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : vector<4xi1>
+  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = trunci %0 : vector<4xi8> to vector<4xi1>
+  return %1 : vector<4xi1>
+}
+
+// -----
+
+// TODO Canonicalize this into:
+//   zexti %arg0 : i1 to i2
+
+// CHECK-LABEL: func @do_not_fold_trunci
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @do_not_fold_trunci(%arg0: i1) -> i2 attributes {} {
+  // CHECK-NEXT: zexti %[[ARG0]] : i1 to i8
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : i8 to i2
+  // CHECK-NEXT: return %[[RES]] : i2
+  %0 = zexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i2
+  return %1 : i2
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_fold_trunci_vector
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
+func @do_not_fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi2> attributes {} {
+  // CHECK-NEXT: zexti %[[ARG0]] : vector<4xi1> to vector<4xi8>
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : vector<4xi8> to vector<4xi2>
+  // CHECK-NEXT: return %[[RES]] : vector<4xi2>
+  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = trunci %0 : vector<4xi8> to vector<4xi2>
+  return %1 : vector<4xi2>
+}
