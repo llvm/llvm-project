@@ -20,7 +20,9 @@ func sayGeneric<T>(_ msg: T) async {
   print("\(str) after calls - arg \(msg)")
 }
 
-runAsyncAndBlock {
-  await sayGeneric("world")
-  await sayHello()
+@main struct Main {
+  static func main() async {
+    await sayGeneric("world")
+    await sayHello()
+  }
 }

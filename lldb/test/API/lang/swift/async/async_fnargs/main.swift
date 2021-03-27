@@ -11,7 +11,9 @@ func sayGeneric<T>(_ msg: T) async {
   print(msg) // And also here.
 }
 
-runAsyncAndBlock {
-  await sayHello()
-  await sayGeneric("world")
+@main struct Main {
+  static func main() async {
+    await sayHello()
+    await sayGeneric("world")
+  }
 }
