@@ -222,6 +222,52 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//
 
+static const Value *extendLinearExpression(
+    bool SignExt, unsigned NewWidth, const Value *CastOp, const Value *Result,
+    APInt &Scale, APInt &Offset, unsigned &ZExtBits, unsigned &SExtBits,
+    bool &NSW, bool &NUW) {
+  unsigned SmallWidth = CastOp->getType()->getPrimitiveSizeInBits();
+
+  // zext(zext(%x)) == zext(%x), and similarly for sext; we'll handle this
+  // by just incrementing the number of bits we've extended by.
+  unsigned ExtendedBy = NewWidth - SmallWidth;
+
+  if (SignExt && ZExtBits == 0) {
+    // sext(sext(%x, a), b) == sext(%x, a + b)
+
+    if (NSW) {
+      // We haven't sign-wrapped, so it's valid to decompose sext(%x + c)
+      // into sext(%x) + sext(c). We'll sext the Offset ourselves:
+      unsigned OldWidth = Offset.getBitWidth();
+      Offset = Offset.truncOrSelf(SmallWidth).sext(NewWidth).zextOrSelf(OldWidth);
+    } else {
+      // We may have signed-wrapped, so don't decompose sext(%x + c) into
+      // sext(%x) + sext(c)
+      Scale = 1;
+      Offset = 0;
+      Result = CastOp;
+      ZExtBits = 0;
+      SExtBits = 0;
+    }
+    SExtBits += ExtendedBy;
+  } else {
+    // sext(zext(%x, a), b) = zext(zext(%x, a), b) = zext(%x, a + b)
+
+    if (!NUW) {
+      // We may have unsigned-wrapped, so don't decompose zext(%x + c) into
+      // zext(%x) + zext(c)
+      Scale = 1;
+      Offset = 0;
+      Result = CastOp;
+      ZExtBits = 0;
+      SExtBits = 0;
+    }
+    ZExtBits += ExtendedBy;
+  }
+
+  return Result;
+}
+
 /// Analyzes the specified value as a linear expression: "A*V + B", where A and
 /// B are constant integers.
 ///
@@ -237,9 +283,8 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
     unsigned &SExtBits, const DataLayout &DL, unsigned Depth,
     AssumptionCache *AC, DominatorTree *DT, bool &NSW, bool &NUW) {
   assert(V->getType()->isIntegerTy() && "Not an integer value");
-  // TODO: SExtBits can be non-zero on entry.
-  assert(Scale == 0 && Offset == 0 && ZExtBits == 0 && NSW == true &&
-         NUW == true && "Incorrect default values");
+  assert(Scale == 0 && Offset == 0 && ZExtBits == 0 && SExtBits == 0 &&
+         NSW == true && NUW == true && "Incorrect default values");
 
   // Limit our recursion depth.
   if (Depth == 6) {
@@ -331,52 +376,13 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
   // bits of a sign or zero extended value - just scales and offsets.  The
   // extensions have to be consistent though.
   if (isa<SExtInst>(V) || isa<ZExtInst>(V)) {
-    Value *CastOp = cast<CastInst>(V)->getOperand(0);
-    unsigned NewWidth = V->getType()->getPrimitiveSizeInBits();
-    unsigned SmallWidth = CastOp->getType()->getPrimitiveSizeInBits();
-    unsigned OldZExtBits = ZExtBits, OldSExtBits = SExtBits;
+    const Value *CastOp = cast<CastInst>(V)->getOperand(0);
     const Value *Result =
         GetLinearExpression(CastOp, Scale, Offset, ZExtBits, SExtBits, DL,
                             Depth + 1, AC, DT, NSW, NUW);
-
-    // zext(zext(%x)) == zext(%x), and similarly for sext; we'll handle this
-    // by just incrementing the number of bits we've extended by.
-    unsigned ExtendedBy = NewWidth - SmallWidth;
-
-    if (isa<SExtInst>(V) && ZExtBits == 0) {
-      // sext(sext(%x, a), b) == sext(%x, a + b)
-
-      if (NSW) {
-        // We haven't sign-wrapped, so it's valid to decompose sext(%x + c)
-        // into sext(%x) + sext(c). We'll sext the Offset ourselves:
-        unsigned OldWidth = Offset.getBitWidth();
-        Offset = Offset.trunc(SmallWidth).sext(NewWidth).zextOrSelf(OldWidth);
-      } else {
-        // We may have signed-wrapped, so don't decompose sext(%x + c) into
-        // sext(%x) + sext(c)
-        Scale = 1;
-        Offset = 0;
-        Result = CastOp;
-        ZExtBits = OldZExtBits;
-        SExtBits = OldSExtBits;
-      }
-      SExtBits += ExtendedBy;
-    } else {
-      // sext(zext(%x, a), b) = zext(zext(%x, a), b) = zext(%x, a + b)
-
-      if (!NUW) {
-        // We may have unsigned-wrapped, so don't decompose zext(%x + c) into
-        // zext(%x) + zext(c)
-        Scale = 1;
-        Offset = 0;
-        Result = CastOp;
-        ZExtBits = OldZExtBits;
-        SExtBits = OldSExtBits;
-      }
-      ZExtBits += ExtendedBy;
-    }
-
-    return Result;
+    return extendLinearExpression(
+        isa<SExtInst>(V), V->getType()->getPrimitiveSizeInBits(),
+        CastOp, Result, Scale, Offset, ZExtBits, SExtBits, NSW, NUW);
   }
 
   Scale = 1;
@@ -531,20 +537,21 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       APInt Scale(MaxPointerSize,
                   DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
-      unsigned ZExtBits = 0, SExtBits = 0;
-
-      // If the integer type is smaller than the pointer size, it is implicitly
-      // sign extended to pointer size.
-      unsigned Width = Index->getType()->getIntegerBitWidth();
-      if (PointerSize > Width)
-        SExtBits += PointerSize - Width;
-
       // Use GetLinearExpression to decompose the index into a C1*V+C2 form.
+      unsigned Width = Index->getType()->getIntegerBitWidth();
       APInt IndexScale(Width, 0), IndexOffset(Width, 0);
+      unsigned ZExtBits = 0, SExtBits = 0;
       bool NSW = true, NUW = true;
       const Value *OrigIndex = Index;
       Index = GetLinearExpression(Index, IndexScale, IndexOffset, ZExtBits,
                                   SExtBits, DL, 0, AC, DT, NSW, NUW);
+
+      // If the integer type is smaller than the pointer size, it is implicitly
+      // sign extended to pointer size.
+      if (PointerSize > Width)
+        Index = extendLinearExpression(
+            /* SignExt */ true, PointerSize, OrigIndex, Index, IndexScale,
+            IndexOffset, ZExtBits, SExtBits, NSW, NUW);
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
