@@ -83,16 +83,16 @@ def FSH : RVInstS<0b001, OPC_STORE_FP, (outs),
           Sched<[WriteFST16, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_H  : FPFMAH_rrr_frm<OPC_MADD, "fmadd.h">,
-               Sched<[WriteFMulAdd16, ReadFMulAdd16, ReadFMulAdd16, ReadFMulAdd16]>;
+               Sched<[WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16]>;
 def          : FPFMAHDynFrmAlias<FMADD_H, "fmadd.h">;
 def FMSUB_H  : FPFMAH_rrr_frm<OPC_MSUB, "fmsub.h">,
-               Sched<[WriteFMulSub16, ReadFMulSub16, ReadFMulSub16, ReadFMulSub16]>;
+               Sched<[WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16]>;
 def          : FPFMAHDynFrmAlias<FMSUB_H, "fmsub.h">;
 def FNMSUB_H : FPFMAH_rrr_frm<OPC_NMSUB, "fnmsub.h">,
-               Sched<[WriteFMulSub16, ReadFMulSub16, ReadFMulSub16, ReadFMulSub16]>;
+               Sched<[WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16]>;
 def          : FPFMAHDynFrmAlias<FNMSUB_H, "fnmsub.h">;
 def FNMADD_H : FPFMAH_rrr_frm<OPC_NMADD, "fnmadd.h">,
-               Sched<[WriteFMulAdd16, ReadFMulAdd16, ReadFMulAdd16, ReadFMulAdd16]>;
+               Sched<[WriteFMA16, ReadFMA16, ReadFMA16, ReadFMA16]>;
 def          : FPFMAHDynFrmAlias<FNMADD_H, "fnmadd.h">;
 
 def FADD_H : FPALUH_rr_frm<0b0000010, "fadd.h">,
