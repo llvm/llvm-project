@@ -7,7 +7,7 @@ define void @may_overflow_mul_add_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_add_i8: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias: [16 x i8]* %ptr, i8* %gep.6
-; CHECK-NEXT:    NoAlias:  i8* %gep.6, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.6, i8* %gep.idx
 ;
   %mul = mul i8 %idx, 5
   %add = add i8 %mul, 2
@@ -38,7 +38,7 @@ define void @may_overflow_mul_sub_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_sub_i8: 3 pointers, 0 call sites
 ; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
 ; CHECK-NEXT:    PartialAlias: [16 x i8]* %ptr, i8* %gep.3
-; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
+; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
   %mul = mul i8 %idx, 5
   %sub = sub i8 %mul, 1
