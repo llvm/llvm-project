@@ -149,3 +149,5 @@ void test() {
   test<std::array<int, 1>, int>();
   test<std::array<int, 1>, int, int>();
 }
+
+int main(int, char**) { return 0; }
