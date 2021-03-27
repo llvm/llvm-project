@@ -297,9 +297,6 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
         Scale *= RHS;
         break;
       case Instruction::Shl:
-        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
-                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
-
         // We're trying to linearize an expression of the kind:
         //   shl i8 -128, 36
         // where the shift count exceeds the bitwidth of the type.
@@ -312,6 +309,8 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
           return V;
         }
 
+        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
+                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
         Offset <<= RHS.getLimitedValue();
         Scale <<= RHS.getLimitedValue();
         break;
