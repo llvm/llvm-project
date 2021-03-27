@@ -118,3 +118,11 @@ endif()
 
 add_subdirectory(Transforms)
 add_subdirectory(Conversions)
+
+add_mlir_python_extension(MLIRLinalgPassesBindingsPythonExtension _mlirLinalgPasses
+  INSTALL_DIR
+    python
+  SOURCES
+    LinalgPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRLinalgPassesBindingsPythonExtension)

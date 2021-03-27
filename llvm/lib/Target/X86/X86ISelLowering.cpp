@@ -49098,10 +49098,17 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
     SDValue N01In = N01Elt.getOperand(0);
     SDValue N10In = N10Elt.getOperand(0);
     SDValue N11In = N11Elt.getOperand(0);
+
     // First time we find an input capture it.
     if (!In0) {
       In0 = N00In;
       In1 = N01In;
+
+      // The input vector sizes must match the output.
+      // TODO: Insert cast ops to allow different types.
+      if (In0.getValueSizeInBits() != VT.getSizeInBits() ||
+          In1.getValueSizeInBits() != VT.getSizeInBits())
+        return SDValue();
     }
     // Mul is commutative so the input vectors can be in any order.
     // Canonicalize to make the compares easier.
