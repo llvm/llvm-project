@@ -22,6 +22,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
+#include <map>
 using namespace llvm;
 
 static cl::extrahelp FileCheckOptsEnv(
@@ -378,16 +379,25 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::vector<FileCheckDiag> &Diags,
                       std::vector<InputAnnotation> &Annotations,
                       unsigned &LabelWidth) {
-  // How many diagnostics have we seen so far?
-  unsigned DiagCount = 0;
-  // How many diagnostics has the current check seen so far?
-  unsigned CheckDiagCount = 0;
+  struct CompareSMLoc {
+    bool operator()(const SMLoc &LHS, const SMLoc &RHS) {
+      return LHS.getPointer() < RHS.getPointer();
+    }
+  };
+  // How many diagnostics does each pattern have?
+  std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
+  for (auto Diag : Diags)
+    ++DiagCountPerPattern[Diag.CheckLoc];
+  // How many diagnostics have we seen so far per pattern?
+  std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
+  // How many total diagnostics have we seen so far?
+  unsigned DiagIndex = 0;
   // What's the widest label?
   LabelWidth = 0;
   for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
        ++DiagItr) {
     InputAnnotation A;
-    A.DiagIndex = DiagCount++;
+    A.DiagIndex = DiagIndex++;
 
     // Build label, which uniquely identifies this check result.
     unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
@@ -403,17 +413,8 @@ BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
     else
       llvm_unreachable("expected diagnostic's check location to be either in "
                        "the check file or for an implicit pattern");
-    unsigned CheckDiagIndex = UINT_MAX;
-    auto DiagNext = std::next(DiagItr);
-    if (DiagNext != DiagEnd && DiagItr->CheckTy == DiagNext->CheckTy &&
-        DiagItr->CheckLoc == DiagNext->CheckLoc)
-      CheckDiagIndex = CheckDiagCount++;
-    else if (CheckDiagCount) {
-      CheckDiagIndex = CheckDiagCount;
-      CheckDiagCount = 0;
-    }
-    if (CheckDiagIndex != UINT_MAX)
-      Label << "'" << CheckDiagIndex;
+    if (DiagCountPerPattern[DiagItr->CheckLoc] > 1)
+      Label << "'" << DiagIndexPerPattern[DiagItr->CheckLoc]++;
     Label.flush();
     LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
 
