@@ -314,10 +314,7 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 
         Offset <<= RHS.getLimitedValue();
         Scale <<= RHS.getLimitedValue();
-        // the semantics of nsw and nuw for left shifts don't match those of
-        // multiplications, so we won't propagate them.
-        NSW = NUW = false;
-        return V;
+        break;
       }
 
       if (isa<OverflowingBinaryOperator>(BOp)) {
