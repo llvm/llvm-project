@@ -20,6 +20,7 @@
 #include "caml/alloc.h"
 #include "caml/mlvalues.h"
 #include "caml/memory.h"
+#include "llvm_ocaml.h"
 
 /* Llvm.llmodule -> string option */
 CAMLprim value llvm_verify_module(LLVMModuleRef M) {
@@ -30,11 +31,10 @@ CAMLprim value llvm_verify_module(LLVMModuleRef M) {
   int Result = LLVMVerifyModule(M, LLVMReturnStatusAction, &Message);
 
   if (0 == Result) {
-    Option = Val_int(0);
+    Option = Val_none;
   } else {
-    Option = alloc(1, 0);
     String = copy_string(Message);
-    Store_field(Option, 0, String);
+    Option = caml_alloc_some(String);
   }
 
   LLVMDisposeMessage(Message);

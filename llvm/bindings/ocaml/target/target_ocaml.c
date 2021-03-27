@@ -23,6 +23,7 @@
 #include "caml/memory.h"
 #include "caml/custom.h"
 #include "caml/callback.h"
+#include "llvm_ocaml.h"
 
 void llvm_raise(value Prototype, char *Message);
 value llvm_string_of_message(char* Message);
@@ -144,16 +145,6 @@ CAMLprim value llvm_datalayout_offset_of_element(LLVMTypeRef Ty, value Index,
 
 /*===---- Target ----------------------------------------------------------===*/
 
-static value llvm_target_option(LLVMTargetRef Target) {
-  if(Target != NULL) {
-    value Result = caml_alloc_small(1, 0);
-    Store_field(Result, 0, (value) Target);
-    return Result;
-  }
-
-  return Val_int(0);
-}
-
 /* unit -> string */
 CAMLprim value llvm_target_default_triple(value Unit) {
   char *TripleCStr = LLVMGetDefaultTargetTriple();
@@ -165,17 +156,17 @@ CAMLprim value llvm_target_default_triple(value Unit) {
 
 /* unit -> Target.t option */
 CAMLprim value llvm_target_first(value Unit) {
-  return llvm_target_option(LLVMGetFirstTarget());
+  return ptr_to_option(LLVMGetFirstTarget());
 }
 
 /* Target.t -> Target.t option */
 CAMLprim value llvm_target_succ(LLVMTargetRef Target) {
-  return llvm_target_option(LLVMGetNextTarget(Target));
+  return ptr_to_option(LLVMGetNextTarget(Target));
 }
 
 /* string -> Target.t option */
 CAMLprim value llvm_target_by_name(value Name) {
-  return llvm_target_option(LLVMGetTargetFromName(String_val(Name)));
+  return ptr_to_option(LLVMGetTargetFromName(String_val(Name)));
 }
 
 /* string -> Target.t */
