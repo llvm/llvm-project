@@ -35301,6 +35301,20 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return CanonicalizeShuffleInput(RootVT, V1);
   }
 
+  // See if the shuffle is a hidden identity shuffle - repeated args in HOPs
+  // etc. can be simplified.
+  if (VT1 == VT2 && VT1.getSizeInBits() == RootSizeInBits) {
+    SmallVector<int> ScaledMask, IdentityMask;
+    unsigned NumElts = VT1.getVectorNumElements();
+    if (BaseMask.size() <= NumElts &&
+        scaleShuffleElements(BaseMask, NumElts, ScaledMask)) {
+      for (unsigned i = 0; i != NumElts; ++i)
+        IdentityMask.push_back(i);
+      if (isTargetShuffleEquivalent(RootVT, ScaledMask, IdentityMask, V1, V2))
+        return CanonicalizeShuffleInput(RootVT, V1);
+    }
+  }
+
   // Handle 128/256-bit lane shuffles of 512-bit vectors.
   if (RootVT.is512BitVector() &&
       (NumBaseMaskElts == 2 || NumBaseMaskElts == 4)) {
