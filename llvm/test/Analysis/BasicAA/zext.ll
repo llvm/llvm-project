@@ -240,5 +240,29 @@ entry:
   ret float %x4
 }
 
+; CHECK-LABEL: Function: test_shl_nuw_zext
+; CHECK: MustAlias: i8* %p.1, i8* %p.2
+define void @test_shl_nuw_zext(i8* %p, i32 %x) {
+  %shl = shl nuw i32 %x, 1
+  %shl.ext = zext i32 %shl to i64
+  %ext = zext i32 %x to i64
+  %ext.shl = shl nuw i64 %ext, 1
+  %p.1 = getelementptr i8, i8* %p, i64 %shl.ext
+  %p.2 = getelementptr i8, i8* %p, i64 %ext.shl
+  ret void
+}
+
+; CHECK-LABEL: Function: test_shl_nsw_sext
+; CHECK: MustAlias: i8* %p.1, i8* %p.2
+define void @test_shl_nsw_sext(i8* %p, i32 %x) {
+  %shl = shl nsw i32 %x, 1
+  %shl.ext = sext i32 %shl to i64
+  %ext = sext i32 %x to i64
+  %ext.shl = shl nsw i64 %ext, 1
+  %p.1 = getelementptr i8, i8* %p, i64 %shl.ext
+  %p.2 = getelementptr i8, i8* %p, i64 %ext.shl
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare noalias i8* @malloc(i64)
