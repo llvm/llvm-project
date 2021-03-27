@@ -98,7 +98,7 @@ define void @test_03(i64* %p1, i64* %p2, i1 %maybe_exit) {
 ; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %guarded ], [ 0, %loop.preheader ]
 ; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK-NEXT:    %rc = icmp slt i64 %iv.next, %div_result
-; CHECK-NEXT:    %or.cond = and i1 %maybe_exit, true
+; CHECK-NEXT:    %or.cond = select i1 %maybe_exit, i1 true, i1 false
 ; CHECK-NEXT:    br i1 %or.cond, label %guarded, label %exit.loopexit1
 ; CHECK:       guarded:
 ; CHECK-NEXT:    %gep = getelementptr i64, i64* %p1, i64 %iv.next
