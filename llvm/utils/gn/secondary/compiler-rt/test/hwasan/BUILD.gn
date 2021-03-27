@@ -84,10 +84,10 @@ if (supported_toolchains != []) {
     outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs
                                              # it each time.
 
-    # Since check-hwasan is always dirty, //:default doesn't depend on it so that
-    # it's not part of the default ninja target.  Hence, check-hwasan shouldn't
-    # have any deps except :hwasan. so that the default target is sure to build
-    # all the deps.
+    # Since check-hwasan is always dirty, //:default doesn't depend on it so
+    # that it's not part of the default ninja target.  Hence, check-hwasan
+    # shouldn't have any deps except :hwasan. so that the default target is
+    # sure to build all the deps.
     deps = [ ":hwasan" ]
     testonly = true
 
