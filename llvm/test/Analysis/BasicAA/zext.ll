@@ -275,5 +275,16 @@ define void @test_implicit_sext(i8* %p, i32 %x) {
   ret void
 }
 
+; CHECK-LABEL: Function: test_partial_decomposition
+; CHECK: MustAlias: i8* %p.1, i8* %p.2
+define void @test_partial_decomposition(i8* %p, i32 %x) {
+  %add = add i32 %x, 1
+  %add.1 = add nsw i32 %add, 1
+  %add.2 = add nsw i32 %add, 1
+  %p.1 = getelementptr i8, i8* %p, i32 %add.1
+  %p.2 = getelementptr i8, i8* %p, i32 %add.2
+  ret void
+}
+
 ; Function Attrs: nounwind
 declare noalias i8* @malloc(i64)
