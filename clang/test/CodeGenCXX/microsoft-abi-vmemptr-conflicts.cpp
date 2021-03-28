@@ -94,7 +94,7 @@ void f(C *c) {
 
 // CHECK-LABEL: define dso_local void @"?f@cdecl_inalloca@@YAXPAUC@1@@Z"(%"struct.cdecl_inalloca::C"* %c)
 // CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"??_9C@cdecl_inalloca@@$BA@AA" to void (%"struct.cdecl_inalloca::C"*)*)(%"struct.cdecl_inalloca::C"* {{[^,]*}} %{{.*}})
-// CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"??_9C@cdecl_inalloca@@$BA@AA" to void (<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>*)*)(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>* inalloca %{{.*}})
+// CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"??_9C@cdecl_inalloca@@$BA@AA" to void (<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>*)*)(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>* inalloca(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>) %{{.*}})
 
 // CHECK-LABEL: define linkonce_odr void @"??_9C@cdecl_inalloca@@$BA@AA"(%"struct.cdecl_inalloca::C"* %this, ...) {{.*}} comdat
 // CHECK: musttail call void (%"struct.cdecl_inalloca::C"*, ...) %{{.*}}(%"struct.cdecl_inalloca::C"* %{{.*}}, ...)

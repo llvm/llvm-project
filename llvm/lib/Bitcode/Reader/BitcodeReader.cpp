@@ -1626,6 +1626,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addByValAttr(nullptr);
           else if (Kind == Attribute::StructRet)
             B.addStructRetAttr(nullptr);
+          else if (Kind == Attribute::InAlloca)
+            B.addInAllocaAttr(nullptr);
 
           B.addAttribute(Kind);
         } else if (Record[i] == 1) { // Integer attribute
@@ -1677,6 +1679,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addByRefAttr(getTypeByID(Record[++i]));
           } else if (Kind == Attribute::Preallocated) {
             B.addPreallocatedAttr(getTypeByID(Record[++i]));
+          } else if (Kind == Attribute::InAlloca) {
+            B.addInAllocaAttr(HasType ? getTypeByID(Record[++i]) : nullptr);
           }
         }
       }
@@ -3330,7 +3334,8 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // argument's pointee type. There should be no opaque pointers where the byval
   // type is implicit.
   for (unsigned i = 0; i != Func->arg_size(); ++i) {
-    for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet}) {
+    for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
+                                     Attribute::InAlloca}) {
       if (!Func->hasParamAttribute(i, Kind))
         continue;
 
@@ -3338,10 +3343,21 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
 
       Type *PTy = cast<FunctionType>(FullFTy)->getParamType(i);
       Type *PtrEltTy = getPointerElementFlatType(PTy);
-      Attribute NewAttr =
-          Kind == Attribute::ByVal
-              ? Attribute::getWithByValType(Context, PtrEltTy)
-              : Attribute::getWithStructRetType(Context, PtrEltTy);
+      Attribute NewAttr;
+      switch (Kind) {
+      case Attribute::ByVal:
+        NewAttr = Attribute::getWithByValType(Context, PtrEltTy);
+        break;
+      case Attribute::StructRet:
+        NewAttr = Attribute::getWithStructRetType(Context, PtrEltTy);
+        break;
+      case Attribute::InAlloca:
+        NewAttr = Attribute::getWithInAllocaType(Context, PtrEltTy);
+        break;
+      default:
+        llvm_unreachable("not an upgraded type attribute");
+      }
+
       Func->addParamAttr(i, NewAttr);
     }
   }
@@ -3807,17 +3823,29 @@ Error BitcodeReader::typeCheckLoadStoreInst(Type *ValType, Type *PtrType) {
 void BitcodeReader::propagateByValSRetTypes(CallBase *CB,
                                             ArrayRef<Type *> ArgsFullTys) {
   for (unsigned i = 0; i != CB->arg_size(); ++i) {
-    for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet}) {
+    for (Attribute::AttrKind Kind : {Attribute::ByVal, Attribute::StructRet,
+                                     Attribute::InAlloca}) {
       if (!CB->paramHasAttr(i, Kind))
         continue;
 
       CB->removeParamAttr(i, Kind);
 
       Type *PtrEltTy = getPointerElementFlatType(ArgsFullTys[i]);
-      Attribute NewAttr =
-          Kind == Attribute::ByVal
-              ? Attribute::getWithByValType(Context, PtrEltTy)
-              : Attribute::getWithStructRetType(Context, PtrEltTy);
+      Attribute NewAttr;
+      switch (Kind) {
+      case Attribute::ByVal:
+        NewAttr = Attribute::getWithByValType(Context, PtrEltTy);
+        break;
+      case Attribute::StructRet:
+        NewAttr = Attribute::getWithStructRetType(Context, PtrEltTy);
+        break;
+      case Attribute::InAlloca:
+        NewAttr = Attribute::getWithInAllocaType(Context, PtrEltTy);
+        break;
+      default:
+        llvm_unreachable("not an upgraded type attribute");
+      }
+
       CB->addParamAttr(i, NewAttr);
     }
   }
