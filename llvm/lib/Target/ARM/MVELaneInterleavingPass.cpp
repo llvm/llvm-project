@@ -303,7 +303,7 @@ static bool tryInterleave(Instruction *Start,
     LLVM_DEBUG(dbgs() << "  with " << *Shuf << "\n");
   }
 
-  return false;
+  return true;
 }
 
 bool MVELaneInterleaving::runOnFunction(Function &F) {
