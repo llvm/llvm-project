@@ -21,7 +21,7 @@
 void llvm_raise(value Prototype, char *Message);
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-CAMLprim value llvm_parse_ir(LLVMContextRef C,
+value llvm_parse_ir(LLVMContextRef C,
                              LLVMMemoryBufferRef MemBuf) {
   CAMLparam0();
   CAMLlocal2(Variant, MessageVal);

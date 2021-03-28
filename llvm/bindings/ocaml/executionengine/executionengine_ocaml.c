@@ -29,7 +29,7 @@
 void llvm_raise(value Prototype, char *Message);
 
 /* unit -> bool */
-CAMLprim value llvm_ee_initialize(value Unit) {
+value llvm_ee_initialize(value Unit) {
   LLVMLinkInMCJIT();
 
   return Val_bool(!LLVMInitializeNativeTarget() &&
@@ -38,7 +38,7 @@ CAMLprim value llvm_ee_initialize(value Unit) {
 }
 
 /* llmodule -> llcompileroption -> ExecutionEngine.t */
-CAMLprim LLVMExecutionEngineRef llvm_ee_create(value OptRecordOpt, LLVMModuleRef M) {
+LLVMExecutionEngineRef llvm_ee_create(value OptRecordOpt, LLVMModuleRef M) {
   value OptRecord;
   LLVMExecutionEngineRef MCJIT;
   char *Error;
@@ -61,19 +61,19 @@ CAMLprim LLVMExecutionEngineRef llvm_ee_create(value OptRecordOpt, LLVMModuleRef
 }
 
 /* ExecutionEngine.t -> unit */
-CAMLprim value llvm_ee_dispose(LLVMExecutionEngineRef EE) {
+value llvm_ee_dispose(LLVMExecutionEngineRef EE) {
   LLVMDisposeExecutionEngine(EE);
   return Val_unit;
 }
 
 /* llmodule -> ExecutionEngine.t -> unit */
-CAMLprim value llvm_ee_add_module(LLVMModuleRef M, LLVMExecutionEngineRef EE) {
+value llvm_ee_add_module(LLVMModuleRef M, LLVMExecutionEngineRef EE) {
   LLVMAddModule(EE, M);
   return Val_unit;
 }
 
 /* llmodule -> ExecutionEngine.t -> llmodule */
-CAMLprim value llvm_ee_remove_module(LLVMModuleRef M, LLVMExecutionEngineRef EE) {
+value llvm_ee_remove_module(LLVMModuleRef M, LLVMExecutionEngineRef EE) {
   LLVMModuleRef RemovedModule;
   char *Error;
   if (LLVMRemoveModule(EE, M, &RemovedModule, &Error))
@@ -82,13 +82,13 @@ CAMLprim value llvm_ee_remove_module(LLVMModuleRef M, LLVMExecutionEngineRef EE)
 }
 
 /* ExecutionEngine.t -> unit */
-CAMLprim value llvm_ee_run_static_ctors(LLVMExecutionEngineRef EE) {
+value llvm_ee_run_static_ctors(LLVMExecutionEngineRef EE) {
   LLVMRunStaticConstructors(EE);
   return Val_unit;
 }
 
 /* ExecutionEngine.t -> unit */
-CAMLprim value llvm_ee_run_static_dtors(LLVMExecutionEngineRef EE) {
+value llvm_ee_run_static_dtors(LLVMExecutionEngineRef EE) {
   LLVMRunStaticDestructors(EE);
   return Val_unit;
 }
@@ -96,7 +96,7 @@ CAMLprim value llvm_ee_run_static_dtors(LLVMExecutionEngineRef EE) {
 extern value llvm_alloc_data_layout(LLVMTargetDataRef TargetData);
 
 /* ExecutionEngine.t -> Llvm_target.DataLayout.t */
-CAMLprim value llvm_ee_get_data_layout(LLVMExecutionEngineRef EE) {
+value llvm_ee_get_data_layout(LLVMExecutionEngineRef EE) {
   value DataLayout;
   LLVMTargetDataRef OrigDataLayout;
   char* TargetDataCStr;
@@ -110,18 +110,18 @@ CAMLprim value llvm_ee_get_data_layout(LLVMExecutionEngineRef EE) {
 }
 
 /* Llvm.llvalue -> int64 -> llexecutionengine -> unit */
-CAMLprim value llvm_ee_add_global_mapping(LLVMValueRef Global, value Ptr,
+value llvm_ee_add_global_mapping(LLVMValueRef Global, value Ptr,
                                           LLVMExecutionEngineRef EE) {
   LLVMAddGlobalMapping(EE, Global, (void*) (Int64_val(Ptr)));
   return Val_unit;
 }
 
-CAMLprim value llvm_ee_get_global_value_address(value Name,
+value llvm_ee_get_global_value_address(value Name,
 						LLVMExecutionEngineRef EE) {
   return caml_copy_int64((int64_t) LLVMGetGlobalValueAddress(EE, String_val(Name)));
 }
 
-CAMLprim value llvm_ee_get_function_address(value Name,
+value llvm_ee_get_function_address(value Name,
 					    LLVMExecutionEngineRef EE) {
   return caml_copy_int64((int64_t) LLVMGetFunctionAddress(EE, String_val(Name)));
 }

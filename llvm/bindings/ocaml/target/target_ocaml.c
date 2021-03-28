@@ -54,12 +54,12 @@ value llvm_alloc_data_layout(LLVMTargetDataRef DataLayout) {
 }
 
 /* string -> DataLayout.t */
-CAMLprim value llvm_datalayout_of_string(value StringRep) {
+value llvm_datalayout_of_string(value StringRep) {
   return llvm_alloc_data_layout(LLVMCreateTargetData(String_val(StringRep)));
 }
 
 /* DataLayout.t -> string */
-CAMLprim value llvm_datalayout_as_string(value TD) {
+value llvm_datalayout_as_string(value TD) {
   char *StringRep = LLVMCopyStringRepOfTargetData(DataLayout_val(TD));
   value Copy = copy_string(StringRep);
   LLVMDisposeMessage(StringRep);
@@ -67,77 +67,77 @@ CAMLprim value llvm_datalayout_as_string(value TD) {
 }
 
 /* DataLayout.t -> Endian.t */
-CAMLprim value llvm_datalayout_byte_order(value DL) {
+value llvm_datalayout_byte_order(value DL) {
   return Val_int(LLVMByteOrder(DataLayout_val(DL)));
 }
 
 /* DataLayout.t -> int */
-CAMLprim value llvm_datalayout_pointer_size(value DL) {
+value llvm_datalayout_pointer_size(value DL) {
   return Val_int(LLVMPointerSize(DataLayout_val(DL)));
 }
 
 /* Llvm.llcontext -> DataLayout.t -> Llvm.lltype */
-CAMLprim LLVMTypeRef llvm_datalayout_intptr_type(LLVMContextRef C, value DL) {
+LLVMTypeRef llvm_datalayout_intptr_type(LLVMContextRef C, value DL) {
   return LLVMIntPtrTypeInContext(C, DataLayout_val(DL));
 }
 
 /* int -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_qualified_pointer_size(value AS, value DL) {
+value llvm_datalayout_qualified_pointer_size(value AS, value DL) {
   return Val_int(LLVMPointerSizeForAS(DataLayout_val(DL), Int_val(AS)));
 }
 
 /* Llvm.llcontext -> int -> DataLayout.t -> Llvm.lltype */
-CAMLprim LLVMTypeRef llvm_datalayout_qualified_intptr_type(LLVMContextRef C,
+LLVMTypeRef llvm_datalayout_qualified_intptr_type(LLVMContextRef C,
                                                            value AS,
                                                            value DL) {
   return LLVMIntPtrTypeForASInContext(C, DataLayout_val(DL), Int_val(AS));
 }
 
 /* Llvm.lltype -> DataLayout.t -> Int64.t */
-CAMLprim value llvm_datalayout_size_in_bits(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_size_in_bits(LLVMTypeRef Ty, value DL) {
   return caml_copy_int64(LLVMSizeOfTypeInBits(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.lltype -> DataLayout.t -> Int64.t */
-CAMLprim value llvm_datalayout_store_size(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_store_size(LLVMTypeRef Ty, value DL) {
   return caml_copy_int64(LLVMStoreSizeOfType(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.lltype -> DataLayout.t -> Int64.t */
-CAMLprim value llvm_datalayout_abi_size(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_abi_size(LLVMTypeRef Ty, value DL) {
   return caml_copy_int64(LLVMABISizeOfType(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.lltype -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_abi_align(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_abi_align(LLVMTypeRef Ty, value DL) {
   return Val_int(LLVMABIAlignmentOfType(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.lltype -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_stack_align(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_stack_align(LLVMTypeRef Ty, value DL) {
   return Val_int(LLVMCallFrameAlignmentOfType(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.lltype -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_preferred_align(LLVMTypeRef Ty, value DL) {
+value llvm_datalayout_preferred_align(LLVMTypeRef Ty, value DL) {
   return Val_int(LLVMPreferredAlignmentOfType(DataLayout_val(DL), Ty));
 }
 
 /* Llvm.llvalue -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_preferred_align_of_global(LLVMValueRef GlobalVar,
+value llvm_datalayout_preferred_align_of_global(LLVMValueRef GlobalVar,
                                                          value DL) {
   return Val_int(LLVMPreferredAlignmentOfGlobal(DataLayout_val(DL), GlobalVar));
 }
 
 /* Llvm.lltype -> Int64.t -> DataLayout.t -> int */
-CAMLprim value llvm_datalayout_element_at_offset(LLVMTypeRef Ty, value Offset,
+value llvm_datalayout_element_at_offset(LLVMTypeRef Ty, value Offset,
                                                  value DL) {
   return Val_int(LLVMElementAtOffset(DataLayout_val(DL), Ty,
                                      Int64_val(Offset)));
 }
 
 /* Llvm.lltype -> int -> DataLayout.t -> Int64.t */
-CAMLprim value llvm_datalayout_offset_of_element(LLVMTypeRef Ty, value Index,
+value llvm_datalayout_offset_of_element(LLVMTypeRef Ty, value Index,
                                                  value DL) {
   return caml_copy_int64(LLVMOffsetOfElement(DataLayout_val(DL), Ty,
                                              Int_val(Index)));
@@ -146,7 +146,7 @@ CAMLprim value llvm_datalayout_offset_of_element(LLVMTypeRef Ty, value Index,
 /*===---- Target ----------------------------------------------------------===*/
 
 /* unit -> string */
-CAMLprim value llvm_target_default_triple(value Unit) {
+value llvm_target_default_triple(value Unit) {
   char *TripleCStr = LLVMGetDefaultTargetTriple();
   value TripleStr = caml_copy_string(TripleCStr);
   LLVMDisposeMessage(TripleCStr);
@@ -155,22 +155,22 @@ CAMLprim value llvm_target_default_triple(value Unit) {
 }
 
 /* unit -> Target.t option */
-CAMLprim value llvm_target_first(value Unit) {
+value llvm_target_first(value Unit) {
   return ptr_to_option(LLVMGetFirstTarget());
 }
 
 /* Target.t -> Target.t option */
-CAMLprim value llvm_target_succ(LLVMTargetRef Target) {
+value llvm_target_succ(LLVMTargetRef Target) {
   return ptr_to_option(LLVMGetNextTarget(Target));
 }
 
 /* string -> Target.t option */
-CAMLprim value llvm_target_by_name(value Name) {
+value llvm_target_by_name(value Name) {
   return ptr_to_option(LLVMGetTargetFromName(String_val(Name)));
 }
 
 /* string -> Target.t */
-CAMLprim LLVMTargetRef llvm_target_by_triple(value Triple) {
+LLVMTargetRef llvm_target_by_triple(value Triple) {
   LLVMTargetRef T;
   char *Error;
 
@@ -181,27 +181,27 @@ CAMLprim LLVMTargetRef llvm_target_by_triple(value Triple) {
 }
 
 /* Target.t -> string */
-CAMLprim value llvm_target_name(LLVMTargetRef Target) {
+value llvm_target_name(LLVMTargetRef Target) {
   return caml_copy_string(LLVMGetTargetName(Target));
 }
 
 /* Target.t -> string */
-CAMLprim value llvm_target_description(LLVMTargetRef Target) {
+value llvm_target_description(LLVMTargetRef Target) {
   return caml_copy_string(LLVMGetTargetDescription(Target));
 }
 
 /* Target.t -> bool */
-CAMLprim value llvm_target_has_jit(LLVMTargetRef Target) {
+value llvm_target_has_jit(LLVMTargetRef Target) {
   return Val_bool(LLVMTargetHasJIT(Target));
 }
 
 /* Target.t -> bool */
-CAMLprim value llvm_target_has_target_machine(LLVMTargetRef Target) {
+value llvm_target_has_target_machine(LLVMTargetRef Target) {
   return Val_bool(LLVMTargetHasTargetMachine(Target));
 }
 
 /* Target.t -> bool */
-CAMLprim value llvm_target_has_asm_backend(LLVMTargetRef Target) {
+value llvm_target_has_asm_backend(LLVMTargetRef Target) {
   return Val_bool(LLVMTargetHasAsmBackend(Target));
 }
 
@@ -233,7 +233,7 @@ static value llvm_alloc_targetmachine(LLVMTargetMachineRef Machine) {
 /* triple:string -> ?cpu:string -> ?features:string
    ?level:CodeGenOptLevel.t -> ?reloc_mode:RelocMode.t
    ?code_model:CodeModel.t -> Target.t -> TargetMachine.t */
-CAMLprim value llvm_create_targetmachine_native(value Triple, value CPU,
+value llvm_create_targetmachine_native(value Triple, value CPU,
                   value Features, value OptLevel, value RelocMode,
                   value CodeModel, LLVMTargetRef Target) {
   LLVMTargetMachineRef Machine;
@@ -259,48 +259,48 @@ CAMLprim value llvm_create_targetmachine_native(value Triple, value CPU,
   return llvm_alloc_targetmachine(Machine);
 }
 
-CAMLprim value llvm_create_targetmachine_bytecode(value *argv, int argn) {
+value llvm_create_targetmachine_bytecode(value *argv, int argn) {
   return llvm_create_targetmachine_native(argv[0], argv[1], argv[2], argv[3],
                                     argv[4], argv[5], (LLVMTargetRef) argv[6]);
 }
 
 /* TargetMachine.t -> Target.t */
-CAMLprim LLVMTargetRef llvm_targetmachine_target(value Machine) {
+LLVMTargetRef llvm_targetmachine_target(value Machine) {
   return LLVMGetTargetMachineTarget(TargetMachine_val(Machine));
 }
 
 /* TargetMachine.t -> string */
-CAMLprim value llvm_targetmachine_triple(value Machine) {
+value llvm_targetmachine_triple(value Machine) {
   return llvm_string_of_message(LLVMGetTargetMachineTriple(
                                 TargetMachine_val(Machine)));
 }
 
 /* TargetMachine.t -> string */
-CAMLprim value llvm_targetmachine_cpu(value Machine) {
+value llvm_targetmachine_cpu(value Machine) {
   return llvm_string_of_message(LLVMGetTargetMachineCPU(
                                 TargetMachine_val(Machine)));
 }
 
 /* TargetMachine.t -> string */
-CAMLprim value llvm_targetmachine_features(value Machine) {
+value llvm_targetmachine_features(value Machine) {
   return llvm_string_of_message(LLVMGetTargetMachineFeatureString(
                                 TargetMachine_val(Machine)));
 }
 
 /* TargetMachine.t -> DataLayout.t */
-CAMLprim value llvm_targetmachine_data_layout(value Machine) {
+value llvm_targetmachine_data_layout(value Machine) {
   return llvm_alloc_data_layout(LLVMCreateTargetDataLayout(
                                 TargetMachine_val(Machine)));
 }
 
 /* bool -> TargetMachine.t -> unit */
-CAMLprim value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
+value llvm_targetmachine_set_verbose_asm(value Verb, value Machine) {
   LLVMSetTargetMachineAsmVerbosity(TargetMachine_val(Machine), Bool_val(Verb));
   return Val_unit;
 }
 
 /* Llvm.llmodule -> CodeGenFileType.t -> string -> TargetMachine.t -> unit */
-CAMLprim value llvm_targetmachine_emit_to_file(LLVMModuleRef Module,
+value llvm_targetmachine_emit_to_file(LLVMModuleRef Module,
                             value FileType, value FileName, value Machine) {
   char *ErrorMessage;
 
@@ -315,7 +315,7 @@ CAMLprim value llvm_targetmachine_emit_to_file(LLVMModuleRef Module,
 
 /* Llvm.llmodule -> CodeGenFileType.t -> TargetMachine.t ->
    Llvm.llmemorybuffer */
-CAMLprim LLVMMemoryBufferRef llvm_targetmachine_emit_to_memory_buffer(
+LLVMMemoryBufferRef llvm_targetmachine_emit_to_memory_buffer(
                                 LLVMModuleRef Module, value FileType,
                                 value Machine) {
   char *ErrorMessage;
@@ -331,7 +331,7 @@ CAMLprim LLVMMemoryBufferRef llvm_targetmachine_emit_to_memory_buffer(
 }
 
 /* TargetMachine.t -> Llvm.PassManager.t -> unit */
-CAMLprim value llvm_targetmachine_add_analysis_passes(LLVMPassManagerRef PM,
+value llvm_targetmachine_add_analysis_passes(LLVMPassManagerRef PM,
                                                       value Machine) {
   LLVMAddAnalysisPasses(TargetMachine_val(Machine), PM);
   return Val_unit;
