@@ -9680,10 +9680,10 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     }
     if (i > 0)
       isOnlyLowElement = false;
-    if (!isa<ConstantFPSDNode>(V) && !isa<ConstantSDNode>(V))
+    if (!isIntOrFPConstant(V))
       isConstant = false;
 
-    if (isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V)) {
+    if (isIntOrFPConstant(V)) {
       ++NumConstantLanes;
       if (!ConstantValue.getNode())
         ConstantValue = V;
@@ -9849,7 +9849,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue V = Op.getOperand(i);
       SDValue LaneIdx = DAG.getConstant(i, dl, MVT::i64);
-      if (!isa<ConstantSDNode>(V) && !isa<ConstantFPSDNode>(V))
+      if (!isIntOrFPConstant(V))
         // Note that type legalization likely mucked about with the VT of the
         // source operand, so we may have to convert it here before inserting.
         Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, VT, Val, V, LaneIdx);
