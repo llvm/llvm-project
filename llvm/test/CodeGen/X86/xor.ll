@@ -373,7 +373,7 @@ define i32 @test9(i32 %a) nounwind {
 define <4 x i32> @test10(<4 x i32> %a) nounwind {
 ; X86-LABEL: test10:
 ; X86:       # %bb.0:
-; X86-NEXT:    andnps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andnps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: test10:

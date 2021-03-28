@@ -77,7 +77,7 @@ define <4 x i64> @combine_permq_pshufb_as_vextracti128(<4 x i64> %a0) {
 ; X86-LABEL: combine_permq_pshufb_as_vextracti128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; X86-NEXT:    vpaddq {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddq {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permq_pshufb_as_vextracti128:
@@ -97,7 +97,7 @@ define <4 x i64> @combine_permq_pshufb_as_vmovdqa(<4 x i64> %a0) {
 ; X86-LABEL: combine_permq_pshufb_as_vmovdqa:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm0
-; X86-NEXT:    vpaddq {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddq {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permq_pshufb_as_vmovdqa:
@@ -210,7 +210,7 @@ define <16 x i8> @combine_pshufb_as_vpbroadcastd128(<16 x i8> %a) {
 ; X86-LABEL: combine_pshufb_as_vpbroadcastd128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X86-NEXT:    vpaddb {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpaddb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pshufb_as_vpbroadcastd128:
@@ -227,7 +227,7 @@ define <8 x i32> @combine_permd_as_vpbroadcastd256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastd256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastd %xmm0, %ymm0
-; X86-NEXT:    vpaddd {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastd256:
@@ -254,7 +254,7 @@ define <8 x i32> @combine_permd_as_vpbroadcastq256(<4 x i32> %a) {
 ; X86-LABEL: combine_permd_as_vpbroadcastq256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vpbroadcastq %xmm0, %ymm0
-; X86-NEXT:    vpaddd {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vpaddd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_as_vpbroadcastq256:
@@ -543,7 +543,7 @@ define <32 x i8> @combine_pshufb_as_unpackhi_zero(<32 x i8> %a0) {
 define <32 x i8> @combine_psrlw_pshufb(<16 x i16> %a0) {
 ; X86-LABEL: combine_psrlw_pshufb:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_psrlw_pshufb:
@@ -559,7 +559,7 @@ define <32 x i8> @combine_psrlw_pshufb(<16 x i16> %a0) {
 define <32 x i8> @combine_pslld_pshufb(<8 x i32> %a0) {
 ; X86-LABEL: combine_pslld_pshufb:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_pslld_pshufb:

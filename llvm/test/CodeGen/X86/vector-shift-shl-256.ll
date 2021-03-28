@@ -435,10 +435,10 @@ define <32 x i8> @var_shift_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpsllw $4, %ymm0, %ymm2
-; X86-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; X86-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm2, %ymm2
+; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
@@ -800,7 +800,7 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ;
 ; X86-AVX2-LABEL: constant_shift_v4i64:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpsllvq {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsllvq {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
   %shift = shl <4 x i64> %a, <i64 1, i64 7, i64 31, i64 62>
   ret <4 x i64> %shift
@@ -845,15 +845,15 @@ define <8 x i32> @constant_shift_v8i32(<8 x i32> %a) nounwind {
 ;
 ; X86-AVX1-LABEL: constant_shift_v8i32:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpmulld {{\.LCPI.*}}, %xmm0, %xmm1
+; X86-AVX1-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-AVX1-NEXT:    vpmulld {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v8i32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpsllvd {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsllvd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
   %shift = shl <8 x i32> %a, <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 8, i32 7>
   ret <8 x i32> %shift
@@ -911,15 +911,15 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ;
 ; X86-AVX1-LABEL: constant_shift_v16i16:
 ; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpmullw {{\.LCPI.*}}, %xmm0, %xmm1
+; X86-AVX1-NEXT:    vpmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; X86-AVX1-NEXT:    vpmullw {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpmullw {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: constant_shift_v16i16:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpmullw {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpmullw {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
   %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   ret <16 x i16> %shift
@@ -1055,12 +1055,12 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X86-AVX2-LABEL: constant_shift_v32i8:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpsllw $4, %ymm0, %ymm1
-; X86-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm2 = [8192,24640,41088,57536,49376,32928,16480,32,8192,24640,41088,57536,49376,32928,16480,32]
 ; X86-AVX2-NEXT:    # ymm2 = mem[0,1,0,1]
 ; X86-AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpsllw $2, %ymm0, %ymm1
-; X86-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
 ; X86-AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm1
@@ -1293,7 +1293,7 @@ define <32 x i8> @splatconstant_shift_v32i8(<32 x i8> %a) nounwind {
 ; X86-AVX2-LABEL: splatconstant_shift_v32i8:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpsllw $3, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
   %shift = shl <32 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <32 x i8> %shift

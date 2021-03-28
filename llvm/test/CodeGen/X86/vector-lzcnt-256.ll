@@ -164,7 +164,7 @@ define <4 x i64> @testv4i64(<4 x i64> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -346,7 +346,7 @@ define <4 x i64> @testv4i64u(<4 x i64> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -503,7 +503,7 @@ define <8 x i32> @testv8i32(<8 x i32> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -655,7 +655,7 @@ define <8 x i32> @testv8i32u(<8 x i32> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -778,7 +778,7 @@ define <16 x i16> @testv16i16(<16 x i16> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -895,7 +895,7 @@ define <16 x i16> @testv16i16u(<16 x i16> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm3, %ymm3
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm3
 ; X32-AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; X32-AVX-NEXT:    vpcmpeqb %ymm4, %ymm3, %ymm5
 ; X32-AVX-NEXT:    vpand %ymm5, %ymm2, %ymm2
@@ -994,7 +994,7 @@ define <32 x i8> @testv32i8(<32 x i8> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; X32-AVX-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm3
 ; X32-AVX-NEXT:    vpand %ymm3, %ymm2, %ymm2
@@ -1088,7 +1088,7 @@ define <32 x i8> @testv32i8u(<32 x i8> %in) nounwind {
 ; X32-AVX-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; X32-AVX-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; X32-AVX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; X32-AVX-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
+; X32-AVX-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; X32-AVX-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm3
 ; X32-AVX-NEXT:    vpand %ymm3, %ymm2, %ymm2
