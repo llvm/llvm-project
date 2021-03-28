@@ -262,6 +262,10 @@ external dibuild_get_or_create_type_array :
   lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
   = "llvm_dibuild_get_or_create_type_array"
 
+external dibuild_get_or_create_array :
+  lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
+  = "llvm_dibuild_get_or_create_array"
+
 external dibuild_create_subroutine_type :
   lldibuilder ->
   file:Llvm.llmetadata ->

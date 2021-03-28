@@ -339,7 +339,7 @@ let test_types dibuilder file_di m_di =
       ~align_in_bits:0 ~elements ~class_ty:int64_ty_di
   in
   let elements_arr =
-    Llvm_debuginfo.dibuild_get_or_create_type_array dibuilder ~data:elements
+    Llvm_debuginfo.dibuild_get_or_create_array dibuilder ~data:elements
   in
   stdout_metadata elements_arr;
   (* CHECK: [[ELEMENTS_PTR:<0x[0-9a-f]*>]] = !{[[ENUMERATOR1_PTR]], [[ENUMERATOR2_PTR]], [[ENUMERATOR3_PTR]]}
