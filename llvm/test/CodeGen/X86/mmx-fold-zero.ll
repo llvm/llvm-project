@@ -32,7 +32,7 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    paddw %mm2, %mm0
 ; X86-NEXT:    paddw %mm6, %mm0
 ; X86-NEXT:    pmuludq %mm3, %mm0
-; X86-NEXT:    paddw {{\.LCPI.*}}, %mm0
+; X86-NEXT:    paddw {{\.LCPI[0-9]+_[0-9]+}}, %mm0
 ; X86-NEXT:    paddw %mm1, %mm0
 ; X86-NEXT:    pmuludq %mm7, %mm0
 ; X86-NEXT:    pmuludq (%esp), %mm0 # 8-byte Folded Reload
@@ -70,7 +70,7 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-NEXT:    paddw %mm2, %mm0
 ; X64-NEXT:    paddw %mm6, %mm0
 ; X64-NEXT:    pmuludq %mm3, %mm0
-; X64-NEXT:    paddw {{\.LCPI.*}}, %mm0
+; X64-NEXT:    paddw {{\.LCPI[0-9]+_[0-9]+}}, %mm0
 ; X64-NEXT:    paddw %mm1, %mm0
 ; X64-NEXT:    pmuludq %mm7, %mm0
 ; X64-NEXT:    pmuludq {{[-0-9]+}}(%r{{[sb]}}p), %mm0 # 8-byte Folded Reload

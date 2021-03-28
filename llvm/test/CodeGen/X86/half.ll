@@ -364,7 +364,7 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-I686-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    shrl $31, %eax
 ; CHECK-I686-NEXT:    fildll {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; CHECK-I686-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; CHECK-I686-NEXT:    fstps (%esp)
 ; CHECK-I686-NEXT:    calll __gnu_f2h_ieee
 ; CHECK-I686-NEXT:    movw %ax, (%esi)

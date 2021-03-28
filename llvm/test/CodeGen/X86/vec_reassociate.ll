@@ -38,7 +38,7 @@ define <4 x i32> @mul_4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: mul_4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pmulld %xmm1, %xmm0
-; X86-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4i32:
@@ -56,7 +56,7 @@ define <4 x i32> @mul_4i32_commute(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: mul_4i32_commute:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pmulld %xmm1, %xmm0
-; X86-NEXT:    pmulld {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    pmulld {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_4i32_commute:
@@ -74,7 +74,7 @@ define <4 x i32> @and_4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: and_4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    andps %xmm1, %xmm0
-; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_4i32:
@@ -92,7 +92,7 @@ define <4 x i32> @and_4i32_commute(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: and_4i32_commute:
 ; X86:       # %bb.0:
 ; X86-NEXT:    andps %xmm1, %xmm0
-; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_4i32_commute:
@@ -110,7 +110,7 @@ define <4 x i32> @or_4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: or_4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    orps %xmm1, %xmm0
-; X86-NEXT:    orps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    orps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_4i32:
@@ -128,7 +128,7 @@ define <4 x i32> @or_4i32_commute(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: or_4i32_commute:
 ; X86:       # %bb.0:
 ; X86-NEXT:    orps %xmm1, %xmm0
-; X86-NEXT:    orps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    orps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_4i32_commute:
@@ -146,7 +146,7 @@ define <4 x i32> @xor_4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: xor_4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm1, %xmm0
-; X86-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_4i32:
@@ -164,7 +164,7 @@ define <4 x i32> @xor_4i32_commute(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-LABEL: xor_4i32_commute:
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorps %xmm1, %xmm0
-; X86-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_4i32_commute:

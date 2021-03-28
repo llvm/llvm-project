@@ -10,7 +10,7 @@
 define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: t1:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: t1:
@@ -166,7 +166,7 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 define <4 x float> @fneg_undef_elts_v4f32(<4 x float> %x) {
 ; X32-SSE-LABEL: fneg_undef_elts_v4f32:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fneg_undef_elts_v4f32:
@@ -194,7 +194,7 @@ define <4 x float> @fsub0_undef_elts_v4f32(<4 x float> %x) {
 define <4 x float> @fneg(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: fneg:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fneg:

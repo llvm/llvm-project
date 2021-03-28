@@ -9,13 +9,13 @@
 define <4 x float> @mask_ucvt_4i32_4f32(<4 x i32> %a) {
 ; X32-SSE-LABEL: mask_ucvt_4i32_4f32:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: mask_ucvt_4i32_4f32:
 ; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
@@ -38,7 +38,7 @@ define <4 x float> @mask_ucvt_4i32_4f32(<4 x i32> %a) {
 define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ; X32-SSE-LABEL: mask_ucvt_4i32_4f64:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    cvtdq2pd %xmm0, %xmm2
 ; X32-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X32-SSE-NEXT:    cvtdq2pd %xmm0, %xmm1
@@ -47,7 +47,7 @@ define <4 x double> @mask_ucvt_4i32_4f64(<4 x i32> %a) {
 ;
 ; X32-AVX-LABEL: mask_ucvt_4i32_4f64:
 ; X32-AVX:       # %bb.0:
-; X32-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2pd %xmm0, %ymm0
 ; X32-AVX-NEXT:    retl
 ;
@@ -80,7 +80,7 @@ define <4 x float> @lshr_truncate_mask_ucvt_4i64_4f32(<4 x i64> *%p0) {
 ; X32-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; X32-SSE-NEXT:    psrld $16, %xmm0
 ; X32-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
-; X32-SSE-NEXT:    mulps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    mulps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:
@@ -90,7 +90,7 @@ define <4 x float> @lshr_truncate_mask_ucvt_4i64_4f32(<4 x i64> *%p0) {
 ; X32-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
 ; X32-AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; X32-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X32-AVX-NEXT:    vmulps {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-AVX-NEXT:    vmulps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: lshr_truncate_mask_ucvt_4i64_4f32:

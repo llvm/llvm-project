@@ -106,7 +106,7 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_uniform_pow_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_uniform_pow_2:
@@ -120,7 +120,7 @@ define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 define <4 x i32> @vec_const_nonuniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_nonuniform_pow_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_nonuniform_pow_2:
