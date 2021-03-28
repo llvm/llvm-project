@@ -183,7 +183,7 @@ value llvm_add_scalar_repl_aggregates_ssa(LLVMPassManagerRef PM) {
 
 /* int -> [<Llvm.PassManager.any] Llvm.PassManager.t -> unit */
 value llvm_add_scalar_repl_aggregates_with_threshold(value threshold,
-                                                              LLVMPassManagerRef PM) {
+                                                     LLVMPassManagerRef PM) {
   LLVMAddScalarReplAggregatesPassWithThreshold(PM, Int_val(threshold));
   return Val_unit;
 }
