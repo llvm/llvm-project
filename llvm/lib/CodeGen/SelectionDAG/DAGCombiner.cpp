@@ -12413,7 +12413,7 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
                                              VT.getVectorElementType());
 
   // If the input is a constant, let getNode fold it.
-  if (isa<ConstantSDNode>(N0) || isa<ConstantFPSDNode>(N0)) {
+  if (isIntOrFPConstant(N0)) {
     // If we can't allow illegal operations, we need to check that this is just
     // a fp -> int or int -> conversion and that the resulting operation will
     // be legal.
@@ -12651,7 +12651,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return N0;
 
   // If the input is a constant, return it.
-  if (isa<ConstantSDNode>(N0) || isa<ConstantFPSDNode>(N0))
+  if (isIntOrFPConstant(N0))
     return N0;
 
   return SDValue();
@@ -16912,7 +16912,7 @@ void DAGCombiner::getStoreMergeCandidates(
     case StoreSource::Constant:
       if (NoTypeMatch)
         return false;
-      if (!(isa<ConstantSDNode>(OtherBC) || isa<ConstantFPSDNode>(OtherBC)))
+      if (!isIntOrFPConstant(OtherBC))
         return false;
       break;
     case StoreSource::Extract:
@@ -20492,7 +20492,7 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
     // generating a splat; semantically, this is fine, but it's likely to
     // generate low-quality code if the target can't reconstruct an appropriate
     // shuffle.
-    if (!Op.isUndef() && !isa<ConstantSDNode>(Op) && !isa<ConstantFPSDNode>(Op))
+    if (!Op.isUndef() && !isIntOrFPConstant(Op))
       if (!IsSplat && !DuplicateOps.insert(Op).second)
         return SDValue();
 
