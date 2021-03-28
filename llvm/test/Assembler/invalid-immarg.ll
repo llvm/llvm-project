@@ -4,7 +4,7 @@
 declare void @llvm.immarg.byval(i32* byval(i32) immarg)
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
-declare void @llvm.immarg.inalloca(i32* inalloca(i32) immarg)
+declare void @llvm.immarg.inalloca(i32* inalloca immarg)
 
 ; CHECK: Attribute 'immarg' is incompatible with other attributes
 declare void @llvm.immarg.inreg(i32 inreg immarg)

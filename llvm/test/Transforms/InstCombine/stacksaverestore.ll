@@ -9,7 +9,7 @@ declare void @llvm.stackrestore(i8*)
 define i32* @test1(i32 %P) {
 	%tmp = call i8* @llvm.stacksave( )
 	call void @llvm.stackrestore( i8* %tmp ) ;; not restoring anything
-	%A = alloca i32, i32 %P
+	%A = alloca i32, i32 %P		
 	ret i32* %A
 }
 
@@ -49,7 +49,7 @@ bb:		; preds = %bb, %bb.preheader
 	%tmp77 = alloca i8, i32 %size		; <i8*> [#uses=1]
 	%tmp78 = call i8* @llvm.stacksave( )		; <i8*> [#uses=1]
 	%tmp102 = alloca i8, i32 %size		; <i8*> [#uses=1]
-	call void @bar( i32 %i.0.reg2mem.0, i8* %tmp23, i8* %tmp52, i8* %tmp77, i8* %tmp102, i32 %size ) nounwind
+	call void @bar( i32 %i.0.reg2mem.0, i8* %tmp23, i8* %tmp52, i8* %tmp77, i8* %tmp102, i32 %size ) nounwind 
 	call void @llvm.stackrestore( i8* %tmp78 )
 	call void @llvm.stackrestore( i8* %tmp53 )
 	call void @llvm.stackrestore( i8* %tmp28 )
@@ -72,7 +72,7 @@ return:		; preds = %bb, %entry
 
 declare void @bar(i32, i8*, i8*, i8*, i8*, i32)
 
-declare void @inalloca_callee(i32* inalloca(i32))
+declare void @inalloca_callee(i32* inalloca)
 
 define void @test3(i32 %c) {
 entry:
@@ -83,7 +83,7 @@ loop:
   %save1 = call i8* @llvm.stacksave()
   %argmem = alloca inalloca i32
   store i32 0, i32* %argmem
-  call void @inalloca_callee(i32* inalloca(i32) %argmem)
+  call void @inalloca_callee(i32* inalloca %argmem)
 
   ; This restore cannot be deleted, the restore below does not make it dead.
   call void @llvm.stackrestore(i8* %save1)
@@ -106,7 +106,7 @@ return:
 ; CHECK: %save1 = call i8* @llvm.stacksave()
 ; CHECK: %argmem = alloca inalloca i32
 ; CHECK: store i32 0, i32* %argmem
-; CHECK: call void @inalloca_callee(i32* {{.*}} inalloca(i32) %argmem)
+; CHECK: call void @inalloca_callee(i32* inalloca {{.*}} %argmem)
 ; CHECK: call void @llvm.stackrestore(i8* %save1)
 ; CHECK: br i1 %done, label %loop, label %return
 ; CHECK: ret void

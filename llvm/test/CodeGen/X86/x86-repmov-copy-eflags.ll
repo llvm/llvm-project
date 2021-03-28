@@ -5,7 +5,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 %struct.T = type { i64, [3 x i32] }
 
 ; Function Attrs: nounwind optsize
-define void @f(i8* %p, i8* %q, i32* inalloca(i32) nocapture %unused) #0 {
+define void @f(i8* %p, i8* %q, i32* inalloca nocapture %unused) #0 {
 entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8
@@ -25,7 +25,7 @@ while.end:                                        ; preds = %while.body
   ret void
 }
 
-define void @f_pgso(i8* %p, i8* %q, i32* inalloca(i32) nocapture %unused) !prof !14 {
+define void @f_pgso(i8* %p, i8* %q, i32* inalloca nocapture %unused) !prof !14 {
 entry:
   %g = alloca %struct.T, align 8
   %r = alloca i32, align 8

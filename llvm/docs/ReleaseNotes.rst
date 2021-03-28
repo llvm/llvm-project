@@ -58,8 +58,7 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
-* The ``inalloca`` attribute now has a mandatory type field, similar
-  to ``byval`` and ``sret``.
+* ...
 
 
 Changes to building LLVM

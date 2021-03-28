@@ -118,7 +118,7 @@ define amdgpu_kernel void @preallocated_as0_cc_amdgpu_kernel(i32* preallocated(i
 
 ; CHECK: Calling convention disallows inalloca
 ; CHECK-NEXT: void (i32*)* @inalloca_as0_cc_amdgpu_kernel
-define amdgpu_kernel void @inalloca_as0_cc_amdgpu_kernel(i32* inalloca(i32) %ptr) {
+define amdgpu_kernel void @inalloca_as0_cc_amdgpu_kernel(i32* inalloca %ptr) {
   ret void
 }
 

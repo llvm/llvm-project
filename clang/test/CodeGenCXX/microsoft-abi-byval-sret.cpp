@@ -19,7 +19,7 @@ A B::foo(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_thiscallcc %struct.A* @"?foo@B@@QAE?AUA@@U2@@Z"
-// CHECK:       (%struct.B* %this, <{ %struct.A*, %struct.A }>* inalloca(<{ %struct.A*, %struct.A }>) %0)
+// CHECK:       (%struct.B* %this, <{ %struct.A*, %struct.A }>* inalloca %0)
 // CHECK:   getelementptr inbounds <{ %struct.A*, %struct.A }>, <{ %struct.A*, %struct.A }>* %{{.*}}, i32 0, i32 0
 // CHECK:   load %struct.A*, %struct.A**
 // CHECK:   ret %struct.A*
@@ -29,7 +29,7 @@ A B::bar(A x) {
 }
 
 // CHECK-LABEL: define dso_local %struct.A* @"?bar@B@@QAA?AUA@@U2@@Z"
-// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca(<{ %struct.B*, %struct.A*, %struct.A }>) %0)
+// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca %0)
 // CHECK:   getelementptr inbounds <{ %struct.B*, %struct.A*, %struct.A }>, <{ %struct.B*, %struct.A*, %struct.A }>* %{{.*}}, i32 0, i32 1
 // CHECK:   load %struct.A*, %struct.A**
 // CHECK:   ret %struct.A*
@@ -39,7 +39,7 @@ A B::baz(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_stdcallcc %struct.A* @"?baz@B@@QAG?AUA@@U2@@Z"
-// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca(<{ %struct.B*, %struct.A*, %struct.A }>) %0)
+// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca %0)
 // CHECK:   getelementptr inbounds <{ %struct.B*, %struct.A*, %struct.A }>, <{ %struct.B*, %struct.A*, %struct.A }>* %{{.*}}, i32 0, i32 1
 // CHECK:   load %struct.A*, %struct.A**
 // CHECK:   ret %struct.A*
@@ -49,7 +49,7 @@ A B::qux(A x) {
 }
 
 // CHECK-LABEL: define dso_local x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (%struct.B* inreg %this, %struct.A* inreg noalias sret(%struct.A) align 4 %agg.result, <{ %struct.A }>* inalloca(<{ %struct.A }>) %0)
+// CHECK:       (%struct.B* inreg %this, %struct.A* inreg noalias sret(%struct.A) align 4 %agg.result, <{ %struct.A }>* inalloca %0)
 // CHECK:   ret void
 
 int main() {
@@ -61,10 +61,10 @@ int main() {
 }
 
 // CHECK: call x86_thiscallcc %struct.A* @"?foo@B@@QAE?AUA@@U2@@Z"
-// CHECK:       (%struct.B* %{{[^,]*}}, <{ %struct.A*, %struct.A }>* inalloca(<{ %struct.A*, %struct.A }>) %{{[^,]*}})
+// CHECK:       (%struct.B* %{{[^,]*}}, <{ %struct.A*, %struct.A }>* inalloca %{{[^,]*}})
 // CHECK: call %struct.A* @"?bar@B@@QAA?AUA@@U2@@Z"
-// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca(<{ %struct.B*, %struct.A*, %struct.A }>) %{{[^,]*}})
+// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca %{{[^,]*}})
 // CHECK: call x86_stdcallcc %struct.A* @"?baz@B@@QAG?AUA@@U2@@Z"
-// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca(<{ %struct.B*, %struct.A*, %struct.A }>) %{{[^,]*}})
+// CHECK:       (<{ %struct.B*, %struct.A*, %struct.A }>* inalloca %{{[^,]*}})
 // CHECK: call x86_fastcallcc void @"?qux@B@@QAI?AUA@@U2@@Z"
-// CHECK:       (%struct.B* inreg %{{[^,]*}}, %struct.A* inreg sret(%struct.A) align 4 %{{.*}}, <{ %struct.A }>* inalloca(<{ %struct.A }>) %{{[^,]*}})
+// CHECK:       (%struct.B* inreg %{{[^,]*}}, %struct.A* inreg sret(%struct.A) align 4 %{{.*}}, <{ %struct.A }>* inalloca %{{[^,]*}})

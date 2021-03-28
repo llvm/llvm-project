@@ -232,7 +232,7 @@ entry:
 ; CHECK: retl
 
 
-define void @avoid_inalloca(i32* inalloca(i32) %x) {
+define void @avoid_inalloca(i32* inalloca %x) {
 entry:
   %x.p.p = alloca i32*
   store i32* %x, i32** %x.p.p
