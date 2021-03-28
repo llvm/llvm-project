@@ -1231,3 +1231,79 @@ define i128 @muli128_m63(i128 %a) nounwind {
   %1 = mul i128 %a, -63
   ret i128 %1
 }
+
+define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
+; RV32I-LABEL: mulhsu_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -64
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    srai a4, a3, 31
+; RV32I-NEXT:    sw a3, 12(sp)
+; RV32I-NEXT:    sw a2, 8(sp)
+; RV32I-NEXT:    sw zero, 36(sp)
+; RV32I-NEXT:    sw zero, 32(sp)
+; RV32I-NEXT:    sw a1, 28(sp)
+; RV32I-NEXT:    sw a0, 24(sp)
+; RV32I-NEXT:    sw a4, 20(sp)
+; RV32I-NEXT:    addi a0, sp, 40
+; RV32I-NEXT:    addi a1, sp, 24
+; RV32I-NEXT:    addi a2, sp, 8
+; RV32I-NEXT:    sw a4, 16(sp)
+; RV32I-NEXT:    call __multi3@plt
+; RV32I-NEXT:    lw a0, 48(sp)
+; RV32I-NEXT:    lw a1, 52(sp)
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 64
+; RV32I-NEXT:    ret
+;
+; RV32IM-LABEL: mulhsu_i64:
+; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    addi sp, sp, -64
+; RV32IM-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32IM-NEXT:    srai a4, a3, 31
+; RV32IM-NEXT:    sw a3, 12(sp)
+; RV32IM-NEXT:    sw a2, 8(sp)
+; RV32IM-NEXT:    sw zero, 36(sp)
+; RV32IM-NEXT:    sw zero, 32(sp)
+; RV32IM-NEXT:    sw a1, 28(sp)
+; RV32IM-NEXT:    sw a0, 24(sp)
+; RV32IM-NEXT:    sw a4, 20(sp)
+; RV32IM-NEXT:    addi a0, sp, 40
+; RV32IM-NEXT:    addi a1, sp, 24
+; RV32IM-NEXT:    addi a2, sp, 8
+; RV32IM-NEXT:    sw a4, 16(sp)
+; RV32IM-NEXT:    call __multi3@plt
+; RV32IM-NEXT:    lw a0, 48(sp)
+; RV32IM-NEXT:    lw a1, 52(sp)
+; RV32IM-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32IM-NEXT:    addi sp, sp, 64
+; RV32IM-NEXT:    ret
+;
+; RV64I-LABEL: mulhsu_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a2, a1
+; RV64I-NEXT:    srai a3, a1, 63
+; RV64I-NEXT:    mv a1, zero
+; RV64I-NEXT:    call __multi3@plt
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
+;
+; RV64IM-LABEL: mulhsu_i64:
+; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    srai a2, a1, 63
+; RV64IM-NEXT:    mulhu a1, a0, a1
+; RV64IM-NEXT:    mul a0, a0, a2
+; RV64IM-NEXT:    add a0, a1, a0
+; RV64IM-NEXT:    ret
+  %1 = zext i64 %a to i128
+  %2 = sext i64 %b to i128
+  %3 = mul i128 %1, %2
+  %4 = lshr i128 %3, 64
+  %5 = trunc i128 %4 to i64
+  ret i64 %5
+}
+
