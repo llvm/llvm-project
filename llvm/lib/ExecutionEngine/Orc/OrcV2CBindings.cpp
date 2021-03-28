@@ -393,7 +393,7 @@ void LLVMOrcDisposeJITTargetMachineBuilder(
   delete unwrap(JTMB);
 }
 
-void lLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
+void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
 }
 
