@@ -2,11 +2,13 @@
 
 /// Test native x86-64 in the tree.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
+// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
+// DEBIAN_X86_64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64:      "-internal-isystem"
 // DEBIAN_X86_64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
+// DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
 // DEBIAN_X86_64:      "-L
@@ -26,11 +28,13 @@
 
 /// Test -m32.
 // RUN: %clang -### %s --target=x86_64-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
+// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
+// DEBIAN_X86_64_M32:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64_M32:      "-internal-isystem"
 // DEBIAN_X86_64_M32-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
+// DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
 // DEBIAN_X86_64_M32:      "-internal-externc-isystem"
@@ -47,11 +51,13 @@
 
 /// Test a cross compiler.
 // RUN: %clang -### %s --target=aarch64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
+// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
+// DEBIAN_AARCH64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_AARCH64:      "-internal-isystem"
 // DEBIAN_AARCH64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10/aarch64-linux-gnu"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10/backward"
+// DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include"
 // DEBIAN_AARCH64:      "-L
