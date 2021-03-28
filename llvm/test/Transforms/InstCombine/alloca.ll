@@ -207,7 +207,7 @@ define void @test8() {
 
 ; PR19569
 %struct_type = type { i32, i32 }
-declare void @test9_aux(<{ %struct_type }>* inalloca(<{ %struct_type }>))
+declare void @test9_aux(<{ %struct_type }>* inalloca)
 declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
 
@@ -219,7 +219,7 @@ define void @test9(%struct_type* %a) {
 ; ALL-NEXT:    [[TMP0:%.*]] = bitcast %struct_type* [[A:%.*]] to i64*
 ; ALL-NEXT:    [[TMP1:%.*]] = load i64, i64* [[TMP0]], align 4
 ; ALL-NEXT:    store i64 [[TMP1]], i64* [[ARGMEM]], align 8
-; ALL-NEXT:    call void @test9_aux(<{ [[STRUCT_TYPE]] }>* nonnull inalloca(<{ [[STRUCT_TYPE]] }>) [[TMPCAST]])
+; ALL-NEXT:    call void @test9_aux(<{ [[STRUCT_TYPE]] }>* inalloca nonnull [[TMPCAST]])
 ; ALL-NEXT:    ret void
 ;
 entry:
@@ -229,7 +229,7 @@ entry:
   %1 = bitcast %struct_type* %0 to i8*
   %2 = bitcast %struct_type* %a to i8*
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %1, i8* align 4 %2, i32 8, i1 false)
-  call void @test9_aux(<{ %struct_type }>* inalloca(<{ %struct_type }>) %argmem)
+  call void @test9_aux(<{ %struct_type }>* inalloca %argmem)
   call void @llvm.stackrestore(i8* %inalloca.save)
   ret void
 }
