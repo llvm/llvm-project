@@ -1012,6 +1012,20 @@ AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
     const Value *V2, LocationSize V2Size, const AAMDNodes &V2AAInfo,
     const Value *UnderlyingV1, const Value *UnderlyingV2, AAQueryInfo &AAQI) {
+  if (!V1Size.hasValue() && !V2Size.hasValue()) {
+    // TODO: This limitation exists for compile-time reasons. Relax it if we
+    // can avoid exponential pathological cases.
+    if (!isa<GEPOperator>(V2))
+      return MayAlias;
+
+    // If both accesses have unknown size, we can only check whether the base
+    // objects don't alias.
+    AliasResult BaseAlias = getBestAAResults().alias(
+        MemoryLocation::getBeforeOrAfter(UnderlyingV1),
+        MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
+    return BaseAlias == NoAlias ? NoAlias : MayAlias;
+  }
+
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1043,11 +1057,6 @@ AliasResult BasicAAResult::aliasGEP(
         V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
         isBaseOfObject(DecompGEP1.Base))
     return NoAlias;
-  } else {
-    // TODO: This limitation exists for compile-time reasons. Relax it if we
-    // can avoid exponential pathological cases.
-    if (!V1Size.hasValue() && !V2Size.hasValue())
-      return MayAlias;
   }
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
