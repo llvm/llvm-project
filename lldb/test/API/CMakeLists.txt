@@ -116,7 +116,7 @@ if(CMAKE_HOST_APPLE)
     list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
     add_lldb_test_dependency(debugserver)
   else()
-    message(STATUS "LLDB Tests use just-built debug server")
+    message(STATUS "LLDB tests use just-built debug server")
   endif()
 endif()
 
