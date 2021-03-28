@@ -139,7 +139,7 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; SSE-NEXT:    movq %rcx, (%rsp)
 ; SSE-NEXT:    movaps (%rsp), %xmm0
 ; SSE-NEXT:    movaps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    callq __lttf2
+; SSE-NEXT:    callq __lttf2@PLT
 ; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    sets %cl
@@ -159,7 +159,7 @@ define fp128 @TestI128_1(fp128 %x) #0 {
 ; AVX-NEXT:    movq %rcx, (%rsp)
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0
 ; AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm1
-; AVX-NEXT:    callq __lttf2
+; AVX-NEXT:    callq __lttf2@PLT
 ; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testl %eax, %eax
 ; AVX-NEXT:    sets %cl
@@ -237,7 +237,7 @@ define fp128 @TestI128_3(fp128 %x, i32* nocapture readnone %ex) #0 {
 ; SSE-NEXT:    jmp .LBB4_3
 ; SSE-NEXT:  .LBB4_2: # %if.then
 ; SSE-NEXT:    movaps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    callq __multf3
+; SSE-NEXT:    callq __multf3@PLT
 ; SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; SSE-NEXT:    movabsq $-9223090561878065153, %rdx # imm = 0x8000FFFFFFFFFFFF
@@ -264,7 +264,7 @@ define fp128 @TestI128_3(fp128 %x, i32* nocapture readnone %ex) #0 {
 ; AVX-NEXT:    jmp .LBB4_3
 ; AVX-NEXT:  .LBB4_2: # %if.then
 ; AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm1
-; AVX-NEXT:    callq __multf3
+; AVX-NEXT:    callq __multf3@PLT
 ; AVX-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; AVX-NEXT:    movabsq $-9223090561878065153, %rdx # imm = 0x8000FFFFFFFFFFFF
@@ -451,11 +451,11 @@ define dso_local void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ f
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE-NEXT:    callq __gttf2
+; SSE-NEXT:    callq __gttf2@PLT
 ; SSE-NEXT:    movl %eax, %ebp
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, %xmm1
-; SSE-NEXT:    callq __subtf3
+; SSE-NEXT:    callq __subtf3@PLT
 ; SSE-NEXT:    testl %ebp, %ebp
 ; SSE-NEXT:    jle .LBB10_1
 ; SSE-NEXT:  # %bb.2: # %if.then
@@ -488,11 +488,11 @@ define dso_local void @TestCopySign({ fp128, fp128 }* noalias nocapture sret({ f
 ; AVX-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm1
 ; AVX-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    callq __gttf2
+; AVX-NEXT:    callq __gttf2@PLT
 ; AVX-NEXT:    movl %eax, %ebp
 ; AVX-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    vmovaps %xmm0, %xmm1
-; AVX-NEXT:    callq __subtf3
+; AVX-NEXT:    callq __subtf3@PLT
 ; AVX-NEXT:    testl %ebp, %ebp
 ; AVX-NEXT:    jle .LBB10_1
 ; AVX-NEXT:  # %bb.2: # %if.then
