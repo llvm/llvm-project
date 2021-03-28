@@ -493,11 +493,6 @@ public:
     return AttributeSets.getParamStructRetType(ArgNo);
   }
 
-  /// Extract the inalloca type for a parameter.
-  Type *getParamInAllocaType(unsigned ArgNo) const {
-    return AttributeSets.getParamInAllocaType(ArgNo);
-  }
-
   /// Extract the byref type for a parameter.
   Type *getParamByRefType(unsigned ArgNo) const {
     return AttributeSets.getParamByRefType(ArgNo);

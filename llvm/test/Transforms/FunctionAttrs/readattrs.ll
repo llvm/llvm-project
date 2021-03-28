@@ -50,9 +50,9 @@ define void @test6_2(i8** %p, i8* %q) {
   ret void
 }
 
-; CHECK: define void @test7_1(i32* nocapture inalloca(i32) %a)
+; CHECK: define void @test7_1(i32* inalloca nocapture %a)
 ; inalloca parameters are always considered written
-define void @test7_1(i32* inalloca(i32) %a) {
+define void @test7_1(i32* inalloca %a) {
   ret void
 }
 
