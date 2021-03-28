@@ -369,6 +369,14 @@ CAMLprim LLVMMetadataRef llvm_dibuild_get_or_create_type_array(value Builder,
                                            Wosize_val(Data));
 }
 
+CAMLprim LLVMMetadataRef llvm_dibuild_get_or_create_array(value Builder,
+                                                          value Data) {
+
+  return LLVMDIBuilderGetOrCreateArray(DIBuilder_val(Builder),
+                                       (LLVMMetadataRef *)Op_val(Data),
+                                       Wosize_val(Data));
+}
+
 CAMLprim LLVMMetadataRef llvm_dibuild_create_subroutine_type(
     value Builder, LLVMMetadataRef File, value ParameterTypes, value Flags) {
 
