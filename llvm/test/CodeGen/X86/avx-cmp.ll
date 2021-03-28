@@ -54,7 +54,7 @@ define void @render(double %a0) nounwind {
 ; CHECK-NEXT:    jnp .LBB2_2
 ; CHECK-NEXT:  .LBB2_5: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    callq scale
+; CHECK-NEXT:    callq scale@PLT
 ; CHECK-NEXT:    jmp .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %for.end52
 ; CHECK-NEXT:    addq $8, %rsp

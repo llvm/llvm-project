@@ -102,7 +102,7 @@ define i32 @test2() nounwind {
 ;
 ; MCU-LABEL: test2:
 ; MCU:       # %bb.0: # %entry
-; MCU-NEXT:    calll return_false
+; MCU-NEXT:    calll return_false@PLT
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB1_2

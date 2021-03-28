@@ -112,9 +112,9 @@ define dso_local float @div_arcp_by_const(half %x) {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    mulss {{.*}}(%rip), %xmm0
-; X64-NEXT:    callq __gnu_f2h_ieee
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X64-NEXT:    movzwl %ax, %edi
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8

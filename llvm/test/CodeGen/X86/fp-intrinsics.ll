@@ -326,7 +326,7 @@ define double @f6() #0 {
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    callq pow
+; SSE-NEXT:    callq pow@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -337,7 +337,7 @@ define double @f6() #0 {
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    callq pow
+; AVX-NEXT:    callq pow@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -382,7 +382,7 @@ define double @f7() #0 {
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movl $3, %edi
-; SSE-NEXT:    callq __powidf2
+; SSE-NEXT:    callq __powidf2@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -393,7 +393,7 @@ define double @f7() #0 {
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    movl $3, %edi
-; AVX-NEXT:    callq __powidf2
+; AVX-NEXT:    callq __powidf2@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -435,7 +435,7 @@ define double @f8() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq sin
+; SSE-NEXT:    callq sin@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -445,7 +445,7 @@ define double @f8() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq sin
+; AVX-NEXT:    callq sin@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -486,7 +486,7 @@ define double @f9() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq cos
+; SSE-NEXT:    callq cos@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -496,7 +496,7 @@ define double @f9() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq cos
+; AVX-NEXT:    callq cos@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -537,7 +537,7 @@ define double @f10() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq exp
+; SSE-NEXT:    callq exp@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -547,7 +547,7 @@ define double @f10() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq exp
+; AVX-NEXT:    callq exp@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -588,7 +588,7 @@ define double @f11() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq exp2
+; SSE-NEXT:    callq exp2@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -598,7 +598,7 @@ define double @f11() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq exp2
+; AVX-NEXT:    callq exp2@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -639,7 +639,7 @@ define double @f12() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq log
+; SSE-NEXT:    callq log@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -649,7 +649,7 @@ define double @f12() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq log
+; AVX-NEXT:    callq log@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -690,7 +690,7 @@ define double @f13() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq log10
+; SSE-NEXT:    callq log10@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -700,7 +700,7 @@ define double @f13() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq log10
+; AVX-NEXT:    callq log10@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -741,7 +741,7 @@ define double @f14() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq log2
+; SSE-NEXT:    callq log2@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -751,7 +751,7 @@ define double @f14() #0 {
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq log2
+; AVX-NEXT:    callq log2@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -792,7 +792,7 @@ define double @f15() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq rint
+; SSE-NEXT:    callq rint@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -840,7 +840,7 @@ define double @f16() #0 {
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    callq nearbyint
+; SSE-NEXT:    callq nearbyint@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -892,7 +892,7 @@ define double @f19() #0 {
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    callq fmod
+; SSE-NEXT:    callq fmod@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -903,7 +903,7 @@ define double @f19() #0 {
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    callq fmod
+; AVX-NEXT:    callq fmod@PLT
 ; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1172,14 +1172,14 @@ define i128 @f20s128(double %x) nounwind strictfp {
 ; SSE-LABEL: f20s128:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    callq __fixdfti
+; SSE-NEXT:    callq __fixdfti@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f20s128:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    callq __fixdfti
+; AVX-NEXT:    callq __fixdfti@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    retq
 entry:
@@ -1517,14 +1517,14 @@ define i128 @f20u128(double %x) nounwind strictfp {
 ; SSE-LABEL: f20u128:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    callq __fixunsdfti
+; SSE-NEXT:    callq __fixunsdfti@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: f20u128:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    callq __fixunsdfti
+; AVX-NEXT:    callq __fixunsdfti@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    retq
 entry:
@@ -1644,7 +1644,7 @@ define i32 @f23(double %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq lrint
+; SSE-NEXT:    callq lrint@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1653,7 +1653,7 @@ define i32 @f23(double %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq lrint
+; AVX-NEXT:    callq lrint@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1692,7 +1692,7 @@ define i32 @f24(float %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq lrintf
+; SSE-NEXT:    callq lrintf@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1701,7 +1701,7 @@ define i32 @f24(float %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq lrintf
+; AVX-NEXT:    callq lrintf@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1740,7 +1740,7 @@ define i64 @f25(double %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq llrint
+; SSE-NEXT:    callq llrint@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1749,7 +1749,7 @@ define i64 @f25(double %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq llrint
+; AVX-NEXT:    callq llrint@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1788,7 +1788,7 @@ define i64 @f26(float %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq llrintf
+; SSE-NEXT:    callq llrintf@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1797,7 +1797,7 @@ define i64 @f26(float %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq llrintf
+; AVX-NEXT:    callq llrintf@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1836,7 +1836,7 @@ define i32 @f27(double %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq lround
+; SSE-NEXT:    callq lround@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1845,7 +1845,7 @@ define i32 @f27(double %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq lround
+; AVX-NEXT:    callq lround@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1883,7 +1883,7 @@ define i32 @f28(float %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq lroundf
+; SSE-NEXT:    callq lroundf@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1892,7 +1892,7 @@ define i32 @f28(float %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq lroundf
+; AVX-NEXT:    callq lroundf@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1930,7 +1930,7 @@ define i64 @f29(double %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq llround
+; SSE-NEXT:    callq llround@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1939,7 +1939,7 @@ define i64 @f29(double %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq llround
+; AVX-NEXT:    callq llround@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
@@ -1977,7 +1977,7 @@ define i64 @f30(float %x) #0 {
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    pushq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
-; SSE-NEXT:    callq llroundf
+; SSE-NEXT:    callq llroundf@PLT
 ; SSE-NEXT:    popq %rcx
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq
@@ -1986,7 +1986,7 @@ define i64 @f30(float %x) #0 {
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    pushq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    callq llroundf
+; AVX-NEXT:    callq llroundf@PLT
 ; AVX-NEXT:    popq %rcx
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
