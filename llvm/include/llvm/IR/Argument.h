@@ -111,6 +111,9 @@ public:
   /// If this is a byref argument, return its type.
   Type *getParamByRefType() const;
 
+  /// If this is an inalloca argument, return its type.
+  Type *getParamInAllocaType() const;
+
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;
 

@@ -148,7 +148,7 @@ define void @test9(%struct.x* byval(%struct.x)  %a) nounwind  {
 }
 
 ; Test for inalloca handling.
-define void @test9_2(%struct.x* inalloca  %a) nounwind  {
+define void @test9_2(%struct.x* inalloca(%struct.x) %a) nounwind {
 ; CHECK-LABEL: @test9_2(
 ; CHECK-NEXT:    ret void
 ;
