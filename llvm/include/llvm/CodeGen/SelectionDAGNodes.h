@@ -1673,6 +1673,11 @@ bool isOneOrOneSplat(SDValue V);
 /// Does not permit build vector implicit truncation.
 bool isAllOnesOrAllOnesSplat(SDValue V);
 
+/// Return true if \p V is either a integer or FP constant.
+inline bool isIntOrFPConstant(SDValue V) {
+  return isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V);
+}
+
 class GlobalAddressSDNode : public SDNode {
   friend class SelectionDAG;
 
