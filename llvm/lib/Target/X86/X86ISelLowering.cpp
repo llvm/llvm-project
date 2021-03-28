@@ -27492,35 +27492,28 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // to a vXi16 type. Do the multiplies, shift the results and pack the half
   // lane results back together.
 
+  // We'll take different approaches for signed and unsigned.
+  // For unsigned we'll use punpcklbw/punpckhbw to zero extend the bytes and
+  // use pmullw to calculate the full 16-bit product.
+  // For signed we'll use punpcklbw/punpckhbw to extend the bytes to words by
+  // placing the bytes in the upper byte of each word with zeros in the lower
+  // byte. This allows us to use pmulhw to calculate the full 16-bit product.
+  // This trick means we don't need to sign extend the bytes to use pmullw.
+
   MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
-
-  static const int PSHUFDMask[] = { 8,  9, 10, 11, 12, 13, 14, 15,
-                                   -1, -1, -1, -1, -1, -1, -1, -1};
-
-  // Extract the lo parts and zero/sign extend to i16.
-  // Only use SSE4.1 instructions for signed v16i8 where using unpack requires
-  // shifts to sign extend. Using unpack for unsigned only requires an xor to
-  // create zeros and a copy due to tied registers contraints pre-avx. But using
-  // zero_extend_vector_inreg would require an additional pshufd for the high
-  // part.
+  SDValue Zero = DAG.getConstant(0, dl, VT);
 
   SDValue ALo, AHi;
-  if (IsSigned && VT == MVT::v16i8 && Subtarget.hasSSE41()) {
-    ALo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, A);
-
-    AHi = DAG.getVectorShuffle(VT, dl, A, A, PSHUFDMask);
-    AHi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, AHi);
-  } else if (IsSigned) {
-    ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), A));
-    AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), A));
-
-    ALo = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExVT, ALo, 8, DAG);
-    AHi = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExVT, AHi, 8, DAG);
+  if (IsSigned) {
+    ALo = DAG.getBitcast(
+        ExVT, getUnpackl(DAG, dl, VT, Zero, A));
+    AHi = DAG.getBitcast(
+        ExVT, getUnpackh(DAG, dl, VT, Zero, A));
   } else {
     ALo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, A,
-                                          DAG.getConstant(0, dl, VT)));
+                                          Zero));
     AHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, A,
-                                          DAG.getConstant(0, dl, VT)));
+                                          Zero));
   }
 
   SDValue BLo, BHi;
@@ -27533,8 +27526,12 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
         SDValue HiOp = B.getOperand(i + j + 8);
 
         if (IsSigned) {
-          LoOp = DAG.getSExtOrTrunc(LoOp, dl, MVT::i16);
-          HiOp = DAG.getSExtOrTrunc(HiOp, dl, MVT::i16);
+          LoOp = DAG.getAnyExtOrTrunc(LoOp, dl, MVT::i16);
+          HiOp = DAG.getAnyExtOrTrunc(HiOp, dl, MVT::i16);
+          LoOp = DAG.getNode(ISD::SHL, dl, MVT::i16, LoOp,
+                             DAG.getConstant(8, dl, MVT::i16));
+          HiOp = DAG.getNode(ISD::SHL, dl, MVT::i16, HiOp,
+                             DAG.getConstant(8, dl, MVT::i16));
         } else {
           LoOp = DAG.getZExtOrTrunc(LoOp, dl, MVT::i16);
           HiOp = DAG.getZExtOrTrunc(HiOp, dl, MVT::i16);
@@ -27547,32 +27544,23 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
     BLo = DAG.getBuildVector(ExVT, dl, LoOps);
     BHi = DAG.getBuildVector(ExVT, dl, HiOps);
-  } else if (IsSigned && VT == MVT::v16i8 && Subtarget.hasSSE41()) {
-    BLo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, B);
-
-    BHi = DAG.getVectorShuffle(VT, dl, B, B, PSHUFDMask);
-    BHi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, BHi);
   } else if (IsSigned) {
-    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), B));
-    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), B));
-
-    BLo = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExVT, BLo, 8, DAG);
-    BHi = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExVT, BHi, 8, DAG);
+    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, Zero, B));
+    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, Zero, B));
   } else {
-    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B,
-                                          DAG.getConstant(0, dl, VT)));
-    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B,
-                                          DAG.getConstant(0, dl, VT)));
+    BLo = DAG.getBitcast(ExVT, getUnpackl(DAG, dl, VT, B, Zero));
+    BHi = DAG.getBitcast(ExVT, getUnpackh(DAG, dl, VT, B, Zero));
   }
 
   // Multiply, lshr the upper 8bits to the lower 8bits of the lo/hi results and
   // pack back to vXi8.
-  SDValue RLo = DAG.getNode(ISD::MUL, dl, ExVT, ALo, BLo);
-  SDValue RHi = DAG.getNode(ISD::MUL, dl, ExVT, AHi, BHi);
+  unsigned MulOpc = IsSigned ? ISD::MULHS : ISD::MUL;
+  SDValue RLo = DAG.getNode(MulOpc, dl, ExVT, ALo, BLo);
+  SDValue RHi = DAG.getNode(MulOpc, dl, ExVT, AHi, BHi);
   RLo = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, RLo, 8, DAG);
   RHi = getTargetVShiftByConstNode(X86ISD::VSRLI, dl, ExVT, RHi, 8, DAG);
 
-  // Bitcast back to VT and then pack all the even elements from Lo and Hi.
+  // Pack all the even elements from Lo and Hi.
   return DAG.getNode(X86ISD::PACKUS, dl, VT, RLo, RHi);
 }
 
