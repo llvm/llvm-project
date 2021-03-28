@@ -2876,8 +2876,9 @@ void Generic_GCC::AddMultilibIncludeArgs(const ArgList &DriverArgs,
 
 void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
-      DriverArgs.hasArg(options::OPT_nostdincxx))
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {
