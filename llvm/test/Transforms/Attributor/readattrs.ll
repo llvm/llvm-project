@@ -107,15 +107,15 @@ define void @test6_2(i8** %p, i8* %q) {
 }
 
 ; inalloca parameters are always considered written
-define void @test7_1(i32* inalloca %a) {
+define void @test7_1(i32* inalloca(i32) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test7_1
-; IS__TUNIT____-SAME: (i32* inalloca nocapture nofree nonnull writeonly dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree nonnull writeonly inalloca(i32) dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test7_1
-; IS__CGSCC____-SAME: (i32* inalloca nocapture nofree nonnull writeonly dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree nonnull writeonly inalloca(i32) dereferenceable(4) [[A:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret void
 ;
   ret void

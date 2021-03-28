@@ -80,7 +80,7 @@ def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly">;
 def InaccessibleMemOrArgMemOnly : EnumAttr<"inaccessiblemem_or_argmemonly">;
 
 /// Pass structure in an alloca.
-def InAlloca : EnumAttr<"inalloca">;
+def InAlloca : TypeAttr<"inalloca">;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint">;

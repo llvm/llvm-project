@@ -718,10 +718,10 @@ TEST(CloneFunction, CloneEmptyFunction) {
 
 TEST(CloneFunction, CloneFunctionWithInalloca) {
   StringRef ImplAssembly = R"(
-    declare void @a(i32* inalloca)
+    declare void @a(i32* inalloca(i32))
     define void @foo() {
       %a = alloca inalloca i32
-      call void @a(i32* inalloca %a)
+      call void @a(i32* inalloca(i32) %a)
       ret void
     }
     declare void @bar()
