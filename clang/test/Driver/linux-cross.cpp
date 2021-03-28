@@ -42,7 +42,6 @@
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib32"
-// DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 

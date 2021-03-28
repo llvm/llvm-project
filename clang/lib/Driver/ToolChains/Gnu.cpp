@@ -2852,19 +2852,7 @@ void Generic_GCC::AddMultiarchPaths(const Driver &D,
                                     const std::string &SysRoot,
                                     const std::string &OSLibDir,
                                     path_list &Paths) {
-  // Try walking via the GCC triple path in case of biarch or multiarch GCC
-  // installations with strange symlinks.
   if (GCCInstallation.isValid()) {
-    // Add the 'other' biarch variant path
-    Multilib BiarchSibling;
-    if (GCCInstallation.getBiarchSibling(BiarchSibling)) {
-      addPathIfExists(
-          D, GCCInstallation.getInstallPath() + BiarchSibling.gccSuffix(),
-                      Paths);
-    }
-
-    // See comments above on the multilib variant for details of why this is
-    // included even from outside the sysroot.
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
     const llvm::Triple &GCCTriple = GCCInstallation.getTriple();
