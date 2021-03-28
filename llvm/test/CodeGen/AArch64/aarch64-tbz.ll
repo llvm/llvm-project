@@ -4,8 +4,8 @@
 ; CHECK-LABEL: test1
 ; CHECK: tbz {{w[0-9]}}, #3, {{.LBB0_3}}
 ; CHECK: tbz w[[REG1:[0-9]+]], #2, {{.LBB0_3}}
-; CHECK-NOT: and [[REG2:x[0-9]+]], x[[REG1]], #0x4
-; CHECK-NOT: cbz [[REG2]], {{.LBB0_3}}
+; CHECK-NOT: and x{{[0-9]+}}, x[[REG1]], #0x4
+; CHECK-NOT: cbz x{{[0-9]+}}, .LBB0_3
 
 ; CHECK: b
 define void @test1(i64 %A, i64 %B) {
@@ -28,8 +28,8 @@ if.end3:                                          ; preds = %if.then2, %entry
 ; CHECK-LABEL: test2
 ; CHECK: cbz {{x[0-9]}}, {{.LBB1_3}}
 ; CHECK: tbz w[[REG1:[0-9]+]], #3, {{.LBB1_3}}
-; CHECK-NOT: and [REG2:x[0-9]+], x[[REG1]], #0x08
-; CHECK-NOT: cbz [[REG2]], {{.LBB1_3}}
+; CHECK-NOT: and x{{[0-9]+}}, x[[REG1]], #0x08
+; CHECK-NOT: cbz x{{[0-9]+}}, .LBB1_3
 
 define void @test2(i64 %A, i64* readonly %B) #0 {
 entry:
@@ -52,8 +52,8 @@ if.end3:                                          ; preds = %entry, %if.then2
 ; CHECK-LABEL: test3
 ; CHECK: tbz {{w[0-9]}}, #3, {{.LBB2_3}}
 ; CHECK: tbz w[[REG1:[0-9]+]], #28, {{.LBB2_3}}
-; CHECK-NOT: and [[REG2:x[0-9]+]], x[[REG1]]
-; CHECK-NOT: cbz [[REG2]], {{.LBB2_3}}
+; CHECK-NOT: and x{{[0-9]+}}, x[[REG1]]
+; CHECK-NOT: cbz x{{[0-9]+}}, .LBB2_3
 define void @test3(i64 %A, i64 %B) {
 entry:
   %shift = shl i64 1, 28
@@ -75,8 +75,8 @@ if.end3:                                          ; preds = %if.then2, %entry
 ; CHECK-LABEL: test4
 ; CHECK: tbz {{w[0-9]}}, #3, {{.LBB3_3}}
 ; CHECK: tbz [[REG1:x[0-9]+]], #35, {{.LBB3_3}}
-; CHECK-NOT: and [[REG2:x[0-9]+]], x[[REG1]]
-; CHECK-NOT: cbz [[REG2]], {{.LBB2_3}}
+; CHECK-NOT: and x{{[0-9]+}}, x[[REG1]]
+; CHECK-NOT: cbz x{{[0-9]+}}, .LBB2_3
 define void @test4(i64 %A, i64 %B) {
 entry:
   %shift = shl i64 1, 35
