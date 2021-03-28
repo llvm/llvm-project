@@ -2766,15 +2766,6 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   }
 }
 
-static void addMultilibsFilePaths(const Driver &D, const MultilibSet &Multilibs,
-                                  const Multilib &Multilib,
-                                  StringRef InstallPath,
-                                  ToolChain::path_list &Paths) {
-  if (const auto &PathsCallback = Multilibs.filePathsCallback())
-    for (const auto &Path : PathsCallback(Multilib))
-      addPathIfExists(D, InstallPath + Path, Paths);
-}
-
 void Generic_GCC::PushPPaths(ToolChain::path_list &PPaths) {
   // Cross-compiling binutils and GCC installations (vanilla and openSUSE at
   // least) put various tools in a triple-prefixed directory off of the parent
@@ -2801,12 +2792,13 @@ void Generic_GCC::AddMultilibPaths(const Driver &D,
     const std::string &LibPath =
         std::string(GCCInstallation.getParentLibPath());
 
-    // Add toolchain / multilib specific file paths.
-    addMultilibsFilePaths(D, Multilibs, SelectedMultilib,
-                          GCCInstallation.getInstallPath(), Paths);
-
     // Sourcery CodeBench MIPS toolchain holds some libraries under
     // a biarch-like suffix of the GCC installation.
+    if (const auto &PathsCallback = Multilibs.filePathsCallback())
+      for (const auto &Path : PathsCallback(SelectedMultilib))
+        addPathIfExists(D, GCCInstallation.getInstallPath() + Path, Paths);
+
+    // Add lib/gcc/$triple/$version, with an optional /multilib suffix.
     addPathIfExists(
         D, GCCInstallation.getInstallPath() + SelectedMultilib.gccSuffix(),
         Paths);
