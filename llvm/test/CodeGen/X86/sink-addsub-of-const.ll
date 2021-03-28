@@ -261,7 +261,7 @@ define <4 x i32> @vec_sink_add_of_const_to_add0(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_add_of_const_to_add0:
 ; X32:       # %bb.0:
 ; X32-NEXT:    paddd %xmm1, %xmm0
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_add_of_const_to_add0:
@@ -277,7 +277,7 @@ define <4 x i32> @vec_sink_add_of_const_to_add1(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_add_of_const_to_add1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    paddd %xmm1, %xmm0
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_add_of_const_to_add1:
@@ -297,7 +297,7 @@ define <4 x i32> @vec_sink_sub_of_const_to_add0(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_of_const_to_add0:
 ; X32:       # %bb.0:
 ; X32-NEXT:    paddd %xmm1, %xmm0
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_of_const_to_add0:
@@ -313,7 +313,7 @@ define <4 x i32> @vec_sink_sub_of_const_to_add1(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_of_const_to_add1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    paddd %xmm1, %xmm0
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_of_const_to_add1:
@@ -333,7 +333,7 @@ define <4 x i32> @vec_sink_sub_from_const_to_add0(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_from_const_to_add0:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm0, %xmm1
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    movdqa %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -351,7 +351,7 @@ define <4 x i32> @vec_sink_sub_from_const_to_add1(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_from_const_to_add1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm0, %xmm1
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    movdqa %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -373,7 +373,7 @@ define <4 x i32> @vec_sink_add_of_const_to_sub(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_add_of_const_to_sub:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm1, %xmm0
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_add_of_const_to_sub:
@@ -389,7 +389,7 @@ define <4 x i32> @vec_sink_add_of_const_to_sub2(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_add_of_const_to_sub2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm0, %xmm1
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    movdqa %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -411,7 +411,7 @@ define <4 x i32> @vec_sink_sub_of_const_to_sub(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_of_const_to_sub:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm1, %xmm0
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_of_const_to_sub:
@@ -427,7 +427,7 @@ define <4 x i32> @vec_sink_sub_of_const_to_sub2(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_of_const_to_sub2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    psubd %xmm0, %xmm1
-; X32-NEXT:    paddd {{\.LCPI.*}}, %xmm1
+; X32-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    movdqa %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
@@ -461,7 +461,7 @@ define <4 x i32> @vec_sink_sub_from_const_to_sub2(<4 x i32> %a, <4 x i32> %b) {
 ; X32-LABEL: vec_sink_sub_from_const_to_sub2:
 ; X32:       # %bb.0:
 ; X32-NEXT:    paddd %xmm1, %xmm0
-; X32-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: vec_sink_sub_from_const_to_sub2:

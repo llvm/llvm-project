@@ -16,7 +16,7 @@ define float @icmp_select_fp_constants(i32 %x) nounwind readnone {
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %al
-; X86-NEXT:    flds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    retl
 ;
 ; X64-SSE-LABEL: icmp_select_fp_constants:
@@ -46,7 +46,7 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X86-SSE-NEXT:    cmpneqss {{[0-9]+}}(%esp), %xmm0
 ; X86-SSE-NEXT:    movd %xmm0, %eax
 ; X86-SSE-NEXT:    andl $1, %eax
-; X86-SSE-NEXT:    flds {{\.LCPI.*}}(,%eax,4)
+; X86-SSE-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: fcmp_select_fp_constants:
@@ -55,15 +55,15 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X86-AVX2-NEXT:    vcmpneqss {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    andl $1, %eax
-; X86-AVX2-NEXT:    flds {{\.LCPI.*}}(,%eax,4)
+; X86-AVX2-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512F-LABEL: fcmp_select_fp_constants:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-AVX512F-NEXT:    vcmpneqss {{\.LCPI.*}}, %xmm0, %k0
+; X86-AVX512F-NEXT:    vcmpneqss {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %k0
 ; X86-AVX512F-NEXT:    kmovw %k0, %eax
-; X86-AVX512F-NEXT:    flds {{\.LCPI.*}}(,%eax,4)
+; X86-AVX512F-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fcmp_select_fp_constants:

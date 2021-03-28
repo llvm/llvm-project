@@ -1287,8 +1287,8 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X32-NEXT:    testb $-128, {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{\.LCPI.*}}
-; X32-NEXT:    flds {{\.LCPI.*}}
+; X32-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X32-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X32-NEXT:    jne .LBB26_3
 ; X32-NEXT:  # %bb.2: # %if.then
 ; X32-NEXT:    fstp %st(1)

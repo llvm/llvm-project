@@ -116,7 +116,7 @@ define void @testCombineMultiplies_splat(<4 x i32> %v1) nounwind {
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [242,242,242,242]
 ; CHECK-NEXT:    paddd %xmm0, %xmm2
-; CHECK-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movdqa %xmm2, v2
 ; CHECK-NEXT:    movdqa %xmm0, v3
 ; CHECK-NEXT:    movdqa %xmm1, x
@@ -151,7 +151,7 @@ define void @testCombineMultiplies_non_splat(<4 x i32> %v1) nounwind {
 ; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [242,726,1452,2420]
 ; CHECK-NEXT:    paddd %xmm0, %xmm2
-; CHECK-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; CHECK-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movdqa %xmm2, v2
 ; CHECK-NEXT:    movdqa %xmm0, v3
 ; CHECK-NEXT:    movdqa %xmm1, x

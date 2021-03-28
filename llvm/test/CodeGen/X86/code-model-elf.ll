@@ -417,13 +417,13 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ;
 ; MEDIUM-STATIC-LABEL: load_constant_pool:
 ; MEDIUM-STATIC:       # %bb.0:
-; MEDIUM-STATIC-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; MEDIUM-STATIC-NEXT:    movabsq ${{\.LCPI[0-9]+_[0-9]+}}, %rax
 ; MEDIUM-STATIC-NEXT:    addss (%rax), %xmm0
 ; MEDIUM-STATIC-NEXT:    retq
 ;
 ; LARGE-STATIC-LABEL: load_constant_pool:
 ; LARGE-STATIC:       # %bb.0:
-; LARGE-STATIC-NEXT:    movabsq ${{\.LCPI.*}}, %rax
+; LARGE-STATIC-NEXT:    movabsq ${{\.LCPI[0-9]+_[0-9]+}}, %rax
 ; LARGE-STATIC-NEXT:    addss (%rax), %xmm0
 ; LARGE-STATIC-NEXT:    retq
 ;
@@ -435,7 +435,7 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ; MEDIUM-PIC-LABEL: load_constant_pool:
 ; MEDIUM-PIC:       # %bb.0:
 ; MEDIUM-PIC-NEXT:    leaq {{.*}}(%rip), %rax
-; MEDIUM-PIC-NEXT:    movabsq ${{\.LCPI.*}}@GOTOFF, %rcx
+; MEDIUM-PIC-NEXT:    movabsq ${{\.LCPI[0-9]+_[0-9]+}}@GOTOFF, %rcx
 ; MEDIUM-PIC-NEXT:    addss (%rax,%rcx), %xmm0
 ; MEDIUM-PIC-NEXT:    retq
 ;
@@ -445,7 +445,7 @@ define dso_local float @load_constant_pool(float %x) #0 {
 ; LARGE-PIC-NEXT:    leaq .L11${{.*}}(%rip), %rax
 ; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L11$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
-; LARGE-PIC-NEXT:    movabsq ${{\.LCPI.*}}@GOTOFF, %rax
+; LARGE-PIC-NEXT:    movabsq ${{\.LCPI[0-9]+_[0-9]+}}@GOTOFF, %rax
 ; LARGE-PIC-NEXT:    addss (%rcx,%rax), %xmm0
 ; LARGE-PIC-NEXT:    retq
   %a = fadd float %x, 1.0

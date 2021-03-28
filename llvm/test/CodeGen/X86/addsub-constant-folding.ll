@@ -64,7 +64,7 @@ define i32 @add_const_add_const_extrause(i32 %arg) {
 define <4 x i32> @vec_add_const_add_const(<4 x i32> %arg) {
 ; X86-LABEL: vec_add_const_add_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_add_const_add_const:
@@ -87,7 +87,7 @@ define <4 x i32> @vec_add_const_add_const_extrause(<4 x i32> %arg) {
 ; X86-NEXT:    paddd %xmm1, %xmm0
 ; X86-NEXT:    calll vec_use@PLT
 ; X86-NEXT:    movdqu (%esp), %xmm0 # 16-byte Reload
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -115,7 +115,7 @@ define <4 x i32> @vec_add_const_add_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_add_const_add_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_add_const_add_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_add_const_add_const_nonsplat:
@@ -186,7 +186,7 @@ define i32 @add_const_sub_const_extrause(i32 %arg) {
 define <4 x i32> @vec_add_const_sub_const(<4 x i32> %arg) {
 ; X86-LABEL: vec_add_const_sub_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_add_const_sub_const:
@@ -209,7 +209,7 @@ define <4 x i32> @vec_add_const_sub_const_extrause(<4 x i32> %arg) {
 ; X86-NEXT:    paddd %xmm1, %xmm0
 ; X86-NEXT:    calll vec_use@PLT
 ; X86-NEXT:    movdqu (%esp), %xmm0 # 16-byte Reload
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -237,7 +237,7 @@ define <4 x i32> @vec_add_const_sub_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_add_const_sub_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_add_const_sub_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_add_const_sub_const_nonsplat:
@@ -440,7 +440,7 @@ define i32 @sub_const_add_const_extrause(i32 %arg) {
 define <4 x i32> @vec_sub_const_add_const(<4 x i32> %arg) {
 ; X86-LABEL: vec_sub_const_add_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_sub_const_add_const:
@@ -458,10 +458,10 @@ define <4 x i32> @vec_sub_const_add_const_extrause(<4 x i32> %arg) {
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 32
 ; X86-NEXT:    movdqu %xmm0, (%esp) # 16-byte Spill
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    calll vec_use@PLT
 ; X86-NEXT:    movdqu (%esp), %xmm0 # 16-byte Reload
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -487,7 +487,7 @@ define <4 x i32> @vec_sub_const_add_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_sub_const_add_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_sub_const_add_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_sub_const_add_const_nonsplat:
@@ -558,7 +558,7 @@ define i32 @sub_const_sub_const_extrause(i32 %arg) {
 define <4 x i32> @vec_sub_const_sub_const(<4 x i32> %arg) {
 ; X86-LABEL: vec_sub_const_sub_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_sub_const_sub_const:
@@ -576,10 +576,10 @@ define <4 x i32> @vec_sub_const_sub_const_extrause(<4 x i32> %arg) {
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 32
 ; X86-NEXT:    movdqu %xmm0, (%esp) # 16-byte Spill
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    calll vec_use@PLT
 ; X86-NEXT:    movdqu (%esp), %xmm0 # 16-byte Reload
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    addl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -605,7 +605,7 @@ define <4 x i32> @vec_sub_const_sub_const_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_sub_const_sub_const_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_sub_const_sub_const_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_sub_const_sub_const_nonsplat:
@@ -698,7 +698,7 @@ define <4 x i32> @vec_sub_const_const_sub_extrause(<4 x i32> %arg) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 32
-; X86-NEXT:    psubd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    psubd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movdqu %xmm0, (%esp) # 16-byte Spill
 ; X86-NEXT:    calll vec_use@PLT
 ; X86-NEXT:    movdqa {{.*#+}} xmm0 = [2,2,2,2]
@@ -1074,7 +1074,7 @@ define i32 @const_sub_const_sub_extrause(i32 %arg) {
 define <4 x i32> @vec_const_sub_const_sub(<4 x i32> %arg) {
 ; X86-LABEL: vec_const_sub_const_sub:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_sub_const_sub:
@@ -1126,7 +1126,7 @@ define <4 x i32> @vec_const_sub_const_sub_extrause(<4 x i32> %arg) {
 define <4 x i32> @vec_const_sub_const_sub_nonsplat(<4 x i32> %arg) {
 ; X86-LABEL: vec_const_sub_const_sub_nonsplat:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    paddd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_sub_const_sub_nonsplat:

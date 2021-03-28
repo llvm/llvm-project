@@ -6,7 +6,7 @@
 define <3 x float> @addf3(<3 x float> %x) {
 ; X86-LABEL: addf3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    addps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    addps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: addf3:

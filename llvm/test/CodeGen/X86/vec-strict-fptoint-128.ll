@@ -2031,7 +2031,7 @@ define <2 x i8> @strict_vector_fptosi_v2f64_to_v2i8(<2 x double> %a) #0 {
 ; SSE-32-LABEL: strict_vector_fptosi_v2f64_to_v2i8:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-32-NEXT:    andpd {{\.LCPI.*}}, %xmm0
+; SSE-32-NEXT:    andpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    retl
@@ -2082,7 +2082,7 @@ define <2 x i8> @strict_vector_fptoui_v2f64_to_v2i8(<2 x double> %a) #0 {
 ; SSE-32-LABEL: strict_vector_fptoui_v2f64_to_v2i8:
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-32-NEXT:    andpd {{\.LCPI.*}}, %xmm0
+; SSE-32-NEXT:    andpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    retl
@@ -2134,7 +2134,7 @@ define <2 x i8> @strict_vector_fptosi_v2f32_to_v2i8(<2 x float> %a) #0 {
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-32-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-32-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; SSE-32-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    retl
@@ -2192,7 +2192,7 @@ define <2 x i8> @strict_vector_fptoui_v2f32_to_v2i8(<2 x float> %a) #0 {
 ; SSE-32:       # %bb.0:
 ; SSE-32-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-32-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-32-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; SSE-32-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-32-NEXT:    retl
@@ -3037,7 +3037,7 @@ define <4 x i32> @strict_vector_fptoui_v4f32_to_v4i32(<4 x float> %a) #0 {
 ; SSE-32-NEXT:    movaps %xmm0, %xmm3
 ; SSE-32-NEXT:    cmpltps %xmm2, %xmm3
 ; SSE-32-NEXT:    movaps %xmm3, %xmm1
-; SSE-32-NEXT:    andnps {{\.LCPI.*}}, %xmm1
+; SSE-32-NEXT:    andnps {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; SSE-32-NEXT:    andnps %xmm2, %xmm3
 ; SSE-32-NEXT:    subps %xmm3, %xmm0
 ; SSE-32-NEXT:    cvttps2dq %xmm0, %xmm0

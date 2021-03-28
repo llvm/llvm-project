@@ -163,7 +163,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    sete %cl
-; MCU-NEXT:    flds {{\.LCPI.*}}(,%ecx,4)
+; MCU-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; MCU-NEXT:    retl
 entry:
   %0 = icmp eq i32 %x, 0
@@ -197,7 +197,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:    fldl {{[0-9]+}}(%esp)
-; MCU-NEXT:    flds {{\.LCPI.*}}
+; MCU-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; MCU-NEXT:    fucompp
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    xorl %edx, %edx
@@ -422,7 +422,7 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; MCU-NEXT:    notl %eax
 ; MCU-NEXT:    shrl $27, %eax
 ; MCU-NEXT:    andl $-16, %eax
-; MCU-NEXT:    fldt {{\.LCPI.*}}(%eax)
+; MCU-NEXT:    fldt {{\.LCPI[0-9]+_[0-9]+}}(%eax)
 ; MCU-NEXT:    retl
   %tmp9 = icmp sgt i32 %tmp8, -1
   %retval = select i1 %tmp9, x86_fp80 0xK4005B400000000000000, x86_fp80 0xK40078700000000000000
