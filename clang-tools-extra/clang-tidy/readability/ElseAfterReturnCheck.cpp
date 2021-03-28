@@ -171,8 +171,7 @@ void ElseAfterReturnCheck::registerPPCallbacks(const SourceManager &SM,
 void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
   const auto InterruptsControlFlow = stmt(anyOf(
       returnStmt().bind(InterruptingStr), continueStmt().bind(InterruptingStr),
-      breakStmt().bind(InterruptingStr),
-      expr(ignoringImplicit(cxxThrowExpr().bind(InterruptingStr)))));
+      breakStmt().bind(InterruptingStr), cxxThrowExpr().bind(InterruptingStr)));
   Finder->addMatcher(
       compoundStmt(
           forEach(ifStmt(unless(isConstexpr()),
