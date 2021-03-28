@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // General tests that ld invocations on Linux targets sane. Note that we use
 // sysroot to make these tests independent of the host system.
 //
