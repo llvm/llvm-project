@@ -327,6 +327,35 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     return UnaryOperator::CreateFNegFMF(NewSel, TI);
   }
 
+  // Min/max intrinsic with a common operand can have the common operand pulled
+  // after the select. This is the same transform as below for binops, but
+  // specialized for intrinsic matching and without the restrictive uses clause.
+  auto *TII = dyn_cast<IntrinsicInst>(TI);
+  auto *FII = dyn_cast<IntrinsicInst>(FI);
+  if (TII && FII && TII->getIntrinsicID() == FII->getIntrinsicID() &&
+      (TII->hasOneUse() || FII->hasOneUse())) {
+    Value *T0, *T1, *F0, *F1;
+    if (match(TII, m_MaxOrMin(m_Value(T0), m_Value(T1))) &&
+        match(FII, m_MaxOrMin(m_Value(F0), m_Value(F1)))) {
+      if (T0 == F0) {
+        Value *NewSel = Builder.CreateSelect(Cond, T1, F1, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T0});
+      }
+      if (T0 == F1) {
+        Value *NewSel = Builder.CreateSelect(Cond, T1, F0, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T0});
+      }
+      if (T1 == F0) {
+        Value *NewSel = Builder.CreateSelect(Cond, T0, F1, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T1});
+      }
+      if (T1 == F1) {
+        Value *NewSel = Builder.CreateSelect(Cond, T0, F0, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T1});
+      }
+    }
+  }
+
   // Only handle binary operators (including two-operand getelementptr) with
   // one-use here. As with the cast case above, it may be possible to relax the
   // one-use constraint, but that needs be examined carefully since it may not
