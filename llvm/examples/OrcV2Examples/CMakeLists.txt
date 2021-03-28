@@ -12,3 +12,7 @@ add_subdirectory(OrcV2CBindingsAddObjectFile)
 add_subdirectory(OrcV2CBindingsBasicUsage)
 add_subdirectory(OrcV2CBindingsReflectProcessSymbols)
 add_subdirectory(OrcV2CBindingsRemovableCode)
+
+if(CMAKE_HOST_UNIX)
+  add_subdirectory(LLJITWithRemoteDebugging)
+endif()
