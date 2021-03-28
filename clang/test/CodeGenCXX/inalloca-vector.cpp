@@ -21,7 +21,7 @@ void receive_vec_128(NonTrivial nt, __m128 x, __m128 y, __m128 z, __m128 w, __m1
 // CHECK-SAME: (<4 x float> inreg %x,
 // CHECK-SAME: <4 x float> inreg %y,
 // CHECK-SAME: <4 x float> inreg %z,
-// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca %0)
+// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %0)
 
 void pass_vec_128() {
   __m128 z = {0};
@@ -45,7 +45,7 @@ void pass_vec_128() {
 // CHECK-SAME: (<4 x float> inreg %{{[^,]*}},
 // CHECK-SAME: <4 x float> inreg %{{[^,]*}},
 // CHECK-SAME: <4 x float> inreg %{{[^,]*}},
-// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca %{{[^,]*}})
+// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %{{[^,]*}})
 
 // w will be passed indirectly by register, and q will be passed indirectly, but
 // the pointer will be in memory.
@@ -58,7 +58,7 @@ void __fastcall fastcall_receive_vec(__m128 x, __m128 y, __m128 z, __m128 w, int
 // CHECK-SAME: <4 x float> inreg %z,
 // CHECK-SAME: <4 x float>* inreg %0,
 // CHECK-SAME: i32 inreg %edx,
-// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca %1)
+// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)
 
 
 void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
@@ -75,4 +75,4 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
 // CHECK-SAME: <4 x float> inreg %z,
 // CHECK-SAME: <4 x float>* inreg %0,
 // CHECK-SAME: i32 inreg %edx,
-// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca %1)
+// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)
