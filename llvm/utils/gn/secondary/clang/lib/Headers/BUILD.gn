@@ -50,13 +50,6 @@ clang_tablegen("riscv_vector") {
   output_name = "riscv_vector.h"
 }
 
-# Generate riscv_vector_generic.h
-clang_tablegen("riscv_vector_generic") {
-  args = [ "-gen-riscv-vector-generic-header" ]
-  td_file = "//clang/include/clang/Basic/riscv_vector.td"
-  output_name = "riscv_vector_generic.h"
-}
-
 copy("tablegen_headers") {
   visibility = [ ":Headers" ]
   deps = [
@@ -67,7 +60,6 @@ copy("tablegen_headers") {
     ":arm_neon",
     ":arm_sve",
     ":riscv_vector",
-    ":riscv_vector_generic",
   ]
   sources = []
   foreach(dep, deps) {
