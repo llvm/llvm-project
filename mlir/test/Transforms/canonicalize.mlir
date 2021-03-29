@@ -1109,3 +1109,14 @@ func @do_not_fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi2> attributes 
   %1 = trunci %0 : vector<4xi8> to vector<4xi2>
   return %1 : vector<4xi2>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_trunci_sexti
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @fold_trunci_sexti(%arg0: i1) -> i1 attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : i1
+  %0 = sexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i1
+  return %1 : i1
+}
