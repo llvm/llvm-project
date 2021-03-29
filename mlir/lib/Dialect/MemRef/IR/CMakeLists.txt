@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRMemRef
 
   LINK_LIBS PUBLIC
   MLIRDialect
+  MLIRInferTypeOpInterface
   MLIRIR
   MLIRStandard
   MLIRTensor
