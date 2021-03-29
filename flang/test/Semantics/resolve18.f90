@@ -121,3 +121,64 @@ module m8
     end subroutine f8
   end interface g8
 end module m8
+
+module m9
+  type f9
+  end type f9
+  !ERROR: 'f9' is already declared in this scoping unit
+  interface f9
+    real function f9()
+    end function f9
+  end interface f9
+contains
+  function f9(x)
+  end function f9
+end module m9
+
+module m10
+  type :: t10
+  end type t10
+  interface f10
+    function f10()
+    end function f10
+  end interface f10
+contains
+  !ERROR: 'f10' is already declared in this scoping unit
+  function f10(x)
+  end function f10
+end module m10
+
+module m11
+  type :: t11
+  end type t11
+  interface i11
+    function f11()
+    end function f11
+  end interface i11
+contains
+  !ERROR: 'f11' is already declared in this scoping unit
+  function f11(x)
+  end function f11
+end module m11
+
+module m12
+  interface f12
+    function f12()
+    end function f12
+  end interface f12
+contains
+  !ERROR: 'f12' is already declared in this scoping unit
+  function f12(x)
+  end function f12
+end module m12
+
+module m13
+  interface f13
+    function f13()
+    end function f13
+  end interface f13
+contains
+  !ERROR: 'f13' is already declared in this scoping unit
+  function f13()
+  end function f13
+end module m13

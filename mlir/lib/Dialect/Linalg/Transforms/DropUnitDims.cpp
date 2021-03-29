@@ -171,8 +171,6 @@ LogicalResult replaceBlockArgForUnitDimLoops<IndexedGenericOp>(
 
 namespace {
 /// Pattern to fold unit-trip count loops in GenericOps.
-// TODO: Generalize this to indexed-generic as well by modifying the region args
-// as well.
 template <typename GenericOpTy>
 struct FoldUnitDimLoops : public OpRewritePattern<GenericOpTy> {
   using OpRewritePattern<GenericOpTy>::OpRewritePattern;
@@ -375,9 +373,7 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOpTy> {
     return success();
   }
 };
-} // namespace
 
-namespace {
 /// Pattern to fold pair of reshape ops where the intermediate has unit-dims for
 /// example:
 ///
@@ -428,12 +424,12 @@ struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
         parentSrcType.getRank() == dstType.getRank())
       return failure();
 
-    // Check if the result tensor_reshape after folding the reshapeOp and
-    // parentReshapeOp are combined.
-    // If the final tensor_reshape is folding, the parentReshapeOp is
-    // introducing unit-dims, and the reshapeOp does an actual reshape.
-    // If the final tensor_reshape op is expanding, the reshapeOp is
-    // introducing unit-dims, and the parentReshapeOp does an actual reshape.
+    // Check if the result tensor_reshape is folding or expanding after folding
+    // the reshapeOp and parentReshapeOp are combined.  If the final
+    // tensor_reshape is folding, the parentReshapeOp is introducing unit-dims,
+    // and the reshapeOp does an actual reshape.  If the final tensor_reshape op
+    // is expanding, the reshapeOp is introducing unit-dims, and the
+    // parentReshapeOp does an actual reshape.
     bool isFoldingPattern = parentSrcType.getRank() > dstType.getRank();
     ArrayRef<int64_t> expandedShape =
         isFoldingPattern ? parentSrcType.getShape() : dstType.getShape();
@@ -485,6 +481,77 @@ struct FoldReshapeOpWithUnitExtent : OpRewritePattern<TensorReshapeOp> {
     return success();
   }
 };
+
+/// Pattern to fold subtensors that are just taking a slice of unit-dimension
+/// tensor. For example
+///
+/// %1 = subtensor %0[0, %o1, 0] [1, %s1, 1] [1, 1, 1]
+///     : tensor<1x?x1xf32> to tensor<1x?x1xf32>
+///
+/// can be replaced with
+///
+/// %0 = linalg.tensor_reshape %0 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+///     : tensor<1x?x1xf32> into tensor<?xf32>
+/// %1 = subtensor %0[%o1] [%s1] [1] : tensor<?xf32> to tensor<?xf32>
+/// %2 = linalg.tensor_reshape %1 [affine_map<(d0, d1, d2) -> (d0, d1, d2)>]
+///     : tensor<?xf32> into tensor<1x?x1xf32>
+///
+/// The additional tensor_reshapes will hopefully get canonicalized away with
+/// other reshapes that drop unit dimensions. Three condiitions to fold a
+/// dimension
+/// - The offset must be 0
+/// - The size must be 1
+/// - The dimension of the source type must be 1.
+struct FoldUnitDimSubTensorOp : public OpRewritePattern<SubTensorOp> {
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubTensorOp subTensorOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<OpFoldResult> mixedOffsets = subTensorOp.getMixedOffsets();
+    SmallVector<OpFoldResult> mixedSizes = subTensorOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = subTensorOp.getMixedStrides();
+    auto hasValue = [](OpFoldResult valueOrAttr, int64_t val) {
+      auto attr = valueOrAttr.dyn_cast<Attribute>();
+      return attr && attr.cast<IntegerAttr>().getInt() == val;
+    };
+
+    if (llvm::any_of(mixedStrides, [&](OpFoldResult valueOrAttr) {
+          return !hasValue(valueOrAttr, 1);
+        }))
+      return failure();
+
+    // Find the expanded unit dimensions.
+    SmallVector<ReassociationIndices> reassociation;
+    SmallVector<OpFoldResult> newOffsets, newSizes;
+    ArrayRef<int64_t> sourceShape = subTensorOp.getSourceType().getShape();
+    ReassociationIndices curr;
+    for (int64_t dim : llvm::seq<int64_t>(0, mixedOffsets.size())) {
+      curr.push_back(dim);
+      if (sourceShape[dim] == 1 && hasValue(mixedOffsets[dim], 0) &&
+          hasValue(mixedSizes[dim], 1)) {
+        continue;
+      }
+      newOffsets.push_back(mixedOffsets[dim]);
+      newSizes.push_back(mixedSizes[dim]);
+      reassociation.emplace_back(ReassociationIndices{});
+      std::swap(reassociation.back(), curr);
+    }
+    if (newOffsets.size() == mixedOffsets.size())
+      return failure();
+    reassociation.back().append(curr.begin(), curr.end());
+    SmallVector<OpFoldResult> newStrides(newOffsets.size(),
+                                         rewriter.getI64IntegerAttr(1));
+    Location loc = subTensorOp->getLoc();
+    auto srcReshape = rewriter.create<TensorReshapeOp>(
+        loc, subTensorOp.source(), reassociation);
+    auto newSubTensorOp = rewriter.create<SubTensorOp>(
+        loc, srcReshape, newOffsets, newSizes, newStrides);
+    rewriter.replaceOpWithNewOp<TensorReshapeOp>(
+        subTensorOp, subTensorOp.getType(), newSubTensorOp, reassociation);
+    return success();
+  }
+};
+
 } // namespace
 
 /// Patterns that are used to canonicalize the use of unit-extent dims for
@@ -493,7 +560,7 @@ void mlir::populateLinalgFoldUnitExtentDimsPatterns(
     RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
   patterns.add<FoldUnitDimLoops<GenericOp>, FoldUnitDimLoops<IndexedGenericOp>,
-               ReplaceUnitExtentTensors<GenericOp>,
+               FoldUnitDimSubTensorOp, ReplaceUnitExtentTensors<GenericOp>,
                ReplaceUnitExtentTensors<IndexedGenericOp>>(context);
   TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldReshapeOpWithUnitExtent>(context);

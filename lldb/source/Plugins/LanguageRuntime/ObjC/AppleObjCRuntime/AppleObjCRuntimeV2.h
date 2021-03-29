@@ -318,6 +318,10 @@ private:
     DynamicClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
         : ClassInfoExtractor(runtime) {}
 
+    DescriptorMapUpdateResult
+    UpdateISAToDescriptorMap(RemoteNXMapTable &hash_table);
+
+  private:
     enum Helper { gdb_objc_realized_classes, objc_copyRealizedClassList };
 
     /// Compute which helper to use. Prefer objc_copyRealizedClassList if it's
@@ -329,7 +333,6 @@ private:
                                                  Helper helper);
     lldb::addr_t &GetClassInfoArgs(Helper helper);
 
-  private:
     std::unique_ptr<UtilityFunction>
     GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, std::string code,
                                     std::string name);
@@ -356,17 +359,16 @@ private:
     SharedCacheClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
         : ClassInfoExtractor(runtime) {}
 
-    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx);
-    lldb::addr_t &GetClassInfoArgs() { return m_args; }
-    std::mutex &GetMutex() { return m_mutex; }
+    DescriptorMapUpdateResult UpdateISAToDescriptorMap();
 
   private:
+    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx);
+
     std::unique_ptr<UtilityFunction>
     GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx);
 
     std::unique_ptr<UtilityFunction> m_utility_function;
     lldb::addr_t m_args = LLDB_INVALID_ADDRESS;
-    std::mutex m_mutex;
   };
 
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
@@ -381,13 +383,8 @@ private:
   /// change when lazily named classes get realized.
   bool RealizedClassGenerationCountChanged();
 
-  DescriptorMapUpdateResult
-  UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
-
   uint32_t ParseClassInfoArray(const lldb_private::DataExtractor &data,
                                uint32_t num_class_infos);
-
-  DescriptorMapUpdateResult UpdateISAToDescriptorMapSharedCache();
 
   enum class SharedCacheWarningReason {
     eExpressionExecutionFailure,

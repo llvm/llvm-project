@@ -220,7 +220,6 @@ going wrong.
 
 .. code-block:: text
 
-    CUDA error: Error when copying data from device to host.
     CUDA error: an illegal memory access was encountered 
     Libomptarget error: Copying data from device failed.
     Libomptarget error: Call to targetDataEnd failed, abort target.
