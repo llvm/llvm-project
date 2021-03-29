@@ -127,13 +127,11 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/LLVMConfig.cmake
   @ONLY)
 
-# Generate LLVMConfigVersion.cmake for build tree (later copied to install tree).
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  "${llvm_cmake_builddir}/LLVMConfigVersion.cmake"
-  VERSION "${PACKAGE_VERSION}"
-  COMPATIBILITY SameMinorVersion
-)
+# Generate LLVMConfigVersion.cmake for build and install tree.
+configure_file(
+  LLVMConfigVersion.cmake.in
+  ${llvm_cmake_builddir}/LLVMConfigVersion.cmake
+  @ONLY)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   get_property(llvm_has_exports GLOBAL PROPERTY LLVM_HAS_EXPORTS)
