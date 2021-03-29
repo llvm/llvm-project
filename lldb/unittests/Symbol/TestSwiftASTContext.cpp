@@ -248,3 +248,13 @@ TEST(ClangArgs, UniquingCollisionWithAddedFlags) {
 
   EXPECT_EQ(dest, uniqued_flags);
 }
+
+TEST(ClangArgs, DoubleDash) {
+  // -v with all currently ignored arguments following.
+  const std::vector<std::string> source{"-v", "--", "-Werror", ""};
+  std::vector<std::string> dest;
+  SwiftASTContext::AddExtraClangArgs(source, dest);
+
+  // Check that all ignored arguments got removed.
+  EXPECT_EQ(dest, std::vector<std::string>({"-v"}));
+}
