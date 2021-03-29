@@ -177,8 +177,6 @@ private:
 /// followed by a non-expert user.
 class LoopVectorizationRequirements {
 public:
-  LoopVectorizationRequirements(OptimizationRemarkEmitter &ORE) : ORE(ORE) {}
-
   /// Track the 1st floating-point instruction that can not be reassociated.
   void addExactFPMathInst(Instruction *I) {
     if (I && !ExactFPMathInst)
@@ -187,19 +185,19 @@ public:
 
   void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
 
-  bool doesNotMeet(Function *F, Loop *L, const LoopVectorizeHints &Hints);
 
   Instruction *getExactFPInst() { return ExactFPMathInst; }
   bool canVectorizeFPMath(const LoopVectorizeHints &Hints) const {
     return !ExactFPMathInst || Hints.allowReordering();
   }
 
+  unsigned getNumRuntimePointerChecks() const {
+    return NumRuntimePointerChecks;
+  }
+
 private:
   unsigned NumRuntimePointerChecks = 0;
   Instruction *ExactFPMathInst = nullptr;
-
-  /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter &ORE;
 };
 
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
