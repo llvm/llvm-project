@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/LLDBAssert.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
