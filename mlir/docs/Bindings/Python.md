@@ -7,9 +7,8 @@ Current status: Under development and not enabled by default
 ### Pre-requisites
 
 * A relatively recent Python3 installation
-* [`pybind11`](https://github.com/pybind/pybind11) must be installed and able to
-  be located by CMake (auto-detected if installed via
-  `python -m pip install pybind11`). Note: minimum version required: :2.6.0.
+* Installation of python dependencies as specified in
+  `mlir/lib/Bindings/Python/requirements.txt`
 
 ### CMake variables
 
@@ -45,9 +44,18 @@ which python
 python -m venv ~/.venv/mlirdev
 source ~/.venv/mlirdev/bin/activate
 
+# Note that many LTS distros will bundle a version of pip itself that is too
+# old to download all of the latest binaries for certain platforms.
+# The pip version can be obtained with `python -m pip --version`, and for
+# Linux specifically, this should be cross checked with minimum versions
+# here: https://github.com/pypa/manylinux
+# It is recommended to upgrade pip:
+python -m pip install --upgrade pip
+
+
 # Now the `python` command will resolve to your virtual environment and
 # packages will be installed there.
-python -m pip install pybind11 numpy
+python -m pip install -r mlir/lib/Bindings/Python/requirements.txt
 
 # Now run `cmake`, `ninja`, et al.
 ```
