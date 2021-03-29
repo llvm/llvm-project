@@ -1740,7 +1740,7 @@ _LIBCPP_STRING_V1_EXTERN_TEMPLATE_LIST(_LIBCPP_EXTERN_TEMPLATE, wchar_t)
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _CharT = typename iterator_traits<_InputIterator>::value_type,
+         class _CharT = __iter_value_type<_InputIterator>,
          class _Allocator = allocator<_CharT>,
          class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value>,
          class = _EnableIf<__is_allocator<_Allocator>::value>
