@@ -77,6 +77,7 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/ProfiledCallGraph.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -160,15 +161,11 @@ static cl::opt<bool> ProfileTopDownLoad(
              "order of call graph during sample profile loading. It only "
              "works for new pass manager. "));
 
-static cl::opt<bool> UseProfileIndirectCallEdges(
-    "use-profile-indirect-call-edges", cl::init(true), cl::Hidden,
-    cl::desc("Considering indirect call samples from profile when top-down "
-             "processing functions. Only CSSPGO is supported."));
-
-static cl::opt<bool> UseProfileTopDownOrder(
-    "use-profile-top-down-order", cl::init(false), cl::Hidden,
-    cl::desc("Process functions in one SCC in a top-down order "
-             "based on the input profile."));
+static cl::opt<bool>
+    UseProfiledCallGraph("use-profiled-call-graph", cl::init(true), cl::Hidden,
+                         cl::desc("Process functions in a top-down order "
+                                  "defined by the profiled call graph when "
+                                  "-sample-profile-top-down-load is on."));
 
 static cl::opt<bool> ProfileSizeInline(
     "sample-profile-inline-size", cl::Hidden, cl::init(false),
@@ -395,8 +392,7 @@ protected:
       const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
       bool Hot);
   std::vector<Function *> buildFunctionOrder(Module &M, CallGraph *CG);
-  void addCallGraphEdges(CallGraph &CG, const FunctionSamples &Samples);
-  void replaceCallGraphEdges(CallGraph &CG, StringMap<Function *> &SymbolMap);
+  std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(CallGraph &CG);
   void generateMDProfMetadata(Function &F);
 
   /// Map from function name to Function *. Used to find the function from
@@ -1579,49 +1575,35 @@ INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
                     "Sample Profile loader", false, false)
 
-// Add inlined profile call edges to the call graph.
-void SampleProfileLoader::addCallGraphEdges(CallGraph &CG,
-                                            const FunctionSamples &Samples) {
-  Function *Caller = SymbolMap.lookup(Samples.getFuncName());
-  if (!Caller || Caller->isDeclaration())
-    return;
+std::unique_ptr<ProfiledCallGraph>
+SampleProfileLoader::buildProfiledCallGraph(CallGraph &CG) {
+  std::unique_ptr<ProfiledCallGraph> ProfiledCG;
+  if (ProfileIsCS)
+    ProfiledCG = std::make_unique<ProfiledCallGraph>(*ContextTracker);
+  else
+    ProfiledCG = std::make_unique<ProfiledCallGraph>(Reader->getProfiles());
 
-  // Skip non-inlined call edges which are not important since top down inlining
-  // for non-CS profile is to get more precise profile matching, not to enable
-  // more inlining.
-
-  for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
-    for (const auto &InlinedSamples : CallsiteSamples.second) {
-      Function *Callee = SymbolMap.lookup(InlinedSamples.first);
-      if (Callee && !Callee->isDeclaration())
-        CG[Caller]->addCalledFunction(nullptr, CG[Callee]);
-      addCallGraphEdges(CG, InlinedSamples.second);
-    }
+  // Add all functions into the profiled call graph even if they are not in
+  // the profile. This makes sure functions missing from the profile still
+  // gets a chance to be processed.
+  for (auto &Node : CG) {
+    const auto *F = Node.first;
+    if (!F || F->isDeclaration() || !F->hasFnAttribute("use-sample-profile"))
+      continue;
+    ProfiledCG->addProfiledFunction(FunctionSamples::getCanonicalFnName(*F));
   }
-}
 
-// Replace call graph edges with dynamic call edges from the profile.
-void SampleProfileLoader::replaceCallGraphEdges(
-    CallGraph &CG, StringMap<Function *> &SymbolMap) {
-  // Remove static call edges from the call graph except for the ones from the
-  // root which make the call graph connected.
-  for (const auto &Node : CG)
-    if (Node.second.get() != CG.getExternalCallingNode())
-      Node.second->removeAllCalledFunctions();
-
-  // Add profile call edges to the call graph.
-  if (ProfileIsCS) {
-    ContextTracker->addCallGraphEdges(CG, SymbolMap);
-  } else {
-    for (const auto &Samples : Reader->getProfiles())
-      addCallGraphEdges(CG, Samples.second);
-  }
+  return ProfiledCG;
 }
 
 std::vector<Function *>
 SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
   std::vector<Function *> FunctionOrderList;
   FunctionOrderList.reserve(M.size());
+
+  if (!ProfileTopDownLoad && UseProfiledCallGraph)
+    errs() << "WARNING: -use-profiled-call-graph ignored, should be used "
+              "together with -sample-profile-top-down-load.\n";
 
   if (!ProfileTopDownLoad || CG == nullptr) {
     if (ProfileMergeInlinee) {
@@ -1641,87 +1623,76 @@ SampleProfileLoader::buildFunctionOrder(Module &M, CallGraph *CG) {
 
   assert(&CG->getModule() == &M);
 
-  // Add indirect call edges from profile to augment the static call graph.
-  // Functions will be processed in a top-down order defined by the static call
-  // graph. Adjusting the order by considering indirect call edges from the
-  // profile (which don't exist in the static call graph) can enable the
-  // inlining of indirect call targets by processing the caller before them.
-  // TODO: enable this for non-CS profile and fix the counts returning logic to
-  // have a full support for indirect calls.
-  if (UseProfileIndirectCallEdges && ProfileIsCS) {
-    for (auto &Entry : *CG) {
-      const auto *F = Entry.first;
-      if (!F || F->isDeclaration() || !F->hasFnAttribute("use-sample-profile"))
-        continue;
-      auto &AllContexts = ContextTracker->getAllContextSamplesFor(F->getName());
-      if (AllContexts.empty())
-        continue;
+  if (UseProfiledCallGraph ||
+      (ProfileIsCS && !UseProfiledCallGraph.getNumOccurrences())) {
+    // Use profiled call edges to augment the top-down order. There are cases
+    // that the top-down order computed based on the static call graph doesn't
+    // reflect real execution order. For example
+    //
+    // 1. Incomplete static call graph due to unknown indirect call targets.
+    //    Adjusting the order by considering indirect call edges from the
+    //    profile can enable the inlining of indirect call targets by allowing
+    //    the caller processed before them.
+    // 2. Mutual call edges in an SCC. The static processing order computed for
+    //    an SCC may not reflect the call contexts in the context-sensitive
+    //    profile, thus may cause potential inlining to be overlooked. The
+    //    function order in one SCC is being adjusted to a top-down order based
+    //    on the profile to favor more inlining. This is only a problem with CS
+    //    profile.
+    // 3. Transitive indirect call edges due to inlining. When a callee function
+    //    (say B) is inlined into into a caller function (say A) in LTO prelink,
+    //    every call edge originated from the callee B will be transferred to
+    //    the caller A. If any transferred edge (say A->C) is indirect, the
+    //    original profiled indirect edge B->C, even if considered, would not
+    //    enforce a top-down order from the caller A to the potential indirect
+    //    call target C in LTO postlink since the inlined callee B is gone from
+    //    the static call graph.
+    // 4. #3 can happen even for direct call targets, due to functions defined
+    //    in header files. A header function (say A), when included into source
+    //    files, is defined multiple times but only one definition survives due
+    //    to ODR. Therefore, the LTO prelink inlining done on those dropped
+    //    definitions can be useless based on a local file scope. More
+    //    importantly, the inlinee (say B), once fully inlined to a
+    //    to-be-dropped A, will have no profile to consume when its outlined
+    //    version is compiled. This can lead to a profile-less prelink
+    //    compilation for the outlined version of B which may be called from
+    //    external modules. while this isn't easy to fix, we rely on the
+    //    postlink AutoFDO pipeline to optimize B. Since the survived copy of
+    //    the A can be inlined in its local scope in prelink, it may not exist
+    //    in the merged IR in postlink, and we'll need the profiled call edges
+    //    to enforce a top-down order for the rest of the functions.
+    //
+    // Considering those cases, a profiled call graph completely independent of
+    // the static call graph is constructed based on profile data, where
+    // function objects are not even needed to handle case #3 and case 4.
+    //
+    // Note that static callgraph edges are completely ignored since they
+    // can be conflicting with profiled edges for cyclic SCCs and may result in
+    // an SCC order incompatible with profile-defined one. Using strictly
+    // profile order ensures a maximum inlining experience. On the other hand,
+    // static call edges are not so important when they don't correspond to a
+    // context in the profile.
 
-      for (const auto &BB : *F) {
-        for (const auto &I : BB.getInstList()) {
-          const auto *CB = dyn_cast<CallBase>(&I);
-          if (!CB || !CB->isIndirectCall())
-            continue;
-          const DebugLoc &DLoc = I.getDebugLoc();
-          if (!DLoc)
-            continue;
-          auto CallSite = FunctionSamples::getCallSiteIdentifier(DLoc);
-          for (FunctionSamples *Samples : AllContexts) {
-            if (auto CallTargets = Samples->findCallTargetMapAt(CallSite)) {
-              for (const auto &Target : CallTargets.get()) {
-                Function *Callee = SymbolMap.lookup(Target.first());
-                if (Callee && !Callee->isDeclaration())
-                  Entry.second->addCalledFunction(nullptr, (*CG)[Callee]);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Compute a top-down order the profile which is used to sort functions in
-  // one SCC later. The static processing order computed for an SCC may not
-  // reflect the call contexts in the context-sensitive profile, thus may cause
-  // potential inlining to be overlooked. The function order in one SCC is being
-  // adjusted to a top-down order based on the profile to favor more inlining.
-  DenseMap<Function *, uint64_t> ProfileOrderMap;
-  if (UseProfileTopDownOrder ||
-      (ProfileIsCS && !UseProfileTopDownOrder.getNumOccurrences())) {
-    // Create a static call graph. The call edges are not important since they
-    // will be replaced by dynamic edges from the profile.
-    CallGraph ProfileCG(M);
-    replaceCallGraphEdges(ProfileCG, SymbolMap);
-    scc_iterator<CallGraph *> CGI = scc_begin(&ProfileCG);
-    uint64_t I = 0;
+    std::unique_ptr<ProfiledCallGraph> ProfiledCG = buildProfiledCallGraph(*CG);
+    scc_iterator<ProfiledCallGraph *> CGI = scc_begin(ProfiledCG.get());
     while (!CGI.isAtEnd()) {
-      for (CallGraphNode *Node : *CGI) {
-        if (auto *F = Node->getFunction())
-          ProfileOrderMap[F] = ++I;
+      for (ProfiledCallGraphNode *Node : *CGI) {
+        Function *F = SymbolMap.lookup(Node->Name);
+        if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
+          FunctionOrderList.push_back(F);
       }
       ++CGI;
     }
-  }
-
-  scc_iterator<CallGraph *> CGI = scc_begin(CG);
-  while (!CGI.isAtEnd()) {
-    uint64_t Start = FunctionOrderList.size();
-    for (CallGraphNode *Node : *CGI) {
-      auto *F = Node->getFunction();
-      if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
-        FunctionOrderList.push_back(F);
+  } else {
+    scc_iterator<CallGraph *> CGI = scc_begin(CG);
+    while (!CGI.isAtEnd()) {
+      for (CallGraphNode *Node : *CGI) {
+        auto *F = Node->getFunction();
+        if (F && !F->isDeclaration() && F->hasFnAttribute("use-sample-profile"))
+          FunctionOrderList.push_back(F);
+      }
+      ++CGI;
     }
-
-    // Sort nodes in SCC based on the profile top-down order.
-    if (!ProfileOrderMap.empty()) {
-      std::stable_sort(FunctionOrderList.begin() + Start,
-                       FunctionOrderList.end(),
-                       [&ProfileOrderMap](Function *Left, Function *Right) {
-                         return ProfileOrderMap[Left] < ProfileOrderMap[Right];
-                       });
-    }
-
-    ++CGI;
   }
 
   LLVM_DEBUG({
