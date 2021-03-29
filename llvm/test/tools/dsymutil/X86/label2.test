@@ -1,0 +1,21 @@
+$ cat label.c
+int main(int argc, char **argv) {
+    if (argc) {
+        goto foobar;
+    }
+    return 1;
+foobar:
+    return 0;
+}
+
+$ clang -g label.c -c -o label.o
+$ clang label.o -o label.out
+
+RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/label/label.out -o %t.dSYM
+RUN: dwarfdump %t.dSYM | FileCheck %s
+
+CHECK:      DW_TAG_label
+CHECK-NEXT:   DW_AT_name    ("foobar")
+CHECK-NEXT:   DW_AT_decl_file       ("/tmp/label/label.c")
+CHECK-NEXT:   DW_AT_decl_line       (6)
+CHECK-NEXT:   DW_AT_low_pc  (0x0000000100003f9d)
