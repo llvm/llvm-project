@@ -49,7 +49,9 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "JSONUtils.h"
@@ -3078,6 +3080,9 @@ void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 }
 
 int main(int argc, char *argv[]) {
+  llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
   g_vsc.debug_adaptor_path = program_path.str().str();
