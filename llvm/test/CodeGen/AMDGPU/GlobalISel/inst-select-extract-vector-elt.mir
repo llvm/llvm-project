@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=MOVREL %s
 # RUN: llc -march=amdgcn -mcpu=fiji -amdgpu-vgpr-index-mode  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GPRIDX %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=GPRIDX %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck -check-prefix=MOVREL %s
 
 ---
 name: extract_vector_elt_s_s32_v2s32

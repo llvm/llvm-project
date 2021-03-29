@@ -2,6 +2,7 @@
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tahiti -verify-machineinstrs | FileCheck %s --check-prefix=SI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s --check-prefix=VI
 ; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GFX9
+; RUN: llc < %s -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefix=GFX10
 
 
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
@@ -74,6 +75,24 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: saddo_i64_zext:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_add_u32 s0, s6, s2
+; GFX10-NEXT:    s_addc_u32 s1, s7, s3
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s2, s[2:3], 0
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s3, s[0:1], s[6:7]
+; GFX10-NEXT:    s_xor_b32 s2, s2, s3
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
+; GFX10-NEXT:    v_add_co_u32_e64 v0, s0, s0, v0
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, s0, s1, 0, s0
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[4:5]
+; GFX10-NEXT:    s_endpgm
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
   %val = extractvalue { i64, i1 } %sadd, 0
   %carry = extractvalue { i64, i1 } %sadd, 1
@@ -144,6 +163,22 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    global_store_dword v0, v2, s[4:5]
 ; GFX9-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_saddo_i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_add_nc_i32 v0, s2, s3 clamp
+; GFX10-NEXT:    s_add_i32 s0, s2, s3
+; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX10-NEXT:    global_store_dword v1, v2, s[4:5]
+; GFX10-NEXT:    global_store_byte v1, v0, s[6:7]
+; GFX10-NEXT:    s_endpgm
   %sadd = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b) nounwind
   %val = extractvalue { i32, i1 } %sadd, 0
   %carry = extractvalue { i32, i1 } %sadd, 1
@@ -222,6 +257,23 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; GFX9-NEXT:    global_store_byte v0, v1, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: v_saddo_i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dword v1, v0, s[4:5]
+; GFX10-NEXT:    global_load_dword v2, v0, s[6:7]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_nc_i32 v3, v1, v2 clamp
+; GFX10-NEXT:    v_add_nc_u32_e32 v1, v1, v2
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v3
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    global_store_byte v0, v2, s[2:3]
+; GFX10-NEXT:    s_endpgm
   %a = load i32, i32 addrspace(1)* %aptr, align 4
   %b = load i32, i32 addrspace(1)* %bptr, align 4
   %sadd = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b) nounwind
@@ -300,6 +352,23 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX9-NEXT:    global_store_byte v2, v0, s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_saddo_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_add_u32 s8, s4, s6
+; GFX10-NEXT:    s_addc_u32 s9, s5, s7
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s6, s[6:7], 0
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s4, s[8:9], s[4:5]
+; GFX10-NEXT:    v_mov_b32_e32 v0, s8
+; GFX10-NEXT:    v_mov_b32_e32 v1, s9
+; GFX10-NEXT:    s_xor_b32 s4, s6, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s4
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_byte v2, v3, s[2:3]
+; GFX10-NEXT:    s_endpgm
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
   %val = extractvalue { i64, i1 } %sadd, 0
   %carry = extractvalue { i64, i1 } %sadd, 1
@@ -382,6 +451,25 @@ define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX9-NEXT:    global_store_byte v6, v0, s[6:7]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: v_saddo_i64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v6, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx2 v[9:10], v6, s[8:9]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v6, s[10:11]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_co_u32_e64 v7, vcc_lo, v9, v2
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v8, vcc_lo, v10, v3, vcc_lo
+; GFX10-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[2:3]
+; GFX10-NEXT:    v_cmp_lt_i64_e64 s0, v[7:8], v[9:10]
+; GFX10-NEXT:    s_xor_b32 s0, vcc_lo, s0
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX10-NEXT:    global_store_dwordx2 v6, v[7:8], s[4:5]
+; GFX10-NEXT:    global_store_byte v6, v0, s[6:7]
+; GFX10-NEXT:    s_endpgm
   %a = load i64, i64 addrspace(1)* %aptr, align 4
   %b = load i64, i64 addrspace(1)* %bptr, align 4
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
@@ -476,6 +564,27 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dwordx2 v4, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: v_saddo_v2i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v4, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[4:5]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v4, s[6:7]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_add_nc_i32 v5, v1, v3 clamp
+; GFX10-NEXT:    v_add_nc_u32_e32 v10, v1, v3
+; GFX10-NEXT:    v_add_nc_i32 v6, v0, v2 clamp
+; GFX10-NEXT:    v_add_nc_u32_e32 v9, v0, v2
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v10, v5
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
+; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v9, v6
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX10-NEXT:    global_store_dwordx2 v4, v[9:10], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v4, v[2:3], s[2:3]
+; GFX10-NEXT:    s_endpgm
   %a = load <2 x i32>, <2 x i32> addrspace(1)* %aptr, align 4
   %b = load <2 x i32>, <2 x i32> addrspace(1)* %bptr, align 4
   %sadd = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b) nounwind
