@@ -30,12 +30,12 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X64-NEXT:    subq $16, %rsp
 ; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    movzwl %si, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movzwl %bx, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __gnu_f2h_ieee
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X64-NEXT:    addq $16, %rsp
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
@@ -119,20 +119,20 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; X64-NEXT:    movl %esi, %ebp
 ; X64-NEXT:    movl %edi, %r14d
 ; X64-NEXT:    movzwl %cx, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movzwl %bp, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __gnu_f2h_ieee
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzwl %bx, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    movzwl %r14w, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee
+; X64-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X64-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X64-NEXT:    callq __gnu_f2h_ieee
+; X64-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X64-NEXT:    movw %ax, {{[0-9]+}}(%rsp)
 ; X64-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
