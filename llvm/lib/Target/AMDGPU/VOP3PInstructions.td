@@ -10,8 +10,14 @@
 // VOP3P Classes
 //===----------------------------------------------------------------------===//
 
-class VOP3P_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile<P, Features> {
+class VOP3P_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
+                    bit HasDPP = 0> : VOP3_Profile<P, Features> {
   let IsVOP3P = 1;
+  let HasExtVOP3DPP = HasDPP;
+  // We do not want to print src modifiers for vop3p because the bits are
+  // overloaded in meaning and the logic in printOperandAndFPInputMods is
+  // wrong for vop3p
+  let AsmVOP3DPPBase = AsmVOP3P;
 }
 
 // Used for FMA_MIX* and MAD_MIX* insts
@@ -20,11 +26,15 @@ class VOP3P_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_P
 // values are really f16 converted to f32, so we treat these as f16
 // operands.
 class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
-                    bit useTiedOutput = 0> : VOP3P_Profile<P, Features> {
+                    bit useTiedOutput = 0> : VOP3P_Profile<P, Features, 1> {
     bit UseTiedOutput = useTiedOutput;
 
     dag srcs =
           (ins FP16InputMods:$src0_modifiers, VCSrc_f16:$src0,
+               FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
+               FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
+    dag dpp_srcs =
+          (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
                FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
 
@@ -39,8 +49,10 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
     // We use Ins64 because that is the one which populates InOperandList
     // due to the logic in class VOP3_Pseudo
     let Ins64 = !con(srcs, mods);
+    let InsVOP3Base = !con(dpp_srcs, mods);
     let Asm64 =
       "$vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$op_sel$op_sel_hi$clamp";
+    let AsmVOP3DPPBase = Asm64;
 }
 
 multiclass VOP3PInst<string OpName, VOPProfile P,
@@ -49,10 +61,15 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
                           !if (P.HasModifiers,
                                getVOP3PModPat<P, node, HasExplicitClamp>.ret,
                                getVOP3Pat<P, node>.ret)>;
+  let SubtargetPredicate = isGFX11Plus in {
+  if P.HasExtVOP3DPP then
+    def _dpp : VOP3_DPP_Pseudo<OpName, P> {
+      let VOP3P = 1;
+      let PseudoInstr = OpName #"_dpp";
+    }
+  } // end SubtargetPredicate = isGFX11Plus
 }
 
-
-// TODO-GFX11 create dpp
 // Non-packed instructions that use the VOP3P encoding.
 // VOP3 neg/abs and VOP3P opsel/opsel_hi modifiers are allowed.
 multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P,
@@ -61,6 +78,15 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P,
     let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
     let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
   }
+  let SubtargetPredicate = isGFX11Plus in {
+    if P.HasExtVOP3DPP then
+      def _dpp : VOP3_DPP_Pseudo<OpName, P> {
+        let VOP3P = 1;
+        let PseudoInstr = OpName#"_dpp";
+        let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
+        let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
+      }
+  } // end SubtargetPredicate = isGFX11Plus
 }
 
 let isCommutable = 1 in {
@@ -313,7 +339,7 @@ defm V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
 let SubtargetPredicate = HasDot7Insts in {
 
 defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
-  VOP3P_Profile<VOP_F32_V2F16_V2F16_F32>,
+  VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
@@ -514,21 +540,66 @@ def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 // Begin Real Encodings
 //===----------------------------------------------------------------------===//
 
+class VOP3P_DPP16<bits<7> op, VOP_DPP_Pseudo ps, int subtarget,
+                  string opName = ps.OpName>
+    : VOP3P_DPP<op, opName, ps.Pfl, 1>, SIMCInstr<ps.PseudoInstr, subtarget> {
+  let hasSideEffects = ps.hasSideEffects;
+  let Defs = ps.Defs;
+  let SchedRW = ps.SchedRW;
+  let Uses = ps.Uses;
+  let AssemblerPredicate = HasDPP16;
+  let SubtargetPredicate = HasDPP16;
+  let OtherPredicates = ps.OtherPredicates;
+}
+
+class VOP3P_DPP8_Base<bits<7> op, VOP_Pseudo ps, string opName = ps.OpName>
+    : VOP3P_DPP8<op, opName, ps.Pfl> {
+  let hasSideEffects = ps.hasSideEffects;
+  let Defs = ps.Defs;
+  let SchedRW = ps.SchedRW;
+  let Uses = ps.Uses;
+  let OtherPredicates = ps.OtherPredicates;
+}
+
 //===----------------------------------------------------------------------===//
 // GFX11.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11" in {
-  multiclass VOP3P_Real_gfx11<bits<7> op, string backing_ps_name = NAME , string asm_name = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
-    def _gfx11 : VOP3P_Real<!cast<VOP3P_Pseudo>(backing_ps_name), SIEncodingFamily.GFX11, asm_name>,
-                 VOP3Pe_gfx11 <op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
+let AssemblerPredicate = isGFX11Plus,
+    DecoderNamespace = "GFX11" in {
+
+  multiclass VOP3P_Real_gfx11<bits<7> op, string backing_ps_name = NAME,
+                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+    def _gfx11 : VOP3P_Real<!cast<VOP3P_Pseudo>(backing_ps_name),
+                            SIEncodingFamily.GFX11, asmName>,
+                 VOP3Pe_gfx11<op, !cast<VOP3P_Pseudo>(backing_ps_name).Pfl>;
   }
-  // TODO-GFX11 implement VOP3P DPP
-  multiclass VOP3P_Realtriple_gfx11<bits<7> op, string backing_ps_name = NAME , string asm_name = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
-    VOP3P_Real_gfx11<op, backing_ps_name, asm_name>;
-    // TODO-GFX11 check if encoding bits differ from vop3_DPPe, override if necessary
-    /*VOP3_Real_dpp_with_name_gfx11<{0, 0, 0, op{0-6}}, backing_ps_name , asm_name >,*/
-    /*VOP3_Real_dpp8_with_name_gfx11<{0, 0, 0, op{0-6}}, backing_ps_name , asm_name >;*/
+
+  multiclass VOP3P_Real_dpp_gfx11<bits<7> op, string backing_ps_name = NAME,
+                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+    defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
+    def _dpp_gfx11
+        : VOP3P_DPP16<op, !cast<VOP_DPP_Pseudo>(backing_ps_name #"_dpp"),
+                      SIEncodingFamily.GFX11> {
+      let AsmString = asmName #ps.Pfl.AsmVOP3DPP16;
+      let DecoderNamespace = "DPPGFX11";
+    }
+  }
+
+  multiclass VOP3P_Real_dpp8_gfx11<bits<7> op, string backing_ps_name = NAME,
+                       string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> {
+    defvar ps = !cast<VOP3P_Pseudo>(backing_ps_name);
+    def _dpp8_gfx11 : VOP3P_DPP8_Base<op, ps> {
+      let AsmString = asmName #ps.Pfl.AsmVOP3DPP8;
+      let DecoderNamespace = "DPP8GFX11";
+    }
+  }
+
+  multiclass VOP3P_Realtriple_gfx11<bits<7> op, string backing_ps_name = NAME,
+                        string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic>
+      : VOP3P_Real_gfx11<op, backing_ps_name, asmName>,
+        VOP3P_Real_dpp_gfx11<op, backing_ps_name, asmName>,
+        VOP3P_Real_dpp8_gfx11<op, backing_ps_name, asmName>;
 } // End AssemblerPredicate = isGFX11Plus, DecoderNamespace = "GFX11"
 
 // The name for the old signed only version of these instructions is accepted

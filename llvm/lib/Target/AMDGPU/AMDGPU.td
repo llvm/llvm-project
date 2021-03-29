@@ -1130,6 +1130,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot2Insts,
    FeatureDot5Insts,
    FeatureDot6Insts,
+   FeatureDot7Insts,
    FeatureNSAEncoding,
    FeatureWavefrontSize32,
    FeatureArchitectedFlatScratch,
