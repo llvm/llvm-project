@@ -534,8 +534,8 @@ declare void @f.param.inreg(i8 inreg)
 ; CHECK: declare void @f.param.inreg(i8 inreg)
 declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
 ; CHECK: declare void @f.param.byval({ i8, i8 }* byval({ i8, i8 }))
-declare void @f.param.inalloca(i8* inalloca)
-; CHECK: declare void @f.param.inalloca(i8* inalloca)
+declare void @f.param.inalloca(i8* inalloca(i8))
+; CHECK: declare void @f.param.inalloca(i8* inalloca(i8))
 declare void @f.param.sret(i8* sret(i8))
 ; CHECK: declare void @f.param.sret(i8* sret(i8))
 declare void @f.param.noalias(i8* noalias)
@@ -1528,9 +1528,9 @@ exit:
   ret void
 }
 
-define void @instructions.call_musttail(i8* inalloca %val) {
-  musttail call void @f.param.inalloca(i8* inalloca %val)
-  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca %val)
+define void @instructions.call_musttail(i8* inalloca(i8) %val) {
+  musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
+  ; CHECK: musttail call void @f.param.inalloca(i8* inalloca(i8) %val)
 
   ret void
 }

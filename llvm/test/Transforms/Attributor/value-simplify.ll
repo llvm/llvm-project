@@ -332,15 +332,15 @@ define i32 @ipccp3() {
 
 ; Do not touch complicated arguments (for now)
 %struct.X = type { i8* }
-define internal i32* @test_inalloca(i32* inalloca %a) {
+define internal i32* @test_inalloca(i32* inalloca(i32) %a) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__TUNIT____-SAME: (i32* inalloca noalias nofree nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* noalias nofree nonnull returned writeonly inalloca(i32) dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:    ret i32* [[A]]
 ;
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@test_inalloca
-; IS__CGSCC____-SAME: (i32* inalloca noalias nofree noundef nonnull returned writeonly dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* noalias nofree noundef nonnull returned writeonly inalloca(i32) dereferenceable(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
