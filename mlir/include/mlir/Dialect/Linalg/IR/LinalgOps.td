@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -33,7 +34,10 @@ class Linalg_Op<string mnemonic, list<OpTrait> traits = []> :
   let parser = [{ return ::parse$cppClass(parser, result); }];
 }
 
-def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
+def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
+    [NoSideEffect,
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+         ["reifyReturnTypeShapesPerResultDim"]>]> {
   let summary = "operation to define a tensor of particular value";
 
   let description = [{
@@ -126,7 +130,10 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor", [NoSideEffect]> {
 }
 
 def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
-    [AttrSizedOperandSegments, NoSideEffect]> {
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+         ["reifyReturnTypeShapesPerResultDim"]>,
+     NoSideEffect]> {
   let summary = "tensor pad operation";
   let description = [{
     `linalg.pad_tensor` is an operation that pads the `source` tensor
@@ -348,11 +355,6 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
               a.cast<AffineMapAttr>().getValue().getResults());
           }));
     }
-    SmallVector<Value, 4> getOutputShape(OpBuilder &b, Location loc) {
-      return getReshapeOutputShapeFromInputShape(
-          b, loc, src(), getResultType().getShape(),
-          getReassociationMaps());
-    }
   }];
   let assemblyFormat = [{
     $src $reassociation attr-dict `:` type($src) `into` type(results)
@@ -417,7 +419,10 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
   let hasCanonicalizer = 1;
 }
 
-def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<"tensor_reshape">,
+def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<
+    "tensor_reshape",
+    [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
+      ["reifyReturnTypeShapesPerResultDim"]>]>,
     Arguments<(ins AnyTensor:$src,
                    AffineMapArrayAttr:$reassociation)>,
     Results<(outs AnyTensor:$result)> {

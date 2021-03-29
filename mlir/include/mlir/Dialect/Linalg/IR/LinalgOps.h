@@ -22,6 +22,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -106,13 +107,6 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 /// Assumes `op` is a LinalgOp.
 void getDimsOfType(Operation *op, StringRef iteratorTypeName,
                    SmallVectorImpl<AffineExpr> &res);
-
-/// For reshape operation, compute the shape of the output based on the result
-/// type and shape of the input.
-SmallVector<Value, 4>
-getReshapeOutputShapeFromInputShape(OpBuilder &b, Location loc, Value src,
-                                    ArrayRef<int64_t> dstStaticShape,
-                                    ArrayRef<AffineMap> reassociation);
 
 namespace detail {
 LogicalResult verifyStructuredOpInterface(Operation *op);
