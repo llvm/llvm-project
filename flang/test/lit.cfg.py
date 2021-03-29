@@ -64,7 +64,6 @@ if config.flang_standalone_build:
 # the build directory holding that tool.
 tools = [
   ToolSubst('%f18', command=FindTool('f18'),
-    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal')
 ]
 
@@ -75,10 +74,8 @@ if config.include_flang_new_driver_test:
     extra_args=['-fc1'], unresolved='fatal'))
 else:
    tools.append(ToolSubst('%flang', command=FindTool('f18'),
-    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal'))
    tools.append(ToolSubst('%flang_fc1', command=FindTool('f18'),
-    extra_args=["-intrinsic-module-directory "+config.flang_intrinsic_modules_dir],
     unresolved='fatal'))
 
 if config.flang_standalone_build:
