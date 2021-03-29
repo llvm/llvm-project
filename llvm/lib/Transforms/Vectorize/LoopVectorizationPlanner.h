@@ -34,9 +34,6 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class PredicatedScalarEvolution;
-class LoopVectorizationRequirements;
-class LoopVectorizeHints;
-class OptimizationRemarkEmitter;
 class VPRecipeBuilder;
 
 /// VPlan-based builder utility analogous to IRBuilder.
@@ -223,12 +220,6 @@ class LoopVectorizationPlanner {
 
   PredicatedScalarEvolution &PSE;
 
-  const LoopVectorizeHints &Hints;
-
-  LoopVectorizationRequirements &Requirements;
-
-  OptimizationRemarkEmitter *ORE;
-
   SmallVector<VPlanPtr, 4> VPlans;
 
   /// A builder used to construct the current plan.
@@ -246,12 +237,9 @@ public:
                            LoopVectorizationLegality *Legal,
                            LoopVectorizationCostModel &CM,
                            InterleavedAccessInfo &IAI,
-                           PredicatedScalarEvolution &PSE,
-                           const LoopVectorizeHints &Hints,
-                           LoopVectorizationRequirements &Requirements,
-                           OptimizationRemarkEmitter *ORE)
+                           PredicatedScalarEvolution &PSE)
       : OrigLoop(L), LI(LI), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM), IAI(IAI),
-        PSE(PSE), Hints(Hints), Requirements(Requirements), ORE(ORE) {}
+        PSE(PSE) {}
 
   /// Plan how to best vectorize, return the best VF and its cost, or None if
   /// vectorization and interleaving should be avoided up front.

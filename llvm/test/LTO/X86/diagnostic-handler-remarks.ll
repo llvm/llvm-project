@@ -6,14 +6,14 @@
 ; Confirm that there are -pass-remarks.
 ; RUN: llvm-lto -use-new-pm=false \
 ; RUN:          -pass-remarks=inline \
-; RUN:          -exported-symbol _func2 -pass-remarks-missed=loop-vectorize \
+; RUN:          -exported-symbol _func2 -pass-remarks-analysis=loop-vectorize \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=REMARKS
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
 
 ; RUN: llvm-lto -use-new-pm=false \
 ; RUN:          -pass-remarks=inline -use-diagnostic-handler \
-; RUN:          -exported-symbol _func2 -pass-remarks-missed=loop-vectorize \
+; RUN:          -exported-symbol _func2 -pass-remarks-analysis=loop-vectorize \
 ; RUN:          -exported-symbol _main -o %t.o %t.bc 2>&1 | \
 ; RUN:     FileCheck %s -allow-empty -check-prefix=REMARKS_DH
 ; RUN: llvm-nm %t.o | FileCheck %s -check-prefix NM
