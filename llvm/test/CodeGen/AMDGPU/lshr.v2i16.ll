@@ -2,6 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX9 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=VI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=CI %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefix=GFX10 %s
 
 define amdgpu_kernel void @s_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> %lhs, <2 x i16> %rhs) #0 {
 ; GFX9-LABEL: s_lshr_v2i16:
@@ -57,6 +58,18 @@ define amdgpu_kernel void @s_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: s_lshr_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x2
+; GFX10-NEXT:    s_load_dword s4, s[0:1], 0x2c
+; GFX10-NEXT:    s_load_dword s5, s[0:1], 0x30
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, s5, s4
+; GFX10-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX10-NEXT:    s_endpgm
   %result = lshr <2 x i16> %lhs, %rhs
   store <2 x i16> %result, <2 x i16> addrspace(1)* %out
   ret void
@@ -122,6 +135,19 @@ define amdgpu_kernel void @v_lshr_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> 
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: v_lshr_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-NEXT:    global_load_dword v2, v0, s[2:3] offset:4
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v2, v1
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -193,6 +219,18 @@ define amdgpu_kernel void @lshr_v_s_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: lshr_v_s_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v1, v0, s[6:7]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, s0, v1
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -262,6 +300,18 @@ define amdgpu_kernel void @lshr_s_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: lshr_s_v_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    s_load_dword s0, s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v1, v0, s[6:7]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v1, s0
+; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -324,6 +374,17 @@ define amdgpu_kernel void @lshr_imm_v_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: lshr_imm_v_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v1, 8 op_sel_hi:[1,0]
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -381,6 +442,17 @@ define amdgpu_kernel void @lshr_v_imm_v2i16(<2 x i16> addrspace(1)* %out, <2 x i
 ; CI-NEXT:    v_and_b32_e32 v2, 0xff00ff, v2
 ; CI-NEXT:    buffer_store_dword v2, v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: lshr_v_imm_v2i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, 8, v1 op_sel_hi:[0,1]
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -463,6 +535,20 @@ define amdgpu_kernel void @v_lshr_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> 
 ; CI-NEXT:    v_or_b32_e32 v2, v2, v4
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: v_lshr_v4i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v7, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v7, s[2:3] offset:8
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, v3, v1
+; GFX10-NEXT:    v_pk_lshrrev_b16 v0, v2, v0
+; GFX10-NEXT:    global_store_dwordx2 v7, v[0:1], s[0:1]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i64 %tid.ext
@@ -529,6 +615,18 @@ define amdgpu_kernel void @lshr_v_imm_v4i16(<4 x i16> addrspace(1)* %out, <4 x i
 ; CI-NEXT:    v_and_b32_e32 v2, s0, v2
 ; CI-NEXT:    buffer_store_dwordx2 v[2:3], v[0:1], s[4:7], 0 addr64
 ; CI-NEXT:    s_endpgm
+;
+; GFX10-LABEL: lshr_v_imm_v4i16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3]
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_pk_lshrrev_b16 v1, 8, v1 op_sel_hi:[0,1]
+; GFX10-NEXT:    v_pk_lshrrev_b16 v0, 8, v0 op_sel_hi:[0,1]
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX10-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, <4 x i16> addrspace(1)* %in, i64 %tid.ext
