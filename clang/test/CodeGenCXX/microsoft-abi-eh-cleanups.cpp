@@ -54,7 +54,7 @@ int HasDeactivatedCleanups() {
 // WIN32:   invoke x86_thiscallcc %struct.A* @"??0A@@QAE@XZ"
 // WIN32:   store i1 false, i1* %[[isactive]]
 //
-// WIN32:   invoke i32 @"?TakesTwo@@YAHUA@@0@Z"([[argmem_ty]]* inalloca([[argmem_ty]]) %[[argmem]])
+// WIN32:   invoke i32 @"?TakesTwo@@YAHUA@@0@Z"([[argmem_ty]]* inalloca %[[argmem]])
 //        Destroy the two const ref temporaries.
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})
 // WIN32:   call x86_thiscallcc void @"??1A@@QAE@XZ"({{.*}})

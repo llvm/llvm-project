@@ -2,21 +2,21 @@
 ; doesn't reject it.
 ; RUN: llvm-as %s -o /dev/null
 
-declare void @doit(i64* inalloca(i64) %a)
+declare void @doit(i64* inalloca %a)
 
 define void @a() {
 entry:
   %a = alloca inalloca [2 x i32]
   %b = bitcast [2 x i32]* %a to i64*
-  call void @doit(i64* inalloca(i64) %b)
+  call void @doit(i64* inalloca %b)
   ret void
 }
 
 define void @b() {
 entry:
   %a = alloca inalloca i64
-  call void @doit(i64* inalloca(i64) %a)
-  call void @doit(i64* inalloca(i64) %a)
+  call void @doit(i64* inalloca %a)
+  call void @doit(i64* inalloca %a)
   ret void
 }
 
@@ -34,6 +34,6 @@ else:
 
 call:
   %args = phi i64* [ %a, %if ], [ %b, %else ]
-  call void @doit(i64* inalloca(i64) %args)
+  call void @doit(i64* inalloca %args)
   ret void
 }
