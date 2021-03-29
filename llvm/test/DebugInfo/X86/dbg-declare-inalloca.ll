@@ -109,7 +109,7 @@ target triple = "i386-pc-windows-msvc19.10.24728"
 %struct.NonTrivial = type { i32 }
 
 ; Function Attrs: nounwind
-define void @f(<{ %struct.NonTrivial, i32, i32, i32 }>* inalloca) local_unnamed_addr #0 !dbg !7 {
+define void @f(<{ %struct.NonTrivial, i32, i32, i32 }>* inalloca(<{ %struct.NonTrivial, i32, i32, i32 }>)) local_unnamed_addr #0 !dbg !7 {
 entry:
   %a = getelementptr inbounds <{ %struct.NonTrivial, i32, i32, i32 }>, <{ %struct.NonTrivial, i32, i32, i32 }>* %0, i32 0, i32 0
   %b = getelementptr inbounds <{ %struct.NonTrivial, i32, i32, i32 }>, <{ %struct.NonTrivial, i32, i32, i32 }>* %0, i32 0, i32 1

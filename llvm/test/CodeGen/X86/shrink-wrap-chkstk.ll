@@ -25,7 +25,7 @@ bb1:
   br label %bb2
 
 bb2:
-  call void @inalloca_params(<{ %struct.S }>* inalloca nonnull %argmem)
+  call void @inalloca_params(<{ %struct.S }>* inalloca(<{ %struct.S }>) nonnull %argmem)
   ret void
 }
 
@@ -39,7 +39,7 @@ bb2:
 ; CHECK: popl %ebp
 ; CHECK: retl
 
-declare void @inalloca_params(<{ %struct.S }>* inalloca)
+declare void @inalloca_params(<{ %struct.S }>* inalloca(<{ %struct.S }>))
 
 declare i32 @doSomething(i32, i32*)
 

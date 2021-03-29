@@ -162,6 +162,8 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
     return ByRefTy;
   if (Type *PreAllocTy = ParamAttrs.getPreallocatedType())
     return PreAllocTy;
+  if (Type *InAllocaTy = ParamAttrs.getInAllocaType())
+    return InAllocaTy;
 
   // FIXME: sret and inalloca always depends on pointee element type. It's also
   // possible for byval to miss it.
@@ -211,6 +213,11 @@ Type *Argument::getParamStructRetType() const {
 Type *Argument::getParamByRefType() const {
   assert(getType()->isPointerTy() && "Only pointers have byref types");
   return getParent()->getParamByRefType(getArgNo());
+}
+
+Type *Argument::getParamInAllocaType() const {
+  assert(getType()->isPointerTy() && "Only pointers have inalloca types");
+  return getParent()->getParamInAllocaType(getArgNo());
 }
 
 uint64_t Argument::getDereferenceableBytes() const {

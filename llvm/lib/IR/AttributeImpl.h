@@ -258,6 +258,7 @@ public:
   Type *getStructRetType() const;
   Type *getByRefType() const;
   Type *getPreallocatedType() const;
+  Type *getInAllocaType() const;
 
   using iterator = const Attribute *;
 
