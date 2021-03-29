@@ -104,14 +104,14 @@ void macho::writeMapFile() {
     return;
   }
 
-  // Dump output path
+  // Dump output path.
   os << format("# Path: %s\n", config->outputFile.str().c_str());
 
-  // Dump output architecure
+  // Dump output architecture.
   os << format("# Arch: %s\n",
                getArchitectureName(config->target.Arch).str().c_str());
 
-  // Dump table of object files
+  // Dump table of object files.
   os << "# Object files:\n";
   os << format("[%3u] %s\n", 0, (const char *)"linker synthesized");
   uint32_t fileIndex = 1;
