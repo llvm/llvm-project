@@ -15,7 +15,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
@@ -91,7 +91,7 @@ private:
 // calling context and the context is identified by path from root to the node.
 class SampleContextTracker {
 public:
-  using ContextSamplesTy = SmallSet<FunctionSamples *, 16>;
+  using ContextSamplesTy = SmallVector<FunctionSamples *, 16>;
 
   SampleContextTracker(StringMap<FunctionSamples> &Profiles);
   // Query context profile for a specific callee with given name at a given
@@ -144,7 +144,7 @@ private:
                                                   StringRef ContextStrToRemove);
 
   // Map from function name to context profiles (excluding base profile)
-  StringMap<ContextSamplesTy> FuncToCtxtProfileSet;
+  StringMap<ContextSamplesTy> FuncToCtxtProfiles;
 
   // Root node for context trie tree
   ContextTrieNode RootContext;
