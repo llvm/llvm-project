@@ -3,6 +3,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=VI %s
 # RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=CI %s
 # RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=SI %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GFX10 %s
 
 ---
 name: m0_gws_init0
@@ -29,6 +30,10 @@ body: |
     ; SI: liveins: $vgpr0
     ; SI: $m0 = S_MOV_B32 -1
     ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_init0
+    ; GFX10: liveins: $vgpr0
+    ; GFX10: $m0 = S_MOV_B32 -1
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec
 
@@ -58,6 +63,10 @@ body: |
     ; SI: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     ; SI: $m0 = S_MOV_B32 -1
     ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_init1
+    ; GFX10: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; GFX10: $m0 = S_MOV_B32 -1
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $m0 = S_MOV_B32 -1
     DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec
@@ -96,6 +105,11 @@ body: |
     ; SI: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     ; SI: $m0 = S_MOV_B32 $sgpr0
     ; SI: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
+    ; GFX10-LABEL: name: m0_gws_readlane
+    ; GFX10: liveins: $vgpr0, $vgpr1
+    ; GFX10: $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+    ; GFX10: $m0 = S_MOV_B32 $sgpr0
+    ; GFX10: DS_GWS_INIT $vgpr0, 0, implicit $m0, implicit $exec
     $sgpr0 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
     $m0 = S_MOV_B32 $sgpr0
     DS_GWS_INIT  $vgpr0, 0, implicit $m0, implicit $exec

@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
 
 define amdgpu_kernel void @store_lds_v4i32(<4 x i32> addrspace(3)* %out, <4 x i32> %x) {
 ; GFX9-LABEL: store_lds_v4i32:
@@ -44,6 +45,20 @@ define amdgpu_kernel void @store_lds_v4i32(<4 x i32> addrspace(3)* %out, <4 x i3
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX6-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset1:1
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-NEXT:    v_mov_b32_e32 v3, s7
+; GFX10-NEXT:    ds_write_b128 v4, v[0:3]
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out
   ret void
 }
@@ -198,6 +213,51 @@ define amdgpu_kernel void @store_lds_v4i32_align1(<4 x i32> addrspace(3)* %out, 
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX6-NEXT:    ds_write_b8 v0, v1 offset:2
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32_align1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s7
+; GFX10-NEXT:    s_lshr_b32 s3, s6, 24
+; GFX10-NEXT:    s_lshr_b32 s0, s7, 8
+; GFX10-NEXT:    s_lshr_b32 s2, s6, 8
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-NEXT:    s_lshr_b32 s6, s5, 8
+; GFX10-NEXT:    v_mov_b32_e32 v3, s5
+; GFX10-NEXT:    s_lshr_b32 s1, s7, 24
+; GFX10-NEXT:    s_lshr_b32 s5, s5, 24
+; GFX10-NEXT:    v_mov_b32_e32 v15, s3
+; GFX10-NEXT:    v_mov_b32_e32 v5, s0
+; GFX10-NEXT:    v_mov_b32_e32 v9, s6
+; GFX10-NEXT:    s_lshr_b32 s0, s4, 8
+; GFX10-NEXT:    v_mov_b32_e32 v6, s1
+; GFX10-NEXT:    v_mov_b32_e32 v11, s4
+; GFX10-NEXT:    v_mov_b32_e32 v7, s2
+; GFX10-NEXT:    ds_write_b8 v0, v1 offset:12
+; GFX10-NEXT:    ds_write_b8_d16_hi v0, v1 offset:14
+; GFX10-NEXT:    ds_write_b8 v0, v2 offset:8
+; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:10
+; GFX10-NEXT:    ds_write_b8 v0, v3 offset:4
+; GFX10-NEXT:    ds_write_b8_d16_hi v0, v3 offset:6
+; GFX10-NEXT:    ds_write_b8 v0, v11
+; GFX10-NEXT:    ds_write_b8_d16_hi v0, v11 offset:2
+; GFX10-NEXT:    ds_write_b8 v0, v5 offset:13
+; GFX10-NEXT:    ds_write_b8 v0, v6 offset:15
+; GFX10-NEXT:    ds_write_b8 v0, v7 offset:9
+; GFX10-NEXT:    s_lshr_b32 s1, s4, 24
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v2, s0
+; GFX10-NEXT:    v_mov_b32_e32 v3, s1
+; GFX10-NEXT:    ds_write_b8 v0, v15 offset:11
+; GFX10-NEXT:    ds_write_b8 v0, v9 offset:5
+; GFX10-NEXT:    ds_write_b8 v0, v1 offset:7
+; GFX10-NEXT:    ds_write_b8 v0, v2 offset:1
+; GFX10-NEXT:    ds_write_b8 v0, v3 offset:3
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 1
   ret void
 }
@@ -280,6 +340,27 @@ define amdgpu_kernel void @store_lds_v4i32_align2(<4 x i32> addrspace(3)* %out, 
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX6-NEXT:    ds_write_b16 v0, v1 offset:2
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32_align2:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s7
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-NEXT:    v_mov_b32_e32 v3, s5
+; GFX10-NEXT:    v_mov_b32_e32 v7, s4
+; GFX10-NEXT:    ds_write_b16 v0, v1 offset:12
+; GFX10-NEXT:    ds_write_b16_d16_hi v0, v1 offset:14
+; GFX10-NEXT:    ds_write_b16 v0, v2 offset:8
+; GFX10-NEXT:    ds_write_b16_d16_hi v0, v2 offset:10
+; GFX10-NEXT:    ds_write_b16 v0, v3 offset:4
+; GFX10-NEXT:    ds_write_b16_d16_hi v0, v3 offset:6
+; GFX10-NEXT:    ds_write_b16 v0, v7
+; GFX10-NEXT:    ds_write_b16_d16_hi v0, v7 offset:2
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 2
   ret void
 }
@@ -328,6 +409,21 @@ define amdgpu_kernel void @store_lds_v4i32_align4(<4 x i32> addrspace(3)* %out, 
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX6-NEXT:    ds_write2_b32 v0, v2, v1 offset0:2 offset1:3
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32_align4:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-NEXT:    v_mov_b32_e32 v1, s4
+; GFX10-NEXT:    v_mov_b32_e32 v2, s5
+; GFX10-NEXT:    v_mov_b32_e32 v3, s6
+; GFX10-NEXT:    v_mov_b32_e32 v6, s7
+; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX10-NEXT:    ds_write2_b32 v0, v3, v6 offset0:2 offset1:3
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 4
   ret void
 }
@@ -373,6 +469,20 @@ define amdgpu_kernel void @store_lds_v4i32_align8(<4 x i32> addrspace(3)* %out, 
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX6-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset1:1
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32_align8:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v3, s7
+; GFX10-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 8
   ret void
 }
@@ -418,6 +528,20 @@ define amdgpu_kernel void @store_lds_v4i32_align16(<4 x i32> addrspace(3)* %out,
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX6-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset1:1
 ; GFX6-NEXT:    s_endpgm
+;
+; GFX10-LABEL: store_lds_v4i32_align16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v4, s2
+; GFX10-NEXT:    v_mov_b32_e32 v0, s4
+; GFX10-NEXT:    v_mov_b32_e32 v1, s5
+; GFX10-NEXT:    v_mov_b32_e32 v2, s6
+; GFX10-NEXT:    v_mov_b32_e32 v3, s7
+; GFX10-NEXT:    ds_write_b128 v4, v[0:3]
+; GFX10-NEXT:    s_endpgm
   store <4 x i32> %x, <4 x i32> addrspace(3)* %out, align 16
   ret void
 }

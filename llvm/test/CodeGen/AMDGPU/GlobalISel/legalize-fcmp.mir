@@ -2,6 +2,7 @@
 # RUN: llc -O0 -march=amdgcn -mcpu=hawaii  -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX7 %s
 # RUN: llc -O0 -march=amdgcn -mcpu=fiji  -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -O0 -march=amdgcn -mcpu=gfx900  -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 %s
+# RUN: llc -O0 -march=amdgcn -mcpu=gfx1010  -run-pass=legalizer -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 %s
 
 ---
 name: test_fcmp_s32
