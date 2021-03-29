@@ -44,7 +44,7 @@ define amdgpu_ps <4 x float> @gather4_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg 
 ; GFX10NSA-NEXT:    s_mov_b32 s9, s11
 ; GFX10NSA-NEXT:    s_mov_b32 s10, s12
 ; GFX10NSA-NEXT:    s_mov_b32 s11, s13
-; GFX10NSA-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
+; GFX10NSA-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
 ; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10NSA-NEXT:    image_gather4 v[0:3], v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
@@ -210,7 +210,7 @@ define amdgpu_ps <4 x float> @gather4_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10NSA-NEXT:    s_mov_b32 s9, s11
 ; GFX10NSA-NEXT:    s_mov_b32 s10, s12
 ; GFX10NSA-NEXT:    s_mov_b32 s11, s13
-; GFX10NSA-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
+; GFX10NSA-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
 ; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10NSA-NEXT:    image_gather4_c v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
@@ -376,7 +376,7 @@ define amdgpu_ps <4 x float> @gather4_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inre
 ; GFX10NSA-NEXT:    s_mov_b32 s9, s11
 ; GFX10NSA-NEXT:    s_mov_b32 s10, s12
 ; GFX10NSA-NEXT:    s_mov_b32 s11, s13
-; GFX10NSA-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
+; GFX10NSA-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
 ; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10NSA-NEXT:    image_gather4_b v[0:3], v[0:1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
@@ -428,7 +428,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> in
 ; GFX10NSA-NEXT:    s_mov_b32 s9, s11
 ; GFX10NSA-NEXT:    s_mov_b32 s10, s12
 ; GFX10NSA-NEXT:    s_mov_b32 s11, s13
-; GFX10NSA-NEXT:    v_and_or_b32 v2, 0xffff, v2, v3
+; GFX10NSA-NEXT:    v_and_or_b32 v2, v2, 0xffff, v3
 ; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
 ; GFX10NSA-NEXT:    image_gather4_c_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D a16
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
@@ -683,7 +683,7 @@ define amdgpu_ps <4 x float> @gather4_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10NSA-NEXT:    s_mov_b32 s1, s3
 ; GFX10NSA-NEXT:    s_mov_b32 s2, s4
 ; GFX10NSA-NEXT:    s_mov_b32 s3, s5
-; GFX10NSA-NEXT:    v_and_or_b32 v0, 0xffff, v0, v1
+; GFX10NSA-NEXT:    v_and_or_b32 v0, v0, 0xffff, v1
 ; GFX10NSA-NEXT:    s_mov_b32 s4, s6
 ; GFX10NSA-NEXT:    s_mov_b32 s5, s7
 ; GFX10NSA-NEXT:    s_mov_b32 s6, s8
@@ -729,7 +729,7 @@ define amdgpu_ps <4 x float> @gather4_c_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> i
 ; GFX10NSA-NEXT:    s_mov_b32 s1, s3
 ; GFX10NSA-NEXT:    s_mov_b32 s2, s4
 ; GFX10NSA-NEXT:    s_mov_b32 s3, s5
-; GFX10NSA-NEXT:    v_and_or_b32 v1, 0xffff, v1, v2
+; GFX10NSA-NEXT:    v_and_or_b32 v1, v1, 0xffff, v2
 ; GFX10NSA-NEXT:    s_mov_b32 s4, s6
 ; GFX10NSA-NEXT:    s_mov_b32 s5, s7
 ; GFX10NSA-NEXT:    s_mov_b32 s6, s8
