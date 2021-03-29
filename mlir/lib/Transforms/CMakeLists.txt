@@ -7,6 +7,7 @@ add_mlir_library(MLIRTransforms
   BufferUtils.cpp
   Bufferize.cpp
   Canonicalizer.cpp
+  CopyRemoval.cpp
   CSE.cpp
   Inliner.cpp
   LocationSnapshot.cpp

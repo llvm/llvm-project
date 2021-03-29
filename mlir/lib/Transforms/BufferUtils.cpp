@@ -12,7 +12,7 @@
 
 #include "mlir/Transforms/BufferUtils.h"
 #include "PassDetail.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -47,6 +47,25 @@ Operation *BufferPlacementAllocs::getStartOperation(Value allocValue,
   }
 
   return startOperation;
+}
+
+/// Finds associated deallocs that can be linked to our allocation nodes (if
+/// any).
+Operation *BufferPlacementAllocs::findDealloc(Value allocValue) {
+  auto userIt = llvm::find_if(allocValue.getUsers(), [&](Operation *user) {
+    auto effectInterface = dyn_cast<MemoryEffectOpInterface>(user);
+    if (!effectInterface)
+      return false;
+    // Try to find a free effect that is applied to one of our values
+    // that will be automatically freed by our pass.
+    SmallVector<MemoryEffects::EffectInstance, 2> effects;
+    effectInterface.getEffectsOnValue(allocValue, effects);
+    return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &it) {
+      return isa<MemoryEffects::Free>(it.getEffect());
+    });
+  });
+  // Assign the associated dealloc operation (if any).
+  return userIt != allocValue.user_end() ? *userIt : nullptr;
 }
 
 /// Initializes the internal list by discovering all supported allocation
