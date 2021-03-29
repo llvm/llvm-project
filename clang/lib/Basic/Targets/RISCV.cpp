@@ -31,7 +31,13 @@ ArrayRef<const char *> RISCVTargetInfo::getGCCRegNames() const {
       "f0",  "f1",  "f2",  "f3",  "f4",  "f5",  "f6",  "f7",
       "f8",  "f9",  "f10", "f11", "f12", "f13", "f14", "f15",
       "f16", "f17", "f18", "f19", "f20", "f21", "f22", "f23",
-      "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"};
+      "f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31",
+
+      // Vector registers
+      "v0",  "v1",  "v2",  "v3",  "v4",  "v5",  "v6",  "v7",
+      "v8",  "v9",  "v10", "v11", "v12", "v13", "v14", "v15",
+      "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23",
+      "v24", "v25", "v26", "v27", "v28", "v29", "v30", "v31"};
   return llvm::makeArrayRef(GCCRegNames);
 }
 
@@ -81,7 +87,29 @@ bool RISCVTargetInfo::validateAsmConstraint(
     // An address that is held in a general-purpose register.
     Info.setAllowsMemory();
     return true;
+  case 'v':
+    // A vector register.
+    if (Name[1] == 'r' || Name[1] == 'm') {
+      Info.setAllowsRegister();
+      Name += 1;
+      return true;
+    }
+    return false;
   }
+}
+
+std::string RISCVTargetInfo::convertConstraint(const char *&Constraint) const {
+  std::string R;
+  switch (*Constraint) {
+  case 'v':
+    R = std::string("v");
+    Constraint += 1;
+    break;
+  default:
+    R = TargetInfo::convertConstraint(Constraint);
+    break;
+  }
+  return R;
 }
 
 void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
