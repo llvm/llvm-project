@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   Core
   MC
+  IPO
   MCDisassembler
   Object
   ProfileData
@@ -15,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-profgen
   llvm-profgen.cpp
   PerfReader.cpp
+  CSPreInliner.cpp
   ProfiledBinary.cpp
   ProfileGenerator.cpp
   PseudoProbe.cpp
