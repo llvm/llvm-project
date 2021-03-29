@@ -44,7 +44,7 @@ class DefinedOpCallable:
     self.op_name = op_name
     self.model = model
 
-  def __call__(self, *args, emit_generic: bool = True, **kwargs):
+  def __call__(self, *args, emit_generic: bool = False, **kwargs):
     """Emits the corresponding op definition as IR.
 
     Most arguments are passed through to the underlying emitter. The following
@@ -61,14 +61,21 @@ class DefinedOpCallable:
       raise NotImplementedError(
           f"Emission of composite linalg ops not supported: {op_configs}")
 
+    # TODO: this file should probably not be called dsl.py but rather is a client
+    # of the dsl.py.
+    from .... import linalg as linalg_ops
+    emit_generic = (emit_generic or 
+      (not self.model.metadata.cpp_class_name in linalg_ops.__dict__.keys()))
+
     op_config = op_configs[0]
     if op_config.structured_op:
       if emit_generic:
         return emit_generic_structured_op(op_config.structured_op, *args,
                                           **kwargs)
       else:
-        return emit_named_structured_op(op_config.structured_op, *args,
-                                        **kwargs)
+        return emit_named_structured_op(
+          op_config.structured_op, self.op_name,
+          self.model.metadata.cpp_class_name, *args, **kwargs)
 
     raise NotImplementedError(
         f"Emission of linalg op type not supported: {op_config}")
@@ -91,7 +98,7 @@ def linalg_structured_op(dsl_func=None,
     op_class_name = f"{''.join(x.title() for x in op_name.split('_'))}Op"
 
   tc_model = LinalgOpDef(name=op_name,
-                         cpp_op_name=op_class_name,
+                         cpp_class_name=op_class_name,
                          doc=inspect.getdoc(dsl_func))
 
   # Extract arguments and TensorDefs from the signature.
