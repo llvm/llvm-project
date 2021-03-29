@@ -2093,14 +2093,6 @@ void CGOpenMPRuntimeGPU::emitNonSPMDParallelCall(
   // Force inline this outlined function at its call site.
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 
-  // Ensure we do not inline the function. This is trivially true for the ones
-  // passed to __kmpc_fork_call but the ones calles in serialized regions
-  // could be inlined. This is not a perfect but it is closer to the invariant
-  // we want, namely, every data environment starts with a new function.
-  // TODO: We should pass the if condition to the runtime function and do the
-  //       handling there. Much cleaner code.
-  cast<llvm::Function>(OutlinedFn)->addFnAttr(llvm::Attribute::NoInline);
-
   Address ZeroAddr = CGF.CreateDefaultAlignTempAlloca(CGF.Int32Ty,
                                                       /*Name=*/".zero.addr");
   CGF.InitTempAlloca(ZeroAddr, CGF.Builder.getInt32(/*C*/ 0));
@@ -4216,6 +4208,15 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
   auto *Fn = llvm::Function::Create(
       CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
       Twine(OutlinedParallelFn->getName(), "_wrapper"), &CGM.getModule());
+
+  // Ensure we do not inline the function. This is trivially true for the ones
+  // passed to __kmpc_fork_call but the ones calles in serialized regions
+  // could be inlined. This is not a perfect but it is closer to the invariant
+  // we want, namely, every data environment starts with a new function.
+  // TODO: We should pass the if condition to the runtime function and do the
+  //       handling there. Much cleaner code.
+  Fn->addFnAttr(llvm::Attribute::NoInline);
+
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
   Fn->setLinkage(llvm::GlobalValue::InternalLinkage);
   Fn->setDoesNotRecurse();
