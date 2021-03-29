@@ -282,8 +282,6 @@ def BufferDeallocation : FunctionPass<"buffer-deallocation"> {
 
   }];
   let constructor = "mlir::createBufferDeallocationPass()";
-  // TODO: this pass likely shouldn't depend on Linalg?
-  let dependentDialects = ["linalg::LinalgDialect"];
 }
 
 def BufferHoisting : FunctionPass<"buffer-hoisting"> {
@@ -364,11 +362,6 @@ def Canonicalizer : Pass<"canonicalize"> {
   }];
   let constructor = "mlir::createCanonicalizerPass()";
   let dependentDialects = ["memref::MemRefDialect"];
-}
-
-def CopyRemoval : FunctionPass<"copy-removal"> {
-  let summary = "Remove the redundant copies from input IR";
-  let constructor = "mlir::createCopyRemovalPass()";
 }
 
 def CSE : Pass<"cse"> {
