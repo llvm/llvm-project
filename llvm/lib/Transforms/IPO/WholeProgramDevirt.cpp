@@ -1153,7 +1153,7 @@ bool DevirtModule::trySingleImplDevirt(
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
   if (TheFn->hasLocalLinkage()) {
-    std::string NewName = (TheFn->getName() + "$merged").str();
+    std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
     // also be renamed. This is required when targeting COFF, as the comdat name
