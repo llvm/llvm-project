@@ -1,4 +1,16 @@
-// RUN: %clang_cc1 -emit-llvm-only -triple s390x-none-zos -fdump-record-layouts %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm-only -triple s390x-none-zos -fdump-record-layouts %s | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -emit-llvm -triple s390x-none-zos %s -o - | FileCheck %s --check-prefix=DECL
+
+static int __attribute__((aligned(32))) v0;
+int __attribute__((aligned(32))) v1;
+typedef int __attribute__((aligned(32))) int32;
+static int32 v2;
+int32 v3;
+int f0() { return v0 + v1 + v2 + v3; }
+// DECL:      @v0 {{.*}} align 16
+// DECL-NEXT: @v1 {{.*}} align 32
+// DECL-NEXT: @v2 {{.*}} align 16
+// DECL-NEXT: @v3 {{.*}} align 32
 
 struct s0 {
   short a:3;
