@@ -37,11 +37,23 @@ subroutine test1b(a,b,c,d,n)
   ! CHECK: fir.array_merge_store %[[A]], %[[T]] to %arg0
 end subroutine test1b
 
-! CHECK-LABEL: func @_QPtest2
+! CHECK-LABEL: func @_QPtest2(
+! CHECK-SAME: %[[aarg:[^:]*]]: !fir.box<!fir.array<?xf32>>,
+! CHECK-SAME: %[[barg:[^:]+]]: !fir.box<!fir.array<?xf32>>,
+! CHECK-SAME: %[[carg:[^:]+]]: !fir.box<!fir.array<?xf32>>)
 subroutine test2(a,b,c)
   real, intent(out) :: a(:)
   real, intent(in) :: b(:), c(:)
-!  a = b + c
+  ! CHECK: %[[a:.*]] = fir.array_load %[[aarg]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
+  ! CHECK: %[[b:.*]] = fir.array_load %[[barg]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
+  ! CHECK: %[[c:.*]] = fir.array_load %[[carg]] : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
+  ! CHECK: %{{[^:]+}}:3 = fir.box_dims %[[aarg]], %c0{{.*}} : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+  ! CHECK: fir.do_loop {{.*}} iter_args(%{{.*}} = %[[a]]) -> (!fir.array<?xf32>
+  ! CHECK: fir.array_fetch %[[b]], %{{.*}} : (!fir.array<?xf32>, index) -> f32
+  ! CHECK: fir.array_fetch %[[c]], %{{.*}} : (!fir.array<?xf32>, index) -> f32
+  ! CHECK: fir.array_update %{{.*}} : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
+  ! CHECK: fir.array_merge_store %[[a]], %{{.*}} to %[[aarg]] : !fir.box<!fir.array<?xf32>>
+ a = b + c
 end subroutine test2
 
 ! CHECK-LABEL: func @_QPtest3
@@ -92,12 +104,28 @@ subroutine test5(a,b,c)
   ! CHECK: fir.array_merge_store %[[A]], %{{.*}} to %arg0
 end subroutine test5
 
-! CHECK-LABEL: func @_QPtest6
+! CHECK-LABEL: func @_QPtest6(
+! CHECK-SAME: %[[aarg:[^:]+]]: !fir.ref<!fir.array<?xf32>>,
+! CHECK-SAME: %[[barg:[^:]+]]: !fir.ref<!fir.array<?xf32>>,
+! CHECK-SAME: %[[carg:[^:]+]]: !fir.ref<f32>,
+! CHECK-SAME: %[[narg:[^:]+]]: !fir.ref<i32>,
+! CHECK-SAME: %[[marg:[^:]+]]: !fir.ref<i32>)
 subroutine test6(a,b,c,n,m)
   integer :: n, m
   real, intent(out) :: a(n)
   real, intent(in) :: b(m), c
-!  a(3:n:4) = b + c
+  ! CHECK: %[[ashape:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %[[aslice:.*]] = fir.slice %c3{{.*}}, %{{.*}}, %c4{{.*}} : (i64, i64, i64) -> !fir.slice<1>
+  ! CHECK: %[[a:.*]] = fir.array_load %[[aarg]](%[[ashape]]) [%[[aslice]]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<?xf32>
+  ! CHECK: %[[bshape:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %[[b:.*]] = fir.array_load %[[barg]](%[[bshape]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.array<?xf32>
+  ! CHECK: %[[loop:.*]] = fir.do_loop {{.*}} iter_args(%{{.*}} = %[[a]]) ->
+  ! CHECK: %[[bv:.*]] = fir.array_fetch %[[b]], %{{.*}} : (!fir.array<?xf32>, index) -> f32
+  ! CHECK: %[[sum:.*]] = addf %[[bv]], %{{.*}} : f32
+  ! CHECK: %[[res:.*]] = fir.array_update %{{.*}}, %[[sum]], %{{.*}} : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
+  ! CHECK: fir.result %[[res]] : !fir.array<?xf32>
+  ! CHECK: fir.array_merge_store %[[a]], %[[loop]] to %[[aarg]] : !fir.ref<!fir.array<?xf32>>
+  a(3:n:4) = b + c
 end subroutine test6
 
 ! This is NOT a conflict. `a` appears on both the lhs and rhs here, but there
@@ -148,6 +176,7 @@ end subroutine test9
 ! CHECK-LABEL: func @_QPtest10
 subroutine test10(a,b,c,d)
   interface
+     ! Function takea an array and yields an array
      function foo(a) result(res)
        real :: a(:)  ! FIXME: must be before res or semantics fails
                      ! as `size(a,1)` fails to resolve to the argument
@@ -155,6 +184,7 @@ subroutine test10(a,b,c,d)
      end function foo
   end interface
   interface
+     ! Function takes an array and yields a scalar
      real function bar(a)
        real :: a(:)
      end function bar
@@ -341,5 +371,19 @@ subroutine test17(a,b,c)
   ! CHECK: fir.result %[[res]] : !fir.array<100xf32>
   ! CHECK: fir.array_merge_store %[[barr]], %[[loop]] to %[[b]]
 end subroutine test17
+
+! CHECK-LABEL: func @_QPtest18(
+subroutine test18
+  integer, target :: array(10,10)
+  integer, pointer :: row_i(:)
+  ! CHECK: %[[iaddr:.*]] = fir.alloca i32 {name = "_QFtest18Ei"}
+  ! CHECK: %[[i:.*]] = fir.load %[[iaddr]] : !fir.ref<i32>
+  ! CHECK: %[[icast:.*]] = fir.convert %[[i]] : (i32) -> i64
+  ! CHECK: %[[exact:.*]] = fir.undefined index
+  ! CHECK: %[[ubound:.*]] = subi %{{.*}}, %c1 : index
+  ! CHECK: %[[slice:.*]] = fir.slice %[[icast]], %[[exact]], %[[exact]], %c1, %[[ubound]], %c1{{.*}} : (i64, index, index, index, index, i64) -> !fir.slice<2>
+  ! CHECK: = fir.embox %{{.*}}(%{{.*}}) [%[[slice]]] : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xi32>>
+  row_i => array(i, :)
+end subroutine test18
 
 ! CHECK: func private @_QPbar(
