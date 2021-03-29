@@ -11,7 +11,15 @@
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=10 -import-instr-evolution-factor=0.5 -S | FileCheck %s --check-prefix=INSTLIM-PROGRESSIVE
 ; INSTLIM-PROGRESSIVE-NOT: call void @staticfunc
 
-
+; Test force import all
+; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc \
+; RUN:  -import-instr-limit=1 -force-import-all -S \
+; RUN:  | FileCheck %s --check-prefix=IMPORTALL
+; IMPORTALL-DAG: define available_externally void @globalfunc1()
+; IMPORTALL-DAG: define available_externally void @trampoline()
+; IMPORTALL-DAG: define available_externally void @largefunction()
+; IMPORTALL-DAG: define available_externally hidden void @staticfunc2.llvm.0()
+; IMPORTALL-DAG: define available_externally void @globalfunc2()
 
 declare void @globalfunc1()
 declare void @globalfunc2()
