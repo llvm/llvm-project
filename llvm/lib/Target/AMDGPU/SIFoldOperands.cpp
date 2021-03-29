@@ -97,7 +97,7 @@ public:
 
   std::pair<const MachineOperand *, int> isOMod(const MachineInstr &MI) const;
   bool tryFoldOMod(MachineInstr &MI);
-  bool tryFoldRegSeqence(MachineInstr &MI);
+  bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldLCSSAPhi(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
 
@@ -489,7 +489,7 @@ static bool isUseSafeToFold(const SIInstrInfo *TII,
   //return !MI.hasRegisterImplicitUseOperand(UseMO.getReg());
 }
 
-// Find a def of the UseReg, check if it is a reg_seqence and find initializers
+// Find a def of the UseReg, check if it is a reg_sequence and find initializers
 // for each subreg, tracking it to foldable inline immediate if possible.
 // Returns true on success.
 static bool getRegSeqInit(
@@ -1528,7 +1528,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
 
 // Try to fold a reg_sequence with vgpr output and agpr inputs into an
 // instruction which can take an agpr. So far that means a store.
-bool SIFoldOperands::tryFoldRegSeqence(MachineInstr &MI) {
+bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   assert(MI.isRegSequence());
   auto Reg = MI.getOperand(0).getReg();
 
@@ -1741,7 +1741,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
 
       tryFoldInst(TII, &MI);
 
-      if (MI.isRegSequence() && tryFoldRegSeqence(MI))
+      if (MI.isRegSequence() && tryFoldRegSequence(MI))
         continue;
 
       if (MI.isPHI() && tryFoldLCSSAPhi(MI))
