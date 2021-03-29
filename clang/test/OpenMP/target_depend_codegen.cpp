@@ -246,7 +246,8 @@ int foo(int n) {
 // CHECK:       define internal void [[MAPPER_ID]](i8* %{{.+}}, i8* %{{.+}}, i8* %{{.+}}, i64 %{{.+}}, i64 %{{.+}})
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1_]](i32{{.*}}, [[TASK_TY1_]]* noalias %{{.+}})
-// CHECK:       call void (i8*, ...) %{{.+}}(i8* %{{.+}}, i[[SZ]]*** %{{.+}}, i32** %{{.+}}, [3 x i8*]** [[BPTR_ADDR:%.+]], [3 x i8*]** [[PTR_ADDR:%.+]], [3 x i64]** [[SZ_ADDR:%.+]], [3 x i8*]** [[M_ADDR:%.+]])
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* %{{.+}} to void (i8*,
+// CHECK:       call void [[FN]](i8* %{{.+}}, i[[SZ]]*** %{{.+}}, i32** %{{.+}}, [3 x i8*]** [[BPTR_ADDR:%.+]], [3 x i8*]** [[PTR_ADDR:%.+]], [3 x i64]** [[SZ_ADDR:%.+]], [3 x i8*]** [[M_ADDR:%.+]])
 // CHECK:       [[BPTR_REF:%.+]] = load [3 x i8*]*, [3 x i8*]** [[BPTR_ADDR]],
 // CHECK:       [[PTR_REF:%.+]] = load [3 x i8*]*, [3 x i8*]** [[PTR_ADDR]],
 // CHECK:       [[SZ_REF:%.+]] = load [3 x i64]*, [3 x i64]** [[SZ_ADDR]],
@@ -275,7 +276,8 @@ int foo(int n) {
 // CHECK:       ret i32 0
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY1__]](i32{{.*}}, [[TASK_TY1__]]* noalias %1)
-// CHECK:       call void (i8*, ...) %
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](
 // CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 2
 // CHECK:       [[BP0:%.+]] = load i[[SZ]]*, i[[SZ]]** %
 // CHECK:       [[BP1_I32:%.+]] = load i32, i32* @
@@ -295,7 +297,8 @@ int foo(int n) {
 // CHECK-32:    load i32, i32* [[AA_ADDR]], align
 
 // CHECK:       define internal{{.*}} i32 [[TASK_ENTRY2]](i32{{.*}}, [[TASK_TY2]]* noalias %1)
-// CHECK:       call void (i8*, ...) %
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](
 // CHECK:       [[BP1_I32:%.+]] = load i32, i32* %
 // CHECK-64:    [[BP1_CAST:%.+]] = bitcast i[[SZ]]* [[BP1_PTR:%.+]] to i32*
 // CHECK-64:    store i32 [[BP1_I32]], i32* [[BP1_CAST]],

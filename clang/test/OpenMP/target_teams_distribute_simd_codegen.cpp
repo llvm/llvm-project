@@ -380,7 +380,8 @@ int foo(int n) {
 // CHECK-DAG:   [[BPADDR]] = load [3 x i8*]*, [3 x i8*]** [[FPBPADDR:%[^,]+]], align
 // CHECK-DAG:   [[PADDR]] = load [3 x i8*]*, [3 x i8*]** [[FPPADDR:%[^,]+]], align
 // CHECK-DAG:   [[SIZEADDR]] = load [3 x i64]*, [3 x i64]** [[FPSIZEADDR:%[^,]+]], align
-// CHECK-DAG:   call void (i8*, ...) %{{.+}}(i8* %{{.+}}, i16** %{{.+}}, [3 x i8*]** [[FPBPADDR]], [3 x i8*]** [[FPPADDR]], [3 x i64]** [[FPSIZEADDR]])
+// CHECK-DAG:   [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK-DAG:   call void [[FN]](i8* %{{.+}}, i16** %{{.+}}, [3 x i8*]** [[FPBPADDR]], [3 x i8*]** [[FPPADDR]], [3 x i64]** [[FPSIZEADDR]])
 // CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
