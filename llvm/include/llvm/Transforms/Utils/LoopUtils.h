@@ -513,8 +513,8 @@ struct IVConditionInfo {
 /// If the branch condition of the header is partially invariant, return a pair
 /// containing the instructions to duplicate and a boolean Constant to update
 /// the condition in the loops created for the true or false successors.
-Optional<IVConditionInfo> hasPartialIVCondition(Loop *L, unsigned MSSAThreshold,
-                                                MemorySSA *MSSA, AAResults *AA);
+Optional<IVConditionInfo> hasPartialIVCondition(Loop &L, unsigned MSSAThreshold,
+                                                MemorySSA &MSSA, AAResults &AA);
 
 } // end namespace llvm
 
