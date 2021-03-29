@@ -693,7 +693,7 @@ void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
   MachineInstrBuilder MIB;
   if (Subtarget.hasNanoMips())
     MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturnNM))
-              .addReg(Mips::RA, RegState::Undef);
+              .addReg(Mips::RA_NM, RegState::Undef);
   else if (Subtarget.isGP64bit())
     MIB = BuildMI(MBB, I, I->getDebugLoc(), get(Mips::PseudoReturn64))
               .addReg(Mips::RA_64, RegState::Undef);
