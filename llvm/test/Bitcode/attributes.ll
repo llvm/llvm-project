@@ -214,8 +214,8 @@ define void @f35() optnone noinline
         ret void;
 }
 
-define void @f36(i8* inalloca(i8) %0) {
-; CHECK: define void @f36(i8* inalloca(i8) %0) {
+define void @f36(i8* inalloca %0) {
+; CHECK: define void @f36(i8* inalloca %0) {
         ret void
 }
 

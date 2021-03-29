@@ -180,6 +180,9 @@ TEST(Attributes, StringRepresentation) {
   Attribute A = Attribute::getWithByValType(C, Ty);
   EXPECT_EQ(A.getAsString(), "byval(%mystruct)");
 
+  A = Attribute::getWithByValType(C, nullptr);
+  EXPECT_EQ(A.getAsString(), "byval");
+
   A = Attribute::getWithByValType(C, Type::getInt32Ty(C));
   EXPECT_EQ(A.getAsString(), "byval(i32)");
 }

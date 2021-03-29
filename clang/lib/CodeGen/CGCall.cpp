@@ -2298,7 +2298,7 @@ void CodeGenModule::ConstructAttributeList(
   // Attach attributes to inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
     llvm::AttrBuilder Attrs;
-    Attrs.addInAllocaAttr(FI.getArgStruct());
+    Attrs.addAttribute(llvm::Attribute::InAlloca);
     ArgAttrs[IRFunctionArgs.getInallocaArgNo()] =
         llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
