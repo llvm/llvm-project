@@ -1077,7 +1077,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // If we have increased the offset to fulfill the alignment constrants,
     // then the scavenging spill slots may become harder to reach from the
     // stack pointer, float them so they stay close.
-    if (OffsetBeforeAlignment != Offset && RS && !EarlyScavengingSlots) {
+    if (StackGrowsDown && OffsetBeforeAlignment != Offset && RS &&
+        !EarlyScavengingSlots) {
       SmallVector<int, 2> SFIs;
       RS->getScavengingFrameIndices(SFIs);
       LLVM_DEBUG(if (!SFIs.empty()) llvm::dbgs()
