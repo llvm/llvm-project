@@ -39,17 +39,14 @@ void UniqueptrDeleteReleaseCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxDeleteExpr(
           unless(isInTemplateInstantiation()),
-          has(expr(ignoringParenImpCasts(
-              cxxMemberCallExpr(
-                  callee(
-                      memberExpr(hasObjectExpression(allOf(
-                                     unless(isTypeDependent()),
-                                     anyOf(hasType(UniquePtrWithDefaultDelete),
-                                           hasType(pointsTo(
-                                               UniquePtrWithDefaultDelete))))),
-                                 member(cxxMethodDecl(hasName("release"))))
-                          .bind("release_expr")))
-                  .bind("release_call")))))
+          has(cxxMemberCallExpr(
+                  callee(memberExpr(hasObjectExpression(anyOf(
+                                        hasType(UniquePtrWithDefaultDelete),
+                                        hasType(pointsTo(
+                                            UniquePtrWithDefaultDelete)))),
+                                    member(cxxMethodDecl(hasName("release"))))
+                             .bind("release_expr")))
+                  .bind("release_call")))
           .bind("delete"),
       this);
 }

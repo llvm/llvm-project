@@ -548,9 +548,9 @@ define float @fma_const_fmul(float %x) {
 ; CHECK-LABEL: fma_const_fmul:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xfa,0x59,0x0d,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    vfmadd132ss {{.*}}(%rip), %xmm1, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x71,0x99,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 5, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 5, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    # xmm0 = (xmm0 * mem) + xmm1
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %mul1 = fmul contract float %x, 10.0

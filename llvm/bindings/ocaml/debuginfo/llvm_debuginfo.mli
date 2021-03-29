@@ -282,6 +282,11 @@ val dibuild_get_or_create_type_array :
 (** [dibuild_get_or_create_type_array] Create a type array.
     See LLVMDIBuilderGetOrCreateTypeArray. *)
 
+val dibuild_get_or_create_array :
+  lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
+(** [dibuild_get_or_create_array] Create an array of DI Nodes.
+    See LLVMDIBuilderGetOrCreateArray. *)
+
 val dibuild_create_constant_value_expression :
   lldibuilder -> int -> Llvm.llmetadata
 (** [dibuild_create_constant_value_expression] Create a new descriptor for

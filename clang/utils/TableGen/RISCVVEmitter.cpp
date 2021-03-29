@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This tablegen backend is responsible for emitting riscv_vector.h and
-// riscv_vector_generic.h, which includes a declaration and definition of each
-// intrinsic fucntions specified in https://github.com/riscv/rvv-intrinsic-doc.
+// This tablegen backend is responsible for emitting riscv_vector.h which
+// includes a declaration and definition of each intrinsic functions specified
+// in https://github.com/riscv/rvv-intrinsic-doc.
 //
 // See also the documentation in include/clang/Basic/riscv_vector.td.
 //
@@ -150,9 +150,10 @@ private:
   std::string MangledName;
   std::string IRName;
   bool HasSideEffects;
+  bool IsMask;
   bool HasMaskedOffOperand;
   bool HasVL;
-  bool HasGeneric;
+  bool HasNoMaskedOverloaded;
   bool HasAutoDef; // There is automiatic definition in header
   std::string ManualCodegen;
   RVVTypePtr OutputType; // Builtin output type
@@ -168,7 +169,7 @@ private:
 public:
   RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
                StringRef IRName, bool HasSideEffects, bool IsMask,
-               bool HasMaskedOffOperand, bool HasVL, bool HasGeneric,
+               bool HasMaskedOffOperand, bool HasVL, bool HasNoMaskedOverloaded,
                bool HasAutoDef, StringRef ManualCodegen, const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes,
                const std::vector<int64_t> &PermuteOperands);
@@ -179,9 +180,10 @@ public:
   bool hasSideEffects() const { return HasSideEffects; }
   bool hasMaskedOffOperand() const { return HasMaskedOffOperand; }
   bool hasVL() const { return HasVL; }
-  bool hasGeneric() const { return HasGeneric; }
+  bool hasNoMaskedOverloaded() const { return HasNoMaskedOverloaded; }
   bool hasManualCodegen() const { return !ManualCodegen.empty(); }
   bool hasAutoDef() const { return HasAutoDef; }
+  bool isMask() const { return IsMask; }
   size_t getNumOperand() const { return InputTypes.size(); }
   StringRef getIRName() const { return IRName; }
   uint8_t getRISCVExtensions() const { return RISCVExtensions; }
@@ -214,9 +216,6 @@ public:
   /// Emit riscv_vector.h
   void createHeader(raw_ostream &o);
 
-  /// Emit riscv_generic.h
-  void createGenericHeader(raw_ostream &o);
-
   /// Emit all the __builtin prototypes and code needed by Sema.
   void createBuiltins(raw_ostream &o);
 
@@ -236,7 +235,8 @@ private:
                                   ArrayRef<std::string> PrototypeSeq);
   Optional<RVVTypePtr> computeType(BasicType BT, int Log2LMUL, StringRef Proto);
 
-  /// Emit Acrh predecessor definitions and body
+  /// Emit Acrh predecessor definitions and body, assume the element of Defs are
+  /// sorted by extension.
   void emitArchMacroAndBody(
       std::vector<std::unique_ptr<RVVIntrinsic>> &Defs, raw_ostream &o,
       std::function<void(raw_ostream &, const RVVIntrinsic &)>);
@@ -694,13 +694,13 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
                            StringRef NewMangledName, StringRef IRName,
                            bool HasSideEffects, bool IsMask,
                            bool HasMaskedOffOperand, bool HasVL,
-                           bool HasGeneric, bool HasAutoDef,
+                           bool HasNoMaskedOverloaded, bool HasAutoDef,
                            StringRef ManualCodegen, const RVVTypes &OutInTypes,
                            const std::vector<int64_t> &NewIntrinsicTypes,
                            const std::vector<int64_t> &PermuteOperands)
-    : IRName(IRName), HasSideEffects(HasSideEffects),
+    : IRName(IRName), HasSideEffects(HasSideEffects), IsMask(IsMask),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL),
-      HasGeneric(HasGeneric), HasAutoDef(HasAutoDef),
+      HasNoMaskedOverloaded(HasNoMaskedOverloaded), HasAutoDef(HasAutoDef),
       ManualCodegen(ManualCodegen.str()) {
 
   // Init Name and MangledName
@@ -713,7 +713,6 @@ RVVIntrinsic::RVVIntrinsic(StringRef NewName, StringRef Suffix,
     Name += "_" + Suffix.str();
   if (IsMask) {
     Name += "_m";
-    MangledName += "_m";
   }
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
@@ -934,30 +933,35 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
   }
   OS << "#endif\n\n";
 
+  // The same extension include in the same arch guard marco.
+  std::stable_sort(Defs.begin(), Defs.end(),
+                   [](const std::unique_ptr<RVVIntrinsic> &A,
+                      const std::unique_ptr<RVVIntrinsic> &B) {
+                     return A->getRISCVExtensions() < B->getRISCVExtensions();
+                   });
+
   // Print intrinsic functions with macro
   emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
     Inst.emitIntrinsicMacro(OS);
+  });
+
+  OS << "#define __riscv_v_intrinsic_overloading 1\n";
+
+  // Print Overloaded APIs
+  OS << "#define __rvv_overloaded static inline "
+        "__attribute__((__always_inline__, __nodebug__, __overloadable__))\n";
+
+  emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
+    if (!Inst.isMask() && !Inst.hasNoMaskedOverloaded())
+      return;
+    OS << "__rvv_overloaded ";
+    Inst.emitMangledFuncDef(OS);
   });
 
   OS << "\n#ifdef __cplusplus\n";
   OS << "}\n";
   OS << "#endif // __riscv_vector\n";
   OS << "#endif // __RISCV_VECTOR_H\n";
-}
-
-void RVVEmitter::createGenericHeader(raw_ostream &OS) {
-  std::vector<std::unique_ptr<RVVIntrinsic>> Defs;
-  createRVVIntrinsics(Defs);
-
-  OS << "#include <riscv_vector.h>\n\n";
-  // Print intrinsic functions macro
-  emitArchMacroAndBody(Defs, OS, [](raw_ostream &OS, const RVVIntrinsic &Inst) {
-    if (!Inst.hasGeneric())
-      return;
-    OS << "static inline __attribute__((__always_inline__, __nodebug__, "
-          "__overloadable__))\n";
-    Inst.emitMangledFuncDef(OS);
-  });
 }
 
 void RVVEmitter::createBuiltins(raw_ostream &OS) {
@@ -1041,7 +1045,7 @@ void RVVEmitter::createRVVIntrinsics(
     bool HasMask = R->getValueAsBit("HasMask");
     bool HasMaskedOffOperand = R->getValueAsBit("HasMaskedOffOperand");
     bool HasVL = R->getValueAsBit("HasVL");
-    bool HasGeneric = R->getValueAsBit("HasGeneric");
+    bool HasNoMaskedOverloaded = R->getValueAsBit("HasNoMaskedOverloaded");
     bool HasSideEffects = R->getValueAsBit("HasSideEffects");
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
     StringRef ManualCodegen = R->getValueAsString("ManualCodegen");
@@ -1092,18 +1096,18 @@ void RVVEmitter::createRVVIntrinsics(
         // Create a non-mask intrinsic
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, MangledName, IRName, HasSideEffects,
-            /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL, HasGeneric,
-            HasAutoDef, ManualCodegen, Types.getValue(), IntrinsicTypes,
-            PermuteOperands));
+            /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
+            HasNoMaskedOverloaded, HasAutoDef, ManualCodegen, Types.getValue(),
+            IntrinsicTypes, PermuteOperands));
         if (HasMask) {
           // Create a mask intrinsic
           Optional<RVVTypes> MaskTypes =
               computeTypes(I, Log2LMUL, ProtoMaskSeq);
           Out.push_back(std::make_unique<RVVIntrinsic>(
               Name, SuffixStr, MangledName, IRNameMask, HasSideEffects,
-              /*IsMask=*/true, HasMaskedOffOperand, HasVL, HasGeneric,
-              HasAutoDef, ManualCodegenMask, MaskTypes.getValue(),
-              IntrinsicTypes, PermuteOperands));
+              /*IsMask=*/true, HasMaskedOffOperand, HasVL,
+              HasNoMaskedOverloaded, HasAutoDef, ManualCodegenMask,
+              MaskTypes.getValue(), IntrinsicTypes, PermuteOperands));
         }
       } // end for Log2LMULList
     }   // end for TypeRange
@@ -1148,13 +1152,6 @@ Optional<RVVTypePtr> RVVEmitter::computeType(BasicType BT, int Log2LMUL,
 void RVVEmitter::emitArchMacroAndBody(
     std::vector<std::unique_ptr<RVVIntrinsic>> &Defs, raw_ostream &OS,
     std::function<void(raw_ostream &, const RVVIntrinsic &)> PrintBody) {
-
-  // The same extension include in the same arch guard marco.
-  std::stable_sort(Defs.begin(), Defs.end(),
-                   [](const std::unique_ptr<RVVIntrinsic> &A,
-                      const std::unique_ptr<RVVIntrinsic> &B) {
-                     return A->getRISCVExtensions() < B->getRISCVExtensions();
-                   });
   uint8_t PrevExt = (*Defs.begin())->getRISCVExtensions();
   bool NeedEndif = emitExtDefStr(PrevExt, OS);
   for (auto &Def : Defs) {
@@ -1190,10 +1187,6 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
 namespace clang {
 void EmitRVVHeader(RecordKeeper &Records, raw_ostream &OS) {
   RVVEmitter(Records).createHeader(OS);
-}
-
-void EmitRVVGenericHeader(RecordKeeper &Records, raw_ostream &OS) {
-  RVVEmitter(Records).createGenericHeader(OS);
 }
 
 void EmitRVVBuiltins(RecordKeeper &Records, raw_ostream &OS) {

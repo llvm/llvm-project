@@ -49,6 +49,10 @@
 #include <osreldate.h>
 #include <sys/sysctl.h>
 #define pthread_getattr_np pthread_attr_get_np
+// The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
+// that, it was never implemented. So just define it to zero.
+#undef MAP_NORESERVE
+#define MAP_NORESERVE 0
 #endif
 
 #if SANITIZER_NETBSD
@@ -883,6 +887,7 @@ static uptr MremapCreateAlias(uptr base_addr, uptr alias_addr,
                          reinterpret_cast<void *>(alias_addr));
 #else
   CHECK(false && "mremap is not supported outside of Linux");
+  return 0;
 #endif
 }
 

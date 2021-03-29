@@ -1485,7 +1485,7 @@ define i1 @length16_eq_const(i8* %X) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
@@ -1495,7 +1495,7 @@ define i1 @length16_eq_const(i8* %X) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm0
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    sete %al
 ; X86-SSE41-NEXT:    retl
@@ -1756,8 +1756,8 @@ define i1 @length24_eq_const(i8* %X) nounwind {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
@@ -1769,8 +1769,8 @@ define i1 @length24_eq_const(i8* %X) nounwind {
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE41-NEXT:    movdqu 8(%eax), %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm0
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    por %xmm1, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    setne %al
@@ -2152,8 +2152,8 @@ define i1 @length31_eq_const(i8* %X) nounwind {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    movdqu 15(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
@@ -2165,8 +2165,8 @@ define i1 @length31_eq_const(i8* %X) nounwind {
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE41-NEXT:    movdqu 15(%eax), %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm0
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    por %xmm1, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    setne %al
@@ -2563,8 +2563,8 @@ define i1 @length32_eq_const(i8* %X) nounwind {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
@@ -2576,8 +2576,8 @@ define i1 @length32_eq_const(i8* %X) nounwind {
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm1
-; X86-SSE41-NEXT:    pxor {{\.LCPI.*}}, %xmm0
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE41-NEXT:    pxor {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    por %xmm1, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    setne %al

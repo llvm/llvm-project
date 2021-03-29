@@ -402,3 +402,5 @@ fun:__sanitizer_cov_pcs_init=discard
 # Ignores the dfsan wrappers.
 fun:__dfsw_*=uninstrumented
 fun:__dfsw_*=discard
+fun:__dfso_*=uninstrumented
+fun:__dfso_*=discard

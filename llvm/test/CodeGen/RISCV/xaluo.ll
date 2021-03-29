@@ -1045,13 +1045,11 @@ define signext i32 @umulo3.i32(i32 signext %0, i32 signext %1, i32* %2) {
 ; RV64-LABEL: umulo3.i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a1, a1, 32
-; RV64-NEXT:    srli a3, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a4, a0, 32
 ; RV64-NEXT:    mulhu a0, a0, a1
-; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    snez a1, a0
-; RV64-NEXT:    mulw a0, a4, a3
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    snez a1, a1
+; RV64-NEXT:    sext.w a0, a0
 ; RV64-NEXT:    sw a1, 0(a2)
 ; RV64-NEXT:    ret
 ;

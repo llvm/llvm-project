@@ -52,4 +52,16 @@ parseExampleModule(llvm::StringRef Source, llvm::StringRef Name) {
   return createSMDiagnosticError(Err);
 }
 
+inline llvm::Expected<llvm::orc::ThreadSafeModule>
+parseExampleModuleFromFile(llvm::StringRef FileName) {
+  using namespace llvm;
+  auto Ctx = std::make_unique<LLVMContext>();
+  SMDiagnostic Err;
+
+  if (auto M = parseIRFile(FileName, Err, *Ctx))
+    return orc::ThreadSafeModule(std::move(M), std::move(Ctx));
+
+  return createSMDiagnosticError(Err);
+}
+
 #endif // LLVM_EXAMPLES_ORCV2EXAMPLES_EXAMPLEMODULES_H
