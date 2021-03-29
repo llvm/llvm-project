@@ -484,6 +484,38 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander);
 
+/// Struct to hold information about a partially invariant condition.
+struct IVConditionInfo {
+  /// Instructions that need to be duplicated and checked for the unswitching
+  /// condition.
+  SmallVector<Instruction *> InstToDuplicate;
+
+  /// Constant to indicate for which value the condition is invariant.
+  Constant *KnownValue = nullptr;
+
+  /// True if the partially invariant path is no-op (=does not have any
+  /// side-effects and no loop value is used outside the loop).
+  bool PathIsNoop = true;
+
+  /// If the partially invariant path reaches a single exit block, ExitForPath
+  /// is set to that block. Otherwise it is nullptr.
+  BasicBlock *ExitForPath = nullptr;
+};
+
+/// Check if the loop header has a conditional branch that is not
+/// loop-invariant, because it involves load instructions. If all paths from
+/// either the true or false successor to the header or loop exists do not
+/// modify the memory feeding the condition, perform 'partial unswitching'. That
+/// is, duplicate the instructions feeding the condition in the pre-header. Then
+/// unswitch on the duplicated condition. The condition is now known in the
+/// unswitched version for the 'invariant' path through the original loop.
+///
+/// If the branch condition of the header is partially invariant, return a pair
+/// containing the instructions to duplicate and a boolean Constant to update
+/// the condition in the loops created for the true or false successors.
+Optional<IVConditionInfo> hasPartialIVCondition(Loop *L, unsigned MSSAThreshold,
+                                                MemorySSA *MSSA, AAResults *AA);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
