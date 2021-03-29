@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+f16c | FileCheck %s --check-prefix=F16C
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+f16c -O0 | FileCheck %s --check-prefix=F16C-O0
 
 define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; X86-LABEL: ir_fadd_v1f16:
@@ -53,6 +54,22 @@ define <1 x half> @ir_fadd_v1f16(<1 x half> %arg0, <1 x half> %arg1) nounwind {
 ; F16C-NEXT:    vmovd %xmm0, %eax
 ; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
 ; F16C-NEXT:    retq
+;
+; F16C-O0-LABEL: ir_fadd_v1f16:
+; F16C-O0:       # %bb.0:
+; F16C-O0-NEXT:    movw %si, %cx
+; F16C-O0-NEXT:    movw %di, %ax
+; F16C-O0-NEXT:    movzwl %cx, %ecx
+; F16C-O0-NEXT:    vmovd %ecx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
+; F16C-O0-NEXT:    movzwl %ax, %eax
+; F16C-O0-NEXT:    vmovd %eax, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-O0-NEXT:    vmovd %xmm0, %eax
+; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-O0-NEXT:    retq
   %retval = fadd <1 x half> %arg0, %arg1
   ret <1 x half> %retval
 }
@@ -171,6 +188,38 @@ define <2 x half> @ir_fadd_v2f16(<2 x half> %arg0, <2 x half> %arg1) nounwind {
 ; F16C-NEXT:    # kill: def $ax killed $ax killed $eax
 ; F16C-NEXT:    # kill: def $dx killed $dx killed $edx
 ; F16C-NEXT:    retq
+;
+; F16C-O0-LABEL: ir_fadd_v2f16:
+; F16C-O0:       # %bb.0:
+; F16C-O0-NEXT:    movl %esi, %eax
+; F16C-O0-NEXT:    # kill: def $cx killed $cx killed $ecx
+; F16C-O0-NEXT:    movw %dx, %si
+; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-O0-NEXT:    movw %di, %dx
+; F16C-O0-NEXT:    movzwl %si, %esi
+; F16C-O0-NEXT:    vmovd %esi, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
+; F16C-O0-NEXT:    movzwl %dx, %edx
+; F16C-O0-NEXT:    vmovd %edx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-O0-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-O0-NEXT:    movzwl %cx, %ecx
+; F16C-O0-NEXT:    vmovd %ecx, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm1
+; F16C-O0-NEXT:    movzwl %ax, %eax
+; F16C-O0-NEXT:    vmovd %eax, %xmm0
+; F16C-O0-NEXT:    vcvtph2ps %xmm0, %xmm0
+; F16C-O0-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; F16C-O0-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; F16C-O0-NEXT:    vpextrw $0, %xmm0, -{{[0-9]+}}(%rsp)
+; F16C-O0-NEXT:    vmovdqa -{{[0-9]+}}(%rsp), %xmm0
+; F16C-O0-NEXT:    vmovd %xmm0, %eax
+; F16C-O0-NEXT:    # kill: def $ax killed $ax killed $eax
+; F16C-O0-NEXT:    vpextrw $1, %xmm0, %ecx
+; F16C-O0-NEXT:    movw %cx, %dx
+; F16C-O0-NEXT:    retq
   %retval = fadd <2 x half> %arg0, %arg1
   ret <2 x half> %retval
 }
