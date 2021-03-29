@@ -258,6 +258,9 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
                        ") of parent class '" + SC->getNameInitAsString() + "'");
   }
 
+  // Copy the subclass record's assertions to the new record.
+  CurRec->appendAssertions(SC);
+
   Init *Name;
   if (CurRec->isClass())
     Name =
@@ -448,14 +451,15 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   Rec->resolveReferences(NewName);
   checkConcrete(*Rec);
 
-  CheckRecordAsserts(*Rec);
-
   if (!isa<StringInit>(Rec->getNameInit())) {
     PrintError(Rec->getLoc(), Twine("record name '") +
                                   Rec->getNameInit()->getAsString() +
                                   "' could not be fully resolved");
     return true;
   }
+
+  // Check the assertions.
+  Rec->checkAssertions();
 
   // If ObjectBody has template arguments, it's an error.
   assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");
@@ -3638,37 +3642,6 @@ bool TGParser::CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
   }
 
   return false;
-}
-
-// Check an assertion: Obtain the condition value and be sure it is true.
-// If not, print a nonfatal error along with the message.
-void TGParser::CheckAssert(SMLoc Loc, Init *Condition, Init *Message) {
-  auto *CondValue = dyn_cast_or_null<IntInit>(
-                        Condition->convertInitializerTo(IntRecTy::get()));
-  if (CondValue) {
-    if (!CondValue->getValue()) {
-      PrintError(Loc, "assertion failed");
-      if (auto *MessageInit = dyn_cast<StringInit>(Message))
-        PrintNote(MessageInit->getValue());
-      else
-        PrintNote("(assert message is not a string)");
-    }
-  } else {
-    PrintError(Loc, "assert condition must of type bit, bits, or int.");
-  }
-}
-
-// Check all record assertions: For each one, resolve the condition
-// and message, then call CheckAssert().
-void TGParser::CheckRecordAsserts(Record &Rec) {
-  RecordResolver R(Rec);
-  R.setFinal(true);
-
-  for (auto Assertion : Rec.getAssertions()) {
-    Init *Condition = std::get<1>(Assertion)->resolveReferences(R);
-    Init *Message = std::get<2>(Assertion)->resolveReferences(R);
-    CheckAssert(std::get<0>(Assertion), Condition, Message);
-  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
