@@ -5742,6 +5742,7 @@ static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,
     CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
 
   CGF.EmitStmt(S.getCapturedStmt(OMPD_target)->getCapturedStmt());
+  CGF.EnsureInsertPoint();
 }
 
 void CodeGenFunction::EmitOMPTargetDeviceFunction(CodeGenModule &CGM,
