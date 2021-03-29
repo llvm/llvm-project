@@ -17,9 +17,9 @@ __all__ = [
 ]
 
 
-def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
-                               *ins: Value,
-                               outs: Value = ()):
+def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
+                                 *ins: Value,
+                                 outs: Value):
   all_arg_defs = op_config.ordered_tensor_args
   in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "input"]
   out_arg_defs = [arg for arg in all_arg_defs if arg.usage == "output"]
@@ -49,6 +49,18 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
       [AffineMapAttr.get(am) for am in op_config.indexing_maps])
   iterator_types_attr = ArrayAttr.get(
       [StringAttr.get(s) for s in op_config.iterator_types])
+
+  return (all_arg_defs, in_arg_defs, out_arg_defs, outs, out_types,
+          type_mapping, indexing_maps_attr, iterator_types_attr)
+
+
+def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
+                               *ins: Value,
+                               outs: Value = ()):
+  all_arg_defs, in_arg_defs, out_arg_defs, outs, out_types, \
+  type_mapping, indexing_maps_attr, iterator_types_attr =   \
+     prepare_common_structured_op(op_config, *ins, outs = outs)
+
   generic_op = linalg.GenericOp(
       result_tensors=out_types,
       inputs=ins,
@@ -77,10 +89,23 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
 
 
 def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
+                             op_name: str,
+                             op_class_name: str,
                              *ins: Value,
                              outs: Value = ()):
-  raise NotImplementedError(
-      f"Emission of named structured ops is not supported: {op_config}")
+  all_arg_defs, in_arg_defs, out_arg_defs, outs, out_types, \
+  type_mapping, indexing_maps_attr, iterator_types_attr =   \
+     prepare_common_structured_op(op_config, *ins, outs = outs)
+
+  if not op_class_name in linalg.__dict__.keys():
+    raise NotImplementedError(
+        f"Unknown named op_name / op_class_name: {op_name} / {op_class_name}")
+
+  named_op = getattr(linalg, op_class_name)(ins, outs, out_types)
+  if len(out_arg_defs) == 1:
+    return named_op.result
+  else:
+    return named_op.results
 
 
 class _BodyBuilder:
