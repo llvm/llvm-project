@@ -2795,12 +2795,14 @@ implementing a keyword attribute, the parsing of the keyword and creation of the
 ``ParsedAttr`` object must be done manually.
 
 Eventually, ``Sema::ProcessDeclAttributeList()`` is called with a ``Decl`` and
-an ``ParsedAttr``, at which point the parsed attribute can be transformed
+a ``ParsedAttr``, at which point the parsed attribute can be transformed
 into a semantic attribute. The process by which a parsed attribute is converted
 into a semantic attribute depends on the attribute definition and semantic
 requirements of the attribute. The end result, however, is that the semantic
 attribute object is attached to the ``Decl`` object, and can be obtained by a
-call to ``Decl::getAttr<T>()``.
+call to ``Decl::getAttr<T>()``. Similarly, for statement attributes,
+``Sema::ProcessStmtAttributes()`` is called with a ``Stmt`` a list of
+``ParsedAttr`` objects to be converted into a semantic attribute.
 
 The structure of the semantic attribute is also governed by the attribute
 definition given in Attr.td. This definition is used to automatically generate
@@ -2820,12 +2822,13 @@ semantic) type, or one of its derivatives. Most attributes will derive from the
 later redeclarations of the ``Decl`` it is associated with.
 ``InheritableParamAttr`` is similar to ``InheritableAttr``, except that the
 attribute is written on a parameter instead of a declaration. If the attribute
-is intended to apply to a type instead of a declaration, such an attribute
-should derive from ``TypeAttr``, and will generally not be given an AST
-representation. (Note that this document does not cover the creation of type
-attributes.) An attribute that inherits from ``IgnoredAttr`` is parsed, but will
-generate an ignored attribute diagnostic when used, which may be useful when an
-attribute is supported by another vendor but not supported by clang.
+applies to statements, it should inherit from ``StmtAttr`. If the attribute is
+intended to apply to a type instead of a declaration, such an attribute should
+derive from ``TypeAttr``, and will generally not be given an AST representation.
+(Note that this document does not cover the creation of type attributes.) An
+attribute that inherits from ``IgnoredAttr`` is parsed, but will generate an
+ignored attribute diagnostic when used, which may be useful when an attribute is
+supported by another vendor but not supported by clang.
 
 The definition will specify several key pieces of information, such as the
 semantic name of the attribute, the spellings the attribute supports, the
@@ -2854,10 +2857,11 @@ are created implicitly. The following spellings are accepted:
   ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
   ``Keyword``   The attribute is spelled as a keyword, and required custom
                 parsing.
-  ``GCC``       Specifies two spellings: the first is a GNU-style spelling, and
-                the second is a C++-style spelling with the ``gnu`` namespace.
-                Attributes should only specify this spelling for attributes
-                supported by GCC.
+  ``GCC``       Specifies two or three spellings: the first is a GNU-style
+                spelling, the second is a C++-style spelling with the ``gnu``
+                namespace, and the third is an optional C-style spelling with
+                the ``gnu`` namespace. Attributes should only specify this
+                spelling for attributes supported by GCC.
   ``Clang``     Specifies two or three spellings: the first is a GNU-style
                 spelling, the second is a C++-style spelling with the ``clang``
                 namespace, and the third is an optional C-style spelling with
@@ -2871,19 +2875,16 @@ are created implicitly. The following spellings are accepted:
 
 Subjects
 ~~~~~~~~
-Attributes appertain to one or more ``Decl`` subjects. If the attribute attempts
-to attach to a subject that is not in the subject list, a diagnostic is issued
+Attributes appertain to one or more subjects. If the attribute attempts to 
+attach to a subject that is not in the subject list, a diagnostic is issued
 automatically. Whether the diagnostic is a warning or an error depends on how
 the attribute's ``SubjectList`` is defined, but the default behavior is to warn.
 The diagnostics displayed to the user are automatically determined based on the
 subjects in the list, but a custom diagnostic parameter can also be specified in
 the ``SubjectList``. The diagnostics generated for subject list violations are
-either ``diag::warn_attribute_wrong_decl_type`` or
-``diag::err_attribute_wrong_decl_type``, and the parameter enumeration is found
-in `include/clang/Sema/ParsedAttr.h
-<https://github.com/llvm/llvm-project/blob/main/clang/include/clang/Sema/ParsedAttr.h>`_
-If a previously unused Decl node is added to the ``SubjectList``, the logic used
-to automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
+calculated automatically or specified by the subject list itself. If a
+previously unused Decl node is added to the ``SubjectList``, the logic used to
+automatically determine the diagnostic parameter in `utils/TableGen/ClangAttrEmitter.cpp
 <https://github.com/llvm/llvm-project/blob/main/clang/utils/TableGen/ClangAttrEmitter.cpp>`_
 may need to be updated.
 
@@ -2897,8 +2898,8 @@ instance, a ``NonBitField`` SubsetSubject appertains to a ``FieldDecl``, and
 tests whether the given FieldDecl is a bit field. When a SubsetSubject is
 specified in a SubjectList, a custom diagnostic parameter must also be provided.
 
-Diagnostic checking for attribute subject lists is automated except when
-``HasCustomParsing`` is set to ``1``.
+Diagnostic checking for attribute subject lists for declaration and statement
+attributes is automated except when ``HasCustomParsing`` is set to ``1``.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -3045,8 +3046,8 @@ the switch statement. Please do not implement handling logic directly in the
 
 Unless otherwise specified by the attribute definition, common semantic checking
 of the parsed attribute is handled automatically. This includes diagnosing
-parsed attributes that do not appertain to the given ``Decl``, ensuring the
-correct minimum number of arguments are passed, etc.
+parsed attributes that do not appertain to the given ``Decl`` or ``Stmt``,
+ensuring the correct minimum number of arguments are passed, etc.
 
 If the attribute adds additional warnings, define a ``DiagGroup`` in
 `include/clang/Basic/DiagnosticGroups.td
@@ -3071,6 +3072,10 @@ the custom logic requiring use of the attribute.
 The ``clang::Decl`` object can be queried for the presence or absence of an
 attribute using ``hasAttr<T>()``. To obtain a pointer to the semantic
 representation of the attribute, ``getAttr<T>`` may be used.
+
+The ``clang::AttributedStmt`` object can  be queried for the presence or absence
+of an attribute by calling ``getAttrs()`` and looping over the list of
+attributes.
 
 How to add an expression or statement
 -------------------------------------

@@ -504,52 +504,104 @@
 ;--------------------------------------------------
 ; CHECK-LABEL
 ;
-; FIXME: Labels sometimes produce redundant diagnostics for good matches.
-; That bug is independent of but affects -dump-input.
+; Each CHECK-LABEL is processed twice: once before other patterns in the
+; preceding section, and once afterward.
+;
+; As expected, the search range for a negative pattern preceding a CHECK-LABEL
+; ends at the start of the CHECK-LABEL match.  not:7 and not:11 below
+; demonstrate this behavior.
+;
+; The search range for a positive pattern preceding a CHECK-LABEL ends at the
+; end of the CHECK-LABEL match.  check:3 and check:5 below demonstrate this
+; behavior.  As in the case of check:5, an effect of this behavior is that the
+; second CHECK-LABEL match might fail even though the first succeeded.
+;
+; FIXME: It seems like the search range for such a positive pattern should be
+; the same as in the case of a negative pattern.  Note that -dump-input is
+; correct here.  It's the matching behavior that's strange.
 ;--------------------------------------------------
 
-; Good match and no match.
+; RUN: echo 'text'   >  %t.in
+; RUN: echo 'labelA' >> %t.in
+; RUN: echo 'textA'  >> %t.in
+; RUN: echo 'labelB' >> %t.in
+; RUN: echo 'textB'  >> %t.in
+; RUN: echo 'labelC' >> %t.in
+; RUN: echo 'textC'  >> %t.in
+; RUN: echo 'labelD' >> %t.in
+; RUN: echo 'textD'  >> %t.in
+; RUN: echo 'labelE' >> %t.in
+; RUN: echo 'textE'  >> %t.in
+; RUN: echo 'labelF' >> %t.in
 
-; RUN: echo 'lab0' > %t.in
-; RUN: echo 'foo' >> %t.in
-; RUN: echo 'lab1' >> %t.in
-; RUN: echo 'bar' >> %t.in
-
-; RUN: echo 'CHECK-LABEL: lab0' > %t.chk
-; RUN: echo 'CHECK: foo' >> %t.chk
-; RUN: echo 'CHECK-LABEL: lab2' >> %t.chk
+; RUN: echo 'CHECK: text'         >  %t.chk
+; RUN: echo 'CHECK-LABEL: labelA' >> %t.chk
+; RUN: echo 'CHECK: foobar'       >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelB' >> %t.chk
+; RUN: echo 'CHECK: labelC'       >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelC' >> %t.chk
+; RUN: echo 'CHECK-NOT: foobar'   >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelD' >> %t.chk
+; RUN: echo 'CHECK-NOT: textD'    >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelE' >> %t.chk
+; RUN: echo 'CHECK-NOT: labelF'   >> %t.chk
+; RUN: echo 'CHECK-LABEL: labelF' >> %t.chk
 
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk 2>&1 \
-; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB \
-; RUN:             -implicit-check-not='remark:'
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-Q \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -v 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V \
-; RUN:             -implicit-check-not='remark:'
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file %t.in %t.chk -vv 2>&1 \
 ; RUN: | FileCheck -match-full-lines %s -check-prefixes=LAB,LAB-V,LAB-VV \
-; RUN:             -implicit-check-not='remark:' -allow-unused-prefixes
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 
 ; Verbose diagnostics are suppressed but not errors.
-; LAB: {{.*}}error:{{.*}}
-; LAB: {{.*}}possible intended match{{.*}}
+; LAB:{{.*}}.chk:3:8: error: CHECK: expected string not found in input
+; LAB:{{.*}}.chk:6:14: error: CHECK-LABEL: expected string not found in input
+; LAB:{{.*}}.chk:9:12: error: CHECK-NOT: excluded string found in input
 
-; LAB:         <<<<<<
-; LAB-NEXT:               1: lab0 
-; LAB-V-NEXT:  label:1'0     ^~~~
-; LAB-V-NEXT:  label:1'1     ^~~~
-; LAB-NEXT:    label:3'0         X error: no match found
-; LAB-NEXT:               2: foo 
-; LAB-NEXT:    label:3'0     ~~~~
-; LAB-NEXT:               3: lab1 
-; LAB-NEXT:    label:3'0     ~~~~~
-; LAB-NEXT:    label:3'1     ?     possible intended match
-; LAB-NEXT:               4: bar 
-; LAB-NEXT:    label:3'0     ~~~~
-; LAB-NEXT:    >>>>>>
-; LAB-NOT:     {{.}}
+;         LAB:<<<<<<
+;    LAB-NEXT:            1: text 
+;  LAB-V-NEXT:check:1        ^~~~
+;    LAB-NEXT:            2: labelA 
+;  LAB-V-NEXT:label:2'0      ^~~~~~
+;  LAB-V-NEXT:label:2'1      ^~~~~~
+;    LAB-NEXT:check:3              X error: no match found
+;    LAB-NEXT:            3: textA 
+;    LAB-NEXT:check:3        ~~~~~~
+;    LAB-NEXT:            4: labelB 
+;  LAB-V-NEXT:label:4        ^~~~~~
+;    LAB-NEXT:check:3        ~~~~~~
+;    LAB-NEXT:            5: textB 
+;    LAB-NEXT:            6: labelC 
+;  LAB-V-NEXT:label:6'0      ^~~~~~
+;  LAB-V-NEXT:check:5        ^~~~~~
+;  LAB-Q-NEXT:label:6              X error: no match found
+;  LAB-V-NEXT:label:6'1            X error: no match found
+; LAB-VV-NEXT:not:7                X
+;    LAB-NEXT:            7: textC 
+; LAB-VV-NEXT:not:7          ~~~~~~
+;    LAB-NEXT:            8: labelD 
+;  LAB-V-NEXT:label:8'0      ^~~~~~
+;  LAB-V-NEXT:label:8'1      ^~~~~~
+;    LAB-NEXT:            9: textD 
+;    LAB-NEXT:not:9          !~~~~  error: no match expected
+;    LAB-NEXT:           10: labelE 
+;  LAB-V-NEXT:label:10'0     ^~~~~~
+;  LAB-V-NEXT:label:10'1     ^~~~~~
+; LAB-VV-NEXT:not:11               X
+;    LAB-NEXT:           11: textE 
+; LAB-VV-NEXT:not:11         ~~~~~~
+;    LAB-NEXT:           12: labelF 
+;  LAB-V-NEXT:label:12'0     ^~~~~~
+;  LAB-V-NEXT:label:12'1     ^~~~~~
+;    LAB-NEXT:>>>>>>
+;     LAB-NOT:{{.}}
 
 ;--------------------------------------------------
 ; --implicit-check-not
@@ -566,20 +618,28 @@
 ; RUN: echo 'CHECK: wor' >> %t.chk
 ; RUN: echo 'CHECK: !' >> %t.chk
 
+; Prefixes used here:
+; IMPNOT    = quiet, -v, or -vv
+; IMPNOT-Q  = quiet
+; IMPNOT-V  = -v or -vv (-vv implies -v)
+; IMPNOT-VQ = -v and not -vv
+; IMPNOT-VV = -vv
+
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk 2>&1 \
 ; RUN:               --implicit-check-not='goodbye' \
 ; RUN:               --implicit-check-not='world' \
 ; RUN:               --implicit-check-not='again' \
-; RUN: | FileCheck -match-full-lines %s -check-prefix=IMPNOT \
-; RUN:             -implicit-check-not='remark:'
+; RUN: | FileCheck -match-full-lines %s -check-prefixes=IMPNOT,IMPNOT-Q \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -v 2>&1 \
 ; RUN:               --implicit-check-not='goodbye' \
 ; RUN:               --implicit-check-not='world' \
 ; RUN:               --implicit-check-not='again' \
-; RUN: | FileCheck -match-full-lines %s -check-prefixes=IMPNOT,IMPNOT-V \
-; RUN:             -implicit-check-not='remark:'
+; RUN: | FileCheck -match-full-lines %s \
+; RUN:             -check-prefixes=IMPNOT,IMPNOT-V,IMPNOT-VQ \
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 ; RUN: %ProtectFileCheckOutput \
 ; RUN: not FileCheck -dump-input=always -input-file=%t.in %t.chk -vv 2>&1 \
 ; RUN:               --implicit-check-not='goodbye' \
@@ -587,25 +647,27 @@
 ; RUN:               --implicit-check-not='again' \
 ; RUN: | FileCheck -match-full-lines %s \
 ; RUN:             -check-prefixes=IMPNOT,IMPNOT-V,IMPNOT-VV \
-; RUN:             -implicit-check-not='remark:'
+; RUN:             -implicit-check-not='{{remark:|error:}}'
 
 ; Verbose diagnostics are suppressed but not errors.
-; IMPNOT:{{.*}}error:{{.*}}
+; IMPNOT:{{.*}}command line:1:22: error: CHECK-NOT: excluded string found in input
 
 ;         IMPNOT:<<<<<<
-;    IMPNOT-NEXT:          1: hello world again! 
-;  IMPNOT-V-NEXT:check:1      ^~~
-; IMPNOT-VV-NEXT:not:imp1     X
-; IMPNOT-VV-NEXT:not:imp2     X
-; IMPNOT-VV-NEXT:not:imp3     X
-;  IMPNOT-V-NEXT:check:2            ^~~
-; IMPNOT-VV-NEXT:not:imp1        X~~
-; IMPNOT-VV-NEXT:not:imp2        X~~
-; IMPNOT-VV-NEXT:not:imp3        X~~
-;  IMPNOT-V-NEXT:check:3                       ^
-; IMPNOT-VV-NEXT:not:imp1              X~~~~~~~
-; IMPNOT-VV-NEXT:not:imp2              X~~~~~~~
-;    IMPNOT-NEXT:not:imp3                 !~~~~   error: no match expected
+;    IMPNOT-NEXT:            1: hello world again! 
+;  IMPNOT-V-NEXT:check:1        ^~~
+; IMPNOT-VV-NEXT:not:imp1'0     X
+; IMPNOT-VV-NEXT:not:imp2'0     X
+; IMPNOT-VV-NEXT:not:imp3'0     X
+;  IMPNOT-V-NEXT:check:2              ^~~
+; IMPNOT-VV-NEXT:not:imp1'1        X~~
+; IMPNOT-VV-NEXT:not:imp2'1        X~~
+; IMPNOT-VV-NEXT:not:imp3'1        X~~
+;  IMPNOT-V-NEXT:check:3                         ^
+; IMPNOT-VV-NEXT:not:imp1'2              X~~~~~~~
+; IMPNOT-VV-NEXT:not:imp2'2              X~~~~~~~
+;  IMPNOT-Q-NEXT:not:imp3                   !~~~~   error: no match expected
+; IMPNOT-VQ-NEXT:not:imp3                   !~~~~   error: no match expected
+; IMPNOT-VV-NEXT:not:imp3'2                 !~~~~   error: no match expected
 ;    IMPNOT-NEXT:>>>>>>
 ;     IMPNOT-NOT:{{.}}
 

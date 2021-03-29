@@ -540,14 +540,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(clang::driver::options::OPT_nostdinc))
     return;
 
-  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
-    // LOCAL_INCLUDE_DIR
-    addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");
-    // TOOL_INCLUDE_DIR
-    AddMultilibIncludeArgs(DriverArgs, CC1Args);
-  }
-
-  // Note: in gcc, GCC_INCLUDE_DIR (private headers) precedes LOCAL_INCLUDE_DIR.
+  // Add 'include' in the resource directory, which is similar to
+  // GCC_INCLUDE_DIR (private headers) in GCC. Note: the include directory
+  // contains some files conflicting with system /usr/include. musl systems
+  // prefer the /usr/include copies which are more relevant.
   SmallString<128> ResourceDirInclude(D.ResourceDir);
   llvm::sys::path::append(ResourceDirInclude, "include");
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc) &&
@@ -556,6 +552,11 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  // LOCAL_INCLUDE_DIR
+  addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");
+  // TOOL_INCLUDE_DIR
+  AddMultilibIncludeArgs(DriverArgs, CC1Args);
 
   // Check for configure-time C include directories.
   StringRef CIncludeDirs(C_INCLUDE_DIRS);
@@ -570,8 +571,8 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
-  // On Debian (and its derivatives which ship g++-multiarch-incdir.diff) and
-  // Android, add /usr/include/$triple if exists.
+  // On systems using multiarch and Android, add /usr/include/$triple before
+  // /usr/include.
   std::string MultiarchIncludeDir = getMultiarchTriple(D, getTriple(), SysRoot);
   if (!MultiarchIncludeDir.empty() &&
       D.getVFS().exists(SysRoot + "/usr/include/" + MultiarchIncludeDir))

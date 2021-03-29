@@ -75,3 +75,6 @@ vncvt.x.x.w v2, v1, v0.t
 # ALIAS:    vfneg.v         v2, v1, v0.t     # encoding: [0x57,0x91,0x10,0x24]
 # NO-ALIAS: vfsgnjn.vv      v2, v1, v1, v0.t # encoding: [0x57,0x91,0x10,0x24]
 vfneg.v v2, v1, v0.t 
+# ALIAS:    vfabs.v         v2, v1, v0.t     # encoding: [0x57,0x91,0x10,0x28]
+# NO-ALIAS: vfsgnjx.vv      v2, v1, v1, v0.t # encoding: [0x57,0x91,0x10,0x28]
+vfabs.v v2, v1, v0.t

@@ -48,6 +48,8 @@ private:
   const GCNSubtarget *ST;
   bool IsPixelShader;
 
+  Value *buildReduction(IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *V,
+                        Value *const Identity) const;
   Value *buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *V,
                    Value *const Identity) const;
   Value *buildShiftRight(IRBuilder<> &B, Value *V, Value *const Identity) const;
@@ -279,6 +281,45 @@ static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
   return B.CreateSelect(Cond, LHS, RHS);
 }
 
+// Use the builder to create a reduction of V across the wavefront, with all
+// lanes active, returning the same result in all lanes.
+Value *AMDGPUAtomicOptimizer::buildReduction(IRBuilder<> &B,
+                                             AtomicRMWInst::BinOp Op, Value *V,
+                                             Value *const Identity) const {
+  Type *const Ty = V->getType();
+  Module *M = B.GetInsertBlock()->getModule();
+  Function *UpdateDPP =
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_update_dpp, Ty);
+
+  // Reduce within each row of 16 lanes.
+  for (unsigned Idx = 0; Idx < 4; Idx++) {
+    V = buildNonAtomicBinOp(
+        B, Op, V,
+        B.CreateCall(UpdateDPP,
+                     {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
+                      B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
+  }
+
+  // Reduce within each pair of rows (i.e. 32 lanes).
+  assert(ST->hasPermLaneX16());
+  V = buildNonAtomicBinOp(
+      B, Op, V,
+      B.CreateIntrinsic(
+          Intrinsic::amdgcn_permlanex16, {},
+          {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()}));
+
+  if (ST->isWave32())
+    return V;
+
+  // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
+  // combine them with a scalar operation.
+  Function *ReadLane =
+      Intrinsic::getDeclaration(M, Intrinsic::amdgcn_readlane, {});
+  Value *const Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
+  Value *const Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
+  return buildNonAtomicBinOp(B, Op, Lane0, Lane32);
+}
+
 // Use the builder to create an inclusive scan of V across the wavefront, with
 // all lanes active.
 Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
@@ -313,6 +354,7 @@ Value *AMDGPUAtomicOptimizer::buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
 
     // Combine lane 15 into lanes 16..31 (and, for wave 64, lane 47 into lanes
     // 48..63).
+    assert(ST->hasPermLaneX16());
     Value *const PermX = B.CreateIntrinsic(
         Intrinsic::amdgcn_permlanex16, {},
         {V, V, B.getInt32(-1), B.getInt32(-1), B.getFalse(), B.getFalse()});
@@ -489,16 +531,24 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
     const AtomicRMWInst::BinOp ScanOp =
         Op == AtomicRMWInst::Sub ? AtomicRMWInst::Add : Op;
-    NewV = buildScan(B, ScanOp, NewV, Identity);
-    if (NeedResult)
-      ExclScan = buildShiftRight(B, NewV, Identity);
+    if (!NeedResult && ST->hasPermLaneX16()) {
+      // On GFX10 the permlanex16 instruction helps us build a reduction without
+      // too many readlanes and writelanes, which are generally bad for
+      // performance.
+      NewV = buildReduction(B, ScanOp, NewV, Identity);
+    } else {
+      NewV = buildScan(B, ScanOp, NewV, Identity);
+      if (NeedResult)
+        ExclScan = buildShiftRight(B, NewV, Identity);
 
-    // Read the value from the last lane, which has accumlated the values of
-    // each active lane in the wavefront. This will be our new value which we
-    // will provide to the atomic operation.
-    Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-    assert(TyBitWidth == 32);
-    NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {}, {NewV, LastLaneIdx});
+      // Read the value from the last lane, which has accumlated the values of
+      // each active lane in the wavefront. This will be our new value which we
+      // will provide to the atomic operation.
+      Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
+      assert(TyBitWidth == 32);
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+                               {NewV, LastLaneIdx});
+    }
 
     // Finally mark the readlanes in the WWM section.
     NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);

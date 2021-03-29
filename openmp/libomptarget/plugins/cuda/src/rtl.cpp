@@ -1035,13 +1035,6 @@ public:
   int synchronize(const int DeviceId, __tgt_async_info *AsyncInfo) const {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo->Queue);
     CUresult Err = cuStreamSynchronize(Stream);
-    if (Err != CUDA_SUCCESS) {
-      REPORT("Error when synchronizing stream. stream = " DPxMOD
-             ", async info ptr = " DPxMOD "\n",
-             DPxPTR(Stream), DPxPTR(AsyncInfo));
-      CUDA_ERR_STRING(Err);
-      return OFFLOAD_FAIL;
-    }
 
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
@@ -1050,7 +1043,13 @@ public:
                                 reinterpret_cast<CUstream>(AsyncInfo->Queue));
     AsyncInfo->Queue = nullptr;
 
-    return OFFLOAD_SUCCESS;
+    if (Err != CUDA_SUCCESS) {
+      REPORT("Error when synchronizing stream. stream = " DPxMOD
+             ", async info ptr = " DPxMOD "\n",
+             DPxPTR(Stream), DPxPTR(AsyncInfo));
+      CUDA_ERR_STRING(Err);
+    }
+    return (Err == CUDA_SUCCESS) ? OFFLOAD_SUCCESS : OFFLOAD_FAIL;
   }
 };
 

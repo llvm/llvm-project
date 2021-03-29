@@ -11,6 +11,7 @@
 #define MLIR_C_DIALECT_LINALG_H
 
 #include "mlir-c/Registration.h"
+#include "mlir-c/Support.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,5 +22,7 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 #ifdef __cplusplus
 }
 #endif
+
+#include "mlir/Dialect/Linalg/Passes.capi.h.inc"
 
 #endif // MLIR_C_DIALECT_LINALG_H

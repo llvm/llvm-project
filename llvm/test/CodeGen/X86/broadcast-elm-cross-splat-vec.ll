@@ -128,7 +128,7 @@ define <32 x i8> @f32xi8_i16(<32 x i8> %a) {
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f32xi8_i16:
@@ -168,7 +168,7 @@ define <32 x i8> @f32xi8_i32(<32 x i8> %a) {
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f32xi8_i32:
@@ -209,7 +209,7 @@ define <32 x i8> @f32xi8_i64(<32 x i8> %a) {
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f32xi8_i64:
@@ -250,7 +250,7 @@ define <32 x i8> @f32xi8_i128(<32 x i8> %a) {
 ; AVX-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f32xi8_i128:
@@ -716,7 +716,7 @@ define <16 x i16> @f16xi16_i32(<16 x i16> %a) {
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f16xi16_i32:
@@ -757,7 +757,7 @@ define <16 x i16> @f16xi16_i64(<16 x i16> %a) {
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f16xi16_i64:
@@ -798,7 +798,7 @@ define <16 x i16> @f16xi16_i128(<16 x i16> %a) {
 ; AVX-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f16xi16_i128:
@@ -1161,7 +1161,7 @@ define <8 x i32> @f8xi32_i64(<8 x i32> %a) {
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f8xi32_i64:
@@ -1202,7 +1202,7 @@ define <8 x i32> @f8xi32_i128(<8 x i32> %a) {
 ; AVX-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f8xi32_i128:
@@ -1386,7 +1386,7 @@ define <4 x i64> @f4xi64_i128(<4 x i64> %a) {
 ; AVX-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; AVX-NEXT:    retl
 ;
 ; ALL32-LABEL: f4xi64_i128:

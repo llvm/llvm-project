@@ -885,7 +885,7 @@ CAMLprim LLVMValueRef llvm_mdnull(LLVMContextRef C) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_get_mdstring(LLVMValueRef V) {
-  size_t Len;
+  unsigned Len;
   const char *CStr = LLVMGetMDString(V, &Len);
   return cstr_to_string_option(CStr, Len);
 }

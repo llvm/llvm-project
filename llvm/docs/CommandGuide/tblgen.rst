@@ -545,10 +545,6 @@ clang-tblgen Options
 
   Generate ``riscv_vector.h`` for Clang.
 
-.. option:: -gen-riscv-vector-generic-header
-
-  Generate ``riscv_vector_generic.h`` for Clang.
-
 .. option:: -gen-riscv-vector-builtins
 
   Generate ``riscv_vector_builtins.inc`` for Clang.

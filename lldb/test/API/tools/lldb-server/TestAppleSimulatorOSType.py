@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 
 import json
 import platform
+import re
 
 @skipIfReproducer
 class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
@@ -46,9 +47,17 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
 
         # Launch the process using simctl
         self.assertIsNotNone(deviceUDID)
+
         exe_name = 'test_simulator_platform_{}'.format(platform_name)
         sdkroot = lldbutil.get_xcode_sdk_root(sdk)
         vers = lldbutil.get_xcode_sdk_version(sdk)
+
+        # Older versions of watchOS (<7.0) only support i386
+        if platform_name == 'watchos':
+            from distutils.version import LooseVersion
+            if LooseVersion(vers) < LooseVersion("7.0"):
+                arch = 'i386'
+
         triple = '-'.join([arch, 'apple', platform_name + vers, 'simulator'])
         version_min = '-m{}-simulator-version-min={}'.format(platform_name, vers)
         self.build(
@@ -140,5 +149,4 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfRemote
     def test_simulator_ostype_watchos(self):
         self.check_simulator_ostype(sdk='watchsimulator',
-                                    platform_name='watchos',
-                                    arch='i386')
+                                    platform_name='watchos')

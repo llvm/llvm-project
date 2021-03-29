@@ -1813,6 +1813,11 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
       Assert(Attrs.getPreallocatedType() == PTy->getElementType(),
              "Attribute 'preallocated' type does not match parameter!", V);
     }
+
+    if (Attrs.hasAttribute(Attribute::InAlloca)) {
+      Assert(Attrs.getInAllocaType() == PTy->getElementType(),
+             "Attribute 'inalloca' type does not match parameter!", V);
+    }
   } else {
     Assert(!Attrs.hasAttribute(Attribute::ByVal),
            "Attribute 'byval' only applies to parameters with pointer type!",

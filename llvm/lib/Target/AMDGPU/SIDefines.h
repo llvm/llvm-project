@@ -773,6 +773,7 @@ enum SDWA9EncValues : unsigned {
 
 namespace DPP {
 
+// clang-format off
 enum DppCtrl : unsigned {
   QUAD_PERM_FIRST   = 0,
   QUAD_PERM_ID      = 0xE4, // identity permutation
@@ -809,12 +810,15 @@ enum DppCtrl : unsigned {
   DPP_UNUSED8_LAST  = 0x14F,
   ROW_NEWBCAST_FIRST= 0x150,
   ROW_NEWBCAST_LAST = 0x15F,
+  ROW_SHARE0        = 0x150,
   ROW_SHARE_FIRST   = 0x150,
   ROW_SHARE_LAST    = 0x15F,
+  ROW_XMASK0        = 0x160,
   ROW_XMASK_FIRST   = 0x160,
   ROW_XMASK_LAST    = 0x16F,
   DPP_LAST          = ROW_XMASK_LAST
 };
+// clang-format on
 
 enum DppFiMode {
   DPP_FI_0  = 0,

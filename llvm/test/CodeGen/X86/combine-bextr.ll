@@ -40,8 +40,8 @@ define float @bextr_uitofp(i32 %x, i32 %y) {
 ; X32-NEXT:    movl $3855, %eax # imm = 0xF0F
 ; X32-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movd %eax, %xmm0
-; X32-NEXT:    por {{\.LCPI.*}}, %xmm0
-; X32-NEXT:    subsd {{\.LCPI.*}}, %xmm0
+; X32-NEXT:    por {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-NEXT:    subsd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-NEXT:    cvtsd2ss %xmm0, %xmm0
 ; X32-NEXT:    movss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)

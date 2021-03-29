@@ -8,7 +8,7 @@
 // RUN:   -Werror -Wall -o - %s -S >/dev/null 2>&1 | FileCheck --check-prefix=ASM --allow-empty %s
 
 // ASM-NOT: warning
-#include <riscv_vector_generic.h>
+#include <riscv_vector.h>
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f32mf2(
 // CHECK-RV32-NEXT:  entry:
@@ -273,7 +273,7 @@ vfloat64m8_t test_vfadd_vf_f64m8(vfloat64m8_t op1, double op2, size_t vl) {
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfadd_vv_f32mf2_m(vbool64_t mask, vfloat32mf2_t maskedoff, vfloat32mf2_t op1, vfloat32mf2_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f32mf2_m(
@@ -287,7 +287,7 @@ vfloat32mf2_t test_vfadd_vv_f32mf2_m(vbool64_t mask, vfloat32mf2_t maskedoff, vf
 // CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
 //
 vfloat32mf2_t test_vfadd_vf_f32mf2_m(vbool64_t mask, vfloat32mf2_t maskedoff, vfloat32mf2_t op1, float op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f32m1_m(
@@ -301,7 +301,7 @@ vfloat32mf2_t test_vfadd_vf_f32mf2_m(vbool64_t mask, vfloat32mf2_t maskedoff, vf
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfadd_vv_f32m1_m(vbool32_t mask, vfloat32m1_t maskedoff, vfloat32m1_t op1, vfloat32m1_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f32m1_m(
@@ -315,7 +315,7 @@ vfloat32m1_t test_vfadd_vv_f32m1_m(vbool32_t mask, vfloat32m1_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
 //
 vfloat32m1_t test_vfadd_vf_f32m1_m(vbool32_t mask, vfloat32m1_t maskedoff, vfloat32m1_t op1, float op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f32m2_m(
@@ -329,7 +329,7 @@ vfloat32m1_t test_vfadd_vf_f32m1_m(vbool32_t mask, vfloat32m1_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfadd_vv_f32m2_m(vbool16_t mask, vfloat32m2_t maskedoff, vfloat32m2_t op1, vfloat32m2_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f32m2_m(
@@ -343,7 +343,7 @@ vfloat32m2_t test_vfadd_vv_f32m2_m(vbool16_t mask, vfloat32m2_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
 vfloat32m2_t test_vfadd_vf_f32m2_m(vbool16_t mask, vfloat32m2_t maskedoff, vfloat32m2_t op1, float op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f32m4_m(
@@ -357,7 +357,7 @@ vfloat32m2_t test_vfadd_vf_f32m2_m(vbool16_t mask, vfloat32m2_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfadd_vv_f32m4_m(vbool8_t mask, vfloat32m4_t maskedoff, vfloat32m4_t op1, vfloat32m4_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f32m4_m(
@@ -371,7 +371,7 @@ vfloat32m4_t test_vfadd_vv_f32m4_m(vbool8_t mask, vfloat32m4_t maskedoff, vfloat
 // CHECK-RV64-NEXT:    ret <vscale x 8 x float> [[TMP0]]
 //
 vfloat32m4_t test_vfadd_vf_f32m4_m(vbool8_t mask, vfloat32m4_t maskedoff, vfloat32m4_t op1, float op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f32m8_m(
@@ -385,7 +385,7 @@ vfloat32m4_t test_vfadd_vf_f32m4_m(vbool8_t mask, vfloat32m4_t maskedoff, vfloat
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfadd_vv_f32m8_m(vbool4_t mask, vfloat32m8_t maskedoff, vfloat32m8_t op1, vfloat32m8_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f32m8_m(
@@ -399,7 +399,7 @@ vfloat32m8_t test_vfadd_vv_f32m8_m(vbool4_t mask, vfloat32m8_t maskedoff, vfloat
 // CHECK-RV64-NEXT:    ret <vscale x 16 x float> [[TMP0]]
 //
 vfloat32m8_t test_vfadd_vf_f32m8_m(vbool4_t mask, vfloat32m8_t maskedoff, vfloat32m8_t op1, float op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f64m1_m(
@@ -413,7 +413,7 @@ vfloat32m8_t test_vfadd_vf_f32m8_m(vbool4_t mask, vfloat32m8_t maskedoff, vfloat
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfadd_vv_f64m1_m(vbool64_t mask, vfloat64m1_t maskedoff, vfloat64m1_t op1, vfloat64m1_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f64m1_m(
@@ -427,7 +427,7 @@ vfloat64m1_t test_vfadd_vv_f64m1_m(vbool64_t mask, vfloat64m1_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 vfloat64m1_t test_vfadd_vf_f64m1_m(vbool64_t mask, vfloat64m1_t maskedoff, vfloat64m1_t op1, double op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f64m2_m(
@@ -441,7 +441,7 @@ vfloat64m1_t test_vfadd_vf_f64m1_m(vbool64_t mask, vfloat64m1_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfadd_vv_f64m2_m(vbool32_t mask, vfloat64m2_t maskedoff, vfloat64m2_t op1, vfloat64m2_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f64m2_m(
@@ -455,7 +455,7 @@ vfloat64m2_t test_vfadd_vv_f64m2_m(vbool32_t mask, vfloat64m2_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
 vfloat64m2_t test_vfadd_vf_f64m2_m(vbool32_t mask, vfloat64m2_t maskedoff, vfloat64m2_t op1, double op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f64m4_m(
@@ -469,7 +469,7 @@ vfloat64m2_t test_vfadd_vf_f64m2_m(vbool32_t mask, vfloat64m2_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfadd_vv_f64m4_m(vbool16_t mask, vfloat64m4_t maskedoff, vfloat64m4_t op1, vfloat64m4_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f64m4_m(
@@ -483,7 +483,7 @@ vfloat64m4_t test_vfadd_vv_f64m4_m(vbool16_t mask, vfloat64m4_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 4 x double> [[TMP0]]
 //
 vfloat64m4_t test_vfadd_vf_f64m4_m(vbool16_t mask, vfloat64m4_t maskedoff, vfloat64m4_t op1, double op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vv_f64m8_m(
@@ -497,7 +497,7 @@ vfloat64m4_t test_vfadd_vf_f64m4_m(vbool16_t mask, vfloat64m4_t maskedoff, vfloa
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfadd_vv_f64m8_m(vbool8_t mask, vfloat64m8_t maskedoff, vfloat64m8_t op1, vfloat64m8_t op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 
 // CHECK-RV32-LABEL: @test_vfadd_vf_f64m8_m(
@@ -511,6 +511,6 @@ vfloat64m8_t test_vfadd_vv_f64m8_m(vbool8_t mask, vfloat64m8_t maskedoff, vfloat
 // CHECK-RV64-NEXT:    ret <vscale x 8 x double> [[TMP0]]
 //
 vfloat64m8_t test_vfadd_vf_f64m8_m(vbool8_t mask, vfloat64m8_t maskedoff, vfloat64m8_t op1, double op2, size_t vl) {
-  return vfadd_m(mask, maskedoff, op1, op2, vl);
+  return vfadd(mask, maskedoff, op1, op2, vl);
 }
 

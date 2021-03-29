@@ -102,6 +102,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMBlockPlacementPass(Registry);
   initializeMVEGatherScatterLoweringPass(Registry);
   initializeARMSLSHardeningPass(Registry);
+  initializeMVELaneInterleavingPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -416,6 +417,7 @@ void ARMPassConfig::addIRPasses() {
         }));
 
   addPass(createMVEGatherScatterLoweringPass());
+  addPass(createMVELaneInterleavingPass());
 
   TargetPassConfig::addIRPasses();
 

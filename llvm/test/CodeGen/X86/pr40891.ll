@@ -7,7 +7,7 @@ define <8 x i32> @foo(<8 x i64> %x, <4 x i64> %y) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vandps {{\.LCPI.*}}, %ymm1, %ymm1
+; CHECK-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3],ymm1[2,3]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm2[0,2],ymm0[4,6],ymm2[4,6]

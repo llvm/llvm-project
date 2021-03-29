@@ -14297,6 +14297,102 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
 }
 
+TEST_F(FormatTest, AlignWithLineBreaks) {
+  auto Style = getLLVMStyleWithColumns(120);
+
+  EXPECT_EQ(Style.AlignConsecutiveAssignments, FormatStyle::ACS_None);
+  EXPECT_EQ(Style.AlignConsecutiveDeclarations, FormatStyle::ACS_None);
+  verifyFormat("void foo() {\n"
+               "  int myVar = 5;\n"
+               "  double x = 3.14;\n"
+               "  auto str = \"Hello \"\n"
+               "             \"World\";\n"
+               "  auto s = \"Hello \"\n"
+               "           \"Again\";\n"
+               "}",
+               Style);
+
+  // clang-format off
+  verifyFormat("void foo() {\n"
+               "  const int capacityBefore = Entries.capacity();\n"
+               "  const auto newEntry = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                            std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "  const X newEntry2 = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                          std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "}",
+               Style);
+  // clang-format on
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo() {\n"
+               "  int myVar = 5;\n"
+               "  double x  = 3.14;\n"
+               "  auto str  = \"Hello \"\n"
+               "              \"World\";\n"
+               "  auto s    = \"Hello \"\n"
+               "              \"Again\";\n"
+               "}",
+               Style);
+
+  // clang-format off
+  verifyFormat("void foo() {\n"
+               "  const int capacityBefore = Entries.capacity();\n"
+               "  const auto newEntry      = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                                 std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "  const X newEntry2        = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                                 std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "}",
+               Style);
+  // clang-format on
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_None;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("void foo() {\n"
+               "  int    myVar = 5;\n"
+               "  double x = 3.14;\n"
+               "  auto   str = \"Hello \"\n"
+               "               \"World\";\n"
+               "  auto   s = \"Hello \"\n"
+               "             \"Again\";\n"
+               "}",
+               Style);
+
+  // clang-format off
+  verifyFormat("void foo() {\n"
+               "  const int  capacityBefore = Entries.capacity();\n"
+               "  const auto newEntry = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                            std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "  const X    newEntry2 = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                             std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "}",
+               Style);
+  // clang-format on
+
+  Style.AlignConsecutiveAssignments = FormatStyle::ACS_Consecutive;
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+
+  verifyFormat("void foo() {\n"
+               "  int    myVar = 5;\n"
+               "  double x     = 3.14;\n"
+               "  auto   str   = \"Hello \"\n"
+               "                 \"World\";\n"
+               "  auto   s     = \"Hello \"\n"
+               "                 \"Again\";\n"
+               "}",
+               Style);
+
+  // clang-format off
+  verifyFormat("void foo() {\n"
+               "  const int  capacityBefore = Entries.capacity();\n"
+               "  const auto newEntry       = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                                  std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "  const X    newEntry2      = Entries.emplaceHint(std::piecewise_construct, std::forward_as_tuple(uniqueId),\n"
+               "                                                  std::forward_as_tuple(id, uniqueId, name, threadCreation));\n"
+               "}",
+               Style);
+  // clang-format on
+}
+
 TEST_F(FormatTest, LinuxBraceBreaking) {
   FormatStyle LinuxBraceStyle = getLLVMStyle();
   LinuxBraceStyle.BreakBeforeBraces = FormatStyle::BS_Linux;
