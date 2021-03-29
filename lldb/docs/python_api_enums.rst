@@ -342,6 +342,9 @@ StopReason
 .. py:data:: eStopReasonSignal
 .. py:data:: eStopReasonException
 .. py:data:: eStopReasonExec
+.. py:data:: eStopReasonFork
+.. py:data:: eStopReasonVFork
+.. py:data:: eStopReasonVForkDone
 .. py:data:: eStopReasonPlanComplete
 .. py:data:: eStopReasonThreadExiting
 .. py:data:: eStopReasonInstrumentation

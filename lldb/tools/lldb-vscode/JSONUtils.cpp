@@ -878,6 +878,15 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   case lldb::eStopReasonExec:
     body.try_emplace("reason", "entry");
     break;
+  case lldb::eStopReasonFork:
+    body.try_emplace("reason", "fork");
+    break;
+  case lldb::eStopReasonVFork:
+    body.try_emplace("reason", "vfork");
+    break;
+  case lldb::eStopReasonVForkDone:
+    body.try_emplace("reason", "vforkdone");
+    break;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:

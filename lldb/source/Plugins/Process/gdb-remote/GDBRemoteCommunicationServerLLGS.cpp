@@ -659,6 +659,12 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "exec";
   case eStopReasonProcessorTrace:
     return "processor trace";
+  case eStopReasonFork:
+    return "fork";
+  case eStopReasonVFork:
+    return "vfork";
+  case eStopReasonVForkDone:
+    return "vforkdone";
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
   case eStopReasonPlanComplete:
@@ -932,6 +938,22 @@ GDBRemoteCommunicationServerLLGS::SendStopReplyPacketForThread(
       response.PutHex64(tid_stop_info.details.exception.data[i]);
       response.PutChar(';');
     }
+  }
+
+  // Include child process PID/TID for forks.
+  if (tid_stop_info.reason == eStopReasonFork ||
+      tid_stop_info.reason == eStopReasonVFork) {
+    assert(bool(m_extensions_supported &
+                NativeProcessProtocol::Extension::multiprocess));
+    if (tid_stop_info.reason == eStopReasonFork)
+      assert(bool(m_extensions_supported &
+                  NativeProcessProtocol::Extension::fork));
+    if (tid_stop_info.reason == eStopReasonVFork)
+      assert(bool(m_extensions_supported &
+                  NativeProcessProtocol::Extension::vfork));
+    response.Printf("%s:p%" PRIx64 ".%" PRIx64 ";", reason_str,
+                    tid_stop_info.details.fork.child_pid,
+                    tid_stop_info.details.fork.child_tid);
   }
 
   return SendPacketNoLock(response.GetString());
