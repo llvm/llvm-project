@@ -162,6 +162,7 @@ static bool tryInterleave(Instruction *Start,
 
   SmallSetVector<Instruction *, 4> Truncs;
   SmallSetVector<Instruction *, 4> Exts;
+  SmallSetVector<Use *, 4> OtherLeafs;
   SmallSetVector<Instruction *, 4> Ops;
 
   while (!Worklist.empty()) {
@@ -204,7 +205,7 @@ static bool tryInterleave(Instruction *Start,
         if (isa<Instruction>(Op))
           Worklist.push_back(cast<Instruction>(&Op));
         else
-          return false;
+          OtherLeafs.insert(&Op);
       }
 
       for (auto *Use : I->users())
@@ -217,6 +218,9 @@ static bool tryInterleave(Instruction *Start,
     }
   }
 
+  if (Exts.empty() && OtherLeafs.empty())
+    return false;
+
   LLVM_DEBUG({
     dbgs() << "Found group:\n  Exts:";
     for (auto *I : Exts)
@@ -224,13 +228,15 @@ static bool tryInterleave(Instruction *Start,
     dbgs() << "  Ops:";
     for (auto *I : Ops)
       dbgs() << "  " << *I << "\n";
+    dbgs() << "  OtherLeafs:";
+    for (auto *I : OtherLeafs)
+      dbgs() << "  " << *I << "\n";
     dbgs() << "Truncs:";
     for (auto *I : Truncs)
       dbgs() << "  " << *I << "\n";
   });
 
   assert(!Truncs.empty() && "Expected some truncs");
-  assert(!Exts.empty() && "Expected some leaves");
 
   // Check types
   unsigned NumElts = VT->getNumElements();
@@ -289,6 +295,14 @@ static bool tryInterleave(Instruction *Start,
     Value *Ext = Sext ? Builder.CreateSExt(Shuffle, I->getType())
                       : Builder.CreateZExt(Shuffle, I->getType());
     I->replaceAllUsesWith(Ext);
+    LLVM_DEBUG(dbgs() << "  with " << *Shuffle << "\n");
+  }
+
+  for (Use *I : OtherLeafs) {
+    LLVM_DEBUG(dbgs() << "Replacing leaf " << *I << "\n");
+    Builder.SetInsertPoint(cast<Instruction>(I->getUser()));
+    Value *Shuffle = Builder.CreateShuffleVector(I->get(), LeafMask);
+    I->getUser()->setOperand(I->getOperandNo(), Shuffle);
     LLVM_DEBUG(dbgs() << "  with " << *Shuffle << "\n");
   }
 
