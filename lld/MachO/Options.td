@@ -772,8 +772,7 @@ def stack_addr : Separate<["-"], "stack_addr">,
     Group<grp_rare>;
 def segprot : MultiArg<["-"], "segprot", 3>,
     MetaVarName<"<segment> <max> <init>">,
-    HelpText<"Specifies the <max> and <init> virtual memory protection of <segment> as r/w/x/-seg_addr_table path Specify hex base addresses and dylib install names on successive lines in <path>. This option is obsolete">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specifies the <max> and <init> virtual memory protection of <segment> as r/w/x/-seg_addr_table path">,
     Group<grp_rare>;
 def segs_read_write_addr : Separate<["-"], "segs_read_write_addr">,
     MetaVarName<"<address>">,
