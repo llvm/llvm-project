@@ -107,9 +107,9 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    add a2, s1, a2
-; CHECK-NEXT:    addi a2, a2, 96
+; CHECK-NEXT:    addi a2, a2, 104
 ; CHECK-NEXT:    vl1re64.v v25, (a2)
-; CHECK-NEXT:    addi a2, s1, 96
+; CHECK-NEXT:    addi a2, s1, 104
 ; CHECK-NEXT:    vl2re64.v v26, (a2)
 ; CHECK-NEXT:    lw a2, 64(s1)
 ; CHECK-NEXT:    slli a1, a1, 2
