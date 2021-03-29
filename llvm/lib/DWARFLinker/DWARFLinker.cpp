@@ -1088,7 +1088,8 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
 
   if (AttrSpec.Attr == dwarf::DW_AT_low_pc) {
     if (Die.getTag() == dwarf::DW_TAG_inlined_subroutine ||
-        Die.getTag() == dwarf::DW_TAG_lexical_block)
+        Die.getTag() == dwarf::DW_TAG_lexical_block ||
+        Die.getTag() == dwarf::DW_TAG_label) {
       // The low_pc of a block or inline subroutine might get
       // relocated because it happens to match the low_pc of the
       // enclosing subprogram. To prevent issues with that, always use
@@ -1097,7 +1098,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
                   ? Info.OrigLowPc
                   : Addr) +
              Info.PCOffset;
-    else if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
+    } else if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
       Addr = Unit.getLowPc();
       if (Addr == std::numeric_limits<uint64_t>::max())
         return 0;
