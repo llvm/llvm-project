@@ -848,7 +848,7 @@ bool LoopUnswitch::processCurrentLoop() {
   if (MSSA &&
       !findOptionMDForLoop(CurrentLoop, "llvm.loop.unswitch.partial.disable")) {
     if (auto Info =
-            llvm::hasPartialIVCondition(CurrentLoop, MSSAThreshold, MSSA, AA)) {
+            hasPartialIVCondition(*CurrentLoop, MSSAThreshold, *MSSA, *AA)) {
       assert(!Info->InstToDuplicate.empty() &&
              "need at least a partially invariant condition");
       LLVM_DEBUG(dbgs() << "loop-unswitch: Found partially invariant condition "
