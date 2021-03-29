@@ -18,17 +18,41 @@
 #include <random>
 #include <type_traits>
 
-#include "../functions.h"
+template <class R, class... Args>
+[[nodiscard]] constexpr bool check_invocable() {
+  constexpr bool result = std::invocable<R(Args...), Args...>;
+  static_assert(std::invocable<R(Args...) noexcept, Args...> == result);
+  static_assert(std::invocable<R (*)(Args...), Args...> == result);
+  static_assert(std::invocable<R (*)(Args...) noexcept, Args...> == result);
+  static_assert(std::invocable<R (&)(Args...), Args...> == result);
+  static_assert(std::invocable<R (&)(Args...) noexcept, Args...> == result);
 
-// clang-format off
-template <class F, class... Args>
-requires std::invocable<F, Args...>
-constexpr void ModelsInvocable(F, Args&&...) noexcept{}
+  return result;
+}
 
-template <class F, class... Args>
-requires(!std::invocable<F, Args...>)
-constexpr void NotInvocable(F, Args&&...) noexcept {}
-// clang-format on
+static_assert(check_invocable<void>());
+static_assert(check_invocable<void, int>());
+static_assert(check_invocable<void, int&>());
+static_assert(check_invocable<void, int*, double>());
+static_assert(check_invocable<int>());
+static_assert(check_invocable<int, int[]>());
+
+struct S;
+static_assert(check_invocable<int, int S::*, std::nullptr_t>());
+static_assert(check_invocable<int, int (S::*)(), int (S::*)(int), int>());
+static_assert(std::invocable<void (*)(int const&), int&>);
+static_assert(std::invocable<void (*)(int const&), int&&>);
+static_assert(std::invocable<void (*)(int volatile&), int&>);
+static_assert(std::invocable<void (*)(int const volatile&), int&>);
+
+static_assert(!std::invocable<void(), int>);
+static_assert(!std::invocable<void(int)>);
+static_assert(!std::invocable<void(int*), double*>);
+static_assert(!std::invocable<void (*)(int&), double*>);
+static_assert(std::invocable<int S::*, std::unique_ptr<S> >);
+static_assert(std::invocable<int S::*, std::shared_ptr<S> >);
+static_assert(!std::invocable<void (*)(int&&), int&>);
+static_assert(!std::invocable<void (*)(int&&), int const&>);
 
 static_assert(!std::invocable<void>);
 static_assert(!std::invocable<void*>);
@@ -36,84 +60,372 @@ static_assert(!std::invocable<int>);
 static_assert(!std::invocable<int&>);
 static_assert(!std::invocable<int&&>);
 
-int main(int, char**) {
+namespace function_objects {
+struct function_object {
+  void operator()();
+};
+static_assert(std::invocable<function_object>);
+static_assert(!std::invocable<function_object const>);
+static_assert(!std::invocable<function_object volatile>);
+static_assert(!std::invocable<function_object const volatile>);
+static_assert(std::invocable<function_object&>);
+static_assert(!std::invocable<function_object const&>);
+static_assert(!std::invocable<function_object volatile&>);
+static_assert(!std::invocable<function_object const volatile&>);
+
+struct const_function_object {
+  void operator()(int) const;
+};
+static_assert(std::invocable<const_function_object, int>);
+static_assert(std::invocable<const_function_object const, int>);
+static_assert(!std::invocable<const_function_object volatile, int>);
+static_assert(!std::invocable<const_function_object const volatile, int>);
+static_assert(std::invocable<const_function_object&, int>);
+static_assert(std::invocable<const_function_object const&, int>);
+static_assert(!std::invocable<const_function_object volatile&, int>);
+static_assert(!std::invocable<const_function_object const volatile&, int>);
+
+struct volatile_function_object {
+  void operator()(int, int) volatile;
+};
+static_assert(std::invocable<volatile_function_object, int, int>);
+static_assert(!std::invocable<volatile_function_object const, int, int>);
+static_assert(std::invocable<volatile_function_object volatile, int, int>);
+static_assert(
+    !std::invocable<volatile_function_object const volatile, int, int>);
+static_assert(std::invocable<volatile_function_object&, int, int>);
+static_assert(!std::invocable<volatile_function_object const&, int, int>);
+static_assert(std::invocable<volatile_function_object volatile&, int, int>);
+static_assert(
+    !std::invocable<volatile_function_object const volatile&, int, int>);
+
+struct cv_function_object {
+  void operator()(int[]) const volatile;
+};
+static_assert(std::invocable<cv_function_object, int*>);
+static_assert(std::invocable<cv_function_object const, int*>);
+static_assert(std::invocable<cv_function_object volatile, int*>);
+static_assert(std::invocable<cv_function_object const volatile, int*>);
+static_assert(std::invocable<cv_function_object&, int*>);
+static_assert(std::invocable<cv_function_object const&, int*>);
+static_assert(std::invocable<cv_function_object volatile&, int*>);
+static_assert(std::invocable<cv_function_object const volatile&, int*>);
+
+struct lvalue_function_object {
+  void operator()() &;
+};
+static_assert(!std::invocable<lvalue_function_object>);
+static_assert(!std::invocable<lvalue_function_object const>);
+static_assert(!std::invocable<lvalue_function_object volatile>);
+static_assert(!std::invocable<lvalue_function_object const volatile>);
+static_assert(std::invocable<lvalue_function_object&>);
+static_assert(!std::invocable<lvalue_function_object const&>);
+static_assert(!std::invocable<lvalue_function_object volatile&>);
+static_assert(!std::invocable<lvalue_function_object const volatile&>);
+
+struct lvalue_const_function_object {
+  void operator()(int) const&;
+};
+static_assert(std::invocable<lvalue_const_function_object, int>);
+static_assert(std::invocable<lvalue_const_function_object const, int>);
+static_assert(!std::invocable<lvalue_const_function_object volatile, int>);
+static_assert(
+    !std::invocable<lvalue_const_function_object const volatile, int>);
+static_assert(std::invocable<lvalue_const_function_object&, int>);
+static_assert(std::invocable<lvalue_const_function_object const&, int>);
+static_assert(!std::invocable<lvalue_const_function_object volatile&, int>);
+static_assert(
+    !std::invocable<lvalue_const_function_object const volatile&, int>);
+
+struct lvalue_volatile_function_object {
+  void operator()(int, int) volatile&;
+};
+static_assert(!std::invocable<lvalue_volatile_function_object, int, int>);
+static_assert(!std::invocable<lvalue_volatile_function_object const, int, int>);
+static_assert(
+    !std::invocable<lvalue_volatile_function_object volatile, int, int>);
+static_assert(
+    !std::invocable<lvalue_volatile_function_object const volatile, int, int>);
+static_assert(std::invocable<lvalue_volatile_function_object&, int, int>);
+static_assert(
+    !std::invocable<lvalue_volatile_function_object const&, int, int>);
+static_assert(
+    std::invocable<lvalue_volatile_function_object volatile&, int, int>);
+static_assert(
+    !std::invocable<lvalue_volatile_function_object const volatile&, int, int>);
+
+struct lvalue_cv_function_object {
+  void operator()(int[]) const volatile&;
+};
+static_assert(!std::invocable<lvalue_cv_function_object, int*>);
+static_assert(!std::invocable<lvalue_cv_function_object const, int*>);
+static_assert(!std::invocable<lvalue_cv_function_object volatile, int*>);
+static_assert(!std::invocable<lvalue_cv_function_object const volatile, int*>);
+static_assert(std::invocable<lvalue_cv_function_object&, int*>);
+static_assert(std::invocable<lvalue_cv_function_object const&, int*>);
+static_assert(std::invocable<lvalue_cv_function_object volatile&, int*>);
+static_assert(std::invocable<lvalue_cv_function_object const volatile&, int*>);
+//
+struct rvalue_function_object {
+  void operator()() &&;
+};
+static_assert(std::invocable<rvalue_function_object>);
+static_assert(!std::invocable<rvalue_function_object const>);
+static_assert(!std::invocable<rvalue_function_object volatile>);
+static_assert(!std::invocable<rvalue_function_object const volatile>);
+static_assert(!std::invocable<rvalue_function_object&>);
+static_assert(!std::invocable<rvalue_function_object const&>);
+static_assert(!std::invocable<rvalue_function_object volatile&>);
+static_assert(!std::invocable<rvalue_function_object const volatile&>);
+
+struct rvalue_const_function_object {
+  void operator()(int) const&&;
+};
+static_assert(std::invocable<rvalue_const_function_object, int>);
+static_assert(std::invocable<rvalue_const_function_object const, int>);
+static_assert(!std::invocable<rvalue_const_function_object volatile, int>);
+static_assert(
+    !std::invocable<rvalue_const_function_object const volatile, int>);
+static_assert(!std::invocable<rvalue_const_function_object&, int>);
+static_assert(!std::invocable<rvalue_const_function_object const&, int>);
+static_assert(!std::invocable<rvalue_const_function_object volatile&, int>);
+static_assert(
+    !std::invocable<rvalue_const_function_object const volatile&, int>);
+
+struct rvalue_volatile_function_object {
+  void operator()(int, int) volatile&&;
+};
+static_assert(std::invocable<rvalue_volatile_function_object, int, int>);
+static_assert(!std::invocable<rvalue_volatile_function_object const, int, int>);
+static_assert(
+    std::invocable<rvalue_volatile_function_object volatile, int, int>);
+static_assert(
+    !std::invocable<rvalue_volatile_function_object const volatile, int, int>);
+static_assert(!std::invocable<rvalue_volatile_function_object&, int, int>);
+static_assert(
+    !std::invocable<rvalue_volatile_function_object const&, int, int>);
+static_assert(
+    !std::invocable<rvalue_volatile_function_object volatile&, int, int>);
+static_assert(
+    !std::invocable<rvalue_volatile_function_object const volatile&, int, int>);
+
+struct rvalue_cv_function_object {
+  void operator()(int[]) const volatile&&;
+};
+static_assert(std::invocable<rvalue_cv_function_object, int*>);
+static_assert(std::invocable<rvalue_cv_function_object const, int*>);
+static_assert(std::invocable<rvalue_cv_function_object volatile, int*>);
+static_assert(std::invocable<rvalue_cv_function_object const volatile, int*>);
+static_assert(!std::invocable<rvalue_cv_function_object&, int*>);
+static_assert(!std::invocable<rvalue_cv_function_object const&, int*>);
+static_assert(!std::invocable<rvalue_cv_function_object volatile&, int*>);
+static_assert(!std::invocable<rvalue_cv_function_object const volatile&, int*>);
+
+struct multiple_overloads {
+  bool operator()();
+  void operator()(int);
+  int operator()(double);
+};
+static_assert(std::invocable<multiple_overloads&>);
+static_assert(std::invocable<multiple_overloads&, short>);
+static_assert(std::invocable<multiple_overloads&, int>);
+static_assert(!std::invocable<multiple_overloads&, long>);
+static_assert(std::invocable<multiple_overloads&, double>);
+static_assert(std::invocable<multiple_overloads&, float>);
+static_assert(std::invocable<multiple_overloads&, short&>);
+static_assert(std::invocable<multiple_overloads&, int&>);
+static_assert(!std::invocable<multiple_overloads&, long&>);
+static_assert(std::invocable<multiple_overloads&, float&>);
+static_assert(std::invocable<multiple_overloads&, double&>);
+} // namespace function_objects
+
+namespace pointer_to_member_functions {
+// clang-format off
+  template<class Member, class T, class... Args>
+  [[nodiscard]] constexpr bool check_member_is_invocable()
   {
-    using namespace RegularInvocable;
-
-    ModelsInvocable(F);
-    NotInvocable(F, 0);
-
-    ModelsInvocable(G, 2);
-    NotInvocable(G);
-    NotInvocable(G, 3, 0);
-
-    NotInvocable(&A::I);
-    NotInvocable(&A::F);
-
-    {
-      A X;
-      ModelsInvocable(&A::I, X);
-      ModelsInvocable(&A::F, X);
-      ModelsInvocable(&A::G, X, 0);
-      NotInvocable(&A::G, X);
-      NotInvocable(&A::G, 0);
-      NotInvocable(&A::H);
-
-      A const& Y = X;
-      ModelsInvocable(&A::I, Y);
-      ModelsInvocable(&A::F, Y);
-      NotInvocable(&A::G, Y, 0);
-      NotInvocable(&A::H, Y, 0);
-    }
-
-    ModelsInvocable(&A::I, A{});
-    ModelsInvocable(&A::F, A{});
-    ModelsInvocable(&A::G, A{}, 0);
-    ModelsInvocable(&A::H, A{}, 0);
-
-    {
-      auto Up = std::make_unique<A>();
-      ModelsInvocable(&A::I, Up);
-      ModelsInvocable(&A::F, Up);
-      ModelsInvocable(&A::G, Up, 0);
-      NotInvocable(&A::H, Up, 0);
-    }
-    {
-      auto Sp = std::make_shared<A>();
-      ModelsInvocable(&A::I, Sp);
-      ModelsInvocable(&A::F, Sp);
-      ModelsInvocable(&A::G, Sp, 0);
-      NotInvocable(&A::H, Sp, 0);
-    }
+    constexpr bool result = std::invocable<Member, T, Args...>;
+    using uncv_t = std::remove_cvref_t<T>;
+    static_assert(std::invocable<Member, uncv_t*, Args...> == result);
+    static_assert(std::invocable<Member, std::unique_ptr<uncv_t>, Args...> == result);
+    static_assert(std::invocable<Member, std::reference_wrapper<uncv_t>, Args...> == result);
+    static_assert(!std::invocable<Member, std::nullptr_t, Args...>);
+    static_assert(!std::invocable<Member, int, Args...>);
+    static_assert(!std::invocable<Member, int*, Args...>);
+    static_assert(!std::invocable<Member, double*, Args...>);
+    struct S2 {};
+    static_assert(!std::invocable<Member, S2*, Args...>);
+    return result;
   }
-  {
-    using namespace Predicate;
-    {
-      ModelsInvocable(L2rSorted{}, 0, 1, 2);
-      NotInvocable(L2rSorted{});
-      NotInvocable(L2rSorted{}, 0);
-      NotInvocable(L2rSorted{}, 0, 1);
-    }
-    {
-      auto Up = std::make_unique<L2rSorted>();
-      ModelsInvocable(&L2rSorted::operator()<int>, Up, 0, 1, 2);
-      NotInvocable(&L2rSorted::operator()<int>, Up);
-      NotInvocable(&L2rSorted::operator()<int>, Up, 0);
-      NotInvocable(&L2rSorted::operator()<int>, Up, 0, 1);
-    }
-    {
-      auto Sp = std::make_shared<L2rSorted>();
-      ModelsInvocable(&L2rSorted::operator()<int>, Sp, 0, 1, 2);
-      NotInvocable(&L2rSorted::operator()<int>, Sp);
-      NotInvocable(&L2rSorted::operator()<int>, Sp, 0);
-      NotInvocable(&L2rSorted::operator()<int>, Sp, 0, 1);
-    }
-  }
-  {
-    auto G = std::mt19937_64(
-        std::chrono::high_resolution_clock().now().time_since_epoch().count());
-    auto D = std::uniform_int_distribution<>();
-    ModelsInvocable(D, G);
-  }
-  return 0;
+// clang-format on
+
+static_assert(check_member_is_invocable<int S::*, S>());
+static_assert(std::invocable<int S::*, S&>);
+static_assert(std::invocable<int S::*, S const&>);
+static_assert(std::invocable<int S::*, S volatile&>);
+static_assert(std::invocable<int S::*, S const volatile&>);
+static_assert(std::invocable<int S::*, S&&>);
+static_assert(std::invocable<int S::*, S const&&>);
+static_assert(std::invocable<int S::*, S volatile&&>);
+static_assert(std::invocable<int S::*, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)(int), S, int>());
+static_assert(!check_member_is_invocable<int (S::*)(int), S>());
+using unqualified = void (S::*)();
+static_assert(std::invocable<unqualified, S&>);
+static_assert(!std::invocable<unqualified, S const&>);
+static_assert(!std::invocable<unqualified, S volatile&>);
+static_assert(!std::invocable<unqualified, S const volatile&>);
+static_assert(std::invocable<unqualified, S&&>);
+static_assert(!std::invocable<unqualified, S const&&>);
+static_assert(!std::invocable<unqualified, S volatile&&>);
+static_assert(!std::invocable<unqualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)(double) const, S, double>());
+using const_qualified = void (S::*)() const;
+static_assert(std::invocable<const_qualified, S&>);
+static_assert(std::invocable<const_qualified, S const&>);
+static_assert(!std::invocable<const_qualified, S volatile&>);
+static_assert(!std::invocable<const_qualified, S const volatile&>);
+static_assert(std::invocable<const_qualified, S&&>);
+static_assert(std::invocable<const_qualified, S const&&>);
+static_assert(!std::invocable<const_qualified, S volatile&&>);
+static_assert(!std::invocable<const_qualified, S const volatile&&>);
+
+static_assert(
+    check_member_is_invocable<int (S::*)(double[]) volatile, S, double*>());
+using volatile_qualified = void (S::*)() volatile;
+static_assert(std::invocable<volatile_qualified, S&>);
+static_assert(!std::invocable<volatile_qualified, S const&>);
+static_assert(std::invocable<volatile_qualified, S volatile&>);
+static_assert(!std::invocable<volatile_qualified, S const volatile&>);
+static_assert(std::invocable<volatile_qualified, S&&>);
+static_assert(!std::invocable<volatile_qualified, S const&&>);
+static_assert(std::invocable<volatile_qualified, S volatile&&>);
+static_assert(!std::invocable<volatile_qualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)(int, S&) const volatile, S,
+                                        int, S&>());
+using cv_qualified = void (S::*)() const volatile;
+static_assert(std::invocable<cv_qualified, S&>);
+static_assert(std::invocable<cv_qualified, S const&>);
+static_assert(std::invocable<cv_qualified, S volatile&>);
+static_assert(std::invocable<cv_qualified, S const volatile&>);
+static_assert(std::invocable<cv_qualified, S&&>);
+static_assert(std::invocable<cv_qualified, S const&&>);
+static_assert(std::invocable<cv_qualified, S volatile&&>);
+static_assert(std::invocable<cv_qualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)() &, S&>());
+using lvalue_qualified = void (S::*)() &;
+static_assert(std::invocable<lvalue_qualified, S&>);
+static_assert(!std::invocable<lvalue_qualified, S const&>);
+static_assert(!std::invocable<lvalue_qualified, S volatile&>);
+static_assert(!std::invocable<lvalue_qualified, S const volatile&>);
+static_assert(!std::invocable<lvalue_qualified, S&&>);
+static_assert(!std::invocable<lvalue_qualified, S const&&>);
+static_assert(!std::invocable<lvalue_qualified, S volatile&&>);
+static_assert(!std::invocable<lvalue_qualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)() const&, S>());
+using lvalue_const_qualified = void (S::*)() const&;
+static_assert(std::invocable<lvalue_const_qualified, S&>);
+static_assert(std::invocable<lvalue_const_qualified, S const&>);
+static_assert(!std::invocable<lvalue_const_qualified, S volatile&>);
+static_assert(!std::invocable<lvalue_const_qualified, S const volatile&>);
+static_assert(std::invocable<lvalue_const_qualified, S&&>);
+static_assert(std::invocable<lvalue_const_qualified, S const&&>);
+static_assert(!std::invocable<lvalue_const_qualified, S volatile&&>);
+static_assert(!std::invocable<lvalue_const_qualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)() volatile&, S&>());
+using lvalue_volatile_qualified = void (S::*)() volatile&;
+static_assert(std::invocable<lvalue_volatile_qualified, S&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S const&>);
+static_assert(std::invocable<lvalue_volatile_qualified, S volatile&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S const volatile&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S&&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S const&&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S volatile&&>);
+static_assert(!std::invocable<lvalue_volatile_qualified, S const volatile&&>);
+
+static_assert(check_member_is_invocable<int (S::*)() const volatile&, S&>());
+using lvalue_cv_qualified = void (S::*)() const volatile&;
+static_assert(std::invocable<lvalue_cv_qualified, S&>);
+static_assert(std::invocable<lvalue_cv_qualified, S const&>);
+static_assert(std::invocable<lvalue_cv_qualified, S volatile&>);
+static_assert(std::invocable<lvalue_cv_qualified, S const volatile&>);
+static_assert(!std::invocable<lvalue_cv_qualified, S&&>);
+static_assert(!std::invocable<lvalue_cv_qualified, S const&&>);
+static_assert(!std::invocable<lvalue_cv_qualified, S volatile&&>);
+static_assert(!std::invocable<lvalue_cv_qualified, S const volatile&&>);
+
+using rvalue_unqualified = void (S::*)() &&;
+static_assert(!std::invocable<rvalue_unqualified, S&>);
+static_assert(!std::invocable<rvalue_unqualified, S const&>);
+static_assert(!std::invocable<rvalue_unqualified, S volatile&>);
+static_assert(!std::invocable<rvalue_unqualified, S const volatile&>);
+static_assert(std::invocable<rvalue_unqualified, S&&>);
+static_assert(!std::invocable<rvalue_unqualified, S const&&>);
+static_assert(!std::invocable<rvalue_unqualified, S volatile&&>);
+static_assert(!std::invocable<rvalue_unqualified, S const volatile&&>);
+
+using rvalue_const_unqualified = void (S::*)() const&&;
+static_assert(!std::invocable<rvalue_const_unqualified, S&>);
+static_assert(!std::invocable<rvalue_const_unqualified, S const&>);
+static_assert(!std::invocable<rvalue_const_unqualified, S volatile&>);
+static_assert(!std::invocable<rvalue_const_unqualified, S const volatile&>);
+static_assert(std::invocable<rvalue_const_unqualified, S&&>);
+static_assert(std::invocable<rvalue_const_unqualified, S const&&>);
+static_assert(!std::invocable<rvalue_const_unqualified, S volatile&&>);
+static_assert(!std::invocable<rvalue_const_unqualified, S const volatile&&>);
+
+using rvalue_volatile_unqualified = void (S::*)() volatile&&;
+static_assert(!std::invocable<rvalue_volatile_unqualified, S&>);
+static_assert(!std::invocable<rvalue_volatile_unqualified, S const&>);
+static_assert(!std::invocable<rvalue_volatile_unqualified, S volatile&>);
+static_assert(!std::invocable<rvalue_volatile_unqualified, S const volatile&>);
+static_assert(std::invocable<rvalue_volatile_unqualified, S&&>);
+static_assert(!std::invocable<rvalue_volatile_unqualified, S const&&>);
+static_assert(std::invocable<rvalue_volatile_unqualified, S volatile&&>);
+static_assert(!std::invocable<rvalue_volatile_unqualified, S const volatile&&>);
+
+using rvalue_cv_unqualified = void (S::*)() const volatile&&;
+static_assert(!std::invocable<rvalue_cv_unqualified, S&>);
+static_assert(!std::invocable<rvalue_cv_unqualified, S const&>);
+static_assert(!std::invocable<rvalue_cv_unqualified, S volatile&>);
+static_assert(!std::invocable<rvalue_cv_unqualified, S const volatile&>);
+static_assert(std::invocable<rvalue_cv_unqualified, S&&>);
+static_assert(std::invocable<rvalue_cv_unqualified, S const&&>);
+static_assert(std::invocable<rvalue_cv_unqualified, S volatile&&>);
+static_assert(std::invocable<rvalue_cv_unqualified, S const volatile&&>);
+} // namespace pointer_to_member_functions
+
+// std::invocable-specific
+static_assert(
+    std::invocable<std::uniform_int_distribution<>, std::mt19937_64&>);
+
+[[nodiscard]] constexpr bool check_lambda(auto, auto...) { return false; }
+
+// clang-format off
+template<class F, class... Args>
+requires std::invocable<F, Args...>
+[[nodiscard]] constexpr bool check_lambda(F, Args&&...)
+{
+  return true;
 }
+// clang-format on
+
+[[nodiscard]] constexpr bool check_lambdas() {
+  static_assert(check_lambda([] {}));
+  static_assert(check_lambda([](int) {}, 0));
+  static_assert(check_lambda([](int) {}, 0L));
+  static_assert(!check_lambda([](int) {}, nullptr));
+
+  int i = 0;
+  return check_lambda([](int&) {}, i);
+}
+
+static_assert(check_lambdas());
+
+int main(int, char**) { return 0; }

@@ -1706,29 +1706,18 @@ std::pair<Instruction *, Instruction *> llvm::addRuntimeChecks(
   return std::make_pair(FirstInst, Check);
 }
 
-/// Check if the loop header has a conditional branch that is not
-/// loop-invariant, because it involves load instructions. If all paths from
-/// either the true or false successor to the header or loop exists do not
-/// modify the memory feeding the condition, perform 'partial unswitching'. That
-/// is, duplicate the instructions feeding the condition in the pre-header. Then
-/// unswitch on the duplicated condition. The condition is now known in the
-/// unswitched version for the 'invariant' path through the original loop.
-///
-/// If the branch condition of the header is partially invariant, return a pair
-/// containing the instructions to duplicate and a boolean Constant to update
-/// the condition in the loops created for the true or false successors.
-Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
+Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,
                                                       unsigned MSSAThreshold,
-                                                      MemorySSA *MSSA,
-                                                      AAResults *AA) {
-  auto *TI = dyn_cast<BranchInst>(L->getHeader()->getTerminator());
+                                                      MemorySSA &MSSA,
+                                                      AAResults &AA) {
+  auto *TI = dyn_cast<BranchInst>(L.getHeader()->getTerminator());
   if (!TI || !TI->isConditional())
     return {};
 
   auto *CondI = dyn_cast<CmpInst>(TI->getCondition());
   // The case with the condition outside the loop should already be handled
   // earlier.
-  if (!CondI || !L->contains(CondI))
+  if (!CondI || !L.contains(CondI))
     return {};
 
   SmallVector<Instruction *> InstToDuplicate;
@@ -1741,7 +1730,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
   SmallVector<MemoryLocation, 4> AccessedLocs;
   while (!WorkList.empty()) {
     Instruction *I = dyn_cast<Instruction>(WorkList.pop_back_val());
-    if (!I || !L->contains(I))
+    if (!I || !L.contains(I))
       continue;
 
     // TODO: support additional instructions.
@@ -1754,7 +1743,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
         return {};
 
     InstToDuplicate.push_back(I);
-    if (MemoryAccess *MA = MSSA->getMemoryAccess(I)) {
+    if (MemoryAccess *MA = MSSA.getMemoryAccess(I)) {
       if (auto *MemUse = dyn_cast_or_null<MemoryUse>(MA)) {
         // Queue the defining access to check for alias checks.
         AccessesToCheck.push_back(MemUse->getDefiningAccess());
@@ -1772,9 +1761,9 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
     return {};
 
   SmallVector<BasicBlock *, 4> ExitingBlocks;
-  L->getExitingBlocks(ExitingBlocks);
+  L.getExitingBlocks(ExitingBlocks);
   auto HasNoClobbersOnPath =
-      [L, AA, &AccessedLocs, &ExitingBlocks, &InstToDuplicate,
+      [&L, &AA, &AccessedLocs, &ExitingBlocks, &InstToDuplicate,
        MSSAThreshold](BasicBlock *Succ, BasicBlock *Header,
                       SmallVector<MemoryAccess *, 4> AccessesToCheck)
       -> Optional<IVConditionInfo> {
@@ -1791,7 +1780,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
 
     while (!WorkList.empty()) {
       BasicBlock *Current = WorkList.pop_back_val();
-      if (!L->contains(Current))
+      if (!L.contains(Current))
         continue;
       const auto &SeenIns = Seen.insert(Current);
       if (!SeenIns.second)
@@ -1829,9 +1818,9 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
       // For a MemoryDef, check if is aliases any of the location feeding
       // the original condition.
       if (auto *CurrentDef = dyn_cast<MemoryDef>(Current)) {
-        if (any_of(AccessedLocs, [AA, CurrentDef](MemoryLocation &Loc) {
+        if (any_of(AccessedLocs, [&AA, CurrentDef](MemoryLocation &Loc) {
               return isModSet(
-                  AA->getModRefInfo(CurrentDef->getMemoryInst(), Loc));
+                  AA.getModRefInfo(CurrentDef->getMemoryInst(), Loc));
             }))
           return {};
       }
@@ -1843,7 +1832,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
     // We could also allow loops with known trip counts without mustprogress,
     // but ScalarEvolution may not be available.
     Info.PathIsNoop &=
-        L->getHeader()->getParent()->mustProgress() || hasMustProgress(L);
+        L.getHeader()->getParent()->mustProgress() || hasMustProgress(&L);
 
     // If the path is considered a no-op so far, check if it reaches a
     // single exit block without any phis. This ensures no values from the
@@ -1853,7 +1842,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
         if (!Seen.contains(Exiting))
           continue;
         for (auto *Succ : successors(Exiting)) {
-          if (L->contains(Succ))
+          if (L.contains(Succ))
             continue;
 
           Info.PathIsNoop &= llvm::empty(Succ->phis()) &&
@@ -1878,12 +1867,12 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop *L,
   if (TI->getSuccessor(0) == TI->getSuccessor(1))
     return {};
 
-  if (auto Info = HasNoClobbersOnPath(TI->getSuccessor(0), L->getHeader(),
+  if (auto Info = HasNoClobbersOnPath(TI->getSuccessor(0), L.getHeader(),
                                       AccessesToCheck)) {
     Info->KnownValue = ConstantInt::getTrue(TI->getContext());
     return Info;
   }
-  if (auto Info = HasNoClobbersOnPath(TI->getSuccessor(1), L->getHeader(),
+  if (auto Info = HasNoClobbersOnPath(TI->getSuccessor(1), L.getHeader(),
                                       AccessesToCheck)) {
     Info->KnownValue = ConstantInt::getFalse(TI->getContext());
     return Info;

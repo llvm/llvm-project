@@ -1388,6 +1388,20 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   // We use EXTRACT_SUBVECTOR to "cast" a scalable vector to a fixed length one.
   setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+  if (VT.isFloatingPoint()) {
+    setCondCodeAction(ISD::SETO, VT, Expand);
+    setCondCodeAction(ISD::SETOLT, VT, Expand);
+    setCondCodeAction(ISD::SETLT, VT, Expand);
+    setCondCodeAction(ISD::SETOLE, VT, Expand);
+    setCondCodeAction(ISD::SETLE, VT, Expand);
+    setCondCodeAction(ISD::SETULT, VT, Expand);
+    setCondCodeAction(ISD::SETULE, VT, Expand);
+    setCondCodeAction(ISD::SETUGE, VT, Expand);
+    setCondCodeAction(ISD::SETUGT, VT, Expand);
+    setCondCodeAction(ISD::SETUEQ, VT, Expand);
+    setCondCodeAction(ISD::SETUNE, VT, Expand);
+  }
+
   // Lower fixed length vector operations to scalable equivalents.
   setOperationAction(ISD::ABS, VT, Custom);
   setOperationAction(ISD::ADD, VT, Custom);
@@ -10389,11 +10403,8 @@ static SDValue EmitVectorComparison(SDValue LHS, SDValue RHS,
 
 SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
                                            SelectionDAG &DAG) const {
-  if (Op.getValueType().isScalableVector()) {
-    if (Op.getOperand(0).getValueType().isFloatingPoint())
-      return Op;
+  if (Op.getValueType().isScalableVector())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::SETCC_MERGE_ZERO);
-  }
 
   if (useSVEForFixedLengthVectorVT(Op.getOperand(0).getValueType()))
     return LowerFixedLengthVectorSetccToSVE(Op, DAG);
@@ -17454,10 +17465,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorSetccToSVE(
          "Only expected to lower fixed length vector operation!");
   assert(Op.getValueType() == InVT.changeTypeToInteger() &&
          "Expected integer result of the same bit length as the inputs!");
-
-  // Expand floating point vector comparisons.
-  if (InVT.isFloatingPoint())
-    return SDValue();
 
   auto Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
   auto Op2 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(1));

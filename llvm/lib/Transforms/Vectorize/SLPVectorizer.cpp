@@ -6570,7 +6570,7 @@ class HorizontalReduction {
 
   /// Creates reduction operation with the current opcode.
   static Value *createOp(IRBuilder<> &Builder, RecurKind Kind, Value *LHS,
-                         Value *RHS, const Twine &Name) {
+                         Value *RHS, const Twine &Name, bool UseSelect) {
     unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
     switch (Kind) {
     case RecurKind::Add:
@@ -6586,23 +6586,30 @@ class HorizontalReduction {
       return Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, LHS, RHS);
     case RecurKind::FMin:
       return Builder.CreateBinaryIntrinsic(Intrinsic::minnum, LHS, RHS);
-
-    case RecurKind::SMax: {
-      Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
-      return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-    }
-    case RecurKind::SMin: {
-      Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
-      return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-    }
-    case RecurKind::UMax: {
-      Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
-      return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-    }
-    case RecurKind::UMin: {
-      Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
-      return Builder.CreateSelect(Cmp, LHS, RHS, Name);
-    }
+    case RecurKind::SMax:
+      if (UseSelect) {
+        Value *Cmp = Builder.CreateICmpSGT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smax, LHS, RHS);
+    case RecurKind::SMin:
+      if (UseSelect) {
+        Value *Cmp = Builder.CreateICmpSLT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      return Builder.CreateBinaryIntrinsic(Intrinsic::smin, LHS, RHS);
+    case RecurKind::UMax:
+      if (UseSelect) {
+        Value *Cmp = Builder.CreateICmpUGT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      return Builder.CreateBinaryIntrinsic(Intrinsic::umax, LHS, RHS);
+    case RecurKind::UMin:
+      if (UseSelect) {
+        Value *Cmp = Builder.CreateICmpULT(LHS, RHS, Name);
+        return Builder.CreateSelect(Cmp, LHS, RHS, Name);
+      }
+      return Builder.CreateBinaryIntrinsic(Intrinsic::umin, LHS, RHS);
     default:
       llvm_unreachable("Unknown reduction operation.");
     }
@@ -6613,12 +6620,16 @@ class HorizontalReduction {
   static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name,
                          const ReductionOpsListType &ReductionOps) {
-    Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name);
+    bool UseSelect = ReductionOps.size() == 2;
+    assert((!UseSelect || isa<SelectInst>(ReductionOps[1][0])) &&
+           "Expected cmp + select pairs for reduction");
+    Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name, UseSelect);
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
-      if (auto *Sel = dyn_cast<SelectInst>(Op))
+      if (auto *Sel = dyn_cast<SelectInst>(Op)) {
         propagateIRFlags(Sel->getCondition(), ReductionOps[0]);
-      propagateIRFlags(Op, ReductionOps[1]);
-      return Op;
+        propagateIRFlags(Op, ReductionOps[1]);
+        return Op;
+      }
     }
     propagateIRFlags(Op, ReductionOps[0]);
     return Op;
@@ -6627,10 +6638,10 @@ class HorizontalReduction {
   /// from \p I.
   static Value *createOp(IRBuilder<> &Builder, RecurKind RdxKind, Value *LHS,
                          Value *RHS, const Twine &Name, Instruction *I) {
-    Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name);
+    auto *SelI = dyn_cast<SelectInst>(I);
+    Value *Op = createOp(Builder, RdxKind, LHS, RHS, Name, SelI != nullptr);
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)) {
       if (auto *Sel = dyn_cast<SelectInst>(Op))
-        if (auto *SelI = dyn_cast<SelectInst>(I))
           propagateIRFlags(Sel->getCondition(), SelI->getCondition());
     }
     propagateIRFlags(Op, I);
@@ -6660,17 +6671,20 @@ class HorizontalReduction {
     if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
       return RecurKind::FMin;
 
+    // This matches either cmp+select or intrinsics. SLP is expected to handle
+    // either form.
+    // TODO: If we are canonicalizing to intrinsics, we can remove several
+    //       special-case paths that deal with selects.
+    if (match(I, m_SMax(m_Value(), m_Value())))
+      return RecurKind::SMax;
+    if (match(I, m_SMin(m_Value(), m_Value())))
+      return RecurKind::SMin;
+    if (match(I, m_UMax(m_Value(), m_Value())))
+      return RecurKind::UMax;
+    if (match(I, m_UMin(m_Value(), m_Value())))
+      return RecurKind::UMin;
+
     if (auto *Select = dyn_cast<SelectInst>(I)) {
-      // These would also match llvm.{u,s}{min,max} intrinsic call
-      // if were not guarded by the SelectInst check above.
-      if (match(I, m_SMax(m_Value(), m_Value())))
-        return RecurKind::SMax;
-      if (match(I, m_SMin(m_Value(), m_Value())))
-        return RecurKind::SMin;
-      if (match(I, m_UMax(m_Value(), m_Value())))
-        return RecurKind::UMax;
-      if (match(I, m_UMin(m_Value(), m_Value())))
-        return RecurKind::UMin;
       // Try harder: look for min/max pattern based on instructions producing
       // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
       // During the intermediate stages of SLP, it's very common to have
@@ -7383,6 +7397,14 @@ static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
   if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(V0), m_Value(V1))))
     return true;
   if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::smin>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umax>(m_Value(V0), m_Value(V1))))
+    return true;
+  if (match(I, m_Intrinsic<Intrinsic::umin>(m_Value(V0), m_Value(V1))))
     return true;
   return false;
 }

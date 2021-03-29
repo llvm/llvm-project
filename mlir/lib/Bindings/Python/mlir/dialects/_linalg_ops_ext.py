@@ -49,9 +49,6 @@ class StructuredOpMixin:
   """All structured ops use the same mixin class."""
 
   def __init__(self, inputs, outputs=(), results=(), loc=None, ip=None):
-    if outputs and results:
-      raise ValueError(
-          "Structured ops must have outputs or results, but not both.")
     super().__init__(
         self.build_generic(results=list(results),
                            operands=[list(inputs), list(outputs)],

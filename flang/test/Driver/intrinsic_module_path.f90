@@ -3,20 +3,11 @@
 ! With the option GIVEN, the module with the same name is PREPENDED, and considered over the
 ! default one, causing a CHECKSUM error.
 
-! REQUIRES: new-flang-driver
-
-
-!--------------------------
-! FLANG DRIVER (flang-new)
-!--------------------------
-! RUN: %flang-new -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
-! RUN: not %flang-new -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
-
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang-new -fc1)
 !-----------------------------------------
-! RUN: %flang-new -fc1 %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
-! RUN: not %flang-new -fc1 -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
+! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 
 !-----------------------------------------
 ! EXPECTED OUTPUT WITHOUT
