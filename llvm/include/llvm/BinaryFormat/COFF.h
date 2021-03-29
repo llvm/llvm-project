@@ -603,7 +603,7 @@ enum WindowsSubsystem : unsigned {
   IMAGE_SUBSYSTEM_NATIVE = 1,  ///< Device drivers and native Windows processes
   IMAGE_SUBSYSTEM_WINDOWS_GUI = 2,      ///< The Windows GUI subsystem.
   IMAGE_SUBSYSTEM_WINDOWS_CUI = 3,      ///< The Windows character subsystem.
-  IMAGE_SUBSYSTEM_OS2_CUI = 5,          ///< The OS/2 character subsytem.
+  IMAGE_SUBSYSTEM_OS2_CUI = 5,          ///< The OS/2 character subsystem.
   IMAGE_SUBSYSTEM_POSIX_CUI = 7,        ///< The POSIX character subsystem.
   IMAGE_SUBSYSTEM_NATIVE_WINDOWS = 8,   ///< Native Windows 9x driver.
   IMAGE_SUBSYSTEM_WINDOWS_CE_GUI = 9,   ///< Windows CE.
