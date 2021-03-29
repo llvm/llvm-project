@@ -37,8 +37,11 @@ static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
 
-// TODO: Move size-based thresholds out of legality checking, make cost based
-// decisions instead of hard thresholds.
+static cl::opt<unsigned> PragmaVectorizeMemoryCheckThreshold(
+    "pragma-vectorize-memory-check-threshold", cl::init(128), cl::Hidden,
+    cl::desc("The maximum allowed number of runtime memory checks with a "
+             "vectorize(enable) pragma."));
+
 static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
     "vectorize-scev-check-threshold", cl::init(16), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed."));
@@ -241,6 +244,32 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
       break;
     }
   }
+}
+
+bool LoopVectorizationRequirements::doesNotMeet(
+    Function *F, Loop *L, const LoopVectorizeHints &Hints) {
+  const char *PassName = Hints.vectorizeAnalysisPassName();
+  bool Failed = false;
+
+  // Test if runtime memcheck thresholds are exceeded.
+  bool PragmaThresholdReached =
+      NumRuntimePointerChecks > PragmaVectorizeMemoryCheckThreshold;
+  bool ThresholdReached =
+      NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
+  if ((ThresholdReached && !Hints.allowReordering()) ||
+      PragmaThresholdReached) {
+    ORE.emit([&]() {
+      return OptimizationRemarkAnalysisAliasing(PassName, "CantReorderMemOps",
+                                                L->getStartLoc(),
+                                                L->getHeader())
+             << "loop not vectorized: cannot prove it is safe to reorder "
+                "memory operations";
+    });
+    LLVM_DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
+    Failed = true;
+  }
+
+  return Failed;
 }
 
 // Return true if the inner loop \p Lp is uniform with regard to the outer loop
