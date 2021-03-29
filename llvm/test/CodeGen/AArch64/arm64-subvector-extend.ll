@@ -202,3 +202,67 @@ define <8 x i64> @sext_v8i8_to_v8i64(<8 x i8> %v0) nounwind {
   %r = sext <8 x i8> %v0 to <8 x i64>
   ret <8 x i64> %r
 }
+
+; Extends of vectors of i1.
+
+define <32 x i8> @zext_v32i1(<32 x i1> %arg) {
+; CHECK-LABEL: zext_v32i1:
+; CHECK:         and.16b v0, v0, v2
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    ret
+  %res = zext <32 x i1> %arg to <32 x i8>
+  ret <32 x i8> %res
+}
+
+define <32 x i8> @sext_v32i1(<32 x i1> %arg) {
+; CHECK-LABEL: sext_v32i1:
+; CHECK:         shl.16b v0, v0, #7
+; CHECK-NEXT:    shl.16b v1, v1, #7
+; CHECK-NEXT:    sshr.16b v0, v0, #7
+; CHECK-NEXT:    sshr.16b v1, v1, #7
+; CHECK-NEXT:    ret
+;
+  %res = sext <32 x i1> %arg to <32 x i8>
+  ret <32 x i8> %res
+}
+
+define <64 x i8> @zext_v64i1(<64 x i1> %arg) {
+; CHECK-LABEL: zext_v64i1:
+; CHECK:         and.16b v0, v0, [[V4:v.+]]
+; CHECK-NEXT:    and.16b v1, v1, [[V4]]
+; CHECK-NEXT:    and.16b v2, v2, [[V4]]
+; CHECK-NEXT:    and.16b v3, v3, [[V4]]
+; CHECK-NEXT:    ret
+;
+  %res = zext <64 x i1> %arg to <64 x i8>
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @sext_v64i1(<64 x i1> %arg) {
+; CHECK-LABEL: sext_v64i1:
+; CHECK:         shl.16b v0, v0, #7
+; CHECK-NEXT:    shl.16b v3, v3, #7
+; CHECK-NEXT:    shl.16b v2, v2, #7
+; CHECK-NEXT:    shl.16b [[V4:v.+]], v1, #7
+; CHECK-NEXT:    sshr.16b v0, v0, #7
+; CHECK-NEXT:    sshr.16b v1, v3, #7
+; CHECK-NEXT:    sshr.16b v2, v2, #7
+; CHECK-NEXT:    sshr.16b v3, [[V4]], #7
+; CHECK-NEXT:    ret
+;
+  %res = sext <64 x i1> %arg to <64 x i8>
+  ret <64 x i8> %res
+}
+
+define <1 x i128> @sext_v1x64(<1 x i64> %arg) {
+; CHECK-LABEL: sext_v1x64:
+; CHECK-NEXT:   .cfi_startproc
+; CHECK-NEXT:    fmov    x8, d0
+; CHECK-NEXT:    asr x1, x8, #63
+; CHECK-NEXT:    mov.d   v0[1], x1
+; CHECK-NEXT:    fmov    x0, d0
+; CHECK-NEXT:    ret
+;
+  %res = sext <1 x i64> %arg to <1 x i128>
+  ret <1 x i128> %res
+}

@@ -13939,78 +13939,7 @@ static SDValue performExtendCombine(SDNode *N,
 
     return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), N->getValueType(0), NewABD);
   }
-
-  // This is effectively a custom type legalization for AArch64.
-  //
-  // Type legalization will split an extend of a small, legal, type to a larger
-  // illegal type by first splitting the destination type, often creating
-  // illegal source types, which then get legalized in isel-confusing ways,
-  // leading to really terrible codegen. E.g.,
-  //   %result = v8i32 sext v8i8 %value
-  // becomes
-  //   %losrc = extract_subreg %value, ...
-  //   %hisrc = extract_subreg %value, ...
-  //   %lo = v4i32 sext v4i8 %losrc
-  //   %hi = v4i32 sext v4i8 %hisrc
-  // Things go rapidly downhill from there.
-  //
-  // For AArch64, the [sz]ext vector instructions can only go up one element
-  // size, so we can, e.g., extend from i8 to i16, but to go from i8 to i32
-  // take two instructions.
-  //
-  // This implies that the most efficient way to do the extend from v8i8
-  // to two v4i32 values is to first extend the v8i8 to v8i16, then do
-  // the normal splitting to happen for the v8i16->v8i32.
-
-  // This is pre-legalization to catch some cases where the default
-  // type legalization will create ill-tempered code.
-  if (!DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  // We're only interested in cleaning things up for non-legal vector types
-  // here. If both the source and destination are legal, things will just
-  // work naturally without any fiddling.
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  EVT ResVT = N->getValueType(0);
-  if (!ResVT.isVector() || TLI.isTypeLegal(ResVT))
-    return SDValue();
-  // If the vector type isn't a simple VT, it's beyond the scope of what
-  // we're  worried about here. Let legalization do its thing and hope for
-  // the best.
-  SDValue Src = N->getOperand(0);
-  EVT SrcVT = Src->getValueType(0);
-  if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return SDValue();
-
-  // If the source VT is a 64-bit fixed or scalable vector, we can play games
-  // and get the better results we want.
-  if (SrcVT.getSizeInBits().getKnownMinSize() != 64)
-    return SDValue();
-
-  unsigned SrcEltSize = SrcVT.getScalarSizeInBits();
-  ElementCount SrcEC = SrcVT.getVectorElementCount();
-  SrcVT = MVT::getVectorVT(MVT::getIntegerVT(SrcEltSize * 2), SrcEC);
-  SDLoc DL(N);
-  Src = DAG.getNode(N->getOpcode(), DL, SrcVT, Src);
-
-  // Now split the rest of the operation into two halves, each with a 64
-  // bit source.
-  EVT LoVT, HiVT;
-  SDValue Lo, Hi;
-  LoVT = HiVT = ResVT.getHalfNumVectorElementsVT(*DAG.getContext());
-
-  EVT InNVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
-                               LoVT.getVectorElementCount());
-  Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
-                   DAG.getConstant(0, DL, MVT::i64));
-  Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InNVT, Src,
-                   DAG.getConstant(InNVT.getVectorMinNumElements(), DL, MVT::i64));
-  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, Lo);
-  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, Hi);
-
-  // Now combine the parts back together so we still have a single result
-  // like the combiner expects.
-  return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
+  return SDValue();
 }
 
 static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
