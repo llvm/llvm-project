@@ -5,7 +5,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 
 %struct.S = type { i8* }
 
-declare void @f(<{ %struct.S }>* inalloca)
+declare void @f(<{ %struct.S }>* inalloca(<{ %struct.S }>))
 
 
 ; Check that we don't clone the %x alloca and insert it in the live range of
@@ -41,7 +41,7 @@ false:
   br label %exit
 
 exit:
-  call void @f(<{ %struct.S }>* inalloca %argmem)
+  call void @f(<{ %struct.S }>* inalloca(<{ %struct.S }>) %argmem)
   call void @llvm.stackrestore(i8* %inalloca.save)
   ret void
 }
