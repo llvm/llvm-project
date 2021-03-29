@@ -2446,7 +2446,7 @@ public:
   }
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
-    TODO(getLoc(), "constant");
+    TODO(getLoc(), "array constructor");
     return [](IterSpace iters) -> ExtValue {
       return mlir::Value{}; /* FIXME */
     };
