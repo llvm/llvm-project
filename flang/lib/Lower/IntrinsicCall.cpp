@@ -1368,8 +1368,10 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
   auto string = builder.createBox(loc, args[0]);
   auto substring = builder.createBox(loc, args[1]);
   auto makeRefThenEmbox = [&](mlir::Value b) {
-    auto temp = builder.createTemporary(loc, builder.getI1Type());
-    auto castb = builder.createConvert(loc, builder.getI1Type(), b);
+    auto logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    auto temp = builder.createTemporary(loc, logTy);
+    auto castb = builder.createConvert(loc, logTy, b);
     builder.create<fir::StoreOp>(loc, castb, temp);
     return builder.createBox(loc, temp);
   };
