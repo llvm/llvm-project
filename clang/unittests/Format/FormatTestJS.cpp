@@ -276,6 +276,12 @@ TEST_F(FormatTestJS, UnderstandsJavaScriptOperators) {
   // ES6 spread operator.
   verifyFormat("someFunction(...a);");
   verifyFormat("var x = [1, ...a, 2];");
+
+  // "- -1" is legal JS syntax, but must not collapse into "--".
+  verifyFormat("- -1;", " - -1;");
+  verifyFormat("-- -1;", " -- -1;");
+  verifyFormat("+ +1;", " + +1;");
+  verifyFormat("++ +1;", " ++ +1;");
 }
 
 TEST_F(FormatTestJS, UnderstandsAmpAmp) {
