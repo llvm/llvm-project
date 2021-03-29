@@ -39,6 +39,10 @@ public:
   static Operation *getStartOperation(Value allocValue, Block *placementBlock,
                                       const Liveness &liveness);
 
+  /// Find an associated dealloc operation that is linked to the given
+  /// allocation node (if any).
+  static Operation *findDealloc(Value allocValue);
+
 public:
   /// Initializes the internal list by discovering all supported allocation
   /// nodes.

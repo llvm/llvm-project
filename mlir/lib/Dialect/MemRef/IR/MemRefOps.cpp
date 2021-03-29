@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -460,76 +459,6 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
-}
-
-//===----------------------------------------------------------------------===//
-// CloneOp
-//===----------------------------------------------------------------------===//
-
-static LogicalResult verify(CloneOp op) { return success(); }
-
-void CloneOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(MemoryEffects::Read::get(), input(),
-                       SideEffects::DefaultResource::get());
-  effects.emplace_back(MemoryEffects::Write::get(), output(),
-                       SideEffects::DefaultResource::get());
-}
-
-namespace {
-/// Fold Dealloc operations that are deallocating an AllocOp that is only used
-/// by other Dealloc operations.
-struct SimplifyClones : public OpRewritePattern<CloneOp> {
-  using OpRewritePattern<CloneOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(CloneOp cloneOp,
-                                PatternRewriter &rewriter) const override {
-    if (cloneOp.use_empty()) {
-      rewriter.eraseOp(cloneOp);
-      return success();
-    }
-
-    Value source = cloneOp.input();
-
-    // Removes the clone operation and the corresponding dealloc and alloc
-    // operation (if any).
-    auto tryRemoveClone = [&](Operation *sourceOp, Operation *dealloc,
-                              Operation *alloc) {
-      if (!sourceOp || !dealloc || !alloc ||
-          alloc->getBlock() != dealloc->getBlock())
-        return false;
-      rewriter.replaceOp(cloneOp, source);
-      rewriter.eraseOp(dealloc);
-      return true;
-    };
-
-    // Removes unnecessary clones that are derived from the result of the clone
-    // op.
-    Operation *deallocOp = findDealloc(cloneOp.output());
-    Operation *sourceOp = source.getDefiningOp();
-    if (tryRemoveClone(sourceOp, deallocOp, sourceOp))
-      return success();
-
-    // Removes unnecessary clones that are derived from the source of the clone
-    // op.
-    deallocOp = findDealloc(source);
-    if (tryRemoveClone(sourceOp, deallocOp, cloneOp))
-      return success();
-
-    return failure();
-  }
-};
-
-} // end anonymous namespace.
-
-void CloneOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                          MLIRContext *context) {
-  results.insert<SimplifyClones>(context);
-}
-
-OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
   return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
 }
 
