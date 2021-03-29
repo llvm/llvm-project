@@ -26,6 +26,7 @@
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}
 // CHECK-DAG: Bake
 // CHECK-NOT: @{{hhh|ggg|fff|eee}} =
+// CHECK-DAG: @flag = hidden global i8 undef,
 // CHECK-DAG: @aaa = external global i32,
 // CHECK-DAG: @bbb ={{ hidden | }}global i32 0,
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { i8* bitcast (i32* @bbb to i8*),
@@ -53,8 +54,8 @@
 
 #ifndef HEADER
 #define HEADER
-
 #pragma omp declare target
+bool flag [[clang::loader_uninitialized]];
 extern int bbb;
 #pragma omp end declare target
 #pragma omp declare target
