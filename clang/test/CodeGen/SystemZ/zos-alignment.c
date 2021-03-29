@@ -12,6 +12,24 @@ int f0() { return v0 + v1 + v2 + v3; }
 // DECL-NEXT: @v2 {{.*}} align 16
 // DECL-NEXT: @v3 {{.*}} align 32
 
+const struct cs0 {
+  unsigned long   :0;
+  long long        a;
+} CS0 = {};
+// CHECK:              0 | struct cs0
+// CHECK-NEXT:       0:- |   unsigned long
+// CHECK-NEXT:         0 |   long long a
+// CHECK-NEXT:           | [sizeof=8, align=8]
+
+volatile struct vs0 {
+  long            :0;
+  short           a;
+} VS0;
+// CHECK:              0 | struct vs0
+// CHECK-NEXT:       0:- |   long
+// CHECK-NEXT:         0 |   short a
+// CHECK-NEXT:           | [sizeof=2, align=2]
+
 struct s0 {
   short a:3;
   long b:5;
