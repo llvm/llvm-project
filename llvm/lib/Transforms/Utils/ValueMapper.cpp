@@ -945,8 +945,7 @@ void Mapper::remapInstruction(Instruction *I) {
     AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
       for (Attribute::AttrKind TypedAttr :
-             {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef,
-              Attribute::InAlloca}) {
+           {Attribute::ByVal, Attribute::StructRet, Attribute::ByRef}) {
         if (Type *Ty = Attrs.getAttribute(i, TypedAttr).getValueAsType()) {
           Attrs = Attrs.replaceAttributeType(C, i, TypedAttr,
                                              TypeMapper->remapType(Ty));

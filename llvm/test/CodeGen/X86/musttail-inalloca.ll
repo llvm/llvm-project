@@ -11,10 +11,10 @@ target triple = "i386-pc-windows-msvc19.16.0"
 ; 20 bytes of memory.
 %struct.Args = type { i32, i32, i32, i32, i32 }
 
-declare dso_local x86_thiscallcc void @methodWithVtorDisp(i8* nocapture readonly, <{ %struct.Args }>* inalloca(<{ %struct.Args }>))
+declare dso_local x86_thiscallcc void @methodWithVtorDisp(i8* nocapture readonly, <{ %struct.Args }>* inalloca)
 
 ; Function Attrs: nounwind optsize
-define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) %1) #0 {
+define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struct.Args }>* inalloca %1) #0 {
 ; CHECK-LABEL: methodWithVtorDisp_thunk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -34,7 +34,7 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struc
   %7 = getelementptr i8, i8* %0, i32 %6
   %8 = call i8* @llvm.returnaddress(i32 0)
   call void @__cyg_profile_func_exit(i8* bitcast (void (i8*, <{ %struct.Args }>*)* @methodWithVtorDisp_thunk to i8*), i8* %8)
-  musttail call x86_thiscallcc void @methodWithVtorDisp(i8* %7, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) nonnull %1)
+  musttail call x86_thiscallcc void @methodWithVtorDisp(i8* %7, <{ %struct.Args }>* inalloca nonnull %1)
   ret void
 }
 
