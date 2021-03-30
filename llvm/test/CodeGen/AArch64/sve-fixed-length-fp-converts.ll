@@ -31,7 +31,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <8 x half> @fptrunc_v8f32_v8f16(<8 x float>* %in) #0 {
 ; CHECK-LABEL: fptrunc_v8f32_v8f16:
-; CHECK-COUNT-8: fcvt h{{[0-9]}}, s{{[0-9]}}
+; CHECK-COUNT-8: fcvt h{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <8 x float>, <8 x float>* %in
@@ -41,7 +41,7 @@ define <8 x half> @fptrunc_v8f32_v8f16(<8 x float>* %in) #0 {
 
 define void @fptrunc_v16f32_v16f16(<16 x float>* %in, <16 x half>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v16f32_v16f16:
-; CHECK-COUNT-16: fcvt h{{[0-9]}}, s{{[0-9]}}
+; CHECK-COUNT-16: fcvt h{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <16 x float>, <16 x float>* %in
@@ -52,7 +52,7 @@ define void @fptrunc_v16f32_v16f16(<16 x float>* %in, <16 x half>* %out) #0 {
 
 define void @fptrunc_v32f32_v32f16(<32 x float>* %in, <32 x half>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v32f32_v32f16:
-; CHECK-COUNT-32: fcvt h{{[0-9]}}, s{{[0-9]}}
+; CHECK-COUNT-32: fcvt h{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <32 x float>, <32 x float>* %in
@@ -63,7 +63,7 @@ define void @fptrunc_v32f32_v32f16(<32 x float>* %in, <32 x half>* %out) #0 {
 
 define void @fptrunc_v64f32_v64f16(<64 x float>* %in, <64 x half>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v64f32_v64f16:
-; CHECK-COUNT-64: fcvt h{{[0-9]}}, s{{[0-9]}}
+; CHECK-COUNT-64: fcvt h{{[0-9]+}}, s{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <64 x float>, <64 x float>* %in
@@ -78,7 +78,7 @@ define void @fptrunc_v64f32_v64f16(<64 x float>* %in, <64 x half>* %out) #0 {
 
 define <4 x half> @fptrunc_v4f64_v4f16(<4 x double>* %in) #0 {
 ; CHECK-LABEL: fptrunc_v4f64_v4f16:
-; CHECK-COUNT-4: fcvt h{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-4: fcvt h{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <4 x double>, <4 x double>* %in
@@ -88,7 +88,7 @@ define <4 x half> @fptrunc_v4f64_v4f16(<4 x double>* %in) #0 {
 
 define <8 x half> @fptrunc_v8f64_v8f16(<8 x double>* %in) #0 {
 ; CHECK-LABEL: fptrunc_v8f64_v8f16:
-; CHECK-COUNT-8: fcvt h{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-8: fcvt h{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <8 x double>, <8 x double>* %in
@@ -98,7 +98,7 @@ define <8 x half> @fptrunc_v8f64_v8f16(<8 x double>* %in) #0 {
 
 define void @fptrunc_v16f64_v16f16(<16 x double>* %in, <16 x half>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v16f64_v16f16:
-; CHECK-COUNT-16: fcvt h{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-16: fcvt h{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <16 x double>, <16 x double>* %in
@@ -109,7 +109,7 @@ define void @fptrunc_v16f64_v16f16(<16 x double>* %in, <16 x half>* %out) #0 {
 
 define void @fptrunc_v32f64_v32f16(<32 x double>* %in, <32 x half>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v32f64_v32f16:
-; CHECK-COUNT-32: fcvt h{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-32: fcvt h{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <32 x double>, <32 x double>* %in
@@ -124,7 +124,7 @@ define void @fptrunc_v32f64_v32f16(<32 x double>* %in, <32 x half>* %out) #0 {
 
 define <4 x float> @fptrunc_v4f64_v4f32(<4 x double>* %in) #0 {
 ; CHECK-LABEL: fptrunc_v4f64_v4f32:
-; CHECK-COUNT-4: fcvt s{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-4: fcvt s{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <4 x double>, <4 x double>* %in
@@ -134,7 +134,7 @@ define <4 x float> @fptrunc_v4f64_v4f32(<4 x double>* %in) #0 {
 
 define void @fptrunc_v8f64_v8f32(<8 x double>* %in, <8 x float>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v8f64_v8f32:
-; CHECK-COUNT-8: fcvt s{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-8: fcvt s{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <8 x double>, <8 x double>* %in
@@ -145,7 +145,7 @@ define void @fptrunc_v8f64_v8f32(<8 x double>* %in, <8 x float>* %out) #0 {
 
 define void @fptrunc_v16f64_v16f32(<16 x double>* %in, <16 x float>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v16f64_v16f32:
-; CHECK-COUNT-16: fcvt s{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-16: fcvt s{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <16 x double>, <16 x double>* %in
@@ -156,7 +156,7 @@ define void @fptrunc_v16f64_v16f32(<16 x double>* %in, <16 x float>* %out) #0 {
 
 define void @fptrunc_v32f64_v32f32(<32 x double>* %in, <32 x float>* %out) #0 {
 ; CHECK-LABEL: fptrunc_v32f64_v32f32:
-; CHECK-COUNT-32: fcvt s{{[0-9]}}, d{{[0-9]}}
+; CHECK-COUNT-32: fcvt s{{[0-9]+}}, d{{[0-9]+}}
 ; CHECK-NOT: fcvt
 ; CHECK: ret
   %a = load <32 x double>, <32 x double>* %in
