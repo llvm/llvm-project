@@ -255,6 +255,36 @@ multiclass RVVIntBinBuiltinSet {
   defm "" : RVVUnsignedBinBuiltinSet;
 }
 
+multiclass RVVSignedShiftBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                [["vv", "v", "vvUv"],
+                                 ["vx", "v", "vvz"]]>;
+}
+
+multiclass RVVUnsignedShiftBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                [["vv", "Uv", "UvUvUv"],
+                                 ["vx", "Uv", "UvUvz"]]>;
+}
+
+multiclass RVVShiftBuiltinSet {
+  defm "" : RVVSignedShiftBuiltinSet;
+  defm "" : RVVUnsignedShiftBuiltinSet;
+}
+
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+  multiclass RVVSignedNShiftBuiltinSet {
+    defm "" : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+                                     [["wv", "v", "vwUv"],
+                                      ["wx", "v", "vwz"]]>;
+  }
+  multiclass RVVUnsignedNShiftBuiltinSet {
+    defm "" : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+                                     [["wv", "Uv", "UvUwUv"],
+                                      ["wx", "Uv", "UvUwz"]]>;
+  }
+}
+
 multiclass RVVIntTerBuiltinSet {
   defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
                                 [["vv", "v", "vvvv"],
@@ -518,27 +548,13 @@ defm vxor : RVVIntBinBuiltinSet;
 defm vor : RVVIntBinBuiltinSet;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
-defm vsll : RVVOutOp1BuiltinSet<"vsll", "csil",
-                                [["vv", "v", "vvUv"],
-                                 ["vx", "v", "vvz"],
-                                 ["vv", "Uv", "UvUvUv"],
-                                 ["vx", "Uv", "UvUvz"]]>;
-defm vsrl : RVVOutOp1BuiltinSet<"vsrl", "csil",
-                                [["vv", "Uv", "UvUvUv"],
-                                 ["vx", "Uv", "UvUvz"]]>;
-defm vsra : RVVOutOp1BuiltinSet<"vsra", "csil",
-                                [["vv", "v", "vvUv"],
-                                 ["vx", "v", "vvz"]]>;
+defm vsll : RVVShiftBuiltinSet;
+defm vsrl : RVVUnsignedShiftBuiltinSet;
+defm vsra : RVVSignedShiftBuiltinSet;
 
 // 12.7. Vector Narrowing Integer Right Shift Instructions
-let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-defm vnsrl : RVVOutOp0Op1BuiltinSet<"vnsrl", "csi",
-                                    [["wv", "Uv", "UvUwUv"],
-                                     ["wx", "Uv", "UvUwz"]]>;
-defm vnsra : RVVOutOp0Op1BuiltinSet<"vnsra", "csi",
-                                    [["wv", "v", "vwUv"],
-                                     ["wx", "v", "vwz"]]>;
-}
+defm vnsrl : RVVUnsignedNShiftBuiltinSet;
+defm vnsra : RVVSignedNShiftBuiltinSet;
 
 // 12.8. Vector Integer Comparison Instructions
 defm vmseq : RVVIntMaskOutBuiltinSet;
@@ -614,6 +630,30 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 
 // 12.16. Vector Integer Move Instructions
 // TODO
+
+// 13. Vector Fixed-Point Arithmetic Instructions
+// 13.1. Vector Single-Width Saturating Add and Subtract
+defm vsaddu : RVVUnsignedBinBuiltinSet;
+defm vsadd : RVVSignedBinBuiltinSet;
+defm vssubu : RVVUnsignedBinBuiltinSet;
+defm vssub : RVVSignedBinBuiltinSet;
+
+// 13.2. Vector Single-Width Averaging Add and Subtract
+defm vaaddu : RVVUnsignedBinBuiltinSet;
+defm vaadd : RVVSignedBinBuiltinSet;
+defm vasubu : RVVUnsignedBinBuiltinSet;
+defm vasub : RVVSignedBinBuiltinSet;
+
+// 13.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
+defm vsmul : RVVSignedBinBuiltinSet;
+
+// 13.4. Vector Single-Width Scaling Shift Instructions
+defm vssrl : RVVUnsignedShiftBuiltinSet;
+defm vssra : RVVSignedShiftBuiltinSet;
+
+// 13.5. Vector Narrowing Fixed-Point Clip Instructions
+defm vnclipu : RVVUnsignedNShiftBuiltinSet;
+defm vnclip : RVVSignedNShiftBuiltinSet;
 
 // 14. Vector Floating-Point Instructions
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
