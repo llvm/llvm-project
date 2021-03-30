@@ -1328,11 +1328,13 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
   unsigned ShaderType = SIInstrInfo::getDSShaderTypeValue(*MF);
 
   unsigned Offset0 = OrderedCountIndex << 2;
-  unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
-                     (Instruction << 4);
+  unsigned Offset1 = WaveRelease | (WaveDone << 1) | (Instruction << 4);
 
   if (STI.getGeneration() >= AMDGPUSubtarget::GFX10)
     Offset1 |= (CountDw - 1) << 6;
+
+  if (STI.getGeneration() < AMDGPUSubtarget::GFX11)
+    Offset1 |= ShaderType << 2;
 
   unsigned Offset = Offset0 | (Offset1 << 8);
 
