@@ -74,6 +74,8 @@ Tool *DPURTE::buildLinker() const {
                                 PathToBootstrap, McountLibName);
 }
 
+#define NR_TASKLETS "NR_TASKLETS"
+
 void DPURTE::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
@@ -91,6 +93,18 @@ void DPURTE::addClangTargetOptions(
 
   if (DriverArgs.hasArg(options::OPT_pg)) {
     CC1Args.push_back("-DDPU_PROFILING");
+  }
+
+  bool nr_tasklets_already_added = false;
+  for (unsigned int EachArg = 0; EachArg < DriverArgs.size(); EachArg++) {
+    std::string arg(DriverArgs.getArgString(EachArg));
+    if (arg.find(NR_TASKLETS) != ULLONG_MAX) {
+      nr_tasklets_already_added = true;
+      break;
+    }
+  }
+  if (!nr_tasklets_already_added) {
+    CC1Args.push_back("-D" NR_TASKLETS "=1");
   }
 }
 } // namespace toolchains
@@ -153,7 +167,7 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(LinkScript);
 
 #define STR_BUFFER_SIZE 128
-#define NR_TASKLETS_FMT "NR_TASKLETS=%u"
+#define NR_TASKLETS_FMT NR_TASKLETS "=%u"
 #define DEFAULT_STACK_SIZE_FMT "STACK_SIZE_DEFAULT=%u"
 #define STACK_SIZE_TASKLET_X_FMT "STACK_SIZE_TASKLET_%u=%u"
 #define DEFSYM_FMT "--defsym="
