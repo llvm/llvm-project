@@ -211,6 +211,7 @@ static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
   switch (OptClass) {
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
+  case Option::JoinedAndSeparateClass:
     Args.push_back(Spelling);
     Args.push_back(SA(Value));
     break;
@@ -2477,9 +2478,13 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   GenerateProgramAction();
 
-  for (const auto &PluginArgs : Opts.PluginArgs)
+  for (const auto &PluginArgs : Opts.PluginArgs) {
+    Option Opt = getDriverOptTable().getOption(OPT_plugin_arg);
+    const char *Spelling =
+        SA(Opt.getPrefix() + Opt.getName() + PluginArgs.first);
     for (const auto &PluginArg : PluginArgs.second)
-      GenerateArg(Args, OPT_plugin_arg, PluginArgs.first + PluginArg, SA);
+      denormalizeString(Args, Spelling, SA, Opt.getKind(), 0, PluginArg);
+  }
 
   for (const auto &Ext : Opts.ModuleFileExtensions)
     if (auto *TestExt = dyn_cast_or_null<TestModuleFileExtension>(Ext.get()))
