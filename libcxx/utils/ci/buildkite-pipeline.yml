@@ -288,6 +288,17 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Runtimes build"
+    command: "libcxx/utils/ci/run-buildbot runtimes-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   # All jobs defined before this `wait` will run whenever a CI job is started.
   # Jobs defined after the `wait` will run only if all the jobs above succeeded.
   # We use this to reduce the load on testers that have more constrained resources
