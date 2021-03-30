@@ -1122,9 +1122,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureWavefrontSize32,
    FeatureShaderCyclesRegister]>;
 
-def FeatureISAVersion11_0_0 : FeatureSet<
+def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
-   FeatureGFX11ExtraVGPRs,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot1Insts,
@@ -1137,6 +1136,15 @@ def FeatureISAVersion11_0_0 : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeaturePackedTID]>;
+
+// Features for GFX 11.0.0 and 11.0.1
+def FeatureISAVersion11_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureGFX11ExtraVGPRs])>;
+
+def FeatureISAVersion11_0_2 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
 
 //===----------------------------------------------------------------------===//
 
