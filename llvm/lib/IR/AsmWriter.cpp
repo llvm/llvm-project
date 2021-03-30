@@ -1936,7 +1936,10 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
 
   auto IsConstant = [&](Metadata *Bound) -> bool {
     if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
-      return BE->isSignedConstant();
+      return BE->isConstant()
+                 ? DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+                       *BE->isConstant()
+                 : false;
     }
     return false;
   };
