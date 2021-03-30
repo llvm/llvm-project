@@ -168,7 +168,7 @@ Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
   auto fTy = scanFunc.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
-      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
+       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
 
   llvm::SmallVector<mlir::Value> args = {
     builder.createConvert(loc, fTy.getInput(0), resultBox),

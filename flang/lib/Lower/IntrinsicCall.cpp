@@ -1559,7 +1559,7 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
   auto resultMutableBox =
        Fortran::lower::createTempMutableBox(builder, loc, resultType);
   auto resultIrBox =
-      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
   Fortran::lower::genScan(builder, loc, resultIrBox, string, set, back, kind);
 
