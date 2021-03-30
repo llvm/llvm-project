@@ -46,11 +46,16 @@ Error backend(const Config &C, AddStreamFn AddStream,
               ModuleSummaryIndex &CombinedIndex);
 
 /// Runs a ThinLTO backend.
+/// If \p ModuleMap is not nullptr, all the module files to be imported have
+/// already been mapped to memory and the corresponding BitcodeModule objects
+/// are saved in the ModuleMap. If \p ModuleMap is nullptr, module files will
+/// be mapped to memory on demand and at any given time during importing, only
+/// one source module will be kept open at the most.
 Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
                   Module &M, const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
-                  MapVector<StringRef, BitcodeModule> &ModuleMap,
+                  MapVector<StringRef, BitcodeModule> *ModuleMap,
                   const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 
 Error finalizeOptimizationRemarks(
@@ -62,15 +67,11 @@ BitcodeModule *findThinLTOModule(MutableArrayRef<BitcodeModule> BMs);
 /// Variant of the above.
 Expected<BitcodeModule> findThinLTOModule(MemoryBufferRef MBRef);
 
-/// Distributed ThinLTO: load the referenced modules, keeping their buffers
-/// alive in the provided OwnedImportLifetimeManager. Returns false if the
+/// Distributed ThinLTO: collect the referenced modules based on
+/// module summary and initialize ImportList. Returns false if the
 /// operation failed.
-bool loadReferencedModules(
-    const Module &M, const ModuleSummaryIndex &CombinedIndex,
-    FunctionImporter::ImportMapTy &ImportList,
-    MapVector<llvm::StringRef, llvm::BitcodeModule> &ModuleMap,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>>
-        &OwnedImportsLifetimeManager);
+bool initImportList(const Module &M, const ModuleSummaryIndex &CombinedIndex,
+                    FunctionImporter::ImportMapTy &ImportList);
 }
 }
 
