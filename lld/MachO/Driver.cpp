@@ -513,7 +513,7 @@ static void compileBitcodeFiles() {
 // any CommonSymbols.
 static void replaceCommonSymbols() {
   TimeTraceScope timeScope("Replace common symbols");
-  for (macho::Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->getSymbols()) {
     auto *common = dyn_cast<CommonSymbol>(sym);
     if (common == nullptr)
       continue;
