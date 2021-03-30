@@ -67,7 +67,7 @@ func @matmul_tensors(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>, %arg2: tens
 
 // -----
 
-func @conv_tensors_static(%input: tensor<1x225x225x32xf32>, %filter: tensor<3x3x3x32xf32>, %elementwise: tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32> {
+func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3x32xf32>, %elementwise: tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32> {
   %c112 = constant 112 : index
   %c32 = constant 32 : index
   %c16 = constant 16 : index
@@ -81,7 +81,7 @@ func @conv_tensors_static(%input: tensor<1x225x225x32xf32>, %filter: tensor<3x3x
 
   %conv = linalg.conv_2d_input_nhwc_filter_hwcf
     {dilations = dense<1> : tensor<2xi64>, strides = dense<2> : tensor<2xi64>}
-    ins(%input, %filter : tensor<1x225x225x32xf32>, tensor<3x3x3x32xf32>)
+    ins(%input, %filter : tensor<1x225x225x3xf32>, tensor<3x3x3x32xf32>)
     outs(%fill : tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32>
 
   %for0 = scf.for %iv0 = %c0 to %c112 step %c8 iter_args(%arg0 = %fill) -> tensor<1x112x112x32xf32> {
@@ -118,7 +118,7 @@ func @conv_tensors_static(%input: tensor<1x225x225x32xf32>, %filter: tensor<3x3x
 //      CHECK: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
 
 //      CHECK: func @conv_tensors_static
-// CHECK-SAME: (%[[INPUT:.+]]: tensor<1x225x225x32xf32>, %[[FILTER:.+]]: tensor<3x3x3x32xf32>, %[[ELEM:.+]]: tensor<1x112x112x32xf32>)
+// CHECK-SAME: (%[[INPUT:.+]]: tensor<1x225x225x3xf32>, %[[FILTER:.+]]: tensor<3x3x3x32xf32>, %[[ELEM:.+]]: tensor<1x112x112x32xf32>)
 
 //      CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
 // CHECK-NEXT: %[[FILL:.+]] = linalg.fill(%[[INIT]], %cst) : tensor<1x112x112x32xf32>, f32 -> tensor<1x112x112x32xf32>
@@ -127,14 +127,14 @@ func @conv_tensors_static(%input: tensor<1x225x225x32xf32>, %filter: tensor<3x3x
 // CHECK-NEXT:   %[[OFFSET_H:.+]] = affine.apply #[[MAP0]](%[[IV0]])
 // CHECK-NEXT:   scf.for %[[IV1:.+]] = %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[ARG1:.+]] = %[[ARG0]])
 // CHECK-NEXT:     %[[OFFSET_W:.+]] = affine.apply #[[MAP0]](%[[IV1]])
-// CHECK-NEXT:     %[[ST_INPUT:.+]] = subtensor %arg0[0, %[[OFFSET_H]], %[[OFFSET_W]], 0] [1, 17, 33, 32] [1, 1, 1, 1] : tensor<1x225x225x32xf32> to tensor<1x17x33x32xf32>
+// CHECK-NEXT:     %[[ST_INPUT:.+]] = subtensor %arg0[0, %[[OFFSET_H]], %[[OFFSET_W]], 0] [1, 17, 33, 3] [1, 1, 1, 1] : tensor<1x225x225x3xf32> to tensor<1x17x33x3xf32>
 // CHECK-NEXT:     scf.for %[[IV2:.+]] = %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[ARG2:.+]] = %[[ARG1]])
 // CHECK-NEXT:       %[[ST_ELEM:.+]] = subtensor %[[ELEM]][0, %[[IV0]], %[[IV1]], %[[IV2]]] [1, 8, 16, 4] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x8x16x4xf32>
 // CHECK-NEXT:       %[[ST_ARG2:.+]] = subtensor %[[ARG2]][0, %[[IV0]], %[[IV1]], %[[IV2]]] [1, 8, 16, 4] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x8x16x4xf32>
 // CHECK-NEXT:       %[[ST_FILTER:.+]] = subtensor %[[FILTER]][0, 0, 0, %[[IV2]]] [3, 3, 3, 4] [1, 1, 1, 1] : tensor<3x3x3x32xf32> to tensor<3x3x3x4xf32>
 // CHECK-NEXT:       %[[ST_FILL:.+]] = subtensor %[[FILL]][0, %[[IV0]], %[[IV1]], %[[IV2]]] [1, 8, 16, 4] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x8x16x4xf32>
 // CHECK-NEXT:       %[[ST_CONV:.+]] = linalg.conv_2d_input_nhwc_filter_hwcf
-// CHECK-SAME:         ins(%[[ST_INPUT]], %[[ST_FILTER]] : tensor<1x17x33x32xf32>, tensor<3x3x3x4xf32>)
+// CHECK-SAME:         ins(%[[ST_INPUT]], %[[ST_FILTER]] : tensor<1x17x33x3xf32>, tensor<3x3x3x4xf32>)
 // CHECK-SAME:         outs(%[[ST_FILL]] : tensor<1x8x16x4xf32>)
 // CHECK-NEXT:       %[[ADD:.+]] = linalg.generic
 // CHECK-SAME:         ins(%[[ST_CONV]], %[[ST_ELEM]] : tensor<1x8x16x4xf32>, tensor<1x8x16x4xf32>)

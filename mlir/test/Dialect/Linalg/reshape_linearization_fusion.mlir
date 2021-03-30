@@ -168,9 +168,9 @@ func @generic_op_021_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
 
 #map0 = affine_map<(d0, d1, d2) -> (d0)>
 #map1 = affine_map<(d0, d1, d2) -> (d1, d2)>
-#map2 = affine_map<(d0, d1, d2) -> (d1, d2, d0)>
-#map3 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func @generic_op_120_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x7x3xf32> {
+#map2 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+func @generic_op_120_permutation_reshape_producer_fusion(%arg0 : tensor<3x35xf32>) -> tensor<5x7x3xf32> {
   %0 = linalg.tensor_reshape %arg0 [#map0, #map1] : tensor<3x35xf32> into tensor<3x5x7xf32>
   %1 = linalg.init_tensor [5, 7, 3] : tensor<5x7x3xf32>
   %2 = linalg.generic
@@ -183,9 +183,9 @@ func @generic_op_120_permultation_reshape_producer_fusion(%arg0 : tensor<3x35xf3
     return %2 : tensor<5x7x3xf32>
 }
 
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d2, d0 * 7 + d1)>
-//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-//       CHECK: func @generic_op_120_permultation_reshape_producer_fusion
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d1, d0 * 7 + d2)>
+//   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
+//       CHECK: func @generic_op_120_permutation_reshape_producer_fusion
 //   CHECK-NOT:   linalg.tensor_reshape
 //       CHECK:   linalg.generic
 //  CHECK-SAME:     indexing_maps = [#[[MAP0]], #[[MAP1]]]
