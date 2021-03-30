@@ -183,7 +183,7 @@ SampleContextTracker::SampleContextTracker(
     SampleContext Context(FuncSample.first(), RawContext);
     LLVM_DEBUG(dbgs() << "Tracking Context for function: " << Context << "\n");
     if (!Context.isBaseContext())
-      FuncToCtxtProfileSet[Context.getNameWithoutContext()].insert(FSamples);
+      FuncToCtxtProfiles[Context.getNameWithoutContext()].push_back(FSamples);
     ContextTrieNode *NewNode = getOrCreateContextPath(Context, true);
     assert(!NewNode->getFunctionSamples() &&
            "New node can't have sample profile");
@@ -268,12 +268,12 @@ SampleContextTracker::getContextSamplesFor(const SampleContext &Context) {
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(const Function &Func) {
   StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return FuncToCtxtProfileSet[CanonName];
+  return FuncToCtxtProfiles[CanonName];
 }
 
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(StringRef Name) {
-  return FuncToCtxtProfileSet[Name];
+  return FuncToCtxtProfiles[Name];
 }
 
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(const Function &Func,
@@ -297,7 +297,7 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(StringRef Name,
     // We have profile for function under different contexts,
     // create synthetic base profile and merge context profiles
     // into base profile.
-    for (auto *CSamples : FuncToCtxtProfileSet[Name]) {
+    for (auto *CSamples : FuncToCtxtProfiles[Name]) {
       SampleContext &Context = CSamples->getContext();
       ContextTrieNode *FromNode = getContextFor(Context);
       if (FromNode == Node)

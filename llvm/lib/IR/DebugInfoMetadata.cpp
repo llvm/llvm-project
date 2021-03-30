@@ -359,17 +359,25 @@ DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
   DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DISubrange, Ops);
 }
 
-DISubrange::CountType DISubrange::getCount() const {
-  if (!getRawCountNode())
-    return CountType();
+DISubrange::BoundType DISubrange::getCount() const {
+  Metadata *CB = getRawCountNode();
+  if (!CB)
+    return BoundType();
 
-  if (auto *MD = dyn_cast<ConstantAsMetadata>(getRawCountNode()))
-    return CountType(cast<ConstantInt>(MD->getValue()));
+  assert((isa<ConstantAsMetadata>(CB) || isa<DIVariable>(CB) ||
+          isa<DIExpression>(CB)) &&
+         "Count must be signed constant or DIVariable or DIExpression");
 
-  if (auto *DV = dyn_cast<DIVariable>(getRawCountNode()))
-    return CountType(DV);
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(CB))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
-  return CountType();
+  if (auto *MD = dyn_cast<DIVariable>(CB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(CB))
+    return BoundType(MD);
+
+  return BoundType();
 }
 
 DISubrange::BoundType DISubrange::getLowerBound() const {

@@ -832,7 +832,7 @@ defm ANYTRUE : SIMDReduce<int_wasm_anytrue, "any_true", 98>;
 defm ALLTRUE : SIMDReduce<int_wasm_alltrue, "all_true", 99>;
 
 // Population count: popcnt
-defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 124>;
+defm POPCNT : SIMDUnary<I8x16, int_wasm_popcnt, "popcnt", 0x62>;
 
 // Reductions already return 0 or 1, so and 1, setne 0, and seteq 1
 // can be folded out

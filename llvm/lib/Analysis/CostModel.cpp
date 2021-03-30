@@ -107,7 +107,7 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else
-        OS << "Cost Model: Unknown cost";
+        OS << "Cost Model: Invalid cost";
 
       OS << " for instruction: " << Inst << "\n";
     }

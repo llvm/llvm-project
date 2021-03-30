@@ -63,8 +63,8 @@ MODULE_PASS("khwasan", HWAddressSanitizerPass(true, true))
 MODULE_PASS("inferattrs", InferFunctionAttrsPass())
 MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("inliner-wrapper-no-mandatory-first", ModuleInlinerWrapperPass(
-  getInlineParams(), 
-  DebugLogging, 
+  getInlineParams(),
+  DebugLogging,
   false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
 MODULE_PASS("instrorderfile", InstrOrderFilePass())
@@ -93,6 +93,7 @@ MODULE_PASS("print-lcg-dot", LazyCallGraphDOTPrinterPass(dbgs()))
 MODULE_PASS("print-must-be-executed-contexts", MustBeExecutedContextPrinterPass(dbgs()))
 MODULE_PASS("print-stack-safety", StackSafetyGlobalPrinterPass(dbgs()))
 MODULE_PASS("print<module-debuginfo>", ModuleDebugInfoPrinterPass(dbgs()))
+MODULE_PASS("rel-lookup-table-converter", RelLookupTableConverterPass())
 MODULE_PASS("rewrite-statepoints-for-gc", RewriteStatepointsForGC())
 MODULE_PASS("rewrite-symbols", RewriteSymbolPass())
 MODULE_PASS("rpo-function-attrs", ReversePostOrderFunctionAttrsPass())
@@ -281,7 +282,7 @@ FUNCTION_PASS("print<demanded-bits>", DemandedBitsPrinterPass(dbgs()))
 FUNCTION_PASS("print<domfrontier>", DominanceFrontierPrinterPass(dbgs()))
 FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(dbgs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(dbgs()))
-FUNCTION_PASS("print<inliner-size-estimator>", 
+FUNCTION_PASS("print<inliner-size-estimator>",
   InlineSizeEstimatorAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(dbgs()))
 FUNCTION_PASS("print<memoryssa>", MemorySSAPrinterPass(dbgs()))

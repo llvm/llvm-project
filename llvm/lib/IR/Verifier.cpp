@@ -922,8 +922,10 @@ void Verifier::visitDISubrange(const DISubrange &N) {
            "Subrange must contain count or upperBound", &N);
   AssertDI(!N.getRawCountNode() || !N.getRawUpperBound(),
            "Subrange can have any one of count or upperBound", &N);
-  AssertDI(!N.getRawCountNode() || N.getCount(),
-           "Count must either be a signed constant or a DIVariable", &N);
+  auto *CBound = N.getRawCountNode();
+  AssertDI(!CBound || isa<ConstantAsMetadata>(CBound) ||
+               isa<DIVariable>(CBound) || isa<DIExpression>(CBound),
+           "Count must be signed constant or DIVariable or DIExpression", &N);
   auto Count = N.getCount();
   AssertDI(!Count || !Count.is<ConstantInt *>() ||
                Count.get<ConstantInt *>()->getSExtValue() >= -1,
@@ -1000,11 +1002,27 @@ void Verifier::visitDIDerivedType(const DIDerivedType &N) {
                N.getTag() == dwarf::DW_TAG_atomic_type ||
                N.getTag() == dwarf::DW_TAG_member ||
                N.getTag() == dwarf::DW_TAG_inheritance ||
-               N.getTag() == dwarf::DW_TAG_friend,
+               N.getTag() == dwarf::DW_TAG_friend ||
+               N.getTag() == dwarf::DW_TAG_set_type,
            "invalid tag", &N);
   if (N.getTag() == dwarf::DW_TAG_ptr_to_member_type) {
     AssertDI(isType(N.getRawExtraData()), "invalid pointer to member type", &N,
              N.getRawExtraData());
+  }
+
+  if (N.getTag() == dwarf::DW_TAG_set_type) {
+    if (auto *T = N.getRawBaseType()) {
+      auto *Enum = dyn_cast_or_null<DICompositeType>(T);
+      auto *Basic = dyn_cast_or_null<DIBasicType>(T);
+      AssertDI(
+          (Enum && Enum->getTag() == dwarf::DW_TAG_enumeration_type) ||
+              (Basic && (Basic->getEncoding() == dwarf::DW_ATE_unsigned ||
+                         Basic->getEncoding() == dwarf::DW_ATE_signed ||
+                         Basic->getEncoding() == dwarf::DW_ATE_unsigned_char ||
+                         Basic->getEncoding() == dwarf::DW_ATE_signed_char ||
+                         Basic->getEncoding() == dwarf::DW_ATE_boolean)),
+          "invalid set base type", &N, T);
+    }
   }
 
   AssertDI(isScope(N.getRawScope()), "invalid scope", &N, N.getRawScope());

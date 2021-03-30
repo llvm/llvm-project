@@ -228,7 +228,7 @@ namespace {
       cl::desc("Do not resolve lli process symbols in JIT'd code"),
       cl::init(false));
 
-  enum class LLJITPlatform { DetectHost, GenericIR, MachO };
+  enum class LLJITPlatform { Inactive, DetectHost, GenericIR, MachO };
 
   cl::opt<LLJITPlatform>
       Platform("lljit-platform", cl::desc("Platform to use with LLJIT"),
@@ -238,7 +238,9 @@ namespace {
                           clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
                                      "Use LLJITGenericIRPlatform"),
                           clEnumValN(LLJITPlatform::MachO, "MachO",
-                                     "Use LLJITMachOPlatform")),
+                                     "Use LLJITMachOPlatform"),
+                          clEnumValN(LLJITPlatform::Inactive, "Inactive",
+                                     "Disable platform support explicitly")),
                cl::Hidden);
 
   enum class DumpKind {
@@ -924,6 +926,9 @@ int runOrcJIT(const char *ProgName) {
     case LLJITPlatform::MachO:
       Builder.setPlatformSetUp(orc::setUpMachOPlatform);
       ExitOnErr(orc::enableObjCRegistration("libobjc.dylib"));
+      break;
+    case LLJITPlatform::Inactive:
+      Builder.setPlatformSetUp(orc::setUpInactivePlatform);
       break;
     default:
       llvm_unreachable("Unrecognized platform value");
