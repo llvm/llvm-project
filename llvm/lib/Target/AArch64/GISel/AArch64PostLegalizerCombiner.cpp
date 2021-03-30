@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -36,6 +37,7 @@
 #define DEBUG_TYPE "aarch64-postlegalizer-combiner"
 
 using namespace llvm;
+using namespace MIPatternMatch;
 
 /// This combine tries do what performExtractVectorEltCombine does in SDAG.
 /// Rewrite for pairwise fadd pattern
@@ -235,6 +237,34 @@ bool applyAArch64MulConstCombine(
   B.setInstrAndDebugLoc(MI);
   ApplyFn(B, MI.getOperand(0).getReg());
   MI.eraseFromParent();
+  return true;
+}
+
+/// Form a G_SBFX from a G_SEXT_INREG fed by a right shift.
+static bool matchBitfieldExtractFromSExtInReg(
+    MachineInstr &MI, MachineRegisterInfo &MRI,
+    std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  int64_t Width = MI.getOperand(2).getImm();
+  LLT Ty = MRI.getType(Src);
+  assert((Ty == LLT::scalar(32) || Ty == LLT::scalar(64)) &&
+         "Unexpected type for G_SEXT_INREG?");
+  Register ShiftSrc;
+  int64_t ShiftImm;
+  if (!mi_match(
+          Src, MRI,
+          m_OneNonDBGUse(m_any_of(m_GAShr(m_Reg(ShiftSrc), m_ICst(ShiftImm)),
+                                  m_GLShr(m_Reg(ShiftSrc), m_ICst(ShiftImm))))))
+    return false;
+  if (ShiftImm < 0 || ShiftImm + Width > Ty.getSizeInBits())
+    return false;
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto Cst1 = B.buildConstant(Ty, ShiftImm);
+    auto Cst2 = B.buildConstant(Ty, ShiftImm + Width - 1);
+    B.buildInstr(TargetOpcode::G_SBFX, {Dst}, {ShiftSrc, Cst1, Cst2});
+  };
   return true;
 }
 

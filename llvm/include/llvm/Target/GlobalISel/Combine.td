@@ -114,6 +114,8 @@ class GIApplyKind;
 class GIApplyKindWithArgs;
 
 def register_matchinfo: GIDefMatchData<"Register">;
+def build_fn_matchinfo :
+GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -560,13 +562,11 @@ def combine_insert_vec_elts_build_vector : GICombineRule<
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
 
-def load_or_combine_matchdata :
-GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def load_or_combine : GICombineRule<
-  (defs root:$root, load_or_combine_matchdata:$info),
+  (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
-  (apply [{ return Helper.applyLoadOrCombine(*${root}, ${info}); }])>;
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
 
 def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
 def extend_through_phis : GICombineRule<
