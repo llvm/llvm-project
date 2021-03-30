@@ -348,6 +348,8 @@ public:
   LegalizeResult lowerFunnelShiftWithInverse(MachineInstr &MI);
   LegalizeResult lowerFunnelShiftAsShifts(MachineInstr &MI);
   LegalizeResult lowerFunnelShift(MachineInstr &MI);
+  LegalizeResult lowerRotateWithReverseRotate(MachineInstr &MI);
+  LegalizeResult lowerRotate(MachineInstr &MI);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI);
