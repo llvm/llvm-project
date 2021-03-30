@@ -1,4 +1,5 @@
-; RUN: %lli -O0 -relocation-model=pic -code-model=small %s
+; RUN: %lli -jit-kind=mcjit -O0 -relocation-model=pic -code-model=small %s
+; RUN: %lli -jit-kind=orc -lljit-platform=Inactive -O0 -relocation-model=pic -code-model=small %s
 ; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386
 
 @.str = private unnamed_addr constant [6 x i8] c"data1\00", align 1
