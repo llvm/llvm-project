@@ -16,6 +16,6 @@ RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
 
 CHECK:      DW_TAG_label
 CHECK-NEXT:   DW_AT_name    ("foobar")
-CHECK-NEXT:   DW_AT_decl_file       ("/tmp/label/label.c")
+CHECK-NEXT:   DW_AT_decl_file       ("/tmp/label{{[/\\]}}label.c")
 CHECK-NEXT:   DW_AT_decl_line       (6)
 CHECK-NEXT:   DW_AT_low_pc  (0x0000000100003f9d)
