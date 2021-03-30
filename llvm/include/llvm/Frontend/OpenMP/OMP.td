@@ -1655,6 +1655,14 @@ def OMP_interop : Directive<"interop"> {
     VersionedClause<OMPC_Use>,
   ];
 }
+def OMP_dispatch : Directive<"dispatch"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_IsDevicePtr>,
+    VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Depend>
+  ];
+}
 def OMP_Unknown : Directive<"unknown"> {
   let isDefault = true;
 }
