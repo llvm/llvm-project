@@ -456,6 +456,12 @@ void setUpGenericLLVMIRPlatform(LLJIT &J);
 /// your JITDylib names do not shadow any real library paths).
 Error setUpMachOPlatform(LLJIT &J);
 
+/// Configure the LLJIT instance to disable platform support explicitly. This is
+/// useful in two cases: for platforms that don't have such requirements and for
+/// platforms, that we have no explicit support yet and that don't work well
+/// with the generic IR platform.
+Error setUpInactivePlatform(LLJIT &J);
+
 } // End namespace orc
 } // End namespace llvm
 
