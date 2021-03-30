@@ -568,26 +568,4 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
   return *ToNode;
 }
-
-// Replace call graph edges with dynamic call edges from the profile.
-void SampleContextTracker::addCallGraphEdges(CallGraph &CG,
-                                             StringMap<Function *> &SymbolMap) {
-  // Add profile call edges to the call graph.
-  std::queue<ContextTrieNode *> NodeQueue;
-  NodeQueue.push(&RootContext);
-  while (!NodeQueue.empty()) {
-    ContextTrieNode *Node = NodeQueue.front();
-    NodeQueue.pop();
-    Function *F = SymbolMap.lookup(Node->getFuncName());
-    for (auto &I : Node->getAllChildContext()) {
-      ContextTrieNode *ChildNode = &I.second;
-      NodeQueue.push(ChildNode);
-      if (F && !F->isDeclaration()) {
-        Function *Callee = SymbolMap.lookup(ChildNode->getFuncName());
-        if (Callee && !Callee->isDeclaration())
-          CG[F]->addCalledFunction(nullptr, CG[Callee]);
-      }
-    }
-  }
-}
 } // namespace llvm

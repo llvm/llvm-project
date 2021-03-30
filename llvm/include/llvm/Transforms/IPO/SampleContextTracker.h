@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -124,7 +123,6 @@ public:
   ContextTrieNode &getRootContext();
   void promoteMergeContextSamplesTree(const Instruction &Inst,
                                       StringRef CalleeName);
-  void addCallGraphEdges(CallGraph &CG, StringMap<Function *> &SymbolMap);
   // Dump the internal context profile trie.
   void dump();
 
