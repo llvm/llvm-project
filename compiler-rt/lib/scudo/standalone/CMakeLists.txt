@@ -68,6 +68,7 @@ set(SCUDO_HEADERS
   linux.h
   list.h
   local_cache.h
+  memtag.h
   mutex.h
   platform.h
   primary32.h
