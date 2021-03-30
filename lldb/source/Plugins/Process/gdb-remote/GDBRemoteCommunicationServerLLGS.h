@@ -244,6 +244,15 @@ private:
 
   void StopSTDIOForwarding();
 
+  // Read thread-id from packet.  If the thread-id is correct, returns it.
+  // Otherwise, returns the error.
+  //
+  // If allow_all is true, then the pid/tid value of -1 ('all') will be allowed.
+  // In any case, the function assumes that exactly one inferior is being
+  // debugged and rejects pid values that do no match that inferior.
+  llvm::Expected<lldb::tid_t> ReadTid(StringExtractorGDBRemote &packet,
+                                      bool allow_all = false);
+
   // For GDBRemoteCommunicationServerLLGS only
   GDBRemoteCommunicationServerLLGS(const GDBRemoteCommunicationServerLLGS &) =
       delete;

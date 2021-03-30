@@ -193,6 +193,15 @@ public:
 
   size_t GetEscapedBinaryData(std::string &str);
 
+  static constexpr lldb::pid_t AllProcesses = UINT64_MAX;
+  static constexpr lldb::tid_t AllThreads = UINT64_MAX;
+
+  // Read thread-id from the packet.  If the packet is valid, returns
+  // the pair (PID, TID), otherwise returns llvm::None.  If the packet
+  // does not list a PID, default_pid is used.
+  llvm::Optional<std::pair<lldb::pid_t, lldb::tid_t>>
+  GetPidTid(lldb::pid_t default_pid);
+
 protected:
   ResponseValidatorCallback m_validator;
   void *m_validator_baton;
