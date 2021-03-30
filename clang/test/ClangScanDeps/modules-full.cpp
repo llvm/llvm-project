@@ -37,11 +37,11 @@
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps",
-// CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
+// CHECK:              "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -53,9 +53,9 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H2:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -67,9 +67,9 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",

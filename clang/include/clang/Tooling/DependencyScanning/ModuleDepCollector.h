@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -47,6 +48,9 @@ struct ModuleDeps {
   /// The identifier of the module.
   ModuleID ID;
 
+  /// Whether this is a "system" module.
+  bool IsSystem;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
@@ -70,6 +74,10 @@ struct ModuleDeps {
   // Used to track which modules that were discovered were directly imported by
   // the primary TU.
   bool ImportedByMainFile = false;
+
+  /// The compiler invocation associated with the translation unit that imports
+  /// this module.
+  std::shared_ptr<CompilerInvocation> Invocation;
 
   /// Gets the full command line suitable for passing to clang.
   ///
