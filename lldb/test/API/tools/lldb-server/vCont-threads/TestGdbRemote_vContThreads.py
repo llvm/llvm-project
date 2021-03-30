@@ -10,8 +10,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
     mydir = TestBase.compute_mydir(__file__)
 
     def start_threads(self, num):
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=['thread:new'] * num + ['@started'])
+        procs = self.prep_debug_monitor_and_inferior(inferior_args=[str(num)])
         # start the process and wait for output
         self.test_sequence.add_log_lines([
             "read packet: $c#63",
