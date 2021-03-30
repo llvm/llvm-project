@@ -69,6 +69,8 @@
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT: Enable the old style PARAMETER statement
 ! HELP-FC1-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
+! HELP-FC1-NEXT: -fdebug-dump-parse-tree-no-sema
+! HELP-FC1-NEXT:                        Dump the parse tree (skips the semantic checks)
 ! HELP-FC1-NEXT: -fdebug-dump-parse-tree Dump the parse tree
 ! HELP-FC1-NEXT: -fdebug-dump-parsing-log
 ! HELP-FC1-NEXT:                   Run instrumented parse and dump the parsing log
@@ -78,6 +80,7 @@
 ! HELP-FC1-NEXT:                         Measure the parse tree
 ! HELP-FC1-NEXT: -fdebug-module-writer   Enable debug messages while writing module files
 ! HELP-FC1-NEXT: -fdebug-pre-fir-tree    Dump the pre-FIR tree
+! HELP-FC1-NEXT: -fdebug-unparse-no-sema Unparse and stop (skips the semantic checks)
 ! HELP-FC1-NEXT: -fdebug-unparse-with-symbols
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
