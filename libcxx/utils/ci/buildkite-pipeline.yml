@@ -317,31 +317,28 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  # TODO: Re-enable those as soon as Green Dragon is back online. Currently,
-  #       all the jobs are failing when they try to pull the older dylibs from
-  #       Green Dragon, which is down.
-  # # Test back-deployment to older Apple platforms
-  # - label: "Apple back-deployment macosx10.9"
-  #   command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
+  # Test back-deployment to older Apple platforms
+  - label: "Apple back-deployment macosx10.9"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.9"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
-  # - label: "Apple back-deployment macosx10.15"
-  #   command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.15"
-  #   artifact_paths:
-  #     - "**/test-results.xml"
-  #   agents:
-  #     queue: "libcxx-builders-macos10.15"
-  #   retry:
-  #     automatic:
-  #       - exit_status: -1  # Agent was lost
-  #         limit: 2
+  - label: "Apple back-deployment macosx10.15"
+    command: "libcxx/utils/ci/run-buildbot x86_64-apple-system-backdeployment-10.15"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-macos10.15"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
 
   - label: "AArch64"
     command: "libcxx/utils/ci/run-buildbot aarch64"
