@@ -57,6 +57,10 @@ struct TestLinalgCodegenStrategy
   ListOption<int64_t> tileSizes{*this, "tile-sizes",
                                 llvm::cl::MiscFlags::CommaSeparated,
                                 llvm::cl::desc("Specifies the tile sizes.")};
+  ListOption<unsigned> tileInterchange{
+      *this, "tile-interchange", llvm::cl::MiscFlags::CommaSeparated,
+      llvm::cl::desc("Specifies the tile interchange.")};
+
   Option<bool> promote{
       *this, "promote",
       llvm::cl::desc("Promote the tile into a small aligned memory buffer."),
@@ -187,6 +191,8 @@ void TestLinalgCodegenStrategy::runOnFunction() {
   LinalgTilingOptions tilingOptions;
   if (!tileSizes.empty())
     tilingOptions = tilingOptions.setTileSizes(tileSizes);
+  if (!tileInterchange.empty())
+    tilingOptions = tilingOptions.setInterchange(tileInterchange);
 
   LinalgTilingOptions registerTilingOptions;
   if (!registerTileSizes.empty())
