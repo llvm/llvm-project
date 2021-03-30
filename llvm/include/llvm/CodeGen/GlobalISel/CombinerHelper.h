@@ -491,8 +491,6 @@ public:
   /// bswap.
   bool matchLoadOrCombine(MachineInstr &MI,
                           std::function<void(MachineIRBuilder &)> &MatchInfo);
-  bool applyLoadOrCombine(MachineInstr &MI,
-                          std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
   bool applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
@@ -506,6 +504,10 @@ public:
   void applyExtractAllEltsFromBuildVector(
       MachineInstr &MI,
       SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  bool applyBuildFn(MachineInstr &MI,
+                    std::function<void(MachineIRBuilder &)> &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
