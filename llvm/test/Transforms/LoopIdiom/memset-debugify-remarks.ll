@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;     *begin = value;
 ; }
 
-; CHECK: remark: <stdin>:4:1: Transformed loop-strided store in _Z15my_basic_memsetPcS_c function into a call to llvm.memset.p0i8.i64() intrinsic
+; CHECK: remark: <stdin>:4:1: Transformed loop-strided store into a call to llvm.memset.p0i8.i64() function
 
 define void @_Z15my_basic_memsetPcS_c(i8* %ptr, i8* %end, i8 %value) {
 ; CHECK-LABEL: @_Z15my_basic_memsetPcS_c(
