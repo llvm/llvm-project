@@ -7383,7 +7383,20 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
 bool RISCVTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.hasValue();
   EVT ValueVT = Val.getValueType();
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    // Cast the f16 to i16, extend to i32, pad with ones to make a float nan,
+    // and cast to f32.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
+                      DAG.getConstant(0xFFFF0000, DL, MVT::i32));
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Val);
+    Parts[0] = Val;
+    return true;
+  }
+
   if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT ValueEltVT = ValueVT.getVectorElementType();
@@ -7412,6 +7425,17 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
 SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.hasValue();
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    SDValue Val = Parts[0];
+
+    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f16, Val);
+    return Val;
+  }
+
   if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     SDValue Val = Parts[0];
