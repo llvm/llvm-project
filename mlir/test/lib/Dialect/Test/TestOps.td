@@ -1309,6 +1309,11 @@ def TestRecursiveRewriteOp : TEST_Op<"recursive_rewrite"> {
   let assemblyFormat = "$depth attr-dict";
 }
 
+// Test legalization pattern: this op will be erase and will also erase the
+// producer of its operand.
+def BlackHoleOp : TEST_Op<"blackhole">,
+  Arguments<(ins AnyType)>;
+
 //===----------------------------------------------------------------------===//
 // Test Type Legalization
 //===----------------------------------------------------------------------===//
