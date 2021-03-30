@@ -212,6 +212,12 @@ static bool tryInterleave(Instruction *Start,
         Worklist.push_back(cast<Instruction>(Use));
       break;
 
+    case Instruction::ShuffleVector:
+      // A shuffle of a splat is a splat.
+      if (cast<ShuffleVectorInst>(I)->isZeroEltSplat())
+        continue;
+      LLVM_FALLTHROUGH;
+
     default:
       LLVM_DEBUG(dbgs() << "  Unhandled instruction: " << *I << "\n");
       return false;
