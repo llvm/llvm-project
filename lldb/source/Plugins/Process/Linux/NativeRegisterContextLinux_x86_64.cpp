@@ -10,14 +10,14 @@
 
 #include "NativeRegisterContextLinux_x86_64.h"
 
+#include "Plugins/Process/Linux/NativeThreadLinux.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
-
-#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include <cpuid.h>
 #include <linux/elf.h>
 
@@ -250,7 +250,7 @@ static inline unsigned int fxsr_regset(const ArchSpec &arch) {
 
 std::unique_ptr<NativeRegisterContextLinux>
 NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::unique_ptr<NativeRegisterContextLinux>(
       new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
 }
