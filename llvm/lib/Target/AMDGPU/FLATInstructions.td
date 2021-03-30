@@ -108,8 +108,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   bits<2> seg = !if(ps.is_flat_global, 0b10,
                   !if(ps.is_flat_scratch, 0b01, 0));
 
-  // Signed offset. Pre-gfx11 flat accesses ignored the top bit and treated it
-  // as 12-bit unsigned.
+  // Signed offset. Highest bit ignored for flat and treated as 12-bit
+  // unsigned for flat accesses.
   bits<13> offset;
   // GFX90A+ only: instruction uses AccVGPR for data
   bits<1> acc = !if(ps.has_vdst, vdst{9}, !if(ps.has_data, vdata{9}, 0));
