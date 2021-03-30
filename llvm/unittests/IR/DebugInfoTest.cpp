@@ -230,18 +230,13 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
   DIVariable::deleteTemporary(DataLocation);
 }
 
-DISubprogram *getSubprogram() {
-  LLVMContext Context;
-  return DISubprogram::getDistinct(Context, nullptr, "", "", nullptr, 0,
-                                   nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
-                                   DISubprogram::SPFlagZero, nullptr);
-}
-
 TEST(DIBuilder, CreateSetType) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
   DIBuilder DIB(*M);
-  DIScope *Scope = getSubprogram();
+  DIScope *Scope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
   DIType *Type = DIB.createBasicType("Int", 64, dwarf::DW_ATE_signed);
   DIFile *F = DIB.createFile("main.c", "/");
 
