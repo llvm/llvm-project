@@ -20,7 +20,7 @@ public:
       : ARMAsmBackend(T, STI, support::little) {}
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
-    return createARMWinCOFFObjectWriter(/*Is64Bit=*/false);
+    return createARMWinCOFFObjectWriter();
   }
 };
 }
