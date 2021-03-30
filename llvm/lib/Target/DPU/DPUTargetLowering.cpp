@@ -299,6 +299,10 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   setLibcallNameForAllTypesForAtomics(RTLIB::SYNC_FETCH_AND_UMIN_,
                                       "__dpu_sync_fetch_and_umin_");
 
+  setTruncStoreAction(MVT::i64, MVT::i32, Expand);
+  setTruncStoreAction(MVT::i64, MVT::i16, Expand);
+  setTruncStoreAction(MVT::i64, MVT::i8, Expand);
+
   for (MVT VT : MVT::integer_valuetypes()) {
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
@@ -2155,8 +2159,7 @@ EmitSelect64WithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB) {
 
 static MachineBasicBlock *
 EmitMramSubStoreWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
-                                   unsigned int Mask, unsigned int Store,
-                                   bool is64Bits) {
+                                   unsigned int Mask, unsigned int Store) {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *F = BB->getParent();
@@ -2167,6 +2170,7 @@ EmitMramSubStoreWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
   unsigned MramAddrMSBReg = RI.createVirtualRegister(&DPU::GP_REGRegClass);
   unsigned ExactWramCacheAddrReg =
       RI.createVirtualRegister(&DPU::GP_REGRegClass);
+  unsigned int storeRegister = MI.getOperand(0).getReg();
 
   // todo __sw_cache_buffer should have abstract representation
 
@@ -2195,18 +2199,6 @@ EmitMramSubStoreWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB,
       .addReg(WramCacheAddrReg)
       .addReg(MramAddrMSBReg);
 
-  unsigned int storeRegister;
-  if (is64Bits) {
-    unsigned storeRegLsb = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-
-    BuildMI(*BB, MI, dl, TII.get(DPU::EXTRACT_SUBREG), storeRegLsb)
-        .addReg(MI.getOperand(0).getReg())
-        .addImm(DPU::sub_32bit);
-
-    storeRegister = storeRegLsb;
-  } else {
-    storeRegister = MI.getOperand(0).getReg();
-  }
 
   BuildMI(*BB, MI, dl, TII.get(Store))
       .addReg(ExactWramCacheAddrReg)
@@ -3209,18 +3201,12 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case DPU::SELECT64rr:
     return EmitSelect64WithCustomInserter(MI, BB);
   case DPU::MRAM_STORE_BYTErm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 7, DPU::SBrir, false);
-  case DPU::MRAM_STORE64_BYTErm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 7, DPU::SBrir, true);
+    return EmitMramSubStoreWithCustomInserter(MI, BB, 7, DPU::SBrir);
   case DPU::MRAM_STORE_HALFrm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 6, DPU::SHrir, false);
-  case DPU::MRAM_STORE64_HALFrm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 6, DPU::SHrir, true);
+    return EmitMramSubStoreWithCustomInserter(MI, BB, 6, DPU::SHrir);
   case DPU::MRAM_STORErm:
   case DPU::MRAM_STORE_WORDrm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 4, DPU::SWrir, false);
-  case DPU::MRAM_STORE64_WORDrm:
-    return EmitMramSubStoreWithCustomInserter(MI, BB, 4, DPU::SWrir, true);
+    return EmitMramSubStoreWithCustomInserter(MI, BB, 4, DPU::SWrir);
   case DPU::MRAM_STORE_DOUBLErm:
     return EmitMramStoreDoubleWithCustomInserter(MI, BB);
   case DPU::MRAM_LOAD_U8mr:

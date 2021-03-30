@@ -588,11 +588,6 @@ let usesCustomInserter = 1 in {
                       "",
                       [(OpNode i32:$rb, ADDRESS_IN_STACK:$addr)]>;
 
-    class MRAM_STORE64_X_rm<PatFrag OpNode> : PseudoDPUInstruction<
-                      (outs), (ins GP64_REG:$rb, MEMri24:$addr),
-                      "",
-                      [(OpNode i64:$rb, ADDRESS_IN_STACK:$addr)]>;
-
     class MRAM_LOAD_X_mr<PatFrag OpNode> : PseudoDPUInstruction<
                       (outs GP_REG:$rc), (ins MEMri24:$addr),
                       "",
@@ -607,9 +602,6 @@ let usesCustomInserter = 1 in {
     def MRAM_STORE_BYTErm : MRAM_STORE_X_rm<mram_truncstorei8>;
     def MRAM_STORE_HALFrm : MRAM_STORE_X_rm<mram_truncstorei16>;
     def MRAM_STORE_WORDrm : MRAM_STORE_X_rm<mram_truncstorei32>;
-    def MRAM_STORE64_BYTErm : MRAM_STORE64_X_rm<mram_truncstorei8>;
-    def MRAM_STORE64_HALFrm : MRAM_STORE64_X_rm<mram_truncstorei16>;
-    def MRAM_STORE64_WORDrm : MRAM_STORE64_X_rm<mram_truncstorei32>;
 
     def MRAM_STORE_DOUBLErm: PseudoDPUInstruction<
                       (outs), (ins GP64_REG:$db, MEMri24:$addr),
