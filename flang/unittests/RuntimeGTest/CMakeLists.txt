@@ -7,6 +7,7 @@ add_flang_unittest(FlangRuntimeTests
   Random.cpp
   Reduction.cpp
   RuntimeCrashTest.cpp
+  ListInputTest.cpp
 )
 
 target_link_libraries(FlangRuntimeTests
