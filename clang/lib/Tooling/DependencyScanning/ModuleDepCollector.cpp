@@ -20,13 +20,13 @@ using namespace dependencies;
 std::vector<std::string> ModuleDeps::getFullCommandLine(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret = NonPathCommandLine;
-
   // TODO: Build full command line. That also means capturing the original
   //       command line into NonPathCommandLine.
 
-  Ret.push_back("-fno-implicit-modules");
-  Ret.push_back("-fno-implicit-module-maps");
+  std::vector<std::string> Ret{
+      "-fno-implicit-modules",
+      "-fno-implicit-module-maps",
+  };
 
   std::vector<std::string> PCMPaths;
   std::vector<std::string> ModMapPaths;
