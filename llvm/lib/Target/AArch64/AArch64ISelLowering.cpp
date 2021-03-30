@@ -5138,11 +5138,11 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
-  // If this function uses the C calling convention but has an SVE signature,
-  // then it preserves more registers and should assume the SVE_VectorCall CC.
+  // Functions using the C or Fast calling convention that have an SVE signature
+  // preserve more registers and should assume the SVE_VectorCall CC.
   // The check for matching callee-saved regs will determine whether it is
   // eligible for TCO.
-  if (CallerCC == CallingConv::C &&
+  if ((CallerCC == CallingConv::C || CallerCC == CallingConv::Fast) &&
       AArch64RegisterInfo::hasSVEArgsOrReturn(&MF))
     CallerCC = CallingConv::AArch64_SVE_VectorCall;
 
@@ -5335,7 +5335,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
-  if (CallConv == CallingConv::C) {
+  if (CallConv == CallingConv::C || CallConv == CallingConv::Fast) {
     bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
       return Out.VT.isScalableVector();
     });
