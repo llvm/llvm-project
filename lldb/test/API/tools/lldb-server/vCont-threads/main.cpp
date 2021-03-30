@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <csignal>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 #include <unistd.h>
