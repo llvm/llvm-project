@@ -1882,6 +1882,19 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       MF->setVariableDbgInfo(DI.getVariable(), DI.getExpression(),
                              getOrCreateFrameIndex(*AI), DI.getDebugLoc());
     } else {
+      // Special handling for swift_async arguments. They need to
+      // describe the incoming register specified by the ABI so they
+      // can be described as entry values.
+      if (auto *Arg = dyn_cast<Argument>(Address))
+        if (MF->getFunction().hasParamAttribute(Arg->getArgNo(),
+                                                Attribute::SwiftAsync)) {
+          Register Reg =
+              std::next(MF->getRegInfo().livein_begin(), Arg->getArgNo())
+                  ->first;
+          MIRBuilder.buildIndirectDbgValue(Reg, DI.getVariable(),
+                                           DI.getExpression());
+          return true;
+        }
       // A dbg.declare describes the address of a source variable, so lower it
       // into an indirect DBG_VALUE.
       MIRBuilder.buildIndirectDbgValue(getOrCreateVReg(*Address),
