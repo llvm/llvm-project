@@ -22,8 +22,6 @@
 
 #include "RegisterContextPOSIX_mips64.h"
 #include "RegisterContextFreeBSD_mips64.h"
-#include "RegisterContextLinux_mips64.h"
-#include "RegisterContextLinux_mips.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -102,17 +100,6 @@ RegisterContextPOSIX_mips64::GetRegisterInfoAtIndex(size_t reg) {
 size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {
   ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
   switch (target_arch.GetTriple().getOS()) {
-  case llvm::Triple::Linux: {
-    if ((target_arch.GetMachine() == llvm::Triple::mipsel) ||
-         (target_arch.GetMachine() == llvm::Triple::mips)) {
-      const auto *context = static_cast<const RegisterContextLinux_mips *>(
-          m_register_info_up.get());
-      return context->GetRegisterSetCount();
-    }
-    const auto *context = static_cast<const RegisterContextLinux_mips64 *>(
-        m_register_info_up.get());
-    return context->GetRegisterSetCount();
-  }
   default: {
     const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
         m_register_info_up.get());
@@ -125,17 +112,6 @@ size_t RegisterContextPOSIX_mips64::GetRegisterSetCount() {
 const RegisterSet *RegisterContextPOSIX_mips64::GetRegisterSet(size_t set) {
   ArchSpec target_arch = m_register_info_up->GetTargetArchitecture();
   switch (target_arch.GetTriple().getOS()) {
-  case llvm::Triple::Linux: {
-    if ((target_arch.GetMachine() == llvm::Triple::mipsel) ||
-         (target_arch.GetMachine() == llvm::Triple::mips)) {
-      const auto *context = static_cast<const RegisterContextLinux_mips *>(
-          m_register_info_up.get());
-      return context->GetRegisterSet(set);
-    }
-    const auto *context = static_cast<const RegisterContextLinux_mips64 *>(
-        m_register_info_up.get());
-    return context->GetRegisterSet(set);
-  }
   default: {
     const auto *context = static_cast<const RegisterContextFreeBSD_mips64 *>(
         m_register_info_up.get());

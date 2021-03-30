@@ -18,8 +18,6 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_mips.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
@@ -121,14 +119,6 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::Linux: {
       switch (arch.GetMachine()) {
       case llvm::Triple::aarch64:
-        break;
-      case llvm::Triple::mipsel:
-      case llvm::Triple::mips:
-        reg_interface = new RegisterContextLinux_mips(arch);
-        break;
-      case llvm::Triple::mips64el:
-      case llvm::Triple::mips64:
-        reg_interface = new RegisterContextLinux_mips64(arch);
         break;
       case llvm::Triple::ppc64le:
         reg_interface = new RegisterInfoPOSIX_ppc64le(arch);
