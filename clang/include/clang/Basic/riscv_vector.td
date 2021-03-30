@@ -259,6 +259,14 @@ multiclass RVVFloatingBinBuiltinSet {
                                  ["vf", "v", "vve"]]>;
 }
 
+multiclass RVVIntExt<string intrinsic_name, string suffix, string prototype,
+                     string type_range> {
+  let IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask",
+      MangledName = NAME, IntrinsicTypes = [-1, 0] in {
+    def "" : RVVBuiltin<suffix, prototype, type_range>;
+  }
+}
+
 defvar TypeList = ["c","s","i","l","f","d"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
                   ["16", "(Log2EEW:4)"],
@@ -438,7 +446,18 @@ defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
 // TODO
 
 // 12.3. Vector Integer Extension
-// TODO
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+    defm vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
+    defm vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
+}
+let Log2LMUL = [-3, -2, -1, 0, 1] in {
+    defm vsext_vf4 : RVVIntExt<"vsext", "q", "qv", "cs">;
+    defm vzext_vf4 : RVVIntExt<"vzext", "Uq", "UqUv", "cs">;
+}
+let Log2LMUL = [-3, -2, -1, 0] in {
+    defm vsext_vf8 : RVVIntExt<"vsext", "o", "ov", "c">;
+    defm vzext_vf8 : RVVIntExt<"vzext", "Uo", "UoUv", "c">;
+}
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
 // TODO
