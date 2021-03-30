@@ -47,13 +47,18 @@ int main() {
                               : omp_out = omp_out > omp_in ? omp_in : omp_out) \
     initializer(omp_priv = 2147483647)
 
+#pragma omp declare reduction(mymin        \
+                              : struct SSS \
+                              : omp_out = omp_out.field > omp_in.field ? omp_in : omp_out)
+
 int foo(int argc, char **argv) {
   int x;
-#pragma omp parallel for reduction(mymin : x)
+  struct SSS ss;
+#pragma omp parallel for reduction(mymin : x, ss)
   for (int i = 0; i < 1000; i++)
     ;
   return 0;
 }
 
-// CHECK: #pragma omp parallel for reduction(mymin: x)
+// CHECK: #pragma omp parallel for reduction(mymin: x,ss)
 #endif
