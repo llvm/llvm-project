@@ -1134,13 +1134,13 @@ Error WasmObjectFile::parseMemorySection(ReadContext &Ctx) {
 
 Error WasmObjectFile::parseEventSection(ReadContext &Ctx) {
   EventSection = Sections.size();
-  uint32_t Count = readVarint32(Ctx);
+  uint32_t Count = readVaruint32(Ctx);
   Events.reserve(Count);
   while (Count--) {
     wasm::WasmEvent Event;
     Event.Index = NumImportedEvents + Events.size();
     Event.Type.Attribute = readVaruint32(Ctx);
-    Event.Type.SigIndex = readVarint32(Ctx);
+    Event.Type.SigIndex = readVaruint32(Ctx);
     Events.push_back(Event);
   }
 
