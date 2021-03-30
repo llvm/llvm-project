@@ -60,8 +60,7 @@ do.end:
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body3.us, label %while.cond1.while.end_crit_edge.us
 
-; CHECK-NOT: [[LOOP_DEC1:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
-; CHECK-NOT: br i1 [[LOOP_DEC1]], label %while.cond1.preheader.us, label %while.end7
+; CHECK-NOT: %{{[^ ]+}} = call i1 @llvm.loop.decrement.i32(i32 1)
 
 define void @nested(i32* nocapture %A, i32 %N) {
 entry:
