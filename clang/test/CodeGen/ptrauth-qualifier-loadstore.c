@@ -22,7 +22,7 @@ extern void use_upf(func_t *ptr);
 
 // Data with address-independent qualifiers.
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_i_constant()
+// CHECK-LABEL: define void @test_store_data_i_constant()
 void test_store_data_i_constant() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[SIGN:%.*]] = call i64 @llvm.ptrauth.sign.i64(i64 ptrtoint (i32* @external_int to i64), i32 1, i64 50)
@@ -36,7 +36,7 @@ void test_store_data_i_constant() {
   iqpi = &external_int;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_iu()
+// CHECK-LABEL: define void @test_store_data_iu()
 void test_store_data_iu() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_upi,
@@ -61,7 +61,7 @@ void test_store_data_iu() {
   iqpi = global_upi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_ia()
+// CHECK-LABEL: define void @test_store_data_ia()
 void test_store_data_ia() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_aqpi,
@@ -107,7 +107,7 @@ void test_store_data_ia() {
   use_upi(iqpi = global_aqpi);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_ii_same()
+// CHECK-LABEL: define void @test_store_data_ii_same()
 void test_store_data_ii_same() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_iqpi,
@@ -118,7 +118,7 @@ void test_store_data_ii_same() {
   iqpi = global_iqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_ii_different()
+// CHECK-LABEL: define void @test_store_data_ii_different()
 void test_store_data_ii_different() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_iqpi,
@@ -143,7 +143,7 @@ void test_store_data_ii_different() {
   iqpi = global_iqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_ii_zero()
+// CHECK-LABEL: define void @test_store_data_ii_zero()
 void test_store_data_ii_zero() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_iqpi,
@@ -168,7 +168,7 @@ void test_store_data_ii_zero() {
   global_iqpi = iqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_load_data_i()
+// CHECK-LABEL: define void @test_load_data_i()
 void test_load_data_i() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_iqpi,
@@ -205,7 +205,7 @@ void test_load_data_i() {
 
 // Data with address-discriminated qualifiers.
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_a_constant()
+// CHECK-LABEL: define void @test_store_data_a_constant()
 void test_store_data_a_constant() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[T0:%.*]] = ptrtoint i32** [[V]] to i64
@@ -222,7 +222,7 @@ void test_store_data_a_constant() {
   aqpi = &external_int;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_au()
+// CHECK-LABEL: define void @test_store_data_au()
 void test_store_data_au() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_upi,
@@ -251,7 +251,7 @@ void test_store_data_au() {
   aqpi = global_upi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_ai()
+// CHECK-LABEL: define void @test_store_data_ai()
 void test_store_data_ai() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_iqpi,
@@ -280,7 +280,7 @@ void test_store_data_ai() {
   aqpi = global_iqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_aa_same()
+// CHECK-LABEL: define void @test_store_data_aa_same()
 void test_store_data_aa_same() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_aqpi,
@@ -311,7 +311,7 @@ void test_store_data_aa_same() {
   aqpi = global_aqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_aa_different()
+// CHECK-LABEL: define void @test_store_data_aa_different()
 void test_store_data_aa_different() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_aqpi,
@@ -342,7 +342,7 @@ void test_store_data_aa_different() {
   aqpi = global_aqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_data_aa_zero()
+// CHECK-LABEL: define void @test_store_data_aa_zero()
 void test_store_data_aa_zero() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_aqpi,
@@ -371,7 +371,7 @@ void test_store_data_aa_zero() {
   global_aqpi = aqpi;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_load_data_a()
+// CHECK-LABEL: define void @test_load_data_a()
 void test_load_data_a() {
 // CHECK:         [[V:%.*]] = alloca i32*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** @global_aqpi,
@@ -411,7 +411,7 @@ void test_load_data_a() {
 
 // Function with address-independent qualifiers.
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_i_constant()
+// CHECK-LABEL: define void @test_store_function_i_constant()
 void test_store_function_i_constant() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[SIGN:%.*]] = call i64 @llvm.ptrauth.resign.i64(i64 ptrtoint ({{.*}} @external_func.ptrauth to i64), i32 0, i64 0, i32 1, i64 50)
@@ -424,7 +424,7 @@ void test_store_function_i_constant() {
   iqpf = &external_func;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_iu()
+// CHECK-LABEL: define void @test_store_function_iu()
 void test_store_function_iu() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_upf,
@@ -449,7 +449,7 @@ void test_store_function_iu() {
   iqpf = global_upf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_ia()
+// CHECK-LABEL: define void @test_store_function_ia()
 void test_store_function_ia() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_aqpf,
@@ -495,7 +495,7 @@ void test_store_function_ia() {
   use_upf(iqpf = global_aqpf);
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_ii_same()
+// CHECK-LABEL: define void @test_store_function_ii_same()
 void test_store_function_ii_same() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_iqpf,
@@ -506,7 +506,7 @@ void test_store_function_ii_same() {
   iqpf = global_iqpf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_ii_different()
+// CHECK-LABEL: define void @test_store_function_ii_different()
 void test_store_function_ii_different() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_iqpf,
@@ -531,7 +531,7 @@ void test_store_function_ii_different() {
   iqpf = global_iqpf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_load_function_i()
+// CHECK-LABEL: define void @test_load_function_i()
 void test_load_function_i() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_iqpf,
@@ -568,7 +568,7 @@ void test_load_function_i() {
 
 // Function with address-discriminated qualifiers.
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_a_constant()
+// CHECK-LABEL: define void @test_store_function_a_constant()
 void test_store_function_a_constant() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[T0:%.*]] = ptrtoint void ()** [[V]] to i64
@@ -585,7 +585,7 @@ void test_store_function_a_constant() {
   aqpf = &external_func;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_au()
+// CHECK-LABEL: define void @test_store_function_au()
 void test_store_function_au() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_upf,
@@ -614,7 +614,7 @@ void test_store_function_au() {
   aqpf = global_upf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_ai()
+// CHECK-LABEL: define void @test_store_function_ai()
 void test_store_function_ai() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_iqpf,
@@ -643,7 +643,7 @@ void test_store_function_ai() {
   aqpf = global_iqpf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_aa_same()
+// CHECK-LABEL: define void @test_store_function_aa_same()
 void test_store_function_aa_same() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_aqpf,
@@ -674,7 +674,7 @@ void test_store_function_aa_same() {
   aqpf = global_aqpf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_store_function_aa_different()
+// CHECK-LABEL: define void @test_store_function_aa_different()
 void test_store_function_aa_different() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_aqpf,
@@ -705,7 +705,7 @@ void test_store_function_aa_different() {
   aqpf = global_aqpf;
 }
 
-// CHECK-LABEL: define {{.*}} void @test_load_function_a()
+// CHECK-LABEL: define void @test_load_function_a()
 void test_load_function_a() {
 // CHECK:         [[V:%.*]] = alloca void ()*,
 // CHECK-NEXT:    [[LOAD:%.*]] = load void ()*, void ()** @global_aqpf,

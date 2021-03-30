@@ -25,12 +25,12 @@
 // CHECK: @_ZN8Derived18virtual7Ev_vfpthunk_.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%[[STRUCT_DERIVED1]]*)* @_ZN8Derived18virtual7Ev_vfpthunk_ to i8*), i32 0, i64 0, i64 25206 }, section "llvm.ptrauth", align 8
 // CHECK: @_ZN5Base08virtual1Ev_vfpthunk_.ptrauth.4 = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%[[STRUCT_BASE0]]*)* @_ZN5Base08virtual1Ev_vfpthunk_ to i8*), i32 0, i64 0, i64 25206 }, section "llvm.ptrauth", align 8
 
-// CHECK: @gmethod0 = {{.*}} global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN5Base011nonvirtual0Ev.ptrauth.1 to i64), i64 0 }, align 8
+// CHECK: @gmethod0 = global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN5Base011nonvirtual0Ev.ptrauth.1 to i64), i64 0 }, align 8
 // CHECK: @_ZN8Derived011nonvirtual5Ev.ptrauth.6 = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%struct.Derived0*)* @_ZN8Derived011nonvirtual5Ev to i8*), i32 0, i64 0, i64 [[TYPEDISC0]] }, section "llvm.ptrauth", align 8
-// CHECK: @gmethod1 = {{.*}} global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN8Derived011nonvirtual5Ev.ptrauth.6 to i64), i64 0 }, align 8
-// CHECK: @gmethod2 = {{.*}} global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual1Ev_vfpthunk_.ptrauth to i64), i64 0 }, align 8
+// CHECK: @gmethod1 = global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN8Derived011nonvirtual5Ev.ptrauth.6 to i64), i64 0 }, align 8
+// CHECK: @gmethod2 = global { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual1Ev_vfpthunk_.ptrauth to i64), i64 0 }, align 8
 
-// CHECK: @_ZTV5Base0 = {{.*}} unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5Base0 to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual1Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual3Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base016virtual_variadicEiz.ptrauth to i8*)] }, align 8
+// CHECK: @_ZTV5Base0 = unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5Base0 to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual1Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual3Ev.ptrauth to i8*), i8* bitcast ({ i8*, i32, i64, i64 }* @_ZN5Base016virtual_variadicEiz.ptrauth to i8*)] }, align 8
 // CHECK: @_ZN5Base08virtual1Ev.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%[[STRUCT_BASE0]]*)* @_ZN5Base08virtual1Ev to i8*), i32 0, i64 ptrtoint (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV5Base0, i32 0, i32 0, i32 2) to i64), i64 55600 }, section "llvm.ptrauth", align 8
 // CHECK: @_ZN5Base08virtual3Ev.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%[[STRUCT_BASE0]]*)* @_ZN5Base08virtual3Ev to i8*), i32 0, i64 ptrtoint (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV5Base0, i32 0, i32 0, i32 3) to i64), i64 53007 }, section "llvm.ptrauth", align 8
 // CHECK: @_ZN5Base016virtual_variadicEiz.ptrauth = private constant { i8*, i32, i64, i64 } { i8* bitcast (void (%[[STRUCT_BASE0]]*, i32, ...)* @_ZN5Base016virtual_variadicEiz to i8*), i32 0, i64 ptrtoint (i8** getelementptr inbounds ({ [5 x i8*] }, { [5 x i8*] }* @_ZTV5Base0, i32 0, i32 0, i32 4) to i64), i64 7464 }, section "llvm.ptrauth", align 8
@@ -78,9 +78,9 @@ typedef void (Base0::*MethodTy0)();
 typedef void (Base0::*VariadicMethodTy0)(int, ...);
 typedef void (Derived0::*MethodTy1)();
 
-// CHECK: define {{.*}} void @_ZN5Base08virtual1Ev(
+// CHECK: define void @_ZN5Base08virtual1Ev(
 
-// CHECK: define {{.*}} void @_Z5test0v()
+// CHECK: define void @_Z5test0v()
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK-NEXT: %[[VARMETHOD1:.*]] = alloca { i64, i64 }, align 8
 // CHECK-NEXT: %[[METHOD2:.*]] = alloca { i64, i64 }, align 8
@@ -232,7 +232,7 @@ void test0() {
   method7 = &Derived1::virtual1;
 }
 
-// CHECK: define {{.*}} void @_Z5test1P5Base0MS_FvvE(%[[STRUCT_BASE0]]* %[[A0:.*]], [2 x i64] %[[A1_COERCE:.*]])
+// CHECK: define void @_Z5test1P5Base0MS_FvvE(%[[STRUCT_BASE0]]* %[[A0:.*]], [2 x i64] %[[A1_COERCE:.*]])
 // CHECK: %[[A1:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[A0_ADDR:.*]] = alloca %[[STRUCT_BASE0]]*, align 8
 // CHECK: %[[A1_ADDR:.*]] = alloca { i64, i64 }, align 8
@@ -277,7 +277,7 @@ void test1(Base0 *a0, MethodTy0 a1) {
   (a0->*a1)();
 }
 
-// CHECK: define {{.*}} void @_Z15testConversion0M5Base0FvvEM8Derived0FvvE([2 x i64] %[[METHOD0_COERCE:.*]], [2 x i64] %[[METHOD1_COERCE:.*]])
+// CHECK: define void @_Z15testConversion0M5Base0FvvEM8Derived0FvvE([2 x i64] %[[METHOD0_COERCE:.*]], [2 x i64] %[[METHOD1_COERCE:.*]])
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[METHOD1:.*]] = alloca { i64, i64 }, align 8
 // CHECK: %[[METHOD0_ADDR:.*]] = alloca { i64, i64 }, align 8
@@ -319,21 +319,21 @@ void testConversion0(MethodTy0 method0, MethodTy1 method1) {
   method1 = method0;
 }
 
-// CHECK: define {{.*}} void @_Z15testConversion1M5Base0FvvE(
+// CHECK: define void @_Z15testConversion1M5Base0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC0]], i32 0, i64 [[TYPEDISC1]])
 
 void testConversion1(MethodTy0 method0) {
   MethodTy1 method1 = reinterpret_cast<MethodTy1>(method0);
 }
 
-// CHECK: define {{.*}} void @_Z15testConversion2M8Derived0FvvE(
+// CHECK: define void @_Z15testConversion2M8Derived0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion2(MethodTy1 method1) {
   MethodTy0 method0 = static_cast<MethodTy0>(method1);
 }
 
-// CHECK: define {{.*}} void @_Z15testConversion3M8Derived0FvvE(
+// CHECK: define void @_Z15testConversion3M8Derived0FvvE(
 // CHECK: call i64 @llvm.ptrauth.resign.i64(i64 %{{.*}}, i32 0, i64 [[TYPEDISC1]], i32 0, i64 [[TYPEDISC0]])
 
 void testConversion3(MethodTy1 method1) {
@@ -343,7 +343,7 @@ void testConversion3(MethodTy1 method1) {
 // No need to call @llvm.ptrauth.resign.i64 if the source member function
 // pointer is a constant.
 
-// CHECK: define {{.*}} void @_Z15testConversion4v(
+// CHECK: define void @_Z15testConversion4v(
 // CHECK: %[[METHOD0:.*]] = alloca { i64, i64 }, align 8
 // CHECK: store { i64, i64 } { i64 ptrtoint ({ i8*, i32, i64, i64 }* @_ZN5Base08virtual1Ev_vfpthunk_.ptrauth to i64), i64 0 }, { i64, i64 }* %[[METHOD0]], align 8
 // CHECK: ret void
@@ -371,7 +371,7 @@ namespace testNonVirtualThunk {
   D d;
 }
 
-// CHECK: define {{.*}} void @_Z39test_builtin_ptrauth_type_discriminatorv()
+// CHECK: define void @_Z39test_builtin_ptrauth_type_discriminatorv()
 // CHECK: store i32 [[TYPEDISC0]], i32* %
 // CHECK: store i32 [[TYPEDISC1]], i32* %
 // CHECK: store i32 [[TYPEDISC2]], i32* %

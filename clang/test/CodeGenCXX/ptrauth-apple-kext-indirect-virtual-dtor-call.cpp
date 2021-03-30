@@ -11,11 +11,11 @@ B1::~B1() {}
 void DELETE(B1 *pb1) {
   pb1->B1::~B1();
 }
-// CHECK-LABEL: define {{.*}} void @_ZN2B1D0Ev
+// CHECK-LABEL: define void @_ZN2B1D0Ev
 // CHECK: [[T1:%.*]] = load %struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2)
 // CHECK-NEXT: [[B1:%.*]] = call i64 @llvm.ptrauth.blend.i64(i64 ptrtoint (%struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2) to i64), i64 14635)
 // CHECK-NEXT: call %struct.B1* [[T1]](%struct.B1* nonnull dereferenceable(8) [[T2:%.*]]) [ "ptrauth"(i32 0, i64 [[B1]]) ]
-// CHECK-LABEL: define {{.*}} void @_Z6DELETEP2B1
+// CHECK-LABEL: define void @_Z6DELETEP2B1
 // CHECK: [[T3:%.*]] = load %struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2)
 // CHECK-NEXT: [[B3:%.*]] = call i64 @llvm.ptrauth.blend.i64(i64 ptrtoint (%struct.B1* (%struct.B1*)** getelementptr inbounds (%struct.B1* (%struct.B1*)*, %struct.B1* (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to %struct.B1* (%struct.B1*)**), i64 2) to i64), i64 14635)
 // CHECK-NEXT:  call %struct.B1* [[T3]](%struct.B1* nonnull dereferenceable(8) [[T4:%.*]]) [ "ptrauth"(i32 0, i64 [[B3]])

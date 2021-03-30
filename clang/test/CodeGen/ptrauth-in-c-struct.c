@@ -27,7 +27,7 @@ typedef struct {
 SA getSA(void);
 void calleeSA(SA);
 
-// CHECK: define {{.*}} void @test_copy_constructor_SA(%[[STRUCT_SA]]* %{{.*}})
+// CHECK: define void @test_copy_constructor_SA(%[[STRUCT_SA]]* %{{.*}})
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa1_50_8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
@@ -55,7 +55,7 @@ void test_copy_constructor_SA(SA *s) {
   SA t = *s;
 }
 
-// CHECK: define {{.*}} void @test_copy_constructor_SA2(%[[STRUCT_SA2]]* %{{.*}})
+// CHECK: define void @test_copy_constructor_SA2(%[[STRUCT_SA2]]* %{{.*}})
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa2_30_8(
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_pa2_30_8(i8** %[[DST:.*]], i8** %[[SRC:.*]])
@@ -83,7 +83,7 @@ void test_copy_constructor_SA2(SA2 *s) {
   SA2 t = *s;
 }
 
-// CHECK: define {{.*}} void @test_copy_assignment_SA(
+// CHECK: define void @test_copy_assignment_SA(
 // CHECK: call void @__copy_assignment_8_8_t0w4_pa1_50_8(
 
 // CHECK: define linkonce_odr hidden void @__copy_assignment_8_8_t0w4_pa1_50_8(
@@ -92,7 +92,7 @@ void test_copy_assignment_SA(SA *d, SA *s) {
   *d = *s;
 }
 
-// CHECK: define {{.*}} void @test_move_constructor_SA(
+// CHECK: define void @test_move_constructor_SA(
 // CHECK: define internal void @__Block_byref_object_copy_(
 // CHECK: define linkonce_odr hidden void @__move_constructor_8_8_t0w4_pa1_50_8(
 
@@ -101,7 +101,7 @@ void test_move_constructor_SA(void) {
   BlockTy b = ^{ (void)t; };
 }
 
-// CHECK: define {{.*}} void @test_move_assignment_SA(
+// CHECK: define void @test_move_assignment_SA(
 // CHECK: call void @__move_assignment_8_8_t0w4_pa1_50_8(
 // CHECK: define linkonce_odr hidden void @__move_assignment_8_8_t0w4_pa1_50_8(
 
@@ -109,14 +109,14 @@ void test_move_assignment_SA(SA *p) {
   *p = getSA();
 }
 
-// CHECK: define {{.*}} void @test_parameter_SA(%[[STRUCT_SA]]* %{{.*}})
+// CHECK: define void @test_parameter_SA(%[[STRUCT_SA]]* %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
 void test_parameter_SA(SA a) {
 }
 
-// CHECK: define {{.*}} void @test_argument_SA(%[[STRUCT_SA]]* %[[A:.*]])
+// CHECK: define void @test_argument_SA(%[[STRUCT_SA]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_SA]], align 8
 // CHECK: store %[[STRUCT_SA]]* %[[A]], %[[STRUCT_SA]]** %[[A_ADDR]], align 8
@@ -132,7 +132,7 @@ void test_argument_SA(SA *a) {
   calleeSA(*a);
 }
 
-// CHECK: define {{.*}} void @test_return_SA(%[[STRUCT_SA]]* noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* %[[A:.*]])
+// CHECK: define void @test_return_SA(%[[STRUCT_SA]]* noalias sret(%struct.SA) align 8 %[[AGG_RESULT:.*]], %[[STRUCT_SA]]* %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca %[[STRUCT_SA]]*, align 8
 // CHECK: store %[[STRUCT_SA]]* %[[A]], %[[STRUCT_SA]]** %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load %[[STRUCT_SA]]*, %[[STRUCT_SA]]** %[[A_ADDR]], align 8
@@ -146,7 +146,7 @@ SA test_return_SA(SA *a) {
   return *a;
 }
 
-// CHECK: define {{.*}} void @test_copy_constructor_SI(
+// CHECK: define void @test_copy_constructor_SI(
 // CHECK-NOT: call
 // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(
 // CHECK-NOT: call
@@ -156,7 +156,7 @@ void test_copy_constructor_SI(SI *s) {
   SI t = *s;
 }
 
-// CHECK: define {{.*}} void @test_parameter_SI(i64 %{{.*}})
+// CHECK: define void @test_parameter_SI(i64 %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
