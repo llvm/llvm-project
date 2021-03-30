@@ -153,15 +153,17 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
   DWARFDebugInfoEntry die;
 
+  uint32_t depth = 0;
   // We are in our compile unit, parse starting at the offset we were told to
   // parse
   const DWARFDataExtractor &data = GetData();
   std::vector<uint32_t> die_index_stack;
   die_index_stack.reserve(32);
+  die_index_stack.push_back(0);
   bool prev_die_had_children = false;
   while (offset < next_cu_offset && die.Extract(data, this, &offset)) {
     const bool null_die = die.IsNULL();
-    if (die_index_stack.size() == 0) {
+    if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");
 
       // The average bytes per DIE entry has been seen to be around 14-20 so
@@ -199,12 +201,11 @@ void DWARFUnit::ExtractDIEsRWLocked() {
             m_die_array.back().SetHasChildren(false);
         }
       } else {
-        die.SetParentIndex(m_die_array.size() - die_index_stack.rbegin()[1]);
+        die.SetParentIndex(m_die_array.size() - die_index_stack[depth - 1]);
 
         if (die_index_stack.back())
           m_die_array[die_index_stack.back()].SetSiblingIndex(
               m_die_array.size() - die_index_stack.back());
-        die_index_stack.back() = m_die_array.size();
 
         // Only push the DIE if it isn't a NULL DIE
         m_die_array.push_back(die);
@@ -213,19 +214,24 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
     if (null_die) {
       // NULL DIE.
-      if (!die_index_stack.empty()) {
+      if (!die_index_stack.empty())
         die_index_stack.pop_back();
-        prev_die_had_children = false;
-      }
+
+      if (depth > 0)
+        --depth;
+      prev_die_had_children = false;
     } else {
+      die_index_stack.back() = m_die_array.size() - 1;
       // Normal DIE
       const bool die_has_children = die.HasChildren();
-      if (die_has_children)
+      if (die_has_children) {
         die_index_stack.push_back(0);
+        ++depth;
+      }
       prev_die_had_children = die_has_children;
     }
 
-    if (die_index_stack.size() == 0)
+    if (depth == 0)
       break; // We are done with this compile unit!
   }
 
