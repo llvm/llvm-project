@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <csignal>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <thread>
@@ -13,8 +14,9 @@ pseudo_barrier_t barrier;
 
 static void sigusr1_handler(int signo) {
   char buf[100];
-  snprintf(buf, sizeof(buf), "received SIGUSR1 on thread id: %" PRIx64 "\n",
-           get_thread_id());
+  std::snprintf(buf, sizeof(buf),
+                "received SIGUSR1 on thread id: %" PRIx64 "\n",
+                get_thread_id());
   write(STDOUT_FILENO, buf, strlen(buf));
 }
 
@@ -36,7 +38,7 @@ int main(int argc, char **argv) {
 
   pseudo_barrier_wait(barrier);
 
-  puts("@started");
+  std::puts("@started");
 
   for (std::thread &thread : threads)
     thread.join();
