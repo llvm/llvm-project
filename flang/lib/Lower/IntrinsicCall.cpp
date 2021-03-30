@@ -1541,19 +1541,21 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle required string argument
   auto string = builder.createBox(loc, args[0]);
+
   // Handle required set argument
   auto set = builder.createBox(loc, args[1]);
 
   // Handle optional argument, back
-  auto back = fir::isUnboxedValue(args[2])
-              ? builder.createBox(loc, args[2]) 
-              : builder.create<fir::AbsentOp>(
-              loc, fir::BoxType::get(builder.getNoneType()));
+  auto back = isAbsent(args[2])
+              ? builder.create<fir::AbsentOp>(
+              loc, fir::BoxType::get(builder.getNoneType()))
+              : builder.createBox(loc, args[2]); 
 
   // Handle optional argument, kind
-  auto kind = fir::isUnboxedValue(args[3]) ? fir::getBase(args[3]) :
-              builder.createIntegerConstant(loc, resultType, 
-              builder.getKindMap().defaultIntegerKind());
+  auto kind = isAbsent(args[3])
+              ? builder.createIntegerConstant(loc, resultType, 
+              builder.getKindMap().defaultIntegerKind()) :
+              fir::getBase(args[3]);
   
   // Create result descriptor    
   auto resultMutableBox =
