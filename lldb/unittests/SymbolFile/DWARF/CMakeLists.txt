@@ -1,5 +1,6 @@
 add_lldb_unittest(SymbolFileDWARFTests
   DWARFASTParserClangTests.cpp
+  DWARFUnitTest.cpp
   SymbolFileDWARFTests.cpp
   XcodeSDKModuleTests.cpp
 
