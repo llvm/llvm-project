@@ -351,3 +351,36 @@ define <4 x i8> @trunc_abs_sext_vec(<4 x i8> %x) {
   %t = trunc <4 x i32> %a to <4 x i8>
   ret <4 x i8> %t
 }
+
+define i32 @demand_low_bit(i32 %x) {
+; CHECK-LABEL: @demand_low_bit(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %r = and i32 %a, 1
+  ret i32 %r
+}
+
+define <3 x i82> @demand_low_bit_int_min_is_poison(<3 x i82> %x) {
+; CHECK-LABEL: @demand_low_bit_int_min_is_poison(
+; CHECK-NEXT:    [[A:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = shl <3 x i82> [[A]], <i82 81, i82 81, i82 81>
+; CHECK-NEXT:    ret <3 x i82> [[R]]
+;
+  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %x, i1 true)
+  %r = shl <3 x i82> %a, <i82 81, i82 81, i82 81>
+  ret <3 x i82> %r
+}
+
+define i32 @demand_low_bits(i32 %x) {
+; CHECK-LABEL: @demand_low_bits(
+; CHECK-NEXT:    [[A:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %r = and i32 %a, 3
+  ret i32 %r
+}
