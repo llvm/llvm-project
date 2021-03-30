@@ -1800,6 +1800,9 @@ DefInit *VarDefInit::instantiate() {
     for (const RecordVal &Val : Class->getValues())
       NewRec->addValue(Val);
 
+    // Copy assertions from class to instance.
+    NewRec->appendAssertions(Class);
+
     // Substitute and resolve template arguments
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
@@ -1827,6 +1830,9 @@ DefInit *VarDefInit::instantiate() {
     // Resolve internal references and store in record keeper
     NewRec->resolveReferences();
     Records.addDef(std::move(NewRecOwner));
+
+    // Check the assertions.
+    NewRec->checkAssertions();
 
     Def = DefInit::get(NewRec);
   }
@@ -2334,6 +2340,8 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     // Re-register with RecordKeeper.
     setName(NewName);
   }
+
+  // Resolve the field values.
   for (RecordVal &Value : Values) {
     if (SkipVal == &Value) // Skip resolve the same field as the given one
       continue;
@@ -2353,6 +2361,14 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
                 "\n");
       }
     }
+  }
+
+  // Resolve the assertion expressions.
+  for (auto &Assertion : Assertions) {
+    Init *Value = std::get<1>(Assertion)->resolveReferences(R);
+    std::get<1>(Assertion) = Value;
+    Value = std::get<2>(Assertion)->resolveReferences(R);
+    std::get<2>(Assertion) = Value;
   }
 }
 
@@ -2593,6 +2609,21 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
     return DI;
   PrintFatalError(getLoc(), "Record `" + getName() + "', field `" +
     FieldName + "' does not have a dag initializer!");
+}
+
+// Check all record assertions: For each one, resolve the condition
+// and message, then call CheckAssert().
+// Note: The condition and message are probably already resolved,
+//       but resolving again allows calls before records are resolved.
+void Record::checkAssertions() {
+  RecordResolver R(*this);
+  R.setFinal(true);
+
+  for (auto Assertion : getAssertions()) {
+    Init *Condition = std::get<1>(Assertion)->resolveReferences(R);
+    Init *Message = std::get<2>(Assertion)->resolveReferences(R);
+    CheckAssert(std::get<0>(Assertion), Condition, Message);
+  }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

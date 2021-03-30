@@ -14,21 +14,21 @@ assert !le(!size(Name), 20), "primary name is too long: " # Name;
 // CHECK: assertion failed
 // CHECK: note: first name is incorrect
 
-def Rec1 {
+def Rec01 {
   string name = "Fred Smith";
 }
 
-assert !eq(!substr(Rec1.name, 0, 3), "Jane"),
-       !strconcat("first name is incorrect: ", Rec1.name);
+assert !eq(!substr(Rec01.name, 0, 3), "Jane"),
+       !strconcat("first name is incorrect: ", Rec01.name);
 
 // CHECK: assertion failed
-// CHECK: note: record Rec2 is broken
+// CHECK: note: record Rec02 is broken
 
-def Rec2 {
+def Rec02 {
   bit broken = true;
 }
 
-assert !not(Rec2.broken), "record Rec2 is broken";
+assert !not(Rec02.broken), "record Rec02 is broken";
 
 // CHECK: assertion failed
 // CHECK: note: cube of 9
@@ -93,6 +93,46 @@ def Rec14 : Cube<3> {
 }
 
 // Test the assert statement in a class definition.
+
+class PersonName<string name> {
+  assert !le(!size(name), 32), "person name is too long: " # name;
+  string Name = name;
+}
+
+class Person<string name, int age> : PersonName<name> {
+  assert !and(!ge(age, 1), !le(age, 120)),
+         "person age is invalid: " # age;
+  int Age = age;
+}
+
+def Rec20 : Person<"Donald Knuth", 60>;
+
+// CHECK: assertion failed
+// CHECK: note: person name is too long
+
+def Rec21 : Person<"Donald Uh Oh This Name Is Too Long Knuth", 50>;
+
+// CHECK: assertion failed
+// CHECK: note: person age is invalid
+
+def Rec22 : Person<"Donald Knuth", 150>;
+
+// Test the assert statement in an anonymous class invocation.
+
+def Rec30 {
+  string Name = Person<"Margaret Heafield Hamilton", 25>.Name;
+  int Age = Person<"Margaret Heafield Hamilton", 25>.Age;
+}
+
+def Rec31 {
+  string Name = Person<"Margaret Heafield And More Middle Names Hamilton", 25>.Name;
+  int Age = Person<"Margaret Heafield Hamilton", 25>.Age;
+}
+
+def Rec32 {
+  string Name = Person<"Margaret Heafield Hamilton", 25>.Name;
+  int Age = Person<"Margaret Heafield Hamilton", 0>.Age;
+}
 
 // Test the assert statement in a multiclass.
 

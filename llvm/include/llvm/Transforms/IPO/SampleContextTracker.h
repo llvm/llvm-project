@@ -114,13 +114,14 @@ public:
   FunctionSamples *getBaseSamplesFor(const Function &Func,
                                      bool MergeContext = true);
   // Query base profile for a given function by name.
-  FunctionSamples *getBaseSamplesFor(StringRef Name, bool MergeContext);
+  FunctionSamples *getBaseSamplesFor(StringRef Name, bool MergeContext = true);
   // Retrieve the context trie node for given profile context
   ContextTrieNode *getContextFor(const SampleContext &Context);
   // Mark a context profile as inlined when function is inlined.
   // This makes sure that inlined context profile will be excluded in
   // function's base profile.
   void markContextSamplesInlined(const FunctionSamples *InlinedSamples);
+  ContextTrieNode &getRootContext();
   void promoteMergeContextSamplesTree(const Instruction &Inst,
                                       StringRef CalleeName);
   void addCallGraphEdges(CallGraph &CG, StringMap<Function *> &SymbolMap);

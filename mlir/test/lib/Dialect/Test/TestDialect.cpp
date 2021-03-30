@@ -754,6 +754,25 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
   return success();
 }
 
+LogicalResult
+OpWithResultShapePerDimInterfaceOp ::reifyReturnTypeShapesPerResultDim(
+    OpBuilder &builder,
+    llvm::SmallVectorImpl<llvm::SmallVector<Value>> &shapes) {
+  SmallVector<Value> operand1Shape, operand2Shape;
+  Location loc = getLoc();
+  for (auto i :
+       llvm::seq<int>(0, operand1().getType().cast<ShapedType>().getRank())) {
+    operand1Shape.push_back(builder.create<memref::DimOp>(loc, operand1(), i));
+  }
+  for (auto i :
+       llvm::seq<int>(0, operand2().getType().cast<ShapedType>().getRank())) {
+    operand2Shape.push_back(builder.create<memref::DimOp>(loc, operand2(), i));
+  }
+  shapes.emplace_back(std::move(operand2Shape));
+  shapes.emplace_back(std::move(operand1Shape));
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Test SideEffect interfaces
 //===----------------------------------------------------------------------===//

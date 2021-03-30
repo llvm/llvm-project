@@ -165,6 +165,10 @@ protected:
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
   /// zero length bitfield, regardless of the zero length bitfield type.
   unsigned ZeroLengthBitfieldBoundary;
+
+  /// If non-zero, specifies a maximum alignment to truncate alignment
+  /// specified in the aligned attribute of a static variable to this value.
+  unsigned MaxAlignedAttribute;
 };
 
 /// OpenCL type kinds.
@@ -783,6 +787,10 @@ public:
   unsigned getZeroLengthBitfieldBoundary() const {
     return ZeroLengthBitfieldBoundary;
   }
+
+  /// Get the maximum alignment in bits for a static variable with
+  /// aligned attribute.
+  unsigned getMaxAlignedAttribute() const { return MaxAlignedAttribute; }
 
   /// Check whether explicit bitfield alignment attributes should be
   //  honored, as in "__attribute__((aligned(2))) int b : 1;".

@@ -28,7 +28,7 @@ public:
   /// \param[in] tid
   ///     The tid of this thread.
   ///
-  /// \param[in] trace_file.
+  /// \param[in] trace_file
   ///     The file that contains the list of instructions that were traced when
   ///     this thread was being executed.
   ThreadTrace(Process &process, lldb::tid_t tid, const FileSpec &trace_file)

@@ -880,8 +880,10 @@ struct FoldProducerReshapeOpByLinearization
 
       // Further check that the resulting index maps can be fused and
       // inverted. Without this the resultant op is not legal.
-      if (!inversePermutation(concatAffineMaps(fusedIndexMaps)))
-        return op.emitRemark("fused op loop bound computation failed");
+      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+        return rewriter.notifyMatchFailure(
+            op, "fused op loop bound computation failed");
+      }
 
       rewriter.startRootUpdate(op);
       op->setOperands(fusedOperands);
@@ -973,15 +975,19 @@ struct FoldConsumerReshapeOpByLinearization
         linearizeCollapsedDims(invMap, reshapeOp.getSrcType().getShape(),
                                reshapeOp.getReassociationMaps());
     for (AffineExpr expr : modifiedMap.getResults()) {
-      if (!expr.isPureAffine())
-        return producer.emitRemark("fused op indexing map is not affine");
+      if (!expr.isPureAffine()) {
+        return rewriter.notifyMatchFailure(
+            producer, "fused op indexing map is not affine");
+      }
     }
     fusedIndexMaps.back() = modifiedMap;
 
     // Further check that the resulting index maps can be fused and
     // inverted. Without this the resultant op is not legal.
-    if (!inversePermutation(concatAffineMaps(fusedIndexMaps)))
-      return reshapeOp.emitRemark("fused op loop bound computation failed");
+    if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+      return rewriter.notifyMatchFailure(
+          producer, "fused op loop bound computation failed");
+    }
 
     Location loc = producer.getLoc();
     Value output = rewriter.create<TensorReshapeOp>(

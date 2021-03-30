@@ -75,8 +75,33 @@ def testStructuredOpOnBuffers():
                                 results=[]))
       with InsertionPoint(func.add_entry_block()):
         lhs, rhs, result = func.entry_block.arguments
+        # TODO: prperly hook up the region.
         linalg.MatmulOp([lhs, rhs], outputs=[result])
         std.ReturnOp([])
 
   # CHECK: linalg.matmul ins(%arg0, %arg1 : memref<2x3x4xf32>, memref<2x3x4xf32>) outs(%arg2 : memref<2x3x4xf32>)
+  print(module)
+
+# CHECK-LABEL: TEST: testNamedStructuredOp
+@run
+def testNamedStructuredOp():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
+                                   RankedTensorType.get((16, 8), f32))
+      def named_form(lhs, rhs):
+        init_result = linalg.InitTensorOp([4, 8], f32)
+        # CHECK: linalg.matmul
+        # TODO: prperly hook up the region.
+        return linalg.matmul(lhs, rhs, outs=[init_result.result])
+
+      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
+                                   RankedTensorType.get((16, 8), f32))
+      def generic_form(lhs, rhs):
+        init_result = linalg.InitTensorOp([4, 8], f32)
+        # CHECK: linalg.generic
+        return linalg.matmul(lhs, rhs, outs=[init_result.result], emit_generic=True)
+
   print(module)

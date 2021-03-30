@@ -138,10 +138,10 @@ private:
 ///
 /// \param[in] module_sp The module to grab the .text section from.
 ///
-/// \param[in/out] breakpad_uuid A vector that will receive the calculated
+/// \param[in,out] breakpad_uuid A vector that will receive the calculated
 ///                breakpad .text hash.
 ///
-/// \param[in/out] facebook_uuid A vector that will receive the calculated
+/// \param[in,out] facebook_uuid A vector that will receive the calculated
 ///                facebook .text hash.
 ///
 void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,

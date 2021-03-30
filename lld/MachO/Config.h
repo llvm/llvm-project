@@ -50,6 +50,12 @@ enum class UndefinedSymbolTreatment {
   dynamic_lookup,
 };
 
+struct SegmentProtection {
+  llvm::StringRef name;
+  uint32_t maxProt;
+  uint32_t initProt;
+};
+
 class SymbolPatterns {
 public:
   // GlobPattern can also match literals,
@@ -104,6 +110,9 @@ struct Configuration {
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
   std::vector<Symbol *> explicitUndefineds;
+  // There are typically very few custom segmentProtections, so use a vector
+  // instead of a map.
+  std::vector<SegmentProtection> segmentProtections;
 
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   SectionRenameMap sectionRenameMap;
