@@ -598,6 +598,15 @@ def extract_vec_elt_combines : GICombineGroup<[
   extract_vec_elt_build_vec,
   extract_all_elts_from_build_vector]>;
 
+def funnel_shift_to_rotate : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FSHL, G_FSHR):$root,
+    [{ return Helper.matchFunnelShiftToRotate(*${root}); }]),
+  (apply [{ Helper.applyFunnelShiftToRotate(*${root}); }])
+>;
+
+def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
+
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
                                      undef_to_negative_one,
@@ -640,4 +649,4 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem]>;
+    div_rem_to_divrem, funnel_shift_combines]>;
