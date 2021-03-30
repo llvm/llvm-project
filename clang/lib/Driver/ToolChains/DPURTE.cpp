@@ -96,14 +96,16 @@ void DPURTE::addClangTargetOptions(
   }
 
   bool nr_tasklets_already_added = false;
+  bool b_crt0 = false;
   for (unsigned int EachArg = 0; EachArg < DriverArgs.size(); EachArg++) {
     std::string arg(DriverArgs.getArgString(EachArg));
     if (arg.find(NR_TASKLETS) != ULLONG_MAX) {
       nr_tasklets_already_added = true;
-      break;
+    } else if (arg.find("UPMEM_CRT0") != ULLONG_MAX) {
+      b_crt0 = true;
     }
   }
-  if (!nr_tasklets_already_added) {
+  if (!nr_tasklets_already_added && !b_crt0) {
     CC1Args.push_back("-D" NR_TASKLETS "=1");
   }
 }
