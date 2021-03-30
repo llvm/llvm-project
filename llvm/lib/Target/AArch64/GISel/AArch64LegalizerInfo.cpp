@@ -760,6 +760,7 @@ bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
   // is 64b with an extension.
   Register AmtReg = MI.getOperand(2).getReg();
   LLT AmtTy = MRI.getType(AmtReg);
+  (void)AmtTy;
   assert(AmtTy.isScalar() && "Expected a scalar rotate");
   assert(AmtTy.getSizeInBits() < 64 && "Expected this rotate to be legal");
   auto NewAmt = Helper.MIRBuilder.buildSExt(LLT::scalar(64), AmtReg);
