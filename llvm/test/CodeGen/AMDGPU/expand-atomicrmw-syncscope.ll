@@ -1,8 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-; Check that syncscope it copied from atomicrmw to cmpxchg during expansion.
-; There should be no scc unless we have system scope.
-
 ; GCN-LABEL: {{^}}expand_atomicrmw_agent:
 ; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc{{$}}
 define void @expand_atomicrmw_agent(float addrspace(1)* nocapture %arg) {
@@ -60,7 +57,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}expand_atomicrmw_one_as:
-; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc scc{{$}}
+; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc{{$}}
 define void @expand_atomicrmw_one_as(float addrspace(1)* nocapture %arg) {
 entry:
   %ret = atomicrmw fadd float addrspace(1)* %arg, float 1.000000e+00 syncscope("one-as") monotonic, align 4
@@ -68,7 +65,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}expand_atomicrmw_system:
-; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc scc{{$}}
+; GCN: global_atomic_cmpswap v{{[0-9]+}}, v[{{[0-9:]+}}], v[{{[0-9:]+}}], off glc{{$}}
 define void @expand_atomicrmw_system(float addrspace(1)* nocapture %arg) {
 entry:
   %ret = atomicrmw fadd float addrspace(1)* %arg, float 1.000000e+00 monotonic, align 4
