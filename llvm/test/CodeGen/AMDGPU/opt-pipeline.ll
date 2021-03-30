@@ -306,8 +306,6 @@
 ; GCN-O1-NEXT:       Remove redundant instructions
 ; GCN-O1-NEXT:       Hoist/decompose integer division and remainder
 ; GCN-O1-NEXT:       Simplify the CFG
-; GCN-O1-NEXT:     Relative Lookup Table Converter
-; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Annotation Remarks
 
 ; GCN-O1-NEXT: Pass Arguments:
@@ -662,8 +660,6 @@
 ; GCN-O2-NEXT:       Remove redundant instructions
 ; GCN-O2-NEXT:       Hoist/decompose integer division and remainder
 ; GCN-O2-NEXT:       Simplify the CFG
-; GCN-O2-NEXT:     Relative Lookup Table Converter
-; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Annotation Remarks
 
 ; GCN-O2-NEXT: Pass Arguments:
@@ -1023,8 +1019,6 @@
 ; GCN-O3-NEXT:       Remove redundant instructions
 ; GCN-O3-NEXT:       Hoist/decompose integer division and remainder
 ; GCN-O3-NEXT:       Simplify the CFG
-; GCN-O3-NEXT:     Relative Lookup Table Converter
-; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Annotation Remarks
 
 ; GCN-O3-NEXT: Pass Arguments:
