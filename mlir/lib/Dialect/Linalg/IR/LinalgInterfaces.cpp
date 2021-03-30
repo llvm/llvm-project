@@ -433,5 +433,54 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
     ++idx;
   }
 
+  // Check if given shapes match to inferred shapes.
+  Optional<SmallVector<int64_t, 4>> loopRanges = linalgOp.getStaticLoopRanges();
+  if (!loopRanges)
+    return linalgOp.emitError("unable to find loop range for operation");
+
+  // Verify only static cases since we can't get exact dimension sizes and loop
+  // ranges for dynamic cases in this stage.
+  if (llvm::none_of(*loopRanges, [](int64_t &range) {
+        return range == ShapedType::kDynamicSize;
+      })) {
+    for (int64_t &range : *loopRanges)
+      range -= 1;
+    for (const auto &en : llvm::enumerate(linalgOp.getShapedOperandTypes())) {
+      auto indices = indexingMaps[en.index()].compose(*loopRanges);
+      for (auto j : llvm::seq<unsigned>(0, en.value().getRank())) {
+
+        // Ignore dynamic dimension or the case that the inferred last index is
+        // zero. The index is increasing or decreasing in Linalg, for example,
+        // the last index should be `0` or `size-1`. We only check the cases
+        // that are non-zero because most of cases are increasing and it is too
+        // expensive to find the shape of decreasing cases.
+        if (en.value().isDynamicDim(j) || indices[j] == 0)
+          continue;
+
+        // The size of shaped operands and inferred dimension size should be
+        // same. But, for now we check if the inferred sizes are in boundary of
+        // shaped operands' size or not in case that Affine Expressions are
+        // complicated such as d0 * 3 + d1 since it is not easy to handle the
+        // issues.
+        auto inferredSize = indices[j] + 1;
+        auto shapedDimSize = en.value().getDimSize(j);
+        if (indexingMaps[en.index()].getResult(j).dyn_cast<AffineDimExpr>()) {
+          if (inferredSize != shapedDimSize) {
+            return linalgOp.emitOpError("inferred shaped operand #")
+                   << en.index() << " has shape's dimension #" << j << " to be "
+                   << inferredSize << ", but found " << shapedDimSize;
+          }
+        } else {
+          if (inferredSize > shapedDimSize) {
+            return linalgOp.emitOpError("inferred shaped operand #")
+                   << en.index() << " has shape's dimension #" << j
+                   << " to be greater than or equal to " << inferredSize
+                   << ", but found " << shapedDimSize;
+          }
+        }
+      }
+    }
+  }
+
   return success();
 }

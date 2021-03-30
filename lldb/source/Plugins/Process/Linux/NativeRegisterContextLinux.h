@@ -15,6 +15,8 @@
 namespace lldb_private {
 namespace process_linux {
 
+class NativeThreadLinux;
+
 class NativeRegisterContextLinux
     : public virtual NativeRegisterContextRegisterInfo {
 public:
@@ -24,7 +26,7 @@ public:
   // variant should be compiled into the final executable.
   static std::unique_ptr<NativeRegisterContextLinux>
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+                                       NativeThreadLinux &native_thread);
 
   // Invalidates cached values in register context data structures
   virtual void InvalidateAllRegisters(){}

@@ -729,7 +729,7 @@ lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
         PacketResult::Success) {
       if (response.GetChar() == 'Q') {
         if (response.GetChar() == 'C') {
-          m_curr_pid = response.GetHexMaxU32(false, LLDB_INVALID_PROCESS_ID);
+          m_curr_pid = response.GetHexMaxU64(false, LLDB_INVALID_PROCESS_ID);
           if (m_curr_pid != LLDB_INVALID_PROCESS_ID) {
             m_curr_pid_is_valid = eLazyBoolYes;
             return m_curr_pid;
@@ -1126,7 +1126,7 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
     return false;
 
   if (response.GetChar() == 'Q' && response.GetChar() == 'C')
-    tid = response.GetHexMaxU32(true, -1);
+    tid = response.GetHexMaxU64(true, -1);
 
   return true;
 }

@@ -848,6 +848,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
   response.PutCString(";qXfer:auxv:read+");
   response.PutCString(";qXfer:libraries-svr4:read+");
 #endif
+  response.PutCString(";multiprocess+");
 
   return SendPacketNoLock(response.GetString());
 }

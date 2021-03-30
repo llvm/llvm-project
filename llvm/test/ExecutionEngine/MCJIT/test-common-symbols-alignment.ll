@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit -O0 %s
 ; RUN: %lli -O0 %s
 
 ; This test checks that common symbols have been allocated addresses honouring

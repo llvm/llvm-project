@@ -902,7 +902,8 @@ class GdbRemoteTestCaseBase(Base):
         "qXfer:libraries-svr4:read",
         "qXfer:features:read",
         "qEcho",
-        "QPassSignals"
+        "QPassSignals",
+        "multiprocess",
     ]
 
     def parse_qSupported_response(self, context):
