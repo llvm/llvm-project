@@ -154,7 +154,9 @@ auto lambda1 = [] (auto x) requires (sizeof(decltype(x)) == 1) { };
 
 auto lambda2 = [] (auto x) constexpr -> int requires (sizeof(decltype(x)) == 1) { return 0; };
 
-auto lambda3 = [] requires (sizeof(char) == 1) { };
+auto lambda3 = []<auto> requires(sizeof(char) == 1){};
+
+auto lambda4 = [] requires(sizeof(char) == 1){}; // expected-error {{expected body of lambda expression}}
 #if __cplusplus <= 202002L
-// expected-warning@-2{{is a C++2b extension}}
+// expected-warning@-2{{lambda without a parameter clause is a C++2b extension}}
 #endif
