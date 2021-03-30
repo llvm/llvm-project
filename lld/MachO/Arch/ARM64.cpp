@@ -33,7 +33,7 @@ struct ARM64 : TargetInfo {
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t pc) const override;
 
-  void writeStub(uint8_t *buf, const macho::Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
@@ -217,7 +217,7 @@ static constexpr uint32_t stubCode[] = {
     0xd61f0200, // 08: br    x16
 };
 
-void ARM64::writeStub(uint8_t *buf8, const macho::Symbol &sym) const {
+void ARM64::writeStub(uint8_t *buf8, const Symbol &sym) const {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   uint64_t pcPageBits =
       pageBits(in.stubs->addr + sym.stubsIndex * sizeof(stubCode));
