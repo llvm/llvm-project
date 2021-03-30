@@ -1,3 +1,4 @@
+; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
 ; This testcase exposes a bug in the local register allocator where it runs out
