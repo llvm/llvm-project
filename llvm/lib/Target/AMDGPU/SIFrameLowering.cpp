@@ -1012,7 +1012,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (TRI.needsStackRealignment(MF)) {
+  if (TRI.hasStackRealignment(MF)) {
     HasFP = true;
     const unsigned Alignment = MFI.getMaxAlign().value();
 
@@ -1445,8 +1445,9 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   }
 
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
-    MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->needsStackRealignment(MF) ||
-    MF.getTarget().Options.DisableFramePointerElim(MF);
+         MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
+             MF) ||
+         MF.getTarget().Options.DisableFramePointerElim(MF);
 }
 
 // This is essentially a reduced version of hasFP for entry functions. Since the

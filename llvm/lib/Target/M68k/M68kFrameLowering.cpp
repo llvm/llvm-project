@@ -46,7 +46,7 @@ bool M68kFrameLowering::hasFP(const MachineFunction &MF) const {
 
   return MF.getTarget().Options.DisableFramePointerElim(MF) ||
          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         TRI->needsStackRealignment(MF);
+         TRI->hasStackRealignment(MF);
 }
 
 // FIXME Make sure no other factors prevent us from reserving call frame
@@ -58,7 +58,7 @@ bool M68kFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
 bool M68kFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {
   return hasReservedCallFrame(MF) ||
-         (hasFP(MF) && !TRI->needsStackRealignment(MF)) ||
+         (hasFP(MF) && !TRI->hasStackRealignment(MF)) ||
          TRI->hasBasePointer(MF);
 }
 
@@ -82,7 +82,7 @@ M68kFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   // have dynamic allocas in addition to dynamic realignment.
   if (TRI->hasBasePointer(MF))
     FrameReg = TRI->getBaseRegister();
-  else if (TRI->needsStackRealignment(MF))
+  else if (TRI->hasStackRealignment(MF))
     FrameReg = TRI->getStackRegister();
   else
     FrameReg = TRI->getFrameRegister(MF);
@@ -107,7 +107,7 @@ M68kFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     assert((-(Offset + StackSize)) % MFI.getObjectAlign(FI).value() == 0);
     return StackOffset::getFixed(Offset + StackSize);
   }
-  if (TRI->needsStackRealignment(MF)) {
+  if (TRI->hasStackRealignment(MF)) {
     if (FI < 0) {
       // Skip the saved FP.
       return StackOffset::getFixed(Offset + SlotSize);
@@ -538,7 +538,7 @@ void M68kFrameLowering::emitPrologue(MachineFunction &MF,
     NumBytes = FrameSize - MMFI->getCalleeSavedFrameSize();
 
     // Callee-saved registers are pushed on stack before the stack is realigned.
-    if (TRI->needsStackRealignment(MF))
+    if (TRI->hasStackRealignment(MF))
       NumBytes = alignTo(NumBytes, MaxAlign);
 
     // Get the offset of the stack slot for the FP register, which is
@@ -608,7 +608,7 @@ void M68kFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Realign stack after we pushed callee-saved registers (so that we'll be
   // able to calculate their offsets from the frame pointer).
-  if (TRI->needsStackRealignment(MF)) {
+  if (TRI->hasStackRealignment(MF)) {
     assert(HasFP && "There should be a frame pointer if stack is realigned.");
     BuildStackAlignAND(MBB, MBBI, DL, StackPtr, MaxAlign);
   }
@@ -699,7 +699,7 @@ void M68kFrameLowering::emitEpilogue(MachineFunction &MF,
 
     // Callee-saved registers were pushed on stack before the stack was
     // realigned.
-    if (TRI->needsStackRealignment(MF))
+    if (TRI->hasStackRealignment(MF))
       NumBytes = alignTo(FrameSize, MaxAlign);
 
     // Pop FP.
@@ -734,8 +734,8 @@ void M68kFrameLowering::emitEpilogue(MachineFunction &MF,
   // slot before popping them off! Same applies for the case, when stack was
   // realigned. Don't do this if this was a funclet epilogue, since the funclets
   // will not do realignment or dynamic stack allocation.
-  if ((TRI->needsStackRealignment(MF) || MFI.hasVarSizedObjects())) {
-    if (TRI->needsStackRealignment(MF))
+  if ((TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects())) {
+    if (TRI->hasStackRealignment(MF))
       MBBI = FirstCSPop;
     uint64_t LEAAmount = -CSSize;
 

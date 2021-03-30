@@ -176,7 +176,7 @@ void M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   unsigned BasePtr;
   if (hasBasePointer(MF))
     BasePtr = (FIndex < 0 ? FramePtr : getBaseRegister());
-  else if (needsStackRealignment(MF))
+  else if (hasStackRealignment(MF))
     BasePtr = (FIndex < 0 ? FramePtr : StackPtr);
   else if (AfterFPPop)
     BasePtr = StackPtr;
@@ -228,7 +228,7 @@ bool M68kRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // can't address variables from the stack pointer.  MS inline asm can
   // reference locals while also adjusting the stack pointer.  When we can't
   // use both the SP and the FP, we need a separate base pointer register.
-  bool CantUseFP = needsStackRealignment(MF);
+  bool CantUseFP = hasStackRealignment(MF);
   return CantUseFP && CantUseSP(MFI);
 }
 

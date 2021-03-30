@@ -255,7 +255,7 @@ bool AArch64FrameLowering::homogeneousPrologEpilog(
   // Bail on stack adjustment needed on return for simplicity.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  if (MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(MF))
+  if (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF))
     return false;
   if (Exit && getArgumentPopSize(MF, *Exit))
     return false;
@@ -373,7 +373,7 @@ bool AArch64FrameLowering::hasFP(const MachineFunction &MF) const {
     return true;
   if (MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
-      RegInfo->needsStackRealignment(MF))
+      RegInfo->hasStackRealignment(MF))
     return true;
   // With large callframes around we may need to use FP to access the scavenging
   // emergency spillslot.
@@ -626,7 +626,7 @@ bool AArch64FrameLowering::canUseAsPrologue(
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
   // Don't need a scratch register if we're not going to re-align the stack.
-  if (!RegInfo->needsStackRealignment(*MF))
+  if (!RegInfo->hasStackRealignment(*MF))
     return true;
   // Otherwise, we can use any block as long as it has a scratch register
   // available.
@@ -688,7 +688,7 @@ bool AArch64FrameLowering::shouldCombineCSRLocalStackBump(
   if (MFI.hasVarSizedObjects())
     return false;
 
-  if (RegInfo->needsStackRealignment(MF))
+  if (RegInfo->hasStackRealignment(MF))
     return false;
 
   // This isn't strictly necessary, but it simplifies things a bit since the
@@ -1432,7 +1432,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (NumBytes) {
     // Alignment is required for the parent frame, not the funclet
     const bool NeedsRealignment =
-        !IsFunclet && RegInfo->needsStackRealignment(MF);
+        !IsFunclet && RegInfo->hasStackRealignment(MF);
     unsigned scratchSPReg = AArch64::SP;
 
     if (NeedsRealignment) {
@@ -2075,13 +2075,13 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     // Argument access should always use the FP.
     if (isFixed) {
       UseFP = hasFP(MF);
-    } else if (isCSR && RegInfo->needsStackRealignment(MF)) {
+    } else if (isCSR && RegInfo->hasStackRealignment(MF)) {
       // References to the CSR area must use FP if we're re-aligning the stack
       // since the dynamically-sized alignment padding is between the SP/BP and
       // the CSR area.
       assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
       UseFP = true;
-    } else if (hasFP(MF) && !RegInfo->needsStackRealignment(MF)) {
+    } else if (hasFP(MF) && !RegInfo->hasStackRealignment(MF)) {
       // If the FPOffset is negative and we're producing a signed immediate, we
       // have to keep in mind that the available offset range for negative
       // offsets is smaller than for positive ones. If an offset is available
@@ -2123,9 +2123,10 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
     }
   }
 
-  assert(((isFixed || isCSR) || !RegInfo->needsStackRealignment(MF) || !UseFP) &&
-         "In the presence of dynamic stack pointer realignment, "
-         "non-argument/CSR objects cannot be accessed through the frame pointer");
+  assert(
+      ((isFixed || isCSR) || !RegInfo->hasStackRealignment(MF) || !UseFP) &&
+      "In the presence of dynamic stack pointer realignment, "
+      "non-argument/CSR objects cannot be accessed through the frame pointer");
 
   if (isSVE) {
     StackOffset FPOffset =
@@ -2135,10 +2136,9 @@ StackOffset AArch64FrameLowering::resolveFrameOffsetReference(
         StackOffset::get(MFI.getStackSize() - AFI->getCalleeSavedStackSize(),
                          ObjectOffset);
     // Always use the FP for SVE spills if available and beneficial.
-    if (hasFP(MF) &&
-        (SPOffset.getFixed() ||
-         FPOffset.getScalable() < SPOffset.getScalable() ||
-         RegInfo->needsStackRealignment(MF))) {
+    if (hasFP(MF) && (SPOffset.getFixed() ||
+                      FPOffset.getScalable() < SPOffset.getScalable() ||
+                      RegInfo->hasStackRealignment(MF))) {
       FrameReg = RegInfo->getFrameRegister(MF);
       return FPOffset;
     }

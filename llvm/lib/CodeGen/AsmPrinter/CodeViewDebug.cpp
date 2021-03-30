@@ -1377,7 +1377,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn->CSRSize = MFI.getCVBytesOfCalleeSavedRegisters();
   CurFn->FrameSize = MFI.getStackSize();
   CurFn->OffsetAdjustment = MFI.getOffsetAdjustment();
-  CurFn->HasStackRealignment = TRI->needsStackRealignment(*MF);
+  CurFn->HasStackRealignment = TRI->hasStackRealignment(*MF);
 
   // For this function S_FRAMEPROC record, figure out which codeview register
   // will be the frame pointer.

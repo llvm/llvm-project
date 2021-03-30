@@ -461,21 +461,13 @@ bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   return !MF.getFunction().hasFnAttribute("no-realign-stack");
 }
 
-bool TargetRegisterInfo::needsStackRealignment(
-    const MachineFunction &MF) const {
+bool TargetRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const Function &F = MF.getFunction();
-  Align StackAlign = TFI->getStackAlign();
-  bool requiresRealignment = ((MFI.getMaxAlign() > StackAlign) ||
-                              F.hasFnAttribute(Attribute::StackAlignment));
-  if (F.hasFnAttribute("stackrealign") || requiresRealignment) {
-    if (canRealignStack(MF))
-      return true;
-    LLVM_DEBUG(dbgs() << "Can't realign function's stack: " << F.getName()
-                      << "\n");
-  }
-  return false;
+  return F.hasFnAttribute("stackrealign") ||
+         (MFI.getMaxAlign() > TFI->getStackAlign()) ||
+         F.hasFnAttribute(Attribute::StackAlignment);
 }
 
 bool TargetRegisterInfo::regmaskSubsetEqual(const uint32_t *mask0,
