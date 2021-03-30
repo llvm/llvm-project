@@ -12,7 +12,7 @@ $ clang -g label.c -c -o label.o
 $ clang label.o -o label.out
 
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/label/label.out -o %t.dSYM
-RUN: dwarfdump %t.dSYM | FileCheck %s
+RUN: llvm-dwarfdump %t.dSYM | FileCheck %s
 
 CHECK:      DW_TAG_label
 CHECK-NEXT:   DW_AT_name    ("foobar")
