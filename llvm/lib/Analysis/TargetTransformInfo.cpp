@@ -456,14 +456,9 @@ unsigned TargetTransformInfo::getRegUsageForType(Type *Ty) const {
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }
-
 bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
     Constant *C) const {
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
-}
-
-bool TargetTransformInfo::shouldBuildRelLookupTables() const {
-  return TTIImpl->shouldBuildRelLookupTables();
 }
 
 bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
