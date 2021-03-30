@@ -156,3 +156,29 @@ void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
   args.emplace_back(builder.createConvert(loc, fTy.getInput(3), sourceLine));
   builder.create<fir::CallOp>(loc, trimFunc, args);
 }
+
+/// generate call to Scan runtime library routine. 
+/// TODO: Add specialized kind versions.
+void
+Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
+                             mlir::Location loc, mlir::Value resultBox,
+                             mlir::Value stringBox, mlir::Value setBox,
+                             mlir::Value backBox, mlir::Value kind) {
+  auto scanFunc = getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
+  auto fTy = scanFunc.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
+
+  llvm::SmallVector<mlir::Value> args = {
+    builder.createConvert(loc, fTy.getInput(0), resultBox),
+    builder.createConvert(loc, fTy.getInput(1), stringBox),
+    builder.createConvert(loc, fTy.getInput(2), setBox),
+    builder.createConvert(loc, fTy.getInput(3), backBox),
+    builder.createConvert(loc, fTy.getInput(4), kind),
+    builder.createConvert(loc, fTy.getInput(5), sourceFile),
+    builder.createConvert(loc, fTy.getInput(6), sourceLine) 
+  };
+   
+  builder.create<fir::CallOp>(loc, scanFunc, args);
+}

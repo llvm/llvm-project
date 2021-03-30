@@ -167,6 +167,7 @@ struct IntrinsicLibrary {
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
@@ -312,6 +313,9 @@ static constexpr IntrinsicHandler handlers[]{
     {"modulo", &I::genModulo},
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
+    {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr},
+                          {"back", asAddr}, {"kind", asValue} }},
+             /*isElemental*/ true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
 };
@@ -1526,6 +1530,51 @@ IntrinsicLibrary::genPresent(mlir::Type,
   assert(args.size() == 1);
   return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
                                           fir::getBase(args[0]));
+}
+
+// SCAN 
+fir::ExtendedValue
+IntrinsicLibrary::genScan(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() >= 2);
+
+  // Handle required string argument
+  auto string = builder.createBox(loc, args[0]);
+  // Handle required set argument
+  auto set = builder.createBox(loc, args[1]);
+
+  // Handle optional argument, back
+  auto back = fir::isUnboxedValue(args[2])
+              ? builder.createBox(loc, args[2]) 
+              : builder.create<fir::AbsentOp>(
+              loc, fir::BoxType::get(builder.getNoneType()));
+
+  // Handle optional argument, kind
+  auto kind = fir::isUnboxedValue(args[3]) ? fir::getBase(args[3]) :
+              builder.createIntegerConstant(loc, resultType, 
+              builder.getKindMap().defaultIntegerKind());
+  
+  // Create result descriptor    
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  Fortran::lower::genScan(builder, loc, resultIrBox, string, set, back, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+
+  return res.match(
+        [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+            -> fir::ExtendedValue { 
+            addCleanUpForTemp(loc, box.getAddr());
+            return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for SCAN");
+      });
 }
 
 // SIGN

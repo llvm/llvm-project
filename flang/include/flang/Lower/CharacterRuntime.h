@@ -51,6 +51,13 @@ void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value substringBox, mlir::Value backOpt,
                         mlir::Value kind);
 
+/// Generate call to scan runtime.
+/// This calls the descriptor based runtime call implementation of the scan
+//  intrinsic.
+void genScan(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+             mlir::Value resultBox, mlir::Value stringBox,
+             mlir::Value setBox, mlir::Value backBox, mlir::Value kind);
+
 /// Generate call to trim runtime.
 ///   \p resultBox must be an unallocated allocatable used for the temporary
 ///   result. \p stringBox must be a fir.box describing trim string argument.
