@@ -539,7 +539,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
-                       MapVector<StringRef, BitcodeModule> &ModuleMap,
+                       MapVector<StringRef, BitcodeModule> *ModuleMap,
                        const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -608,11 +608,35 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
-    auto I = ModuleMap.find(Identifier);
-    assert(I != ModuleMap.end());
-    return I->second.getLazyModule(Mod.getContext(),
-                                   /*ShouldLazyLoadMetadata=*/true,
-                                   /*IsImporting*/ true);
+    if (ModuleMap) {
+      auto I = ModuleMap->find(Identifier);
+      assert(I != ModuleMap->end());
+      return I->second.getLazyModule(Mod.getContext(),
+                                     /*ShouldLazyLoadMetadata=*/true,
+                                     /*IsImporting*/ true);
+    }
+
+    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
+        llvm::MemoryBuffer::getFile(Identifier);
+    if (!MBOrErr)
+      return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
+          Twine("Error loading imported file ") + Identifier + " : ",
+          MBOrErr.getError()));
+
+    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
+    if (!BMOrErr)
+      return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
+          Twine("Error loading imported file ") + Identifier + " : " +
+              toString(BMOrErr.takeError()),
+          inconvertibleErrorCode()));
+
+    Expected<std::unique_ptr<Module>> MOrErr =
+        BMOrErr->getLazyModule(Mod.getContext(),
+                               /*ShouldLazyLoadMetadata=*/true,
+                               /*IsImporting*/ true);
+    if (MOrErr)
+      (*MOrErr)->setOwnedMemoryBuffer(std::move(*MBOrErr));
+    return MOrErr;
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader,
@@ -652,12 +676,9 @@ Expected<BitcodeModule> lto::findThinLTOModule(MemoryBufferRef MBRef) {
                                  inconvertibleErrorCode());
 }
 
-bool lto::loadReferencedModules(
-    const Module &M, const ModuleSummaryIndex &CombinedIndex,
-    FunctionImporter::ImportMapTy &ImportList,
-    MapVector<llvm::StringRef, llvm::BitcodeModule> &ModuleMap,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>>
-        &OwnedImportsLifetimeManager) {
+bool lto::initImportList(const Module &M,
+                         const ModuleSummaryIndex &CombinedIndex,
+                         FunctionImporter::ImportMapTy &ImportList) {
   if (ThinLTOAssumeMerged)
     return true;
   // We can simply import the values mentioned in the combined index, since
@@ -677,27 +698,6 @@ bool lto::loadReferencedModules(
       // Add an entry to provoke importing by thinBackend.
       ImportList[Summary->modulePath()].insert(GUID);
     }
-  }
-
-  for (auto &I : ImportList) {
-    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(I.first());
-    if (!MBOrErr) {
-      errs() << "Error loading imported file '" << I.first()
-             << "': " << MBOrErr.getError().message() << "\n";
-      return false;
-    }
-
-    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
-    if (!BMOrErr) {
-      handleAllErrors(BMOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        errs() << "Error loading imported file '" << I.first()
-               << "': " << EIB.message() << '\n';
-      });
-      return false;
-    }
-    ModuleMap.insert({I.first(), *BMOrErr});
-    OwnedImportsLifetimeManager.push_back(std::move(*MBOrErr));
   }
   return true;
 }
