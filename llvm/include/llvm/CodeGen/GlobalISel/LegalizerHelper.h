@@ -249,6 +249,10 @@ private:
 
   void changeOpcode(MachineInstr &MI, unsigned NewOpcode);
 
+  LegalizeResult tryNarrowPow2Reduction(MachineInstr &MI, Register SrcReg,
+                                        LLT SrcTy, LLT NarrowTy,
+                                        unsigned ScalarOpc);
+
 public:
   /// Return the alignment to use for a stack temporary object with the given
   /// type.
@@ -318,6 +322,9 @@ public:
 
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
+
+  LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
+                                               unsigned TypeIdx, LLT NarrowTy);
 
   LegalizeResult narrowScalarShift(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarAddSub(MachineInstr &MI, unsigned TypeIdx,
