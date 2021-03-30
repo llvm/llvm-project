@@ -558,6 +558,7 @@ protected:
   LazyBool m_supports_jGetSharedCacheInfo;
   LazyBool m_supports_QPassSignals;
   LazyBool m_supports_error_string_reply;
+  LazyBool m_supports_multiprocess;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

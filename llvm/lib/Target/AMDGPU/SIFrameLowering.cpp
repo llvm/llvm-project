@@ -963,7 +963,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(Spill.size() == 1);
 
     // Save FP before setting it up.
-    // FIXME: This should respect spillSGPRToVGPR;
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(FramePtrReg)
         .addImm(Spill[0].Lane)
@@ -981,7 +980,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(Spill.size() == 1);
 
     // Save BP before setting it up.
-    // FIXME: This should respect spillSGPRToVGPR;
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(BasePtrReg)
         .addImm(Spill[0].Lane)

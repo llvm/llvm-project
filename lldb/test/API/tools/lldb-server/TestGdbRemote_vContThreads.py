@@ -49,6 +49,13 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
                       for x in range(1, len(threads)+1))
         self.assertEqual(tids, sorted(threads))
 
+    def get_pid(self):
+        self.add_process_info_collection_packets()
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        procinfo = self.parse_process_info_response(context)
+        return int(procinfo['pid'], 16)
+
     @skipIfWindows
     @expectedFailureNetBSD
     @expectedFailureDarwin # No signals delivered
@@ -86,6 +93,82 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
             "C{0:x}:{1:x};C{0:x}:{2:x}".format(
                 lldbutil.get_signal_number('SIGUSR1'),
                 *threads),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_process_by_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}:p{1:x}".format(
+                lldbutil.get_signal_number('SIGUSR1'),
+                self.get_pid()),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_process_minus_one(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}:p-1".format(
+                lldbutil.get_signal_number('SIGUSR1')),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_minus_one(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}:-1".format(lldbutil.get_signal_number('SIGUSR1')),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_all_threads_by_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        # try sending a signal to two threads (= the process)
+        self.send_and_check_signal(
+            "C{0:x}:p{1:x}.{2:x};C{0:x}:p{1:x}.{3:x}".format(
+                lldbutil.get_signal_number('SIGUSR1'),
+                self.get_pid(),
+                *threads),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_minus_one_by_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}:p{1:x}.-1".format(
+                lldbutil.get_signal_number('SIGUSR1'),
+                self.get_pid()),
+            threads)
+
+    @skipIfWindows
+    @expectedFailureNetBSD
+    def test_signal_minus_one_by_minus_one(self):
+        self.build()
+        self.set_inferior_startup_launch()
+
+        threads = self.start_threads(1)
+        self.send_and_check_signal(
+            "C{0:x}:p-1.-1".format(
+                lldbutil.get_signal_number('SIGUSR1')),
             threads)
 
     @skipUnlessPlatform(["netbsd"])
