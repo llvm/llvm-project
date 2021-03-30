@@ -23,6 +23,162 @@ public:
   void erasingInstr(MachineInstr &MI) override {}
 };
 
+// Test G_ROTL/G_ROTR lowering.
+TEST_F(AArch64GISelMITest, LowerRotates) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
+
+  LLT S32 = LLT::scalar(32);
+  auto Src = B.buildTrunc(S32, Copies[0]);
+  auto Amt = B.buildTrunc(S32, Copies[1]);
+  auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {S32}, {Src, Amt});
+  auto ROTL = B.buildInstr(TargetOpcode::G_ROTL, {S32}, {Src, Amt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*ROTR, 0, S32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*ROTL, 0, S32));
+
+  auto CheckStr = R"(
+  ; Check G_ROTR
+  CHECK: [[SRC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+  CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMT]]:_, [[C1]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[SRC]]:_, [[AND]]:_(s32)
+  CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]]:_, [[C1]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SRC]]:_, [[AND1]]:_(s32)
+  CHECK: G_OR [[LSHR]]:_, [[SHL]]:_
+
+  ; Check G_ROTL
+  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+  CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[C]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[AMT]]:_, [[C1]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[SRC]]:_, [[AND]]:_(s32)
+  CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SUB]]:_, [[C1]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[SRC]]:_, [[AND1]]:_(s32)
+  CHECK: G_OR [[SHL]]:_, [[LSHR]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test G_ROTL/G_ROTR non-pow2 lowering.
+TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
+
+  LLT S24 = LLT::scalar(24);
+  auto Src = B.buildTrunc(S24, Copies[0]);
+  auto Amt = B.buildTrunc(S24, Copies[1]);
+  auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {S24}, {Src, Amt});
+  auto ROTL = B.buildInstr(TargetOpcode::G_ROTL, {S24}, {Src, Amt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*ROTR, 0, S24));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*ROTL, 0, S24));
+
+  auto CheckStr = R"(
+  ; Check G_ROTR
+  CHECK: [[SRC:%[0-9]+]]:_(s24) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(s24) = G_TRUNC
+  CHECK: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 0
+  CHECK: [[C1:%[0-9]+]]:_(s24) = G_CONSTANT i24 23
+  CHECK: [[C2:%[0-9]+]]:_(s24) = G_CONSTANT i24 24
+  CHECK: [[UREM:%[0-9]+]]:_(s24) = G_UREM [[AMT]]:_, [[C2]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(s24) = G_LSHR [[SRC]]:_, [[UREM]]:_(s24)
+  CHECK: [[SUB:%[0-9]+]]:_(s24) = G_SUB [[C1]]:_, [[UREM]]:_
+  CHECK: [[C4:%[0-9]+]]:_(s24) = G_CONSTANT i24 1
+  CHECK: [[SHL:%[0-9]+]]:_(s24) = G_SHL [[SRC]]:_, [[C4]]:_(s24)
+  CHECK: [[SHL2:%[0-9]+]]:_(s24) = G_SHL [[SHL]]:_, [[SUB]]:_(s24)
+  CHECK: G_OR [[LSHR]]:_, [[SHL2]]:_
+
+  ; Check G_ROTL
+  CHECK: [[C:%[0-9]+]]:_(s24) = G_CONSTANT i24 0
+  CHECK: [[C1:%[0-9]+]]:_(s24) = G_CONSTANT i24 23
+  CHECK: [[C2:%[0-9]+]]:_(s24) = G_CONSTANT i24 24
+  CHECK: [[UREM:%[0-9]+]]:_(s24) = G_UREM [[AMT]]:_, [[C2]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(s24) = G_SHL [[SRC]]:_, [[UREM]]:_(s24)
+  CHECK: [[SUB:%[0-9]+]]:_(s24) = G_SUB [[C1]]:_, [[UREM]]:_
+  CHECK: [[C4:%[0-9]+]]:_(s24) = G_CONSTANT i24 1
+  CHECK: [[LSHR:%[0-9]+]]:_(s24) = G_LSHR [[SRC]]:_, [[C4]]:_(s24)
+  CHECK: [[LSHR2:%[0-9]+]]:_(s24) = G_LSHR [[LSHR]]:_, [[SUB]]:_(s24)
+  CHECK: G_OR [[SHL]]:_, [[LSHR2]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
+// Test vector G_ROTR lowering.
+TEST_F(AArch64GISelMITest, LowerRotatesVector) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder({G_ROTR, G_ROTL}).lower(); });
+
+  LLT S32 = LLT::scalar(32);
+  LLT V4S32 = LLT::vector(4, S32);
+  auto SrcTrunc = B.buildTrunc(S32, Copies[0]);
+  auto Src = B.buildSplatVector(V4S32, SrcTrunc);
+  auto AmtTrunc = B.buildTrunc(S32, Copies[1]);
+  auto Amt = B.buildSplatVector(V4S32, AmtTrunc);
+  auto ROTR = B.buildInstr(TargetOpcode::G_ROTR, {V4S32}, {Src, Amt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  // Perform Legalization
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.lower(*ROTR, 0, V4S32));
+
+  auto CheckStr = R"(
+  CHECK: [[SRCTRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[SRC:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[SRCTRUNC]]
+  CHECK: [[AMTTRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[AMT:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[AMTTRUNC]]
+  CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  CHECK: [[ZERO:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]]
+  CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+  CHECK: [[VEC31:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C1]]
+  CHECK: [[SUB:%[0-9]+]]:_(<4 x s32>) = G_SUB [[ZERO]]:_, [[AMT]]:_
+  CHECK: [[AND:%[0-9]+]]:_(<4 x s32>) = G_AND [[AMT]]:_, [[VEC31]]:_
+  CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[SRC]]:_, [[AND]]:_(<4 x s32>)
+  CHECK: [[AND1:%[0-9]+]]:_(<4 x s32>) = G_AND [[SUB]]:_, [[VEC31]]:_
+  CHECK: [[SHL:%[0-9]+]]:_(<4 x s32>) = G_SHL [[SRC]]:_, [[AND1]]:_(<4 x s32>)
+  CHECK: G_OR [[LSHR]]:_, [[SHL]]:_
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 // Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,
 // in which case it becomes CTTZ_ZERO_UNDEF with select.
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
