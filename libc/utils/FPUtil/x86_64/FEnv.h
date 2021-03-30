@@ -12,7 +12,7 @@
 #include <fenv.h>
 #include <stdint.h>
 
-#include "src/__support/sanitizer_annotations.h"
+#include "src/__support/sanitizer.h"
 
 namespace __llvm_libc {
 namespace fputil {
