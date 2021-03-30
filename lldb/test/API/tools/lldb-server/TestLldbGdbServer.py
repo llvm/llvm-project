@@ -426,16 +426,19 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
         self.expect_gdbremote_sequence()
 
+    @expectedFailureAll(oslist=["windows"])
     def test_Hg_fails_on_another_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(1)
 
+    @expectedFailureAll(oslist=["windows"])
     def test_Hg_fails_on_zero_pid(self):
         self.build()
         self.set_inferior_startup_launch()
         self.Hg_fails_on_pid(0)
 
+    @expectedFailureAll(oslist=["windows"])
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
