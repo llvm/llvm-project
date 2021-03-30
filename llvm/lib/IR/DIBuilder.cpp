@@ -542,7 +542,7 @@ DIDerivedType *DIBuilder::createSetType(DIScope *Scope, StringRef Name,
   auto *R =
       DIDerivedType::get(VMContext, dwarf::DW_TAG_set_type, Name, File, LineNo,
                          getNonCompileUnitScope(Scope), Ty, SizeInBits,
-                         AlignInBits, 0, None, DINode::FlagZero);
+                         AlignInBits, 0, None, None, DINode::FlagZero);
   trackIfUnresolved(R);
   return R;
 }
