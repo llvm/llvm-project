@@ -25,17 +25,26 @@ std::vector<std::string> ModuleDeps::getFullCommandLine(
   // TODO: Build full command line. That also means capturing the original
   //       command line into NonPathCommandLine.
 
-  dependencies::detail::appendCommonModuleArguments(
-      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, Ret);
+  Ret.push_back("-fno-implicit-modules");
+  Ret.push_back("-fno-implicit-module-maps");
+
+  std::vector<std::string> PCMPaths;
+  std::vector<std::string> ModMapPaths;
+  dependencies::detail::collectPCMAndModuleMapPaths(
+      ClangModuleDeps, LookupPCMPath, LookupModuleDeps, PCMPaths, ModMapPaths);
+  for (const std::string &PCMPath : PCMPaths)
+    Ret.push_back("-fmodule-file=" + PCMPath);
+  for (const std::string &ModMapPath : ModMapPaths)
+    Ret.push_back("-fmodule-map-file=" + ModMapPath);
 
   return Ret;
 }
 
-void dependencies::detail::appendCommonModuleArguments(
+void dependencies::detail::collectPCMAndModuleMapPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &Result) {
+    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths) {
   llvm::StringSet<> AlreadyAdded;
 
   std::function<void(llvm::ArrayRef<ModuleID>)> AddArgs =
@@ -46,15 +55,12 @@ void dependencies::detail::appendCommonModuleArguments(
           const ModuleDeps &M = LookupModuleDeps(MID);
           // Depth first traversal.
           AddArgs(M.ClangModuleDeps);
-          Result.push_back(("-fmodule-file=" + LookupPCMPath(MID)).str());
-          if (!M.ClangModuleMapFile.empty()) {
-            Result.push_back("-fmodule-map-file=" + M.ClangModuleMapFile);
-          }
+          PCMPaths.push_back(LookupPCMPath(MID).str());
+          if (!M.ClangModuleMapFile.empty())
+            ModMapPaths.push_back(M.ClangModuleMapFile);
         }
       };
 
-  Result.push_back("-fno-implicit-modules");
-  Result.push_back("-fno-implicit-module-maps");
   AddArgs(Modules);
 }
 

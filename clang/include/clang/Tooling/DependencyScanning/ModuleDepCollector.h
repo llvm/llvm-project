@@ -79,11 +79,11 @@ struct ModuleDeps {
 
   /// Gets the full command line suitable for passing to clang.
   ///
-  /// \param LookupPCMPath this function is called to fill in `-fmodule-file=`
+  /// \param LookupPCMPath This function is called to fill in `-fmodule-file=`
   ///                      flags and for the `-o` flag. It needs to return a
   ///                      path for where the PCM for the given module is to
   ///                      be located.
-  /// \param LookupModuleDeps this fucntion is called to collect the full
+  /// \param LookupModuleDeps This function is called to collect the full
   ///                         transitive set of dependencies for this
   ///                         compilation.
   std::vector<std::string> getFullCommandLine(
@@ -92,14 +92,13 @@ struct ModuleDeps {
 };
 
 namespace detail {
-/// Append the `-fmodule-file=` and `-fmodule-map-file=` arguments for the
-/// modules in \c Modules transitively, along with other needed arguments to
-/// use explicitly built modules.
-void appendCommonModuleArguments(
+/// Collect the paths of PCM and module map files for the modules in \c Modules
+/// transitively.
+void collectPCMAndModuleMapPaths(
     llvm::ArrayRef<ModuleID> Modules,
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps,
-    std::vector<std::string> &Result);
+    std::vector<std::string> &PCMPaths, std::vector<std::string> &ModMapPaths);
 } // namespace detail
 
 class ModuleDepCollector;

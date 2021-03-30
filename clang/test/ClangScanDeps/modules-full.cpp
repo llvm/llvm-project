@@ -148,8 +148,8 @@
 // CHECK-NEXT:         "-fno-implicit-modules",
 // CHECK-NEXT:         "-fno-implicit-module-maps",
 // CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm",
+// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
