@@ -174,7 +174,7 @@ void bar() {
   // CHECK: [[SS_PRIV:%.+]] = alloca %struct.SSS,
   // CHECK: [[IN_PRIV:%.+]] = alloca i32,
   // CHECK: [[BC:%.+]] = bitcast %struct.SSS* [[SS_PRIV]] to i8*
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC]], i8* align 4 bitcast (%struct.SSS* [[SSS_INIT]] to i8*), i64 4, i1 false)
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i{{64|32}}(i8* {{.*}}[[BC]], i8* {{.*}}bitcast (%struct.SSS* [[SSS_INIT]] to i8*), i{{64|32}} 4, i1 false)
   // CHECK: [[IN_VAL:%.+]] = load i32, i32* [[INT_INIT]],
   // CHECK: store i32 [[IN_VAL]], i32* [[IN_PRIV]],
   // CHECK: call void @__kmpc_for_static_init_4(
