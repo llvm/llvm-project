@@ -78,6 +78,7 @@ private:
   static bool optimizeConvertFromSVBool(IntrinsicInst *I);
   static bool optimizePTest(IntrinsicInst *I);
   static bool optimizeVectorMul(IntrinsicInst *I);
+  static bool optimizeTBL(IntrinsicInst *I);
 
   static bool processPhiNode(IntrinsicInst *I);
 };
@@ -437,6 +438,41 @@ bool SVEIntrinsicOpts::optimizeVectorMul(IntrinsicInst *I) {
   return Changed;
 }
 
+bool SVEIntrinsicOpts::optimizeTBL(IntrinsicInst *I) {
+  assert(I->getIntrinsicID() == Intrinsic::aarch64_sve_tbl &&
+         "Unexpected opcode");
+
+  auto *OpVal = I->getOperand(0);
+  auto *OpIndices = I->getOperand(1);
+  VectorType *VTy = cast<VectorType>(I->getType());
+
+  // Check whether OpIndices is an aarch64_sve_dup_x intrinsic call with
+  // constant splat value < minimal element count of result.
+  auto *DupXIntrI = dyn_cast<IntrinsicInst>(OpIndices);
+  if (!DupXIntrI || DupXIntrI->getIntrinsicID() != Intrinsic::aarch64_sve_dup_x)
+    return false;
+
+  auto *SplatValue = dyn_cast<ConstantInt>(DupXIntrI->getOperand(0));
+  if (!SplatValue ||
+      SplatValue->getValue().uge(VTy->getElementCount().getKnownMinValue()))
+    return false;
+
+  // Convert sve_tbl(OpVal sve_dup_x(SplatValue)) to
+  // splat_vector(extractelement(OpVal, SplatValue)) for further optimization.
+  LLVMContext &Ctx = I->getContext();
+  IRBuilder<> Builder(Ctx);
+  Builder.SetInsertPoint(I);
+  auto *Extract = Builder.CreateExtractElement(OpVal, SplatValue);
+  auto *VectorSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), Extract);
+
+  I->replaceAllUsesWith(VectorSplat);
+  I->eraseFromParent();
+  if (DupXIntrI->use_empty())
+    DupXIntrI->eraseFromParent();
+  return true;
+}
+
 bool SVEIntrinsicOpts::optimizeConvertFromSVBool(IntrinsicInst *I) {
   assert(I->getIntrinsicID() == Intrinsic::aarch64_sve_convert_from_svbool &&
          "Unexpected opcode");
@@ -507,6 +543,8 @@ bool SVEIntrinsicOpts::optimizeIntrinsic(Instruction *I) {
   case Intrinsic::aarch64_sve_ptest_first:
   case Intrinsic::aarch64_sve_ptest_last:
     return optimizePTest(IntrI);
+  case Intrinsic::aarch64_sve_tbl:
+    return optimizeTBL(IntrI);
   default:
     return false;
   }
@@ -560,6 +598,7 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
     case Intrinsic::aarch64_sve_ptrue:
     case Intrinsic::aarch64_sve_mul:
     case Intrinsic::aarch64_sve_fmul:
+    case Intrinsic::aarch64_sve_tbl:
       for (User *U : F.users())
         Functions.insert(cast<Instruction>(U)->getFunction());
       break;
