@@ -1732,7 +1732,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       // Consume the separator.
       packet.GetChar();
 
-      thread_action.tid = packet.GetHexMaxU32(false, LLDB_INVALID_THREAD_ID);
+      thread_action.tid = packet.GetHexMaxU64(false, LLDB_INVALID_THREAD_ID);
       if (thread_action.tid == LLDB_INVALID_THREAD_ID)
         return SendIllFormedResponse(
             packet, "Could not parse thread number in vCont packet");
@@ -3384,7 +3384,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qThreadStopInfo(
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_THREAD));
 
   packet.SetFilePos(strlen("qThreadStopInfo"));
-  const lldb::tid_t tid = packet.GetHexMaxU32(false, LLDB_INVALID_THREAD_ID);
+  const lldb::tid_t tid = packet.GetHexMaxU64(false, LLDB_INVALID_THREAD_ID);
   if (tid == LLDB_INVALID_THREAD_ID) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed, could not "
