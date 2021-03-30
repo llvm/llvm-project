@@ -51,6 +51,8 @@ public:
 
   Status RemoveHardwareBreakpoint(lldb::addr_t addr) override;
 
+  NativeProcessLinux &GetProcess();
+
 private:
   // Interface for friend classes
 
@@ -89,8 +91,6 @@ private:
 
   // Private interface
   void MaybeLogStateChange(lldb::StateType new_state);
-
-  NativeProcessLinux &GetProcess();
 
   void SetStopped();
 

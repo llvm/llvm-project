@@ -8390,7 +8390,7 @@ def warn_bad_function_cast : Warning<
   "cast from function call of type %0 to non-matching type %1">,
   InGroup<BadFunctionCast>, DefaultIgnore;
 def warn_cast_function_type : Warning<
-  "cast from %0 to %1 converts to incompatible function types">,
+  "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
   InGroup<CastFunctionType>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
   "pointer cannot be cast to type %0">;
