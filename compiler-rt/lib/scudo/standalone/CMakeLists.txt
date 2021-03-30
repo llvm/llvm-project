@@ -10,6 +10,7 @@ set(SCUDO_CFLAGS)
 list(APPEND SCUDO_CFLAGS
   -Werror=conversion
   -Wall
+  -g
   -nostdinc++)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.
