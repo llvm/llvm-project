@@ -315,7 +315,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
     {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr},
                           {"back", asAddr}, {"kind", asValue} }},
-             /*isElemental*/ true},
+             /*isElemental=*/true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
 };
@@ -1537,7 +1537,7 @@ fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
 
-  assert(args.size() >= 2);
+  assert(args.size() == 4);
 
   // Handle required string argument
   auto string = builder.createBox(loc, args[0]);

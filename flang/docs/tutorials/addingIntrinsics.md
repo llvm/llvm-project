@@ -270,7 +270,7 @@ It is OK to define internal helper functions, classes or to use templates to ach
 
 In the table in `lib/Lower/IntrinsicCall.cpp`, there is a line:
 ```c++
-{"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental*/ false}
+{"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false}
 ```
 
 It defines that when presented with a call to an intrinsic named "trim",
@@ -281,7 +281,7 @@ Pass by value is the default argument passing scheme. If all arguments are passe
 ```c++
 {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr}, 
                          {"back", asAddr}, {"kind", asValue} }}, 
-                         /*isElemental*/ true}
+                         /*isElemental=*/true}
 ```
 
 The `genTrim` function looks like:

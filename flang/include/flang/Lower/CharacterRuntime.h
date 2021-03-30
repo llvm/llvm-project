@@ -53,7 +53,7 @@ void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate call to scan runtime.
 /// This calls the descriptor based runtime call implementation of the scan
-///  intrinsic.
+/// intrinsic.
 void genScan(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value stringBox,
              mlir::Value setBox, mlir::Value backBox, mlir::Value kind);
