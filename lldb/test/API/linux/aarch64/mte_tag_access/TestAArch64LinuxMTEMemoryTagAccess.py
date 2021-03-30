@@ -216,3 +216,59 @@ class AArch64LinuxMTEMemoryTagAccessTestCase(TestBase):
         self.expect("memory tag write mte_buf 99",
                 patterns=["error: Found tag 0x63 which is > max MTE tag value of 0xf."],
                 error=True)
+
+        # You can provide an end address and have lldb repeat the tags as needed
+        # The range is checked in the same way it is for "memory tag read"
+        self.expect("memory tag write mte_buf 9 -e",
+                patterns=["error: last option requires an argument"],
+                error=True)
+        self.expect("memory tag write mte_buf 9 -e food",
+                patterns=["error: address expression \"food\" evaluation failed"],
+                error=True)
+        self.expect("memory tag write mte_buf_2 9 --end-addr mte_buf_2",
+                patterns=["error: End address \(0x[A-Fa-f0-9]+\) must be "
+                          "greater than the start address \(0x[A-Fa-f0-9]+\)"],
+                error=True)
+        self.expect("memory tag write mte_buf_2 9 --end-addr mte_buf_2-16",
+                patterns=["error: End address \(0x[A-Fa-f0-9]+\) must be "
+                          "greater than the start address \(0x[A-Fa-f0-9]+\)"],
+                error=True)
+        self.expect("memory tag write mte_buf_2 9 --end-addr mte_buf_2+page_size+16",
+                patterns=["error: Address range 0x[0-9A-fa-f]+00:0x[0-9A-Fa-f]+10 "
+                          "is not in a memory tagged region"],
+                error=True)
+
+        # Tags are repeated across the range
+        # For these we'll read one extra to make sure we don't over write
+        self.expect("memory tag write mte_buf_2 4 5 --end-addr mte_buf_2+48")
+        self.expect("memory tag read mte_buf_2 mte_buf_2+64",
+                patterns=["Logical tag: 0x0\n"
+                          "Allocation tags:\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x4\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x5\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4\n"
+                          "\[0x[0-9A-Fa-f]+30, 0x[0-9A-Fa-f]+40\): 0x0$"])
+
+        # Since this aligns like tag read does, the start is aligned down and the end up.
+        # Meaning that start/end tells you the start/end granule that will be written.
+        # This matters particularly if either are misaligned.
+
+        # Here start moves down so the final range is mte_buf_2 -> mte_buf_2+32
+        self.expect("memory tag write mte_buf_2+8 6 -end-addr mte_buf_2+32")
+        self.expect("memory tag read mte_buf_2 mte_buf_2+48",
+                patterns=["Logical tag: 0x0\n"
+                          "Allocation tags:\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x6\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x6\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x4$"])
+
+        # If we do the same with a misaligned end, it also moves but upward.
+        # The intial range is 2 granules but the final range is mte_buf_2 -> mte_buf_2+48
+        self.expect("memory tag write mte_buf_2+8 3 -end-addr mte_buf_2+32+8")
+        self.expect("memory tag read mte_buf_2 mte_buf_2+64",
+                patterns=["Logical tag: 0x0\n"
+                          "Allocation tags:\n"
+                          "\[0x[0-9A-Fa-f]+00, 0x[0-9A-Fa-f]+10\): 0x3\n"
+                          "\[0x[0-9A-Fa-f]+10, 0x[0-9A-Fa-f]+20\): 0x3\n"
+                          "\[0x[0-9A-Fa-f]+20, 0x[0-9A-Fa-f]+30\): 0x3\n"
+                          "\[0x[0-9A-Fa-f]+30, 0x[0-9A-Fa-f]+40\): 0x0$"])
