@@ -484,8 +484,8 @@ static bool needsBinding(const Symbol *sym) {
   return false;
 }
 
-static void prepareSymbolRelocation(lld::macho::Symbol *sym,
-                                    const InputSection *isec, const Reloc &r) {
+static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
+                                    const Reloc &r) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
@@ -520,10 +520,10 @@ void Writer::scanRelocations() {
         // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
         // to emit rebase opcodes for it.
         it = std::next(it);
-        assert(isa<Defined>(it->referent.dyn_cast<lld::macho::Symbol *>()));
+        assert(isa<Defined>(it->referent.dyn_cast<Symbol *>()));
         continue;
       }
-      if (auto *sym = r.referent.dyn_cast<lld::macho::Symbol *>()) {
+      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
         if (auto *undefined = dyn_cast<Undefined>(sym))
           treatUndefinedSymbol(*undefined);
         // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
@@ -540,7 +540,7 @@ void Writer::scanRelocations() {
 
 void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
-  for (const macho::Symbol *sym : symtab->getSymbols()) {
+  for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
@@ -660,11 +660,12 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   };
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles)
+  for (const InputFile *file : inputFiles) {
     if (isa<ObjFile>(file))
-      for (lld::macho::Symbol *sym : file->symbols)
+      for (Symbol *sym : file->symbols)
         if (auto *d = dyn_cast<Defined>(sym))
           addSym(*d);
+  }
 
   return sectionPriorities;
 }
