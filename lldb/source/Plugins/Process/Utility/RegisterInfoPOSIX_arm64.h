@@ -11,6 +11,7 @@
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/lldb-private.h"
 #include <map>
 
@@ -19,7 +20,14 @@ enum class SVEState { Unknown, Disabled, FPSIMD, Full };
 class RegisterInfoPOSIX_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
-  enum { GPRegSet = 0, FPRegSet, SVERegSet };
+  enum { GPRegSet = 0, FPRegSet };
+
+  // AArch64 register set mask value
+  enum {
+    eRegsetMaskDefault = 0,
+    eRegsetMaskSVE = 1,
+    eRegsetMaskDynamic = ~1,
+  };
 
   // AArch64 Register set FP/SIMD feature configuration
   enum {
@@ -68,7 +76,8 @@ public:
     uint64_t mdscr_el1;
   };
 
-  RegisterInfoPOSIX_arm64(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoPOSIX_arm64(const lldb_private::ArchSpec &target_arch,
+                          lldb_private::Flags opt_regsets);
 
   size_t GetGPRSize() const override;
 
@@ -85,7 +94,7 @@ public:
 
   size_t GetRegisterSetFromRegisterIndex(uint32_t reg_index) const override;
 
-  uint32_t ConfigureVectorRegisterInfos(uint32_t sve_vq);
+  uint32_t ConfigureVectorLength(uint32_t sve_vq);
 
   bool VectorSizeIsValid(uint32_t vq) {
     if (vq >= eVectorQuadwordAArch64 && vq <= eVectorQuadwordAArch64SVEMax)
@@ -93,8 +102,9 @@ public:
     return false;
   }
 
-  bool IsSVEEnabled() const { return m_vector_reg_vq > eVectorQuadwordAArch64; }
+  bool IsSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
 
+  bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
   bool IsSVEPReg(unsigned reg) const;
   bool IsSVERegVG(unsigned reg) const;
@@ -115,6 +125,18 @@ private:
 
   const lldb_private::RegisterInfo *m_register_info_p;
   uint32_t m_register_info_count;
+
+  const lldb_private::RegisterSet *m_register_set_p;
+  uint32_t m_register_set_count;
+
+  // Contains pair of [start, end] register numbers of a register set with start
+  // and end included.
+  std::map<uint32_t, std::pair<uint32_t, uint32_t>> m_per_regset_regnum_range;
+
+  lldb_private::Flags m_opt_regsets;
+
+  std::vector<lldb_private::RegisterInfo> m_dynamic_reg_infos;
+  std::vector<lldb_private::RegisterSet> m_dynamic_reg_sets;
 };
 
 #endif

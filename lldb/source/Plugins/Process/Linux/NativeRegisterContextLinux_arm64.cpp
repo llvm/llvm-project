@@ -46,18 +46,37 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   case llvm::Triple::arm:
     return std::make_unique<NativeRegisterContextLinux_arm>(target_arch,
                                                              native_thread);
-  case llvm::Triple::aarch64:
-    return std::make_unique<NativeRegisterContextLinux_arm64>(target_arch,
-                                                               native_thread);
+  case llvm::Triple::aarch64: {
+    // Configure register sets supported by this AArch64 target.
+    // Read SVE header to check for SVE support.
+    struct user_sve_header sve_header;
+    struct iovec ioVec;
+    ioVec.iov_base = &sve_header;
+    ioVec.iov_len = sizeof(sve_header);
+    unsigned int regset = NT_ARM_SVE;
+
+    Flags opt_regsets;
+    if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
+                                          native_thread.GetID(), &regset,
+                                          &ioVec, sizeof(sve_header))
+            .Success())
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+
+    auto register_info_up =
+        std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
+    return std::make_unique<NativeRegisterContextLinux_arm64>(
+        target_arch, native_thread, std::move(register_info_up));
+  }
   default:
     llvm_unreachable("have no register context for architecture");
   }
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_arm64(target_arch)) {
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
+    std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        register_info_up.release()) {
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_gpr_arm64, 0, sizeof(m_gpr_arm64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
@@ -75,8 +94,10 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_sve_buffer_is_valid = false;
   m_sve_header_is_valid = false;
 
-  // SVE is not enabled until we query user_sve_header
-  m_sve_state = SVEState::Unknown;
+  if (GetRegisterInfo().IsSVEEnabled())
+    m_sve_state = SVEState::Unknown;
+  else
+    m_sve_state = SVEState::Disabled;
 }
 
 RegisterInfoPOSIX_arm64 &
@@ -451,10 +472,7 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 }
 
 bool NativeRegisterContextLinux_arm64::IsSVE(unsigned reg) const {
-  if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::SVERegSet)
-    return true;
-  return false;
+  return GetRegisterInfo().IsSVEReg(reg);
 }
 
 llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
@@ -676,23 +694,27 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
-  // Read SVE configuration data and configure register infos.
+  // ConfigureRegisterContext gets called from InvalidateAllRegisters
+  // on every stop and configures SVE vector length.
+  // If m_sve_state is set to SVEState::Disabled on first stop, code below will
+  // be deemed non operational for the lifetime of current process.
   if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
     Status error = ReadSVEHeader();
-    if (!error.Success() && m_sve_state == SVEState::Unknown) {
-      m_sve_state = SVEState::Disabled;
-      GetRegisterInfo().ConfigureVectorRegisterInfos(
-          RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64);
-    } else {
+    if (error.Success()) {
+      // If SVE is enabled thread can switch between SVEState::FPSIMD and
+      // SVEState::Full on every stop.
       if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_FPSIMD)
         m_sve_state = SVEState::FPSIMD;
       else if ((m_sve_header.flags & SVE_PT_REGS_MASK) == SVE_PT_REGS_SVE)
         m_sve_state = SVEState::Full;
 
+      // On every stop we configure SVE vector length by calling
+      // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
       if (sve_vl_valid(m_sve_header.vl))
         vq = sve_vq_from_vl(m_sve_header.vl);
-      GetRegisterInfo().ConfigureVectorRegisterInfos(vq);
+
+      GetRegisterInfo().ConfigureVectorLength(vq);
       m_sve_ptrace_payload.resize(SVE_PT_SIZE(vq, SVE_PT_REGS_SVE));
     }
   }

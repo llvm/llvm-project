@@ -40,10 +40,7 @@ bool RegisterContextPOSIX_arm64::IsFPR(unsigned reg) {
 }
 
 bool RegisterContextPOSIX_arm64::IsSVE(unsigned reg) const {
-  if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm64::SVERegSet)
-    return true;
-  return false;
+  return m_register_info_up->IsSVEReg(reg);
 }
 
 RegisterContextPOSIX_arm64::RegisterContextPOSIX_arm64(
