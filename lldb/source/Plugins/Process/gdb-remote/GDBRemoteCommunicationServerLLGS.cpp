@@ -1732,10 +1732,13 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       // Consume the separator.
       packet.GetChar();
 
-      thread_action.tid = packet.GetHexMaxU64(false, LLDB_INVALID_THREAD_ID);
-      if (thread_action.tid == LLDB_INVALID_THREAD_ID)
-        return SendIllFormedResponse(
-            packet, "Could not parse thread number in vCont packet");
+      llvm::Expected<lldb::tid_t> tid_ret = ReadTid(packet, /*allow_all=*/true);
+      if (!tid_ret)
+        return SendErrorResponse(tid_ret.takeError());
+
+      thread_action.tid = tid_ret.get();
+      if (thread_action.tid == StringExtractorGDBRemote::AllThreads)
+        thread_action.tid = LLDB_INVALID_THREAD_ID;
     }
 
     thread_actions.Append(thread_action);
@@ -2220,10 +2223,11 @@ GDBRemoteCommunicationServerLLGS::Handle_H(StringExtractorGDBRemote &packet) {
   }
 
   // Parse out the thread number.
-  // FIXME return a parse success/fail value.  All values are valid here.
-  const lldb::tid_t tid =
-      packet.GetHexMaxU64(false, std::numeric_limits<lldb::tid_t>::max());
+  llvm::Expected<lldb::tid_t> tid_ret = ReadTid(packet, /*allow_all=*/true);
+  if (!tid_ret)
+    return SendErrorResponse(tid_ret.takeError());
 
+  lldb::tid_t tid = tid_ret.get();
   // Ensure we have the given thread when not specifying -1 (all threads) or 0
   // (any thread).
   if (tid != LLDB_INVALID_THREAD_ID && tid != 0) {
@@ -3652,4 +3656,37 @@ std::string GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
     }
   }
   return result;
+}
+
+llvm::Expected<lldb::tid_t>
+GDBRemoteCommunicationServerLLGS::ReadTid(StringExtractorGDBRemote &packet,
+                                          bool allow_all) {
+  assert(m_debugged_process_up);
+  assert(m_debugged_process_up->GetID() != LLDB_INVALID_PROCESS_ID);
+
+  auto pid_tid = packet.GetPidTid(m_debugged_process_up->GetID());
+  if (!pid_tid)
+    return llvm::make_error<StringError>(inconvertibleErrorCode(),
+                                         "Malformed thread-id");
+
+  lldb::pid_t pid = pid_tid->first;
+  lldb::tid_t tid = pid_tid->second;
+
+  if (!allow_all && pid == StringExtractorGDBRemote::AllProcesses)
+    return llvm::make_error<StringError>(
+        inconvertibleErrorCode(),
+        llvm::formatv("PID value {0} not allowed", pid == 0 ? 0 : -1));
+
+  if (!allow_all && tid == StringExtractorGDBRemote::AllThreads)
+    return llvm::make_error<StringError>(
+        inconvertibleErrorCode(),
+        llvm::formatv("TID value {0} not allowed", tid == 0 ? 0 : -1));
+
+  if (pid != StringExtractorGDBRemote::AllProcesses) {
+    if (pid != m_debugged_process_up->GetID())
+      return llvm::make_error<StringError>(
+          inconvertibleErrorCode(), llvm::formatv("PID {0} not debugged", pid));
+  }
+
+  return tid;
 }
