@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/OptPasses.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -148,10 +149,10 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerMLIRPassesForFortranTools();
-  fir::registerOptimizerPasses();
-
   [[maybe_unused]] InitLLVM y(argc, argv);
+  fir::support::registerMLIRPassesForFortranTools();
+  fir::registerOptCodeGenPasses();
+  fir::registerOptTransformPasses();
   InitializeAllTargets();
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();

@@ -1,10 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  AllTargetsAsmParsers
-  AllTargetsCodeGens
-  AllTargetsDescs
-  AllTargetsInfos
-)
-llvm_map_components_to_libnames(llvm_libs ${LLVM_LINK_COMPONENTS})
 
 add_flang_tool(bbc bbc.cpp)
 llvm_update_compile_flags(bbc)
@@ -14,9 +7,7 @@ target_link_libraries(bbc PRIVATE
   FIRAnalysis
   FIRSupport
   FIRTransforms
-  FIRCodeGen
   ${dialect_libs}
-  MLIRLLVMIR
   MLIRAffineToStandard
   MLIRSCFToStandard
   FortranCommon
@@ -24,5 +15,4 @@ target_link_libraries(bbc PRIVATE
   FortranEvaluate
   FortranSemantics
   FortranLower
-  ${llvm_libs}
 )

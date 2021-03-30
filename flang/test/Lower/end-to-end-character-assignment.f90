@@ -1,4 +1,4 @@
-! RUN: bbc -emit-llvm -o - %s | tco | llc --filetype=obj --relocation-model=pic -o %t
+! RUN: bbc -o - %s | tco | llc --filetype=obj --relocation-model=pic -o %t
 ! RUN: %CXX -fPIC -std=c++17 %t %S/end-to-end-character-assignment-driver.cpp
 ! RUN: ./a.out
 

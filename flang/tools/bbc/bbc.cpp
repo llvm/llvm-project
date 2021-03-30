@@ -20,11 +20,11 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
-#include "flang/Optimizer/OptPasses.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/KindMapping.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -82,11 +82,6 @@ static llvm::cl::opt<std::string>
                  llvm::cl::init(".mod"));
 
 static llvm::cl::opt<bool>
-    emitLLVM("emit-llvm",
-             llvm::cl::desc("Add passes to lower to and emit LLVM IR"),
-             llvm::cl::init(false));
-
-static llvm::cl::opt<bool>
     emitFIR("emit-fir",
             llvm::cl::desc("Dump the FIR created by lowering and exit"),
             llvm::cl::init(false));
@@ -129,6 +124,7 @@ static llvm::cl::opt<bool> dumpModuleOnFailure("dump-module-on-failure",
 static llvm::cl::opt<std::string>
     targetTriple("target", llvm::cl::desc("specify a target triple"));
 
+#define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
 
 //===----------------------------------------------------------------------===//
@@ -156,6 +152,11 @@ fromDefaultKinds(const Fortran::common::IntrinsicTypeDefaultKinds &defKinds) {
               defKinds.GetDefaultKind(Fortran::common::TypeCategory::Logical)),
           static_cast<fir::KindTy>(
               defKinds.GetDefaultKind(Fortran::common::TypeCategory::Real))};
+}
+
+static void registerAllPasses() {
+  fir::support::registerMLIRPassesForFortranTools();
+  fir::registerOptTransformPasses();
 }
 
 //===----------------------------------------------------------------------===//
@@ -225,10 +226,9 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // translate to FIR dialect of MLIR
   mlir::DialectRegistry registry;
-  fir::support::registerDialects(registry);
+  fir::support::registerNonCodegenDialects(registry);
   mlir::MLIRContext ctx(registry);
-  fir::support::loadDialects(ctx);
-  fir::support::registerLLVMTranslation(ctx);
+  fir::support::loadNonCodegenDialects(ctx);
   auto &defKinds = semanticsContext.defaultKinds();
   fir::KindMapping kindMap(
       &ctx, llvm::ArrayRef<fir::KindTy>{fromDefaultKinds(defKinds)});
@@ -289,26 +289,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
   }
 
-  if (emitLLVM) {
-    // Continue to lower from MLIR down to LLVM IR. Emit LLVM and MLIR.
-    pm.addPass(fir::createFirCodeGenRewritePass());
-    pm.addPass(fir::createFirTargetRewritePass());
-    fir::addFIRToLLVMPass(pm);
-
-    std::error_code ec;
-    llvm::ToolOutputFile outFile(outputName + ".ll", ec,
-                                 llvm::sys::fs::OF_None);
-    if (ec) {
-      llvm::errs() << "can't open output file " + outputName + ".ll";
-      return mlir::failure();
-    }
-    fir::addLLVMDialectToLLVMPass(pm, outFile.os());
-    if (mlir::succeeded(pm.run(mlirModule))) {
-      outFile.keep();
-      printModule(mlirModule, out);
-      return mlir::success();
-    }
-  } else if (mlir::succeeded(pm.run(mlirModule))) {
+  if (mlir::succeeded(pm.run(mlirModule))) {
     // Emit MLIR and do not lower to LLVM IR.
     printModule(mlirModule, out);
     return mlir::success();
@@ -321,11 +302,9 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 }
 
 int main(int argc, char **argv) {
-  fir::support::registerMLIRPassesForFortranTools();
-  fir::registerOptimizerPasses();
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
+  registerAllPasses();
 
-  llvm::InitializeAllTargets();
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();

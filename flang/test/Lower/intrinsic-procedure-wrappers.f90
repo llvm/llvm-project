@@ -1,4 +1,4 @@
-! RUN: bbc -emit-llvm -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -outline-intrinsics %s -o - | tco --disable-llvm --print-ir-after=fir-to-llvm-ir 2>&1 | FileCheck %s
 
 ! Test properties of intrinsic function wrappers
 

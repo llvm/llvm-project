@@ -28,7 +28,9 @@ void addPassConditionally(
 
 } // namespace
 
+#if !defined(FLANG_EXCLUDE_CODEGEN)
 namespace fir {
+
 inline void addFIRToLLVMPass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableFirToLlvmIr, fir::createFIRToLLVMPass);
 }
@@ -38,4 +40,7 @@ inline void addLLVMDialectToLLVMPass(
   addPassConditionally(pm, disableLlvmIrToLlvm,
       [&]() { return fir::createLLVMDialectToLLVMPass(output); });
 }
+
 } // namespace fir
+#undef FLANG_EXCLUDE_CODEGEN
+#endif

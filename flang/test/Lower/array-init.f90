@@ -1,4 +1,4 @@
-! RUN: bbc -emit-llvm -o - %s | tco | llc --filetype=obj -o %t.o
+! RUN: bbc -o - %s | tco | llc --filetype=obj -o %t.o
 ! RUN: %CC %t.o %S/array-init-driver.c -o %t.out
 ! RUN: %t.out | FileCheck %s
 

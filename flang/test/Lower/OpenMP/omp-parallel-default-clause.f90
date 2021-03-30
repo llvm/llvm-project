@@ -3,7 +3,8 @@
 
 ! RUN: bbc -fopenmp -emit-fir %s -o - | \
 ! RUN:   FileCheck %s --check-prefix=FIRDialect
-! RUN: bbc -fopenmp -emit-llvm %s -o - | \
+! RUN: bbc -fopenmp %s -o - | \
+! RUN:   tco --disable-llvm --print-ir-after=fir-to-llvm-ir 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=LLVMDialect
 
 subroutine default_clause()

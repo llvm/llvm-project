@@ -25,16 +25,26 @@
 
 namespace fir::support {
 
-// The definitive list of dialects used by flang.
-#define FLANG_DIALECT_LIST                                                     \
-  mlir::AffineDialect, FIROpsDialect, FIRCodeGenDialect,                       \
-      mlir::LLVM::LLVMDialect, mlir::acc::OpenACCDialect,                      \
+#define FLANG_NONCODEGEN_DIALECT_LIST                                          \
+  mlir::AffineDialect, FIROpsDialect, mlir::acc::OpenACCDialect,               \
       mlir::omp::OpenMPDialect, mlir::scf::SCFDialect,                         \
       mlir::StandardOpsDialect, mlir::vector::VectorDialect
+
+// The definitive list of dialects used by flang.
+#define FLANG_DIALECT_LIST                                                     \
+  FLANG_NONCODEGEN_DIALECT_LIST, FIRCodeGenDialect, mlir::LLVM::LLVMDialect
+
+inline void registerNonCodegenDialects(mlir::DialectRegistry &registry) {
+  registry.insert<FLANG_NONCODEGEN_DIALECT_LIST>();
+}
 
 /// Register all the dialects used by flang.
 inline void registerDialects(mlir::DialectRegistry &registry) {
   registry.insert<FLANG_DIALECT_LIST>();
+}
+
+inline void loadNonCodegenDialects(mlir::MLIRContext &context) {
+  context.loadDialect<FLANG_NONCODEGEN_DIALECT_LIST>();
 }
 
 /// Forced load of all the dialects used by flang.  Lowering is not an MLIR
