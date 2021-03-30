@@ -6236,6 +6236,28 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportOfCapturedVLAType) {
   EXPECT_NE(FromFD->getCapturedVLAType(), ToFD->getCapturedVLAType());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class T> struct A {
+        enum tagname { enumerator };
+      };
+      template struct A<int>;
+      )",
+      Lang_CXX03);
+  auto *FromD = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasName("tagname"),
+                       hasParent(classTemplateSpecializationDecl())));
+  ASSERT_TRUE(FromD);
+  ASSERT_TRUE(FromD->getMemberSpecializationInfo());
+
+  auto *ToD = Import(FromD, Lang_CXX03);
+  EXPECT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getMemberSpecializationInfo());
+  EXPECT_EQ(FromD->getTemplateSpecializationKind(),
+            ToD->getTemplateSpecializationKind());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
