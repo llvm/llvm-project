@@ -995,10 +995,12 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   case AMD_COMGR_LANGUAGE_OPENCL_1_2:
     Args.push_back("cl");
     Args.push_back("-std=cl1.2");
+    Args.push_back("-cl-no-stdinc");
     break;
   case AMD_COMGR_LANGUAGE_OPENCL_2_0:
     Args.push_back("cl");
     Args.push_back("-std=cl2.0");
+    Args.push_back("-cl-no-stdinc");
     break;
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
