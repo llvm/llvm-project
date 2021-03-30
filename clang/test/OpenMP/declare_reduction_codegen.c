@@ -17,6 +17,9 @@
 // CHECK: [[SSS_INT:.+]] = type { i32 }
 // CHECK-LOAD: [[SSS_INT:.+]] = type { i32 }
 
+// CHECK-DAG: [[SSS_INIT:@.+]] = private constant %struct.SSS zeroinitializer
+// CHECK-DAG: [[INT_INIT:@.+]] = private constant i32 0
+
 #pragma omp declare reduction(+ : int, char : omp_out *= omp_in)
 // CHECK: define internal {{.*}}void @{{[^(]+}}(i32* noalias %0, i32* noalias %1)
 // CHECK: [[MUL:%.+]] = mul nsw i32
@@ -163,4 +166,27 @@ int main() {
 // OMP45-LOAD-NEXT: store i8 [[TRUNC]], i8*
 // OMP45-LOAD-NEXT: ret void
 // OMP45-LOAD-NEXT: }
+
+// CHECK-LABEL: bar
+struct SSS ss;
+int in;
+void bar() {
+  // CHECK: [[SS_PRIV:%.+]] = alloca %struct.SSS,
+  // CHECK: [[IN_PRIV:%.+]] = alloca i32,
+  // CHECK: [[BC:%.+]] = bitcast %struct.SSS* [[SS_PRIV]] to i8*
+  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[BC]], i8* align 4 bitcast (%struct.SSS* [[SSS_INIT]] to i8*), i64 4, i1 false)
+  // CHECK: [[IN_VAL:%.+]] = load i32, i32* [[INT_INIT]],
+  // CHECK: store i32 [[IN_VAL]], i32* [[IN_PRIV]],
+  // CHECK: call void @__kmpc_for_static_init_4(
+#pragma omp declare reduction(+            \
+                              : struct SSS \
+                              : omp_out = omp_in)
+#pragma omp declare reduction(+     \
+                              : int \
+                              : omp_out = omp_in)
+#pragma omp for reduction(+ \
+                          : ss, in)
+  for (int i = 0; i < 10; ++i)
+    ;
+}
 #endif

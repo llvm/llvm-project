@@ -16567,8 +16567,7 @@ static bool actOnOMPReductionKindClause(
     }
     if (RHSVD->isInvalidDecl())
       continue;
-    if (!RHSVD->hasInit() &&
-        (DeclareReductionRef.isUnset() || !S.LangOpts.CPlusPlus)) {
+    if (!RHSVD->hasInit() && DeclareReductionRef.isUnset()) {
       S.Diag(ELoc, diag::err_omp_reduction_id_not_compatible)
           << Type << ReductionIdRange;
       bool IsDecl = !VD || VD->isThisDeclarationADefinition(Context) ==
