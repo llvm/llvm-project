@@ -1078,6 +1078,7 @@ __OMP_TRAIT_PROPERTY(user, condition, true)
 __OMP_TRAIT_PROPERTY(user, condition, false)
 __OMP_TRAIT_PROPERTY(user, condition, unknown)
 
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, dispatch)
 
 // Note that we put isa last so that the other conditions are checked first.
 // This allows us to issue warnings wrt. isa only if we match otherwise.

@@ -2548,6 +2548,13 @@ void ASTStmtWriter::VisitOMPInteropDirective(OMPInteropDirective *D) {
   Code = serialization::STMT_OMP_INTEROP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Record.AddSourceLocation(D->getTargetCallLoc());
+  Code = serialization::STMT_OMP_DISPATCH_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
