@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include <queue>
 #include <set>
@@ -40,40 +41,41 @@ struct ProfiledCallGraphNode {
 class ProfiledCallGraph {
 public:
   using iterator = std::set<ProfiledCallGraphNode *>::iterator;
-  ProfiledCallGraph(StringMap<FunctionSamples> &ProfileMap,
-                    SampleContextTracker &ContextTracker) {
-    // Add all profiled functions into profiled call graph.
-    // We only add function with actual context profile
-    for (auto &FuncSample : ProfileMap) {
-      FunctionSamples *FSamples = &FuncSample.second;
-      addProfiledFunction(FSamples->getName());
+
+  // Constructor for non-CS profile.
+  ProfiledCallGraph(StringMap<FunctionSamples> &ProfileMap) {
+    assert(!FunctionSamples::ProfileIsCS && "CS profile is not handled here");
+    for (const auto &Samples : ProfileMap) {
+      addProfiledCalls(Samples.second);
+    }
+  }
+
+  // Constructor for CS profile.
+  ProfiledCallGraph(SampleContextTracker &ContextTracker) {
+    // BFS traverse the context profile trie to add call edges for calls shown
+    // in context.
+    std::queue<ContextTrieNode *> Queue;
+    for (auto &Child : ContextTracker.getRootContext().getAllChildContext()) {
+      ContextTrieNode *Callee = &Child.second;
+      addProfiledFunction(Callee->getFuncName());
+      Queue.push(Callee);
     }
 
-    // BFS traverse the context profile trie to add call edges for
-    // both samples calls as well as calls shown in context.
-    std::queue<ContextTrieNode *> Queue;
-    Queue.push(&ContextTracker.getRootContext());
     while (!Queue.empty()) {
       ContextTrieNode *Caller = Queue.front();
       Queue.pop();
-      FunctionSamples *CallerSamples = Caller->getFunctionSamples();
-
-      // Add calls for context, if both caller and callee has context profile.
+      // Add calls for context. When AddNodeWithSamplesOnly is true, both caller
+      // and callee need to have context profile.
+      // Note that callsite target samples are completely ignored since they can
+      // conflict with the context edges, which are formed by context
+      // compression during profile generation, for cyclic SCCs. This may
+      // further result in an SCC order incompatible with the purely
+      // context-based one, which may in turn block context-based inlining.
       for (auto &Child : Caller->getAllChildContext()) {
         ContextTrieNode *Callee = &Child.second;
+        addProfiledFunction(Callee->getFuncName());
         Queue.push(Callee);
-        if (CallerSamples && Callee->getFunctionSamples()) {
-          addProfiledCall(Caller->getFuncName(), Callee->getFuncName());
-        }
-      }
-
-      // Add calls from call site samples
-      if (CallerSamples) {
-        for (auto &LocCallSite : CallerSamples->getBodySamples()) {
-          for (auto &NameCallSite : LocCallSite.second.getCallTargets()) {
-            addProfiledCall(Caller->getFuncName(), NameCallSite.first());
-          }
-        }
+        addProfiledCall(Caller->getFuncName(), Callee->getFuncName());
       }
     }
   }
@@ -89,6 +91,7 @@ public:
       ProfiledFunctions[Name] = ProfiledCallGraphNode(Name);
     }
   }
+
   void addProfiledCall(StringRef CallerName, StringRef CalleeName) {
     assert(ProfiledFunctions.count(CallerName));
     auto CalleeIt = ProfiledFunctions.find(CalleeName);
@@ -96,6 +99,25 @@ public:
       return;
     }
     ProfiledFunctions[CallerName].Callees.insert(&CalleeIt->second);
+  }
+
+  void addProfiledCalls(const FunctionSamples &Samples) {
+    addProfiledFunction(Samples.getFuncName());
+
+    for (const auto &Sample : Samples.getBodySamples()) {
+      for (const auto &Target : Sample.second.getCallTargets()) {
+        addProfiledFunction(Target.first());
+        addProfiledCall(Samples.getFuncName(), Target.first());
+      }
+    }
+
+    for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
+      for (const auto &InlinedSamples : CallsiteSamples.second) {
+        addProfiledFunction(InlinedSamples.first);
+        addProfiledCall(Samples.getFuncName(), InlinedSamples.first);
+        addProfiledCalls(InlinedSamples.second);
+      }
+    }
   }
 
 private:

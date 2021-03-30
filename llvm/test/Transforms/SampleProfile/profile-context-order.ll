@@ -1,21 +1,21 @@
 ;; Test for different function processing orders affecting inlining in sample profile loader.
 
 ;; There is an SCC _Z5funcAi -> _Z8funcLeafi -> _Z5funcAi in the program.
-;; With -use-profile-top-down-order=0, the top-down processing order of
+;; With -use-profiled-call-graph=0, the top-down processing order of
 ;; that SCC is (_Z8funcLeafi, _Z5funcAi), which is determinined based on
-;; the static call graph. With -use-profile-top-down-order=1, call edges
+;; the static call graph. With -use-profiled-call-graph=1, call edges
 ;; from profile are considered, thus the order becomes (_Z5funcAi, _Z8funcLeafi)
 ;; which leads to _Z8funcLeafi inlined into _Z5funcAi.
-; RUN: opt < %s -passes=sample-profile -use-profile-top-down-order=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=INLINE
-; RUN: opt < %s -passes=sample-profile -use-profile-top-down-order=0 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=NOINLINE
+; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=INLINE
+; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=0 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=NOINLINE
 
 ;; There is an indirect call _Z5funcAi -> _Z3fibi in the program.
-;; With -use-profile-indirect-call-edges=0, the processing order computed
+;; With -use-profiled-call-graph=0, the processing order computed
 ;; based on the static call graph is (_Z3fibi, _Z5funcAi). With 
-;; -use-profile-top-down-order=1, the indirect call edge from profile is
+;; -use-profiled-call-graph=1, the indirect call edge from profile is
 ;; considered, thus the order becomes (_Z5funcAi, _Z3fibi) which leads to
 ;; _Z3fibi inlined into _Z5funcAi.
-; RUN: opt < %s -passes=sample-profile -use-profile-indirect-call-edges=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=ICALL-INLINE
+; RUN: opt < %s -passes=sample-profile -use-profiled-call-graph=1 -sample-profile-file=%S/Inputs/profile-context-order.prof -S | FileCheck %s -check-prefix=ICALL-INLINE
 
 @factor = dso_local global i32 3, align 4, !dbg !0
 @fp = dso_local global i32 (i32)* null, align 8
