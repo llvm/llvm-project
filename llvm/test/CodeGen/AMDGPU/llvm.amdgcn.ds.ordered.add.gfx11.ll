@@ -25,7 +25,7 @@ define amdgpu_cs float @ds_ordered_add_cs(i32 addrspace(2)* inreg %gds) {
 ; FUNC-LABEL: {{^}}ds_ordered_add_ps:
 ; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN: s_mov_b32 m0, s0
-; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:1796 gds
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define amdgpu_ps float @ds_ordered_add_ps(i32 addrspace(2)* inreg %gds) {
   %val = call i32@llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* %gds, i32 31, i32 0, i32 0, i1 false, i32 16777217, i1 true, i1 true)
@@ -36,7 +36,7 @@ define amdgpu_ps float @ds_ordered_add_ps(i32 addrspace(2)* inreg %gds) {
 ; FUNC-LABEL: {{^}}ds_ordered_add_vs:
 ; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN: s_mov_b32 m0, s0
-; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:2820 gds
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define amdgpu_vs float @ds_ordered_add_vs(i32 addrspace(2)* inreg %gds) {
   %val = call i32@llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* %gds, i32 31, i32 0, i32 0, i1 false, i32 16777217, i1 true, i1 true)
@@ -47,7 +47,7 @@ define amdgpu_vs float @ds_ordered_add_vs(i32 addrspace(2)* inreg %gds) {
 ; FUNC-LABEL: {{^}}ds_ordered_add_gs:
 ; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN: s_mov_b32 m0, s0
-; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:3844 gds
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define amdgpu_gs float @ds_ordered_add_gs(i32 addrspace(2)* inreg %gds) {
   %val = call i32@llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* %gds, i32 31, i32 0, i32 0, i1 false, i32 16777217, i1 true, i1 true)
