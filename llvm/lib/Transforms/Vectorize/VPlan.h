@@ -1767,7 +1767,7 @@ class VPlan {
   // VPlan. External definitions must be immutable and hold a pointer to its
   // underlying IR that will be used to implement its structural comparison
   // (operators '==' and '<').
-  SmallPtrSet<VPValue *, 16> VPExternalDefs;
+  SetVector<VPValue *> VPExternalDefs;
 
   /// Represents the backedge taken count of the original loop, for folding
   /// the tail.
@@ -1835,9 +1835,7 @@ public:
 
   /// Add \p VPVal to the pool of external definitions if it's not already
   /// in the pool.
-  void addExternalDef(VPValue *VPVal) {
-    VPExternalDefs.insert(VPVal);
-  }
+  void addExternalDef(VPValue *VPVal) { VPExternalDefs.insert(VPVal); }
 
   void addVPValue(Value *V) {
     assert(V && "Trying to add a null Value to VPlan");
