@@ -10,7 +10,7 @@ body: |
     ; CHECK: %copy:_(s32) = COPY $w0
     ; CHECK: %lsb:_(s32) = G_CONSTANT i32 1
     ; CHECK: %width:_(s32) = G_CONSTANT i32 2
-    ; CHECK: %ubfx:_(s32) = G_UBFX %copy, %lsb, %width
+    ; CHECK: %ubfx:_(s32) = G_UBFX %copy, %lsb(s32), %width
     ; CHECK: $w0 = COPY %ubfx(s32)
     %copy:_(s32) = COPY $w0
     %lsb:_(s32) = G_CONSTANT i32 1
@@ -27,7 +27,7 @@ body: |
     ; CHECK: %copy:_(s64) = COPY $x0
     ; CHECK: %lsb:_(s64) = G_CONSTANT i64 1
     ; CHECK: %width:_(s64) = G_CONSTANT i64 2
-    ; CHECK: %ubfx:_(s64) = G_UBFX %copy, %lsb, %width
+    ; CHECK: %ubfx:_(s64) = G_UBFX %copy, %lsb(s64), %width
     ; CHECK: $x0 = COPY %ubfx(s64)
     %copy:_(s64) = COPY $x0
     %lsb:_(s64) = G_CONSTANT i64 1
