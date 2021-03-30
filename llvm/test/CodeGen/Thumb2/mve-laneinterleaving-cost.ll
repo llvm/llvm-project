@@ -422,17 +422,15 @@ entry:
 define arm_aapcs_vfpcc void @mul_i16(<8 x i16> *%A, <8 x i16> *%B, i32 %C, <8 x i16> *%D) {
 ; CHECK-LABEL: mul_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrh.s32 q0, [r1]
-; CHECK-NEXT:    vldrh.s32 q1, [r0]
-; CHECK-NEXT:    vldrh.s32 q2, [r0, #8]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    rsbs r2, r2, #0
-; CHECK-NEXT:    vmul.i32 q0, q1, q0
-; CHECK-NEXT:    vldrh.s32 q1, [r1, #8]
+; CHECK-NEXT:    vmullt.s16 q2, q1, q0
+; CHECK-NEXT:    vmullb.s16 q0, q1, q0
+; CHECK-NEXT:    vshl.s32 q2, r2
 ; CHECK-NEXT:    vshl.s32 q0, r2
-; CHECK-NEXT:    vmul.i32 q1, q2, q1
-; CHECK-NEXT:    vstrh.32 q0, [r3]
-; CHECK-NEXT:    vshl.s32 q1, r2
-; CHECK-NEXT:    vstrh.32 q1, [r3, #8]
+; CHECK-NEXT:    vmovnt.i32 q0, q2
+; CHECK-NEXT:    vstrw.32 q0, [r3]
 ; CHECK-NEXT:    bx lr
 entry:
   %a = load <8 x i16>, <8 x i16> *%A, align 4
@@ -451,17 +449,15 @@ entry:
 define arm_aapcs_vfpcc void @mul_i8(<16 x i8> *%A, <16 x i8> *%B, i16 %C, <16 x i8> *%D) {
 ; CHECK-LABEL: mul_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.s16 q0, [r1]
-; CHECK-NEXT:    vldrb.s16 q1, [r0]
-; CHECK-NEXT:    vldrb.s16 q2, [r0, #8]
+; CHECK-NEXT:    vldrw.u32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    rsbs r2, r2, #0
-; CHECK-NEXT:    vmul.i16 q0, q1, q0
-; CHECK-NEXT:    vldrb.s16 q1, [r1, #8]
+; CHECK-NEXT:    vmullt.s8 q2, q1, q0
+; CHECK-NEXT:    vmullb.s8 q0, q1, q0
+; CHECK-NEXT:    vshl.s16 q2, r2
 ; CHECK-NEXT:    vshl.s16 q0, r2
-; CHECK-NEXT:    vmul.i16 q1, q2, q1
-; CHECK-NEXT:    vstrb.16 q0, [r3]
-; CHECK-NEXT:    vshl.s16 q1, r2
-; CHECK-NEXT:    vstrb.16 q1, [r3, #8]
+; CHECK-NEXT:    vmovnt.i16 q0, q2
+; CHECK-NEXT:    vstrw.32 q0, [r3]
 ; CHECK-NEXT:    bx lr
 entry:
   %a = load <16 x i8>, <16 x i8> *%A, align 4

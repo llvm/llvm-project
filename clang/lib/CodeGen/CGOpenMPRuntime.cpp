@@ -655,9 +655,13 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
       InitRVal =
           RValue::getComplex(CGF.EmitLoadOfComplex(LV, DRD->getLocation()));
       break;
-    case TEK_Aggregate:
-      InitRVal = RValue::getAggregate(LV.getAddress(CGF));
-      break;
+    case TEK_Aggregate: {
+      OpaqueValueExpr OVE(DRD->getLocation(), Ty, VK_LValue);
+      CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE, LV);
+      CGF.EmitAnyExprToMem(&OVE, Private, Ty.getQualifiers(),
+                           /*IsInitializer=*/false);
+      return;
+    }
     }
     OpaqueValueExpr OVE(DRD->getLocation(), Ty, VK_RValue);
     CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE, InitRVal);

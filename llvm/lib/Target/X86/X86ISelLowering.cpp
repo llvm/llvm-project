@@ -49045,10 +49045,10 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
       In0 = N00In;
       In1 = N01In;
 
-      // The input vector sizes must match the output.
-      // TODO: Insert cast ops to allow different types.
-      if (In0.getValueSizeInBits() != VT.getSizeInBits() ||
-          In1.getValueSizeInBits() != VT.getSizeInBits())
+      // The input vectors must be at least as wide as the output.
+      // If they are larger than the output, we extract subvector below.
+      if (In0.getValueSizeInBits() < VT.getSizeInBits() ||
+          In1.getValueSizeInBits() < VT.getSizeInBits())
         return SDValue();
     }
     // Mul is commutative so the input vectors can be in any order.
@@ -49063,8 +49063,6 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                          ArrayRef<SDValue> Ops) {
-    // Shrink by adding truncate nodes and let DAGCombine fold with the
-    // sources.
     EVT OpVT = Ops[0].getValueType();
     assert(OpVT.getScalarType() == MVT::i16 &&
            "Unexpected scalar element type");
@@ -49073,6 +49071,19 @@ static SDValue matchPMADDWD_2(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                  OpVT.getVectorNumElements() / 2);
     return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
   };
+
+  // If the output is narrower than an input, extract the low part of the input
+  // vector.
+  EVT OutVT16 = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
+                               VT.getVectorNumElements() * 2);
+  if (OutVT16.bitsLT(In0.getValueType())) {
+    In0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT16, In0,
+                      DAG.getIntPtrConstant(0, DL));
+  }
+  if (OutVT16.bitsLT(In1.getValueType())) {
+    In1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT16, In1,
+                      DAG.getIntPtrConstant(0, DL));
+  }
   return SplitOpsAndApply(DAG, Subtarget, DL, VT, { In0, In1 },
                           PMADDBuilder);
 }

@@ -2732,7 +2732,20 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
   D2->setBraceRange(ToBraceRange);
   D2->setAccess(D->getAccess());
   D2->setLexicalDeclContext(LexicalDC);
-  LexicalDC->addDeclInternal(D2);
+  addDeclToContexts(D, D2);
+
+  if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
+    TemplateSpecializationKind SK = MemberInfo->getTemplateSpecializationKind();
+    EnumDecl *FromInst = D->getInstantiatedFromMemberEnum();
+    if (Expected<EnumDecl *> ToInstOrErr = import(FromInst))
+      D2->setInstantiationOfMemberEnum(*ToInstOrErr, SK);
+    else
+      return ToInstOrErr.takeError();
+    if (ExpectedSLoc POIOrErr = import(MemberInfo->getPointOfInstantiation()))
+      D2->getMemberSpecializationInfo()->setPointOfInstantiation(*POIOrErr);
+    else
+      return POIOrErr.takeError();
+  }
 
   // Import the definition
   if (D->isCompleteDefinition())

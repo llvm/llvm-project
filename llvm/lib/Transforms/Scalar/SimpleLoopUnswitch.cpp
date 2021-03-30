@@ -2645,6 +2645,13 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
         BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
 
+    // If BI's condition is 'select _, true, false', simplify it to confuse
+    // matchers
+    Value *Cond = BI->getCondition(), *CondNext;
+    while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
+      Cond = CondNext;
+    BI->setCondition(Cond);
+
     if (L.isLoopInvariant(BI->getCondition())) {
       UnswitchCandidates.push_back({BI, {BI->getCondition()}});
       continue;
