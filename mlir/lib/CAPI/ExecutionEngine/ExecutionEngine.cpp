@@ -11,6 +11,7 @@
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -53,4 +54,15 @@ extern "C" void *mlirExecutionEngineLookup(MlirExecutionEngine jit,
   if (!expectedFPtr)
     return nullptr;
   return reinterpret_cast<void *>(*expectedFPtr);
+}
+
+extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
+                                                  MlirStringRef name,
+                                                  void *sym) {
+  unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
+    llvm::orc::SymbolMap symbolMap;
+    symbolMap[interner(unwrap(name))] =
+        llvm::JITEvaluatedSymbol::fromPointer(sym);
+    return symbolMap;
+  });
 }

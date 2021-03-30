@@ -3459,89 +3459,11 @@ RISCVTargetLowering::lowerFixedLengthVectorSetccToRVV(SDValue Op,
   SDValue VL =
       DAG.getConstant(VT.getVectorNumElements(), DL, Subtarget.getXLenVT());
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-
-  bool Invert = false;
-  Optional<unsigned> LogicOpc;
-  if (ContainerVT.isFloatingPoint()) {
-    bool Swap = false;
-    switch (CC) {
-    default:
-      break;
-    case ISD::SETULE:
-    case ISD::SETULT:
-      Swap = true;
-      LLVM_FALLTHROUGH;
-    case ISD::SETUGE:
-    case ISD::SETUGT:
-      CC = getSetCCInverse(CC, ContainerVT);
-      Invert = true;
-      break;
-    case ISD::SETOGE:
-    case ISD::SETOGT:
-    case ISD::SETGE:
-    case ISD::SETGT:
-      Swap = true;
-      break;
-    case ISD::SETUEQ:
-      // Use !((OLT Op1, Op2) || (OLT Op2, Op1))
-      Invert = true;
-      LogicOpc = RISCVISD::VMOR_VL;
-      CC = ISD::SETOLT;
-      break;
-    case ISD::SETONE:
-      // Use ((OLT Op1, Op2) || (OLT Op2, Op1))
-      LogicOpc = RISCVISD::VMOR_VL;
-      CC = ISD::SETOLT;
-      break;
-    case ISD::SETO:
-      // Use (OEQ Op1, Op1) && (OEQ Op2, Op2)
-      LogicOpc = RISCVISD::VMAND_VL;
-      CC = ISD::SETOEQ;
-      break;
-    case ISD::SETUO:
-      // Use (UNE Op1, Op1) || (UNE Op2, Op2)
-      LogicOpc = RISCVISD::VMOR_VL;
-      CC = ISD::SETUNE;
-      break;
-    }
-
-    if (Swap) {
-      CC = getSetCCSwappedOperands(CC);
-      std::swap(Op1, Op2);
-    }
-  }
-
   MVT MaskVT = MVT::getVectorVT(MVT::i1, ContainerVT.getVectorElementCount());
   SDValue Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
 
-  // There are 3 cases we need to emit.
-  // 1. For (OEQ Op1, Op1) && (OEQ Op2, Op2) or (UNE Op1, Op1) || (UNE Op2, Op2)
-  //    we need to compare each operand with itself.
-  // 2. For (OLT Op1, Op2) || (OLT Op2, Op1) we need to compare Op1 and Op2 in
-  //    both orders.
-  // 3. For any other case we just need one compare with Op1 and Op2.
-  SDValue Cmp;
-  if (LogicOpc && (CC == ISD::SETOEQ || CC == ISD::SETUNE)) {
-    Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op1,
-                      DAG.getCondCode(CC), Mask, VL);
-    SDValue Cmp2 = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op2, Op2,
-                               DAG.getCondCode(CC), Mask, VL);
-    Cmp = DAG.getNode(*LogicOpc, DL, MaskVT, Cmp, Cmp2, VL);
-  } else {
-    Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op2,
-                      DAG.getCondCode(CC), Mask, VL);
-    if (LogicOpc) {
-      SDValue Cmp2 = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op2, Op1,
-                                 DAG.getCondCode(CC), Mask, VL);
-      Cmp = DAG.getNode(*LogicOpc, DL, MaskVT, Cmp, Cmp2, VL);
-    }
-  }
-
-  if (Invert) {
-    SDValue AllOnes = DAG.getNode(RISCVISD::VMSET_VL, DL, MaskVT, VL);
-    Cmp = DAG.getNode(RISCVISD::VMXOR_VL, DL, MaskVT, Cmp, AllOnes, VL);
-  }
+  SDValue Cmp = DAG.getNode(RISCVISD::SETCC_VL, DL, MaskVT, Op1, Op2,
+                            Op.getOperand(2), Mask, VL);
 
   return convertFromScalableVector(VT, Cmp, DAG, Subtarget);
 }
@@ -7461,7 +7383,20 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
 bool RISCVTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.hasValue();
   EVT ValueVT = Val.getValueType();
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    // Cast the f16 to i16, extend to i32, pad with ones to make a float nan,
+    // and cast to f32.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
+                      DAG.getConstant(0xFFFF0000, DL, MVT::i32));
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Val);
+    Parts[0] = Val;
+    return true;
+  }
+
   if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT ValueEltVT = ValueVT.getVectorElementType();
@@ -7490,6 +7425,17 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
 SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
+  bool IsABIRegCopy = CC.hasValue();
+  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+    SDValue Val = Parts[0];
+
+    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
+    Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f16, Val);
+    return Val;
+  }
+
   if (ValueVT.isScalableVector() && PartVT.isScalableVector()) {
     LLVMContext &Context = *DAG.getContext();
     SDValue Val = Parts[0];

@@ -42,7 +42,7 @@ CSPreInliner::CSPreInliner(StringMap<FunctionSamples> &Profiles,
 
 std::vector<StringRef> CSPreInliner::buildTopDownOrder() {
   std::vector<StringRef> Order;
-  ProfiledCallGraph ProfiledCG(ProfileMap, ContextTracker);
+  ProfiledCallGraph ProfiledCG(ContextTracker);
 
   // Now that we have a profiled call graph, construct top-down order
   // by building up SCC and reversing SCC order.
