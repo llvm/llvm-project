@@ -5,25 +5,17 @@ define void @inst_size(i64* %a, <2 x i64> %b) {
 ; CHECK-LABEL: @inst_size(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VAL:%.*]] = extractelement <2 x i64> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[TMPL1:%.*]] = load i64, i64* [[A:%.*]], align 4
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
-; CHECK-NEXT:    [[TMPL2:%.*]] = load i64, i64* [[PTR2]], align 4
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
 ; CHECK-NEXT:    [[PTR3:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 2
-; CHECK-NEXT:    [[TMPL3:%.*]] = load i64, i64* [[PTR3]], align 4
 ; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 3
-; CHECK-NEXT:    [[TMPL4:%.*]] = load i64, i64* [[PTR4]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A]] to <4 x i64>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[T41:%.*]] = icmp sgt i64 0, [[VAL]]
-; CHECK-NEXT:    [[T42:%.*]] = icmp sgt i64 0, [[TMPL1]]
-; CHECK-NEXT:    [[T43:%.*]] = icmp sgt i64 0, [[TMPL2]]
-; CHECK-NEXT:    [[T44:%.*]] = icmp sgt i64 0, [[TMPL3]]
-; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i64 0, [[TMPL4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    br label [[BLOCK:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ [[T41]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i1 [ [[T42]], [[ENTRY]] ]
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i1 [ [[T43]], [[ENTRY]] ]
-; CHECK-NEXT:    [[PHI4:%.*]] = phi i1 [ [[T44]], [[ENTRY]] ]
-; CHECK-NEXT:    [[PHI5:%.*]] = phi i1 [ [[T45]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i1> [ [[TMP2]], [[ENTRY]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:
