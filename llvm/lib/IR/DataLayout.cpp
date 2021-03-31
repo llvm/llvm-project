@@ -64,7 +64,7 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
     // Keep track of maximum alignment constraint.
     StructAlignment = std::max(TyAlign, StructAlignment);
 
-    MemberOffsets[i] = StructSize;
+    getMemberOffsets()[i] = StructSize;
     // Consume space for this data item
     StructSize += DL.getTypeAllocSize(Ty).getFixedValue();
   }
@@ -80,13 +80,13 @@ StructLayout::StructLayout(StructType *ST, const DataLayout &DL) {
 /// getElementContainingOffset - Given a valid offset into the structure,
 /// return the structure index that contains it.
 unsigned StructLayout::getElementContainingOffset(uint64_t Offset) const {
-  const uint64_t *SI =
-    std::upper_bound(&MemberOffsets[0], &MemberOffsets[NumElements], Offset);
-  assert(SI != &MemberOffsets[0] && "Offset not in structure type!");
+  ArrayRef<uint64_t> MemberOffsets = getMemberOffsets();
+  auto SI = llvm::upper_bound(MemberOffsets, Offset);
+  assert(SI != MemberOffsets.begin() && "Offset not in structure type!");
   --SI;
   assert(*SI <= Offset && "upper_bound didn't work");
-  assert((SI == &MemberOffsets[0] || *(SI-1) <= Offset) &&
-         (SI+1 == &MemberOffsets[NumElements] || *(SI+1) > Offset) &&
+  assert((SI == MemberOffsets.begin() || *(SI - 1) <= Offset) &&
+         (SI + 1 == MemberOffsets.end() || *(SI + 1) > Offset) &&
          "Upper bound didn't work!");
 
   // Multiple fields can have the same offset if any of them are zero sized.
@@ -94,7 +94,7 @@ unsigned StructLayout::getElementContainingOffset(uint64_t Offset) const {
   // at the i32 element, because it is the last element at that offset.  This is
   // the right one to return, because anything after it will have a higher
   // offset, implying that this element is non-empty.
-  return SI-&MemberOffsets[0];
+  return SI - MemberOffsets.begin();
 }
 
 //===----------------------------------------------------------------------===//
@@ -678,9 +678,8 @@ const StructLayout *DataLayout::getStructLayout(StructType *Ty) const {
 
   // Otherwise, create the struct layout.  Because it is variable length, we
   // malloc it, then use placement new.
-  int NumElts = Ty->getNumElements();
-  StructLayout *L = (StructLayout *)
-      safe_malloc(sizeof(StructLayout)+(NumElts-1) * sizeof(uint64_t));
+  StructLayout *L = (StructLayout *)safe_malloc(
+      StructLayout::totalSizeToAlloc<uint64_t>(Ty->getNumElements()));
 
   // Set SL before calling StructLayout's ctor.  The ctor could cause other
   // entries to be added to TheMap, invalidating our reference.
