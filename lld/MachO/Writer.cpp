@@ -20,12 +20,14 @@
 #include "Target.h"
 #include "UnwindInfoSection.h"
 
+#include "lld/Common/Arrays.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
@@ -920,10 +922,21 @@ void Writer::writeSections() {
       osec->writeTo(buf + osec->fileOff);
 }
 
+// In order to utilize multiple cores, we first split the buffer into chunks,
+// compute a hash for each chunk, and then compute a hash value of the hash
+// values.
 void Writer::writeUuid() {
   TimeTraceScope timeScope("Computing UUID");
-  uint64_t digest =
-      xxHash64({buffer->getBufferStart(), buffer->getBufferEnd()});
+  ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
+  unsigned chunkCount = parallel::strategy.compute_thread_count() * 10;
+  // Round-up integer division
+  size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
+  std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
+  std::vector<uint64_t> hashes(chunks.size());
+  parallelForEachN(0, chunks.size(),
+                   [&](size_t i) { hashes[i] = xxHash64(chunks[i]); });
+  uint64_t digest = xxHash64({reinterpret_cast<uint8_t *>(hashes.data()),
+                              hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
 }
 
