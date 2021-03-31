@@ -1,10 +1,21 @@
 #include <arm_acle.h>
 #include <asm/hwcap.h>
 #include <asm/mman.h>
+#include <stdlib.h>
 #include <sys/auxv.h>
 #include <sys/mman.h>
 #include <sys/prctl.h>
 #include <unistd.h>
+
+// This file uses ACLE intrinsics as detailed in:
+// https://developer.arm.com/documentation/101028/0012/10--Memory-tagging-intrinsics?lang=en
+
+char *checked_mmap(size_t page_size, int prot) {
+  char *ptr = mmap(0, page_size, prot, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (ptr == MAP_FAILED)
+    exit(1);
+  return ptr;
+}
 
 int main(int argc, char const *argv[]) {
   // We assume that the test runner has checked we're on an MTE system
@@ -20,38 +31,32 @@ int main(int argc, char const *argv[]) {
 
   size_t page_size = sysconf(_SC_PAGESIZE);
 
-  // Allocate memory with MTE
-  // We ask for two pages. One is read only so that we get
-  // 2 mappings in /proc/.../smaps so we can check reading
-  // a range across mappings.
-  // The first allocation will start at the highest address,
-  // so we allocate buf2 first to get:
-  // <low address> | buf | buf2 | <high address>
-  int prot = PROT_READ | PROT_MTE;
-  int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+  // We're going to mmap pages in this order:
+  // <high addres>
+  // MTE read/write
+  // MTE read/write executable
+  // non MTE
+  // MTE read only
+  // <low address>
+  //
+  // This means that the first two MTE pages end up next
+  // to each other. Since the second one is also executable
+  // it will create a new entry in /proc/smaps.
+  int mte_prot = PROT_READ | PROT_MTE;
 
-  char *buf2 = mmap(0, page_size, prot, flags, -1, 0);
-  if (buf2 == MAP_FAILED)
-    return 1;
-
-  // Writeable so we can set tags on it later
-  char *buf = mmap(0, page_size, prot | PROT_WRITE, flags, -1, 0);
-  if (buf == MAP_FAILED)
-    return 1;
-
+  char *mte_buf_2 = checked_mmap(page_size, mte_prot | PROT_WRITE);
+  char *mte_buf = checked_mmap(page_size, mte_prot | PROT_WRITE | PROT_EXEC);
   // We expect the mappings to be next to each other
-  if (buf2 - buf != page_size)
+  if (mte_buf_2 - mte_buf != page_size)
     return 1;
 
-  // And without MTE
-  char *non_mte_buf = mmap(0, page_size, PROT_READ | PROT_WRITE, flags, -1, 0);
-  if (non_mte_buf == MAP_FAILED)
-    return 1;
+  char *non_mte_buf = checked_mmap(page_size, PROT_READ);
+  char *mte_read_only = checked_mmap(page_size, mte_prot);
 
   // Set incrementing tags until end of the first page
-  char *tagged_ptr = buf;
+  char *tagged_ptr = mte_buf;
   // This ignores tag bits when subtracting the addresses
-  while (__arm_mte_ptrdiff(tagged_ptr, buf) < page_size) {
+  while (__arm_mte_ptrdiff(tagged_ptr, mte_buf) < page_size) {
     // Set the allocation tag for this location
     __arm_mte_set_tag(tagged_ptr);
     // + 16 for 16 byte granules
@@ -61,16 +66,17 @@ int main(int argc, char const *argv[]) {
   }
 
   // Tag the original pointer with 9
-  buf = __arm_mte_create_random_tag(buf, ~(1 << 9));
+  mte_buf = __arm_mte_create_random_tag(mte_buf, ~(1 << 9));
   // A different tag so that buf_alt_tag > buf if you don't handle the tag
-  char *buf_alt_tag = __arm_mte_create_random_tag(buf, ~(1 << 10));
+  char *mte_buf_alt_tag = __arm_mte_create_random_tag(mte_buf, ~(1 << 10));
 
   // lldb should be removing the whole top byte, not just the tags.
   // So fill 63-60 with something non zero so we'll fail if we only remove tags.
 #define SET_TOP_NIBBLE(ptr) (char *)((size_t)(ptr) | (0xA << 60))
-  buf = SET_TOP_NIBBLE(buf);
-  buf_alt_tag = SET_TOP_NIBBLE(buf_alt_tag);
-  buf2 = SET_TOP_NIBBLE(buf2);
+  mte_buf = SET_TOP_NIBBLE(mte_buf);
+  mte_buf_alt_tag = SET_TOP_NIBBLE(mte_buf_alt_tag);
+  mte_buf_2 = SET_TOP_NIBBLE(mte_buf_2);
+  mte_read_only = SET_TOP_NIBBLE(mte_read_only);
 
   // Breakpoint here
   return 0;

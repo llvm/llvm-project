@@ -115,6 +115,114 @@ protected:
   }
 };
 
+#define LLDB_OPTIONS_memory_tag_write
+#include "CommandOptions.inc"
+
+class CommandObjectMemoryTagWrite : public CommandObjectParsed {
+public:
+  CommandObjectMemoryTagWrite(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "tag",
+                            "Write memory tags starting from the granule that "
+                            "contains the given address.",
+                            nullptr,
+                            eCommandRequiresTarget | eCommandRequiresProcess |
+                                eCommandProcessMustBePaused) {
+    // Address
+    m_arguments.push_back(
+        CommandArgumentEntry{CommandArgumentData(eArgTypeAddressOrExpression)});
+    // One or more tag values
+    m_arguments.push_back(CommandArgumentEntry{
+        CommandArgumentData(eArgTypeValue, eArgRepeatPlus)});
+  }
+
+  ~CommandObjectMemoryTagWrite() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() < 2) {
+      result.AppendError("wrong number of arguments; expected "
+                         "<address-expression> <tag> [<tag> [...]]");
+      return false;
+    }
+
+    Status error;
+    addr_t start_addr = OptionArgParser::ToAddress(
+        &m_exe_ctx, command[0].ref(), LLDB_INVALID_ADDRESS, &error);
+    if (start_addr == LLDB_INVALID_ADDRESS) {
+      result.AppendErrorWithFormatv("Invalid address expression, {0}",
+                                    error.AsCString());
+      return false;
+    }
+
+    command.Shift(); // shift off start address
+
+    std::vector<lldb::addr_t> tags;
+    for (auto &entry : command) {
+      lldb::addr_t tag_value;
+      // getAsInteger returns true on failure
+      if (entry.ref().getAsInteger(0, tag_value)) {
+        result.AppendErrorWithFormat(
+            "'%s' is not a valid unsigned decimal string value.\n",
+            entry.c_str());
+        return false;
+      }
+      tags.push_back(tag_value);
+    }
+
+    Process *process = m_exe_ctx.GetProcessPtr();
+    llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
+        process->GetMemoryTagManager();
+
+    if (!tag_manager_or_err) {
+      result.SetError(Status(tag_manager_or_err.takeError()));
+      return false;
+    }
+
+    const MemoryTagManager *tag_manager = *tag_manager_or_err;
+
+    MemoryRegionInfos memory_regions;
+    // If this fails the list of regions is cleared, so we don't need to read
+    // the return status here.
+    process->GetMemoryRegions(memory_regions);
+
+    // We have to assume start_addr is not granule aligned.
+    // So if we simply made a range:
+    // (start_addr, start_addr + (N * granule_size))
+    // We would end up with a range that isn't N granules but N+1
+    // granules. To avoid this we'll align the start first using the method that
+    // doesn't check memory attributes. (if the final range is untagged we'll
+    // handle that error later)
+    lldb::addr_t aligned_start_addr =
+        tag_manager->ExpandToGranule(MemoryTagManager::TagRange(start_addr, 1))
+            .GetRangeBase();
+
+    // Now we've aligned the start address so if we ask for another range
+    // using the number of tags N, we'll get back a range that is also N
+    // granules in size.
+    llvm::Expected<MemoryTagManager::TagRange> tagged_range =
+        tag_manager->MakeTaggedRange(
+            aligned_start_addr,
+            aligned_start_addr + (tags.size() * tag_manager->GetGranuleSize()),
+            memory_regions);
+
+    if (!tagged_range) {
+      result.SetError(Status(tagged_range.takeError()));
+      return false;
+    }
+
+    Status status = process->WriteMemoryTags(tagged_range->GetRangeBase(),
+                                             tagged_range->GetByteSize(), tags);
+
+    if (status.Fail()) {
+      result.SetError(status);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return true;
+  }
+};
+
 CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)
     : CommandObjectMultiword(
           interpreter, "tag", "Commands for manipulating memory tags",
@@ -123,6 +231,11 @@ CommandObjectMemoryTag::CommandObjectMemoryTag(CommandInterpreter &interpreter)
       new CommandObjectMemoryTagRead(interpreter));
   read_command_object->SetCommandName("memory tag read");
   LoadSubCommand("read", read_command_object);
+
+  CommandObjectSP write_command_object(
+      new CommandObjectMemoryTagWrite(interpreter));
+  write_command_object->SetCommandName("memory tag write");
+  LoadSubCommand("write", write_command_object);
 }
 
 CommandObjectMemoryTag::~CommandObjectMemoryTag() = default;
