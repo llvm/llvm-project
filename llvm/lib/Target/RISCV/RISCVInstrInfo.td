@@ -295,8 +295,6 @@ def ixlenimm_li : Operand<XLenVT> {
 }
 
 // Standalone (codegen-only) immleaf patterns.
-def simm32     : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
-def simm32hi20 : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
