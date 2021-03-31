@@ -250,7 +250,8 @@ public:
     fillStrTabShdr(ShStrTab);
 
     // Finish initializing the ELF header.
-    initELFHeader<ELFT>(ElfHeader, Stub.Arch);
+    initELFHeader<ELFT>(ElfHeader,
+                        static_cast<uint16_t>(Stub.Target.Arch.getValue()));
     ElfHeader.e_shstrndx = ShStrTab.Index;
     ElfHeader.e_shnum = LastSection->Index + 1;
     ElfHeader.e_shoff =
@@ -517,7 +518,7 @@ static Error populateSymbols(ELFStub &TargetStub,
     if (!SymName)
       return SymName.takeError();
     ELFSymbol Sym = createELFSym<ELFT>(*SymName, RawSym);
-    TargetStub.Symbols.insert(std::move(Sym));
+    TargetStub.Symbols.push_back(std::move(Sym));
     // TODO: Populate symbol warning.
   }
   return Error::success();
@@ -561,7 +562,12 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
                    DynEnt.StrSize);
 
   // Populate Arch from ELF header.
-  DestStub->Arch = ElfFile.getHeader().e_machine;
+  DestStub->Target.Arch = static_cast<ELFArch>(ElfFile.getHeader().e_machine);
+  DestStub->Target.BitWidth =
+      (ELFBitWidthType)ElfFile.getHeader().e_ident[EI_CLASS];
+  DestStub->Target.Endianness =
+      (ELFEndiannessType)ElfFile.getHeader().e_ident[EI_DATA];
+  DestStub->Target.ObjectFormat = "ELF";
 
   // Populate SoName from .dynamic entries and dynamic string table.
   if (DynEnt.SONameOffset.hasValue()) {
@@ -667,15 +673,23 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
 // This function wraps the ELFT writeELFBinaryToFile() so writeBinaryStub()
 // can be called without having to use ELFType templates directly.
 Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
-                      ELFTarget OutputFormat, bool WriteIfChanged) {
-  if (OutputFormat == ELFTarget::ELF32LE)
-    return writeELFBinaryToFile<ELF32LE>(FilePath, Stub, WriteIfChanged);
-  if (OutputFormat == ELFTarget::ELF32BE)
-    return writeELFBinaryToFile<ELF32BE>(FilePath, Stub, WriteIfChanged);
-  if (OutputFormat == ELFTarget::ELF64LE)
-    return writeELFBinaryToFile<ELF64LE>(FilePath, Stub, WriteIfChanged);
-  if (OutputFormat == ELFTarget::ELF64BE)
-    return writeELFBinaryToFile<ELF64BE>(FilePath, Stub, WriteIfChanged);
+                      bool WriteIfChanged) {
+  assert(Stub.Target.Arch);
+  assert(Stub.Target.BitWidth);
+  assert(Stub.Target.Endianness);
+  if (Stub.Target.BitWidth == ELFBitWidthType::ELF32) {
+    if (Stub.Target.Endianness == ELFEndiannessType::Little) {
+      return writeELFBinaryToFile<ELF32LE>(FilePath, Stub, WriteIfChanged);
+    } else {
+      return writeELFBinaryToFile<ELF32BE>(FilePath, Stub, WriteIfChanged);
+    }
+  } else {
+    if (Stub.Target.Endianness == ELFEndiannessType::Little) {
+      return writeELFBinaryToFile<ELF64LE>(FilePath, Stub, WriteIfChanged);
+    } else {
+      return writeELFBinaryToFile<ELF64BE>(FilePath, Stub, WriteIfChanged);
+    }
+  }
   llvm_unreachable("invalid binary output target");
 }
 

@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-elfabi --elf %t --emit-tbe=- | FileCheck %s
+# RUN: llvm-elfabi --input-format=ELF --output-format=TBE --output=- %t | FileCheck %s
 
 !ELF
 FileHeader:
@@ -48,4 +48,4 @@ ProgramHeaders:
 # CHECK:      NeededLibs:
 # CHECK-NEXT:   - libfoo.so{{$}}
 # CHECK-NEXT:   - libbar.so{{$}}
-# CHECK-NEXT: Symbols: {}
+# CHECK-NEXT: Symbols: []

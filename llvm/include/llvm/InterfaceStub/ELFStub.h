@@ -15,6 +15,7 @@
 #define LLVM_INTERFACESTUB_ELFSTUB_H
 
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <set>
 #include <vector>
@@ -34,8 +35,25 @@ enum class ELFSymbolType {
   Unknown = 16,
 };
 
+enum class ELFEndiannessType {
+  Little = ELF::ELFDATA2LSB,
+  Big = ELF::ELFDATA2MSB,
+
+  // Endianness info is 1 bytes, 256 is safely out of rance.
+  Unknown = 256,
+};
+
+enum class ELFBitWidthType {
+  ELF32 = ELF::ELFCLASS32,
+  ELF64 = ELF::ELFCLASS64,
+
+  // Bit width info is 1 bytes, 256 is safely out of rance.
+  Unknown = 256,
+};
+
 struct ELFSymbol {
-  ELFSymbol(std::string SymbolName) : Name(SymbolName) {}
+  ELFSymbol() = default;
+  explicit ELFSymbol(std::string SymbolName) : Name(std::move(SymbolName)) {}
   std::string Name;
   uint64_t Size;
   ELFSymbolType Type;
@@ -45,21 +63,42 @@ struct ELFSymbol {
   bool operator<(const ELFSymbol &RHS) const { return Name < RHS.Name; }
 };
 
+struct IFSTarget {
+  Optional<std::string> Triple;
+  Optional<std::string> ObjectFormat;
+  Optional<ELFArch> Arch;
+  Optional<std::string> ArchString;
+  Optional<ELFEndiannessType> Endianness;
+  Optional<ELFBitWidthType> BitWidth;
+};
+
 // A cumulative representation of ELF stubs.
 // Both textual and binary stubs will read into and write from this object.
-class ELFStub {
+struct ELFStub {
   // TODO: Add support for symbol versioning.
-public:
   VersionTuple TbeVersion;
   Optional<std::string> SoName;
-  ELFArch Arch;
+  IFSTarget Target;
   std::vector<std::string> NeededLibs;
-  std::set<ELFSymbol> Symbols;
+  std::vector<ELFSymbol> Symbols;
 
   ELFStub() {}
   ELFStub(const ELFStub &Stub);
   ELFStub(ELFStub &&Stub);
 };
+
+// Create a alias class for ELFStub.
+// LLVM's YAML library does not allow mapping a class with 2 traits,
+// which prevents us using 'Target:' field with different definitions.
+// This class makes it possible to map a second traits so the same data
+// structure can be used for 2 different yaml schema.
+struct ELFStubTriple : ELFStub {
+  ELFStubTriple() {}
+  ELFStubTriple(const ELFStub &Stub);
+  ELFStubTriple(const ELFStubTriple &Stub);
+  ELFStubTriple(ELFStubTriple &&Stub);
+};
+
 } // end namespace elfabi
 } // end namespace llvm
 

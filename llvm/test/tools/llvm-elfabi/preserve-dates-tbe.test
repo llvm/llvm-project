@@ -1,8 +1,8 @@
 ## Test writing unchanged content to TBE file with --write-if-changed flag.
 
-# RUN: llvm-elfabi --elf %p/Inputs/gnu_hash.so --emit-tbe=%t
+# RUN: llvm-elfabi --input-format=ELF --output-format=TBE --output=%t %p/Inputs/gnu_hash.so
 # RUN: env TZ=GMT touch -m -t 197001010000 %t
-# RUN: llvm-elfabi --elf %p/Inputs/gnu_hash.so --emit-tbe=%t --write-if-changed
+# RUN: llvm-elfabi --input-format=ELF --output-format=TBE --output=%t --write-if-changed %p/Inputs/gnu_hash.so
 # RUN: env TZ=GMT ls -l %t | FileCheck %s
 
 # CHECK: {{[[:space:]]1970}}

@@ -1,26 +1,44 @@
 ## Test writing stub elf with minimal sections.
 
-# RUN: llvm-elfabi %s --output-target=elf32-little %t.elf32l
+# RUN: llvm-elfabi --output-format=ELF --output=%t.elf32l --arch=x86_64 --bitwidth=32 --endianness=little %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf32l | FileCheck %s -DCLASS="32-bit (0x1)" -DDE="LittleEndian (0x1)" -DHS=52 -DPHES=32 -DSHES=40 -DDYNSYMAL=4 -DDYNSYMES=16 -DDYNAMICAL=4 -DDYNAMICES=8 -DDYNTABZ=0
 
-# RUN: llvm-elfabi %s --output-target=elf32-big %t.elf32b
+# RUN: llvm-elfabi --output-format=ELF --output=%t.elf32b --arch=x86_64 --bitwidth=32 --endianness=big %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf32b | FileCheck %s -DCLASS="32-bit (0x1)" -DDE="BigEndian (0x2)" -DHS=52 -DPHES=32 -DSHES=40 -DDYNSYMAL=4 -DDYNSYMES=16 -DDYNAMICAL=4 -DDYNAMICES=8 -DDYNTABZ=0
 
-# RUN: llvm-elfabi %s --output-target=elf64-little %t.elf64l
+# RUN: llvm-elfabi --output-format=ELF --output=%t.elf64l --arch=x86_64 --bitwidth=64 --endianness=little %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64l | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
-# RUN: llvm-elfabi %s --output-target=elf64-big %t.elf64b
+# RUN: llvm-elfabi --output-format=ELF --output=%t.elf64l --target=x86_64-linux-gnu %s
+# RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64l | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="LittleEndian (0x1)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
+
+# RUN: llvm-elfabi --output-format=ELF --output=%t.elf64b --arch=x86_64 --bitwidth=64 --endianness=big %s
 # RUN: llvm-readobj -h -S --string-dump .dynstr --string-dump .shstrtab --dyn-symbols --dynamic-table %t.elf64b | FileCheck %s -DCLASS="64-bit (0x2)" -DDE="BigEndian (0x2)" -DHS=64 -DPHES=56 -DSHES=64 -DDYNSYMAL=8 -DDYNSYMES=24 -DDYNAMICAL=8 -DDYNAMICES=16 -DDYNTABZ=000000000
 
---- !tapi-tbe
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --arch=x86_64 --bitwidth=64 --endianness=big --target=x86_64-linux-gnu %s 2>&1 | FileCheck %s --check-prefix=TRIPLEERR
+
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --bitwidth=64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="Arch" --check-prefix=TARGETERR
+
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --arch=x86_64 --endianness=big %s 2>&1 | FileCheck %s -DMSG="BitWidth" --check-prefix=TARGETERR
+
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --arch=x86_64 --bitwidth=64 %s 2>&1 | FileCheck %s -DMSG="Endianness" --check-prefix=TARGETERR
+
+# RUN: llvm-elfabi --output-format=TBE --output=%t.target --target=x86_64-linux-gnu %s
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --target=aarch64-linux-gnu %t.target 2>&1 | FileCheck %s -DMSG="Triple" --check-prefix=CONFLICTERR
+
+# RUN: llvm-elfabi --output-format=TBE --output=%t.target --arch=x86_64 --endianness=little --bitwidth=64 %s
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --arch=AArch64 %t.target 2>&1 | FileCheck %s -DMSG=Arch --check-prefix=CONFLICTERR
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --endianness=big %t.target 2>&1 | FileCheck %s -DMSG=Endianness --check-prefix=CONFLICTERR
+# RUN: not llvm-elfabi --output-format=ELF --output=%t --bitwidth=32 %t.target 2>&1 | FileCheck %s -DMSG=BitWidth --check-prefix=CONFLICTERR
+
+--- !ifs-v1
 TbeVersion: 1.0
-Arch: x86_64
 NeededLibs:
   - libc.so.6
 Symbols:
-  bar: { Type: Object, Size: 42 }
-  baz: { Type: TLS, Size: 3 }
-  plus: { Type: Func }
+  - { Name: bar, Type: Object, Size: 42 }
+  - { Name: baz, Type: TLS, Size: 3 }
+  - { Name: plus, Type: Func }
 ...
 
 # CHECK:      ElfHeader {
@@ -175,3 +193,7 @@ Symbols:
 # CHECK-NEXT: [     9] .dynsym
 # CHECK-NEXT: [    11] .dynamic
 # CHECK-NEXT: [    1a] .shstrtab
+
+# TRIPLEERR: error: Target triple cannot be used simultaneously with ELF target format
+# TARGETERR: error: [[MSG]] is not defined in the text stub
+# CONFLICTERR: error: Supplied [[MSG]] conflicts with the text stub

@@ -1,15 +1,15 @@
 ## Test running llvm-elfabi without specifying a valid target.
 
-# RUN: not llvm-elfabi %s %t 2>&1 | FileCheck %s --check-prefix=MISSING
-# RUN: not llvm-elfabi %s --output-target=nope %t 2>&1 | FileCheck %s --check-prefix=INVALID
+# RUN: not llvm-elfabi --output=%t %s 2>&1 | FileCheck %s --check-prefix=MISSING
+# RUN: not llvm-elfabi --output-format=nope --output=%t %s 2>&1 | FileCheck %s --check-prefix=INVALID
 
---- !tapi-tbe
+--- !ifs-v1
 SoName: somelib.so
 TbeVersion: 1.0
-Arch: x86_64
-Symbols: {}
+Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
+Symbols: []
 ...
 
-# MISSING: error: no binary output target specified.
+# MISSING: llvm-elfabi: for the --output-format option: must be specified at least once!
 
-# INVALID: llvm-elfabi: for the --output-target option: Cannot find option named 'nope'!
+# INVALID: llvm-elfabi: for the --output-format option: Cannot find option named 'nope'!

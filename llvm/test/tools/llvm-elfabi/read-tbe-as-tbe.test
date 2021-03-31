@@ -1,13 +1,13 @@
-# RUN: llvm-elfabi --tbe %s --emit-tbe=- | FileCheck %s
+# RUN: llvm-elfabi --input-format=TBE --output-format=TBE --output=- %s | FileCheck %s
 
---- !tapi-tbe
+--- !ifs-v1
 TbeVersion: 1.0
-Arch: AArch64
-Symbols: {}
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
 ...
 
-# CHECK:      --- !tapi-tbe
+# CHECK:      --- !ifs-v1
 # CHECK-NEXT: TbeVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
-# CHECK-NEXT: Arch: AArch64
-# CHECK-NEXT: Symbols: {}
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+# CHECK-NEXT: Symbols: []
 # CHECK-NEXT: ...

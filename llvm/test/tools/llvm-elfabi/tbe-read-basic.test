@@ -1,25 +1,25 @@
-# RUN: llvm-elfabi %s --emit-tbe=- | FileCheck %s
+# RUN: llvm-elfabi --output-format=TBE --output=- %s | FileCheck %s
 
---- !tapi-tbe
+--- !ifs-v1
 SoName: somelib.so
 TbeVersion: 1.0
-Arch: x86_64
+Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 Symbols:
-  foo: { Type: Func }
-  bar: { Type: Object, Size: 42 }
-  baz: { Type: Object, Size: 8 }
-  not: { Type: Object, Undefined: true, Size: 128 }
-  nor: { Type: Func, Undefined: true }
+  - { Name: foo, Type: Func }
+  - { Name: bar, Type: Object, Size: 42 }
+  - { Name: baz, Type: Object, Size: 8 }
+  - { Name: not, Type: Object, Size: 128, Undefined: true }
+  - { Name: nor, Type: Func, Undefined: true }
 ...
 
-# CHECK:      --- !tapi-tbe
+# CHECK:      --- !ifs-v1
 # CHECK-NEXT: TbeVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
 # CHECK-NEXT: SoName: somelib.so
-# CHECK-NEXT: Arch: x86_64
+# CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: x86_64, Endianness: little, BitWidth: 64 }
 # CHECK-NEXT: Symbols:
-# CHECK-NEXT:   bar: { Type: Object, Size: 42 }
-# CHECK-NEXT:   baz: { Type: Object, Size: 8 }
-# CHECK-NEXT:   foo: { Type: Func }
-# CHECK-NEXT:   nor: { Type: Func, Undefined: true }
-# CHECK-NEXT:   not: { Type: Object, Size: 128, Undefined: true }
+# CHECK-NEXT:   - { Name: foo, Type: Func }
+# CHECK-NEXT:   - { Name: bar, Type: Object, Size: 42 }
+# CHECK-NEXT:   - { Name: baz, Type: Object, Size: 8 }
+# CHECK-NEXT:   - { Name: not, Type: Object, Size: 128, Undefined: true }
+# CHECK-NEXT:   - { Name: nor, Type: Func, Undefined: true }
 # CHECK-NEXT: ...

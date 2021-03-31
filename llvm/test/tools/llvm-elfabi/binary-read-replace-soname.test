@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-elfabi --elf %t --emit-tbe=- | FileCheck %s --check-prefix=ORIGINAL
-# RUN: llvm-elfabi --elf %t --emit-tbe=- --soname=libbest.so | FileCheck %s --check-prefix=REPLACED
+# RUN: llvm-elfabi --input-format=ELF --output-format=TBE --output=- %t | FileCheck %s --check-prefix=ORIGINAL
+# RUN: llvm-elfabi --input-format=ELF --output-format=TBE --soname=libbest.so --output=- %t | FileCheck %s --check-prefix=REPLACED
 
 !ELF
 FileHeader:

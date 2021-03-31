@@ -5,14 +5,14 @@
 # RUN: mkdir %t.TestDir
 # RUN: touch %t.TestDir/Output.TestFile
 # RUN: chmod 400 %t.TestDir
-# RUN: not llvm-elfabi %s --output-target=elf64-little %t.TestDir/Output.TestFile 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+# RUN: not llvm-elfabi --output-format=ELF --output=%t.TestDir/Output.TestFile %s 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
 # RUN: chmod 777 %t.TestDir
 # RUN: rm -rf %t.TestDir
 
---- !tapi-tbe
+--- !ifs-v1
 TbeVersion: 1.0
-Arch: AArch64
-Symbols: {}
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols: []
 ...
 
 # ERR: [[MSG]] when trying to open `{{.*}}.TestDir/Output.TestFile` for writing
