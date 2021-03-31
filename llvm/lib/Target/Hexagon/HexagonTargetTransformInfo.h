@@ -110,8 +110,8 @@ public:
                                             ArrayRef<Type *> Tys);
   unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys,
                             TTI::TargetCostKind CostKind);
-  unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                 TTI::TargetCostKind CostKind);
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
   unsigned getAddressComputationCost(Type *Tp, ScalarEvolution *SE,
             const SCEV *S);
   unsigned getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
