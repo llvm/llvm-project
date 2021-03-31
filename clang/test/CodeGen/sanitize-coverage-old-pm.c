@@ -7,6 +7,8 @@
 //
 // Host armv7 is currently unsupported: https://bugs.llvm.org/show_bug.cgi?id=46117
 // XFAIL: armv7, thumbv7
+// The same issue also occurs on a riscv32 host.
+// XFAIL: riscv32
 
 int x[10];
 
