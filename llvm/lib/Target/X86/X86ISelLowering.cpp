@@ -9209,6 +9209,19 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   return DstVec;
 }
 
+static bool isHorizOp(unsigned Opcode) {
+  switch (Opcode) {
+  case X86ISD::PACKSS:
+  case X86ISD::PACKUS:
+  case X86ISD::FHADD:
+  case X86ISD::FHSUB:
+  case X86ISD::HADD:
+  case X86ISD::HSUB:
+    return true;
+  }
+  return false;
+}
+
 /// This is a helper function of LowerToHorizontalOp().
 /// This function checks that the build_vector \p N in input implements a
 /// 128-bit partial horizontal operation on a 256-bit vector, but that operation
@@ -43295,10 +43308,7 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
 static SDValue combineHorizOpWithShuffle(SDNode *N, SelectionDAG &DAG,
                                          const X86Subtarget &Subtarget) {
   unsigned Opcode = N->getOpcode();
-  assert((X86ISD::HADD == Opcode || X86ISD::FHADD == Opcode ||
-          X86ISD::HSUB == Opcode || X86ISD::FHSUB == Opcode ||
-          X86ISD::PACKSS == Opcode || X86ISD::PACKUS == Opcode) &&
-         "Unexpected hadd/hsub/pack opcode");
+  assert(isHorizOp(Opcode) && "Unexpected hadd/hsub/pack opcode");
 
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
