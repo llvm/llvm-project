@@ -42,7 +42,7 @@ TEST(LinkGraphTest, AddressAccess) {
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
 
-  auto Sec1 = G.createSection("__data.1", RWFlags);
+  auto &Sec1 = G.createSection("__data.1", RWFlags);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, 0x1000, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 4, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);
