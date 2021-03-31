@@ -147,7 +147,8 @@ private:
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_SHUFFLE_VECTOR(MachineInstr &I) const;
   bool selectAMDGPU_BUFFER_ATOMIC_FADD(MachineInstr &I) const;
-  bool selectGlobalAtomicFaddIntrinsic(MachineInstr &I) const;
+  bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
+                              MachineOperand &DataOp) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
