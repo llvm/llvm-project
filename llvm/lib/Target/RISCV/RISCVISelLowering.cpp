@@ -483,6 +483,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+      setOperationAction(ISD::STEP_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     }
 
@@ -1808,6 +1809,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return lowerEXTRACT_SUBVECTOR(Op, DAG);
+  case ISD::STEP_VECTOR:
+    return lowerSTEP_VECTOR(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return lowerVECTOR_REVERSE(Op, DAG);
   case ISD::BUILD_VECTOR:
@@ -3252,6 +3255,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   // We might have bitcast from a mask type: cast back to the original type if
   // required.
   return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
+}
+
+// Implement step_vector to the vid instruction.
+SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  assert(Op.getConstantOperandAPInt(0) == 1 && "Unexpected step value");
+  MVT VT = Op.getSimpleValueType();
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+  return DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
 }
 
 // Implement vector_reverse using vrgather.vv with indices determined by
