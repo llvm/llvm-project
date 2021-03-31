@@ -1158,8 +1158,8 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
 }
 
 // Try to fold an instruction into a simpler one
-static bool tryFoldInst(const SIInstrInfo *TII,
-                        MachineInstr *MI) {
+static bool tryFoldCndMask(const SIInstrInfo *TII,
+                           MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
 
   if (Opc == AMDGPU::V_CNDMASK_B32_e32    ||
@@ -1313,7 +1313,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI << '\n');
-      if (tryFoldInst(TII, Fold.UseMI))
+      if (tryFoldCndMask(TII, Fold.UseMI))
         Folded.insert(Fold.UseMI);
     } else if (Fold.isCommuted()) {
       // Restoring instruction's original operand order if fold has failed.
@@ -1755,7 +1755,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       Next = std::next(I);
       MachineInstr &MI = *I;
 
-      tryFoldInst(TII, &MI);
+      tryFoldCndMask(TII, &MI);
 
       if (MI.isRegSequence() && tryFoldRegSequence(MI))
         continue;
