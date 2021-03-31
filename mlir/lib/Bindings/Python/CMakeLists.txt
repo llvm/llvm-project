@@ -69,6 +69,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
   INSTALL_DIR
     python
   SOURCES
+    DialectLinalg.cpp
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp

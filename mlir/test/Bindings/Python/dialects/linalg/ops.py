@@ -5,7 +5,6 @@ from mlir.dialects import builtin
 from mlir.dialects import linalg
 from mlir.dialects import std
 
-
 def run(f):
   print("\nTEST:", f.__name__)
   f()
@@ -82,9 +81,9 @@ def testStructuredOpOnBuffers():
   # CHECK: linalg.matmul ins(%arg0, %arg1 : memref<2x3x4xf32>, memref<2x3x4xf32>) outs(%arg2 : memref<2x3x4xf32>)
   print(module)
 
-# CHECK-LABEL: TEST: testNamedStructuredOp
+# CHECK-LABEL: TEST: testNamedStructuredOpCustomForm
 @run
-def testNamedStructuredOp():
+def testNamedStructuredOpCustomForm():
   with Context() as ctx, Location.unknown():
     module = Module.create()
     f32 = F32Type.get()
@@ -93,10 +92,45 @@ def testNamedStructuredOp():
                                    RankedTensorType.get((16, 8), f32))
       def named_form(lhs, rhs):
         init_result = linalg.InitTensorOp([4, 8], f32)
-        # CHECK: linalg.matmul
-        # TODO: prperly hook up the region.
+        # First check the named form with custom format
+        #      CHECK: linalg.matmul
+        # CHECK-SAME:    ins(%{{.*}} : tensor<4x16xf32>, tensor<16x8xf32>)
+        # CHECK-SAME:   outs(%{{.*}} : tensor<4x8xf32>)
+        # CHECK-SAME:   -> tensor<4x8xf32>
+        # CHECK-NEXT: return
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 
+  print(module)
+
+# CHECK-LABEL: TEST: testNamedStructuredOpGenericForm
+@run
+def testNamedStructuredOpGenericForm():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
+                                   RankedTensorType.get((16, 8), f32))
+      def named_form(lhs, rhs):
+        init_result = linalg.InitTensorOp([4, 8], f32)
+        #      CHECK: "linalg.matmul"(%{{.*}})
+        # CHECK-NEXT:  ^bb0(%{{.*}}: f32, %{{.*}}: f32, %{{.*}}: f32):
+        # CHECK-NEXT:    std.mulf{{.*}} (f32, f32) -> f32
+        # CHECK-NEXT:    std.addf{{.*}} (f32, f32) -> f32
+        # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
+        # CHECK-NEXT:    {operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} : 
+        # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
+        return linalg.matmul(lhs, rhs, outs=[init_result.result])
+
+  module.operation.print(print_generic_op_form=True)
+
+# CHECK-LABEL: TEST: testNamedStructuredAsGenericOp
+@run
+def testNamedStructuredAsGenericOp():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
       @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32),
                                    RankedTensorType.get((16, 8), f32))
       def generic_form(lhs, rhs):
