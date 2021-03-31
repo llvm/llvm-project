@@ -879,7 +879,7 @@ define i32 @blcic32_branch(i32 %x) nounwind {
 ; CHECK-NEXT:    blcicl %edi, %ebx
 ; CHECK-NEXT:    jne .LBB69_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB69_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
@@ -902,7 +902,7 @@ define i64 @blcic64_branch(i64 %x) nounwind {
 ; CHECK-NEXT:    blcicq %rdi, %rbx
 ; CHECK-NEXT:    jne .LBB70_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB70_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
@@ -925,7 +925,7 @@ define i32 @tzmsk32_branch(i32 %x) nounwind {
 ; CHECK-NEXT:    tzmskl %edi, %ebx
 ; CHECK-NEXT:    jne .LBB71_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB71_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
@@ -948,7 +948,7 @@ define i64 @tzmsk64_branch(i64 %x) nounwind {
 ; CHECK-NEXT:    tzmskq %rdi, %rbx
 ; CHECK-NEXT:    jne .LBB72_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB72_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
@@ -971,7 +971,7 @@ define i32 @blcfill32_branch(i32 %x) nounwind {
 ; CHECK-NEXT:    blcfilll %edi, %ebx
 ; CHECK-NEXT:    jne .LBB73_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB73_2:
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    popq %rbx
@@ -993,7 +993,7 @@ define i64 @blcfill64_branch(i64 %x) nounwind {
 ; CHECK-NEXT:    blcfillq %rdi, %rbx
 ; CHECK-NEXT:    jne .LBB74_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:  .LBB74_2:
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
