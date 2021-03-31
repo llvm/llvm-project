@@ -9907,6 +9907,7 @@ ulong16 __ovld __cnfn upsample(uint16 hi, uint16 lo);
 /*
  * popcount(x): returns the number of set bit in x
  */
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 char __ovld __cnfn popcount(char x);
 uchar __ovld __cnfn popcount(uchar x);
 char2 __ovld __cnfn popcount(char2 x);
@@ -9955,6 +9956,7 @@ long8 __ovld __cnfn popcount(long8 x);
 ulong8 __ovld __cnfn popcount(ulong8 x);
 long16 __ovld __cnfn popcount(long16 x);
 ulong16 __ovld __cnfn popcount(ulong16 x);
+#endif // defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 
 /**
  * Multiply two 24-bit integer values x and y and add
