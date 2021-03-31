@@ -76,6 +76,26 @@ protected:
   bool m_add_return = true;
 };
 
+/// Class similar to \a CommandObjectIterateOverThreads, but which performs
+/// an action on multiple threads at once instead of iterating over each thread.
+class CommandObjectMultipleThreads : public CommandObjectParsed {
+public:
+  using CommandObjectParsed::CommandObjectParsed;
+
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
+
+protected:
+  /// Method that handles the command after the main arguments have been parsed.
+  ///
+  /// \param[in] tids
+  ///     The thread ids passed as arguments.
+  ///
+  /// \return
+  ///     A boolean result similar to the one expected from \a DoExecute.
+  virtual bool DoExecuteOnThreads(Args &command, CommandReturnObject &result,
+                                  const std::vector<lldb::tid_t> &tids) = 0;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_SOURCE_COMMANDS_COMMANDOBJECTTHREADUTIL_H

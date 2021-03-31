@@ -55,6 +55,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonSignal:
   case lldb::eStopReasonException:
   case lldb::eStopReasonExec:
+  case lldb::eStopReasonProcessorTrace:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:

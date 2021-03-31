@@ -1,4 +1,4 @@
-//===-- ProcessorTraceMonitorTest.cpp -------------------------------------===//
+//===-- IntelPTManagerTests.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "gtest/gtest.h"
 
-#include "ProcessorTrace.h"
+#include "IntelPTManager.h"
 #include "llvm/ADT/ArrayRef.h"
 
 
@@ -22,7 +22,7 @@ size_t ReadCylicBufferWrapper(void *buf, size_t buf_size, void *cyc_buf,
                                      buf_size);
   llvm::MutableArrayRef<uint8_t> src(reinterpret_cast<uint8_t *>(cyc_buf),
                                      cyc_buf_size);
-  ProcessorTraceMonitor::ReadCyclicBuffer(dst, src, cyc_start, offset);
+  IntelPTThreadTrace::ReadCyclicBuffer(dst, src, cyc_start, offset);
   return dst.size();
 }
 

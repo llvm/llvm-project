@@ -16,6 +16,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPostMortemTrace.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -57,9 +58,10 @@ static Error createInvalidPlugInError(StringRef plugin_name) {
       plugin_name.data());
 }
 
-Expected<lldb::TraceSP> Trace::FindPlugin(Debugger &debugger,
-                                          const json::Value &trace_session_file,
-                                          StringRef session_file_dir) {
+Expected<lldb::TraceSP>
+Trace::FindPluginForPostMortemProcess(Debugger &debugger,
+                                      const json::Value &trace_session_file,
+                                      StringRef session_file_dir) {
   JSONSimpleTraceSession json_session;
   json::Path::Root root("traceSession");
   if (!json::fromJSON(trace_session_file, json_session, root))
@@ -70,6 +72,20 @@ Expected<lldb::TraceSP> Trace::FindPlugin(Debugger &debugger,
     return create_callback(trace_session_file, session_file_dir, debugger);
 
   return createInvalidPlugInError(json_session.trace.type);
+}
+
+Expected<lldb::TraceSP>
+Trace::FindPluginForLiveProcess(llvm::StringRef plugin_name, Process &process) {
+  if (!process.IsLiveDebugSession())
+    return createStringError(inconvertibleErrorCode(),
+                             "Can't trace non-live processes");
+
+  ConstString name(plugin_name);
+  if (auto create_callback =
+          PluginManager::GetTraceCreateCallbackForLiveProcess(name))
+    return create_callback(process);
+
+  return createInvalidPlugInError(plugin_name);
 }
 
 Expected<StringRef> Trace::FindPluginSchema(StringRef name) {
@@ -204,6 +220,12 @@ DumpInstructionInfo(Stream &s, const SymbolContext &sc,
 
 void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
                                   size_t end_position, bool raw) {
+  if (!IsTraced(thread)) {
+    s.Printf("thread #%u: tid = %" PRIu64 ", not traced\n", thread.GetIndexID(),
+             thread.GetID());
+    return;
+  }
+
   size_t instructions_count = GetInstructionCount(thread);
   s.Printf("thread #%u: tid = %" PRIu64 ", total instructions = %zu\n",
            thread.GetIndexID(), thread.GetID(), instructions_count);
@@ -265,4 +287,122 @@ void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
 
         return index < end_position;
       });
+}
+
+Error Trace::Start(const llvm::json::Value &request) {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  return m_live_process->TraceStart(request);
+}
+
+Error Trace::StopProcess() {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  return m_live_process->TraceStop(
+      TraceStopRequest(GetPluginName().AsCString()));
+}
+
+Error Trace::StopThreads(const std::vector<lldb::tid_t> &tids) {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  return m_live_process->TraceStop(
+      TraceStopRequest(GetPluginName().AsCString(), tids));
+}
+
+Expected<std::string> Trace::GetLiveProcessState() {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  return m_live_process->TraceGetState(GetPluginName().AsCString());
+}
+
+Optional<size_t> Trace::GetLiveThreadBinaryDataSize(lldb::tid_t tid,
+                                                    llvm::StringRef kind) {
+  auto it = m_live_thread_data.find(tid);
+  if (it == m_live_thread_data.end())
+    return None;
+  std::unordered_map<std::string, size_t> &single_thread_data = it->second;
+  auto single_thread_data_it = single_thread_data.find(kind.str());
+  if (single_thread_data_it == single_thread_data.end())
+    return None;
+  return single_thread_data_it->second;
+}
+
+Optional<size_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
+  auto data_it = m_live_process_data.find(kind.str());
+  if (data_it == m_live_process_data.end())
+    return None;
+  return data_it->second;
+}
+
+Expected<std::vector<uint8_t>>
+Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  llvm::Optional<size_t> size = GetLiveThreadBinaryDataSize(tid, kind);
+  if (!size)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Tracing data \"%s\" is not available for thread %" PRIu64 ".",
+        kind.data(), tid);
+
+  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
+                                    static_cast<int64_t>(tid), 0,
+                                    static_cast<int64_t>(*size)};
+  return m_live_process->TraceGetBinaryData(request);
+}
+
+Expected<std::vector<uint8_t>>
+Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
+  if (!m_live_process)
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing requires a live process.");
+  llvm::Optional<size_t> size = GetLiveProcessBinaryDataSize(kind);
+  if (!size)
+    return createStringError(
+        inconvertibleErrorCode(),
+        "Tracing data \"%s\" is not available for the process.", kind.data());
+
+  TraceGetBinaryDataRequest request{GetPluginName().AsCString(), kind.str(),
+                                    None, 0, static_cast<int64_t>(*size)};
+  return m_live_process->TraceGetBinaryData(request);
+}
+
+void Trace::RefreshLiveProcessState() {
+  if (!m_live_process)
+    return;
+
+  uint32_t new_stop_id = m_live_process->GetStopID();
+  if (new_stop_id == m_stop_id)
+    return;
+
+  m_stop_id = new_stop_id;
+  m_live_thread_data.clear();
+
+  Expected<std::string> json_string = GetLiveProcessState();
+  if (!json_string) {
+    DoRefreshLiveProcessState(json_string.takeError());
+    return;
+  }
+  Expected<TraceGetStateResponse> live_process_state =
+      json::parse<TraceGetStateResponse>(*json_string, "TraceGetStateResponse");
+  if (!live_process_state) {
+    DoRefreshLiveProcessState(live_process_state.takeError());
+    return;
+  }
+
+  for (const TraceThreadState &thread_state :
+       live_process_state->tracedThreads) {
+    for (const TraceBinaryData &item : thread_state.binaryData)
+      m_live_thread_data[thread_state.tid][item.kind] = item.size;
+  }
+
+  for (const TraceBinaryData &item : live_process_state->processBinaryData)
+    m_live_process_data[item.kind] = item.size;
+
+  DoRefreshLiveProcessState(std::move(live_process_state));
 }

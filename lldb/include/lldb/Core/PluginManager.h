@@ -331,18 +331,20 @@ public:
   GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
 
   // Trace
-  static bool RegisterPlugin(ConstString name, const char *description,
-                             TraceCreateInstance create_callback,
-                             llvm::StringRef schema,
-                             TraceGetStartCommand get_start_command);
+  static bool RegisterPlugin(
+      ConstString name, const char *description,
+      TraceCreateInstanceForSessionFile create_callback_for_session_file,
+      TraceCreateInstanceForLiveProcess create_callback_for_live_process,
+      llvm::StringRef schema);
 
-  static bool UnregisterPlugin(TraceCreateInstance create_callback);
+  static bool
+  UnregisterPlugin(TraceCreateInstanceForSessionFile create_callback);
 
-  static TraceCreateInstance GetTraceCreateCallback(ConstString plugin_name);
+  static TraceCreateInstanceForSessionFile
+  GetTraceCreateCallback(ConstString plugin_name);
 
-  static lldb::CommandObjectSP
-  GetTraceStartCommand(llvm::StringRef plugin_name,
-                       CommandInterpreter &interpreter);
+  static TraceCreateInstanceForLiveProcess
+  GetTraceCreateCallbackForLiveProcess(ConstString plugin_name);
 
   /// Get the JSON schema for a trace session file corresponding to the given
   /// plugin.

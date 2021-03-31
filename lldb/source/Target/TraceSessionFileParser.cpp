@@ -14,7 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/ThreadTrace.h"
+#include "lldb/Target/ThreadPostMortemTrace.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -96,15 +96,16 @@ std::string TraceSessionFileParser::BuildSchema(StringRef plugin_schema) {
   return schema_builder.str();
 }
 
-ThreadTraceSP TraceSessionFileParser::ParseThread(ProcessSP &process_sp,
-                                                  const JSONThread &thread) {
+ThreadPostMortemTraceSP
+TraceSessionFileParser::ParseThread(ProcessSP &process_sp,
+                                    const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
   FileSpec trace_file(thread.trace_file);
   NormalizePath(trace_file);
 
-  ThreadTraceSP thread_sp =
-      std::make_shared<ThreadTrace>(*process_sp, tid, trace_file);
+  ThreadPostMortemTraceSP thread_sp =
+      std::make_shared<ThreadPostMortemTrace>(*process_sp, tid, trace_file);
   process_sp->GetThreadList().AddThread(thread_sp);
   return thread_sp;
 }
