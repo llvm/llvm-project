@@ -1245,7 +1245,7 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
                              &*Builder.GetInsertPoint());
           // This dbg.declare is for the main function entry point.  It
           // will be deleted in all coro-split functions.
-          coro::salvageDebugInfo(DbgPtrAllocaCache, DDI);
+          coro::salvageDebugInfo(DbgPtrAllocaCache, DDI, Shape.ReuseFrameSlot);
         }
       }
 
@@ -2144,7 +2144,7 @@ static void collectFrameAllocas(Function &F, coro::Shape &Shape,
 
 void coro::salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgDeclareInst *DDI) {
+    DbgDeclareInst *DDI, bool ReuseFrameSlot) {
   Function *F = DDI->getFunction();
   IRBuilder<> Builder(F->getContext());
   auto InsertPt = F->getEntryBlock().getFirstInsertionPt();
@@ -2189,28 +2189,34 @@ void coro::salvageDebugInfo(
   // is available throughout the function when producing unoptimized
   // code. Extending the lifetime this way is correct because the
   // variable has been declared by a dbg.declare intrinsic.
-  if (auto Arg = dyn_cast_or_null<llvm::Argument>(Storage)) {
-    auto &Cached = DbgPtrAllocaCache[Storage];
-    if (!Cached) {
-      Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
-                                    Arg->getName() + ".debug");
-      Builder.CreateStore(Storage, Cached);
+  //
+  // Avoid to create the alloca would be eliminated by optimization
+  // passes and the corresponding dbg.declares would be invalid.
+  if (!ReuseFrameSlot && !EnableReuseStorageInFrame)
+    if (auto *Arg = dyn_cast<llvm::Argument>(Storage)) {
+      auto &Cached = DbgPtrAllocaCache[Storage];
+      if (!Cached) {
+        Cached = Builder.CreateAlloca(Storage->getType(), 0, nullptr,
+                                      Arg->getName() + ".debug");
+        Builder.CreateStore(Storage, Cached);
+      }
+      Storage = Cached;
+      // FIXME: LLVM lacks nuanced semantics to differentiate between
+      // memory and direct locations at the IR level. The backend will
+      // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
+      // location. Thus, if there are deref and offset operations in the
+      // expression, we need to add a DW_OP_deref at the *start* of the
+      // expression to first load the contents of the alloca before
+      // adjusting it with the expression.
+      if (Expr && Expr->isComplex())
+        Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
     }
-    Storage = Cached;
-    // FIXME: LLVM lacks nuanced semantics to differentiate between
-    // memory and direct locations at the IR level. The backend will
-    // turn a dbg.declare(alloca, ..., DIExpression()) into a memory
-    // location. Thus, if there are deref and offset operations in the
-    // expression, we need to add a DW_OP_deref at the *start* of the
-    // expression to first load the contents of the alloca before
-    // adjusting it with the expression.
-    if (Expr && Expr->isComplex())
-      Expr = DIExpression::prepend(Expr, DIExpression::DerefBefore);
-  }
   DDI->replaceVariableLocationOp(OriginalStorage, Storage);
   DDI->setExpression(Expr);
-  if (auto *InsertPt = dyn_cast_or_null<Instruction>(Storage))
+  if (auto *InsertPt = dyn_cast<Instruction>(Storage))
     DDI->moveAfter(InsertPt);
+  else if (isa<Argument>(Storage))
+    DDI->moveAfter(F->getEntryBlock().getFirstNonPHI());
 }
 
 void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
