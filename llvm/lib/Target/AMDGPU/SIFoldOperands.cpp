@@ -496,7 +496,7 @@ static bool getRegSeqInit(
     SmallVectorImpl<std::pair<MachineOperand*, unsigned>> &Defs,
     Register UseReg, uint8_t OpTy,
     const SIInstrInfo *TII, const MachineRegisterInfo &MRI) {
-  MachineInstr *Def = MRI.getUniqueVRegDef(UseReg);
+  MachineInstr *Def = MRI.getVRegDef(UseReg);
   if (!Def || !Def->isRegSequence())
     return false;
 
@@ -504,10 +504,10 @@ static bool getRegSeqInit(
     MachineOperand *Sub = &Def->getOperand(I);
     assert (Sub->isReg());
 
-    for (MachineInstr *SubDef = MRI.getUniqueVRegDef(Sub->getReg());
+    for (MachineInstr *SubDef = MRI.getVRegDef(Sub->getReg());
          SubDef && Sub->isReg() && !Sub->getSubReg() &&
          TII->isFoldableCopy(*SubDef);
-         SubDef = MRI.getUniqueVRegDef(Sub->getReg())) {
+         SubDef = MRI.getVRegDef(Sub->getReg())) {
       MachineOperand *Op = &SubDef->getOperand(1);
       if (Op->isImm()) {
         if (TII->isInlineConstant(*Op, OpTy))
@@ -563,7 +563,7 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
   MachineRegisterInfo &MRI = UseMI->getParent()->getParent()->getRegInfo();
 
   // Maybe it is just a COPY of an immediate itself.
-  MachineInstr *Def = MRI.getUniqueVRegDef(UseReg);
+  MachineInstr *Def = MRI.getVRegDef(UseReg);
   MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
   if (!UseOp.getSubReg() && Def && TII->isFoldableCopy(*Def)) {
     MachineOperand &DefOp = Def->getOperand(1);
@@ -1563,7 +1563,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
     if (TRI->isAGPR(*MRI, Op->getReg()))
       continue;
     // Maybe this is a COPY from AREG
-    const MachineInstr *SubDef = MRI->getUniqueVRegDef(Op->getReg());
+    const MachineInstr *SubDef = MRI->getVRegDef(Op->getReg());
     if (!SubDef || !SubDef->isCopy() || SubDef->getOperand(1).getSubReg())
       return false;
     if (!TRI->isAGPR(*MRI, SubDef->getOperand(1).getReg()))
@@ -1608,7 +1608,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
     if (TRI->isAGPR(*MRI, Def->getReg())) {
       RS.add(*Def);
     } else { // This is a copy
-      MachineInstr *SubDef = MRI->getUniqueVRegDef(Def->getReg());
+      MachineInstr *SubDef = MRI->getVRegDef(Def->getReg());
       SubDef->getOperand(1).setIsKill(false);
       RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
     }
@@ -1652,7 +1652,7 @@ bool SIFoldOperands::tryFoldLCSSAPhi(MachineInstr &PHI) {
   if (!MRI->hasOneNonDBGUse(PhiIn))
     return false;
 
-  MachineInstr *Copy = MRI->getUniqueVRegDef(PhiIn);
+  MachineInstr *Copy = MRI->getVRegDef(PhiIn);
   if (!Copy || !Copy->isCopy())
     return false;
 
