@@ -1248,14 +1248,15 @@ public:
     Value vectorDataPtr =
         castDataPtr(rewriter, loc, dataPtr, memRefType, toLLVMTy(vtp));
 
-    if (!xferOp.isMaskedDim(0))
+    if (xferOp.isDimInBounds(0))
       return replaceTransferOpWithLoadOrStore(rewriter,
                                               *this->getTypeConverter(), loc,
                                               xferOp, operands, vectorDataPtr);
 
     // 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
     // 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
-    // 4. Let dim the memref dimension, compute the vector comparison mask:
+    // 4. Let dim the memref dimension, compute the vector comparison mask
+    //    (in-bounds mask):
     //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
     //
     // TODO: when the leaf transfer rank is k > 1, we need the last `k`
