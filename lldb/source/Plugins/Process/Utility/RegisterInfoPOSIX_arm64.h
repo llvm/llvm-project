@@ -26,8 +26,6 @@ public:
   enum {
     eRegsetMaskDefault = 0,
     eRegsetMaskSVE = 1,
-    eRegsetMaskPAuth = 2,
-    eRegsetMaskMTE = 4,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -96,10 +94,6 @@ public:
 
   size_t GetRegisterSetFromRegisterIndex(uint32_t reg_index) const override;
 
-  void AddRegSetPAuth();
-
-  void AddRegSetMTE();
-
   uint32_t ConfigureVectorLength(uint32_t sve_vq);
 
   bool VectorSizeIsValid(uint32_t vq) {
@@ -114,16 +108,12 @@ public:
   bool IsSVEZReg(unsigned reg) const;
   bool IsSVEPReg(unsigned reg) const;
   bool IsSVERegVG(unsigned reg) const;
-  bool IsPAuthReg(unsigned reg) const;
-  bool IsMTEReg(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;
   uint32_t GetRegNumFPCR() const;
   uint32_t GetRegNumFPSR() const;
   uint32_t GetRegNumSVEVG() const;
-  uint32_t GetPAuthOffset() const;
-  uint32_t GetMTEOffset() const;
 
 private:
   typedef std::map<uint32_t, std::vector<lldb_private::RegisterInfo>>
@@ -147,9 +137,6 @@ private:
 
   std::vector<lldb_private::RegisterInfo> m_dynamic_reg_infos;
   std::vector<lldb_private::RegisterSet> m_dynamic_reg_sets;
-
-  std::vector<uint32_t> pauth_regnum_collection;
-  std::vector<uint32_t> m_mte_regnum_collection;
 };
 
 #endif

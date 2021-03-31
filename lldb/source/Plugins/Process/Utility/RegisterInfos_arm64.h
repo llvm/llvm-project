@@ -470,13 +470,6 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
         LLDB_INVALID_REGNUM, lldb_kind                                         \
   }
 
-// Generates register kinds array for registers with only lldb kind
-#define KIND_ALL_INVALID                                                       \
-  {                                                                            \
-    LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,             \
-        LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM                               \
-  }
-
 // Generates register kinds array for vector registers
 #define GPR64_KIND(reg, generic_kind) MISC_KIND(reg, gpr, generic_kind)
 #define VREG_KIND(reg) MISC_KIND(reg, fpu, LLDB_INVALID_REGNUM)
@@ -531,13 +524,6 @@ static uint32_t g_d31_invalidates[] = {fpu_v31, fpu_s31, LLDB_INVALID_REGNUM};
     #reg, nullptr, size, TYPE##_OFFSET_NAME(reg), lldb::eEncodingUint,         \
         lldb::eFormatHex, MISC_##TYPE##_KIND(lldb_kind), nullptr, nullptr,     \
         nullptr, 0                                                             \
-  }
-
-// Defines pointer authentication mask registers
-#define DEFINE_EXTENSION_REG(reg)                                              \
-  {                                                                            \
-    #reg, nullptr, 8, 0, lldb::eEncodingUint, lldb::eFormatHex,                \
-        KIND_ALL_INVALID, nullptr, nullptr, nullptr, 0                         \
   }
 
 static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
@@ -786,12 +772,7 @@ static lldb_private::RegisterInfo g_register_infos_arm64_le[] = {
     {DEFINE_DBG(wcr, 13)},
     {DEFINE_DBG(wcr, 14)},
     {DEFINE_DBG(wcr, 15)}
+    // clang-format on
 };
-// clang-format on
-static lldb_private::RegisterInfo g_register_infos_pauth[] = {
-    DEFINE_EXTENSION_REG(data_mask), DEFINE_EXTENSION_REG(code_mask)};
-
-static lldb_private::RegisterInfo g_register_infos_mte[] = {
-    DEFINE_EXTENSION_REG(mte_ctrl)};
 
 #endif // DECLARE_REGISTER_INFOS_ARM64_STRUCT
