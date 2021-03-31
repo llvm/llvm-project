@@ -167,9 +167,8 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     switch (arch.GetMachine()) {
     case llvm::Triple::aarch64:
-      m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm64>(
-          *this, std::make_unique<RegisterInfoPOSIX_arm64>(arch),
-          m_gpregset_data, m_notes);
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_arm64::Create(
+          *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
