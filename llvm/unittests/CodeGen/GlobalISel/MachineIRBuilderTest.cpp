@@ -10,7 +10,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -41,7 +41,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstant) {
 #ifndef NDEBUG
 
 TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -73,7 +73,7 @@ TEST_F(AArch64GISelMITest, TestBuildConstantFConstantDeath) {
 #endif
 
 TEST_F(AArch64GISelMITest, DstOpSrcOp) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -99,7 +99,7 @@ TEST_F(AArch64GISelMITest, DstOpSrcOp) {
 }
 
 TEST_F(AArch64GISelMITest, BuildUnmerge) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -120,7 +120,7 @@ TEST_F(AArch64GISelMITest, BuildUnmerge) {
 }
 
 TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -156,7 +156,7 @@ TEST_F(AArch64GISelMITest, TestBuildFPInsts) {
 }
 
 TEST_F(AArch64GISelMITest, BuildIntrinsic) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -185,7 +185,7 @@ TEST_F(AArch64GISelMITest, BuildIntrinsic) {
 }
 
 TEST_F(AArch64GISelMITest, BuildXor) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -214,7 +214,7 @@ TEST_F(AArch64GISelMITest, BuildXor) {
 }
 
 TEST_F(AArch64GISelMITest, BuildBitCounts) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -242,7 +242,7 @@ TEST_F(AArch64GISelMITest, BuildBitCounts) {
 }
 
 TEST_F(AArch64GISelMITest, BuildCasts) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -267,7 +267,7 @@ TEST_F(AArch64GISelMITest, BuildCasts) {
 }
 
 TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -295,7 +295,7 @@ TEST_F(AArch64GISelMITest, BuildMinMaxAbs) {
 }
 
 TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -325,7 +325,7 @@ TEST_F(AArch64GISelMITest, BuildAtomicRMW) {
 }
 
 TEST_F(AArch64GISelMITest, BuildMerge) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -364,7 +364,7 @@ TEST_F(AArch64GISelMITest, BuildMerge) {
 }
 
 TEST_F(AArch64GISelMITest, BuildAddoSubo) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -400,7 +400,7 @@ TEST_F(AArch64GISelMITest, BuildAddoSubo) {
 }
 
 TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
   LLT S64 = LLT::scalar(64);

@@ -18,7 +18,7 @@ using namespace llvm;
 namespace {
 
 TEST_F(AArch64GISelMITest, FoldWithBuilder) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
   // Try to use the FoldableInstructionsBuilder to build binary ops.
@@ -69,7 +69,7 @@ TEST_F(AArch64GISelMITest, FoldWithBuilder) {
 }
 
 TEST_F(AArch64GISelMITest, FoldBinOp) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
