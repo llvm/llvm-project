@@ -590,6 +590,12 @@ public:
 
   ~Section();
 
+  // Sections are not movable or copyable.
+  Section(const Section &) = delete;
+  Section &operator=(const Section &) = delete;
+  Section(Section &&) = delete;
+  Section &operator=(Section &&) = delete;
+
   /// Returns the name of this section.
   StringRef getName() const { return Name; }
 
