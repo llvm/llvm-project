@@ -3878,7 +3878,7 @@ bool CombinerHelper::matchFunnelShiftToRotate(MachineInstr &MI) {
   Register Y = MI.getOperand(2).getReg();
   if (X != Y)
     return false;
-  bool RotateOpc =
+  unsigned RotateOpc =
       Opc == TargetOpcode::G_FSHL ? TargetOpcode::G_ROTL : TargetOpcode::G_ROTR;
   return isLegalOrBeforeLegalizer({RotateOpc, {MRI.getType(X), MRI.getType(Y)}});
 }
