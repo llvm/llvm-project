@@ -125,14 +125,17 @@ MemoryTagManagerAArch64MTE::MakeTaggedRange(
 
 llvm::Expected<std::vector<lldb::addr_t>>
 MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
-                                           size_t granules) const {
-  size_t num_tags = tags.size() / GetTagSizeInBytes();
-  if (num_tags != granules) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "Packed tag data size does not match expected number of tags. "
-        "Expected %zu tag(s) for %zu granules, got %zu tag(s).",
-        granules, granules, num_tags);
+                                           size_t granules /*=0*/) const {
+  // 0 means don't check the number of tags before unpacking
+  if (granules) {
+    size_t num_tags = tags.size() / GetTagSizeInBytes();
+    if (num_tags != granules) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Packed tag data size does not match expected number of tags. "
+          "Expected %zu tag(s) for %zu granule(s), got %zu tag(s).",
+          granules, granules, num_tags);
+    }
   }
 
   // (if bytes per tag was not 1, we would reconstruct them here)
@@ -151,4 +154,47 @@ MemoryTagManagerAArch64MTE::UnpackTagsData(const std::vector<uint8_t> &tags,
   }
 
   return unpacked;
+}
+
+llvm::Expected<std::vector<uint8_t>> MemoryTagManagerAArch64MTE::PackTags(
+    const std::vector<lldb::addr_t> &tags) const {
+  std::vector<uint8_t> packed;
+  packed.reserve(tags.size() * GetTagSizeInBytes());
+
+  for (auto tag : tags) {
+    if (tag > MTE_TAG_MAX) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Found tag 0x%" PRIx64
+                                     " which is > max MTE tag value of 0x%x.",
+                                     tag, MTE_TAG_MAX);
+    }
+    packed.push_back(static_cast<uint8_t>(tag));
+  }
+
+  return packed;
+}
+
+llvm::Expected<std::vector<lldb::addr_t>>
+MemoryTagManagerAArch64MTE::RepeatTagsForRange(
+    const std::vector<lldb::addr_t> &tags, TagRange range) const {
+  std::vector<lldb::addr_t> new_tags;
+
+  // If the range is not empty
+  if (range.IsValid()) {
+    if (tags.empty()) {
+      return llvm::createStringError(
+          llvm::inconvertibleErrorCode(),
+          "Expected some tags to cover given range, got zero.");
+    }
+
+    // We assume that this range has already been expanded/aligned to granules
+    size_t granules = range.GetByteSize() / GetGranuleSize();
+    new_tags.reserve(granules);
+    for (size_t to_copy = 0; granules > 0; granules -= to_copy) {
+      to_copy = granules > tags.size() ? tags.size() : granules;
+      new_tags.insert(new_tags.end(), tags.begin(), tags.begin() + to_copy);
+    }
+  }
+
+  return new_tags;
 }
