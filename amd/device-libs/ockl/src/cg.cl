@@ -81,7 +81,7 @@ __ockl_grid_is_valid(void)
 __attribute__((convergent)) void
 __ockl_grid_sync(void)
 {
-    __llvm_fence_sc_dev();
+    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
     if (choose_one_workgroup_workitem()) {
         uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
         __ockl_gws_barrier(nwm1, 0);
@@ -125,7 +125,7 @@ __ockl_multi_grid_is_valid(void)
 __attribute__((convergent)) void
 __ockl_multi_grid_sync(void)
 {
-    __llvm_fence_sc_sys();
+    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
     uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
     bool cwwi = choose_one_workgroup_workitem();
 
