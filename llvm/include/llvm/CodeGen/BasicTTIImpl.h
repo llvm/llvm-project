@@ -1207,7 +1207,7 @@ public:
       return TargetTransformInfo::TCC_Basic;
 
     if (ICA.isTypeBasedOnly())
-      return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
+      return *getTypeBasedIntrinsicInstrCost(ICA, CostKind).getValue();
 
     Type *RetTy = ICA.getReturnType();
 
@@ -1294,13 +1294,13 @@ public:
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_umin: {
       IntrinsicCostAttributes Attrs(IID, RetTy, Args[0]->getType(), FMF, I, 1);
-      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+      return *getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
     }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul: {
       IntrinsicCostAttributes Attrs(
           IID, RetTy, {Args[0]->getType(), Args[1]->getType()}, FMF, I, 1);
-      return getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+      return *getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
     }
     case Intrinsic::fshl:
     case Intrinsic::fshr: {
@@ -1365,15 +1365,16 @@ public:
 
     IntrinsicCostAttributes Attrs(IID, RetTy, ICA.getArgTypes(), FMF, I,
                                   ScalarizationCost);
-    return thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind);
+    return *thisT()->getTypeBasedIntrinsicInstrCost(Attrs, CostKind).getValue();
   }
 
   /// Get intrinsic cost based on argument types.
   /// If ScalarizationCostPassed is std::numeric_limits<unsigned>::max(), the
   /// cost of scalarizing the arguments and the return value will be computed
   /// based on types.
-  unsigned getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                          TTI::TargetCostKind CostKind) {
+  InstructionCost
+  getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                 TTI::TargetCostKind CostKind) {
     Intrinsic::ID IID = ICA.getID();
     Type *RetTy = ICA.getReturnType();
     const SmallVectorImpl<Type *> &Tys = ICA.getArgTypes();
@@ -1399,7 +1400,7 @@ public:
     switch (IID) {
     default: {
       // Assume that we need to scalarize this intrinsic.
-      unsigned ScalarizationCost = ScalarizationCostPassed;
+      InstructionCost ScalarizationCost = ScalarizationCostPassed;
       unsigned ScalarCalls = 1;
       Type *ScalarRetTy = RetTy;
       if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
@@ -1425,7 +1426,7 @@ public:
         return 1; // Return cost of a scalar intrinsic. Assume it to be cheap.
 
       IntrinsicCostAttributes ScalarAttrs(IID, ScalarRetTy, ScalarTys, FMF);
-      unsigned ScalarCost =
+      InstructionCost ScalarCost =
           thisT()->getIntrinsicInstrCost(ScalarAttrs, CostKind);
 
       return ScalarCalls * ScalarCost + ScalarizationCost;
@@ -1605,7 +1606,7 @@ public:
 
       // SatMax -> Overflow && SumDiff < 0
       // SatMin -> Overflow && SumDiff >= 0
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
                                     nullptr, ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
@@ -1626,7 +1627,7 @@ public:
                                      ? Intrinsic::uadd_with_overflow
                                      : Intrinsic::usub_with_overflow;
 
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       IntrinsicCostAttributes Attrs(OverflowOp, OpTy, {RetTy, RetTy}, FMF,
                                     nullptr, ScalarizationCostPassed);
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
@@ -1644,7 +1645,7 @@ public:
           IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
       TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, RetTy, CCH, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
@@ -1713,7 +1714,7 @@ public:
           IID == Intrinsic::smul_fix ? Instruction::SExt : Instruction::ZExt;
       TTI::CastContextHint CCH = TTI::CastContextHint::None;
 
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       Cost += 2 * thisT()->getCastInstrCost(ExtOp, ExtTy, MulTy, CCH, CostKind);
       Cost +=
           thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
@@ -1821,7 +1822,8 @@ public:
         ScalarTys.push_back(Ty);
       }
       IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
-      unsigned ScalarCost = thisT()->getIntrinsicInstrCost(Attrs, CostKind);
+      InstructionCost ScalarCost =
+          thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
         if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
           if (!ICA.skipScalarizationCost())
