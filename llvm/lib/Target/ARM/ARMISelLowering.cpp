@@ -19117,6 +19117,11 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 // and up to 64 bits on the non-M profiles
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  // At -O0 expand pseudo-instructions after register allocation to avoid
+  // inserting spills between ldrex/strex.
+  if (getTargetMachine().getOptLevel() == 0 && !Subtarget->isThumb())
+    return AtomicExpansionKind::None;
+
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
