@@ -111,12 +111,11 @@ typedef lldb::REPLSP (*REPLCreateInstance)(Status &error,
                                            const char *repl_options);
 typedef int (*ComparisonFunction)(const void *, const void *);
 typedef void (*DebuggerInitializeCallback)(Debugger &debugger);
-typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstance)(
+typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstanceForSessionFile)(
     const llvm::json::Value &trace_session_file,
     llvm::StringRef session_file_dir, lldb_private::Debugger &debugger);
-typedef lldb::CommandObjectSP (*TraceGetStartCommand)(
-    CommandInterpreter &interpreter);
-
+typedef llvm::Expected<lldb::TraceSP> (*TraceCreateInstanceForLiveProcess)(
+    Process &process);
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)

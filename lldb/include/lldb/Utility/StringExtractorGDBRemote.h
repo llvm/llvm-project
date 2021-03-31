@@ -162,13 +162,11 @@ public:
     eServerPacketType__m,
     eServerPacketType_notify, // '%' notification
 
-    eServerPacketType_jTraceStart,      // deprecated
-    eServerPacketType_jTraceBufferRead, // deprecated
-    eServerPacketType_jTraceMetaRead,   // deprecated
-    eServerPacketType_jTraceStop,       // deprecated
-    eServerPacketType_jTraceConfigRead, // deprecated
-
-    eServerPacketType_jLLDBTraceSupportedType,
+    eServerPacketType_jLLDBTraceSupported,
+    eServerPacketType_jLLDBTraceStart,
+    eServerPacketType_jLLDBTraceStop,
+    eServerPacketType_jLLDBTraceGetState,
+    eServerPacketType_jLLDBTraceGetBinaryData,
   };
 
   ServerPacketType GetServerPacketType() const;

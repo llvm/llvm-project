@@ -1,4 +1,4 @@
-//===-- ThreadTrace.cpp ---------------------------------------------------===//
+//===-- ThreadPostMortemTrace.cpp -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/ThreadTrace.h"
+#include "lldb/Target/ThreadPostMortemTrace.h"
 
 #include <memory>
 
@@ -17,9 +17,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void ThreadTrace::RefreshStateAfterStop() {}
+void ThreadPostMortemTrace::RefreshStateAfterStop() {}
 
-RegisterContextSP ThreadTrace::GetRegisterContext() {
+RegisterContextSP ThreadPostMortemTrace::GetRegisterContext() {
   if (!m_reg_context_sp)
     m_reg_context_sp = CreateRegisterContextForFrame(nullptr);
 
@@ -27,13 +27,15 @@ RegisterContextSP ThreadTrace::GetRegisterContext() {
 }
 
 RegisterContextSP
-ThreadTrace::CreateRegisterContextForFrame(StackFrame *frame) {
+ThreadPostMortemTrace::CreateRegisterContextForFrame(StackFrame *frame) {
   // Eventually this will calculate the register context based on the current
   // trace position.
   return std::make_shared<RegisterContextHistory>(
       *this, 0, GetProcess()->GetAddressByteSize(), LLDB_INVALID_ADDRESS);
 }
 
-bool ThreadTrace::CalculateStopInfo() { return false; }
+bool ThreadPostMortemTrace::CalculateStopInfo() { return false; }
 
-const FileSpec &ThreadTrace::GetTraceFile() const { return m_trace_file; }
+const FileSpec &ThreadPostMortemTrace::GetTraceFile() const {
+  return m_trace_file;
+}

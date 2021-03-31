@@ -3372,110 +3372,12 @@ bool GDBRemoteCommunicationClient::SyncThreadState(lldb::tid_t tid) {
          response.IsOKResponse();
 }
 
-lldb::user_id_t
-GDBRemoteCommunicationClient::SendStartTracePacket(const TraceOptions &options,
-                                                   Status &error) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  lldb::user_id_t ret_uid = LLDB_INVALID_UID;
-
-  StreamGDBRemote escaped_packet;
-  escaped_packet.PutCString("jTraceStart:");
-
-  StructuredData::Dictionary json_packet;
-  json_packet.AddIntegerItem("type", options.getType());
-  json_packet.AddIntegerItem("buffersize", options.getTraceBufferSize());
-  json_packet.AddIntegerItem("metabuffersize", options.getMetaDataBufferSize());
-
-  if (options.getThreadID() != LLDB_INVALID_THREAD_ID)
-    json_packet.AddIntegerItem("threadid", options.getThreadID());
-
-  StructuredData::DictionarySP custom_params = options.getTraceParams();
-  if (custom_params)
-    json_packet.AddItem("params", custom_params);
-
-  StreamString json_string;
-  json_packet.Dump(json_string, false);
-  escaped_packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
-
-  StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
-                                   true) ==
-      GDBRemoteCommunication::PacketResult::Success) {
-    if (!response.IsNormalResponse()) {
-      error = response.GetStatus();
-      LLDB_LOG(log, "Target does not support Tracing , error {0}", error);
-    } else {
-      ret_uid = response.GetHexMaxU64(false, LLDB_INVALID_UID);
-    }
-  } else {
-    LLDB_LOG(log, "failed to send packet");
-    error.SetErrorStringWithFormat("failed to send packet: '%s'",
-                                   escaped_packet.GetData());
-  }
-  return ret_uid;
-}
-
-Status
-GDBRemoteCommunicationClient::SendStopTracePacket(lldb::user_id_t uid,
-                                                  lldb::tid_t thread_id) {
-  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  StringExtractorGDBRemote response;
-  Status error;
-
-  StructuredData::Dictionary json_packet;
-  StreamGDBRemote escaped_packet;
-  StreamString json_string;
-  escaped_packet.PutCString("jTraceStop:");
-
-  json_packet.AddIntegerItem("traceid", uid);
-
-  if (thread_id != LLDB_INVALID_THREAD_ID)
-    json_packet.AddIntegerItem("threadid", thread_id);
-
-  json_packet.Dump(json_string, false);
-
-  escaped_packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
-
-  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
-                                   true) ==
-      GDBRemoteCommunication::PacketResult::Success) {
-    if (!response.IsOKResponse()) {
-      error = response.GetStatus();
-      LLDB_LOG(log, "stop tracing failed");
-    }
-  } else {
-    LLDB_LOG(log, "failed to send packet");
-    error.SetErrorStringWithFormat(
-        "failed to send packet: '%s' with error '%d'", escaped_packet.GetData(),
-        response.GetError());
-  }
-  return error;
-}
-
-Status GDBRemoteCommunicationClient::SendGetDataPacket(
-    lldb::user_id_t uid, lldb::tid_t thread_id,
-    llvm::MutableArrayRef<uint8_t> &buffer, size_t offset) {
-
-  StreamGDBRemote escaped_packet;
-  escaped_packet.PutCString("jTraceBufferRead:");
-  return SendGetTraceDataPacket(escaped_packet, uid, thread_id, buffer, offset);
-}
-
-Status GDBRemoteCommunicationClient::SendGetMetaDataPacket(
-    lldb::user_id_t uid, lldb::tid_t thread_id,
-    llvm::MutableArrayRef<uint8_t> &buffer, size_t offset) {
-
-  StreamGDBRemote escaped_packet;
-  escaped_packet.PutCString("jTraceMetaRead:");
-  return SendGetTraceDataPacket(escaped_packet, uid, thread_id, buffer, offset);
-}
-
-llvm::Expected<TraceTypeInfo>
-GDBRemoteCommunicationClient::SendGetSupportedTraceType() {
+llvm::Expected<TraceSupportedResponse>
+GDBRemoteCommunicationClient::SendTraceSupported() {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
 
   StreamGDBRemote escaped_packet;
-  escaped_packet.PutCString("jLLDBTraceSupportedType");
+  escaped_packet.PutCString("jLLDBTraceSupported");
 
   StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
@@ -3485,127 +3387,150 @@ GDBRemoteCommunicationClient::SendGetSupportedTraceType() {
       return response.GetStatus().ToError();
     if (response.IsUnsupportedResponse())
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "jLLDBTraceSupportedType is unsupported");
+                                     "jLLDBTraceSupported is unsupported");
 
-    if (llvm::Expected<TraceTypeInfo> type =
-            llvm::json::parse<TraceTypeInfo>(response.Peek()))
-      return *type;
-    else
-      return type.takeError();
+    return llvm::json::parse<TraceSupportedResponse>(response.Peek(),
+                                                     "TraceSupportedResponse");
   }
-  LLDB_LOG(log, "failed to send packet: jLLDBTraceSupportedType");
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "failed to send packet: jLLDBTraceSupportedType");
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceSupported");
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "failed to send packet: jLLDBTraceSupported");
 }
 
-Status
-GDBRemoteCommunicationClient::SendGetTraceConfigPacket(lldb::user_id_t uid,
-                                                       TraceOptions &options) {
+llvm::Error
+GDBRemoteCommunicationClient::SendTraceStop(const TraceStopRequest &request) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  StringExtractorGDBRemote response;
-  Status error;
 
-  StreamString json_string;
   StreamGDBRemote escaped_packet;
-  escaped_packet.PutCString("jTraceConfigRead:");
+  escaped_packet.PutCString("jLLDBTraceStop:");
 
-  StructuredData::Dictionary json_packet;
-  json_packet.AddIntegerItem("traceid", uid);
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << toJSON(request);
+  os.flush();
 
-  if (options.getThreadID() != LLDB_INVALID_THREAD_ID)
-    json_packet.AddIntegerItem("threadid", options.getThreadID());
+  escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
-  json_packet.Dump(json_string, false);
-  escaped_packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
-
+  StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
                                    true) ==
       GDBRemoteCommunication::PacketResult::Success) {
-    if (response.IsNormalResponse()) {
-      uint64_t type = std::numeric_limits<uint64_t>::max();
-      uint64_t buffersize = std::numeric_limits<uint64_t>::max();
-      uint64_t metabuffersize = std::numeric_limits<uint64_t>::max();
-
-      auto json_object = StructuredData::ParseJSON(response.Peek());
-
-      if (!json_object ||
-          json_object->GetType() != lldb::eStructuredDataTypeDictionary) {
-        error.SetErrorString("Invalid Configuration obtained");
-        return error;
-      }
-
-      auto json_dict = json_object->GetAsDictionary();
-
-      json_dict->GetValueForKeyAsInteger<uint64_t>("metabuffersize",
-                                                   metabuffersize);
-      options.setMetaDataBufferSize(metabuffersize);
-
-      json_dict->GetValueForKeyAsInteger<uint64_t>("buffersize", buffersize);
-      options.setTraceBufferSize(buffersize);
-
-      json_dict->GetValueForKeyAsInteger<uint64_t>("type", type);
-      options.setType(static_cast<lldb::TraceType>(type));
-
-      StructuredData::ObjectSP custom_params_sp =
-          json_dict->GetValueForKey("params");
-      if (custom_params_sp) {
-        if (custom_params_sp->GetType() !=
-            lldb::eStructuredDataTypeDictionary) {
-          error.SetErrorString("Invalid Configuration obtained");
-          return error;
-        } else
-          options.setTraceParams(
-              std::static_pointer_cast<StructuredData::Dictionary>(
-                  custom_params_sp));
-      }
-    } else {
-      error = response.GetStatus();
-    }
-  } else {
-    LLDB_LOG(log, "failed to send packet");
-    error.SetErrorStringWithFormat("failed to send packet: '%s'",
-                                   escaped_packet.GetData());
+    if (response.IsErrorResponse())
+      return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceStop is unsupported");
+    if (response.IsOKResponse())
+      return llvm::Error::success();
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid jLLDBTraceStart response");
   }
-  return error;
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceStop");
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "failed to send packet: jLLDBTraceStop '%s'",
+                                 escaped_packet.GetData());
 }
 
-Status GDBRemoteCommunicationClient::SendGetTraceDataPacket(
-    StreamGDBRemote &packet, lldb::user_id_t uid, lldb::tid_t thread_id,
-    llvm::MutableArrayRef<uint8_t> &buffer, size_t offset) {
+llvm::Error
+GDBRemoteCommunicationClient::SendTraceStart(const llvm::json::Value &params) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  Status error;
 
-  StructuredData::Dictionary json_packet;
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jLLDBTraceStart:");
 
-  json_packet.AddIntegerItem("traceid", uid);
-  json_packet.AddIntegerItem("offset", offset);
-  json_packet.AddIntegerItem("buffersize", buffer.size());
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << params;
+  os.flush();
 
-  if (thread_id != LLDB_INVALID_THREAD_ID)
-    json_packet.AddIntegerItem("threadid", thread_id);
+  escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
 
-  StreamString json_string;
-  json_packet.Dump(json_string, false);
-
-  packet.PutEscapedBytes(json_string.GetData(), json_string.GetSize());
   StringExtractorGDBRemote response;
-  if (SendPacketAndWaitForResponse(packet.GetString(), response, true) ==
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
       GDBRemoteCommunication::PacketResult::Success) {
-    if (response.IsNormalResponse()) {
-      size_t filled_size = response.GetHexBytesAvail(buffer);
-      buffer = llvm::MutableArrayRef<uint8_t>(buffer.data(), filled_size);
-    } else {
-      error = response.GetStatus();
-      buffer = buffer.slice(buffer.size());
-    }
-  } else {
-    LLDB_LOG(log, "failed to send packet");
-    error.SetErrorStringWithFormat("failed to send packet: '%s'",
-                                   packet.GetData());
-    buffer = buffer.slice(buffer.size());
+    if (response.IsErrorResponse())
+      return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceStart is unsupported");
+    if (response.IsOKResponse())
+      return llvm::Error::success();
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Invalid jLLDBTraceStart response");
   }
-  return error;
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceStart");
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "failed to send packet: jLLDBTraceStart '%s'",
+                                 escaped_packet.GetData());
+}
+
+llvm::Expected<std::string>
+GDBRemoteCommunicationClient::SendTraceGetState(llvm::StringRef type) {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jLLDBTraceGetState:");
+
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << toJSON(TraceGetStateRequest{type.str()});
+  os.flush();
+
+  escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (response.IsErrorResponse())
+      return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceGetState is unsupported");
+    return std::string(response.Peek());
+  }
+
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceGetState");
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "failed to send packet: jLLDBTraceGetState '%s'",
+      escaped_packet.GetData());
+}
+
+llvm::Expected<std::vector<uint8_t>>
+GDBRemoteCommunicationClient::SendTraceGetBinaryData(
+    const TraceGetBinaryDataRequest &request) {
+  Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+
+  StreamGDBRemote escaped_packet;
+  escaped_packet.PutCString("jLLDBTraceGetBinaryData:");
+
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << toJSON(request);
+  os.flush();
+
+  escaped_packet.PutEscapedBytes(json_string.c_str(), json_string.size());
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(escaped_packet.GetString(), response,
+                                   true) ==
+      GDBRemoteCommunication::PacketResult::Success) {
+    if (response.IsErrorResponse())
+      return response.GetStatus().ToError();
+    if (response.IsUnsupportedResponse())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "jLLDBTraceGetBinaryData is unsupported");
+    std::string data;
+    response.GetEscapedBinaryData(data);
+    return std::vector<uint8_t>(data.begin(), data.end());
+  }
+  LLDB_LOG(log, "failed to send packet: jLLDBTraceGetBinaryData");
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "failed to send packet: jLLDBTraceGetBinaryData '%s'",
+      escaped_packet.GetData());
 }
 
 llvm::Optional<QOffsets> GDBRemoteCommunicationClient::GetQOffsets() {

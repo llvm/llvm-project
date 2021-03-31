@@ -165,22 +165,16 @@ public:
 
   Status GetWatchpointSupportInfo(uint32_t &num) override;
 
-  lldb::user_id_t StartTrace(const TraceOptions &options,
-                             Status &error) override;
+  llvm::Expected<TraceSupportedResponse> TraceSupported() override;
 
-  Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) override;
+  llvm::Error TraceStop(const TraceStopRequest &request) override;
 
-  Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                 llvm::MutableArrayRef<uint8_t> &buffer,
-                 size_t offset = 0) override;
+  llvm::Error TraceStart(const llvm::json::Value &request) override;
 
-  Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                     llvm::MutableArrayRef<uint8_t> &buffer,
-                     size_t offset = 0) override;
+  llvm::Expected<std::string> TraceGetState(llvm::StringRef type) override;
 
-  llvm::Expected<TraceTypeInfo> GetSupportedTraceType() override;
-
-  Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) override;
+  llvm::Expected<std::vector<uint8_t>>
+  TraceGetBinaryData(const TraceGetBinaryDataRequest &request) override;
 
   Status GetWatchpointSupportInfo(uint32_t &num, bool &after) override;
 

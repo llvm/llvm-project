@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_COMMANDS_COMMANDOBJECTTRACE_H
 #define LLDB_SOURCE_COMMANDS_COMMANDOBJECTTRACE_H
 
-#include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "CommandObjectThreadUtil.h"
 
 namespace lldb_private {
 
@@ -18,6 +18,32 @@ public:
   CommandObjectTrace(CommandInterpreter &interpreter);
 
   ~CommandObjectTrace() override;
+};
+
+/// This class works by delegating the logic to the actual trace plug-in that
+/// can support the current process.
+class CommandObjectTraceProxy : public CommandObjectProxy {
+public:
+  CommandObjectTraceProxy(bool live_debug_session_only,
+                          CommandInterpreter &interpreter, const char *name,
+                          const char *help = nullptr,
+                          const char *syntax = nullptr, uint32_t flags = 0)
+      : CommandObjectProxy(interpreter, name, help, syntax, flags),
+        m_live_debug_session_only(live_debug_session_only) {}
+
+protected:
+  virtual lldb::CommandObjectSP GetDelegateCommand(Trace &trace) = 0;
+
+  llvm::Expected<lldb::CommandObjectSP> DoGetProxyCommandObject();
+
+  CommandObject *GetProxyCommandObject() override;
+
+private:
+  llvm::StringRef GetUnsupportedError() override { return m_delegate_error; }
+
+  bool m_live_debug_session_only;
+  lldb::CommandObjectSP m_delegate_sp;
+  std::string m_delegate_error;
 };
 
 } // namespace lldb_private

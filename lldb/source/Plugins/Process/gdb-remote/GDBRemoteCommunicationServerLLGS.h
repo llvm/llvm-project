@@ -167,15 +167,15 @@ protected:
 
   PacketResult Handle_QSaveRegisterState(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jTraceStart(StringExtractorGDBRemote &packet);
+  PacketResult Handle_jLLDBTraceSupported(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jTraceRead(StringExtractorGDBRemote &packet);
+  PacketResult Handle_jLLDBTraceStart(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jTraceStop(StringExtractorGDBRemote &packet);
+  PacketResult Handle_jLLDBTraceStop(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jTraceConfigRead(StringExtractorGDBRemote &packet);
+  PacketResult Handle_jLLDBTraceGetState(StringExtractorGDBRemote &packet);
 
-  PacketResult Handle_jLLDBTraceSupportedType(StringExtractorGDBRemote &packet);
+  PacketResult Handle_jLLDBTraceGetBinaryData(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QRestoreRegisterState(StringExtractorGDBRemote &packet);
 

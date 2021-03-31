@@ -172,6 +172,7 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonPlanComplete:
         case eStopReasonThreadExiting:
         case eStopReasonInstrumentation:
+        case eStopReasonProcessorTrace:
           // There is no data for these stop reasons.
           return 0;
 
@@ -223,6 +224,7 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
         case eStopReasonPlanComplete:
         case eStopReasonThreadExiting:
         case eStopReasonInstrumentation:
+        case eStopReasonProcessorTrace:
           // There is no data for these stop reasons.
           return 0;
 
