@@ -546,6 +546,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isLong = false;
   isUnsigned = false;
   isLongLong = false;
+  isSizeT = false;
   isHalf = false;
   isFloat = false;
   isImaginary = false;
@@ -589,6 +590,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   // integer constant.
   bool isFixedPointConstant = isFixedPointLiteral();
   bool isFPConstant = isFloatingLiteral();
+  bool HasSize = false;
 
   // Loop over all of the characters of the suffix.  If we see something bad,
   // we break out of the loop.
@@ -616,14 +618,17 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       if (!(LangOpts.Half || LangOpts.FixedPoint))
         break;
       if (isIntegerLiteral()) break;  // Error for integer constant.
-      if (isHalf || isFloat || isLong) break; // HH, FH, LH invalid.
+      if (HasSize)
+        break;
+      HasSize = true;
       isHalf = true;
       continue;  // Success.
     case 'f':      // FP Suffix for "float"
     case 'F':
       if (!isFPConstant) break;  // Error for integer constant.
-      if (isHalf || isFloat || isLong || isFloat128)
-        break; // HF, FF, LF, QF invalid.
+      if (HasSize)
+        break;
+      HasSize = true;
 
       // CUDA host and device may have different _Float16 support, therefore
       // allows f16 literals to avoid false alarm.
@@ -640,8 +645,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
     case 'q':    // FP Suffix for "__float128"
     case 'Q':
       if (!isFPConstant) break;  // Error for integer constant.
-      if (isHalf || isFloat || isLong || isFloat128)
-        break; // HQ, FQ, LQ, QQ invalid.
+      if (HasSize)
+        break;
+      HasSize = true;
       isFloat128 = true;
       continue;  // Success.
     case 'u':
@@ -652,8 +658,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       continue;  // Success.
     case 'l':
     case 'L':
-      if (isLong || isLongLong) break;  // Cannot be repeated.
-      if (isHalf || isFloat || isFloat128) break;     // LH, LF, LQ invalid.
+      if (HasSize)
+        break;
+      HasSize = true;
 
       // Check for long long.  The L's need to be adjacent and the same case.
       if (s[1] == s[0]) {
@@ -665,42 +672,54 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         isLong = true;
       }
       continue; // Success.
+    case 'z':
+    case 'Z':
+      if (isFPConstant)
+        break; // Invalid for floats.
+      if (HasSize)
+        break;
+      HasSize = true;
+      isSizeT = true;
+      continue;
     case 'i':
     case 'I':
-      if (LangOpts.MicrosoftExt) {
-        if (isLong || isLongLong || MicrosoftInteger)
+      if (LangOpts.MicrosoftExt && !isFPConstant) {
+        // Allow i8, i16, i32, and i64. First, look ahead and check if
+        // suffixes are Microsoft integers and not the imaginary unit.
+        uint8_t Bits = 0;
+        size_t ToSkip = 0;
+        switch (s[1]) {
+        case '8': // i8 suffix
+          Bits = 8;
+          ToSkip = 2;
           break;
-
-        if (!isFPConstant) {
-          // Allow i8, i16, i32, and i64.
-          switch (s[1]) {
-          case '8':
-            s += 2; // i8 suffix
-            MicrosoftInteger = 8;
-            break;
-          case '1':
-            if (s[2] == '6') {
-              s += 3; // i16 suffix
-              MicrosoftInteger = 16;
-            }
-            break;
-          case '3':
-            if (s[2] == '2') {
-              s += 3; // i32 suffix
-              MicrosoftInteger = 32;
-            }
-            break;
-          case '6':
-            if (s[2] == '4') {
-              s += 3; // i64 suffix
-              MicrosoftInteger = 64;
-            }
-            break;
-          default:
-            break;
+        case '1':
+          if (s[2] == '6') { // i16 suffix
+            Bits = 16;
+            ToSkip = 3;
           }
+          break;
+        case '3':
+          if (s[2] == '2') { // i32 suffix
+            Bits = 32;
+            ToSkip = 3;
+          }
+          break;
+        case '6':
+          if (s[2] == '4') { // i64 suffix
+            Bits = 64;
+            ToSkip = 3;
+          }
+          break;
+        default:
+          break;
         }
-        if (MicrosoftInteger) {
+        if (Bits) {
+          if (HasSize)
+            break;
+          HasSize = true;
+          MicrosoftInteger = Bits;
+          s += ToSkip;
           assert(s <= ThisTokEnd && "didn't maximally munch?");
           break;
         }
@@ -727,6 +746,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         isLong = false;
         isUnsigned = false;
         isLongLong = false;
+        isSizeT = false;
         isFloat = false;
         isFloat16 = false;
         isHalf = false;
