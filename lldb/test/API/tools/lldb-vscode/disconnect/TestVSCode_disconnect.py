@@ -29,7 +29,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
-    @skipIf(oslist=["linux"], archs=["arm"])
     def test_launch(self):
         """
             This test launches a process that would creates a file, but we disconnect
