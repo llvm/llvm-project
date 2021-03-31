@@ -25,18 +25,18 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; COMDAT: $global = comdat any
 ; COMDAT: $dyn_init_global = comdat any
-; COMDAT: $"_ZZ4funcvE10static_var${{[01-9a-f]+}}" = comdat any
-; COMDAT: $".str${{[01-9a-f]+}}" = comdat any
+; COMDAT: $_ZZ4funcvE10static_var.{{[01-9a-f]+}} = comdat any
+; COMDAT: $.str.{{[01-9a-f]+}} = comdat any
 
 ; NOCOMDAT-NOT: $global = comdat any
 ; NOCOMDAT-NOT: $dyn_init_global = comdat any
-; NOCOMDAT-NOT: $"_ZZ4funcvE10static_var${{[01-9a-f]+}}" = comdat any
-; NOCOMDAT-NOT: $".str${{[01-9a-f]+}}" = comdat any
+; NOCOMDAT-NOT: $_ZZ4funcvE10static_var.{{[01-9a-f]+}} = comdat any
+; NOCOMDAT-NOT: $.str.{{[01-9a-f]+}} = comdat any
 
 ; COMDAT: @global = global { i32, [60 x i8] } zeroinitializer, comdat, align 32
 ; COMDAT: @dyn_init_global = global { i32, [60 x i8] } zeroinitializer, comdat, align 32
-; COMDAT: @_ZZ4funcvE10static_var = internal global { i32, [60 x i8] } zeroinitializer, comdat($"_ZZ4funcvE10static_var${{[01-9a-f]+}}"), align 32
-; COMDAT: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, comdat($".str${{[01-9a-f]+}}"), align 32
+; COMDAT: @_ZZ4funcvE10static_var = internal global { i32, [60 x i8] } zeroinitializer, comdat($_ZZ4funcvE10static_var.{{[01-9a-f]+}}), align 32
+; COMDAT: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, comdat($.str.{{[01-9a-f]+}}), align 32
 
 ; NOCOMDAT: @global = global { i32, [60 x i8] } zeroinitializer, align 32
 ; NOCOMDAT: @dyn_init_global = global { i32, [60 x i8] } zeroinitializer, align 32

@@ -1349,7 +1349,7 @@ bool PPCRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // If we need to realign the stack, then the stack pointer can no longer
   // serve as an offset into the caller's stack space. As a result, we need a
   // base pointer.
-  return needsStackRealignment(MF);
+  return hasStackRealignment(MF);
 }
 
 /// Returns true if the instruction's frame index

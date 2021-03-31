@@ -186,14 +186,14 @@ define <4 x float> @fptrunc_fromreg2_zext(<2 x double> %arg) {
 define <4 x float> @fptrunc_fromconst() {
 ; X32-SSE-LABEL: fptrunc_fromconst:
 ; X32-SSE:       # %bb.0: # %entry
-; X32-SSE-NEXT:    cvtpd2ps {{\.LCPI.*}}, %xmm1
-; X32-SSE-NEXT:    cvtpd2ps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    cvtpd2ps {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X32-SSE-NEXT:    cvtpd2ps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X32-SSE-NEXT:    retl
 ;
 ; X32-AVX-LABEL: fptrunc_fromconst:
 ; X32-AVX:       # %bb.0: # %entry
-; X32-AVX-NEXT:    vcvtpd2psy {{\.LCPI.*}}, %xmm0
+; X32-AVX-NEXT:    vcvtpd2psy {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fptrunc_fromconst:

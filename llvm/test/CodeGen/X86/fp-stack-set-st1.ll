@@ -4,8 +4,8 @@
 define i32 @main() nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fldl {{\.LCPI.*}}
-; CHECK-NEXT:    fldl {{\.LCPI.*}}
+; CHECK-NEXT:    fldl {{\.LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fldl {{\.LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    fmul %st(1), %st

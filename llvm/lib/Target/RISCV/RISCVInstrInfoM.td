@@ -104,4 +104,11 @@ let Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba] in {
 // still be better off shifting both left by 32.
 def : Pat<(i64 (mul (and GPR:$rs1, 0xffffffff), (and GPR:$rs2, 0xffffffff))),
           (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32))>;
+// Prevent matching the first part of this pattern to mulw. The mul here has
+// additionals users or the ANDs would have been removed. The above pattern
+// will be used for the other users. If we form a mulw we'll keep the ANDs alive
+// and they'll still become SLLI+SRLI.
+def : Pat<(sext_inreg (mul (and GPR:$rs1, 0xffffffff),
+                           (and GPR:$rs2, 0xffffffff)), i32),
+          (ADDIW (MULHU (SLLI GPR:$rs1, 32), (SLLI GPR:$rs2, 32)), 0)>;
 } // Predicates = [HasStdExtM, IsRV64, NotHasStdExtZba]

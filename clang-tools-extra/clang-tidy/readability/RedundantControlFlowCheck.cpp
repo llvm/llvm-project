@@ -32,10 +32,10 @@ bool isLocationInMacroExpansion(const SourceManager &SM, SourceLocation Loc) {
 
 void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(
-          isDefinition(), returns(voidType()),
-          has(compoundStmt(hasAnySubstatement(returnStmt(unless(has(expr())))))
-                  .bind("return"))),
+      functionDecl(isDefinition(), returns(voidType()),
+                   hasBody(compoundStmt(hasAnySubstatement(
+                                            returnStmt(unless(has(expr())))))
+                               .bind("return"))),
       this);
   Finder->addMatcher(
       mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt)

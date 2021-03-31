@@ -7,16 +7,15 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements logic for computing correct alloc and dealloc positions.
-// Furthermore, buffer placement also adds required new alloc and copy
-// operations to ensure that all buffers are deallocated. The main class is the
+// Furthermore, buffer deallocation also adds required new clone operations to
+// ensure that all buffers are deallocated. The main class is the
 // BufferDeallocationPass class that implements the underlying algorithm. In
 // order to put allocations and deallocations at safe positions, it is
 // significantly important to put them into the correct blocks. However, the
 // liveness analysis does not pay attention to aliases, which can occur due to
 // branches (and their associated block arguments) in general. For this purpose,
 // BufferDeallocation firstly finds all possible aliases for a single value
-// (using the BufferAliasAnalysis class). Consider the following
-// example:
+// (using the BufferAliasAnalysis class). Consider the following example:
 //
 // ^bb0(%arg0):
 //   cond_br %cond, ^bb1, ^bb2
@@ -30,16 +29,16 @@
 //
 // We should place the dealloc for %new_value in exit. However, we have to free
 // the buffer in the same block, because it cannot be freed in the post
-// dominator. However, this requires a new copy buffer for %arg1 that will
+// dominator. However, this requires a new clone buffer for %arg1 that will
 // contain the actual contents. Using the class BufferAliasAnalysis, we
 // will find out that %new_value has a potential alias %arg1. In order to find
 // the dealloc position we have to find all potential aliases, iterate over
 // their uses and find the common post-dominator block (note that additional
-// copies and buffers remove potential aliases and will influence the placement
+// clones and buffers remove potential aliases and will influence the placement
 // of the deallocs). In all cases, the computed block can be safely used to free
 // the %new_value buffer (may be exit or bb2) as it will die and we can use
 // liveness information to determine the exact operation after which we have to
-// insert the dealloc. However, the algorithm supports introducing copy buffers
+// insert the dealloc. However, the algorithm supports introducing clone buffers
 // and placing deallocs in safe locations to ensure that all buffers will be
 // freed in the end.
 //
@@ -52,10 +51,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -187,25 +184,25 @@ private:
 
 /// The buffer deallocation transformation which ensures that all allocs in the
 /// program have a corresponding de-allocation. As a side-effect, it might also
-/// introduce copies that in turn leads to additional allocs and de-allocations.
+/// introduce clones that in turn leads to additional deallocations.
 class BufferDeallocation : BufferPlacementTransformationBase {
 public:
   BufferDeallocation(Operation *op)
       : BufferPlacementTransformationBase(op), dominators(op),
         postDominators(op) {}
 
-  /// Performs the actual placement/creation of all temporary alloc, copy and
-  /// dealloc nodes.
+  /// Performs the actual placement/creation of all temporary clone and dealloc
+  /// nodes.
   void deallocate() {
-    // Add additional allocations and copies that are required.
-    introduceCopies();
+    // Add additional clones that are required.
+    introduceClones();
     // Place deallocations for all allocation entries.
     placeDeallocs();
   }
 
 private:
-  /// Introduces required allocs and copy operations to avoid memory leaks.
-  void introduceCopies() {
+  /// Introduces required clone operations to avoid memory leaks.
+  void introduceClones() {
     // Initialize the set of values that require a dedicated memory free
     // operation since their operands cannot be safely deallocated in a post
     // dominator.
@@ -214,7 +211,7 @@ private:
     SmallVector<std::tuple<Value, Block *>, 8> toProcess;
 
     // Check dominance relation for proper dominance properties. If the given
-    // value node does not dominate an alias, we will have to create a copy in
+    // value node does not dominate an alias, we will have to create a clone in
     // order to free all buffers that can potentially leak into a post
     // dominator.
     auto findUnsafeValues = [&](Value source, Block *definingBlock) {
@@ -255,7 +252,7 @@ private:
     // arguments at the correct locations.
     aliases.remove(valuesToFree);
 
-    // Add new allocs and additional copy operations.
+    // Add new allocs and additional clone operations.
     for (Value value : valuesToFree) {
       if (auto blockArg = value.dyn_cast<BlockArgument>())
         introduceBlockArgCopy(blockArg);
@@ -269,7 +266,7 @@ private:
     }
   }
 
-  /// Introduces temporary allocs in all predecessors and copies the source
+  /// Introduces temporary clones in all predecessors and copies the source
   /// values into the newly allocated buffers.
   void introduceBlockArgCopy(BlockArgument blockArg) {
     // Allocate a buffer for the current block argument in the block of
@@ -285,9 +282,9 @@ private:
       Value sourceValue =
           branchInterface.getSuccessorOperands(it.getSuccessorIndex())
               .getValue()[blockArg.getArgNumber()];
-      // Create a new alloc and copy at the current location of the terminator.
-      Value alloc = introduceBufferCopy(sourceValue, terminator);
-      // Wire new alloc and successor operand.
+      // Create a new clone at the current location of the terminator.
+      Value clone = introduceCloneBuffers(sourceValue, terminator);
+      // Wire new clone and successor operand.
       auto mutableOperands =
           branchInterface.getMutableSuccessorOperands(it.getSuccessorIndex());
       if (!mutableOperands.hasValue())
@@ -296,7 +293,7 @@ private:
       else
         mutableOperands.getValue()
             .slice(blockArg.getArgNumber(), 1)
-            .assign(alloc);
+            .assign(clone);
     }
 
     // Check whether the block argument has implicitly defined predecessors via
@@ -310,7 +307,7 @@ private:
         !(regionInterface = dyn_cast<RegionBranchOpInterface>(parentOp)))
       return;
 
-    introduceCopiesForRegionSuccessors(
+    introduceClonesForRegionSuccessors(
         regionInterface, argRegion->getParentOp()->getRegions(), blockArg,
         [&](RegionSuccessor &successorRegion) {
           // Find a predecessor of our argRegion.
@@ -318,7 +315,7 @@ private:
         });
 
     // Check whether the block argument belongs to an entry region of the
-    // parent operation. In this case, we have to introduce an additional copy
+    // parent operation. In this case, we have to introduce an additional clone
     // for buffer that is passed to the argument.
     SmallVector<RegionSuccessor, 2> successorRegions;
     regionInterface.getSuccessorRegions(/*index=*/llvm::None, successorRegions);
@@ -329,20 +326,20 @@ private:
     if (it == successorRegions.end())
       return;
 
-    // Determine the actual operand to introduce a copy for and rewire the
-    // operand to point to the copy instead.
+    // Determine the actual operand to introduce a clone for and rewire the
+    // operand to point to the clone instead.
     Value operand =
         regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber())
             [llvm::find(it->getSuccessorInputs(), blockArg).getIndex()];
-    Value copy = introduceBufferCopy(operand, parentOp);
+    Value clone = introduceCloneBuffers(operand, parentOp);
 
     auto op = llvm::find(parentOp->getOperands(), operand);
     assert(op != parentOp->getOperands().end() &&
            "parentOp does not contain operand");
-    parentOp->setOperand(op.getIndex(), copy);
+    parentOp->setOperand(op.getIndex(), clone);
   }
 
-  /// Introduces temporary allocs in front of all associated nested-region
+  /// Introduces temporary clones in front of all associated nested-region
   /// terminators and copies the source values into the newly allocated buffers.
   void introduceValueCopyForRegionResult(Value value) {
     // Get the actual result index in the scope of the parent terminator.
@@ -354,20 +351,20 @@ private:
       // its parent operation.
       return !successorRegion.getSuccessor();
     };
-    // Introduce a copy for all region "results" that are returned to the parent
-    // operation. This is required since the parent's result value has been
-    // considered critical. Therefore, the algorithm assumes that a copy of a
-    // previously allocated buffer is returned by the operation (like in the
-    // case of a block argument).
-    introduceCopiesForRegionSuccessors(regionInterface, operation->getRegions(),
+    // Introduce a clone for all region "results" that are returned to the
+    // parent operation. This is required since the parent's result value has
+    // been considered critical. Therefore, the algorithm assumes that a clone
+    // of a previously allocated buffer is returned by the operation (like in
+    // the case of a block argument).
+    introduceClonesForRegionSuccessors(regionInterface, operation->getRegions(),
                                        value, regionPredicate);
   }
 
-  /// Introduces buffer copies for all terminators in the given regions. The
+  /// Introduces buffer clones for all terminators in the given regions. The
   /// regionPredicate is applied to every successor region in order to restrict
-  /// the copies to specific regions.
+  /// the clones to specific regions.
   template <typename TPredicate>
-  void introduceCopiesForRegionSuccessors(
+  void introduceClonesForRegionSuccessors(
       RegionBranchOpInterface regionInterface, MutableArrayRef<Region> regions,
       Value argValue, const TPredicate &regionPredicate) {
     for (Region &region : regions) {
@@ -393,49 +390,37 @@ private:
       walkReturnOperations(&region, [&](Operation *terminator) {
         // Extract the source value from the current terminator.
         Value sourceValue = terminator->getOperand(operandIndex);
-        // Create a new alloc at the current location of the terminator.
-        Value alloc = introduceBufferCopy(sourceValue, terminator);
-        // Wire alloc and terminator operand.
-        terminator->setOperand(operandIndex, alloc);
+        // Create a new clone at the current location of the terminator.
+        Value clone = introduceCloneBuffers(sourceValue, terminator);
+        // Wire clone and terminator operand.
+        terminator->setOperand(operandIndex, clone);
       });
     }
   }
 
-  /// Creates a new memory allocation for the given source value and copies
+  /// Creates a new memory allocation for the given source value and clones
   /// its content into the newly allocated buffer. The terminator operation is
-  /// used to insert the alloc and copy operations at the right places.
-  Value introduceBufferCopy(Value sourceValue, Operation *terminator) {
-    // Avoid multiple copies of the same source value. This can happen in the
+  /// used to insert the clone operation at the right place.
+  Value introduceCloneBuffers(Value sourceValue, Operation *terminator) {
+    // Avoid multiple clones of the same source value. This can happen in the
     // presence of loops when a branch acts as a backedge while also having
     // another successor that returns to its parent operation. Note: that
     // copying copied buffers can introduce memory leaks since the invariant of
-    // BufferPlacement assumes that a buffer will be only copied once into a
-    // temporary buffer. Hence, the construction of copy chains introduces
+    // BufferDeallocation assumes that a buffer will be only cloned once into a
+    // temporary buffer. Hence, the construction of clone chains introduces
     // additional allocations that are not tracked automatically by the
     // algorithm.
-    if (copiedValues.contains(sourceValue))
+    if (clonedValues.contains(sourceValue))
       return sourceValue;
-    // Create a new alloc at the current location of the terminator.
-    auto memRefType = sourceValue.getType().cast<MemRefType>();
+    // Create a new clone operation that copies the contents of the old
+    // buffer to the new one.
     OpBuilder builder(terminator);
+    auto cloneOp =
+        builder.create<memref::CloneOp>(terminator->getLoc(), sourceValue);
 
-    // Extract information about dynamically shaped types by
-    // extracting their dynamic dimensions.
-    auto dynamicOperands =
-        getDynOperands(terminator->getLoc(), sourceValue, builder);
-
-    // TODO: provide a generic interface to create dialect-specific
-    // Alloc and CopyOp nodes.
-    auto alloc = builder.create<memref::AllocOp>(terminator->getLoc(),
-                                                 memRefType, dynamicOperands);
-
-    // Create a new copy operation that copies to contents of the old
-    // allocation to the new one.
-    builder.create<linalg::CopyOp>(terminator->getLoc(), sourceValue, alloc);
-
-    // Remember the copy of original source value.
-    copiedValues.insert(alloc);
-    return alloc;
+    // Remember the clone of original source value.
+    clonedValues.insert(cloneOp);
+    return cloneOp;
   }
 
   /// Finds correct dealloc positions according to the algorithm described at
@@ -513,8 +498,8 @@ private:
   /// position.
   PostDominanceInfo postDominators;
 
-  /// Stores already copied allocations to avoid additional copies of copies.
-  ValueSetT copiedValues;
+  /// Stores already cloned buffers to avoid additional clones of clones.
+  ValueSetT clonedValues;
 };
 
 //===----------------------------------------------------------------------===//
@@ -522,8 +507,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
-/// into the right positions. Furthermore, it inserts additional allocs and
-/// copies if necessary. It uses the algorithm described at the top of the file.
+/// into the right positions. Furthermore, it inserts additional clones if
+/// necessary. It uses the algorithm described at the top of the file.
 struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
 
   void runOnFunction() override {
@@ -540,7 +525,7 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
       return signalPassFailure();
     }
 
-    // Place all required temporary alloc, copy and dealloc nodes.
+    // Place all required temporary clone and dealloc nodes.
     BufferDeallocation deallocation(getFunction());
     deallocation.deallocate();
   }

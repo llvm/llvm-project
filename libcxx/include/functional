@@ -189,6 +189,8 @@ struct bit_not : unary_function<T, T>
     T operator()(const T& x) const;
 };
 
+struct identity; // C++20
+
 template <class Predicate>
 class unary_negate // deprecated in C++17
     : public unary_function<typename Predicate::argument_type, bool>
@@ -3214,6 +3216,19 @@ using unwrap_reference_t = typename unwrap_reference<_Tp>::type;
 template <class _Tp>
 using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
 #endif // > C++17
+
+#if _LIBCPP_STD_VER > 17
+// [func.identity]
+struct identity {
+    template<class _Tp>
+    constexpr _Tp&& operator()(_Tp&& __t) const noexcept
+    {
+        return _VSTD::forward<_Tp>(__t);
+    }
+
+    using is_transparent = void;
+};
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

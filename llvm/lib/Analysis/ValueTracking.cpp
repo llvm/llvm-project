@@ -2213,6 +2213,35 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
+static bool isNonZeroRecurrence(const PHINode *PN) {
+  // Try and detect a recurrence that monotonically increases from a
+  // starting value, as these are common as induction variables.
+  BinaryOperator *BO = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  const APInt *StartC, *StepC;
+  if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
+      !match(Start, m_APInt(StartC)))
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Add:
+    return match(Step, m_APInt(StepC)) &&
+           ((BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
+             !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
+             StepC->isNonNegative()));
+  case Instruction::Mul:
+    return !StartC->isNullValue() && match(Step, m_APInt(StepC)) &&
+           ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StepC->isStrictlyPositive()));
+  case Instruction::Shl:
+    return !StartC->isNullValue() &&
+           (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
+  default:
+    return false;
+  }
+}
+
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every demanded element is known to be non-zero when
 /// defined. For pointers, if the context instruction and dominator tree are
@@ -2454,22 +2483,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   }
   // PHI
   else if (const PHINode *PN = dyn_cast<PHINode>(V)) {
-    // Try and detect a recurrence that monotonically increases from a
-    // starting value, as these are common as induction variables.
-    BinaryOperator *BO = nullptr;
-    Value *Start = nullptr, *Step = nullptr;
-    const APInt *StartC, *StepC;
-    if (Q.IIQ.UseInstrInfo && matchSimpleRecurrence(PN, BO, Start, Step) &&
-        match(Start, m_APInt(StartC)) && match(Step, m_APInt(StepC))) {
-      if (BO->getOpcode() == Instruction::Add &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          StartC->isStrictlyPositive() && !StepC->isNegative())
-        return true;
-      if (BO->getOpcode() == Instruction::Mul &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          !StartC->isNullValue() && StepC->isStrictlyPositive())
-        return true;
-    }
+    if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
+      return true;
+
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
@@ -2544,6 +2560,19 @@ static bool isNonEqualMul(const Value *V1, const Value *V2, unsigned Depth,
            (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
            !C->isNullValue() && !C->isOneValue() &&
            isKnownNonZero(V1, Depth + 1, Q);
+  }
+  return false;
+}
+
+/// Return true if V2 == V1 << C, where V1 is known non-zero, C is not 0 and
+/// the shift is nuw or nsw.
+static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
+                          const Query &Q) {
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
+    const APInt *C;
+    return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
+           (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
+           !C->isNullValue() && isKnownNonZero(V1, Depth + 1, Q);
   }
   return false;
 }
@@ -2626,6 +2655,20 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                                Depth + 1, Q);
       break;
     }
+    case Instruction::Shl: {
+      // Same as multiplies, with the difference that we don't need to check
+      // for a non-zero multiply. Shifts always multiply by non-zero.
+      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
+        break;
+
+      if (O1->getOperand(1) == O2->getOperand(1))
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
+                               Depth + 1, Q);
+      break;
+    }
     case Instruction::SExt:
     case Instruction::ZExt:
       if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
@@ -2647,6 +2690,9 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
     return true;
 
   if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualShl(V1, V2, Depth, Q) || isNonEqualShl(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {

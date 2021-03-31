@@ -18,7 +18,7 @@ define float @test(i64 %a) nounwind {
 ; X86-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    movss %xmm0, (%esp)

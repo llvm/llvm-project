@@ -688,6 +688,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
       WrapperFO, isKernel);
 
   llvm::SmallVector<llvm::Value *, 4> CallArgs;
+  auto *PI = F->arg_begin();
   for (const auto *Arg : Args) {
     llvm::Value *CallArg;
     auto I = LocalAddrs.find(Arg);
@@ -696,6 +697,11 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
           I->second.second,
           I->second.first ? I->second.first->getType() : Arg->getType(),
           AlignmentSource::Decl);
+      if (LV.getType()->isAnyComplexType())
+        LV.setAddress(WrapperCGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+            LV.getAddress(WrapperCGF),
+            PI->getType()->getPointerTo(
+                LV.getAddress(WrapperCGF).getAddressSpace())));
       CallArg = WrapperCGF.EmitLoadOfScalar(LV, S.getBeginLoc());
     } else {
       auto EI = VLASizes.find(Arg);
@@ -709,6 +715,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
       }
     }
     CallArgs.emplace_back(WrapperCGF.EmitFromMemory(CallArg, Arg->getType()));
+    ++PI;
   }
   CGM.getOpenMPRuntime().emitOutlinedFunctionCall(WrapperCGF, Loc, F, CallArgs);
   WrapperCGF.FinishFunction();
@@ -5796,6 +5803,7 @@ static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,
     CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
 
   CGF.EmitStmt(S.getCapturedStmt(OMPD_target)->getCapturedStmt());
+  CGF.EnsureInsertPoint();
 }
 
 void CodeGenFunction::EmitOMPTargetDeviceFunction(CodeGenModule &CGM,

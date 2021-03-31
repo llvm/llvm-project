@@ -49,6 +49,10 @@
 #include <osreldate.h>
 #include <sys/sysctl.h>
 #define pthread_getattr_np pthread_attr_get_np
+// The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
+// that, it was never implemented. So just define it to zero.
+#undef MAP_NORESERVE
+#define MAP_NORESERVE 0
 #endif
 
 #if SANITIZER_NETBSD
@@ -300,7 +304,7 @@ static int CollectStaticTlsRanges(struct dl_phdr_info *info, size_t size,
   return 0;
 }
 
-static void GetStaticTlsRange(uptr *addr, uptr *size) {
+static void GetStaticTlsRange(uptr *addr, uptr *size, uptr *align) {
   InternalMmapVector<TlsRange> ranges;
   dl_iterate_phdr(CollectStaticTlsRanges, &ranges);
   uptr len = ranges.size();
@@ -314,17 +318,19 @@ static void GetStaticTlsRange(uptr *addr, uptr *size) {
     // This may happen with musl if no module uses PT_TLS.
     *addr = 0;
     *size = 0;
+    *align = 1;
     return;
   }
   // Find the maximum consecutive ranges. We consider two modules consecutive if
   // the gap is smaller than the alignment. The dynamic loader places static TLS
   // blocks this way not to waste space.
   uptr l = one;
+  *align = ranges[l].align;
   while (l != 0 && ranges[l].begin < ranges[l - 1].end + ranges[l - 1].align)
-    --l;
+    *align = Max(*align, ranges[--l].align);
   uptr r = one + 1;
   while (r != len && ranges[r].begin < ranges[r - 1].end + ranges[r - 1].align)
-    ++r;
+    *align = Max(*align, ranges[r++].align);
   *addr = ranges[l].begin;
   *size = ranges[r - 1].end - ranges[l].begin;
 }
@@ -402,25 +408,43 @@ static void GetTls(uptr *addr, uptr *size) {
     *size = 0;
   }
 #elif SANITIZER_LINUX
-  GetStaticTlsRange(addr, size);
+  uptr align;
+  GetStaticTlsRange(addr, size, &align);
 #if defined(__x86_64__) || defined(__i386__) || defined(__s390__)
+  if (SANITIZER_GLIBC) {
+#if defined(__s390__)
+    align = Max<uptr>(align, 16);
+#else
+    align = Max<uptr>(align, 64);
+#endif
+  }
+  const uptr tp = RoundUpTo(*addr + *size, align);
+
   // lsan requires the range to additionally cover the static TLS surplus
   // (elf/dl-tls.c defines 1664). Otherwise there may be false positives for
   // allocations only referenced by tls in dynamically loaded modules.
-  if (SANITIZER_GLIBC) {
-    *addr -= 1664;
-    *size += 1664;
-  }
+  if (SANITIZER_GLIBC)
+    *size += 1644;
+
   // Extend the range to include the thread control block. On glibc, lsan needs
   // the range to include pthread::{specific_1stblock,specific} so that
   // allocations only referenced by pthread_setspecific can be scanned. This may
   // underestimate by at most TLS_TCB_ALIGN-1 bytes but it should be fine
   // because the number of bytes after pthread::specific is larger.
-  *size += ThreadDescriptorSize();
+  *addr = tp - RoundUpTo(*size, align);
+  *size = tp - *addr + ThreadDescriptorSize();
 #else
   if (SANITIZER_GLIBC)
     *size += 1664;
-#if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#if defined(__powerpc64__)
+  // TODO Figure out why *addr may be zero and use TlsPreTcbSize.
+  void *ptr = dlsym(RTLD_NEXT, "_dl_get_tls_static_info");
+  uptr tls_size, tls_align;
+  ((void (*)(size_t *, size_t *))ptr)(&tls_size, &tls_align);
+  asm("addi %0,13,-0x7000" : "=r"(*addr));
+  *addr -= TlsPreTcbSize();
+  *size = RoundUpTo(tls_size + TlsPreTcbSize(), 16);
+#elif defined(__mips__) || SANITIZER_RISCV64
   const uptr pre_tcb_size = TlsPreTcbSize();
   *addr -= pre_tcb_size;
   *size += pre_tcb_size;
@@ -875,6 +899,7 @@ static uptr MremapCreateAlias(uptr base_addr, uptr alias_addr,
                          reinterpret_cast<void *>(alias_addr));
 #else
   CHECK(false && "mremap is not supported outside of Linux");
+  return 0;
 #endif
 }
 

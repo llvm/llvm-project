@@ -1370,7 +1370,7 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->needsStackRealignment(MF))
+    if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
         NewAlign = NewAlign / 2;
 
@@ -1475,7 +1475,7 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
     // Don't promote to an alignment that would require dynamic stack
     // realignment.
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-    if (!TRI->needsStackRealignment(MF))
+    if (!TRI->hasStackRealignment(MF))
       while (NewAlign > Alignment && DL.exceedsNaturalStackAlignment(NewAlign))
         NewAlign = NewAlign / 2;
 
@@ -3862,12 +3862,36 @@ void CombinerHelper::applyExtractAllEltsFromBuildVector(
   MI.eraseFromParent();
 }
 
-bool CombinerHelper::applyLoadOrCombine(
+bool CombinerHelper::applyBuildFn(
     MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
   Builder.setInstrAndDebugLoc(MI);
   MatchInfo(Builder);
   MI.eraseFromParent();
   return true;
+}
+
+/// Match an FSHL or FSHR that can be combined to a ROTR or ROTL rotate.
+bool CombinerHelper::matchFunnelShiftToRotate(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_FSHL || Opc == TargetOpcode::G_FSHR);
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
+  if (X != Y)
+    return false;
+  unsigned RotateOpc =
+      Opc == TargetOpcode::G_FSHL ? TargetOpcode::G_ROTL : TargetOpcode::G_ROTR;
+  return isLegalOrBeforeLegalizer({RotateOpc, {MRI.getType(X), MRI.getType(Y)}});
+}
+
+void CombinerHelper::applyFunnelShiftToRotate(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  assert(Opc == TargetOpcode::G_FSHL || Opc == TargetOpcode::G_FSHR);
+  bool IsFSHL = Opc == TargetOpcode::G_FSHL;
+  Observer.changingInstr(MI);
+  MI.setDesc(Builder.getTII().get(IsFSHL ? TargetOpcode::G_ROTL
+                                         : TargetOpcode::G_ROTR));
+  MI.RemoveOperand(2);
+  Observer.changedInstr(MI);
 }
 
 bool CombinerHelper::tryCombine(MachineInstr &MI) {

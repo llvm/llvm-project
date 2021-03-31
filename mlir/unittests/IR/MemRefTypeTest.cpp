@@ -27,7 +27,7 @@ TEST(MemRefTypeTest, GetStridesAndOffset) {
   int64_t offset1 = -1;
   LogicalResult res1 = getStridesAndOffset(type1, strides1, offset1);
   ASSERT_TRUE(res1.succeeded());
-  ASSERT_EQ(3, strides1.size());
+  ASSERT_EQ(3u, strides1.size());
   EXPECT_EQ(12, strides1[0]);
   EXPECT_EQ(4, strides1[1]);
   EXPECT_EQ(1, strides1[2]);
@@ -40,7 +40,7 @@ TEST(MemRefTypeTest, GetStridesAndOffset) {
   int64_t offset2 = -1;
   LogicalResult res2 = getStridesAndOffset(type2, strides2, offset2);
   ASSERT_TRUE(res2.succeeded());
-  ASSERT_EQ(3, strides2.size());
+  ASSERT_EQ(3u, strides2.size());
   EXPECT_EQ(1, strides2[0]);
   EXPECT_EQ(8, strides2[1]);
   EXPECT_EQ(2, strides2[2]);

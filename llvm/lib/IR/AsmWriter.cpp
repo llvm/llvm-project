@@ -1889,11 +1889,14 @@ static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
                             const Module *Context) {
   Out << "!DISubrange(";
   MDFieldPrinter Printer(Out, TypePrinter, Machine, Context);
-  if (auto *CE = N->getCount().dyn_cast<ConstantInt*>())
-    Printer.printInt("count", CE->getSExtValue(), /* ShouldSkipZero */ false);
-  else
-    Printer.printMetadata("count", N->getCount().dyn_cast<DIVariable *>(),
-                          /*ShouldSkipNull */ true);
+
+  auto *Count = N->getRawCountNode();
+  if (auto *CE = dyn_cast_or_null<ConstantAsMetadata>(Count)) {
+    auto *CV = cast<ConstantInt>(CE->getValue());
+    Printer.printInt("count", CV->getSExtValue(),
+                     /* ShouldSkipZero */ false);
+  } else
+    Printer.printMetadata("count", Count, /*ShouldSkipNull */ true);
 
   // A lowerBound of constant 0 should not be skipped, since it is different
   // from an unspecified lower bound (= nullptr).
@@ -1932,7 +1935,10 @@ static void writeDIGenericSubrange(raw_ostream &Out, const DIGenericSubrange *N,
 
   auto IsConstant = [&](Metadata *Bound) -> bool {
     if (auto *BE = dyn_cast_or_null<DIExpression>(Bound)) {
-      return BE->isSignedConstant();
+      return BE->isConstant()
+                 ? DIExpression::SignedOrUnsignedConstant::SignedConstant ==
+                       *BE->isConstant()
+                 : false;
     }
     return false;
   };
@@ -4413,20 +4419,18 @@ void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
     return;
   }
 
-  assert((Attr.hasAttribute(Attribute::ByVal) ||
-          Attr.hasAttribute(Attribute::StructRet) ||
-          Attr.hasAttribute(Attribute::ByRef) ||
-          Attr.hasAttribute(Attribute::Preallocated)) &&
-         "unexpected type attr");
-
   if (Attr.hasAttribute(Attribute::ByVal)) {
     Out << "byval";
   } else if (Attr.hasAttribute(Attribute::StructRet)) {
     Out << "sret";
   } else if (Attr.hasAttribute(Attribute::ByRef)) {
     Out << "byref";
-  } else {
+  } else if (Attr.hasAttribute(Attribute::Preallocated)) {
     Out << "preallocated";
+  } else if (Attr.hasAttribute(Attribute::InAlloca)) {
+    Out << "inalloca";
+  } else {
+    llvm_unreachable("unexpected type attr");
   }
 
   if (Type *Ty = Attr.getValueAsType()) {

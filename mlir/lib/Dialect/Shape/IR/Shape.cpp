@@ -744,7 +744,6 @@ OpFoldResult FromExtentsOp::fold(ArrayRef<Attribute> operands) {
 
 void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
                               StringRef name) {
-  ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
 }
@@ -773,8 +772,6 @@ ParseResult parseFunctionLibraryOp(OpAsmParser &parser,
   if (parser.parseRegion(*bodyRegion))
     return failure();
 
-  FunctionLibraryOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
-                                      result.location);
   if (parser.parseKeyword("mapping"))
     return failure();
 
@@ -990,11 +987,43 @@ struct ShapeOfWithTensor : public OpRewritePattern<shape::ShapeOfOp> {
     return success();
   }
 };
+
+// Canonicalize
+// ```
+// %0 = shape.shape_of %arg : tensor<?x?x?xf32> -> tensor<3xindex>
+// %1 = tensor.cast %0 : tensor<3xindex> to tensor<?xindex>
+// ```
+// to
+// ```
+// %1 = shape.shape_of %arg : tensor<?x?x?xf32> -> tensor<?xindex>
+// ```
+struct ShapeOfCastedExtentTensor : public OpRewritePattern<tensor::CastOp> {
+  using OpRewritePattern<tensor::CastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::CastOp op,
+                                PatternRewriter &rewriter) const override {
+    auto ty = op.getType().dyn_cast<RankedTensorType>();
+    if (!ty || ty.getRank() != 1)
+      return failure();
+
+    auto shapeOfOp = op.source().getDefiningOp<ShapeOfOp>();
+    if (!shapeOfOp)
+      return failure();
+
+    // Argument type must be ranked and must not conflict.
+    auto argTy = shapeOfOp.arg().getType().dyn_cast<RankedTensorType>();
+    if (!argTy || (!ty.isDynamicDim(0) && ty.getDimSize(0) != argTy.getRank()))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ShapeOfOp>(op, ty, shapeOfOp.arg());
+    return success();
+  }
+};
 } // namespace
 
 void ShapeOfOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                             MLIRContext *context) {
-  patterns.add<ShapeOfWithTensor>(context);
+  patterns.add<ShapeOfCastedExtentTensor, ShapeOfWithTensor>(context);
 }
 
 //===----------------------------------------------------------------------===//

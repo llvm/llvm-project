@@ -1295,6 +1295,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
     case Stmt::OMPTileDirectiveClass:
     case Stmt::OMPInteropDirectiveClass:
+    case Stmt::OMPDispatchDirectiveClass:
     case Stmt::CapturedStmtClass: {
       const ExplodedNode *node = Bldr.generateSink(S, Pred, Pred->getState());
       Engine.addAbortedBlock(node, currBldrCtx->getBlock());

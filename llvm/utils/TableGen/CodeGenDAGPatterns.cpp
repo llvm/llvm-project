@@ -846,7 +846,11 @@ TypeInfer::ValidateOnExit::~ValidateOnExit() {
               "(use -print-records with llvm-tblgen to see all "
               "expanded records).\n";
     Infer.TP.dump();
-    llvm_unreachable(nullptr);
+    dbgs() << "Generated from record:\n";
+    Infer.TP.getRecord()->dump();
+    PrintFatalError(Infer.TP.getRecord()->getLoc(),
+                    "Type set is empty for each HW mode in '" +
+                        Infer.TP.getRecord()->getName() + "'");
   }
 }
 #endif

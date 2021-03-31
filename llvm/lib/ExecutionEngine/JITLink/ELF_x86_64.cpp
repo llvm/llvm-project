@@ -125,14 +125,13 @@ private:
     return *StubsSection;
   }
 
-  StringRef getGOTEntryBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
-                     sizeof(NullGOTEntryContent));
+  ArrayRef<char> getGOTEntryBlockContent() {
+    return {reinterpret_cast<const char *>(NullGOTEntryContent),
+            sizeof(NullGOTEntryContent)};
   }
 
-  StringRef getStubBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(StubContent),
-                     sizeof(StubContent));
+  ArrayRef<char> getStubBlockContent() {
+    return {reinterpret_cast<const char *>(StubContent), sizeof(StubContent)};
   }
 
   mutable Section *GOTSection = nullptr;
@@ -406,7 +405,7 @@ private:
         // for now everything is
         auto &section = G->createSection(*Name, Prot);
         // Do this here because we have it, but move it into graphify later
-        G->createContentBlock(section, StringRef(Data, Size), Address,
+        G->createContentBlock(section, ArrayRef<char>(Data, Size), Address,
                               Alignment, 0);
         if (SecRef.sh_type == ELF::SHT_SYMTAB)
           // TODO: Dynamic?

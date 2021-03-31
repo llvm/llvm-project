@@ -301,8 +301,9 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
       JITTargetAddress SymStart = Sym->getAddress();
       JITTargetAddress SymSize = Sym->getSize();
       JITTargetAddress SymEnd = SymStart + SymSize;
-      const uint8_t *SymData =
-          IsZeroFill ? nullptr : Sym->getSymbolContent().bytes_begin();
+      const uint8_t *SymData = IsZeroFill ? nullptr
+                                          : reinterpret_cast<const uint8_t *>(
+                                                Sym->getSymbolContent().data());
 
       // Pad any space before the symbol starts.
       while (NextAddr != SymStart) {
@@ -1214,7 +1215,7 @@ static Error loadObjects(Session &S) {
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = { StringRef(), Addr };
+    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
   }
 
   LLVM_DEBUG({

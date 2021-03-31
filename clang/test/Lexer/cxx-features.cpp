@@ -29,6 +29,12 @@
 #define check(macro, cxx98, cxx11, cxx14, cxx17, cxx20, cxx23) (cxx23 == 0 ? defined(__cpp_##macro) : __cpp_##macro != cxx23)
 #endif
 
+// --- C++2b features ---
+
+#if check(size_t_suffix, 0, 0, 0, 0, 0, 202011)
+#error "wrong value for __cpp_size_t_suffix"
+#endif
+
 // --- C++20 features ---
 
 #if check(aggregate_paren_init, 0, 0, 0, 0, 0, 0)

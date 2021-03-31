@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <unistd.h>
 #endif
+#include "thread.h"
 #include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,17 +19,6 @@
 #include <thread>
 #include <time.h>
 #include <vector>
-
-#if defined(__APPLE__)
-__OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_3_2)
-int pthread_threadid_np(pthread_t, __uint64_t *);
-#elif defined(__linux__)
-#include <sys/syscall.h>
-#elif defined(__NetBSD__)
-#include <lwp.h>
-#elif defined(_WIN32)
-#include <windows.h>
-#endif
 
 static const char *const RETVAL_PREFIX = "retval:";
 static const char *const SLEEP_PREFIX = "sleep:";
@@ -67,26 +57,6 @@ static void print_pid() {
   fprintf(stderr, "PID: %d\n", ::GetCurrentProcessId());
 #else
   fprintf(stderr, "PID: %d\n", getpid());
-#endif
-}
-
-static uint64_t get_thread_id() {
-// Put in the right magic here for your platform to spit out the thread id (tid)
-// that debugserver/lldb-gdbserver would see as a TID.
-#if defined(__APPLE__)
-  __uint64_t tid = 0;
-  pthread_threadid_np(pthread_self(), &tid);
-  return tid;
-#elif defined(__linux__)
-  // This is a call to gettid() via syscall.
-  return syscall(__NR_gettid);
-#elif defined(__NetBSD__)
-  // Technically lwpid_t is 32-bit signed integer
-  return static_cast<uint64_t>(_lwp_self());
-#elif defined(_WIN32)
-  return static_cast<uint64_t>(::GetCurrentThreadId());
-#else
-  return -1;
 #endif
 }
 

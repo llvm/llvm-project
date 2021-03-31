@@ -267,7 +267,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI.*}}
+; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx
@@ -691,7 +691,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI.*}}
+; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx
@@ -914,7 +914,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-AVX512-LIN:       # %bb.0:
 ; X86-AVX512-LIN-NEXT:    subl $12, %esp
 ; X86-AVX512-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-AVX512-LIN-NEXT:    flds {{\.LCPI.*}}
+; X86-AVX512-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-AVX512-LIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512-LIN-NEXT:    fucomi %st(1), %st
 ; X86-AVX512-LIN-NEXT:    fldz
@@ -990,7 +990,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
 ; X86-SSE3-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-SSE3-LIN-NEXT:    flds {{\.LCPI.*}}
+; X86-SSE3-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-SSE3-LIN-NEXT:    xorl %edx, %edx
 ; X86-SSE3-LIN-NEXT:    fucomi %st(1), %st
 ; X86-SSE3-LIN-NEXT:    fldz
@@ -1072,7 +1072,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
 ; X86-SSE2-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-SSE2-LIN-NEXT:    flds {{\.LCPI.*}}
+; X86-SSE2-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X86-SSE2-LIN-NEXT:    xorl %edx, %edx
 ; X86-SSE2-LIN-NEXT:    fucomi %st(1), %st
 ; X86-SSE2-LIN-NEXT:    setbe %dl
@@ -1180,7 +1180,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI.*}}
+; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx

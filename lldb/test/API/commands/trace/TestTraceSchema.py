@@ -25,7 +25,7 @@ class TestTraceLoad(TestBase):
         self.expect("trace schema all", substrs=['''{
   "trace": {
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel" | "unknown",
       "family": integer,
       "model": integer,

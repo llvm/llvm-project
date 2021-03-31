@@ -12,7 +12,7 @@ if (GRPC_INSTALL_PATH)
   # LLVM's BUILD_SHARED_LIBS has no effect).
   set(protobuf_MODULE_COMPATIBLE TRUE)
   find_package(Protobuf CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
-  message(STATUS "Using protobuf ${protobuf_VERSION}")
+  message(STATUS "Using protobuf ${Protobuf_VERSION}")
   find_package(gRPC CONFIG REQUIRED HINTS ${GRPC_INSTALL_PATH})
   message(STATUS "Using gRPC ${gRPC_VERSION}")
 

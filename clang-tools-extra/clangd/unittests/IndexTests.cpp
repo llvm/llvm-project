@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "SyncAPI.h"
 #include "TestIndex.h"
 #include "TestTU.h"
 #include "index/FileIndex.h"
@@ -17,6 +18,7 @@
 #include "clang/Index/IndexSymbol.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <utility>
 
 using ::testing::_;
 using ::testing::AllOf;
@@ -312,16 +314,28 @@ TEST(MergeIndexTest, LookupRemovedDefinition) {
   AST = Test.build();
   DynamicIndex.updateMain(testPath(Test.Filename), AST);
 
-  // Merged index should not return the symbol definition if this definition
-  // location is inside a file from the dynamic index.
+  // Even though the definition is actually deleted in the newer version of the
+  // file, we still chose to merge with information coming from static index.
+  // This seems wrong, but is generic behavior we want for e.g. include headers
+  // which are always missing from the dynamic index
   LookupRequest LookupReq;
   LookupReq.IDs = {Foo.ID};
   unsigned SymbolCounter = 0;
   Merge.lookup(LookupReq, [&](const Symbol &Sym) {
     ++SymbolCounter;
-    EXPECT_FALSE(Sym.Definition);
+    EXPECT_TRUE(Sym.Definition);
   });
   EXPECT_EQ(SymbolCounter, 1u);
+
+  // Drop the symbol completely.
+  Test.Code = "class Bar {};";
+  AST = Test.build();
+  DynamicIndex.updateMain(testPath(Test.Filename), AST);
+
+  // Now we don't expect to see the symbol at all.
+  SymbolCounter = 0;
+  Merge.lookup(LookupReq, [&](const Symbol &Sym) { ++SymbolCounter; });
+  EXPECT_EQ(SymbolCounter, 0u);
 }
 
 TEST(MergeIndexTest, FuzzyFind) {
@@ -585,6 +599,44 @@ TEST(MergeTest, MergeIncludesOnDifferentDefinitions) {
                                    IncludeHeaderWithRef("new", 1u)));
 }
 
+TEST(MergeIndexTest, IncludeHeadersMerged) {
+  auto S = symbol("Z");
+  S.Definition.FileURI = "unittest:///foo.cc";
+
+  SymbolSlab::Builder DynB;
+  S.IncludeHeaders.clear();
+  DynB.insert(S);
+  SymbolSlab DynSymbols = std::move(DynB).build();
+  RefSlab DynRefs;
+  auto DynSize = DynSymbols.bytes() + DynRefs.bytes();
+  auto DynData = std::make_pair(std::move(DynSymbols), std::move(DynRefs));
+  llvm::StringSet<> DynFiles = {S.Definition.FileURI};
+  MemIndex DynIndex(std::move(DynData.first), std::move(DynData.second),
+                    RelationSlab(), std::move(DynFiles), IndexContents::Symbols,
+                    std::move(DynData), DynSize);
+
+  SymbolSlab::Builder StaticB;
+  S.IncludeHeaders.push_back({"<header>", 0});
+  StaticB.insert(S);
+  auto StaticIndex =
+      MemIndex::build(std::move(StaticB).build(), RefSlab(), RelationSlab());
+  MergedIndex Merge(&DynIndex, StaticIndex.get());
+
+  EXPECT_THAT(runFuzzyFind(Merge, S.Name),
+              ElementsAre(testing::Field(
+                  &Symbol::IncludeHeaders,
+                  ElementsAre(IncludeHeaderWithRef("<header>", 0u)))));
+
+  LookupRequest Req;
+  Req.IDs = {S.ID};
+  std::string IncludeHeader;
+  Merge.lookup(Req, [&](const Symbol &S) {
+    EXPECT_TRUE(IncludeHeader.empty());
+    ASSERT_EQ(S.IncludeHeaders.size(), 1u);
+    IncludeHeader = S.IncludeHeaders.front().IncludeHeader.str();
+  });
+  EXPECT_EQ(IncludeHeader, "<header>");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

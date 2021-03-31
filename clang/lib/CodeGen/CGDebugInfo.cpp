@@ -2740,16 +2740,26 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     EltTys.push_back(PropertyNode);
   };
   {
-    llvm::SmallPtrSet<const IdentifierInfo *, 16> PropertySet;
+    // Use 'char' for the isClassProperty bit as DenseSet requires space for
+    // empty/tombstone keys in the data type (and bool is too small for that).
+    typedef std::pair<char, const IdentifierInfo *> IsClassAndIdent;
+    /// List of already emitted properties. Two distinct class and instance
+    /// properties can share the same identifier (but not two instance
+    /// properties or two class properties).
+    llvm::DenseSet<IsClassAndIdent> PropertySet;
+    /// Returns the IsClassAndIdent key for the given property.
+    auto GetIsClassAndIdent = [](const ObjCPropertyDecl *PD) {
+      return std::make_pair(PD->isClassProperty(), PD->getIdentifier());
+    };
     for (const ObjCCategoryDecl *ClassExt : ID->known_extensions())
       for (auto *PD : ClassExt->properties()) {
-        PropertySet.insert(PD->getIdentifier());
+        PropertySet.insert(GetIsClassAndIdent(PD));
         AddProperty(PD);
       }
     for (const auto *PD : ID->properties()) {
       // Don't emit duplicate metadata for properties that were already in a
       // class extension.
-      if (!PropertySet.insert(PD->getIdentifier()).second)
+      if (!PropertySet.insert(GetIsClassAndIdent(PD)).second)
         continue;
       AddProperty(PD);
     }

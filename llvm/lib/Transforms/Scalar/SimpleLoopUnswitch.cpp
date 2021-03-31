@@ -1995,10 +1995,12 @@ static void unswitchNontrivialInvariants(
   bool Direction = true;
   int ClonedSucc = 0;
   if (!FullUnswitch) {
+    Value *Cond = BI->getCondition();
+    (void)Cond;
+    assert((match(Cond, m_LogicalAnd()) ^ match(Cond, m_LogicalOr())) &&
+           "Only `or`, `and`, an `select` instructions can combine "
+           "invariants being unswitched.");
     if (!match(BI->getCondition(), m_LogicalOr())) {
-      assert(match(BI->getCondition(), m_LogicalAnd()) &&
-             "Only `or`, `and`, an `select` instructions can combine "
-             "invariants being unswitched.");
       Direction = false;
       ClonedSucc = 1;
     }
@@ -2644,6 +2646,13 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     if (!BI || !BI->isConditional() || isa<Constant>(BI->getCondition()) ||
         BI->getSuccessor(0) == BI->getSuccessor(1))
       continue;
+
+    // If BI's condition is 'select _, true, false', simplify it to confuse
+    // matchers
+    Value *Cond = BI->getCondition(), *CondNext;
+    while (match(Cond, m_Select(m_Value(CondNext), m_One(), m_Zero())))
+      Cond = CondNext;
+    BI->setCondition(Cond);
 
     if (L.isLoopInvariant(BI->getCondition())) {
       UnswitchCandidates.push_back({BI, {BI->getCondition()}});

@@ -1924,6 +1924,44 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
   return N;
 }
 
+/// Attempts to add visitors to track an RValue expression back to its point of
+/// origin. Works similarly to trackExpressionValue, but accepts only RValues.
+static void trackRValueExpression(const ExplodedNode *InputNode, const Expr *E,
+                                  PathSensitiveBugReport &report,
+                                  bugreporter::TrackingKind TKind,
+                                  bool EnableNullFPSuppression) {
+  assert(E->isRValue() && "The expression is not an rvalue!");
+  const ExplodedNode *RVNode = findNodeForExpression(InputNode, E);
+  if (!RVNode)
+    return;
+  ProgramStateRef RVState = RVNode->getState();
+  SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
+  const auto *BO = dyn_cast<BinaryOperator>(E);
+  if (!BO)
+    return;
+  if (!V.isZeroConstant())
+    return;
+  if (!BO->isMultiplicativeOp())
+    return;
+
+  SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
+  SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
+
+  // Track both LHS and RHS of a multiplication.
+  if (BO->getOpcode() == BO_Mul) {
+    if (LHSV.isZeroConstant())
+      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
+                           EnableNullFPSuppression);
+    if (RHSV.isZeroConstant())
+      trackExpressionValue(InputNode, BO->getRHS(), report, TKind,
+                           EnableNullFPSuppression);
+  } else { // Track only the LHS of a division or a modulo.
+    if (LHSV.isZeroConstant())
+      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
+                           EnableNullFPSuppression);
+  }
+}
+
 bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
                                        const Expr *E,
                                        PathSensitiveBugReport &report,
@@ -2069,6 +2107,11 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
             loc::MemRegionVal(RegionRVal), /*assumption=*/false));
     }
   }
+
+  if (Inner->isRValue())
+    trackRValueExpression(LVNode, Inner, report, TKind,
+                          EnableNullFPSuppression);
+
   return true;
 }
 

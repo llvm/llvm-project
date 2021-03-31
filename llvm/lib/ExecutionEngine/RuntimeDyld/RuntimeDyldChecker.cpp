@@ -796,7 +796,7 @@ StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
     logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return StringRef();
   }
-  return SymInfo->getContent();
+  return {SymInfo->getContent().data(), SymInfo->getContent().size()};
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(

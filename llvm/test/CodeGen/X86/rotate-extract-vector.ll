@@ -109,7 +109,7 @@ define <4 x i32> @vrolw_extract_mul_with_mask(<4 x i32> %i) nounwind {
 ; X86-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [9,9,9,9]
 ; X86-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vprold $7, %zmm0, %zmm0
-; X86-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
@@ -132,8 +132,8 @@ define <4 x i32> @vrolw_extract_mul_with_mask(<4 x i32> %i) nounwind {
 define <32 x i16> @illegal_no_extract_mul(<32 x i16> %i) nounwind {
 ; X86-LABEL: illegal_no_extract_mul:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmullw {{\.LCPI.*}}, %zmm0, %zmm1
-; X86-NEXT:    vpmullw {{\.LCPI.*}}, %zmm0, %zmm0
+; X86-NEXT:    vpmullw {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm1
+; X86-NEXT:    vpmullw {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-NEXT:    vpsrlw $10, %zmm0, %zmm0
 ; X86-NEXT:    vporq %zmm0, %zmm1, %zmm0
 ; X86-NEXT:    retl

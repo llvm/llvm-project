@@ -439,7 +439,7 @@ class StdBitsetPrinter(object):
 
     def _list_it(self):
         for bit in range(self.bit_count):
-            word = math.floor(bit / self.bits_per_word)
+            word = bit // self.bits_per_word
             word_bit = bit % self.bits_per_word
             if self.values[word] & (1 << word_bit):
                 yield ("[%d]" % bit, 1)

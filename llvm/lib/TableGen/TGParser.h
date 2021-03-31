@@ -268,8 +268,6 @@ private:  // Parser methods.
   bool ApplyLetStack(RecordsEntry &Entry);
   bool CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
                               SMLoc Loc, Record *ArgsRec);
-  void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
-  void CheckRecordAsserts(Record &Rec);
 };
 
 } // end namespace llvm

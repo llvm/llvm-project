@@ -157,8 +157,9 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin has a granted vector length parameter in the last position.
   bit HasVL = true;
 
-  // This builtin supports function overloading and has a mangled name.
-  bit HasGeneric = true;
+  // This builtin supports non-masked function overloading api.
+  // All masked operations support overloading api.
+  bit HasNoMaskedOverloaded = true;
 
   // Reads or writes "memory" or has other side-effects.
   bit HasSideEffects = false;
@@ -231,7 +232,7 @@ multiclass RVVVLEBuiltin<list<string> types> {
   let Name = NAME # "_v",
       IRName = "vle",
       IRNameMask ="vle_mask",
-      HasGeneric = false,
+      HasNoMaskedOverloaded = false,
       ManualCodegen = [{
         IntrinsicTypes = {ResultType, Ops[1]->getType()};
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
@@ -250,8 +251,7 @@ multiclass RVVVLEBuiltin<list<string> types> {
 }
 
 multiclass RVVIndexedLoad<string op> {
-  let HasGeneric = false,
-      ManualCodegen = [{
+  let ManualCodegen = [{
         IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[2]->getType()};
         Ops[0] = Builder.CreateBitCast(Ops[0], ResultType->getPointerTo());
       }],
@@ -280,7 +280,6 @@ multiclass RVVVSEBuiltin<list<string> types> {
       IRNameMask = "vse_mask",
       HasMaskedOffOperand = false,
       PermuteOperands = [1, 0], // C/C++ Operand: (ptr, value, vl). Builtin: (value, ptr, vl)
-      HasGeneric = false,
       ManualCodegen = [{
         Ops[1] = Builder.CreateBitCast(Ops[1], Ops[0]->getType()->getPointerTo());
         IntrinsicTypes = {Ops[0]->getType(), Ops[2]->getType()};
@@ -303,7 +302,6 @@ multiclass RVVVSEBuiltin<list<string> types> {
 let HasVL = false,
     HasMask = false,
     HasSideEffects = true,
-    HasGeneric = false,
     Log2LMUL = [0],
     ManualCodegen = [{IntrinsicTypes = {ResultType};}] in // Set XLEN type
 {

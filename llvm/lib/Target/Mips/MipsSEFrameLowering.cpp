@@ -535,7 +535,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl, TII.get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex);
 
-    if (RegInfo.needsStackRealignment(MF)) {
+    if (RegInfo.hasStackRealignment(MF)) {
       // addiu $Reg, $zero, -MaxAlignment
       // andi $sp, $sp, $Reg
       Register VR = MF.getRegInfo().createVirtualRegister(RC);

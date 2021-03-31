@@ -515,7 +515,7 @@ define <4 x i32> @signbits_mask_ashr_smax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_smax:
@@ -553,7 +553,7 @@ define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_smin:
@@ -591,7 +591,7 @@ define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_umax:
@@ -629,7 +629,7 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_umin:
@@ -674,7 +674,7 @@ define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 
 ; X86-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X86-NEXT:    vandnps %ymm1, %ymm0, %ymm1
-; X86-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper

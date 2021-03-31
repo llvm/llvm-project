@@ -318,9 +318,9 @@ int PPCTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   return PPCTTIImpl::getIntImmCost(Imm, Ty, CostKind);
 }
 
-unsigned
-PPCTTIImpl::getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                        TTI::TargetCostKind CostKind) {
+InstructionCost PPCTTIImpl::getUserCost(const User *U,
+                                        ArrayRef<const Value *> Operands,
+                                        TTI::TargetCostKind CostKind) {
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
@@ -1209,8 +1209,9 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(
   return Cost;
 }
 
-unsigned PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                           TTI::TargetCostKind CostKind) {
+InstructionCost
+PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 

@@ -818,6 +818,8 @@ defm VFSGNJX_V : VALU_FV_V_F<"vfsgnjx", 0b001010>;
 
 def : InstAlias<"vfneg.v $vd, $vs$vm",
                 (VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
+def : InstAlias<"vfabs.v $vd, $vs$vm",
+                (VFSGNJX_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
 
 // Vector Floating-Point Compare Instructions
 let RVVConstraint = NoConstraint in {

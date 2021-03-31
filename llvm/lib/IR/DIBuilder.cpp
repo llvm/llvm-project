@@ -525,6 +525,18 @@ DICompositeType *DIBuilder::createEnumerationType(
   return CTy;
 }
 
+DIDerivedType *DIBuilder::createSetType(DIScope *Scope, StringRef Name,
+                                        DIFile *File, unsigned LineNo,
+                                        uint64_t SizeInBits,
+                                        uint32_t AlignInBits, DIType *Ty) {
+  auto *R =
+      DIDerivedType::get(VMContext, dwarf::DW_TAG_set_type, Name, File, LineNo,
+                         getNonCompileUnitScope(Scope), Ty, SizeInBits,
+                         AlignInBits, 0, None, DINode::FlagZero);
+  trackIfUnresolved(R);
+  return R;
+}
+
 DICompositeType *DIBuilder::createArrayType(
     uint64_t Size, uint32_t AlignInBits, DIType *Ty, DINodeArray Subscripts,
     PointerUnion<DIExpression *, DIVariable *> DL,

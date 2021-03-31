@@ -853,12 +853,12 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _Compare = less<typename iterator_traits<_InputIterator>::value_type>,
-         class _Allocator = allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class _Compare = less<__iter_value_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-  -> set<typename iterator_traits<_InputIterator>::value_type, _Compare, _Allocator>;
+  -> set<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
@@ -870,8 +870,8 @@ set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
 template<class _InputIterator, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
 set(_InputIterator, _InputIterator, _Allocator)
-  -> set<typename iterator_traits<_InputIterator>::value_type,
-         less<typename iterator_traits<_InputIterator>::value_type>, _Allocator>;
+  -> set<__iter_value_type<_InputIterator>,
+         less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 template<class _Key, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
@@ -1380,12 +1380,12 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _Compare = less<typename iterator_traits<_InputIterator>::value_type>,
-         class _Allocator = allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class _Compare = less<__iter_value_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-  -> multiset<typename iterator_traits<_InputIterator>::value_type, _Compare, _Allocator>;
+  -> multiset<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
@@ -1397,8 +1397,8 @@ multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator(
 template<class _InputIterator, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
 multiset(_InputIterator, _InputIterator, _Allocator)
-  -> multiset<typename iterator_traits<_InputIterator>::value_type,
-         less<typename iterator_traits<_InputIterator>::value_type>, _Allocator>;
+  -> multiset<__iter_value_type<_InputIterator>,
+         less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 template<class _Key, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>

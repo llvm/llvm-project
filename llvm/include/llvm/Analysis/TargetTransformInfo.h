@@ -237,8 +237,6 @@ public:
       Cost = getUserCost(I, kind);
       break;
     }
-    if (Cost == -1)
-      Cost.setInvalid();
     return Cost;
   }
 
@@ -319,12 +317,12 @@ public:
   ///
   /// The returned cost is defined in terms of \c TargetCostConstants, see its
   /// comments for a detailed explanation of the cost values.
-  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                  TargetCostKind CostKind) const;
+  InstructionCost getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                              TargetCostKind CostKind) const;
 
   /// This is a helper function which calls the two-argument getUserCost
   /// with \p Operands which are the current operands U has.
-  int getUserCost(const User *U, TargetCostKind CostKind) const {
+  InstructionCost getUserCost(const User *U, TargetCostKind CostKind) const {
     SmallVector<const Value *, 4> Operands(U->operand_values());
     return getUserCost(U, Operands, CostKind);
   }
@@ -1199,8 +1197,8 @@ public:
   /// \returns The cost of Intrinsic instructions. Analyses the real arguments.
   /// Three cases are handled: 1. scalar instruction 2. vector instruction
   /// 3. scalar instruction which is to be vectorized.
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind) const;
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
   int getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type *> Tys,
@@ -1373,11 +1371,11 @@ public:
 private:
   /// Estimate the latency of specified instruction.
   /// Returns 1 as the default value.
-  int getInstructionLatency(const Instruction *I) const;
+  InstructionCost getInstructionLatency(const Instruction *I) const;
 
   /// Returns the expected throughput cost of the instruction.
   /// Returns -1 if the cost is unknown.
-  int getInstructionThroughput(const Instruction *I) const;
+  InstructionCost getInstructionThroughput(const Instruction *I) const;
 
   /// The abstract base class used to type erase specific TTI
   /// implementations.
@@ -1405,8 +1403,9 @@ public:
   getEstimatedNumberOfCaseClusters(const SwitchInst &SI, unsigned &JTSize,
                                    ProfileSummaryInfo *PSI,
                                    BlockFrequencyInfo *BFI) = 0;
-  virtual int getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                          TargetCostKind CostKind) = 0;
+  virtual InstructionCost getUserCost(const User *U,
+                                      ArrayRef<const Value *> Operands,
+                                      TargetCostKind CostKind) = 0;
   virtual BranchProbability getPredictableBranchThreshold() = 0;
   virtual bool hasBranchDivergence() = 0;
   virtual bool useGPUDivergenceAnalysis() = 0;
@@ -1608,8 +1607,9 @@ public:
   virtual InstructionCost getExtendedAddReductionCost(
       bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) = 0;
-  virtual int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                    TTI::TargetCostKind CostKind) = 0;
+  virtual InstructionCost
+  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                        TTI::TargetCostKind CostKind) = 0;
   virtual int getCallInstrCost(Function *F, Type *RetTy,
                                ArrayRef<Type *> Tys,
                                TTI::TargetCostKind CostKind) = 0;
@@ -1663,7 +1663,7 @@ public:
   virtual unsigned getGISelRematGlobalCost() const = 0;
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength() const = 0;
-  virtual int getInstructionLatency(const Instruction *I) = 0;
+  virtual InstructionCost getInstructionLatency(const Instruction *I) = 0;
 };
 
 template <typename T>
@@ -1695,8 +1695,8 @@ public:
   int getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);
   }
-  int getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                  TargetCostKind CostKind) override {
+  InstructionCost getUserCost(const User *U, ArrayRef<const Value *> Operands,
+                              TargetCostKind CostKind) override {
     return Impl.getUserCost(U, Operands, CostKind);
   }
   BranchProbability getPredictableBranchThreshold() override {
@@ -2099,8 +2099,8 @@ public:
     return Impl.getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, Ty,
                                             CostKind);
   }
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind) override {
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind) override {
     return Impl.getIntrinsicInstrCost(ICA, CostKind);
   }
   int getCallInstrCost(Function *F, Type *RetTy,
@@ -2216,7 +2216,7 @@ public:
     return Impl.hasActiveVectorLength();
   }
 
-  int getInstructionLatency(const Instruction *I) override {
+  InstructionCost getInstructionLatency(const Instruction *I) override {
     return Impl.getInstructionLatency(I);
   }
 };

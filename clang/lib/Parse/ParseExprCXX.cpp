@@ -690,7 +690,7 @@ ExprResult Parser::ParseCXXIdExpression(bool isAddressOfOperand) {
 ///       lambda-expression:
 ///         lambda-introducer lambda-declarator compound-statement
 ///         lambda-introducer '<' template-parameter-list '>'
-///             lambda-declarator compound-statement
+///             requires-clause[opt] lambda-declarator compound-statement
 ///
 ///       lambda-introducer:
 ///         '[' lambda-capture[opt] ']'
@@ -1392,12 +1392,6 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                 /*DeclsInPrototype=*/None, LParenLoc, FunLocalRangeEnd, D,
                 TrailingReturnType, TrailingReturnTypeLoc, &DS),
             std::move(Attr), DeclEndLoc);
-
-        // Parse requires-clause[opt].
-        if (Tok.is(tok::kw_requires))
-          ParseTrailingRequiresClause(D);
-
-        WarnIfHasCUDATargetAttr();
       };
 
   if (Tok.is(tok::l_paren)) {
@@ -1433,6 +1427,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     // Parse lambda-specifiers.
     ParseLambdaSpecifiers(LParenLoc, /*DeclEndLoc=*/T.getCloseLocation(),
                           ParamInfo, EllipsisLoc);
+
+    // Parse requires-clause[opt].
+    if (Tok.is(tok::kw_requires))
+      ParseTrailingRequiresClause(D);
   } else if (Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
                          tok::kw_constexpr, tok::kw_consteval,
                          tok::kw___private, tok::kw___global, tok::kw___local,
@@ -1452,6 +1450,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     ParseLambdaSpecifiers(/*LParenLoc=*/NoLoc, /*RParenLoc=*/NoLoc,
                           EmptyParamInfo, /*EllipsisLoc=*/NoLoc);
   }
+
+  WarnIfHasCUDATargetAttr();
 
   // FIXME: Rename BlockScope -> ClosureScope if we decide to continue using
   // it.

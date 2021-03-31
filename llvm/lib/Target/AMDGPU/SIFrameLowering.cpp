@@ -1228,7 +1228,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(Spill.size() == 1);
 
     // Save FP before setting it up.
-    // FIXME: This should respect spillSGPRToVGPR;
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(FramePtrReg)
         .addImm(Spill[0].Lane)
@@ -1249,7 +1248,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     assert(Spill.size() == 1);
 
     // Save BP before setting it up.
-    // FIXME: This should respect spillSGPRToVGPR;
     BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::V_WRITELANE_B32), Spill[0].VGPR)
         .addReg(BasePtrReg)
         .addImm(Spill[0].Lane)
@@ -1306,7 +1304,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     }
   }
 
-  if (TRI.needsStackRealignment(MF)) {
+  if (TRI.hasStackRealignment(MF)) {
     HasFP = true;
     const unsigned Alignment = MFI.getMaxAlign().value();
 
@@ -1790,8 +1788,9 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
   }
 
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
-    MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->needsStackRealignment(MF) ||
-    MF.getTarget().Options.DisableFramePointerElim(MF);
+         MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
+             MF) ||
+         MF.getTarget().Options.DisableFramePointerElim(MF);
 }
 
 // This is essentially a reduced version of hasFP for entry functions. Since the

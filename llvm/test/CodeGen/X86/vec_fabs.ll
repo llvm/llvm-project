@@ -9,7 +9,7 @@
 define <2 x double> @fabs_v2f64(<2 x double> %p) {
 ; X86-LABEL: fabs_v2f64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fabs_v2f64:
@@ -24,17 +24,17 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double> %p)
 define <4 x float> @fabs_v4f32(<4 x float> %p) {
 ; X86-AVX-LABEL: fabs_v4f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v4f32:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
+; X86-AVX512VL-NEXT:    vpandd {{\.LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v4f32:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI.*}}{1to4}, %xmm0, %xmm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fabs_v4f32:
@@ -59,17 +59,17 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float> %p)
 define <4 x double> @fabs_v4f64(<4 x double> %p) {
 ; X86-AVX-LABEL: fabs_v4f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v4f64:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    vpandq {{\.LCPI.*}}{1to4}, %ymm0, %ymm0
+; X86-AVX512VL-NEXT:    vpandq {{\.LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v4f64:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    vandpd {{\.LCPI.*}}{1to4}, %ymm0, %ymm0
+; X86-AVX512VLDQ-NEXT:    vandpd {{\.LCPI[0-9]+_[0-9]+}}{1to4}, %ymm0, %ymm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fabs_v4f64:
@@ -94,17 +94,17 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
 define <8 x float> @fabs_v8f32(<8 x float> %p) {
 ; X86-AVX-LABEL: fabs_v8f32:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v8f32:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to8}, %ymm0, %ymm0
+; X86-AVX512VL-NEXT:    vpandd {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v8f32:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI.*}}{1to8}, %ymm0, %ymm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fabs_v8f32:
@@ -136,12 +136,12 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) {
 ;
 ; X86-AVX512VL-LABEL: fabs_v8f64:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    vpandq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
+; X86-AVX512VL-NEXT:    vpandq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v8f64:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    vandpd {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
+; X86-AVX512VLDQ-NEXT:    vandpd {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fabs_v8f64:
@@ -175,12 +175,12 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) {
 ;
 ; X86-AVX512VL-LABEL: fabs_v16f32:
 ; X86-AVX512VL:       # %bb.0:
-; X86-AVX512VL-NEXT:    vpandd {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; X86-AVX512VL-NEXT:    vpandd {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v16f32:
 ; X86-AVX512VLDQ:       # %bb.0:
-; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-AVX-LABEL: fabs_v16f32:

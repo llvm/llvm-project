@@ -3,7 +3,7 @@
 #include "Inputs/cuda.h"
 
 // CHECK-NOT: Function Attrs: {{.*}} optnone
-// CHECK-NOT: Function Attrs: {{.*}} noinline
+// removed  : Function Attrs: {{.*}} noinline
 
 __device__ void foo() {
 }

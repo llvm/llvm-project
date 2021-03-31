@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -linalg-generalize-named-ops | FileCheck %s
 
-func @generalize_conv(%input : memref<1x225x225x3xf32>, %filter: memref<3x3x3x32xf32>, %output: memref<1x112x112x32xf32>) {
-  linalg.conv(%filter, %input, %output) {dilations = [2, 3], strides = [4, 5]} : memref<3x3x3x32xf32>, memref<1x225x225x3xf32>, memref<1x112x112x32xf32>
+func @generalize_conv(%input : memref<1x449x562x3xf32>, %filter: memref<3x3x3x32xf32>, %output: memref<1x112x112x32xf32>) {
+  linalg.conv(%filter, %input, %output) {dilations = [2, 3], strides = [4, 5]} : memref<3x3x3x32xf32>, memref<1x449x562x3xf32>, memref<1x112x112x32xf32>
   return
 }
 
@@ -10,7 +10,7 @@ func @generalize_conv(%input : memref<1x225x225x3xf32>, %filter: memref<3x3x3x32
 // CHECK: #[[OUTPUT_MAP:.+]] = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1, d2, d3)>
 
 // CHECK: func @generalize_conv
-// CHECK-SAME:  %[[INPUT:.+]]: memref<1x225x225x3xf32>
+// CHECK-SAME:  %[[INPUT:.+]]: memref<1x449x562x3xf32>
 // CHECK-SAME: %[[FILTER:.+]]: memref<3x3x3x32xf32>
 // CHECK-SAME: %[[OUTPUT:.+]]: memref<1x112x112x32xf32>
 

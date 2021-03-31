@@ -1862,17 +1862,8 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
     lldb::addr_t file_vm_addr = so_addr.GetFileAddress();
 
     DWARFDebugInfo &debug_info = DebugInfo();
-    llvm::Expected<DWARFDebugAranges &> aranges =
-        debug_info.GetCompileUnitAranges();
-    if (!aranges) {
-      Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
-      LLDB_LOG_ERROR(log, aranges.takeError(),
-                     "SymbolFileDWARF::ResolveSymbolContext failed to get cu "
-                     "aranges.  {0}");
-      return 0;
-    }
-
-    const dw_offset_t cu_offset = aranges->FindAddress(file_vm_addr);
+    const DWARFDebugAranges &aranges = debug_info.GetCompileUnitAranges();
+    const dw_offset_t cu_offset = aranges.FindAddress(file_vm_addr);
     if (cu_offset == DW_INVALID_OFFSET) {
       // Global variables are not in the compile unit address ranges. The only
       // way to currently find global variables is to iterate over the

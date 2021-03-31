@@ -1444,8 +1444,8 @@ void AsmPrinter::emitFunctionBody() {
   }
 
   // Emit section containing BB address offsets and their metadata, when
-  // BB labels are requested for this function.
-  if (MF->hasBBLabels())
+  // BB labels are requested for this function. Skip empty functions.
+  if (MF->hasBBLabels() && HasAnyRealCode)
     emitBBAddrMapSection(*MF);
 
   // Emit section containing stack size metadata.

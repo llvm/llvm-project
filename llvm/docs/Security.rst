@@ -29,6 +29,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Artur Pilipenko (Azul Systems Inc)
 * Dimitry Andric (individual; FreeBSD)
 * Ed Maste (individual; FreeBSD)
+* George Burgess IV (Google)
 * Josh Eads (Sony)
 * Kristof Beyls (ARM)
 * Matthew Riley (Google)

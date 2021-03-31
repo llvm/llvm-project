@@ -37,6 +37,12 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+In the default configuration, the tests are built against headers that form a
+fake installation root of libc++. This installation root has to be updated when
+changes are made to the headers, so you should re-run the `cxx-test-depends`
+target before running the tests manually with `lit` when you make any sort of
+change, including to the headers.
+
 Sometimes you'll want to change the way LIT is running the tests. Custom options
 can be specified using the `--param=<name>=<val>` flag. The most common option
 you'll want to change is the standard dialect (ie -std=c++XX). By default the

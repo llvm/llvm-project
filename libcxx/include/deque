@@ -1586,18 +1586,18 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _Alloc = allocator<typename iterator_traits<_InputIterator>::value_type>,
-         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+         class = _EnableIf<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator)
-  -> deque<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+  -> deque<__iter_value_type<_InputIterator>, _Alloc>;
 
 template<class _InputIterator,
          class _Alloc,
-         class = typename enable_if<__is_allocator<_Alloc>::value, void>::type
+         class = _EnableIf<__is_allocator<_Alloc>::value>
          >
 deque(_InputIterator, _InputIterator, _Alloc)
-  -> deque<typename iterator_traits<_InputIterator>::value_type, _Alloc>;
+  -> deque<__iter_value_type<_InputIterator>, _Alloc>;
 #endif
 
 

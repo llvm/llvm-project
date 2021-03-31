@@ -13,16 +13,16 @@ func @forward_dead_store(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c4 = constant 4 : index
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
-  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {masked = [false, false]} :
+  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
     memref<4x4xf32>, vector<1x4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
     -> (vector<1x4xf32>) {
     %1 = addf %acc, %acc : vector<1x4xf32>
     scf.yield %1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -40,18 +40,18 @@ func @forward_nested(%arg0: i1, %arg1 : memref<4x4xf32>, %v0 : vector<1x4xf32>,
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %cf0 = constant 0.0 : f32
-  vector.transfer_write %v1, %arg1[%i, %c0] {masked = [false, false]} :
+  vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
-  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {masked = [false, false]} :
+    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c0, %c0] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c0, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -73,18 +73,18 @@ func @forward_nested_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %cf0 = constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {masked = [false, false]} :
+    %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
-    vector.transfer_write %v1, %arg1[%i, %c0] {masked = [false, false]} :
+    vector.transfer_write %v1, %arg1[%i, %c0] {in_bounds = [true, true]} :
       vector<1x4xf32>, memref<4x4xf32>
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c0, %i] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c0, %i] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -108,24 +108,24 @@ func @dead_store_region(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %cf0 = constant 0.0 : f32
-  vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
     scf.yield %v1 : vector<1x4xf32>
   } else {
-    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {masked = [false, false]} :
+    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   }
   scf.if %arg0 {
-    vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
       vector<1x4xf32>, memref<4x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
-  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
-  %1 = vector.transfer_read %arg1[%i, %c0], %cf0 {masked = [false, false]} :
+  %1 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
     memref<4x4xf32>, vector<1x4xf32>
   return %1 : vector<1x4xf32>
 }
@@ -144,15 +144,15 @@ func @dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
   %c1 = constant 1 : index
   %cf0 = constant 0.0 : f32
   %x = scf.if %arg0 -> (vector<1x4xf32>) {
-    vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+    vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
       vector<1x4xf32>, memref<4x4xf32>
-    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {masked = [false, false]} :
+    %0 = vector.transfer_read %arg1[%i, %c0], %cf0 {in_bounds = [true, true]} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.yield %0 : vector<1x4xf32>
   } else {
     scf.yield %v1 : vector<1x4xf32>
   }
-  vector.transfer_write %x, %arg1[%c1, %c0] {masked = [false, false]} :
+  vector.transfer_write %x, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, memref<4x4xf32>
   return
 }
@@ -172,13 +172,13 @@ func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32>,
   %c1 = constant 1 : index
   %cf0 = constant 0.0 : f32
   scf.if %arg0 {
-    %0 = vector.transfer_read %arg2[%i, %c0], %cf0 {masked = [false, false]} :
+    %0 = vector.transfer_read %arg2[%i, %c0], %cf0 {in_bounds = [true, true]} :
       memref<4x4xf32>, vector<1x4xf32>
     scf.if %arg1 {
-      vector.transfer_write %v1, %arg2[%c1, %c0] {masked = [false, false]} :
+      vector.transfer_write %v1, %arg2[%c1, %c0] {in_bounds = [true, true]} :
         vector<1x4xf32>, memref<4x4xf32>
     }
-    vector.transfer_write %v0, %arg2[%c1, %c0] {masked = [false, false]} :
+    vector.transfer_write %v0, %arg2[%c1, %c0] {in_bounds = [true, true]} :
       vector<1x4xf32>, memref<4x4xf32>
   }
   return
@@ -197,16 +197,16 @@ func @forward_dead_store_tensor(%arg0: i1, %arg1 : tensor<4x4xf32>,
   %c4 = constant 4 : index
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg1[%c1, %c0] {masked = [false, false]} :
+  %w0 = vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {masked = [false, false]} :
+  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {in_bounds = [true, true]} :
     tensor<4x4xf32>, vector<1x4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
     -> (vector<1x4xf32>) {
     %1 = addf %acc, %acc : vector<1x4xf32>
     scf.yield %1 : vector<1x4xf32>
   }
-  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {masked = [false, false]} :
+  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w1 : tensor<4x4xf32>
 }
@@ -224,16 +224,16 @@ func @forward_dead_store_negative_tensor(%arg0: i1, %arg1 : tensor<4x4xf32>,
   %c4 = constant 4 : index
   %c0 = constant 0 : index
   %cf0 = constant 0.0 : f32
-  %w0 = vector.transfer_write %v0, %arg1[%c1, %i] {masked = [false, false]} :
+  %w0 = vector.transfer_write %v0, %arg1[%c1, %i] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
-  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {masked = [false, false]} :
+  %0 = vector.transfer_read %w0[%c1, %c0], %cf0 {in_bounds = [true, true]} :
     tensor<4x4xf32>, vector<1x4xf32>
   %x = scf.for %i0 = %c0 to %c4 step %c1 iter_args(%acc = %0)
     -> (vector<1x4xf32>) {
     %1 = addf %acc, %acc : vector<1x4xf32>
     scf.yield %1 : vector<1x4xf32>
   }
-  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {masked = [false, false]} :
+  %w1 = vector.transfer_write %x, %w0[%c1, %c0] {in_bounds = [true, true]} :
     vector<1x4xf32>, tensor<4x4xf32>
   return %w1 : tensor<4x4xf32>
 }

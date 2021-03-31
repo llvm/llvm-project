@@ -121,18 +121,18 @@ enum class VectorTransposeLowering {
   /// intrinsics.
   Flat = 1,
 };
-/// Enum to control the splitting of `vector.transfer` operations into masked
-/// and unmasked variants.
+/// Enum to control the splitting of `vector.transfer` operations into
+/// in-bounds and out-of-bounds variants.
 enum class VectorTransferSplit {
   /// Do not split vector transfer operations.
   None = 0,
-  /// Split using masked + unmasked vector.transfer operations.
+  /// Split using in-bounds + out-of-bounds vector.transfer operations.
   VectorTransfer = 1,
-  /// Split using a unmasked vector.transfer + linalg.fill + linalg.copy
+  /// Split using an in-bounds vector.transfer + linalg.fill + linalg.copy
   /// operations.
   LinalgCopy = 2,
-  /// Do not split vector transfer operation but instead mark it as "unmasked".
-  ForceUnmasked = 3
+  /// Do not split vector transfer operation but instead mark it as "in-bounds".
+  ForceInBounds = 3
 };
 /// Structure to control the behavior of vector transform patterns.
 struct VectorTransformsOptions {

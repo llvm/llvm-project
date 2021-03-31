@@ -3046,3 +3046,114 @@ middle.block:
   %11 = extractelement <8 x i32> %bin.rdx34, i32 0
   ret i32 %11
 }
+
+; PR49716 - https://llvm.org/PR49716
+
+define <4 x i32> @input_size_mismatch(<16 x i16> %x, <16 x i16>* %p) {
+; SSE2-LABEL: input_size_mismatch:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pmaddwd (%rdi), %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: input_size_mismatch:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmaddwd (%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %y = load <16 x i16>, <16 x i16>* %p, align 32
+  %x0 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %x1 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %y0 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %y1 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %sx0 = sext <4 x i16> %x0 to <4 x i32>
+  %sx1 = sext <4 x i16> %x1 to <4 x i32>
+  %sy0 = sext <4 x i16> %y0 to <4 x i32>
+  %sy1 = sext <4 x i16> %y1 to <4 x i32>
+  %m0 = mul <4 x i32> %sx0, %sy0
+  %m1 = mul <4 x i32> %sx1, %sy1
+  %r = add <4 x i32> %m0, %m1
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @output_size_mismatch(<16 x i16> %x, <16 x i16> %y) {
+; SSE2-LABEL: output_size_mismatch:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: output_size_mismatch:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmaddwd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %x0 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %x1 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %y0 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %y1 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %sx0 = sext <4 x i16> %x0 to <4 x i32>
+  %sx1 = sext <4 x i16> %x1 to <4 x i32>
+  %sy0 = sext <4 x i16> %y0 to <4 x i32>
+  %sy1 = sext <4 x i16> %y1 to <4 x i32>
+  %m0 = mul <4 x i32> %sx0, %sy0
+  %m1 = mul <4 x i32> %sx1, %sy1
+  %r = add <4 x i32> %m0, %m1
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @output_size_mismatch_high_subvector(<16 x i16> %x, <16 x i16> %y) {
+; SSE2-LABEL: output_size_mismatch_high_subvector:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pmaddwd %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; AVX1-LABEL: output_size_mismatch_high_subvector:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpshufb %xmm2, %xmm0, %xmm3
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
+; AVX1-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
+; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpmovsxwd %xmm3, %xmm3
+; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX1-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
+; AVX1-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX256-LABEL: output_size_mismatch_high_subvector:
+; AVX256:       # %bb.0:
+; AVX256-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX256-NEXT:    vpshufb %xmm2, %xmm0, %xmm3
+; AVX256-NEXT:    vmovdqa {{.*#+}} xmm4 = [2,3,6,7,10,11,14,15,14,15,10,11,12,13,14,15]
+; AVX256-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
+; AVX256-NEXT:    vpshufb %xmm2, %xmm1, %xmm2
+; AVX256-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
+; AVX256-NEXT:    vpmovsxwd %xmm3, %xmm3
+; AVX256-NEXT:    vpmovsxwd %xmm0, %xmm0
+; AVX256-NEXT:    vpmovsxwd %xmm2, %xmm2
+; AVX256-NEXT:    vpmulld %xmm2, %xmm3, %xmm2
+; AVX256-NEXT:    vpmovsxwd %xmm1, %xmm1
+; AVX256-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX256-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; AVX256-NEXT:    vzeroupper
+; AVX256-NEXT:    retq
+  %x0 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 8, i32 10, i32 12, i32 14>
+  %x1 = shufflevector <16 x i16> %x, <16 x i16> undef, <4 x i32> <i32 9, i32 11, i32 13, i32 15>
+  %y0 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %y1 = shufflevector <16 x i16> %y, <16 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %sx0 = sext <4 x i16> %x0 to <4 x i32>
+  %sx1 = sext <4 x i16> %x1 to <4 x i32>
+  %sy0 = sext <4 x i16> %y0 to <4 x i32>
+  %sy1 = sext <4 x i16> %y1 to <4 x i32>
+  %m0 = mul <4 x i32> %sx0, %sy0
+  %m1 = mul <4 x i32> %sx1, %sy1
+  %r = add <4 x i32> %m0, %m1
+  ret <4 x i32> %r
+}

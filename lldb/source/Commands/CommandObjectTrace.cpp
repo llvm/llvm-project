@@ -23,6 +23,7 @@
 #include "lldb/Interpreter/OptionValueLanguage.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/Trace.h"
 
 using namespace lldb;
@@ -113,8 +114,9 @@ protected:
       return end_with_failure(session_file.takeError());
 
     if (Expected<lldb::TraceSP> traceOrErr =
-            Trace::FindPlugin(GetDebugger(), *session_file,
-                              json_file.GetDirectory().AsCString())) {
+            Trace::FindPluginForPostMortemProcess(
+                GetDebugger(), *session_file,
+                json_file.GetDirectory().AsCString())) {
       lldb::TraceSP trace_sp = traceOrErr.get();
       if (m_options.m_verbose && trace_sp)
         result.AppendMessageWithFormat("loading trace with plugin %s\n",
@@ -303,3 +305,33 @@ CommandObjectTrace::CommandObjectTrace(CommandInterpreter &interpreter)
 }
 
 CommandObjectTrace::~CommandObjectTrace() = default;
+
+Expected<CommandObjectSP> CommandObjectTraceProxy::DoGetProxyCommandObject() {
+  ProcessSP process_sp = m_interpreter.GetExecutionContext().GetProcessSP();
+
+  if (!process_sp)
+    return createStringError(inconvertibleErrorCode(),
+                             "Process not available.");
+  if (m_live_debug_session_only && !process_sp->IsLiveDebugSession())
+    return createStringError(inconvertibleErrorCode(),
+                             "Process must be alive.");
+
+  if (Expected<TraceSP &> trace_sp = process_sp->GetTarget().GetTraceOrCreate())
+    return GetDelegateCommand(**trace_sp);
+  else
+    return createStringError(inconvertibleErrorCode(),
+                             "Tracing is not supported. %s",
+                             toString(trace_sp.takeError()).c_str());
+}
+
+CommandObject *CommandObjectTraceProxy::GetProxyCommandObject() {
+  if (Expected<CommandObjectSP> delegate = DoGetProxyCommandObject()) {
+    m_delegate_sp = *delegate;
+    m_delegate_error.clear();
+    return m_delegate_sp.get();
+  } else {
+    m_delegate_sp.reset();
+    m_delegate_error = toString(delegate.takeError());
+    return nullptr;
+  }
+}

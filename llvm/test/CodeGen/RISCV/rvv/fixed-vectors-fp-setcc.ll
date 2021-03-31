@@ -285,9 +285,8 @@ define void @fcmp_ult_vv_v8f64(<8 x double>* %x, <8 x double>* %y, <8 x i1>* %z)
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vle64.v v8, (a1)
 ; CHECK-NEXT:    vmfle.vv v25, v8, v28
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
-; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vse1.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -358,8 +357,8 @@ define void @fcmp_ueq_vv_v32f32(<32 x float>* %x, <32 x float>* %y, <32 x i1>* %
 ; CHECK-NEXT:    vsetvli a4, a3, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vle32.v v16, (a1)
-; CHECK-NEXT:    vmflt.vv v25, v16, v8
-; CHECK-NEXT:    vmflt.vv v26, v8, v16
+; CHECK-NEXT:    vmflt.vv v25, v8, v16
+; CHECK-NEXT:    vmflt.vv v26, v16, v8
 ; CHECK-NEXT:    vsetvli a0, a3, e8,m2,ta,mu
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a2)
@@ -395,8 +394,8 @@ define void @fcmp_one_vv_v8f64(<16 x double>* %x, <16 x double>* %y, <16 x i1>* 
 ; CHECK-NEXT:    vsetivli a3, 16, e64,m8,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vle64.v v16, (a1)
-; CHECK-NEXT:    vmflt.vv v25, v16, v8
-; CHECK-NEXT:    vmflt.vv v26, v8, v16
+; CHECK-NEXT:    vmflt.vv v25, v8, v16
+; CHECK-NEXT:    vmflt.vv v26, v16, v8
 ; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a2)
@@ -433,9 +432,8 @@ define void @fcmp_ord_vv_v4f16(<4 x half>* %x, <4 x half>* %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmfeq.vv v27, v25, v25
 ; CHECK-NEXT:    vmfeq.vv v25, v26, v26
-; CHECK-NEXT:    vsetivli a0, 4, e8,mf2,ta,mu
-; CHECK-NEXT:    vmand.mm v25, v25, v27
 ; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vmand.mm v25, v25, v27
 ; CHECK-NEXT:    vse1.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
@@ -453,9 +451,8 @@ define void @fcmp_uno_vv_v4f16(<2 x half>* %x, <2 x half>* %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vle16.v v26, (a0)
 ; CHECK-NEXT:    vmfne.vv v27, v25, v25
 ; CHECK-NEXT:    vmfne.vv v25, v26, v26
-; CHECK-NEXT:    vsetivli a0, 2, e8,mf2,ta,mu
-; CHECK-NEXT:    vmor.mm v25, v25, v27
 ; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vmor.mm v25, v25, v27
 ; CHECK-NEXT:    vse1.v v25, (a2)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
@@ -747,9 +744,8 @@ define void @fcmp_ult_vf_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmfge.vf v25, v28, fa0
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
-; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -820,8 +816,8 @@ define void @fcmp_ueq_vf_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli a3, a2, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
-; CHECK-NEXT:    vmflt.vf v26, v8, fa0
+; CHECK-NEXT:    vmflt.vf v25, v8, fa0
+; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, a2, e8,m2,ta,mu
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
@@ -857,8 +853,8 @@ define void @fcmp_one_vf_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a2, 16, e64,m8,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
-; CHECK-NEXT:    vmflt.vf v26, v8, fa0
+; CHECK-NEXT:    vmflt.vf v25, v8, fa0
+; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
 ; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
@@ -896,9 +892,8 @@ define void @fcmp_ord_vf_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfeq.vf v27, v26, fa0
 ; CHECK-NEXT:    vmfeq.vv v26, v25, v25
-; CHECK-NEXT:    vsetivli a0, 4, e8,mf2,ta,mu
-; CHECK-NEXT:    vmand.mm v25, v26, v27
 ; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vmand.mm v25, v26, v27
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
@@ -917,9 +912,8 @@ define void @fcmp_uno_vf_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vmfne.vf v27, v26, fa0
 ; CHECK-NEXT:    vmfne.vv v26, v25, v25
-; CHECK-NEXT:    vsetivli a0, 2, e8,mf2,ta,mu
-; CHECK-NEXT:    vmor.mm v25, v26, v27
 ; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vmor.mm v25, v26, v27
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x
@@ -1212,9 +1206,8 @@ define void @fcmp_ult_fv_v8f64(<8 x double>* %x, double %y, <8 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 8, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    vmfle.vf v25, v28, fa0
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
-; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vsetivli a0, 8, e8,m1,ta,mu
+; CHECK-NEXT:    vmnand.mm v25, v25, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <8 x double>, <8 x double>* %x
@@ -1285,8 +1278,8 @@ define void @fcmp_ueq_fv_v32f32(<32 x float>* %x, float %y, <32 x i1>* %z) {
 ; CHECK-NEXT:    addi a2, zero, 32
 ; CHECK-NEXT:    vsetvli a3, a2, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vmflt.vf v25, v8, fa0
-; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
+; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
+; CHECK-NEXT:    vmflt.vf v26, v8, fa0
 ; CHECK-NEXT:    vsetvli a0, a2, e8,m2,ta,mu
 ; CHECK-NEXT:    vmnor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
@@ -1322,8 +1315,8 @@ define void @fcmp_one_fv_v8f64(<16 x double>* %x, double %y, <16 x i1>* %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli a2, 16, e64,m8,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmflt.vf v25, v8, fa0
-; CHECK-NEXT:    vmfgt.vf v26, v8, fa0
+; CHECK-NEXT:    vmfgt.vf v25, v8, fa0
+; CHECK-NEXT:    vmflt.vf v26, v8, fa0
 ; CHECK-NEXT:    vsetivli a0, 16, e8,m1,ta,mu
 ; CHECK-NEXT:    vmor.mm v25, v26, v25
 ; CHECK-NEXT:    vse1.v v25, (a1)
@@ -1359,11 +1352,10 @@ define void @fcmp_ord_fv_v4f16(<4 x half>* %x, half %y, <4 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 4, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
-; CHECK-NEXT:    vmfeq.vf v27, v26, fa0
-; CHECK-NEXT:    vmfeq.vv v26, v25, v25
-; CHECK-NEXT:    vsetivli a0, 4, e8,mf2,ta,mu
-; CHECK-NEXT:    vmand.mm v25, v27, v26
+; CHECK-NEXT:    vmfeq.vv v27, v25, v25
+; CHECK-NEXT:    vmfeq.vf v25, v26, fa0
 ; CHECK-NEXT:    vsetivli a0, 4, e8,m1,ta,mu
+; CHECK-NEXT:    vmand.mm v25, v25, v27
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, <4 x half>* %x
@@ -1380,11 +1372,10 @@ define void @fcmp_uno_fv_v4f16(<2 x half>* %x, half %y, <2 x i1>* %z) {
 ; CHECK-NEXT:    vsetivli a2, 2, e16,m1,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
-; CHECK-NEXT:    vmfne.vf v27, v26, fa0
-; CHECK-NEXT:    vmfne.vv v26, v25, v25
-; CHECK-NEXT:    vsetivli a0, 2, e8,mf2,ta,mu
-; CHECK-NEXT:    vmor.mm v25, v27, v26
+; CHECK-NEXT:    vmfne.vv v27, v25, v25
+; CHECK-NEXT:    vmfne.vf v25, v26, fa0
 ; CHECK-NEXT:    vsetivli a0, 2, e8,m1,ta,mu
+; CHECK-NEXT:    vmor.mm v25, v25, v27
 ; CHECK-NEXT:    vse1.v v25, (a1)
 ; CHECK-NEXT:    ret
   %a = load <2 x half>, <2 x half>* %x

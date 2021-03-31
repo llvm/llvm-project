@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -16,6 +17,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
@@ -463,6 +465,76 @@ OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// CloneOp
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(CloneOp op) { return success(); }
+
+void CloneOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(MemoryEffects::Read::get(), input(),
+                       SideEffects::DefaultResource::get());
+  effects.emplace_back(MemoryEffects::Write::get(), output(),
+                       SideEffects::DefaultResource::get());
+}
+
+namespace {
+/// Fold Dealloc operations that are deallocating an AllocOp that is only used
+/// by other Dealloc operations.
+struct SimplifyClones : public OpRewritePattern<CloneOp> {
+  using OpRewritePattern<CloneOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CloneOp cloneOp,
+                                PatternRewriter &rewriter) const override {
+    if (cloneOp.use_empty()) {
+      rewriter.eraseOp(cloneOp);
+      return success();
+    }
+
+    Value source = cloneOp.input();
+
+    // Removes the clone operation and the corresponding dealloc and alloc
+    // operation (if any).
+    auto tryRemoveClone = [&](Operation *sourceOp, Operation *dealloc,
+                              Operation *alloc) {
+      if (!sourceOp || !dealloc || !alloc ||
+          alloc->getBlock() != dealloc->getBlock())
+        return false;
+      rewriter.replaceOp(cloneOp, source);
+      rewriter.eraseOp(dealloc);
+      return true;
+    };
+
+    // Removes unnecessary clones that are derived from the result of the clone
+    // op.
+    Operation *deallocOp = findDealloc(cloneOp.output());
+    Operation *sourceOp = source.getDefiningOp();
+    if (tryRemoveClone(sourceOp, deallocOp, sourceOp))
+      return success();
+
+    // Removes unnecessary clones that are derived from the source of the clone
+    // op.
+    deallocOp = findDealloc(source);
+    if (tryRemoveClone(sourceOp, deallocOp, cloneOp))
+      return success();
+
+    return failure();
+  }
+};
+
+} // end anonymous namespace.
+
+void CloneOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+                                          MLIRContext *context) {
+  results.insert<SimplifyClones>(context);
+}
+
+OpFoldResult CloneOp::fold(ArrayRef<Attribute> operands) {
+  return succeeded(foldMemRefCast(*this)) ? getResult() : Value();
+}
+
+//===----------------------------------------------------------------------===//
 // DeallocOp
 //===----------------------------------------------------------------------===//
 namespace {
@@ -673,12 +745,84 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
+
+/// Helper method to get the `Value` that is the shape of the `resultIdx`-th
+/// result at dimension `dimIndex` from the `ShapedTypeOpInterface`.
+/// TODO(ravishankarm): This is better put as a interface utility method
+/// somewhere, but that would imply the interface will depend on the `tensor`
+/// dialect. Ideally maybe a utility method in the `tensor` dialect.
+static Value getResultDimFromShapeInterface(OpBuilder &builder, OpResult result,
+                                            int64_t dimIndex) {
+  unsigned resultNumber = result.getResultNumber();
+  auto shapedTypeOp = dyn_cast<InferShapedTypeOpInterface>(result.getOwner());
+  Location loc = result.getOwner()->getLoc();
+  if (!shapedTypeOp)
+    return nullptr;
+
+  // The interface exposes two methods, one that returns the shape of all the
+  // results as `Value` and other that returns the shape as a list of
+  // `SmallVector<Value>`. The former takes precedence over the latter. So first
+  // check if the op implements the first interface method or the second, and
+  // get the value to use appropriately.
+  SmallVector<Value> reifiedResultShapes;
+  if (succeeded(
+          shapedTypeOp.reifyReturnTypeShapes(builder, reifiedResultShapes))) {
+    if (reifiedResultShapes.size() <= resultNumber)
+      return nullptr;
+    Value resultShape = reifiedResultShapes[resultNumber];
+    auto resultShapeType = resultShape.getType().dyn_cast<RankedTensorType>();
+    if (!resultShapeType || !resultShapeType.getElementType().isa<IndexType>())
+      return nullptr;
+    return builder.create<tensor::ExtractOp>(
+        loc, resultShape, builder.createOrFold<ConstantIndexOp>(loc, dimIndex));
+  }
+
+  SmallVector<SmallVector<Value>> reifiedResultShapesPerDim;
+  if (failed(shapedTypeOp.reifyReturnTypeShapesPerResultDim(
+          builder, reifiedResultShapesPerDim)))
+    return nullptr;
+  if (reifiedResultShapesPerDim.size() <= resultNumber ||
+      reifiedResultShapesPerDim[resultNumber].size() !=
+          static_cast<size_t>(result.getType().cast<ShapedType>().getRank()))
+    return nullptr;
+  OpFoldResult valueOrAttr = reifiedResultShapesPerDim[resultNumber][dimIndex];
+  if (auto attr = valueOrAttr.dyn_cast<Attribute>())
+    return builder.createOrFold<ConstantIndexOp>(
+        loc, attr.cast<IntegerAttr>().getInt());
+  return valueOrAttr.get<Value>();
+}
+
+/// Fold dim of an operation that implements the InferShapedTypeOpInterface
+struct DimOfShapedTypeOpInterface : public OpRewritePattern<DimOp> {
+  using OpRewritePattern<DimOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DimOp dimOp,
+                                PatternRewriter &rewriter) const override {
+    OpResult dimValue = dimOp.memrefOrTensor().dyn_cast<OpResult>();
+    if (!dimValue)
+      return failure();
+    auto shapedTypeOp =
+        dyn_cast<InferShapedTypeOpInterface>(dimValue.getOwner());
+    if (!shapedTypeOp)
+      return failure();
+
+    Optional<int64_t> dimIndex = dimOp.getConstantIndex();
+    if (!dimIndex)
+      return failure();
+    Value replacement =
+        getResultDimFromShapeInterface(rewriter, dimValue, *dimIndex);
+    if (!replacement)
+      return failure();
+    rewriter.replaceOp(dimOp, replacement);
+    return success();
+  }
+};
 } // end anonymous namespace.
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
-              DimOfCastOp<tensor::CastOp>>(context);
+              DimOfCastOp<tensor::CastOp>, DimOfShapedTypeOpInterface>(context);
 }
 
 // ---------------------------------------------------------------------------

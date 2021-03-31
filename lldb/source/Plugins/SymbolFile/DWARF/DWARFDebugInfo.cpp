@@ -34,17 +34,18 @@ DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
                                lldb_private::DWARFContext &context)
     : m_dwarf(dwarf), m_context(context), m_units(), m_cu_aranges_up() {}
 
-llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
+const DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
   if (m_cu_aranges_up)
     return *m_cu_aranges_up;
 
   m_cu_aranges_up = std::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
       m_context.getOrLoadArangesData();
-  if (llvm::Error error = m_cu_aranges_up->extract(debug_aranges_data))
-    return std::move(error);
 
-  // Make a list of all CUs represented by the arange data in the file.
+  // Extract what we can from the .debug_aranges first.
+  m_cu_aranges_up->extract(debug_aranges_data);
+
+  // Make a list of all CUs represented by the .debug_aranges data.
   std::set<dw_offset_t> cus_with_data;
   for (size_t n = 0; n < m_cu_aranges_up->GetNumRanges(); n++) {
     dw_offset_t offset = m_cu_aranges_up->OffsetAtIndex(n);
@@ -52,8 +53,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
       cus_with_data.insert(offset);
   }
 
-  // Manually build arange data for everything that wasn't in the
-  // .debug_aranges table.
+  // Manually build arange data for everything that wasn't in .debug_aranges.
   const size_t num_units = GetNumUnits();
   for (size_t idx = 0; idx < num_units; ++idx) {
     DWARFUnit *cu = GetUnitAtIndex(idx);

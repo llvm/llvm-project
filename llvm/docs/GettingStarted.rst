@@ -561,31 +561,6 @@ commit XYZ". Leave this at the end of the commit message, but add some details
 before it as to why the commit is being reverted. A brief explanation and/or
 links to bots that demonstrate the problem are sufficient.
 
-Checkout via SVN (deprecated)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The SVN repository is no longer updated, but it is still available for now. If
-you need to check the code out of SVN rather than git for some reason, you can
-do it like so:
-
-* ``cd where-you-want-llvm-to-live``
-* Read-Only: ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
-* Read-Write: ``svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm``
-
-This will create an '``llvm``' directory in the current directory and fully
-populate it with the LLVM source code, Makefiles, test directories, and local
-copies of documentation files.
-
-If you want to get a specific release (as opposed to the most recent revision),
-you can check it out from the '``tags``' directory (instead of '``trunk``'). The
-following releases are located in the following subdirectories of the '``tags``'
-directory:
-
-* Release 3.5.0 and later: **RELEASE_350/final** and so on
-* Release 2.9 through 3.4: **RELEASE_29/final** and so on
-* Release 1.1 through 2.8: **RELEASE_11** and so on
-* Release 1.0: **RELEASE_1**
-
 Local LLVM Configuration
 ------------------------
 

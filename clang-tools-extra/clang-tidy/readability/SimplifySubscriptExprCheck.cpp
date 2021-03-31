@@ -32,7 +32,7 @@ void SimplifySubscriptExprCheck::registerMatchers(MatchFinder *Finder) {
           llvm::SmallVector<StringRef, 8>(Types.begin(), Types.end()))))));
 
   Finder->addMatcher(
-      arraySubscriptExpr(hasBase(ignoringParenImpCasts(
+      arraySubscriptExpr(hasBase(
           cxxMemberCallExpr(
               has(memberExpr().bind("member")),
               on(hasType(qualType(
@@ -40,7 +40,7 @@ void SimplifySubscriptExprCheck::registerMatchers(MatchFinder *Finder) {
                                hasDescendant(substTemplateTypeParmType()))),
                   anyOf(TypesMatcher, pointerType(pointee(TypesMatcher)))))),
               callee(namedDecl(hasName("data"))))
-              .bind("call")))),
+              .bind("call"))),
       this);
 }
 

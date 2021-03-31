@@ -52,6 +52,10 @@ enum LLVMConstants : uint32_t {
   DEBUG_METADATA_VERSION = 3 // Current debug info version number.
 };
 
+/// Magic number in the value profile metadata showing a target has been
+/// promoted for the instruction and shouldn't be promoted again.
+const uint64_t NOMORE_ICP_MAGICNUM = -1;
+
 /// Root of the metadata hierarchy.
 ///
 /// This is a root class for typeless data in the IR.

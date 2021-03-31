@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10 %s
 
 define double @v_trig_preop_f64(double %a, i32 %b) {
 ; GCN-LABEL: v_trig_preop_f64:
@@ -9,6 +10,13 @@ define double @v_trig_preop_f64(double %a, i32 %b) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_trig_preop_f64:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], v2
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 %b)
   ret double %result
 }
@@ -19,6 +27,13 @@ define double @v_trig_preop_f64_imm(double %a, i32 %b) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], 7
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v_trig_preop_f64_imm:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], 7
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 7)
   ret double %result
 }

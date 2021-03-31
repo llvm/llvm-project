@@ -234,9 +234,7 @@ void CSProfileGenerator::generateProfile() {
   // body sample.
   populateInferredFunctionSamples();
 
-  // Compute hot/cold threshold based on profile. This will be used for cold
-  // context profile merging/trimming.
-  computeSummaryAndThreshold();
+  postProcessProfiles();
 }
 
 void CSProfileGenerator::updateBodySamplesforFunctionProfile(
@@ -392,6 +390,20 @@ void CSProfileGenerator::populateInferredFunctionSamples() {
   }
 }
 
+void CSProfileGenerator::postProcessProfiles() {
+  // Compute hot/cold threshold based on profile. This will be used for cold
+  // context profile merging/trimming.
+  computeSummaryAndThreshold();
+
+  // Run global pre-inliner to adjust/merge context profile based on estimated
+  // inline decisions.
+  CSPreInliner(ProfileMap, PSI->getHotCountThreshold(),
+               PSI->getColdCountThreshold())
+      .run();
+
+  mergeAndTrimColdProfile(ProfileMap);
+}
+
 void CSProfileGenerator::computeSummaryAndThreshold() {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
   auto Summary = Builder.computeSummaryForProfiles(ProfileMap);
@@ -451,17 +463,19 @@ void CSProfileGenerator::mergeAndTrimColdProfile(
 
 void CSProfileGenerator::write(std::unique_ptr<SampleProfileWriter> Writer,
                                StringMap<FunctionSamples> &ProfileMap) {
-  mergeAndTrimColdProfile(ProfileMap);
   // Add bracket for context key to support different profile binary format
   StringMap<FunctionSamples> CxtWithBracketPMap;
   for (const auto &Item : ProfileMap) {
-    std::string ContextWithBracket = "[" + Item.first().str() + "]";
+    // After CSPreInliner the key of ProfileMap is no longer accurate for
+    // context, use the context attached to function samples instead.
+    std::string ContextWithBracket =
+        "[" + Item.second.getNameWithContext().str() + "]";
     auto Ret = CxtWithBracketPMap.try_emplace(ContextWithBracket, Item.second);
     assert(Ret.second && "Must be a unique context");
     SampleContext FContext(Ret.first->first(), RawContext);
     FunctionSamples &FProfile = Ret.first->second;
     FContext.setAllAttributes(FProfile.getContext().getAllAttributes());
-    FProfile.setName(FContext.getNameWithContext(true));
+    FProfile.setName(FContext.getNameWithoutContext());
     FProfile.setContext(FContext);
   }
   Writer->write(CxtWithBracketPMap);
@@ -500,9 +514,7 @@ void PseudoProbeCSProfileGenerator::generateProfile() {
     }
   }
 
-  // Compute hot/cold threshold based on profile. This will be used for cold
-  // context profile merging/trimming.
-  computeSummaryAndThreshold();
+  postProcessProfiles();
 }
 
 void PseudoProbeCSProfileGenerator::extractProbesFromRange(

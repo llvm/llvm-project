@@ -324,7 +324,8 @@ main:
     # CHECK: i8x16.neg # encoding: [0xfd,0x61]
     i8x16.neg
 
-    # TODO: i8x16.popcnt # encoding: [0xfd,0x62]
+    # CHECK: i8x16.popcnt # encoding: [0xfd,0x62]
+    i8x16.popcnt
 
     # CHECK: i8x16.all_true # encoding: [0xfd,0x63]
     i8x16.all_true

@@ -120,7 +120,8 @@ def GetOptionalValue(valobj):
     return storage.Cast(underlying_type)
 
 def OptionalSummaryProvider(valobj, internal_dict):
-    return GetOptionalValue(valobj).summary
+    val = GetOptionalValue(valobj)
+    return val.summary if val else 'None'
 
 class OptionalSynthProvider:
     """Provides deref support to llvm::Optional<T>"""

@@ -200,6 +200,13 @@ public:
   }
 
   void print(raw_ostream &OS) const;
+
+  template <class Function>
+  auto map(const Function &F) const -> InstructionCost {
+    if (isValid())
+      return F(*getValue());
+    return getInvalid();
+  }
 };
 
 inline InstructionCost operator+(const InstructionCost &LHS,
