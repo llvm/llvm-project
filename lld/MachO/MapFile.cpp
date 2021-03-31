@@ -76,7 +76,7 @@ static std::vector<Defined *> getSymbols() {
 // Construct a map from symbols to their stringified representations.
 // Demangling symbols (which is what toString() does) is slow, so
 // we do that in batch using parallel-for.
-static DenseMap<macho::Symbol *, std::string>
+static DenseMap<Symbol *, std::string>
 getSymbolStrings(ArrayRef<Defined *> syms) {
   std::vector<std::string> str(syms.size());
   parallelForEachN(0, syms.size(), [&](size_t i) {
@@ -84,7 +84,7 @@ getSymbolStrings(ArrayRef<Defined *> syms) {
     os << toString(*syms[i]);
   });
 
-  DenseMap<macho::Symbol *, std::string> ret;
+  DenseMap<Symbol *, std::string> ret;
   for (size_t i = 0, e = syms.size(); i < e; ++i)
     ret[syms[i]] = std::move(str[i]);
   return ret;
@@ -126,7 +126,7 @@ void macho::writeMapFile() {
   // Collect symbol info that we want to print out.
   std::vector<Defined *> syms = getSymbols();
   SymbolMapTy sectionSyms = getSectionSyms(syms);
-  DenseMap<lld::macho::Symbol *, std::string> symStr = getSymbolStrings(syms);
+  DenseMap<Symbol *, std::string> symStr = getSymbolStrings(syms);
 
   // Dump table of sections
   os << "# Sections:\n";
@@ -144,7 +144,7 @@ void macho::writeMapFile() {
   os << "# Symbols:\n";
   os << "# Address\t    File  Name\n";
   for (InputSection *isec : inputSections) {
-    for (macho::Symbol *sym : sectionSyms[isec]) {
+    for (Symbol *sym : sectionSyms[isec]) {
       os << format("0x%08llX\t[%3u] %s\n", sym->getVA(),
                    readerToFileOrdinal[sym->getFile()], symStr[sym].c_str());
     }

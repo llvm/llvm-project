@@ -114,6 +114,8 @@ class GIApplyKind;
 class GIApplyKindWithArgs;
 
 def register_matchinfo: GIDefMatchData<"Register">;
+def build_fn_matchinfo :
+GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -560,13 +562,11 @@ def combine_insert_vec_elts_build_vector : GICombineRule<
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
 
-def load_or_combine_matchdata :
-GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def load_or_combine : GICombineRule<
-  (defs root:$root, load_or_combine_matchdata:$info),
+  (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
-  (apply [{ return Helper.applyLoadOrCombine(*${root}, ${info}); }])>;
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
 
 def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
 def extend_through_phis : GICombineRule<
@@ -597,6 +597,15 @@ def extract_all_elts_from_build_vector : GICombineRule<
 def extract_vec_elt_combines : GICombineGroup<[
   extract_vec_elt_build_vec,
   extract_all_elts_from_build_vector]>;
+
+def funnel_shift_to_rotate : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FSHL, G_FSHR):$root,
+    [{ return Helper.matchFunnelShiftToRotate(*${root}); }]),
+  (apply [{ Helper.applyFunnelShiftToRotate(*${root}); }])
+>;
+
+def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -640,4 +649,4 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem]>;
+    div_rem_to_divrem, funnel_shift_combines]>;

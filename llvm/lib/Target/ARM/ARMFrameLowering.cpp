@@ -206,8 +206,7 @@ bool ARMFrameLowering::hasFP(const MachineFunction &MF) const {
     return true;
 
   // Frame pointer required for use within this function.
-  return (RegInfo->needsStackRealignment(MF) ||
-          MFI.hasVarSizedObjects() ||
+  return (RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
           MFI.isFrameAddressTaken());
 }
 
@@ -807,7 +806,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // sure if we also have VLAs, we have a base pointer for frame access.
   // If aligned NEON registers were spilled, the stack has already been
   // realigned.
-  if (!AFI->getNumAlignedDPRCS2Regs() && RegInfo->needsStackRealignment(MF)) {
+  if (!AFI->getNumAlignedDPRCS2Regs() && RegInfo->hasStackRealignment(MF)) {
     Align MaxAlign = MFI.getMaxAlign();
     assert(!AFI->isThumb1OnlyFunction());
     if (!AFI->isThumbFunction()) {
@@ -1005,7 +1004,7 @@ int ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
 
   // When dynamically realigning the stack, use the frame pointer for
   // parameters, and the stack/base pointer for locals.
-  if (RegInfo->needsStackRealignment(MF)) {
+  if (RegInfo->hasStackRealignment(MF)) {
     assert(hasFP(MF) && "dynamic stack realignment without a FP!");
     if (isFixed) {
       FrameReg = RegInfo->getFrameRegister(MF);
@@ -1783,7 +1782,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // instruction.
   // FIXME: It will be better just to find spare register here.
   if (AFI->isThumb2Function() &&
-      (MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(MF)))
+      (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF)))
     SavedRegs.set(ARM::R4);
 
   // If a stack probe will be emitted, spill R4 and LR, since they are
@@ -1808,7 +1807,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     // changes it, it'll be a spill, which implies we've used all the registers
     // and so R4 is already used, so not marking it here will be OK.
     // FIXME: It will be better just to find spare register here.
-    if (MFI.hasVarSizedObjects() || RegInfo->needsStackRealignment(MF) ||
+    if (MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF) ||
         MFI.estimateStackSize(MF) > 508)
       SavedRegs.set(ARM::R4);
   }

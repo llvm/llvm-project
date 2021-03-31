@@ -152,8 +152,8 @@ of LLVM's high-level design, as well as its internals:
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _beginner keyword: https://bugs.llvm.org/buglist.cgi?bug_status=NEW&bug_status=REOPENED&keywords=beginner%2C%20&keywords_type=allwords&list_id=130748&query_format=advanced&resolution=---
 .. _bug tracker: https://bugs.llvm.org
-.. _clang-format-diff.py: https://reviews.llvm.org/source/clang/browse/cfe/trunk/tools/clang-format/clang-format-diff.py
-.. _git-clang-format: https://reviews.llvm.org/source/clang/browse/cfe/trunk/tools/clang-format/git-clang-format
+.. _clang-format-diff.py: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/clang-format-diff.py
+.. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's Phabricator: https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what
 .. _LLVM Developer's mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev

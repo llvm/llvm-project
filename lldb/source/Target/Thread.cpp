@@ -1685,6 +1685,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "thread exiting";
   case eStopReasonInstrumentation:
     return "instrumentation break";
+  case eStopReasonProcessorTrace:
+    return "processor trace";
   }
 
   return "StopReason = " + std::to_string(reason);

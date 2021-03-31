@@ -61,6 +61,12 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirExecutionEngineInvokePacked(
 MLIR_CAPI_EXPORTED void *mlirExecutionEngineLookup(MlirExecutionEngine jit,
                                                    MlirStringRef name);
 
+/// Register a symbol with the jit: this symbol will be accessible to the jitted
+/// code.
+MLIR_CAPI_EXPORTED void
+mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit, MlirStringRef name,
+                                  void *sym);
+
 #ifdef __cplusplus
 }
 #endif

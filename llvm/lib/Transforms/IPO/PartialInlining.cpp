@@ -254,7 +254,7 @@ struct PartialInlinerImpl {
     // outlining.
     bool IsFunctionInlined = false;
     // The cost of the region to be outlined.
-    int OutlinedRegionCost = 0;
+    InstructionCost OutlinedRegionCost = 0;
     // ClonedOI is specific to outlining non-early return blocks.
     std::unique_ptr<FunctionOutliningInfo> ClonedOI = nullptr;
     // ClonedOMRI is specific to outlining cold regions.
@@ -328,12 +328,14 @@ private:
   //    outlined function itself;
   // - The second value is the estimated size of the new call sequence in
   //   basic block Cloner.OutliningCallBB;
-  std::tuple<int, int> computeOutliningCosts(FunctionCloner &Cloner) const;
+  std::tuple<InstructionCost, InstructionCost>
+  computeOutliningCosts(FunctionCloner &Cloner) const;
 
   // Compute the 'InlineCost' of block BB. InlineCost is a proxy used to
   // approximate both the size and runtime cost (Note that in the current
   // inline cost analysis, there is no clear distinction there either).
-  static int computeBBInlineCost(BasicBlock *BB, TargetTransformInfo *TTI);
+  static InstructionCost computeBBInlineCost(BasicBlock *BB,
+                                             TargetTransformInfo *TTI);
 
   std::unique_ptr<FunctionOutliningInfo>
   computeOutliningInfo(Function &F) const;
@@ -447,15 +449,16 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   // Use the same computeBBInlineCost function to compute the cost savings of
   // the outlining the candidate region.
   TargetTransformInfo *FTTI = &GetTTI(F);
-  int OverallFunctionCost = 0;
+  InstructionCost OverallFunctionCost = 0;
   for (auto &BB : F)
     OverallFunctionCost += computeBBInlineCost(&BB, FTTI);
 
   LLVM_DEBUG(dbgs() << "OverallFunctionCost = " << OverallFunctionCost
                     << "\n";);
 
-  int MinOutlineRegionCost =
-      static_cast<int>(OverallFunctionCost * MinRegionSizeRatio);
+  InstructionCost MinOutlineRegionCost = OverallFunctionCost.map(
+      [&](auto Cost) { return Cost * MinRegionSizeRatio; });
+
   BranchProbability MinBranchProbability(
       static_cast<int>(ColdBranchRatio * MinBlockCounterExecution),
       MinBlockCounterExecution);
@@ -516,7 +519,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
         continue;
       }
 
-      int OutlineRegionCost = 0;
+      InstructionCost OutlineRegionCost = 0;
       for (auto *BB : DominateVector)
         OutlineRegionCost += computeBBInlineCost(BB, &GetTTI(*BB->getParent()));
 
@@ -851,9 +854,10 @@ bool PartialInlinerImpl::shouldPartialInline(
 // TODO: Ideally  we should share Inliner's InlineCost Analysis code.
 // For now use a simplified version. The returned 'InlineCost' will be used
 // to esimate the size cost as well as runtime cost of the BB.
-int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
-                                            TargetTransformInfo *TTI) {
-  int InlineCost = 0;
+InstructionCost
+PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
+                                        TargetTransformInfo *TTI) {
+  InstructionCost InlineCost = 0;
   const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
   for (Instruction &I : BB->instructionsWithoutDebug()) {
     // Skip free instructions.
@@ -906,12 +910,13 @@ int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB,
     }
     InlineCost += InlineConstants::InstrCost;
   }
+
   return InlineCost;
 }
 
-std::tuple<int, int>
+std::tuple<InstructionCost, InstructionCost>
 PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
-  int OutliningFuncCallCost = 0, OutlinedFunctionCost = 0;
+  InstructionCost OutliningFuncCallCost = 0, OutlinedFunctionCost = 0;
   for (auto FuncBBPair : Cloner.OutlinedFunctions) {
     Function *OutlinedFunc = FuncBBPair.first;
     BasicBlock* OutliningCallBB = FuncBBPair.second;
@@ -934,10 +939,10 @@ PartialInlinerImpl::computeOutliningCosts(FunctionCloner &Cloner) const {
   OutlinedFunctionCost -=
       2 * InlineConstants::InstrCost * Cloner.OutlinedFunctions.size();
 
-  int OutliningRuntimeOverhead =
+  InstructionCost OutliningRuntimeOverhead =
       OutliningFuncCallCost +
       (OutlinedFunctionCost - Cloner.OutlinedRegionCost) +
-      ExtraOutliningPenalty;
+      ExtraOutliningPenalty.getValue();
 
   return std::make_tuple(OutliningFuncCallCost, OutliningRuntimeOverhead);
 }
@@ -1126,8 +1131,9 @@ void PartialInlinerImpl::FunctionCloner::normalizeReturnBlock() const {
 
 bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
 
-  auto ComputeRegionCost = [&](SmallVectorImpl<BasicBlock *> &Region) {
-    int Cost = 0;
+  auto ComputeRegionCost =
+      [&](SmallVectorImpl<BasicBlock *> &Region) -> InstructionCost {
+    InstructionCost Cost = 0;
     for (BasicBlock* BB : Region)
       Cost += computeBBInlineCost(BB, &GetTTI(*BB->getParent()));
     return Cost;
@@ -1153,7 +1159,8 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   SetVector<Value *> Inputs, Outputs, Sinks;
   for (FunctionOutliningMultiRegionInfo::OutlineRegionInfo RegionInfo :
        ClonedOMRI->ORI) {
-    int CurrentOutlinedRegionCost = ComputeRegionCost(RegionInfo.Region);
+    InstructionCost CurrentOutlinedRegionCost =
+        ComputeRegionCost(RegionInfo.Region);
 
     CodeExtractor CE(RegionInfo.Region, &DT, /*AggregateArgs*/ false,
                      ClonedFuncBFI.get(), &BPI,
@@ -1350,7 +1357,13 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   int SizeCost = 0;
   BlockFrequency WeightedRcost;
   int NonWeightedRcost;
-  std::tie(SizeCost, NonWeightedRcost) = computeOutliningCosts(Cloner);
+
+  auto OutliningCosts = computeOutliningCosts(Cloner);
+  assert(std::get<0>(OutliningCosts).isValid() &&
+         std::get<1>(OutliningCosts).isValid() && "Expected valid costs");
+
+  SizeCost = *std::get<0>(OutliningCosts).getValue();
+  NonWeightedRcost = *std::get<1>(OutliningCosts).getValue();
 
   // Only calculate RelativeToEntryFreq when we are doing single region
   // outlining.

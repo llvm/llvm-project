@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectProcess.h"
+#include "CommandObjectTrace.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
@@ -1577,6 +1578,71 @@ protected:
   CommandOptions m_options;
 };
 
+// Next are the subcommands of CommandObjectMultiwordProcessTrace
+
+// CommandObjectProcessTraceStart
+class CommandObjectProcessTraceStart : public CommandObjectTraceProxy {
+public:
+  CommandObjectProcessTraceStart(CommandInterpreter &interpreter)
+      : CommandObjectTraceProxy(
+            /*live_debug_session_only*/ true, interpreter,
+            "process trace start",
+            "Start tracing this process with the corresponding trace "
+            "plug-in.",
+            "process trace start [<trace-options>]") {}
+
+protected:
+  lldb::CommandObjectSP GetDelegateCommand(Trace &trace) override {
+    return trace.GetProcessTraceStartCommand(m_interpreter);
+  }
+};
+
+// CommandObjectProcessTraceStop
+class CommandObjectProcessTraceStop : public CommandObjectParsed {
+public:
+  CommandObjectProcessTraceStop(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "process trace stop",
+                            "Stop tracing this process. This does not affect "
+                            "traces started with the "
+                            "\"thread trace start\" command.",
+                            "process trace stop",
+                            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                                eCommandProcessMustBeLaunched |
+                                eCommandProcessMustBePaused |
+                                eCommandProcessMustBeTraced) {}
+
+  ~CommandObjectProcessTraceStop() override = default;
+
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+
+    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
+
+    if (llvm::Error err = trace_sp->StopProcess())
+      result.SetError(toString(std::move(err)));
+    else
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    return result.Succeeded();
+  }
+};
+
+// CommandObjectMultiwordProcessTrace
+class CommandObjectMultiwordProcessTrace : public CommandObjectMultiword {
+public:
+  CommandObjectMultiwordProcessTrace(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "trace", "Commands for tracing the current process.",
+            "process trace <subcommand> [<subcommand objects>]") {
+    LoadSubCommand("start", CommandObjectSP(new CommandObjectProcessTraceStart(
+                                interpreter)));
+    LoadSubCommand("stop", CommandObjectSP(
+                               new CommandObjectProcessTraceStop(interpreter)));
+  }
+
+  ~CommandObjectMultiwordProcessTrace() override = default;
+};
+
 // CommandObjectMultiwordProcess
 
 CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
@@ -1613,6 +1679,9 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
                  CommandObjectSP(new CommandObjectProcessPlugin(interpreter)));
   LoadSubCommand("save-core", CommandObjectSP(new CommandObjectProcessSaveCore(
                                   interpreter)));
+  LoadSubCommand(
+      "trace",
+      CommandObjectSP(new CommandObjectMultiwordProcessTrace(interpreter)));
 }
 
 CommandObjectMultiwordProcess::~CommandObjectMultiwordProcess() = default;

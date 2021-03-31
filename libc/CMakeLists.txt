@@ -14,7 +14,7 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
-set(LIBC_INSTALL_PREFIX "" CACHE STRING "Define libc destination prefix.")
+set(LIBC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "Define libc destination prefix.")
 
 set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
 string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)

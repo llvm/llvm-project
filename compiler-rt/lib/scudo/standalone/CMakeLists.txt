@@ -10,6 +10,7 @@ set(SCUDO_CFLAGS)
 list(APPEND SCUDO_CFLAGS
   -Werror=conversion
   -Wall
+  -g
   -nostdinc++)
 
 # Remove -stdlib= which is unused when passing -nostdinc++.
@@ -61,13 +62,14 @@ set(SCUDO_HEADERS
   checksum.h
   chunk.h
   combined.h
-  flags.h
   flags_parser.h
+  flags.h
   fuchsia.h
   internal_defs.h
   linux.h
   list.h
   local_cache.h
+  memtag.h
   mutex.h
   platform.h
   primary32.h
@@ -79,9 +81,9 @@ set(SCUDO_HEADERS
   size_class_map.h
   stats.h
   string_utils.h
-  tsd.h
   tsd_exclusive.h
   tsd_shared.h
+  tsd.h
   vector.h
   wrappers_c_checks.h
   wrappers_c.h
@@ -91,10 +93,10 @@ set(SCUDO_HEADERS
 
 set(SCUDO_SOURCES
   checksum.cpp
-  crc32_hw.cpp
   common.cpp
-  flags.cpp
+  crc32_hw.cpp
   flags_parser.cpp
+  flags.cpp
   fuchsia.cpp
   linux.cpp
   release.cpp

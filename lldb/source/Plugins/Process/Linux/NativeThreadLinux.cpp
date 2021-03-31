@@ -77,6 +77,9 @@ void LogThreadStopInfo(Log &log, const ThreadStopInfo &stop_info,
   case eStopReasonInstrumentation:
     log.Printf("%s: %s instrumentation", __FUNCTION__, header);
     return;
+  case eStopReasonProcessorTrace:
+    log.Printf("%s: %s processor trace", __FUNCTION__, header);
+    return;
   default:
     log.Printf("%s: %s invalid stop reason %" PRIu32, __FUNCTION__, header,
                static_cast<uint32_t>(stop_info.reason));
@@ -396,6 +399,15 @@ void NativeThreadLinux::SetStoppedWithNoReason() {
 
   m_stop_info.reason = StopReason::eStopReasonNone;
   m_stop_info.details.signal.signo = 0;
+}
+
+void NativeThreadLinux::SetStoppedByProcessorTrace(
+    llvm::StringRef description) {
+  SetStopped();
+
+  m_stop_info.reason = StopReason::eStopReasonProcessorTrace;
+  m_stop_info.details.signal.signo = 0;
+  m_stop_description = description.str();
 }
 
 void NativeThreadLinux::SetExited() {

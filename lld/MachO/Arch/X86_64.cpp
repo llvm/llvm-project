@@ -30,7 +30,7 @@ struct X86_64 : TargetInfo {
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t relocVA) const override;
 
-  void writeStub(uint8_t *buf, const macho::Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
                             uint64_t entryAddr) const override;
@@ -138,7 +138,7 @@ static constexpr uint8_t stub[] = {
     0xff, 0x25, 0, 0, 0, 0, // jmpq *__la_symbol_ptr(%rip)
 };
 
-void X86_64::writeStub(uint8_t *buf, const macho::Symbol &sym) const {
+void X86_64::writeStub(uint8_t *buf, const Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
   writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub),

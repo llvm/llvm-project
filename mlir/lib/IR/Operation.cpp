@@ -182,7 +182,17 @@ Operation::Operation(Location location, OperationName name, unsigned numResults,
 // allocated via malloc.
 Operation::~Operation() {
   assert(block == nullptr && "operation destroyed but still in a block");
-
+#ifndef NDEBUG
+  if (!use_empty()) {
+    {
+      InFlightDiagnostic diag =
+          emitOpError("operation destroyed but still has uses");
+      for (Operation *user : getUsers())
+        diag.attachNote(user->getLoc()) << "- use: " << *user << "\n";
+    }
+    llvm::report_fatal_error("operation destroyed but still has uses");
+  }
+#endif
   // Explicitly run the destructors for the operands.
   if (hasOperandStorage)
     getOperandStorage().~OperandStorage();

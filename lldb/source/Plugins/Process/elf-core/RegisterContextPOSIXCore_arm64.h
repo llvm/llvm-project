@@ -18,11 +18,10 @@
 
 class RegisterContextCorePOSIX_arm64 : public RegisterContextPOSIX_arm64 {
 public:
-  RegisterContextCorePOSIX_arm64(
-      lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  static std::unique_ptr<RegisterContextCorePOSIX_arm64>
+  Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
+         const lldb_private::DataExtractor &gpregset,
+         llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextCorePOSIX_arm64() override;
 
@@ -39,6 +38,13 @@ public:
   bool HardwareSingleStep(bool enable) override;
 
 protected:
+  RegisterContextCorePOSIX_arm64(
+      lldb_private::Thread &thread,
+      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+      const lldb_private::DataExtractor &gpregset,
+      const lldb_private::DataExtractor &sveregset,
+      llvm::ArrayRef<lldb_private::CoreNote> notes);
+
   bool ReadGPR() override;
 
   bool ReadFPR() override;

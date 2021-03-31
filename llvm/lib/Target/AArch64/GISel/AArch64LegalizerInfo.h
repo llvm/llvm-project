@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 namespace llvm {
 
@@ -49,6 +50,8 @@ private:
   bool legalizeVectorTrunc(MachineInstr &MI, LegalizerHelper &Helper) const;
   bool legalizeBitfieldExtract(MachineInstr &MI, MachineRegisterInfo &MRI,
                                LegalizerHelper &Helper) const;
+  bool legalizeRotate(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

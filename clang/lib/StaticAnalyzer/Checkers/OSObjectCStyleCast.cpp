@@ -32,7 +32,21 @@ public:
   void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
 };
+} // namespace
+
+namespace clang {
+namespace ast_matchers {
+AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
+  return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
+    const auto &BN = Nodes.getNode(this->BindingID);
+    if (const auto *ND = BN.get<NamedDecl>()) {
+      return ND->getName() != Node.getString();
+    }
+    return true;
+  });
 }
+} // end namespace ast_matchers
+} // end namespace clang
 
 static void emitDiagnostics(const BoundNodes &Nodes,
                             BugReporter &BR,
@@ -63,22 +77,41 @@ static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
 }
 
-void OSObjectCStyleCastChecker::checkASTCodeBody(const Decl *D, AnalysisManager &AM,
+void OSObjectCStyleCastChecker::checkASTCodeBody(const Decl *D,
+                                                 AnalysisManager &AM,
                                                  BugReporter &BR) const {
 
   AnalysisDeclContext *ADC = AM.getAnalysisDeclContext(D);
 
   auto DynamicCastM = callExpr(callee(functionDecl(hasName("safeMetaCast"))));
+  // 'allocClassWithName' allocates an object with the given type.
+  // The type is actually provided as a string argument (type's name).
+  // This makes the following pattern possible:
+  //
+  // Foo *object = (Foo *)allocClassWithName("Foo");
+  //
+  // While OSRequiredCast can be used here, it is still not a useful warning.
+  auto AllocClassWithNameM = callExpr(
+      callee(functionDecl(hasName("allocClassWithName"))),
+      // Here we want to make sure that the string argument matches the
+      // type in the cast expression.
+      hasArgument(0, stringLiteral(mentionsBoundType(WarnRecordDecl))));
 
-  auto OSObjTypeM = hasTypePointingTo(cxxRecordDecl(isDerivedFrom("OSMetaClassBase")));
+  auto OSObjTypeM =
+      hasTypePointingTo(cxxRecordDecl(isDerivedFrom("OSMetaClassBase")));
   auto OSObjSubclassM = hasTypePointingTo(
-    cxxRecordDecl(isDerivedFrom("OSObject")).bind(WarnRecordDecl));
+      cxxRecordDecl(isDerivedFrom("OSObject")).bind(WarnRecordDecl));
 
-  auto CastM = cStyleCastExpr(
-          allOf(hasSourceExpression(allOf(OSObjTypeM, unless(DynamicCastM))),
-          OSObjSubclassM)).bind(WarnAtNode);
+  auto CastM =
+      cStyleCastExpr(
+          allOf(OSObjSubclassM,
+                hasSourceExpression(
+                    allOf(OSObjTypeM,
+                          unless(anyOf(DynamicCastM, AllocClassWithNameM))))))
+          .bind(WarnAtNode);
 
-  auto Matches = match(stmt(forEachDescendant(CastM)), *D->getBody(), AM.getASTContext());
+  auto Matches =
+      match(stmt(forEachDescendant(CastM)), *D->getBody(), AM.getASTContext());
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, BR, ADC, this);
 }

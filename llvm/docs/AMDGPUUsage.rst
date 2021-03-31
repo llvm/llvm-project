@@ -10959,140 +10959,384 @@ AMDPAL
 ------
 
 This section provides code conventions used when the target triple OS is
-``amdpal`` (see :ref:`amdgpu-target-triples`) for passing runtime parameters
-from the application/runtime to each invocation of a hardware shader. These
-parameters include both generic, application-controlled parameters called
-*user data* as well as system-generated parameters that are a product of the
-draw or dispatch execution.
+``amdpal`` (see :ref:`amdgpu-target-triples`).
 
-User Data
-~~~~~~~~~
+.. _amdgpu-amdpal-code-object-metadata-section:
 
-Each hardware stage has a set of 32-bit *user data registers* which can be
-written from a command buffer and then loaded into SGPRs when waves are launched
-via a subsequent dispatch or draw operation. This is the way most arguments are
-passed from the application/runtime to a hardware shader.
-
-Compute User Data
-~~~~~~~~~~~~~~~~~
-
-Compute shader user data mappings are simpler than graphics shaders and have a
-fixed mapping.
-
-Note that there are always 10 available *user data entries* in registers -
-entries beyond that limit must be fetched from memory (via the spill table
-pointer) by the shader.
-
-  .. table:: PAL Compute Shader User Data Registers
-     :name: pal-compute-user-data-registers
-
-     ============= ================================
-     User Register Description
-     ============= ================================
-     0             Global Internal Table (32-bit pointer)
-     1             Per-Shader Internal Table (32-bit pointer)
-     2 - 11        Application-Controlled User Data (10 32-bit values)
-     12            Spill Table (32-bit pointer)
-     13 - 14       Thread Group Count (64-bit pointer)
-     15            GDS Range
-     ============= ================================
-
-Graphics User Data
-~~~~~~~~~~~~~~~~~~
-
-Graphics pipelines support a much more flexible user data mapping:
-
-  .. table:: PAL Graphics Shader User Data Registers
-     :name: pal-graphics-user-data-registers
-
-     ============= ================================
-     User Register Description
-     ============= ================================
-     0             Global Internal Table (32-bit pointer)
-     +             Per-Shader Internal Table (32-bit pointer)
-     + 1-15        Application Controlled User Data
-                   (1-15 Contiguous 32-bit Values in Registers)
-     +             Spill Table (32-bit pointer)
-     +             Draw Index (First Stage Only)
-     +             Vertex Offset (First Stage Only)
-     +             Instance Offset (First Stage Only)
-     ============= ================================
-
-  The placement of the global internal table remains fixed in the first *user
-  data SGPR register*. Otherwise all parameters are optional, and can be mapped
-  to any desired *user data SGPR register*, with the following restrictions:
-
-  * Draw Index, Vertex Offset, and Instance Offset can only be used by the first
-    active hardware stage in a graphics pipeline (i.e. where the API vertex
-    shader runs).
-
-  * Application-controlled user data must be mapped into a contiguous range of
-    user data registers.
-
-  * The application-controlled user data range supports compaction remapping, so
-    only *entries* that are actually consumed by the shader must be assigned to
-    corresponding *registers*. Note that in order to support an efficient runtime
-    implementation, the remapping must pack *registers* in the same order as
-    *entries*, with unused *entries* removed.
-
-.. _pal_global_internal_table:
-
-Global Internal Table
-~~~~~~~~~~~~~~~~~~~~~
-
-The global internal table is a table of *shader resource descriptors* (SRDs)
-that define how certain engine-wide, runtime-managed resources should be
-accessed from a shader. The majority of these resources have HW-defined formats,
-and it is up to the compiler to write/read data as required by the target
-hardware.
-
-The following table illustrates the required format:
-
-  .. table:: PAL Global Internal Table
-     :name: pal-git-table
-
-     ============= ================================
-     Offset        Description
-     ============= ================================
-     0-3           Graphics Scratch SRD
-     4-7           Compute Scratch SRD
-     8-11          ES/GS Ring Output SRD
-     12-15         ES/GS Ring Input SRD
-     16-19         GS/VS Ring Output #0
-     20-23         GS/VS Ring Output #1
-     24-27         GS/VS Ring Output #2
-     28-31         GS/VS Ring Output #3
-     32-35         GS/VS Ring Input SRD
-     36-39         Tessellation Factor Buffer SRD
-     40-43         Off-Chip LDS Buffer SRD
-     44-47         Off-Chip Param Cache Buffer SRD
-     48-51         Sample Position Buffer SRD
-     52            vaRange::ShadowDescriptorTable High Bits
-     ============= ================================
-
-  The pointer to the global internal table passed to the shader as user data
-  is a 32-bit pointer. The top 32 bits should be assumed to be the same as
-  the top 32 bits of the pipeline, so the shader may use the program
-  counter's top 32 bits.
-
-.. _pal_call-convention:
-
-Call Convention
-~~~~~~~~~~~~~~~
-
-For graphics use cases, the calling convention is `amdgpu_gfx`.
+Code Object Metadata
+~~~~~~~~~~~~~~~~~~~~
 
 .. note::
 
-  `amdgpu_gfx` Function calls are currently in development and are
-  subject to major changes.
+  The metadata is currently in development and is subject to major
+  changes. Only the current version is supported. *When this document
+  was generated the version was 2.6.*
 
-This calling convention shares most properties with calling non-kernel
-functions (see
-:ref:`amdgpu-amdhsa-function-call-convention-non-kernel-functions`).
-Differences are:
+Code object metadata is specified by the ``NT_AMDGPU_METADATA`` note
+record (see :ref:`amdgpu-note-records-v3-v4`).
 
- - Currently there are none, differences will be listed here
+The metadata is represented as Message Pack formatted binary data (see
+[MsgPack]_). The top level is a Message Pack map that includes the keys
+defined in table :ref:`amdgpu-amdpal-code-object-metadata-map-table`
+and referenced tables.
+
+Additional information can be added to the maps. To avoid conflicts, any
+key names should be prefixed by "*vendor-name*." where ``vendor-name``
+can be the name of the vendor and specific vendor tool that generates the
+information. The prefix is abbreviated to simply "." when it appears
+within a map that has been added by the same *vendor-name*.
+
+  .. table:: AMDPAL Code Object Metadata Map
+     :name: amdgpu-amdpal-code-object-metadata-map-table
+
+     =================== ============== ========= ======================================================================
+     String Key          Value Type     Required? Description
+     =================== ============== ========= ======================================================================
+     "amdpal.version"    sequence of    Required  PAL code object metadata (major, minor) version. The current values
+                         2 integers               are defined by *Util::Abi::PipelineMetadata(Major|Minor)Version*.
+     "amdpal.pipelines"  sequence of    Required  Per-pipeline metadata. See
+                         map                      :ref:`amdgpu-amdpal-code-object-pipeline-metadata-map-table` for the
+                                                  definition of the keys included in that map.
+     =================== ============== ========= ======================================================================
+
+..
+
+  .. table:: AMDPAL Code Object Pipeline Metadata Map
+     :name: amdgpu-amdpal-code-object-pipeline-metadata-map-table
+
+     ====================================== ============== ========= ===================================================
+     String Key                             Value Type     Required? Description
+     ====================================== ============== ========= ===================================================
+     ".name"                                string                   Source name of the pipeline.
+     ".type"                                string                   Pipeline type, e.g. VsPs. Values include:
+
+                                                                       - "VsPs"
+                                                                       - "Gs"
+                                                                       - "Cs"
+                                                                       - "Ngg"
+                                                                       - "Tess"
+                                                                       - "GsTess"
+                                                                       - "NggTess"
+
+     ".internal_pipeline_hash"              sequence of    Required  Internal compiler hash for this pipeline. Lower
+                                            2 integers               64 bits is the "stable" portion of the hash, used
+                                                                     for e.g. shader replacement lookup. Upper 64 bits
+                                                                     is the "unique" portion of the hash, used for
+                                                                     e.g. pipeline cache lookup. The value is
+                                                                     implementation defined, and can not be relied on
+                                                                     between different builds of the compiler.
+     ".shaders"                             map                      Per-API shader metadata. See
+                                                                     :ref:`amdgpu-amdpal-code-object-shader-map-table`
+                                                                     for the definition of the keys included in that
+                                                                     map.
+     ".hardware_stages"                     map                      Per-hardware stage metadata. See
+                                                                     :ref:`amdgpu-amdpal-code-object-hardware-stage-map-table`
+                                                                     for the definition of the keys included in that
+                                                                     map.
+     ".shader_functions"                    map                      Per-shader function metadata. See
+                                                                     :ref:`amdgpu-amdpal-code-object-shader-function-map-table`
+                                                                     for the definition of the keys included in that
+                                                                     map.
+     ".registers"                           map            Required  Hardware register configuration. See
+                                                                     :ref:`amdgpu-amdpal-code-object-register-map-table`
+                                                                     for the definition of the keys included in that
+                                                                     map.
+     ".user_data_limit"                     integer                  Number of user data entries accessed by this
+                                                                     pipeline.
+     ".spill_threshold"                     integer                  The user data spill threshold.  0xFFFF for
+                                                                     NoUserDataSpilling.
+     ".uses_viewport_array_index"           boolean                  Indicates whether or not the pipeline uses the
+                                                                     viewport array index feature. Pipelines which use
+                                                                     this feature can render into all 16 viewports,
+                                                                     whereas pipelines which do not use it are
+                                                                     restricted to viewport #0.
+     ".es_gs_lds_size"                      integer                  Size in bytes of LDS space used internally for
+                                                                     handling data-passing between the ES and GS
+                                                                     shader stages. This can be zero if the data is
+                                                                     passed using off-chip buffers. This value should
+                                                                     be used to program all user-SGPRs which have been
+                                                                     marked with "UserDataMapping::EsGsLdsSize"
+                                                                     (typically only the GS and VS HW stages will ever
+                                                                     have a user-SGPR so marked).
+     ".nggSubgroupSize"                     integer                  Explicit maximum subgroup size for NGG shaders
+                                                                     (maximum number of threads in a subgroup).
+     ".num_interpolants"                    integer                  Graphics only. Number of PS interpolants.
+     ".mesh_scratch_memory_size"            integer                  Max mesh shader scratch memory used.
+     ".api"                                 string                   Name of the client graphics API.
+     ".api_create_info"                     binary                   Graphics API shader create info binary blob. Can
+                                                                     be defined by the driver using the compiler if
+                                                                     they want to be able to correlate API-specific
+                                                                     information used during creation at a later time.
+     ====================================== ============== ========= ===================================================
+
+..
+
+  .. table:: AMDPAL Code Object Shader Map
+     :name: amdgpu-amdpal-code-object-shader-map-table
+
+
+     +-------------+--------------+-------------------------------------------------------------------+
+     |String Key   |Value Type    |Description                                                        |
+     +=============+==============+===================================================================+
+     |- ".compute" |map           |See :ref:`amdgpu-amdpal-code-object-api-shader-metadata-map-table` |
+     |- ".vertex"  |              |for the definition of the keys included in that map.               |
+     |- ".hull"    |              |                                                                   |
+     |- ".domain"  |              |                                                                   |
+     |- ".geometry"|              |                                                                   |
+     |- ".pixel"   |              |                                                                   |
+     +-------------+--------------+-------------------------------------------------------------------+
+
+..
+
+  .. table:: AMDPAL Code Object API Shader Metadata Map
+     :name: amdgpu-amdpal-code-object-api-shader-metadata-map-table
+
+     ==================== ============== ========= =====================================================================
+     String Key           Value Type     Required? Description
+     ==================== ============== ========= =====================================================================
+     ".api_shader_hash"   sequence of    Required  Input shader hash, typically passed in from the client. The value
+                          2 integers               is implementation defined, and can not be relied on between
+                                                   different builds of the compiler.
+     ".hardware_mapping"  sequence of    Required  Flags indicating the HW stages this API shader maps to. Values
+                          string                   include:
+
+                                                     - ".ls"
+                                                     - ".hs"
+                                                     - ".es"
+                                                     - ".gs"
+                                                     - ".vs"
+                                                     - ".ps"
+                                                     - ".cs"
+
+     ==================== ============== ========= =====================================================================
+
+..
+
+  .. table:: AMDPAL Code Object Hardware Stage Map
+     :name: amdgpu-amdpal-code-object-hardware-stage-map-table
+
+     +-------------+--------------+-----------------------------------------------------------------------+
+     |String Key   |Value Type    |Description                                                            |
+     +=============+==============+=======================================================================+
+     |- ".ls"      |map           |See :ref:`amdgpu-amdpal-code-object-hardware-stage-metadata-map-table` |
+     |- ".hs"      |              |for the definition of the keys included in that map.                   |
+     |- ".es"      |              |                                                                       |
+     |- ".gs"      |              |                                                                       |
+     |- ".vs"      |              |                                                                       |
+     |- ".ps"      |              |                                                                       |
+     |- ".cs"      |              |                                                                       |
+     +-------------+--------------+-----------------------------------------------------------------------+
+
+..
+
+  .. table:: AMDPAL Code Object Hardware Stage Metadata Map
+     :name: amdgpu-amdpal-code-object-hardware-stage-metadata-map-table
+
+     ========================== ============== ========= ===============================================================
+     String Key                 Value Type     Required? Description
+     ========================== ============== ========= ===============================================================
+     ".entry_point"             string                   The ELF symbol pointing to this pipeline's stage entry point.
+     ".scratch_memory_size"     integer                  Scratch memory size in bytes.
+     ".lds_size"                integer                  Local Data Share size in bytes.
+     ".perf_data_buffer_size"   integer                  Performance data buffer size in bytes.
+     ".vgpr_count"              integer                  Number of VGPRs used.
+     ".sgpr_count"              integer                  Number of SGPRs used.
+     ".vgpr_limit"              integer                  If non-zero, indicates the shader was compiled with a
+                                                         directive to instruct the compiler to limit the VGPR usage to
+                                                         be less than or equal to the specified value (only set if
+                                                         different from HW default).
+     ".sgpr_limit"              integer                  SGPR count upper limit (only set if different from HW
+                                                         default).
+     ".threadgroup_dimensions"  sequence of              Thread-group X/Y/Z dimensions (Compute only).
+                                3 integers
+     ".wavefront_size"          integer                  Wavefront size (only set if different from HW default).
+     ".uses_uavs"               boolean                  The shader reads or writes UAVs.
+     ".uses_rovs"               boolean                  The shader reads or writes ROVs.
+     ".writes_uavs"             boolean                  The shader writes to one or more UAVs.
+     ".writes_depth"            boolean                  The shader writes out a depth value.
+     ".uses_append_consume"     boolean                  The shader uses append and/or consume operations, either
+                                                         memory or GDS.
+     ".uses_prim_id"            boolean                  The shader uses PrimID.
+     ========================== ============== ========= ===============================================================
+
+..
+
+  .. table:: AMDPAL Code Object Shader Function Map
+     :name: amdgpu-amdpal-code-object-shader-function-map-table
+
+     =============== ============== ====================================================================
+     String Key      Value Type     Description
+     =============== ============== ====================================================================
+     *symbol name*   map            *symbol name* is the ELF symbol name of the shader function code
+                                    entry address. The value is the function's metadata. See
+                                    :ref:`amdgpu-amdpal-code-object-shader-function-metadata-map-table`.
+     =============== ============== ====================================================================
+
+..
+
+  .. table:: AMDPAL Code Object Shader Function Metadata Map
+     :name: amdgpu-amdpal-code-object-shader-function-metadata-map-table
+
+     ============================= ============== =================================================================
+     String Key                    Value Type     Description
+     ============================= ============== =================================================================
+     ".api_shader_hash"            sequence of    Input shader hash, typically passed in from the client. The value
+                                   2 integers     is implementation defined, and can not be relied on between
+                                                  different builds of the compiler.
+     ".scratch_memory_size"        sequence of    Size in bytes of scratch memory used by the shader.
+                                   2 integers
+     ".lds_size"                   sequence of    Size in bytes of LDS memory.
+                                   2 integers
+     ".vgpr_count"                 integer        Number of VGPRs used by the shader.
+     ".sgpr_count"                 integer        Number of SGPRs used by the shader.
+     ".stack_frame_size_in_bytes"  integer        Amount of stack size used by the shader.
+     ".shader_subtype"             string         Shader subtype/kind. Values include:
+
+                                                    - "Unknown"
+
+     ============================= ============== =================================================================
+
+..
+
+  .. table:: AMDPAL Code Object Register Map
+     :name: amdgpu-amdpal-code-object-register-map-table
+
+     ========================== ============== ====================================================================
+     32-bit Integer Key         Value Type     Description
+     ========================== ============== ====================================================================
+     ``reg offset``             32-bit integer ``reg offset`` is the dword offset into the GFXIP register space of
+                                               a GRBM register (i.e., driver accessible GPU register number, not
+                                               shader GPR register number). The driver is required to program each
+                                               specified register to the corresponding specified value when
+                                               executing this pipeline. Typically, the ``reg offsets`` are the
+                                               ``uint16_t`` offsets to each register as defined by the hardware
+                                               chip headers. The register is set to the provided value. However, a
+                                               ``reg offset`` that specifies a user data register (e.g.,
+                                               COMPUTE_USER_DATA_0) needs special treatment. See
+                                               :ref:`amdgpu-amdpal-code-object-user-data-section` section for more
+                                               information.
+     ========================== ============== ====================================================================
+
+.. _amdgpu-amdpal-code-object-user-data-section:
+
+User Data
++++++++++
+
+Each hardware stage has a set of 32-bit physical SPI *user data registers*
+(either 16 or 32 based on graphics IP and the stage) which can be
+written from a command buffer and then loaded into SGPRs when waves are
+launched via a subsequent dispatch or draw operation. This is the way
+most arguments are passed from the application/runtime to a hardware
+shader.
+
+PAL abstracts this functionality by exposing a set of 128 *user data
+entries* per pipeline a client can use to pass arguments from a command
+buffer to one or more shaders in that pipeline. The ELF code object must
+specify a mapping from virtualized *user data entries* to physical *user
+data registers*, and PAL is responsible for implementing that mapping,
+including spilling overflow *user data entries* to memory if needed.
+
+Since the *user data registers* are GRBM-accessible SPI registers, this
+mapping is actually embedded in the ``.registers`` metadata entry. For
+most registers, the value in that map is a literal 32-bit value that
+should be written to the register by the driver. However, when the
+register is a *user data register* (any USER_DATA register e.g.,
+SPI_SHADER_USER_DATA_PS_5), the value is instead an encoding that tells
+the driver to write either a *user data entry* value or one of several
+driver-internal values to the register. This encoding is described in
+the following table:
+
+.. note::
+
+  Currently, *user data registers* 0 and 1 (e.g., SPI_SHADER_USER_DATA_PS_0,
+  and SPI_SHADER_USER_DATA_PS_1) are reserved. *User data register* 0 must
+  always be programmed to the address of the GlobalTable, and *user data
+  register* 1 must always be programmed to the address of the PerShaderTable.
+
+..
+
+  .. table:: AMDPAL User Data Mapping
+     :name: amdgpu-amdpal-code-object-metadata-user-data-mapping-table
+
+     ==========  =================  ===============================================================================
+     Value       Name               Description
+     ==========  =================  ===============================================================================
+     0..127      *User Data Entry*  32-bit value of user_data_entry[N] as specified via *CmdSetUserData()*
+     0x10000000  GlobalTable        32-bit pointer to GPU memory containing the global internal table (should
+                                    always point to *user data register* 0).
+     0x10000001  PerShaderTable     32-bit pointer to GPU memory containing the per-shader internal table. See
+                                    :ref:`amdgpu-amdpal-code-object-metadata-user-data-per-shader-table-section`
+                                    for more detail (should always point to *user data register* 1).
+     0x10000002  SpillTable         32-bit pointer to GPU memory containing the user data spill table. See
+                                    :ref:`amdgpu-amdpal-code-object-metadata-user-data-spill-table-section` for
+                                    more detail.
+     0x10000003  BaseVertex         Vertex offset (32-bit unsigned integer). Not needed if the pipeline doesn't
+                                    reference the draw index in the vertex shader. Only supported by the first
+                                    stage in a graphics pipeline.
+     0x10000004  BaseInstance       Instance offset (32-bit unsigned integer). Only supported by the first stage in
+                                    a graphics pipeline.
+     0x10000005  DrawIndex          Draw index (32-bit unsigned integer). Only supported by the first stage in a
+                                    graphics pipeline.
+     0x10000006  Workgroup          Thread group count (32-bit unsigned integer). Low half of a 64-bit address of
+                                    a buffer containing the grid dimensions for a Compute dispatch operation. The
+                                    high half of the address is stored in the next sequential user-SGPR. Only
+                                    supported by compute pipelines.
+     0x1000000A  EsGsLdsSize        Indicates that PAL will program this user-SGPR to contain the amount of LDS
+                                    space used for the ES/GS pseudo-ring-buffer for passing data between shader
+                                    stages.
+     0x1000000B  ViewId             View id (32-bit unsigned integer) identifies a view of graphic
+                                    pipeline instancing.
+     0x1000000C  StreamOutTable     32-bit pointer to GPU memory containing the stream out target SRD table.  This
+                                    can only appear for one shader stage per pipeline.
+     0x1000000D  PerShaderPerfData  32-bit pointer to GPU memory containing the per-shader performance data buffer.
+     0x1000000F  VertexBufferTable  32-bit pointer to GPU memory containing the vertex buffer SRD table.  This can
+                                    only appear for one shader stage per pipeline.
+     0x10000010  UavExportTable     32-bit pointer to GPU memory containing the UAV export SRD table.  This can
+                                    only appear for one shader stage per pipeline (PS). These replace color targets
+                                    and are completely separate from any UAVs used by the shader. This is optional,
+                                    and only used by the PS when UAV exports are used to replace color-target
+                                    exports to optimize specific shaders.
+     0x10000011  NggCullingData     64-bit pointer to GPU memory containing the hardware register data needed by
+                                    some NGG pipelines to perform culling.  This value contains the address of the
+                                    first of two consecutive registers which provide the full GPU address.
+     0x10000015  FetchShaderPtr     64-bit pointer to GPU memory containing the fetch shader subroutine.
+     ==========  =================  ===============================================================================
+
+.. _amdgpu-amdpal-code-object-metadata-user-data-per-shader-table-section:
+
+Per-Shader Table
+################
+
+Low 32 bits of the GPU address for an optional buffer in the ``.data``
+section of the ELF. The high 32 bits of the address match the high 32 bits
+of the shader's program counter.
+
+The buffer can be anything the shader compiler needs it for, and
+allows each shader to have its own region of the ``.data`` section.
+Typically, this could be a table of buffer SRD's and the data pointed to
+by the buffer SRD's, but it could be a flat-address region of memory as
+well. Its layout and usage are defined by the shader compiler.
+
+Each shader's table in the ``.data`` section is referenced by the symbol
+``_amdgpu_``\ *xs*\ ``_shdr_intrl_data``  where *xs* corresponds with the
+hardware shader stage the data is for. E.g.,
+``_amdgpu_cs_shdr_intrl_data`` for the compute shader hardware stage.
+
+.. _amdgpu-amdpal-code-object-metadata-user-data-spill-table-section:
+
+Spill Table
+###########
+
+It is possible for a hardware shader to need access to more *user data
+entries* than there are slots available in user data registers for one
+or more hardware shader stages. In that case, the PAL runtime expects
+the necessary *user data entries* to be spilled to GPU memory and use
+one user data register to point to the spilled user data memory. The
+value of the *user data entry* must then represent the location where
+a shader expects to read the low 32-bits of the table's GPU virtual
+address. The *spill table* itself represents a set of 32-bit values
+managed by the PAL runtime in GPU-accessible memory that can be made
+indirectly accessible to a hardware shader.
 
 Unspecified OS
 --------------

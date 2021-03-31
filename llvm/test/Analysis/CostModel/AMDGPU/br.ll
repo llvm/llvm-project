@@ -20,7 +20,7 @@ bb2:
 }
 
 ; CHECK: 'test_switch_cost'
-; CHECK: Unknown cost for instruction:   switch
+; CHECK: estimated cost of -1 for instruction:   switch
 define amdgpu_kernel void @test_switch_cost(i32 %a) #0 {
 entry:
   switch i32 %a, label %default [

@@ -46,7 +46,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
-#include "lldb/Utility/TraceOptions.h"
+#include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private.h"
@@ -2455,6 +2455,8 @@ void PruneThreadPlans();
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(ConstString type_name) const;
 
+  /// Deprecated
+  ///
   /// Starts tracing with the configuration provided in options. To enable
   /// tracing on the complete process the thread_id in the options should be
   /// set to LLDB_INVALID_THREAD_ID. The API returns a user_id which is needed
@@ -2469,6 +2471,8 @@ void PruneThreadPlans();
     return LLDB_INVALID_UID;
   }
 
+  /// Deprecated
+  ///
   /// Stops the tracing instance leading to deletion of the trace data. The
   /// tracing instance is identified by the user_id which is obtained when
   /// tracing was started from the StartTrace. In case tracing of the complete
@@ -2479,6 +2483,8 @@ void PruneThreadPlans();
     return Status("Not implemented");
   }
 
+  /// Deprecated
+  ///
   /// Provides the trace data as raw bytes. A buffer needs to be supplied to
   /// copy the trace data. The exact behavior of this API may vary across
   /// trace technology, as some may support partial reading of the trace data
@@ -2490,6 +2496,8 @@ void PruneThreadPlans();
     return Status("Not implemented");
   }
 
+  /// Deprecated
+  ///
   /// Similar API as above except for obtaining meta data
   virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
                              llvm::MutableArrayRef<uint8_t> &buffer,
@@ -2497,17 +2505,8 @@ void PruneThreadPlans();
     return Status("Not implemented");
   }
 
-  /// API to obtain the trace configuration used by a trace instance.
-  /// Configurations that may be specific to some trace technology should be
-  /// stored in the custom parameters. The options are transported to the
-  /// server, which shall interpret accordingly. The thread_id can be
-  /// specified in the options to obtain the configuration used by a specific
-  /// thread. The thread_id specified should also match the uid otherwise an
-  /// error will be returned.
-  virtual Status GetTraceConfig(lldb::user_id_t uid, TraceOptions &options) {
-    return Status("Not implemented");
-  }
-
+protected:
+  friend class Trace;
   ///  Get the processor tracing type supported for this process.
   ///  Responses might be different depending on the architecture and
   ///  capabilities of the underlying OS.
@@ -2515,14 +2514,64 @@ void PruneThreadPlans();
   ///  \return
   ///     The supported trace type or an \a llvm::Error if tracing is
   ///     not supported for the inferior.
-  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType();
+  virtual llvm::Expected<TraceSupportedResponse> TraceSupported();
+
+  /// Start tracing a process or its threads.
+  ///
+  /// \param[in] request
+  ///     JSON object with the information necessary to start tracing. In the
+  ///     case of gdb-remote processes, this JSON object should conform to the
+  ///     jLLDBTraceStart packet.
+  ///
+  /// \return
+  ///     \a llvm::Error::success if the operation was successful, or
+  ///     \a llvm::Error otherwise.
+  virtual llvm::Error TraceStart(const llvm::json::Value &request) {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  /// Stop tracing a live process or its threads.
+  ///
+  /// \param[in] request
+  ///     The information determining which threads or process to stop tracing.
+  ///
+  /// \return
+  ///     \a llvm::Error::success if the operation was successful, or
+  ///     \a llvm::Error otherwise.
+  virtual llvm::Error TraceStop(const TraceStopRequest &request) {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  /// Get the current tracing state of the process and its threads.
+  ///
+  /// \param[in] type
+  ///     Tracing technology type to consider.
+  ///
+  /// \return
+  ///     A JSON object string with custom data depending on the trace
+  ///     technology, or an \a llvm::Error in case of errors.
+  virtual llvm::Expected<std::string> TraceGetState(llvm::StringRef type) {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  /// Get binary data given a trace technology and a data identifier.
+  ///
+  /// \param[in] request
+  ///     Object with the params of the requested data.
+  ///
+  /// \return
+  ///     A vector of bytes with the requested data, or an \a llvm::Error in
+  ///     case of failures.
+  virtual llvm::Expected<std::vector<uint8_t>>
+  TraceGetBinaryData(const TraceGetBinaryDataRequest &request) {
+    return llvm::make_error<UnimplementedError>();
+  }
 
   // This calls a function of the form "void * (*)(void)".
   bool CallVoidArgVoidPtrReturn(const Address *address,
                                 lldb::addr_t &returned_func,
                                 bool trap_exceptions = false);
 
-protected:
   /// Update the thread list following process plug-in's specific logic.
   ///
   /// This method should only be invoked by \a UpdateThreadList.

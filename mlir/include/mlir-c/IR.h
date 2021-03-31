@@ -119,6 +119,13 @@ mlirContextGetNumLoadedDialects(MlirContext context);
 MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
                                                            MlirStringRef name);
 
+/// Returns whether the given fully-qualified operation (i.e.
+/// 'dialect.operation') is registered with the context. This will return true
+/// if the dialect is loaded and the operation is registered within the
+/// dialect.
+MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
+                                                         MlirStringRef name);
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//

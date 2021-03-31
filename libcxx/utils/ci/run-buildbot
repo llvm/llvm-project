@@ -295,7 +295,7 @@ x86_64-apple-system-backdeployment-*)
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
         echo "--- Downloading previous macOS dylibs"
-        PREVIOUS_DYLIBS_URL="http://lab.llvm.org:8080/roots/libcxx-roots.tar.gz"
+        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/liu4fmc53qzlfly/libcxx-roots.tar.gz"
         OSX_ROOTS="${BUILD_DIR}/macos-roots"
         mkdir -p "${OSX_ROOTS}"
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
@@ -353,6 +353,28 @@ unified-standalone)
 
     check-cxx-cxxabi
 ;;
+runtimes-build)
+    export CC=clang
+    export CXX=clang++
+
+    clean
+
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+          -DLLVM_RUNTIME_TARGETS="x86_64-unknown-linux-gnu"
+
+    echo "+++ Running the libc++ and libc++abi tests"
+    ${NINJA} -C "${BUILD_DIR}" check-runtimes
+
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ${NINJA} -C "${BUILD_DIR}" install-cxx install-cxxabi
+;;
 legacy-standalone)
     export CC=clang
     export CXX=clang++
@@ -377,8 +399,11 @@ legacy-standalone)
           -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
           -DLLVM_PATH="${MONOREPO_ROOT}/llvm" \
           -DLIBCXXABI_LIBCXX_PATH="${MONOREPO_ROOT}/libcxx" \
-          -DLIBCXXABI_LIBCXX_INCLUDES="${MONOREPO_ROOT}/libcxx/include" \
+          -DLIBCXXABI_LIBCXX_INCLUDES="${BUILD_DIR}/libcxx/include/c++/v1" \
           -DLIBCXXABI_LIBCXX_LIBRARY_PATH="${BUILD_DIR}/libcxx/lib"
+
+    echo "+++ Generating libc++ headers"
+    ${NINJA} -vC "${BUILD_DIR}/libcxx" generate-cxx-headers
 
     echo "+++ Building libc++abi"
     ${NINJA} -vC "${BUILD_DIR}/libcxxabi" cxxabi

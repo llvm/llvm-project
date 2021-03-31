@@ -176,7 +176,7 @@ bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // When we need stack realignment, we can't reference off of the
   // stack pointer, so we reserve a base pointer.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MFI.getNumFixedObjects() && needsStackRealignment(MF);
+  return MFI.getNumFixedObjects() && shouldRealignStack(MF);
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }
@@ -358,7 +358,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool SIRegisterInfo::canRealignStack(const MachineFunction &MF) const {
+bool SIRegisterInfo::shouldRealignStack(const MachineFunction &MF) const {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   // On entry, the base address is 0, so it can't possibly need any more
   // alignment.
@@ -368,7 +368,7 @@ bool SIRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   if (Info->isEntryFunction())
     return false;
 
-  return TargetRegisterInfo::canRealignStack(MF);
+  return TargetRegisterInfo::shouldRealignStack(MF);
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {

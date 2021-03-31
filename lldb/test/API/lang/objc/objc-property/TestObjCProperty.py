@@ -137,3 +137,8 @@ class ObjCPropertyTestCase(TestBase):
         value = frame.EvaluateExpression("BaseClass.classInt", False)
         self.assertTrue(value.GetError().Success())
         self.assertEquals(value.GetValueAsUnsigned(11111), 234)
+
+        # Test that accessing two distinct class and instance properties that
+        # share the same name works.
+        self.expect_expr("mine.propConflict", result_value="4")
+        self.expect_expr("BaseClass.propConflict", result_value="6")

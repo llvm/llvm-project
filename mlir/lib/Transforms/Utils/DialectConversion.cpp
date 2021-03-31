@@ -916,9 +916,13 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 
   // In a second pass, erase all of the replaced operations in reverse. This
   // allows processing nested operations before their parent region is
-  // destroyed.
-  for (auto &repl : llvm::reverse(replacements))
+  // destroyed. Because we process in reverse order, producers may be deleted
+  // before their users (a pattern deleting a producer and then the consumer)
+  // so we first drop all uses explicitly.
+  for (auto &repl : llvm::reverse(replacements)) {
+    repl.first->dropAllUses();
     repl.first->erase();
+  }
 
   argConverter.applyRewrites(mapping);
 
@@ -2230,13 +2234,20 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // legalized.
   if (failed(finalize(rewriter)))
     return rewriterImpl.discardRewrites(), failure();
-
   // After a successful conversion, apply rewrites if this is not an analysis
   // conversion.
   if (mode == OpConversionMode::Analysis)
     rewriterImpl.discardRewrites();
-  else
+  else {
     rewriterImpl.applyRewrites();
+
+    // It is possible for a later pattern to erase an op that was originally
+    // identified as illegal and added to the trackedOps, remove it now after
+    // replacements have been computed.
+    if (trackedOps)
+      for (auto &repl : rewriterImpl.replacements)
+        trackedOps->erase(repl.first);
+  }
   return success();
 }
 
