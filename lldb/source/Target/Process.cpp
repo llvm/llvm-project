@@ -6102,3 +6102,21 @@ Process::ReadMemoryTags(lldb::addr_t addr, size_t len) {
   return tag_manager->UnpackTagsData(*tag_data,
                                      len / tag_manager->GetGranuleSize());
 }
+
+Status Process::WriteMemoryTags(lldb::addr_t addr, size_t len,
+                                const std::vector<lldb::addr_t> &tags) {
+  llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
+      GetMemoryTagManager();
+  if (!tag_manager_or_err)
+    return Status(tag_manager_or_err.takeError());
+
+  const MemoryTagManager *tag_manager = *tag_manager_or_err;
+  llvm::Expected<std::vector<uint8_t>> packed_tags =
+      tag_manager->PackTags(tags);
+  if (!packed_tags) {
+    return Status(packed_tags.takeError());
+  }
+
+  return DoWriteMemoryTags(addr, len, tag_manager->GetAllocationTagType(),
+                           *packed_tags);
+}
