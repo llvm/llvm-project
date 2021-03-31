@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+/// Apply the special region builder for the builtin named Linalg op.
+/// Assert that `op` is a builtin named Linalg op.
+MLIR_CAPI_EXPORTED void
+mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect, MlirOperation op);
+
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Linalg, linalg);
 
 #ifdef __cplusplus

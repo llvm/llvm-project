@@ -38,7 +38,8 @@ static Operation *findAncestorOpInRegion(Region *region, Operation *op) {
 /// transfer_read.
 static bool transferEncompasses(vector::TransferWriteOp defWrite,
                                 vector::TransferReadOp read) {
-  return !defWrite.hasMaskedDim() && defWrite.indices() == read.indices() &&
+  return !defWrite.hasOutOfBoundsDim() &&
+         defWrite.indices() == read.indices() &&
          defWrite.getVectorType() == read.getVectorType() &&
          defWrite.permutation_map() == read.permutation_map();
 }
@@ -175,7 +176,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
 /// potentially aliasing ops that may reach the transfer_read are post-dominated
 /// by the transfer_write.
 void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
-  if (read.hasMaskedDim())
+  if (read.hasOutOfBoundsDim())
     return;
   LLVM_DEBUG(DBGS() << "Candidate for Forwarding: " << *read.getOperation()
                     << "\n");

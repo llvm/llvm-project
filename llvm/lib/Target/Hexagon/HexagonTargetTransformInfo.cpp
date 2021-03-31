@@ -334,10 +334,9 @@ unsigned HexagonTTIImpl::getCacheLineSize() const {
   return ST.getL1CacheLineSize();
 }
 
-int
-HexagonTTIImpl::getUserCost(const User *U,
-                            ArrayRef<const Value *> Operands,
-                            TTI::TargetCostKind CostKind) {
+InstructionCost HexagonTTIImpl::getUserCost(const User *U,
+                                            ArrayRef<const Value *> Operands,
+                                            TTI::TargetCostKind CostKind) {
   auto isCastFoldedIntoLoad = [this](const CastInst *CI) -> bool {
     if (!CI->isIntegerCast())
       return false;

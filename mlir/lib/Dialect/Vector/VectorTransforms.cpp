@@ -613,12 +613,12 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
     // Get VectorType for slice 'i'.
     auto sliceVectorType = tupleType.getType(index);
     // Create split TransferReadOp for 'sliceUser'.
-    // `masked` attribute propagates conservatively: if the coarse op didn't
-    // need masking, the fine op doesn't either.
+    // `in_bounds` attribute propagates conservatively: if the coarse op didn't
+    // need out-of-bounds masking, the fine op doesn't either.
     vectorTupleValues[index] = builder.create<vector::TransferReadOp>(
         loc, sliceVectorType, readOp.source(), sliceIndices,
         readOp.permutation_map(), readOp.padding(),
-        readOp.masked() ? *readOp.masked() : ArrayAttr());
+        readOp.in_bounds() ? *readOp.in_bounds() : ArrayAttr());
   };
   generateTransferOpSlices(shapedElementType, sourceVectorType, tupleType,
                            targetShape, strides, indices, builder, createSlice);
@@ -662,7 +662,7 @@ mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
         loc, element.getResult(),
         resultTensor ? resultTensor : writeOp.source(), sliceIndices,
         writeOp.permutation_map(),
-        writeOp.masked() ? *writeOp.masked() : ArrayAttr());
+        writeOp.in_bounds() ? *writeOp.in_bounds() : ArrayAttr());
     if (!write->getResults().empty())
       resultTensor = write->getResult(0);
   };
@@ -800,13 +800,13 @@ public:
     Value resultTensor;
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
       // Create split TransferWriteOp for source vector 'tupleOp.operand[i]'.
-      // 'masked' attribute propagates conservatively: if the coarse op didn't
-      // need masking, the fine op doesn't either.
+      // 'in_bounds' attribute propagates conservatively: if the coarse op
+      // didn't need out-of-bounds masking, the fine op doesn't either.
       Operation *write = rewriter.create<vector::TransferWriteOp>(
           loc, tupleOp.getOperand(index),
           resultTensor ? resultTensor : writeOp.source(), sliceIndices,
           writeOp.permutation_map(),
-          writeOp.masked() ? *writeOp.masked() : ArrayAttr());
+          writeOp.in_bounds() ? *writeOp.in_bounds() : ArrayAttr());
       if (!write->getResults().empty())
         resultTensor = write->getResult(0);
     };
@@ -2267,16 +2267,16 @@ static Value createScopedFoldedSLE(Value v, Value ub) {
 }
 
 // Operates under a scoped context to build the condition to ensure that a
-// particular VectorTransferOpInterface is unmasked.
+// particular VectorTransferOpInterface is in-bounds.
 static Value createScopedInBoundsCond(VectorTransferOpInterface xferOp) {
   assert(xferOp.permutation_map().isMinorIdentity() &&
          "Expected minor identity map");
   Value inBoundsCond;
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     // Zip over the resulting vector shape and memref indices.
-    // If the dimension is known to be unmasked, it does not participate in the
-    // construction of `inBoundsCond`.
-    if (!xferOp.isMaskedDim(resultIdx))
+    // If the dimension is known to be in-bounds, it does not participate in
+    // the construction of `inBoundsCond`.
+    if (xferOp.isDimInBounds(resultIdx))
       return;
     int64_t vectorSize = xferOp.getVectorType().getDimSize(resultIdx);
     using namespace edsc::op;
@@ -2298,8 +2298,8 @@ LogicalResult mlir::vector::splitFullAndPartialTransferPrecondition(
   // TODO: expand support to these 2 cases.
   if (!xferOp.permutation_map().isMinorIdentity())
     return failure();
-  // Must have some masked dimension to be a candidate for splitting.
-  if (!xferOp.hasMaskedDim())
+  // Must have some out-of-bounds dimension to be a candidate for splitting.
+  if (!xferOp.hasOutOfBoundsDim())
     return failure();
   // Don't split transfer operations directly under IfOp, this avoids applying
   // the pattern recursively.
@@ -2492,7 +2492,8 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
   return fullPartialIfOp;
 }
 
-/// Split a vector.transfer operation into an unmasked fastpath and a slowpath.
+/// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
+/// masking) fastpath and a slowpath.
 /// If `ifOp` is not null and the result is `success, the `ifOp` points to the
 /// newly created conditional upon function return.
 /// To accomodate for the fact that the original vector.transfer indexing may be
@@ -2511,11 +2512,11 @@ static scf::IfOp createScopedFullPartialVectorTransferRead(
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slowpath, masked vector.transfer or linalg.copy.
+///      // slowpath, not in-bounds vector.transfer or linalg.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
-///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ... true]}
 /// ```
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
@@ -2533,10 +2534,11 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   if (options.vectorTransferSplit == VectorTransferSplit::None)
     return failure();
 
-  SmallVector<bool, 4> bools(xferOp.getTransferRank(), false);
-  auto unmaskedAttr = b.getBoolArrayAttr(bools);
-  if (options.vectorTransferSplit == VectorTransferSplit::ForceUnmasked) {
-    xferOp->setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+  SmallVector<bool, 4> bools(xferOp.getTransferRank(), true);
+  auto inBoundsAttr = b.getBoolArrayAttr(bools);
+  if (options.vectorTransferSplit == VectorTransferSplit::ForceInBounds) {
+    xferOp->setAttr(vector::TransferReadOp::getInBoundsAttrName(),
+                    inBoundsAttr);
     return success();
   }
 
@@ -2575,7 +2577,7 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
       getCastCompatibleMemRefType(xferOp.getShapedType().cast<MemRefType>(),
                                   alloc.getType().cast<MemRefType>());
 
-  // Read case: full fill + partial copy -> unmasked vector.xfer_read.
+  // Read case: full fill + partial copy -> in-bounds vector.xfer_read.
   SmallVector<Type, 4> returnTypes(1 + xferOp.getTransferRank(),
                                    b.getIndexType());
   returnTypes[0] = compatibleMemRefType;
@@ -2590,10 +2592,10 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
   if (ifOp)
     *ifOp = fullPartialIfOp;
 
-  // Unmask the existing read op, it always reads from a full buffer.
+  // Set existing read op to in-bounds, it always reads from a full buffer.
   for (unsigned i = 0, e = returnTypes.size(); i != e; ++i)
     xferReadOp.setOperand(i, fullPartialIfOp.getResult(i));
-  xferOp->setAttr(vector::TransferReadOp::getMaskedAttrName(), unmaskedAttr);
+  xferOp->setAttr(vector::TransferReadOp::getInBoundsAttrName(), inBoundsAttr);
 
   return success();
 }
@@ -2691,7 +2693,7 @@ struct TransferReadExtractPattern
     }
     Value newRead = vector_transfer_read(extract.getType(), read.source(),
                                          indices, read.permutation_map(),
-                                         read.padding(), read.maskedAttr());
+                                         read.padding(), read.in_boundsAttr());
     Value dest = rewriter.create<ConstantOp>(
         read.getLoc(), read.getType(), rewriter.getZeroAttr(read.getType()));
     newRead = rewriter.create<vector::InsertMapOp>(read.getLoc(), newRead, dest,
@@ -2726,7 +2728,7 @@ struct TransferWriteInsertPattern
               std_constant_index(insert.getSourceVectorType().getDimSize(pos));
     }
     vector_transfer_write(insert.vector(), write.source(), indices,
-                          write.permutation_map(), write.maskedAttr());
+                          write.permutation_map(), write.in_boundsAttr());
     rewriter.eraseOp(write);
     return success();
   }
@@ -2736,7 +2738,7 @@ struct TransferWriteInsertPattern
 /// `vector.transfer_read` to a combination of `vector.load` and
 /// `vector.broadcast` if all of the following hold:
 /// - The op reads from a memref with the default layout.
-/// - Masking is not required.
+/// - Out-of-bounds masking is not required.
 /// - If the memref's element type is a vector type then it coincides with the
 ///   result type.
 /// - The permutation map doesn't perform permutation (broadcasting is allowed).
@@ -2774,8 +2776,9 @@ struct TransferReadToVectorLoadLowering
     // TODO: Support non-default layouts.
     if (!memRefType.getAffineMaps().empty())
       return failure();
-    // TODO: When masking is required, we can create a MaskedLoadOp
-    if (read.hasMaskedDim())
+    // TODO: When out-of-bounds masking is required, we can create a
+    //       MaskedLoadOp.
+    if (read.hasOutOfBoundsDim())
       return failure();
 
     Operation *loadOp;
@@ -2807,7 +2810,7 @@ struct TransferReadToVectorLoadLowering
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store` if all of the following hold:
 /// - The op writes to a memref with the default layout.
-/// - Masking is not required.
+/// - Out-of-bounds masking is not required.
 /// - If the memref's element type is a vector type then it coincides with the
 ///   type of the written value.
 /// - The permutation map is the minor identity map (neither permutation nor
@@ -2833,8 +2836,9 @@ struct TransferWriteToVectorStoreLowering
     // TODO: Support non-default layouts.
     if (!memRefType.getAffineMaps().empty())
       return failure();
-    // TODO: When masking is required, we can create a MaskedStoreOp
-    if (write.hasMaskedDim())
+    // TODO: When out-of-bounds masking is required, we can create a
+    //       MaskedStoreOp.
+    if (write.hasOutOfBoundsDim())
       return failure();
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
         write, write.vector(), write.source(), write.indices());
@@ -2889,7 +2893,7 @@ struct TransferReadPermutationLowering
         VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), op.masked() ? *op.masked() : ArrayAttr());
+        op.padding(), op.in_bounds() ? *op.in_bounds() : ArrayAttr());
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(op, newRead,
                                                      transposePerm);
@@ -2935,14 +2939,14 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
         originalVecType.getShape().take_back(reducedShapeRank));
     VectorType newReadType =
         VectorType::get(newShape, originalVecType.getElementType());
-    ArrayAttr newMask =
-        op.masked()
+    ArrayAttr newInBounds =
+        op.in_bounds()
             ? rewriter.getArrayAttr(
-                  op.maskedAttr().getValue().take_back(reducedShapeRank))
+                  op.in_boundsAttr().getValue().take_back(reducedShapeRank))
             : ArrayAttr();
     Value newRead = rewriter.create<vector::TransferReadOp>(
         op.getLoc(), newReadType, op.source(), op.indices(), newMap,
-        op.padding(), newMask);
+        op.padding(), newInBounds);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
                                                      newRead);
     return success();
@@ -3075,14 +3079,14 @@ struct CastAwayTransferReadLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr mask;
-    if (read.masked())
-      mask = rewriter.getArrayAttr(
-          read.maskedAttr().getValue().take_back(newType.getRank()));
+    ArrayAttr inBounds;
+    if (read.in_bounds())
+      inBounds = rewriter.getArrayAttr(
+          read.in_boundsAttr().getValue().take_back(newType.getRank()));
 
     auto newRead = rewriter.create<vector::TransferReadOp>(
         read.getLoc(), newType, read.source(), read.indices(), newMap,
-        read.padding(), mask);
+        read.padding(), inBounds);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(read, oldType, newRead);
 
     return success();
@@ -3115,15 +3119,15 @@ struct CastAwayTransferWriteLeadingOneDim
         AffineMap::get(oldMap.getNumDims(), oldMap.getNumSymbols(), newResults,
                        rewriter.getContext());
 
-    ArrayAttr mask;
-    if (write.masked())
-      mask = rewriter.getArrayAttr(
-          write.maskedAttr().getValue().take_back(newType.getRank()));
+    ArrayAttr inBounds;
+    if (write.in_bounds())
+      inBounds = rewriter.getArrayAttr(
+          write.in_boundsAttr().getValue().take_back(newType.getRank()));
 
     auto newVector = rewriter.create<vector::ShapeCastOp>(
         write.getLoc(), newType, write.vector());
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        write, newVector, write.source(), write.indices(), newMap, mask);
+        write, newVector, write.source(), write.indices(), newMap, inBounds);
 
     return success();
   }
