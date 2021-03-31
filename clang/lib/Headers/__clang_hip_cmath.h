@@ -312,7 +312,6 @@ class __promote : public __promote_imp<_A1, _A2, _A3> {};
   }
 #endif
 
-__HIP_OVERLOAD1(double, abs)
 __HIP_OVERLOAD1(double, acos)
 __HIP_OVERLOAD1(double, acosh)
 __HIP_OVERLOAD1(double, asin)
