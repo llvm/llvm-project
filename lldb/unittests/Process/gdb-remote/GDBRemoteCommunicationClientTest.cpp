@@ -417,7 +417,7 @@ TEST_F(GDBRemoteCommunicationClientTest, SendTraceSupportedPacket) {
     HandlePacket(server, "jLLDBTraceSupported", R"({"type":"intel-pt"}])");
 
     EXPECT_FALSE(result.get());
-    ASSERT_STREQ(error_message.c_str(), "missing value at (root).description");
+    ASSERT_STREQ(error_message.c_str(), "missing value at TraceSupportedResponse.description");
   }
 
   // Error response
