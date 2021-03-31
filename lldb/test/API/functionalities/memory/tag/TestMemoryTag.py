@@ -39,3 +39,4 @@ class MemoryTagTestCase(TestBase):
             expected = "error: This architecture does not support memory tagging"
 
         self.expect("memory tag read 0 1", substrs=[expected], error=True)
+        self.expect("memory tag write 0 1 2", substrs=[expected], error=True)
