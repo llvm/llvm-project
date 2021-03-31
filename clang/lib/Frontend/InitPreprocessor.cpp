@@ -589,6 +589,9 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     //Builder.defineMacro("__cpp_modules", "201907L");
     //Builder.defineMacro("__cpp_using_enum", "201907L");
   }
+  // C++2b features.
+  if (LangOpts.CPlusPlus2b)
+    Builder.defineMacro("__cpp_size_t_suffix", "202011L");
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "201811L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
