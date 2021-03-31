@@ -85,7 +85,7 @@ add_lldb_library(lldbTarget
   ThreadPlanTracer.cpp
   ThreadPlanStack.cpp
   ThreadSpec.cpp
-  ThreadTrace.cpp
+  ThreadPostMortemTrace.cpp
   Trace.cpp
   TraceSessionFileParser.cpp
   UnixSignals.cpp

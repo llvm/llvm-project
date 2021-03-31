@@ -836,6 +836,7 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
             case eStopReasonExec:
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
+            case eStopReasonProcessorTrace:
               if (!other_thread)
                 other_thread = thread;
               break;
@@ -6088,7 +6089,7 @@ UtilityFunction *Process::GetLoadImageUtilityFunction(
   return m_dlopen_utility_func_up.get();
 }
 
-llvm::Expected<TraceTypeInfo> Process::GetSupportedTraceType() {
+llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {
   if (!IsLiveDebugSession())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Can't trace a non-live process.");

@@ -1044,6 +1044,30 @@ public:
   }
 };
 
+// StopInfoProcessorTrace
+
+class StopInfoProcessorTrace : public StopInfo {
+public:
+  StopInfoProcessorTrace(Thread &thread, const char *description)
+      : StopInfo(thread, LLDB_INVALID_UID) {
+    if (description)
+      SetDescription(description);
+  }
+
+  ~StopInfoProcessorTrace() override = default;
+
+  StopReason GetStopReason() const override {
+    return eStopReasonProcessorTrace;
+  }
+
+  const char *GetDescription() override {
+    if (m_description.empty())
+      return "processor trace event";
+    else
+      return m_description.c_str();
+  }
+};
+
 // StopInfoThreadPlan
 
 class StopInfoThreadPlan : public StopInfo {
@@ -1168,6 +1192,11 @@ StopInfo::CreateStopReasonWithPlan(ThreadPlanSP &plan_sp,
 StopInfoSP StopInfo::CreateStopReasonWithException(Thread &thread,
                                                    const char *description) {
   return StopInfoSP(new StopInfoException(thread, description));
+}
+
+StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
+                                                    const char *description) {
+  return StopInfoSP(new StopInfoProcessorTrace(thread, description));
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {

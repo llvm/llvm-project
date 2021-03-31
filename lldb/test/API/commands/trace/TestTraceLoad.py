@@ -59,7 +59,7 @@ Schema:
 {
   "trace": {
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel" | "unknown",
       "family": integer,
       "model": integer,
@@ -73,13 +73,13 @@ Schema:
 
         # Now we test a missing field in the intel-pt settings
         self.expect("trace load -v " + os.path.join(src_dir, "intelpt-trace", "trace_bad4.json"), error=True,
-            substrs=['''error: missing value at traceSession.trace.pt_cpu.family
+            substrs=['''error: missing value at traceSession.trace.cpuInfo.family
 
 Context:
 {
   "processes": [],
   "trace": {
-    "pt_cpu": /* error: missing value */ {
+    "cpuInfo": /* error: missing value */ {
       "model": 79,
       "stepping": 1,
       "vendor": "intel"

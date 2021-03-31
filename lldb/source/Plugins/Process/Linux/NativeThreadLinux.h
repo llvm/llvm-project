@@ -14,6 +14,8 @@
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
+#include "llvm/ADT/StringRef.h"
+
 #include <csignal>
 #include <map>
 #include <memory>
@@ -84,6 +86,8 @@ private:
   void SetStoppedByTrace();
 
   void SetStoppedWithNoReason();
+
+  void SetStoppedByProcessorTrace(llvm::StringRef description);
 
   void SetExited();
 

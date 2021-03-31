@@ -130,6 +130,9 @@ public:
 
   static lldb::StopInfoSP CreateStopReasonWithExec(Thread &thread);
 
+  static lldb::StopInfoSP
+  CreateStopReasonProcessorTrace(Thread &thread, const char *description);
+
   static lldb::ValueObjectSP
   GetReturnValueObject(lldb::StopInfoSP &stop_info_sp,
                        bool &is_swift_error_result);

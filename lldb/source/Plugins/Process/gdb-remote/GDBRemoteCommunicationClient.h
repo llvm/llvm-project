@@ -22,7 +22,7 @@
 #include "lldb/Utility/GDBRemote.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
-#include "lldb/Utility/TraceOptions.h"
+#include "lldb/Utility/TraceGDBRemotePackets.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
 #endif
@@ -505,22 +505,16 @@ public:
   ConfigureRemoteStructuredData(ConstString type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
-  lldb::user_id_t SendStartTracePacket(const TraceOptions &options,
-                                       Status &error);
+  llvm::Expected<TraceSupportedResponse> SendTraceSupported();
 
-  Status SendStopTracePacket(lldb::user_id_t uid, lldb::tid_t thread_id);
+  llvm::Error SendTraceStart(const llvm::json::Value &request);
 
-  Status SendGetDataPacket(lldb::user_id_t uid, lldb::tid_t thread_id,
-                           llvm::MutableArrayRef<uint8_t> &buffer,
-                           size_t offset = 0);
+  llvm::Error SendTraceStop(const TraceStopRequest &request);
 
-  Status SendGetMetaDataPacket(lldb::user_id_t uid, lldb::tid_t thread_id,
-                               llvm::MutableArrayRef<uint8_t> &buffer,
-                               size_t offset = 0);
+  llvm::Expected<std::string> SendTraceGetState(llvm::StringRef type);
 
-  Status SendGetTraceConfigPacket(lldb::user_id_t uid, TraceOptions &options);
-
-  llvm::Expected<TraceTypeInfo> SendGetSupportedTraceType();
+  llvm::Expected<std::vector<uint8_t>>
+  SendTraceGetBinaryData(const TraceGetBinaryDataRequest &request);
 
 protected:
   LazyBool m_supports_not_sending_acks;
