@@ -340,12 +340,22 @@ AffineMap simplifyAffineMap(AffineMap map);
 /// Drop the dims that are not used.
 AffineMap compressUnusedDims(AffineMap map);
 
+/// Drop the dims that are not used by any of the individual maps in `maps`.
+/// Asserts that all maps in `maps` are normalized to the same number of
+/// dims and symbols.
+SmallVector<AffineMap> compressUnusedDims(ArrayRef<AffineMap> maps);
+
 /// Drop the dims that are not listed in `unusedDims`.
 AffineMap compressDims(AffineMap map,
                        const llvm::SmallDenseSet<unsigned> &unusedDims);
 
 /// Drop the symbols that are not used.
 AffineMap compressUnusedSymbols(AffineMap map);
+
+/// Drop the symbols that are not used by any of the individual maps in `maps`.
+/// Asserts that all maps in `maps` are normalized to the same number of
+/// dims and symbols.
+SmallVector<AffineMap> compressUnusedSymbols(ArrayRef<AffineMap> maps);
 
 /// Drop the symbols that are not listed in `unusedSymbols`.
 AffineMap compressSymbols(AffineMap map,

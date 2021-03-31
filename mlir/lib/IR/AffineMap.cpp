@@ -543,6 +543,41 @@ AffineMap mlir::compressUnusedDims(AffineMap map) {
   return compressDims(map, unusedDims);
 }
 
+static SmallVector<AffineMap>
+compressUnusedImpl(ArrayRef<AffineMap> maps,
+                   llvm::function_ref<AffineMap(AffineMap)> compressionFun) {
+  if (maps.empty())
+    return SmallVector<AffineMap>();
+  SmallVector<AffineExpr> allExprs;
+  allExprs.reserve(maps.size() * maps.front().getNumResults());
+  unsigned numDims = maps.front().getNumDims(),
+           numSymbols = maps.front().getNumSymbols();
+  for (auto m : maps) {
+    assert(numDims == m.getNumDims() && numSymbols == m.getNumSymbols() &&
+           "expected maps with same num dims and symbols");
+    llvm::append_range(allExprs, m.getResults());
+  }
+  AffineMap unifiedMap = compressionFun(
+      AffineMap::get(numDims, numSymbols, allExprs, maps.front().getContext()));
+  unsigned unifiedNumDims = unifiedMap.getNumDims(),
+           unifiedNumSymbols = unifiedMap.getNumSymbols();
+  ArrayRef<AffineExpr> unifiedResults = unifiedMap.getResults();
+  SmallVector<AffineMap> res;
+  res.reserve(maps.size());
+  for (auto m : maps) {
+    res.push_back(AffineMap::get(unifiedNumDims, unifiedNumSymbols,
+                                 unifiedResults.take_front(m.getNumResults()),
+                                 m.getContext()));
+    unifiedResults = unifiedResults.drop_front(m.getNumResults());
+  }
+  return res;
+}
+
+SmallVector<AffineMap> mlir::compressUnusedDims(ArrayRef<AffineMap> maps) {
+  return compressUnusedImpl(maps,
+                            [](AffineMap m) { return compressUnusedDims(m); });
+}
+
 AffineMap
 mlir::compressSymbols(AffineMap map,
                       const llvm::SmallDenseSet<unsigned> &unusedSymbols) {
@@ -574,6 +609,11 @@ AffineMap mlir::compressUnusedSymbols(AffineMap map) {
     if (!usedSymbols.contains(d))
       unusedSymbols.insert(d);
   return compressSymbols(map, unusedSymbols);
+}
+
+SmallVector<AffineMap> mlir::compressUnusedSymbols(ArrayRef<AffineMap> maps) {
+  return compressUnusedImpl(
+      maps, [](AffineMap m) { return compressUnusedSymbols(m); });
 }
 
 AffineMap mlir::simplifyAffineMap(AffineMap map) {
