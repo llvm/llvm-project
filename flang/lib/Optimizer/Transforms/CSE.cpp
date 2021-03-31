@@ -37,9 +37,6 @@ static llvm::cl::opt<bool>
     leaveEffects("keep-effects",
                  llvm::cl::desc("disable cleaning up effects attributes"),
                  llvm::cl::init(false), llvm::cl::Hidden);
-static llvm::cl::opt<bool> disableCSE("disable-cse",
-                                      llvm::cl::desc("disable CSE pass"),
-                                      llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -293,9 +290,6 @@ void BasicCSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
 }
 
 void BasicCSE::runOnFunction() {
-  if (disableCSE)
-    return;
-
   /// A scoped hash table of defining operations within a function.
   {
     ScopedMapTy knownValues;

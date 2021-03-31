@@ -114,7 +114,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     // simplify the IR
     pm.addNestedPass<mlir::FuncOp>(fir::createArrayValueCopyPass());
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+    fir::addCSE(pm);
     pm.addPass(mlir::createInlinerPass());
     pm.addPass(mlir::createCSEPass());
 
@@ -124,11 +124,11 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     pm.addPass(mlir::createLowerToCFGPass());
 
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+    fir::addCSE(pm);
 
     // pm.addPass(fir::createMemToRegPass());
-    pm.addPass(fir::createFirCodeGenRewritePass());
-    pm.addPass(fir::createFirTargetRewritePass());
+    fir::addCodeGenRewritePass(pm);
+    fir::addTargetRewritePass(pm);
     fir::addFIRToLLVMPass(pm);
     fir::addLLVMDialectToLLVMPass(pm, out.os());
   }

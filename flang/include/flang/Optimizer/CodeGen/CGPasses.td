@@ -36,8 +36,7 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   }];
   let constructor = "fir::createFirCodeGenRewritePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
-    "mlir::LLVM::LLVMDialect", "mlir::omp::OpenMPDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
   ];
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
@@ -51,10 +50,7 @@ def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
       representations that may differ based on the target machine.
   }];
   let constructor = "fir::createFirTargetRewritePass()";
-  let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect", "mlir::BuiltinDialect",
-    "mlir::omp::OpenMPDialect"
-  ];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
   let options = [
     Option<"noCharacterConversion", "no-character-conversion",
            "bool", /*default=*/"false",

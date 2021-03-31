@@ -276,7 +276,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     // simplify the IR
     pm.addNestedPass<mlir::FuncOp>(fir::createArrayValueCopyPass());
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+    fir::addCSE(pm);
     pm.addPass(mlir::createInlinerPass());
     pm.addPass(mlir::createCSEPass());
 
@@ -286,7 +286,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(mlir::createLowerToCFGPass());
 
     pm.addPass(mlir::createCanonicalizerPass());
-    pm.addNestedPass<mlir::FuncOp>(fir::createCSEPass());
+    fir::addCSE(pm);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {

@@ -15,8 +15,16 @@
       llvm::cl::Hidden)
 
 namespace {
+// Optimizer Passes
+DisableOption(FirCse, "fir-cse", "CSE for FIR dialect");
+
+// CodeGen Passes
+#if !defined(FLANG_EXCLUDE_CODEGEN)
+DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
+DisableOption(TargetRewrite, "target-rewrite", "rewrite FIR for target");
 DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
+#endif
 
 // Generic for adding a pass to the pass manager if it is not disabled.
 template <typename F>
@@ -26,10 +34,33 @@ void addPassConditionally(
     pm.addPass(ctor());
 }
 
+template <typename OP, typename F>
+void addNestedPassConditionally(
+    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
+  if (!disabled)
+    pm.addNestedPass<OP>(ctor());
+}
+
 } // namespace
 
-#if !defined(FLANG_EXCLUDE_CODEGEN)
 namespace fir {
+
+inline void addCSE(mlir::PassManager &pm) {
+  addNestedPassConditionally<mlir::FuncOp>(
+      pm, disableFirCse, fir::createCSEPass);
+}
+
+#if !defined(FLANG_EXCLUDE_CODEGEN)
+inline void addCodeGenRewritePass(mlir::PassManager &pm) {
+  addPassConditionally(
+      pm, disableCodeGenRewrite, fir::createFirCodeGenRewritePass);
+}
+
+inline void addTargetRewritePass(mlir::PassManager &pm) {
+  addPassConditionally(pm, disableTargetRewrite, []() {
+    return fir::createFirTargetRewritePass(fir::TargetRewriteOptions{});
+  });
+}
 
 inline void addFIRToLLVMPass(mlir::PassManager &pm) {
   addPassConditionally(pm, disableFirToLlvmIr, fir::createFIRToLLVMPass);
@@ -40,7 +71,7 @@ inline void addLLVMDialectToLLVMPass(
   addPassConditionally(pm, disableLlvmIrToLlvm,
       [&]() { return fir::createLLVMDialectToLLVMPass(output); });
 }
-
-} // namespace fir
 #undef FLANG_EXCLUDE_CODEGEN
 #endif
+
+} // namespace fir
