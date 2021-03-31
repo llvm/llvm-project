@@ -165,6 +165,9 @@ class DominatorTree : public DominatorTreeBase<BasicBlock, false> {
   // Ensure base-class overloads are visible.
   using Base::dominates;
 
+  /// Return true if the (end of the) basic block BB dominates the use U.
+  bool dominates(const BasicBlock *BB, const Use &U) const;
+
   /// Return true if value Def dominates use U, in the sense that Def is
   /// available at U, and could be substituted as the used value without
   /// violating the SSA dominance requirement.

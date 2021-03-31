@@ -325,6 +325,11 @@ static bool writeShouldKill(const VarDecl *VD) {
 }
 
 void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
+  if (LV.killAtAssign && B->getOpcode() == BO_Assign) {
+    if (const auto *DR = dyn_cast<DeclRefExpr>(B->getLHS()->IgnoreParens())) {
+      LV.inAssignment[DR] = 1;
+    }
+  }
   if (B->isAssignmentOp()) {
     if (!LV.killAtAssign)
       return;
@@ -513,29 +518,8 @@ LiveVariables::computeLiveness(AnalysisDeclContext &AC, bool killAtAssign) {
   llvm::BitVector everAnalyzedBlock(cfg->getNumBlockIDs());
 
   // FIXME: we should enqueue using post order.
-  for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it) {
-    const CFGBlock *block = *it;
-    worklist.enqueueBlock(block);
-
-    // FIXME: Scan for DeclRefExprs using in the LHS of an assignment.
-    // We need to do this because we lack context in the reverse analysis
-    // to determine if a DeclRefExpr appears in such a context, and thus
-    // doesn't constitute a "use".
-    if (killAtAssign)
-      for (CFGBlock::const_iterator bi = block->begin(), be = block->end();
-           bi != be; ++bi) {
-        if (Optional<CFGStmt> cs = bi->getAs<CFGStmt>()) {
-          const Stmt* stmt = cs->getStmt();
-          if (const auto *BO = dyn_cast<BinaryOperator>(stmt)) {
-            if (BO->getOpcode() == BO_Assign) {
-              if (const auto *DR =
-                    dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParens())) {
-                LV->inAssignment[DR] = 1;
-              }
-            }
-          }
-        }
-      }
+  for (const CFGBlock *B : cfg->nodes()) {
+    worklist.enqueueBlock(B);
   }
 
   while (const CFGBlock *block = worklist.dequeue()) {

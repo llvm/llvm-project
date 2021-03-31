@@ -47,6 +47,12 @@
 # CHECK-NEXT:     0000: 00000000 00000000 01010203
 # CHECK-NEXT:   )
 
+# Case 6: Override the NumBlocks field.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 20000000 00000000 02010203
+# CHECK-NEXT:   )
+
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -95,6 +101,17 @@ Sections:
             Size:             0x00000002
             Metadata:         0x00000003
 
+## 6) We can override the NumBlocks field with a value different from the
+##    actual number of BB Entries.
+  - Name:    '.llvm_bb_addr_map (6)'
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Address:   0x0000000000000020
+        NumBlocks: 2
+        BBEntries:
+          - AddressOffset:    0x00000001
+            Size:             0x00000002
+            Metadata:         0x00000003
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

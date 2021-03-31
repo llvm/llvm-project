@@ -26,9 +26,9 @@ using namespace mlir;
 
 namespace mlir {
 struct ScfToSPIRVContextImpl {
-  // Map between the spirv region control flow operation (spv.loop or
-  // spv.selection) to the VariableOp created to store the region results. The
-  // order of the VariableOp matches the order of the results.
+  // Map between the spirv region control flow operation (spv.mlir.loop or
+  // spv.mlir.selection) to the VariableOp created to store the region results.
+  // The order of the VariableOp matches the order of the results.
   DenseMap<Operation *, SmallVector<spirv::VariableOp, 8>> outputVars;
 };
 } // namespace mlir
@@ -111,8 +111,9 @@ public:
 
 /// Helper function to replaces SCF op outputs with SPIR-V variable loads.
 /// We create VariableOp to handle the results value of the control flow region.
-/// spv.loop/spv.selection currently don't yield value. Right after the loop
-/// we load the value from the allocation and use it as the SCF op result.
+/// spv.mlir.loop/spv.mlir.selection currently don't yield value. Right after
+/// the loop we load the value from the allocation and use it as the SCF op
+/// result.
 template <typename ScfOp, typename OpTy>
 static void replaceSCFOutputValue(ScfOp scfOp, OpTy newOp,
                                   ConversionPatternRewriter &rewriter,
@@ -154,9 +155,7 @@ ForOpConversion::matchAndRewrite(scf::ForOp forOp, ArrayRef<Value> operands,
   // header to merge.
   scf::ForOpAdaptor forOperands(operands);
   auto loc = forOp.getLoc();
-  auto loopControl = rewriter.getI32IntegerAttr(
-      static_cast<uint32_t>(spirv::LoopControl::None));
-  auto loopOp = rewriter.create<spirv::LoopOp>(loc, loopControl);
+  auto loopOp = rewriter.create<spirv::LoopOp>(loc, spirv::LoopControl::None);
   loopOp.addEntryAndMergeBlock();
 
   OpBuilder::InsertionGuard guard(rewriter);
@@ -238,9 +237,8 @@ IfOpConversion::matchAndRewrite(scf::IfOp ifOp, ArrayRef<Value> operands,
   auto loc = ifOp.getLoc();
 
   // Create `spv.selection` operation, selection header block and merge block.
-  auto selectionControl = rewriter.getI32IntegerAttr(
-      static_cast<uint32_t>(spirv::SelectionControl::None));
-  auto selectionOp = rewriter.create<spirv::SelectionOp>(loc, selectionControl);
+  auto selectionOp =
+      rewriter.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
   auto *mergeBlock =
       rewriter.createBlock(&selectionOp.body(), selectionOp.body().end());
   rewriter.create<spirv::MergeOp>(loc);
@@ -321,10 +319,9 @@ LogicalResult TerminatorOpConversion::matchAndRewrite(
 // Hooks
 //===----------------------------------------------------------------------===//
 
-void mlir::populateSCFToSPIRVPatterns(MLIRContext *context,
-                                      SPIRVTypeConverter &typeConverter,
+void mlir::populateSCFToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       ScfToSPIRVContext &scfToSPIRVContext,
-                                      OwningRewritePatternList &patterns) {
-  patterns.insert<ForOpConversion, IfOpConversion, TerminatorOpConversion>(
-      context, typeConverter, scfToSPIRVContext.getImpl());
+                                      RewritePatternSet &patterns) {
+  patterns.add<ForOpConversion, IfOpConversion, TerminatorOpConversion>(
+      patterns.getContext(), typeConverter, scfToSPIRVContext.getImpl());
 }

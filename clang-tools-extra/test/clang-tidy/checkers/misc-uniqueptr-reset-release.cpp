@@ -33,27 +33,27 @@ void f() {
   std::unique_ptr<Foo> *y = &b;
 
   a.reset(b.release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer ptr1 = std::move(ptr2) over ptr1.reset(ptr2.release()) [misc-uniqueptr-reset-release]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer 'unique_ptr<>' assignment over 'release' and 'reset' [misc-uniqueptr-reset-release]
   // CHECK-FIXES: a = std::move(b);
   a.reset(c.release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer ptr1 = std::move(ptr2)
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: a = std::move(c);
   a.reset(Create().release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer ptr = ReturnUnique() over ptr.reset(ReturnUnique().release()) [misc-uniqueptr-reset-release]
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: a = Create();
   x->reset(y->release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: prefer ptr1 = std::move(ptr2)
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: *x = std::move(*y);
   Look().reset(Look().release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer ptr1 = std::move(ptr2)
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: Look() = std::move(Look());
   Get()->reset(Get()->release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer ptr1 = std::move(ptr2)
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: *Get() = std::move(*Get());
 
   std::unique_ptr<Bar, FooFunc> func_a, func_b;
   func_a.reset(func_b.release());
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer ptr1 = std::move(ptr2)
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer 'unique_ptr<>' assignment
   // CHECK-FIXES: func_a = std::move(func_b);
 }
 

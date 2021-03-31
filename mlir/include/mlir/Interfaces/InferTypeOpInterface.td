@@ -50,8 +50,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
                " for an op.",
       /*retTy=*/"bool",
       /*methodName=*/"isCompatibleReturnTypes",
-      /*args=*/(ins "::llvm::ArrayRef<::mlir::Type>":$lhs,
-                    "::llvm::ArrayRef<::mlir::Type>":$rhs),
+      /*args=*/(ins "::mlir::TypeRange":$lhs, "::mlir::TypeRange":$rhs),
       /*methodBody=*/[{
         return ConcreteOp::isCompatibleReturnTypes(lhs, rhs);
       }],
@@ -90,30 +89,79 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
       may be returned by this function while returning success. E.g., partial
       population of components is not error condition.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"inferReturnTypeComponents",
-      /*args=*/(ins "MLIRContext*":$context,
-                    "Optional<Location>":$location,
-                    "ValueRange":$operands,
-                    "DictionaryAttr":$attributes,
-                    "RegionRange":$regions,
-                    "SmallVectorImpl<ShapedTypeComponents>&":
-                      $inferredReturnShapes)
+      /*args=*/(ins "::mlir::MLIRContext*":$context,
+                    "::mlir::Optional<::mlir::Location>":$location,
+                    "::mlir::ValueRange":$operands,
+                    "::mlir::DictionaryAttr":$attributes,
+                    "::mlir::RegionRange":$regions,
+                    "::mlir::SmallVectorImpl<::mlir::ShapedTypeComponents>&":
+                      $inferredReturnShapes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >,
     InterfaceMethod<
       /*desc=*/[{Reify the shape computation for the operation.
 
-      Insert operations using the given OpBuilder that computes the result
-      shape.
+      Insert operations using the given OpBuilder that computes the
+      result shape. Only one of this method or
+      `reifyReturnTypeShapesPerResultDim` needs to be overriden by the
+      operation.
       }],
-      /*retTy=*/"LogicalResult",
+      /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"reifyReturnTypeShapes",
-      /*args=*/(ins "OpBuilder&":$builder,
-                    "SmallVectorImpl<Value>&":$reifiedReturnShapes),
+      /*args=*/(ins "::mlir::OpBuilder&":$builder,
+          "::mlir::SmallVectorImpl<Value> &":$reifiedReturnShapes),
       /*methodBody=*/[{}],
-      /*defaultImplementation=*/[{ return failure(); }]
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{Reify the shape computation for the operation.
+
+      Insert operations using the given OpBuilder that computes the
+      result shape. The `reifiedReturnShapes` is expected to be
+      populated with as many vectors as the number of results of the
+      op (empty if the shape of a result value cannot be computed). If
+      the returned shape for a result is not empty, its size must
+      match the rank of the shaped type returned. Consequently, this
+      interface can only be overridden if the return types are ranked.
+
+      If both this method and `reifyReturnTypeShapes` are overridden
+      by the operation, `reifyReturnTypeShapes` takes precedence. This
+      method is intended to be used when the shape of each result, dim
+      pair can be computed independently. Using this method avoids
+      adding additional instructions to aggregate individual dimension
+      of a result shape into an single `Value` (and consequently
+      avoids the need to extract the value from the shape on the
+      client side).
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"reifyReturnTypeShapesPerResultDim",
+      /*args=*/(ins "::mlir::OpBuilder&":$builder,
+          "::mlir::SmallVectorImpl<SmallVector<::mlir::Value>>&"
+          :$reifiedReturnShapes),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{ return ::mlir::failure(); }]
+    >
   ];
 }
+
+// Convenience class grouping together type and shaped type op interfaces for
+// ops that have tensor return types.
+class InferTensorType<list<string> overridenMethods = []> {
+  list<OpTrait> traits = [
+    // Op implements infer type op interface.
+    InferTypeOpInterface,
+    // The op will have methods implementing the ShapedType type inference
+    // interface.
+    DeclareOpInterfaceMethods<InferShapedTypeOpInterface, overridenMethods>,
+    // The op produces tensors and will use the ShapedType type infer interface
+    // along with knowledge that it is producing Tensors to infer the type.
+    NativeOpTrait<"InferTensorType">
+  ];
+}
+defvar InferTensorTypeWithReify = InferTensorType<[
+    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
 
 #endif // MLIR_INFERTYPEOPINTERFACE

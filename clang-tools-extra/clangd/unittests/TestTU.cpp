@@ -113,6 +113,11 @@ ParsedAST TestTU::build() const {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");
   }
+  if (!AST->getDiagnostics()) {
+    ADD_FAILURE() << "TestTU should always build an AST with a fresh Preamble"
+                  << Code;
+    return std::move(*AST);
+  }
   // Check for error diagnostics and report gtest failures (unless expected).
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
@@ -128,7 +133,8 @@ ParsedAST TestTU::build() const {
     return false;
   }();
   if (!ErrorOk) {
-    for (const auto &D : AST->getDiagnostics())
+    // We always build AST with a fresh preamble in TestTU.
+    for (const auto &D : *AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
         ADD_FAILURE()
             << "TestTU failed to build (suppress with /*error-ok*/): \n"
@@ -189,7 +195,7 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
                            llvm::StringRef Name) -> const NamedDecl & {
     auto LookupRes = Scope.lookup(DeclarationName(&Ctx.Idents.get(Name)));
     assert(!LookupRes.empty() && "Lookup failed");
-    assert(LookupRes.size() == 1 && "Lookup returned multiple results");
+    assert(LookupRes.isSingleResult() && "Lookup returned multiple results");
     return *LookupRes.front();
   };
 

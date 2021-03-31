@@ -51,13 +51,18 @@ printf("th %d (gen by th %d) passed bar%d in taskloop\n", omp_get_thread_num(), 
   }
   return 0;
 }
-// res = 2*((1+2)+(2+3)+(3+4)+(4+5)+1+2+3) = 60
-#define res 60
+// res = ((1+2)+(2+3)+(3+4)+(4+5)+1+2+3) = 30
+#define res 30
 int main()
 {
   r = 0;
   #pragma omp parallel num_threads(2)
-    foo();
+  { // barrier ensures threads have started before tasks creation
+    #pragma omp barrier
+    // single ensures no race condition between taskgroup reductions
+    #pragma omp single nowait
+      foo();
+  }
   if (r == res) {
     return 0;
   } else {

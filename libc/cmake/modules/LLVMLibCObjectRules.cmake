@@ -25,6 +25,7 @@ function(add_object_library target_name)
   get_fq_target_name(${target_name} fq_target_name)
   add_library(
     ${fq_target_name}
+    EXCLUDE_FROM_ALL
     OBJECT
     ${ADD_OBJECT_SRCS}
     ${ADD_OBJECT_HDRS}
@@ -157,6 +158,7 @@ function(add_entrypoint_object target_name)
     ${internal_target_name}
     # TODO: We don't need an object library for internal consumption.
     # A future change should switch this to a normal static library.
+    EXCLUDE_FROM_ALL
     OBJECT
     ${ADD_ENTRYPOINT_OBJ_SRCS}
     ${ADD_ENTRYPOINT_OBJ_HDRS}
@@ -169,6 +171,7 @@ function(add_entrypoint_object target_name)
     ${fq_target_name}
     # We want an object library as the objects will eventually get packaged into
     # an archive (like libc.a).
+    EXCLUDE_FROM_ALL
     OBJECT
     ${ADD_ENTRYPOINT_OBJ_SRCS}
     ${ADD_ENTRYPOINT_OBJ_HDRS}
@@ -268,6 +271,7 @@ function(add_redirector_object target_name)
 
   add_library(
     ${target_name}
+    EXCLUDE_FROM_ALL
     OBJECT
     ${REDIRECTOR_OBJECT_SRC}
   )

@@ -24,10 +24,20 @@ def icmp_redundant_trunc : GICombineRule<
          [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
 
+// AArch64-specific offset folding for G_GLOBAL_VALUE.
+def fold_global_offset_matchdata : GIDefMatchData<"std::pair<uint64_t, uint64_t>">;
+def fold_global_offset : GICombineRule<
+  (defs root:$root, fold_global_offset_matchdata:$matchinfo),
+  (match (wip_match_opcode G_GLOBAL_VALUE):$root,
+          [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
+>;
+
 def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
   "AArch64GenPreLegalizerCombinerHelper", [all_combines,
                                            fconstant_to_constant,
-                                           icmp_redundant_trunc]> {
+                                           icmp_redundant_trunc,
+                                           fold_global_offset]> {
   let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
   let StateClass = "AArch64PreLegalizerCombinerHelperState";
   let AdditionalArguments = [];
@@ -79,9 +89,13 @@ def ext: GICombineRule <
   (apply [{ applyEXT(*${root}, ${matchinfo}); }])
 >;
 
-// Combines which replace a G_SHUFFLE_VECTOR with a target-specific pseudo
-// instruction.
-def shuffle_vector_pseudos : GICombineGroup<[dup, rev, ext, zip, uzp, trn]>;
+def shuf_to_ins_matchdata : GIDefMatchData<"std::tuple<Register, int, Register, int>">;
+def shuf_to_ins: GICombineRule <
+  (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
+         [{ return matchINS(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ return applyINS(*${root}, MRI, B, ${matchinfo}); }])
+>;
 
 def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
 def vashr_vlshr_imm : GICombineRule<
@@ -99,6 +113,10 @@ def form_duplane : GICombineRule <
           [{ return matchDupLane(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyDupLane(*${root}, MRI, B, ${matchinfo}); }])
 >;
+
+def shuffle_vector_lowering : GICombineGroup<[dup, rev, ext, zip, uzp, trn,
+                                              form_duplane,
+                                              shuf_to_ins]>;
 
 def adjust_icmp_imm_matchdata :
   GIDefMatchData<"std::pair<uint64_t, CmpInst::Predicate>">;
@@ -127,13 +145,30 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def build_vector_to_dup : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+          [{ return matchBuildVectorToDup(*${root}, MRI); }]),
+  (apply [{ return applyBuildVectorToDup(*${root}, MRI, B); }])
+>;
+
+def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
+
+def bitfield_extract_from_sext_inreg : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_SEXT_INREG):$root,
+    [{ return matchBitfieldExtractFromSExtInReg(*${root}, MRI, ${info}); }]),
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
+
+def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg]>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
 def AArch64PostLegalizerLoweringHelper
     : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
-                       [shuffle_vector_pseudos, vashr_vlshr_imm,
-                        icmp_lowering, form_duplane]> {
+                       [shuffle_vector_lowering, vashr_vlshr_imm,
+                        icmp_lowering, build_vector_lowering]> {
   let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
@@ -145,6 +180,7 @@ def AArch64PostLegalizerCombinerHelper
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_const]> {
+                        mul_const, redundant_sext_inreg,
+                        form_bitfield_extract]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

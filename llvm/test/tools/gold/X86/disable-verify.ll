@@ -2,12 +2,12 @@
 ; REQUIRES: asserts
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
-; RUN:    --plugin-opt=disable-verify \
+; RUN:    --plugin-opt=disable-verify --plugin-opt=legacy-pass-manager \
 ; RUN:    --plugin-opt=-debug-pass=Arguments \
 ; RUN:    -shared %t.o -o %t2.o 2>&1 | FileCheck %s
 
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
-; RUN:    --plugin-opt=-debug-pass=Arguments \
+; RUN:    --plugin-opt=-debug-pass=Arguments --plugin-opt=legacy-pass-manager \
 ; RUN:    -shared %t.o -o %t2.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

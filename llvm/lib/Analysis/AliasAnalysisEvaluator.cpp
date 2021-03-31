@@ -105,14 +105,13 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
     if (I.getType()->isPointerTy())    // Add all pointer arguments.
       Pointers.insert(&I);
 
-  for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
-    if (I->getType()->isPointerTy()) // Add all pointer instructions.
-      Pointers.insert(&*I);
-    if (EvalAAMD && isa<LoadInst>(&*I))
-      Loads.insert(&*I);
-    if (EvalAAMD && isa<StoreInst>(&*I))
-      Stores.insert(&*I);
-    Instruction &Inst = *I;
+  for (Instruction &Inst : instructions(F)) {
+    if (Inst.getType()->isPointerTy()) // Add all pointer instructions.
+      Pointers.insert(&Inst);
+    if (EvalAAMD && isa<LoadInst>(&Inst))
+      Loads.insert(&Inst);
+    if (EvalAAMD && isa<StoreInst>(&Inst))
+      Stores.insert(&Inst);
     if (auto *Call = dyn_cast<CallBase>(&Inst)) {
       Value *Callee = Call->getCalledOperand();
       // Skip actual functions for direct function calls.
@@ -125,10 +124,9 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
       Calls.insert(Call);
     } else {
       // Consider all operands.
-      for (Instruction::op_iterator OI = Inst.op_begin(), OE = Inst.op_end();
-           OI != OE; ++OI)
-        if (isInterestingPointer(*OI))
-          Pointers.insert(*OI);
+      for (Use &Op : Inst.operands())
+        if (isInterestingPointer(Op))
+          Pointers.insert(Op);
     }
   }
 

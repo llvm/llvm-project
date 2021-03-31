@@ -15,6 +15,19 @@
 #
 
 steps:
+  - label: "Format"
+    command: "libcxx/utils/ci/run-buildbot check-format"
+    artifact_paths:
+      - "**/clang-format.patch"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    soft_fail:
+        - exit_status: 1
+
   - label: "C++03"
     command: "libcxx/utils/ci/run-buildbot generic-cxx03"
     artifact_paths:
@@ -98,6 +111,17 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Static libraries"
+    command: "libcxx/utils/ci/run-buildbot generic-static"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "GCC/C++20"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
@@ -165,7 +189,7 @@ steps:
           limit: 2
 
   - label: "No debug mode"
-    command: "libcxx/utils/ci/run-buildbot generic-nodebug"
+    command: "libcxx/utils/ci/run-buildbot generic-no-debug"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -214,7 +238,7 @@ steps:
       - "**/test-results.xml"
       - "**/*.abilist"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -264,13 +288,30 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Runtimes build"
+    command: "libcxx/utils/ci/run-buildbot runtimes-build"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  # All jobs defined before this `wait` will run whenever a CI job is started.
+  # Jobs defined after the `wait` will run only if all the jobs above succeeded.
+  # We use this to reduce the load on testers that have more constrained resources
+  # and avoid running builds that we know fail anyway.
+  - wait
+
   # Build with the configuration we use to generate libc++.dylib on Apple platforms
   - label: "Apple system"
     command: "libcxx/utils/ci/run-buildbot x86_64-apple-system"
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -281,7 +322,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos"
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -293,7 +334,7 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15" # TODO: For now, we're running the back-deployment tests for 10.9 on 10.15, because we don't have proper 10.9 machines
     retry:
       automatic:
         - exit_status: -1  # Agent was lost
@@ -304,7 +345,79 @@ steps:
     artifact_paths:
       - "**/test-results.xml"
     agents:
-      queue: "libcxx-macos-builders"
+      queue: "libcxx-builders-macos10.15"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "AArch64"
+    command: "libcxx/utils/ci/run-buildbot aarch64"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "AArch64 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "aarch64"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv8"
+    command: "libcxx/utils/ci/run-buildbot armv8"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv8 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7"
+    command: "libcxx/utils/ci/run-buildbot armv7"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Armv7 -fno-exceptions"
+    command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders-linaro-arm"
+      arch: "armv8l" # Compiling for v7, running on v8 hardware
     retry:
       automatic:
         - exit_status: -1  # Agent was lost

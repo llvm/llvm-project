@@ -5,5 +5,5 @@ entry:
   ret i32 0
 }
 
-; CHECK: *** IR Dump Before Inliner for always_inline functions ***
+; CHECK: *** IR Dump Before Inliner for always_inline functions (always-inline) ***
 ; CHECK: Printing <null> Function

@@ -23,6 +23,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -405,7 +406,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     assert(DstReg != MI.getOperand(3).getReg());
 
   bool UseRev = false;
-  unsigned PredIdx, DOPIdx, SrcIdx;
+  unsigned PredIdx, DOPIdx, SrcIdx, Src2Idx;
   switch (DType) {
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
@@ -419,7 +420,19 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveBinary:
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
-   break;
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3, 4);
+    if (DstReg == MI.getOperand(3).getReg()) {
+      // FMLA Zd, Pg, Za, Zd, Zm ==> FMAD Zdn, Pg, Zm, Za
+      std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 3, 4, 2);
+      UseRev = true;
+    } else if (DstReg == MI.getOperand(4).getReg()) {
+      // FMLA Zd, Pg, Za, Zm, Zd ==> FMAD Zdn, Pg, Zm, Za
+      std::tie(PredIdx, DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 4, 3, 2);
+      UseRev = true;
+    }
+    break;
   default:
     llvm_unreachable("Unsupported Destructive Operand type");
   }
@@ -438,6 +451,12 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     break;
   case AArch64::DestructiveBinaryImm:
     DOPRegIsUnique = true;
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    DOPRegIsUnique =
+        DstReg != MI.getOperand(DOPIdx).getReg() ||
+        (MI.getOperand(DOPIdx).getReg() != MI.getOperand(SrcIdx).getReg() &&
+         MI.getOperand(DOPIdx).getReg() != MI.getOperand(Src2Idx).getReg());
     break;
   }
 #endif
@@ -520,6 +539,12 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     DOP.add(MI.getOperand(PredIdx))
        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
        .add(MI.getOperand(SrcIdx));
+    break;
+  case AArch64::DestructiveTernaryCommWithRev:
+    DOP.add(MI.getOperand(PredIdx))
+        .addReg(MI.getOperand(DOPIdx).getReg(), RegState::Kill)
+        .add(MI.getOperand(SrcIdx))
+        .add(MI.getOperand(Src2Idx));
     break;
   }
 
@@ -648,8 +673,10 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   // Skip register arguments. Those are added during ISel, but are not
   // needed for the concrete branch.
   while (!MI.getOperand(RegMaskStartIdx).isRegMask()) {
-    assert(MI.getOperand(RegMaskStartIdx).isReg() &&
-           "should only skip register operands");
+    auto MOP = MI.getOperand(RegMaskStartIdx);
+    assert(MOP.isReg() && "can only add register operands");
+    OriginalCall->addOperand(MachineOperand::CreateReg(
+        MOP.getReg(), /*Def=*/false, /*Implicit=*/true));
     RegMaskStartIdx++;
   }
   for (; RegMaskStartIdx < MI.getNumOperands(); ++RegMaskStartIdx)
@@ -877,11 +904,36 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
   }
+  case AArch64::MOVaddrBA: {
+    MachineFunction &MF = *MI.getParent()->getParent();
+    if (MF.getSubtarget<AArch64Subtarget>().isTargetMachO()) {
+      // blockaddress expressions have to come from a constant pool because the
+      // largest addend (and hence offset within a function) allowed for ADRP is
+      // only 8MB.
+      const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
+      assert(MI.getOperand(1).getOffset() == 0 && "unexpected offset");
 
+      MachineConstantPool *MCP = MF.getConstantPool();
+      unsigned CPIdx = MCP->getConstantPoolIndex(BA, Align(8));
+
+      Register DstReg = MI.getOperand(0).getReg();
+      auto MIB1 =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
+              .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
+      auto MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                          TII->get(AArch64::LDRXui), DstReg)
+                      .addUse(DstReg)
+                      .addConstantPoolIndex(
+                          CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+      transferImpOps(MI, MIB1, MIB2);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+    LLVM_FALLTHROUGH;
   case AArch64::MOVaddr:
   case AArch64::MOVaddrJT:
   case AArch64::MOVaddrCP:
-  case AArch64::MOVaddrBA:
   case AArch64::MOVaddrTLS:
   case AArch64::MOVaddrEXT: {
     // Expand into ADRP + ADD.

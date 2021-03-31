@@ -67,7 +67,65 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-The improvements are...
+- The `run-clang-tidy.py` helper script is now installed in `bin/` as
+  `run-clang-tidy`. It was previously installed in `share/clang/`.
+
+- Added command line option `--fix-notes` to apply fixes found in notes
+  attached to warnings. These are typically cases where we are less confident
+  the fix will have the desired effect.
+
+New checks
+^^^^^^^^^^
+
+- New :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` check.
+
+  Finds ``pthread_setcanceltype`` function calls where a thread's cancellation
+  type is set to asynchronous.
+
+- New :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera-unroll-loops>` check.
+
+  Finds inner loops that have not been unrolled, as well as fully unrolled
+  loops with unknown loops bounds or a large number of iterations.
+
+- New :doc:`cppcoreguidelines-prefer-member-initializer
+  <clang-tidy/checks/cppcoreguidelines-prefer-member-initializer>` check.
+
+  Finds member initializations in the constructor body which can be placed into
+  the initialization list instead.
+
+New check aliases
+^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cert-pos47-c
+  <clang-tidy/checks/cert-pos47-c>` to
+  :doc:`concurrency-thread-canceltype-asynchronous
+  <clang-tidy/checks/concurrency-thread-canceltype-asynchronous>` was added.
+
+Changes in existing checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone-signal-handler>` check.
+
+  Added an option to choose the set of allowed functions.
+
+- Improved :doc:`readability-uniqueptr-delete-release
+  <clang-tidy/checks/readability-uniqueptr-delete-release>` check.
+
+  Added an option to choose whether to refactor by calling the ``reset`` member
+  function or assignment to ``nullptr``.
+  Added support for pointers to ``std::unique_ptr``.
+
+Removed checks
+^^^^^^^^^^^^^^
+
+- The readability-deleted-default check has been removed.
+  
+  The clang warning `Wdefaulted-function-deleted
+  <https://clang.llvm.org/docs/DiagnosticsReference.html#wdefaulted-function-deleted>`_
+  will diagnose the same issues and is enabled by default.
 
 Improvements to include-fixer
 -----------------------------

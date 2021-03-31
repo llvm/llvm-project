@@ -42,11 +42,12 @@ public:
   virtual uint32_t getSize() const { return data().size(); }
   virtual uint32_t getInputSize() const { return getSize(); };
 
-  virtual void writeTo(uint8_t *sectionStart) const;
+  virtual void writeTo(uint8_t *buf) const;
 
   ArrayRef<WasmRelocation> getRelocations() const { return relocations; }
   void setRelocations(ArrayRef<WasmRelocation> rs) { relocations = rs; }
 
+  uint64_t getOffset(uint64_t offset) const { return outSecOff + offset; }
   virtual StringRef getName() const = 0;
   virtual StringRef getDebugName() const = 0;
   virtual uint32_t getComdat() const = 0;
@@ -58,8 +59,10 @@ public:
 
   ObjFile *file;
   OutputSection *outputSec = nullptr;
-  // Offset withing the output section
-  int32_t outputOffset = 0;
+
+  // After assignAddresses is called, this represents the offset from
+  // the beginning of the output section this chunk was assigned to.
+  int32_t outSecOff = 0;
 
   // Signals that the section is part of the output.  The garbage collector,
   // and COMDAT handling can set a sections' Live bit.
@@ -95,22 +98,25 @@ protected:
 class InputSegment : public InputChunk {
 public:
   InputSegment(const WasmSegment &seg, ObjFile *f)
-      : InputChunk(f, InputChunk::DataSegment), segment(seg) {}
+      : InputChunk(f, InputChunk::DataSegment), segment(seg) {
+    alignment = segment.Data.Alignment;
+  }
 
   static bool classof(const InputChunk *c) { return c->kind() == DataSegment; }
 
   void generateRelocationCode(raw_ostream &os) const;
 
-  uint32_t getAlignment() const { return segment.Data.Alignment; }
   StringRef getName() const override { return segment.Data.Name; }
   StringRef getDebugName() const override { return StringRef(); }
   uint32_t getComdat() const override { return segment.Data.Comdat; }
   uint32_t getInputSectionOffset() const override {
     return segment.SectionOffset;
   }
+  uint64_t getVA(uint64_t offset = 0) const;
 
   const OutputSegment *outputSeg = nullptr;
-  int32_t outputSegmentOffset = 0;
+  uint32_t outputSegmentOffset = 0;
+  uint32_t alignment = 0;
 
 protected:
   ArrayRef<uint8_t> data() const override { return segment.Data.Content; }
@@ -133,7 +139,7 @@ public:
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  void writeTo(uint8_t *sectionStart) const override;
+  void writeTo(uint8_t *buf) const override;
   StringRef getName() const override { return function->SymbolName; }
   StringRef getDebugName() const override { return function->DebugName; }
   llvm::Optional<StringRef> getExportName() const {

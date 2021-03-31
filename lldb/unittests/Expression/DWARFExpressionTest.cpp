@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpression.h"
+#include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/dwarf.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Testing/Support/Error.h"
@@ -21,22 +25,25 @@ using namespace lldb_private;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
-                                       DWARFUnit *unit = nullptr) {
+                                       DWARFUnit *unit = nullptr,
+                                       ExecutionContext *exe_ctx = nullptr) {
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
   Value result;
   Status status;
-  if (!DWARFExpression::Evaluate(
-          /*exe_ctx*/ nullptr, /*reg_ctx*/ nullptr, module_sp, extractor, unit,
-          lldb::eRegisterKindLLDB,
-          /*initial_value_ptr*/ nullptr,
-          /*object_address_ptr*/ nullptr, result, &status))
+  if (!DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
+                                 extractor, unit, lldb::eRegisterKindLLDB,
+                                 /*initial_value_ptr*/ nullptr,
+                                 /*object_address_ptr*/ nullptr, result,
+                                 &status))
     return status.ToError();
 
   switch (result.GetValueType()) {
-  case Value::eValueTypeScalar:
+  case Value::ValueType::Scalar:
     return result.GetScalar();
-  case Value::eValueTypeHostAddress: {
+  case Value::ValueType::LoadAddress:
+    return LLDB_INVALID_ADDRESS;
+  case Value::ValueType::HostAddress: {
     // Convert small buffers to scalars to simplify the tests.
     DataBufferHeap &buf = result.GetBuffer();
     if (buf.GetByteSize() <= 8) {
@@ -65,6 +72,23 @@ static Scalar GetScalar(unsigned bits, uint64_t value, bool sign) {
   scalar.TruncOrExtendTo(bits, sign);
   return scalar;
 }
+
+/// This is needed for the tests that use a mock process.
+class DWARFExpressionMockProcessTest : public ::testing::Test {
+public:
+  void SetUp() override {
+    llvm::cantFail(repro::Reproducer::Initialize(repro::ReproducerMode::Off, {}));
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+    platform_linux::PlatformLinux::Initialize();
+  }
+  void TearDown() override {
+    platform_linux::PlatformLinux::Terminate();
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+    repro::Reproducer::Terminate();
+  }
+};
 
 TEST(DWARFExpression, DW_OP_pick) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit1, DW_OP_lit0, DW_OP_pick, 0}),
@@ -189,42 +213,45 @@ DWARF:
   //
 
   // Leave as is.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
-                               DW_OP_convert, offs_uint32_t}),
-                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+              DW_OP_convert, offs_uint32_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
 
   // Zero-extend to 64 bits.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
-                               DW_OP_convert, offs_uint64_t}),
-                       llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4u, 0x11, 0x22, 0x33, 0x44, //
+              DW_OP_convert, offs_uint64_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(64, 0x44332211, not_signed)));
 
   // Sign-extend to 64 bits.
   EXPECT_THAT_EXPECTED(
       t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
-              DW_OP_convert, offs_sint64_t}),
+              DW_OP_convert, offs_sint64_t, DW_OP_stack_value}),
       llvm::HasValue(GetScalar(64, 0xffffffffffeeddcc, is_signed)));
 
   // Sign-extend, then truncate.
-  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
-                               DW_OP_convert, offs_sint64_t,          //
-                               DW_OP_convert, offs_uint32_t}),
-                       llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
+  EXPECT_THAT_EXPECTED(
+      t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
+              DW_OP_convert, offs_sint64_t,          //
+              DW_OP_convert, offs_uint32_t, DW_OP_stack_value}),
+      llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
 
   // Truncate to default unspecified (pointer-sized) type.
   EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 0xcc, 0xdd, 0xee, 0xff, //
                                DW_OP_convert, offs_sint64_t,          //
-                               DW_OP_convert, 0x00}),
+                               DW_OP_convert, 0x00, DW_OP_stack_value}),
                        llvm::HasValue(GetScalar(32, 0xffeeddcc, not_signed)));
 
   // Truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_uchar}),
-      llvm::HasValue(GetScalar(8, 'A', not_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert,
+                               offs_uchar, DW_OP_stack_value}),
+                       llvm::HasValue(GetScalar(8, 'A', not_signed)));
 
   // Also truncate to 8 bits.
-  EXPECT_THAT_EXPECTED(
-      t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert, offs_schar}),
-      llvm::HasValue(GetScalar(8, 'A', is_signed)));
+  EXPECT_THAT_EXPECTED(t.Eval({DW_OP_const4s, 'A', 'B', 'C', 'D', DW_OP_convert,
+                               offs_schar, DW_OP_stack_value}),
+                       llvm::HasValue(GetScalar(8, 'A', is_signed)));
 
   //
   // Errors.
@@ -275,4 +302,68 @@ TEST(DWARFExpression, DW_OP_unknown) {
       Evaluate({0xff}),
       llvm::FailedWithMessage(
           "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
+}
+
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
+
+  struct MockProcess : Process {
+    using Process::Process;
+    ConstString GetPluginName() override { return ConstString("mock process"); }
+    uint32_t GetPluginVersion() override { return 0; }
+    bool CanDebug(lldb::TargetSP target,
+                  bool plugin_specified_by_name) override {
+      return false;
+    };
+    Status DoDestroy() override { return {}; }
+    void RefreshStateAfterStop() override {}
+    bool DoUpdateThreadList(ThreadList &old_thread_list,
+                            ThreadList &new_thread_list) override {
+      return false;
+    };
+    size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                        Status &error) override {
+      for (size_t i = 0; i < size; ++i)
+        ((char *)buf)[i] = (vm_addr + i) & 0xff;
+      error.Clear();
+      return size;
+    }
+  };
+
+  // Set up a mock process.
+  ArchSpec arch("i386-pc-linux");
+  Platform::SetHostPlatform(
+      platform_linux::PlatformLinux::CreateInstance(true, &arch));
+  lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  lldb::TargetSP target_sp;
+  lldb::PlatformSP platform_sp;
+  debugger_sp->GetTargetList().CreateTarget(
+      *debugger_sp, "", arch, eLoadDependentsNo, platform_sp, target_sp);
+  ASSERT_TRUE(target_sp);
+  ASSERT_TRUE(target_sp->GetArchitecture().IsValid());
+  ASSERT_TRUE(platform_sp);
+  lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  lldb::ProcessSP process_sp =
+      std::make_shared<MockProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  ExecutionContext exe_ctx(process_sp);
+  // Implicit location: *0x4.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value},
+                                {}, {}, &exe_ctx),
+                       llvm::HasValue(GetScalar(32, 0x07060504, false)));
+  // Memory location: *(*0x4).
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4, DW_OP_deref}, {}, {}, &exe_ctx),
+                       llvm::HasValue(Scalar(LLDB_INVALID_ADDRESS)));
+  // Memory location: *0x4.
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit4}, {}, {}, &exe_ctx),
+                       llvm::HasValue(Scalar(4)));
+  // Implicit location: *0x4.
+  // Evaluate returns LLDB_INVALID_ADDRESS for all load addresses.
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_lit4, DW_OP_deref, DW_OP_stack_value}, {}, {}, &exe_ctx),
+      llvm::HasValue(GetScalar(32, 0x07060504, false)));
 }

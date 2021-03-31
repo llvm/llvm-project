@@ -1,103 +1,102 @@
+## Show that llvm-objcopy can handle an input file with many sections.
+
 RUN: %python %p/../Inputs/ungzip.py %p/Inputs/many-sections.o.gz > %t
 RUN: llvm-objcopy %t %t2
-RUN: llvm-readobj --file-headers %t2 | FileCheck --check-prefix=EHDR %s
-RUN: llvm-readobj --sections %t2 | FileCheck --check-prefix=SECS %s
-RUN: llvm-readobj --symbols %t2 | grep "Symbol {" | wc -l | FileCheck --check-prefix=SYMS %s
-RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=SYM_SEC_IDS
+RUN: llvm-readobj --file-headers --sections --symbols %t2 | FileCheck %s
+RUN: llvm-readelf --symbols %t2 | FileCheck --check-prefix=SYMS %s
 
-EHDR:      Format: elf64-x86-64
-EHDR-NEXT: Arch: x86_64
-EHDR-NEXT: AddressSize: 64bit
-EHDR-NEXT: LoadName:
-EHDR-NEXT: ElfHeader {
-EHDR-NEXT:   Ident {
-EHDR-NEXT:     Magic: (7F 45 4C 46)
-EHDR-NEXT:     Class: 64-bit (0x2)
-EHDR-NEXT:     DataEncoding: LittleEndian (0x1)
-EHDR-NEXT:     FileVersion: 1
-EHDR-NEXT:     OS/ABI: SystemV (0x0)
-EHDR-NEXT:     ABIVersion: 0
-EHDR-NEXT:     Unused: (00 00 00 00 00 00 00)
-EHDR-NEXT:   }
-EHDR-NEXT:   Type: Relocatable (0x1)
-EHDR-NEXT:   Machine: EM_X86_64 (0x3E)
-EHDR-NEXT:   Version: 1
-EHDR-NEXT:   Entry: 0x0
-EHDR-NEXT:   ProgramHeaderOffset: 0x0
-EHDR-NEXT:   SectionHeaderOffset:
-EHDR-NEXT:   Flags [ (0x0)
-EHDR-NEXT:   ]
-EHDR-NEXT:   HeaderSize: 64
-EHDR-NEXT:   ProgramHeaderEntrySize: 0
-EHDR-NEXT:   ProgramHeaderCount: 0
-EHDR-NEXT:   SectionHeaderEntrySize: 64
-EHDR-NEXT:   SectionHeaderCount: 0
-EHDR-NEXT:   StringTableSectionIndex: 65535
-EHDR-NEXT: }
+## The ELF header should have e_shnum == 0 and e_shstrndx == SHN_XINDEX.
+# CHECK:        SectionHeaderCount: 0
+# CHECK-NEXT:   StringTableSectionIndex: 65535
 
-SECS: Index: 65285
-SECS-NEXT: Name: .symtab
-SECS-NEXT: Type: SHT_SYMTAB
-SECS: Name: .symtab_shndx
-SECS-NEXT: Type: SHT_SYMTAB_SHNDX
-SECS-NEXT: Flags [ (0x0)
-SECS-NEXT: ]
-SECS-NEXT: Address: 0x0
-SECS-NEXT: Offset:
-# There should be #syms * EntrySize bytes.
-SECS-NEXT: Size: 261136
-SECS-NEXT: Link: 65285
-SECS-NEXT: Info:
-SECS-NEXT: AddressAlignment: 4
-SECS-NEXT: EntrySize: 4
-SECS: Index: 65287
-SYMS: 65284
+## The first section header should store the real section header count and
+## shstrndx in its fields.
+# CHECK:      Section {
+# CHECK-NEXT:   Index: 0
+# CHECK-NEXT:   Name:
+# CHECK-NEXT:   Type: SHT_NULL
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address:
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size: [[#SHNUM:]]
+# CHECK-NEXT:   Link: [[#SHNUM-1]]
 
-SYM_SEC_IDS:         Section: s9 (0xFEFF)
-SYM_SEC_IDS-NEXT:  }
-SYM_SEC_IDS-NEXT:  Symbol {
-SYM_SEC_IDS-NEXT:    Name: s9 (37)
-SYM_SEC_IDS-NEXT:    Value: 0x0
-SYM_SEC_IDS-NEXT:    Size: 0
-SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
-SYM_SEC_IDS-NEXT:    Type: None (0x0)
-SYM_SEC_IDS-NEXT:    Other: 0
-SYM_SEC_IDS-NEXT:    Section: s9 (0xFF01)
-SYM_SEC_IDS-NEXT:  }
-SYM_SEC_IDS-NEXT:  Symbol {
-SYM_SEC_IDS-NEXT:    Name: s9 (37)
-SYM_SEC_IDS-NEXT:    Value: 0x0
-SYM_SEC_IDS-NEXT:    Size: 0
-SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
-SYM_SEC_IDS-NEXT:    Type: None (0x0)
-SYM_SEC_IDS-NEXT:    Other: 0
-SYM_SEC_IDS-NEXT:    Section: s9 (0xFF00)
-SYM_SEC_IDS-NEXT:  }
-SYM_SEC_IDS-NEXT:  Symbol {
-SYM_SEC_IDS-NEXT:    Name: s9 (37)
-SYM_SEC_IDS-NEXT:    Value: 0x0
-SYM_SEC_IDS-NEXT:    Size: 0
-SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
-SYM_SEC_IDS-NEXT:    Type: None (0x0)
-SYM_SEC_IDS-NEXT:    Other: 0
-SYM_SEC_IDS-NEXT:    Section: s9 (0x1982)
-SYM_SEC_IDS-NEXT:  }
-SYM_SEC_IDS-NEXT:  Symbol {
-SYM_SEC_IDS-NEXT:    Name: s9 (37)
-SYM_SEC_IDS-NEXT:    Value: 0x0
-SYM_SEC_IDS-NEXT:    Size: 0
-SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
-SYM_SEC_IDS-NEXT:    Type: None (0x0)
-SYM_SEC_IDS-NEXT:    Other: 0
-SYM_SEC_IDS-NEXT:    Section: s9 (0xFF03)
-SYM_SEC_IDS-NEXT:  }
-SYM_SEC_IDS-NEXT:  Symbol {
-SYM_SEC_IDS-NEXT:    Name: s9 (37)
-SYM_SEC_IDS-NEXT:    Value: 0x0
-SYM_SEC_IDS-NEXT:    Size: 0
-SYM_SEC_IDS-NEXT:    Binding: Local (0x0)
-SYM_SEC_IDS-NEXT:    Type: None (0x0)
-SYM_SEC_IDS-NEXT:    Other: 0
-SYM_SEC_IDS-NEXT:    Section: s9 (0xFF04)
-SYM_SEC_IDS-NEXT:  }
+## Show that the .symtab_shndx section has the correct properties.
+## To avoid accidentally capturing the index of an unrelated section header for
+## checking the sh_link of the .symtab_shndx section, use the index of the
+## section immediately following the symbol table.
+# CHECK:        Name: .symtab
+# CHECK-NEXT:   Type: SHT_SYMTAB
+# CHECK:        Index: [[#AFTERSYMTAB:]]
+# CHECK:        Name: .symtab_shndx
+# CHECK-NEXT:   Type: SHT_SYMTAB_SHNDX
+# CHECK-NEXT:   Flags [ (0x0)
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x0
+# CHECK-NEXT:   Offset:
+## There should be #syms * EntrySize bytes.
+# CHECK-NEXT:   Size: 262148
+# CHECK-NEXT:   Link: [[#AFTERSYMTAB-1]]
+# CHECK-NEXT:   Info: 0
+# CHECK-NEXT:   AddressAlignment: 4
+# CHECK-NEXT:   EntrySize: 4
+## Show that the sh_link of the first section header is the section header table
+## index. Also show that the last section is the .strtab.
+# CHECK:        Index: [[#SHNUM-1]]
+# CHECK-NEXT:   Name: .strtab
 
+## Show that the symbols with section indexes around the reserved range still
+## have the right section indexes afterwards.
+# CHECK:         Section: s65279 (0xFEFF)
+# CHECK-NEXT:  }
+## st_shndx == SHN_LORSERVE.
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: sym65280 (
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: s65280 (0xFF00)
+# CHECK-NEXT:  }
+## st_shndx == SHN_ABS.
+# CHECK:         Name: sym65521 (
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: s65521 (0xFFF1)
+# CHECK-NEXT:  }
+## st_shndx == SHN_COMMON.
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: sym65522 (
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: s65522 (0xFFF2)
+# CHECK-NEXT:  }
+## st_shndx == SHN_XINDEX.
+# CHECK:         Name: sym65535 (
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: s65535 (0xFFFF)
+# CHECK-NEXT:  }
+## st_shndx > SHN_XINDEX.
+# CHECK-NEXT:  Symbol {
+# CHECK-NEXT:    Name: sym65536 (
+# CHECK-NEXT:    Value: 0x0
+# CHECK-NEXT:    Size: 0
+# CHECK-NEXT:    Binding: Local (0x0)
+# CHECK-NEXT:    Type: None (0x0)
+# CHECK-NEXT:    Other: 0
+# CHECK-NEXT:    Section: s65536 (0x10000)
+# CHECK-NEXT:  }
+
+# SYMS: Symbol table '.symtab' contains 65537 entries

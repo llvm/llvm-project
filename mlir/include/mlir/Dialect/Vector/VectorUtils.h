@@ -19,6 +19,7 @@ namespace mlir {
 class AffineApplyOp;
 class AffineForOp;
 class AffineMap;
+class Block;
 class Location;
 class OpBuilder;
 class Operation;
@@ -98,8 +99,10 @@ Optional<SmallVector<int64_t, 4>> shapeRatio(VectorType superVectorType,
 /// Note that loopToVectorDim is a whole function map from which only enclosing
 /// loop information is extracted.
 ///
-/// Prerequisites: `opInst` is a vectorizable load or store operation (i.e. at
-/// most one invariant index along each AffineForOp of `loopToVectorDim`).
+/// Prerequisites: `indices` belong to a vectorizable load or store operation
+/// (i.e. at most one invariant index along each AffineForOp of
+/// `loopToVectorDim`). `insertPoint` is the insertion point for the vectorized
+/// load or store operation.
 ///
 /// Example 1:
 /// The following MLIR snippet:
@@ -151,7 +154,10 @@ Optional<SmallVector<int64_t, 4>> shapeRatio(VectorType superVectorType,
 /// `%arg0[%c0, %c0]` into vector<128xf32> which needs a 1-D vector broadcast.
 ///
 AffineMap
-makePermutationMap(Operation *op, ArrayRef<Value> indices,
+makePermutationMap(Block *insertPoint, ArrayRef<Value> indices,
+                   const DenseMap<Operation *, unsigned> &loopToVectorDim);
+AffineMap
+makePermutationMap(Operation *insertPoint, ArrayRef<Value> indices,
                    const DenseMap<Operation *, unsigned> &loopToVectorDim);
 
 /// Build the default minor identity map suitable for a vector transfer. This

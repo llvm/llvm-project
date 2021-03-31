@@ -18,9 +18,9 @@ GCC-compatible ``clang`` and ``clang++`` drivers.
 
 
 .. program:: clang
-.. option:: -B<dir>, --prefix <arg>, --prefix=<arg>
+.. option:: -B<prefix>, --prefix <arg>, --prefix=<arg>
 
-Add <dir> to search path for binaries and object files used implicitly
+Search $prefix/$triple-$file and $prefix$file for executables, libraries, includes, and data files used by the compiler. $prefix may or may not be a directory
 
 .. option:: -F<arg>
 
@@ -256,7 +256,7 @@ Build this module as a system module. Only used with -emit-module
 
 .. option:: --gcc-toolchain=<arg>, -gcc-toolchain <arg>
 
-Use the gcc toolchain at the given directory
+Search for GCC installation in the specified directory on targets which commonly use GCC. The directory usually contains 'lib{,32,64}/gcc{,-cross}/$triple' and 'include'. If specified, sysroot is skipped for GCC detection. Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation
 
 .. option:: -gcodeview
 
@@ -869,6 +869,17 @@ Enable use-after-scope detection in AddressSanitizer
 .. option:: -fsanitize-address-use-odr-indicator, -fno-sanitize-address-use-odr-indicator
 
 Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
+
+.. option:: -fsanitize-address-destructor-kind=<arg>
+
+Set the kind of module destructors emitted by AddressSanitizer instrumentation.
+These destructors are emitted to unregister instrumented global variables when
+code is unloaded (e.g. via `dlclose()`).
+
+Valid options are:
+
+* ``global`` - Emit module destructors that are called via a platform specific array (see `llvm.global_dtors`).
+* ``none`` - Do not emit module destructors.
 
 .. option:: -fsanitize-blacklist=<arg>
 
@@ -2786,10 +2797,6 @@ Use packed stack layout (SystemZ only).
 
 Specify maximum number of prefixes to use for padding
 
-.. option:: -mpie-copy-relocations, -mno-pie-copy-relocations
-
-Use copy relocations support for PIE builds
-
 .. option:: -mprefer-vector-width=<arg>
 
 Specifies preferred vector width for auto-vectorization. Defaults to 'none' which allows target specific decisions.
@@ -2981,6 +2988,10 @@ Specify CU (-mcumode) or WGP (-mno-cumode) wavefront execution mode (AMDGPU only
 .. option:: -msram-ecc, -mno-sram-ecc
 
 Specify SRAM ECC mode (AMDGPU only)
+
+.. option:: -mtgsplit, -mno-tgsplit
+
+Enable threadgroup split execution mode (AMDGPU only)
 
 .. option:: -mxnack, -mno-xnack
 
@@ -3783,4 +3794,3 @@ undef all system defines
 .. option:: -z <arg>
 
 Pass -z <arg> to the linker
-

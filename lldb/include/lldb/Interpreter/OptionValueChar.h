@@ -13,16 +13,15 @@
 
 namespace lldb_private {
 
-class OptionValueChar : public OptionValue {
+class OptionValueChar : public Cloneable<OptionValueChar, OptionValue> {
 public:
   OptionValueChar(char value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueChar(char current_value, char default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
-  ~OptionValueChar() override {}
+  ~OptionValueChar() override = default;
 
   // Virtual subclass pure virtual overrides
 
@@ -34,9 +33,6 @@ public:
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void Clear() override {
     m_current_value = m_default_value;
@@ -57,8 +53,6 @@ public:
   void SetCurrentValue(char value) { m_current_value = value; }
 
   void SetDefaultValue(char value) { m_default_value = value; }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
 protected:
   char m_current_value;

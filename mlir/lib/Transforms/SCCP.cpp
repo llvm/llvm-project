@@ -358,7 +358,7 @@ void SCCPSolver::rewrite(MLIRContext *context,
     // Replace any block arguments with constants.
     builder.setInsertionPointToStart(block);
     for (BlockArgument arg : block->getArguments())
-      replaceWithConstant(builder, folder, arg);
+      (void)replaceWithConstant(builder, folder, arg);
 
     for (Operation &op : llvm::make_early_inc_range(*block)) {
       builder.setInsertionPoint(&op);
@@ -487,7 +487,7 @@ void SCCPSolver::visitOperation(Operation *op) {
   }
 
   // If this is a terminator operation, process any control flow lattice state.
-  if (op->isKnownTerminator())
+  if (op->hasTrait<OpTrait::IsTerminator>())
     visitTerminatorOperation(op, operandConstants);
 
   // Process call operations. The call visitor processes result values, so we

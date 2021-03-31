@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // bool is_fifo(file_status s) noexcept

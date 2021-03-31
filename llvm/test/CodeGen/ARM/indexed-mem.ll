@@ -220,16 +220,14 @@ define i32* @pre_dec_ldrd(i32* %base) {
 define i32* @post_inc_ldrd(i32* %base, i32* %addr.3) {
 ; CHECK-V8M-LABEL: post_inc_ldrd:
 ; CHECK-V8M:       @ %bb.0:
-; CHECK-V8M-NEXT:    ldrd r2, r3, [r0]
-; CHECK-V8M-NEXT:    adds r0, #8
+; CHECK-V8M-NEXT:    ldrd r2, r3, [r0], #8
 ; CHECK-V8M-NEXT:    add r2, r3
 ; CHECK-V8M-NEXT:    str r2, [r1]
 ; CHECK-V8M-NEXT:    bx lr
 ;
 ; CHECK-V8A-LABEL: post_inc_ldrd:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0, {r2, r3}
-; CHECK-V8A-NEXT:    add r0, r0, #8
+; CHECK-V8A-NEXT:    ldm r0!, {r2, r3}
 ; CHECK-V8A-NEXT:    add r2, r2, r3
 ; CHECK-V8A-NEXT:    str r2, [r1]
 ; CHECK-V8A-NEXT:    bx lr

@@ -8,18 +8,18 @@
 
 // RUN: ld.lld -o %t3 %t1.o %t2.o %t3.o
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TEST1 %s
-// TEST1: Name: bar
 // TEST1: Name: foo
+// TEST1: Name: bar
 
 // RUN: ld.lld -o %t3 %t1.o -u bar --start-lib %t2.o %t3.o
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TEST2 %s
-// TEST2: Name: bar
 // TEST2-NOT: Name: foo
+// TEST2: Name: bar
 
 // RUN: ld.lld -o %t3 %t1.o --start-lib %t2.o %t3.o
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=TEST3 %s
-// TEST3-NOT: Name: bar
 // TEST3-NOT: Name: foo
+// TEST3-NOT: Name: bar
 
 // RUN: not ld.lld %t1.o --start-lib --start-lib 2>&1 | FileCheck -check-prefix=NESTED-LIB %s
 // NESTED-LIB: nested --start-lib

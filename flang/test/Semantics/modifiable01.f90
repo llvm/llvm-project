@@ -1,4 +1,4 @@
-! RUN: not %f18 -fparse-only %s 2>&1 | FileCheck %s
+! RUN: not %f18 -fsyntax-only %s 2>&1 | FileCheck %s
 ! Test WhyNotModifiable() explanations
 
 module prot
@@ -46,7 +46,7 @@ module m
       read(internal,*) a ! ok
     end associate
     !CHECK: error: Input variable 'j3' must be definable
-    !CHECK: 'j3' is not a variable
+    !CHECK: '666_4' is not a variable
     read(internal,*) j3
     !CHECK: error: Left-hand side of assignment is not modifiable
     !CHECK: 't2var' is an entity with either an EVENT_TYPE or LOCK_TYPE

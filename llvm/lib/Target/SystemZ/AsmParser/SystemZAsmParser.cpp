@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SystemZInstPrinter.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "TargetInfo/SystemZTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -428,6 +430,36 @@ private:
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
+  // Both the hlasm and att variants still rely on the basic gnu asm
+  // format with respect to inputs, clobbers, outputs etc.
+  //
+  // However, calling the overriden getAssemblerDialect() method in
+  // AsmParser is problematic. It either returns the AssemblerDialect field
+  // in the MCAsmInfo instance if the AssemblerDialect field in AsmParser is
+  // unset, otherwise it returns the private AssemblerDialect field in
+  // AsmParser.
+  //
+  // The problematic part is because, we forcibly set the inline asm dialect
+  // in the AsmParser instance in AsmPrinterInlineAsm.cpp. Soo any query
+  // to the overriden getAssemblerDialect function in AsmParser.cpp, will
+  // not return the assembler dialect set in the respective MCAsmInfo instance.
+  //
+  // For this purpose, we explicitly query the SystemZMCAsmInfo instance
+  // here, to get the "correct" assembler dialect, and use it in various
+  // functions.
+  unsigned getMAIAssemblerDialect() {
+    return Parser.getContext().getAsmInfo()->getAssemblerDialect();
+  }
+
+  // An alphabetic character in HLASM is a letter from 'A' through 'Z',
+  // or from 'a' through 'z', or '$', '_','#', or '@'.
+  inline bool isHLASMAlpha(char C) {
+    return isAlpha(C) || llvm::is_contained("_@#$", C);
+  }
+
+  // A digit in HLASM is a number from 0 to 9.
+  inline bool isHLASMAlnum(char C) { return isHLASMAlpha(C) || isDigit(C); }
+
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                    const MCInstrInfo &MII,
@@ -455,6 +487,7 @@ public:
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
+  bool isLabel(AsmToken &Token) override;
 
   // Used by the TableGen code to parse particular operand types.
   OperandMatchResultTy parseGR32(OperandVector &Operands) {
@@ -1325,7 +1358,7 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   // Apply mnemonic aliases first, before doing anything else, in
   // case the target uses it.
-  applyMnemonicAliases(Name, getAvailableFeatures(), 0 /*VariantID*/);
+  applyMnemonicAliases(Name, getAvailableFeatures(), getMAIAssemblerDialect());
 
   Operands.push_back(SystemZOperand::createToken(Name, NameLoc));
 
@@ -1428,9 +1461,11 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   unsigned MatchResult;
 
+  unsigned Dialect = getMAIAssemblerDialect();
+
   FeatureBitset MissingFeatures;
-  MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                     MissingFeatures, MatchingInlineAsm);
+  MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                                     MatchingInlineAsm, Dialect);
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(IDLoc);
@@ -1467,7 +1502,7 @@ bool SystemZAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_MnemonicFail: {
     FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
     std::string Suggestion = SystemZMnemonicSpellCheck(
-      ((SystemZOperand &)*Operands[0]).getToken(), FBS);
+        ((SystemZOperand &)*Operands[0]).getToken(), FBS, Dialect);
     return Error(IDLoc, "invalid instruction" + Suggestion,
                  ((SystemZOperand &)*Operands[0]).getLocRange());
   }
@@ -1568,6 +1603,47 @@ SystemZAsmParser::parsePCRel(OperandVector &Operands, int64_t MinVal,
     Operands.push_back(SystemZOperand::createImm(Expr, StartLoc, EndLoc));
 
   return MatchOperand_Success;
+}
+
+bool SystemZAsmParser::isLabel(AsmToken &Token) {
+  if (getMAIAssemblerDialect() == AD_ATT)
+    return true;
+
+  // HLASM labels are ordinary symbols.
+  // An HLASM label always starts at column 1.
+  // An ordinary symbol syntax is laid out as follows:
+  // Rules:
+  // 1. Has to start with an "alphabetic character". Can be followed by up to
+  //    62 alphanumeric characters. An "alphabetic character", in this scenario,
+  //    is a letter from 'A' through 'Z', or from 'a' through 'z',
+  //    or '$', '_', '#', or '@'
+  // 2. Labels are case-insensitive. E.g. "lab123", "LAB123", "lAb123", etc.
+  //    are all treated as the same symbol. However, the processing for the case
+  //    folding will not be done in this function.
+  StringRef RawLabel = Token.getString();
+  SMLoc Loc = Token.getLoc();
+
+  // An HLASM label cannot be empty.
+  if (!RawLabel.size())
+    return !Error(Loc, "HLASM Label cannot be empty");
+
+  // An HLASM label cannot exceed greater than 63 characters.
+  if (RawLabel.size() > 63)
+    return !Error(Loc, "Maximum length for HLASM Label is 63 characters");
+
+  // A label must start with an "alphabetic character".
+  if (!isHLASMAlpha(RawLabel[0]))
+    return !Error(Loc, "HLASM Label has to start with an alphabetic "
+                       "character or the underscore character");
+
+  // Now, we've established that the length is valid
+  // and the first character is alphabetic.
+  // Check whether remaining string is alphanumeric.
+  for (unsigned I = 1; I < RawLabel.size(); ++I)
+    if (!isHLASMAlnum(RawLabel[I]))
+      return !Error(Loc, "HLASM Label has to be alphanumeric");
+
+  return true;
 }
 
 // Force static initialization.

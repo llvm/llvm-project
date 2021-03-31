@@ -1,7 +1,7 @@
 # RUN: %PYTHON %s
 # Standalone sanity check of context life-cycle.
 import gc
-import mlir
+import mlir.ir
 
 assert mlir.ir.Context._get_live_count() == 0
 

@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
-// FIXME: Fix the checker to work in C++17 mode.
 
 using int64_t = long long;
 

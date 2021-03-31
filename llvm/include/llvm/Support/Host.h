@@ -65,6 +65,20 @@ namespace sys {
   StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
   StringRef getHostCPUNameForBPF();
+
+  /// Helper functions to extract CPU details from CPUID on x86.
+  namespace x86 {
+  enum class VendorSignatures {
+    UNKNOWN,
+    GENUINE_INTEL,
+    AUTHENTIC_AMD,
+  };
+
+  /// Returns the host CPU's vendor.
+  /// MaxLeaf: if a non-nullptr pointer is specified, the EAX value will be
+  /// assigned to its pointee.
+  VendorSignatures getVendorSignature(unsigned *MaxLeaf = nullptr);
+  } // namespace x86
   }
 }
 }

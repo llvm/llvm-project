@@ -179,6 +179,9 @@ def err_invalid_suffix_constant : Error<
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
+def warn_c2x_compat_digit_separator : Warning<
+  "digit separators are incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 def err_digit_separator_not_between_digits : Error<
   "digit separator cannot appear at %select{start|end}0 of digit sequence">;
 def warn_extraneous_char_constant : Warning<

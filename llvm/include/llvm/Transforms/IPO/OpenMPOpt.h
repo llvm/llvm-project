@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
-#define LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
+#ifndef LLVM_TRANSFORMS_IPO_OPENMPOPT_H
+#define LLVM_TRANSFORMS_IPO_OPENMPOPT_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -73,4 +73,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_IPO_OPENMP_OPT_H
+#endif // LLVM_TRANSFORMS_IPO_OPENMPOPT_H

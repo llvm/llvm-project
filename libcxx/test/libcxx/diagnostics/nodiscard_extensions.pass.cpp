@@ -18,6 +18,8 @@
 // UNSUPPORTED: apple-clang-9
 // UNSUPPORTED: gcc-5
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // All entities to which libc++ applies [[nodiscard]] as an extension should
 // be tested here and in nodiscard_extensions.fail.cpp. They should also
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.

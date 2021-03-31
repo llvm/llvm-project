@@ -21,6 +21,12 @@ class functor1
 {
 };
 
+struct convertible_to_int_ref {
+    int val = 0;
+    operator int&() { return val; }
+    operator int const&() const { return val; }
+};
+
 template <class T>
 void
 test(T& t)
@@ -55,6 +61,20 @@ int main(int, char**)
     test(i);
     const int j = 0;
     test(j);
+
+#if TEST_STD_VER >= 11
+    convertible_to_int_ref convi;
+    test(convi);
+    convertible_to_int_ref const convic;
+    test(convic);
+
+    {
+    using Ref = std::reference_wrapper<int>;
+    static_assert((std::is_assignable<Ref&, int&>::value), "");
+    static_assert((!std::is_assignable<Ref&, int>::value), "");
+    static_assert((!std::is_assignable<Ref&, int&&>::value), "");
+    }
+#endif
 
   return 0;
 }

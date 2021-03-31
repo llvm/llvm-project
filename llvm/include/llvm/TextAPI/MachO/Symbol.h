@@ -104,6 +104,15 @@ public:
   void dump() const { dump(llvm::errs()); }
 #endif
 
+  bool operator==(const Symbol &O) const {
+    return (Kind == O.Kind) && (Name == O.Name) && (Targets == O.Targets) &&
+           (Flags == O.Flags);
+  }
+
+  bool operator!=(const Symbol &O) const {
+    return !(*this == O);
+  }
+
 private:
   StringRef Name;
   TargetList Targets;

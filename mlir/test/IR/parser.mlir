@@ -137,10 +137,34 @@ func private @memrefs_drop_triv_id_multiple(memref<2xi8, affine_map<(d0) -> (d0)
 func private @memrefs_compose_with_id(memref<2x2xi8, affine_map<(d0, d1) -> (d0, d1)>,
                                              affine_map<(d0, d1) -> (d1, d0)>>)
 
+// Test memref with custom memory space
+
+// CHECK: func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
+func private @memrefs_nomap_nospace(memref<5x6x7xf32>)
+
+// CHECK: func private @memrefs_map_nospace(memref<5x6x7xf32, #map{{[0-9]+}}>)
+func private @memrefs_map_nospace(memref<5x6x7xf32, #map3>)
+
+// CHECK: func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
+func private @memrefs_nomap_intspace(memref<5x6x7xf32, 3>)
+
+// CHECK: func private @memrefs_map_intspace(memref<5x6x7xf32, #map{{[0-9]+}}, 5>)
+func private @memrefs_map_intspace(memref<5x6x7xf32, #map3, 5>)
+
+// CHECK: func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
+func private @memrefs_nomap_strspace(memref<5x6x7xf32, "local">)
+
+// CHECK: func private @memrefs_map_strspace(memref<5x6x7xf32, #map{{[0-9]+}}, "private">)
+func private @memrefs_map_strspace(memref<5x6x7xf32, #map3, "private">)
+
+// CHECK: func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1 : i64}>)
+func private @memrefs_nomap_dictspace(memref<5x6x7xf32, {memSpace = "special", subIndex = 1}>)
+
+// CHECK: func private @memrefs_map_dictspace(memref<5x6x7xf32, #map{{[0-9]+}}, {memSpace = "special", subIndex = 3 : i64}>)
+func private @memrefs_map_dictspace(memref<5x6x7xf32, #map3, {memSpace = "special", subIndex = 3}>)
 
 // CHECK: func private @complex_types(complex<i1>) -> complex<f32>
 func private @complex_types(complex<i1>) -> complex<f32>
-
 
 // CHECK: func private @memref_with_index_elems(memref<1x?xindex>)
 func private @memref_with_index_elems(memref<1x?xindex>)
@@ -287,7 +311,7 @@ func @triang_loop(%arg0: index, %arg1: memref<?x?xi32>) {
   %c = constant 0 : i32       // CHECK: %{{.*}} = constant 0 : i32
   affine.for %i0 = 1 to %arg0 {      // CHECK: affine.for %{{.*}} = 1 to %{{.*}} {
     affine.for %i1 = affine_map<(d0)[]->(d0)>(%i0)[] to %arg0 {  // CHECK:   affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to %{{.*}} {
-      store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
+      memref.store %c, %arg1[%i0, %i1] : memref<?x?xi32>  // CHECK: memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}]
     }          // CHECK:     }
   }            // CHECK:   }
   return       // CHECK:   return
@@ -1387,3 +1411,7 @@ test.graph_region {
   %2 = "bar"(%1) : (i64) -> i64
   "unregistered_terminator"() : () -> ()
 }) {sym_name = "unregistered_op_dominance_violation_ok", type = () -> i1} : () -> ()
+
+// This is an unregister operation, the printing/parsing is handled by the dialect.
+// CHECK: test.dialect_custom_printer custom_format
+test.dialect_custom_printer custom_format

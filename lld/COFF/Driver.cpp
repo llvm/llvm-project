@@ -54,7 +54,7 @@
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::COFF;
-using llvm::sys::Process;
+using namespace llvm::sys;
 
 namespace lld {
 namespace coff {
@@ -157,9 +157,8 @@ static std::future<MBErrPair> createFutureForFile(std::string path) {
   auto strategy = std::launch::deferred;
 #endif
   return std::async(strategy, [=]() {
-    auto mbOrErr = MemoryBuffer::getFile(path,
-                                         /*FileSize*/ -1,
-                                         /*RequiresNullTerminator*/ false);
+    auto mbOrErr = MemoryBuffer::getFile(path, /*IsText=*/false,
+                                         /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
     return MBErrPair{std::move(*mbOrErr), std::error_code()};
@@ -622,6 +621,14 @@ static uint64_t getDefaultImageBase() {
   return config->dll ? 0x10000000 : 0x400000;
 }
 
+static std::string rewritePath(StringRef s) {
+  if (fs::exists(s))
+    return relativeToRoot(s);
+  return std::string(s);
+}
+
+// Reconstructs command line arguments so that so that you can re-run
+// the same command with the same inputs. This is for --reproduce.
 static std::string createResponseFile(const opt::InputArgList &args,
                                       ArrayRef<StringRef> filePaths,
                                       ArrayRef<StringRef> searchPaths) {
@@ -642,6 +649,24 @@ static std::string createResponseFile(const opt::InputArgList &args,
     case OPT_manifestinput:
     case OPT_manifestuac:
       break;
+    case OPT_call_graph_ordering_file:
+    case OPT_deffile:
+    case OPT_natvis:
+      os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << '\n';
+      break;
+    case OPT_order: {
+      StringRef orderFile = arg->getValue();
+      orderFile.consume_front("@");
+      os << arg->getSpelling() << '@' << quote(rewritePath(orderFile)) << '\n';
+      break;
+    }
+    case OPT_pdbstream: {
+      const std::pair<StringRef, StringRef> nameFile =
+          StringRef(arg->getValue()).split("=");
+      os << arg->getSpelling() << nameFile.first << '='
+         << quote(rewritePath(nameFile.second)) << '\n';
+      break;
+    }
     case OPT_implib:
     case OPT_pdb:
     case OPT_pdbstripped:
@@ -803,7 +828,7 @@ static void createImportLibrary(bool asLib) {
   // If the import library already exists, replace it only if the contents
   // have changed.
   ErrorOr<std::unique_ptr<MemoryBuffer>> oldBuf = MemoryBuffer::getFile(
-      path, /*FileSize*/ -1, /*RequiresNullTerminator*/ false);
+      path, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (!oldBuf) {
     handleError(writeImportLibrary(libName, path, exports, config->machine,
                                    config->mingw));
@@ -823,7 +848,7 @@ static void createImportLibrary(bool asLib) {
   }
 
   std::unique_ptr<MemoryBuffer> newBuf = check(MemoryBuffer::getFile(
-      tmpName, /*FileSize*/ -1, /*RequiresNullTerminator*/ false));
+      tmpName, /*IsText=*/false, /*RequiresNullTerminator=*/false));
   if ((*oldBuf)->getBuffer() != newBuf->getBuffer()) {
     oldBuf->reset();
     handleError(errorCodeToError(sys::fs::rename(tmpName, path)));
@@ -833,10 +858,16 @@ static void createImportLibrary(bool asLib) {
 }
 
 static void parseModuleDefs(StringRef path) {
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
   COFFModuleDefinition m = check(parseCOFFModuleDefinition(
       mb->getMemBufferRef(), config->machine, config->mingw));
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 
   if (config->outputFile.empty())
     config->outputFile = std::string(saver.save(m.OutputFile));
@@ -919,8 +950,11 @@ static void parseOrderFile(StringRef arg) {
 
   // Open a file.
   StringRef path = arg.substr(1);
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
 
   // Parse a file. An order file contains one symbol per line.
   // All symbols that were not present in a given order file are
@@ -938,11 +972,17 @@ static void parseOrderFile(StringRef arg) {
     else
       config->order[s] = INT_MIN + config->order.size();
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
 static void parseCallGraphFile(StringRef path) {
-  std::unique_ptr<MemoryBuffer> mb = CHECK(
-      MemoryBuffer::getFile(path, -1, false, true), "could not open " + path);
+  std::unique_ptr<MemoryBuffer> mb =
+      CHECK(MemoryBuffer::getFile(path, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false,
+                                  /*IsVolatile=*/true),
+            "could not open " + path);
 
   // Build a map from symbol name to section.
   DenseMap<StringRef, Symbol *> map;
@@ -978,6 +1018,9 @@ static void parseCallGraphFile(StringRef path) {
       if (SectionChunk *to = findSection(fields[1]))
         config->callGraphProfile[{from, to}] += count;
   }
+
+  // Include in /reproduce: output if applicable.
+  driver->takeBuffer(std::move(mb));
 }
 
 static void readCallGraphsFromObjectFiles() {
@@ -1209,7 +1252,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
-  if (argsArr.size() > 1 && StringRef(argsArr[1]).equals_lower("/lib")) {
+  if (argsArr.size() > 1 && (StringRef(argsArr[1]).equals_lower("/lib") ||
+                             StringRef(argsArr[1]).equals_lower("-lib"))) {
     if (llvm::libDriverMain(argsArr.slice(1)) != 0)
       fatal("lib failed");
     return;
@@ -1516,8 +1560,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /opt.
   bool doGC = debug == DebugKind::None || args.hasArg(OPT_profile);
-  unsigned icfLevel =
-      args.hasArg(OPT_profile) ? 0 : 1; // 0: off, 1: limited, 2: on
+  Optional<ICFLevel> icfLevel = None;
+  if (args.hasArg(OPT_profile))
+    icfLevel = ICFLevel::None;
   unsigned tailMerge = 1;
   bool ltoNewPM = LLVM_ENABLE_NEW_PASS_MANAGER;
   bool ltoDebugPM = false;
@@ -1531,9 +1576,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       } else if (s == "noref") {
         doGC = false;
       } else if (s == "icf" || s.startswith("icf=")) {
-        icfLevel = 2;
+        icfLevel = ICFLevel::All;
+      } else if (s == "safeicf") {
+        icfLevel = ICFLevel::Safe;
       } else if (s == "noicf") {
-        icfLevel = 0;
+        icfLevel = ICFLevel::None;
       } else if (s == "lldtailmerge") {
         tailMerge = 2;
       } else if (s == "nolldtailmerge") {
@@ -1565,16 +1612,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Limited ICF is enabled if GC is enabled and ICF was never mentioned
-  // explicitly.
-  // FIXME: LLD only implements "limited" ICF, i.e. it only merges identical
-  // code. If the user passes /OPT:ICF explicitly, LLD should merge identical
-  // comdat readonly data.
-  if (icfLevel == 1 && !doGC)
-    icfLevel = 0;
+  if (!icfLevel)
+    icfLevel = doGC ? ICFLevel::All : ICFLevel::None;
   config->doGC = doGC;
-  config->doICF = icfLevel > 0;
-  config->tailMerge = (tailMerge == 1 && config->doICF) || tailMerge == 2;
+  config->doICF = icfLevel.getValue();
+  config->tailMerge =
+      (tailMerge == 1 && config->doICF != ICFLevel::None) || tailMerge == 2;
   config->ltoNewPassManager = ltoNewPM;
   config->ltoDebugPassManager = ltoDebugPM;
 
@@ -1677,14 +1720,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->thinLTOObjectSuffixReplace =
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace);
   config->ltoObjPath = args.getLastArgValue(OPT_lto_obj_path);
+  config->ltoCSProfileGenerate = args.hasArg(OPT_lto_cs_profile_generate);
+  config->ltoCSProfileFile = args.getLastArgValue(OPT_lto_cs_profile_file);
   // Handle miscellaneous boolean flags.
   config->allowBind = args.hasFlag(OPT_allowbind, OPT_allowbind_no, true);
   config->allowIsolation =
       args.hasFlag(OPT_allowisolation, OPT_allowisolation_no, true);
   config->incremental =
       args.hasFlag(OPT_incremental, OPT_incremental_no,
-                   !config->doGC && !config->doICF && !args.hasArg(OPT_order) &&
-                       !args.hasArg(OPT_profile));
+                   !config->doGC && config->doICF == ICFLevel::None &&
+                       !args.hasArg(OPT_order) && !args.hasArg(OPT_profile));
   config->integrityCheck =
       args.hasFlag(OPT_integritycheck, OPT_integritycheck_no, false);
   config->cetCompat = args.hasFlag(OPT_cetcompat, OPT_cetcompat_no, false);
@@ -1733,7 +1778,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
-  if (config->incremental && config->doICF) {
+  if (config->incremental && config->doICF != ICFLevel::None) {
     warn("ignoring '/incremental' because ICF is enabled; use '/opt:noicf' to "
          "disable");
     config->incremental = false;
@@ -2176,9 +2221,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   convertResources();
 
   // Identify identical COMDAT sections to merge them.
-  if (config->doICF) {
+  if (config->doICF != ICFLevel::None) {
     findKeepUniqueSections();
-    doICF(symtab->getChunks());
+    doICF(symtab->getChunks(), config->doICF);
   }
 
   // Write the result.

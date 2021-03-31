@@ -361,14 +361,14 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
   // The estimated cost of the unrolled form of the loop. We try to estimate
   // this by simplifying as much as we can while computing the estimate.
-  unsigned UnrolledCost = 0;
+  InstructionCost UnrolledCost = 0;
 
   // We also track the estimated dynamic (that is, actually executed) cost in
   // the rolled form. This helps identify cases when the savings from unrolling
   // aren't just exposing dead control flows, but actual reduced dynamic
   // instructions due to the simplifications which we expect to occur after
   // unrolling.
-  unsigned RolledDynamicCost = 0;
+  InstructionCost RolledDynamicCost = 0;
 
   // We track the simplification of each instruction in each iteration. We use
   // this to recursively merge costs into the unrolled cost on-demand so that
@@ -639,10 +639,15 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     }
   }
 
+  assert(UnrolledCost.isValid() && RolledDynamicCost.isValid() &&
+         "All instructions must have a valid cost, whether the "
+         "loop is rolled or unrolled.");
+
   LLVM_DEBUG(dbgs() << "Analysis finished:\n"
                     << "UnrolledCost: " << UnrolledCost << ", "
                     << "RolledDynamicCost: " << RolledDynamicCost << "\n");
-  return {{UnrolledCost, RolledDynamicCost}};
+  return {{unsigned(*UnrolledCost.getValue()),
+           unsigned(*RolledDynamicCost.getValue())}};
 }
 
 /// ApproximateLoopSize - Approximate the size of the loop.

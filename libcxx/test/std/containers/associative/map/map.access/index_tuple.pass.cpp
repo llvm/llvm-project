@@ -14,7 +14,7 @@
 
 // mapped_type& operator[](const key_type& k);
 
-// https://bugs.llvm.org/show_bug.cgi?id=16542
+// https://llvm.org/PR16542
 
 #include <map>
 

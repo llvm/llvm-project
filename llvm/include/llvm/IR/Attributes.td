@@ -80,7 +80,7 @@ def InaccessibleMemOnly : EnumAttr<"inaccessiblememonly">;
 def InaccessibleMemOrArgMemOnly : EnumAttr<"inaccessiblemem_or_argmemonly">;
 
 /// Pass structure in an alloca.
-def InAlloca : EnumAttr<"inalloca">;
+def InAlloca : TypeAttr<"inalloca">;
 
 /// Source said inlining was desirable.
 def InlineHint : EnumAttr<"inlinehint">;
@@ -148,7 +148,7 @@ def NoSync : EnumAttr<"nosync">;
 /// Disable Indirect Branch Tracking.
 def NoCfCheck : EnumAttr<"nocf_check">;
 
-/// Function should be instrumented.
+/// Function should not be instrumented.
 def NoProfile : EnumAttr<"noprofile">;
 
 /// Function doesn't unwind stack.
@@ -246,6 +246,9 @@ def SwiftSelf : EnumAttr<"swiftself">;
 
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
+
+/// Minimum/Maximum vscale value for function.
+def VScaleRange : IntAttr<"vscale_range">;
 
 /// Function always comes back to callsite.
 def WillReturn : EnumAttr<"willreturn">;

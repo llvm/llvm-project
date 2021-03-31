@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // bool is_empty(path const& p);
@@ -95,6 +97,7 @@ TEST_CASE(test_directory_access_denied)
 }
 
 
+#ifndef _WIN32
 TEST_CASE(test_fifo_fails)
 {
     scoped_test_env env;
@@ -107,5 +110,6 @@ TEST_CASE(test_fifo_fails)
 
     TEST_CHECK_THROW(filesystem_error, is_empty(fifo));
 }
+#endif
 
 TEST_SUITE_END()

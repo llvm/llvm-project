@@ -284,6 +284,14 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
       return false;
   }
 
+  // Make sure no potentially eflags clobbering phi moves can be inserted in
+  // between.
+  auto HasPhis = [](const BasicBlock *Succ) {
+    return !llvm::empty(Succ->phis());
+  };
+  if (I->isTerminator() && llvm::any_of(successors(I), HasPhis))
+    return false;
+
   CC = TmpCC;
   return true;
 }
@@ -1444,6 +1452,10 @@ bool X86FastISel::X86SelectCmp(const Instruction *I) {
 
   MVT VT;
   if (!isTypeLegal(I->getOperand(0)->getType(), VT))
+    return false;
+
+  // Below code only works for scalars.
+  if (VT.isVector())
     return false;
 
   // Try to optimize or fold the cmp.

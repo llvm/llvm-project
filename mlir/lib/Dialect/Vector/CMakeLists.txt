@@ -10,14 +10,17 @@ add_mlir_dialect_library(MLIRVector
 
   DEPENDS
   MLIRVectorOpsIncGen
+  MLIRVectorOpsEnumsIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineEDSC
   MLIREDSC
+  MLIRDialectUtils
   MLIRIR
   MLIRStandard
   MLIRAffine
   MLIRLinalg
+  MLIRMemRef
   MLIRSCF
   MLIRLoopAnalysis
   MLIRSideEffectInterfaces

@@ -14,8 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_EXECUTE_STAGE_H
-#define LLVM_MCA_EXECUTE_STAGE_H
+#ifndef LLVM_MCA_STAGES_EXECUTESTAGE_H
+#define LLVM_MCA_STAGES_EXECUTESTAGE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MCA/HardwareUnits/Scheduler.h"
@@ -87,4 +87,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_EXECUTE_STAGE_H
+#endif // LLVM_MCA_STAGES_EXECUTESTAGE_H

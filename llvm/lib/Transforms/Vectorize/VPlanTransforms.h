@@ -25,7 +25,7 @@ struct VPlanTransforms {
   static void VPInstructionsToVPRecipes(
       Loop *OrigLoop, VPlanPtr &Plan,
       LoopVectorizationLegality::InductionList &Inductions,
-      SmallPtrSetImpl<Instruction *> &DeadInstructions);
+      SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE);
 };
 
 } // namespace llvm

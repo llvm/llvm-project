@@ -23,10 +23,10 @@
 # CHECK-NEXT:    {{.*}}:  addiu   $2, $2, -32712
 
 # GOT: Symbol table '.symtab'
-# GOT: {{.*}} [[B12:[0-9a-f]+]] {{.*}} b12
 # GOT: {{.*}} [[B04:[0-9a-f]+]] {{.*}} b4
-# GOT: {{.*}} [[B08:[0-9a-f]+]] {{.*}} b8
 # GOT: {{.*}} [[FOO:[0-9a-f]+]] {{.*}} foo
+# GOT: {{.*}} [[B08:[0-9a-f]+]] {{.*}} b8
+# GOT: {{.*}} [[B12:[0-9a-f]+]] {{.*}} b12
 
 # GOT:      Primary GOT:
 # GOT-NEXT:  Canonical gp value:

@@ -6267,6 +6267,26 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     }
   }
 
+  // Convert a sign-bit test of an FP value into a cast and integer compare.
+  // TODO: Simplify if the copysign constant is 0.0 or NaN.
+  // TODO: Handle non-zero compare constants.
+  // TODO: Handle other predicates.
+  const APFloat *C;
+  if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::copysign>(m_APFloat(C),
+                                                           m_Value(X)))) &&
+      match(Op1, m_AnyZeroFP()) && !C->isZero() && !C->isNaN()) {
+    Type *IntType = Builder.getIntNTy(X->getType()->getScalarSizeInBits());
+    if (auto *VecTy = dyn_cast<VectorType>(OpType))
+      IntType = VectorType::get(IntType, VecTy->getElementCount());
+
+    // copysign(non-zero constant, X) < 0.0 --> (bitcast X) < 0
+    if (Pred == FCmpInst::FCMP_OLT) {
+      Value *IntX = Builder.CreateBitCast(X, IntType);
+      return new ICmpInst(ICmpInst::ICMP_SLT, IntX,
+                          ConstantInt::getNullValue(IntType));
+    }
+  }
+
   if (I.getType()->isVectorTy())
     if (Instruction *Res = foldVectorCmp(I, Builder))
       return Res;

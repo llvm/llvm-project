@@ -13,7 +13,6 @@ class SBValuePersistTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Test SBValue::Persist"""
@@ -57,11 +56,11 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertTrue(
-            fooPersist.GetValueAsUnsigned(0) == 10,
+        self.assertEqual(
+            fooPersist.GetValueAsUnsigned(0), 10,
             "fooPersist != 10")
-        self.assertTrue(
-            barPersist.GetPointeeData().sint32[0] == 4,
+        self.assertEqual(
+            barPersist.GetPointeeData().sint32[0], 4,
             "barPersist != 4")
         self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 
@@ -71,11 +70,11 @@ class SBValuePersistTestCase(TestBase):
         self.assertTrue(barPersist.IsValid(), "barPersist is not valid")
         self.assertTrue(bazPersist.IsValid(), "bazPersist is not valid")
 
-        self.assertTrue(
-            fooPersist.GetValueAsUnsigned(0) == 10,
+        self.assertEqual(
+            fooPersist.GetValueAsUnsigned(0), 10,
             "fooPersist != 10")
-        self.assertTrue(
-            barPersist.GetPointeeData().sint32[0] == 4,
+        self.assertEqual(
+            barPersist.GetPointeeData().sint32[0], 4,
             "barPersist != 4")
         self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 

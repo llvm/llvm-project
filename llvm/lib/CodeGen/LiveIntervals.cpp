@@ -702,9 +702,6 @@ void LiveIntervals::pruneValue(LiveRange &LR, SlotIndex Kill,
 void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
   // Keep track of regunit ranges.
   SmallVector<std::pair<const LiveRange*, LiveRange::const_iterator>, 8> RU;
-  // Keep track of subregister ranges.
-  SmallVector<std::pair<const LiveInterval::SubRange*,
-                        LiveRange::const_iterator>, 4> SRs;
 
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
     Register Reg = Register::index2VirtReg(i);
@@ -724,14 +721,6 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         continue;
       RU.push_back(std::make_pair(&RURange, RURange.find(LI.begin()->end)));
     }
-
-    if (MRI->subRegLivenessEnabled()) {
-      SRs.clear();
-      for (const LiveInterval::SubRange &SR : LI.subranges()) {
-        SRs.push_back(std::make_pair(&SR, SR.find(LI.begin()->end)));
-      }
-    }
-
     // Every instruction that kills Reg corresponds to a segment range end
     // point.
     for (LiveInterval::const_iterator RI = LI.begin(), RE = LI.end(); RI != RE;
@@ -776,20 +765,18 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
         // are actually never written by %2. After assignment the <kill>
         // flag at the read instruction is invalid.
         LaneBitmask DefinedLanesMask;
-        if (!SRs.empty()) {
+        if (LI.hasSubRanges()) {
           // Compute a mask of lanes that are defined.
           DefinedLanesMask = LaneBitmask::getNone();
-          for (auto &SRP : SRs) {
-            const LiveInterval::SubRange &SR = *SRP.first;
-            LiveRange::const_iterator &I = SRP.second;
-            if (I == SR.end())
-              continue;
-            I = SR.advanceTo(I, RI->end);
-            if (I == SR.end() || I->start >= RI->end)
-              continue;
-            // I is overlapping RI
-            DefinedLanesMask |= SR.LaneMask;
-          }
+          for (const LiveInterval::SubRange &SR : LI.subranges())
+            for (const LiveRange::Segment &Segment : SR.segments) {
+              if (Segment.start >= RI->end)
+                break;
+              if (Segment.end == RI->end) {
+                DefinedLanesMask |= SR.LaneMask;
+                break;
+              }
+            }
         } else
           DefinedLanesMask = LaneBitmask::getAll();
 
@@ -799,7 +786,9 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
             continue;
           if (MO.isUse()) {
             // Reading any undefined lanes?
-            LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+            unsigned SubReg = MO.getSubReg();
+            LaneBitmask UseMask = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
+                                         : MRI->getMaxLaneMaskForVReg(Reg);
             if ((UseMask & ~DefinedLanesMask).any())
               goto CancelKill;
           } else if (MO.getSubReg() == 0) {

@@ -176,6 +176,37 @@ static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
   return true;
 }
 
+/// Helper function for matchINS.
+///
+/// \returns a value when \p M is an ins mask for \p NumInputElements.
+///
+/// First element of the returned pair is true when the produced
+/// G_INSERT_VECTOR_ELT destination should be the LHS of the G_SHUFFLE_VECTOR.
+///
+/// Second element is the destination lane for the G_INSERT_VECTOR_ELT.
+static Optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
+                                                int NumInputElements) {
+  if (M.size() != static_cast<size_t>(NumInputElements))
+    return None;
+  int NumLHSMatch = 0, NumRHSMatch = 0;
+  int LastLHSMismatch = -1, LastRHSMismatch = -1;
+  for (int Idx = 0; Idx < NumInputElements; ++Idx) {
+    if (M[Idx] == -1) {
+      ++NumLHSMatch;
+      ++NumRHSMatch;
+      continue;
+    }
+    M[Idx] == Idx ? ++NumLHSMatch : LastLHSMismatch = Idx;
+    M[Idx] == Idx + NumInputElements ? ++NumRHSMatch : LastRHSMismatch = Idx;
+  }
+  const int NumNeededToMatch = NumInputElements - 1;
+  if (NumLHSMatch == NumNeededToMatch)
+    return std::make_pair(true, LastLHSMismatch);
+  if (NumRHSMatch == NumNeededToMatch)
+    return std::make_pair(false, LastRHSMismatch);
+  return None;
+}
+
 /// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with a
 /// G_REV instruction. Returns the appropriate G_REV opcode in \p Opc.
 static bool matchREV(MachineInstr &MI, MachineRegisterInfo &MRI,
@@ -378,6 +409,61 @@ static bool applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   return true;
 }
 
+/// Match a G_SHUFFLE_VECTOR with a mask which corresponds to a
+/// G_INSERT_VECTOR_ELT and G_EXTRACT_VECTOR_ELT pair.
+///
+/// e.g.
+///   %shuf = G_SHUFFLE_VECTOR %left, %right, shufflemask(0, 0)
+///
+/// Can be represented as
+///
+///   %extract = G_EXTRACT_VECTOR_ELT %left, 0
+///   %ins = G_INSERT_VECTOR_ELT %left, %extract, 1
+///
+static bool matchINS(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     std::tuple<Register, int, Register, int> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  ArrayRef<int> ShuffleMask = MI.getOperand(3).getShuffleMask();
+  Register Dst = MI.getOperand(0).getReg();
+  int NumElts = MRI.getType(Dst).getNumElements();
+  auto DstIsLeftAndDstLane = isINSMask(ShuffleMask, NumElts);
+  if (!DstIsLeftAndDstLane)
+    return false;
+  bool DstIsLeft;
+  int DstLane;
+  std::tie(DstIsLeft, DstLane) = *DstIsLeftAndDstLane;
+  Register Left = MI.getOperand(1).getReg();
+  Register Right = MI.getOperand(2).getReg();
+  Register DstVec = DstIsLeft ? Left : Right;
+  Register SrcVec = Left;
+
+  int SrcLane = ShuffleMask[DstLane];
+  if (SrcLane >= NumElts) {
+    SrcVec = Right;
+    SrcLane -= NumElts;
+  }
+
+  MatchInfo = std::make_tuple(DstVec, DstLane, SrcVec, SrcLane);
+  return true;
+}
+
+static bool applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &Builder,
+                     std::tuple<Register, int, Register, int> &MatchInfo) {
+  Builder.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  auto ScalarTy = MRI.getType(Dst).getElementType();
+  Register DstVec, SrcVec;
+  int DstLane, SrcLane;
+  std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
+  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
+  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
+  MI.eraseFromParent();
+  return true;
+}
+
 /// isVShiftRImm - Check if this is a valid vector for the immediate
 /// operand of a vector shift right operation. The value must be in the range:
 ///   1 <= Value <= ElementBits for a right shift.
@@ -385,7 +471,7 @@ static bool isVShiftRImm(Register Reg, MachineRegisterInfo &MRI, LLT Ty,
                          int64_t &Cnt) {
   assert(Ty.isVector() && "vector shift count is not a vector type");
   MachineInstr *MI = MRI.getVRegDef(Reg);
-  auto Cst = getBuildVectorConstantSplat(*MI, MRI);
+  auto Cst = getAArch64VectorSplatScalar(*MI, MRI);
   if (!Cst)
     return false;
   Cnt = *Cst;
@@ -575,6 +661,8 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   case 2:
     if (ScalarSize == 64)
       Opc = AArch64::G_DUPLANE64;
+    else if (ScalarSize == 32)
+      Opc = AArch64::G_DUPLANE32;
     break;
   case 4:
     if (ScalarSize == 32)
@@ -602,10 +690,47 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
 bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
                   MachineIRBuilder &B, std::pair<unsigned, int> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
+  Register Src1Reg = MI.getOperand(1).getReg();
+  const LLT SrcTy = MRI.getType(Src1Reg);
+
   B.setInstrAndDebugLoc(MI);
   auto Lane = B.buildConstant(LLT::scalar(64), MatchInfo.second);
-  B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()},
-               {MI.getOperand(1).getReg(), Lane});
+
+  Register DupSrc = MI.getOperand(1).getReg();
+  // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
+  // To do this, we can use a G_CONCAT_VECTORS to do the widening.
+  if (SrcTy == LLT::vector(2, LLT::scalar(32))) {
+    assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
+           "Unexpected dest elements");
+    auto Undef = B.buildUndef(SrcTy);
+    DupSrc = B.buildConcatVectors(SrcTy.changeNumElements(4),
+                                  {Src1Reg, Undef.getReg(0)})
+                 .getReg(0);
+  }
+  B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
+  MI.eraseFromParent();
+  return true;
+}
+
+static bool matchBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  auto Splat = getAArch64VectorSplat(MI, MRI);
+  if (!Splat)
+    return false;
+  if (Splat->isReg())
+    return true;
+  // Later, during selection, we'll try to match imported patterns using
+  // immAllOnesV and immAllZerosV. These require G_BUILD_VECTOR. Don't lower
+  // G_BUILD_VECTORs which could match those patterns.
+  int64_t Cst = Splat->getCst();
+  return (Cst != 0 && Cst != -1);
+}
+
+static bool applyBuildVectorToDup(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) {
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(AArch64::G_DUP, {MI.getOperand(0).getReg()},
+               {MI.getOperand(1).getReg()});
   MI.eraseFromParent();
   return true;
 }

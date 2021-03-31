@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_IDF_H
-#define LLVM_ANALYSIS_IDF_H
+#ifndef LLVM_ANALYSIS_ITERATEDDOMINANCEFRONTIER_H
+#define LLVM_ANALYSIS_ITERATEDDOMINANCEFRONTIER_H
 
 #include "llvm/Support/CFGDiff.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"

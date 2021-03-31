@@ -20,6 +20,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -140,6 +141,12 @@ public:
     All,         // Keep all frame pointers.
   };
 
+  enum FiniteLoopsKind {
+    Language, // Not specified, use language standard.
+    Always,   // All loops are assumed to be finite.
+    Never,    // No loop is assumed to be finite.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -166,6 +173,9 @@ public:
   /// The string to embed in debug information as the current working directory.
   std::string DebugCompilationDir;
 
+  /// The string to embed in coverage mapping as the current working directory.
+  std::string CoverageCompilationDir;
+
   /// The string to embed in the debug information for the compile unit, if
   /// non-empty.
   std::string DwarfDebugFlags;
@@ -175,10 +185,14 @@ public:
   std::string RecordCommandLine;
 
   std::map<std::string, std::string> DebugPrefixMap;
-  std::map<std::string, std::string> ProfilePrefixMap;
+  std::map<std::string, std::string> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
+
+  /// The file to use for dumping bug report by `Debugify` for original
+  /// debug info.
+  std::string DIBugsReportFilePath;
 
   /// The floating-point denormal mode to use.
   llvm::DenormalMode FPDenormalMode = llvm::DenormalMode::getIEEE();
@@ -278,27 +292,52 @@ public:
   /// -fsymbol-partition (see https://lld.llvm.org/Partitions.html).
   std::string SymbolPartition;
 
-  /// Regular expression to select optimizations for which we should enable
-  /// optimization remarks. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they perform a transformation. This is enabled by the
-  /// -Rpass=regexp flag.
-  std::shared_ptr<llvm::Regex> OptimizationRemarkPattern;
+  enum RemarkKind {
+    RK_Missing,            // Remark argument not present on the command line.
+    RK_Enabled,            // Remark enabled via '-Rgroup'.
+    RK_EnabledEverything,  // Remark enabled via '-Reverything'.
+    RK_Disabled,           // Remark disabled via '-Rno-group'.
+    RK_DisabledEverything, // Remark disabled via '-Rno-everything'.
+    RK_WithPattern,        // Remark pattern specified via '-Rgroup=regexp'.
+  };
 
-  /// Regular expression to select optimizations for which we should enable
-  /// missed optimization remarks. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they tried but failed to perform a transformation. This is
-  /// enabled by the -Rpass-missed=regexp flag.
-  std::shared_ptr<llvm::Regex> OptimizationRemarkMissedPattern;
+  /// Optimization remark with an optional regular expression pattern.
+  struct OptRemark {
+    RemarkKind Kind;
+    std::string Pattern;
+    std::shared_ptr<llvm::Regex> Regex;
 
-  /// Regular expression to select optimizations for which we should enable
-  /// optimization analyses. Transformation passes whose name matches this
-  /// expression (and support this feature), will emit a diagnostic
-  /// whenever they want to explain why they decided to apply or not apply
-  /// a given transformation. This is enabled by the -Rpass-analysis=regexp
-  /// flag.
-  std::shared_ptr<llvm::Regex> OptimizationRemarkAnalysisPattern;
+    /// By default, optimization remark is missing.
+    OptRemark() : Kind(RK_Missing), Pattern(""), Regex(nullptr) {}
+
+    /// Returns true iff the optimization remark holds a valid regular
+    /// expression.
+    bool hasValidPattern() const { return Regex != nullptr; }
+
+    /// Matches the given string against the regex, if there is some.
+    bool patternMatches(StringRef String) const {
+      return hasValidPattern() && Regex->match(String);
+    }
+  };
+
+  /// Selected optimizations for which we should enable optimization remarks.
+  /// Transformation passes whose name matches the contained (optional) regular
+  /// expression (and support this feature), will emit a diagnostic whenever
+  /// they perform a transformation.
+  OptRemark OptimizationRemark;
+
+  /// Selected optimizations for which we should enable missed optimization
+  /// remarks. Transformation passes whose name matches the contained (optional)
+  /// regular expression (and support this feature), will emit a diagnostic
+  /// whenever they tried but failed to perform a transformation.
+  OptRemark OptimizationRemarkMissed;
+
+  /// Selected optimizations for which we should enable optimization analyses.
+  /// Transformation passes whose name matches the contained (optional) regular
+  /// expression (and support this feature), will emit a diagnostic whenever
+  /// they want to explain why they decided to apply or not apply a given
+  /// transformation.
+  OptRemark OptimizationRemarkAnalysis;
 
   /// Set of files defining the rules for the symbol rewriting.
   std::vector<std::string> RewriteMapFiles;
@@ -379,10 +418,6 @@ public:
 #include "clang/Basic/CodeGenOptions.def"
 
   CodeGenOptions();
-
-  /// Is this a libc/libm function that is no longer recognized as a
-  /// builtin because a -fno-builtin-* option has been specified?
-  bool isNoBuiltinFunc(const char *Name) const;
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;

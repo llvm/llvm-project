@@ -44,6 +44,19 @@ def int_aarch64_fjcvtzs : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_double_ty],
 def int_aarch64_cls: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_aarch64_cls64: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i64_ty], [IntrNoMem]>;
 
+def int_aarch64_frint32z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64z
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint32x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+def int_aarch64_frint64x
+    : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ], [ LLVMMatchType<0> ],
+                            [ IntrNoMem ]>;
+
 //===----------------------------------------------------------------------===//
 // HINT
 
@@ -458,9 +471,11 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_fcvtzs : AdvSIMD_FPToIntRounding_Intrinsic;
   def int_aarch64_neon_fcvtzu : AdvSIMD_FPToIntRounding_Intrinsic;
 
-  // Vector FP Rounding: only ties to even is unrepresented by a normal
-  // intrinsic.
-  def int_aarch64_neon_frintn : AdvSIMD_1FloatArg_Intrinsic;
+  // v8.5-A Vector FP Rounding
+  def int_aarch64_neon_frint32x : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint32z : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint64x : AdvSIMD_1FloatArg_Intrinsic;
+  def int_aarch64_neon_frint64z : AdvSIMD_1FloatArg_Intrinsic;
 
   // Scalar FP->Int conversions
 
@@ -475,7 +490,7 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   def int_aarch64_neon_udot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_sdot : AdvSIMD_Dot_Intrinsic;
 
-// v8.6-A Matrix Multiply Intrinsics
+  // v8.6-A Matrix Multiply Intrinsics
   def int_aarch64_neon_ummla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_smmla : AdvSIMD_MatMul_Intrinsic;
   def int_aarch64_neon_usmmla : AdvSIMD_MatMul_Intrinsic;
@@ -675,10 +690,19 @@ def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 let TargetPrefix = "aarch64" in {
   class FPCR_Get_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
+  class FPCR_Set_Intrinsic
+    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrNoMem, IntrHasSideEffects]>;
+  class RNDR_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 }
 
 // FPCR
 def int_aarch64_get_fpcr : FPCR_Get_Intrinsic;
+def int_aarch64_set_fpcr : FPCR_Set_Intrinsic;
+
+// Armv8.5-A Random number generation intrinsics
+def int_aarch64_rndr : RNDR_Intrinsic;
+def int_aarch64_rndrrs : RNDR_Intrinsic;
 
 let TargetPrefix = "aarch64" in {
   class Crypto_AES_DataKey_Intrinsic
@@ -711,6 +735,42 @@ let TargetPrefix = "aarch64" in {
   class Crypto_SHA_8Hash4Schedule_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
                 [IntrNoMem]>;
+
+  // SHA512 intrinsic taking 2 arguments
+  class Crypto_SHA512_2Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty], [IntrNoMem]>;
+
+  // SHA512 intrinsic taking 3 Arguments
+  class Crypto_SHA512_3Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v2i64_ty],
+                [IntrNoMem]>;
+
+  // SHA3 Intrinsics taking 3 arguments
+  class Crypto_SHA3_3Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+               [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
+               [IntrNoMem]>;
+
+  // SHA3 Intrinsic taking 2 arguments
+  class Crypto_SHA3_2Arg_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty],
+               [IntrNoMem]>;
+
+  // SHA3 Intrinsic taking 3 Arguments 1 immediate
+  class Crypto_SHA3_2ArgImm_Intrinsic
+    : DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i64_ty],
+               [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+  class Crypto_SM3_3Vector_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
+                [IntrNoMem]>;
+
+  class Crypto_SM3_3VectorIndexed_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty, llvm_i64_ty],
+                [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+  class Crypto_SM4_2Vector_Intrinsic
+    : Intrinsic<[llvm_v4i32_ty], [llvm_v4i32_ty, llvm_v4i32_ty], [IntrNoMem]>;
 }
 
 // AES
@@ -733,6 +793,31 @@ def int_aarch64_crypto_sha256h   : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256h2  : Crypto_SHA_8Hash4Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su0 : Crypto_SHA_8Schedule_Intrinsic;
 def int_aarch64_crypto_sha256su1 : Crypto_SHA_12Schedule_Intrinsic;
+
+//SHA3
+def int_aarch64_crypto_eor3s : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_eor3u : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_bcaxs : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_bcaxu : Crypto_SHA3_3Arg_Intrinsic;
+def int_aarch64_crypto_rax1 : Crypto_SHA3_2Arg_Intrinsic;
+def int_aarch64_crypto_xar : Crypto_SHA3_2ArgImm_Intrinsic;
+
+// SHA512
+def int_aarch64_crypto_sha512h : Crypto_SHA512_3Arg_Intrinsic;
+def int_aarch64_crypto_sha512h2 : Crypto_SHA512_3Arg_Intrinsic;
+def int_aarch64_crypto_sha512su0 : Crypto_SHA512_2Arg_Intrinsic;
+def int_aarch64_crypto_sha512su1 : Crypto_SHA512_3Arg_Intrinsic;
+
+//SM3 & SM4
+def int_aarch64_crypto_sm3partw1 : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3partw2 : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3ss1    : Crypto_SM3_3Vector_Intrinsic;
+def int_aarch64_crypto_sm3tt1a   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt1b   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt2a   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm3tt2b   : Crypto_SM3_3VectorIndexed_Intrinsic;
+def int_aarch64_crypto_sm4e      : Crypto_SM4_2Vector_Intrinsic;
+def int_aarch64_crypto_sm4ekey   : Crypto_SM4_2Vector_Intrinsic;
 
 //===----------------------------------------------------------------------===//
 // CRC32

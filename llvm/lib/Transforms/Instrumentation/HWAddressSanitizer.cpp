@@ -267,7 +267,7 @@ private:
     bool InGlobal;
     bool InTls;
 
-    void init(Triple &TargetTriple);
+    void init(Triple &TargetTriple, bool InstrumentWithCalls);
     unsigned getObjectAlignment() const { return 1U << Scale; }
   };
   ShadowMapping Mapping;
@@ -284,6 +284,9 @@ private:
   bool OutlinedChecks;
   bool UseShortGranules;
   bool InstrumentLandingPads;
+  bool InstrumentWithCalls;
+  bool InstrumentStack;
+  bool UsePageAliases;
 
   bool HasMatchAllTag = false;
   uint8_t MatchAllTag = 0;
@@ -479,7 +482,13 @@ void HWAddressSanitizer::initializeModule() {
 
   TargetTriple = Triple(M.getTargetTriple());
 
-  Mapping.init(TargetTriple);
+  // x86_64 uses userspace pointer aliases, currently heap-only with callback
+  // instrumentation only.
+  UsePageAliases = TargetTriple.getArch() == Triple::x86_64;
+  InstrumentWithCalls = UsePageAliases ? true : ClInstrumentWithCalls;
+  InstrumentStack = UsePageAliases ? false : ClInstrumentStack;
+
+  Mapping.init(TargetTriple, InstrumentWithCalls);
 
   C = &(M.getContext());
   IRBuilder<> IRB(*C);
@@ -521,7 +530,7 @@ void HWAddressSanitizer::initializeModule() {
     createHwasanCtorComdat();
     bool InstrumentGlobals =
         ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
-    if (InstrumentGlobals)
+    if (InstrumentGlobals && !UsePageAliases)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -699,7 +708,7 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
 }
 
 void HWAddressSanitizer::untagPointerOperand(Instruction *I, Value *Addr) {
-  if (TargetTriple.isAArch64())
+  if (TargetTriple.isAArch64() || TargetTriple.getArch() == Triple::x86_64)
     return;
 
   IRBuilder<> IRB(I);
@@ -721,6 +730,7 @@ Value *HWAddressSanitizer::memToShadow(Value *Mem, IRBuilder<> &IRB) {
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
                                                    unsigned AccessSizeIndex,
                                                    Instruction *InsertBefore) {
+  assert(!UsePageAliases);
   const int64_t AccessInfo =
       (CompileKernel << HWASanAccessInfo::CompileKernelShift) +
       (HasMatchAllTag << HWASanAccessInfo::HasMatchAllShift) +
@@ -849,7 +859,7 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
       (!O.Alignment || *O.Alignment >= (1ULL << Mapping.Scale) ||
        *O.Alignment >= O.TypeSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeSize);
-    if (ClInstrumentWithCalls) {
+    if (InstrumentWithCalls) {
       IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
                      IRB.CreatePointerCast(Addr, IntptrTy));
     } else {
@@ -884,7 +894,7 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
     Size = AlignedSize;
 
   Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
-  if (ClInstrumentWithCalls) {
+  if (InstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
                    {IRB.CreatePointerCast(AI, Int8PtrTy), JustTag,
                     ConstantInt::get(IntptrTy, AlignedSize)});
@@ -976,6 +986,7 @@ Value *HWAddressSanitizer::getUARTag(IRBuilder<> &IRB, Value *StackTag) {
 // Add a tag to an address.
 Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
                                       Value *PtrLong, Value *Tag) {
+  assert(!UsePageAliases);
   Value *TaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
@@ -993,6 +1004,7 @@ Value *HWAddressSanitizer::tagPointer(IRBuilder<> &IRB, Type *Ty,
 
 // Remove tag from an address.
 Value *HWAddressSanitizer::untagPointer(IRBuilder<> &IRB, Value *PtrLong) {
+  assert(!UsePageAliases);
   Value *UntaggedPtrLong;
   if (CompileKernel) {
     // Kernel addresses have 0xFF in the most significant byte.
@@ -1153,9 +1165,10 @@ bool HWAddressSanitizer::instrumentStack(
       // to put it at the beginning of the expression.
       SmallVector<uint64_t, 8> NewOps = {dwarf::DW_OP_LLVM_tag_offset,
                                          RetagMask(N)};
-      DDI->setArgOperand(
-          2, MetadataAsValue::get(*C, DIExpression::prependOpcodes(
-                                          DDI->getExpression(), NewOps)));
+      auto Locations = DDI->location_ops();
+      unsigned LocNo = std::distance(Locations.begin(), find(Locations, AI));
+      DDI->setExpression(
+          DIExpression::appendOpsToArg(DDI->getExpression(), NewOps, LocNo));
     }
 
     size_t Size = getAllocaSizeInBytes(*AI);
@@ -1206,7 +1219,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   DenseMap<AllocaInst *, std::vector<DbgVariableIntrinsic *>> AllocaDbgMap;
   for (auto &BB : F) {
     for (auto &Inst : BB) {
-      if (ClInstrumentStack)
+      if (InstrumentStack)
         if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
           if (isInterestingAlloca(*AI))
             AllocasToInstrument.push_back(AI);
@@ -1217,10 +1230,10 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
           isa<CleanupReturnInst>(Inst))
         RetVec.push_back(&Inst);
 
-      if (auto *DDI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-        if (auto *Alloca =
-                dyn_cast_or_null<AllocaInst>(DDI->getVariableLocation()))
-          AllocaDbgMap[Alloca].push_back(DDI);
+      if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
+        for (Value *V : DVI->location_ops())
+          if (auto *Alloca = dyn_cast_or_null<AllocaInst>(V))
+            AllocaDbgMap[Alloca].push_back(DVI);
 
       if (InstrumentLandingPads && isa<LandingPadInst>(Inst))
         LandingPadVec.push_back(&Inst);
@@ -1296,14 +1309,18 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   }
 
   if (!AllocaToPaddedAllocaMap.empty()) {
-    for (auto &BB : F)
-      for (auto &Inst : BB)
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
-          if (auto *AI =
-                  dyn_cast_or_null<AllocaInst>(DVI->getVariableLocation()))
-            if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
-              DVI->setArgOperand(
-                  0, MetadataAsValue::get(*C, LocalAsMetadata::get(NewAI)));
+    for (auto &BB : F) {
+      for (auto &Inst : BB) {
+        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
+          for (Value *V : DVI->location_ops()) {
+            if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
+              if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
+                DVI->replaceVariableLocationOp(V, NewAI);
+            }
+          }
+        }
+      }
+    }
     for (auto &P : AllocaToPaddedAllocaMap)
       P.first->eraseFromParent();
   }
@@ -1338,6 +1355,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
 }
 
 void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
+  assert(!UsePageAliases);
   Constant *Initializer = GV->getInitializer();
   uint64_t SizeInBytes =
       M.getDataLayout().getTypeAllocSize(Initializer->getType());
@@ -1510,13 +1528,20 @@ void HWAddressSanitizer::instrumentPersonalityFunctions() {
   }
 }
 
-void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple) {
+void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
+                                             bool InstrumentWithCalls) {
   Scale = kDefaultShadowScale;
-  if (ClMappingOffset.getNumOccurrences() > 0) {
+  if (TargetTriple.isOSFuchsia()) {
+    // Fuchsia is always PIE, which means that the beginning of the address
+    // space is always available.
+    InGlobal = false;
+    InTls = false;
+    Offset = 0;
+  } else if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
     InTls = false;
     Offset = ClMappingOffset;
-  } else if (ClEnableKhwasan || ClInstrumentWithCalls) {
+  } else if (ClEnableKhwasan || InstrumentWithCalls) {
     InGlobal = false;
     InTls = false;
     Offset = 0;

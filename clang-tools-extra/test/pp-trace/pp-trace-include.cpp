@@ -39,7 +39,8 @@
 // CHECK-NEXT:   Reason: EnterFile
 // CHECK-NEXT:   FileType: C_User
 // CHECK-NEXT:   PrevFID: (invalid)
-// CHECK-NEXT: - Callback: FileChanged
+// CHECK:      - Callback: MacroDefined
+// CHECK:      - Callback: FileChanged
 // CHECK-NEXT:   Loc: "<built-in>:1:1"
 // CHECK-NEXT:   Reason: ExitFile
 // CHECK-NEXT:   FileType: C_User

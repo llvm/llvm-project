@@ -4,7 +4,7 @@ set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
@@ -116,15 +116,16 @@ endif()
 
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
-  check-llvm
   check-clang
   check-lld
+  check-llvm
+  check-polly
   llvm-config
-  test-suite
-  test-depends
-  llvm-test-depends
   clang-test-depends
   lld-test-depends
+  llvm-test-depends
+  test-suite
+  test-depends
   distribution
   install-distribution
   install-distribution-stripped

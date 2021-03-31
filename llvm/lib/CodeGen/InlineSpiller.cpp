@@ -173,7 +173,7 @@ class InlineSpiller : public Spiller {
   LiveRangeEdit *Edit;
   LiveInterval *StackInt;
   int StackSlot;
-  unsigned Original;
+  Register Original;
 
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
@@ -191,19 +191,23 @@ class InlineSpiller : public Spiller {
   // Object records spills information and does the hoisting.
   HoistSpillHelper HSpiller;
 
+  // Live range weight calculator.
+  VirtRegAuxInfo &VRAI;
+
   ~InlineSpiller() override = default;
 
 public:
-  InlineSpiller(MachineFunctionPass &pass, MachineFunction &mf, VirtRegMap &vrm)
-      : MF(mf), LIS(pass.getAnalysis<LiveIntervals>()),
-        LSS(pass.getAnalysis<LiveStacks>()),
-        AA(&pass.getAnalysis<AAResultsWrapperPass>().getAAResults()),
-        MDT(pass.getAnalysis<MachineDominatorTree>()),
-        Loops(pass.getAnalysis<MachineLoopInfo>()), VRM(vrm),
-        MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
-        TRI(*mf.getSubtarget().getRegisterInfo()),
-        MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
-        HSpiller(pass, mf, vrm) {}
+  InlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF, VirtRegMap &VRM,
+                VirtRegAuxInfo &VRAI)
+      : MF(MF), LIS(Pass.getAnalysis<LiveIntervals>()),
+        LSS(Pass.getAnalysis<LiveStacks>()),
+        AA(&Pass.getAnalysis<AAResultsWrapperPass>().getAAResults()),
+        MDT(Pass.getAnalysis<MachineDominatorTree>()),
+        Loops(Pass.getAnalysis<MachineLoopInfo>()), VRM(VRM),
+        MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
+        TRI(*MF.getSubtarget().getRegisterInfo()),
+        MBFI(Pass.getAnalysis<MachineBlockFrequencyInfo>()),
+        HSpiller(Pass, MF, VRM), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &) override;
   void postOptimization() override;
@@ -239,10 +243,10 @@ Spiller::~Spiller() = default;
 
 void Spiller::anchor() {}
 
-Spiller *llvm::createInlineSpiller(MachineFunctionPass &pass,
-                                   MachineFunction &mf,
-                                   VirtRegMap &vrm) {
-  return new InlineSpiller(pass, mf, vrm);
+Spiller *llvm::createInlineSpiller(MachineFunctionPass &Pass,
+                                   MachineFunction &MF, VirtRegMap &VRM,
+                                   VirtRegAuxInfo &VRAI) {
+  return new InlineSpiller(Pass, MF, VRM, VRAI);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1044,7 +1048,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       // Modify DBG_VALUE now that the value is in a spill slot.
       MachineBasicBlock *MBB = MI->getParent();
       LLVM_DEBUG(dbgs() << "Modifying debug info due to spill:\t" << *MI);
-      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot);
+      buildDbgValueForSpill(*MBB, MI, *MI, StackSlot, Reg);
       MBB->erase(MI);
       continue;
     }
@@ -1200,7 +1204,7 @@ void InlineSpiller::spill(LiveRangeEdit &edit) {
   if (!RegsToSpill.empty())
     spillAll();
 
-  Edit->calculateRegClassAndHint(MF, Loops, MBFI);
+  Edit->calculateRegClassAndHint(MF, VRAI);
 }
 
 /// Optimizations after all the reg selections and spills are done.

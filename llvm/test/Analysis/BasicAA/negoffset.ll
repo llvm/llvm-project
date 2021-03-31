@@ -4,6 +4,7 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 target triple = "i386-unknown-linux-gnu"
 
 declare i32* @random.i32(i32* %ptr)
+declare i8* @random.i8(i32* %ptr)
 
 ; CHECK-LABEL: Function: arr:
 ; CHECK-DAG: MayAlias: i32* %alloca, i32* %p0
@@ -125,5 +126,38 @@ define void @one_size_unknown(i8* %p, i32 %size) {
   call void @llvm.memset.p0i8.i32(i8* %p, i8 0, i32 %size, i1 false)
   ret void
 }
+
+
+; If part of the addressing is done with non-inbounds GEPs, we can't use
+; properties implied by the last gep w/the whole offset. In this case,
+; %random = %alloc - 4 bytes is well defined, and results in %step == %alloca,
+; leaving %p as an entirely inbounds gep pointing inside %alloca
+; CHECK-LABEL: Function: all_inbounds:
+; CHECK: MayAlias: i32* %alloca, i8* %p0
+; CHECK: MayAlias:  i32* %alloca, i8* %p1
+define void @all_inbounds() {
+  %alloca = alloca i32, i32 4
+  %random = call i8* @random.i8(i32* %alloca)
+  %p0 = getelementptr inbounds i8, i8* %random, i8 0
+  %step = getelementptr i8, i8* %random, i8 4
+  %p1 = getelementptr inbounds i8, i8* %step, i8 2
+  ret void
+}
+
+
+; For all values of %x, %p0 and %p1 can't alias because %random would
+; have to be out of bounds (and thus a contradiction) for them to be equal.
+; CHECK-LABEL: Function: common_factor:
+; CHECK: NoAlias:  i32* %p0, i32* %p1
+define void @common_factor(i32 %x) {
+  %alloca = alloca i32, i32 4
+  %random = call i8* @random.i8(i32* %alloca)
+  %p0 = getelementptr inbounds i32, i32* %alloca, i32 %x
+  %step = getelementptr inbounds i8, i8* %random, i8 4
+  %step.bitcast = bitcast i8* %step to i32*
+  %p1 = getelementptr inbounds i32, i32* %step.bitcast, i32 %x
+  ret void
+}
+
 
 declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)

@@ -70,6 +70,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/Hexagon.def"
     textual header "BinaryFormat/ELFRelocs/i386.def"
     textual header "BinaryFormat/ELFRelocs/Lanai.def"
+    textual header "BinaryFormat/ELFRelocs/M68k.def"
     textual header "BinaryFormat/ELFRelocs/Mips.def"
     textual header "BinaryFormat/ELFRelocs/MSP430.def"
     textual header "BinaryFormat/ELFRelocs/PowerPC64.def"
@@ -202,6 +203,15 @@ module LLVM_FileCheck {
 
   umbrella "FileCheck"
   module * { export * }
+}
+
+module LLVM_Frontend_OpenMP {
+  requires cplusplus
+
+  umbrella "Frontend/OpenMP"
+  module * { export * }
+
+  exclude header "Frontend/OpenMP/OMPKinds.def"
 }
 
 // Orc utilities that don't depend only on Support (not ExecutionEngine or

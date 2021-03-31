@@ -9,8 +9,8 @@
 // Recalculate the liveness information given a data flow graph.
 // This includes block live-ins and kill flags.
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_RDFLIVENESS_H
-#define LLVM_LIB_TARGET_HEXAGON_RDFLIVENESS_H
+#ifndef LLVM_CODEGEN_RDFLIVENESS_H
+#define LLVM_CODEGEN_RDFLIVENESS_H
 
 #include "RDFGraph.h"
 #include "RDFRegisters.h"
@@ -172,4 +172,4 @@ namespace rdf {
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_HEXAGON_RDFLIVENESS_H
+#endif // LLVM_CODEGEN_RDFLIVENESS_H

@@ -60,7 +60,7 @@ struct SampleProfTest : ::testing::Test {
         std::string(Profile), Context, std::string(RemapFile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
-    Reader->collectFuncsFrom(M);
+    Reader->setModule(&M);
   }
 
   TempFile createRemapFile() {

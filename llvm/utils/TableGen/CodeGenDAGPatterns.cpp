@@ -205,11 +205,9 @@ void TypeSetByHwMode::writeToStream(const SetType &S, raw_ostream &OS) {
   array_pod_sort(Types.begin(), Types.end());
 
   OS << '[';
-  for (unsigned i = 0, e = Types.size(); i != e; ++i) {
-    OS << ValueTypeByHwMode::getMVTName(Types[i]);
-    if (i != e-1)
-      OS << ' ';
-  }
+  ListSeparator LS(" ");
+  for (const MVT &T : Types)
+    OS << LS << ValueTypeByHwMode::getMVTName(T);
   OS << ']';
 }
 
@@ -716,6 +714,15 @@ bool TypeInfer::EnforceSameNumElts(TypeSetByHwMode &V, TypeSetByHwMode &W) {
   return Changed;
 }
 
+namespace {
+struct TypeSizeComparator {
+  bool operator()(const TypeSize &LHS, const TypeSize &RHS) const {
+    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
+           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+  }
+};
+} // end anonymous namespace
+
 /// 1. Ensure that for each type T in A, there exists a type U in B,
 ///    such that T and U have equal size in bits.
 /// 2. Ensure that for each type U in B, there exists a type T in A
@@ -730,14 +737,16 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   if (B.empty())
     Changed |= EnforceAny(B);
 
-  auto NoSize = [](const SmallSet<TypeSize, 2> &Sizes, MVT T) -> bool {
+  typedef SmallSet<TypeSize, 2, TypeSizeComparator> TypeSizeSet;
+
+  auto NoSize = [](const TypeSizeSet &Sizes, MVT T) -> bool {
     return !Sizes.count(T.getSizeInBits());
   };
 
   for (unsigned M : union_modes(A, B)) {
     TypeSetByHwMode::SetType &AS = A.get(M);
     TypeSetByHwMode::SetType &BS = B.get(M);
-    SmallSet<TypeSize, 2> AN, BN;
+    TypeSizeSet AN, BN;
 
     for (MVT T : AS)
       AN.insert(T.getSizeInBits());
@@ -980,12 +989,9 @@ std::string TreePredicateFn::getPredCode() const {
       Code += "unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();\n"
         " if (";
 
-      bool First = true;
+      ListSeparator LS(" && ");
       for (Init *Val : AddressSpaces->getValues()) {
-        if (First)
-          First = false;
-        else
-          Code += " && ";
+        Code += LS;
 
         IntInit *IntVal = dyn_cast<IntInit>(Val);
         if (!IntVal) {
@@ -1857,9 +1863,9 @@ void TreePatternNode::print(raw_ostream &OS) const {
   if (!isLeaf()) {
     if (getNumChildren() != 0) {
       OS << " ";
-      getChild(0)->print(OS);
-      for (unsigned i = 1, e = getNumChildren(); i != e; ++i) {
-        OS << ", ";
+      ListSeparator LS;
+      for (unsigned i = 0, e = getNumChildren(); i != e; ++i) {
+        OS << LS;
         getChild(i)->print(OS);
       }
     }
@@ -3032,9 +3038,10 @@ InferAllTypes(const StringMap<SmallVector<TreePatternNode*,1> > *InNamedTypes) {
 void TreePattern::print(raw_ostream &OS) const {
   OS << getRecord()->getName();
   if (!Args.empty()) {
-    OS << "(" << Args[0];
-    for (unsigned i = 1, e = Args.size(); i != e; ++i)
-      OS << ", " << Args[i];
+    OS << "(";
+    ListSeparator LS;
+    for (const std::string &Arg : Args)
+      OS << LS << Arg;
     OS << ")";
   }
   OS << ": ";
@@ -3472,6 +3479,9 @@ private:
     if (N->getNumChildren() != 1 || !N->getChild(0)->isLeaf())
       return false;
 
+    if (N->getOperator()->isSubClassOf("ComplexPattern"))
+      return false;
+
     const SDNodeInfo &OpInfo = CDP.getSDNodeInfo(N->getOperator());
     if (OpInfo.getNumResults() != 1 || OpInfo.getNumOperands() != 1)
       return false;
@@ -3673,9 +3683,9 @@ void CodeGenDAGPatterns::parseInstructionPattern(
     TreePatternNodePtr Pat = I.getTree(j);
     if (Pat->getNumTypes() != 0) {
       raw_svector_ostream OS(TypesString);
+      ListSeparator LS;
       for (unsigned k = 0, ke = Pat->getNumTypes(); k != ke; ++k) {
-        if (k > 0)
-          OS << ", ";
+        OS << LS;
         Pat->getExtType(k).writeToStream(OS);
       }
       I.error("Top-level forms in instruction pattern should have"
@@ -4032,8 +4042,7 @@ void CodeGenDAGPatterns::InferInstructionFlags() {
 /// Verify instruction flags against pattern node properties.
 void CodeGenDAGPatterns::VerifyInstructionFlags() {
   unsigned Errors = 0;
-  for (ptm_iterator I = ptm_begin(), E = ptm_end(); I != E; ++I) {
-    const PatternToMatch &PTM = *I;
+  for (const PatternToMatch &PTM : ptms()) {
     SmallVector<Record*, 8> Instrs;
     getInstructionsInTree(PTM.getDstPattern(), Instrs);
     if (Instrs.empty())
@@ -4288,13 +4297,13 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
   PatternsToMatch.swap(Copy);
 
   auto AppendPattern = [this, &ModeChecks](PatternToMatch &P, unsigned Mode) {
-    TreePatternNodePtr NewSrc = P.SrcPattern->clone();
-    TreePatternNodePtr NewDst = P.DstPattern->clone();
+    TreePatternNodePtr NewSrc = P.getSrcPattern()->clone();
+    TreePatternNodePtr NewDst = P.getDstPattern()->clone();
     if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
       return;
     }
 
-    std::vector<Predicate> Preds = P.Predicates;
+    std::vector<Predicate> Preds = P.getPredicates();
     const std::vector<Predicate> &MC = ModeChecks[Mode];
     llvm::append_range(Preds, MC);
     PatternsToMatch.emplace_back(P.getSrcRecord(), std::move(Preds),
@@ -4306,10 +4315,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
 
   for (PatternToMatch &P : Copy) {
     TreePatternNodePtr SrcP = nullptr, DstP = nullptr;
-    if (P.SrcPattern->hasProperTypeByHwMode())
-      SrcP = P.SrcPattern;
-    if (P.DstPattern->hasProperTypeByHwMode())
-      DstP = P.DstPattern;
+    if (P.getSrcPattern()->hasProperTypeByHwMode())
+      SrcP = P.getSrcPatternShared();
+    if (P.getDstPattern()->hasProperTypeByHwMode())
+      DstP = P.getDstPatternShared();
     if (!SrcP && !DstP) {
       PatternsToMatch.push_back(P);
       continue;

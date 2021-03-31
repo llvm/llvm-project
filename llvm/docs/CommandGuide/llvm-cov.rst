@@ -364,6 +364,10 @@ OPTIONS
  universal binary or to use an architecture that does not match a
  non-universal binary.
 
+.. option:: -show-region-summary
+
+ Show statistics for all regions. Defaults to true.
+
 .. option:: -show-branch-summary
 
  Show statistics for all branch conditions. Defaults to true.

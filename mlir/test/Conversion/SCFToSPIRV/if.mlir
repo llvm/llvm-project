@@ -10,7 +10,7 @@ func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
   %value = constant 0.0 : f32
   %i = constant 0 : index
 
-  // CHECK:       spv.selection {
+  // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE:\^.*]], [[MERGE:\^.*]]
   // CHECK-NEXT:  [[TRUE]]:
   // CHECK:         spv.Branch [[MERGE]]
@@ -20,7 +20,7 @@ func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK-NEXT:  spv.Return
 
   scf.if %arg3 {
-    store %value, %arg2[%i] : memref<10xf32>
+    memref.store %value, %arg2[%i] : memref<10xf32>
   }
   return
 }
@@ -30,10 +30,10 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
   %i = constant 0 : index
   %j = constant 9 : index
 
-  // CHECK:       spv.selection {
+  // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE_TOP:\^.*]], [[FALSE_TOP:\^.*]]
   // CHECK-NEXT:  [[TRUE_TOP]]:
-  // CHECK-NEXT:    spv.selection {
+  // CHECK-NEXT:    spv.mlir.selection {
   // CHECK-NEXT:      spv.BranchConditional {{%.*}}, [[TRUE_NESTED_TRUE_PATH:\^.*]], [[FALSE_NESTED_TRUE_PATH:\^.*]]
   // CHECK-NEXT:    [[TRUE_NESTED_TRUE_PATH]]:
   // CHECK:           spv.Branch [[MERGE_NESTED_TRUE_PATH:\^.*]]
@@ -44,7 +44,7 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
   // CHECK-NEXT:    }
   // CHECK-NEXT:    spv.Branch [[MERGE_TOP:\^.*]]
   // CHECK-NEXT:  [[FALSE_TOP]]:
-  // CHECK-NEXT:    spv.selection {
+  // CHECK-NEXT:    spv.mlir.selection {
   // CHECK-NEXT:      spv.BranchConditional {{%.*}}, [[TRUE_NESTED_FALSE_PATH:\^.*]], [[FALSE_NESTED_FALSE_PATH:\^.*]]
   // CHECK-NEXT:    [[TRUE_NESTED_FALSE_PATH]]:
   // CHECK:           spv.Branch [[MERGE_NESTED_FALSE_PATH:\^.*]]
@@ -61,19 +61,19 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
 
   scf.if %arg5 {
     scf.if %arg6 {
-      %value = load %arg3[%i] : memref<10xf32>
-      store %value, %arg4[%i] : memref<10xf32>
+      %value = memref.load %arg3[%i] : memref<10xf32>
+      memref.store %value, %arg4[%i] : memref<10xf32>
     } else {
-      %value = load %arg4[%i] : memref<10xf32>
-      store %value, %arg3[%i] : memref<10xf32>
+      %value = memref.load %arg4[%i] : memref<10xf32>
+      memref.store %value, %arg3[%i] : memref<10xf32>
     }
   } else {
     scf.if %arg6 {
-      %value = load %arg3[%j] : memref<10xf32>
-      store %value, %arg4[%j] : memref<10xf32>
+      %value = memref.load %arg3[%j] : memref<10xf32>
+      memref.store %value, %arg4[%j] : memref<10xf32>
     } else {
-      %value = load %arg4[%j] : memref<10xf32>
-      store %value, %arg3[%j] : memref<10xf32>
+      %value = memref.load %arg4[%j] : memref<10xf32>
+      memref.store %value, %arg3[%j] : memref<10xf32>
     }
   }
   return
@@ -83,17 +83,17 @@ func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %a
 func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
-  // CHECK:       spv.selection {
+  // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE:\^.*]], [[FALSE:\^.*]]
   // CHECK-NEXT:  [[TRUE]]:
-  // CHECK:         %[[RET1TRUE:.*]] = spv.constant 0.000000e+00 : f32
-  // CHECK:         %[[RET2TRUE:.*]] = spv.constant 1.000000e+00 : f32
+  // CHECK:         %[[RET1TRUE:.*]] = spv.Constant 0.000000e+00 : f32
+  // CHECK:         %[[RET2TRUE:.*]] = spv.Constant 1.000000e+00 : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR1]], %[[RET1TRUE]] : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR2]], %[[RET2TRUE]] : f32
   // CHECK:         spv.Branch ^[[MERGE:.*]]
   // CHECK-NEXT:  [[FALSE]]:
-  // CHECK:         %[[RET2FALSE:.*]] = spv.constant 2.000000e+00 : f32
-  // CHECK:         %[[RET1FALSE:.*]] = spv.constant 3.000000e+00 : f32
+  // CHECK:         %[[RET2FALSE:.*]] = spv.Constant 2.000000e+00 : f32
+  // CHECK:         %[[RET1FALSE:.*]] = spv.Constant 3.000000e+00 : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR1]], %[[RET1FALSE]] : f32
   // CHECK-DAG:     spv.Store "Function" %[[VAR2]], %[[RET2FALSE]] : f32
   // CHECK:         spv.Branch ^[[MERGE]]
@@ -116,8 +116,8 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   }
   %i = constant 0 : index
   %j = constant 1 : index
-  store %0#0, %arg2[%i] : memref<10xf32>
-  store %0#1, %arg2[%j] : memref<10xf32>
+  memref.store %0#0, %arg2[%i] : memref<10xf32>
+  memref.store %0#1, %arg2[%j] : memref<10xf32>
   return
 }
 
@@ -127,7 +127,7 @@ func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
 func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
   // CHECK-LABEL: @simple_if_yield_type_change
   // CHECK:       %[[VAR:.*]] = spv.Variable : !spv.ptr<!spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, Function>
-  // CHECK:       spv.selection {
+  // CHECK:       spv.mlir.selection {
   // CHECK-NEXT:    spv.BranchConditional {{%.*}}, [[TRUE:\^.*]], [[FALSE:\^.*]]
   // CHECK-NEXT:  [[TRUE]]:
   // CHECK:         spv.Store "Function" %[[VAR]], {{%.*}} : !spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>
@@ -149,7 +149,7 @@ func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>
   } else {
     scf.yield %arg3 : memref<10xf32>
   }
-  store %value, %0[%i] : memref<10xf32>
+  memref.store %value, %0[%i] : memref<10xf32>
   return
 }
 

@@ -170,12 +170,15 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
 
 std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
     const StringMap<FunctionSamples> &Profiles) {
-  if (!FunctionSamples::ProfileIsProbeBased)
+  if (!FunctionSamples::ProfileIsProbeBased && !FunctionSamples::ProfileIsCS)
     return sampleprof_error::success;
   auto &OS = *OutputStream;
   for (const auto &Entry : Profiles) {
     writeNameIdx(Entry.first());
-    encodeULEB128(Entry.second.getFunctionHash(), OS);
+    if (FunctionSamples::ProfileIsProbeBased)
+      encodeULEB128(Entry.second.getFunctionHash(), OS);
+    if (FunctionSamples::ProfileIsCS)
+      encodeULEB128(Entry.second.getContext().getAllAttributes(), OS);
   }
   return sampleprof_error::success;
 }
@@ -204,6 +207,17 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     addName(I.first());
     addNames(I.second);
   }
+
+  // If NameTable contains ".__uniq." suffix, set SecFlagUniqSuffix flag
+  // so compiler won't strip the suffix during profile matching after
+  // seeing the flag in the profile.
+  for (const auto &I : NameTable) {
+    if (I.first.find(FunctionSamples::UniqSuffix) != StringRef::npos) {
+      addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
+      break;
+    }
+  }
+
   if (auto EC = writeNameTable())
     return EC;
   return sampleprof_error::success;
@@ -226,6 +240,10 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     setToCompressSection(SecProfileSymbolList);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsProbeBased)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagIsProbeBased);
+  if (Type == SecProfSummary && FunctionSamples::ProfileIsCS)
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFullContext);
+  if (Type == SecFuncMetadata && FunctionSamples::ProfileIsCS)
+    addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagHasAttribute);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -360,10 +378,7 @@ std::error_code SampleProfileWriterCompactBinary::write(
 /// it needs to be parsed by the SampleProfileReaderText class.
 std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   auto &OS = *OutputStream;
-  if (FunctionSamples::ProfileIsCS)
-    OS << "[" << S.getNameWithContext() << "]:" << S.getTotalSamples();
-  else
-    OS << S.getName() << ":" << S.getTotalSamples();
+  OS << S.getNameWithContext(true) << ":" << S.getTotalSamples();
   if (Indent == 0)
     OS << ":" << S.getHeadSamples();
   OS << "\n";
@@ -406,6 +421,10 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
     if (FunctionSamples::ProfileIsProbeBased) {
       OS.indent(Indent + 1);
       OS << "!CFGChecksum: " << S.getFunctionHash() << "\n";
+    }
+    if (FunctionSamples::ProfileIsCS) {
+      OS.indent(Indent + 1);
+      OS << "!Attributes: " << S.getContext().getAllAttributes() << "\n";
     }
   }
 
@@ -752,9 +771,5 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
 void SampleProfileWriter::computeSummary(
     const StringMap<FunctionSamples> &ProfileMap) {
   SampleProfileSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
-  for (const auto &I : ProfileMap) {
-    const FunctionSamples &Profile = I.second;
-    Builder.addRecord(Profile);
-  }
-  Summary = Builder.getSummary();
+  Summary = Builder.computeSummaryForProfiles(ProfileMap);
 }

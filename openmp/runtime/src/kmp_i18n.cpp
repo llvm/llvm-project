@@ -364,9 +364,10 @@ void __kmp_i18n_do_catopen() {
          Issue hint in this case so cause of trouble is more understandable. */
       kmp_msg_t err_code = KMP_SYSERRCODE(error);
       __kmp_msg(kmp_ms_warning, KMP_MSG(CantOpenMessageCatalog, path.str),
-                err_code, (error == ERROR_BAD_EXE_FORMAT
-                               ? KMP_HNT(BadExeFormat, path.str, KMP_ARCH_STR)
-                               : __kmp_msg_null),
+                err_code,
+                (error == ERROR_BAD_EXE_FORMAT
+                     ? KMP_HNT(BadExeFormat, path.str, KMP_ARCH_STR)
+                     : __kmp_msg_null),
                 __kmp_msg_null);
       if (__kmp_generate_warnings == kmp_warnings_off) {
         __kmp_str_free(&err_code.str);
@@ -488,7 +489,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
                             wmsg, wlen, // Wide buffer and size.
                             NULL, 0, // Buffer and size.
                             NULL, NULL // Default char and used default char.
-                            );
+  );
   if (len <= 0) {
     goto end;
   }
@@ -502,7 +503,7 @@ static char const *___catgets(kmp_i18n_id_t id) {
                            wmsg, wlen, // Wide buffer and size.
                            msg, len, // Buffer and size.
                            NULL, NULL // Default char and used default char.
-                           );
+  );
   if (rc <= 0 || rc > len) {
     goto end;
   }
@@ -701,11 +702,11 @@ static char *sys_error(int err) {
 
 #else // Non-Windows* OS: Linux* OS or OS X*
 
-/* There are 2 incompatible versions of strerror_r:
+  /* There are 2 incompatible versions of strerror_r:
 
-   char * strerror_r( int, char *, size_t );  // GNU version
-   int    strerror_r( int, char *, size_t );  // XSI version
-*/
+     char * strerror_r( int, char *, size_t );  // GNU version
+     int    strerror_r( int, char *, size_t );  // XSI version
+  */
 
 #if (defined(__GLIBC__) && defined(_GNU_SOURCE)) ||                            \
     (defined(__BIONIC__) && defined(_GNU_SOURCE) &&                            \
@@ -806,7 +807,9 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
   case kmp_ms_fatal: {
     format = kmp_i18n_fmt_Fatal;
   } break;
-  default: { KMP_DEBUG_ASSERT(0); }
+  default: {
+    KMP_DEBUG_ASSERT(0);
+  }
   }
   fmsg = __kmp_msg_format(format, message.num, message.str);
   __kmp_str_free(&message.str);
@@ -830,7 +833,9 @@ void __kmp_msg(kmp_msg_severity_t severity, kmp_msg_t message, va_list args) {
       format = kmp_i18n_fmt_SysErr;
       fmsg = __kmp_msg_format(format, message.num, message.str);
     } break;
-    default: { KMP_DEBUG_ASSERT(0); }
+    default: {
+      KMP_DEBUG_ASSERT(0);
+    }
     }
     __kmp_str_free(&message.str);
     __kmp_str_buf_cat(&buffer, fmsg.str, fmsg.len);

@@ -231,6 +231,18 @@ std::vector<EnumAttrCase> EnumAttr::getAllCases() const {
   return cases;
 }
 
+bool EnumAttr::genSpecializedAttr() const {
+  return def->getValueAsBit("genSpecializedAttr");
+}
+
+llvm::Record *EnumAttr::getBaseAttrClass() const {
+  return def->getValueAsDef("baseAttrClass");
+}
+
+StringRef EnumAttr::getSpecializedAttrClassName() const {
+  return def->getValueAsString("specializedAttrClassName");
+}
+
 StructFieldAttr::StructFieldAttr(const llvm::Record *record) : def(record) {
   assert(def->isSubClassOf("StructFieldAttr") &&
          "must be subclass of TableGen 'StructFieldAttr' class");

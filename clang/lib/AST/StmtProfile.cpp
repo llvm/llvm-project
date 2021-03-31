@@ -462,6 +462,12 @@ void OMPClauseProfiler::VisitOMPSimdlenClause(const OMPSimdlenClause *C) {
     Profiler->VisitStmt(C->getSimdlen());
 }
 
+void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
+  for (auto E : C->getSizesRefs())
+    if (E)
+      Profiler->VisitExpr(E);
+}
+
 void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   if (C->getAllocator())
     Profiler->VisitStmt(C->getAllocator());
@@ -537,7 +543,19 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
-void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *) {}
+void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
+  VisitOMPClauseList(C);
+}
+
+void OMPClauseProfiler::VisitOMPUseClause(const OMPUseClause *C) {
+  if (C->getInteropVar())
+    Profiler->VisitStmt(C->getInteropVar());
+}
+
+void OMPClauseProfiler::VisitOMPDestroyClause(const OMPDestroyClause *C) {
+  if (C->getInteropVar())
+    Profiler->VisitStmt(C->getInteropVar());
+}
 
 template<typename T>
 void OMPClauseProfiler::VisitOMPClauseList(T *Node) {
@@ -848,8 +866,16 @@ StmtProfiler::VisitOMPExecutableDirective(const OMPExecutableDirective *S) {
       P.Visit(*I);
 }
 
-void StmtProfiler::VisitOMPLoopDirective(const OMPLoopDirective *S) {
+void StmtProfiler::VisitOMPCanonicalLoop(const OMPCanonicalLoop *L) {
+  VisitStmt(L);
+}
+
+void StmtProfiler::VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *S) {
   VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPLoopDirective(const OMPLoopDirective *S) {
+  VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
@@ -858,6 +884,10 @@ void StmtProfiler::VisitOMPParallelDirective(const OMPParallelDirective *S) {
 
 void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
   VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+  VisitOMPLoopBasedDirective(S);
 }
 
 void StmtProfiler::VisitOMPForDirective(const OMPForDirective *S) {
@@ -1108,6 +1138,14 @@ void StmtProfiler::VisitOMPTargetTeamsDistributeParallelForSimdDirective(
 void StmtProfiler::VisitOMPTargetTeamsDistributeSimdDirective(
     const OMPTargetTeamsDistributeSimdDirective *S) {
   VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPInteropDirective(const OMPInteropDirective *S) {
+  VisitOMPExecutableDirective(S);
+}
+
+void StmtProfiler::VisitOMPDispatchDirective(const OMPDispatchDirective *S) {
+  VisitOMPExecutableDirective(S);
 }
 
 void StmtProfiler::VisitExpr(const Expr *S) {

@@ -184,7 +184,7 @@ int f() {
 // need init:
 // CHECK: call i32 @_Z1gv()
 // CHECK: store i32 %{{.*}}, i32* @_ZN1VIfE1mE, align 4
-// CHECK: store i64 1, i64* @_ZGVN1VIfE1mE
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIfE1mE to i8*)
 // CHECK: br label
 
 // LINUX: define internal void @[[XF_M_INIT]]()
@@ -197,7 +197,7 @@ int f() {
 // need init:
 // LINUX: call {{.*}}__cxa_thread_atexit
 // DARWIN: call {{.*}}_tlv_atexit
-// CHECK: store i64 1, i64* @_ZGVN1XIfE1mE
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIfE1mE to i8*)
 // CHECK: br label
 
 // LINUX: declare i32 @__cxa_thread_atexit(void (i8*)*, i8*, i8*)
@@ -285,7 +285,7 @@ void set_anon_i() {
 // need init:
 // CHECK: call i32 @_Z1gv()
 // CHECK: store i32 %{{.*}}, i32* @_ZN1VIiE1mE, align 4
-// CHECK: store i64 1, i64* @_ZGVN1VIiE1mE
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1VIiE1mE to i8*)
 // CHECK: br label
 
 // LINUX: define internal void @[[X_M_INIT]]()
@@ -298,7 +298,7 @@ void set_anon_i() {
 // need init:
 // LINUX: call {{.*}}__cxa_thread_atexit
 // DARWIN: call {{.*}}_tlv_atexit
-// CHECK: store i64 1, i64* @_ZGVN1XIiE1mE
+// CHECK: store i8 1, i8* bitcast (i64* @_ZGVN1XIiE1mE to i8*)
 // CHECK: br label
 
 // CHECK: define {{.*}}@[[GLOBAL_INIT:.*]]()

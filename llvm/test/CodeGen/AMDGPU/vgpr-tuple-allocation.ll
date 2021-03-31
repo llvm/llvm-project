@@ -21,14 +21,14 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT: v_mov_b32_e32 v32, v12
 ; GFX9: ;;#ASMSTART
 ; GFX9-NEXT: ;;#ASMEND
-; GFX9: image_gather4_c_b_cl v[40:43], v[32:39], s[4:11], s[4:7] dmask:0x1
-; GFX9-NEXT: s_getpc_b64 s[4:5]
-; GFX9-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
-; GFX9-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
-; GFX9-NEXT: s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GFX9: image_gather4_c_b_cl v[40:43], v[32:39], s[16:23], s[4:7] dmask:0x1
+; GFX9-NEXT: s_getpc_b64 s[16:17]
+; GFX9-NEXT: s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
+; GFX9-NEXT: s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
+; GFX9-NEXT: s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; GFX9-NEXT: v_writelane_b32 v44, s30, 0
 ; GFX9: s_waitcnt lgkmcnt(0)
-; GFX9-NEXT: s_swappc_b64 s[30:31], s[4:5]
+; GFX9-NEXT: s_swappc_b64 s[30:31], s[16:17]
 
 ; GFX9: buffer_load_dword v43, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
@@ -53,14 +53,14 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10: ;;#ASMSTART
 ; GFX10-NEXT: ;;#ASMEND
 
-; GFX10: image_gather4_c_b_cl v[40:43], v[32:39], s[4:11], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX10: image_gather4_c_b_cl v[40:43], v[32:39], s[16:23], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT: s_waitcnt_depctr 0xffe3
-; GFX10-NEXT: s_getpc_b64 s[4:5]
-; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
-; GFX10-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
-; GFX10: s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GFX10-NEXT: s_getpc_b64 s[16:17]
+; GFX10-NEXT: s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
+; GFX10-NEXT: s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
+; GFX10: s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; GFX10: s_waitcnt lgkmcnt(0)
-; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
+; GFX10-NEXT: s_swappc_b64 s[30:31], s[16:17]
 
 ; GFX10: buffer_load_dword v43, off, s[0:3], s33
 ; GFX10-NEXT: buffer_load_dword v42, off, s[0:3], s33 offset:4
@@ -100,14 +100,14 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT: v_mov_b32_e32 v40, v12
 
 ; GFX9: image_gather4_c_b_cl v[0:3], v[40:47], s[36:43], s[4:7] dmask:0x1
-; GFX9-NEXT: s_getpc_b64 s[4:5]
-; GFX9-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
-; GFX9-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
-; GFX9-NEXT: s_load_dwordx2 s[4:5], s[4:5], 0x0
+; GFX9-NEXT: s_getpc_b64 s[16:17]
+; GFX9-NEXT: s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
+; GFX9-NEXT: s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
+; GFX9-NEXT: s_load_dwordx2 s[16:17], s[16:17], 0x0
 ; GFX9: s_waitcnt vmcnt(0)
 ; GFX9-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT: s_waitcnt lgkmcnt(0)
-; GFX9-NEXT: s_swappc_b64 s[30:31], s[4:5]
+; GFX9-NEXT: s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT: image_gather4_c_b_cl v[0:3], v[40:47], s[36:43], s[4:7] dmask:0x1
 
 ; GFX9: buffer_load_dword v44, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -127,22 +127,29 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: buffer_store_dword v43, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GFX10-NEXT: buffer_store_dword v44, off, s[0:3], s33 ; 4-byte Folded Spill
 
-
-; GFX10:      image_gather4_c_b_cl v[0:3], v[12:19], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
-; GFX10-NEXT: s_waitcnt_depctr 0xffe3
-; GFX10-NEXT: s_getpc_b64 s[4:5]
-; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
-; GFX10-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
+; GFX10: s_getpc_b64 s[16:17]
+; GFX10-NEXT: s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
+; GFX10-NEXT: s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
+; GFX10-NEXT: s_mov_b32 s37, s36
+; GFX10-NEXT: s_mov_b32 s38, s36
+; GFX10-NEXT: s_mov_b32 s39, s36
+; GFX10-NEXT: s_mov_b32 s40, s36
+; GFX10-NEXT: s_mov_b32 s41, s36
+; GFX10-NEXT: s_mov_b32 s42, s36
+; GFX10-NEXT: s_mov_b32 s43, s36
+; GFX10-NEXT: s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GFX10-NEXT: image_gather4_c_b_cl v[0:3], v[12:19], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX10-NEXT: v_writelane_b32 v45, s30, 8
 ; GFX10-NEXT: v_mov_b32_e32 v40, v16
-; GFX10-NEXT: s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GFX10-NEXT: v_mov_b32_e32 v41, v15
 ; GFX10-NEXT: v_mov_b32_e32 v42, v14
 ; GFX10-NEXT: v_mov_b32_e32 v43, v13
+; GFX10-NEXT: v_writelane_b32 v45, s31, 9
 ; GFX10-NEXT: v_mov_b32_e32 v44, v12
 ; GFX10-NEXT: s_waitcnt vmcnt(0)
 ; GFX10-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX10-NEXT: s_waitcnt lgkmcnt(0)
-; GFX10-NEXT: s_swappc_b64 s[30:31], s[4:5]
+; GFX10-NEXT: s_swappc_b64 s[30:31], s[16:17]
 ; GFX10-NEXT: image_gather4_c_b_cl v[0:3], [v44, v43, v42, v41, v40], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
 
 ; GFX10: buffer_load_dword v44, off, s[0:3], s33

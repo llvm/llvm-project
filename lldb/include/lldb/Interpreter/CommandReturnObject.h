@@ -26,7 +26,7 @@ class CommandReturnObject {
 public:
   CommandReturnObject(bool colors);
 
-  ~CommandReturnObject();
+  ~CommandReturnObject() = default;
 
   llvm::StringRef GetOutputData() {
     lldb::StreamSP stream_sp(m_out_stream.GetStreamAtIndex(eStreamStringIndex));
@@ -94,8 +94,6 @@ public:
 
   void AppendMessageWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
-
-  void AppendRawWarning(llvm::StringRef in_string);
 
   void AppendWarning(llvm::StringRef in_string);
 

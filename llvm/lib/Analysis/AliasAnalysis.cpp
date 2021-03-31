@@ -67,6 +67,13 @@ STATISTIC(NumMustAlias, "Number of MustAlias results");
 /// when testing to isolate a single AA implementation.
 cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden, cl::init(false));
 
+#ifndef NDEBUG
+/// Print a trace of alias analysis queries and their results.
+static cl::opt<bool> EnableAATrace("aa-trace", cl::Hidden, cl::init(false));
+#else
+static const bool EnableAATrace = false;
+#endif
+
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {
   for (auto &AA : AAs)
@@ -118,15 +125,29 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI) {
   AliasResult Result = MayAlias;
 
-  Depth++;
+  if (EnableAATrace) {
+    for (unsigned I = 0; I < AAQI.Depth; ++I)
+      dbgs() << "  ";
+    dbgs() << "Start " << *LocA.Ptr << " @ " << LocA.Size << ", "
+           << *LocB.Ptr << " @ " << LocB.Size << "\n";
+  }
+
+  AAQI.Depth++;
   for (const auto &AA : AAs) {
     Result = AA->alias(LocA, LocB, AAQI);
     if (Result != MayAlias)
       break;
   }
-  Depth--;
+  AAQI.Depth--;
 
-  if (Depth == 0) {
+  if (EnableAATrace) {
+    for (unsigned I = 0; I < AAQI.Depth; ++I)
+      dbgs() << "  ";
+    dbgs() << "End " << *LocA.Ptr << " @ " << LocA.Size << ", "
+           << *LocB.Ptr << " @ " << LocB.Size << " = " << Result << "\n";
+  }
+
+  if (AAQI.Depth == 0) {
     if (Result == NoAlias)
       ++NumNoAlias;
     else if (Result == MustAlias)
@@ -935,6 +956,17 @@ AAResults llvm::createLegacyPMAAResults(Pass &P, Function &F,
       WrapperPass->CB(P, F, AAR);
 
   return AAR;
+}
+
+Optional<int64_t>
+BatchAAResults::getClobberOffset(const MemoryLocation &LocA,
+                                 const MemoryLocation &LocB) const {
+  if (!LocA.Size.hasValue() || !LocB.Size.hasValue())
+    return None;
+  const Value *V1 = LocA.Ptr->stripPointerCastsForAliasAnalysis();
+  const Value *V2 = LocB.Ptr->stripPointerCastsForAliasAnalysis();
+  return AAQI.getClobberOffset(V1, V2, LocA.Size.getValue(),
+                               LocB.Size.getValue());
 }
 
 bool llvm::isNoAliasCall(const Value *V) {

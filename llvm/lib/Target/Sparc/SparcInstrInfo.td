@@ -1534,6 +1534,11 @@ let Predicates = [HasV9], hasSideEffects = 1, rd = 0, rs1 = 0b01111 in
  def MEMBARi : F3_2<2, 0b101000, (outs), (ins MembarTag:$simm13),
                     "membar $simm13", []>;
 
+let Predicates = [HasV9], rd = 15, rs1 = 0b00000 in
+  def SIR: F3_2<2, 0b110000, (outs),
+                (ins simm13Op:$simm13),
+                 "sir $simm13", []>;
+
 // The CAS instruction, unlike other instructions, only comes in a
 // form which requires an ASI be provided. The ASI value hardcoded
 // here is ASI_PRIMARY, the default unprivileged ASI for SparcV9.

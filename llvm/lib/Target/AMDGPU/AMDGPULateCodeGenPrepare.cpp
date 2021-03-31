@@ -168,7 +168,7 @@ bool AMDGPULateCodeGenPrepare::visitLoadInst(LoadInst &LI) {
       IRB.CreateConstGEP1_64(IRB.CreateBitCast(Base, Int8PtrTy),
                              Offset - Adjust),
       Int32PtrTy);
-  LoadInst *NewLd = IRB.CreateAlignedLoad(NewPtr, Align(4));
+  LoadInst *NewLd = IRB.CreateAlignedLoad(IRB.getInt32Ty(), NewPtr, Align(4));
   NewLd->copyMetadata(LI);
   NewLd->setMetadata(LLVMContext::MD_range, nullptr);
 

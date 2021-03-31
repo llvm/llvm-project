@@ -251,8 +251,9 @@ generateSnippets(const LLVMState &State, unsigned Opcode,
   const Instruction &Instr = State.getIC().getInstr(Opcode);
   const MCInstrDesc &InstrDesc = Instr.Description;
   // Ignore instructions that we cannot run.
-  if (InstrDesc.isPseudo())
-    return make_error<Failure>("Unsupported opcode: isPseudo");
+  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
+    return make_error<Failure>(
+        "Unsupported opcode: isPseudo/usesCustomInserter");
   if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
     return make_error<Failure>("Unsupported opcode: isBranch/isIndirectBranch");
   if (InstrDesc.isCall() || InstrDesc.isReturn())

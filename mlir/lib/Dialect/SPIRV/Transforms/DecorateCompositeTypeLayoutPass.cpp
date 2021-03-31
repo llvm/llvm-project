@@ -43,7 +43,7 @@ public:
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 
     // Save all named attributes except "type" attribute.
-    for (const auto &attr : op.getAttrs()) {
+    for (const auto &attr : op->getAttrs()) {
       if (attr.first == "type") {
         continue;
       }
@@ -74,10 +74,9 @@ public:
 };
 } // namespace
 
-static void populateSPIRVLayoutInfoPatterns(OwningRewritePatternList &patterns,
-                                            MLIRContext *ctx) {
-  patterns.insert<SPIRVGlobalVariableOpLayoutInfoDecoration,
-                  SPIRVAddressOfOpLayoutInfoDecoration>(ctx);
+static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
+  patterns.add<SPIRVGlobalVariableOpLayoutInfoDecoration,
+               SPIRVAddressOfOpLayoutInfoDecoration>(patterns.getContext());
 }
 
 namespace {
@@ -90,8 +89,8 @@ class DecorateSPIRVCompositeTypeLayoutPass
 
 void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   auto module = getOperation();
-  OwningRewritePatternList patterns;
-  populateSPIRVLayoutInfoPatterns(patterns, module.getContext());
+  RewritePatternSet patterns(module.getContext());
+  populateSPIRVLayoutInfoPatterns(patterns);
   ConversionTarget target(*(module.getContext()));
   target.addLegalDialect<spirv::SPIRVDialect>();
   target.addLegalOp<FuncOp>();
@@ -107,7 +106,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
 
   // TODO: Change the type for the indirect users such as spv.Load, spv.Store,
   // spv.FunctionCall and so on.
-  FrozenRewritePatternList frozenPatterns(std::move(patterns));
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
   for (auto spirvModule : module.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();

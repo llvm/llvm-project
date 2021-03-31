@@ -225,8 +225,8 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
   return 0;
 }
 
-void addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
-                           bool CreateScalarRefs) {
+void polly::addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr,
+                                  bool CreateScalarRefs) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())
@@ -426,7 +426,27 @@ void IslNodeBuilder::createMark(__isl_take isl_ast_node *Node) {
     auto *BasePtr = static_cast<Value *>(isl_id_get_user(Id));
     Annotator.addInterIterationAliasFreeBasePtr(BasePtr);
   }
+
+  BandAttr *ChildLoopAttr = getLoopAttr(isl::manage_copy(Id));
+  BandAttr *AncestorLoopAttr;
+  if (ChildLoopAttr) {
+    // Save current LoopAttr environment to restore again when leaving this
+    // subtree. This means there was no loop between the ancestor LoopAttr and
+    // this mark, i.e. the ancestor LoopAttr did not directly mark a loop. This
+    // can happen e.g. if the AST build peeled or unrolled the loop.
+    AncestorLoopAttr = Annotator.getStagingAttrEnv();
+
+    Annotator.getStagingAttrEnv() = ChildLoopAttr;
+  }
+
   create(Child);
+
+  if (ChildLoopAttr) {
+    assert(Annotator.getStagingAttrEnv() == ChildLoopAttr &&
+           "Nest must not overwrite loop attr environment");
+    Annotator.getStagingAttrEnv() = AncestorLoopAttr;
+  }
+
   isl_id_free(Id);
 }
 
@@ -762,7 +782,7 @@ static bool hasPartialAccesses(__isl_take isl_ast_node *Node) {
 void IslNodeBuilder::createFor(__isl_take isl_ast_node *For) {
   bool Vector = PollyVectorizerChoice == VECTORIZER_POLLY;
 
-  if (Vector && IslAstInfo::isInnermostParallel(For) &&
+  if (Vector && IslAstInfo::isInnermostParallel(isl::manage_copy(For)) &&
       !IslAstInfo::isReductionParallel(For)) {
     int VectorWidth = getNumberOfIterations(isl::manage_copy(For));
     if (1 < VectorWidth && VectorWidth <= 16 && !hasPartialAccesses(For)) {
@@ -952,7 +972,7 @@ void IslNodeBuilder::generateCopyStmt(
   auto *LoadValue = ExprBuilder.create(AccessExpr);
   AccessExpr =
       isl_id_to_ast_expr_get(NewAccesses, (*WriteAccess)->getId().release());
-  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr);
+  auto *StoreAddr = ExprBuilder.createAccessAddress(AccessExpr).first;
   Builder.CreateStore(LoadValue, StoreAddr);
 }
 
@@ -1139,22 +1159,22 @@ static Value *buildFADOutermostDimensionLoad(Value *GlobalDescriptor,
                       Builder.getInt64(0), Builder.getInt32(2)};
   Value *endPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, endIdx,
                                             ArrayName + "_end_ptr");
-  Value *end = Builder.CreateLoad(endPtr, ArrayName + "_end");
+  Type *type = cast<GEPOperator>(endPtr)->getResultElementType();
+  assert(isa<IntegerType>(type) && "expected type of end to be integral");
+
+  Value *end = Builder.CreateLoad(type, endPtr, ArrayName + "_end");
 
   Value *beginIdx[4] = {Builder.getInt64(0), Builder.getInt32(3),
                         Builder.getInt64(0), Builder.getInt32(1)};
   Value *beginPtr = Builder.CreateInBoundsGEP(GlobalDescriptor, beginIdx,
                                               ArrayName + "_begin_ptr");
-  Value *begin = Builder.CreateLoad(beginPtr, ArrayName + "_begin");
+  Value *begin = Builder.CreateLoad(type, beginPtr, ArrayName + "_begin");
 
   Value *size =
       Builder.CreateNSWSub(end, begin, ArrayName + "_end_begin_delta");
-  Type *endType = dyn_cast<IntegerType>(end->getType());
-  assert(endType && "expected type of end to be integral");
 
-  size = Builder.CreateNSWAdd(end,
-                              ConstantInt::get(endType, 1, /* signed = */ true),
-                              ArrayName + "_size");
+  size = Builder.CreateNSWAdd(
+      end, ConstantInt::get(type, 1, /* signed = */ true), ArrayName + "_size");
 
   return size;
 }
@@ -1211,7 +1231,7 @@ Value *IslNodeBuilder::preloadUnconditionally(isl_set *AccessRange,
   auto Name = Ptr->getName();
   auto AS = Ptr->getType()->getPointerAddressSpace();
   Ptr = Builder.CreatePointerCast(Ptr, Ty->getPointerTo(AS), Name + ".cast");
-  PreloadVal = Builder.CreateLoad(Ptr, Name + ".load");
+  PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
 

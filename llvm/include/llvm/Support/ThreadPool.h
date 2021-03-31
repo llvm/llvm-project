@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_THREAD_POOL_H
-#define LLVM_SUPPORT_THREAD_POOL_H
+#ifndef LLVM_SUPPORT_THREADPOOL_H
+#define LLVM_SUPPORT_THREADPOOL_H
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Threading.h"
@@ -102,4 +102,4 @@ private:
 };
 }
 
-#endif // LLVM_SUPPORT_THREAD_POOL_H
+#endif // LLVM_SUPPORT_THREADPOOL_H

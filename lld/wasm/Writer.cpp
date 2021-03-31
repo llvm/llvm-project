@@ -9,9 +9,7 @@
 #include "Writer.h"
 #include "Config.h"
 #include "InputChunks.h"
-#include "InputEvent.h"
-#include "InputGlobal.h"
-#include "InputTable.h"
+#include "InputElement.h"
 #include "MapFile.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
@@ -79,6 +77,7 @@ private:
   void calculateCustomSections();
   void calculateTypes();
   void createOutputSegments();
+  void combineOutputSegments();
   void layoutMemory();
   void createHeader();
 
@@ -88,6 +87,7 @@ private:
 
   void createCustomSections();
   void createSyntheticSections();
+  void createSyntheticSectionsPostLayout();
   void finalizeSections();
 
   // Custom sections
@@ -212,13 +212,7 @@ void Writer::writeSections() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  if (config->is64.getValueOr(false)) {
-    assert(g->global->global.InitExpr.Opcode == WASM_OPCODE_I64_CONST);
-    g->global->global.InitExpr.Value.Int64 = memoryPtr;
-  } else {
-    assert(g->global->global.InitExpr.Opcode == WASM_OPCODE_I32_CONST);
-    g->global->global.InitExpr.Value.Int32 = memoryPtr;
-  }
+  g->global->setPointerValue(memoryPtr);
 }
 
 // Fix the memory layout of the output binary.  This assigns memory offsets
@@ -246,17 +240,7 @@ void Writer::layoutMemory() {
     log("mem: stack size  = " + Twine(config->zStackSize));
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
-    auto *sp = cast<DefinedGlobal>(WasmSym::stackPointer);
-    switch (sp->global->global.InitExpr.Opcode) {
-    case WASM_OPCODE_I32_CONST:
-      sp->global->global.InitExpr.Value.Int32 = memoryPtr;
-      break;
-    case WASM_OPCODE_I64_CONST:
-      sp->global->global.InitExpr.Value.Int64 = memoryPtr;
-      break;
-    default:
-      llvm_unreachable("init expr must be i32/i64.const");
-    }
+    setGlobalPtr(cast<DefinedGlobal>(WasmSym::stackPointer), memoryPtr);
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 
@@ -268,14 +252,14 @@ void Writer::layoutMemory() {
   }
 
   if (WasmSym::globalBase)
-    WasmSym::globalBase->setVirtualAddress(memoryPtr);
+    WasmSym::globalBase->setVA(memoryPtr);
 
   uint64_t dataStart = memoryPtr;
 
   // Arbitrarily set __dso_handle handle to point to the start of the data
   // segments.
   if (WasmSym::dsoHandle)
-    WasmSym::dsoHandle->setVirtualAddress(dataStart);
+    WasmSym::dsoHandle->setVA(dataStart);
 
   out.dylinkSec->memAlign = 0;
   for (OutputSegment *seg : segments) {
@@ -307,14 +291,14 @@ void Writer::layoutMemory() {
     WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
         "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::initMemoryFlag->markLive();
-    WasmSym::initMemoryFlag->setVirtualAddress(memoryPtr);
+    WasmSym::initMemoryFlag->setVA(memoryPtr);
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}",
                 "__wasm_init_memory_flag", memoryPtr, 4, 4));
     memoryPtr += 4;
   }
 
   if (WasmSym::dataEnd)
-    WasmSym::dataEnd->setVirtualAddress(memoryPtr);
+    WasmSym::dataEnd->setVA(memoryPtr);
 
   uint64_t staticDataSize = memoryPtr - dataStart;
   log("mem: static data = " + Twine(staticDataSize));
@@ -329,7 +313,7 @@ void Writer::layoutMemory() {
     // The fact that this comes last means that a malloc/brk implementation
     // can grow the heap at runtime.
     log("mem: heap base   = " + Twine(memoryPtr));
-    WasmSym::heapBase->setVirtualAddress(memoryPtr);
+    WasmSym::heapBase->setVA(memoryPtr);
   }
 
   uint64_t maxMemorySetting = 1ULL
@@ -561,6 +545,15 @@ void Writer::populateTargetFeatures() {
 }
 
 static bool shouldImport(Symbol *sym) {
+  if (!sym->isUndefined())
+    return false;
+  if (sym->isWeak() && !config->relocatable)
+    return false;
+  if (!sym->isLive())
+    return false;
+  if (!sym->isUsedInRegularObj)
+    return false;
+
   // We don't generate imports for data symbols. They however can be imported
   // as GOT entries.
   if (isa<DataSymbol>(sym))
@@ -582,19 +575,20 @@ static bool shouldImport(Symbol *sym) {
 }
 
 void Writer::calculateImports() {
+  // Some inputs require that the indirect function table be assigned to table
+  // number 0, so if it is present and is an import, allocate it before any
+  // other tables.
+  if (WasmSym::indirectFunctionTable &&
+      shouldImport(WasmSym::indirectFunctionTable))
+    out.importSec->addImport(WasmSym::indirectFunctionTable);
+
   for (Symbol *sym : symtab->getSymbols()) {
-    if (!sym->isUndefined())
+    if (!shouldImport(sym))
       continue;
-    if (sym->isWeak() && !config->relocatable)
+    if (sym == WasmSym::indirectFunctionTable)
       continue;
-    if (!sym->isLive())
-      continue;
-    if (!sym->isUsedInRegularObj)
-      continue;
-    if (shouldImport(sym)) {
-      LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
-      out.importSec->addImport(sym);
-    }
+    LLVM_DEBUG(dbgs() << "import: " << sym->getName() << "\n");
+    out.importSec->addImport(sym);
   }
 }
 
@@ -745,11 +739,20 @@ static void finalizeIndirectFunctionTable() {
   if (!WasmSym::indirectFunctionTable)
     return;
 
+  if (shouldImport(WasmSym::indirectFunctionTable) &&
+      !WasmSym::indirectFunctionTable->hasTableNumber()) {
+    // Processing -Bsymbolic relocations resulted in a late requirement that the
+    // indirect function table be present, and we are running in --import-table
+    // mode.  Add the table now to the imports section.  Otherwise it will be
+    // added to the tables section later in assignIndexes.
+    out.importSec->addImport(WasmSym::indirectFunctionTable);
+  }
+
   uint32_t tableSize = config->tableBase + out.elemSec->numEntries();
   WasmLimits limits = {0, tableSize, 0};
   if (WasmSym::indirectFunctionTable->isDefined() && !config->growableTable) {
     limits.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
-    limits.Maximum = limits.Initial;
+    limits.Maximum = limits.Minimum;
   }
   WasmSym::indirectFunctionTable->setLimits(limits);
 }
@@ -805,6 +808,7 @@ void Writer::assignIndexes() {
     out.tableSec->addTable(table);
 
   out.globalSec->assignIndexes();
+  out.tableSec->assignIndexes();
 }
 
 static StringRef getOutputDataSegmentName(StringRef name) {
@@ -813,10 +817,6 @@ static StringRef getOutputDataSegmentName(StringRef name) {
   // We also need to merge .tbss into .tdata so they share the same offsets.
   if (name.startswith(".tdata") || name.startswith(".tbss"))
     return ".tdata";
-  // With PIC code we currently only support a single data segment since
-  // we only have a single __memory_base to use as our base address.
-  if (config->isPic)
-    return ".data";
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -861,9 +861,9 @@ void Writer::createOutputSegments() {
                    [](const OutputSegment *a, const OutputSegment *b) {
                      auto order = [](StringRef name) {
                        return StringSwitch<int>(name)
-                           .StartsWith(".rodata", 0)
-                           .StartsWith(".data", 1)
-                           .StartsWith(".tdata", 2)
+                           .StartsWith(".tdata", 0)
+                           .StartsWith(".rodata", 1)
+                           .StartsWith(".data", 2)
                            .StartsWith(".bss", 4)
                            .Default(3);
                      };
@@ -872,6 +872,53 @@ void Writer::createOutputSegments() {
 
   for (size_t i = 0; i < segments.size(); ++i)
     segments[i]->index = i;
+}
+
+void Writer::combineOutputSegments() {
+  // With PIC code we currently only support a single data segment since
+  // we only have a single __memory_base to use as our base address.
+  // This pass combines all non-TLS data segments into a single .data
+  // segment.
+  // This restructions can be relaxed once we have extended constant
+  // expressions available:
+  // https://github.com/WebAssembly/extended-const
+  assert(config->isPic);
+  if (segments.size() <= 1)
+    return;
+  OutputSegment *combined = nullptr;
+  std::vector<OutputSegment *> new_segments;
+  for (OutputSegment *s : segments) {
+    if (s->name == ".tdata") {
+      new_segments.push_back(s);
+    } else {
+      if (!combined) {
+        combined = make<OutputSegment>(".data");
+        combined->startVA = s->startVA;
+        if (config->sharedMemory)
+          combined->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
+      }
+      bool first = true;
+      for (InputSegment *inSeg : s->inputSegments) {
+        if (first)
+          inSeg->alignment = std::max(inSeg->alignment, s->alignment);
+        first = false;
+#ifndef NDEBUG
+        uint64_t oldVA = inSeg->getVA();
+#endif
+        combined->addInputSegment(inSeg);
+#ifndef NDEBUG
+        uint64_t newVA = inSeg->getVA();
+        assert(oldVA == newVA);
+#endif
+      }
+    }
+  }
+  if (combined) {
+    new_segments.push_back(combined);
+    segments = new_segments;
+    for (size_t i = 0; i < segments.size(); ++i)
+      segments[i]->index = i;
+  }
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -943,7 +990,7 @@ void Writer::createInitMemoryFunction() {
   assert(WasmSym::initMemory);
   assert(WasmSym::initMemoryFlag);
   assert(hasPassiveInitializedSegments());
-  uint64_t flagAddress = WasmSym::initMemoryFlag->getVirtualAddress();
+  uint64_t flagAddress = WasmSym::initMemoryFlag->getVA();
   bool is64 = config->is64.getValueOr(false);
   std::string bodyContent;
   {
@@ -1313,11 +1360,14 @@ void Writer::createSyntheticSections() {
   out.exportSec = make<ExportSection>();
   out.startSec = make<StartSection>();
   out.elemSec = make<ElemSection>();
+  out.producersSec = make<ProducersSection>();
+  out.targetFeaturesSec = make<TargetFeaturesSection>();
+}
+
+void Writer::createSyntheticSectionsPostLayout() {
   out.dataCountSec = make<DataCountSection>(segments);
   out.linkingSec = make<LinkingSection>(initFunctions, segments);
   out.nameSec = make<NameSection>(segments);
-  out.producersSec = make<ProducersSection>();
-  out.targetFeaturesSec = make<TargetFeaturesSection>();
 }
 
 void Writer::run() {
@@ -1329,27 +1379,48 @@ void Writer::run() {
   if (!config->isPic) {
     config->tableBase = 1;
     if (WasmSym::definedTableBase)
-      WasmSym::definedTableBase->setVirtualAddress(config->tableBase);
+      WasmSym::definedTableBase->setVA(config->tableBase);
   }
 
   log("-- createOutputSegments");
   createOutputSegments();
   log("-- createSyntheticSections");
   createSyntheticSections();
-  log("-- populateProducers");
-  populateProducers();
-  log("-- calculateImports");
-  calculateImports();
   log("-- layoutMemory");
   layoutMemory();
 
   if (!config->relocatable) {
     // Create linker synthesized __start_SECNAME/__stop_SECNAME symbols
     // This has to be done after memory layout is performed.
-    for (const OutputSegment *seg : segments)
+    for (const OutputSegment *seg : segments) {
       addStartStopSymbols(seg);
+    }
   }
 
+  // Delay reporting error about explict exports until after addStartStopSymbols
+  // which can create optional symbols.
+  for (auto &entry : config->exportedSymbols) {
+    StringRef name = entry.first();
+    Symbol *sym = symtab->find(name);
+    if (sym && sym->isDefined())
+      sym->forceExport = true;
+    else if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
+      error(Twine("symbol exported via --export not found: ") + name);
+    else if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
+      warn(Twine("symbol exported via --export not found: ") + name);
+  }
+
+  if (config->isPic) {
+    log("-- combineOutputSegments");
+    combineOutputSegments();
+  }
+
+  log("-- createSyntheticSectionsPostLayout");
+  createSyntheticSectionsPostLayout();
+  log("-- populateProducers");
+  populateProducers();
+  log("-- calculateImports");
+  calculateImports();
   log("-- scanRelocations");
   scanRelocations();
   log("-- finalizeIndirectFunctionTable");

@@ -7,5 +7,6 @@ add_mlir_dialect_library(MLIRLinalgAnalysis
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLinalg
+  MLIRMemRef
   MLIRStandard
   )

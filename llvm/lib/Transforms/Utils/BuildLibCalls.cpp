@@ -166,18 +166,16 @@ static bool setArgsNoUndef(Function &F) {
   return Changed;
 }
 
-static bool setRetAndArgsNoUndef(Function &F) {
-  return setRetNoUndef(F) | setArgsNoUndef(F);
+static bool setArgNoUndef(Function &F, unsigned ArgNo) {
+  if (F.hasParamAttribute(ArgNo, Attribute::NoUndef))
+    return false;
+  F.addParamAttr(ArgNo, Attribute::NoUndef);
+  ++NumNoUndef;
+  return true;
 }
 
-static bool setRetNonNull(Function &F) {
-  assert(F.getReturnType()->isPointerTy() &&
-         "nonnull applies only to pointers");
-  if (F.hasAttribute(AttributeList::ReturnIndex, Attribute::NonNull))
-    return false;
-  F.addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
-  ++NumNonNull;
-  return true;
+static bool setRetAndArgsNoUndef(Function &F) {
+  return setRetNoUndef(F) | setArgsNoUndef(F);
 }
 
 static bool setReturnedArg(Function &F, unsigned ArgNo) {
@@ -333,8 +331,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
-  case LibFunc_strdup:
   case LibFunc_strndup:
+    Changed |= setArgNoUndef(F, 1);
+    LLVM_FALLTHROUGH;
+  case LibFunc_strdup:
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
@@ -393,7 +393,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_malloc:
   case LibFunc_vec_malloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetNoUndef(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
@@ -481,10 +481,12 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
+    Changed |= setArgNoUndef(F, 1);
     return Changed;
   case LibFunc_reallocf:
     Changed |= setRetNoUndef(F);
     Changed |= setWillReturn(F);
+    Changed |= setArgNoUndef(F, 1);
     return Changed;
   case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
@@ -527,7 +529,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_aligned_alloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetNoUndef(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
@@ -559,7 +561,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
   case LibFunc_calloc:
   case LibFunc_vec_calloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetNoUndef(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
@@ -843,7 +845,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return Changed;
   case LibFunc_valloc:
     Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetNoUndef(F);
+    Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
@@ -918,8 +920,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 3);
     return Changed;
-  case LibFunc_dunder_strdup:
   case LibFunc_dunder_strndup:
+    Changed |= setArgNoUndef(F, 1);
+    LLVM_FALLTHROUGH;
+  case LibFunc_dunder_strdup:
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
@@ -1004,63 +1008,6 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
-    return Changed;
-  case LibFunc_ZdlPvRKSt9nothrow_t: // delete(void*, nothrow)
-  case LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t: // delete(void*, align_val_t, nothrow)
-  case LibFunc_ZdaPvRKSt9nothrow_t: // delete[](void*, nothrow)
-  case LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t: // delete[](void*, align_val_t, nothrow)
-    Changed |= setDoesNotThrow(F);
-    LLVM_FALLTHROUGH;
-  case LibFunc_ZdlPv: // delete(void*)
-  case LibFunc_ZdlPvj: // delete(void*, unsigned int)
-  case LibFunc_ZdlPvm: // delete(void*, unsigned long)
-  case LibFunc_ZdaPv: // delete[](void*)
-  case LibFunc_ZdaPvj: // delete[](void*, unsigned int)
-  case LibFunc_ZdaPvm: // delete[](void*, unsigned long)
-  case LibFunc_ZdlPvSt11align_val_t: // delete(void*, align_val_t)
-  case LibFunc_ZdlPvjSt11align_val_t: // delete(void*, unsigned int, align_val_t)
-  case LibFunc_ZdlPvmSt11align_val_t: // delete(void*, unsigned long, align_val_t)
-  case LibFunc_ZdaPvSt11align_val_t: // delete[](void*, align_val_t)
-  case LibFunc_ZdaPvjSt11align_val_t: // delete[](void*, unsigned int, align_val_t)
-  case LibFunc_ZdaPvmSt11align_val_t: // delete[](void*, unsigned long, align_val_t);
-    Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
-    Changed |= setArgsNoUndef(F);
-    Changed |= setWillReturn(F);
-    Changed |= setDoesNotCapture(F, 0);
-    return Changed;
-  case LibFunc_ZnwjRKSt9nothrow_t: // new(unsigned int, nothrow)
-  case LibFunc_ZnwmRKSt9nothrow_t: // new(unsigned long, nothrow)
-  case LibFunc_ZnajRKSt9nothrow_t: // new[](unsigned int, nothrow)
-  case LibFunc_ZnamRKSt9nothrow_t: // new[](unsigned long, nothrow)
-  case LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t: // new(unsigned int, align_val_t, nothrow)
-  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t: // new(unsigned long, align_val_t, nothrow)
-  case LibFunc_ZnajSt11align_val_tRKSt9nothrow_t: // new[](unsigned int, align_val_t, nothrow)
-  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t: // new[](unsigned long, align_val_t, nothrow)
-    // Nothrow operator new may return null pointer
-    Changed |= setDoesNotThrow(F);
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
-    Changed |= setRetNoUndef(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
-    return Changed;
-  case LibFunc_Znwj: // new(unsigned int)
-  case LibFunc_Znwm: // new(unsigned long)
-  case LibFunc_Znaj: // new[](unsigned int)
-  case LibFunc_Znam: // new[](unsigned long)
-  case LibFunc_ZnwjSt11align_val_t: // new(unsigned int, align_val_t)
-  case LibFunc_ZnwmSt11align_val_t: // new(unsigned long, align_val_t)
-  case LibFunc_ZnajSt11align_val_t: // new[](unsigned int, align_val_t)
-  case LibFunc_ZnamSt11align_val_t: // new[](unsigned long, align_val_t)
-  case LibFunc_msvc_new_int: // new(unsigned int)
-  case LibFunc_msvc_new_longlong: // new(unsigned long long)
-  case LibFunc_msvc_new_array_int: // new[](unsigned int)
-  case LibFunc_msvc_new_array_longlong: // new[](unsigned long long)
-    Changed |= setOnlyAccessesInaccessibleMemory(F);
-    // Operator new always returns a nonnull noalias pointer
-    Changed |= setRetNoUndef(F);
-    Changed |= setRetNonNull(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
     return Changed;
   // TODO: add LibFunc entries for:
   // case LibFunc_memset_pattern4:

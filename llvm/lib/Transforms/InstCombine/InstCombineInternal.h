@@ -715,10 +715,10 @@ public:
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   bool mergeStoreIntoSuccessor(StoreInst &SI);
 
-  /// Given an 'or' instruction, check to see if it is part of a
+  /// Given an initial instruction, check to see if it is the root of a
   /// bswap/bitreverse idiom. If so, return the equivalent bswap/bitreverse
   /// intrinsic.
-  Instruction *matchBSwapOrBitReverse(BinaryOperator &Or, bool MatchBSwaps,
+  Instruction *matchBSwapOrBitReverse(Instruction &I, bool MatchBSwaps,
                                       bool MatchBitReversals);
 
   Instruction *SimplifyAnyMemTransfer(AnyMemTransferInst *MI);

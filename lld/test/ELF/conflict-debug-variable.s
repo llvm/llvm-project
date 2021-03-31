@@ -42,18 +42,18 @@
 #  static int zed = 3;
 # Invocation: g++ -g -S 1.c
 
-.bss
-.globl  foo
-.type  foo, @object
-.size  foo, 4
-foo:
-
 .data
 .globl  bar
 .type  bar, @object
 .size  bar, 4
 bar:
  .byte 0
+
+.bss
+.globl  foo
+.type  foo, @object
+.size  foo, 4
+foo:
 
 .local zed
 zed:

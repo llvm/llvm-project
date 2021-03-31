@@ -2,6 +2,67 @@
 # RUN: llc -mtriple aarch64 -verify-machineinstrs -run-pass=legalizer -debugify-and-strip-all-safe %s -o - | FileCheck %s
 
 ---
+name:            narrow_scalar_saddo_s128
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_saddo_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY2]]
+    ; CHECK: %17:_(s64), %carry_out:_(s1) = G_SADDE [[COPY1]], [[COPY3]], [[UADDO1]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[UADDO]](s64)
+    ; CHECK: $x1 = COPY %17(s64)
+    ; CHECK: $x2 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %lhs:_(s128) = G_MERGE_VALUES %0, %1
+    %rhs:_(s128) = G_MERGE_VALUES %2, %3
+    %add:_(s128), %carry_out:_(s1) = G_SADDO %lhs, %rhs
+    %add0:_(s64), %add1:_(s64) = G_UNMERGE_VALUES %add
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %add0
+    $x1 = COPY %add1
+    $x2 = COPY %carry_out_ext
+
+...
+---
+name:            narrow_scalar_saddo_big_nonpow2
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_saddo_big_nonpow2
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s1) = G_UADDO [[COPY]], [[COPY1]]
+    ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDO1]]
+    ; CHECK: %22:_(s64), %carry_out:_(s1) = G_SADDE [[COPY2]], [[COPY3]], [[UADDE1]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[UADDO]](s64)
+    ; CHECK: $x1 = COPY [[UADDE]](s64)
+    ; CHECK: $x2 = COPY %22(s64)
+    ; CHECK: $x3 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %lhs:_(s192) = G_MERGE_VALUES %0, %1, %2
+    %rhs:_(s192) = G_MERGE_VALUES %1, %2, %3
+    %add:_(s192), %carry_out:_(s1) = G_SADDO %lhs, %rhs
+    %add0:_(s64), %add1:_(s64), %add2:_(s64) = G_UNMERGE_VALUES %add
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %add0
+    $x1 = COPY %add1
+    $x2 = COPY %add2
+    $x3 = COPY %carry_out_ext
+
+...
+---
 name:            test_scalar_saddo_small
 body:             |
   bb.0.entry:

@@ -3701,15 +3701,15 @@
             attn
 
 # Copy-Paste Facility (Extended Mnemonics):
-# CHECK-BE: copy 2, 19, 0                      # encoding: [0x7c,0x02,0x9e,0x0c]
-# CHECK-LE: copy 2, 19, 0                      # encoding: [0x0c,0x9e,0x02,0x7c]
+# CHECK-BE: copy 2, 19                       # encoding: [0x7c,0x22,0x9e,0x0c]
+# CHECK-LE: copy 2, 19                       # encoding: [0x0c,0x9e,0x22,0x7c]
             copy 2, 19
-# CHECK-BE: copy 2, 19, 1                      # encoding: [0x7c,0x22,0x9e,0x0c]
-# CHECK-LE: copy 2, 19, 1                      # encoding: [0x0c,0x9e,0x22,0x7c]
-            copy_first 2, 19
-# CHECK-BE: paste 17, 1, 0                     # encoding: [0x7c,0x11,0x0f,0x0c]
-# CHECK-LE: paste 17, 1, 0                     # encoding: [0x0c,0x0f,0x11,0x7c]
-            paste 17, 1
-# CHECK-BE: paste. 17, 1, 1                    # encoding: [0x7c,0x31,0x0f,0x0d]
-# CHECK-LE: paste. 17, 1, 1                    # encoding: [0x0d,0x0f,0x31,0x7c]
-            paste_last 17, 1
+# CHECK-BE: paste. 17, 1, 0                  # encoding: [0x7c,0x11,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1, 0                  # encoding: [0x0d,0x0f,0x11,0x7c]
+            paste. 17, 1, 0
+# CHECK-BE: paste. 17, 1                     # encoding: [0x7c,0x31,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1                     # encoding: [0x0d,0x0f,0x31,0x7c]
+            paste. 17, 1, 1
+# CHECK-BE: paste. 17, 1                     # encoding: [0x7c,0x31,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1                     # encoding: [0x0d,0x0f,0x31,0x7c]
+            paste. 17, 1

@@ -60,10 +60,7 @@ CheckTy0Ty1MemSizeAlign(const LegalityQuery &Query,
 
 static bool CheckTyN(unsigned N, const LegalityQuery &Query,
                      std::initializer_list<LLT> SupportedValues) {
-  for (auto &Val : SupportedValues)
-    if (Val == Query.Types[N])
-      return true;
-  return false;
+  return llvm::is_contained(SupportedValues, Query.Types[N]);
 }
 
 MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {

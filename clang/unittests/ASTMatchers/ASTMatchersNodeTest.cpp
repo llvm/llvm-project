@@ -2129,6 +2129,37 @@ TEST(ASTMatchersTestObjC, ObjCExceptionStmts) {
   EXPECT_TRUE(matchesObjC(ObjCString, objcFinallyStmt()));
 }
 
+TEST(ASTMatchersTest, DecompositionDecl) {
+  StringRef Code = R"cpp(
+void foo()
+{
+    int arr[3];
+    auto &[f, s, t] = arr;
+
+    f = 42;
+}
+  )cpp";
+  EXPECT_TRUE(matchesConditionally(
+      Code, decompositionDecl(hasBinding(0, bindingDecl(hasName("f")))), true,
+      {"-std=c++17"}));
+  EXPECT_FALSE(matchesConditionally(
+      Code, decompositionDecl(hasBinding(42, bindingDecl(hasName("f")))), true,
+      {"-std=c++17"}));
+  EXPECT_FALSE(matchesConditionally(
+      Code, decompositionDecl(hasBinding(0, bindingDecl(hasName("s")))), true,
+      {"-std=c++17"}));
+  EXPECT_TRUE(matchesConditionally(
+      Code, decompositionDecl(hasBinding(1, bindingDecl(hasName("s")))), true,
+      {"-std=c++17"}));
+
+  EXPECT_TRUE(matchesConditionally(
+      Code,
+      bindingDecl(decl().bind("self"), hasName("f"),
+                  forDecomposition(decompositionDecl(
+                      hasAnyBinding(bindingDecl(equalsBoundNode("self")))))),
+      true, {"-std=c++17"}));
+}
+
 TEST(ASTMatchersTestObjC, ObjCAutoreleasePoolStmt) {
   StringRef ObjCString = "void f() {"
                          "@autoreleasepool {"

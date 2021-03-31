@@ -13,9 +13,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-size_t OptionValueArgs::GetArgs(Args &args) {
+size_t OptionValueArgs::GetArgs(Args &args) const {
   args.Clear();
-  for (auto value : m_values) {
+  for (const auto &value : m_values) {
     llvm::StringRef string_value = value->GetStringValue();
     if (!string_value.empty())
       args.AppendArgument(string_value);

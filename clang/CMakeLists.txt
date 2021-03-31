@@ -113,6 +113,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   include(TableGen)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(GetErrcMessages)
   include(LLVMDistributionSupport)
 
   set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
@@ -131,7 +132,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
   if(LLVM_INCLUDE_TESTS)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
+      COMPONENTS Interpreter)
 
     # Check prebuilt llvm/utils.
     if(EXISTS ${LLVM_TOOLS_BINARY_DIR}/FileCheck${CMAKE_EXECUTABLE_SUFFIX}
@@ -175,6 +177,8 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
         set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
       endif()
       set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+      get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
       # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
       if( WIN32 AND NOT CYGWIN )
@@ -262,8 +266,6 @@ set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
 if (CLANG_DEFAULT_UNWINDLIB STREQUAL "")
   if (CLANG_DEFAULT_RTLIB STREQUAL "libgcc")
     set (CLANG_DEFAULT_UNWINDLIB "libgcc" CACHE STRING "" FORCE)
-  elseif (CLANG_DEFAULT_RTLIBS STREQUAL "libunwind")
-    set (CLANG_DEFAULT_UNWINDLIB "none" CACHE STRING "" FORCE)
   endif()
 endif()
 
@@ -273,7 +275,7 @@ if (NOT(CLANG_DEFAULT_UNWINDLIB STREQUAL "" OR
         CLANG_DEFAULT_UNWINDLIB STREQUAL "libunwind"))
   message(WARNING "Resetting default unwindlib to use platform default")
   set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
-    "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty for none)" FORCE)
+    "Default unwind library to use (\"none\" \"libgcc\" or \"libunwind\", empty to match runtime library.)" FORCE)
 endif()
 
 set(CLANG_DEFAULT_OBJCOPY "objcopy" CACHE STRING
@@ -465,12 +467,19 @@ option(CLANG_ENABLE_STATIC_ANALYZER
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
+option(CLANG_ROUND_TRIP_CC1_ARGS
+  "Round-trip command line arguments in -cc1." ${LLVM_ENABLE_ASSERTIONS})
+
 if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
 endif()
 
 if(CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ON)
+endif()
+
+if (CLANG_ROUND_TRIP_CC1_ARGS)
+  add_definitions(-DCLANG_ROUND_TRIP_CC1_ARGS=ON)
 endif()
 
 # Clang version information
@@ -632,6 +641,11 @@ if (CLANG_ENABLE_BOOTSTRAP)
   set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/${NEXT_CLANG_STAGE}-bins/)
 
   if(BOOTSTRAP_LLVM_ENABLE_LLD)
+    # adding lld to clang-bootstrap-deps without having it enabled in
+    # LLVM_ENABLE_PROJECTS just generates a cryptic error message.
+    if (NOT "lld" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(FATAL_ERROR "LLD is enabled in the boostrap build, but lld is not in LLVM_ENABLE_PROJECTS")
+    endif()
     add_dependencies(clang-bootstrap-deps lld)
   endif()
 
@@ -851,13 +865,24 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # exclude from main target
-    set_target_properties(${NEXT_CLANG_STAGE} PROPERTIES _EP_${target}_EXCLUDE_FROM_MAIN On)
+    # Install targets have side effects, so we always want to execute them.
+    # "install" is reserved by CMake and can't be used as a step name for
+    # ExternalProject_Add_Step, so we can match against "^install-" instead of
+    # "^install" to get a tighter match. CMake's installation scripts already
+    # skip up-to-date files, so there's no behavior change if you install to the
+    # same destination multiple times.
+    if(target MATCHES "^install-")
+      set(step_always ON)
+    else()
+      set(step_always OFF)
+    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
+      ALWAYS ${step_always}
+      EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )
 

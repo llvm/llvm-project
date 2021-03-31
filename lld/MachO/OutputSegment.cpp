@@ -21,6 +21,12 @@ using namespace lld;
 using namespace lld::macho;
 
 static uint32_t initProt(StringRef name) {
+  auto it = find_if(
+      config->segmentProtections,
+      [&](const SegmentProtection &segprot) { return segprot.name == name; });
+  if (it != config->segmentProtections.end())
+    return it->initProt;
+
   if (name == segment_names::text)
     return VM_PROT_READ | VM_PROT_EXECUTE;
   if (name == segment_names::pageZero)
@@ -31,16 +37,15 @@ static uint32_t initProt(StringRef name) {
 }
 
 static uint32_t maxProt(StringRef name) {
-  assert(config->arch != AK_i386 &&
+  assert(config->target.Arch != AK_i386 &&
          "TODO: i386 has different maxProt requirements");
   return initProt(name);
 }
 
 size_t OutputSegment::numNonHiddenSections() const {
   size_t count = 0;
-  for (const OutputSection *osec : sections) {
+  for (const OutputSection *osec : sections)
     count += (!osec->isHidden() ? 1 : 0);
-  }
   return count;
 }
 

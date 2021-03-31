@@ -21,9 +21,8 @@ class SPIRVTypeConverter;
 /// Appends to a pattern list additional patterns for translating GPU Ops to
 /// SPIR-V ops. For a gpu.func to be converted, it should have a
 /// spv.entry_point_abi attribute.
-void populateGPUToSPIRVPatterns(MLIRContext *context,
-                                SPIRVTypeConverter &typeConverter,
-                                OwningRewritePatternList &patterns);
+void populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                RewritePatternSet &patterns);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRV_H

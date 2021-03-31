@@ -38,7 +38,7 @@ BasicBlock *GetBlockByName(StringRef BlockName, Function &F) {
   return nullptr;
 }
 
-// We use this fixture to ensure that we clean up DivergenceAnalysis before
+// We use this fixture to ensure that we clean up DivergenceAnalysisImpl before
 // deleting the PassManager.
 class DivergenceAnalysisTest : public testing::Test {
 protected:
@@ -54,21 +54,21 @@ protected:
 
   DivergenceAnalysisTest() : M("", Context), TLII(), TLI(TLII) {}
 
-  DivergenceAnalysis buildDA(Function &F, bool IsLCSSA) {
+  DivergenceAnalysisImpl buildDA(Function &F, bool IsLCSSA) {
     DT.reset(new DominatorTree(F));
     PDT.reset(new PostDominatorTree(F));
     LI.reset(new LoopInfo(*DT));
     SDA.reset(new SyncDependenceAnalysis(*DT, *PDT, *LI));
-    return DivergenceAnalysis(F, nullptr, *DT, *LI, *SDA, IsLCSSA);
+    return DivergenceAnalysisImpl(F, nullptr, *DT, *LI, *SDA, IsLCSSA);
   }
 
   void runWithDA(
       Module &M, StringRef FuncName, bool IsLCSSA,
-      function_ref<void(Function &F, LoopInfo &LI, DivergenceAnalysis &DA)>
+      function_ref<void(Function &F, LoopInfo &LI, DivergenceAnalysisImpl &DA)>
           Test) {
     auto *F = M.getFunction(FuncName);
     ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
-    DivergenceAnalysis DA = buildDA(*F, IsLCSSA);
+    DivergenceAnalysisImpl DA = buildDA(*F, IsLCSSA);
     Test(*F, *LI, DA);
   }
 };
@@ -82,7 +82,7 @@ TEST_F(DivergenceAnalysisTest, DAInitialState) {
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   ReturnInst::Create(Context, nullptr, BB);
 
-  DivergenceAnalysis DA = buildDA(*F, false);
+  DivergenceAnalysisImpl DA = buildDA(*F, false);
 
   // Whole function region
   EXPECT_EQ(DA.getRegionLoop(), nullptr);
@@ -135,7 +135,7 @@ TEST_F(DivergenceAnalysisTest, DANoLCSSA) {
       Err, C);
 
   Function *F = M->getFunction("f_1");
-  DivergenceAnalysis DA = buildDA(*F, false);
+  DivergenceAnalysisImpl DA = buildDA(*F, false);
   EXPECT_FALSE(DA.hasDetectedDivergence());
 
   auto ItArg = F->arg_begin();
@@ -189,7 +189,7 @@ TEST_F(DivergenceAnalysisTest, DALCSSA) {
       Err, C);
 
   Function *F = M->getFunction("f_lcssa");
-  DivergenceAnalysis DA = buildDA(*F, true);
+  DivergenceAnalysisImpl DA = buildDA(*F, true);
   EXPECT_FALSE(DA.hasDetectedDivergence());
 
   auto ItArg = F->arg_begin();

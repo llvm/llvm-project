@@ -83,16 +83,10 @@ using namespace std::chrono;
 #define DISABLE_MEM_CACHE_DEFAULT true
 #endif
 
-class ProcessOptionValueProperties : public OptionValueProperties {
+class ProcessOptionValueProperties
+    : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
-  ProcessOptionValueProperties(ConstString name)
-      : OptionValueProperties(name) {}
-
-  // This constructor is used when creating ProcessOptionValueProperties when
-  // it is part of a new lldb_private::Process instance. It will copy all
-  // current global property values as needed
-  ProcessOptionValueProperties(ProcessProperties *global_properties)
-      : OptionValueProperties(*global_properties->GetValueProperties()) {}
+  ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
 
   const Property *GetPropertyAtIndex(const ExecutionContext *exe_ctx,
                                      bool will_modify,
@@ -131,10 +125,12 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
-class ProcessExperimentalOptionValueProperties : public OptionValueProperties {
+class ProcessExperimentalOptionValueProperties
+    : public Cloneable<ProcessExperimentalOptionValueProperties,
+                       OptionValueProperties> {
 public:
   ProcessExperimentalOptionValueProperties()
-      : OptionValueProperties(
+      : Cloneable(
             ConstString(Properties::GetExperimentalSettingsName())) {}
 };
 
@@ -157,8 +153,8 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
         ConstString("thread"), ConstString("Settings specific to threads."),
         true, Thread::GetGlobalProperties()->GetValueProperties());
   } else {
-    m_collection_sp = std::make_shared<ProcessOptionValueProperties>(
-        Process::GetGlobalProperties().get());
+    m_collection_sp =
+        OptionValueProperties::CreateLocalCopy(*Process::GetGlobalProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertyPythonOSPluginPath,
         [this] { m_process->LoadOperatingSystemPlugin(true); });
@@ -806,6 +802,7 @@ bool Process::HandleProcessStateChangedEvent(const EventSP &event_sp,
             case eStopReasonExec:
             case eStopReasonThreadExiting:
             case eStopReasonInstrumentation:
+            case eStopReasonProcessorTrace:
               if (!other_thread)
                 other_thread = thread;
               break;
@@ -1356,8 +1353,8 @@ void Process::SetPrivateState(StateType new_state) {
   if (m_finalizing)
     return;
 
-  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
-                                                  LIBLLDB_LOG_PROCESS));
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(
+      LIBLLDB_LOG_STATE | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_UNWIND));
   bool state_changed = false;
 
   LLDB_LOGF(log, "Process::SetPrivateState (%s)", StateAsCString(new_state));
@@ -3374,14 +3371,14 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
         should_resume = !m_thread_list.ShouldStop(event_ptr);
 
       if (was_restarted || should_resume || m_resume_requested) {
-        Vote stop_vote = m_thread_list.ShouldReportStop(event_ptr);
+        Vote report_stop_vote = m_thread_list.ShouldReportStop(event_ptr);
         LLDB_LOGF(log,
                   "Process::ShouldBroadcastEvent: should_resume: %i state: "
-                  "%s was_restarted: %i stop_vote: %d.",
+                  "%s was_restarted: %i report_stop_vote: %d.",
                   should_resume, StateAsCString(state), was_restarted,
-                  stop_vote);
+                  report_stop_vote);
 
-        switch (stop_vote) {
+        switch (report_stop_vote) {
         case eVoteYes:
           return_value = true;
           break;
@@ -5684,9 +5681,9 @@ void Process::PrintWarningUnsupportedLanguage(const SymbolContext &sc) {
   LanguageType language = sc.GetLanguage();
   if (language == eLanguageTypeUnknown)
     return;
-  auto type_system_or_err = sc.module_sp->GetTypeSystemForLanguage(language);
-  if (auto err = type_system_or_err.takeError()) {
-    llvm::consumeError(std::move(err));
+  LanguageSet plugins =
+      PluginManager::GetAllTypeSystemSupportedLanguagesForTypes();
+  if (!plugins[language]) {
     PrintWarning(Process::Warnings::eWarningsUnsupportedLanguage,
                  sc.module_sp.get(),
                  "This version of LLDB has no plugin for the %s language. "
@@ -5962,7 +5959,7 @@ UtilityFunction *Process::GetLoadImageUtilityFunction(
   return m_dlopen_utility_func_up.get();
 }
 
-llvm::Expected<TraceTypeInfo> Process::GetSupportedTraceType() {
+llvm::Expected<TraceSupportedResponse> Process::TraceSupported() {
   if (!IsLiveDebugSession())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Can't trace a non-live process.");

@@ -15,7 +15,7 @@ struct A {
   void v(int j);
 };
 // Storing to atomic values should be atomic
-// CHECK: store atomic i32
+// CHECK: store atomic i32 {{.*}} seq_cst, align 4
 void A::v(int j) { i = j; }
 // Initialising atomic values should not be atomic
 // CHECK-NOT: store atomic 

@@ -148,8 +148,8 @@ private:
   void mergeThunks(ArrayRef<OutputSection *> outputSections);
 
   ThunkSection *getISDThunkSec(OutputSection *os, InputSection *isec,
-                               InputSectionDescription *isd, uint32_t type,
-                               uint64_t src);
+                               InputSectionDescription *isd,
+                               const Relocation &rel, uint64_t src);
 
   ThunkSection *getISThunkSec(InputSection *isec);
 

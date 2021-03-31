@@ -11,6 +11,7 @@
 
 namespace llvm {
 class Error;
+class raw_ostream;
 
 namespace object {
 class COFFObjectFile;
@@ -18,11 +19,10 @@ class COFFObjectFile;
 
 namespace objcopy {
 struct CopyConfig;
-class Buffer;
 
 namespace coff {
 Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::COFFObjectFile &In, Buffer &Out);
+                             object::COFFObjectFile &In, raw_ostream &Out);
 
 } // end namespace coff
 } // end namespace objcopy

@@ -85,6 +85,9 @@ public:
                                                       bool InSet,
                                                       bool IsPCRel) const;
 
+  /// ELF only. Mark that we have seen GNU ABI usage (e.g. SHF_GNU_RETAIN).
+  virtual void markGnuAbi() {}
+
   /// Tell the object writer to emit an address-significance table during
   /// writeObject(). If this function is not called, all symbols are treated as
   /// address-significant.

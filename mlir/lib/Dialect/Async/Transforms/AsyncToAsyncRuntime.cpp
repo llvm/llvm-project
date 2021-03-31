@@ -199,7 +199,7 @@ outlineExecuteOp(SymbolTable &symbolTable, ExecuteOp execute) {
   // TODO: Derive outlined function name from the parent FuncOp (support
   // multiple nested async.execute operations).
   FuncOp func = FuncOp::create(loc, kAsyncFnPrefix, funcType, funcAttrs);
-  symbolTable.insert(func, Block::iterator(module.getBody()->getTerminator()));
+  symbolTable.insert(func);
 
   SymbolTable::setSymbolVisibility(func, SymbolTable::Visibility::Private);
 
@@ -485,14 +485,14 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
 
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
-  OwningRewritePatternList asyncPatterns;
+  RewritePatternSet asyncPatterns(ctx);
 
   // Async lowering does not use type converter because it must preserve all
   // types for async.runtime operations.
-  asyncPatterns.insert<CreateGroupOpLowering, AddToGroupOpLowering>(ctx);
-  asyncPatterns.insert<AwaitTokenOpLowering, AwaitValueOpLowering,
-                       AwaitAllOpLowering, YieldOpLowering>(ctx,
-                                                            outlinedFunctions);
+  asyncPatterns.add<CreateGroupOpLowering, AddToGroupOpLowering>(ctx);
+  asyncPatterns.add<AwaitTokenOpLowering, AwaitValueOpLowering,
+                    AwaitAllOpLowering, YieldOpLowering>(ctx,
+                                                         outlinedFunctions);
 
   // All high level async operations must be lowered to the runtime operations.
   ConversionTarget runtimeTarget(*ctx);

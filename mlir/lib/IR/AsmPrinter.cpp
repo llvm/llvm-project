@@ -418,7 +418,8 @@ private:
 
   /// Print the given region.
   void printRegion(Region &region, bool printEntryBlockArgs,
-                   bool printBlockTerminators) override {
+                   bool printBlockTerminators,
+                   bool printEmptyBlock = false) override {
     if (region.empty())
       return;
 
@@ -441,13 +442,18 @@ private:
   /// 'elidedAttrs'.
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {}) override {
-    // Filter out any attributes that shouldn't be included.
-    SmallVector<NamedAttribute, 8> filteredAttrs(
-        llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-          return !llvm::is_contained(elidedAttrs, attr.first.strref());
-        }));
-    for (const NamedAttribute &attr : filteredAttrs)
-      printAttribute(attr.second);
+    if (attrs.empty())
+      return;
+    if (elidedAttrs.empty()) {
+      for (const NamedAttribute &attr : attrs)
+        printAttribute(attr.second);
+      return;
+    }
+    llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
+                                                  elidedAttrs.end());
+    for (const NamedAttribute &attr : attrs)
+      if (!elidedAttrsSet.contains(attr.first.strref()))
+        printAttribute(attr.second);
   }
   void printOptionalAttrDictWithKeyword(
       ArrayRef<NamedAttribute> attrs,
@@ -633,10 +639,10 @@ LogicalResult AliasInitializer::generateAlias(
     T symbol, llvm::MapVector<StringRef, std::vector<T>> &aliasToSymbol) {
   SmallString<16> tempBuffer;
   for (const auto &interface : interfaces) {
-    interface.getAlias(symbol, aliasOS);
-    StringRef name = aliasOS.str();
-    if (name.empty())
+    if (failed(interface.getAlias(symbol, aliasOS)))
       continue;
+    StringRef name = aliasOS.str();
+    assert(!name.empty() && "expected valid alias name");
     name = sanitizeIdentifier(name, tempBuffer, /*allowedPunctChars=*/"$_-",
                               /*allowTrailingDigit=*/false);
     name = name.copy(aliasAllocator);
@@ -878,7 +884,7 @@ void SSANameState::shadowRegionArgs(Region &region, ValueRange namesToUse) {
   assert(!region.empty() && "cannot shadow arguments of an empty region");
   assert(region.getNumArguments() == namesToUse.size() &&
          "incorrect number of names passed in");
-  assert(region.getParentOp()->isKnownIsolatedFromAbove() &&
+  assert(region.getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
          "only KnownIsolatedFromAbove ops can shadow names");
 
   SmallVector<char, 16> nameStr;
@@ -1510,7 +1516,7 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // accept the string "elided". The first string must be a registered dialect
 // name and the latter must be a hex constant.
 static void printElidedElementsAttr(raw_ostream &os) {
-  os << R"(opaque<"", "0xDEADBEEF">)";
+  os << R"(opaque<"_", "0xDEADBEEF">)";
 }
 
 void ModulePrinter::printAttribute(Attribute attr,
@@ -1605,8 +1611,8 @@ void ModulePrinter::printAttribute(Attribute attr,
     if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
       printElidedElementsAttr(os);
     } else {
-      os << "opaque<\"" << opaqueAttr.getDialect()->getNamespace() << "\", ";
-      os << '"' << "0x" << llvm::toHex(opaqueAttr.getValue()) << "\">";
+      os << "opaque<\"" << opaqueAttr.getDialect() << "\", \"0x"
+         << llvm::toHex(opaqueAttr.getValue()) << "\">";
     }
 
   } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {
@@ -1882,16 +1888,20 @@ void ModulePrinter::printType(Type type) {
           printAttribute(AffineMapAttr::get(map));
         }
         // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpace())
-          os << ", " << memrefTy.getMemorySpace();
+        if (memrefTy.getMemorySpace()) {
+          os << ", ";
+          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
+        }
         os << '>';
       })
       .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
         os << "memref<*x";
         printType(memrefTy.getElementType());
         // Only print the memory space if it is the non-default one.
-        if (memrefTy.getMemorySpace())
-          os << ", " << memrefTy.getMemorySpace();
+        if (memrefTy.getMemorySpace()) {
+          os << ", ";
+          printAttribute(memrefTy.getMemorySpace(), AttrTypeElision::May);
+        }
         os << '>';
       })
       .Case<ComplexType>([&](ComplexType complexTy) {
@@ -1916,25 +1926,31 @@ void ModulePrinter::printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
   if (attrs.empty())
     return;
 
-  // Filter out any attributes that shouldn't be included.
-  SmallVector<NamedAttribute, 8> filteredAttrs(
-      llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
-        return !llvm::is_contained(elidedAttrs, attr.first.strref());
-      }));
+  // Functor used to print a filtered attribute list.
+  auto printFilteredAttributesFn = [&](auto filteredAttrs) {
+    // Print the 'attributes' keyword if necessary.
+    if (withKeyword)
+      os << " attributes";
 
-  // If there are no attributes left to print after filtering, then we're done.
-  if (filteredAttrs.empty())
-    return;
+    // Otherwise, print them all out in braces.
+    os << " {";
+    interleaveComma(filteredAttrs,
+                    [&](NamedAttribute attr) { printNamedAttribute(attr); });
+    os << '}';
+  };
 
-  // Print the 'attributes' keyword if necessary.
-  if (withKeyword)
-    os << " attributes";
+  // If no attributes are elided, we can directly print with no filtering.
+  if (elidedAttrs.empty())
+    return printFilteredAttributesFn(attrs);
 
-  // Otherwise, print them all out in braces.
-  os << " {";
-  interleaveComma(filteredAttrs,
-                  [&](NamedAttribute attr) { printNamedAttribute(attr); });
-  os << '}';
+  // Otherwise, filter out any attributes that shouldn't be included.
+  llvm::SmallDenseSet<StringRef> elidedAttrsSet(elidedAttrs.begin(),
+                                                elidedAttrs.end());
+  auto filteredAttrs = llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
+    return !elidedAttrsSet.contains(attr.first.strref());
+  });
+  if (!filteredAttrs.empty())
+    printFilteredAttributesFn(filteredAttrs);
 }
 
 void ModulePrinter::printNamedAttribute(NamedAttribute attr) {
@@ -2309,7 +2325,7 @@ public:
 
   /// Print the given region.
   void printRegion(Region &region, bool printEntryBlockArgs,
-                   bool printBlockTerminators) override;
+                   bool printBlockTerminators, bool printEmptyBlock) override;
 
   /// Renumber the arguments for the specified region to the same names as the
   /// SSA values in namesToUse. This may only be used for IsolatedFromAbove
@@ -2394,6 +2410,11 @@ void OperationPrinter::printOperation(Operation *op) {
       opInfo->printAssembly(op, *this);
       return;
     }
+    // Otherwise try to dispatch to the dialect, if available.
+    if (Dialect *dialect = op->getDialect()) {
+      if (succeeded(dialect->printOperation(op, *this)))
+        return;
+    }
   }
 
   // Otherwise print with the generic assembly form.
@@ -2420,7 +2441,7 @@ void OperationPrinter::printGenericOp(Operation *op) {
     os << " (";
     interleaveComma(op->getRegions(), [&](Region &region) {
       printRegion(region, /*printEntryBlockArgs=*/true,
-                  /*printBlockTerminators=*/true);
+                  /*printBlockTerminators=*/true, /*printEmptyBlock=*/true);
     });
     os << ')';
   }
@@ -2521,12 +2542,18 @@ void OperationPrinter::printSuccessorAndUseList(Block *successor,
 }
 
 void OperationPrinter::printRegion(Region &region, bool printEntryBlockArgs,
-                                   bool printBlockTerminators) {
+                                   bool printBlockTerminators,
+                                   bool printEmptyBlock) {
   os << " {" << newLine;
   if (!region.empty()) {
     auto *entryBlock = &region.front();
-    print(entryBlock, printEntryBlockArgs && entryBlock->getNumArguments() != 0,
-          printBlockTerminators);
+    // Force printing the block header if printEmptyBlock is set and the block
+    // is empty or if printEntryBlockArgs is set and there are arguments to
+    // print.
+    bool shouldAlwaysPrintBlockHeader =
+        (printEmptyBlock && entryBlock->empty()) ||
+        (printEntryBlockArgs && entryBlock->getNumArguments() != 0);
+    print(entryBlock, shouldAlwaysPrintBlockHeader, printBlockTerminators);
     for (auto &b : llvm::drop_begin(region.getBlocks(), 1))
       print(&b);
   }
@@ -2646,22 +2673,22 @@ void Operation::print(raw_ostream &os, OpPrintingFlags flags) {
   }
 
   // Find the operation to number from based upon the provided flags.
-  Operation *printedOp = this;
+  Operation *op = this;
   bool shouldUseLocalScope = flags.shouldUseLocalScope();
   do {
     // If we are printing local scope, stop at the first operation that is
     // isolated from above.
-    if (shouldUseLocalScope && printedOp->isKnownIsolatedFromAbove())
+    if (shouldUseLocalScope && op->hasTrait<OpTrait::IsIsolatedFromAbove>())
       break;
 
     // Otherwise, traverse up to the next parent.
-    Operation *parentOp = printedOp->getParentOp();
+    Operation *parentOp = op->getParentOp();
     if (!parentOp)
       break;
-    printedOp = parentOp;
+    op = parentOp;
   } while (true);
 
-  AsmState state(printedOp);
+  AsmState state(op);
   print(os, state, flags);
 }
 void Operation::print(raw_ostream &os, AsmState &state, OpPrintingFlags flags) {

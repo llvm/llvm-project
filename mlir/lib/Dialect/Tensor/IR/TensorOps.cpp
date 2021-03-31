@@ -73,6 +73,20 @@ bool mlir::tensor::canFoldIntoConsumerOp(CastOp castOp) {
   return true;
 }
 
+/// Performs folding of any operand of `op` if it comes from a tensor::CastOp
+/// that can be folded.
+LogicalResult mlir::tensor::foldTensorCast(Operation *op) {
+  bool folded = false;
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto castOp = operand.get().getDefiningOp<tensor::CastOp>();
+    if (castOp && tensor::canFoldIntoConsumerOp(castOp)) {
+      operand.set(castOp.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
+
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
@@ -163,9 +177,9 @@ struct ChainedTensorCast : public OpRewritePattern<CastOp> {
 
 } // namespace
 
-void CastOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.insert<ChainedTensorCast>(context);
+  results.add<ChainedTensorCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -261,9 +275,9 @@ struct ExtractElementFromTensorFromElements
 
 } // namespace
 
-void FromElementsOp::getCanonicalizationPatterns(
-    OwningRewritePatternList &results, MLIRContext *context) {
-  results.insert<ExtractElementFromTensorFromElements>(context);
+void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                 MLIRContext *context) {
+  results.add<ExtractElementFromTensorFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -421,11 +435,11 @@ struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
 
 } // namespace
 
-void GenerateOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
+void GenerateOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
   // TODO: Move extract patterns to tensor::ExtractOp.
-  results.insert<ExtractFromTensorGenerate, ExtractFromTensorCast,
-                 StaticTensorGenerate>(context);
+  results.add<ExtractFromTensorGenerate, ExtractFromTensorCast,
+              StaticTensorGenerate>(context);
 }
 
 //===----------------------------------------------------------------------===//

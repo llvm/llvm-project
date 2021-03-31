@@ -152,8 +152,12 @@ endif()
 set(EXEEXT ${CMAKE_EXECUTABLE_SUFFIX})
 set(LTDL_SHLIB_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
 
-# We use *.dylib rather than *.so on darwin.
-set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
+# We use *.dylib rather than *.so on darwin, but we stick with *.so on AIX.
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_MODULE_SUFFIX})
+else()
+  set(LLVM_PLUGIN_EXT ${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif()
 
 if(APPLE)
   if(LLVM_ENABLE_LLD AND LLVM_ENABLE_LTO)
@@ -207,6 +211,11 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     # we can limit the processing for archive members to only those that are otherwise referenced.
     append("-bcdtors:mbr"
            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+  if(BUILD_SHARED_LIBS)
+    # See rpath handling in AddLLVM.cmake
+    # FIXME: Remove this warning if this rpath is no longer hardcoded.
+    message(WARNING "Build and install environment path info may be exposed; binaries will also be unrelocatable.")
   endif()
 endif()
 
@@ -431,6 +440,16 @@ if( MSVC )
     -D_UNICODE
   )
 
+  # Allow setting clang-cl's /winsysroot flag.
+  set(LLVM_WINSYSROOT "" CACHE STRING
+    "If set, argument to clang-cl's /winsysroot")
+  if (LLVM_WINSYSROOT)
+    if (NOT CLANG_CL)
+      message(ERROR "LLVM_WINSYSROOT requires clang-cl")
+    endif()
+    append("/winsysroot${LLVM_WINSYSROOT}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  endif()
+
   if (LLVM_ENABLE_WERROR)
     append("/WX" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   endif (LLVM_ENABLE_WERROR)
@@ -654,6 +673,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   if (LLVM_ENABLE_PEDANTIC AND LLVM_COMPILER_IS_GCC_COMPATIBLE)
     append("-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     append("-Wno-long-long" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+    # GCC warns about redundant toplevel semicolons (enabled by -pedantic
+    # above), while Clang doesn't. Enable the corresponding Clang option to
+    # pick up on these even in builds with Clang.
+    add_flag_if_supported("-Wc++98-compat-extra-semi" CXX98_COMPAT_EXTRA_SEMI_FLAG)
   endif()
 
   add_flag_if_supported("-Wimplicit-fallthrough" IMPLICIT_FALLTHROUGH_FLAG)
@@ -666,14 +690,17 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   check_cxx_compiler_flag("-Wclass-memaccess" CXX_SUPPORTS_CLASS_MEMACCESS_FLAG)
   append_if(CXX_SUPPORTS_CLASS_MEMACCESS_FLAG "-Wno-class-memaccess" CMAKE_CXX_FLAGS)
 
-  # Disable -Wredundant-move on GCC>=9. GCC wants to remove std::move in code
-  # like "A foo(ConvertibleToA a) { return std::move(a); }", but this code does
-  # not compile (or uses the copy constructor instead) on clang<=3.8. Clang also
-  # has a -Wredundant-move, but it only fires when the types match exactly, so
-  # we can keep it here.
+  # Disable -Wredundant-move and -Wpessimizing-move on GCC>=9. GCC wants to
+  # remove std::move in code like "A foo(ConvertibleToA a) {
+  # return std::move(a); }", but this code does not compile (or uses the copy
+  # constructor instead) on clang<=3.8. Clang also has a -Wredundant-move and
+  # -Wpessimizing-move, but they only fire when the types match exactly, so we
+  # can keep them here.
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     check_cxx_compiler_flag("-Wredundant-move" CXX_SUPPORTS_REDUNDANT_MOVE_FLAG)
     append_if(CXX_SUPPORTS_REDUNDANT_MOVE_FLAG "-Wno-redundant-move" CMAKE_CXX_FLAGS)
+    check_cxx_compiler_flag("-Wpessimizing-move" CXX_SUPPORTS_PESSIMIZING_MOVE_FLAG)
+    append_if(CXX_SUPPORTS_PESSIMIZING_MOVE_FLAG "-Wno-pessimizing-move" CMAKE_CXX_FLAGS)
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
@@ -792,6 +819,21 @@ if(LLVM_USE_SANITIZER)
       append("-fsanitize=leak" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
     else()
       message(FATAL_ERROR "Unsupported value of LLVM_USE_SANITIZER: ${LLVM_USE_SANITIZER}")
+    endif()
+  elseif(MINGW)
+    if (LLVM_USE_SANITIZER STREQUAL "Address")
+      append_common_sanitizer_flags()
+      append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    elseif (LLVM_USE_SANITIZER STREQUAL "Undefined")
+      append_common_sanitizer_flags()
+      append("${LLVM_UBSAN_FLAGS}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    elseif (LLVM_USE_SANITIZER STREQUAL "Address;Undefined" OR
+            LLVM_USE_SANITIZER STREQUAL "Undefined;Address")
+      append_common_sanitizer_flags()
+      append("-fsanitize=address" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      append("${LLVM_UBSAN_FLAGS}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    else()
+      message(FATAL_ERROR "This sanitizer not yet supported in a MinGW environment: ${LLVM_USE_SANITIZER}")
     endif()
   elseif(MSVC)
     if (LLVM_USE_SANITIZER STREQUAL "Address")
@@ -953,8 +995,8 @@ endif()
 # linker directly, it isn't sufficient to pass -fsanitize=* to the linker.
 if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
   execute_process(
-    COMMAND ${CMAKE_CXX_COMPILER} /clang:-print-resource-dir
-    OUTPUT_VARIABLE clang_resource_dir
+    COMMAND ${CMAKE_CXX_COMPILER} /clang:-print-libgcc-file-name /clang:--rtlib=compiler-rt
+    OUTPUT_VARIABLE clang_compiler_rt_file
     ERROR_VARIABLE clang_cl_stderr
     OUTPUT_STRIP_TRAILING_WHITESPACE
     ERROR_STRIP_TRAILING_WHITESPACE
@@ -963,8 +1005,9 @@ if (CLANG_CL AND (LLVM_BUILD_INSTRUMENTED OR LLVM_USE_SANITIZER))
     message(FATAL_ERROR
       "Unable to invoke clang-cl to find resource dir: ${clang_cl_stderr}")
   endif()
-  file(TO_CMAKE_PATH "${clang_resource_dir}" clang_resource_dir)
-  append("/libpath:${clang_resource_dir}/lib/windows"
+  file(TO_CMAKE_PATH "${clang_compiler_rt_file}" clang_compiler_rt_file)
+  get_filename_component(clang_runtime_dir "${clang_compiler_rt_file}" DIRECTORY)
+  append("/libpath:${clang_runtime_dir}"
     CMAKE_EXE_LINKER_FLAGS
     CMAKE_MODULE_LINKER_FLAGS
     CMAKE_SHARED_LINKER_FLAGS)
@@ -1146,4 +1189,12 @@ if(LLVM_USE_RELATIVE_PATHS_IN_FILES)
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${CMAKE_BINARY_DIR}=${relative_root}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append_if(SUPPORTS_FFILE_PREFIX_MAP "-ffile-prefix-map=${source_root}/=${LLVM_SOURCE_PREFIX}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   add_flag_if_supported("-no-canonical-prefixes" NO_CANONICAL_PREFIXES)
+endif()
+
+if(LLVM_INCLUDE_TESTS)
+  # Lit test suite requires at least python 3.6
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.6)
+else()
+  # FIXME: it is unknown if this is the actual minimum bound
+  set(LLVM_MINIMUM_PYTHON_VERSION 3.0)
 endif()

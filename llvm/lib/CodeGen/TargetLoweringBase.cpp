@@ -45,7 +45,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -113,17 +112,6 @@ static bool darwinHasSinCos(const Triple &TT) {
   // Any other darwin such as WatchOS/TvOS is new enough.
   return true;
 }
-
-// Although this default value is arbitrary, it is not random. It is assumed
-// that a condition that evaluates the same way by a higher percentage than this
-// is best represented as control flow. Therefore, the default value N should be
-// set such that the win from N% correct executions is greater than the loss
-// from (100 - N)% mispredicted executions for the majority of intended targets.
-static cl::opt<int> MinPercentageForPredictableBranch(
-    "min-predictable-branch", cl::init(99),
-    cl::desc("Minimum percentage (0-100) that a condition must be either true "
-             "or false to assume that the condition is predictable"),
-    cl::Hidden);
 
 void TargetLoweringBase::InitLibcalls(const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
@@ -849,6 +837,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::VECREDUCE_FMIN, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Expand);
     setOperationAction(ISD::VECREDUCE_SEQ_FMUL, VT, Expand);
+
+    // Named vector shuffles default to expand.
+    setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -1698,8 +1689,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   }
 
   // This is a misaligned access.
-  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment.value(), Flags,
-                                        Fast);
+  return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Flags, Fast);
 }
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
@@ -1732,10 +1722,6 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             bool *Fast) const {
   return allowsMemoryAccess(Context, DL, getMVTForLLT(Ty), MMO.getAddrSpace(),
                             MMO.getAlign(), MMO.getFlags(), Fast);
-}
-
-BranchProbability TargetLoweringBase::getPredictableBranchThreshold() const {
-  return BranchProbability(MinPercentageForPredictableBranch, 100);
 }
 
 //===----------------------------------------------------------------------===//

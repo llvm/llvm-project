@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_CSECONFIG_BASE_H
-#define LLVM_CODEGEN_CSECONFIG_BASE_H
+#ifndef LLVM_CODEGEN_CSECONFIGBASE_H
+#define LLVM_CODEGEN_CSECONFIGBASE_H
 
 namespace llvm {
 // Class representing some configuration that can be done during GlobalISel's
@@ -25,4 +25,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_CSECONFIG_BASE_H
+#endif // LLVM_CODEGEN_CSECONFIGBASE_H

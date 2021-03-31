@@ -14,12 +14,12 @@
 #include <cstring>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #ifdef _WIN32
 #define NOMINMAX
 #include <io.h>
 #include <windows.h>
 #else
-#include <sys/stat.h>
 #include <unistd.h>
 #endif
 

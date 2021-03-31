@@ -14,6 +14,8 @@ program's error code.
 """
 
 import argparse
+import os
+import platform
 import subprocess
 import sys
 
@@ -37,6 +39,14 @@ def main():
 
     # Extract environment variables into a dictionary
     env = {k : v  for (k, v) in map(lambda s: s.split('=', 1), args.env)}
+    if platform.system() == 'Windows':
+        # Pass some extra variables through on Windows:
+        # COMSPEC is needed for running subprocesses via std::system().
+        if 'COMSPEC' in os.environ:
+            env['COMSPEC'] = os.environ.get('COMSPEC')
+        # TEMP is needed for placing temp files in a sensible directory.
+        if 'TEMP' in os.environ:
+            env['TEMP'] = os.environ.get('TEMP')
 
     # Run the command line with the given environment in the execution directory.
     return subprocess.call(commandLine, cwd=args.execdir, env=env, shell=False)

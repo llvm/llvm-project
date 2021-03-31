@@ -194,43 +194,24 @@ define <4 x float> @combine_vec_fcopysign_fcopysign_sgn(<4 x float> %x, <4 x flo
 define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fpext_sgn:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    movshdup {{.*#+}} xmm4 = xmm2[1,1,3,3]
-; SSE-NEXT:    cvtss2sd %xmm2, %xmm5
+; SSE-NEXT:    cvtps2pd %xmm2, %xmm3
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSE-NEXT:    movaps {{.*#+}} xmm6 = [NaN,NaN]
-; SSE-NEXT:    cvtss2sd %xmm3, %xmm3
-; SSE-NEXT:    movaps %xmm6, %xmm7
-; SSE-NEXT:    andnps %xmm3, %xmm7
-; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm1[1]
-; SSE-NEXT:    andps %xmm6, %xmm3
-; SSE-NEXT:    orps %xmm3, %xmm7
-; SSE-NEXT:    andps %xmm6, %xmm1
-; SSE-NEXT:    cvtss2sd %xmm2, %xmm2
-; SSE-NEXT:    movaps %xmm6, %xmm3
-; SSE-NEXT:    andnps %xmm2, %xmm3
-; SSE-NEXT:    orps %xmm3, %xmm1
-; SSE-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm7[0]
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE-NEXT:    andps %xmm6, %xmm2
-; SSE-NEXT:    xorps %xmm3, %xmm3
-; SSE-NEXT:    cvtss2sd %xmm4, %xmm3
-; SSE-NEXT:    andps %xmm6, %xmm0
-; SSE-NEXT:    andnps %xmm3, %xmm6
-; SSE-NEXT:    orps %xmm2, %xmm6
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm5
+; SSE-NEXT:    cvtps2pd %xmm2, %xmm2
+; SSE-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN]
+; SSE-NEXT:    andps %xmm4, %xmm0
+; SSE-NEXT:    movaps %xmm4, %xmm5
+; SSE-NEXT:    andnps %xmm3, %xmm5
 ; SSE-NEXT:    orps %xmm5, %xmm0
-; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm6[0]
+; SSE-NEXT:    andps %xmm4, %xmm1
+; SSE-NEXT:    andnps %xmm2, %xmm4
+; SSE-NEXT:    orps %xmm4, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fpext_sgn:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtps2pd %xmm1, %ymm1
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
 ; AVX-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; AVX-NEXT:    vcvtps2pd %xmm1, %ymm1
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX-NEXT:    vandps %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
@@ -244,45 +225,19 @@ define <4 x double> @combine_vec_fcopysign_fpext_sgn(<4 x double> %x, <4 x float
 define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x double> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fptrunc_sgn:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm3 = xmm3[1],xmm0[1]
-; SSE-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
-; SSE-NEXT:    andps %xmm4, %xmm3
-; SSE-NEXT:    cvtsd2ss %xmm2, %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm6
-; SSE-NEXT:    andnps %xmm5, %xmm6
-; SSE-NEXT:    orps %xmm3, %xmm6
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    andps %xmm4, %xmm3
-; SSE-NEXT:    xorps %xmm5, %xmm5
-; SSE-NEXT:    cvtsd2ss %xmm1, %xmm5
-; SSE-NEXT:    movaps %xmm4, %xmm7
-; SSE-NEXT:    andnps %xmm5, %xmm7
-; SSE-NEXT:    orps %xmm7, %xmm3
-; SSE-NEXT:    movshdup {{.*#+}} xmm5 = xmm0[1,1,3,3]
-; SSE-NEXT:    andps %xmm4, %xmm5
-; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    cvtsd2ss %xmm1, %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    orps %xmm5, %xmm1
-; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm6[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    andps %xmm4, %xmm0
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    cvtsd2ss %xmm2, %xmm1
-; SSE-NEXT:    andnps %xmm1, %xmm4
-; SSE-NEXT:    orps %xmm0, %xmm4
-; SSE-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm4[0]
-; SSE-NEXT:    movaps %xmm3, %xmm0
+; SSE-NEXT:    cvtpd2ps %xmm2, %xmm2
+; SSE-NEXT:    cvtpd2ps %xmm1, %xmm1
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE-NEXT:    andpd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andpd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fptrunc_sgn:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vcvtpd2ps %ymm1, %xmm1
 ; AVX-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX-NEXT:    vandpd %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vorpd %xmm1, %xmm0, %xmm0

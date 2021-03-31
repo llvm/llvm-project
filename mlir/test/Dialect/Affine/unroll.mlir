@@ -265,9 +265,9 @@ func @loop_nest_outer_unroll() {
 // count threshold set to 2.
 // SHORT-LABEL: func @loop_nest_seq_long() -> i32 {
 func @loop_nest_seq_long() -> i32 {
-  %A = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-  %B = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-  %C = alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %A = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %B = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %C = memref.alloc() : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
 
   %zero = constant 0 : i32
   %one = constant 1 : i32
@@ -279,9 +279,9 @@ func @loop_nest_seq_long() -> i32 {
   affine.for %n0 = 0 to 512 {
     // CHECK: affine.for %arg1 = 0 to 8
     affine.for %n1 = 0 to 8 {
-      store %one,  %A[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-      store %two,  %B[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
-      store %zero, %C[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %one,  %A[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %two,  %B[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+      memref.store %zero, %C[%n0, %n1] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
     }
   }
 
@@ -292,27 +292,27 @@ func @loop_nest_seq_long() -> i32 {
         // CHECK-NOT: affine.for
         // CHECK: %{{[0-9]+}} = affine.apply
         %b2 = "affine.apply" (%y, %arg2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-        %z = load %B[%x, %b2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+        %z = memref.load %B[%x, %b2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
         "op1"(%z) : (i32) -> ()
       }
       affine.for %j1 = 0 to 8 {
         affine.for %j2 = 0 to 8 {
           %a2 = "affine.apply" (%y, %j2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-          %v203 = load %A[%j1, %a2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          %v203 = memref.load %A[%j1, %a2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
           "op2"(%v203) : (i32) -> ()
         }
         affine.for %k2 = 0 to 8 {
           %s0 = "op3"() : () -> i32
           %c2 = "affine.apply" (%x, %k2) {map = affine_map<(d0, d1) -> (16*d0 + d1)>} : (index, index) -> index
-          %s1 =  load %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          %s1 =  memref.load %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
           %s2 = "addi32"(%s0, %s1) : (i32, i32) -> i32
-          store %s2, %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+          memref.store %s2, %C[%j1, %c2] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
         }
       }
       "op4"() : () -> ()
     }
   }
-  %ret = load %C[%zero_idx, %zero_idx] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
+  %ret = memref.load %C[%zero_idx, %zero_idx] : memref<512 x 512 x i32, affine_map<(d0, d1) -> (d0, d1)>, 2>
   return %ret : i32
 }
 
@@ -589,4 +589,55 @@ func @unroll_by_one_should_promote_single_iteration_loop() {
 // UNROLL-BY-1-NEXT: %c0 = constant 0 : index
 // UNROLL-BY-1-NEXT: %0 = "foo"(%c0) : (index) -> i32
 // UNROLL-BY-1-NEXT: return
+}
+
+// Test unrolling with affine.for iter_args.
+
+// UNROLL-BY-4-LABEL: loop_unroll_with_iter_args_and_cleanup
+func @loop_unroll_with_iter_args_and_cleanup(%arg0 : f32, %arg1 : f32, %n : index) -> (f32,f32) {
+  %cf1 = constant 1.0 : f32
+  %cf2 = constant 2.0 : f32
+  %sum:2 = affine.for %iv = 0 to 10 iter_args(%i0 = %arg0, %i1 = %arg1) -> (f32, f32) {
+    %sum0 = addf %i0, %cf1 : f32
+    %sum1 = addf %i1, %cf2 : f32
+    affine.yield %sum0, %sum1 : f32, f32
+  }
+  return %sum#0, %sum#1 : f32, f32
+  // UNROLL-BY-4:      %[[SUM:.*]]:2 = affine.for {{.*}} = 0 to 8 step 4 iter_args
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   addf
+  // UNROLL-BY-4-NEXT:   %[[Y1:.*]] = addf
+  // UNROLL-BY-4-NEXT:   %[[Y2:.*]] = addf
+  // UNROLL-BY-4-NEXT:   affine.yield %[[Y1]], %[[Y2]]
+  // UNROLL-BY-4-NEXT: }
+  // UNROLL-BY-4-NEXT: %[[SUM1:.*]]:2 = affine.for {{.*}} = 8 to 10 iter_args(%[[V1:.*]] = %[[SUM]]#0, %[[V2:.*]] = %[[SUM]]#1)
+  // UNROLL-BY-4:      }
+  // UNROLL-BY-4-NEXT: return %[[SUM1]]#0, %[[SUM1]]#1
+}
+
+// The epilogue being a single iteration loop gets promoted here.
+
+// UNROLL-BY-4-LABEL: unroll_with_iter_args_and_promotion
+func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 {
+  %from = constant 0 : index
+  %to = constant 10 : index
+  %step = constant 1 : index
+  %sum = affine.for %iv = 0 to 9 iter_args(%sum_iter = %arg0) -> (f32) {
+    %next = addf %sum_iter, %arg1 : f32
+    affine.yield %next : f32
+  }
+  // UNROLL-BY-4:      %[[SUM:.*]] = affine.for %{{.*}} = 0 to 8 step 4 iter_args(%[[V0:.*]] =
+  // UNROLL-BY-4-NEXT:   %[[V1:.*]] = addf %[[V0]]
+  // UNROLL-BY-4-NEXT:   %[[V2:.*]] = addf %[[V1]]
+  // UNROLL-BY-4-NEXT:   %[[V3:.*]] = addf %[[V2]]
+  // UNROLL-BY-4-NEXT:   %[[V4:.*]] = addf %[[V3]]
+  // UNROLL-BY-4-NEXT:   affine.yield %[[V4]]
+  // UNROLL-BY-4-NEXT: }
+  // UNROLL-BY-4-NEXT: %[[RES:.*]] = addf %[[SUM]],
+  // UNROLL-BY-4-NEXT: return %[[RES]]
+  return %sum : f32
 }

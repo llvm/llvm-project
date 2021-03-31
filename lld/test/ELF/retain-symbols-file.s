@@ -20,13 +20,13 @@
 # CHECK-NEXT:     Section:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: bar
+# CHECK-NEXT:     Name: und
 # CHECK-NEXT:     Value:
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type:
 # CHECK-NEXT:     Other:
-# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:     Section: Undefined
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: foo
@@ -38,13 +38,13 @@
 # CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: und
+# CHECK-NEXT:     Name: bar
 # CHECK-NEXT:     Value:
 # CHECK-NEXT:     Size:
 # CHECK-NEXT:     Binding: Global
 # CHECK-NEXT:     Type:
 # CHECK-NEXT:     Other:
-# CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

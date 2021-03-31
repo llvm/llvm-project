@@ -311,6 +311,87 @@ operator-(const random_access_iterator<T>& x, const random_access_iterator<U>& y
     return x.base() - y.base();
 }
 
+#if TEST_STD_VER >= 20
+template <class It>
+class contiguous_iterator
+{
+    static_assert(std::is_pointer_v<It>, "Things probably break in this case");
+
+    It it_;
+
+    template <class U> friend class contiguous_iterator;
+public:
+    typedef          std::contiguous_iterator_tag              iterator_category;
+    typedef typename std::iterator_traits<It>::value_type      value_type;
+    typedef typename std::iterator_traits<It>::difference_type difference_type;
+    typedef It                                                 pointer;
+    typedef typename std::iterator_traits<It>::reference       reference;
+    typedef typename std::remove_pointer<It>::type             element_type;
+
+    TEST_CONSTEXPR_CXX14 It base() const {return it_;}
+
+    TEST_CONSTEXPR_CXX14 contiguous_iterator() : it_() {}
+    explicit TEST_CONSTEXPR_CXX14 contiguous_iterator(It it) : it_(it) {}
+    template <class U>
+        TEST_CONSTEXPR_CXX14 contiguous_iterator(const contiguous_iterator<U>& u) : it_(u.it_) {}
+
+    TEST_CONSTEXPR_CXX14 reference operator*() const {return *it_;}
+    TEST_CONSTEXPR_CXX14 pointer operator->() const {return it_;}
+
+    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator++() {++it_; return *this;}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator operator++(int)
+        {contiguous_iterator tmp(*this); ++(*this); return tmp;}
+
+    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator--() {--it_; return *this;}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator operator--(int)
+        {contiguous_iterator tmp(*this); --(*this); return tmp;}
+
+    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator+=(difference_type n) {it_ += n; return *this;}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(difference_type n) const
+        {contiguous_iterator tmp(*this); tmp += n; return tmp;}
+    friend TEST_CONSTEXPR_CXX14 contiguous_iterator operator+(difference_type n, contiguous_iterator x)
+        {x += n; return x;}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator& operator-=(difference_type n) {return *this += -n;}
+    TEST_CONSTEXPR_CXX14 contiguous_iterator operator-(difference_type n) const
+        {contiguous_iterator tmp(*this); tmp -= n; return tmp;}
+
+    TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const {return it_[n];}
+
+    template <class T>
+    void operator,(T const &) DELETE_FUNCTION;
+
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator-(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() - y.base();
+    }
+
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator<(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() < y.base();
+    }
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator>(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() > y.base();
+    }
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator<=(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() <= y.base();
+    }
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator>=(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() >= y.base();
+    }
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator==(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() == y.base();
+    }
+    friend TEST_CONSTEXPR_CXX14
+    difference_type operator!=(const contiguous_iterator& x, const contiguous_iterator& y) {
+        return x.base() != y.base();
+    }
+};
+#endif
+
 template <class Iter>
 inline TEST_CONSTEXPR_CXX14 Iter base(output_iterator<Iter> i) { return i.base(); }
 
@@ -325,6 +406,11 @@ inline TEST_CONSTEXPR_CXX14 Iter base(bidirectional_iterator<Iter> i) { return i
 
 template <class Iter>
 inline TEST_CONSTEXPR_CXX14 Iter base(random_access_iterator<Iter> i) { return i.base(); }
+
+#if TEST_STD_VER >= 20
+template <class Iter>
+inline TEST_CONSTEXPR_CXX14 Iter base(contiguous_iterator<Iter> i) { return i.base(); }
+#endif
 
 template <class Iter>    // everything else
 inline TEST_CONSTEXPR_CXX14 Iter base(Iter i) { return i; }

@@ -112,8 +112,10 @@ static llvm::hash_code mlir::test::hash_value(const FieldInfo &fi) { // NOLINT
 }
 
 // Example type validity checker.
-LogicalResult TestIntegerType::verifyConstructionInvariants(
-    Location loc, unsigned width, TestIntegerType::SignednessSemantics ss) {
+LogicalResult
+TestIntegerType::verify(function_ref<InFlightDiagnostic()> emitError,
+                        unsigned width,
+                        TestIntegerType::SignednessSemantics ss) {
   if (width > 8)
     return failure();
   return success();
@@ -126,9 +128,48 @@ LogicalResult TestIntegerType::verifyConstructionInvariants(
 #define GET_TYPEDEF_CLASSES
 #include "TestTypeDefs.cpp.inc"
 
+LogicalResult TestTypeWithLayout::verifyEntries(DataLayoutEntryListRef params,
+                                                Location loc) const {
+  for (DataLayoutEntryInterface entry : params) {
+    // This is for testing purposes only, so assert well-formedness.
+    assert(entry.isTypeEntry() && "unexpected identifier entry");
+    assert(entry.getKey().get<Type>().isa<TestTypeWithLayout>() &&
+           "wrong type passed in");
+    auto array = entry.getValue().dyn_cast<ArrayAttr>();
+    assert(array && array.getValue().size() == 2 &&
+           "expected array of two elements");
+    auto kind = array.getValue().front().dyn_cast<StringAttr>();
+    (void)kind;
+    assert(kind &&
+           (kind.getValue() == "size" || kind.getValue() == "alignment" ||
+            kind.getValue() == "preferred") &&
+           "unexpected kind");
+    assert(array.getValue().back().isa<IntegerAttr>());
+  }
+  return success();
+}
+
+unsigned TestTypeWithLayout::extractKind(DataLayoutEntryListRef params,
+                                         StringRef expectedKind) const {
+  for (DataLayoutEntryInterface entry : params) {
+    ArrayRef<Attribute> pair = entry.getValue().cast<ArrayAttr>().getValue();
+    StringRef kind = pair.front().cast<StringAttr>().getValue();
+    if (kind == expectedKind)
+      return pair.back().cast<IntegerAttr>().getValue().getZExtValue();
+  }
+  return 1;
+}
+
 //===----------------------------------------------------------------------===//
 // TestDialect
 //===----------------------------------------------------------------------===//
+
+void TestDialect::registerTypes() {
+  addTypes<TestType, TestTypeWithLayout, TestRecursiveType,
+#define GET_TYPEDEF_LIST
+#include "TestTypeDefs.cpp.inc"
+           >();
+}
 
 static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
                           llvm::SetVector<Type> &stack) {
@@ -136,15 +177,28 @@ static Type parseTestType(MLIRContext *ctxt, DialectAsmParser &parser,
   if (failed(parser.parseKeyword(&typeTag)))
     return Type();
 
-  auto genType = generatedTypeParser(ctxt, parser, typeTag);
-  if (genType != Type())
-    return genType;
-
+  {
+    Type genType;
+    auto parseResult = generatedTypeParser(ctxt, parser, typeTag, genType);
+    if (parseResult.hasValue())
+      return genType;
+  }
   if (typeTag == "test_type")
     return TestType::get(parser.getBuilder().getContext());
 
-  if (typeTag != "test_rec")
+  if (typeTag == "test_type_with_layout") {
+    unsigned val;
+    if (parser.parseLess() || parser.parseInteger(val) ||
+        parser.parseGreater()) {
+      return Type();
+    }
+    return TestTypeWithLayout::get(parser.getBuilder().getContext(), val);
+  }
+
+  if (typeTag != "test_rec") {
+    parser.emitError(parser.getNameLoc()) << "unknown type!";
     return Type();
+  }
 
   StringRef name;
   if (parser.parseLess() || parser.parseKeyword(&name))
@@ -182,6 +236,11 @@ static void printTestType(Type type, DialectAsmPrinter &printer,
     return;
   if (type.isa<TestType>()) {
     printer << "test_type";
+    return;
+  }
+
+  if (auto t = type.dyn_cast<TestTypeWithLayout>()) {
+    printer << "test_type_with_layout<" << t.getKey() << ">";
     return;
   }
 

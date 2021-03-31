@@ -46,7 +46,7 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
   assert(within->isAncestor(symbol) && "expected 'within' to be an ancestor");
   MLIRContext *ctx = symbol->getContext();
 
-  auto leafRef = FlatSymbolRefAttr::get(symbolName, ctx);
+  auto leafRef = FlatSymbolRefAttr::get(ctx, symbolName);
   results.push_back(leafRef);
 
   // Early exit for when 'within' is the parent of 'symbol'.
@@ -67,13 +67,13 @@ collectValidReferencesFor(Operation *symbol, StringRef symbolName,
         getNameIfSymbol(symbolTableOp, symbolNameId);
     if (!symbolTableName)
       return failure();
-    results.push_back(SymbolRefAttr::get(*symbolTableName, nestedRefs, ctx));
+    results.push_back(SymbolRefAttr::get(ctx, *symbolTableName, nestedRefs));
 
     symbolTableOp = symbolTableOp->getParentOp();
     if (symbolTableOp == within)
       break;
     nestedRefs.insert(nestedRefs.begin(),
-                      FlatSymbolRefAttr::get(*symbolTableName, ctx));
+                      FlatSymbolRefAttr::get(ctx, *symbolTableName));
   } while (true);
   return success();
 }
@@ -161,11 +161,17 @@ void SymbolTable::insert(Operation *symbol, Block::iterator insertPt) {
   // TODO: consider if SymbolTable's constructor should behave the same.
   if (!symbol->getParentOp()) {
     auto &body = symbolTableOp->getRegion(0).front();
-    if (insertPt == Block::iterator() || insertPt == body.end())
-      insertPt = Block::iterator(body.getTerminator());
-
-    assert(insertPt->getParentOp() == symbolTableOp &&
-           "expected insertPt to be in the associated module operation");
+    if (insertPt == Block::iterator()) {
+      insertPt = Block::iterator(body.end());
+    } else {
+      assert((insertPt == body.end() ||
+              insertPt->getParentOp() == symbolTableOp) &&
+             "expected insertPt to be in the associated module operation");
+    }
+    // Insert before the terminator, if any.
+    if (insertPt == Block::iterator(body.end()) && !body.empty() &&
+        std::prev(body.end())->hasTrait<OpTrait::IsTerminator>())
+      insertPt = std::prev(body.end());
 
     body.getOperations().insert(insertPt, symbol);
   }
@@ -203,7 +209,7 @@ StringRef SymbolTable::getSymbolName(Operation *symbol) {
 /// Sets the name of the given symbol operation.
 void SymbolTable::setSymbolName(Operation *symbol, StringRef name) {
   symbol->setAttr(getSymbolAttrName(),
-                  StringAttr::get(name, symbol->getContext()));
+                  StringAttr::get(symbol->getContext(), name));
 }
 
 /// Returns the visibility of the given symbol operation.
@@ -235,7 +241,7 @@ void SymbolTable::setSymbolVisibility(Operation *symbol, Visibility vis) {
          "unknown symbol visibility kind");
 
   StringRef visName = vis == Visibility::Private ? "private" : "nested";
-  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(visName, ctx));
+  symbol->setAttr(getVisibilityAttrName(), StringAttr::get(ctx, visName));
 }
 
 /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -291,11 +297,14 @@ void SymbolTable::walkSymbolTables(
 Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
                                        StringRef symbol) {
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
+  Region &region = symbolTableOp->getRegion(0);
+  if (region.empty())
+    return nullptr;
 
   // Look for a symbol with the given name.
   Identifier symbolNameId = Identifier::get(SymbolTable::getSymbolAttrName(),
                                             symbolTableOp->getContext());
-  for (auto &op : symbolTableOp->getRegion(0).front().without_terminator())
+  for (auto &op : region.front())
     if (getNameIfSymbol(&op, symbolNameId) == symbol)
       return &op;
   return nullptr;
@@ -603,7 +612,7 @@ static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
       // doesn't support parent references.
       if (SymbolTable::getNearestSymbolTable(limit->getParentOp()) ==
           symbol->getParentOp())
-        return {{SymbolRefAttr::get(symName, symbol->getContext()), limit}};
+        return {{SymbolRefAttr::get(symbol->getContext(), symName), limit}};
       return {};
     }
 
@@ -659,7 +668,7 @@ static SmallVector<SymbolScope, 2> collectSymbolScopes(Operation *symbol,
 template <typename IRUnit>
 static SmallVector<SymbolScope, 1> collectSymbolScopes(StringRef symbol,
                                                        IRUnit *limit) {
-  return {{SymbolRefAttr::get(symbol, limit->getContext()), limit}};
+  return {{SymbolRefAttr::get(limit->getContext(), symbol), limit}};
 }
 
 /// Returns true if the given reference 'SubRef' is a sub reference of the
@@ -825,11 +834,11 @@ static Attribute rebuildAttrAfterRAUW(
   if (auto dictAttr = container.dyn_cast<DictionaryAttr>()) {
     auto newAttrs = llvm::to_vector<4>(dictAttr.getValue());
     updateAttrs(make_second_range(newAttrs));
-    return DictionaryAttr::get(newAttrs, dictAttr.getContext());
+    return DictionaryAttr::get(dictAttr.getContext(), newAttrs);
   }
   auto newAttrs = llvm::to_vector<4>(container.cast<ArrayAttr>().getValue());
   updateAttrs(newAttrs);
-  return ArrayAttr::get(newAttrs, container.getContext());
+  return ArrayAttr::get(container.getContext(), newAttrs);
 }
 
 /// Generates a new symbol reference attribute with a new leaf reference.
@@ -839,8 +848,8 @@ static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
     return newLeafAttr;
   auto nestedRefs = llvm::to_vector<2>(oldAttr.getNestedReferences());
   nestedRefs.back() = newLeafAttr;
-  return SymbolRefAttr::get(oldAttr.getRootReference(), nestedRefs,
-                            oldAttr.getContext());
+  return SymbolRefAttr::get(oldAttr.getContext(), oldAttr.getRootReference(),
+                            nestedRefs);
 }
 
 /// The implementation of SymbolTable::replaceAllSymbolUses below.
@@ -867,7 +876,7 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
 
   // Generate a new attribute to replace the given attribute.
   MLIRContext *ctx = limit->getContext();
-  FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(newSymbol, ctx);
+  FlatSymbolRefAttr newLeafAttr = FlatSymbolRefAttr::get(ctx, newSymbol);
   for (SymbolScope &scope : collectSymbolScopes(symbol, limit)) {
     SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
     auto walkFn = [&](SymbolTable::SymbolUse symbolUse,
@@ -883,13 +892,13 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringRef newSymbol, IRUnitT *limit) {
       if (useRef != scope.symbol) {
         if (scope.symbol.isa<FlatSymbolRefAttr>()) {
           replacementRef =
-              SymbolRefAttr::get(newSymbol, useRef.getNestedReferences(), ctx);
+              SymbolRefAttr::get(ctx, newSymbol, useRef.getNestedReferences());
         } else {
           auto nestedRefs = llvm::to_vector<4>(useRef.getNestedReferences());
           nestedRefs[scope.symbol.getNestedReferences().size() - 1] =
               newLeafAttr;
           replacementRef =
-              SymbolRefAttr::get(useRef.getRootReference(), nestedRefs, ctx);
+              SymbolRefAttr::get(ctx, useRef.getRootReference(), nestedRefs);
         }
       }
 
@@ -998,6 +1007,61 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
   if (it.second)
     it.first->second = std::make_unique<SymbolTable>(op);
   return *it.first->second;
+}
+
+//===----------------------------------------------------------------------===//
+// SymbolUserMap
+//===----------------------------------------------------------------------===//
+
+SymbolUserMap::SymbolUserMap(SymbolTableCollection &symbolTable,
+                             Operation *symbolTableOp)
+    : symbolTable(symbolTable) {
+  // Walk each of the symbol tables looking for discardable callgraph nodes.
+  SmallVector<Operation *> symbols;
+  auto walkFn = [&](Operation *symbolTableOp, bool allUsesVisible) {
+    for (Operation &nestedOp : symbolTableOp->getRegion(0).getOps()) {
+      auto symbolUses = SymbolTable::getSymbolUses(&nestedOp);
+      assert(symbolUses && "expected uses to be valid");
+
+      for (const SymbolTable::SymbolUse &use : *symbolUses) {
+        symbols.clear();
+        (void)symbolTable.lookupSymbolIn(symbolTableOp, use.getSymbolRef(),
+                                         symbols);
+        for (Operation *symbolOp : symbols)
+          symbolToUsers[symbolOp].insert(use.getUser());
+      }
+    }
+  };
+  // We just set `allSymUsesVisible` to false here because it isn't necessary
+  // for building the user map.
+  SymbolTable::walkSymbolTables(symbolTableOp, /*allSymUsesVisible=*/false,
+                                walkFn);
+}
+
+void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
+                                       StringRef newSymbolName) {
+  auto it = symbolToUsers.find(symbol);
+  if (it == symbolToUsers.end())
+    return;
+  llvm::SetVector<Operation *> &users = it->second;
+
+  // Replace the uses within the users of `symbol`.
+  for (Operation *user : users)
+    (void)SymbolTable::replaceAllSymbolUses(symbol, newSymbolName, user);
+
+  // Move the current users of `symbol` to the new symbol if it is in the
+  // symbol table.
+  Operation *newSymbol =
+      symbolTable.lookupSymbolIn(symbol->getParentOp(), newSymbolName);
+  if (newSymbol != symbol) {
+    // Transfer over the users to the new symbol.
+    auto newIt = symbolToUsers.find(newSymbol);
+    if (newIt == symbolToUsers.end())
+      symbolToUsers.try_emplace(newSymbol, std::move(users));
+    else
+      newIt->second.set_union(users);
+    symbolToUsers.erase(symbol);
+  }
 }
 
 //===----------------------------------------------------------------------===//

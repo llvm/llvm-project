@@ -23,11 +23,9 @@ protected:
     SCOPED_TRACE(llvm::join(GetParam().getCommandLineArgs(), " "));
 
     auto *Root = buildTree(Code, GetParam());
-    if (Diags->getClient()->getNumErrors() != 0) {
-      return ::testing::AssertionFailure()
-             << "Source file has syntax errors, they were printed to the test "
-                "log";
-    }
+    auto ErrorOK = errorOK(Code);
+    if (!ErrorOK)
+      return ErrorOK;
     auto Actual = StringRef(Root->dump(Arena->getSourceManager())).trim().str();
     // EXPECT_EQ shows the diff between the two strings if they are different.
     EXPECT_EQ(Tree.trim().str(), Actual);
@@ -45,11 +43,9 @@ protected:
     auto AnnotatedCode = llvm::Annotations(CodeWithAnnotations);
     auto *Root = buildTree(AnnotatedCode.code(), GetParam());
 
-    if (Diags->getClient()->getNumErrors() != 0) {
-      return ::testing::AssertionFailure()
-             << "Source file has syntax errors, they were printed to the test "
-                "log";
-    }
+    auto ErrorOK = errorOK(AnnotatedCode.code());
+    if (!ErrorOK)
+      return ErrorOK;
 
     auto AnnotatedRanges = AnnotatedCode.ranges();
     if (AnnotatedRanges.size() != TreeDumps.size()) {
@@ -76,6 +72,19 @@ protected:
     }
     return Failed ? ::testing::AssertionFailure()
                   : ::testing::AssertionSuccess();
+  }
+
+private:
+  ::testing::AssertionResult errorOK(StringRef RawCode) {
+    if (!RawCode.contains("error-ok")) {
+      if (Diags->getClient()->getNumErrors() != 0) {
+        return ::testing::AssertionFailure()
+               << "Source file has syntax errors (suppress with /*error-ok*/), "
+                  "they were printed to the "
+                  "test log";
+      }
+    }
+    return ::testing::AssertionSuccess();
   }
 };
 
@@ -204,8 +213,9 @@ void test() {
 IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
-|-IntegerLiteralExpression
-| `-'1' LiteralToken
+|-ExpressionStatement Condition
+| `-IntegerLiteralExpression Expression
+|   `-'1' LiteralToken
 |-')'
 `-CompoundStatement ThenStatement
   |-'{' OpenParen
@@ -215,8 +225,9 @@ IfStatement Statement
 IfStatement Statement
 |-'if' IntroducerKeyword
 |-'('
-|-IntegerLiteralExpression
-| `-'1' LiteralToken
+|-ExpressionStatement Condition
+| `-IntegerLiteralExpression Expression
+|   `-'1' LiteralToken
 |-')'
 |-CompoundStatement ThenStatement
 | |-'{' OpenParen
@@ -225,12 +236,68 @@ IfStatement Statement
 `-IfStatement ElseStatement
   |-'if' IntroducerKeyword
   |-'('
-  |-IntegerLiteralExpression
-  | `-'0' LiteralToken
+  |-ExpressionStatement Condition
+  | `-IntegerLiteralExpression Expression
+  |   `-'0' LiteralToken
   |-')'
   `-CompoundStatement ThenStatement
     |-'{' OpenParen
     `-'}' CloseParen
+)txt"}));
+}
+
+TEST_P(BuildSyntaxTreeTest, IfDecl) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+void test() {
+  [[if (int a = 5) {}]]
+  [[if (int a; a == 5) {}]]
+}
+)cpp",
+      {R"txt(
+IfStatement Statement
+|-'if' IntroducerKeyword
+|-'('
+|-DeclarationStatement Condition
+| `-SimpleDeclaration
+|   |-'int'
+|   `-DeclaratorList Declarators
+|     `-SimpleDeclarator ListElement
+|       |-'a'
+|       |-'='
+|       `-IntegerLiteralExpression
+|         `-'5' LiteralToken
+|-')'
+`-CompoundStatement ThenStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
+      )txt",
+       R"txt(
+IfStatement Statement
+|-'if' IntroducerKeyword
+|-'('
+|-DeclarationStatement
+| |-SimpleDeclaration
+| | |-'int'
+| | `-DeclaratorList Declarators
+| |   `-SimpleDeclarator ListElement
+| |     `-'a'
+| `-';'
+|-ExpressionStatement Condition
+| `-BinaryOperatorExpression Expression
+|   |-IdExpression LeftHandSide
+|   | `-UnqualifiedId UnqualifiedId
+|   |   `-'a'
+|   |-'==' OperatorToken
+|   `-IntegerLiteralExpression RightHandSide
+|     `-'5' LiteralToken
+|-')'
+`-CompoundStatement ThenStatement
+  |-'{' OpenParen
+  `-'}' CloseParen
 )txt"}));
 }
 
@@ -420,8 +487,9 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword
     | |-'('
-    | |-IntegerLiteralExpression
-    | | `-'1' LiteralToken
+    | |-ExpressionStatement Condition
+    | | `-IntegerLiteralExpression Expression
+    | |   `-'1' LiteralToken
     | |-')'
     | |-ExpressionStatement ThenStatement
     | | |-CallExpression Expression
@@ -442,6 +510,25 @@ TranslationUnit Detached
     |   `-';'
     `-'}' CloseParen
 )txt"));
+}
+
+TEST_P(BuildSyntaxTreeTest, ConditionalOperator) {
+  // FIXME: conditional expression is not modeled yet.
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
+      R"cpp(
+void test() {
+  [[1?:2]];
+}
+)cpp",
+      {R"txt(
+UnknownExpression Expression
+|-IntegerLiteralExpression
+| `-'1' LiteralToken
+|-'?'
+|-':'
+`-IntegerLiteralExpression
+  `-'2' LiteralToken
+)txt"}));
 }
 
 TEST_P(BuildSyntaxTreeTest, UnqualifiedId_Identifier) {
@@ -3992,12 +4079,13 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword unmodifiable
     | |-'(' unmodifiable
-    | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression LeftHandSide unmodifiable
-    | | | `-'1' LiteralToken unmodifiable
-    | | |-'+' OperatorToken unmodifiable
-    | | `-IntegerLiteralExpression RightHandSide unmodifiable
-    | |   `-'1' LiteralToken unmodifiable
+    | |-ExpressionStatement Condition unmodifiable
+    | | `-BinaryOperatorExpression Expression unmodifiable
+    | |   |-IntegerLiteralExpression LeftHandSide unmodifiable
+    | |   | `-'1' LiteralToken unmodifiable
+    | |   |-'+' OperatorToken unmodifiable
+    | |   `-IntegerLiteralExpression RightHandSide unmodifiable
+    | |     `-'1' LiteralToken unmodifiable
     | |-')' unmodifiable
     | |-CompoundStatement ThenStatement unmodifiable
     | | |-'{' OpenParen unmodifiable
@@ -4076,12 +4164,13 @@ TranslationUnit Detached
     |-IfStatement Statement
     | |-'if' IntroducerKeyword unmodifiable
     | |-'(' unmodifiable
-    | |-BinaryOperatorExpression unmodifiable
-    | | |-IntegerLiteralExpression LeftHandSide
-    | | | `-'1' LiteralToken
-    | | |-'&&' OperatorToken unmodifiable
-    | | `-IntegerLiteralExpression RightHandSide
-    | |   `-'0' LiteralToken
+    | |-ExpressionStatement Condition unmodifiable
+    | | `-BinaryOperatorExpression Expression unmodifiable
+    | |   |-IntegerLiteralExpression LeftHandSide
+    | |   | `-'1' LiteralToken
+    | |   |-'&&' OperatorToken unmodifiable
+    | |   `-IntegerLiteralExpression RightHandSide
+    | |     `-'0' LiteralToken
     | |-')' unmodifiable
     | |-CompoundStatement ThenStatement unmodifiable
     | | |-'{' OpenParen unmodifiable
@@ -4707,67 +4796,52 @@ TranslationUnit Detached
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Named) {
-  EXPECT_TRUE(treeDumpEqual(
+  EXPECT_TRUE(treeDumpEqualOnAnnotations(
       R"cpp(
-int func1(int a);
-int func2(int *ap);
-int func3(int a, float b);
-)cpp",
-      R"txt(
-TranslationUnit Detached
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func1'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       `-'a'
-| |     `-')' CloseParen
-| `-';'
-|-SimpleDeclaration
-| |-'int'
-| |-DeclaratorList Declarators
-| | `-SimpleDeclarator ListElement
-| |   |-'func2'
-| |   `-ParametersAndQualifiers
-| |     |-'(' OpenParen
-| |     |-ParameterDeclarationList Parameters
-| |     | `-SimpleDeclaration ListElement
-| |     |   |-'int'
-| |     |   `-DeclaratorList Declarators
-| |     |     `-SimpleDeclarator ListElement
-| |     |       |-'*'
-| |     |       `-'ap'
-| |     `-')' CloseParen
-| `-';'
-`-SimpleDeclaration
+     int func1([[int a]]);
+     int func2([[int *ap]]);
+     int func3([[int a, float b]]);
+     int func4([[undef a]]); // error-ok: no crash on invalid type
+   )cpp",
+      {R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
   |-'int'
-  |-DeclaratorList Declarators
-  | `-SimpleDeclarator ListElement
-  |   |-'func3'
-  |   `-ParametersAndQualifiers
-  |     |-'(' OpenParen
-  |     |-ParameterDeclarationList Parameters
-  |     | |-SimpleDeclaration ListElement
-  |     | | |-'int'
-  |     | | `-DeclaratorList Declarators
-  |     | |   `-SimpleDeclarator ListElement
-  |     | |     `-'a'
-  |     | |-',' ListDelimiter
-  |     | `-SimpleDeclaration ListElement
-  |     |   |-'float'
-  |     |   `-DeclaratorList Declarators
-  |     |     `-SimpleDeclarator ListElement
-  |     |       `-'b'
-  |     `-')' CloseParen
-  `-';'
-)txt"));
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'a'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'int'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      |-'*'
+      `-'ap'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+|-SimpleDeclaration ListElement
+| |-'int'
+| `-DeclaratorList Declarators
+|   `-SimpleDeclarator ListElement
+|     `-'a'
+|-',' ListDelimiter
+`-SimpleDeclaration ListElement
+  |-'float'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'b'
+)txt",
+       R"txt(
+ParameterDeclarationList Parameters
+`-SimpleDeclaration ListElement
+  |-'undef'
+  `-DeclaratorList Declarators
+    `-SimpleDeclarator ListElement
+      `-'a'
+)txt"}));
 }
 
 TEST_P(BuildSyntaxTreeTest, ParametersAndQualifiers_InFreeFunctions_Unnamed) {

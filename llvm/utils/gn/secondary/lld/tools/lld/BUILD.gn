@@ -5,6 +5,7 @@ symlinks = [
   "ld.lld",
   "ld64.lld",
   "ld64.lld.darwinnew",
+  "ld64.lld.darwinold",
   "wasm-ld",
 ]
 foreach(target, symlinks) {

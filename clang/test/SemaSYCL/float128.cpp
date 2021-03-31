@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple spir64 -fsycl -fsycl-is-device -verify -fsyntax-only %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl -fsycl-is-device -fsyntax-only %s
+// RUN: %clang_cc1 -triple spir64 -fsycl-is-device -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-device -fsyntax-only %s
 
 typedef __float128 BIGTY;
 

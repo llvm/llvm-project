@@ -17,13 +17,17 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
+#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm-register-enums.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
+#include "Plugins/Process/Utility/lldb-mips-freebsd-register-enums.h"
+#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -398,3 +402,152 @@ TEST(RegisterContextFreeBSDTest, arm64) {
 }
 
 #endif // defined(__aarch64__)
+
+#if defined(__mips64__)
+
+#define EXPECT_GPR_MIPS64(lldb_reg, fbsd_regno)                                \
+  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_mips64),                  \
+              ::testing::Pair(offsetof(reg, r_regs[fbsd_regno]),               \
+                              sizeof(reg::r_regs[fbsd_regno])))
+
+TEST(RegisterContextFreeBSDTest, mips64) {
+  ArchSpec arch{"mips64-unknown-freebsd"};
+  RegisterContextFreeBSD_mips64 reg_ctx{arch};
+
+  // we can not use aliases from <machine/regnum.h> because macros defined
+  // there are not namespaced and collide a lot, e.g. 'A1'
+
+  EXPECT_GPR_MIPS64(zero, 0);
+  EXPECT_GPR_MIPS64(r1, 1);
+  EXPECT_GPR_MIPS64(r2, 2);
+  EXPECT_GPR_MIPS64(r3, 3);
+  EXPECT_GPR_MIPS64(r4, 4);
+  EXPECT_GPR_MIPS64(r5, 5);
+  EXPECT_GPR_MIPS64(r6, 6);
+  EXPECT_GPR_MIPS64(r7, 7);
+  EXPECT_GPR_MIPS64(r8, 8);
+  EXPECT_GPR_MIPS64(r9, 9);
+  EXPECT_GPR_MIPS64(r10, 10);
+  EXPECT_GPR_MIPS64(r11, 11);
+  EXPECT_GPR_MIPS64(r12, 12);
+  EXPECT_GPR_MIPS64(r13, 13);
+  EXPECT_GPR_MIPS64(r14, 14);
+  EXPECT_GPR_MIPS64(r15, 15);
+  EXPECT_GPR_MIPS64(r16, 16);
+  EXPECT_GPR_MIPS64(r17, 17);
+  EXPECT_GPR_MIPS64(r18, 18);
+  EXPECT_GPR_MIPS64(r19, 19);
+  EXPECT_GPR_MIPS64(r20, 20);
+  EXPECT_GPR_MIPS64(r21, 21);
+  EXPECT_GPR_MIPS64(r22, 22);
+  EXPECT_GPR_MIPS64(r23, 23);
+  EXPECT_GPR_MIPS64(r24, 24);
+  EXPECT_GPR_MIPS64(r25, 25);
+  EXPECT_GPR_MIPS64(r26, 26);
+  EXPECT_GPR_MIPS64(r27, 27);
+  EXPECT_GPR_MIPS64(gp, 28);
+  EXPECT_GPR_MIPS64(sp, 29);
+  EXPECT_GPR_MIPS64(r30, 30);
+  EXPECT_GPR_MIPS64(ra, 31);
+  EXPECT_GPR_MIPS64(sr, 32);
+  EXPECT_GPR_MIPS64(mullo, 33);
+  EXPECT_GPR_MIPS64(mulhi, 34);
+  EXPECT_GPR_MIPS64(badvaddr, 35);
+  EXPECT_GPR_MIPS64(cause, 36);
+  EXPECT_GPR_MIPS64(pc, 37);
+  EXPECT_GPR_MIPS64(ic, 38);
+  EXPECT_GPR_MIPS64(dummy, 39);
+}
+
+#endif // defined(__mips64__)
+
+#if defined(__powerpc__)
+
+#define EXPECT_GPR_PPC(lldb_reg, fbsd_reg)                                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, gpr_##lldb_reg##_powerpc),                 \
+              ::testing::Pair(offsetof(reg, fbsd_reg), sizeof(reg::fbsd_reg)))
+#define EXPECT_FPU_PPC(lldb_reg, fbsd_reg)                                     \
+  EXPECT_THAT(GetRegParams(reg_ctx, fpr_##lldb_reg##_powerpc),                 \
+              ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
+                              sizeof(fpreg::fbsd_reg)))
+
+TEST(RegisterContextFreeBSDTest, powerpc32) {
+  ArchSpec arch{"powerpc-unknown-freebsd"};
+  RegisterContextFreeBSD_powerpc32 reg_ctx{arch};
+
+  EXPECT_GPR_PPC(r0, fixreg[0]);
+  EXPECT_GPR_PPC(r1, fixreg[1]);
+  EXPECT_GPR_PPC(r2, fixreg[2]);
+  EXPECT_GPR_PPC(r3, fixreg[3]);
+  EXPECT_GPR_PPC(r4, fixreg[4]);
+  EXPECT_GPR_PPC(r5, fixreg[5]);
+  EXPECT_GPR_PPC(r6, fixreg[6]);
+  EXPECT_GPR_PPC(r7, fixreg[7]);
+  EXPECT_GPR_PPC(r8, fixreg[8]);
+  EXPECT_GPR_PPC(r9, fixreg[9]);
+  EXPECT_GPR_PPC(r10, fixreg[10]);
+  EXPECT_GPR_PPC(r11, fixreg[11]);
+  EXPECT_GPR_PPC(r12, fixreg[12]);
+  EXPECT_GPR_PPC(r13, fixreg[13]);
+  EXPECT_GPR_PPC(r14, fixreg[14]);
+  EXPECT_GPR_PPC(r15, fixreg[15]);
+  EXPECT_GPR_PPC(r16, fixreg[16]);
+  EXPECT_GPR_PPC(r17, fixreg[17]);
+  EXPECT_GPR_PPC(r18, fixreg[18]);
+  EXPECT_GPR_PPC(r19, fixreg[19]);
+  EXPECT_GPR_PPC(r20, fixreg[20]);
+  EXPECT_GPR_PPC(r21, fixreg[21]);
+  EXPECT_GPR_PPC(r22, fixreg[22]);
+  EXPECT_GPR_PPC(r23, fixreg[23]);
+  EXPECT_GPR_PPC(r24, fixreg[24]);
+  EXPECT_GPR_PPC(r25, fixreg[25]);
+  EXPECT_GPR_PPC(r26, fixreg[26]);
+  EXPECT_GPR_PPC(r27, fixreg[27]);
+  EXPECT_GPR_PPC(r28, fixreg[28]);
+  EXPECT_GPR_PPC(r29, fixreg[29]);
+  EXPECT_GPR_PPC(r30, fixreg[30]);
+  EXPECT_GPR_PPC(r31, fixreg[31]);
+  EXPECT_GPR_PPC(lr, lr);
+  EXPECT_GPR_PPC(cr, cr);
+  EXPECT_GPR_PPC(xer, xer);
+  EXPECT_GPR_PPC(ctr, ctr);
+  EXPECT_GPR_PPC(pc, pc);
+
+  size_t base_offset = reg_ctx.GetRegisterInfo()[fpr_f0_powerpc].byte_offset;
+
+  EXPECT_FPU_PPC(f0, fpreg[0]);
+  EXPECT_FPU_PPC(f1, fpreg[1]);
+  EXPECT_FPU_PPC(f2, fpreg[2]);
+  EXPECT_FPU_PPC(f3, fpreg[3]);
+  EXPECT_FPU_PPC(f4, fpreg[4]);
+  EXPECT_FPU_PPC(f5, fpreg[5]);
+  EXPECT_FPU_PPC(f6, fpreg[6]);
+  EXPECT_FPU_PPC(f7, fpreg[7]);
+  EXPECT_FPU_PPC(f8, fpreg[8]);
+  EXPECT_FPU_PPC(f9, fpreg[9]);
+  EXPECT_FPU_PPC(f10, fpreg[10]);
+  EXPECT_FPU_PPC(f11, fpreg[11]);
+  EXPECT_FPU_PPC(f12, fpreg[12]);
+  EXPECT_FPU_PPC(f13, fpreg[13]);
+  EXPECT_FPU_PPC(f14, fpreg[14]);
+  EXPECT_FPU_PPC(f15, fpreg[15]);
+  EXPECT_FPU_PPC(f16, fpreg[16]);
+  EXPECT_FPU_PPC(f17, fpreg[17]);
+  EXPECT_FPU_PPC(f18, fpreg[18]);
+  EXPECT_FPU_PPC(f19, fpreg[19]);
+  EXPECT_FPU_PPC(f20, fpreg[20]);
+  EXPECT_FPU_PPC(f21, fpreg[21]);
+  EXPECT_FPU_PPC(f22, fpreg[22]);
+  EXPECT_FPU_PPC(f23, fpreg[23]);
+  EXPECT_FPU_PPC(f24, fpreg[24]);
+  EXPECT_FPU_PPC(f25, fpreg[25]);
+  EXPECT_FPU_PPC(f26, fpreg[26]);
+  EXPECT_FPU_PPC(f27, fpreg[27]);
+  EXPECT_FPU_PPC(f28, fpreg[28]);
+  EXPECT_FPU_PPC(f29, fpreg[29]);
+  EXPECT_FPU_PPC(f30, fpreg[30]);
+  EXPECT_FPU_PPC(f31, fpreg[31]);
+  EXPECT_FPU_PPC(fpscr, fpscr);
+}
+
+#endif // defined(__powerpc__)

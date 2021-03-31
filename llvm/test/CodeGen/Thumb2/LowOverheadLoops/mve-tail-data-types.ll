@@ -15,9 +15,9 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_char(i8 zeroext %a, i8* nocapture re
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r12, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -91,9 +91,9 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_short(i16 signext %a, i16* nocapture
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r12, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -167,9 +167,9 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_uchar(i8 zeroext %a, i8* nocapture r
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r12, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB2_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -243,9 +243,9 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_ushort(i16 signext %a, i16* nocaptur
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r12, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -319,9 +319,9 @@ define arm_aapcs_vfpcc i32 @test_acc_scalar_int(i32 %a, i32* nocapture readonly 
 ; CHECK-NEXT:    bic r3, r3, #3
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r12, r3, r12, lsr #2
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r12
 ; CHECK-NEXT:  .LBB4_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
@@ -398,11 +398,9 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_char(i8* nocapture readonly
 ; CHECK-NEXT:    cset r5, hi
 ; CHECK-NEXT:    cmp r4, r3
 ; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB5_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    sub.w r4, r12, #1
@@ -696,11 +694,9 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_uchar(i8* nocapture readonl
 ; CHECK-NEXT:    cset r5, hi
 ; CHECK-NEXT:    cmp r4, r3
 ; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB7_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    sub.w r4, r12, #1
@@ -994,11 +990,9 @@ define arm_aapcs_vfpcc void @test_vec_mul_scalar_add_int(i32* nocapture readonly
 ; CHECK-NEXT:    cset r5, hi
 ; CHECK-NEXT:    cmp r4, r3
 ; CHECK-NEXT:    cset r4, hi
-; CHECK-NEXT:    ands r5, r4
-; CHECK-NEXT:    lsls r5, r5, #31
-; CHECK-NEXT:    itt eq
-; CHECK-NEXT:    andeq r7, r6
-; CHECK-NEXT:    lslseq.w r7, r7, #31
+; CHECK-NEXT:    tst r4, r5
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    andseq.w r7, r7, r6
 ; CHECK-NEXT:    beq .LBB9_4
 ; CHECK-NEXT:  @ %bb.2: @ %for.body.preheader
 ; CHECK-NEXT:    sub.w r4, r12, #1

@@ -18,6 +18,7 @@ A default SBCommandInterpreterRunOptions object has:
 * StopOnCrash:    false
 * EchoCommands:   true
 * PrintResults:   true
+* PrintErrors:    true
 * AddToHistory:   true
 
 ") SBCommandInterpreterRunOptions;
@@ -57,6 +58,12 @@ public:
 
     void
     SetPrintResults (bool);
+
+    bool
+    GetPrintErrors () const;
+
+    void
+    SetPrintErrors (bool);
 
     bool
     GetAddToHistory () const;

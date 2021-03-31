@@ -235,11 +235,11 @@ kernel void bar(global unsigned int *buf)
 kernel void foo1(global unsigned int *buf)
 {
   ndrange_t n;
-  buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_max_sub_group_size_for_ndrange' requires cl_khr_subgroups extension to be enabled}}
+  buf[0] = get_kernel_max_sub_group_size_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_max_sub_group_size_for_ndrange' requires cl_khr_subgroups support}}
 }
 
 kernel void bar1(global unsigned int *buf)
 {
   ndrange_t n;
-  buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_sub_group_count_for_ndrange' requires cl_khr_subgroups extension to be enabled}}
+  buf[0] = get_kernel_sub_group_count_for_ndrange(n, ^(){}); // expected-error {{use of declaration 'get_kernel_sub_group_count_for_ndrange' requires cl_khr_subgroups support}}
 }

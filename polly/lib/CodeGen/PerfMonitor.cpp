@@ -138,11 +138,12 @@ Function *PerfMonitor::insertFinalReporting() {
   // Measure current cycles and compute final timings.
   Function *RDTSCPFn = getRDTSCP();
 
+  Type *Int64Ty = Builder.getInt64Ty();
   Value *CurrentCycles =
       Builder.CreateExtractValue(Builder.CreateCall(RDTSCPFn), {0});
-  Value *CyclesStart = Builder.CreateLoad(CyclesTotalStartPtr, true);
+  Value *CyclesStart = Builder.CreateLoad(Int64Ty, CyclesTotalStartPtr, true);
   Value *CyclesTotal = Builder.CreateSub(CurrentCycles, CyclesStart);
-  Value *CyclesInScops = Builder.CreateLoad(CyclesInScopsPtr, true);
+  Value *CyclesInScops = Builder.CreateLoad(Int64Ty, CyclesInScopsPtr, true);
 
   // Print the runtime information.
   RuntimeDebugBuilder::createCPUPrinter(Builder, "Polly runtime information\n");
@@ -175,11 +176,12 @@ void PerfMonitor::AppendScopReporting() {
   Builder.SetInsertPoint(FinalStartBB);
   ReturnFromFinal->eraseFromParent();
 
+  Type *Int64Ty = Builder.getInt64Ty();
   Value *CyclesInCurrentScop =
-      Builder.CreateLoad(this->CyclesInCurrentScopPtr, true);
+      Builder.CreateLoad(Int64Ty, this->CyclesInCurrentScopPtr, true);
 
   Value *TripCountForCurrentScop =
-      Builder.CreateLoad(this->TripCountForCurrentScopPtr, true);
+      Builder.CreateLoad(Int64Ty, this->TripCountForCurrentScopPtr, true);
 
   std::string EntryName, ExitName;
   std::tie(EntryName, ExitName) = S.getEntryExitStr();
@@ -231,7 +233,8 @@ Function *PerfMonitor::insertInitFunction(Function *FinalReporting) {
   // multiple times. To avoid initializations being run multiple times (and
   // especially to avoid that atExitFn is called more than once), we bail
   // out if the initializer is run more than once.
-  Value *HasRunBefore = Builder.CreateLoad(AlreadyInitializedPtr);
+  Value *HasRunBefore =
+      Builder.CreateLoad(Builder.getInt1Ty(), AlreadyInitializedPtr);
   Builder.CreateCondBr(HasRunBefore, EarlyReturn, InitBB);
   Builder.SetInsertPoint(EarlyReturn);
   Builder.CreateRetVoid();
@@ -276,20 +279,23 @@ void PerfMonitor::insertRegionEnd(Instruction *InsertBefore) {
 
   Builder.SetInsertPoint(InsertBefore);
   Function *RDTSCPFn = getRDTSCP();
-  LoadInst *CyclesStart = Builder.CreateLoad(CyclesInScopStartPtr, true);
+  Type *Int64Ty = Builder.getInt64Ty();
+  LoadInst *CyclesStart =
+      Builder.CreateLoad(Int64Ty, CyclesInScopStartPtr, true);
   Value *CurrentCycles =
       Builder.CreateExtractValue(Builder.CreateCall(RDTSCPFn), {0});
   Value *CyclesInScop = Builder.CreateSub(CurrentCycles, CyclesStart);
-  Value *CyclesInScops = Builder.CreateLoad(CyclesInScopsPtr, true);
+  Value *CyclesInScops = Builder.CreateLoad(Int64Ty, CyclesInScopsPtr, true);
   CyclesInScops = Builder.CreateAdd(CyclesInScops, CyclesInScop);
   Builder.CreateStore(CyclesInScops, CyclesInScopsPtr, true);
 
-  Value *CyclesInCurrentScop = Builder.CreateLoad(CyclesInCurrentScopPtr, true);
+  Value *CyclesInCurrentScop =
+      Builder.CreateLoad(Int64Ty, CyclesInCurrentScopPtr, true);
   CyclesInCurrentScop = Builder.CreateAdd(CyclesInCurrentScop, CyclesInScop);
   Builder.CreateStore(CyclesInCurrentScop, CyclesInCurrentScopPtr, true);
 
   Value *TripCountForCurrentScop =
-      Builder.CreateLoad(TripCountForCurrentScopPtr, true);
+      Builder.CreateLoad(Int64Ty, TripCountForCurrentScopPtr, true);
   TripCountForCurrentScop =
       Builder.CreateAdd(TripCountForCurrentScop, Builder.getInt64(1));
   Builder.CreateStore(TripCountForCurrentScop, TripCountForCurrentScopPtr,

@@ -47,6 +47,8 @@ protected:
   bool HasZvamo = false;
   bool HasZvlsseg = false;
 
+  static const Builtin::Info BuiltinInfo[];
+
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
@@ -56,6 +58,8 @@ public:
     SuitableAlign = 128;
     WCharType = SignedInt;
     WIntType = UnsignedInt;
+    HasRISCVVTypes = true;
+    MCountName = "_mcount";
   }
 
   bool setCPU(const std::string &Name) override {
@@ -69,7 +73,7 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::VoidPtrBuiltinVaList;
@@ -92,6 +96,8 @@ public:
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override;
+
+  std::string convertConstraint(const char *&Constraint) const override;
 
   bool hasFeature(StringRef Feature) const override;
 

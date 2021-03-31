@@ -52,6 +52,10 @@ enum LLVMConstants : uint32_t {
   DEBUG_METADATA_VERSION = 3 // Current debug info version number.
 };
 
+/// Magic number in the value profile metadata showing a target has been
+/// promoted for the instruction and shouldn't be promoted again.
+const uint64_t NOMORE_ICP_MAGICNUM = -1;
+
 /// Root of the metadata hierarchy.
 ///
 /// This is a root class for typeless data in the IR.
@@ -67,10 +71,8 @@ protected:
 
   /// Storage flag for non-uniqued, otherwise unowned, metadata.
   unsigned char Storage : 7;
-  // TODO: expose remaining bits to subclasses.
 
-  unsigned char ImplicitCode : 1;
-
+  unsigned char SubclassData1 : 1;
   unsigned short SubclassData16 = 0;
   unsigned SubclassData32 = 0;
 
@@ -82,7 +84,7 @@ public:
 
 protected:
   Metadata(unsigned ID, StorageType Storage)
-      : SubclassID(ID), Storage(Storage), ImplicitCode(false) {
+      : SubclassID(ID), Storage(Storage), SubclassData1(false) {
     static_assert(sizeof(*this) == 8, "Metadata fields poorly packed");
   }
 
@@ -301,6 +303,9 @@ public:
   /// Replace all uses of this with \c MD, which is allowed to be null.
   void replaceAllUsesWith(Metadata *MD);
 
+  /// Returns the list of all DIArgList users of this.
+  SmallVector<Metadata *, 4> getAllArgListUsers();
+
   /// Resolve all uses of this.
   ///
   /// Resolve all uses of this, turning off RAUW permanently.  If \c
@@ -379,6 +384,10 @@ public:
   Value *getValue() const { return V; }
   Type *getType() const { return V->getType(); }
   LLVMContext &getContext() const { return V->getContext(); }
+
+  SmallVector<Metadata *, 4> getAllArgListUsers() {
+    return ReplaceableMetadataImpl::getAllArgListUsers();
+  }
 
   static void handleDeletion(Value *V);
   static void handleRAUW(Value *From, Value *To);
@@ -667,6 +676,12 @@ struct AAMDNodes {
   /// The tag specifying the noalias scope.
   MDNode *NoAlias = nullptr;
 
+  // Shift tbaa Metadata node to start off bytes later
+  static MDNode *ShiftTBAA(MDNode *M, size_t off);
+
+  // Shift tbaa.struct Metadata node to start off bytes later
+  static MDNode *ShiftTBAAStruct(MDNode *M, size_t off);
+
   /// Given two sets of AAMDNodes that apply to the same pointer,
   /// give the best AAMDNodes that are compatible with both (i.e. a set of
   /// nodes whose allowable aliasing conclusions are a subset of those
@@ -678,6 +693,18 @@ struct AAMDNodes {
     Result.TBAAStruct = Other.TBAAStruct == TBAAStruct ? TBAAStruct : nullptr;
     Result.Scope = Other.Scope == Scope ? Scope : nullptr;
     Result.NoAlias = Other.NoAlias == NoAlias ? NoAlias : nullptr;
+    return Result;
+  }
+
+  /// Create a new AAMDNode that describes this AAMDNode after applying a
+  /// constant offset to the start of the pointer
+  AAMDNodes shift(size_t Offset) {
+    AAMDNodes Result;
+    Result.TBAA = TBAA ? ShiftTBAA(TBAA, Offset) : nullptr;
+    Result.TBAAStruct =
+        TBAAStruct ? ShiftTBAAStruct(TBAAStruct, Offset) : nullptr;
+    Result.Scope = Scope;
+    Result.NoAlias = NoAlias;
     return Result;
   }
 };

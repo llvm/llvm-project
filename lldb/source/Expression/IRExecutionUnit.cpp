@@ -9,6 +9,8 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -200,16 +202,26 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
   return ret;
 }
 
-static void ReportInlineAsmError(const llvm::SMDiagnostic &diagnostic,
-                                 void *Context, unsigned LocCookie) {
-  Status *err = static_cast<Status *>(Context);
+namespace {
+struct IRExecDiagnosticHandler : public llvm::DiagnosticHandler {
+  Status *err;
+  IRExecDiagnosticHandler(Status *err) : err(err) {}
+  bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
+    if (DI.getKind() == llvm::DK_SrcMgr) {
+      const auto &DISM = llvm::cast<llvm::DiagnosticInfoSrcMgr>(DI);
+      if (err && err->Success()) {
+        err->SetErrorToGenericError();
+        err->SetErrorStringWithFormat(
+            "Inline assembly error: %s",
+            DISM.getSMDiag().getMessage().str().c_str());
+      }
+      return true;
+    }
 
-  if (err && err->Success()) {
-    err->SetErrorToGenericError();
-    err->SetErrorStringWithFormat("Inline assembly error: %s",
-                                  diagnostic.getMessage().str().c_str());
+    return false;
   }
-}
+};
+} // namespace
 
 void IRExecutionUnit::ReportSymbolLookupError(ConstString name) {
   m_failed_lookups.push_back(name);
@@ -257,8 +269,8 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     LLDB_LOGF(log, "Module being sent to JIT: \n%s", s.c_str());
   }
 
-  m_module_up->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
-                                                          &error);
+  m_module_up->getContext().setDiagnosticHandler(
+      std::make_unique<IRExecDiagnosticHandler>(&error));
 
   llvm::EngineBuilder builder(std::move(m_module_up));
   llvm::Triple triple(m_module->getTargetTriple());

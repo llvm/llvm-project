@@ -10,6 +10,14 @@
 // Test that we don't create a symbol for the symtab_shndx section.
 // SYMBOLS-NOT: symtab_shndx
 
+// SYMBOLS:         Name: dm (0)
+// SYMBOLS:         Value: 0x0
+// SYMBOLS:         Size: 0
+// SYMBOLS:         Binding: Local (0x0)
+// SYMBOLS:         Type: Section (0x3)
+// SYMBOLS:         Other: 0
+// SYMBOLS:         Section: dm (0xFF00)
+// SYMBOLS-NEXT:  }
 
 // Test that both a and b show up in the correct section.
 // SYMBOLS:         Name: a
@@ -28,17 +36,6 @@
 // SYMBOLS-NEXT:    Type: None (0x0)
 // SYMBOLS-NEXT:    Other: 0
 // SYMBOLS-NEXT:    Section: dm (0xFF00)
-// SYMBOLS-NEXT:  }
-
-
-// Test that this file has one section too many.
-// SYMBOLS:         Name: dm (0)
-// SYMBOLS:         Value: 0x0
-// SYMBOLS:         Size: 0
-// SYMBOLS:         Binding: Local (0x0)
-// SYMBOLS:         Type: Section (0x3)
-// SYMBOLS:         Other: 0
-// SYMBOLS:         Section: dm (0xFF00)
 // SYMBOLS-NEXT:  }
 // SYMBOLS-NEXT:]
 

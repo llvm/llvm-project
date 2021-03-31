@@ -93,7 +93,7 @@ public:
   unsigned getNumberOfRegisters(unsigned ClassID) const;
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
   const char* getRegisterClassName(unsigned ClassID) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(unsigned VF);
@@ -107,7 +107,8 @@ public:
       TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
-  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index, Type *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, ArrayRef<int> Mask,
+                     int Index, Type *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);

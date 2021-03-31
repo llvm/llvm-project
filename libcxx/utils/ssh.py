@@ -23,6 +23,12 @@ import sys
 import tarfile
 import tempfile
 
+try:
+   from shlex import quote as cmd_quote
+except ImportError:
+   # for Python 2 compatibility
+   from pipes import quote as cmd_quote
+
 def ssh(args, command):
     cmd = ['ssh', '-oBatchMode=yes']
     if args.extra_ssh_args is not None:
@@ -41,6 +47,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--host', type=str, required=True)
     parser.add_argument('--execdir', type=str, required=True)
+    parser.add_argument('--tempdir', type=str, required=False, default='/tmp')
     parser.add_argument('--extra-ssh-args', type=str, required=False)
     parser.add_argument('--extra-scp-args', type=str, required=False)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
@@ -51,7 +58,7 @@ def main():
 
     # Create a temporary directory where the test will be run.
     # That is effectively the value of %T on the remote host.
-    tmp = subprocess.check_output(ssh(args, 'mktemp -d /tmp/libcxx.XXXXXXXXXX'), universal_newlines=True).strip()
+    tmp = subprocess.check_output(ssh(args, 'mktemp -d {}/libcxx.XXXXXXXXXX'.format(args.tempdir)), universal_newlines=True).strip()
 
     # HACK:
     # If an argument is a file that ends in `.tmp.exe`, assume it is the name
@@ -106,7 +113,7 @@ def main():
         commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
         remoteCommands.append('cd {}'.format(tmp))
         if args.env:
-            remoteCommands.append('export {}'.format(' '.join(args.env)))
+            remoteCommands.append('export {}'.format(cmd_quote(' '.join(args.env))))
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.

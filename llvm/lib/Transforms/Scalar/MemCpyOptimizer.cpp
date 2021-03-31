@@ -68,7 +68,7 @@ using namespace llvm;
 #define DEBUG_TYPE "memcpyopt"
 
 static cl::opt<bool>
-    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(false), cl::Hidden,
+    EnableMemorySSA("enable-memcpyopt-memoryssa", cl::init(true), cl::Hidden,
                     cl::desc("Use MemorySSA-backed MemCpyOpt."));
 
 STATISTIC(NumMemCpyInstr, "Number of memcpy instructions deleted");
@@ -308,6 +308,7 @@ INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(MemCpyOptLegacyPass, "memcpyopt", "MemCpy Optimization",
                     false, false)
 
@@ -1134,7 +1135,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
                                                   MemSetInst *MemSet) {
   // We can only transform memset/memcpy with the same destination.
-  if (MemSet->getDest() != MemCpy->getDest())
+  if (!AA->isMustAlias(MemSet->getDest(), MemCpy->getDest()))
     return false;
 
   // Check that src and dst of the memcpy aren't the same. While memcpy
@@ -1171,6 +1172,13 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
 
   if (mayBeVisibleThroughUnwinding(Dest, MemSet, MemCpy))
     return false;
+
+  // If the sizes are the same, simply drop the memset instead of generating
+  // a replacement with zero size.
+  if (DestSize == SrcSize) {
+    eraseInstruction(MemSet);
+    return true;
+  }
 
   // By default, create an unaligned memset.
   unsigned Align = 1;
@@ -1246,6 +1254,18 @@ static bool hasUndefContentsMSSA(MemorySSA *MSSA, AliasAnalysis *AA, Value *V,
       if (AA->isMustAlias(V, II->getArgOperand(1)) &&
           LTSize->getZExtValue() >= Size->getZExtValue())
         return true;
+
+      // If the lifetime.start covers a whole alloca (as it almost always does)
+      // and we're querying a pointer based on that alloca, then we know the
+      // memory is definitely undef, regardless of how exactly we alias. The
+      // size also doesn't matter, as an out-of-bounds access would be UB.
+      AllocaInst *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V));
+      if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
+        DataLayout DL = Alloca->getModule()->getDataLayout();
+        if (Optional<TypeSize> AllocaSize = Alloca->getAllocationSizeInBits(DL))
+          if (*AllocaSize == LTSize->getValue() * 8)
+            return true;
+      }
     }
   }
 
@@ -1541,6 +1561,8 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   MemCpyInst *MDep = nullptr;
   if (EnableMemorySSA) {
     MemoryUseOrDef *CallAccess = MSSA->getMemoryAccess(&CB);
+    if (!CallAccess)
+      return false;
     MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
         CallAccess->getDefiningAccess(), Loc);
     if (auto *MD = dyn_cast<MemoryDef>(Clobber))

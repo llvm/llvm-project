@@ -364,8 +364,9 @@ private:
   ///
   /// This is an internal implementation that emulates the state machine
   /// described in the DWARF Call Frame Information opcodes and will push
-  /// CurrRow onto the Rows container when needed. \param CFID the CFI program
-  /// that contains the opcodes from a CIE or FDE.
+  /// CurrRow onto the Rows container when needed.
+  ///
+  /// \param CFIP the CFI program that contains the opcodes from a CIE or FDE.
   ///
   /// \param CurrRow the current row to modify while parsing the state machine.
   ///

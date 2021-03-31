@@ -134,15 +134,12 @@ protected:
 
     FileSpec cmd_file(command[0].ref());
     FileSystem::Instance().Resolve(cmd_file);
-    ExecutionContext *exe_ctx = nullptr; // Just use the default context.
 
+    CommandInterpreterRunOptions options;
     // If any options were set, then use them
     if (m_options.m_stop_on_error.OptionWasSet() ||
         m_options.m_silent_run.OptionWasSet() ||
         m_options.m_stop_on_continue.OptionWasSet()) {
-      // Use user set settings
-      CommandInterpreterRunOptions options;
-
       if (m_options.m_stop_on_continue.OptionWasSet())
         options.SetStopOnContinue(
             m_options.m_stop_on_continue.GetCurrentValue());
@@ -159,14 +156,9 @@ protected:
         options.SetEchoCommands(m_interpreter.GetEchoCommands());
         options.SetEchoCommentCommands(m_interpreter.GetEchoCommentCommands());
       }
-
-      m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
-    } else {
-      // No options were set, inherit any settings from nested "command source"
-      // commands, or set to sane default settings...
-      CommandInterpreterRunOptions options;
-      m_interpreter.HandleCommandsFromFile(cmd_file, exe_ctx, options, result);
     }
+
+    m_interpreter.HandleCommandsFromFile(cmd_file, options, result);
     return result.Succeeded();
   }
 

@@ -4,7 +4,7 @@
 
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func @slice_depth1_loop_nest() {
-  %0 = alloc() : memref<100xf32>
+  %0 = memref.alloc() : memref<100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
@@ -24,7 +24,7 @@ func @slice_depth1_loop_nest() {
 // same location.
 // CHECK-LABEL: func @slice_depth1_loop_nest_with_offsets() {
 func @slice_depth1_loop_nest_with_offsets() {
-  %0 = alloc() : memref<100xf32>
+  %0 = memref.alloc() : memref<100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0 + 3), (d0) -> (d0 + 4)] )}}
@@ -45,7 +45,7 @@ func @slice_depth1_loop_nest_with_offsets() {
 // Slices at loop depth 2 should slice loop bounds of both loops.
 // CHECK-LABEL: func @slice_depth2_loop_nest() {
 func @slice_depth2_loop_nest() {
-  %0 = alloc() : memref<100x100xf32>
+  %0 = memref.alloc() : memref<100x100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
@@ -71,7 +71,7 @@ func @slice_depth2_loop_nest() {
 // depths 1 and 2 because the dependent store in loop nest %i0 is at depth 2.
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_loads() {
 func @slice_depth2_loop_nest_two_loads() {
-  %0 = alloc() : memref<100x100xf32>
+  %0 = memref.alloc() : memref<100x100xf32>
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
@@ -99,7 +99,7 @@ func @slice_depth2_loop_nest_two_loads() {
 // loop nest %i2 is at depth 2.
 // CHECK-LABEL: func @slice_depth2_loop_nest_two_stores() {
 func @slice_depth2_loop_nest_two_stores() {
-  %0 = alloc() : memref<100x100xf32>
+  %0 = memref.alloc() : memref<100x100xf32>
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
@@ -124,7 +124,7 @@ func @slice_depth2_loop_nest_two_stores() {
 // Test loop nest which has a smaller outer trip count than its inner scf.
 // CHECK-LABEL: func @slice_loop_nest_with_smaller_outer_trip_count() {
 func @slice_loop_nest_with_smaller_outer_trip_count() {
-  %0 = alloc() : memref<100x100xf32>
+  %0 = memref.alloc() : memref<100x100xf32>
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {

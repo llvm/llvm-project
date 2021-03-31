@@ -51,7 +51,8 @@
 ;; routed to __wrap_bar.
 
 ; CHECK: <entry>:
-; CHECK: {{jmp|callq}}{{.*}}<__wrap_bar>
+; JMP: jmp {{.*}}<__wrap_bar>
+; CALL: callq {{.*}}<__wrap_bar>
 
 ;--- main.ll
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -46,7 +46,7 @@ struct FileHeader {
 
 struct Limits {
   LimitFlags Flags;
-  yaml::Hex32 Initial;
+  yaml::Hex32 Minimum;
   yaml::Hex32 Maximum;
 };
 
@@ -63,7 +63,9 @@ struct Export {
 };
 
 struct ElemSegment {
-  uint32_t TableIndex;
+  uint32_t Flags;
+  uint32_t TableNumber;
+  ValueType ElemKind;
   wasm::WasmInitExpr Offset;
   std::vector<uint32_t> Functions;
 };

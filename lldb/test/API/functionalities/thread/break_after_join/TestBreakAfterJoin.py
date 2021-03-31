@@ -88,6 +88,6 @@ class BreakpointAfterJoinTestCase(TestBase):
             self.runCmd("process status")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)

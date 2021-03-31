@@ -670,8 +670,8 @@ ELFObjectFile<ELFT>::getSymbolType(DataRefImpl Symb) const {
     return SymbolRef::ST_Function;
   case ELF::STT_OBJECT:
   case ELF::STT_COMMON:
-  case ELF::STT_TLS:
     return SymbolRef::ST_Data;
+  case ELF::STT_TLS:
   default:
     return SymbolRef::ST_Other;
   }
@@ -716,7 +716,16 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     // TODO: Test this error.
     return SymbolsOrErr.takeError();
 
-  if (EF.getHeader().e_machine == ELF::EM_ARM) {
+  if (EF.getHeader().e_machine == ELF::EM_AARCH64) {
+    if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
+      StringRef Name = *NameOrErr;
+      if (Name.startswith("$d") || Name.startswith("$x"))
+        Result |= SymbolRef::SF_FormatSpecific;
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
+    }
+  } else if (EF.getHeader().e_machine == ELF::EM_ARM) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
       if (Name.startswith("$d") || Name.startswith("$t") ||
@@ -728,6 +737,15 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     }
     if (ESym->getType() == ELF::STT_FUNC && (ESym->st_value & 1) == 1)
       Result |= SymbolRef::SF_Thumb;
+  } else if (EF.getHeader().e_machine == ELF::EM_RISCV) {
+    if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
+      // Mark empty name symbols used for label differences.
+      if (NameOrErr->empty())
+        Result |= SymbolRef::SF_FormatSpecific;
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
+    }
   }
 
   if (ESym->st_shndx == ELF::SHN_UNDEF)
@@ -1141,6 +1159,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
   switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASS32:
     switch (EF.getHeader().e_machine) {
+    case ELF::EM_68K:
+      return "elf32-m68k";
     case ELF::EM_386:
       return "elf32-i386";
     case ELF::EM_IAMCU:
@@ -1209,6 +1229,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
 template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
   bool IsLittleEndian = ELFT::TargetEndianness == support::little;
   switch (EF.getHeader().e_machine) {
+  case ELF::EM_68K:
+    return Triple::m68k;
   case ELF::EM_386:
   case ELF::EM_IAMCU:
     return Triple::x86;

@@ -82,16 +82,16 @@ def FSD : RVInstS<0b011, OPC_STORE_FP, (outs),
           Sched<[WriteFST64, ReadStoreData, ReadFMemBase]>;
 
 def FMADD_D  : FPFMAD_rrr_frm<OPC_MADD, "fmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMADD_D, "fmadd.d">;
 def FMSUB_D  : FPFMAD_rrr_frm<OPC_MSUB, "fmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FMSUB_D, "fmsub.d">;
 def FNMSUB_D : FPFMAD_rrr_frm<OPC_NMSUB, "fnmsub.d">,
-               Sched<[WriteFMulSub64, ReadFMulSub64, ReadFMulSub64, ReadFMulSub64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMSUB_D, "fnmsub.d">;
 def FNMADD_D : FPFMAD_rrr_frm<OPC_NMADD, "fnmadd.d">,
-               Sched<[WriteFMulAdd64, ReadFMulAdd64, ReadFMulAdd64, ReadFMulAdd64]>;
+               Sched<[WriteFMA64, ReadFMA64, ReadFMA64, ReadFMA64]>;
 def          : FPFMADDynFrmAlias<FNMADD_D, "fnmadd.d">;
 
 def FADD_D : FPALUD_rr_frm<0b0000001, "fadd.d">,
@@ -303,11 +303,11 @@ def Select_FPR64_Using_CC_GPR : SelectCC_rrirr<FPR64, GPR>;
 
 /// Loads
 
-defm : LdPat<load, FLD>;
+defm : LdPat<load, FLD, f64>;
 
 /// Stores
 
-defm : StPat<store, FSD, FPR64>;
+defm : StPat<store, FSD, FPR64, f64>;
 
 /// Pseudo-instructions needed for the soft-float ABI with RV32D
 
@@ -328,25 +328,25 @@ def SplitF64Pseudo
 let Predicates = [HasStdExtD, IsRV32] in {
 
 /// Float constants
-def : Pat<(f64 (fpimm0)), (FCVT_D_W X0)>;
+def : Pat<(f64 (fpimm0)), (FCVT_D_W (i32 X0))>;
 
 // double->[u]int. Round-to-zero must be used.
-def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_W_D FPR64:$rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_WU_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (fp_to_sint FPR64:$rs1)), (FCVT_W_D FPR64:$rs1, 0b001)>;
+def : Pat<(i32 (fp_to_uint FPR64:$rs1)), (FCVT_WU_D FPR64:$rs1, 0b001)>;
 
 // [u]int->double.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_W GPR:$rs1)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_WU GPR:$rs1)>;
+def : Pat<(sint_to_fp (i32 GPR:$rs1)), (FCVT_D_W GPR:$rs1)>;
+def : Pat<(uint_to_fp (i32 GPR:$rs1)), (FCVT_D_WU GPR:$rs1)>;
 } // Predicates = [HasStdExtD, IsRV32]
 
 let Predicates = [HasStdExtD, IsRV64] in {
 
 /// Float constants
-def : Pat<(f64 (fpimm0)), (FMV_D_X X0)>;
+def : Pat<(f64 (fpimm0)), (FMV_D_X (i64 X0))>;
 
 // Moves (no conversion)
-def : Pat<(bitconvert GPR:$rs1), (FMV_D_X GPR:$rs1)>;
-def : Pat<(bitconvert FPR64:$rs1), (FMV_X_D FPR64:$rs1)>;
+def : Pat<(bitconvert (i64 GPR:$rs1)), (FMV_D_X GPR:$rs1)>;
+def : Pat<(i64 (bitconvert FPR64:$rs1)), (FMV_X_D FPR64:$rs1)>;
 
 // FP->[u]int32 is mostly handled by the FP->[u]int64 patterns. This is safe
 // because fpto[u|s]i produce poison if the value can't fit into the target.
@@ -356,13 +356,13 @@ def : Pat<(sext_inreg (assertzexti32 (fp_to_uint FPR64:$rs1)), i32),
           (FCVT_WU_D $rs1, 0b001)>;
 
 // [u]int32->fp
-def : Pat<(sint_to_fp (sexti32 GPR:$rs1)), (FCVT_D_W $rs1)>;
-def : Pat<(uint_to_fp (zexti32 GPR:$rs1)), (FCVT_D_WU $rs1)>;
+def : Pat<(sint_to_fp (i64 (sexti32 (i64 GPR:$rs1)))), (FCVT_D_W $rs1)>;
+def : Pat<(uint_to_fp (i64 (zexti32 (i64 GPR:$rs1)))), (FCVT_D_WU $rs1)>;
 
-def : Pat<(fp_to_sint FPR64:$rs1), (FCVT_L_D FPR64:$rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR64:$rs1), (FCVT_LU_D FPR64:$rs1, 0b001)>;
+def : Pat<(i64 (fp_to_sint FPR64:$rs1)), (FCVT_L_D FPR64:$rs1, 0b001)>;
+def : Pat<(i64 (fp_to_uint FPR64:$rs1)), (FCVT_LU_D FPR64:$rs1, 0b001)>;
 
 // [u]int64->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_D_L GPR:$rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_D_LU GPR:$rs1, 0b111)>;
+def : Pat<(sint_to_fp (i64 GPR:$rs1)), (FCVT_D_L GPR:$rs1, 0b111)>;
+def : Pat<(uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU GPR:$rs1, 0b111)>;
 } // Predicates = [HasStdExtD, IsRV64]

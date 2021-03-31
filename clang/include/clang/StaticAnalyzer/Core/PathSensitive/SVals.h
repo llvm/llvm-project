@@ -511,10 +511,11 @@ private:
 /// This value is qualified as NonLoc because neither loading nor storing
 /// operations are applied to it. Instead, the analyzer uses the L-value coming
 /// from pointer-to-member applied to an object.
-/// This SVal is represented by a DeclaratorDecl which can be a member function
-/// pointer or a member data pointer and a list of CXXBaseSpecifiers. This list
-/// is required to accumulate the pointer-to-member cast history to figure out
-/// the correct subobject field.
+/// This SVal is represented by a NamedDecl which can be a member function
+/// pointer or a member data pointer and an optional list of CXXBaseSpecifiers.
+/// This list is required to accumulate the pointer-to-member cast history to
+/// figure out the correct subobject field. In particular, implicit casts grow
+/// this list and explicit casts like static_cast shrink this list.
 class PointerToMember : public NonLoc {
   friend class ento::SValBuilder;
 

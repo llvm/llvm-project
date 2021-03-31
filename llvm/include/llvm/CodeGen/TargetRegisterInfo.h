@@ -363,6 +363,15 @@ public:
     return SubRegIndexLaneMasks[SubIdx];
   }
 
+  /// Try to find one or more subregister indexes to cover \p LaneMask.
+  ///
+  /// If this is possible, returns true and appends the best matching set of
+  /// indexes to \p Indexes. If this is not possible, returns false.
+  bool getCoveringSubRegIndexes(const MachineRegisterInfo &MRI,
+                                const TargetRegisterClass *RC,
+                                LaneBitmask LaneMask,
+                                SmallVectorImpl<unsigned> &Indexes) const;
+
   /// The lane masks returned by getSubRegIndexLaneMask() above can only be
   /// used to determine if sub-registers overlap - they can't be used to
   /// determine if a set of sub-registers completely cover another
@@ -905,9 +914,12 @@ public:
 
   /// True if storage within the function requires the stack pointer to be
   /// aligned more than the normal calling convention calls for.
-  /// This cannot be overriden by the target, but canRealignStack can be
-  /// overridden.
-  bool needsStackRealignment(const MachineFunction &MF) const;
+  virtual bool shouldRealignStack(const MachineFunction &MF) const;
+
+  /// True if stack realignment is required and still possible.
+  bool hasStackRealignment(const MachineFunction &MF) const {
+    return shouldRealignStack(MF) && canRealignStack(MF);
+  }
 
   /// Get the offset from the referenced frame index in the instruction,
   /// if there is one.

@@ -30,7 +30,8 @@
 
 static llvm::cl::opt<unsigned> AmdhsaCodeObjectVersion(
   "amdhsa-code-object-version", llvm::cl::Hidden,
-  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(3));
+  llvm::cl::desc("AMDHSA Code Object Version"), llvm::cl::init(4),
+  llvm::cl::ZeroOrMore);
 
 namespace {
 
@@ -96,21 +97,34 @@ Optional<uint8_t> getHsaAbiVersion(const MCSubtargetInfo *STI) {
     return ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   case 3:
     return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  case 4:
+    return ELF::ELFABIVERSION_AMDGPU_HSA_V4;
   default:
-    return ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+    report_fatal_error(Twine("Unsupported AMDHSA Code Object Version ") +
+                       Twine(AmdhsaCodeObjectVersion));
   }
 }
 
 bool isHsaAbiVersion2(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V2;
   return false;
 }
 
 bool isHsaAbiVersion3(const MCSubtargetInfo *STI) {
-  if (const auto &&HsaAbiVer = getHsaAbiVersion(STI))
-    return HsaAbiVer.getValue() == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V3;
   return false;
+}
+
+bool isHsaAbiVersion4(const MCSubtargetInfo *STI) {
+  if (Optional<uint8_t> HsaAbiVer = getHsaAbiVersion(STI))
+    return *HsaAbiVer == ELF::ELFABIVERSION_AMDGPU_HSA_V4;
+  return false;
+}
+
+bool isHsaAbiVersion3Or4(const MCSubtargetInfo *STI) {
+  return isHsaAbiVersion3(STI) || isHsaAbiVersion4(STI);
 }
 
 #define GET_MIMGBaseOpcodesTable_IMPL
@@ -247,7 +261,8 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
 namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : XnackSetting(TargetIDSetting::Any), SramEccSetting(TargetIDSetting::Any) {
+    : STI(STI), XnackSetting(TargetIDSetting::Any),
+      SramEccSetting(TargetIDSetting::Any) {
   if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
     XnackSetting = TargetIDSetting::Unsupported;
   if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
@@ -334,25 +349,104 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
-  auto TargetTriple = STI->getTargetTriple();
-  auto Version = getIsaVersion(STI->getCPU());
+std::string AMDGPUTargetID::toString() const {
+  std::string StringRep = "";
+  raw_string_ostream StreamRep(StringRep);
 
-  Stream << TargetTriple.getArchName() << '-'
-         << TargetTriple.getVendorName() << '-'
-         << TargetTriple.getOSName() << '-'
-         << TargetTriple.getEnvironmentName() << '-'
-         << "gfx"
-         << Version.Major
-         << Version.Minor
-         << Version.Stepping;
+  auto TargetTriple = STI.getTargetTriple();
+  auto Version = getIsaVersion(STI.getCPU());
 
-  if (hasXNACK(*STI))
-    Stream << "+xnack";
-  if (hasSRAMECC(*STI))
-    Stream << "+sramecc";
+  StreamRep << TargetTriple.getArchName() << '-'
+            << TargetTriple.getVendorName() << '-'
+            << TargetTriple.getOSName() << '-'
+            << TargetTriple.getEnvironmentName() << '-';
 
-  Stream.flush();
+  std::string Processor = "";
+  // TODO: Following else statement is present here because we used various
+  // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
+  // Remove once all aliases are removed from GCNProcessors.td.
+  if (Version.Major >= 9)
+    Processor = STI.getCPU().str();
+  else
+    Processor = (Twine("gfx") + Twine(Version.Major) + Twine(Version.Minor) +
+                 Twine(Version.Stepping))
+                    .str();
+
+  std::string Features = "";
+  if (Optional<uint8_t> HsaAbiVersion = getHsaAbiVersion(&STI)) {
+    switch (*HsaAbiVersion) {
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V2:
+      // Code object V2 only supported specific processors and had fixed
+      // settings for the XNACK.
+      if (Processor == "gfx600") {
+      } else if (Processor == "gfx601") {
+      } else if (Processor == "gfx602") {
+      } else if (Processor == "gfx700") {
+      } else if (Processor == "gfx701") {
+      } else if (Processor == "gfx702") {
+      } else if (Processor == "gfx703") {
+      } else if (Processor == "gfx704") {
+      } else if (Processor == "gfx705") {
+      } else if (Processor == "gfx801") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor " + Processor +
+              " without XNACK");
+      } else if (Processor == "gfx802") {
+      } else if (Processor == "gfx803") {
+      } else if (Processor == "gfx805") {
+      } else if (Processor == "gfx810") {
+        if (!isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor " + Processor +
+              " without XNACK");
+      } else if (Processor == "gfx900") {
+        if (isXnackOnOrAny())
+          Processor = "gfx901";
+      } else if (Processor == "gfx902") {
+        if (isXnackOnOrAny())
+          Processor = "gfx903";
+      } else if (Processor == "gfx904") {
+        if (isXnackOnOrAny())
+          Processor = "gfx905";
+      } else if (Processor == "gfx906") {
+        if (isXnackOnOrAny())
+          Processor = "gfx907";
+      } else {
+        report_fatal_error(
+            "AMD GPU code object V2 does not support processor " + Processor);
+      }
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      // xnack.
+      if (isXnackOnOrAny())
+        Features += "+xnack";
+      // In code object v2 and v3, "sramecc" feature was spelled with a
+      // hyphen ("sram-ecc").
+      if (isSramEccOnOrAny())
+        Features += "+sram-ecc";
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      // sramecc.
+      if (getSramEccSetting() == TargetIDSetting::Off)
+        Features += ":sramecc-";
+      else if (getSramEccSetting() == TargetIDSetting::On)
+        Features += ":sramecc+";
+      // xnack.
+      if (getXnackSetting() == TargetIDSetting::Off)
+        Features += ":xnack-";
+      else if (getXnackSetting() == TargetIDSetting::On)
+        Features += ":xnack+";
+      break;
+    default:
+      break;
+    }
+  }
+
+  StreamRep << Processor << Features;
+
+  StreamRep.flush();
+  return StringRep;
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
@@ -402,6 +496,8 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
+  if (isGFX90A(*STI))
+    return 8;
   if (!isGFX10Plus(*STI))
     return 10;
   return hasGFX10_3Insts(*STI) ? 16 : 20;
@@ -531,6 +627,9 @@ unsigned getNumSGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs) {
 
 unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
                              Optional<bool> EnableWavefrontSize32) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 8;
+
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
       STI->getFeatureBits().test(FeatureWavefrontSize32);
@@ -543,6 +642,8 @@ unsigned getVGPRAllocGranule(const MCSubtargetInfo *STI,
 
 unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
                                 Optional<bool> EnableWavefrontSize32) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 8;
 
   bool IsWave32 = EnableWavefrontSize32 ?
       *EnableWavefrontSize32 :
@@ -552,12 +653,16 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 512;
   if (!isGFX10Plus(*STI))
     return 256;
   return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
+  if (STI->getFeatureBits().test(FeatureGFX90AInsts))
+    return 512;
   return 256;
 }
 
@@ -652,6 +757,11 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                     STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                     amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
+  }
+  if (AMDGPU::isGFX90A(*STI)) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
+                    amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
+                    STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
   }
   return KD;
 }
@@ -1049,23 +1159,32 @@ int64_t getMsgId(const StringRef Name) {
   return ID_UNKNOWN_;
 }
 
-static bool isValidMsgId(int64_t MsgId) {
-  return (ID_GAPS_FIRST_ <= MsgId && MsgId < ID_GAPS_LAST_) && IdSymbolic[MsgId];
-}
-
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
   if (Strict) {
-    if (MsgId == ID_GS_ALLOC_REQ || MsgId == ID_GET_DOORBELL)
+    switch (MsgId) {
+    case ID_SAVEWAVE:
+      return isVI(STI) || isGFX9Plus(STI);
+    case ID_STALL_WAVE_GEN:
+    case ID_HALT_WAVES:
+    case ID_ORDERED_PS_DONE:
+    case ID_GS_ALLOC_REQ:
+    case ID_GET_DOORBELL:
       return isGFX9Plus(STI);
-    else
-      return isValidMsgId(MsgId);
+    case ID_EARLY_PRIM_DEALLOC:
+      return isGFX9(STI);
+    case ID_GET_DDID:
+      return isGFX10Plus(STI);
+    default:
+      return 0 <= MsgId && MsgId < ID_GAPS_LAST_ && IdSymbolic[MsgId];
+    }
   } else {
     return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
   }
 }
 
 StringRef getMsgName(int64_t MsgId) {
-  return isValidMsgId(MsgId)? IdSymbolic[MsgId] : "";
+  assert(0 <= MsgId && MsgId < ID_GAPS_LAST_);
+  return IdSymbolic[MsgId];
 }
 
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
@@ -1080,7 +1199,9 @@ int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
   return OP_UNKNOWN_;
 }
 
-bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict) {
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
+                  bool Strict) {
+  assert(isValidMsgId(MsgId, STI, Strict));
 
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
@@ -1103,7 +1224,9 @@ StringRef getMsgOpName(int64_t MsgId, int64_t OpId) {
   return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
 }
 
-bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict) {
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId,
+                      const MCSubtargetInfo &STI, bool Strict) {
+  assert(isValidMsgOp(MsgId, OpId, STI, Strict));
 
   if (!Strict)
     return 0 <= StreamId && isUInt<STREAM_ID_WIDTH_>(StreamId);
@@ -1267,6 +1390,10 @@ bool hasGFX10_3Insts(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX10_3Insts];
 }
 
+bool isGFX90A(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts];
+}
+
 bool isSGPR(unsigned Reg, const MCRegisterInfo* TRI) {
   const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const unsigned FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
@@ -1374,6 +1501,9 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_C_V2FP32:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return true;
   default:
     return false;
@@ -1413,41 +1543,60 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VReg_64RegClassID:
   case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
+  case AMDGPU::VReg_64_Align2RegClassID:
+  case AMDGPU::AReg_64_Align2RegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
   case AMDGPU::SReg_96RegClassID:
   case AMDGPU::VReg_96RegClassID:
   case AMDGPU::AReg_96RegClassID:
+  case AMDGPU::VReg_96_Align2RegClassID:
+  case AMDGPU::AReg_96_Align2RegClassID:
+  case AMDGPU::AV_96RegClassID:
     return 96;
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
   case AMDGPU::AReg_128RegClassID:
+  case AMDGPU::VReg_128_Align2RegClassID:
+  case AMDGPU::AReg_128_Align2RegClassID:
+  case AMDGPU::AV_128RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
   case AMDGPU::VReg_160RegClassID:
   case AMDGPU::AReg_160RegClassID:
+  case AMDGPU::VReg_160_Align2RegClassID:
+  case AMDGPU::AReg_160_Align2RegClassID:
+  case AMDGPU::AV_160RegClassID:
     return 160;
   case AMDGPU::SGPR_192RegClassID:
   case AMDGPU::SReg_192RegClassID:
   case AMDGPU::VReg_192RegClassID:
   case AMDGPU::AReg_192RegClassID:
+  case AMDGPU::VReg_192_Align2RegClassID:
+  case AMDGPU::AReg_192_Align2RegClassID:
     return 192;
   case AMDGPU::SGPR_256RegClassID:
   case AMDGPU::SReg_256RegClassID:
   case AMDGPU::VReg_256RegClassID:
   case AMDGPU::AReg_256RegClassID:
+  case AMDGPU::VReg_256_Align2RegClassID:
+  case AMDGPU::AReg_256_Align2RegClassID:
     return 256;
   case AMDGPU::SGPR_512RegClassID:
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
   case AMDGPU::AReg_512RegClassID:
+  case AMDGPU::VReg_512_Align2RegClassID:
+  case AMDGPU::AReg_512_Align2RegClassID:
     return 512;
   case AMDGPU::SGPR_1024RegClassID:
   case AMDGPU::SReg_1024RegClassID:
   case AMDGPU::VReg_1024RegClassID:
   case AMDGPU::AReg_1024RegClassID:
+  case AMDGPU::VReg_1024_Align2RegClassID:
+  case AMDGPU::AReg_1024_Align2RegClassID:
     return 1024;
   default:
     llvm_unreachable("Unexpected register class");

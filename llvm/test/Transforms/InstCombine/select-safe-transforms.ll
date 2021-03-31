@@ -53,26 +53,6 @@ define i1 @cond_eq_or_const(i8 %X, i8 %Y) {
   ret i1 %res
 }
 
-define i1 @merge_and(i1 %X, i1 %Y) {
-; CHECK-LABEL: @merge_and(
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %c = select i1 %X, i1 %Y, i1 false
-  %res = and i1 %X, %c
-  ret i1 %res
-}
-
-define i1 @merge_or(i1 %X, i1 %Y) {
-; CHECK-LABEL: @merge_or(
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[C]]
-;
-  %c = select i1 %X, i1 true, i1 %Y
-  %res = or i1 %X, %c
-  ret i1 %res
-}
-
 define i1 @xor_and(i1 %c, i32 %X, i32 %Y) {
 ; CHECK-LABEL: @xor_and(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]

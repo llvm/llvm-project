@@ -249,26 +249,21 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
                                               va_list args) {
   va_list args2;
   va_copy(args2, args);
-  const int kLen = 16 * 1024;
-  int needed_length;
+  InternalMmapVector<char> v;
+  int needed_length = 0;
   char *buffer = local_buffer;
   // First try to print a message using a local buffer, and then fall back to
   // mmaped buffer.
-  for (int use_mmap = 0; use_mmap < 2; use_mmap++) {
+  for (int use_mmap = 0;; use_mmap++) {
     if (use_mmap) {
       va_end(args);
       va_copy(args, args2);
-      buffer = (char*)MmapOrDie(kLen, "Report");
-      buffer_size = kLen;
+      v.resize(needed_length + 1);
+      buffer_size = v.capacity();
+      v.resize(buffer_size);
+      buffer = &v[0];
     }
     needed_length = 0;
-    // Check that data fits into the current buffer.
-#   define CHECK_NEEDED_LENGTH \
-      if (needed_length >= buffer_size) { \
-        if (!use_mmap) continue; \
-        RAW_CHECK_MSG(needed_length < kLen, \
-                      "Buffer in Report is too short!\n"); \
-      }
     // Fuchsia's logging infrastructure always keeps track of the logging
     // process, thread, and timestamp, so never prepend such information.
     if (!SANITIZER_FUCHSIA && append_pid) {
@@ -277,18 +272,20 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
       if (common_flags()->log_exe_name && exe_name) {
         needed_length += internal_snprintf(buffer, buffer_size,
                                            "==%s", exe_name);
-        CHECK_NEEDED_LENGTH
+        if (needed_length >= buffer_size)
+          continue;
       }
       needed_length += internal_snprintf(
           buffer + needed_length, buffer_size - needed_length, "==%d==", pid);
-      CHECK_NEEDED_LENGTH
+      if (needed_length >= buffer_size)
+        continue;
     }
     needed_length += VSNPrintf(buffer + needed_length,
                                buffer_size - needed_length, format, args);
-    CHECK_NEEDED_LENGTH
+    if (needed_length >= buffer_size)
+      continue;
     // If the message fit into the buffer, print it and exit.
     break;
-#   undef CHECK_NEEDED_LENGTH
   }
   RawWrite(buffer);
 
@@ -297,9 +294,6 @@ static void NOINLINE SharedPrintfCodeNoBuffer(bool append_pid,
   CallPrintfAndReportCallback(buffer);
   LogMessageOnPrintf(buffer);
 
-  // If we had mapped any memory, clean up.
-  if (buffer != local_buffer)
-    UnmapOrDie((void *)buffer, buffer_size);
   va_end(args2);
 }
 
@@ -346,13 +340,24 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...) {
 
 FORMAT(2, 3)
 void InternalScopedString::append(const char *format, ...) {
-  CHECK_LT(length_, size());
-  va_list args;
-  va_start(args, format);
-  VSNPrintf(data() + length_, size() - length_, format, args);
-  va_end(args);
-  length_ += internal_strlen(data() + length_);
-  CHECK_LT(length_, size());
+  uptr prev_len = length();
+
+  while (true) {
+    buffer_.resize(buffer_.capacity());
+
+    va_list args;
+    va_start(args, format);
+    uptr sz = VSNPrintf(buffer_.data() + prev_len, buffer_.size() - prev_len,
+                        format, args);
+    va_end(args);
+    if (sz < buffer_.size() - prev_len) {
+      buffer_.resize(prev_len + sz + 1);
+      break;
+    }
+
+    buffer_.reserve(buffer_.capacity() * 2);
+  }
+  CHECK_EQ(buffer_[length()], '\0');
 }
 
 } // namespace __sanitizer

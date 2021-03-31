@@ -54,7 +54,7 @@ void updateCallGraph(Function &Caller, ArrayRef<Function *> Funcs,
 /// holding a pointer to the coroutine frame.
 void salvageDebugInfo(
     SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgDeclareInst *DDI);
+    DbgDeclareInst *DDI, bool ReuseFrameSlot);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -125,6 +125,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   Instruction *FramePtr;
   BasicBlock *AllocaSpillBlock;
 
+  /// This would only be true if optimization are enabled.
   bool ReuseFrameSlot;
 
   struct SwitchLoweringStorage {
@@ -146,6 +147,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   struct AsyncLoweringStorage {
     FunctionType *AsyncFuncTy;
     Value *Context;
+    CallingConv::ID AsyncCC;
     unsigned ContextArgNo;
     uint64_t ContextHeaderSize;
     uint64_t ContextAlignment;
@@ -208,7 +210,8 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getFunctionType();
     case coro::ABI::Async:
-      return AsyncLowering.AsyncFuncTy;
+      // Not used. The function type depends on the active suspend.
+      return nullptr;
     }
 
     llvm_unreachable("Unknown coro::ABI enum");
@@ -245,7 +248,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     case coro::ABI::RetconOnce:
       return RetconLowering.ResumePrototype->getCallingConv();
     case coro::ABI::Async:
-      return CallingConv::Swift;
+      return AsyncLowering.AsyncCC;
     }
     llvm_unreachable("Unknown coro::ABI enum");
   }

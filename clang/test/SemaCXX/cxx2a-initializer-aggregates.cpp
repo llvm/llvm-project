@@ -54,6 +54,10 @@ A a5 = {
   .y = 1, // override-note {{previous}}
   .y = 1 // override-error {{overrides prior initialization}}
 };
+B b2 = {.a = 1}; // pedantic-error {{brace elision for designated initializer is a C99 extension}}
+B b3 = {.a = 1, 2}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}}
+B b4 = {.a = 1, 2, 3}; // pedantic-error {{mixture of designated and non-designated}} pedantic-note {{first non-designated}} pedantic-error {{brace elision}} expected-error {{excess elements}}
+B b5 = {.a = nullptr}; // expected-error {{cannot initialize}}
 struct C { int :0, x, :0, y, :0; };
 C c = {
   .x = 1, // override-note {{previous}}
@@ -112,6 +116,15 @@ namespace overload_resolution {
   void k() {
     j({.x = 1, .y = 2}); // expected-error {{ambiguous}}
   }
+
+  struct E { A a; };
+  struct F { int a; };
+  void l(E e); // expected-note {{candidate}}
+  int &l(F f); // expected-note {{candidate}}
+  void m() {
+    int &r = l({.a = 0}); // ok, l(E) is not viable
+    int &s = l({.a = {0}}); // expected-error {{ambiguous}}
+  }
 }
 
 namespace deduction {
@@ -127,5 +140,19 @@ namespace deduction {
   template<typename T, typename U> void h(decltype(U{.y = 1, .x = 2}) = {});
   void i() {
     h<A, C>(); // ok, selects C overload by SFINAE
+  }
+
+  struct D { int n; };
+  struct E { D n; };
+  template<typename T, typename U> void j1(decltype(T{.n = 0}));
+  template<typename T, typename U> void j1(decltype(U{.n = 0})) = delete;
+  template<typename T, typename U> void j2(decltype(T{.n = {0}})); // expected-note {{candidate}}
+  template<typename T, typename U> void j2(decltype(U{.n = {0}})); // expected-note {{candidate}}
+  template<typename T, typename U> void j3(decltype(T{.n = {{0}}})) = delete;
+  template<typename T, typename U> void j3(decltype(U{.n = {{0}}}));
+  void k() {
+    j1<D, E>({}); // ok, selects D overload by SFINAE (too few braces for E)
+    j2<D, E>({}); // expected-error {{ambiguous}}
+    j3<D, E>({}); // ok, selects E overload by SFINAE (too many braces for D)
   }
 }

@@ -62,6 +62,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
@@ -389,8 +390,7 @@ public:
     if (Members.size() != Other->Members.size())
       return false;
 
-    return all_of(Members,
-                  [&](const Value *V) { return Other->Members.count(V); });
+    return llvm::set_is_subset(Members, Other->Members);
   }
 
 private:

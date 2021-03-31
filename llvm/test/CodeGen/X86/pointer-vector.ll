@@ -133,7 +133,7 @@ define <4 x i32> @ICMP0(<4 x i8*>* %p0, <4 x i8*>* %p1) nounwind {
 ; CHECK-NEXT:    movdqa (%ecx), %xmm0
 ; CHECK-NEXT:    pcmpgtd (%eax), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [9,8,7,6]
-; CHECK-NEXT:    blendvps %xmm0, {{\.LCPI.*}}, %xmm1
+; CHECK-NEXT:    blendvps %xmm0, {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:
@@ -152,7 +152,7 @@ define <4 x i32> @ICMP1(<4 x i8*>* %p0, <4 x i8*>* %p1) nounwind {
 ; CHECK-NEXT:    movdqa (%ecx), %xmm0
 ; CHECK-NEXT:    pcmpeqd (%eax), %xmm0
 ; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [9,8,7,6]
-; CHECK-NEXT:    blendvps %xmm0, {{\.LCPI.*}}, %xmm1
+; CHECK-NEXT:    blendvps %xmm0, {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 entry:

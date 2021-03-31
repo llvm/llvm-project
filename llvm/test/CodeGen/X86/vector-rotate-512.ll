@@ -430,7 +430,6 @@ define <32 x i16> @splatvar_rotate_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind
 ; AVX512F-LABEL: splatvar_rotate_v32i16:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX512F-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
 ; AVX512F-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
 ; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
@@ -447,7 +446,6 @@ define <32 x i16> @splatvar_rotate_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind
 ; AVX512VL-LABEL: splatvar_rotate_v32i16:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX512VL-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
 ; AVX512VL-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
@@ -506,7 +504,6 @@ define <64 x i8> @splatvar_rotate_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512F-LABEL: splatvar_rotate_v64i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; AVX512F-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
 ; AVX512F-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
@@ -532,7 +529,6 @@ define <64 x i8> @splatvar_rotate_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512VL-LABEL: splatvar_rotate_v64i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxbq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512VL-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8]
 ; AVX512VL-NEXT:    vpsubb %xmm1, %xmm3, %xmm1
 ; AVX512VL-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero

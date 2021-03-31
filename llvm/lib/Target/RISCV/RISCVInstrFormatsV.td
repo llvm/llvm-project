@@ -38,9 +38,11 @@ class RISCVLSUMOP<bits<5> val> {
   bits<5> Value = val;
 }
 def LUMOPUnitStride  : RISCVLSUMOP<0b00000>;
+def LUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
 def LUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
 def LUMOPUnitStrideFF: RISCVLSUMOP<0b10000>;
 def SUMOPUnitStride  : RISCVLSUMOP<0b00000>;
+def SUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
 def SUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
 
 class RISCVAMOOP<bits<5> val> {
@@ -63,10 +65,23 @@ def LSWidth8     : RISCVWidth<0b0000>;
 def LSWidth16    : RISCVWidth<0b0101>;
 def LSWidth32    : RISCVWidth<0b0110>;
 def LSWidth64    : RISCVWidth<0b0111>;
-def LSWidth128   : RISCVWidth<0b1000>;
-def LSWidth256   : RISCVWidth<0b1101>;
-def LSWidth512   : RISCVWidth<0b1110>;
-def LSWidth1024  : RISCVWidth<0b1111>;
+
+class RVInstSetiVLi<dag outs, dag ins, string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+  bits<5> uimm;
+  bits<5> rd;
+  bits<10> vtypei;
+
+  let Inst{31} = 1;
+  let Inst{30} = 1;
+  let Inst{29-20} = vtypei{9-0};
+  let Inst{19-15} = uimm;
+  let Inst{14-12} = 0b111;
+  let Inst{11-7} = rd;
+  let Opcode = OPC_OP_V.Value;
+
+  let Defs = [VTYPE, VL];
+}
 
 class RVInstSetVLi<dag outs, dag ins, string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {

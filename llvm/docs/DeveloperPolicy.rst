@@ -291,6 +291,9 @@ Below are some guidelines about the format of the message itself:
   related commit. This could be as simple as "Revert commit NNNN because it
   caused PR#".
 
+* If the patch has been reviewed, add a link to its review page, as shown
+  `here <https://www.llvm.org/docs/Phabricator.html#committing-a-change>`_.
+
 For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
 omissions can be handled by sending a reply to the commits mailing list.
@@ -786,8 +789,9 @@ Copyright, License, and Patents
 This section addresses the issues of copyright, license and patents for the LLVM
 project.  The copyright for the code is held by the contributors of
 the code.  The code is licensed under permissive `open source licensing terms`_,
-namely the Apache 2 license, which includes a copyright and `patent license`_.
-When you contribute code to the LLVM project, you license it under these terms.
+namely the Apache-2.0 with LLVM-exception license, which includes a copyright
+and `patent license`_.  When you contribute code to the LLVM project, you
+license it under these terms.
 
 If you have questions or comments about these topics, please contact the
 `LLVM Developer's Mailing List <mailto:llvm-dev@lists.llvm.org>`_.  However,

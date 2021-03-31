@@ -85,7 +85,7 @@ void mlir::edsc::appendToBlock(Block *block,
   OpBuilder &builder = ScopedContext::getBuilderRef();
 
   OpBuilder::InsertionGuard guard(builder);
-  if (block->empty() || block->back().isKnownNonTerminator())
+  if (block->empty() || !block->back().mightHaveTrait<OpTrait::IsTerminator>())
     builder.setInsertionPointToEnd(block);
   else
     builder.setInsertionPoint(&block->back());

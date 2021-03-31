@@ -14,6 +14,8 @@
 
 //   This test is not portable
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 #include <locale>
 #include <string>
 #include <cassert>

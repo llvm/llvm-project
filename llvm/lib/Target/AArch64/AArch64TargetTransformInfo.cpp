@@ -251,6 +251,28 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first * Instrs;
     break;
   }
+  case Intrinsic::abs: {
+    static const auto ValidAbsTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
+                                     MVT::v8i16, MVT::v2i32, MVT::v4i32,
+                                     MVT::v2i64};
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+      return LT.first;
+    break;
+  }
+  case Intrinsic::experimental_stepvector: {
+    unsigned Cost = 1; // Cost of the `index' instruction
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    // Legalisation of illegal vectors involves an `index' instruction plus
+    // (LT.first - 1) vector adds.
+    if (LT.first > 1) {
+      Type *LegalVTy = EVT(LT.second).getTypeForEVT(RetTy->getContext());
+      unsigned AddCost =
+          getArithmeticInstrCost(Instruction::Add, LegalVTy, CostKind);
+      Cost += AddCost * (LT.first - 1);
+    }
+    return Cost;
+  }
   default:
     break;
   }
@@ -369,6 +391,23 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::TRUNCATE, MVT::v8i8,  MVT::v8i32,  3 },
     { ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 6 },
 
+    // Truncations on nxvmiN
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i1, MVT::nxv2i64, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i1, MVT::nxv4i64, 2 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i16, 1 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i32, 3 },
+    { ISD::TRUNCATE, MVT::nxv8i1, MVT::nxv8i64, 5 },
+    { ISD::TRUNCATE, MVT::nxv2i16, MVT::nxv2i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv2i32, MVT::nxv2i64, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i16, MVT::nxv4i32, 1 },
+    { ISD::TRUNCATE, MVT::nxv4i32, MVT::nxv4i64, 2 },
+    { ISD::TRUNCATE, MVT::nxv8i16, MVT::nxv8i32, 3 },
+    { ISD::TRUNCATE, MVT::nxv8i32, MVT::nxv8i64, 6 },
+
     // The number of shll instructions for the extension.
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
@@ -450,6 +489,23 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 2 },
     { ISD::FP_TO_UINT, MVT::v4i8,  MVT::v4f32, 2 },
 
+    // Lowering scalable
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1 },
+
+
+    // Complex, from nxv2f32 legal type is nxv2i32 (no cost) or nxv2i64 (1 ext)
+    { ISD::FP_TO_SINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f32, 1 },
+
     // Complex, from v2f64: legal type is v2i32, 1 narrowing => ~2.
     { ISD::FP_TO_SINT, MVT::v2i32, MVT::v2f64, 2 },
     { ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f64, 2 },
@@ -457,6 +513,75 @@ int AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     { ISD::FP_TO_UINT, MVT::v2i32, MVT::v2f64, 2 },
     { ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f64, 2 },
     { ISD::FP_TO_UINT, MVT::v2i8,  MVT::v2f64, 2 },
+
+    // Complex, from nxv2f64: legal type is nxv2i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv2i8,  MVT::nxv2f64, 2 },
+
+    // Complex, from nxv4f32 legal type is nxv4i16, 1 narrowing => ~2
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f32, 2 },
+
+    // Complex, from nxv8f64: legal type is nxv8i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f64, 2 },
+
+    // Complex, from nxv4f64: legal type is nxv4i32, 1 narrowing => ~2.
+    { ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f64, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv4i8,  MVT::nxv4f64, 2 },
+
+    // Complex, from nxv8f32: legal type is nxv8i32 (no cost) or nxv8i64 (1 ext).
+    { ISD::FP_TO_SINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
+    { ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f32, 3 },
+    { ISD::FP_TO_SINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f32, 2 },
+    { ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f32, 1 },
+    { ISD::FP_TO_UINT, MVT::nxv8i8,  MVT::nxv8f32, 1 },
+
+    // Truncate from nxvmf32 to nxvmf16.
+    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f32, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1 },
+    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3 },
+
+    // Truncate from nxvmf64 to nxvmf16.
+    { ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3 },
+    { ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7 },
+
+    // Truncate from nxvmf64 to nxvmf32.
+    { ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1 },
+    { ISD::FP_ROUND, MVT::nxv4f32, MVT::nxv4f64, 3 },
+    { ISD::FP_ROUND, MVT::nxv8f32, MVT::nxv8f64, 6 },
+
+    // Extend from nxvmf16 to nxvmf32.
+    { ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
+
+    // Extend from nxvmf16 to nxvmf64.
+    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
+    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
+
+    // Extend from nxvmf32 to nxvmf64.
+    { ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
+    { ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
+    { ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
+
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
@@ -1089,29 +1214,31 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool AArch64TTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                                           TTI::ReductionFlags Flags) const {
-  auto *VTy = cast<VectorType>(Ty);
-  unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::FAdd:
-  case Instruction::FMul:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-  case Instruction::Mul:
+bool AArch64TTIImpl::isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                                 ElementCount VF) const {
+  if (!VF.isScalable())
+    return true;
+
+  Type *Ty = RdxDesc.getRecurrenceType();
+  if (Ty->isBFloatTy() || !isLegalElementTypeForSVE(Ty))
     return false;
-  case Instruction::Add:
-    return ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128;
-  case Instruction::ICmp:
-    return (ScalarBits < 64) &&
-           (ScalarBits * cast<FixedVectorType>(VTy)->getNumElements() >= 128);
-  case Instruction::FCmp:
-    return Flags.NoNaN;
+
+  switch (RdxDesc.getRecurrenceKind()) {
+  case RecurKind::Add:
+  case RecurKind::FAdd:
+  case RecurKind::And:
+  case RecurKind::Or:
+  case RecurKind::Xor:
+  case RecurKind::SMin:
+  case RecurKind::SMax:
+  case RecurKind::UMin:
+  case RecurKind::UMax:
+  case RecurKind::FMin:
+  case RecurKind::FMax:
+    return true;
   default:
-    llvm_unreachable("Unhandled reduction opcode");
+    return false;
   }
-  return false;
 }
 
 int AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
@@ -1206,9 +1333,11 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode,
 }
 
 int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                   int Index, VectorType *SubTp) {
+                                   ArrayRef<int> Mask, int Index,
+                                   VectorType *SubTp) {
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
-      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
+      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
+      Kind == TTI::SK_Reverse) {
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
@@ -1249,11 +1378,33 @@ int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
       { TTI::SK_PermuteSingleSrc, MVT::v2f32, 1 }, // mov.
       { TTI::SK_PermuteSingleSrc, MVT::v4f32, 3 }, // perfectshuffle worst case.
       { TTI::SK_PermuteSingleSrc, MVT::v2f64, 1 }, // mov.
+      // Broadcast shuffle kinds for scalable vectors
+      { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
+      { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
+      { TTI::SK_Broadcast, MVT::nxv4i32,  1 },
+      { TTI::SK_Broadcast, MVT::nxv2i64,  1 },
+      { TTI::SK_Broadcast, MVT::nxv8f16,  1 },
+      { TTI::SK_Broadcast, MVT::nxv8bf16, 1 },
+      { TTI::SK_Broadcast, MVT::nxv4f32,  1 },
+      { TTI::SK_Broadcast, MVT::nxv2f64,  1 },
+      // Handle the cases for vector.reverse with scalable vectors
+      { TTI::SK_Reverse, MVT::nxv16i8,  1 },
+      { TTI::SK_Reverse, MVT::nxv8i16,  1 },
+      { TTI::SK_Reverse, MVT::nxv4i32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2i64,  1 },
+      { TTI::SK_Reverse, MVT::nxv8f16,  1 },
+      { TTI::SK_Reverse, MVT::nxv8bf16, 1 },
+      { TTI::SK_Reverse, MVT::nxv4f32,  1 },
+      { TTI::SK_Reverse, MVT::nxv2f64,  1 },
+      { TTI::SK_Reverse, MVT::nxv16i1,  1 },
+      { TTI::SK_Reverse, MVT::nxv8i1,   1 },
+      { TTI::SK_Reverse, MVT::nxv4i1,   1 },
+      { TTI::SK_Reverse, MVT::nxv2i1,   1 },
     };
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
     if (const auto *Entry = CostTableLookup(ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
 }

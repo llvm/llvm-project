@@ -1,0 +1,22 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BTST32DD
+
+#------------------------------------------------------------------------------
+# MxBTST_RR class used for BTST operations, where both the source and bit number
+# are in registers. This instruction can only operate on 32 bits
+#------------------------------------------------------------------------------
+
+
+#               ---------------+-----------+-----------+-----------+-----------
+#                F   E   D   C | B   A   9 | 8   7   6 | 5   4   3 | 2   1   0
+#               ---------------+-----------+-----------+-----------+-----------
+#                0   0   0   0 |    REG    | 1   0   0 |    MODE   |    REG
+#               ---------------+-----------+-----------+-----------+-----------
+# BTST32DD:      0   0   0   0   0   0   1   1 . 0   0   0   0   0   0   0   0
+# BTST32DD:      0   0   0   0   0   0   0   1 . 0   0   0   0   0   0   1   1
+name: MxBTST_RR
+body: |
+  bb.0:
+    BTST32dd $d0, $d1, implicit-def $ccr
+    BTST32dd $d3, $d0, implicit-def $ccr

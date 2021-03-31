@@ -279,7 +279,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   if (ClearDSOLocalOnDeclarations && GV.isDeclarationForLinker() &&
       !GV.isImplicitDSOLocal()) {
     GV.setDSOLocal(false);
-  } else if (VI && VI.isDSOLocal()) {
+  } else if (VI && VI.isDSOLocal(ImportIndex.withDSOLocalPropagation())) {
     // If all summaries are dso_local, symbol gets resolved to a known local
     // definition.
     GV.setDSOLocal(true);

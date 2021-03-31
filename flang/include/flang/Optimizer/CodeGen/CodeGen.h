@@ -9,6 +9,7 @@
 #ifndef OPTIMIZER_CODEGEN_CODEGEN_H
 #define OPTIMIZER_CODEGEN_CODEGEN_H
 
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>

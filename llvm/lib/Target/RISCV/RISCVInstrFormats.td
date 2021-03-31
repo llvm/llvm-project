@@ -167,8 +167,8 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   bit HasDummyMask = 0;
   let TSFlags{11} = HasDummyMask;
 
-  bit WritesElement0 = 0;
-  let TSFlags{12} = WritesElement0;
+  bit ForceTailAgnostic = false;
+  let TSFlags{12} = ForceTailAgnostic;
 
   bit HasMergeOp = 0;
   let TSFlags{13} = HasMergeOp;

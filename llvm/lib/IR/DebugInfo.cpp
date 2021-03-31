@@ -338,18 +338,16 @@ bool llvm::stripDebugInfo(Function &F) {
         Changed = true;
         I.setDebugLoc(DebugLoc());
       }
-    }
-
-    auto *TermInst = BB.getTerminator();
-    if (!TermInst)
-      // This is invalid IR, but we may not have run the verifier yet
-      continue;
-    if (auto *LoopID = TermInst->getMetadata(LLVMContext::MD_loop)) {
-      auto *NewLoopID = LoopIDsMap.lookup(LoopID);
-      if (!NewLoopID)
-        NewLoopID = LoopIDsMap[LoopID] = stripDebugLocFromLoopID(LoopID);
-      if (NewLoopID != LoopID)
-        TermInst->setMetadata(LLVMContext::MD_loop, NewLoopID);
+      if (auto *LoopID = I.getMetadata(LLVMContext::MD_loop)) {
+        auto *NewLoopID = LoopIDsMap.lookup(LoopID);
+        if (!NewLoopID)
+          NewLoopID = LoopIDsMap[LoopID] = stripDebugLocFromLoopID(LoopID);
+        if (NewLoopID != LoopID)
+          I.setMetadata(LLVMContext::MD_loop, NewLoopID);
+      }
+      // Strip heapallocsite attachments, they point into the DIType system.
+      if (I.hasMetadataOtherThanDebugLoc())
+        I.setMetadata("heapallocsite", nullptr);
     }
   }
   return Changed;
@@ -358,16 +356,12 @@ bool llvm::stripDebugInfo(Function &F) {
 bool llvm::StripDebugInfo(Module &M) {
   bool Changed = false;
 
-  for (Module::named_metadata_iterator NMI = M.named_metadata_begin(),
-         NME = M.named_metadata_end(); NMI != NME;) {
-    NamedMDNode *NMD = &*NMI;
-    ++NMI;
-
+  for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata())) {
     // We're stripping debug info, and without them, coverage information
     // doesn't quite make sense.
-    if (NMD->getName().startswith("llvm.dbg.") ||
-        NMD->getName() == "llvm.gcov") {
-      NMD->eraseFromParent();
+    if (NMD.getName().startswith("llvm.dbg.") ||
+        NMD.getName() == "llvm.gcov") {
+      NMD.eraseFromParent();
       Changed = true;
     }
   }
@@ -663,6 +657,10 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
         updateLoopMetadataDebugLocations(I, [&](const DILocation &Loc) {
           return remapDebugLoc(&Loc).get();
         });
+
+        // Strip heapallocsite attachments, they point into the DIType system.
+        if (I.hasMetadataOtherThanDebugLoc())
+          I.setMetadata("heapallocsite", nullptr);
       }
     }
   }

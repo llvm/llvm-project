@@ -16,8 +16,9 @@
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
 class VectorTransferOpInterface;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 namespace scf {
 class IfOp;
@@ -26,7 +27,7 @@ class IfOp;
 /// Collect a set of patterns to convert from the Vector dialect to itself.
 /// Should be merged with populateVectorToSCFLoweringPattern.
 void populateVectorToVectorConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
+    MLIRContext *context, RewritePatternSet &patterns,
     ArrayRef<int64_t> coarseVectorShape = {},
     ArrayRef<int64_t> fineVectorShape = {});
 
@@ -122,7 +123,8 @@ struct UnrollVectorOptions {
 struct UnrollVectorPattern : public RewritePattern {
   using FilterConstraintType = std::function<LogicalResult(Operation *op)>;
   UnrollVectorPattern(MLIRContext *context, UnrollVectorOptions options)
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()), options(options) {}
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
+        options(options) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     if (options.filterConstraint && failed(options.filterConstraint(op)))
@@ -180,11 +182,11 @@ private:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
 ///      // fastpath, direct cast
-///      memref_cast %A: memref<A...> to compatibleMemRefType
+///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
 ///      // slowpath, masked vector.transfer or linalg.copy.
-///      memref_cast %alloc: memref<B...> to compatibleMemRefType
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
 ///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {masked = [false ... false]}
@@ -215,7 +217,7 @@ struct VectorTransferFullPartialRewriter : public RewritePattern {
       FilterConstraintType filter =
           [](VectorTransferOpInterface op) { return success(); },
       PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()), options(options),
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context), options(options),
         filter(filter) {}
 
   /// Performs the rewrite.

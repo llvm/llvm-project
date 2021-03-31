@@ -39,10 +39,12 @@ LLVMArrayType LLVMArrayType::get(Type elementType, unsigned numElements) {
   return Base::get(elementType.getContext(), elementType, numElements);
 }
 
-LLVMArrayType LLVMArrayType::getChecked(Location loc, Type elementType,
-                                        unsigned numElements) {
+LLVMArrayType
+LLVMArrayType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                          Type elementType, unsigned numElements) {
   assert(elementType && "expected non-null subtype");
-  return Base::getChecked(loc, elementType, numElements);
+  return Base::getChecked(emitError, elementType.getContext(), elementType,
+                          numElements);
 }
 
 Type LLVMArrayType::getElementType() { return getImpl()->elementType; }
@@ -50,10 +52,10 @@ Type LLVMArrayType::getElementType() { return getImpl()->elementType; }
 unsigned LLVMArrayType::getNumElements() { return getImpl()->numElements; }
 
 LogicalResult
-LLVMArrayType::verifyConstructionInvariants(Location loc, Type elementType,
-                                            unsigned numElements) {
+LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
+                      Type elementType, unsigned numElements) {
   if (!isValidElementType(elementType))
-    return emitError(loc, "invalid array element type: ") << elementType;
+    return emitError() << "invalid array element type: " << elementType;
   return success();
 }
 
@@ -75,11 +77,13 @@ LLVMFunctionType LLVMFunctionType::get(Type result, ArrayRef<Type> arguments,
   return Base::get(result.getContext(), result, arguments, isVarArg);
 }
 
-LLVMFunctionType LLVMFunctionType::getChecked(Location loc, Type result,
-                                              ArrayRef<Type> arguments,
-                                              bool isVarArg) {
+LLVMFunctionType
+LLVMFunctionType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                             Type result, ArrayRef<Type> arguments,
+                             bool isVarArg) {
   assert(result && "expected non-null result");
-  return Base::getChecked(loc, result, arguments, isVarArg);
+  return Base::getChecked(emitError, result.getContext(), result, arguments,
+                          isVarArg);
 }
 
 Type LLVMFunctionType::getReturnType() { return getImpl()->getReturnType(); }
@@ -99,14 +103,14 @@ ArrayRef<Type> LLVMFunctionType::getParams() {
 }
 
 LogicalResult
-LLVMFunctionType::verifyConstructionInvariants(Location loc, Type result,
-                                               ArrayRef<Type> arguments, bool) {
+LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
+                         Type result, ArrayRef<Type> arguments, bool) {
   if (!isValidResultType(result))
-    return emitError(loc, "invalid function result type: ") << result;
+    return emitError() << "invalid function result type: " << result;
 
   for (Type arg : arguments)
     if (!isValidArgumentType(arg))
-      return emitError(loc, "invalid function argument type: ") << arg;
+      return emitError() << "invalid function argument type: " << arg;
 
   return success();
 }
@@ -125,20 +129,22 @@ LLVMPointerType LLVMPointerType::get(Type pointee, unsigned addressSpace) {
   return Base::get(pointee.getContext(), pointee, addressSpace);
 }
 
-LLVMPointerType LLVMPointerType::getChecked(Location loc, Type pointee,
-                                            unsigned addressSpace) {
-  return Base::getChecked(loc, pointee, addressSpace);
+LLVMPointerType
+LLVMPointerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                            Type pointee, unsigned addressSpace) {
+  return Base::getChecked(emitError, pointee.getContext(), pointee,
+                          addressSpace);
 }
 
 Type LLVMPointerType::getElementType() { return getImpl()->pointeeType; }
 
 unsigned LLVMPointerType::getAddressSpace() { return getImpl()->addressSpace; }
 
-LogicalResult LLVMPointerType::verifyConstructionInvariants(Location loc,
-                                                            Type pointee,
-                                                            unsigned) {
+LogicalResult
+LLVMPointerType::verify(function_ref<InFlightDiagnostic()> emitError,
+                        Type pointee, unsigned) {
   if (!isValidElementType(pointee))
-    return emitError(loc, "invalid pointer element type: ") << pointee;
+    return emitError() << "invalid pointer element type: " << pointee;
   return success();
 }
 
@@ -156,9 +162,10 @@ LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
   return Base::get(context, name, /*opaque=*/false);
 }
 
-LLVMStructType LLVMStructType::getIdentifiedChecked(Location loc,
-                                                    StringRef name) {
-  return Base::getChecked(loc, name, /*opaque=*/false);
+LLVMStructType LLVMStructType::getIdentifiedChecked(
+    function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+    StringRef name) {
+  return Base::getChecked(emitError, context, name, /*opaque=*/false);
 }
 
 LLVMStructType LLVMStructType::getNewIdentified(MLIRContext *context,
@@ -183,18 +190,21 @@ LLVMStructType LLVMStructType::getLiteral(MLIRContext *context,
   return Base::get(context, types, isPacked);
 }
 
-LLVMStructType LLVMStructType::getLiteralChecked(Location loc,
-                                                 ArrayRef<Type> types,
-                                                 bool isPacked) {
-  return Base::getChecked(loc, types, isPacked);
+LLVMStructType
+LLVMStructType::getLiteralChecked(function_ref<InFlightDiagnostic()> emitError,
+                                  MLIRContext *context, ArrayRef<Type> types,
+                                  bool isPacked) {
+  return Base::getChecked(emitError, context, types, isPacked);
 }
 
 LLVMStructType LLVMStructType::getOpaque(StringRef name, MLIRContext *context) {
   return Base::get(context, name, /*opaque=*/true);
 }
 
-LLVMStructType LLVMStructType::getOpaqueChecked(Location loc, StringRef name) {
-  return Base::getChecked(loc, name, /*opaque=*/true);
+LLVMStructType
+LLVMStructType::getOpaqueChecked(function_ref<InFlightDiagnostic()> emitError,
+                                 MLIRContext *context, StringRef name) {
+  return Base::getChecked(emitError, context, name, /*opaque=*/true);
 }
 
 LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
@@ -217,17 +227,17 @@ ArrayRef<Type> LLVMStructType::getBody() {
                         : getImpl()->getTypeList();
 }
 
-LogicalResult LLVMStructType::verifyConstructionInvariants(Location, StringRef,
-                                                           bool) {
+LogicalResult LLVMStructType::verify(function_ref<InFlightDiagnostic()>,
+                                     StringRef, bool) {
   return success();
 }
 
-LogicalResult LLVMStructType::verifyConstructionInvariants(Location loc,
-                                                           ArrayRef<Type> types,
-                                                           bool) {
+LogicalResult
+LLVMStructType::verify(function_ref<InFlightDiagnostic()> emitError,
+                       ArrayRef<Type> types, bool) {
   for (Type t : types)
     if (!isValidElementType(t))
-      return emitError(loc, "invalid LLVM structure element type: ") << t;
+      return emitError() << "invalid LLVM structure element type: " << t;
 
   return success();
 }
@@ -238,14 +248,14 @@ LogicalResult LLVMStructType::verifyConstructionInvariants(Location loc,
 
 /// Verifies that the type about to be constructed is well-formed.
 template <typename VecTy>
-static LogicalResult verifyVectorConstructionInvariants(Location loc,
-                                                        Type elementType,
-                                                        unsigned numElements) {
+static LogicalResult
+verifyVectorConstructionInvariants(function_ref<InFlightDiagnostic()> emitError,
+                                   Type elementType, unsigned numElements) {
   if (numElements == 0)
-    return emitError(loc, "the number of vector elements must be positive");
+    return emitError() << "the number of vector elements must be positive";
 
   if (!VecTy::isValidElementType(elementType))
-    return emitError(loc, "invalid vector element type");
+    return emitError() << "invalid vector element type";
 
   return success();
 }
@@ -256,11 +266,12 @@ LLVMFixedVectorType LLVMFixedVectorType::get(Type elementType,
   return Base::get(elementType.getContext(), elementType, numElements);
 }
 
-LLVMFixedVectorType LLVMFixedVectorType::getChecked(Location loc,
-                                                    Type elementType,
-                                                    unsigned numElements) {
+LLVMFixedVectorType
+LLVMFixedVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                Type elementType, unsigned numElements) {
   assert(elementType && "expected non-null subtype");
-  return Base::getChecked(loc, elementType, numElements);
+  return Base::getChecked(emitError, elementType.getContext(), elementType,
+                          numElements);
 }
 
 Type LLVMFixedVectorType::getElementType() {
@@ -275,10 +286,11 @@ bool LLVMFixedVectorType::isValidElementType(Type type) {
   return type.isa<LLVMPointerType, LLVMPPCFP128Type>();
 }
 
-LogicalResult LLVMFixedVectorType::verifyConstructionInvariants(
-    Location loc, Type elementType, unsigned numElements) {
+LogicalResult
+LLVMFixedVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
+                            Type elementType, unsigned numElements) {
   return verifyVectorConstructionInvariants<LLVMFixedVectorType>(
-      loc, elementType, numElements);
+      emitError, elementType, numElements);
 }
 
 //===----------------------------------------------------------------------===//
@@ -292,10 +304,11 @@ LLVMScalableVectorType LLVMScalableVectorType::get(Type elementType,
 }
 
 LLVMScalableVectorType
-LLVMScalableVectorType::getChecked(Location loc, Type elementType,
-                                   unsigned minNumElements) {
+LLVMScalableVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                   Type elementType, unsigned minNumElements) {
   assert(elementType && "expected non-null subtype");
-  return Base::getChecked(loc, elementType, minNumElements);
+  return Base::getChecked(emitError, elementType.getContext(), elementType,
+                          minNumElements);
 }
 
 Type LLVMScalableVectorType::getElementType() {
@@ -313,10 +326,11 @@ bool LLVMScalableVectorType::isValidElementType(Type type) {
   return isCompatibleFloatingPointType(type) || type.isa<LLVMPointerType>();
 }
 
-LogicalResult LLVMScalableVectorType::verifyConstructionInvariants(
-    Location loc, Type elementType, unsigned numElements) {
+LogicalResult
+LLVMScalableVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
+                               Type elementType, unsigned numElements) {
   return verifyVectorConstructionInvariants<LLVMScalableVectorType>(
-      loc, elementType, numElements);
+      emitError, elementType, numElements);
 }
 
 //===----------------------------------------------------------------------===//

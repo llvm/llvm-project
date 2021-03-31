@@ -49,12 +49,12 @@ class ObjCSBTypeTestCase(TestBase):
         aBar = self.frame().FindVariable("aBar")
         aBarType = aBar.GetType()
         self.assertTrue(aBarType.IsValid(), "Bar should be a valid data type")
-        self.assertTrue(
-            aBarType.GetName() == "Bar *",
+        self.assertEqual(
+            aBarType.GetName(), "Bar *",
             "Bar has the right name")
 
-        self.assertTrue(
-            aBarType.GetNumberOfDirectBaseClasses() == 1,
+        self.assertEqual(
+            aBarType.GetNumberOfDirectBaseClasses(), 1,
             "Bar has a superclass")
         aFooType = aBarType.GetDirectBaseClassAtIndex(0)
 
@@ -64,6 +64,6 @@ class ObjCSBTypeTestCase(TestBase):
         self.assertEquals(aBarType.GetNumberOfFields(), 1, "Bar has a field")
         aBarField = aBarType.GetFieldAtIndex(0)
 
-        self.assertTrue(
-            aBarField.GetName() == "_iVar",
+        self.assertEqual(
+            aBarField.GetName(), "_iVar",
             "The field has the right name")

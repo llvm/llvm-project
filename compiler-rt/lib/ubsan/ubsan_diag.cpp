@@ -278,7 +278,7 @@ static void PrintMemorySnippet(const Decorator &Decor, MemoryLocation Loc,
   }
 
   // Emit data.
-  InternalScopedString Buffer(1024);
+  InternalScopedString Buffer;
   for (uptr P = Min; P != Max; ++P) {
     unsigned char C = *reinterpret_cast<const unsigned char*>(P);
     Buffer.append("%s%02x", (P % 8 == 0) ? "  " : " ", C);
@@ -346,7 +346,7 @@ Diag::~Diag() {
   // All diagnostics should be printed under report mutex.
   ScopedReport::CheckLocked();
   Decorator Decor;
-  InternalScopedString Buffer(1024);
+  InternalScopedString Buffer;
 
   // Prepare a report that a monitor process can inspect.
   if (Level == DL_Error) {
@@ -388,6 +388,10 @@ ScopedReport::ScopedReport(ReportOptions Opts, Location SummaryLoc,
 ScopedReport::~ScopedReport() {
   MaybePrintStackTrace(Opts.pc, Opts.bp);
   MaybeReportErrorSummary(SummaryLoc, Type);
+
+  if (common_flags()->print_module_map >= 2)
+    DumpProcessMap();
+
   if (flags()->halt_on_error)
     Die();
 }

@@ -30,9 +30,6 @@ class ConstraintSystem {
   // Eliminate constraints from the system using Fourier–Motzkin elimination.
   bool eliminateUsingFM();
 
-  /// Print the constraints in the system, using \p Names as variable names.
-  void dump(ArrayRef<std::string> Names) const;
-
   /// Print the constraints in the system, using x0...xn as variable names.
   void dump() const;
 
@@ -82,6 +79,9 @@ public:
 
   /// Returns the number of rows in the constraint system.
   unsigned size() const { return Constraints.size(); }
+
+  /// Print the constraints in the system, using \p Names as variable names.
+  void dump(ArrayRef<std::string> Names) const;
 };
 } // namespace llvm
 

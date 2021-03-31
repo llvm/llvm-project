@@ -457,6 +457,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx908";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX909:
     return "gfx909";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90A:
+    return "gfx90a";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
 
@@ -581,6 +583,7 @@ ELFObjectFileBase::getPltAddresses() const {
       JumpSlotReloc = ELF::R_X86_64_JUMP_SLOT;
       break;
     case Triple::aarch64:
+    case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
     default:

@@ -29,9 +29,22 @@
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_DECLARE(p)
 #include "Plugins/Plugins.def"
 
+#if LLDB_ENABLE_PYTHON
+#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
+
+constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
+    *g_shlib_dir_helper =
+        lldb_private::ScriptInterpreterPython::SharedLibraryDirectoryHelper;
+
+#else
+constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
+    *g_shlib_dir_helper = 0;
+#endif
+
 using namespace lldb_private;
 
-SystemInitializerFull::SystemInitializerFull() = default;
+SystemInitializerFull::SystemInitializerFull()
+    : SystemInitializerCommon(g_shlib_dir_helper) {}
 SystemInitializerFull::~SystemInitializerFull() = default;
 
 llvm::Error SystemInitializerFull::Initialize() {

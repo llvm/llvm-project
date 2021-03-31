@@ -855,7 +855,7 @@ LogicalResult VulkanRuntime::submitCommandBuffersToQueue() {
 
 LogicalResult VulkanRuntime::updateHostMemoryBuffers() {
   // First copy back the data to the staging buffer.
-  copyResource(/*deviceToHost=*/true);
+  (void)copyResource(/*deviceToHost=*/true);
 
   // For each descriptor set.
   for (auto &resourceDataMapPair : resourceData) {

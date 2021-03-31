@@ -1,4 +1,4 @@
-//===- TestExpandTanh.cpp - Test expand tanh op into exp form ------===//
+//===- TestExpandTanh.cpp - Test expand tanh op into exp form -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -24,9 +24,9 @@ struct TestExpandTanhPass
 } // end anonymous namespace
 
 void TestExpandTanhPass::runOnFunction() {
-  OwningRewritePatternList patterns;
-  populateExpandTanhPattern(patterns, &getContext());
-  applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  RewritePatternSet patterns(&getContext());
+  populateExpandTanhPattern(patterns);
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

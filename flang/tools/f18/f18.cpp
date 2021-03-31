@@ -27,6 +27,7 @@
 #include "flang/Version.inc"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
@@ -92,7 +93,7 @@ struct DriverOptions {
   bool warningsAreErrors{false}; // -Werror
   bool byteswapio{false}; // -byteswapio
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
-  bool parseOnly{false};
+  bool syntaxOnly{false};
   bool dumpProvenance{false};
   bool dumpCookedChars{false};
   bool dumpUnparse{false};
@@ -102,6 +103,7 @@ struct DriverOptions {
   bool dumpSymbols{false};
   bool debugNoSemantics{false};
   bool debugModuleWriter{false};
+  bool defaultReal8{false};
   bool measureTree{false};
   bool unparseTypedExprsToF18_FC{false};
   std::vector<std::string> F18_FCArgs;
@@ -109,6 +111,7 @@ struct DriverOptions {
   bool getDefinition{false};
   GetDefinitionArgs getDefinitionArgs{0, 0, 0};
   bool getSymbolsSources{false};
+  std::optional<bool> forcePreprocessing; // -cpp & -nocpp
 };
 
 void Exec(std::vector<llvm::StringRef> &argv, bool verbose = false) {
@@ -327,7 +330,7 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
       exitStatus = EXIT_FAILURE;
     }
   }
-  if (driver.parseOnly) {
+  if (driver.syntaxOnly) {
     return {};
   }
 
@@ -393,6 +396,16 @@ int printVersion() {
   return exitStatus;
 }
 
+// Generate the path to look for intrinsic modules
+static std::string getIntrinsicDir() {
+  // TODO: Find a system independent API
+  llvm::SmallString<128> driverPath;
+  driverPath.assign(llvm::sys::fs::getMainExecutable(nullptr, nullptr));
+  llvm::sys::path::remove_filename(driverPath);
+  driverPath.append("/../include/flang/");
+  return std::string(driverPath);
+}
+
 int main(int argc, char *const argv[]) {
 
   atexit(CleanUpAtExit);
@@ -410,25 +423,28 @@ int main(int argc, char *const argv[]) {
   driver.prefix = prefix.data();
 
   Fortran::parser::Options options;
-  options.predefinitions.emplace_back("__F18", "1");
-  options.predefinitions.emplace_back("__F18_MAJOR__", "1");
-  options.predefinitions.emplace_back("__F18_MINOR__", "1");
-  options.predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
-  options.predefinitions.emplace_back("__flang__", FLANG_VERSION_STRING);
-  options.predefinitions.emplace_back(
-      "__flang_major__", FLANG_VERSION_MAJOR_STRING);
-  options.predefinitions.emplace_back(
-      "__flang_minor__", FLANG_VERSION_MINOR_STRING);
-  options.predefinitions.emplace_back(
+  std::vector<Fortran::parser::Options::Predefinition> predefinitions;
+  predefinitions.emplace_back("__F18", "1");
+  predefinitions.emplace_back("__F18_MAJOR__", "1");
+  predefinitions.emplace_back("__F18_MINOR__", "1");
+  predefinitions.emplace_back("__F18_PATCHLEVEL__", "1");
+  predefinitions.emplace_back("__flang__", FLANG_VERSION_STRING);
+  predefinitions.emplace_back("__flang_major__", FLANG_VERSION_MAJOR_STRING);
+  predefinitions.emplace_back("__flang_minor__", FLANG_VERSION_MINOR_STRING);
+  predefinitions.emplace_back(
       "__flang_patchlevel__", FLANG_VERSION_PATCHLEVEL_STRING);
 #if __x86_64__
-  options.predefinitions.emplace_back("__x86_64__", "1");
+  predefinitions.emplace_back("__x86_64__", "1");
 #endif
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
   std::vector<std::string> fortranSources, otherSources;
   bool anyFiles{false};
+
+  // Add the default intrinsic module directory to the list of search
+  // directories
+  driver.searchDirectories.push_back(getIntrinsicDir());
 
   while (!args.empty()) {
     std::string arg{std::move(args.front())};
@@ -486,14 +502,15 @@ int main(int argc, char *const argv[]) {
       options.features.Enable(
           Fortran::common::LanguageFeature::BackslashEscapes, true);
     } else if (arg == "-Mstandard" || arg == "-std=f95" ||
-        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy") {
+        arg == "-std=f2003" || arg == "-std=f2008" || arg == "-std=legacy" ||
+        arg == "-std=f2018" || arg == "-pedantic") {
       driver.warnOnNonstandardUsage = true;
     } else if (arg == "-fopenacc") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
-      options.predefinitions.emplace_back("_OPENACC", "202011");
+      predefinitions.emplace_back("_OPENACC", "202011");
     } else if (arg == "-fopenmp") {
       options.features.Enable(Fortran::common::LanguageFeature::OpenMP);
-      options.predefinitions.emplace_back("_OPENMP", "201511");
+      predefinitions.emplace_back("_OPENMP", "201511");
     } else if (arg == "-Werror") {
       driver.warningsAreErrors = true;
     } else if (arg == "-ed") {
@@ -526,26 +543,30 @@ int main(int argc, char *const argv[]) {
       options.needProvenanceRangeToCharBlockMappings = true;
     } else if (arg == "-fdebug-dump-parse-tree") {
       driver.dumpParseTree = true;
+      driver.syntaxOnly = true;
     } else if (arg == "-fdebug-pre-fir-tree") {
       driver.dumpPreFirTree = true;
     } else if (arg == "-fdebug-dump-symbols") {
       driver.dumpSymbols = true;
+      driver.syntaxOnly = true;
     } else if (arg == "-fdebug-module-writer") {
       driver.debugModuleWriter = true;
     } else if (arg == "-fdebug-measure-parse-tree") {
       driver.measureTree = true;
-    } else if (arg == "-fdebug-instrumented-parse") {
+    } else if (arg == "-fdebug-instrumented-parse" ||
+        arg == "-fdebug-dump-parsing-log") {
       options.instrumentedParse = true;
     } else if (arg == "-fdebug-no-semantics") {
       driver.debugNoSemantics = true;
-    } else if (arg == "-funparse") {
+    } else if (arg == "-funparse" || arg == "-fdebug-unparse") {
       driver.dumpUnparse = true;
-    } else if (arg == "-funparse-with-symbols") {
+    } else if (arg == "-funparse-with-symbols" ||
+        arg == "-fdebug-unparse-with-symbols") {
       driver.dumpUnparseWithSymbols = true;
     } else if (arg == "-funparse-typed-exprs-to-f18-fc") {
       driver.unparseTypedExprsToF18_FC = true;
-    } else if (arg == "-fparse-only") {
-      driver.parseOnly = true;
+    } else if (arg == "-fparse-only" || arg == "-fsyntax-only") {
+      driver.syntaxOnly = true;
     } else if (arg == "-c") {
       driver.compileOnly = true;
     } else if (arg == "-o") {
@@ -554,18 +575,26 @@ int main(int argc, char *const argv[]) {
     } else if (arg.substr(0, 2) == "-D") {
       auto eq{arg.find('=')};
       if (eq == std::string::npos) {
-        options.predefinitions.emplace_back(arg.substr(2), "1");
+        predefinitions.emplace_back(arg.substr(2), "1");
       } else {
-        options.predefinitions.emplace_back(
-            arg.substr(2, eq - 2), arg.substr(eq + 1));
+        predefinitions.emplace_back(arg.substr(2, eq - 2), arg.substr(eq + 1));
       }
     } else if (arg.substr(0, 2) == "-U") {
-      options.predefinitions.emplace_back(
-          arg.substr(2), std::optional<std::string>{});
-    } else if (arg == "-fdefault-double-8") {
-      defaultKinds.set_defaultRealKind(4);
+      predefinitions.emplace_back(arg.substr(2), std::optional<std::string>{});
     } else if (arg == "-r8" || arg == "-fdefault-real-8") {
+      driver.defaultReal8 = true;
       defaultKinds.set_defaultRealKind(8);
+      defaultKinds.set_doublePrecisionKind(16);
+    } else if (arg == "-fdefault-double-8") {
+      if (!driver.defaultReal8) {
+        // -fdefault-double-8 has to be used with -fdefault-real-8
+        // to be compatible with gfortran. See:
+        // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
+        llvm::errs()
+            << "Use of `-fdefault-double-8` requires `-fdefault-real-8`\n";
+        return EXIT_FAILURE;
+      }
+      defaultKinds.set_doublePrecisionKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
       defaultKinds.set_subscriptIntegerKind(8);
@@ -582,11 +611,18 @@ int main(int argc, char *const argv[]) {
     } else if (arg == "-module") {
       driver.moduleDirectory = args.front();
       args.pop_front();
+    } else if (arg == "-module-dir") {
+      driver.moduleDirectory = args.front();
+      driver.searchDirectories.push_back(driver.moduleDirectory);
+      args.pop_front();
     } else if (arg == "-module-suffix") {
       driver.moduleFileSuffix = args.front();
       args.pop_front();
-    } else if (arg == "-intrinsic-module-directory") {
-      driver.searchDirectories.push_back(args.front());
+    } else if (arg == "-intrinsic-module-directory" ||
+        arg == "-fintrinsic-modules-path") {
+      // prepend to the list of search directories
+      driver.searchDirectories.insert(
+          driver.searchDirectories.begin(), args.front());
       args.pop_front();
     } else if (arg == "-futf-8") {
       driver.encoding = Fortran::parser::Encoding::UTF_8;
@@ -616,6 +652,10 @@ int main(int argc, char *const argv[]) {
       driver.getSymbolsSources = true;
     } else if (arg == "-byteswapio") {
       driver.byteswapio = true; // TODO: Pass to lowering, generate call
+    } else if (arg == "-cpp") {
+      driver.forcePreprocessing = true;
+    } else if (arg == "-nocpp") {
+      driver.forcePreprocessing = false;
     } else if (arg == "-h" || arg == "-help" || arg == "--help" ||
         arg == "-?") {
       llvm::errs()
@@ -647,9 +687,11 @@ int main(int argc, char *const argv[]) {
           << "  -ed                  enable fixed form D lines\n"
           << "  -E                   prescan & preprocess only\n"
           << "  -module dir          module output directory (default .)\n"
+          << "  -module-dir/-J <dir> Put MODULE files in <dir>\n"
           << "  -flatin              interpret source as Latin-1 (ISO 8859-1) "
              "rather than UTF-8\n"
-          << "  -fparse-only         parse only, no output except messages\n"
+          << "  -fsyntax-only        parsing and semantics only, no output "
+             "except messages\n"
           << "  -funparse            parse & reformat only, no code "
              "generation\n"
           << "  -funparse-with-symbols  parse, resolve symbols, and unparse\n"
@@ -662,6 +704,7 @@ int main(int argc, char *const argv[]) {
           << "  -fget-definition\n"
           << "  -fget-symbols-sources\n"
           << "  -v -c -o -I -D -U    have their usual meanings\n"
+          << "  -cpp / -nocpp        force / inhibit macro replacement\n"
           << "  -help                print this again\n"
           << "Unrecognised options are passed through to the external "
              "compiler\n"
@@ -685,6 +728,14 @@ int main(int argc, char *const argv[]) {
         args.pop_front();
       } else if (arg.substr(0, 2) == "-I") {
         driver.searchDirectories.push_back(arg.substr(2));
+      } else if (arg == "-J") {
+        driver.F18_FCArgs.push_back(args.front());
+        driver.moduleDirectory = args.front();
+        driver.searchDirectories.push_back(driver.moduleDirectory);
+        args.pop_front();
+      } else if (arg.substr(0, 2) == "-J") {
+        driver.moduleDirectory = arg.substr(2);
+        driver.searchDirectories.push_back(driver.moduleDirectory);
       }
     }
   }
@@ -724,6 +775,21 @@ int main(int argc, char *const argv[]) {
     return exitStatus;
   }
   for (const auto &path : fortranSources) {
+    options.predefinitions.clear();
+    if (driver.forcePreprocessing) {
+      if (*driver.forcePreprocessing) {
+        options.predefinitions = predefinitions;
+      }
+    } else {
+      auto dot{path.rfind(".")};
+      if (dot != std::string::npos) {
+        std::string suffix{path.substr(dot + 1)};
+        if (suffix == "F" || suffix == "F90" || suffix == "F95" ||
+            suffix == "CUF" || suffix == "F18") {
+          options.predefinitions = predefinitions;
+        }
+      }
+    }
     std::string relo{CompileFortran(path, options, driver, defaultKinds)};
     if (!driver.compileOnly && !relo.empty()) {
       objlist.push_back(relo);

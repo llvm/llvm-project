@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SIVI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SIVI %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
@@ -208,17 +208,12 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i32(i32 addrspace(1)* %
   ret void
 }
 
-; FIXME: Why does VI make the wrong regalloc choice?
 ; GCN-LABEL: {{^}}icmp_vgprX_k0_select_k1_vgprZ_i64:
 ; GCN: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[X_LO:[0-9]+]]:[[X_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: {{buffer|flat|global}}_load_dwordx2 v{{\[}}[[Z_LO:[0-9]+]]:[[Z_HI:[0-9]+]]{{\]}}
-; SI-DAG: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[X_LO]]:[[X_HI]]{{\]}}
-; SI-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v[[Z_HI]], vcc
-; SI-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2, v[[Z_LO]], vcc
-
-; VI-DAG: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[X_LO]]:[[X_HI]]{{\]}}
-; VI-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v[[Z_HI]], vcc
-; VI-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2, v[[Z_LO]], vcc
+; GCN-DAG: v_cmp_lt_i64_e32 vcc, -1, v{{\[}}[[X_LO]]:[[X_HI]]{{\]}}
+; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 0, v[[Z_HI]], vcc
+; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 2, v[[Z_LO]], vcc
 define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %x.ptr, i64 addrspace(1)* %z.ptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

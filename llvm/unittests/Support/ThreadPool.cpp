@@ -240,7 +240,7 @@ extern const char *TestMainArgv0;
 // Just a reachable symbol to ease resolving of the executable's path.
 static cl::opt<std::string> ThreadPoolTestStringArg1("thread-pool-string-arg1");
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #define setenv(name, var, ignore) _putenv_s(name, var)
 #endif
 

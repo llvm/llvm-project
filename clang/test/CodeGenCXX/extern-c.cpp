@@ -70,7 +70,7 @@ extern "C" {
     __attribute__((used)) static int duplicate_internal_fn() { return 0; }
   }
 
-  // CHECK: @llvm.used = appending global {{.*}} @internal_var {{.*}} @internal_fn 
+  // CHECK: @llvm.compiler.used = appending global {{.*}} @internal_var {{.*}} @internal_fn
 
   // CHECK-NOT: @unused
   // CHECK-NOT: @duplicate_internal

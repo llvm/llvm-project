@@ -113,7 +113,7 @@ bool AVRRelaxMem::relax<AVR::STDWPtrQRr>(Block &MBB, BlockIt MBBI) {
 
     // Pop the original state of the pointer register.
     buildMI(MBB, MBBI, AVR::POPWRd)
-      .addReg(Ptr.getReg(), getKillRegState(Ptr.isKill()));
+      .addDef(Ptr.getReg(), getKillRegState(Ptr.isKill()));
 
     MI.removeFromParent();
   }

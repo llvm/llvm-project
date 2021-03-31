@@ -48,6 +48,13 @@ public:
 
     return PSL;
   }
+
+  /// Serialize ParsedSourceLocation back to a string.
+  std::string ToString() const {
+    return (llvm::Twine(FileName == "<stdin>" ? "-" : FileName) + ":" +
+            Twine(Line) + ":" + Twine(Column))
+        .str();
+  }
 };
 
 /// A source range that has been parsed on the command line.

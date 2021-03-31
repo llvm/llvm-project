@@ -239,20 +239,25 @@ public:
   /// @}
 
 private:
-  /// Parse options for flags that expose marshalling information in their
-  /// table-gen definition
-  ///
-  /// \param Args - The argument list containing the arguments to parse
-  /// \param Diags - The DiagnosticsEngine associated with CreateFromArgs
-  /// \returns - True if parsing was successful, false otherwise
-  bool parseSimpleArgs(const llvm::opt::ArgList &Args,
-                       DiagnosticsEngine &Diags);
+  static bool CreateFromArgsImpl(CompilerInvocation &Res,
+                                 ArrayRef<const char *> CommandLineArgs,
+                                 DiagnosticsEngine &Diags, const char *Argv0);
+
+  /// Generate command line options from DiagnosticOptions.
+  static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
+                                     SmallVectorImpl<const char *> &Args,
+                                     StringAllocator SA, bool DefaultDiagColor);
 
   /// Parse command line options that map to LangOptions.
-  static void ParseLangArgs(LangOptions &Opts, llvm::opt::ArgList &Args,
+  static bool ParseLangArgs(LangOptions &Opts, llvm::opt::ArgList &Args,
                             InputKind IK, const llvm::Triple &T,
                             std::vector<std::string> &Includes,
                             DiagnosticsEngine &Diags);
+
+  /// Generate command line options from LangOptions.
+  static void GenerateLangArgs(const LangOptions &Opts,
+                               SmallVectorImpl<const char *> &Args,
+                               StringAllocator SA, const llvm::Triple &T);
 
   /// Parse command line options that map to CodeGenOptions.
   static bool ParseCodeGenArgs(CodeGenOptions &Opts, llvm::opt::ArgList &Args,
@@ -260,6 +265,13 @@ private:
                                const llvm::Triple &T,
                                const std::string &OutputFile,
                                const LangOptions &LangOptsRef);
+
+  // Generate command line options from CodeGenOptions.
+  static void GenerateCodeGenArgs(const CodeGenOptions &Opts,
+                                  SmallVectorImpl<const char *> &Args,
+                                  StringAllocator SA, const llvm::Triple &T,
+                                  const std::string &OutputFile,
+                                  const LangOptions *LangOpts);
 };
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

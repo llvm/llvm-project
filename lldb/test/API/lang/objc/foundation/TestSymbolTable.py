@@ -68,5 +68,5 @@ class FoundationSymtabTestCase(TestBase):
         # At this point, the known_symbols set should have become an empty set.
         # If not, raise an error.
         self.trace("symbols unaccounted for:", expected_symbols)
-        self.assertTrue(len(expected_symbols) == 0,
+        self.assertEqual(len(expected_symbols), 0,
                         "All the known symbols are accounted for")

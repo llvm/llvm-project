@@ -15,11 +15,13 @@
 ; RUN: llvm-readobj --file-headers %t/mesa3d.so | FileCheck %s --check-prefixes=GCN,NON-AMDHSA,MESA3D
 
 ; AMDHSA: OS/ABI: AMDGPU_HSA (0x40)
-; AMDHSA: ABIVersion: 1
+; AMDHSA: ABIVersion: 2
 
 ; AMDPAL: OS/ABI: AMDGPU_PAL (0x41)
 ; MESA3D: OS/ABI: AMDGPU_MESA3D (0x42)
 ; NON-AMDHSA: ABIVersion: 0
+
+; GCN: Machine: EM_AMDGPU
 
 ;--- amdhsa.ll
 target triple = "amdgcn-amd-amdhsa"

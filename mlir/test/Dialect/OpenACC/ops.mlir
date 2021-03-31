@@ -15,12 +15,12 @@ func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
-            %a = load %A[%arg3, %arg5] : memref<10x10xf32>
-            %b = load %B[%arg5, %arg4] : memref<10x10xf32>
-            %cij = load %C[%arg3, %arg4] : memref<10x10xf32>
+            %a = memref.load %A[%arg3, %arg5] : memref<10x10xf32>
+            %b = memref.load %B[%arg5, %arg4] : memref<10x10xf32>
+            %cij = memref.load %C[%arg3, %arg4] : memref<10x10xf32>
             %p = mulf %a, %b : f32
             %co = addf %cij, %p : f32
-            store %co, %C[%arg3, %arg4] : memref<10x10xf32>
+            memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
           }
         }
       }
@@ -42,12 +42,12 @@ func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:             %{{.*}} = mulf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:             %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-//  CHECK-NEXT:             store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:           }
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
@@ -70,12 +70,12 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
       scf.for %arg3 = %c0 to %c10 step %c1 {
         scf.for %arg4 = %c0 to %c10 step %c1 {
           scf.for %arg5 = %c0 to %c10 step %c1 {
-            %a = load %A[%arg3, %arg5] : memref<10x10xf32>
-            %b = load %B[%arg5, %arg4] : memref<10x10xf32>
-            %cij = load %C[%arg3, %arg4] : memref<10x10xf32>
+            %a = memref.load %A[%arg3, %arg5] : memref<10x10xf32>
+            %b = memref.load %B[%arg5, %arg4] : memref<10x10xf32>
+            %cij = memref.load %C[%arg3, %arg4] : memref<10x10xf32>
             %p = mulf %a, %b : f32
             %co = addf %cij, %p : f32
-            store %co, %C[%arg3, %arg4] : memref<10x10xf32>
+            memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
           }
         }
       }
@@ -96,12 +96,12 @@ func @compute2(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x10xf3
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:         scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
 //  CHECK-NEXT:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-//  CHECK-NEXT:             %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:             %{{.*}} = mulf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:             %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-//  CHECK-NEXT:             store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+//  CHECK-NEXT:             memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:           }
 //  CHECK-NEXT:         }
 //  CHECK-NEXT:       }
@@ -127,10 +127,10 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
         scf.for %x = %lb to %c10 step %st {
           acc.loop worker {
             scf.for %y = %lb to %c10 step %st {
-              %axy = load %a[%x, %y] : memref<10x10xf32>
-              %bxy = load %b[%x, %y] : memref<10x10xf32>
+              %axy = memref.load %a[%x, %y] : memref<10x10xf32>
+              %bxy = memref.load %b[%x, %y] : memref<10x10xf32>
               %tmp = addf %axy, %bxy : f32
-              store %tmp, %c[%y] : memref<10xf32>
+              memref.store %tmp, %c[%y] : memref<10xf32>
             }
             acc.yield
           }
@@ -139,10 +139,10 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
             // for i = 0 to 10 step 1
             //   d[x] += c[i]
             scf.for %i = %lb to %c10 step %st {
-              %ci = load %c[%i] : memref<10xf32>
-              %dx = load %d[%x] : memref<10xf32>
+              %ci = memref.load %c[%i] : memref<10xf32>
+              %dx = memref.load %d[%x] : memref<10xf32>
               %z = addf %ci, %dx : f32
-              store %z, %d[%x] : memref<10xf32>
+              memref.store %z, %d[%x] : memref<10xf32>
             }
             acc.yield
           } attributes {seq}
@@ -169,19 +169,19 @@ func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10xf32>,
 // CHECK-NEXT:         scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
 // CHECK-NEXT:           acc.loop worker {
 // CHECK-NEXT:             scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
-// CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
-// CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+// CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
+// CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 // CHECK-NEXT:               %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:               store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
 // CHECK-NEXT:           }
 // CHECK-NEXT:           acc.loop {
 // CHECK-NEXT:             scf.for %{{.*}} = [[C0]] to [[C10]] step [[C1]] {
-// CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
-// CHECK-NEXT:               %{{.*}} = load %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:               %{{.*}} = addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:               store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:               memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:             }
 // CHECK-NEXT:             acc.yield
 // CHECK-NEXT:           } attributes {seq}

@@ -1,4 +1,5 @@
-;RUN: opt -mtriple=amdgcn-mesa-mesa3d -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+;RUN: opt -mtriple=amdgcn-mesa-mesa3d -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-mesa-mesa3d -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.buffer.atomic.swap.i32(
 define float @buffer_atomic_swap(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TARGET_TARGETINSTRINFO_H
-#define LLVM_TARGET_TARGETINSTRINFO_H
+#ifndef LLVM_CODEGEN_TARGETINSTRINFO_H
+#define LLVM_CODEGEN_TARGETINSTRINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -951,6 +951,19 @@ public:
     llvm_unreachable("Target didn't implement TargetInstrInfo::copyPhysReg!");
   }
 
+  /// Allow targets to tell MachineVerifier whether a specific register
+  /// MachineOperand can be used as part of PC-relative addressing.
+  /// PC-relative addressing modes in many CISC architectures contain
+  /// (non-PC) registers as offsets or scaling values, which inherently
+  /// tags the corresponding MachineOperand with OPERAND_PCREL.
+  ///
+  /// @param MO The MachineOperand in question. MO.isReg() should always
+  /// be true.
+  /// @return Whether this operand is allowed to be used PC-relatively.
+  virtual bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const {
+    return false;
+  }
+
 protected:
   /// Target-dependent implementation for IsCopyInstr.
   /// If the specific machine instruction is a instruction that moves/copies
@@ -1382,7 +1395,7 @@ public:
                            unsigned Quantity) const;
 
   /// Return the noop instruction to use for a noop.
-  virtual void getNoop(MCInst &NopInst) const;
+  virtual MCInst getNop() const;
 
   /// Return true for post-incremented instructions.
   virtual bool isPostIncrement(const MachineInstr &MI) const { return false; }
@@ -1929,12 +1942,27 @@ public:
   virtual Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
                                                          Register Reg) const;
 
+  /// Given the generic extension instruction \p ExtMI, returns true if this
+  /// extension is a likely candidate for being folded into an another
+  /// instruction.
+  virtual bool isExtendLikelyToBeFolded(MachineInstr &ExtMI,
+                                        MachineRegisterInfo &MRI) const {
+    return false;
+  }
+
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
     if (!Formatter.get())
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
+  }
+
+  /// Returns the target-specific default value for tail duplication.
+  /// This value will be used if the tail-dup-placement-threshold argument is
+  /// not provided.
+  virtual unsigned getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
+    return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
   }
 
 private:
@@ -1974,4 +2002,4 @@ template <> struct DenseMapInfo<TargetInstrInfo::RegSubRegPair> {
 
 } // end namespace llvm
 
-#endif // LLVM_TARGET_TARGETINSTRINFO_H
+#endif // LLVM_CODEGEN_TARGETINSTRINFO_H

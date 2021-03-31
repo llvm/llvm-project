@@ -16,7 +16,6 @@ class DisassembleRawDataTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @add_test_categories(['pyapi'])
     @no_debug_info_test
     @skipIfRemote
     @skipIfReproducer # GetInstructions is not instrumented.
@@ -47,13 +46,13 @@ class DisassembleRawDataTestCase(TestBase):
             print("Raw bytes:    ", [hex(x) for x in raw_bytes])
             print("Disassembled%s" % str(inst))
         if re.match("mips", arch):
-            self.assertTrue(inst.GetMnemonic(target) == "move")
-            self.assertTrue(inst.GetOperands(target) ==
+            self.assertEqual(inst.GetMnemonic(target), "move")
+            self.assertEqual(inst.GetOperands(target),
                             '$' + "fp, " + '$' + "sp")
         elif re.match("powerpc64le", arch):
-            self.assertTrue(inst.GetMnemonic(target) == "li")
-            self.assertTrue(inst.GetOperands(target) == "4, 0")
+            self.assertEqual(inst.GetMnemonic(target), "li")
+            self.assertEqual(inst.GetOperands(target), "4, 0")
         else:
-            self.assertTrue(inst.GetMnemonic(target) == "movq")
-            self.assertTrue(inst.GetOperands(target) ==
+            self.assertEqual(inst.GetMnemonic(target), "movq")
+            self.assertEqual(inst.GetOperands(target),
                             '%' + "rsp, " + '%' + "rbp")

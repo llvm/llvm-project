@@ -1,0 +1,30 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=MOV8DD,MOV16RA,MOV32RR
+
+#------------------------------------------------------------------------------
+# MxMove_RR moves data from register to register
+#------------------------------------------------------------------------------
+
+
+#               ---------------------------+-----------+-----------+-----------
+#                F   E | D   C | B   A   9 | 8   7   6 | 5   4   3 | 2   1   0
+#               -------+-------+-----------+-----------+-----------+-----------
+#                      |       |      DESTINATION      |         SOURCE
+#                0   0 | SIZE  |    REG    |    MODE   |    MODE   |    REG
+#               -------+-------+-----------+-----------+-----------+-----------
+# MOV8DD:        0   0   0   1   0   0   1   0 . 0   0   0   0   0   0   0   0
+# MOV16RA-SAME:  0   0   1   1   0   1   1   0 . 0   0   0   0   1   0   1   0
+# MOV16RA-SAME:  0   0   1   1   1   1   0   0 . 0   1   0   0   1   0   1   0
+# MOV16RA-SAME:  0   0   1   1   0   0   1   0 . 0   0   0   0   1   0   1   0
+# MOV32RR-SAME:  0   0   1   0   0   0   1   0 . 0   0   0   0   0   0   1   0
+# MOV32RR-SAME:  0   0   1   0   0   0   1   0 . 0   1   0   0   1   0   1   0
+name: MxMove_RR
+body: |
+  bb.0:
+    $bd1 = MOV8dd  $bd0, implicit-def $ccr
+    $wd3 = MOV16ra $wa2, implicit-def $ccr
+    $wa6 = MOV16ra $wa2, implicit-def $ccr
+    $wd1 = MOV16ra $wa2, implicit-def $ccr
+    $d1  = MOV32rr $d2,  implicit-def $ccr
+    $a1  = MOV32rr $a2,  implicit-def $ccr

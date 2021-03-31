@@ -687,8 +687,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
   // find a path to function entry.  TODO: We should consider explicitly
   // canonicalizing to make this true rather than relying on this happy
   // accident.
-  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
-    Optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, *PI, BB);
+  for (BasicBlock *Pred : predecessors(BB)) {
+    Optional<ValueLatticeElement> EdgeResult = getEdgeValue(Val, Pred, BB);
     if (!EdgeResult)
       // Explore that input, then return here
       return None;
@@ -875,48 +875,6 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueSelect(
   FalseVal = intersect(FalseVal,
                        getValueFromCondition(SI->getFalseValue(), Cond, false));
 
-  // Handle clamp idioms such as:
-  //   %24 = constantrange<0, 17>
-  //   %39 = icmp eq i32 %24, 0
-  //   %40 = add i32 %24, -1
-  //   %siv.next = select i1 %39, i32 16, i32 %40
-  //   %siv.next = constantrange<0, 17> not <-1, 17>
-  // In general, this can handle any clamp idiom which tests the edge
-  // condition via an equality or inequality.
-  if (auto *ICI = dyn_cast<ICmpInst>(Cond)) {
-    ICmpInst::Predicate Pred = ICI->getPredicate();
-    Value *A = ICI->getOperand(0);
-    if (ConstantInt *CIBase = dyn_cast<ConstantInt>(ICI->getOperand(1))) {
-      auto addConstants = [](ConstantInt *A, ConstantInt *B) {
-        assert(A->getType() == B->getType());
-        return ConstantInt::get(A->getType(), A->getValue() + B->getValue());
-      };
-      // See if either input is A + C2, subject to the constraint from the
-      // condition that A != C when that input is used.  We can assume that
-      // that input doesn't include C + C2.
-      ConstantInt *CIAdded;
-      switch (Pred) {
-      default: break;
-      case ICmpInst::ICMP_EQ:
-        if (match(SI->getFalseValue(), m_Add(m_Specific(A),
-                                             m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          FalseVal = intersect(FalseVal,
-                               ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      case ICmpInst::ICMP_NE:
-        if (match(SI->getTrueValue(), m_Add(m_Specific(A),
-                                            m_ConstantInt(CIAdded)))) {
-          auto ResNot = addConstants(CIBase, CIAdded);
-          TrueVal = intersect(TrueVal,
-                              ValueLatticeElement::getNot(ResNot));
-        }
-        break;
-      };
-    }
-  }
-
   ValueLatticeElement Result = TrueVal;
   Result.mergeIn(FalseVal);
   return Result;
@@ -1076,15 +1034,25 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueExtractValue(
   return ValueLatticeElement::getOverdefined();
 }
 
-static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
+static bool matchICmpOperand(APInt &Offset, Value *LHS, Value *Val,
                              ICmpInst::Predicate Pred) {
   if (LHS == Val)
     return true;
 
   // Handle range checking idiom produced by InstCombine. We will subtract the
   // offset from the allowed range for RHS in this case.
-  if (match(LHS, m_Add(m_Specific(Val), m_APInt(Offset))))
+  const APInt *C;
+  if (match(LHS, m_Add(m_Specific(Val), m_APInt(C)))) {
+    Offset = *C;
     return true;
+  }
+
+  // Handle the symmetric case. This appears in saturation patterns like
+  // (x == 16) ? 16 : (x + 1).
+  if (match(Val, m_Add(m_Specific(LHS), m_APInt(C)))) {
+    Offset = -*C;
+    return true;
+  }
 
   // If (x | y) < C, then (x < C) && (y < C).
   if (match(LHS, m_c_Or(m_Specific(Val), m_Value())) &&
@@ -1101,7 +1069,7 @@ static bool matchICmpOperand(const APInt *&Offset, Value *LHS, Value *Val,
 
 /// Get value range for a "(Val + Offset) Pred RHS" condition.
 static ValueLatticeElement getValueFromSimpleICmpCondition(
-    CmpInst::Predicate Pred, Value *RHS, const APInt *Offset) {
+    CmpInst::Predicate Pred, Value *RHS, const APInt &Offset) {
   ConstantRange RHSRange(RHS->getType()->getIntegerBitWidth(),
                          /*isFullSet=*/true);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(RHS))
@@ -1112,11 +1080,7 @@ static ValueLatticeElement getValueFromSimpleICmpCondition(
 
   ConstantRange TrueValues =
       ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
-
-  if (Offset)
-    TrueValues = TrueValues.subtract(*Offset);
-
-  return ValueLatticeElement::getRange(std::move(TrueValues));
+  return ValueLatticeElement::getRange(TrueValues.subtract(Offset));
 }
 
 static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
@@ -1137,10 +1101,11 @@ static ValueLatticeElement getValueFromICmpCondition(Value *Val, ICmpInst *ICI,
     }
   }
 
-  if (!Val->getType()->isIntegerTy())
+  Type *Ty = Val->getType();
+  if (!Ty->isIntegerTy())
     return ValueLatticeElement::getOverdefined();
 
-  const APInt *Offset = nullptr;
+  APInt Offset(Ty->getScalarSizeInBits(), 0);
   if (matchICmpOperand(Offset, LHS, Val, EdgePred))
     return getValueFromSimpleICmpCondition(EdgePred, RHS, Offset);
 

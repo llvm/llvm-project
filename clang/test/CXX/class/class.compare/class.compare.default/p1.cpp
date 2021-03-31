@@ -127,7 +127,7 @@ namespace P1946 {
     friend bool operator==(A &, A &); // expected-note {{would lose const qualifier}}
   };
   struct B {
-    A a; // expected-note {{no viable comparison}}
+    A a; // expected-note {{no viable three-way comparison}}
     friend bool operator==(B, B) = default; // ok
     friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}}
   };

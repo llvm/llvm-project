@@ -29,7 +29,9 @@ enum class CudaVersion {
   CUDA_101,
   CUDA_102,
   CUDA_110,
-  LATEST = CUDA_110,
+  CUDA_111,
+  CUDA_112,
+  LATEST = CUDA_112,
   LATEST_SUPPORTED = CUDA_101,
 };
 const char *CudaVersionToString(CudaVersion V);
@@ -55,6 +57,7 @@ enum class CudaArch {
   SM_72,
   SM_75,
   SM_80,
+  SM_86,
   GFX600,
   GFX601,
   GFX602,
@@ -75,6 +78,7 @@ enum class CudaArch {
   GFX906,
   GFX908,
   GFX909,
+  GFX90a,
   GFX90c,
   GFX1010,
   GFX1011,

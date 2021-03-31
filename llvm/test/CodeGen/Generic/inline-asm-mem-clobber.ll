@@ -1,7 +1,7 @@
 ; RUN: llc -O2 -no-integrated-as < %s | FileCheck %s
 
-; Test uses 32-bit registers which aren't supported on AVR.
-; XFAIL: avr
+; XCore default subtarget does not support 8-byte alignment on stack.
+; XFAIL: xcore
 
 @G = common global i32 0, align 4
 

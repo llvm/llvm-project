@@ -82,5 +82,5 @@
 _start:
   jmp _start
 
-.comm common_uniq_0,4,4
 .comm common_multiple,8,8
+.comm common_uniq_0,4,4

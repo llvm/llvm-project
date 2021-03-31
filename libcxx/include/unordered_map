@@ -435,6 +435,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__hash_table>
 #include <__node_handle>
 #include <functional>
+#include <iterator> // __libcpp_erase_if_container
 #include <stdexcept>
 #include <tuple>
 #include <version>
@@ -920,9 +921,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef typename __identity<_Hash>::type               hasher;
-    typedef typename __identity<_Pred>::type               key_equal;
-    typedef typename __identity<_Alloc>::type              allocator_type;
+    typedef __identity_t<_Hash>                            hasher;
+    typedef __identity_t<_Pred>                            key_equal;
+    typedef __identity_t<_Alloc>                           allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -1817,7 +1818,7 @@ inline _LIBCPP_INLINE_VISIBILITY
     typename unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -1857,9 +1858,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef typename __identity<_Hash>::type               hasher;
-    typedef typename __identity<_Pred>::type               key_equal;
-    typedef typename __identity<_Alloc>::type              allocator_type;
+    typedef __identity_t<_Hash>                            hasher;
+    typedef __identity_t<_Pred>                            key_equal;
+    typedef __identity_t<_Alloc>                           allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -2550,7 +2551,7 @@ inline _LIBCPP_INLINE_VISIBILITY
     typename unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::size_type
     erase_if(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __c,
              _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 

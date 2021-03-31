@@ -229,8 +229,8 @@ An IR test case for a transformation can, in many cases, be automatically
 mutated to test debug info handling within that transformation. This is a
 simple way to test for proper debug info handling.
 
-The ``debugify`` utility
-^^^^^^^^^^^^^^^^^^^^^^^^
+The ``debugify`` utility pass
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``debugify`` testing utility is just a pair of passes: ``debugify`` and
 ``check-debugify``.
@@ -345,6 +345,47 @@ tests. Changes to this pass are not allowed to break existing tests.
    be precise enough), moving the test to its own file is preferred.
 
 .. _MIRDebugify:
+
+Test original debug info preservation in optimizations
+------------------------------------------------------
+
+In addition to automatically generating debug info, the checks provided by
+the ``debugify`` utility pass can also be used to test the preservation of
+pre-existing debug info metadata. It could be run as follows:
+
+.. code-block:: bash
+
+  # Run the pass by checking original Debug Info preservation.
+  $ opt -verify-debuginfo-preserve -pass-to-test sample.ll
+
+  # Check the preservation of original Debug Info after each pass.
+  $ opt -verify-each-debuginfo-preserve -O2 sample.ll
+
+Furthermore, there is a way to export the issues that have been found into
+a JSON file as follows:
+
+.. code-block:: bash
+
+  $ opt -verify-debuginfo-preserve -verify-di-preserve-export=sample.json -pass-to-test sample.ll
+
+and then use the ``llvm/utils/llvm-original-di-preservation.py`` script
+to generate an HTML page with the issues reported in a more human readable form
+as follows:
+
+.. code-block:: bash
+
+  $ llvm-original-di-preservation.py sample.json sample.html
+
+Testing of original debug info preservation can be invoked from front-end level
+as follows:
+
+.. code-block:: bash
+
+  # Test each pass.
+  $ clang -Xclang -fverify-debuginfo-preserve -g -O2 sample.c
+
+  # Test each pass and export the issues report into the JSON file.
+  $ clang -Xclang -fverify-debuginfo-preserve -Xclang -fverify-debuginfo-preserve-export=sample.json -g -O2 sample.c
 
 Mutation testing for MIR-level transformations
 ----------------------------------------------

@@ -42,9 +42,9 @@ bool mlirAttributeIsAArray(MlirAttribute attr) {
 MlirAttribute mlirArrayAttrGet(MlirContext ctx, intptr_t numElements,
                                MlirAttribute const *elements) {
   SmallVector<Attribute, 8> attrs;
-  return wrap(ArrayAttr::get(
-      unwrapList(static_cast<size_t>(numElements), elements, attrs),
-      unwrap(ctx)));
+  return wrap(
+      ArrayAttr::get(unwrap(ctx), unwrapList(static_cast<size_t>(numElements),
+                                             elements, attrs)));
 }
 
 intptr_t mlirArrayAttrGetNumElements(MlirAttribute attr) {
@@ -71,7 +71,7 @@ MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
     attributes.emplace_back(
         Identifier::get(unwrap(elements[i].name), unwrap(ctx)),
         unwrap(elements[i].attribute));
-  return wrap(DictionaryAttr::get(attributes, unwrap(ctx)));
+  return wrap(DictionaryAttr::get(unwrap(ctx), attributes));
 }
 
 intptr_t mlirDictionaryAttrGetNumElements(MlirAttribute attr) {
@@ -103,9 +103,9 @@ MlirAttribute mlirFloatAttrDoubleGet(MlirContext ctx, MlirType type,
   return wrap(FloatAttr::get(unwrap(type), value));
 }
 
-MlirAttribute mlirFloatAttrDoubleGetChecked(MlirType type, double value,
-                                            MlirLocation loc) {
-  return wrap(FloatAttr::getChecked(unwrap(type), value, unwrap(loc)));
+MlirAttribute mlirFloatAttrDoubleGetChecked(MlirLocation loc, MlirType type,
+                                            double value) {
+  return wrap(FloatAttr::getChecked(unwrap(loc), unwrap(type), value));
 }
 
 double mlirFloatAttrGetValueDouble(MlirAttribute attr) {
@@ -137,7 +137,7 @@ bool mlirAttributeIsABool(MlirAttribute attr) {
 }
 
 MlirAttribute mlirBoolAttrGet(MlirContext ctx, int value) {
-  return wrap(BoolAttr::get(value, unwrap(ctx)));
+  return wrap(BoolAttr::get(unwrap(ctx), value));
 }
 
 bool mlirBoolAttrGetValue(MlirAttribute attr) {
@@ -165,7 +165,7 @@ MlirAttribute mlirOpaqueAttrGet(MlirContext ctx, MlirStringRef dialectNamespace,
                                 MlirType type) {
   return wrap(
       OpaqueAttr::get(Identifier::get(unwrap(dialectNamespace), unwrap(ctx)),
-                      StringRef(data, dataLength), unwrap(type), unwrap(ctx)));
+                      StringRef(data, dataLength), unwrap(type)));
 }
 
 MlirStringRef mlirOpaqueAttrGetDialectNamespace(MlirAttribute attr) {
@@ -185,7 +185,7 @@ bool mlirAttributeIsAString(MlirAttribute attr) {
 }
 
 MlirAttribute mlirStringAttrGet(MlirContext ctx, MlirStringRef str) {
-  return wrap(StringAttr::get(unwrap(str), unwrap(ctx)));
+  return wrap(StringAttr::get(unwrap(ctx), unwrap(str)));
 }
 
 MlirAttribute mlirStringAttrTypedGet(MlirType type, MlirStringRef str) {
@@ -211,7 +211,7 @@ MlirAttribute mlirSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol,
   refs.reserve(numReferences);
   for (intptr_t i = 0; i < numReferences; ++i)
     refs.push_back(unwrap(references[i]).cast<FlatSymbolRefAttr>());
-  return wrap(SymbolRefAttr::get(unwrap(symbol), refs, unwrap(ctx)));
+  return wrap(SymbolRefAttr::get(unwrap(ctx), unwrap(symbol), refs));
 }
 
 MlirStringRef mlirSymbolRefAttrGetRootReference(MlirAttribute attr) {
@@ -241,7 +241,7 @@ bool mlirAttributeIsAFlatSymbolRef(MlirAttribute attr) {
 }
 
 MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx, MlirStringRef symbol) {
-  return wrap(FlatSymbolRefAttr::get(unwrap(symbol), unwrap(ctx)));
+  return wrap(FlatSymbolRefAttr::get(unwrap(ctx), unwrap(symbol)));
 }
 
 MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {

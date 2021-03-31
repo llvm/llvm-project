@@ -55,9 +55,9 @@
 
 # KEEP_START:      Symbol table '.symtab' contains 10 entries:
 # KEEP_START:      5: {{.*}} SECTION
-# KEEP_START-NEXT: 6: {{.*}} UND __start_qux
-# KEEP_START-NEXT: 7: {{.*}}   1 _start
-# KEEP_START-NEXT: 8: {{.*}}   5 fred
+# KEEP_START-NEXT: 6: {{.*}}   1 _start
+# KEEP_START-NEXT: 7: {{.*}}   5 fred
+# KEEP_START-NEXT: 8: {{.*}} UND __start_qux
 # KEEP_START-NEXT: 9: {{.*}} UND fred_und
 
 .section qux,"a",@progbits

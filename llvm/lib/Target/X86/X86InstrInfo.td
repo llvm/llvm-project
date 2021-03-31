@@ -2587,7 +2587,7 @@ let Predicates = [HasBMI], Defs = [EFLAGS] in {
 }
 
 multiclass bmi_bzhi<bits<8> opc, string mnemonic, RegisterClass RC,
-                    X86MemOperand x86memop, Intrinsic Int,
+                    X86MemOperand x86memop, SDNode Int,
                     PatFrag ld_frag, X86FoldableSchedWrite Sched> {
   def rr : I<opc, MRMSrcReg4VOp3, (outs RC:$dst), (ins RC:$src1, RC:$src2),
              !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),

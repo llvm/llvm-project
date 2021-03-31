@@ -814,3 +814,27 @@ body: |
     %1:_(<2 x s64>) = G_FPTOUI %0
     $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
 ...
+
+---
+name: test_fptoui_s16_to_s1
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; SI-LABEL: name: test_fptoui_s16_to_s1
+    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; SI: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; SI: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
+    ; SI: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[FPTOSI]](s32)
+    ; SI: S_ENDPGM 0, implicit [[TRUNC1]](s1)
+    ; VI-LABEL: name: test_fptoui_s16_to_s1
+    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; VI: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[FPTOSI]](s32)
+    ; VI: S_ENDPGM 0, implicit [[TRUNC1]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s16) = G_TRUNC %0
+    %2:_(s1)  = G_FPTOSI %1
+    S_ENDPGM 0, implicit %2
+...

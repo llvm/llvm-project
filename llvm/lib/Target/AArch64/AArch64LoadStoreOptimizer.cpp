@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/BitVector.h"
@@ -1849,6 +1850,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineInstr &MemMI = *I;
   MachineBasicBlock::iterator MBBI = I;
+  MachineFunction &MF = *MemMI.getMF();
 
   Register BaseReg = getLdStBaseOp(MemMI).getReg();
   int Offset = getLdStOffsetOp(MemMI).getImm();
@@ -1876,11 +1878,16 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     return E;
   }
 
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  unsigned RedZoneSize =
+      Subtarget.getTargetLowering()->getRedZoneSize(MF.getFunction());
+
   // Track which register units have been modified and used between the first
   // insn (inclusive) and the second insn.
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
   unsigned Count = 0;
+  bool MemAcessBeforeSPPreInc = false;
   do {
     MBBI = prev_nodbg(MBBI, B);
     MachineInstr &MI = *MBBI;
@@ -1891,8 +1898,13 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
       ++Count;
 
     // If we found a match, return it.
-    if (isMatchingUpdateInsn(*I, MI, BaseReg, Offset))
+    if (isMatchingUpdateInsn(*I, MI, BaseReg, Offset)) {
+      // Check that the update value is within our red zone limit (which may be
+      // zero).
+      if (MemAcessBeforeSPPreInc && MBBI->getOperand(2).getImm() > RedZoneSize)
+        return E;
       return MBBI;
+    }
 
     // Update the status of what the instruction clobbered and used.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
@@ -1902,6 +1914,11 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     if (!ModifiedRegUnits.available(BaseReg) ||
         !UsedRegUnits.available(BaseReg))
       return E;
+    // Keep track if we have a memory access before an SP pre-increment, in this
+    // case we need to validate later that the update amount respects the red
+    // zone.
+    if (BaseRegSP && MBBI->mayLoadOrStore())
+      MemAcessBeforeSPPreInc = true;
   } while (MBBI != B && Count < Limit);
   return E;
 }

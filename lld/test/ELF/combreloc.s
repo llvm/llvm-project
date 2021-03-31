@@ -39,6 +39,7 @@
 # NOCOMB-NEXT:     0x23F0 R_X86_64_GLOB_DAT aaa 0x0
 # NOCOMB-NEXT:   }
 
+.globl aaa, bbb, ccc
 .data
  .quad aaa
  .quad ccc

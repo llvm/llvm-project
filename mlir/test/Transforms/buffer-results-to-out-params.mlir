@@ -60,7 +60,7 @@ func private @mixed_result_attrs() -> (memref<1xf32>, memref<2xf32> {test.some_a
 func private @callee() -> memref<1xf32>
 
 // CHECK-LABEL:   func @call_basic() {
-// CHECK:           %[[OUTPARAM:.*]] = alloc() : memref<1xf32>
+// CHECK:           %[[OUTPARAM:.*]] = memref.alloc() : memref<1xf32>
 // CHECK:           call @callee(%[[OUTPARAM]]) : (memref<1xf32>) -> ()
 // CHECK:           "test.sink"(%[[OUTPARAM]]) : (memref<1xf32>) -> ()
 // CHECK:           return
@@ -77,8 +77,8 @@ func @call_basic() {
 func private @callee() -> (memref<1xf32>, memref<2xf32>)
 
 // CHECK-LABEL:   func @call_multiple_result() {
-// CHECK:           %[[RESULT0:.*]] = alloc() : memref<1xf32>
-// CHECK:           %[[RESULT1:.*]] = alloc() : memref<2xf32>
+// CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<1xf32>
+// CHECK:           %[[RESULT1:.*]] = memref.alloc() : memref<2xf32>
 // CHECK:           call @callee(%[[RESULT0]], %[[RESULT1]]) : (memref<1xf32>, memref<2xf32>) -> ()
 // CHECK:           "test.sink"(%[[RESULT0]], %[[RESULT1]]) : (memref<1xf32>, memref<2xf32>) -> ()
 // CHECK:         }
@@ -93,7 +93,7 @@ func @call_multiple_result() {
 func private @callee() -> (i1, memref<1xf32>, i32)
 
 // CHECK-LABEL:   func @call_non_memref_result() {
-// CHECK:           %[[RESULT0:.*]] = alloc() : memref<1xf32>
+// CHECK:           %[[RESULT0:.*]] = memref.alloc() : memref<1xf32>
 // CHECK:           %[[NON_MEMREF_RESULTS:.*]]:2 = call @callee(%[[RESULT0]]) : (memref<1xf32>) -> (i1, i32)
 // CHECK:           "test.sink"(%[[NON_MEMREF_RESULTS]]#0, %[[RESULT0]], %[[NON_MEMREF_RESULTS]]#1) : (i1, memref<1xf32>, i32) -> ()
 // CHECK:         }

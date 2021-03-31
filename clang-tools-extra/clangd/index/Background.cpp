@@ -97,6 +97,7 @@ BackgroundIndex::BackgroundIndex(
     BackgroundIndexStorage::Factory IndexStorageFactory, Options Opts)
     : SwapIndex(std::make_unique<MemIndex>()), TFS(TFS), CDB(CDB),
       ContextProvider(std::move(Opts.ContextProvider)),
+      IndexedSymbols(IndexContents::All),
       Rebuilder(this, &IndexedSymbols, Opts.ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       Queue(std::move(Opts.OnProgress)),
@@ -242,7 +243,7 @@ void BackgroundIndex::update(
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
       IndexedSymbols.update(
-          Path, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
+          Uri, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
           std::make_unique<RefSlab>(std::move(*IF->Refs)),
           std::make_unique<RelationSlab>(std::move(*IF->Relations)),
           Path == MainFile);
@@ -389,8 +390,9 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
       SV.HadErrors = LS.HadErrors;
       ++LoadedShards;
 
-      IndexedSymbols.update(LS.AbsolutePath, std::move(SS), std::move(RS),
-                            std::move(RelS), LS.CountReferences);
+      IndexedSymbols.update(URI::create(LS.AbsolutePath).toString(),
+                            std::move(SS), std::move(RS), std::move(RelS),
+                            LS.CountReferences);
     }
   }
   Rebuilder.loadedShard(LoadedShards);

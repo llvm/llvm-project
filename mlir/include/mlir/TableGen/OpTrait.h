@@ -63,7 +63,7 @@ protected:
 class NativeOpTrait : public OpTrait {
 public:
   // Returns the trait corresponding to a C++ trait class.
-  StringRef getTrait() const;
+  std::string getTrait() const;
 
   static bool classof(const OpTrait *t) { return t->getKind() == Kind::Native; }
 };

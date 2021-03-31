@@ -231,7 +231,7 @@ void VectorizerTestPass::testVecAffineLoopNest() {
   strategy.loopToVectorDim[outermostLoop] = 0;
   std::vector<SmallVector<AffineForOp, 2>> loopsToVectorize;
   loopsToVectorize.push_back({outermostLoop});
-  vectorizeAffineLoopNest(loopsToVectorize, strategy);
+  (void)vectorizeAffineLoopNest(loopsToVectorize, strategy);
 }
 
 void VectorizerTestPass::runOnFunction() {

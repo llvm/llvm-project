@@ -15,12 +15,9 @@ using namespace lldb_private;
 
 OptionValueEnumeration::OptionValueEnumeration(
     const OptionEnumValues &enumerators, enum_type value)
-    : OptionValue(), m_current_value(value), m_default_value(value),
-      m_enumerations() {
+    : m_current_value(value), m_default_value(value) {
   SetEnumerations(enumerators);
 }
-
-OptionValueEnumeration::~OptionValueEnumeration() {}
 
 void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
                                        Stream &strm, uint32_t dump_mask) {
@@ -96,10 +93,6 @@ void OptionValueEnumeration::SetEnumerations(
   }
 
   m_enumerations.Sort();
-}
-
-lldb::OptionValueSP OptionValueEnumeration::DeepCopy() const {
-  return OptionValueSP(new OptionValueEnumeration(*this));
 }
 
 void OptionValueEnumeration::AutoComplete(CommandInterpreter &interpreter,

@@ -29,6 +29,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfDarwin
     @skipIfWindows
     @skipIfRemote
+    @skipIf(oslist=["linux"], archs=["arm"])
     def test_launch(self):
         """
             This test launches a process that would creates a file, but we disconnect
@@ -36,7 +37,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
             created.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        self.build_and_launch(program, disconnectAutomatically=False)
 
         # We set a breakpoint right before the side effect file is created
         self.set_source_breakpoints(self.source, [line_number(self.source, '// breakpoint')])

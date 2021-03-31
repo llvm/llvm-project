@@ -30,7 +30,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Status error;
-  const int short_option = m_getopt_table[option_idx].val;
+  const int short_option = g_process_launch_options[option_idx].short_option;
 
   switch (short_option) {
   case 's': // Stop at program entry point
@@ -130,7 +130,7 @@ Status CommandOptionsProcessLaunch::SetOptionValue(
       launch_info.SetShell(HostInfo::GetDefaultShell());
     break;
 
-  case 'v':
+  case 'E':
     launch_info.GetEnvironment().insert(option_arg);
     break;
 

@@ -327,6 +327,35 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
     return UnaryOperator::CreateFNegFMF(NewSel, TI);
   }
 
+  // Min/max intrinsic with a common operand can have the common operand pulled
+  // after the select. This is the same transform as below for binops, but
+  // specialized for intrinsic matching and without the restrictive uses clause.
+  auto *TII = dyn_cast<IntrinsicInst>(TI);
+  auto *FII = dyn_cast<IntrinsicInst>(FI);
+  if (TII && FII && TII->getIntrinsicID() == FII->getIntrinsicID() &&
+      (TII->hasOneUse() || FII->hasOneUse())) {
+    Value *T0, *T1, *F0, *F1;
+    if (match(TII, m_MaxOrMin(m_Value(T0), m_Value(T1))) &&
+        match(FII, m_MaxOrMin(m_Value(F0), m_Value(F1)))) {
+      if (T0 == F0) {
+        Value *NewSel = Builder.CreateSelect(Cond, T1, F1, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T0});
+      }
+      if (T0 == F1) {
+        Value *NewSel = Builder.CreateSelect(Cond, T1, F0, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T0});
+      }
+      if (T1 == F0) {
+        Value *NewSel = Builder.CreateSelect(Cond, T0, F1, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T1});
+      }
+      if (T1 == F1) {
+        Value *NewSel = Builder.CreateSelect(Cond, T0, F0, "minmaxop", &SI);
+        return CallInst::Create(TII->getCalledFunction(), {NewSel, T1});
+      }
+    }
+  }
+
   // Only handle binary operators (including two-operand getelementptr) with
   // one-use here. As with the cast case above, it may be possible to relax the
   // one-use constraint, but that needs be examined carefully since it may not
@@ -2600,34 +2629,50 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }
 
+    auto *One = ConstantInt::getTrue(SelType);
+    auto *Zero = ConstantInt::getFalse(SelType);
+
     // select a, false, b -> select !a, b, false
     if (match(TrueVal, m_Zero())) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-      return SelectInst::Create(NotCond, FalseVal,
-                                ConstantInt::getFalse(SelType));
+      return SelectInst::Create(NotCond, FalseVal, Zero);
     }
     // select a, b, true -> select !a, true, b
     if (match(FalseVal, m_One())) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-      return SelectInst::Create(NotCond, ConstantInt::getTrue(SelType),
-                                TrueVal);
+      return SelectInst::Create(NotCond, One, TrueVal);
     }
 
     // select a, a, b -> select a, true, b
     if (CondVal == TrueVal)
-      return replaceOperand(SI, 1, ConstantInt::getTrue(SelType));
+      return replaceOperand(SI, 1, One);
     // select a, b, a -> select a, b, false
     if (CondVal == FalseVal)
-      return replaceOperand(SI, 2, ConstantInt::getFalse(SelType));
+      return replaceOperand(SI, 2, Zero);
 
     // select a, !a, b -> select !a, b, false
     if (match(TrueVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(TrueVal, FalseVal,
-                                ConstantInt::getFalse(SelType));
+      return SelectInst::Create(TrueVal, FalseVal, Zero);
     // select a, b, !a -> select !a, true, b
     if (match(FalseVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(FalseVal, ConstantInt::getTrue(SelType),
-                                TrueVal);
+      return SelectInst::Create(FalseVal, One, TrueVal);
+
+    Value *A, *B;
+    // select (select a, true, b), true, b -> select a, true, b
+    if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+        match(TrueVal, m_One()) && match(FalseVal, m_Specific(B)))
+      return replaceOperand(SI, 0, A);
+    // select (select a, b, false), b, false -> select a, b, false
+    if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
+        match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
+      return replaceOperand(SI, 0, A);
+
+    if (Value *S = SimplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 1, S);
+    if (Value *S = SimplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 2, S);
   }
 
   // Selecting between two integer or vector splat integer constants?
@@ -2890,7 +2935,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
       if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *And = Builder.CreateAnd(CondVal, TrueSI->getCondition());
+        Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
         replaceOperand(SI, 0, And);
         replaceOperand(SI, 1, TrueSI->getTrueValue());
         return &SI;
@@ -2907,7 +2952,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       }
       // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
       if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Or = Builder.CreateOr(CondVal, FalseSI->getCondition());
+        Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
         replaceOperand(SI, 0, Or);
         replaceOperand(SI, 2, FalseSI->getFalseValue());
         return &SI;

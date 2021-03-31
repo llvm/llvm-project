@@ -48,8 +48,8 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    leal 257(%ecx,%edx), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fildl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds {{\.LCPI.*}}
-; CHECK-NEXT:    fmuls {{\.LCPI.*}}
+; CHECK-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fmuls {{\.LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -62,7 +62,7 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    imull $60000, 24(%ebx), %ecx # imm = 0xEA60
 ; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    fldl 28(%ebx)
-; CHECK-NEXT:    fmuls {{\.LCPI.*}}
+; CHECK-NEXT:    fmuls {{\.LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00

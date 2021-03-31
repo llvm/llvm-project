@@ -72,6 +72,13 @@ protected:
 
   PacketResult SendOKResponse();
 
+  /// Serialize and send a JSON object response.
+  PacketResult SendJSONResponse(const llvm::json::Value &value);
+
+  /// Serialize and send a JSON object response, or respond with an error if the
+  /// input object is an \a llvm::Error.
+  PacketResult SendJSONResponse(llvm::Expected<llvm::json::Value> value);
+
 private:
   GDBRemoteCommunicationServer(const GDBRemoteCommunicationServer &) = delete;
   const GDBRemoteCommunicationServer &

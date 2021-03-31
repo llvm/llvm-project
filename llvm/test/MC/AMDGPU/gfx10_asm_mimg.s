@@ -136,14 +136,14 @@ image_atomic_inc v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 image_atomic_dec v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
 ; GFX10: image_atomic_dec v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x21,0x70,0xf0,0x20,0x04,0x18,0x00]
 
-;image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc
-; TODO-GFX10: ; encoding: [0x00,0x23,0x74,0xf0,0x20,0x04,0x18,0x00]
+image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc
+; GFX10: image_atomic_fcmpswap v[4:5], v32, s[96:103] dmask:0x3 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x23,0x74,0xf0,0x20,0x04,0x18,0x00]
 
-;image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
-; TODO-GFX10: ; encoding: [0x00,0x21,0x78,0xf0,0x20,0x04,0x18,0x00]
+image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
+; GFX10: image_atomic_fmin v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x21,0x78,0xf0,0x20,0x04,0x18,0x00]
 
-;image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
-; TODO-GFX10: ; encoding: [0x00,0x21,0x7c,0xf0,0x20,0x04,0x18,0x00]
+image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc
+; GFX10: image_atomic_fmax v4, v32, s[96:103] dmask:0x1 dim:SQ_RSRC_IMG_1D glc ; encoding: [0x00,0x21,0x7c,0xf0,0x20,0x04,0x18,0x00]
 
 image_sample v[64:66], v32, s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D
 ; GFX10: image_sample v[64:66], v32, s[4:11], s[100:103] dmask:0x7 dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x07,0x80,0xf0,0x20,0x40,0x21,0x03]

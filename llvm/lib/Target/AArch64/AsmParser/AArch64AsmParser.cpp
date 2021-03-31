@@ -379,7 +379,7 @@ private:
   };
 
   struct VectorIndexOp {
-    unsigned Val;
+    int Val;
   };
 
   struct ImmOp {
@@ -599,7 +599,7 @@ public:
     return VectorList.Count;
   }
 
-  unsigned getVectorIndex() const {
+  int getVectorIndex() const {
     assert(Kind == k_VectorIndex && "Invalid access!");
     return VectorIndex.Val;
   }
@@ -1931,7 +1931,7 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
-  CreateVectorIndex(unsigned Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
+  CreateVectorIndex(int Idx, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_VectorIndex, Ctx);
     Op->VectorIndex.Val = Idx;
     Op->StartLoc = S;
@@ -2906,9 +2906,11 @@ static const struct Extension {
     {"mte", {AArch64::FeatureMTE}},
     {"memtag", {AArch64::FeatureMTE}},
     {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
+    {"pan", {AArch64::FeaturePAN}},
     {"pan-rwv", {AArch64::FeaturePAN_RWV}},
     {"ccpp", {AArch64::FeatureCCPP}},
     {"rcpc", {AArch64::FeatureRCPC}},
+    {"rng", {AArch64::FeatureRandGen}},
     {"sve", {AArch64::FeatureSVE}},
     {"sve2", {AArch64::FeatureSVE2}},
     {"sve2-aes", {AArch64::FeatureSVE2AES}},
@@ -2920,7 +2922,6 @@ static const struct Extension {
     {"pauth", {AArch64::FeaturePAuth}},
     {"flagm", {AArch64::FeatureFlagM}},
     // FIXME: Unsupported extensions
-    {"pan", {}},
     {"lor", {}},
     {"rdma", {}},
     {"profile", {}},

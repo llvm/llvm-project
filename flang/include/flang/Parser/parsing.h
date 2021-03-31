@@ -36,6 +36,7 @@ struct Options {
   bool instrumentedParse{false};
   bool isModuleFile{false};
   bool needProvenanceRangeToCharBlockMappings{false};
+  Fortran::parser::Encoding encoding{Fortran::parser::Encoding::UTF_8};
 };
 
 class Parsing {

@@ -22,6 +22,8 @@ entry:
 }
 
 ; CHECK: private constant [6 x i64*] [{{.*}}@foo{{.*}}blockaddress{{.*}}blockaddress{{.*}}], section "__sancov_pcs", comdat($foo), align 8
+; CHECK:      @__start___sancov_pcs = extern_weak hidden global i64
+; CHECK-NEXT: @__stop___sancov_pcs = extern_weak hidden global i64
 ; CHECK: define internal void @sancov.module_ctor
 ; CHECK: call void @__sanitizer_cov
 ; CHECK: call void @__sanitizer_cov_pcs_init

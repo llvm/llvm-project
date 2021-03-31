@@ -13,18 +13,6 @@
 ; CHECK-DT-INVALIDATE: Running pass: AAEvaluator
 ; CHECK-DT-INVALIDATE: Running analysis: BasicAA
 ;
-; Check LoopInfo specifically.
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
-; RUN:     -passes='require<loops>,require<aa>,invalidate<loops>,aa-eval' -aa-pipeline='basic-aa' \
-; RUN:     | FileCheck %s --check-prefix=CHECK-LI-INVALIDATE
-; CHECK-LI-INVALIDATE: Running pass: RequireAnalysisPass
-; CHECK-LI-INVALIDATE: Running analysis: BasicAA
-; CHECK-LI-INVALIDATE: Running pass: InvalidateAnalysisPass
-; CHECK-LI-INVALIDATE: Invalidating analysis: LoopAnalysis
-; CHECK-LI-INVALIDATE: Invalidating analysis: BasicAA
-; CHECK-LI-INVALIDATE: Running pass: AAEvaluator
-; CHECK-LI-INVALIDATE: Running analysis: BasicAA
-;
 ; Check PhiValues specifically.
 ; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<phi-values>,require<aa>,invalidate<phi-values>,aa-eval' -aa-pipeline='basic-aa' \

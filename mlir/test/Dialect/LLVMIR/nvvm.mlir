@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
 func @nvvm_special_regs() -> i32 {
   // CHECK: nvvm.read.ptx.sreg.tid.x : i32
@@ -68,3 +68,8 @@ func @nvvm_mma(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="row", blayout="col"} : (vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, f32, f32, f32, f32, f32, f32, f32, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
+
+// -----
+
+// expected-error@below {{attribute attached to unexpected op}}
+func private @expected_llvm_func() attributes { nvvm.kernel }

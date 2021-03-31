@@ -31,7 +31,7 @@ add_header_library(
     libc.include.math
     libc.include.errno
     libc.include.fenv
-    libc.src.errno.__errno_location
+    libc.src.__support.common
     libc.utils.CPP.standalone_cpp
 )
 

@@ -111,7 +111,7 @@ class ClassTypesTestCase(TestBase):
         # startstr = "main.cpp:93")
 
         # We should be stopped on the breakpoint with a hit count of 1.
-        self.assertTrue(breakpoint.GetHitCount() == 1, BREAKPOINT_HIT_ONCE)
+        self.assertEqual(breakpoint.GetHitCount(), 1, BREAKPOINT_HIT_ONCE)
 
         process.Continue()
 
@@ -220,5 +220,5 @@ class ClassTypesTestCase(TestBase):
         frame = thread.frames[0]
         self.assertTrue(frame.IsValid(), "Got a valid frame.")
 
-        self.assertTrue("C::C" in frame.name,
-                        "Constructor name includes class name.")
+        self.assertIn("C::C", frame.name,
+                      "Constructor name includes class name.")

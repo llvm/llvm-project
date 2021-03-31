@@ -407,7 +407,7 @@ define i16 @test_v2i16(<2 x i16> %a0) {
 ; AVX-LABEL: test_v2i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
@@ -432,7 +432,7 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq
@@ -461,7 +461,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX-NEXT:    retq

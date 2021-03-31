@@ -737,13 +737,13 @@ TEST(DexIndex, IndexedFiles) {
   RefSlab Refs;
   auto Size = Symbols.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  llvm::StringSet<> Files = {testPath("foo.cc"), testPath("bar.cc")};
+  llvm::StringSet<> Files = {"unittest:///foo.cc", "unittest:///bar.cc"};
   Dex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
-        std::move(Files), std::move(Data), Size);
+        std::move(Files), IndexContents::All, std::move(Data), Size);
   auto ContainsFile = I.indexedFiles();
-  EXPECT_TRUE(ContainsFile("unittest:///foo.cc"));
-  EXPECT_TRUE(ContainsFile("unittest:///bar.cc"));
-  EXPECT_FALSE(ContainsFile("unittest:///foobar.cc"));
+  EXPECT_EQ(ContainsFile("unittest:///foo.cc"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("unittest:///bar.cc"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("unittest:///foobar.cc"), IndexContents::None);
 }
 
 TEST(DexTest, PreferredTypesBoosting) {

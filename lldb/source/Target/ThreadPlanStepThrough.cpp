@@ -22,7 +22,6 @@ using namespace lldb_private;
 // ThreadPlanStepThrough: If the current instruction is a trampoline, step
 // through it If it is the beginning of the prologue of a function, step
 // through that as well.
-// FIXME: At present only handles DYLD trampolines.
 
 ThreadPlanStepThrough::ThreadPlanStepThrough(Thread &thread,
                                              StackID &m_stack_id,

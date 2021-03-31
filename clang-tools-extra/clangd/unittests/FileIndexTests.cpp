@@ -102,7 +102,7 @@ std::unique_ptr<RelationSlab> relSlab(llvm::ArrayRef<const Relation> Rels) {
 }
 
 TEST(FileSymbolsTest, UpdateAndGet) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
 
   FS.update("f1", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cc"), nullptr,
@@ -114,7 +114,7 @@ TEST(FileSymbolsTest, UpdateAndGet) {
 }
 
 TEST(FileSymbolsTest, Overlap) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   FS.update("f1", numSlab(1, 3), nullptr, nullptr, false);
   FS.update("f2", numSlab(3, 5), nullptr, nullptr, false);
   for (auto Type : {IndexType::Light, IndexType::Heavy})
@@ -124,7 +124,7 @@ TEST(FileSymbolsTest, Overlap) {
 }
 
 TEST(FileSymbolsTest, MergeOverlap) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   auto OneSymboSlab = [](Symbol Sym) {
     SymbolSlab::Builder S;
     S.insert(Sym);
@@ -145,7 +145,7 @@ TEST(FileSymbolsTest, MergeOverlap) {
 }
 
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
 
   SymbolID ID("1");
   FS.update("f1", numSlab(1, 3), refSlab(ID, "f1.cc"), nullptr, false);
@@ -352,14 +352,14 @@ TEST(FileIndexTest, Refs) {
   Test.Code = std::string(MainCode.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.updateMain(Test.Filename, AST);
+  Index.updateMain(testPath(Test.Filename), AST);
   // Add test2.cc
   TestTU Test2;
   Test2.HeaderCode = HeaderCode;
   Test2.Code = std::string(MainCode.code());
   Test2.Filename = "test2.cc";
   AST = Test2.build();
-  Index.updateMain(Test2.Filename, AST);
+  Index.updateMain(testPath(Test2.Filename), AST);
 
   EXPECT_THAT(getRefs(Index, Foo.ID),
               RefsAre({AllOf(RefRange(MainCode.range("foo")),
@@ -387,7 +387,7 @@ TEST(FileIndexTest, MacroRefs) {
   Test.Code = std::string(MainCode.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
-  Index.updateMain(Test.Filename, AST);
+  Index.updateMain(testPath(Test.Filename), AST);
 
   auto HeaderMacro = findSymbol(Test.headerSymbols(), "HEADER_MACRO");
   EXPECT_THAT(getRefs(Index, HeaderMacro.ID),
@@ -495,7 +495,7 @@ TEST(FileIndexTest, MergeMainFileSymbols) {
 }
 
 TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   FS.update("f1", numSlab(1, 3), nullptr, nullptr, true);
   FS.update("f2", numSlab(1, 3), nullptr, nullptr, false);
   EXPECT_THAT(
@@ -507,7 +507,7 @@ TEST(FileSymbolsTest, CountReferencesNoRefSlabs) {
 }
 
 TEST(FileSymbolsTest, CountReferencesWithRefSlabs) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   FS.update("f1cpp", numSlab(1, 3), refSlab(SymbolID("1"), "f1.cpp"), nullptr,
             true);
   FS.update("f1h", numSlab(1, 3), refSlab(SymbolID("1"), "f1.h"), nullptr,
@@ -709,7 +709,7 @@ TEST(FileIndexTest, Profile) {
 }
 
 TEST(FileSymbolsTest, Profile) {
-  FileSymbols FS;
+  FileSymbols FS(IndexContents::All);
   FS.update("f1", numSlab(1, 2), nullptr, nullptr, false);
   FS.update("f2", nullptr, refSlab(SymbolID("1"), "f1"), nullptr, false);
   FS.update("f3", nullptr, nullptr,

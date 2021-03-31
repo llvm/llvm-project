@@ -13,6 +13,10 @@
 
 namespace mlir {
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
 

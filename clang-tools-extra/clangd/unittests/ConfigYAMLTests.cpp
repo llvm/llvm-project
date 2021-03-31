@@ -10,10 +10,12 @@
 #include "ConfigFragment.h"
 #include "ConfigTesting.h"
 #include "Protocol.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -164,6 +166,35 @@ Index:
   EXPECT_THAT(*Results[0].Index.External.getValue()->Server, Val("bar"));
 }
 
+TEST(ParseYAML, AllScopes) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Completion:
+  AllScopes: True
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.AllScopes, llvm::ValueIs(Val(true)));
+}
+
+TEST(ParseYAML, AllScopesWarn) {
+  CapturedDiags Diags;
+  Annotations YAML(R"yaml(
+Completion:
+  AllScopes: $diagrange[[Truex]]
+  )yaml");
+  auto Results =
+      Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(AllOf(DiagMessage("AllScopes should be a boolean"),
+                                DiagKind(llvm::SourceMgr::DK_Warning),
+                                DiagPos(YAML.range("diagrange").start),
+                                DiagRange(YAML.range("diagrange")))));
+  ASSERT_EQ(Results.size(), 1u);
+  EXPECT_THAT(Results[0].Completion.AllScopes, testing::Eq(llvm::None));
+}
 } // namespace
 } // namespace config
 } // namespace clangd

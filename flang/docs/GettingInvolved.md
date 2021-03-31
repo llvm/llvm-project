@@ -92,6 +92,6 @@ To understand the status of various developments in Flang please join the respec
 
 -   Development updates on the new Flang driver.
 -   Join [New Flang Driver Technical Call](https://bit.ly/2Yo6RYI)
--   Time: On Mondays 8:30 AM Pacific Time, on the weeks alternating with Flang Community Technical Biweekly Call
+-   Time: On Mondays 4:30 PM UK Time, on the weeks alternating with Flang Community Technical Biweekly Call
 -   Meeting minutes are [here](https://docs.google.com/document/d/1G042fAWgVN-QW9fi8JGy4lyTLC1IMQ_tfWDZin3RHW4).
 -   Status tracking [page](https://docs.google.com/spreadsheets/d/1JRe39lP_KhtkYxFEIvwrCFlE5v1Ofa_krOHI-XXXWPY)

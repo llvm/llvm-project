@@ -84,8 +84,8 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK: [[DUP:%[0-9]+]]:_(<4 x s32>) = G_DUP [[C]](s32)
+    ; CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[DUP]](<4 x s32>)
     ; CHECK: $q0 = COPY [[LSHR]](<4 x s32>)
     ; CHECK: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0

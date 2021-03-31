@@ -40,18 +40,13 @@ void SpecialMemberFunctionsCheck::storeOptions(
 void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxRecordDecl(
-          eachOf(
-              has(cxxDestructorDecl(unless(isImplicit())).bind("dtor")),
-              has(cxxConstructorDecl(isCopyConstructor(), unless(isImplicit()))
-                      .bind("copy-ctor")),
-              has(cxxMethodDecl(isCopyAssignmentOperator(),
-                                unless(isImplicit()))
-                      .bind("copy-assign")),
-              has(cxxConstructorDecl(isMoveConstructor(), unless(isImplicit()))
-                      .bind("move-ctor")),
-              has(cxxMethodDecl(isMoveAssignmentOperator(),
-                                unless(isImplicit()))
-                      .bind("move-assign"))))
+          eachOf(has(cxxDestructorDecl().bind("dtor")),
+                 has(cxxConstructorDecl(isCopyConstructor()).bind("copy-ctor")),
+                 has(cxxMethodDecl(isCopyAssignmentOperator())
+                         .bind("copy-assign")),
+                 has(cxxConstructorDecl(isMoveConstructor()).bind("move-ctor")),
+                 has(cxxMethodDecl(isMoveAssignmentOperator())
+                         .bind("move-assign"))))
           .bind("class-def"),
       this);
 }

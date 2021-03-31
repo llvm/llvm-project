@@ -586,8 +586,8 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
     uint64_t LeaderDemandedBits = 0;
-    for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI)
-      LeaderDemandedBits |= DBits[*MI];
+    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+      LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = (sizeof(LeaderDemandedBits) * 8) -
                      llvm::countLeadingZeros(LeaderDemandedBits);
@@ -600,22 +600,22 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI)
-      if (isa<PHINode>(*MI) && MinBW < (*MI)->getType()->getScalarSizeInBits()) {
+    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+      if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
       }
     if (Abort)
       continue;
 
-    for (auto MI = ECs.member_begin(I), ME = ECs.member_end(); MI != ME; ++MI) {
-      if (!isa<Instruction>(*MI))
+    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+      if (!isa<Instruction>(M))
         continue;
-      Type *Ty = (*MI)->getType();
-      if (Roots.count(*MI))
-        Ty = cast<Instruction>(*MI)->getOperand(0)->getType();
+      Type *Ty = M->getType();
+      if (Roots.count(M))
+        Ty = cast<Instruction>(M)->getOperand(0)->getType();
       if (MinBW < Ty->getScalarSizeInBits())
-        MinBWs[cast<Instruction>(*MI)] = MinBW;
+        MinBWs[cast<Instruction>(M)] = MinBW;
     }
   }
 
@@ -1300,10 +1300,14 @@ void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
 
 std::string VFABI::mangleTLIVectorName(StringRef VectorName,
                                        StringRef ScalarName, unsigned numArgs,
-                                       unsigned VF) {
+                                       ElementCount VF) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
-  Out << "_ZGV" << VFABI::_LLVM_ << "N" << VF;
+  Out << "_ZGV" << VFABI::_LLVM_ << "N";
+  if (VF.isScalable())
+    Out << 'x';
+  else
+    Out << VF.getFixedValue();
   for (unsigned I = 0; I < numArgs; ++I)
     Out << "v";
   Out << "_" << ScalarName << "(" << VectorName << ")";

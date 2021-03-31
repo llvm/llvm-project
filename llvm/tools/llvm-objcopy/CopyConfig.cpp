@@ -607,13 +607,6 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
     Config.GnuDebugLinkCRC32 =
         llvm::crc32(arrayRefFromStringRef(Debug->getBuffer()));
   }
-  Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_input))
-    Config.BuildIdLinkInput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_input);
-  if (InputArgs.hasArg(OBJCOPY_build_id_link_output))
-    Config.BuildIdLinkOutput =
-        InputArgs.getLastArgValue(OBJCOPY_build_id_link_output);
   Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
   Config.AllocSectionsPrefix =
@@ -727,6 +720,7 @@ parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
             : DiscardType::Locals;
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
+  Config.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);
   Config.DecompressDebugSections =
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
   if (Config.DiscardMode == DiscardType::All) {
@@ -1104,6 +1098,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
   Config.StripSwiftSymbols = InputArgs.hasArg(STRIP_strip_swift_symbols);
   Config.OnlyKeepDebug = InputArgs.hasArg(STRIP_only_keep_debug);
   Config.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
+  Config.KeepUndefined = InputArgs.hasArg(STRIP_keep_undefined);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
     if (Error E = Config.KeepSection.addMatcher(NameOrPattern::create(

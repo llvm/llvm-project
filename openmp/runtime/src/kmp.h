@@ -845,7 +845,7 @@ extern char *__kmp_cpuinfo_file;
 typedef enum kmp_proc_bind_t {
   proc_bind_false = 0,
   proc_bind_true,
-  proc_bind_master,
+  proc_bind_primary,
   proc_bind_close,
   proc_bind_spread,
   proc_bind_intel, // use KMP_AFFINITY interface
@@ -958,6 +958,10 @@ extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
 extern omp_memspace_handle_t const omp_high_bw_mem_space;
 extern omp_memspace_handle_t const omp_low_lat_mem_space;
+// Preview of target memory support
+extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
+extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
+extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
 
 typedef struct {
   omp_alloctrait_key_t key;
@@ -974,6 +978,10 @@ extern omp_allocator_handle_t const omp_low_lat_mem_alloc;
 extern omp_allocator_handle_t const omp_cgroup_mem_alloc;
 extern omp_allocator_handle_t const omp_pteam_mem_alloc;
 extern omp_allocator_handle_t const omp_thread_mem_alloc;
+// Preview of target memory support
+extern omp_allocator_handle_t const llvm_omp_target_host_mem_alloc;
+extern omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
+extern omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
 extern omp_allocator_handle_t const kmp_max_mem_alloc;
 extern omp_allocator_handle_t __kmp_def_allocator;
 
@@ -1011,6 +1019,7 @@ extern void __kmpc_free(int gtid, void *ptr, omp_allocator_handle_t al);
 
 extern void __kmp_init_memkind();
 extern void __kmp_fini_memkind();
+extern void __kmp_init_target_mem();
 
 /* ------------------------------------------------------------------------ */
 
@@ -1075,13 +1084,11 @@ extern void __kmp_fini_memkind();
 /* Calculate new number of monitor wakeups for a specific block time based on
    previous monitor_wakeups. Only allow increasing number of wakeups */
 #define KMP_WAKEUPS_FROM_BLOCKTIME(blocktime, monitor_wakeups)                 \
-  (((blocktime) == KMP_MAX_BLOCKTIME)                                          \
+  (((blocktime) == KMP_MAX_BLOCKTIME)   ? (monitor_wakeups)                    \
+   : ((blocktime) == KMP_MIN_BLOCKTIME) ? KMP_MAX_MONITOR_WAKEUPS              \
+   : ((monitor_wakeups) > (KMP_BLOCKTIME_MULTIPLIER / (blocktime)))            \
        ? (monitor_wakeups)                                                     \
-       : ((blocktime) == KMP_MIN_BLOCKTIME)                                    \
-             ? KMP_MAX_MONITOR_WAKEUPS                                         \
-             : ((monitor_wakeups) > (KMP_BLOCKTIME_MULTIPLIER / (blocktime)))  \
-                   ? (monitor_wakeups)                                         \
-                   : (KMP_BLOCKTIME_MULTIPLIER) / (blocktime))
+       : (KMP_BLOCKTIME_MULTIPLIER) / (blocktime))
 
 /* Calculate number of intervals for a specific block time based on
    monitor_wakeups */
@@ -1126,7 +1133,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_MAX_CHUNK (INT_MAX - 1)
 #define KMP_DEFAULT_CHUNK 1
 
+#define KMP_MIN_DISP_NUM_BUFF 1
 #define KMP_DFLT_DISP_NUM_BUFF 7
+#define KMP_MAX_DISP_NUM_BUFF 4096
+
 #define KMP_MAX_ORDERED 8
 
 #define KMP_MAX_FIELDS 32
@@ -1211,7 +1221,6 @@ typedef struct kmp_cpuinfo {
   int stepping; // CPUID(1).EAX[3:0] ( Stepping )
   int sse2; // 0 if SSE2 instructions are not supported, 1 otherwise.
   int rtm; // 0 if RTM instructions are not supported, 1 otherwise.
-  int cpu_stackoffset;
   int apic_id;
   int physical_id;
   int logical_id;
@@ -1368,8 +1377,7 @@ static inline void __kmp_x86_pause(void) { _mm_pause(); }
 #endif
 #endif // KMP_HAVE_WAITPKG_INTRINSICS
 KMP_ATTRIBUTE_TARGET_WAITPKG
-static inline int
-__kmp_tpause(uint32_t hint, uint64_t counter) {
+static inline int __kmp_tpause(uint32_t hint, uint64_t counter) {
 #if !KMP_HAVE_WAITPKG_INTRINSICS
   uint32_t timeHi = uint32_t(counter >> 32);
   uint32_t timeLo = uint32_t(counter & 0xffffffff);
@@ -1385,8 +1393,7 @@ __kmp_tpause(uint32_t hint, uint64_t counter) {
 #endif
 }
 KMP_ATTRIBUTE_TARGET_WAITPKG
-static inline void
-__kmp_umonitor(void *cacheline) {
+static inline void __kmp_umonitor(void *cacheline) {
 #if !KMP_HAVE_WAITPKG_INTRINSICS
   __asm__ volatile("# umonitor\n.byte 0xF3, 0x0F, 0xAE, 0x01 "
                    :
@@ -1397,8 +1404,7 @@ __kmp_umonitor(void *cacheline) {
 #endif
 }
 KMP_ATTRIBUTE_TARGET_WAITPKG
-static inline int
-__kmp_umwait(uint32_t hint, uint64_t counter) {
+static inline int __kmp_umwait(uint32_t hint, uint64_t counter) {
 #if !KMP_HAVE_WAITPKG_INTRINSICS
   uint32_t timeHi = uint32_t(counter >> 32);
   uint32_t timeLo = uint32_t(counter & 0xffffffff);
@@ -1451,7 +1457,8 @@ enum cons_type {
   ct_ordered_in_pdo,
   ct_master,
   ct_reduce,
-  ct_barrier
+  ct_barrier,
+  ct_masked
 };
 
 #define IS_CONS_TYPE_ORDERED(ct) ((ct) == ct_pdo_ordered)
@@ -1599,7 +1606,7 @@ struct private_common {
   struct private_common *next;
   struct private_common *link;
   void *gbl_addr;
-  void *par_addr; /* par_addr == gbl_addr for MASTER thread */
+  void *par_addr; /* par_addr == gbl_addr for PRIMARY thread */
   size_t cmn_size;
 };
 
@@ -1911,9 +1918,8 @@ typedef enum kmp_bar_pat { /* Barrier communication patterns */
                                0, /* Single level (degenerate) tree */
                            bp_tree_bar =
                                1, /* Balanced tree with branching factor 2^n */
-                           bp_hyper_bar =
-                               2, /* Hypercube-embedded tree with min branching
-                                     factor 2^n */
+                           bp_hyper_bar = 2, /* Hypercube-embedded tree with min
+                                                branching factor 2^n */
                            bp_hierarchical_bar = 3, /* Machine hierarchy tree */
                            bp_last_bar /* Placeholder to mark the end */
 } kmp_bar_pat_e;
@@ -1998,9 +2004,9 @@ union KMP_ALIGN_CACHE kmp_barrier_team_union {
     kmp_uint64 b_arrived; /* STATE => task reached synch point. */
 #if USE_DEBUGGER
     // The following two fields are indended for the debugger solely. Only
-    // master of the team accesses these fields: the first one is increased by
-    // 1 when master arrives to a barrier, the second one is increased by one
-    // when all the threads arrived.
+    // primary thread of the team accesses these fields: the first one is
+    // increased by 1 when the primary thread arrives to a barrier, the second
+    // one is increased by one when all the threads arrived.
     kmp_uint b_master_arrived;
     kmp_uint b_team_arrived;
 #endif
@@ -2530,7 +2536,7 @@ typedef struct kmp_teams_size {
 
 // This struct stores a thread that acts as a "root" for a contention
 // group. Contention groups are rooted at kmp_root threads, but also at
-// each master thread of each team created in the teams construct.
+// each primary thread of each team created in the teams construct.
 // This struct therefore also stores a thread_limit associated with
 // that contention group, and a counter to track the number of threads
 // active in that contention group. Each thread has a list of these: CG
@@ -2542,7 +2548,7 @@ typedef struct kmp_teams_size {
 typedef struct kmp_cg_root {
   kmp_info_p *cg_root; // "root" thread for a contention group
   // The CG root's limit comes from OMP_THREAD_LIMIT for root threads, or
-  // thread_limit clause for teams masters
+  // thread_limit clause for teams primary threads
   kmp_int32 cg_thread_limit;
   kmp_int32 cg_nthreads; // Count of active threads in CG rooted at cg_root
   struct kmp_cg_root *up; // pointer to higher level CG root in list
@@ -2552,8 +2558,9 @@ typedef struct kmp_cg_root {
 
 typedef struct KMP_ALIGN_CACHE kmp_base_info {
   /* Start with the readonly data which is cache aligned and padded. This is
-     written before the thread starts working by the master. Uber masters may
-     update themselves later. Usage does not consider serialized regions.  */
+     written before the thread starts working by the primary thread. Uber
+     masters may update themselves later. Usage does not consider serialized
+     regions.  */
   kmp_desc_t th_info;
   kmp_team_p *th_team; /* team we belong to */
   kmp_root_p *th_root; /* pointer to root of task hierarchy */
@@ -2564,7 +2571,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   /* The following are cached from the team info structure */
   /* TODO use these in more places as determined to be needed via profiling */
   int th_team_nproc; /* number of threads in a team */
-  kmp_info_p *th_team_master; /* the team's master thread */
+  kmp_info_p *th_team_master; /* the team's primary thread */
   int th_team_serialized; /* team is serialized */
   microtask_t th_teams_microtask; /* save entry address for teams construct */
   int th_teams_level; /* save initial level of teams construct */
@@ -2585,7 +2592,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   kmp_affin_mask_t *th_affin_mask; /* thread's current affinity mask */
 #endif
   omp_allocator_handle_t th_def_allocator; /* default allocator */
-  /* The data set by the master at reinit, then R/W by the worker */
+  /* The data set by the primary thread at reinit, then R/W by the worker */
   KMP_ALIGN_CACHE int
       th_set_nproc; /* if > 0, then only use this request for the next fork */
 #if KMP_NESTED_HOT_TEAMS
@@ -2621,7 +2628,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_info {
   ompt_thread_info_t ompt_thread_info;
 #endif
 
-  /* The following are also read by the master during reinit */
+  /* The following are also read by the primary thread during reinit */
   struct common_table *th_pri_common;
 
   volatile kmp_uint32 th_spin_here; /* thread-local location for spinning */
@@ -2698,7 +2705,9 @@ typedef union KMP_ALIGN_CACHE kmp_info {
 
 // OpenMP thread team data structures
 
-typedef struct kmp_base_data { volatile kmp_uint32 t_value; } kmp_base_data_t;
+typedef struct kmp_base_data {
+  volatile kmp_uint32 t_value;
+} kmp_base_data_t;
 
 typedef union KMP_ALIGN_CACHE kmp_sleep_team {
   double dt_align; /* use worst case alignment */
@@ -2719,7 +2728,7 @@ typedef int (*launch_t)(int gtid);
 
 // Set up how many argv pointers will fit in cache lines containing
 // t_inline_argv. Historically, we have supported at least 96 bytes. Using a
-// larger value for more space between the master write/worker read section and
+// larger value for more space between the primary write/worker read section and
 // read/write by all section seems to buy more performance on EPCC PARALLEL.
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 #define KMP_INLINE_ARGV_BYTES                                                  \
@@ -2745,11 +2754,11 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   std::atomic<void *> t_tg_reduce_data[2]; // to support task modifier
   std::atomic<int> t_tg_fini_counter[2]; // sync end of task reductions
 
-  // Master only
+  // Primary thread only
   // ---------------------------------------------------------------------------
-  KMP_ALIGN_CACHE int t_master_tid; // tid of master in parent team
-  int t_master_this_cons; // "this_construct" single counter of master in parent
-  // team
+  KMP_ALIGN_CACHE int t_master_tid; // tid of primary thread in parent team
+  int t_master_this_cons; // "this_construct" single counter of primary thread
+  // in parent team
   ident_t *t_ident; // if volatile, have to change too much other crud to
   // volatile too
   kmp_team_p *t_parent; // parent team
@@ -2761,7 +2770,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_uint64 t_region_time; // region begin timestamp
 #endif /* USE_ITT_BUILD */
 
-  // Master write, workers read
+  // Primary thread write, workers read
   // --------------------------------------------------------------------------
   KMP_ALIGN_CACHE void **t_argv;
   int t_argc;
@@ -2797,7 +2806,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_r_sched_t t_sched; // run-time schedule for the team
 #if KMP_AFFINITY_SUPPORTED
   int t_first_place; // first & last place in parent thread's partition.
-  int t_last_place; // Restore these values to master after par region.
+  int t_last_place; // Restore these values to primary thread after par region.
 #endif // KMP_AFFINITY_SUPPORTED
   int t_display_affinity;
   int t_size_changed; // team size was changed?: 0: no, 1: yes, -1: changed via
@@ -3073,9 +3082,8 @@ extern int __kmp_ncores; /* Total number of cores for threads placement */
 extern int __kmp_abort_delay;
 
 extern int __kmp_need_register_atfork_specified;
-extern int
-    __kmp_need_register_atfork; /* At initialization, call pthread_atfork to
-                                   install fork handler */
+extern int __kmp_need_register_atfork; /* At initialization, call pthread_atfork
+                                          to install fork handler */
 extern int __kmp_gtid_mode; /* Method of getting gtid, values:
                                0 - not set, will be set at runtime
                                1 - using stack search
@@ -3363,6 +3371,8 @@ extern void __kmp_push_proc_bind(ident_t *loc, int gtid,
                                  kmp_proc_bind_t proc_bind);
 extern void __kmp_push_num_teams(ident_t *loc, int gtid, int num_teams,
                                  int num_threads);
+extern void __kmp_push_num_teams_51(ident_t *loc, int gtid, int num_teams_lb,
+                                    int num_teams_ub, int num_threads);
 
 extern void __kmp_yield();
 
@@ -3441,7 +3451,7 @@ extern void __kmp_wait_64(kmp_info_t *this_thr, kmp_flag_64<> *flag,
                           ,
                           void *itt_sync_obj
 #endif
-                          );
+);
 extern void __kmp_release_64(kmp_flag_64<> *flag);
 
 extern void __kmp_infinite_loop(void);
@@ -3699,7 +3709,7 @@ extern int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int npr, int argc,
                                   ,
                                   void **exit_frame_ptr
 #endif
-                                  );
+);
 
 /* ------------------------------------------------------------------------ */
 
@@ -3733,6 +3743,9 @@ KMP_EXPORT void __kmpc_flush(ident_t *);
 KMP_EXPORT void __kmpc_barrier(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_master(ident_t *, kmp_int32 global_tid);
+KMP_EXPORT kmp_int32 __kmpc_masked(ident_t *, kmp_int32 global_tid,
+                                   kmp_int32 filter);
+KMP_EXPORT void __kmpc_end_masked(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_ordered(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_ordered(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_critical(ident_t *, kmp_int32 global_tid,
@@ -3776,12 +3789,9 @@ KMP_EXPORT kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                              size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds,
                                              kmp_routine_entry_t task_entry);
-KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
-                                                    kmp_int32 flags,
-                                                    size_t sizeof_kmp_task_t,
-                                                    size_t sizeof_shareds,
-                                                    kmp_routine_entry_t task_entry,
-                                                    kmp_int64 device_id);
+KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(
+    ident_t *loc_ref, kmp_int32 gtid, kmp_int32 flags, size_t sizeof_kmp_task_t,
+    size_t sizeof_shareds, kmp_routine_entry_t task_entry, kmp_int64 device_id);
 KMP_EXPORT void __kmpc_omp_task_begin_if0(ident_t *loc_ref, kmp_int32 gtid,
                                           kmp_task_t *task);
 KMP_EXPORT void __kmpc_omp_task_complete_if0(ident_t *loc_ref, kmp_int32 gtid,
@@ -3921,6 +3931,11 @@ KMP_EXPORT void __kmpc_push_proc_bind(ident_t *loc, kmp_int32 global_tid,
 KMP_EXPORT void __kmpc_push_num_teams(ident_t *loc, kmp_int32 global_tid,
                                       kmp_int32 num_teams,
                                       kmp_int32 num_threads);
+/* Function for OpenMP 5.1 num_teams clause */
+KMP_EXPORT void __kmpc_push_num_teams_51(ident_t *loc, kmp_int32 global_tid,
+                                         kmp_int32 num_teams_lb,
+                                         kmp_int32 num_teams_ub,
+                                         kmp_int32 num_threads);
 KMP_EXPORT void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc,
                                   kmpc_micro microtask, ...);
 struct kmp_dim { // loop bounds info casted to kmp_int64
@@ -4071,6 +4086,13 @@ extern void __kmp_hidden_helper_main_thread_release();
 // main thread, is skipped.
 #define KMP_GTID_TO_SHADOW_GTID(gtid)                                          \
   ((gtid) % (__kmp_hidden_helper_threads_num - 1) + 2)
+
+// Support for error directive
+typedef enum kmp_severity_t {
+  severity_warning = 1,
+  severity_fatal = 2
+} kmp_severity_t;
+extern void __kmpc_error(ident_t *loc, int severity, const char *message);
 
 #ifdef __cplusplus
 }

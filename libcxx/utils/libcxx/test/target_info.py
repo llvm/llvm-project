@@ -21,14 +21,14 @@ class DefaultTargetInfo(object):
         self.full_config = full_config
         self.executor = None
 
-    def platform(self):
-        return sys.platform.lower().strip()
-
     def is_windows(self):
-        return self.platform() == 'win32'
+        return False
 
-    def is_darwin(self):
-        return self.platform() == 'darwin'
+    def is_zos(self):
+        return False
+
+    def is_mingw(self):
+        return False
 
     def add_cxx_flags(self, flags): pass
     def add_cxx_compile_flags(self, flags): pass
@@ -49,30 +49,6 @@ class DefaultTargetInfo(object):
 class DarwinLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(DarwinLocalTI, self).__init__(full_config)
-
-    def is_host_macosx(self):
-        name = lit.util.to_string(subprocess.check_output(['sw_vers', '-productName'])).strip()
-        return name == "Mac OS X"
-
-    def get_macosx_version(self):
-        assert self.is_host_macosx()
-        version = lit.util.to_string(subprocess.check_output(['sw_vers', '-productVersion'])).strip()
-        version = re.sub(r'([0-9]+\.[0-9]+)(\..*)?', r'\1', version)
-        return version
-
-    def get_sdk_version(self, name):
-        assert self.is_host_macosx()
-        cmd = ['xcrun', '--sdk', name, '--show-sdk-path']
-        try:
-            out = subprocess.check_output(cmd).strip()
-        except OSError:
-            pass
-
-        if not out:
-            self.full_config.lit_config.fatal(
-                    "cannot infer sdk version with: %r" % cmd)
-
-        return re.sub(r'.*/[^0-9]+([0-9.]+)\.sdk', r'\1', out)
 
     def add_cxx_flags(self, flags):
         out, err, exit_code = executeCommand(['xcrun', '--show-sdk-path'])
@@ -113,31 +89,6 @@ class NetBSDLocalTI(DefaultTargetInfo):
 class LinuxLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(LinuxLocalTI, self).__init__(full_config)
-
-    def platform(self):
-        return 'linux'
-
-    def _distribution(self):
-        try:
-            # linux_distribution is not available since Python 3.8
-            # However, this function is only used to detect SLES 11,
-            # which is quite an old distribution that doesn't have
-            # Python 3.8.
-            return platform.linux_distribution()
-        except AttributeError:
-            return '', '', ''
-
-    def platform_name(self):
-        name, _, _ = self._distribution()
-        # Some distros have spaces, e.g. 'SUSE Linux Enterprise Server'
-        # lit features can't have spaces
-        name = name.lower().strip().replace(' ', '-')
-        return name # Permitted to be None
-
-    def platform_ver(self):
-        _, ver, _ = self._distribution()
-        ver = ver.lower().strip().replace(' ', '-')
-        return ver # Permitted to be None.
 
     def add_cxx_compile_flags(self, flags):
         flags += ['-D__STDC_FORMAT_MACROS',
@@ -184,6 +135,23 @@ class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
 
+    def is_windows(self):
+        return True
+
+class ZOSLocalTI(DefaultTargetInfo):
+    def __init__(self, full_config):
+        super(ZOSLocalTI, self).__init__(full_config)
+
+    def is_zos(self):
+        return True
+
+class MingwLocalTI(WindowsLocalTI):
+    def __init__(self, full_config):
+        super(MingwLocalTI, self).__init__(full_config)
+
+    def is_mingw(self):
+        return True
+
 def make_target_info(full_config):
     default = "libcxx.test.target_info.LocalTI"
     info_str = full_config.get_lit_conf('target_info', default)
@@ -199,4 +167,5 @@ def make_target_info(full_config):
     if target_system == 'NetBSD':  return NetBSDLocalTI(full_config)
     if target_system == 'Linux':   return LinuxLocalTI(full_config)
     if target_system == 'Windows': return WindowsLocalTI(full_config)
+    if target_system == 'OS/390':  return ZOSLocalTI(full_config)
     return DefaultTargetInfo(full_config)

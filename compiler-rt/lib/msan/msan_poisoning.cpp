@@ -213,7 +213,7 @@ void SetShadow(const void *ptr, uptr size, u8 value) {
       if (page_end != shadow_end) {
         REAL(memset)((void *)page_end, 0, shadow_end - page_end);
       }
-      if (!MmapFixedNoReserve(page_beg, page_end - page_beg))
+      if (!MmapFixedSuperNoReserve(page_beg, page_end - page_beg))
         Die();
     }
   }

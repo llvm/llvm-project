@@ -473,6 +473,56 @@ std::vector<StructType *> Module::getIdentifiedStructTypes() const {
   return Ret;
 }
 
+std::string Module::getUniqueIntrinsicName(StringRef BaseName, Intrinsic::ID Id,
+                                           const FunctionType *Proto) {
+  auto Encode = [&BaseName](unsigned Suffix) {
+    return (Twine(BaseName) + "." + Twine(Suffix)).str();
+  };
+
+  {
+    // fast path - the prototype is already known
+    auto UinItInserted = UniquedIntrinsicNames.insert({{Id, Proto}, 0});
+    if (!UinItInserted.second)
+      return Encode(UinItInserted.first->second);
+  }
+
+  // Not known yet. A new entry was created with index 0. Check if there already
+  // exists a matching declaration, or select a new entry.
+
+  // Start looking for names with the current known maximum count (or 0).
+  auto NiidItInserted = CurrentIntrinsicIds.insert({BaseName, 0});
+  unsigned Count = NiidItInserted.first->second;
+
+  // This might be slow if a whole population of intrinsics already existed, but
+  // we cache the values for later usage.
+  std::string NewName;
+  while (true) {
+    NewName = Encode(Count);
+    GlobalValue *F = getNamedValue(NewName);
+    if (!F) {
+      // Reserve this entry for the new proto
+      UniquedIntrinsicNames[{Id, Proto}] = Count;
+      break;
+    }
+
+    // A declaration with this name already exists. Remember it.
+    FunctionType *FT = dyn_cast<FunctionType>(F->getType()->getElementType());
+    auto UinItInserted = UniquedIntrinsicNames.insert({{Id, FT}, Count});
+    if (FT == Proto) {
+      // It was a declaration for our prototype. This entry was allocated in the
+      // beginning. Update the count to match the existing declaration.
+      UinItInserted.first->second = Count;
+      break;
+    }
+
+    ++Count;
+  }
+
+  NiidItInserted.first->second = Count + 1;
+
+  return NewName;
+}
+
 // dropAllReferences() - This function causes all the subelements to "let go"
 // of all references that they are maintaining.  This allows one to 'delete' a
 // whole module at a time, even though there may be circular references... first
@@ -509,6 +559,11 @@ unsigned Module::getDwarfVersion() const {
   return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
 
+bool Module::isDwarf64() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("DWARF64"));
+  return Val && cast<ConstantInt>(Val->getValue())->isOne();
+}
+
 unsigned Module::getCodeViewFlag() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("CodeView"));
   if (!Val)
@@ -516,9 +571,9 @@ unsigned Module::getCodeViewFlag() const {
   return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
 
-unsigned Module::getInstructionCount() {
+unsigned Module::getInstructionCount() const {
   unsigned NumInstrs = 0;
-  for (Function &F : FunctionList)
+  for (const Function &F : FunctionList)
     NumInstrs += F.getInstructionCount();
   return NumInstrs;
 }
@@ -654,7 +709,7 @@ VersionTuple Module::getSDKVersion() const {
 }
 
 GlobalVariable *llvm::collectUsedGlobalVariables(
-    const Module &M, SmallPtrSetImpl<GlobalValue *> &Set, bool CompilerUsed) {
+    const Module &M, SmallVectorImpl<GlobalValue *> &Vec, bool CompilerUsed) {
   const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";
   GlobalVariable *GV = M.getGlobalVariable(Name);
   if (!GV || !GV->hasInitializer())
@@ -663,7 +718,7 @@ GlobalVariable *llvm::collectUsedGlobalVariables(
   const ConstantArray *Init = cast<ConstantArray>(GV->getInitializer());
   for (Value *Op : Init->operands()) {
     GlobalValue *G = cast<GlobalValue>(Op->stripPointerCasts());
-    Set.insert(G);
+    Vec.push_back(G);
   }
   return GV;
 }

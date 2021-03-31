@@ -51,7 +51,7 @@ namespace jitlink {
 
 char JITLinkError::ID = 0;
 
-void JITLinkError::log(raw_ostream &OS) const { OS << ErrMsg << "\n"; }
+void JITLinkError::log(raw_ostream &OS) const { OS << ErrMsg; }
 
 std::error_code JITLinkError::convertToErrorCode() const {
   return std::error_code(GenericJITLinkError, *JITLinkerErrorCategory);
@@ -251,11 +251,7 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
   return NewBlock;
 }
 
-void LinkGraph::dump(raw_ostream &OS,
-                     std::function<StringRef(Edge::Kind)> EdgeKindToName) {
-  if (!EdgeKindToName)
-    EdgeKindToName = [](Edge::Kind K) { return StringRef(); };
-
+void LinkGraph::dump(raw_ostream &OS) {
   OS << "Symbols:\n";
   for (auto *Sym : defined_symbols()) {
     OS << "  " << format("0x%016" PRIx64, Sym->getAddress()) << ": " << *Sym
@@ -263,16 +259,7 @@ void LinkGraph::dump(raw_ostream &OS,
     if (Sym->isDefined()) {
       for (auto &E : Sym->getBlock().edges()) {
         OS << "    ";
-        StringRef EdgeName = (E.getKind() < Edge::FirstRelocation
-                                  ? getGenericEdgeKindName(E.getKind())
-                                  : EdgeKindToName(E.getKind()));
-
-        if (!EdgeName.empty())
-          printEdge(OS, Sym->getBlock(), E, EdgeName);
-        else {
-          auto EdgeNumberString = std::to_string(E.getKind());
-          printEdge(OS, Sym->getBlock(), E, EdgeNumberString);
-        }
+        printEdge(OS, Sym->getBlock(), E, getEdgeKindName(E.getKind()));
         OS << "\n";
       }
     }
@@ -311,7 +298,7 @@ LinkGraphPassFunction JITLinkContext::getMarkLivePass(const Triple &TT) const {
   return LinkGraphPassFunction();
 }
 
-Error JITLinkContext::modifyPassConfig(const Triple &TT,
+Error JITLinkContext::modifyPassConfig(LinkGraph &G,
                                        PassConfiguration &Config) {
   return Error::success();
 }
@@ -322,14 +309,47 @@ Error markAllSymbolsLive(LinkGraph &G) {
   return Error::success();
 }
 
+Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
+                                const Edge &E) {
+  std::string ErrMsg;
+  {
+    raw_string_ostream ErrStream(ErrMsg);
+    Section &Sec = B.getSection();
+    ErrStream << "In graph " << G.getName() << ", section " << Sec.getName()
+              << ": relocation target ";
+    if (E.getTarget().hasName())
+      ErrStream << "\"" << E.getTarget().getName() << "\" ";
+    ErrStream << "at address " << formatv("{0:x}", E.getTarget().getAddress());
+    ErrStream << " is out of range of " << G.getEdgeKindName(E.getKind())
+              << " fixup at " << formatv("{0:x}", B.getFixupAddress(E)) << " (";
+
+    Symbol *BestSymbolForBlock = nullptr;
+    for (auto *Sym : Sec.symbols())
+      if (&Sym->getBlock() == &B && Sym->hasName() && Sym->getOffset() == 0 &&
+          (!BestSymbolForBlock ||
+           Sym->getScope() < BestSymbolForBlock->getScope() ||
+           Sym->getLinkage() < BestSymbolForBlock->getLinkage()))
+        BestSymbolForBlock = Sym;
+
+    if (BestSymbolForBlock)
+      ErrStream << BestSymbolForBlock->getName() << ", ";
+    else
+      ErrStream << "<anonymous block> @ ";
+
+    ErrStream << formatv("{0:x}", B.getAddress()) << " + "
+              << formatv("{0:x}", E.getOffset()) << ")";
+  }
+  return make_error<JITLinkError>(std::move(ErrMsg));
+}
+
 Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
   auto Magic = identify_magic(ObjectBuffer.getBuffer());
   switch (Magic) {
   case file_magic::macho_object:
-    return createLinkGraphFromMachOObject(std::move(ObjectBuffer));
+    return createLinkGraphFromMachOObject(ObjectBuffer);
   case file_magic::elf_relocatable:
-    return createLinkGraphFromELFObject(std::move(ObjectBuffer));
+    return createLinkGraphFromELFObject(ObjectBuffer);
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };

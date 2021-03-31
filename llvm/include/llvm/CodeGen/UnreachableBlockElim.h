@@ -19,8 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_UNREACHABLEBLOCKELIM_H
-#define LLVM_LIB_CODEGEN_UNREACHABLEBLOCKELIM_H
+#ifndef LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H
+#define LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -33,4 +33,4 @@ public:
 };
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_UNREACHABLEBLOCKELIM_H
+#endif // LLVM_CODEGEN_UNREACHABLEBLOCKELIM_H

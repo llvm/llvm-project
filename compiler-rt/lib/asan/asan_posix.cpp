@@ -56,7 +56,7 @@ bool PlatformUnpoisonStacks() {
   if (signal_stack.ss_flags != SS_ONSTACK)
     return false;
 
-  // Since we're on the signal altnerate stack, we cannot find the DEFAULT
+  // Since we're on the signal alternate stack, we cannot find the DEFAULT
   // stack bottom using a local variable.
   uptr default_bottom, tls_addr, tls_size, stack_size;
   GetThreadStackAndTls(/*main=*/false, &default_bottom, &stack_size, &tls_addr,

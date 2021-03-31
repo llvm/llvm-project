@@ -1938,7 +1938,6 @@ AVRTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i8)
         return std::make_pair(0U, &AVR::GPR8RegClass);
 
-      assert(VT == MVT::i16 && "inline asm constraint too large");
       return std::make_pair(0U, &AVR::DREGSRegClass);
     case 't': // Temporary register: r0.
       return std::make_pair(unsigned(AVR::R0), &AVR::GPR8RegClass);

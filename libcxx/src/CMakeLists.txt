@@ -77,13 +77,22 @@ if(WIN32)
   list(APPEND LIBCXX_SOURCES
     support/win32/locale_win32.cpp
     support/win32/support.cpp
-    support/win32/thread_win32.cpp
     )
+
+  if (NOT LIBCXX_HAS_PTHREAD_API)
+    list(APPEND LIBCXX_SOURCES
+      support/win32/thread_win32.cpp
+      )
+  endif()
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")
   list(APPEND LIBCXX_SOURCES
     support/solaris/mbsnrtowcs.inc
     support/solaris/wcsnrtombs.inc
     support/solaris/xlocale.cpp
+    )
+elseif(ZOS)
+  list(APPEND LIBCXX_SOURCES
+    support/ibm/xlocale_zos.cpp
     )
 endif()
 
@@ -109,7 +118,7 @@ endif()
 if (LIBCXX_CONFIGURE_IDE)
   file(GLOB_RECURSE LIBCXX_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/*)
   if(WIN32)
-    file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/support/win32/*.h)
+    file( GLOB LIBCXX_WIN32_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../include/__support/win32/*.h)
     list(APPEND LIBCXX_HEADERS ${LIBCXX_WIN32_HEADERS})
   endif()
   # Force them all into the headers dir on MSVC, otherwise they end up at
@@ -250,12 +259,13 @@ if (LIBCXX_ENABLE_SHARED)
   endif()
 endif()
 
+set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
+
 # Build the static library.
 if (LIBCXX_ENABLE_STATIC)
   add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_link_libraries(cxx_static PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES})
-  set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
   set_target_properties(cxx_static
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -288,6 +298,9 @@ if (LIBCXX_ENABLE_STATIC)
     else()
       set(MERGE_ARCHIVES_ABI_TARGET
         "${CMAKE_STATIC_LIBRARY_PREFIX}${LIBCXX_CXX_STATIC_ABI_LIBRARY}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+      if (LIBCXX_CXX_ABI_LIBRARY_PATH)
+        set(MERGE_ARCHIVES_ABI_TARGET "${LIBCXX_CXX_ABI_LIBRARY_PATH}/${MERGE_ARCHIVES_ABI_TARGET}")
+      endif ()
     endif()
     if (APPLE)
       set(MERGE_ARCHIVES_LIBTOOL "--use-libtool" "--libtool" "${CMAKE_LIBTOOL}")
@@ -303,6 +316,7 @@ if (LIBCXX_ENABLE_STATIC)
       "${MERGE_ARCHIVES_ABI_TARGET}"
       "${MERGE_ARCHIVES_SEARCH_PATHS}"
     WORKING_DIRECTORY ${LIBCXX_BUILD_DIR}
+    DEPENDS ${MERGE_ARCHIVES_ABI_TARGET}
     )
   endif()
 endif()
@@ -374,9 +388,7 @@ endif()
 # NOTE: This install command must go after the cxx install command otherwise
 # it will not be executed after the library symlinks are installed.
 if (LIBCXX_ENABLE_SHARED AND LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  # Replace the libc++ filename with $<TARGET_LINKER_FILE:cxx>
-  # after we required CMake 3.0.
-  install(FILES "${LIBCXX_LIBRARY_DIR}/libc++${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  install(FILES "$<TARGET_LINKER_FILE:cxx_shared>"
     DESTINATION ${LIBCXX_INSTALL_PREFIX}${LIBCXX_INSTALL_LIBRARY_DIR}
     COMPONENT libcxx)
 endif()

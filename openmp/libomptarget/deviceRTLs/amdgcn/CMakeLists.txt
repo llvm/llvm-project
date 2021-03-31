@@ -68,6 +68,7 @@ set(cuda_sources
   ${devicertl_base_directory}/common/src/parallel.cu
   ${devicertl_base_directory}/common/src/reduction.cu
   ${devicertl_base_directory}/common/src/support.cu
+  ${devicertl_base_directory}/common/src/shuffle.cpp
   ${devicertl_base_directory}/common/src/sync.cu
   ${devicertl_base_directory}/common/src/task.cu)
 
@@ -90,24 +91,30 @@ else()
 endif()
 
 # create libraries
-set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900)
+set(mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx906)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
 
 macro(add_cuda_bc_library)
   set(cu_cmd ${AOMP_BINDIR}/clang++
+    -xc++
+    -c
     -std=c++14
-    -fcuda-rdc
+    -ffreestanding
+    -target amdgcn-amd-amdhsa
+    -emit-llvm
+    -Xclang -aux-triple -Xclang x86_64-unknown-linux-gnu # see nvptx
+    -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
+    -D__AMDGCN__
+    -Xclang -target-cpu -Xclang ${mcpu}
     -fvisibility=default
-    --cuda-device-only
     -Wno-unused-value
-    -x hip
-    -nogpulib -nogpuinc
+    -nogpulib
     -O${optimization_level}
-    --cuda-gpu-arch=${mcpu}
     ${CUDA_DEBUG}
     -I${CMAKE_CURRENT_SOURCE_DIR}/src
+    -I${devicertl_base_directory}/common/include
     -I${devicertl_base_directory})
 
   set(bc1_files)

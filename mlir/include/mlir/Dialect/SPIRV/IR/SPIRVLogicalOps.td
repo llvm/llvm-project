@@ -28,7 +28,7 @@ class SPV_LogicalBinaryOp<string mnemonic, Type operandsType,
   let printer = [{ return ::printLogicalOp(getOperation(), p); }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$lhs, "Value":$rhs),
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs),
     [{::buildLogicalBinaryOp($_builder, $_state, lhs, rhs);}]>
   ];
 }
@@ -43,7 +43,7 @@ class SPV_LogicalUnaryOp<string mnemonic, Type operandType,
   let printer = [{ return ::printLogicalOp(getOperation(), p); }];
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$value),
+    OpBuilder<(ins "Value":$value),
     [{::buildLogicalUnaryOp($_builder, $_state, value);}]>
   ];
 }
@@ -1001,7 +1001,7 @@ def SPV_SelectOp : SPV_Op<"Select",
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$cond, "Value":$trueValue, "Value":$falseValue)>];
+    OpBuilder<(ins "Value":$cond, "Value":$trueValue, "Value":$falseValue)>];
 
   let assemblyFormat = [{
     operands attr-dict `:` type($condition) `,` type($result)

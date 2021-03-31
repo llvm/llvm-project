@@ -95,6 +95,9 @@ public:
     /// the block has a non-PHI def.  When this is false, a live-in value on
     /// the stack can be live-out on the stack without inserting a spill.
     bool ChangesValue;
+
+    void print(raw_ostream &OS) const;
+    void dump() const;
   };
 
   /// prepare - Reset state and prepare for a new spill placement computation.

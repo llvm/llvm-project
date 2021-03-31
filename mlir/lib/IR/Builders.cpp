@@ -29,11 +29,6 @@ Identifier Builder::getIdentifier(StringRef str) {
 
 Location Builder::getUnknownLoc() { return UnknownLoc::get(context); }
 
-Location Builder::getFileLineColLoc(Identifier filename, unsigned line,
-                                    unsigned column) {
-  return FileLineColLoc::get(filename, line, column, context);
-}
-
 Location Builder::getFusedLoc(ArrayRef<Location> locs, Attribute metadata) {
   return FusedLoc::get(locs, metadata, context);
 }
@@ -92,11 +87,11 @@ NamedAttribute Builder::getNamedAttr(StringRef name, Attribute val) {
 UnitAttr Builder::getUnitAttr() { return UnitAttr::get(context); }
 
 BoolAttr Builder::getBoolAttr(bool value) {
-  return BoolAttr::get(value, context);
+  return BoolAttr::get(context, value);
 }
 
 DictionaryAttr Builder::getDictionaryAttr(ArrayRef<NamedAttribute> value) {
-  return DictionaryAttr::get(value, context);
+  return DictionaryAttr::get(context, value);
 }
 
 IntegerAttr Builder::getIndexAttr(int64_t value) {
@@ -200,11 +195,11 @@ FloatAttr Builder::getFloatAttr(Type type, const APFloat &value) {
 }
 
 StringAttr Builder::getStringAttr(StringRef bytes) {
-  return StringAttr::get(bytes, context);
+  return StringAttr::get(context, bytes);
 }
 
 ArrayAttr Builder::getArrayAttr(ArrayRef<Attribute> value) {
-  return ArrayAttr::get(value, context);
+  return ArrayAttr::get(context, value);
 }
 
 FlatSymbolRefAttr Builder::getSymbolRefAttr(Operation *value) {
@@ -214,12 +209,12 @@ FlatSymbolRefAttr Builder::getSymbolRefAttr(Operation *value) {
   return getSymbolRefAttr(symName.getValue());
 }
 FlatSymbolRefAttr Builder::getSymbolRefAttr(StringRef value) {
-  return SymbolRefAttr::get(value, getContext());
+  return SymbolRefAttr::get(getContext(), value);
 }
 SymbolRefAttr
 Builder::getSymbolRefAttr(StringRef value,
                           ArrayRef<FlatSymbolRefAttr> nestedReferences) {
-  return SymbolRefAttr::get(value, nestedReferences, getContext());
+  return SymbolRefAttr::get(getContext(), value, nestedReferences);
 }
 
 ArrayAttr Builder::getBoolArrayAttr(ArrayRef<bool> values) {

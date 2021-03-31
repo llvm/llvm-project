@@ -375,6 +375,7 @@ struct InstrDesc {
   bool HasSideEffects;
   bool BeginGroup;
   bool EndGroup;
+  bool RetireOOO;
 
   // True if all buffered resources are in-order, and there is at least one
   // buffer which is a dispatch hazard (BufferSize = 0).
@@ -593,45 +594,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const InstRef &IR) {
   return OS;
 }
 #endif
-
-/// A reference to a register write.
-///
-/// This class is mainly used by the register file to describe register
-/// mappings. It correlates a register write to the source index of the
-/// defining instruction.
-class WriteRef {
-  std::pair<unsigned, WriteState *> Data;
-  static const unsigned INVALID_IID;
-
-public:
-  WriteRef() : Data(INVALID_IID, nullptr) {}
-  WriteRef(unsigned SourceIndex, WriteState *WS) : Data(SourceIndex, WS) {}
-
-  unsigned getSourceIndex() const { return Data.first; }
-  const WriteState *getWriteState() const { return Data.second; }
-  WriteState *getWriteState() { return Data.second; }
-  void invalidate() { Data.second = nullptr; }
-  bool isWriteZero() const {
-    assert(isValid() && "Invalid null WriteState found!");
-    return getWriteState()->isWriteZero();
-  }
-
-  /// Returns true if this register write has been executed, and the new
-  /// register value is therefore available to users.
-  bool isAvailable() const {
-    if (getSourceIndex() == INVALID_IID)
-      return false;
-    const WriteState *WS = getWriteState();
-    return !WS || WS->isExecuted();
-  }
-
-  bool isValid() const { return Data.second && Data.first != INVALID_IID; }
-  bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
-
-#ifndef NDEBUG
-  void dump() const;
-#endif
-};
 
 } // namespace mca
 } // namespace llvm

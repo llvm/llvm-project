@@ -214,4 +214,275 @@ define i1 @mul_constantexpr(i16 %a) {
   ret i1 %cmp
 }
 
+define i1 @mul_nuw(i16 %x) {
+; CHECK-LABEL: @mul_nuw(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_nuw_comm(i16 %x) {
+; CHECK-LABEL: @mul_nuw_comm(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, 2
+  %cmp = icmp eq i16 %mul, %nz
+  ret i1 %cmp
+}
+
+define i1 @mul_nsw(i16 %x) {
+; CHECK-LABEL: @mul_nsw(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = mul nsw i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_nsw_comm(i16 %x) {
+; CHECK-LABEL: @mul_nsw_comm(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = mul nsw i16 %nz, 2
+  %cmp = icmp eq i16 %mul, %nz
+  ret i1 %cmp
+}
+
+define i1 @mul_may_wrap(i16 %x) {
+; CHECK-LABEL: @mul_may_wrap(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[NZ]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul i16 %nz, 2
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_may_be_zero(i16 %x) {
+; CHECK-LABEL: @mul_may_be_zero(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = mul nuw i16 %x, 2
+  %cmp = icmp eq i16 %x, %mul
+  ret i1 %cmp
+}
+
+define i1 @mul_other_may_be_zero_or_one(i16 %x, i16 %y) {
+; CHECK-LABEL: @mul_other_may_be_zero_or_one(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i16 [[NZ]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = mul nuw i16 %nz, %y
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @known_non_equal_phis(i8 %p, i8* %pq, i8 %n, i8 %r) {
+; CHECK-LABEL: @known_non_equal_phis(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = mul nsw i8 [[A]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 2, %entry ], [ %next, %loop ]
+  %B = phi i8 [ 3, %entry ], [ %A, %loop ]
+  %next = mul nsw i8 %A, 2
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp ne i8 %A, %B
+  ret i1 %cmp
+}
+
+define i1 @known_non_equal_phis_fail(i8 %p, i8* %pq, i8 %n, i8 %r) {
+; CHECK-LABEL: @known_non_equal_phis_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 2, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i8 [ 2, [[ENTRY]] ], [ [[A]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = mul nsw i8 [[A]], 2
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 2, %entry ], [ %next, %loop ]
+  %B = phi i8 [ 2, %entry ], [ %A, %loop ]
+  %next = mul nsw i8 %A, 2
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp ne i8 %A, %B
+  ret i1 %cmp
+}
+
+define i1 @shl_nuw(i16 %x) {
+; CHECK-LABEL: @shl_nuw(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = shl nuw i16 %nz, 1
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @shl_nsw(i16 %x) {
+; CHECK-LABEL: @shl_nsw(
+; CHECK-NEXT:    ret i1 false
+;
+  %nz = or i16 %x, 2
+  %mul = shl nsw i16 %nz, 1
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @shl_may_wrap(i16 %x) {
+; CHECK-LABEL: @shl_may_wrap(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = shl i16 [[NZ]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = shl i16 %nz, 1
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @shl_shift_may_be_zero(i16 %x, i16 %shift) {
+; CHECK-LABEL: @shl_shift_may_be_zero(
+; CHECK-NEXT:    [[NZ:%.*]] = or i16 [[X:%.*]], 2
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw i16 [[NZ]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[NZ]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i16 %x, 2
+  %mul = shl nuw i16 %nz, %shift
+  %cmp = icmp eq i16 %nz, %mul
+  ret i1 %cmp
+}
+
+define i1 @shl_op_may_be_zero(i16 %x) {
+; CHECK-LABEL: @shl_op_may_be_zero(
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[X]], [[MUL]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = shl nuw i16 %x, 1
+  %cmp = icmp eq i16 %x, %mul
+  ret i1 %cmp
+}
+
+; The additional muls in these tests are necessary to actually
+; test the isKnownNonEqual() code, rather than InstSimplify's own
+; comparison folding.
+
+define i1 @shl_shl_nuw(i8 %B, i8 %shift) {
+; CHECK-LABEL: @shl_shl_nuw(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = shl nuw i8 %A, %shift
+  %B.op = shl nuw i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @shl_shl_nsw(i8 %B, i8 %shift) {
+; CHECK-LABEL: @shl_shl_nsw(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = shl nsw i8 %A, %shift
+  %B.op = shl nsw i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @shl_shl_may_wrap(i8 %B, i8 %shift) {
+; CHECK-LABEL: @shl_shl_may_wrap(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = shl i8 [[A]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = shl nsw i8 [[B]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = shl i8 %A, %shift
+  %B.op = shl nsw i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @shl_shl_mixed_wrap(i8 %B, i8 %shift) {
+; CHECK-LABEL: @shl_shl_mixed_wrap(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = shl nuw i8 [[A]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = shl nsw i8 [[B]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = shl nuw i8 %A, %shift
+  %B.op = shl nsw i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @shl_shl_may_be_equal(i8 %A, i8 %B, i8 %shift) {
+; CHECK-LABEL: @shl_shl_may_be_equal(
+; CHECK-NEXT:    [[A_OP:%.*]] = shl nuw i8 [[A:%.*]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = shl nuw i8 [[B:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A.op = shl nuw i8 %A, %shift
+  %B.op = shl nuw i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
 !0 = !{ i8 1, i8 5 }

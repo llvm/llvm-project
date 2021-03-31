@@ -51,9 +51,9 @@ namespace llvm {
 /// file.
 class MIRParserImpl {
   SourceMgr SM;
+  LLVMContext &Context;
   yaml::Input In;
   StringRef Filename;
-  LLVMContext &Context;
   SlotMapping IRSlots;
   std::unique_ptr<PerTargetMIParsingState> Target;
 
@@ -176,10 +176,11 @@ MIRParserImpl::MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
                              StringRef Filename, LLVMContext &Context,
                              std::function<void(Function &)> Callback)
     : SM(),
+      Context(Context),
       In(SM.getMemoryBuffer(SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))
              ->getBuffer(),
          nullptr, handleYAMLDiag, this),
-      Filename(Filename), Context(Context), ProcessIRFunction(Callback) {
+      Filename(Filename), ProcessIRFunction(Callback) {
   In.setContext(&In);
 }
 
@@ -646,10 +647,9 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   };
 
-  for (auto I = PFS.VRegInfosNamed.begin(), E = PFS.VRegInfosNamed.end();
-       I != E; I++) {
-    const VRegInfo &Info = *I->second;
-    populateVRegInfo(Info, Twine(I->first()));
+  for (const auto &P : PFS.VRegInfosNamed) {
+    const VRegInfo &Info = *P.second;
+    populateVRegInfo(Info, Twine(P.first()));
   }
 
   for (auto P : PFS.VRegInfos) {
@@ -700,6 +700,7 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasOpaqueSPAdjustment(YamlMFI.HasOpaqueSPAdjustment);
   MFI.setHasVAStart(YamlMFI.HasVAStart);
   MFI.setHasMustTailInVarArgFunc(YamlMFI.HasMustTailInVarArgFunc);
+  MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
   if (!YamlMFI.SavePoint.Value.empty()) {
     MachineBasicBlock *MBB = nullptr;

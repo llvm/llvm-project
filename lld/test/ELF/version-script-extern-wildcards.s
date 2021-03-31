@@ -7,8 +7,8 @@
 # RUN: llvm-readobj -V --dyn-syms %t.so | FileCheck %s
 
 # CHECK:  VersionSymbols [
-# CHECK:    Name: _Z3bari
 # CHECK:    Name: _Z3fooi@@FOO
+# CHECK:    Name: _Z3bari
 # CHECK:    Name: _Z3zedi@@BAR
 
 .text

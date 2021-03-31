@@ -47,7 +47,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
           %first_result, %middle_results:2, %0 = "my.op" ...
         ```
       }],
-      "void", "getAsmResultNames", (ins "OpAsmSetValueNameFn":$setNameFn)
+      "void", "getAsmResultNames", (ins "::mlir::OpAsmSetValueNameFn":$setNameFn)
     >,
   ];
 }

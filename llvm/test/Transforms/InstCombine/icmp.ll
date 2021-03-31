@@ -2876,7 +2876,7 @@ define <2 x i1> @icmp_and_or_lshr_cst_vec_nonuniform(<2 x i32> %x) {
 
 define <2 x i1> @icmp_and_or_lshr_cst_vec_undef(<2 x i32> %x) {
 ; CHECK-LABEL: @icmp_and_or_lshr_cst_vec_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 3, i32 -1>
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
@@ -2920,7 +2920,7 @@ define <2 x i1> @icmp_and_or_lshr_cst_vec_nonuniform_commute(<2 x i32> %xp) {
 define <2 x i1> @icmp_and_or_lshr_cst_vec_undef_commute(<2 x i32> %xp) {
 ; CHECK-LABEL: @icmp_and_or_lshr_cst_vec_undef_commute(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i32> [[XP:%.*]], <i32 42, i32 42>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X]], <i32 3, i32 -1>
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
@@ -3053,7 +3053,7 @@ define i1 @icmp_sle_zero_add_nsw(i32 %a) {
 
 define zeroext i1 @icmp_cmpxchg_strong(i32* %sc, i32 %old_val, i32 %new_val) {
 ; CHECK-LABEL: @icmp_cmpxchg_strong(
-; CHECK-NEXT:    [[XCHG:%.*]] = cmpxchg i32* [[SC:%.*]], i32 [[OLD_VAL:%.*]], i32 [[NEW_VAL:%.*]] seq_cst seq_cst
+; CHECK-NEXT:    [[XCHG:%.*]] = cmpxchg i32* [[SC:%.*]], i32 [[OLD_VAL:%.*]], i32 [[NEW_VAL:%.*]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[ICMP:%.*]] = extractvalue { i32, i1 } [[XCHG]], 1
 ; CHECK-NEXT:    ret i1 [[ICMP]]
 ;

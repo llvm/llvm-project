@@ -13,16 +13,16 @@
 
 namespace lldb_private {
 
-class OptionValueFormat : public OptionValue {
+class OptionValueFormat
+    : public Cloneable<OptionValueFormat, OptionValue> {
 public:
   OptionValueFormat(lldb::Format value)
-      : OptionValue(), m_current_value(value), m_default_value(value) {}
+      : m_current_value(value), m_default_value(value) {}
 
   OptionValueFormat(lldb::Format current_value, lldb::Format default_value)
-      : OptionValue(), m_current_value(current_value),
-        m_default_value(default_value) {}
+      : m_current_value(current_value), m_default_value(default_value) {}
 
-  ~OptionValueFormat() override {}
+  ~OptionValueFormat() override = default;
 
   // Virtual subclass pure virtual overrides
 
@@ -34,16 +34,11 @@ public:
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void Clear() override {
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 

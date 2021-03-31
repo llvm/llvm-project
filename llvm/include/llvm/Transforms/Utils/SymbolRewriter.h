@@ -138,4 +138,4 @@ private:
 
 } // end namespace llvm
 
-#endif //LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
+#endif // LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H

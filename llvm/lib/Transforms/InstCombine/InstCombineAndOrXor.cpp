@@ -1987,48 +1987,20 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
 
+  // An and recurrence w/loop invariant step is equivelent to (and start, step)
+  PHINode *PN = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
+    return replaceInstUsesWith(I, Builder.CreateAnd(Start, Step));
+
   return nullptr;
 }
 
-Instruction *InstCombinerImpl::matchBSwapOrBitReverse(BinaryOperator &Or,
+Instruction *InstCombinerImpl::matchBSwapOrBitReverse(Instruction &I,
                                                       bool MatchBSwaps,
                                                       bool MatchBitReversals) {
-  assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
-  Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
-
-  // Look through zero extends.
-  if (Instruction *Ext = dyn_cast<ZExtInst>(Op0))
-    Op0 = Ext->getOperand(0);
-
-  if (Instruction *Ext = dyn_cast<ZExtInst>(Op1))
-    Op1 = Ext->getOperand(0);
-
-  // (A | B) | C  and  A | (B | C)                  -> bswap if possible.
-  bool OrWithOrs = match(Op0, m_Or(m_Value(), m_Value())) ||
-                   match(Op1, m_Or(m_Value(), m_Value()));
-
-  // (A >> B) | C  and  (A << B) | C                -> bswap if possible.
-  bool OrWithShifts = match(Op0, m_LogicalShift(m_Value(), m_Value())) ||
-                      match(Op1, m_LogicalShift(m_Value(), m_Value()));
-
-  // (A & B) | C  and  A | (B & C)                  -> bswap if possible.
-  bool OrWithAnds = match(Op0, m_And(m_Value(), m_Value())) ||
-                    match(Op1, m_And(m_Value(), m_Value()));
-
-  // fshl(A,B,C) | D  and  A | fshl(B,C,D)          -> bswap if possible.
-  // fshr(A,B,C) | D  and  A | fshr(B,C,D)          -> bswap if possible.
-  bool OrWithFunnels = match(Op0, m_FShl(m_Value(), m_Value(), m_Value())) ||
-                       match(Op0, m_FShr(m_Value(), m_Value(), m_Value())) ||
-                       match(Op0, m_FShl(m_Value(), m_Value(), m_Value())) ||
-                       match(Op0, m_FShr(m_Value(), m_Value(), m_Value()));
-
-  // TODO: Do we need all these filtering checks or should we just rely on
-  // recognizeBSwapOrBitReverseIdiom + collectBitParts to reject them quickly?
-  if (!OrWithOrs && !OrWithShifts && !OrWithAnds && !OrWithFunnels)
-    return nullptr;
-
   SmallVector<Instruction *, 4> Insts;
-  if (!recognizeBSwapOrBitReverseIdiom(&Or, MatchBSwaps, MatchBitReversals,
+  if (!recognizeBSwapOrBitReverseIdiom(&I, MatchBSwaps, MatchBitReversals,
                                        Insts))
     return nullptr;
   Instruction *LastInst = Insts.pop_back_val();
@@ -2870,6 +2842,12 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // (~x) | y  -->  ~(x & (~y))  iff that gets rid of inversions
   if (sinkNotIntoOtherHandOfAndOrOr(I))
     return &I;
+
+  // An or recurrence w/loop invariant step is equivelent to (or start, step)
+  PHINode *PN = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
+    return replaceInstUsesWith(I, Builder.CreateOr(Start, Step));
 
   return nullptr;
 }

@@ -183,13 +183,13 @@ struct TosaTestQuantUtilAPI
 };
 
 void TosaTestQuantUtilAPI::runOnFunction() {
-  OwningRewritePatternList patterns;
   auto *ctx = &getContext();
+  RewritePatternSet patterns(ctx);
   auto func = getFunction();
 
-  patterns.insert<ConvertTosaNegateOp>(ctx);
-  patterns.insert<ConvertTosaConv2DOp>(ctx);
-  applyPatternsAndFoldGreedily(func, std::move(patterns));
+  patterns.add<ConvertTosaNegateOp>(ctx);
+  patterns.add<ConvertTosaConv2DOp>(ctx);
+  (void)applyPatternsAndFoldGreedily(func, std::move(patterns));
 }
 
 } // anonymous namespace

@@ -119,7 +119,7 @@ namespace ISD {
     void setNest() { IsNest = 1; }
 
     bool isReturned() const { return IsReturned; }
-    void setReturned() { IsReturned = 1; }
+    void setReturned(bool V = true) { IsReturned = V; }
 
     bool isInConsecutiveRegs()  const { return IsInConsecutiveRegs; }
     void setInConsecutiveRegs(bool Flag = true) { IsInConsecutiveRegs = Flag; }

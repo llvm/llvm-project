@@ -49,22 +49,6 @@ j:
 # CHECK:     Section: .text
 # CHECK:   }
 # CHECK:   Symbol {
-# CHECK:     Name: i
-# CHECK:     Binding: Local
-# CHECK:     Type: None
-# CHECK:     Other [ (0x80)
-# CHECK:       STO_MIPS_MICROMIPS
-# CHECK:     ]
-# CHECK:     Section: .text
-# CHECK:   }
-# CHECK:   Symbol {
-# CHECK:     Name: j
-# CHECK:     Binding: Local
-# CHECK:     Type: None
-# CHECK:     Other: 0
-# CHECK:     Section: .text
-# CHECK:   }
-# CHECK:   Symbol {
 # CHECK:     Name: k
 # CHECK:     Binding: Local
 # CHECK:     Type: None
@@ -99,4 +83,20 @@ j:
 # CHECK:     Other: 0
 # CHECK:     Section: .text
 # CHECK:   }
+# CHECK:        Symbol {
+# CHECK-NEXT:     Name: i
+# CHECK:          Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other [ (0x80)
+# CHECK-NEXT:       STO_MIPS_MICROMIPS
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: j
+# CHECK:          Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other: 0
+# CHECK-NEXT:     Section: .text
+# CHECK-NEXT:   }
 # CHECK: ]

@@ -176,9 +176,6 @@ TEST_F(DefineInlineTest, CheckForCanonDecl) {
 }
 
 TEST_F(DefineInlineTest, UsingShadowDecls) {
-  // Template body is not parsed until instantiation time on windows, which
-  // results in arbitrary failures as function body becomes NULL.
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   EXPECT_UNAVAILABLE(R"cpp(
   namespace ns1 { void foo(int); }
   namespace ns2 { void foo(int*); }
@@ -426,9 +423,6 @@ TEST_F(DefineInlineTest, TransformDependentTypes) {
     using namespace a;
     )cpp";
 
-  // Template body is not parsed until instantiation time on windows, which
-  // results in arbitrary failures as function body becomes NULL.
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   EXPECT_EQ(apply(Test), Expected);
 }
 
@@ -512,9 +506,6 @@ TEST_F(DefineInlineTest, TransformFunctionTempls) {
 
           )cpp"},
   };
-  // Template body is not parsed until instantiation time on windows, which
-  // results in arbitrary failures as function body becomes NULL.
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   for (const auto &Case : Cases)
     EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
@@ -658,7 +649,6 @@ est);
         void foo(PARAM, TYPE b, TYPE c, TYPE d = BODY(x)){}
         )cpp"},
   };
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   for (const auto &Case : Cases)
     EXPECT_EQ(apply(Case.first), Case.second) << Case.first;
 }
@@ -689,7 +679,6 @@ TEST_F(DefineInlineTest, TransformTemplParamNames) {
     };
 
     )cpp";
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   EXPECT_EQ(apply(Test), Expected);
 }
 
@@ -936,7 +925,6 @@ TEST_F(DefineInlineTest, QualifyWithUsingDirectives) {
 }
 
 TEST_F(DefineInlineTest, AddInline) {
-  ExtraArgs.push_back("-fno-delayed-template-parsing");
   llvm::StringMap<std::string> EditedFiles;
   ExtraFiles["a.h"] = "void foo();";
   apply(R"cpp(#include "a.h"

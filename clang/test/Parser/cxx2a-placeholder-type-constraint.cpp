@@ -23,9 +23,9 @@ int foo() {
   {C<> decltype(auto) a = 1;}
   {C<int> decltype(auto) a = 1;}
   {const C<> decltype(auto) &a = 1;} // expected-error{{'decltype(auto)' cannot be combined with other type specifiers}}
-  // expected-error@-1{{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // expected-error@-1{{cannot form reference to 'decltype(auto)'}}
   {const C<int> decltype(auto) &a = 1;} // expected-error{{'decltype(auto)' cannot be combined with other type specifiers}}
-  // expected-error@-1{{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // expected-error@-1{{cannot form reference to 'decltype(auto)'}}
   {C a = 1;}
   // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
   {C decltype a19 = 1;}

@@ -23,10 +23,11 @@ using namespace lldb_private;
 ThreadPlanStepInstruction::ThreadPlanStepInstruction(Thread &thread,
                                                      bool step_over,
                                                      bool stop_other_threads,
-                                                     Vote stop_vote,
-                                                     Vote run_vote)
+                                                     Vote report_stop_vote,
+                                                     Vote report_run_vote)
     : ThreadPlan(ThreadPlan::eKindStepInstruction,
-                 "Step over single instruction", thread, stop_vote, run_vote),
+                 "Step over single instruction", thread, report_stop_vote,
+                 report_run_vote),
       m_instruction_addr(0), m_stop_other_threads(stop_other_threads),
       m_step_over(step_over) {
   m_takes_iteration_count = true;

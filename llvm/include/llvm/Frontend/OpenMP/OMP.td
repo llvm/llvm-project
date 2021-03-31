@@ -23,7 +23,6 @@ def OpenMP : DirectiveLanguage {
   let clausePrefix = "OMPC_";
   let makeEnumAvailableInNamespace = true;
   let enableBitmaskEnumInNamespace = true;
-  let includeHeader = "llvm/Frontend/OpenMP/OMP.h.inc";
   let clauseEnumSetClass = "OmpClauseSet";
   let flangClauseBaseClass = "OmpClause";
 }
@@ -68,6 +67,7 @@ def OMPC_Private : Clause<"private"> {
   let clangClass = "OMPPrivateClause";
   let flangClass = "OmpObjectList";
 }
+def OMPC_Sizes: Clause<"sizes"> { let clangClass = "OMPSizesClause"; }
 def OMPC_FirstPrivate : Clause<"firstprivate"> {
   let clangClass = "OMPFirstprivateClause";
   let flangClass = "OmpObjectList";
@@ -267,6 +267,12 @@ def OMPC_Order : Clause<"order"> {
     OMP_ORDER_concurrent
   ];
 }
+def OMPC_Init : Clause<"init"> {
+  let clangClass = "OMPInitClause";
+}
+def OMPC_Use : Clause<"use"> {
+  let clangClass = "OMPUseClause";
+}
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
 }
@@ -373,6 +379,11 @@ def OMP_Simd : Directive<"simd"> {
     VersionedClause<OMPC_SafeLen>,
     VersionedClause<OMPC_SimdLen>,
     VersionedClause<OMPC_If, 50>,
+  ];
+}
+def OMP_Tile : Directive<"tile"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Sizes, 51>,
   ];
 }
 def OMP_For : Directive<"for"> {
@@ -1632,6 +1643,24 @@ def OMP_EndSingle : Directive<"end single"> {
 def OMP_EndWorkshare : Directive<"end workshare"> {
   let allowedClauses = [
     VersionedClause<OMPC_NoWait>
+  ];
+}
+def OMP_interop : Directive<"interop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Destroy>,
+    VersionedClause<OMPC_Init>,
+    VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Use>,
+  ];
+}
+def OMP_dispatch : Directive<"dispatch"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_IsDevicePtr>,
+    VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_Depend>
   ];
 }
 def OMP_Unknown : Directive<"unknown"> {

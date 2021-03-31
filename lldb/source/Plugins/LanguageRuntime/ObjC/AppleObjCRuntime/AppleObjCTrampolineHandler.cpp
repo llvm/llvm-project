@@ -526,7 +526,7 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     CompilerType clang_void_ptr_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
 
-    input_value.SetValueType(Value::eValueTypeScalar);
+    input_value.SetValueType(Value::ValueType::Scalar);
     // input_value.SetContext (Value::eContextTypeClangType,
     // clang_void_ptr_type);
     input_value.SetCompilerType(clang_void_ptr_type);
@@ -936,7 +936,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     Value void_ptr_value;
     CompilerType clang_void_ptr_type =
         clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-    void_ptr_value.SetValueType(Value::eValueTypeScalar);
+    void_ptr_value.SetValueType(Value::ValueType::Scalar);
     // void_ptr_value.SetContext (Value::eContextTypeClangType,
     // clang_void_ptr_type);
     void_ptr_value.SetCompilerType(clang_void_ptr_type);
@@ -1048,7 +1048,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
       Value isa_value(*(argument_values.GetValueAtIndex(obj_index)));
 
-      isa_value.SetValueType(Value::eValueTypeLoadAddress);
+      isa_value.SetValueType(Value::ValueType::LoadAddress);
       isa_value.ResolveValue(&exe_ctx);
       if (isa_value.GetScalar().IsValid()) {
         isa_addr = isa_value.GetScalar().ULongLong();
@@ -1110,7 +1110,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       CompilerType clang_int_type =
           clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
               lldb::eEncodingSint, 32);
-      flag_value.SetValueType(Value::eValueTypeScalar);
+      flag_value.SetValueType(Value::ValueType::Scalar);
       // flag_value.SetContext (Value::eContextTypeClangType, clang_int_type);
       flag_value.SetCompilerType(clang_int_type);
 
@@ -1157,13 +1157,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
         flag_value.GetScalar() = 0; // FIXME - Set to 0 when debugging is done.
       dispatch_values.PushValue(flag_value);
 
-      // The step through code might have to fill in the cache, so it
-      // is not safe to run only one thread.  So we override the
-      // stop_others value passed in to us here:
-      const bool trampoline_stop_others = false;
       ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughObjCTrampoline>(
-          thread, *this, dispatch_values, isa_addr, sel_addr,
-          trampoline_stop_others);
+          thread, *this, dispatch_values, isa_addr, sel_addr);
       if (log) {
         StreamString s;
         ret_plan_sp->GetDescription(&s, eDescriptionLevelFull);
@@ -1182,13 +1177,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     MsgsendMap::iterator pos;
     pos = m_opt_dispatch_map.find(curr_pc);
     if (pos != m_opt_dispatch_map.end()) {
-
       const char *opt_name = g_opt_dispatch_names[(*pos).second];
-
-      bool trampoline_stop_others = false;
-      LazyBool step_in_should_stop = eLazyBoolCalculate;
-      ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch> (
-          thread, *this, opt_name, trampoline_stop_others, step_in_should_stop);
+      ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch>(
+          thread, *this, opt_name);
     }
   }
 

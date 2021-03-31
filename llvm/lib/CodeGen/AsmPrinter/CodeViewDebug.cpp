@@ -358,6 +358,25 @@ TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   return recordTypeIndexForDINode(Scope, TI);
 }
 
+static StringRef removeTemplateArgs(StringRef Name) {
+  // Remove template args from the display name. Assume that the template args
+  // are the last thing in the name.
+  if (Name.empty() || Name.back() != '>')
+    return Name;
+
+  int OpenBrackets = 0;
+  for (int i = Name.size() - 1; i >= 0; --i) {
+    if (Name[i] == '>')
+      ++OpenBrackets;
+    else if (Name[i] == '<') {
+      --OpenBrackets;
+      if (OpenBrackets == 0)
+        return Name.substr(0, i);
+    }
+  }
+  return Name;
+}
+
 TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   assert(SP);
 
@@ -367,8 +386,9 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
     return I->second;
 
   // The display name includes function template arguments. Drop them to match
-  // MSVC.
-  StringRef DisplayName = SP->getName().split('<').first;
+  // MSVC. We need to have the template arguments in the DISubprogram name
+  // because they are used in other symbol records, such as S_GPROC32_IDs.
+  StringRef DisplayName = removeTemplateArgs(SP->getName());
 
   const DIScope *Scope = SP->getScope();
   TypeIndex TI;
@@ -794,8 +814,8 @@ void CodeViewDebug::emitCompilerInformation() {
   StringRef CompilerVersion = CU->getProducer();
   Version FrontVer = parseVersion(CompilerVersion);
   OS.AddComment("Frontend version");
-  for (int N = 0; N < 4; ++N)
-    OS.emitInt16(FrontVer.Part[N]);
+  for (int N : FrontVer.Part)
+    OS.emitInt16(N);
 
   // Some Microsoft tools, like Binscope, expect a backend version number of at
   // least 8.something, so we'll coerce the LLVM version into a form that
@@ -807,8 +827,8 @@ void CodeViewDebug::emitCompilerInformation() {
   Major = std::min<int>(Major, std::numeric_limits<uint16_t>::max());
   Version BackVer = {{ Major, 0, 0, 0 }};
   OS.AddComment("Backend version");
-  for (int N = 0; N < 4; ++N)
-    OS.emitInt16(BackVer.Part[N]);
+  for (int N : BackVer.Part)
+    OS.emitInt16(N);
 
   OS.AddComment("Null-terminated compiler version string");
   emitNullTerminatedSymbolName(OS, CompilerVersion);
@@ -1357,7 +1377,7 @@ void CodeViewDebug::beginFunctionImpl(const MachineFunction *MF) {
   CurFn->CSRSize = MFI.getCVBytesOfCalleeSavedRegisters();
   CurFn->FrameSize = MFI.getStackSize();
   CurFn->OffsetAdjustment = MFI.getOffsetAdjustment();
-  CurFn->HasStackRealignment = TRI->needsStackRealignment(*MF);
+  CurFn->HasStackRealignment = TRI->hasStackRealignment(*MF);
 
   // For this function S_FRAMEPROC record, figure out which codeview register
   // will be the frame pointer.

@@ -247,12 +247,19 @@ Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_PPC64_NONE)
+                 .Case("BFD_RELOC_16", ELF::R_PPC64_ADDR16)
+                 .Case("BFD_RELOC_32", ELF::R_PPC64_ADDR32)
+                 .Case("BFD_RELOC_64", ELF::R_PPC64_ADDR64)
                  .Default(-1u);
     } else {
       Type = llvm::StringSwitch<unsigned>(Name)
 #define ELF_RELOC(X, Y) .Case(#X, Y)
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
 #undef ELF_RELOC
+                 .Case("BFD_RELOC_NONE", ELF::R_PPC_NONE)
+                 .Case("BFD_RELOC_16", ELF::R_PPC_ADDR16)
+                 .Case("BFD_RELOC_32", ELF::R_PPC_ADDR32)
                  .Default(-1u);
     }
     if (Type != -1u)

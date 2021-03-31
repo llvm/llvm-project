@@ -133,6 +133,7 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
   ; CHECK:   $sp = frame-setup tSUBspi $sp, 8, 14 /* CC::al */, $noreg
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 40
+  ; CHECK:   dead $lr = tMOVr renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi8 killed renamable $r0, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = tSUBi8 killed renamable $r1, 4, 14 /* CC::al */, $noreg
@@ -152,7 +153,7 @@ body:             |
   ; CHECK:   early-clobber renamable $r3 = t2STR_PRE killed renamable $r1, killed renamable $r3, 4, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep3)
   ; CHECK:   $r1 = tLDRspi $sp, 0, 14 /* CC::al */, $noreg :: (load 4 from %stack.7)
   ; CHECK:   $lr = tMOVr killed $r1, 14 /* CC::al */, $noreg
-  ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
+  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK:   $r12 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK:   tSTRspi killed $r0, $sp, 7, 14 /* CC::al */, $noreg :: (store 4 into %stack.0)
   ; CHECK:   tSTRspi killed $r2, $sp, 6, 14 /* CC::al */, $noreg :: (store 4 into %stack.1)

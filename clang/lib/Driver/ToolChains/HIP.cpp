@@ -35,23 +35,6 @@ using namespace llvm::opt;
 
 namespace {
 const unsigned HIPCodeObjectAlign = 4096;
-
-static void addBCLib(const Driver &D, const ArgList &Args,
-                     ArgStringList &CmdArgs, ArgStringList LibraryPaths,
-                     StringRef BCName) {
-  StringRef FullName;
-  for (std::string LibraryPath : LibraryPaths) {
-    SmallString<128> Path(LibraryPath);
-    llvm::sys::path::append(Path, BCName);
-    FullName = Path;
-    if (llvm::sys::fs::exists(FullName)) {
-      CmdArgs.push_back("-mlink-builtin-bitcode");
-      CmdArgs.push_back(Args.MakeArgString(FullName));
-      return;
-    }
-  }
-  D.Diag(diag::err_drv_no_such_file) << BCName;
-}
 } // namespace
 
 void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
@@ -96,6 +79,13 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.append({"-o", Output.getFilename()});
   for (auto Input : Inputs)
     LldArgs.push_back(Input.getFilename());
+
+  if (Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                   false))
+    llvm::for_each(TC.getHIPDeviceLibs(Args), [&](StringRef BCFile) {
+      LldArgs.push_back(Args.MakeArgString(BCFile));
+    });
+
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Lld, LldArgs, Inputs, Output));
@@ -247,13 +237,8 @@ void HIPToolChain::addClangTargetOptions(
     Action::OffloadKind DeviceOffloadingKind) const {
   HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
 
-  StringRef GpuArch = getGPUArch(DriverArgs);
-  assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
-  (void) GpuArch;
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
-  auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
-  const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
 
   CC1Args.push_back("-fcuda-is-device");
 
@@ -261,10 +246,8 @@ void HIPToolChain::addClangTargetOptions(
                          options::OPT_fno_cuda_approx_transcendentals, false))
     CC1Args.push_back("-fcuda-approx-transcendentals");
 
-  if (DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                         false))
-    CC1Args.push_back("-fgpu-rdc");
-  else
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                          false))
     CC1Args.append({"-mllvm", "-amdgpu-internalize-symbols"});
 
   StringRef MaxThreadsPerBlock =
@@ -285,66 +268,10 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
-    return;
-  ArgStringList LibraryPaths;
-
-  // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
-  for (auto Path : RocmInstallation.getRocmDeviceLibPathArg())
-    LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
-
-  addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
-
-  // Maintain compatability with --hip-device-lib.
-  auto BCLibs = DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ);
-  if (!BCLibs.empty()) {
-    for (auto Lib : BCLibs)
-      addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);
-  } else {
-    if (!RocmInstallation.hasDeviceLibrary()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
-      return;
-    }
-
-    std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
-    if (LibDeviceFile.empty()) {
-      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GpuArch;
-      return;
-    }
-
-    // If --hip-device-lib is not set, add the default bitcode libraries.
-    // TODO: There are way too many flags that change this. Do we need to check
-    // them all?
-    bool DAZ = DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                                  options::OPT_fno_cuda_flush_denormals_to_zero,
-                                  getDefaultDenormsAreZeroForTarget(Kind));
-    // TODO: Check standard C++ flags?
-    bool FiniteOnly = false;
-    bool UnsafeMathOpt = false;
-    bool FastRelaxedMath = false;
-    bool CorrectSqrt = true;
-    bool Wave64 = isWave64(DriverArgs, Kind);
-
-    // Add the HIP specific bitcode library.
+  llvm::for_each(getHIPDeviceLibs(DriverArgs), [&](StringRef BCFile) {
     CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(RocmInstallation.getHIPPath()));
-
-    // Add the generic set of libraries.
-    RocmInstallation.addCommonBitcodeLibCC1Args(
-      DriverArgs, CC1Args, LibDeviceFile, Wave64, DAZ, FiniteOnly,
-      UnsafeMathOpt, FastRelaxedMath, CorrectSqrt);
-
-    // Add instrument lib.
-    auto InstLib =
-        DriverArgs.getLastArgValue(options::OPT_gpu_instrument_lib_EQ);
-    if (InstLib.empty())
-      return;
-    if (llvm::sys::fs::exists(InstLib)) {
-      CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(InstLib));
-    } else
-      getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
-  }
+    CC1Args.push_back(DriverArgs.MakeArgString(BCFile));
+  });
 }
 
 llvm::opt::DerivedArgList *
@@ -422,4 +349,100 @@ SanitizerMask HIPToolChain::getSupportedSanitizers() const {
 VersionTuple HIPToolChain::computeMSVCVersion(const Driver *D,
                                                const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
+}
+
+llvm::SmallVector<std::string, 12>
+HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+  llvm::SmallVector<std::string, 12> BCLibs;
+  if (DriverArgs.hasArg(options::OPT_nogpulib))
+    return {};
+  ArgStringList LibraryPaths;
+
+  // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
+  for (auto Path : RocmInstallation.getRocmDeviceLibPathArg())
+    LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
+
+  addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
+
+  // Maintain compatability with --hip-device-lib.
+  auto BCLibArgs = DriverArgs.getAllArgValues(options::OPT_hip_device_lib_EQ);
+  if (!BCLibArgs.empty()) {
+    llvm::for_each(BCLibArgs, [&](StringRef BCName) {
+      StringRef FullName;
+      for (std::string LibraryPath : LibraryPaths) {
+        SmallString<128> Path(LibraryPath);
+        llvm::sys::path::append(Path, BCName);
+        FullName = Path;
+        if (llvm::sys::fs::exists(FullName)) {
+          BCLibs.push_back(FullName.str());
+          return;
+        }
+      }
+      getDriver().Diag(diag::err_drv_no_such_file) << BCName;
+    });
+  } else {
+    if (!RocmInstallation.hasDeviceLibrary()) {
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
+      return {};
+    }
+    StringRef GpuArch = getGPUArch(DriverArgs);
+    assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
+    (void)GpuArch;
+    auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
+    const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(Kind);
+
+    std::string LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
+    if (LibDeviceFile.empty()) {
+      getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 1 << GpuArch;
+      return {};
+    }
+
+    // If --hip-device-lib is not set, add the default bitcode libraries.
+    // TODO: There are way too many flags that change this. Do we need to check
+    // them all?
+    bool DAZ = DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
+                                  options::OPT_fno_cuda_flush_denormals_to_zero,
+                                  getDefaultDenormsAreZeroForTarget(Kind));
+    // TODO: Check standard C++ flags?
+    bool FiniteOnly = false;
+    bool UnsafeMathOpt = false;
+    bool FastRelaxedMath = false;
+    bool CorrectSqrt = true;
+    bool Wave64 = isWave64(DriverArgs, Kind);
+
+    if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
+                           options::OPT_fno_gpu_sanitize, false)) {
+      auto AsanRTL = RocmInstallation.getAsanRTLPath();
+      if (AsanRTL.empty()) {
+        unsigned DiagID = getDriver().getDiags().getCustomDiagID(
+            DiagnosticsEngine::Error,
+            "AMDGPU address sanitizer runtime library (asanrtl) is not found. "
+            "Please install ROCm device library which supports address "
+            "sanitizer");
+        getDriver().Diag(DiagID);
+        return {};
+      } else
+        BCLibs.push_back(AsanRTL.str());
+    }
+
+    // Add the HIP specific bitcode library.
+    BCLibs.push_back(RocmInstallation.getHIPPath().str());
+
+    // Add the generic set of libraries.
+    BCLibs.append(RocmInstallation.getCommonBitcodeLibs(
+        DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
+        FastRelaxedMath, CorrectSqrt));
+
+    // Add instrument lib.
+    auto InstLib =
+        DriverArgs.getLastArgValue(options::OPT_gpu_instrument_lib_EQ);
+    if (InstLib.empty())
+      return BCLibs;
+    if (llvm::sys::fs::exists(InstLib))
+      BCLibs.push_back(InstLib.str());
+    else
+      getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
+  }
+
+  return BCLibs;
 }

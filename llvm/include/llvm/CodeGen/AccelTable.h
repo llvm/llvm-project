@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_DWARFACCELTABLE_H
-#define LLVM_CODEGEN_DWARFACCELTABLE_H
+#ifndef LLVM_CODEGEN_ACCELTABLE_H
+#define LLVM_CODEGEN_ACCELTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -404,4 +404,4 @@ protected:
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_DWARFACCELTABLE_H
+#endif // LLVM_CODEGEN_ACCELTABLE_H

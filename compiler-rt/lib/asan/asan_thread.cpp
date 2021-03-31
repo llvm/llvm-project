@@ -100,18 +100,27 @@ void AsanThread::Destroy() {
   int tid = this->tid();
   VReport(1, "T%d exited\n", tid);
 
-  malloc_storage().CommitBack();
-  if (common_flags()->use_sigaltstack) UnsetAlternateSignalStack();
-  asanThreadRegistry().FinishThread(tid);
-  FlushToDeadThreadStats(&stats_);
-  // We also clear the shadow on thread destruction because
-  // some code may still be executing in later TSD destructors
-  // and we don't want it to have any poisoned stack.
-  ClearShadowForThreadStackAndTLS();
-  DeleteFakeStack(tid);
+  bool was_running =
+      (asanThreadRegistry().FinishThread(tid) == ThreadStatusRunning);
+  if (was_running) {
+    if (AsanThread *thread = GetCurrentThread())
+      CHECK_EQ(this, thread);
+    malloc_storage().CommitBack();
+    if (common_flags()->use_sigaltstack)
+      UnsetAlternateSignalStack();
+    FlushToDeadThreadStats(&stats_);
+    // We also clear the shadow on thread destruction because
+    // some code may still be executing in later TSD destructors
+    // and we don't want it to have any poisoned stack.
+    ClearShadowForThreadStackAndTLS();
+    DeleteFakeStack(tid);
+  } else {
+    CHECK_NE(this, GetCurrentThread());
+  }
   uptr size = RoundUpTo(sizeof(AsanThread), GetPageSizeCached());
   UnmapOrDie(this, size);
-  DTLS_Destroy();
+  if (was_running)
+    DTLS_Destroy();
 }
 
 void AsanThread::StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom,
@@ -298,7 +307,7 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   uptr stack_size = 0;
   GetThreadStackAndTls(tid() == 0, &stack_bottom_, &stack_size, &tls_begin_,
                        &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
+  stack_top_ = RoundDownTo(stack_bottom_ + stack_size, SHADOW_GRANULARITY);
   tls_end_ = tls_begin_ + tls_size;
   dtls_ = DTLS_Get();
 

@@ -48,10 +48,6 @@ public:
 
   void ThreadDestroyed(Thread *thread);
 
-  void EnableTracer(bool value, bool single_stepping);
-
-  void SetTracer(lldb::ThreadPlanTracerSP &tracer_sp);
-
   void PushPlan(lldb::ThreadPlanSP new_plan_sp);
 
   lldb::ThreadPlanSP PopPlan();

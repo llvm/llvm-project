@@ -15,6 +15,7 @@ add_mlir_conversion_library(MLIRSCFToGPU
   MLIRGPU
   MLIRIR
   MLIRLinalg
+  MLIRMemRef
   MLIRPass
   MLIRStandard
   MLIRSupport

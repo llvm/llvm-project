@@ -74,6 +74,9 @@ public:
 
   RuntimeLibType GetDefaultRuntimeLibType() const override;
 
+  // Set default DWARF version to 3 for now as latest AIX OS supports version 3.
+  unsigned GetDefaultDwarfVersion() const override { return 3; }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

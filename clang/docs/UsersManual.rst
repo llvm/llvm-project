@@ -674,6 +674,11 @@ control the crash diagnostics.
 The -fno-crash-diagnostics flag can be helpful for speeding the process
 of generating a delta reduced test case.
 
+.. option:: -fcrash-diagnostics-dir=<dir>
+
+  Specify where to write the crash diagnostics files; defaults to the
+  usual location for temporary files.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is specially useful when trying to
 generate a reproducer for warnings or errors while using modules.
@@ -764,12 +769,12 @@ compilations steps.
   is sent to. If it specifies a regular file, the data are saved to this file in
   CSV format:
 
-.. code-block:: console
+  .. code-block:: console
 
-   $ clang -fproc-stat-report=abc foo.c
-   $ cat abc
-   clang-11,"/tmp/foo-123456.o",92000,84000,87536
-   ld,"a.out",900,8000,53568
+    $ clang -fproc-stat-report=abc foo.c
+    $ cat abc
+    clang-11,"/tmp/foo-123456.o",92000,84000,87536
+    ld,"a.out",900,8000,53568
 
   The data on each row represent:
   
@@ -780,18 +785,37 @@ compilations steps.
   * peak memory usage in Kb.
   
   It is possible to specify this option without any value. In this case statistics
-  is printed on standard output in human readable format:
+  are printed on standard output in human readable format:
   
-.. code-block:: console
+  .. code-block:: console
 
-  $ clang -fproc-stat-report foo.c
-  clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
-  ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
+    $ clang -fproc-stat-report foo.c
+    clang-11: output=/tmp/foo-855a8e.o, total=68.000 ms, user=60.000 ms, mem=86920 Kb
+    ld: output=a.out, total=8.000 ms, user=4.000 ms, mem=52320 Kb
   
   The report file specified in the option is locked for write, so this option
   can be used to collect statistics in parallel builds. The report file is not
   cleared, new data is appended to it, thus making posible to accumulate build
   statistics.
+
+  You can also use environment variables to control the process statistics reporting.
+  Setting ``CC_PRINT_PROC_STAT`` to ``1`` enables the feature, the report goes to
+  stdout in human readable format.
+  Setting ``CC_PRINT_PROC_STAT_FILE`` to a fully qualified file path makes it report
+  process statistics to the given file in the CSV format. Specifying a relative
+  path will likely lead to multiple files with the same name created in different
+  directories, since the path is relative to a changing working directory.
+
+  These environment variables are handy when you need to request the statistics
+  report without changing your build scripts or alter the existing set of compiler
+  options. Note that ``-fproc-stat-report`` take precedence over ``CC_PRINT_PROC_STAT``
+  and ``CC_PRINT_PROC_STAT_FILE``.
+
+  .. code-block:: console
+
+    $ export CC_PRINT_PROC_STAT=1
+    $ export CC_PRINT_PROC_STAT_FILE=~/project-build-proc-stat.csv
+    $ make
 
 Other Options
 -------------
@@ -2241,14 +2265,14 @@ programs using the same instrumentation method as ``-fprofile-generate``.
 
   The resulted ``cs_code.prodata`` combines ``code.profdata`` and the profile
   generated from binary ``cs_code``. Profile ``cs_code.profata`` can be used by
-  ``-fprofile-use`` compilaton.
+  ``-fprofile-use`` compilation.
 
   .. code-block:: console
 
     $ clang++ -O2 -fprofile-use=cs_code.profdata
 
   The above command will read both profiles to the compiler at the identical
-  point of instrumenations.
+  point of instrumentations.
 
 .. option:: -fprofile-use[=<pathname>]
 
@@ -2503,6 +2527,18 @@ below. If multiple flags are present, the last one is used.
    On Darwin **-fstandalone-debug** is enabled by default. The
    **-fno-standalone-debug** option can be used to get to turn on the
    vtable-based optimization described above.
+
+.. option:: -fuse-ctor-homing
+
+   This optimization is similar to the optimizations that are enabled as part
+   of -fno-standalone-debug. Here, Clang only emits type info for a
+   non-trivial, non-aggregate C++ class in the modules that contain a
+   definition of one of its constructors. This relies on the additional
+   assumption that all classes that are not trivially constructible have a
+   non-trivial constructor that is used somewhere.
+
+   This flag is not enabled by default, and needs to be used with -cc1 or
+   -Xclang.
 
 .. option:: -g
 
@@ -2889,8 +2925,10 @@ Note that if compiled to bitcode for generic targets such as SPIR,
 portable IR is produced that can be used with various vendor
 tools as well as open source tools such as `SPIRV-LLVM Translator
 <https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_
-to produce SPIR-V binary.
-
+to produce SPIR-V binary. More details are provided in `the offline
+compilation from OpenCL kernel sources into SPIR-V using open source
+tools
+<https://www.khronos.org/blog/offline-compilation-of-opencl-kernels-into-spir-v-using-open-source-tooling>`_.
 
 Clang currently supports OpenCL C language standards up to v2.0. Clang mainly
 supports full profile. There is only very limited support of the embedded
@@ -2920,35 +2958,24 @@ compiling for OpenCL, examples: ``-c``, ``-O<1-4|s>``, ``-o``, ``-emit-llvm``, e
 
 Some extra options are available to support special OpenCL features.
 
-.. option:: -finclude-default-header
+.. _opencl_cl_no_stdinc:
 
-Adds most of builtin types and function declarations during compilations. By
-default the OpenCL headers are not loaded and therefore certain builtin
-types and most of builtin functions are not declared. To load them
-automatically this flag can be passed to the frontend (see also :ref:`the
-section on the OpenCL Header <opencl_header>`):
+.. option:: -cl-no-stdinc
 
-   .. code-block:: console
-
-     $ clang -Xclang -finclude-default-header test.cl
-
-Note that this is a frontend-only flag and therefore it requires the use of
-flags that forward options to the frontend, e.g. ``-cc1`` or ``-Xclang``.
-
-Alternatively the internal header `opencl-c.h` containing the declarations
-can be included manually using ``-include`` or ``-I`` followed by the path
-to the header location. The header can be found in the clang source tree or
-installation directory.
+Allows to disable all extra types and functions that are not native to the compiler.
+This might reduce the compilation speed marginally but many declarations from the
+OpenCL standard will not be accessible. For example, the following will fail to
+compile.
 
    .. code-block:: console
 
-     $ clang -I<path to clang sources>/lib/Headers/opencl-c.h test.cl
-     $ clang -I<path to clang installation>/lib/clang/<llvm version>/include/opencl-c.h/opencl-c.h test.cl
+     $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
+     $ clang -cl-std=CL2.0 -cl-no-stdinc test.cl
+     error: use of undeclared identifier 'get_enqueued_local_size'
+     error: use of undeclared identifier 'get_local_size'
 
-In this example it is assumed that the kernel code contains
-``#include <opencl-c.h>`` just as a regular C include.
-
-More options are documented in :doc:`OpenCLSupport`.
+More information about the standard types and functions is provided in :ref:`the
+section on the OpenCL Header <opencl_header>`.
 
 OpenCL Targets
 --------------
@@ -2985,11 +3012,8 @@ Generic Targets
 
    .. code-block:: console
 
-    $ clang -cc1 -triple=spir test.cl
-    $ clang -cc1 -triple=spir64 test.cl
-
-  Note that this is a frontend-only target and therefore it requires the use of
-  flags that forward options to the frontend e.g. ``-cc1`` or ``-Xclang``.
+    $ clang -target spir test.cl -emit-llvm -c
+    $ clang -target spir64 test.cl -emit-llvm -c
 
   All known OpenCL extensions are supported in the SPIR targets. Clang will
   generate SPIR v1.2 compatible IR for OpenCL versions up to 2.0 and SPIR v2.0
@@ -3012,31 +3036,21 @@ Generic Targets
 OpenCL Header
 -------------
 
-By default Clang will not include standard headers and therefore OpenCL builtin
-functions and some types (i.e. vectors) are unknown during compilation. The
-default CL header is, however, provided in the Clang installation and can be
-enabled by passing the ``-finclude-default-header`` flag (see :ref:`flags
-description <opencl_cl_ext>` for more details).
+By default Clang will include standard headers and therefore most of OpenCL
+builtin functions and types are available during compilation. The
+default declarations of non-native compiler types and functions can be disabled
+by using flag :ref:`-cl-no-stdinc <opencl_cl_no_stdinc>`.
+
+The following example demonstrates that OpenCL kernel sources with various
+standard builtin functions can be compiled without the need for an explicit
+includes or compiler flags.
 
    .. code-block:: console
 
      $ echo "bool is_wg_uniform(int i){return get_enqueued_local_size(i)==get_local_size(i);}" > test.cl
-     $ clang -Xclang -finclude-default-header -cl-std=CL2.0 test.cl
+     $ clang -cl-std=CL2.0 test.cl
 
-Because the header is very large and long to parse, PCH (:doc:`PCHInternals`)
-and modules (:doc:`Modules`) are used internally to improve the compilation
-speed.
-
-To enable modules for OpenCL:
-
-   .. code-block:: console
-
-     $ clang -target spir-unknown-unknown -c -emit-llvm -Xclang -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=<path to the generated module> test.cl
-
-Another way to circumvent long parsing latency for the OpenCL builtin
-declarations is to use mechanism enabled by ``-fdeclare-opencl-builtins`` flag
-that is available as an experimental feature (see more information in
-:doc:`OpenCLSupport`).
+More information about the default headers is provided in :doc:`OpenCLSupport`.
 
 OpenCL Extensions
 -----------------
@@ -3222,6 +3236,18 @@ compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
    .. code-block:: console
 
      clang -cl-std=clc++ test.cl
+
+Alternatively, files with ``.clcpp`` extension are compiled with the C++ for OpenCL
+mode.
+
+   .. code-block:: console
+
+     clang test.clcpp
+
+C++ for OpenCL kernel sources can also be compiled online in drivers supporting 
+`cl_ext_cxx_for_opencl
+<https://www.khronos.org/registry/OpenCL/extensions/ext/cl_ext_cxx_for_opencl.html>`_
+extension.
 
 Constructing and destroying global objects
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3489,7 +3515,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /execution-charset:<value>
                               Runtime encoding, supports only UTF-8
       /E                      Preprocess to stdout
-      /fallback               Fall back to cl.exe if clang-cl fails to compile
       /FA                     Output assembly code file during compilation
       /Fa<file or directory>  Output assembly code to this file during compilation (with /FA)
       /Fe<file or directory>  Set output executable file or directory (ends in / or \)
@@ -3515,7 +3540,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Gs                     Use stack probes (default)
       /Gs<value>              Set stack probe size (default 4096)
       /guard:<value>          Enable Control Flow Guard with /guard:cf,
-                              or only the table with /guard:cf,nochecks
+                              or only the table with /guard:cf,nochecks.
+                              Enable EH Continuation Guard with /guard:ehcont
       /Gv                     Set __vectorcall as a default calling convention
       /Gw-                    Don't put each data item in its own section
       /Gw                     Put each data item in its own section
@@ -3620,6 +3646,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fcomplete-member-pointers
                               Require member pointer base types to be complete if they would be significant under the Microsoft ABI
       -fcoverage-mapping      Generate coverage mapping to enable code coverage analysis
+      -fcrash-diagnostics-dir=<dir>
+                              Put crash-report files in <dir>
       -fdebug-macro           Emit macro debug information
       -fdelayed-template-parsing
                               Parse templated function definitions at the end of the translation unit
@@ -3834,18 +3862,6 @@ different instance of that variable than in the DLL:
 This could lead to very subtle bugs. Using ``-fvisibility-inlines-hidden`` can
 lead to the same issue. To avoid it in this case, make `S::foo()` or
 `internal()` non-inline, or mark them `dllimport/dllexport` explicitly.
-
-The /fallback Option
-^^^^^^^^^^^^^^^^^^^^
-
-When clang-cl is run with the ``/fallback`` option, it will first try to
-compile files itself. For any file that it fails to compile, it will fall back
-and try to compile the file by invoking cl.exe.
-
-This option is intended to be used as a temporary means to build projects where
-clang-cl cannot successfully compile all the files. clang-cl may fail to compile
-a file either because it cannot generate code for some C++ feature, or because
-it cannot parse some Microsoft language extension.
 
 Finding Clang runtime libraries
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

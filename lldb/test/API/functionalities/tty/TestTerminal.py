@@ -48,4 +48,4 @@ class LaunchInTerminalTestCase(TestBase):
             "Make sure launch happened successfully in a terminal window")
         # Running in synchronous mode our process should have run and already
         # exited by the time target.Launch() returns
-        self.assertTrue(process.GetState() == lldb.eStateExited)
+        self.assertEqual(process.GetState(), lldb.eStateExited)

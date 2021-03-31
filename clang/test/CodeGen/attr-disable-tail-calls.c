@@ -15,5 +15,5 @@ int f2() __attribute__((disable_tail_calls)) {
 }
 
 // DISABLE: attributes [[ATTRTRUE]] = { {{.*}}"disable-tail-calls"="true"{{.*}} }
-// ENABLE: attributes [[ATTRFALSE]] = { {{.*}}"disable-tail-calls"="false"{{.*}} }
+// ENABLE-NOT: attributes [[ATTRFALSE]] = { {{.*}}"disable-tail-calls"="false"{{.*}} }
 // ENABLE: attributes [[ATTRTRUE]] = { {{.*}}"disable-tail-calls"="true"{{.*}} }

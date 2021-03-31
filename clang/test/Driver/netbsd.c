@@ -236,6 +236,7 @@
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}eabi{{/|\\\\}}crti.o"
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc"
 // ARMEB: "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+// ARMV7EB: as{{.*}}" "-mcpu=cortex-a8"
 // ARMV7EB: ld{{.*}}" "--eh-frame-hdr" "-dynamic-linker" "/libexec/ld.elf_so"
 // ARMV7EB: "--be8" "-m" "armelfb_nbsd_eabi"
 

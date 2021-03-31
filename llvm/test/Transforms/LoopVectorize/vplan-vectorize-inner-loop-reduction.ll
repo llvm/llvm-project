@@ -28,8 +28,8 @@ define void @inner_loop_reduction(double* noalias nocapture readonly %a.in, doub
 ; CHECK-NEXT: br label %[[FOR2_HEADER:.*]]
 
 ; CHECK: [[FOR2_HEADER]]:
-; CHECK-NEXT: %[[FOR2_INDEX:.*]] = phi <4 x i32> [ %[[FOR2_INDEX_NEXT:.*]], %[[FOR2_HEADER]] ], [ zeroinitializer, %vector.body ]
-; CHECK-NEXT: %[[REDUCTION:.*]] = phi <4 x double> [ %[[REDUCTION_NEXT:.*]], %[[FOR2_HEADER]] ], [ %[[MASKED_GATHER1]], %vector.body ]
+; CHECK-NEXT: %[[FOR2_INDEX:.*]] = phi <4 x i32> [ zeroinitializer, %vector.body ], [ %[[FOR2_INDEX_NEXT:.*]], %[[FOR2_HEADER]] ]
+; CHECK-NEXT: %[[REDUCTION:.*]] = phi <4 x double> [ %[[MASKED_GATHER1]], %vector.body ], [ %[[REDUCTION_NEXT:.*]], %[[FOR2_HEADER]] ]
 ; CHECK-NEXT: %[[REDUCTION_NEXT]] = fadd <4 x double> %[[MASKED_GATHER2]], %[[REDUCTION]]
 ; CHECK-NEXT: %[[FOR2_INDEX_NEXT]] = add nuw nsw <4 x i32> %[[FOR2_INDEX]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT: %[[VEC_PTR:.*]] = icmp eq <4 x i32> %[[FOR2_INDEX_NEXT]], <i32 10000, i32 10000, i32 10000, i32 10000>

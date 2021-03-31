@@ -5,6 +5,7 @@ def StdC : StandardSpec<"stdc"> {
   RestrictedPtrType FILERestrictedPtr = RestrictedPtrType<FILE>;
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
+  PtrType TimeTTypePtr = PtrType<TimeTType>;
 
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
@@ -96,6 +97,12 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  NamedType FEnvT = NamedType<"fenv_t">;
+  PtrType FEnvTPtr = PtrType<FEnvT>;
+  ConstType ConstFEnvTPtr = ConstType<FEnvTPtr>;
+  NamedType FExceptT = NamedType<"fexcept_t">;
+  PtrType FExceptTPtr = PtrType<FExceptT>;
+  ConstType ConstFExceptTPtr = ConstType<FExceptTPtr>;
   HeaderSpec Fenv = HeaderSpec<
       "fenv.h",
       [
@@ -111,7 +118,10 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"FE_TOWARDZERO">,
           Macro<"FE_UPWARD">
       ],
-      [], // Types
+      [
+          NamedType<"fenv_t">,
+          NamedType<"fexcept_t">,
+      ], // Types
       [], // Enumerations
       [
           FunctionSpec<
@@ -138,6 +148,36 @@ def StdC : StandardSpec<"stdc"> {
               "fegetround",
               RetValSpec<IntType>,
               []
+          >,
+          FunctionSpec<
+              "fegetenv",
+              RetValSpec<IntType>,
+              [ArgSpec<FEnvTPtr>]
+          >,
+          FunctionSpec<
+              "fesetenv",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFEnvTPtr>]
+          >,
+          FunctionSpec<
+              "fegetexceptflag",
+              RetValSpec<IntType>,
+              [ArgSpec<FExceptTPtr>, ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "fesetexceptflag",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFExceptTPtr>, ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "feholdexcept",
+              RetValSpec<IntType>,
+              [ArgSpec<FEnvTPtr>]
+          >,
+          FunctionSpec<
+              "feupdateenv",
+              RetValSpec<IntType>,
+              [ArgSpec<ConstFEnvTPtr>]
           >,
       ]
   >;
@@ -558,6 +598,19 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [], // Enumerations
       [
+          FunctionSpec<
+              "gmtime",
+              RetValSpec<StructTmPtr>,
+              [ArgSpec<TimeTTypePtr>]
+          >,
+          FunctionSpec<
+              "gmtime_r",
+              RetValSpec<StructTmPtr>,
+              [
+                  ArgSpec<TimeTTypePtr>,
+                  ArgSpec<StructTmPtr>,
+              ]
+          >,
           FunctionSpec<
               "mktime",
               RetValSpec<TimeTType>,

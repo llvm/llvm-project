@@ -1113,7 +1113,7 @@ void array_shaping(float *f, int sa) {
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 #ifdef CK19
 
-// PRESENT=0x1000 | TO=0x1 = 0x1021
+// PRESENT=0x1000 | TO=0x1 = 0x1001
 // CK19: [[MTYPE00:@.+]] = {{.+}}constant [1 x i64] [i64 [[#0x1001]]]
 
 // PRESENT=0x1000 | FROM=0x2 = 0x1002

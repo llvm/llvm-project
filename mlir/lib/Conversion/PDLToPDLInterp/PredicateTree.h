@@ -190,6 +190,12 @@ struct SwitchNode : public MatcherNode {
   using ChildMapT = llvm::MapVector<Qualifier *, std::unique_ptr<MatcherNode>>;
   ChildMapT &getChildren() { return children; }
 
+  /// Returns the child at the given index.
+  std::pair<Qualifier *, std::unique_ptr<MatcherNode>> &getChild(unsigned i) {
+    assert(i < children.size() && "invalid child index");
+    return *std::next(children.begin(), i);
+  }
+
 private:
   /// Switch predicate "answers" select the child. Answers that are not found
   /// default to the failure node.

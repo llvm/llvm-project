@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 # RUN: not %lld -o /dev/null %t.o 2>&1 | FileCheck %s
 
-# CHECK: error: X86_64_RELOC_TLV must be used with movq instructions
+# CHECK: error: TLV reloc requires MOVQ instruction
 
 .text
 .globl _main

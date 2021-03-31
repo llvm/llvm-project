@@ -11,7 +11,6 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ReproducerProvider.h"
@@ -35,7 +34,9 @@
 using namespace lldb_private;
 using namespace lldb_private::repro;
 
-SystemInitializerCommon::SystemInitializerCommon() {}
+SystemInitializerCommon::SystemInitializerCommon(
+    HostInfo::SharedLibraryDirectoryHelper *helper)
+    : m_shlib_dir_helper(helper) {}
 
 SystemInitializerCommon::~SystemInitializerCommon() {}
 
@@ -125,7 +126,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
     return e;
 
   Log::Initialize();
-  HostInfo::Initialize();
+  HostInfo::Initialize(m_shlib_dir_helper);
 
   llvm::Error error = Socket::Initialize();
   if (error)

@@ -184,10 +184,10 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
-  Reloc::Model RelocModel;
+  Optional<Reloc::Model> RelocModel = None;
   if (Conf.RelocModel)
     RelocModel = *Conf.RelocModel;
-  else
+  else if (M.getModuleFlag("PIC Level"))
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
@@ -224,11 +224,6 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Conf.DebugPassManager);
   SI.registerCallbacks(PIC);
   PassBuilder PB(Conf.DebugPassManager, TM, Conf.PTO, PGOOpt, &PIC);
-  AAManager AA;
-
-  // Parse a custom AA pipeline if asked to.
-  if (auto Err = PB.parseAAPipeline(AA, "default"))
-    report_fatal_error("Error parsing default AA pipeline");
 
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
@@ -243,6 +238,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
+  AAManager AA;
+  // Parse a custom AA pipeline if asked to.
+  if (!Conf.AAPipeline.empty()) {
+    if (auto Err = PB.parseAAPipeline(AA, Conf.AAPipeline)) {
+      report_fatal_error("unable to parse AA pipeline description '" +
+                         Conf.AAPipeline + "': " + toString(std::move(Err)));
+    }
+  } else {
+    AA = PB.buildDefaultAAPipeline();
+  }
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });
 
@@ -277,65 +282,21 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
     break;
   }
 
-  if (IsThinLTO)
+  // Parse a custom pipeline if asked to.
+  if (!Conf.OptPipeline.empty()) {
+    if (auto Err = PB.parsePassPipeline(MPM, Conf.OptPipeline)) {
+      report_fatal_error("unable to parse pass pipeline description '" +
+                         Conf.OptPipeline + "': " + toString(std::move(Err)));
+    }
+  } else if (IsThinLTO) {
     MPM.addPass(PB.buildThinLTODefaultPipeline(OL, ImportSummary));
-  else
+  } else {
     MPM.addPass(PB.buildLTODefaultPipeline(OL, ExportSummary));
+  }
 
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  MPM.run(Mod, MAM);
-}
-
-static void runNewPMCustomPasses(const Config &Conf, Module &Mod,
-                                 TargetMachine *TM, std::string PipelineDesc,
-                                 std::string AAPipelineDesc,
-                                 bool DisableVerify) {
-  PassBuilder PB(Conf.DebugPassManager, TM);
-  AAManager AA;
-
-  // Parse a custom AA pipeline if asked to.
-  if (!AAPipelineDesc.empty())
-    if (auto Err = PB.parseAAPipeline(AA, AAPipelineDesc))
-      report_fatal_error("unable to parse AA pipeline description '" +
-                         AAPipelineDesc + "': " + toString(std::move(Err)));
-
-  RegisterPassPlugins(Conf.PassPlugins, PB);
-
-  LoopAnalysisManager LAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
-
-  std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));
-  if (Conf.Freestanding)
-    TLII->disableAllFunctions();
-  FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
-
-  // Register the AA manager first so that our version is the one used.
-  FAM.registerPass([&] { return std::move(AA); });
-
-  // Register all the basic analyses with the managers.
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-
-  ModulePassManager MPM;
-
-  // Always verify the input.
-  MPM.addPass(VerifierPass());
-
-  // Now, add all the passes we've been requested to.
-  if (auto Err = PB.parsePassPipeline(MPM, PipelineDesc))
-    report_fatal_error("unable to parse pass pipeline description '" +
-                       PipelineDesc + "': " + toString(std::move(Err)));
-
-  if (!DisableVerify)
-    MPM.addPass(VerifierPass());
   MPM.run(Mod, MAM);
 }
 
@@ -394,14 +355,12 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
                                /*Cmdline*/ CmdArgs);
   }
   // FIXME: Plumb the combined index into the new pass manager.
-  if (!Conf.OptPipeline.empty())
-    runNewPMCustomPasses(Conf, Mod, TM, Conf.OptPipeline, Conf.AAPipeline,
-                         Conf.DisableVerify);
-  else if (Conf.UseNewPM)
+  if (Conf.UseNewPM || !Conf.OptPipeline.empty()) {
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
                    ImportSummary);
-  else
+  } else {
     runOldPMPasses(Conf, Mod, TM, IsThinLTO, ExportSummary, ImportSummary);
+  }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
@@ -580,7 +539,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
-                       MapVector<StringRef, BitcodeModule> &ModuleMap,
+                       MapVector<StringRef, BitcodeModule> *ModuleMap,
                        const std::vector<uint8_t> &CmdArgs) {
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
   if (!TOrErr)
@@ -649,11 +608,35 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto ModuleLoader = [&](StringRef Identifier) {
     assert(Mod.getContext().isODRUniquingDebugTypes() &&
            "ODR Type uniquing should be enabled on the context");
-    auto I = ModuleMap.find(Identifier);
-    assert(I != ModuleMap.end());
-    return I->second.getLazyModule(Mod.getContext(),
-                                   /*ShouldLazyLoadMetadata=*/true,
-                                   /*IsImporting*/ true);
+    if (ModuleMap) {
+      auto I = ModuleMap->find(Identifier);
+      assert(I != ModuleMap->end());
+      return I->second.getLazyModule(Mod.getContext(),
+                                     /*ShouldLazyLoadMetadata=*/true,
+                                     /*IsImporting*/ true);
+    }
+
+    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
+        llvm::MemoryBuffer::getFile(Identifier);
+    if (!MBOrErr)
+      return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
+          Twine("Error loading imported file ") + Identifier + " : ",
+          MBOrErr.getError()));
+
+    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
+    if (!BMOrErr)
+      return Expected<std::unique_ptr<llvm::Module>>(make_error<StringError>(
+          Twine("Error loading imported file ") + Identifier + " : " +
+              toString(BMOrErr.takeError()),
+          inconvertibleErrorCode()));
+
+    Expected<std::unique_ptr<Module>> MOrErr =
+        BMOrErr->getLazyModule(Mod.getContext(),
+                               /*ShouldLazyLoadMetadata=*/true,
+                               /*IsImporting*/ true);
+    if (MOrErr)
+      (*MOrErr)->setOwnedMemoryBuffer(std::move(*MBOrErr));
+    return MOrErr;
   };
 
   FunctionImporter Importer(CombinedIndex, ModuleLoader,
@@ -693,12 +676,9 @@ Expected<BitcodeModule> lto::findThinLTOModule(MemoryBufferRef MBRef) {
                                  inconvertibleErrorCode());
 }
 
-bool lto::loadReferencedModules(
-    const Module &M, const ModuleSummaryIndex &CombinedIndex,
-    FunctionImporter::ImportMapTy &ImportList,
-    MapVector<llvm::StringRef, llvm::BitcodeModule> &ModuleMap,
-    std::vector<std::unique_ptr<llvm::MemoryBuffer>>
-        &OwnedImportsLifetimeManager) {
+bool lto::initImportList(const Module &M,
+                         const ModuleSummaryIndex &CombinedIndex,
+                         FunctionImporter::ImportMapTy &ImportList) {
   if (ThinLTOAssumeMerged)
     return true;
   // We can simply import the values mentioned in the combined index, since
@@ -718,27 +698,6 @@ bool lto::loadReferencedModules(
       // Add an entry to provoke importing by thinBackend.
       ImportList[Summary->modulePath()].insert(GUID);
     }
-  }
-
-  for (auto &I : ImportList) {
-    ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
-        llvm::MemoryBuffer::getFile(I.first());
-    if (!MBOrErr) {
-      errs() << "Error loading imported file '" << I.first()
-             << "': " << MBOrErr.getError().message() << "\n";
-      return false;
-    }
-
-    Expected<BitcodeModule> BMOrErr = findThinLTOModule(**MBOrErr);
-    if (!BMOrErr) {
-      handleAllErrors(BMOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        errs() << "Error loading imported file '" << I.first()
-               << "': " << EIB.message() << '\n';
-      });
-      return false;
-    }
-    ModuleMap.insert({I.first(), *BMOrErr});
-    OwnedImportsLifetimeManager.push_back(std::move(*MBOrErr));
   }
   return true;
 }

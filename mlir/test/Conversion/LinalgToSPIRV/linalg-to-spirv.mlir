@@ -17,13 +17,13 @@ module attributes {
     #spv.vce<v1.3, [Shader, GroupNonUniformArithmetic], []>, {}>
 } {
 
-// CHECK:      spv.globalVariable
+// CHECK:      spv.GlobalVariable
 // CHECK-SAME: built_in("LocalInvocationId")
 
 // CHECK:      @single_workgroup_reduction
 // CHECK-SAME: (%[[INPUT:.+]]: !spv.ptr{{.+}}, %[[OUTPUT:.+]]: !spv.ptr{{.+}})
 
-// CHECK:        %[[ZERO:.+]] = spv.constant 0 : i32
+// CHECK:        %[[ZERO:.+]] = spv.Constant 0 : i32
 // CHECK:        %[[ID:.+]] = spv.Load "Input" %{{.+}} : vector<3xi32>
 // CHECK:        %[[X:.+]] = spv.CompositeExtract %[[ID]][0 : i32]
 
@@ -34,7 +34,7 @@ module attributes {
 // CHECK:        %[[OUTPTR:.+]] = spv.AccessChain %[[OUTPUT]][%[[ZERO]], %[[ZERO]]]
 // CHECK:        %[[ELECT:.+]] = spv.GroupNonUniformElect Subgroup : i1
 
-// CHECK:        spv.selection {
+// CHECK:        spv.mlir.selection {
 // CHECK:          spv.BranchConditional %[[ELECT]], ^bb1, ^bb2
 // CHECK:        ^bb1:
 // CHECK:          spv.AtomicIAdd "Device" "AcquireRelease" %[[OUTPTR]], %[[ADD]]

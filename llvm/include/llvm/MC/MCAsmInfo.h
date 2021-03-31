@@ -122,9 +122,13 @@ protected:
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
 
-  /// This indicates the comment character used by the assembler.  Defaults to
+  /// This indicates the comment string used by the assembler.  Defaults to
   /// "#"
   StringRef CommentString;
+
+  /// This indicates whether the comment string is only accepted as a comment
+  /// at the beginning of statements. Defaults to false.
+  bool RestrictCommentStringToStartOfStatement = false;
 
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
@@ -388,6 +392,14 @@ protected:
   /// absolute difference.
   bool DwarfFDESymbolsUseAbsDiff = false;
 
+  /// True if the target supports generating the DWARF line table through using
+  /// the .loc/.file directives. Defaults to true.
+  bool UsesDwarfFileAndLocDirectives = true;
+
+  /// True if the target needs the DWARF section length in the header (if any)
+  /// of the DWARF section in the assembly file. Defaults to true.
+  bool DwarfSectionSizeRequired = true;
+
   /// True if dwarf register numbers are printed instead of symbolic register
   /// names in .cfi_* directives.  Defaults to false.
   bool DwarfRegNumForCFI = false;
@@ -549,6 +561,9 @@ public:
   unsigned getCommentColumn() const { return 40; }
 
   StringRef getCommentString() const { return CommentString; }
+  bool getRestrictCommentStringToStartOfStatement() const {
+    return RestrictCommentStringToStartOfStatement;
+  }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
@@ -671,6 +686,14 @@ public:
   bool useParensForSymbolVariant() const { return UseParensForSymbolVariant; }
   bool supportsExtendedDwarfLocDirective() const {
     return SupportsExtendedDwarfLocDirective;
+  }
+
+  bool usesDwarfFileAndLocDirectives() const {
+    return UsesDwarfFileAndLocDirectives;
+  }
+
+  bool needsDwarfSectionSizeInHeader() const {
+    return DwarfSectionSizeRequired;
   }
 
   void addInitialFrameState(const MCCFIInstruction &Inst);

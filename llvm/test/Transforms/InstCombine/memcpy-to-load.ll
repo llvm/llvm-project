@@ -34,7 +34,7 @@ define void @copy_2_bytes(i8* %d, i8* %s) {
 
 define void @copy_3_bytes(i8* %d, i8* %s) {
 ; CHECK-LABEL: @copy_3_bytes(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(3) [[D:%.*]], i8* nonnull align 1 dereferenceable(3) [[S:%.*]], i32 3, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(3) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(3) [[S:%.*]], i32 3, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 3, i1 false)
@@ -57,7 +57,7 @@ define void @copy_4_bytes(i8* %d, i8* %s) {
 
 define void @copy_5_bytes(i8* %d, i8* %s) {
 ; CHECK-LABEL: @copy_5_bytes(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(5) [[D:%.*]], i8* nonnull align 1 dereferenceable(5) [[S:%.*]], i32 5, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(5) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(5) [[S:%.*]], i32 5, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 5, i1 false)
@@ -78,7 +78,7 @@ define void @copy_8_bytes(i8* %d, i8* %s) {
 
 define void @copy_16_bytes(i8* %d, i8* %s) {
 ; CHECK-LABEL: @copy_16_bytes(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* nonnull align 1 dereferenceable(16) [[D:%.*]], i8* nonnull align 1 dereferenceable(16) [[S:%.*]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(16) [[D:%.*]], i8* noundef nonnull align 1 dereferenceable(16) [[S:%.*]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %d, i8* %s, i32 16, i1 false)

@@ -12,5 +12,5 @@ entry:
   ret void
 }
 
-; CHECK: .section	gsection,"aw",@progbits
-; CHECK: .section	hsection,"aw",@progbits
+; CHECK: .section	gsection,"awR",@progbits
+; CHECK: .section	hsection,"awR",@progbits

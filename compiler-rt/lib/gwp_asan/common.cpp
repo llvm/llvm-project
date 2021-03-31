@@ -40,7 +40,7 @@ constexpr size_t AllocationMetadata::kMaxTraceLengthToCollect;
 void AllocationMetadata::RecordAllocation(uintptr_t AllocAddr,
                                           size_t AllocSize) {
   Addr = AllocAddr;
-  Size = AllocSize;
+  RequestedSize = AllocSize;
   IsDeallocated = false;
 
   AllocationTrace.ThreadID = getThreadID();

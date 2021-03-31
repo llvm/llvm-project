@@ -5,7 +5,7 @@
 # Test that R6 when used for an argument is modelled as being live throughout
 # the function when not saved in the prologue..
 
-# CHECK:      # *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization ***:
+# CHECK:      # *** IR Dump After Prologue/Epilogue Insertion & Frame Finalization (prologepilog) ***:
 # CHECK-NEXT: # Machine code for function fun0:
 # CHECK-LABEL: bb.0:
 # CHECK: liveins:{{.*}} $r6d

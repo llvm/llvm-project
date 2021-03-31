@@ -91,7 +91,7 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
         # We are now stopped at the entry point to the program. Shared
         # libraries are not loaded yet (at least on macOS they aren't) and any
         # breakpoints set in foo.cpp should not be resolved.
-        self.assertTrue(len(self.vscode.breakpoint_events) == 0,
+        self.assertEqual(len(self.vscode.breakpoint_events), 0,
                         "no breakpoint events when stopped at entry point")
 
         # Continue to the breakpoint
@@ -100,17 +100,17 @@ class TestVSCode_breakpointEvents(lldbvscode_testcase.VSCodeTestCaseBase):
         # Make sure we only get an event for the breakpoint we set via a call
         # to self.vscode.request_setBreakpoints(...), not the breakpoint
         # we set with with a LLDB command in preRunCommands.
-        self.assertTrue(len(self.vscode.breakpoint_events) == 1,
+        self.assertEqual(len(self.vscode.breakpoint_events), 1,
                         "make sure we got a breakpoint event")
         event = self.vscode.breakpoint_events[0]
         # Verify the details of the breakpoint changed notification.
         body = event['body']
-        self.assertTrue(body['reason'] == 'changed',
+        self.assertEqual(body['reason'], 'changed',
                 "breakpoint event is says breakpoint is changed")
         breakpoint = body['breakpoint']
-        self.assertTrue(breakpoint['verified'] == True,
+        self.assertTrue(breakpoint['verified'],
                 "breakpoint event is says it is verified")
-        self.assertTrue(breakpoint['id'] == foo_bp_id,
+        self.assertEqual(breakpoint['id'], foo_bp_id,
                 "breakpoint event is for breakpoint %i" % (foo_bp_id))
         self.assertTrue('line' in breakpoint and breakpoint['line'] > 0,
                 "breakpoint event is has a line number")

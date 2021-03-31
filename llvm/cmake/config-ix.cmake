@@ -232,6 +232,7 @@ check_symbol_exists(lseek64 "sys/types.h;unistd.h" HAVE_LSEEK64)
 set(CMAKE_REQUIRED_DEFINITIONS "")
 check_symbol_exists(mallctl malloc_np.h HAVE_MALLCTL)
 check_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
+check_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_symbol_exists(malloc_zone_statistics malloc/malloc.h
                     HAVE_MALLOC_ZONE_STATISTICS)
 check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
@@ -351,6 +352,8 @@ else()
   unset(HAVE_FFI_CALL CACHE)
 endif( LLVM_ENABLE_FFI )
 
+check_symbol_exists(proc_pid_rusage "libproc.h" HAVE_PROC_PID_RUSAGE)
+
 # Whether we can use std::is_trivially_copyable to verify llvm::is_trivially_copyable.
 CHECK_CXX_SOURCE_COMPILES("
 #include <type_traits>
@@ -449,17 +452,21 @@ elseif (LLVM_NATIVE_ARCH MATCHES "riscv32")
   set(LLVM_NATIVE_ARCH RISCV)
 elseif (LLVM_NATIVE_ARCH MATCHES "riscv64")
   set(LLVM_NATIVE_ARCH RISCV)
+elseif (LLVM_NATIVE_ARCH STREQUAL "m68k")
+  set(LLVM_NATIVE_ARCH M68k)
 else ()
   message(FATAL_ERROR "Unknown architecture ${LLVM_NATIVE_ARCH}")
 endif ()
 
-# If build targets includes "host", then replace with native architecture.
-list(FIND LLVM_TARGETS_TO_BUILD "host" idx)
-if( NOT idx LESS 0 )
-  list(REMOVE_AT LLVM_TARGETS_TO_BUILD ${idx})
-  list(APPEND LLVM_TARGETS_TO_BUILD ${LLVM_NATIVE_ARCH})
-  list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
-endif()
+# If build targets includes "host" or "Native", then replace with native architecture.
+foreach (NATIVE_KEYWORD host Native)
+  list(FIND LLVM_TARGETS_TO_BUILD ${NATIVE_KEYWORD} idx)
+  if( NOT idx LESS 0 )
+    list(REMOVE_AT LLVM_TARGETS_TO_BUILD ${idx})
+    list(APPEND LLVM_TARGETS_TO_BUILD ${LLVM_NATIVE_ARCH})
+    list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
+  endif()
+endforeach()
 
 list(FIND LLVM_TARGETS_TO_BUILD ${LLVM_NATIVE_ARCH} NATIVE_ARCH_IDX)
 if (NATIVE_ARCH_IDX EQUAL -1)

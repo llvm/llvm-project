@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // file_status status(const path& p);
@@ -109,12 +111,16 @@ TEST_CASE(status_file_types_test)
         {static_env.SymlinkToFile, file_type::regular},
         {static_env.Dir, file_type::directory},
         {static_env.SymlinkToDir, file_type::directory},
-        // Block files tested elsewhere
+        // file_type::block files tested elsewhere
+#ifndef _WIN32
         {static_env.CharFile, file_type::character},
+#endif
 #if !defined(__APPLE__) && !defined(__FreeBSD__) && !defined(_WIN32) // No support for domain sockets
         {env.create_socket("socket"), file_type::socket},
 #endif
+#ifndef _WIN32
         {env.create_fifo("fifo"), file_type::fifo}
+#endif
     };
     for (const auto& TC : cases) {
         // test non-throwing case

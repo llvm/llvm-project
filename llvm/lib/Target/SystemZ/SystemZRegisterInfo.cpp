@@ -9,12 +9,13 @@
 #include "SystemZRegisterInfo.h"
 #include "SystemZInstrInfo.h"
 #include "SystemZSubtarget.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 
 using namespace llvm;
 
@@ -202,7 +203,7 @@ SystemZRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       MF->getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_SaveList;
-  return CSR_SystemZ_SaveList;
+  return CSR_SystemZ_ELF_SaveList;
 }
 
 const uint32_t *
@@ -218,7 +219,7 @@ SystemZRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       MF.getFunction().getAttributes().hasAttrSomewhere(
           Attribute::SwiftError))
     return CSR_SystemZ_SwiftError_RegMask;
-  return CSR_SystemZ_RegMask;
+  return CSR_SystemZ_ELF_RegMask;
 }
 
 BitVector
@@ -273,7 +274,16 @@ SystemZRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   // Special handling of dbg_value instructions.
   if (MI->isDebugValue()) {
     MI->getOperand(FIOperandNum).ChangeToRegister(BasePtr, /*isDef*/ false);
-    MI->getDebugOffset().ChangeToImmediate(Offset);
+    if (MI->isNonListDebugValue()) {
+      MI->getDebugOffset().ChangeToImmediate(Offset);
+    } else {
+      unsigned OpIdx = MI->getDebugOperandIndex(&MI->getOperand(FIOperandNum));
+      SmallVector<uint64_t, 3> Ops;
+      DIExpression::appendOffset(
+          Ops, TFI->getFrameIndexReference(MF, FrameIndex, BasePtr).getFixed());
+      MI->getDebugExpressionOp().setMetadata(
+          DIExpression::appendOpsToArg(MI->getDebugExpression(), Ops, OpIdx));
+    }
     return;
   }
 

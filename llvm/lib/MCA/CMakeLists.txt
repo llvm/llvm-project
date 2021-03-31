@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMMCA
   Stages/DispatchStage.cpp
   Stages/EntryStage.cpp
   Stages/ExecuteStage.cpp
+  Stages/InOrderIssueStage.cpp
   Stages/InstructionTables.cpp
   Stages/MicroOpQueueStage.cpp
   Stages/RetireStage.cpp

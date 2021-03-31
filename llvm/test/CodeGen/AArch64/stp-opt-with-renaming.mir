@@ -100,11 +100,11 @@ body:             |
   bb.0:
     liveins: $x0
 
-    renamable $x8 = MRS 58880
+    renamable $x8 = MRS 58880, implicit-def $nzcv
     renamable $x8 = MOVZXi 15309, 0
     renamable $x8 = MOVKXi renamable $x8, 26239, 16
     STRXui renamable $x8, renamable $x0, 0, implicit killed $x8 :: (store 8)
-    renamable $x8 = MRS 55840
+    renamable $x8 = MRS 55840, implicit-def $nzcv
     STRXui killed renamable  $x8, renamable killed $x0, 1, implicit killed $x8 :: (store 8)
     RET undef $lr
 
@@ -134,9 +134,9 @@ body:             |
   bb.0:
     liveins: $x0, $x1
 
-    renamable $x8 = MRS 58880
+    renamable $x8 = MRS 58880, implicit-def $nzcv
     STRXui renamable $x8, renamable $x0, 0, implicit killed $x8 :: (store 4)
-    renamable $x8 = MRS 55840
+    renamable $x8 = MRS 55840, implicit-def $nzcv
     STRXui killed renamable  $x8, renamable killed $x0, 1, implicit killed $x8 :: (store 4)
     RET undef $lr
 
@@ -166,9 +166,9 @@ body:             |
   bb.0:
     liveins: $x0, $x1
 
-    renamable $x8 = MRS 58880
+    renamable $x8 = MRS 58880, implicit-def $nzcv
     STRWui renamable $w8, renamable $x0, 0, implicit killed $x8 :: (store 4)
-    renamable $x8 = MRS 55840
+    renamable $x8 = MRS 55840, implicit-def $nzcv
     STRWui killed renamable $w8, renamable killed $x0, 1, implicit killed $x8 :: (store 4)
     RET undef $lr
 
@@ -275,10 +275,10 @@ body:             |
   bb.0:
     liveins: $x0, $x1
 
-    renamable $x8 = MRS 58880
+    renamable $x8 = MRS 58880, implicit-def $nzcv
     renamable $w8 = ORRWrs $wzr, killed renamable $w8, 0, implicit-def $x8
     STRWui renamable $w8, renamable $x0, 0, implicit killed $x8 :: (store 4)
-    renamable $x8 = MRS 55840
+    renamable $x8 = MRS 55840, implicit-def $nzcv
     STRWui killed renamable $w8, renamable killed $x0, 1, implicit killed $x8 :: (store 4)
     RET undef $lr
 

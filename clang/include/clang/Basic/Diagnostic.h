@@ -273,6 +273,13 @@ private:
   // Which overload candidates to show.
   OverloadsShown ShowOverloads = Ovl_All;
 
+  // With Ovl_Best, the number of overload candidates to show when we encounter
+  // an error.
+  //
+  // The value here is the number of candidates to show in the first nontrivial
+  // error.  Future errors may show a different number of candidates.
+  unsigned NumOverloadsToShow = 32;
+
   // Cap of # errors emitted, 0 -> no limit.
   unsigned ErrorLimit = 0;
 
@@ -707,6 +714,37 @@ public:
   }
   OverloadsShown getShowOverloads() const { return ShowOverloads; }
 
+  /// When a call or operator fails, print out up to this many candidate
+  /// overloads as suggestions.
+  ///
+  /// With Ovl_Best, we set a high limit for the first nontrivial overload set
+  /// we print, and a lower limit for later sets.  This way the user has a
+  /// chance of diagnosing at least one callsite in their program without
+  /// having to recompile with -fshow-overloads=all.
+  unsigned getNumOverloadCandidatesToShow() const {
+    switch (getShowOverloads()) {
+    case Ovl_All:
+      // INT_MAX rather than UINT_MAX so that we don't have to think about the
+      // effect of implicit conversions on this value. In practice we'll never
+      // hit 2^31 candidates anyway.
+      return std::numeric_limits<int>::max();
+    case Ovl_Best:
+      return NumOverloadsToShow;
+    }
+    llvm_unreachable("invalid OverloadsShown kind");
+  }
+
+  /// Call this after showing N overload candidates.  This influences the value
+  /// returned by later calls to getNumOverloadCandidatesToShow().
+  void overloadCandidatesShown(unsigned N) {
+    // Current heuristic: Start out with a large value for NumOverloadsToShow,
+    // and then once we print one nontrivially-large overload set, decrease it
+    // for future calls.
+    if (N > 4) {
+      NumOverloadsToShow = 4;
+    }
+  }
+
   /// Pretend that the last diagnostic issued was ignored, so any
   /// subsequent notes will be suppressed, or restore a prior ignoring
   /// state after ignoring some diagnostics and their notes, possibly in
@@ -806,6 +844,7 @@ public:
     return FatalErrorOccurred || UnrecoverableErrorOccurred;
   }
 
+  unsigned getNumErrors() const { return NumErrors; }
   unsigned getNumWarnings() const { return NumWarnings; }
 
   void setNumWarnings(unsigned NumWarnings) {

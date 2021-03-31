@@ -448,6 +448,10 @@ namespace llvm {
   /// shuffles.
   FunctionPass *createExpandReductionsPass();
 
+  // This pass replaces intrinsics operating on vector operands with calls to
+  // the corresponding function in a vector library (e.g., SVML, libmvec).
+  FunctionPass *createReplaceWithVeclibLegacyPass();
+
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();
 
@@ -463,6 +467,10 @@ namespace llvm {
   /// Creates CFGuard longjmp target identification pass.
   /// \see CFGuardLongjmp.cpp
   FunctionPass *createCFGuardLongjmpPass();
+
+  /// Creates EHContGuard catchret target identification pass.
+  /// \see EHContGuardCatchret.cpp
+  FunctionPass *createEHContGuardCatchretPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsPass();
@@ -489,9 +497,13 @@ namespace llvm {
   /// caller saved registers with stack slots.
   extern char &FixupStatepointCallerSavedID;
 
-  /// The pass transform load/store <256 x i32> to AMX load/store intrinsics
+  /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
   /// or split the data to two <128 x i32>.
   FunctionPass *createX86LowerAMXTypePass();
+
+  /// The pass transforms amx intrinsics to scalar operation if the function has
+  /// optnone attribute or it is O0.
+  FunctionPass *createX86LowerAMXIntrinsicsPass();
 } // End llvm namespace
 
 #endif

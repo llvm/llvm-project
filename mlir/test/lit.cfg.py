@@ -61,6 +61,10 @@ tools = [
     'mlir-capi-ir-test',
     'mlir-capi-pass-test',
     'mlir-edsc-builder-api-test',
+    'mlir-cpu-runner',
+    'mlir-linalg-ods-gen',
+    'mlir-reduce',
+    'mlir-sdbm-api-test',
 ]
 
 # The following tools are optional
@@ -71,14 +75,12 @@ tools.extend([
     ToolSubst('toy-ch3', unresolved='ignore'),
     ToolSubst('toy-ch4', unresolved='ignore'),
     ToolSubst('toy-ch5', unresolved='ignore'),
-    ToolSubst('%cuda_wrapper_library_dir', config.cuda_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%linalg_test_lib_dir', config.linalg_test_lib_dir, unresolved='ignore'),
     ToolSubst('%mlir_runner_utils_dir', config.mlir_runner_utils_dir, unresolved='ignore'),
-    ToolSubst('%rocm_wrapper_library_dir', config.rocm_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%spirv_wrapper_library_dir', config.spirv_wrapper_library_dir, unresolved='ignore'),
     ToolSubst('%vulkan_wrapper_library_dir', config.vulkan_wrapper_library_dir, unresolved='ignore'),
+    ToolSubst('%mlir_integration_test_dir', config.mlir_integration_test_dir, unresolved='ignore'),
 ])
-
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 

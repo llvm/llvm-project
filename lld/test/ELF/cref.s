@@ -10,10 +10,10 @@
 // RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a -gc-sections -cref | FileCheck -strict-whitespace %s
 
 //      CHECK: Symbol                                            File
-// CHECK-NEXT: bar                                               {{.*}}2.o
-// CHECK-NEXT:                                                   {{.*}}3.o
 // CHECK-NEXT: foo                                               {{.*}}1.so
 // CHECK-NEXT:                                                   {{.*}}2.o
+// CHECK-NEXT:                                                   {{.*}}3.o
+// CHECK-NEXT: bar                                               {{.*}}2.o
 // CHECK-NEXT:                                                   {{.*}}3.o
 // CHECK-NEXT: _start                                            {{.*}}3.o
 // CHECK-NEXT: baz                                               {{.*}}3.o

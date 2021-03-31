@@ -8,6 +8,9 @@ path to lower to LLVM or other codegen infrastructure. This tutorial is based on
 the model of the
 [LLVM Kaleidoscope Tutorial](https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html).
 
+Another good source of introduction is the online [recording](https://www.youtube.com/watch?v=Y4SvqTtOIDk)
+from the 2020 LLVM Dev Conference ([slides](https://llvm.org/devmtg/2020-09/slides/MLIR_Tutorial.pdf)).
+
 This tutorial assumes you have cloned and built MLIR; if you have not yet done
 so, see
 [Getting started with MLIR](https://mlir.llvm.org/getting_started/).

@@ -11,5 +11,6 @@ add_mlir_conversion_library(MLIRVectorToSCF
   MLIREDSC
   MLIRAffineEDSC
   MLIRLLVMIR
+  MLIRMemRef
   MLIRTransforms
   )

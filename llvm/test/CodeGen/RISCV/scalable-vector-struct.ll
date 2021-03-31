@@ -7,9 +7,8 @@
 define i32 @foo({ {<vscale x 2 x i32>, <vscale x 2 x i32>}, i32 } %x, <vscale x 2 x i32>* %y, <vscale x 2 x i32>* %z) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, zero, e32,m1,ta,mu
-; CHECK-NEXT:    vse32.v v8, (a1)
-; CHECK-NEXT:    vse32.v v9, (a2)
+; CHECK-NEXT:    vs1r.v v8, (a1)
+; CHECK-NEXT:    vs1r.v v9, (a2)
 ; CHECK-NEXT:    ret
 entry:
   br label %return

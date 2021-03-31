@@ -6,6 +6,7 @@
 void counters_in_macro_following_unreachable() {
   // CHECK-NEXT: File 0, [[@LINE-1]]:48 -> {{[0-9]+}}:2 = #0
   return;
+  // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:10 -> [[@LINE+3]]:3 = 0
   // CHECK-NEXT: Expansion,File 0, [[@LINE+2]]:3 -> [[@LINE+2]]:8 = 0
   // CHECK-NEXT: File 0, [[@LINE+1]]:8 -> [[@LINE+2]]:2 = 0
   WHILE

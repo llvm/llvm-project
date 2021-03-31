@@ -11,16 +11,22 @@
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_ABI_TAG (ABI version tag)
 # GNU-NEXT:    OS: Linux, ABI: 2.6.32
-
-#      GNU:Displaying notes found in: .note.gnu.build-id
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.build-id
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000010	NT_GNU_BUILD_ID (unique build ID bitstring)
 # GNU-NEXT:    Build ID: 4fcb712aa6387724a9f465a32cd8c14b
-
-#      GNU:Displaying notes found in: .note.gnu.gold-version
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.gold-version
 # GNU-NEXT:  Owner                Data size 	Description
 # GNU-NEXT:  GNU                  0x00000009	NT_GNU_GOLD_VERSION (gold version)
 # GNU-NEXT:    Version: gold 1.11
+# GNU-EMPTY:
+# GNU-NEXT:Displaying notes found in: .note.gnu.unknown
+# GNU-NEXT:  Owner                Data size 	Description
+# GNU-NEXT:  GNU                  0x00000004	Unknown note type: (0x0000abcd)
+# GNU-NEXT:   description data: 61 62 63 64
+# GNU-EMPTY:
 
 # LLVM:      Notes [
 # LLVM-NEXT:   NoteSection {
@@ -55,6 +61,19 @@
 # LLVM-NEXT:       Data size: 0x9
 # LLVM-NEXT:       Type: NT_GNU_GOLD_VERSION (gold version)
 # LLVM-NEXT:       Version: gold 1.11
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Name: .note.gnu.unknown
+# LLVM-NEXT:     Offset: 0xD4
+# LLVM-NEXT:     Size: 0x14
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x4
+# LLVM-NEXT:       Type: Unknown (0x0000abcd)
+# LLVM-NEXT:       Description data (
+# LLVM-NEXT:         0000: 61626364                             |abcd|
+# LLVM-NEXT:       )
 # LLVM-NEXT:     }
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
@@ -103,6 +122,10 @@ Sections:
     Type:         SHT_NOTE
     AddressAlign: 0x0000000000000004
     Content:      040000000900000004000000474E5500676F6C6420312E3131000000
+  - Name:         .note.gnu.unknown
+    Type:         SHT_NOTE
+    AddressAlign: 0x0000000000000004
+    Content:      0400000004000000cdab0000474E550061626364
 ProgramHeaders:
   - Type:     PT_NOTE
     FileSize: 0x20
@@ -119,7 +142,7 @@ ProgramHeaders:
 # ERR1-GNU:      Displaying notes found in: .note
 # ERR1-GNU-NEXT:   Owner                Data size        Description
 # ERR1-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0xffff0000) or size (0x0)
-# ERR1-GNU-NOT: {{.}}
+# ERR1-GNU-EMPTY:
 
 # ERR1-LLVM:      Notes [
 # ERR1-LLVM-NEXT:   NoteSection {
@@ -152,7 +175,7 @@ Sections:
 # ERR2-GNU:      Displaying notes found in: .note
 # ERR2-GNU-NEXT:   Owner                Data size        Description
 # ERR2-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the SHT_NOTE section with index 1: invalid offset (0x40) or size (0xffff0000)
-# ERR2-GNU-NOT: {{.}}
+# ERR2-GNU-EMPTY:
 
 # ERR2-LLVM:      Notes [
 # ERR2-LLVM-NEXT:   NoteSection {
@@ -204,7 +227,7 @@ ProgramHeaders:
 # ERR4-GNU:      Displaying notes found at file offset 0x00000000 with length 0xffff0000:
 # ERR4-GNU-NEXT:   Owner                Data size        Description
 # ERR4-GNU-NEXT: warning: '[[FILE]]': unable to read notes from the PT_NOTE segment with index 0: invalid offset (0x0) or size (0xffff0000)
-# ERR4-GNU-NOT: {{.}}
+# ERR4-GNU-EMPTY:
 
 # ERR4-LLVM:      Notes [
 # ERR4-LLVM-NEXT:   NoteSection {

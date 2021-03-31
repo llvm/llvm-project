@@ -527,6 +527,8 @@ bool AArch64RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   case TargetOpcode::G_UITOFP:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
   case TargetOpcode::G_INSERT_VECTOR_ELT:
+  case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return true;
   default:
     break;
@@ -666,9 +668,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   switch (Opc) {
   case AArch64::G_DUP: {
     Register ScalarReg = MI.getOperand(1).getReg();
+    LLT ScalarTy = MRI.getType(ScalarReg);
     auto ScalarDef = MRI.getVRegDef(ScalarReg);
-    if (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
-        onlyDefinesFP(*ScalarDef, MRI, TRI))
+    // s8 is an exception for G_DUP, which we always want on gpr.
+    if (ScalarTy.getSizeInBits() != 8 &&
+        (getRegBank(ScalarReg, MRI, TRI) == &AArch64::FPRRegBank ||
+         onlyDefinesFP(*ScalarDef, MRI, TRI)))
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
     else
       OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR};
@@ -877,7 +882,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         }))
       break;
     if (isPreISelGenericFloatingPointOpcode(DefOpc) ||
-        SrcTy.getSizeInBits() < 32) {
+        SrcTy.getSizeInBits() < 32 ||
+        getRegBank(VReg, MRI, TRI) == &AArch64::FPRRegBank) {
       // Have a floating point op.
       // Make sure every operand gets mapped to a FPR register class.
       unsigned NumOperands = MI.getNumOperands();

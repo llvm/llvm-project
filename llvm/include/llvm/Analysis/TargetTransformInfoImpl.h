@@ -22,7 +22,10 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
+
+using namespace llvm::PatternMatch;
 
 namespace llvm {
 
@@ -73,6 +76,16 @@ public:
 
   unsigned getMemcpyCost(const Instruction *I) const {
     return TTI::TCC_Expensive;
+  }
+
+  // Although this default value is arbitrary, it is not random. It is assumed
+  // that a condition that evaluates the same way by a higher percentage than
+  // this is best represented as control flow. Therefore, the default value N
+  // should be set such that the win from N% correct executions is greater than
+  // the loss from (100 - N)% mispredicted executions for the majority of
+  //  intended targets.
+  BranchProbability getPredictableBranchThreshold() const {
+    return BranchProbability(99, 100);
   }
 
   bool hasBranchDivergence() const { return false; }
@@ -209,9 +222,10 @@ public:
     return false;
   }
 
-  bool shouldFavorPostInc() const { return false; }
-
-  bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const {
+    return TTI::AMK_None;
+  }
 
   bool isLegalMaskedStore(Type *DataType, Align Alignment) const {
     return false;
@@ -288,7 +302,7 @@ public:
   }
 
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF) const {
+                                            ArrayRef<Type *> Tys) const {
     return 0;
   }
 
@@ -310,7 +324,7 @@ public:
   bool isFPVectorizationPotentiallyUnsafe() const { return false; }
 
   bool allowsMisalignedMemoryAccesses(LLVMContext &Context, unsigned BitWidth,
-                                      unsigned AddressSpace, unsigned Alignment,
+                                      unsigned AddressSpace, Align Alignment,
                                       bool *Fast) const {
     return false;
   }
@@ -366,7 +380,9 @@ public:
     }
   }
 
-  unsigned getRegisterBitWidth(bool Vector) const { return 32; }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+    return TypeSize::getFixed(32);
+  }
 
   unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
@@ -374,7 +390,9 @@ public:
 
   bool shouldMaximizeVectorBandwidth(bool OptSize) const { return false; }
 
-  unsigned getMinimumVF(unsigned ElemWidth) const { return 0; }
+  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const {
+    return ElementCount::get(0, IsScalable);
+  }
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const { return 0; }
 
@@ -445,7 +463,8 @@ public:
     return 1;
   }
 
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty, int Index,
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty,
+                          ArrayRef<int> Mask, int Index,
                           VectorType *SubTp) const {
     return 1;
   }
@@ -686,6 +705,11 @@ public:
     return true;
   }
 
+  bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                   ElementCount VF) const {
+    return true;
+  }
+
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const {
@@ -696,11 +720,6 @@ public:
                                 unsigned ChainSizeInBytes,
                                 VectorType *VecTy) const {
     return VF;
-  }
-
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return false;
   }
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty,
@@ -987,6 +1006,23 @@ public:
                                         CostKind, I);
     }
     case Instruction::Select: {
+      const Value *Op0, *Op1;
+      if (match(U, m_LogicalAnd(m_Value(Op0), m_Value(Op1))) ||
+          match(U, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+        // select x, y, false --> x & y
+        // select x, true, y --> x | y
+        TTI::OperandValueProperties Op1VP = TTI::OP_None;
+        TTI::OperandValueProperties Op2VP = TTI::OP_None;
+        TTI::OperandValueKind Op1VK = TTI::getOperandInfo(Op0, Op1VP);
+        TTI::OperandValueKind Op2VK = TTI::getOperandInfo(Op1, Op2VP);
+        assert(Op0->getType()->getScalarSizeInBits() == 1 &&
+               Op1->getType()->getScalarSizeInBits() == 1);
+
+        SmallVector<const Value *, 2> Operands{Op0, Op1};
+        return TargetTTI->getArithmeticInstrCost(
+            match(U, m_LogicalOr()) ? Instruction::Or : Instruction::And, Ty,
+            CostKind, Op1VK, Op2VK, Op1VP, Op2VP, Operands, I);
+      }
       Type *CondTy = U->getOperand(0)->getType();
       return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
                                            CmpInst::BAD_ICMP_PREDICATE,
@@ -1020,25 +1056,30 @@ public:
       int SubIndex;
       if (Shuffle->isExtractSubvectorMask(SubIndex))
         return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                         SubIndex, VecTy);
+                                         Shuffle->getShuffleMask(), SubIndex,
+                                         VecTy);
       else if (Shuffle->changesLength())
         return CostKind == TTI::TCK_RecipThroughput ? -1 : 1;
       else if (Shuffle->isIdentity())
         return 0;
       else if (Shuffle->isReverse())
-        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSelect())
-        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isTranspose())
-        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isZeroEltSplat())
-        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy, 0, nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
       else if (Shuffle->isSingleSource())
-        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, 0,
-                                         nullptr);
+        return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
+                                         Shuffle->getShuffleMask(), 0, nullptr);
 
-      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy, 0,
-                                       nullptr);
+      return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
+                                       Shuffle->getShuffleMask(), 0, nullptr);
     }
     case Instruction::ExtractElement: {
       unsigned Idx = -1;

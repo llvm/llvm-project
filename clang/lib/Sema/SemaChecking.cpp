@@ -837,7 +837,8 @@ static bool checkOpenCLBlockArgs(Sema &S, Expr *BlockArg) {
 }
 
 static bool checkOpenCLSubgroupExt(Sema &S, CallExpr *Call) {
-  if (!S.getOpenCLOptions().isEnabled("cl_khr_subgroups")) {
+  if (!S.getOpenCLOptions().isAvailableOption("cl_khr_subgroups",
+                                              S.getLangOpts())) {
     S.Diag(Call->getBeginLoc(), diag::err_opencl_requires_extension)
         << 1 << Call->getDirectCallee() << "cl_khr_subgroups";
     return true;
@@ -1429,6 +1430,9 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgcn:
     return CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    return CheckRISCVBuiltinFunctionCall(TI, BuiltinID, TheCall);
   }
 }
 
@@ -1962,6 +1966,26 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   case Builtin::BI__builtin_matrix_column_major_store:
     return SemaBuiltinMatrixColumnMajorStore(TheCall, TheCallResult);
+
+  case Builtin::BI__builtin_get_device_side_mangled_name: {
+    auto Check = [](CallExpr *TheCall) {
+      if (TheCall->getNumArgs() != 1)
+        return false;
+      auto *DRE = dyn_cast<DeclRefExpr>(TheCall->getArg(0)->IgnoreImpCasts());
+      if (!DRE)
+        return false;
+      auto *D = DRE->getDecl();
+      if (!isa<FunctionDecl>(D) && !isa<VarDecl>(D))
+        return false;
+      return D->hasAttr<CUDAGlobalAttr>() || D->hasAttr<CUDADeviceAttr>() ||
+             D->hasAttr<CUDAConstantAttr>() || D->hasAttr<HIPManagedAttr>();
+    };
+    if (!Check(TheCall)) {
+      Diag(TheCall->getBeginLoc(),
+           diag::err_hip_invalid_args_builtin_mangled_name);
+      return ExprError();
+    }
+  }
   }
 
   // Since the target specific builtins for each arch overlap, only check those
@@ -2623,7 +2647,10 @@ static bool isValidBPFPreserveEnumValueArg(Expr *Arg) {
     return false;
 
   const auto *CE = dyn_cast<CStyleCastExpr>(UO->getSubExpr());
-  if (!CE || CE->getCastKind() != CK_IntegralToPointer)
+  if (!CE)
+    return false;
+  if (CE->getCastKind() != CK_IntegralToPointer &&
+      CE->getCastKind() != CK_NullToPointer)
     return false;
 
   // The integer must be from an EnumConstantDecl.
@@ -3379,6 +3406,20 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   if (!ArgExpr->EvaluateAsConstantExpr(ArgResult1, Context))
     return Diag(ArgExpr->getExprLoc(), diag::err_expr_not_string_literal)
            << ArgExpr->getType();
+
+  return false;
+}
+
+bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
+                                         unsigned BuiltinID,
+                                         CallExpr *TheCall) {
+  // CodeGenFunction can also detect this, but this gives a better error
+  // message.
+  StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
+  if (Features.find("experimental-v") != StringRef::npos &&
+      !TI.hasFeature("experimental-v"))
+    return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
+           << TheCall->getSourceRange();
 
   return false;
 }
@@ -4448,6 +4489,44 @@ static void CheckNonNullArguments(Sema &S,
   }
 }
 
+/// Warn if a pointer or reference argument passed to a function points to an
+/// object that is less aligned than the parameter. This can happen when
+/// creating a typedef with a lower alignment than the original type and then
+/// calling functions defined in terms of the original type.
+void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
+                             StringRef ParamName, QualType ArgTy,
+                             QualType ParamTy) {
+
+  // If a function accepts a pointer or reference type
+  if (!ParamTy->isPointerType() && !ParamTy->isReferenceType())
+    return;
+
+  // If the parameter is a pointer type, get the pointee type for the
+  // argument too. If the parameter is a reference type, don't try to get
+  // the pointee type for the argument.
+  if (ParamTy->isPointerType())
+    ArgTy = ArgTy->getPointeeType();
+
+  // Remove reference or pointer
+  ParamTy = ParamTy->getPointeeType();
+
+  // Find expected alignment, and the actual alignment of the passed object.
+  // getTypeAlignInChars requires complete types
+  if (ParamTy->isIncompleteType() || ArgTy->isIncompleteType() ||
+      ParamTy->isUndeducedType() || ArgTy->isUndeducedType())
+    return;
+
+  CharUnits ParamAlign = Context.getTypeAlignInChars(ParamTy);
+  CharUnits ArgAlign = Context.getTypeAlignInChars(ArgTy);
+
+  // If the argument is less aligned than the parameter, there is a
+  // potential alignment issue.
+  if (ArgAlign < ParamAlign)
+    Diag(Loc, diag::warn_param_mismatched_alignment)
+        << (int)ArgAlign.getQuantity() << (int)ParamAlign.getQuantity()
+        << ParamName << FDecl;
+}
+
 /// Handles the checks for format strings, non-POD arguments to vararg
 /// functions, NULL arguments passed to non-NULL parameters, and diagnose_if
 /// attributes.
@@ -4502,6 +4581,28 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
   }
 
+  // Check that passed arguments match the alignment of original arguments.
+  // Try to get the missing prototype from the declaration.
+  if (!Proto && FDecl) {
+    const auto *FT = FDecl->getFunctionType();
+    if (isa_and_nonnull<FunctionProtoType>(FT))
+      Proto = cast<FunctionProtoType>(FDecl->getFunctionType());
+  }
+  if (Proto) {
+    // For variadic functions, we may have more args than parameters.
+    // For some K&R functions, we may have less args than parameters.
+    const auto N = std::min<unsigned>(Proto->getNumParams(), Args.size());
+    for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
+      // Args[ArgIdx] can be null in malformed code.
+      if (const Expr *Arg = Args[ArgIdx]) {
+        QualType ParamTy = Proto->getParamType(ArgIdx);
+        QualType ArgTy = Arg->getType();
+        CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),
+                          ArgTy, ParamTy);
+      }
+    }
+  }
+
   if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {
     auto *AA = FDecl->getAttr<AllocAlignAttr>();
     const Expr *Arg = Args[AA->getParamIndex().getASTIndex()];
@@ -4526,12 +4627,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 
 /// CheckConstructorCall - Check a constructor call for correctness and safety
 /// properties not enforced by the C type system.
-void Sema::CheckConstructorCall(FunctionDecl *FDecl,
+void Sema::CheckConstructorCall(FunctionDecl *FDecl, QualType ThisType,
                                 ArrayRef<const Expr *> Args,
                                 const FunctionProtoType *Proto,
                                 SourceLocation Loc) {
   VariadicCallType CallType =
-    Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
+      Proto->isVariadic() ? VariadicConstructor : VariadicDoesNotApply;
+
+  auto *Ctor = cast<CXXConstructorDecl>(FDecl);
+  CheckArgAlignment(Loc, FDecl, "'this'", Context.getPointerType(ThisType),
+                    Context.getPointerType(Ctor->getThisObjectType()));
+
   checkCall(FDecl, Proto, /*ThisArg=*/nullptr, Args, /*IsMemberFunction=*/true,
             Loc, SourceRange(), CallType);
 }
@@ -4560,6 +4666,22 @@ bool Sema::CheckFunctionCall(FunctionDecl *FDecl, CallExpr *TheCall,
   } else if (IsMemberFunction)
     ImplicitThis =
         cast<CXXMemberCallExpr>(TheCall)->getImplicitObjectArgument();
+
+  if (ImplicitThis) {
+    // ImplicitThis may or may not be a pointer, depending on whether . or -> is
+    // used.
+    QualType ThisType = ImplicitThis->getType();
+    if (!ThisType->isPointerType()) {
+      assert(!ThisType->isReferenceType());
+      ThisType = Context.getPointerType(ThisType);
+    }
+
+    QualType ThisTypeFromDecl =
+        Context.getPointerType(cast<CXXMethodDecl>(FDecl)->getThisObjectType());
+
+    CheckArgAlignment(TheCall->getRParenLoc(), FDecl, "'this'", ThisType,
+                      ThisTypeFromDecl);
+  }
 
   checkCall(FDecl, Proto, ImplicitThis, llvm::makeArrayRef(Args, NumArgs),
             IsMemberFunction, TheCall->getRParenLoc(),
@@ -8630,8 +8752,11 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
   } else if (const CharacterLiteral *CL = dyn_cast<CharacterLiteral>(E)) {
     // Special case for 'a', which has type 'int' in C.
     // Note, however, that we do /not/ want to treat multibyte constants like
-    // 'MooV' as characters! This form is deprecated but still exists.
-    if (ExprTy == S.Context.IntTy)
+    // 'MooV' as characters! This form is deprecated but still exists. In
+    // addition, don't treat expressions as of type 'char' if one byte length
+    // modifier is provided.
+    if (ExprTy == S.Context.IntTy &&
+        FS.getLengthModifier().getKind() != LengthModifier::AsChar)
       if (llvm::isUIntN(S.Context.getCharWidth(), CL->getValue()))
         ExprTy = S.Context.CharTy;
   }
@@ -10250,64 +10375,115 @@ void Sema::CheckStrncatArguments(const CallExpr *CE,
 
 namespace {
 void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
-                                const UnaryOperator *UnaryExpr,
-                                const VarDecl *Var) {
-  StorageClass Class = Var->getStorageClass();
-  if (Class == StorageClass::SC_Extern ||
-      Class == StorageClass::SC_PrivateExtern ||
-      Var->getType()->isReferenceType())
-    return;
-
-  S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
-      << CalleeName << Var;
-}
-
-void CheckFreeArgumentsOnLvalue(Sema &S, const std::string &CalleeName,
                                 const UnaryOperator *UnaryExpr, const Decl *D) {
-  if (const auto *Field = dyn_cast<FieldDecl>(D))
+  if (isa<FieldDecl, FunctionDecl, VarDecl>(D)) {
     S.Diag(UnaryExpr->getBeginLoc(), diag::warn_free_nonheap_object)
-        << CalleeName << Field;
+        << CalleeName << 0 /*object: */ << cast<NamedDecl>(D);
+    return;
+  }
 }
 
 void CheckFreeArgumentsAddressof(Sema &S, const std::string &CalleeName,
                                  const UnaryOperator *UnaryExpr) {
-  if (UnaryExpr->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
-    return;
-
-  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr()))
-    if (const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl()))
-      return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, Var);
+  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(UnaryExpr->getSubExpr())) {
+    const Decl *D = Lvalue->getDecl();
+    if (isa<VarDecl, FunctionDecl>(D))
+      return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr, D);
+  }
 
   if (const auto *Lvalue = dyn_cast<MemberExpr>(UnaryExpr->getSubExpr()))
     return CheckFreeArgumentsOnLvalue(S, CalleeName, UnaryExpr,
                                       Lvalue->getMemberDecl());
 }
 
-void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,
-                                  const DeclRefExpr *Lvalue) {
-  if (!Lvalue->getType()->isArrayType())
+void CheckFreeArgumentsPlus(Sema &S, const std::string &CalleeName,
+                            const UnaryOperator *UnaryExpr) {
+  const auto *Lambda = dyn_cast<LambdaExpr>(
+      UnaryExpr->getSubExpr()->IgnoreImplicitAsWritten()->IgnoreParens());
+  if (!Lambda)
     return;
 
+  S.Diag(Lambda->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << 2 /*object: lambda expression*/;
+}
+
+void CheckFreeArgumentsStackArray(Sema &S, const std::string &CalleeName,
+                                  const DeclRefExpr *Lvalue) {
   const auto *Var = dyn_cast<VarDecl>(Lvalue->getDecl());
   if (Var == nullptr)
     return;
 
   S.Diag(Lvalue->getBeginLoc(), diag::warn_free_nonheap_object)
-      << CalleeName << Var;
+      << CalleeName << 0 /*object: */ << Var;
+}
+
+void CheckFreeArgumentsCast(Sema &S, const std::string &CalleeName,
+                            const CastExpr *Cast) {
+  SmallString<128> SizeString;
+  llvm::raw_svector_ostream OS(SizeString);
+
+  clang::CastKind Kind = Cast->getCastKind();
+  if (Kind == clang::CK_BitCast &&
+      !Cast->getSubExpr()->getType()->isFunctionPointerType())
+    return;
+  if (Kind == clang::CK_IntegralToPointer &&
+      !isa<IntegerLiteral>(
+          Cast->getSubExpr()->IgnoreParenImpCasts()->IgnoreParens()))
+    return;
+
+  switch (Cast->getCastKind()) {
+  case clang::CK_BitCast:
+  case clang::CK_IntegralToPointer:
+  case clang::CK_FunctionToPointerDecay:
+    OS << '\'';
+    Cast->printPretty(OS, nullptr, S.getPrintingPolicy());
+    OS << '\'';
+    break;
+  default:
+    return;
+  }
+
+  S.Diag(Cast->getBeginLoc(), diag::warn_free_nonheap_object)
+      << CalleeName << 0 /*object: */ << OS.str();
 }
 } // namespace
 
 /// Alerts the user that they are attempting to free a non-malloc'd object.
 void Sema::CheckFreeArguments(const CallExpr *E) {
-  const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
   const std::string CalleeName =
       dyn_cast<FunctionDecl>(E->getCalleeDecl())->getQualifiedNameAsString();
 
-  if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
-    return CheckFreeArgumentsAddressof(*this, CalleeName, UnaryExpr);
+  { // Prefer something that doesn't involve a cast to make things simpler.
+    const Expr *Arg = E->getArg(0)->IgnoreParenCasts();
+    if (const auto *UnaryExpr = dyn_cast<UnaryOperator>(Arg))
+      switch (UnaryExpr->getOpcode()) {
+      case UnaryOperator::Opcode::UO_AddrOf:
+        return CheckFreeArgumentsAddressof(*this, CalleeName, UnaryExpr);
+      case UnaryOperator::Opcode::UO_Plus:
+        return CheckFreeArgumentsPlus(*this, CalleeName, UnaryExpr);
+      default:
+        break;
+      }
 
-  if (const auto *Lvalue = dyn_cast<DeclRefExpr>(Arg))
-    return CheckFreeArgumentsStackArray(*this, CalleeName, Lvalue);
+    if (const auto *Lvalue = dyn_cast<DeclRefExpr>(Arg))
+      if (Lvalue->getType()->isArrayType())
+        return CheckFreeArgumentsStackArray(*this, CalleeName, Lvalue);
+
+    if (const auto *Label = dyn_cast<AddrLabelExpr>(Arg)) {
+      Diag(Label->getBeginLoc(), diag::warn_free_nonheap_object)
+          << CalleeName << 0 /*object: */ << Label->getLabel()->getIdentifier();
+      return;
+    }
+
+    if (isa<BlockExpr>(Arg)) {
+      Diag(Arg->getBeginLoc(), diag::warn_free_nonheap_object)
+          << CalleeName << 1 /*object: block*/;
+      return;
+    }
+  }
+  // Maybe the cast was important, check after the other cases.
+  if (const auto *Cast = dyn_cast<CastExpr>(E->getArg(0)))
+    return CheckFreeArgumentsCast(*this, CalleeName, Cast);
 }
 
 void
@@ -12051,7 +12227,16 @@ static void CheckImplicitConversion(Sema &S, Expr *E, QualType T,
     checkObjCDictionaryLiteral(S, QualType(Target, 0), DictionaryLiteral);
 
   // Strip vector types.
-  if (isa<VectorType>(Source)) {
+  if (const auto *SourceVT = dyn_cast<VectorType>(Source)) {
+    if (Target->isVLSTBuiltinType()) {
+      auto SourceVectorKind = SourceVT->getVectorKind();
+      if (SourceVectorKind == VectorType::SveFixedLengthDataVector ||
+          SourceVectorKind == VectorType::SveFixedLengthPredicateVector ||
+          (SourceVectorKind == VectorType::GenericVector &&
+           S.Context.getTypeSize(Source) == S.getLangOpts().ArmSveVectorBits))
+        return;
+    }
+
     if (!isa<VectorType>(Target)) {
       if (S.SourceMgr.isInSystemMacro(CC))
         return;

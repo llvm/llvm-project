@@ -260,42 +260,33 @@ void CooperativeMatrixNVType::getCapabilities(
 // ImageType
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-static constexpr unsigned getNumBits() {
-  return 0;
-}
-template <>
-constexpr unsigned getNumBits<Dim>() {
+template <typename T> static constexpr unsigned getNumBits() { return 0; }
+template <> constexpr unsigned getNumBits<Dim>() {
   static_assert((1 << 3) > getMaxEnumValForDim(),
                 "Not enough bits to encode Dim value");
   return 3;
 }
-template <>
-constexpr unsigned getNumBits<ImageDepthInfo>() {
+template <> constexpr unsigned getNumBits<ImageDepthInfo>() {
   static_assert((1 << 2) > getMaxEnumValForImageDepthInfo(),
                 "Not enough bits to encode ImageDepthInfo value");
   return 2;
 }
-template <>
-constexpr unsigned getNumBits<ImageArrayedInfo>() {
+template <> constexpr unsigned getNumBits<ImageArrayedInfo>() {
   static_assert((1 << 1) > getMaxEnumValForImageArrayedInfo(),
                 "Not enough bits to encode ImageArrayedInfo value");
   return 1;
 }
-template <>
-constexpr unsigned getNumBits<ImageSamplingInfo>() {
+template <> constexpr unsigned getNumBits<ImageSamplingInfo>() {
   static_assert((1 << 1) > getMaxEnumValForImageSamplingInfo(),
                 "Not enough bits to encode ImageSamplingInfo value");
   return 1;
 }
-template <>
-constexpr unsigned getNumBits<ImageSamplerUseInfo>() {
+template <> constexpr unsigned getNumBits<ImageSamplerUseInfo>() {
   static_assert((1 << 2) > getMaxEnumValForImageSamplerUseInfo(),
                 "Not enough bits to encode ImageSamplerUseInfo value");
   return 2;
 }
-template <>
-constexpr unsigned getNumBits<ImageFormat>() {
+template <> constexpr unsigned getNumBits<ImageFormat>() {
   static_assert((1 << 6) > getMaxEnumValForImageFormat(),
                 "Not enough bits to encode ImageFormat value");
   return 6;
@@ -668,6 +659,8 @@ void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
     compositeType.getExtensions(extensions, storage);
   } else if (auto imageType = dyn_cast<ImageType>()) {
     imageType.getExtensions(extensions, storage);
+  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+    sampledImageType.getExtensions(extensions, storage);
   } else if (auto matrixType = dyn_cast<MatrixType>()) {
     matrixType.getExtensions(extensions, storage);
   } else if (auto ptrType = dyn_cast<PointerType>()) {
@@ -686,6 +679,8 @@ void SPIRVType::getCapabilities(
     compositeType.getCapabilities(capabilities, storage);
   } else if (auto imageType = dyn_cast<ImageType>()) {
     imageType.getCapabilities(capabilities, storage);
+  } else if (auto sampledImageType = dyn_cast<SampledImageType>()) {
+    sampledImageType.getCapabilities(capabilities, storage);
   } else if (auto matrixType = dyn_cast<MatrixType>()) {
     matrixType.getCapabilities(capabilities, storage);
   } else if (auto ptrType = dyn_cast<PointerType>()) {
@@ -701,6 +696,58 @@ Optional<int64_t> SPIRVType::getSizeInBytes() {
   if (auto compositeType = dyn_cast<CompositeType>())
     return compositeType.getSizeInBytes();
   return llvm::None;
+}
+
+//===----------------------------------------------------------------------===//
+// SampledImageType
+//===----------------------------------------------------------------------===//
+struct spirv::detail::SampledImageTypeStorage : public TypeStorage {
+  using KeyTy = Type;
+
+  SampledImageTypeStorage(const KeyTy &key) : imageType{key} {}
+
+  bool operator==(const KeyTy &key) const { return key == KeyTy(imageType); }
+
+  static SampledImageTypeStorage *construct(TypeStorageAllocator &allocator,
+                                            const KeyTy &key) {
+    return new (allocator.allocate<SampledImageTypeStorage>())
+        SampledImageTypeStorage(key);
+  }
+
+  Type imageType;
+};
+
+SampledImageType SampledImageType::get(Type imageType) {
+  return Base::get(imageType.getContext(), imageType);
+}
+
+SampledImageType
+SampledImageType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                             Type imageType) {
+  return Base::getChecked(emitError, imageType.getContext(), imageType);
+}
+
+Type SampledImageType::getImageType() const { return getImpl()->imageType; }
+
+LogicalResult
+SampledImageType::verify(function_ref<InFlightDiagnostic()> emitError,
+                         Type imageType) {
+  if (!imageType.isa<ImageType>())
+    return emitError() << "expected image type";
+
+  return success();
+}
+
+void SampledImageType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    Optional<StorageClass> storage) {
+  getImageType().cast<ImageType>().getExtensions(extensions, storage);
+}
+
+void SampledImageType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  getImageType().cast<ImageType>().getCapabilities(capabilities, storage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1041,27 +1088,27 @@ MatrixType MatrixType::get(Type columnType, uint32_t columnCount) {
   return Base::get(columnType.getContext(), columnType, columnCount);
 }
 
-MatrixType MatrixType::getChecked(Type columnType, uint32_t columnCount,
-                                  Location location) {
-  return Base::getChecked(location, columnType, columnCount);
+MatrixType MatrixType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                  Type columnType, uint32_t columnCount) {
+  return Base::getChecked(emitError, columnType.getContext(), columnType,
+                          columnCount);
 }
 
-LogicalResult MatrixType::verifyConstructionInvariants(Location loc,
-                                                       Type columnType,
-                                                       uint32_t columnCount) {
+LogicalResult MatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 Type columnType, uint32_t columnCount) {
   if (columnCount < 2 || columnCount > 4)
-    return emitError(loc, "matrix can have 2, 3, or 4 columns only");
+    return emitError() << "matrix can have 2, 3, or 4 columns only";
 
   if (!isValidColumnType(columnType))
-    return emitError(loc, "matrix columns must be vectors of floats");
+    return emitError() << "matrix columns must be vectors of floats";
 
   /// The underlying vectors (columns) must be of size 2, 3, or 4
   ArrayRef<int64_t> columnShape = columnType.cast<VectorType>().getShape();
   if (columnShape.size() != 1)
-    return emitError(loc, "matrix columns must be 1D vectors");
+    return emitError() << "matrix columns must be 1D vectors";
 
   if (columnShape[0] < 2 || columnShape[0] > 4)
-    return emitError(loc, "matrix columns must be of size 2, 3, or 4");
+    return emitError() << "matrix columns must be of size 2, 3, or 4";
 
   return success();
 }
@@ -1106,4 +1153,13 @@ void MatrixType::getCapabilities(
   }
   // Add any capabilities associated with the underlying vectors (i.e., columns)
   getColumnType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Dialect
+//===----------------------------------------------------------------------===//
+
+void SPIRVDialect::registerTypes() {
+  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
+           PointerType, RuntimeArrayType, SampledImageType, StructType>();
 }

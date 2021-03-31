@@ -22,8 +22,8 @@ class Value;
 /// (the builder, %addr, %loaded, %new_val, ordering,
 ///  /* OUT */ %success, /* OUT */ %new_loaded)
 using CreateCmpXchgInstFun =
-    function_ref<void(IRBuilder<> &, Value *, Value *, Value *, AtomicOrdering,
-                      Value *&, Value *&)>;
+    function_ref<void(IRBuilder<> &, Value *, Value *, Value *, Align,
+                      AtomicOrdering, Value *&, Value *&)>;
 
 /// Expand an atomic RMW instruction into a loop utilizing
 /// cmpxchg. You'll want to make sure your target machine likes cmpxchg

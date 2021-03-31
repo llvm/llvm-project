@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1  -fvisibility default -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-DAG: @g0 = external hidden constant i32
 // CHECK-DAG: @g1 = hidden constant i32 1

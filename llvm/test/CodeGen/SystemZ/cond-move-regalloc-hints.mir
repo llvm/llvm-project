@@ -200,16 +200,16 @@ body:             |
     %32:gr64bit = COPY $r3d
     %0:gr64bit = COPY $r2d
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @sre_malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %1:addr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @sre_malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
+    CallBRASL @sre_malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit-def $r2d
     %2:addr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     %3:gr32bit = AHIMuxK %0.subreg_l32, -1, implicit-def dead $cc
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @malloc, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    CallBRASL @malloc, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     %55:gr32bit = AHIMuxK %0.subreg_l32, 3, implicit-def dead $cc
     %56:addr64bit = LGHI 0

@@ -213,6 +213,8 @@ def AMDGPUcvt_f32_ubyte2 : SDNode<"AMDGPUISD::CVT_F32_UBYTE2",
 def AMDGPUcvt_f32_ubyte3 : SDNode<"AMDGPUISD::CVT_F32_UBYTE3",
   SDTIntToFPOp, []>;
 
+def AMDGPUcvt_pk_i16_i32 : SDNode<"AMDGPUISD::CVT_PK_I16_I32",
+  AMDGPUIntPackOp, []>;
 
 // urecip - This operation is a helper for integer division, it returns the
 // result of 1 / a as a fractional unsigned integer.

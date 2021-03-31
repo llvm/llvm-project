@@ -1370,10 +1370,8 @@ bool HexagonHardwareLoops::isLoopFeeder(MachineLoop *L, MachineBasicBlock *A,
     LLVM_DEBUG(dbgs() << "\nhw_loop head, "
                       << printMBBReference(**L->block_begin()));
     // Ignore all BBs that form Loop.
-    for (MachineBasicBlock *MBB : L->getBlocks()) {
-      if (A == MBB)
-        return false;
-    }
+    if (llvm::is_contained(L->getBlocks(), A))
+      return false;
     MachineInstr *Def = MRI->getVRegDef(MO->getReg());
     LoopFeederPhi.insert(std::make_pair(MO->getReg(), Def));
     return true;

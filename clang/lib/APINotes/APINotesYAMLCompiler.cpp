@@ -551,7 +551,7 @@ struct Module {
 
   llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
 
-  LLVM_DUMP_METHOD void dump() /*const*/;
+  void dump() /*const*/;
 };
 } // namespace
 
@@ -571,7 +571,7 @@ template <> struct MappingTraits<Module> {
 } // namespace yaml
 } // namespace llvm
 
-void Module::dump() {
+LLVM_DUMP_METHOD void Module::dump() {
   llvm::yaml::Output OS(llvm::errs());
   OS << *this;
 }

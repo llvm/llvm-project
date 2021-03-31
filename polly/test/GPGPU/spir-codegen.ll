@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -O3 -polly -polly-target=gpu \
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-target=gpu \
 ; RUN: -polly-gpu-arch=spir32 \
-; RUN: -polly-acc-dump-kernel-ir -polly-process-unprofitable -disable-output < %s | \
+; RUN: -polly-acc-dump-kernel-ir -polly-process-unprofitable -disable-output -enable-new-pm=0 < %s | \
 ; RUN: FileCheck %s
 
 ; REQUIRES: pollyacc

@@ -49,7 +49,15 @@ test()
     static_assert((std::is_same<typename R::difference_type, typename T::difference_type>::value), "");
     static_assert((std::is_same<typename R::reference, typename T::reference>::value), "");
     static_assert((std::is_same<typename R::pointer, typename std::iterator_traits<It>::pointer>::value), "");
+#if TEST_STD_VER > 17
+    if constexpr (std::is_same_v<typename T::iterator_category, std::contiguous_iterator_tag>) {
+        static_assert((std::is_same<typename R::iterator_category, std::random_access_iterator_tag>::value), "");
+    } else {
+        static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
+    }
+#else
     static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
+#endif
 }
 
 int main(int, char**)
@@ -57,6 +65,14 @@ int main(int, char**)
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();
     test<char*>();
+
+#if TEST_STD_VER > 17
+    test<contiguous_iterator<char*>>();
+    static_assert(std::is_same_v<typename std::reverse_iterator<bidirectional_iterator<char*>>::iterator_concept, std::bidirectional_iterator_tag>);
+    static_assert(std::is_same_v<typename std::reverse_iterator<random_access_iterator<char*>>::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::is_same_v<typename std::reverse_iterator<contiguous_iterator<char*>>::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::is_same_v<typename std::reverse_iterator<char*>::iterator_concept, std::random_access_iterator_tag>);
+#endif
 
     return 0;
 }

@@ -101,9 +101,14 @@ protected:
 
 // This test makes sure correct mangling occurs for given string.
 TEST_F(VFABIParserTest, ManglingVectorTLINames) {
-  EXPECT_EQ(VFABI::mangleTLIVectorName("vec", "scalar", 3, 4),
-            "_ZGV_LLVM_N4vvv_scalar(vec)");
-  EXPECT_EQ(VFABI::mangleTLIVectorName("custom.call.v5", "custom.call", 1, 5),
+  EXPECT_EQ(
+      VFABI::mangleTLIVectorName("vec", "scalar", 3, ElementCount::getFixed(4)),
+      "_ZGV_LLVM_N4vvv_scalar(vec)");
+  EXPECT_EQ(VFABI::mangleTLIVectorName("vec", "scalar", 3,
+                                       ElementCount::getScalable(4)),
+            "_ZGV_LLVM_Nxvvv_scalar(vec)");
+  EXPECT_EQ(VFABI::mangleTLIVectorName("custom.call.v5", "custom.call", 1,
+                                       ElementCount::getFixed(5)),
             "_ZGV_LLVM_N5v_custom.call(custom.call.v5)");
 }
 

@@ -568,6 +568,12 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
   return dumped_something;
 }
 
+OptionValueSP OptionValue::DeepCopy(const OptionValueSP &new_parent) const {
+  auto clone = Clone();
+  clone->SetParent(new_parent);
+  return clone;
+}
+
 void OptionValue::AutoComplete(CommandInterpreter &interpreter,
                                CompletionRequest &request) {}
 

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LTO_THINLTOCODEGENERATOR_H
-#define LLVM_LTO_THINLTOCODEGENERATOR_H
+#ifndef LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
+#define LLVM_LTO_LEGACY_THINLTOCODEGENERATOR_H
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringSet.h"

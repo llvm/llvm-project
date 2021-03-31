@@ -12,7 +12,7 @@ def Test_Dialect : Dialect {
 // ERROR1: error: expected 'ins'
 def OpInsMissing : Op<Test_Dialect, "ins_missing"> {
   let builders = [
-    OpBuilderDAG<(outs)>
+    OpBuilder<(outs)>
   ];
 }
 #endif
@@ -21,7 +21,7 @@ def OpInsMissing : Op<Test_Dialect, "ins_missing"> {
 // ERROR2: error: expected an argument with default value after other arguments with default values
 def OpDefaultValueNotTrailing : Op<Test_Dialect, "default_value"> {
   let builders = [
-    OpBuilderDAG<(ins CArg<"int", "42">, "int")>
+    OpBuilder<(ins CArg<"int", "42">, "int")>
   ];
 }
 #endif
@@ -30,7 +30,7 @@ def OpDefaultValueNotTrailing : Op<Test_Dialect, "default_value"> {
 // ERROR3: error: expected an argument with default value after other arguments with default values
 def OpDefaultValueNotTrailing : Op<Test_Dialect, "default_value"> {
   let builders = [
-    OpBuilderDAG<(ins CArg<"int", "42">, CArg<"int">)>
+    OpBuilder<(ins CArg<"int", "42">, CArg<"int">)>
   ];
 }
 #endif

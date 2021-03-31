@@ -298,6 +298,46 @@ TEST_F(AliasAnalysisTest, BatchAAPhiAssumption) {
   EXPECT_EQ(MayAlias, BatchAA.alias(ANextLoc, BNextLoc));
 }
 
+// Check that two aliased GEPs with non-constant offsets are correctly
+// analyzed and their relative offset can be requested from AA.
+TEST_F(AliasAnalysisTest, PartialAliasOffset) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define void @foo(float* %arg, i32 %i) {
+    bb:
+      %i2 = zext i32 %i to i64
+      %i3 = getelementptr inbounds float, float* %arg, i64 %i2
+      %i4 = bitcast float* %i3 to <2 x float>*
+      %L2 = load <2 x float>, <2 x float>* %i4, align 16
+      %i7 = add nuw nsw i32 %i, 1
+      %i8 = zext i32 %i7 to i64
+      %i9 = getelementptr inbounds float, float* %arg, i64 %i8
+      %L1 = load float, float* %i9, align 4
+      ret void
+    }
+  )",
+                                                  Err, C);
+
+  if (!M)
+    Err.print("PartialAliasOffset", errs());
+
+  Function *F = M->getFunction("foo");
+  const auto Loc1 = MemoryLocation::get(getInstructionByName(*F, "L1"));
+  auto Loc2 = MemoryLocation::get(getInstructionByName(*F, "L2"));
+
+  auto &AA = getAAResults(*F);
+
+  BatchAAResults BatchAA(AA, /*CacheOffsets =*/true);
+  EXPECT_EQ(PartialAlias, BatchAA.alias(Loc1, Loc2));
+  EXPECT_EQ(-4, BatchAA.getClobberOffset(Loc1, Loc2).getValueOr(0));
+  EXPECT_EQ(4, BatchAA.getClobberOffset(Loc2, Loc1).getValueOr(0));
+
+  // Check that no offset returned for different size.
+  Loc2.Size = LocationSize::precise(42);
+  EXPECT_EQ(0, BatchAA.getClobberOffset(Loc1, Loc2).getValueOr(0));
+}
+
 class AAPassInfraTest : public testing::Test {
 protected:
   LLVMContext C;

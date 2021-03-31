@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H
-#define LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGESET_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGESET_H
 
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
@@ -76,4 +76,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDEBUGARANGESET_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDEBUGARANGESET_H

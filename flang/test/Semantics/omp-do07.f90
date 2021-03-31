@@ -1,6 +1,4 @@
-! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-! XFAIL:*
-
+! RUN: not %flang -fsyntax-only -fopenmp %s 2>&1 | FileCheck %s
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
 ! No statement in the associated loops other than the DO statements
@@ -13,12 +11,13 @@ program omp_do
   do i = 1, 10
     do j = 1, 10
       print *, "Hello"
-      !ERROR: invalid branch to/from OpenMP structured block
+      !CHECK: invalid branch leaving an OpenMP structured block
       goto 10
     end do
   end do
   !$omp end do
 
+  !CHECK: Outside the enclosing DO directive
   10 stop
 
 end program omp_do

@@ -837,6 +837,14 @@ private:
       if (EnableCheckProfiling)
         Timer.setBucket(&TimeByBucket[MP.second->getID()]);
       BoundNodesTreeBuilder Builder;
+
+      {
+        TraversalKindScope RAII(getASTContext(), MP.first.getTraversalKind());
+        if (getASTContext().getParentMapContext().traverseIgnored(DynNode) !=
+            DynNode)
+          continue;
+      }
+
       if (MP.first.matches(DynNode, this, &Builder)) {
         MatchVisitor Visitor(ActiveASTContext, MP.second);
         Builder.visitMatches(&Visitor);
@@ -1028,6 +1036,7 @@ private:
         Callback(Callback) {}
 
     void visitMatch(const BoundNodes& BoundNodesView) override {
+      TraversalKindScope RAII(*Context, Callback->getCheckTraversalKind());
       Callback->run(MatchFinder::MatchResult(BoundNodesView, Context));
     }
 
@@ -1208,6 +1217,8 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
       ScopedChildren = true;
     if (FD->isTemplateInstantiation())
       ScopedTraversal = true;
+  } else if (isa<BindingDecl>(DeclNode)) {
+    ScopedChildren = true;
   }
 
   ASTNodeNotSpelledInSourceScope RAII1(this, ScopedTraversal);
@@ -1325,7 +1336,13 @@ MatchFinder::~MatchFinder() {}
 
 void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
@@ -1337,7 +1354,13 @@ void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  llvm::Optional<TraversalKind> TK;
+  if (Action)
+    TK = Action->getCheckTraversalKind();
+  if (TK)
+    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
+  else
+    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
@@ -1425,6 +1448,11 @@ void MatchFinder::registerTestCallbackAfterParsing(
 }
 
 StringRef MatchFinder::MatchCallback::getID() const { return "<unknown>"; }
+
+llvm::Optional<TraversalKind>
+MatchFinder::MatchCallback::getCheckTraversalKind() const {
+  return llvm::None;
+}
 
 } // end namespace ast_matchers
 } // end namespace clang

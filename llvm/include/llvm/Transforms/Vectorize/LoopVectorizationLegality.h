@@ -177,24 +177,27 @@ private:
 /// followed by a non-expert user.
 class LoopVectorizationRequirements {
 public:
-  LoopVectorizationRequirements(OptimizationRemarkEmitter &ORE) : ORE(ORE) {}
-
-  void addUnsafeAlgebraInst(Instruction *I) {
-    // First unsafe algebra instruction.
-    if (!UnsafeAlgebraInst)
-      UnsafeAlgebraInst = I;
+  /// Track the 1st floating-point instruction that can not be reassociated.
+  void addExactFPMathInst(Instruction *I) {
+    if (I && !ExactFPMathInst)
+      ExactFPMathInst = I;
   }
 
   void addRuntimePointerChecks(unsigned Num) { NumRuntimePointerChecks = Num; }
 
-  bool doesNotMeet(Function *F, Loop *L, const LoopVectorizeHints &Hints);
+
+  Instruction *getExactFPInst() { return ExactFPMathInst; }
+  bool canVectorizeFPMath(const LoopVectorizeHints &Hints) const {
+    return !ExactFPMathInst || Hints.allowReordering();
+  }
+
+  unsigned getNumRuntimePointerChecks() const {
+    return NumRuntimePointerChecks;
+  }
 
 private:
   unsigned NumRuntimePointerChecks = 0;
-  Instruction *UnsafeAlgebraInst = nullptr;
-
-  /// Interface to emit optimization remarks.
-  OptimizationRemarkEmitter &ORE;
+  Instruction *ExactFPMathInst = nullptr;
 };
 
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and

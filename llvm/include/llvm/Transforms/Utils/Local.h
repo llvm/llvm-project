@@ -311,9 +311,10 @@ void salvageDebugInfoForDbgValues(Instruction &I,
 /// Given an instruction \p I and DIExpression \p DIExpr operating on it, write
 /// the effects of \p I into the returned DIExpression, or return nullptr if
 /// it cannot be salvaged. \p StackVal: whether DW_OP_stack_value should be
-/// appended to the expression.
+/// appended to the expression. \p LocNo: the index of the location operand to
+/// which \p I applies, should be 0 for debug info without a DIArgList.
 DIExpression *salvageDebugInfoImpl(Instruction &I, DIExpression *DIExpr,
-                                   bool StackVal);
+                                   bool StackVal, unsigned LocNo);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that

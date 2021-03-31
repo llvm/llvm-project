@@ -52,6 +52,33 @@ sink2:
   ret i32 %0
 }
 
+; This GEP is sunk, and has multiple debug uses in the same block. Check that
+; only the last use is cloned into the sunk block, and that both of the
+; original dbg.values are salvaged.
+;
+; CHECK-LABEL: define i32 @baz(i32*
+; CHECK:       call void @llvm.dbg.value(metadata i32* %a, metadata !{{[0-9]+}},
+; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32* %a, metadata !{{[0-9]+}},
+; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_plus_uconst, 5, DW_OP_stack_value))
+; CHECK-NEXT:  br label %sink1
+
+define i32 @baz(i32 *%a) !dbg !80 {
+entry:
+  %gep = getelementptr i32, i32 *%a, i32 1
+  call void @llvm.dbg.value(metadata i32 *%gep, metadata !83, metadata !12), !dbg !84
+  call void @llvm.dbg.value(metadata i32 *%gep, metadata !83, metadata !DIExpression(DW_OP_plus_uconst, 5)), !dbg !85
+  br label %sink1
+
+sink1:
+; CHECK-LABEL: sink1:
+; CHECK:       call void @llvm.dbg.value(metadata i32* %gep,
+; CHECK-SAME:  metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 5))
+; CHECK-NEXT:  load
+  %0 = load i32, i32* %gep, align 4, !dbg !85
+  ret i32 %0, !dbg !85
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
@@ -76,3 +103,7 @@ sink2:
 !72 = !{!10, !10, !10}
 !73 = !DILocalVariable(name: "k", scope: !70, file: !1, line: 2, type: !10)
 !74 = !DILocation(line: 5, column: 3, scope: !70)
+!80 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!83 = !DILocalVariable(name: "l", scope: !80, file: !1, line: 2, type: !10)
+!84 = !DILocation(line: 5, column: 3, scope: !80)
+!85 = !DILocation(line: 6, column: 3, scope: !80)

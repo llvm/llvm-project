@@ -104,10 +104,12 @@ namespace {
 // PrintOpPass is simple pass to write graph per function.
 // Note: this is a module pass only to avoid interleaving on the same ostream
 // due to multi-threading over functions.
-struct PrintOpPass : public PrintOpBase<PrintOpPass> {
-  explicit PrintOpPass(raw_ostream &os = llvm::errs(), bool short_names = false,
-                       const Twine &title = "")
-      : os(os), title(title.str()), short_names(short_names) {}
+class PrintOpPass : public ViewOpGraphPassBase<PrintOpPass> {
+public:
+  PrintOpPass(raw_ostream &os, bool shortNames, const Twine &title) : os(os) {
+    this->shortNames = shortNames;
+    this->title = title.str();
+  }
 
   std::string getOpName(Operation &op) {
     auto symbolAttr =
@@ -133,7 +135,7 @@ struct PrintOpPass : public PrintOpBase<PrintOpPass> {
           auto blockName = llvm::hasSingleElement(region)
                                ? ""
                                : ("__" + llvm::utostr(indexed_block.index()));
-          llvm::WriteGraph(os, &indexed_block.value(), short_names,
+          llvm::WriteGraph(os, &indexed_block.value(), shortNames,
                            Twine(title) + opName + blockName);
         }
       }
@@ -144,9 +146,7 @@ struct PrintOpPass : public PrintOpBase<PrintOpPass> {
 
 private:
   raw_ostream &os;
-  std::string title;
   int unnamedOpCtr = 0;
-  bool short_names;
 };
 } // namespace
 

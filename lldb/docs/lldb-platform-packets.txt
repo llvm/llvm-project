@@ -113,7 +113,7 @@ incompatible with the flags that gdb specifies.
 //     3. {optional} working directory ascii-hex encoded
 //
 //  Response is F followed by the return value of the command (base 16),
-//  followed by a another number, followed by the output of the command
+//  followed by another number, followed by the output of the command
 /   in binary-escaped-data encoding.
 
 //----------------------------------------------------------------------

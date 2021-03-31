@@ -431,4 +431,33 @@ TEST_F(HostTest, AIXVersionDetect) {
   ASSERT_EQ(std::tie(SystemMajor, SystemMinor),
             std::tie(TargetMajor, TargetMinor));
 }
+
+TEST_F(HostTest, AIXHostCPUDetect) {
+  // Return a value based on the current processor implementation mode.
+  const char *ExePath = "/usr/sbin/getsystype";
+  StringRef argv[] = {ExePath, "-i"};
+  std::unique_ptr<char[]> Buffer;
+  off_t Size;
+  ASSERT_EQ(runAndGetCommandOutput(ExePath, argv, Buffer, Size), true);
+  StringRef CPU(Buffer.get(), Size);
+  StringRef MCPU = StringSwitch<const char *>(CPU)
+                       .Case("POWER 4\n", "pwr4")
+                       .Case("POWER 5\n", "pwr5")
+                       .Case("POWER 6\n", "pwr6")
+                       .Case("POWER 7\n", "pwr7")
+                       .Case("POWER 8\n", "pwr8")
+                       .Case("POWER 9\n", "pwr9")
+                       .Case("POWER 10\n", "pwr10")
+                       .Default("unknown");
+
+  StringRef HostCPU = sys::getHostCPUName();
+
+  // Just do the comparison on the base implementation mode.
+  if (HostCPU == "970")
+    HostCPU = StringRef("pwr4");
+  else
+    HostCPU = HostCPU.rtrim('x');
+
+  EXPECT_EQ(HostCPU, MCPU);
+}
 #endif

@@ -24,7 +24,7 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
   ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
@@ -63,7 +63,7 @@ body:             |
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0, $cpsr = tADDrr killed renamable $r0, renamable $r1, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r1 = t2ADDrs renamable $r0, killed renamable $r1, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
   ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
@@ -143,7 +143,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r1 = t2ADDrs renamable $r0, killed renamable $r1, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ $r0, %bb.2
+  ; CHECK:   tCBZ renamable $r0, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
   ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
@@ -222,7 +222,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0 = t2ADDrs killed renamable $r0, killed renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ killed $r1, %bb.2
+  ; CHECK:   tCBZ killed renamable $r1, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
   ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)
@@ -261,7 +261,7 @@ body:             |
   ; CHECK:   successors: %bb.2(0x30000000), %bb.1(0x50000000)
   ; CHECK:   liveins: $r0, $r1
   ; CHECK:   renamable $r0 = t2ADDrs renamable $r1, killed renamable $r0, 18, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   tCBZ killed $r1, %bb.2
+  ; CHECK:   tCBZ killed renamable $r1, %bb.2
   ; CHECK: bb.1:
   ; CHECK:   liveins: $r0
   ; CHECK:   renamable $r0 = tLDRi killed renamable $r0, 0, 14 /* CC::al */, $noreg :: (load 4 from %ir.x)

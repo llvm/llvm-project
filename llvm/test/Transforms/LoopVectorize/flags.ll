@@ -56,8 +56,7 @@ define i32 @flags2(i32 %n, i32* nocapture %A) nounwind uwtable ssp {
 ; CHECK: load <4 x float>
 ; CHECK: fadd fast <4 x float>
 ; CHECK: br
-; CHECK: fadd fast <4 x float>
-; CHECK: fadd fast <4 x float>
+; CHECK: call fast float @llvm.vector.reduce.fadd.v4f32
 define float @fast_math(float* noalias %s) {
 entry:
   br label %for.body

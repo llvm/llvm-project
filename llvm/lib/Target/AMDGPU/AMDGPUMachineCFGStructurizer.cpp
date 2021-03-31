@@ -1419,11 +1419,7 @@ void AMDGPUMachineCFGStructurizer::extractKilledPHIs(MachineBasicBlock *MBB) {
 
 static bool isPHIRegionIndex(SmallVector<unsigned, 2> PHIRegionIndices,
                              unsigned Index) {
-  for (auto i : PHIRegionIndices) {
-    if (i == Index)
-      return true;
-  }
-  return false;
+  return llvm::is_contained(PHIRegionIndices, Index);
 }
 
 bool AMDGPUMachineCFGStructurizer::shrinkPHI(MachineInstr &PHI,

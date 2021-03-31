@@ -19,7 +19,7 @@ void Fortran::lower::DoLoopHelper::createLoop(
   auto ubi = builder.convertToIndexType(loc, ub);
   assert(step && "step must be an actual Value");
   auto inc = builder.convertToIndexType(loc, step);
-  auto loop = builder.create<fir::LoopOp>(loc, lbi, ubi, inc);
+  auto loop = builder.create<fir::DoLoopOp>(loc, lbi, ubi, inc);
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(loop.getBody());
   auto index = loop.getInductionVar();

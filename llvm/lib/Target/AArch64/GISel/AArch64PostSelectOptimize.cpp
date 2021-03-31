@@ -14,6 +14,7 @@
 #include "AArch64.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -93,7 +94,12 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // Our solution here is to try to convert flag setting operations between
   // a interval of identical FCMPs, so that CSE will be able to eliminate one.
   bool Changed = false;
-  const auto *TII = MBB.getParent()->getSubtarget().getInstrInfo();
+  auto &MF = *MBB.getParent();
+  auto &Subtarget = MF.getSubtarget();
+  const auto &TII = Subtarget.getInstrInfo();
+  auto TRI = Subtarget.getRegisterInfo();
+  auto RBI = Subtarget.getRegBankInfo();
+  auto &MRI = MF.getRegInfo();
 
   // The first step is to find the first and last FCMPs. If we have found
   // at least two, then set the limit of the bottom-up walk to the first FCMP
@@ -144,6 +150,11 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
                             << II);
           II.setDesc(TII->get(NewOpc));
           II.RemoveOperand(DeadNZCVIdx);
+          // Changing the opcode can result in differing regclass requirements,
+          // e.g. SUBSWri uses gpr32 for the dest, whereas SUBWri uses gpr32sp.
+          // Constrain the regclasses, possibly introducing a copy.
+          constrainOperandRegClass(MF, *TRI, MRI, *TII, *RBI, II, II.getDesc(),
+                                   II.getOperand(0), 0);
           Changed |= true;
         } else {
           // Otherwise, we just set the nzcv imp-def operand to be dead, so the

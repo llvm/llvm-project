@@ -353,7 +353,6 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   const lldb::addr_t file_end = address_range->data.GetRangeEnd();
   size_t bytes_to_read = size; // Number of bytes to read from the core file
   size_t bytes_copied = 0;   // Number of bytes actually read from the core file
-  size_t zero_fill_size = 0; // Padding
   lldb::addr_t bytes_left =
       0; // Number of bytes available in the core file from the given address
 
@@ -367,24 +366,15 @@ size_t ProcessElfCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   if (file_end > file_start + offset)
     bytes_left = file_end - (file_start + offset);
 
-  // Figure out how many bytes we need to zero-fill if we are reading more
-  // bytes than available in the on-disk segment
-  if (bytes_to_read > bytes_left) {
-    zero_fill_size = bytes_to_read - bytes_left;
+  if (bytes_to_read > bytes_left)
     bytes_to_read = bytes_left;
-  }
 
   // If there is data available on the core file read it
   if (bytes_to_read)
     bytes_copied =
         core_objfile->CopyData(offset + file_start, bytes_to_read, buf);
 
-  assert(zero_fill_size <= size);
-  // Pad remaining bytes
-  if (zero_fill_size)
-    memset(((char *)buf) + bytes_copied, 0, zero_fill_size);
-
-  return bytes_copied + zero_fill_size;
+  return bytes_copied;
 }
 
 void ProcessElfCore::Clear() {

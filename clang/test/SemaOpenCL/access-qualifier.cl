@@ -76,7 +76,7 @@ kernel void k14(read_only pipe int p) {
 #endif
 
 #if __OPENCL_C_VERSION__ < 200
-kernel void test_image3d_wo(write_only image3d_t img) {} // expected-error {{use of type '__write_only image3d_t' requires cl_khr_3d_image_writes extension to be enabled}}
+kernel void test_image3d_wo(write_only image3d_t img) {} // expected-error {{use of type '__write_only image3d_t' requires cl_khr_3d_image_writes support}}
 #endif
 
 #if __OPENCL_C_VERSION__ >= 200

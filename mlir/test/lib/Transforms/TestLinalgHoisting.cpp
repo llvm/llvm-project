@@ -29,10 +29,6 @@ struct TestLinalgHoisting
 
   void runOnFunction() override;
 
-  Option<bool> testHoistViewAllocs{
-      *this, "test-hoist-view-allocs",
-      llvm::cl::desc("Test hoisting alloc used by view"),
-      llvm::cl::init(false)};
   Option<bool> testHoistRedundantTransfers{
       *this, "test-hoist-redundant-transfers",
       llvm::cl::desc("Test hoisting transfer_read/transfer_write pairs"),
@@ -41,10 +37,6 @@ struct TestLinalgHoisting
 } // end anonymous namespace
 
 void TestLinalgHoisting::runOnFunction() {
-  if (testHoistViewAllocs) {
-    hoistViewAllocOps(getFunction());
-    return;
-  }
   if (testHoistRedundantTransfers) {
     hoistRedundantVectorTransfers(getFunction());
     hoistRedundantVectorTransfersOnTensor(getFunction());

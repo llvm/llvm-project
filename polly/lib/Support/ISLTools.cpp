@@ -157,10 +157,9 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
   return Result;
 }
 
-unsigned polly::getNumScatterDims(const isl::union_map &Schedule) {
-  unsigned Dims = 0;
+isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
+  isl_size Dims = 0;
   for (isl::map Map : Schedule.get_map_list()) {
-    // Map.dim would return UINT_MAX.
     if (!Map)
       continue;
 

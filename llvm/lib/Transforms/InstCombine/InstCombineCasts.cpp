@@ -1270,6 +1270,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &CI) {
     ICmpInst *LHS = dyn_cast<ICmpInst>(SrcI->getOperand(0));
     ICmpInst *RHS = dyn_cast<ICmpInst>(SrcI->getOperand(1));
     if (LHS && RHS && LHS->hasOneUse() && RHS->hasOneUse() &&
+        LHS->getOperand(0)->getType() == RHS->getOperand(0)->getType() &&
         (transformZExtICmp(LHS, CI, false) ||
          transformZExtICmp(RHS, CI, false))) {
       // zext (or icmp, icmp) -> or (zext icmp), (zext icmp)
@@ -1568,13 +1569,16 @@ static Type *shrinkFPConstant(ConstantFP *CFP) {
 // TODO: Make these support undef elements.
 static Type *shrinkFPConstantVector(Value *V) {
   auto *CV = dyn_cast<Constant>(V);
-  auto *CVVTy = dyn_cast<VectorType>(V->getType());
+  auto *CVVTy = dyn_cast<FixedVectorType>(V->getType());
   if (!CV || !CVVTy)
     return nullptr;
 
   Type *MinType = nullptr;
 
-  unsigned NumElts = cast<FixedVectorType>(CVVTy)->getNumElements();
+  unsigned NumElts = CVVTy->getNumElements();
+
+  // For fixed-width vectors we find the minimal type by looking
+  // through the constant values of the vector.
   for (unsigned i = 0; i != NumElts; ++i) {
     auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
     if (!CFP)
@@ -1606,7 +1610,15 @@ static Type *getMinimumFPType(Value *V) {
     if (Type *T = shrinkFPConstant(CFP))
       return T;
 
-  // Try to shrink a vector of FP constants.
+  // We can only correctly find a minimum type for a scalable vector when it is
+  // a splat. For splats of constant values the fpext is wrapped up as a
+  // ConstantExpr.
+  if (auto *FPCExt = dyn_cast<ConstantExpr>(V))
+    if (FPCExt->getOpcode() == Instruction::FPExt)
+      return FPCExt->getOperand(0)->getType();
+
+  // Try to shrink a vector of FP constants. This returns nullptr on scalable
+  // vectors
   if (Type *T = shrinkFPConstantVector(V))
     return T;
 
@@ -1926,11 +1938,8 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   unsigned AS = CI.getAddressSpace();
   if (CI.getOperand(0)->getType()->getScalarSizeInBits() !=
       DL.getPointerSizeInBits(AS)) {
-    Type *Ty = DL.getIntPtrType(CI.getContext(), AS);
-    // Handle vectors of pointers.
-    if (auto *CIVTy = dyn_cast<VectorType>(CI.getType()))
-      Ty = VectorType::get(Ty, CIVTy->getElementCount());
-
+    Type *Ty = CI.getOperand(0)->getType()->getWithNewType(
+        DL.getIntPtrType(CI.getContext(), AS));
     Value *P = Builder.CreateZExtOrTrunc(CI.getOperand(0), Ty);
     return new IntToPtrInst(P, CI.getType());
   }
@@ -1969,16 +1978,14 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
   // to be exposed to other transforms.
   Value *SrcOp = CI.getPointerOperand();
+  Type *SrcTy = SrcOp->getType();
   Type *Ty = CI.getType();
   unsigned AS = CI.getPointerAddressSpace();
   unsigned TySize = Ty->getScalarSizeInBits();
   unsigned PtrSize = DL.getPointerSizeInBits(AS);
   if (TySize != PtrSize) {
-    Type *IntPtrTy = DL.getIntPtrType(CI.getContext(), AS);
-    // Handle vectors of pointers.
-    if (auto *VecTy = dyn_cast<VectorType>(Ty))
-      IntPtrTy = VectorType::get(IntPtrTy, VecTy->getElementCount());
-
+    Type *IntPtrTy =
+        SrcTy->getWithNewType(DL.getIntPtrType(CI.getContext(), AS));
     Value *P = Builder.CreatePtrToInt(SrcOp, IntPtrTy);
     return CastInst::CreateIntegerCast(P, Ty, /*isSigned=*/false);
   }
@@ -2402,6 +2409,11 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         Value *Addr = LI->getOperand(0);
         if (Addr == &CI || isa<LoadInst>(Addr))
           return nullptr;
+        // If there is any loss for the pointer bitcast, abandon.
+        auto *DestPtrTy = DestTy->getPointerTo(LI->getPointerAddressSpace());
+        auto *SrcPtrTy = Addr->getType();
+        if (!SrcPtrTy->canLosslesslyBitCastTo(DestPtrTy))
+          return nullptr;
         if (LI->hasOneUse() && LI->isSimple())
           continue;
         // If a LoadInst has more than one use, changing the type of loaded
@@ -2587,8 +2599,8 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
 
       // If the source pointer is dereferenceable, then assume it points to an
       // allocated object and apply "inbounds" to the GEP.
-      bool CanBeNull;
-      if (Src->getPointerDereferenceableBytes(DL, CanBeNull)) {
+      bool CanBeNull, CanBeFreed;
+      if (Src->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed)) {
         // In a non-default address space (not 0), a null pointer can not be
         // assumed inbounds, so ignore that case (dereferenceable_or_null).
         // The reason is that 'null' is not treated differently in these address

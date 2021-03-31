@@ -1,4 +1,14 @@
-; RUN: opt -mtriple=amdgcn-- -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -passes='print<divergence>' -disable-output 2>&1 | FileCheck %s
+
+; NOTE: The new pass manager does not fall back on legacy divergence
+; analysis even when the function contains an irreducible loop. The
+; (new) divergence analysis conservatively reports all values as
+; divergent. This test does not check for this conservative
+; behaviour. Instead, it only checks for the values that are known to
+; be divergent according to the legacy analysis.
+
+; RUN: opt -mtriple amdgcn-- -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; This test contains an unstructured loop.
 ;           +-------------- entry ----------------+
@@ -14,7 +24,7 @@
 ;                        if (i3 == 5) // divergent
 ; because sync dependent on (tid / i3).
 define i32 @unstructured_loop(i1 %entry_cond) {
-; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'unstructured_loop'
+; CHECK-LABEL: Divergence Analysis' for function 'unstructured_loop'
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   br i1 %entry_cond, label %loop_entry_1, label %loop_entry_2

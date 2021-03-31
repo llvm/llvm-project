@@ -1,0 +1,25 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BTST32DI
+
+#------------------------------------------------------------------------------
+# MxBTST_RI class used for BTST operations, the source is in a data register and
+# the bit number is a immediate. This instruction can only operate on 32 bits
+#------------------------------------------------------------------------------
+
+
+#               ---------------------------------------+-----------+-----------
+#                F   E   D   C   B   A   9   8   7   6 | 5   4   3 | 2   1   0
+#               ---------------------------------------------------+-----------
+#                0   0   0   0   1   0   0   0   0   0 |    MODE   |    REG
+#               ---------------------------------------+-----------+-----------
+# BTST32DI:      0   0   0   0   1   0   0   0 . 0   0   0   0   0   0   0   0
+# BTST32DI:      0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   1
+#               ---------------------------------------------------------------
+# BTST32DI:      0   0   0   0   1   0   0   0 . 0   0   0   0   0   0   1   1
+# BTST32DI:      0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+name: MxBTST_RI
+body: |
+  bb.0:
+    BTST32di $d0, 1, implicit-def $ccr
+    BTST32di $d3, 0, implicit-def $ccr

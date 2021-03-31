@@ -5,6 +5,8 @@
 # RUN: %lld -dylib -lSystem %t/foo.o -o %t/foo.dylib
 # RUN: llvm-ar rcs %t/foo.a %t/foo.dylib
 # RUN: not %lld %t/test.o %t/foo.a -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/foo.a
+# RUN: not %lld %t/test.o -force_load %t/foo.a -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/foo.a
+# RUN: not %lld %t/test.o -ObjC %t/foo.a -o /dev/null 2>&1 | FileCheck %s -DFILE=%t/foo.a
 # CHECK: error: [[FILE]]: archive member foo.dylib has unhandled file type
 
 #--- foo.s

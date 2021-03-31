@@ -596,19 +596,7 @@ define i64 @bswap_and_mask_2(i64 %0) {
 
 define i64 @bswap_trunc(i64 %x01234567) {
 ; CHECK-LABEL: @bswap_trunc(
-; CHECK-NEXT:    [[X7ZZZZZZZ:%.*]] = shl i64 [[X01234567:%.*]], 56
-; CHECK-NEXT:    [[XZ0123456:%.*]] = lshr i64 [[X01234567]], 8
-; CHECK-NEXT:    [[XZZZZZ012:%.*]] = lshr i64 [[X01234567]], 40
-; CHECK-NEXT:    [[X3456:%.*]] = trunc i64 [[XZ0123456]] to i32
-; CHECK-NEXT:    [[XZ012:%.*]] = trunc i64 [[XZZZZZ012]] to i32
-; CHECK-NEXT:    [[X6543:%.*]] = call i32 @llvm.bswap.i32(i32 [[X3456]])
-; CHECK-NEXT:    [[X210Z:%.*]] = call i32 @llvm.bswap.i32(i32 [[XZ012]])
-; CHECK-NEXT:    [[XZ210:%.*]] = lshr exact i32 [[X210Z]], 8
-; CHECK-NEXT:    [[XZZZZ6543:%.*]] = zext i32 [[X6543]] to i64
-; CHECK-NEXT:    [[XZZZZZ210:%.*]] = zext i32 [[XZ210]] to i64
-; CHECK-NEXT:    [[XZ6543ZZZ:%.*]] = shl nuw nsw i64 [[XZZZZ6543]], 24
-; CHECK-NEXT:    [[XZ6543210:%.*]] = or i64 [[XZ6543ZZZ]], [[XZZZZZ210]]
-; CHECK-NEXT:    [[X76543210:%.*]] = or i64 [[XZ6543210]], [[X7ZZZZZZZ]]
+; CHECK-NEXT:    [[X76543210:%.*]] = call i64 @llvm.bswap.i64(i64 [[X01234567:%.*]])
 ; CHECK-NEXT:    ret i64 [[X76543210]]
 ;
   %x7zzzzzzz = shl i64 %x01234567, 56
@@ -746,6 +734,31 @@ define i32 @funnel_and(i32 %abcd) {
   %dzbz = call i32 @llvm.fshl.i32(i32 %abcd, i32 %zbzz, i32 24)
   %dcba = or i32 %zcza, %dzbz
   ret i32 %dcba
+}
+
+; Don't attempt to collectBitParts from >128 bit integers
+define i16 @trunc_bswap_i160(i160* %a0) {
+; CHECK-LABEL: @trunc_bswap_i160(
+; CHECK-NEXT:    [[LOAD:%.*]] = load i160, i160* [[A0:%.*]], align 4
+; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i160 [[LOAD]], 136
+; CHECK-NEXT:    [[CAST1:%.*]] = trunc i160 [[LSHR1]] to i16
+; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[CAST1]], 255
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i160 [[LOAD]], 120
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i160 [[TMP1]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = and i16 [[TMP2]], -256
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
+; CHECK-NEXT:    ret i16 [[OR]]
+;
+  %load = load i160, i160* %a0, align 4
+  %lshr0 = lshr i160 %load, 128
+  %lshr1 = lshr i160 %load, 136
+  %cast0 = trunc i160 %lshr0 to i16
+  %cast1 = trunc i160 %lshr1 to i16
+  %and0 = and i16 %cast0, 255
+  %and1 = and i16 %cast1, 255
+  %shl = shl i16 %and0, 8
+  %or = or i16 %and1, %shl
+  ret i16 %or
 }
 
 ; PR47191 - deep IR trees prevent ADD/XOR instructions being simplified to OR.

@@ -653,9 +653,10 @@ public:
         ;
 
 #pragma omp parallel
-// expected-error@+5 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
-// expected-error@+4 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
-// expected-error@+4 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+// expected-error@+6 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+// expected-error@+6 {{expected loop invariant expression or '<invariant1> * TC::ii + <invariant2>' kind of expression}}
+// expected-error@+4 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
+// expected-error@+4 2 {{expected loop invariant expression or '<invariant1> * ii + <invariant2>' kind of expression}}
 #pragma omp for collapse(3)
     for (ii = 10 + 25; ii < 1000; ii += 1)
       for (iii = ii * 10 + 25; iii < ii / ii - 23; iii += 1)

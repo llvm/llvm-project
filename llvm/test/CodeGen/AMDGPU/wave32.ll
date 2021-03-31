@@ -34,10 +34,10 @@ define amdgpu_kernel void @test_vopc_f32(float addrspace(1)* %arg) {
   ret void
 }
 
-; GCN-LABEL: {{^}}test_vopc_vcmpx:
-; GFX1032: v_cmpx_le_f32_e32 0, v{{[0-9]+}}
-; GFX1064: v_cmpx_le_f32_e32 0, v{{[0-9]+}}
-define amdgpu_ps void @test_vopc_vcmpx(float %x) {
+; GCN-LABEL: {{^}}test_vopc_vcmp:
+; GFX1032: v_cmp_nle_f32_e32 vcc_lo, 0, v{{[0-9]+}}
+; GFX1064: v_cmp_nle_f32_e32 vcc, 0, v{{[0-9]+}}
+define amdgpu_ps void @test_vopc_vcmp(float %x) {
   %cmp = fcmp oge float %x, 0.0
   call void @llvm.amdgcn.kill(i1 %cmp)
   ret void
@@ -658,15 +658,22 @@ define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
 }
 
 ; GCN-LABEL: {{^}}test_kill_i1_terminator_i1:
+; GFX1032: s_mov_b32 [[LIVE:s[0-9]+]], exec_lo
 ; GFX1032: s_or_b32 [[OR:s[0-9]+]],
-; GFX1032: s_and_b32 exec_lo, exec_lo, [[OR]]
+; GFX1032: s_xor_b32 [[KILL:s[0-9]+]], [[OR]], exec_lo
+; GFX1032: s_andn2_b32 [[MASK:s[0-9]+]], [[LIVE]], [[KILL]]
+; GFX1032: s_and_b32 exec_lo, exec_lo, [[MASK]]
+; GFX1064: s_mov_b64 [[LIVE:s\[[0-9:]+\]]], exec
 ; GFX1064: s_or_b64 [[OR:s\[[0-9:]+\]]],
-; GFX1064: s_and_b64 exec, exec, [[OR]]
+; GFX1064: s_xor_b64 [[KILL:s\[[0-9:]+\]]], [[OR]], exec
+; GFX1064: s_andn2_b64 [[MASK:s\[[0-9:]+\]]], [[LIVE]], [[KILL]]
+; GFX1064: s_and_b64 exec, exec, [[MASK]]
 define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
   %c1 = icmp slt i32 %a, %b
   %c2 = icmp slt i32 %c, %d
   %x = or i1 %c1, %c2
   call void @llvm.amdgcn.kill(i1 %x)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float 0.0, float 0.0, float 0.0, float 0.0, i1 false, i1 false)
   ret void
 }
 
@@ -694,6 +701,7 @@ break:
   ret <4 x float> %c.iv
 }
 
+; NOTE: llvm.amdgcn.wwm is deprecated, use llvm.amdgcn.strict.wwm instead.
 ; GCN-LABEL: {{^}}test_wwm1:
 ; GFX1032: s_or_saveexec_b32 [[SAVE:s[0-9]+]], -1
 ; GFX1032: s_mov_b32 exec_lo, [[SAVE]]
@@ -736,6 +744,50 @@ endif:
   %out.2 = phi float [ %out.1, %if ], [ 0.0, %main_body ]
   ret float %out.2
 }
+
+; GCN-LABEL: {{^}}test_strict_wwm1:
+; GFX1032: s_or_saveexec_b32 [[SAVE:s[0-9]+]], -1
+; GFX1032: s_mov_b32 exec_lo, [[SAVE]]
+; GFX1064: s_or_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], -1
+; GFX1064: s_mov_b64 exec, [[SAVE]]
+define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1, float %src0, float %src1) {
+main_body:
+  %out = fadd float %src0, %src1
+  %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
+  ret float %out.0
+}
+
+; GCN-LABEL: {{^}}test_strict_wwm2:
+; GFX1032: v_cmp_gt_u32_e32 vcc_lo, 32, v{{[0-9]+}}
+; GFX1032: s_and_saveexec_b32 [[SAVE1:s[0-9]+]], vcc_lo
+; GFX1032: s_or_saveexec_b32 [[SAVE2:s[0-9]+]], -1
+; GFX1032: s_mov_b32 exec_lo, [[SAVE2]]
+; GFX1032: s_or_b32 exec_lo, exec_lo, [[SAVE1]]
+; GFX1064: v_cmp_gt_u32_e32 vcc, 32, v{{[0-9]+}}
+; GFX1064: s_and_saveexec_b64 [[SAVE1:s\[[0-9:]+\]]], vcc{{$}}
+; GFX1064: s_or_saveexec_b64 [[SAVE2:s\[[0-9:]+\]]], -1
+; GFX1064: s_mov_b64 exec, [[SAVE2]]
+; GFX1064: s_or_b64 exec, exec, [[SAVE1]]
+define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx) {
+main_body:
+  ; use mbcnt to make sure the branch is divergent
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
+  %cc = icmp uge i32 %hi, 32
+  br i1 %cc, label %endif, label %if
+
+if:
+  %src = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx, i32 0, i32 0, i32 0)
+  %out = fadd float %src, %src
+  %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
+  %out.1 = fadd float %src, %out.0
+  br label %endif
+
+endif:
+  %out.2 = phi float [ %out.1, %if ], [ 0.0, %main_body ]
+  ret float %out.2
+}
+
 
 ; GCN-LABEL: {{^}}test_wqm1:
 ; GFX1032: s_mov_b32 [[ORIG:s[0-9]+]], exec_lo
@@ -828,15 +880,22 @@ define amdgpu_kernel void @test_intr_icmp_i32(i32 addrspace(1)* %out, i32 %src) 
 
 ; GCN-LABEL: {{^}}test_wqm_vote:
 ; GFX1032: v_cmp_neq_f32_e32 vcc_lo, 0
+; GFX1032: s_mov_b32 [[LIVE:s[0-9]+]], exec_lo
 ; GFX1032: s_wqm_b32 [[WQM:s[0-9]+]], vcc_lo
-; GFX1032: s_and_b32 exec_lo, exec_lo, [[WQM]]
+; GFX1032: s_xor_b32 [[KILL:s[0-9]+]], [[WQM]], exec_lo
+; GFX1032: s_andn2_b32 [[MASK:s[0-9]+]], [[LIVE]], [[KILL]]
+; GFX1032: s_and_b32 exec_lo, exec_lo, [[MASK]]
 ; GFX1064: v_cmp_neq_f32_e32 vcc, 0
-; GFX1064: s_wqm_b64 [[WQM:s\[[0-9:]+\]]], vcc{{$}}
-; GFX1064: s_and_b64 exec, exec, [[WQM]]
+; GFX1064: s_mov_b64 [[LIVE:s\[[0-9:]+\]]], exec
+; GFX1064: s_wqm_b64 [[WQM:s\[[0-9:]+\]]], vcc
+; GFX1064: s_xor_b64 [[KILL:s\[[0-9:]+\]]], [[WQM]], exec
+; GFX1064: s_andn2_b64 [[MASK:s\[[0-9:]+\]]], [[LIVE]], [[KILL]]
+; GFX1064: s_and_b64 exec, exec, [[MASK]]
 define amdgpu_ps void @test_wqm_vote(float %a) {
   %c1 = fcmp une float %a, 0.0
   %c2 = call i1 @llvm.amdgcn.wqm.vote(i1 %c1)
   call void @llvm.amdgcn.kill(i1 %c2)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float 0.0, float 0.0, float 0.0, float 0.0, i1 false, i1 false)
   ret void
 }
 
@@ -1062,7 +1121,7 @@ declare void @external_void_func_void() #1
 ; GCN-NEXT: s_waitcnt_vscnt
 
 ; GFX1064-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]]], -1{{$}}
+; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]+]], -1{{$}}
 ; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GCN-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
@@ -1109,6 +1168,7 @@ declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32)
 declare i64 @llvm.amdgcn.set.inactive.i64(i64, i64)
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32)
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32)
+declare float @llvm.amdgcn.strict.wwm.f32(float)
 declare float @llvm.amdgcn.wwm.f32(float)
 declare i32 @llvm.amdgcn.wqm.i32(i32)
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32)
@@ -1125,9 +1185,11 @@ declare i1 @llvm.amdgcn.wqm.vote(i1)
 declare i1 @llvm.amdgcn.ps.live()
 declare i64 @llvm.cttz.i64(i64, i1)
 declare i32 @llvm.cttz.i32(i32, i1)
+declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #5
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone optnone noinline }
 attributes #3 = { "target-features"="+wavefrontsize32" }
 attributes #4 = { "target-features"="+wavefrontsize64" }
+attributes #5 = { inaccessiblememonly nounwind }

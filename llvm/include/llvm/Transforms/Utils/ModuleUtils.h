@@ -120,4 +120,4 @@ void setVectorVariantNames(CallInst *CI,
 } // End VFABI namespace
 } // End llvm namespace
 
-#endif //  LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
+#endif // LLVM_TRANSFORMS_UTILS_MODULEUTILS_H

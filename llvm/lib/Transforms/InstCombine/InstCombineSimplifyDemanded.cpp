@@ -345,10 +345,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return false;
 
       // Get the constant out of the ICmp, if there is one.
+      // Only try this when exactly 1 operand is a constant (if both operands
+      // are constant, the icmp should eventually simplify). Otherwise, we may
+      // invert the transform that reduces set bits and infinite-loop.
+      Value *X;
       const APInt *CmpC;
       ICmpInst::Predicate Pred;
-      if (!match(I->getOperand(0), m_c_ICmp(Pred, m_APInt(CmpC), m_Value())) ||
-          CmpC->getBitWidth() != SelC->getBitWidth())
+      if (!match(I->getOperand(0), m_ICmp(Pred, m_Value(X), m_APInt(CmpC))) ||
+          isa<Constant>(X) || CmpC->getBitWidth() != SelC->getBitWidth())
         return ShrinkDemandedConstant(I, OpNo, DemandedMask);
 
       // If the constant is already the same as the ICmp, leave it as-is.
@@ -730,6 +734,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     bool KnownBitsComputed = false;
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
+      case Intrinsic::abs: {
+        if (DemandedMask == 1)
+          return II->getArgOperand(0);
+        break;
+      }
       case Intrinsic::bswap: {
         // If the only bits demanded come from one byte of the bswap result,
         // just shift the input byte into position to eliminate the bswap.

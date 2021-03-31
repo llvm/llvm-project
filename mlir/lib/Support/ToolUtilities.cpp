@@ -37,8 +37,9 @@ mlir::splitAndProcessBuffer(std::unique_ptr<llvm::MemoryBuffer> originalBuffer,
     auto splitLoc = llvm::SMLoc::getFromPointer(subBuffer.data());
     unsigned splitLine = fileSourceMgr.getLineAndColumn(splitLoc).first;
     auto subMemBuffer = llvm::MemoryBuffer::getMemBufferCopy(
-        subBuffer, origMemBuffer->getBufferIdentifier() +
-                       Twine(" split at line #") + Twine(splitLine));
+        subBuffer, Twine("within split at ") +
+                       origMemBuffer->getBufferIdentifier() + ":" +
+                       Twine(splitLine) + " offset ");
     if (failed(processChunkBuffer(std::move(subMemBuffer), os)))
       hadFailure = true;
   }

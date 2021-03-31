@@ -23,6 +23,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -33,6 +34,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -67,7 +69,11 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
   // a * b + c
   // The shape depends on which operand.
-  case Intrinsic::x86_tdpbssd_internal: {
+  case Intrinsic::x86_tdpbssd_internal:
+  case Intrinsic::x86_tdpbsud_internal:
+  case Intrinsic::x86_tdpbusd_internal:
+  case Intrinsic::x86_tdpbuud_internal:
+  case Intrinsic::x86_tdpbf16ps_internal: {
     switch (OpNo) {
     case 3:
       Row = II->getArgOperand(0);
@@ -327,6 +333,10 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+    if (F.hasFnAttribute(Attribute::OptimizeNone) ||
+        TM->getOptLevel() == CodeGenOpt::None)
+      return false;
     X86LowerAMXType LAT(F);
     bool C = LAT.visit();
     return C;
@@ -334,6 +344,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<TargetPassConfig>();
   }
 };
 
@@ -343,6 +354,7 @@ static const char PassName[] = "Lower AMX type for load/store";
 char X86LowerAMXTypeLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                       false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                     false)
 

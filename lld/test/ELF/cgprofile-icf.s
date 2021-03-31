@@ -34,20 +34,20 @@ A:
     mov $42, %rax
     retq
 
-# CHECK:          Name: A
-# CHECK-NEXT:     Value: 0x201120
-# CHECK:          Name: B
-# CHECK-NEXT:     Value: 0x201130
-# CHECK:          Name: C
-# CHECK-NEXT:     Value: 0x201128
 # CHECK:          Name: D
 # CHECK-NEXT:     Value: 0x201128
+# CHECK:          Name: C
+# CHECK-NEXT:     Value: 0x201128
+# CHECK:          Name: B
+# CHECK-NEXT:     Value: 0x201130
+# CHECK:          Name: A
+# CHECK-NEXT:     Value: 0x201120
 
-# NOICF:          Name: A
-# NOICF-NEXT:     Value: 0x201120
-# NOICF:          Name: B
-# NOICF-NEXT:     Value: 0x201128
-# NOICF:          Name: C
-# NOICF-NEXT:     Value: 0x201130
 # NOICF:          Name: D
 # NOICF-NEXT:     Value: 0x201138
+# NOICF:          Name: C
+# NOICF-NEXT:     Value: 0x201130
+# NOICF:          Name: B
+# NOICF-NEXT:     Value: 0x201128
+# NOICF:          Name: A
+# NOICF-NEXT:     Value: 0x201120

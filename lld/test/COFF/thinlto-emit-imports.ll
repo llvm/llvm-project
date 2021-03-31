@@ -34,8 +34,8 @@
 ; RUN: chmod 400 %t3.obj.imports
 ; RUN: not lld-link -entry:main -thinlto-index-only \
 ; RUN:     -thinlto-emit-imports-files %t1.obj %t2.obj %t3.obj \
-; RUN:     -out:%t4.exe 2>&1 | FileCheck %s --check-prefix=ERR
-; ERR: cannot open {{.*}}3.obj.imports: {{P|p}}ermission denied
+; RUN:     -out:%t4.exe 2>&1 | FileCheck -DMSG=%errc_EACCES %s --check-prefix=ERR
+; ERR: cannot open {{.*}}3.obj.imports: [[MSG]]
 
 ; Ensure lld doesn't generate import files when thinlto-index-only is not enabled
 ; RUN: rm -f %t1.obj.imports

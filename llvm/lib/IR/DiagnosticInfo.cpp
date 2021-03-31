@@ -152,7 +152,7 @@ void DiagnosticInfoWithLocationBase::getLocation(StringRef &RelativePath,
   Column = Loc.getColumn();
 }
 
-const std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
+std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
   StringRef Filename("<unknown>");
   unsigned Line = 0;
   unsigned Column = 0;
@@ -327,6 +327,10 @@ bool OptimizationRemarkAnalysis::isEnabled() const {
 }
 
 void DiagnosticInfoMIRParser::print(DiagnosticPrinter &DP) const {
+  DP << Diagnostic;
+}
+
+void DiagnosticInfoSrcMgr::print(DiagnosticPrinter &DP) const {
   DP << Diagnostic;
 }
 

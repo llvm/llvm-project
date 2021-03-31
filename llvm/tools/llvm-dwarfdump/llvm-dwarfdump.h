@@ -9,6 +9,8 @@
 #ifndef LLVM_TOOLS_LLVM_DWARFDUMP_LLVM_DWARFDUMP_H
 #define LLVM_TOOLS_LLVM_DWARFDUMP_LLVM_DWARFDUMP_H
 
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/ObjectFile.h"
@@ -21,7 +23,7 @@ namespace dwarfdump {
 struct SectionSizes {
   /// Map of .debug section names and their sizes across all such-named
   /// sections.
-  StringMap<uint64_t> DebugSectionSizes;
+  MapVector<std::string, uint64_t, StringMap<uint64_t>> DebugSectionSizes;
   /// Total number of bytes of all sections.
   uint64_t TotalObjectSize = 0;
   /// Total number of bytes of all debug sections.

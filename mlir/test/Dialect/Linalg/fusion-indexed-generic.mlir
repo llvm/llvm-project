@@ -21,15 +21,15 @@ func @fuse_indexed_generic_consumer(%A: memref<?x?xf32>,
   %c0 = constant 0 : index
   %c25 = constant 25 : index
   %c10 = constant 10 : index
-  %0 = dim %C, %c0 : memref<?x?xf32>
-  %1 = dim %C, %c1 : memref<?x?xf32>
-  %2 = dim %D, %c0 : memref<?x?xf32>
-  %3 = dim %D, %c1 : memref<?x?xf32>
+  %0 = memref.dim %C, %c0 : memref<?x?xf32>
+  %1 = memref.dim %C, %c1 : memref<?x?xf32>
+  %2 = memref.dim %D, %c0 : memref<?x?xf32>
+  %3 = memref.dim %D, %c1 : memref<?x?xf32>
   scf.for %arg2 = %c0 to %0 step %c10 {
     scf.for %arg3 = %c0 to %1 step %c25 {
-      %4 = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+      %4 = memref.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
           memref<?x?xf32> to memref<?x?xf32, #map>
-      %5 = std.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+      %5 = memref.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
           memref<?x?xf32> to memref<?x?xf32, #map>
       linalg.indexed_generic {
         indexing_maps = [#id_2d, #id_2d],
@@ -89,14 +89,14 @@ func @fuse_indexed_generic_producer(%A: memref<?x?xf32>,
       %out = addf %tmp, %j_float : f32
       linalg.yield %out : f32
   }
-  %C_X = dim %C, %c0 : memref<?x?xf32>
-  %C_Y = dim %C, %c1 : memref<?x?xf32>
-  %D_X = dim %D, %c0 : memref<?x?xf32>
-  %D_Y = dim %D, %c1 : memref<?x?xf32>
+  %C_X = memref.dim %C, %c0 : memref<?x?xf32>
+  %C_Y = memref.dim %C, %c1 : memref<?x?xf32>
+  %D_X = memref.dim %D, %c0 : memref<?x?xf32>
+  %D_Y = memref.dim %D, %c1 : memref<?x?xf32>
   scf.parallel (%arg2, %arg3) = (%c0, %c0) to (%C_X, %C_Y) step (%c10, %c25) {
-    %C_view = std.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+    %C_view = memref.subview %C[%arg2, %arg3][%c10, %c25][%c1, %c1] :
         memref<?x?xf32> to memref<?x?xf32, #map>
-    %D_view = std.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
+    %D_view = memref.subview %D[%arg2, %arg3][%c10, %c25][%c1, %c1] :
         memref<?x?xf32> to memref<?x?xf32, #map>
     linalg.generic {
       indexing_maps = [#id_2d, #id_2d],
@@ -150,18 +150,18 @@ func @fuse_indexed_generic_producer_tile_second_dim_only(%A: memref<?x?xf32>,
       %out = addf %tmp, %j_float : f32
       linalg.yield %out : f32
   }
-  %C_X = dim %C, %c0 : memref<?x?xf32>
-  %C_Y = dim %C, %c1 : memref<?x?xf32>
-  %D_X = dim %D, %c0 : memref<?x?xf32>
-  %D_Y = dim %D, %c1 : memref<?x?xf32>
+  %C_X = memref.dim %C, %c0 : memref<?x?xf32>
+  %C_Y = memref.dim %C, %c1 : memref<?x?xf32>
+  %D_X = memref.dim %D, %c0 : memref<?x?xf32>
+  %D_Y = memref.dim %D, %c1 : memref<?x?xf32>
   %3 = linalg.range %c0 : %C_Y : %c3 : !linalg.range
   scf.parallel (%j) = (%c0) to (%C_Y) step (%c3) {
     %0 = affine.min affine_map<(d0, d1, d2) -> (d0, d1 - d2)>(%c3, %C_Y, %j)
-    %C_view = subview %C[%c0, %j] [%C_X, %0] [%c1, %c1] :
+    %C_view = memref.subview %C[%c0, %j] [%C_X, %0] [%c1, %c1] :
       memref<?x?xf32> to memref<?x?xf32, #map>
 
     %1 = affine.min affine_map<(d0, d1, d2) -> (d0, d1 - d2)>(%c3, %D_Y, %j)
-    %D_view = subview %D[%c0, %j] [%D_X, %1] [%c1, %c1] :
+    %D_view = memref.subview %D[%c0, %j] [%D_X, %1] [%c1, %c1] :
       memref<?x?xf32> to memref<?x?xf32, #map>
 
     linalg.generic {

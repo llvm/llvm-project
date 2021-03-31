@@ -95,8 +95,15 @@ bool Type::canLosslesslyBitCastTo(Type *Ty) const {
   // else is not lossless. Conservatively assume we can't losslessly convert
   // between pointers with different address spaces.
   if (auto *PTy = dyn_cast<PointerType>(this)) {
-    if (auto *OtherPTy = dyn_cast<PointerType>(Ty))
+    if (auto *OtherPTy = dyn_cast<PointerType>(Ty)) {
+      // Don't bitcast "load <256 x i32>, <256 x i32>*" to
+      // "load x86_amx, x86_amx*", because we don't have a corresponding
+      // instruction to load x86_amx. Doing the transform causes trouble
+      // to lower "load x86_amx" instruction in backend.
+      if (OtherPTy->getElementType()->isX86_AMXTy())
+        return false;
       return PTy->getAddressSpace() == OtherPTy->getAddressSpace();
+    }
     return false;
   }
   return false;  // Other types have no identity values

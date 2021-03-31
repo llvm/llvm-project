@@ -10,9 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_MOVECONSTRUCTORINITCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "../utils/IncludeInserter.h"
-
-#include <memory>
 
 namespace clang {
 namespace tidy {
@@ -31,12 +28,6 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
-                           Preprocessor *ModuleExpanderPP) override;
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
-
-private:
-  utils::IncludeInserter Inserter;
 };
 
 } // namespace performance

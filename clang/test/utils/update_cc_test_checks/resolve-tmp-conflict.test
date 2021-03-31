@@ -1,0 +1,8 @@
+## Test that CHECK lines generated avoid naming conflicts with FileCheck IR variables
+
+# RUN: cp %S/Inputs/resolve-tmp-conflict.cpp %t.cpp && %update_cc_test_checks --function-signature --prefix-filecheck-ir-name _ %t.cpp
+# RUN: diff -u %S/Inputs/resolve-tmp-conflict.cpp.expected %t.cpp
+
+## Check that re-running update_cc_test_checks doesn't change the output
+# RUN: %update_cc_test_checks %t.cpp
+# RUN: diff -u %S/Inputs/resolve-tmp-conflict.cpp.expected %t.cpp

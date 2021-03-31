@@ -8,9 +8,9 @@
 
 # RELOC:      Relocations [
 # RELOC-NEXT:   Section ({{.*}}) .rela.dyn {
-# RELOC-NEXT:     R_X86_64_GLOB_DAT dsofoo 0x0
 # RELOC-NEXT:     R_X86_64_GLOB_DAT foo 0x0
 # RELOC-NEXT:     R_X86_64_GLOB_DAT und 0x0
+# RELOC-NEXT:     R_X86_64_GLOB_DAT dsofoo 0x0
 # RELOC-NEXT:   }
 # RELOC-NEXT: ]
 

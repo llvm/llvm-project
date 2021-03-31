@@ -46,13 +46,6 @@ public:
   /// Verify the given operation.
   LogicalResult verify(Operation &op);
 
-  /// Returns the registered dialect for a dialect-specific attribute.
-  Dialect *getDialectForAttribute(const NamedAttribute &attr) {
-    assert(attr.first.strref().contains('.') && "expected dialect attribute");
-    auto dialectNamePair = attr.first.strref().split('.');
-    return ctx->getLoadedDialect(dialectNamePair.first);
-  }
-
 private:
   /// Verify the given potentially nested region or block.
   LogicalResult verifyRegion(Region &region);
@@ -81,10 +74,6 @@ private:
 
   /// Dominance information for this operation, when checking dominance.
   DominanceInfo *domInfo = nullptr;
-
-  /// Mapping between dialect namespace and if that dialect supports
-  /// unregistered operations.
-  llvm::StringMap<bool> dialectAllowsUnknownOps;
 };
 } // end anonymous namespace
 
@@ -124,17 +113,36 @@ LogicalResult OperationVerifier::verifyRegion(Region &region) {
   return success();
 }
 
+/// Returns true if this block may be valid without terminator. That is if:
+/// - it does not have a parent region.
+/// - Or the parent region have a single block and:
+///    - This region does not have a parent op.
+///    - Or the parent op is unregistered.
+///    - Or the parent op has the NoTerminator trait.
+static bool mayNotHaveTerminator(Block *block) {
+  if (!block->getParent())
+    return true;
+  if (!llvm::hasSingleElement(*block->getParent()))
+    return false;
+  Operation *op = block->getParentOp();
+  return !op || op->mightHaveTrait<OpTrait::NoTerminator>();
+}
+
 LogicalResult OperationVerifier::verifyBlock(Block &block) {
   for (auto arg : block.getArguments())
     if (arg.getOwner() != &block)
       return emitError(block, "block argument not owned by block");
 
   // Verify that this block has a terminator.
-  if (block.empty())
-    return emitError(block, "block with no terminator");
+
+  if (block.empty()) {
+    if (mayNotHaveTerminator(&block))
+      return success();
+    return emitError(block, "empty block: expect at least a terminator");
+  }
 
   // Verify the non-terminator operations separately so that we can verify
-  // they has no successors.
+  // they have no successors.
   for (auto &op : llvm::make_range(block.begin(), std::prev(block.end()))) {
     if (op.getNumSuccessors() != 0)
       return op.emitError(
@@ -145,10 +153,16 @@ LogicalResult OperationVerifier::verifyBlock(Block &block) {
   }
 
   // Verify the terminator.
-  if (failed(verifyOperation(block.back())))
+  Operation &terminator = block.back();
+  if (failed(verifyOperation(terminator)))
     return failure();
-  if (block.back().isKnownNonTerminator())
-    return block.back().emitError("block with no terminator");
+
+  if (mayNotHaveTerminator(&block))
+    return success();
+
+  if (!terminator.mightHaveTrait<OpTrait::IsTerminator>())
+    return block.back().emitError("block with no terminator, has ")
+           << terminator;
 
   // Verify that this block is not branching to a block of a different
   // region.
@@ -169,15 +183,14 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   /// Verify that all of the attributes are okay.
   for (auto attr : op.getAttrs()) {
     // Check for any optional dialect specific attributes.
-    if (!attr.first.strref().contains('.'))
-      continue;
-    if (auto *dialect = getDialectForAttribute(attr))
+    if (auto *dialect = attr.first.getDialect())
       if (failed(dialect->verifyOperationAttribute(&op, attr)))
         return failure();
   }
 
   // If we can get operation info for this, check the custom hook.
-  auto *opInfo = op.getAbstractOperation();
+  OperationName opName = op.getName();
+  auto *opInfo = opName.getAbstractOperation();
   if (opInfo && failed(opInfo->verifyInvariants(&op)))
     return failure();
 
@@ -187,13 +200,14 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
   unsigned numRegions = op.getNumRegions();
   for (unsigned i = 0; i < numRegions; i++) {
     Region &region = op.getRegion(i);
+    RegionKind kind =
+        kindInterface ? kindInterface.getRegionKind(i) : RegionKind::SSACFG;
     // Check that Graph Regions only have a single basic block. This is
     // similar to the code in SingleBlockImplicitTerminator, but doesn't
     // require the trait to be specified. This arbitrary limitation is
     // designed to limit the number of cases that have to be handled by
     // transforms and conversions until the concept stabilizes.
-    if (op.isRegistered() && kindInterface &&
-        kindInterface.getRegionKind(i) == RegionKind::Graph) {
+    if (op.isRegistered() && kind == RegionKind::Graph) {
       // Empty regions are fine.
       if (region.empty())
         continue;
@@ -212,33 +226,21 @@ LogicalResult OperationVerifier::verifyOperation(Operation &op) {
     return success();
 
   // Otherwise, verify that the parent dialect allows un-registered operations.
-  auto dialectPrefix = op.getName().getDialect();
-
-  // Check for an existing answer for the operation dialect.
-  auto it = dialectAllowsUnknownOps.find(dialectPrefix);
-  if (it == dialectAllowsUnknownOps.end()) {
-    // If the operation dialect is registered, query it directly.
-    if (auto *dialect = ctx->getLoadedDialect(dialectPrefix))
-      it = dialectAllowsUnknownOps
-               .try_emplace(dialectPrefix, dialect->allowsUnknownOperations())
-               .first;
-    // Otherwise, unregistered dialects (when allowed by the context)
-    // conservatively allow unknown operations.
-    else {
-      if (!op.getContext()->allowsUnregisteredDialects() && !op.getDialect())
-        return op.emitOpError()
-               << "created with unregistered dialect. If this is "
-                  "intended, please call allowUnregisteredDialects() on the "
-                  "MLIRContext, or use -allow-unregistered-dialect with "
-                  "mlir-opt";
-
-      it = dialectAllowsUnknownOps.try_emplace(dialectPrefix, true).first;
+  Dialect *dialect = opName.getDialect();
+  if (!dialect) {
+    if (!ctx->allowsUnregisteredDialects()) {
+      return op.emitOpError()
+             << "created with unregistered dialect. If this is "
+                "intended, please call allowUnregisteredDialects() on the "
+                "MLIRContext, or use -allow-unregistered-dialect with "
+                "mlir-opt";
     }
+    return success();
   }
 
-  if (!it->second) {
+  if (!dialect->allowsUnknownOperations()) {
     return op.emitError("unregistered operation '")
-           << op.getName() << "' found in dialect ('" << dialectPrefix
+           << op.getName() << "' found in dialect ('" << dialect->getNamespace()
            << "') that does not allow unknown operations";
   }
 

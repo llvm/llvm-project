@@ -1,4 +1,4 @@
-;; Test that --export-dynamic prevents devirtualization.
+;; Test that dynamically exported symbols prevent devirtualization.
 ;; Note that --export-dynamic-symbol and --dynamic-list are tested similarly
 ;; in the v1.16 directory, because those were not properly passed down to the
 ;; plugin until then.
@@ -65,6 +65,41 @@
 ; RUN:   %t4.o -o %t3 \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
+
+;; Check that all WPD fails with when linking against a shared library containing
+;; preemptible versions of the vtables. In this case the symbols in the object being
+;; linked against the shared library must be exported to .dynsym to allow the runtime
+;; preemption, even without any options.
+
+;; Index based WPD
+; RUN: opt -relocation-model=pic --thinlto-bc -o %t5.o %s
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: 	 %t5.o -o %t5.so -shared
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t5.o %t5.so -o %t5 \
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+
+;; Hybrid WPD
+; RUN: opt -relocation-model=pic --thinlto-bc --thinlto-split-lto-unit -o %t5.o %s
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: 	 %t5.o -o %t5.so -shared
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t5.o %t5.so -o %t5 \
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
+
+;; Regular LTO WPD
+; RUN: opt -relocation-model=pic -o %t5.o %s
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: 	 %t5.o -o %t5.so -shared
+; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN:   --plugin-opt=whole-program-visibility \
+; RUN:   --plugin-opt=-pass-remarks=. \
+; RUN:   %t5.o %t5.so -o %t5 \
+; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"

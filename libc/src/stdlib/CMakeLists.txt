@@ -2,12 +2,6 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
-add_header_library(
-  abs_utils
-  HDRS
-    abs_utils.h
-)
-
 add_entrypoint_object(
   _Exit
   ALIAS
@@ -34,7 +28,7 @@ add_entrypoint_object(
   HDRS
     abs.h
   DEPENDS
-    .abs_utils
+    libc.src.__support.integer_operations
 )
 
 add_entrypoint_object(
@@ -44,7 +38,7 @@ add_entrypoint_object(
   HDRS
     labs.h
   DEPENDS
-    .abs_utils
+    libc.src.__support.integer_operations
 )
 
 add_entrypoint_object(
@@ -54,5 +48,5 @@ add_entrypoint_object(
   HDRS
     llabs.h
   DEPENDS
-    .abs_utils
+    libc.src.__support.integer_operations
 )

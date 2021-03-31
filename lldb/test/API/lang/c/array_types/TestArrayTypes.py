@@ -216,8 +216,8 @@ class ArrayTypesTestCase(TestBase):
         # Last, check that "long_6" has a value type of eValueTypeVariableLocal
         # and "argc" has eValueTypeVariableArgument.
         from lldbsuite.test.lldbutil import value_type_to_str
-        self.assertTrue(
-            variable.GetValueType() == lldb.eValueTypeVariableLocal,
+        self.assertEqual(
+            variable.GetValueType(), lldb.eValueTypeVariableLocal,
             "Variable 'long_6' should have '%s' value type." %
             value_type_to_str(
                 lldb.eValueTypeVariableLocal))

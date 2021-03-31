@@ -217,8 +217,8 @@ let opNewValue = 0;
 let BaseOpcode = "A2_addi";
 let CextOpcode = "A2_add";
 let InputType = "imm";
-let isPredicable = 1;
 let isAdd = 1;
+let isPredicable = 1;
 let isExtendable = 1;
 let opExtendable = 2;
 let isExtentSigned = 1;
@@ -233,8 +233,8 @@ tc_5da50c4b, TypeALU64>, Enc_a56825 {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11010011000;
-let isCommutable = 1;
 let isAdd = 1;
+let isCommutable = 1;
 }
 def A2_addpsat : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -410,9 +410,9 @@ def A2_combineii : HInst<
 "$Rdd32 = combine(#$Ii,#$II)",
 tc_713b66bf, TypeALU32_2op>, Enc_18c338 {
 let Inst{31-23} = 0b011111000;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
 let isMoveImm = 1;
+let isReMaterializable = 1;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -1533,9 +1533,9 @@ def A2_tfrpi : HInst<
 (ins s8_0Imm:$Ii),
 "$Rdd32 = #$Ii",
 tc_713b66bf, TypeALU64> {
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
 let isMoveImm = 1;
+let isReMaterializable = 1;
 let isPseudo = 1;
 }
 def A2_tfrpt : HInst<
@@ -1579,10 +1579,10 @@ let opNewValue = 0;
 let BaseOpcode = "A2_tfrsi";
 let CextOpcode = "A2_tfr";
 let InputType = "imm";
-let isPredicable = 1;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
 let isMoveImm = 1;
+let isPredicable = 1;
+let isReMaterializable = 1;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -4892,8 +4892,8 @@ let cofMax1 = 1;
 let Uses = [R29];
 let Defs = [PC, R31];
 let BaseOpcode = "J2_call";
-let isPredicable = 1;
 let hasSideEffects = 1;
+let isPredicable = 1;
 let isExtendable = 1;
 let opExtendable = 0;
 let isExtentSigned = 1;
@@ -10131,6 +10131,18 @@ let isExtentSigned = 0;
 let opExtentBits = 17;
 let opExtentAlign = 1;
 }
+def L2_loadw_aq : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = memw_aq($Rs32)",
+tc_2471c1c8, TypeLD>, Enc_5e2823, Requires<[HasV68]> {
+let Inst{13-5} = 0b001000000;
+let Inst{31-21} = 0b10010010000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+}
 def L2_loadw_locked : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
@@ -12021,6 +12033,16 @@ let opExtendable = 3;
 let isExtentSigned = 0;
 let opExtentBits = 6;
 let opExtentAlign = 0;
+}
+def L4_loadd_aq : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins IntRegs:$Rs32),
+"$Rdd32 = memd_aq($Rs32)",
+tc_2471c1c8, TypeLD>, Enc_3a3d62, Requires<[HasV68]> {
+let Inst{13-5} = 0b011000000;
+let Inst{31-21} = 0b10010010000;
+let accessSize = DoubleWordAccess;
+let mayLoad = 1;
 }
 def L4_loadd_locked : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -18015,8 +18037,8 @@ let isExtended = 1;
 let mayStore = 1;
 let BaseOpcode = "S2_storerbabs";
 let CextOpcode = "S2_storerb";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let DecoderNamespace = "MustExtend";
 let isExtended = 1;
 let opExtendable = 0;
@@ -18105,8 +18127,8 @@ let isExtended = 1;
 let mayStore = 1;
 let BaseOpcode = "S2_storerhabs";
 let CextOpcode = "S2_storerh";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let DecoderNamespace = "MustExtend";
 let isExtended = 1;
 let opExtendable = 0;
@@ -18153,8 +18175,8 @@ let isExtended = 1;
 let mayStore = 1;
 let BaseOpcode = "S2_storeriabs";
 let CextOpcode = "S2_storeri";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let DecoderNamespace = "MustExtend";
 let isExtended = 1;
 let opExtendable = 0;
@@ -18197,7 +18219,28 @@ let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0101010010000000;
+}
+def R6_release_at_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"release($Rs32):at",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68]> {
+let Inst{7-2} = 0b000011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000111;
 let isSolo = 1;
+let mayStore = 1;
+}
+def R6_release_st_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"release($Rs32):st",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68]> {
+let Inst{7-2} = 0b001011;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000111;
+let isSolo = 1;
+let mayStore = 1;
 }
 def S2_addasl_rrri : HInst<
 (outs IntRegs:$Rd32),
@@ -20856,8 +20899,8 @@ let mayStore = 1;
 let BaseOpcode = "S2_storerb_io";
 let CextOpcode = "S2_storerb";
 let InputType = "imm";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -20923,8 +20966,8 @@ let accessSize = ByteAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storerb_pi";
 let CextOpcode = "S2_storerb";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerb_pr : HInst<
@@ -20960,8 +21003,8 @@ let accessSize = ByteAccess;
 let mayStore = 1;
 let Uses = [GP];
 let BaseOpcode = "S2_storerbabs";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let opExtendable = 0;
 let isExtentSigned = 0;
 let opExtentBits = 16;
@@ -21065,8 +21108,8 @@ let isNewValue = 1;
 let isRestrictNoSlot1Store = 1;
 let mayStore = 1;
 let BaseOpcode = "S2_storerb_pi";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let opNewValue = 3;
 let Constraints = "$Rx32 = $Rx32in";
 }
@@ -21358,8 +21401,8 @@ let mayStore = 1;
 let BaseOpcode = "S2_storerh_io";
 let CextOpcode = "S2_storerh";
 let InputType = "imm";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -21425,8 +21468,8 @@ let accessSize = HalfWordAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storerh_pi";
 let CextOpcode = "S2_storerh";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storerh_pr : HInst<
@@ -21462,8 +21505,8 @@ let accessSize = HalfWordAccess;
 let mayStore = 1;
 let Uses = [GP];
 let BaseOpcode = "S2_storerhabs";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let opExtendable = 0;
 let isExtentSigned = 0;
 let opExtentBits = 17;
@@ -21634,8 +21677,8 @@ let mayStore = 1;
 let BaseOpcode = "S2_storeri_io";
 let CextOpcode = "S2_storeri";
 let InputType = "imm";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let isExtendable = 1;
 let opExtendable = 1;
 let isExtentSigned = 1;
@@ -21701,8 +21744,8 @@ let accessSize = WordAccess;
 let mayStore = 1;
 let BaseOpcode = "S2_storeri_pi";
 let CextOpcode = "S2_storeri";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
 def S2_storeri_pr : HInst<
@@ -21738,8 +21781,8 @@ let accessSize = WordAccess;
 let mayStore = 1;
 let Uses = [GP];
 let BaseOpcode = "S2_storeriabs";
-let isPredicable = 1;
 let isNVStorable = 1;
+let isPredicable = 1;
 let opExtendable = 0;
 let isExtentSigned = 0;
 let opExtentBits = 18;
@@ -21907,6 +21950,30 @@ let Inst{31-21} = 0b10100000101;
 let accessSize = WordAccess;
 let isPredicateLate = 1;
 let isSoloAX = 1;
+let mayStore = 1;
+}
+def S2_storew_rl_at_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"memw_rl($Rs32):at = $Rt32",
+tc_7af3a37e, TypeST>, Enc_ca3887, Requires<[HasV68]> {
+let Inst{7-2} = 0b000010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000101;
+let accessSize = WordAccess;
+let isSolo = 1;
+let mayStore = 1;
+}
+def S2_storew_rl_st_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"memw_rl($Rs32):st = $Rt32",
+tc_7af3a37e, TypeST>, Enc_ca3887, Requires<[HasV68]> {
+let Inst{7-2} = 0b001010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000101;
+let accessSize = WordAccess;
+let isSolo = 1;
 let mayStore = 1;
 }
 def S2_svsathb : HInst<
@@ -22218,8 +22285,8 @@ let Inst{13-5} = 0b000000111;
 let Inst{31-21} = 0b10001100010;
 let hasNewValue = 1;
 let opNewValue = 0;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S2_vsplatrh : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -22228,8 +22295,8 @@ def S2_vsplatrh : HInst<
 tc_9f6cd987, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100010;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S2_vspliceib : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -22255,8 +22322,8 @@ def S2_vsxtbh : HInst<
 tc_9f6cd987, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b10000100000;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S2_vsxthw : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -22265,8 +22332,8 @@ def S2_vsxthw : HInst<
 tc_9f6cd987, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000100;
 let Inst{31-21} = 0b10000100000;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S2_vtrunehb : HInst<
 (outs IntRegs:$Rd32),
@@ -22313,8 +22380,8 @@ def S2_vzxtbh : HInst<
 tc_9f6cd987, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000010;
 let Inst{31-21} = 0b10000100000;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S2_vzxthw : HInst<
 (outs DoubleRegs:$Rdd32),
@@ -22323,8 +22390,8 @@ def S2_vzxthw : HInst<
 tc_9f6cd987, TypeS_2op>, Enc_3a3d62 {
 let Inst{13-5} = 0b000000110;
 let Inst{31-21} = 0b10000100000;
-let isReMaterializable = 1;
 let isAsCheapAsAMove = 1;
+let isReMaterializable = 1;
 }
 def S4_addaddi : HInst<
 (outs IntRegs:$Rd32),
@@ -24521,6 +24588,30 @@ let isPredicateLate = 1;
 let isSoloAX = 1;
 let mayStore = 1;
 }
+def S4_stored_rl_at_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
+"memd_rl($Rs32):at = $Rtt32",
+tc_7af3a37e, TypeST>, Enc_e6abcf, Requires<[HasV68]> {
+let Inst{7-2} = 0b000010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000111;
+let accessSize = DoubleWordAccess;
+let isSolo = 1;
+let mayStore = 1;
+}
+def S4_stored_rl_st_vi : HInst<
+(outs),
+(ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
+"memd_rl($Rs32):st = $Rtt32",
+tc_7af3a37e, TypeST>, Enc_e6abcf, Requires<[HasV68]> {
+let Inst{7-2} = 0b001010;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100000111;
+let accessSize = DoubleWordAccess;
+let isSolo = 1;
+let mayStore = 1;
+}
 def S4_storeirb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
@@ -25800,7 +25891,7 @@ let Inst{31-21} = 0b11000001100;
 }
 def SA1_addi : HInst<
 (outs GeneralSubRegs:$Rx16),
-(ins IntRegs:$Rx16in, s32_0Imm:$Ii),
+(ins GeneralSubRegs:$Rx16in, s32_0Imm:$Ii),
 "$Rx16 = add($Rx16in,#$Ii)",
 tc_5b347363, TypeSUBINSN>, Enc_93af4c {
 let Inst{12-11} = 0b00;
@@ -25817,7 +25908,7 @@ let Constraints = "$Rx16 = $Rx16in";
 }
 def SA1_addrx : HInst<
 (outs GeneralSubRegs:$Rx16),
-(ins IntRegs:$Rx16in, GeneralSubRegs:$Rs16),
+(ins GeneralSubRegs:$Rx16in, GeneralSubRegs:$Rs16),
 "$Rx16 = add($Rx16in,$Rs16)",
 tc_5b347363, TypeSUBINSN>, Enc_0527db {
 let Inst{12-8} = 0b11000;
@@ -27221,6 +27312,86 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_v6mpyhubs10 : HInst<
+(outs HvxWR:$Vdd32),
+(ins HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vdd32.w = v6mpy($Vuu32.ub,$Vvv32.b,#$Ii):h",
+tc_2b4c548e, TypeCVI_VX_DV>, Enc_b91167, Requires<[UseHVXV68]> {
+let Inst{7-7} = 0b1;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_v6mpyhubs10_alt : HInst<
+(outs HvxWR:$Vdd32),
+(ins HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vdd32.w = v6mpy($Vuu32.ub,$Vvv32.b10,#$Ii):h",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV68]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_v6mpyhubs10_vxx : HInst<
+(outs HvxWR:$Vxx32),
+(ins HvxWR:$Vxx32in, HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vxx32.w += v6mpy($Vuu32.ub,$Vvv32.b,#$Ii):h",
+tc_bb599486, TypeCVI_VX_DV>, Enc_f4f57b, Requires<[UseHVXV68]> {
+let Inst{7-7} = 0b1;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
+def V6_v6mpyvubs10 : HInst<
+(outs HvxWR:$Vdd32),
+(ins HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vdd32.w = v6mpy($Vuu32.ub,$Vvv32.b,#$Ii):v",
+tc_2b4c548e, TypeCVI_VX_DV>, Enc_b91167, Requires<[UseHVXV68]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111010;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_v6mpyvubs10_alt : HInst<
+(outs HvxWR:$Vdd32),
+(ins HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vdd32.w = v6mpy($Vuu32.ub,$Vvv32.b10,#$Ii):v",
+PSEUDO, TypeMAPPING>, Requires<[UseHVXV68]> {
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let isPseudo = 1;
+let isCodeGenOnly = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_v6mpyvubs10_vxx : HInst<
+(outs HvxWR:$Vxx32),
+(ins HvxWR:$Vxx32in, HvxWR:$Vuu32, HvxWR:$Vvv32, u2_0Imm:$Ii),
+"$Vxx32.w += v6mpy($Vuu32.ub,$Vvv32.b,#$Ii):v",
+tc_bb599486, TypeCVI_VX_DV>, Enc_f4f57b, Requires<[UseHVXV68]> {
+let Inst{7-7} = 0b0;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011111001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isAccumulator = 1;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+let Constraints = "$Vxx32 = $Vxx32in";
+}
 def V6_vL32Ub_ai : HInst<
 (outs HvxVR:$Vd32),
 (ins IntRegs:$Rt32, s4_0Imm:$Ii),
@@ -27966,6 +28137,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -27988,6 +28160,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28010,6 +28183,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28032,6 +28206,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28053,6 +28228,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28074,6 +28250,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28096,6 +28273,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28117,6 +28295,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28138,6 +28317,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isNonTemporal = 1;
 let isRestrictNoSlot1Store = 1;
@@ -28262,6 +28442,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -28283,6 +28464,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -28304,6 +28486,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -28325,6 +28508,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -28345,6 +28529,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -28365,6 +28550,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -28386,6 +28572,7 @@ let addrMode = BaseImmOffset;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ai";
@@ -28406,6 +28593,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_pi";
@@ -28426,6 +28614,7 @@ let addrMode = PostInc;
 let accessSize = HVXVectorAccess;
 let isCVLoad = 1;
 let isCVI = 1;
+let hasTmpDst = 1;
 let mayLoad = 1;
 let isRestrictNoSlot1Store = 1;
 let BaseOpcode = "V6_vL32b_tmp_ppu";
@@ -32646,7 +32835,7 @@ def V6_vgathermh : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "vtmp.h = vgather($Rt32,$Mu2,$Vv32.h).h",
-tc_e8797b98, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
+tc_a28f32b5, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00001000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -32663,7 +32852,7 @@ def V6_vgathermhq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "if ($Qs4) vtmp.h = vgather($Rt32,$Mu2,$Vv32.h).h",
-tc_05ac6f98, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
+tc_7d68d5c2, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001010;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -32680,7 +32869,7 @@ def V6_vgathermhw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32),
 "vtmp.h = vgather($Rt32,$Mu2,$Vvv32.w).h",
-tc_05058f6f, TypeCVI_GATHER_DV>, Enc_28dcbb, Requires<[UseHVXV65]> {
+tc_7095ecba, TypeCVI_GATHER_DV>, Enc_28dcbb, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00010000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -32697,7 +32886,7 @@ def V6_vgathermhwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxWR:$Vvv32),
 "if ($Qs4) vtmp.h = vgather($Rt32,$Mu2,$Vvv32.w).h",
-tc_fd7610da, TypeCVI_GATHER_DV>, Enc_4e4a80, Requires<[UseHVXV65]> {
+tc_a69eeee1, TypeCVI_GATHER_DV>, Enc_4e4a80, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001100;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -32714,7 +32903,7 @@ def V6_vgathermw : HInst<
 (outs),
 (ins IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "vtmp.w = vgather($Rt32,$Mu2,$Vv32.w).w",
-tc_e8797b98, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
+tc_a28f32b5, TypeCVI_GATHER>, Enc_8b8927, Requires<[UseHVXV65]> {
 let Inst{12-5} = 0b00000000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -32731,7 +32920,7 @@ def V6_vgathermwq : HInst<
 (outs),
 (ins HvxQR:$Qs4, IntRegs:$Rt32, ModRegs:$Mu2, HvxVR:$Vv32),
 "if ($Qs4) vtmp.w = vgather($Rt32,$Mu2,$Vv32.w).w",
-tc_05ac6f98, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
+tc_7d68d5c2, TypeCVI_GATHER>, Enc_158beb, Requires<[UseHVXV65]> {
 let Inst{12-7} = 0b001000;
 let Inst{31-21} = 0b00101111000;
 let hasNewValue = 1;
@@ -36155,7 +36344,7 @@ let Constraints = "$Vyyyy32 = $Vyyyy32in";
 }
 def V6_vrmpyzbb_rx : HInst<
 (outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
-(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vdddd32.w = vrmpyz($Vu32.b,$Rx8.b++)",
 tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b000;
@@ -36169,7 +36358,7 @@ let Constraints = "$Rx8 = $Rx8in";
 }
 def V6_vrmpyzbb_rx_acc : HInst<
 (outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
-(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vyyyy32.w += vrmpyz($Vu32.b,$Rx8.b++)",
 tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b010;
@@ -36212,7 +36401,7 @@ let Constraints = "$Vyyyy32 = $Vyyyy32in";
 }
 def V6_vrmpyzbub_rx : HInst<
 (outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
-(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vdddd32.w = vrmpyz($Vu32.b,$Rx8.ub++)",
 tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b010;
@@ -36226,7 +36415,7 @@ let Constraints = "$Rx8 = $Rx8in";
 }
 def V6_vrmpyzbub_rx_acc : HInst<
 (outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
-(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vyyyy32.w += vrmpyz($Vu32.b,$Rx8.ub++)",
 tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b001;
@@ -36269,7 +36458,7 @@ let Constraints = "$Vyyyy32 = $Vyyyy32in";
 }
 def V6_vrmpyzcb_rx : HInst<
 (outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
-(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vdddd32.w = vr16mpyz($Vu32.c,$Rx8.b++)",
 tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b001;
@@ -36283,7 +36472,7 @@ let Constraints = "$Rx8 = $Rx8in";
 }
 def V6_vrmpyzcb_rx_acc : HInst<
 (outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
-(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vyyyy32.w += vr16mpyz($Vu32.c,$Rx8.b++)",
 tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b011;
@@ -36326,7 +36515,7 @@ let Constraints = "$Vyyyy32 = $Vyyyy32in";
 }
 def V6_vrmpyzcbs_rx : HInst<
 (outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
-(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vdddd32.w = vr16mpyzs($Vu32.c,$Rx8.b++)",
 tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b010;
@@ -36340,7 +36529,7 @@ let Constraints = "$Rx8 = $Rx8in";
 }
 def V6_vrmpyzcbs_rx_acc : HInst<
 (outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
-(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vyyyy32.w += vr16mpyzs($Vu32.c,$Rx8.b++)",
 tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b001;
@@ -36383,7 +36572,7 @@ let Constraints = "$Vyyyy32 = $Vyyyy32in";
 }
 def V6_vrmpyznb_rx : HInst<
 (outs HvxVQR:$Vdddd32, IntRegsLow8:$Rx8),
-(ins HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vdddd32.w = vr8mpyz($Vu32.n,$Rx8.b++)",
 tc_26a377fe, TypeCVI_4SLOT_MPY>, Enc_3b7631, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b000;
@@ -36397,7 +36586,7 @@ let Constraints = "$Rx8 = $Rx8in";
 }
 def V6_vrmpyznb_rx_acc : HInst<
 (outs HvxVQR:$Vyyyy32, IntRegsLow8:$Rx8),
-(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegs:$Rx8in),
+(ins HvxVQR:$Vyyyy32in, HvxVR:$Vu32, IntRegsLow8:$Rx8in),
 "$Vyyyy32.w += vr8mpyz($Vu32.n,$Rx8.b++)",
 tc_2d4051cd, TypeCVI_4SLOT_MPY>, Enc_bddee3, Requires<[UseHVXV66,UseZReg]> {
 let Inst{7-5} = 0b010;
@@ -38685,7 +38874,7 @@ def Y2_wait : HInst<
 (outs),
 (ins IntRegs:$Rs32),
 "wait($Rs32)",
-tc_d7718fbe, TypeCR>, Enc_ecbcc8 {
+tc_2c3e17fc, TypeCR>, Enc_ecbcc8, Requires<[HasV65]> {
 let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01100100010;
 let isSolo = 1;
@@ -38699,8 +38888,8 @@ let Inst{7-0} = 0b00000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100110000;
 let isSoloAX = 1;
-let mayStore = 1;
 let hasSideEffects = 1;
+let mayStore = 1;
 }
 def Y4_trace : HInst<
 (outs),
@@ -38720,8 +38909,8 @@ let Inst{7-0} = 0b00000000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b10100110100;
 let isSoloAX = 1;
-let mayStore = 1;
 let hasSideEffects = 1;
+let mayStore = 1;
 }
 def Y6_diag : HInst<
 (outs),
@@ -38748,6 +38937,74 @@ tc_28e55c6f, TypeCR>, Enc_b00112, Requires<[HasV67]> {
 let Inst{7-0} = 0b01100000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b01100010010;
+}
+def Y6_dmlink : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"dmlink($Rs32,$Rt32)",
+tc_7af3a37e, TypeST>, Enc_ca3887, Requires<[HasV68]> {
+let Inst{7-0} = 0b01000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100110000;
+let hasSideEffects = 1;
+let isSolo = 1;
+let mayStore = 1;
+}
+def Y6_dmpause : HInst<
+(outs IntRegs:$Rd32),
+(ins),
+"$Rd32 = dmpause",
+tc_4bf903b0, TypeST>, Enc_a4ef14, Requires<[HasV68]> {
+let Inst{13-5} = 0b000000011;
+let Inst{31-16} = 0b1010100000000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_dmpoll : HInst<
+(outs IntRegs:$Rd32),
+(ins),
+"$Rd32 = dmpoll",
+tc_4bf903b0, TypeST>, Enc_a4ef14, Requires<[HasV68]> {
+let Inst{13-5} = 0b000000010;
+let Inst{31-16} = 0b1010100000000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_dmresume : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dmresume($Rs32)",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68]> {
+let Inst{13-0} = 0b00000010000000;
+let Inst{31-21} = 0b10100110000;
+let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_dmstart : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dmstart($Rs32)",
+tc_db96aa6b, TypeST>, Enc_ecbcc8, Requires<[HasV68]> {
+let Inst{13-0} = 0b00000000100000;
+let Inst{31-21} = 0b10100110000;
+let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_dmwait : HInst<
+(outs IntRegs:$Rd32),
+(ins),
+"$Rd32 = dmwait",
+tc_4bf903b0, TypeST>, Enc_a4ef14, Requires<[HasV68]> {
+let Inst{13-5} = 0b000000001;
+let Inst{31-16} = 0b1010100000000000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let hasSideEffects = 1;
+let isSolo = 1;
 }
 def dep_A2_addsat : HInst<
 (outs IntRegs:$Rd32),
@@ -38788,7 +39045,7 @@ def dup_A2_add : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add($Rs32,$Rt32)",
-tc_388f9897, TypeALU32_3op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_3op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38798,7 +39055,7 @@ def dup_A2_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = add($Rs32,#$Ii)",
-tc_388f9897, TypeALU32_ADDI>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_ADDI>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38813,7 +39070,7 @@ def dup_A2_andir : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = and($Rs32,#$Ii)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38828,7 +39085,7 @@ def dup_A2_combineii : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s32_0Imm:$Ii, s8_0Imm:$II),
 "$Rdd32 = combine(#$Ii,#$II)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let AsmVariantName = "NonParsable";
 let isPseudo = 1;
 let isExtendable = 1;
@@ -38841,7 +39098,7 @@ def dup_A2_sxtb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sxtb($Rs32)",
-tc_9124c04f, TypeALU32_2op>, Requires<[HasV67]> {
+tc_9124c04f, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38851,7 +39108,7 @@ def dup_A2_sxth : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = sxth($Rs32)",
-tc_9124c04f, TypeALU32_2op>, Requires<[HasV67]> {
+tc_9124c04f, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38861,7 +39118,7 @@ def dup_A2_tfr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = $Rs32",
-tc_9124c04f, TypeALU32_2op>, Requires<[HasV67]> {
+tc_9124c04f, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38871,7 +39128,7 @@ def dup_A2_tfrsi : HInst<
 (outs IntRegs:$Rd32),
 (ins s32_0Imm:$Ii),
 "$Rd32 = #$Ii",
-tc_9124c04f, TypeALU32_2op>, Requires<[HasV67]> {
+tc_9124c04f, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38886,7 +39143,7 @@ def dup_A2_zxtb : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = zxtb($Rs32)",
-PSEUDO, TypeMAPPING>, Requires<[HasV67]> {
+PSEUDO, TypeMAPPING>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38896,7 +39153,7 @@ def dup_A2_zxth : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32),
 "$Rd32 = zxth($Rs32)",
-tc_9124c04f, TypeALU32_2op>, Requires<[HasV67]> {
+tc_9124c04f, TypeALU32_2op>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let AsmVariantName = "NonParsable";
@@ -38906,7 +39163,7 @@ def dup_A4_combineii : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s8_0Imm:$Ii, u32_0Imm:$II),
 "$Rdd32 = combine(#$Ii,#$II)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let AsmVariantName = "NonParsable";
 let isPseudo = 1;
 let isExtendable = 1;
@@ -38919,7 +39176,7 @@ def dup_A4_combineir : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins s32_0Imm:$Ii, IntRegs:$Rs32),
 "$Rdd32 = combine(#$Ii,$Rs32)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let AsmVariantName = "NonParsable";
 let isPseudo = 1;
 let isExtendable = 1;
@@ -38932,7 +39189,7 @@ def dup_A4_combineri : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rdd32 = combine($Rs32,#$Ii)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let AsmVariantName = "NonParsable";
 let isPseudo = 1;
 let isExtendable = 1;
@@ -38945,7 +39202,7 @@ def dup_C2_cmoveif : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if (!$Pu4) $Rd32 = #$Ii",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let hasNewValue = 1;
@@ -38962,7 +39219,7 @@ def dup_C2_cmoveit : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if ($Pu4) $Rd32 = #$Ii",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -38978,7 +39235,7 @@ def dup_C2_cmovenewif : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if (!$Pu4.new) $Rd32 = #$Ii",
-tc_4ac61d92, TypeALU32_2op>, Requires<[HasV67]> {
+tc_4ac61d92, TypeALU32_2op>, Requires<[HasV68]> {
 let isPredicated = 1;
 let isPredicatedFalse = 1;
 let hasNewValue = 1;
@@ -38996,7 +39253,7 @@ def dup_C2_cmovenewit : HInst<
 (outs IntRegs:$Rd32),
 (ins PredRegs:$Pu4, s32_0Imm:$Ii),
 "if ($Pu4.new) $Rd32 = #$Ii",
-tc_4ac61d92, TypeALU32_2op>, Requires<[HasV67]> {
+tc_4ac61d92, TypeALU32_2op>, Requires<[HasV68]> {
 let isPredicated = 1;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -39013,7 +39270,7 @@ def dup_C2_cmpeqi : HInst<
 (outs PredRegs:$Pd4),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Pd4 = cmp.eq($Rs32,#$Ii)",
-tc_388f9897, TypeALU32_2op>, Requires<[HasV67]> {
+tc_388f9897, TypeALU32_2op>, Requires<[HasV68]> {
 let AsmVariantName = "NonParsable";
 let isPseudo = 1;
 let isExtendable = 1;
@@ -39026,7 +39283,7 @@ def dup_L2_deallocframe : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32),
 "$Rdd32 = deallocframe($Rs32):raw",
-tc_aee6250c, TypeLD>, Requires<[HasV67]> {
+tc_aee6250c, TypeLD>, Requires<[HasV68]> {
 let accessSize = DoubleWordAccess;
 let AsmVariantName = "NonParsable";
 let mayLoad = 1;
@@ -39038,7 +39295,7 @@ def dup_L2_loadrb_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = memb($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39056,7 +39313,7 @@ def dup_L2_loadrd_io : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins IntRegs:$Rs32, s29_3Imm:$Ii),
 "$Rdd32 = memd($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = DoubleWordAccess;
 let AsmVariantName = "NonParsable";
@@ -39072,7 +39329,7 @@ def dup_L2_loadrh_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = memh($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39090,7 +39347,7 @@ def dup_L2_loadri_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii),
 "$Rd32 = memw($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39108,7 +39365,7 @@ def dup_L2_loadrub_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii),
 "$Rd32 = memub($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39126,7 +39383,7 @@ def dup_L2_loadruh_io : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii),
 "$Rd32 = memuh($Rs32+#$Ii)",
-tc_eed07714, TypeLD>, Requires<[HasV67]> {
+tc_eed07714, TypeLD>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39144,7 +39401,7 @@ def dup_S2_allocframe : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u11_3Imm:$Ii),
 "allocframe($Rx32,#$Ii):raw",
-tc_74a42bda, TypeST>, Requires<[HasV67]> {
+tc_74a42bda, TypeST>, Requires<[HasV68]> {
 let hasNewValue = 1;
 let opNewValue = 0;
 let addrMode = BaseImmOffset;
@@ -39160,7 +39417,7 @@ def dup_S2_storerb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii, IntRegs:$Rt32),
 "memb($Rs32+#$Ii) = $Rt32",
-tc_a9edeffa, TypeST>, Requires<[HasV67]> {
+tc_a9edeffa, TypeST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
 let AsmVariantName = "NonParsable";
@@ -39176,7 +39433,7 @@ def dup_S2_storerd_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s29_3Imm:$Ii, DoubleRegs:$Rtt32),
 "memd($Rs32+#$Ii) = $Rtt32",
-tc_a9edeffa, TypeST>, Requires<[HasV67]> {
+tc_a9edeffa, TypeST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = DoubleWordAccess;
 let AsmVariantName = "NonParsable";
@@ -39192,7 +39449,7 @@ def dup_S2_storerh_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s31_1Imm:$Ii, IntRegs:$Rt32),
 "memh($Rs32+#$Ii) = $Rt32",
-tc_a9edeffa, TypeST>, Requires<[HasV67]> {
+tc_a9edeffa, TypeST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = HalfWordAccess;
 let AsmVariantName = "NonParsable";
@@ -39208,7 +39465,7 @@ def dup_S2_storeri_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, s30_2Imm:$Ii, IntRegs:$Rt32),
 "memw($Rs32+#$Ii) = $Rt32",
-tc_a9edeffa, TypeST>, Requires<[HasV67]> {
+tc_a9edeffa, TypeST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
 let AsmVariantName = "NonParsable";
@@ -39224,7 +39481,7 @@ def dup_S4_storeirb_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_0Imm:$Ii, s32_0Imm:$II),
 "memb($Rs32+#$Ii) = #$II",
-tc_838c4d7a, TypeV4LDST>, Requires<[HasV67]> {
+tc_838c4d7a, TypeV4LDST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = ByteAccess;
 let AsmVariantName = "NonParsable";
@@ -39240,7 +39497,7 @@ def dup_S4_storeiri_io : HInst<
 (outs),
 (ins IntRegs:$Rs32, u6_2Imm:$Ii, s32_0Imm:$II),
 "memw($Rs32+#$Ii) = #$II",
-tc_838c4d7a, TypeV4LDST>, Requires<[HasV67]> {
+tc_838c4d7a, TypeV4LDST>, Requires<[HasV68]> {
 let addrMode = BaseImmOffset;
 let accessSize = WordAccess;
 let AsmVariantName = "NonParsable";

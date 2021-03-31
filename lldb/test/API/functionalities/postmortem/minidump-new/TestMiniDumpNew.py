@@ -110,7 +110,7 @@ class MiniDumpNewTestCase(TestBase):
             ci.HandleCommand(command, result, False)
             message = 'Ensure memory "%s" shows up in output for "%s"' % (
                 region_name, command)
-            self.assertTrue(region_name in result.GetOutput(), message)
+            self.assertIn(region_name, result.GetOutput(), message)
 
     def test_thread_info_in_minidump(self):
         """Test that lldb can read the thread information from the Minidump."""
@@ -122,7 +122,7 @@ class MiniDumpNewTestCase(TestBase):
         thread = self.process.GetThreadAtIndex(0)
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
         stop_description = thread.GetStopDescription(256)
-        self.assertTrue("SIGSEGV" in stop_description)
+        self.assertIn("SIGSEGV", stop_description)
 
     def test_stack_info_in_minidump(self):
         """Test that we can see a trivial stack in a breakpad-generated Minidump."""
@@ -333,7 +333,7 @@ class MiniDumpNewTestCase(TestBase):
             frame = thread.GetFrameAtIndex(index)
             self.assertTrue(frame.IsValid())
             function_name = frame.GetFunctionName()
-            self.assertTrue(name in function_name)
+            self.assertIn(name, function_name)
 
     @skipIfLLVMTargetMissing("X86")
     def test_deeper_stack_in_minidump(self):

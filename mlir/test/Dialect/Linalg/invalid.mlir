@@ -3,23 +3,7 @@
 func @load_number_of_indices(%v : memref<f32>) {
   // expected-error @+2 {{incorrect number of indices for load}}
   %c0 = constant 0 : index
-  load %v[%c0] : memref<f32>
-}
-
-// -----
-
-func @slice_number_of_indexings(%arg0: memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
-  // expected-error @+2 {{expected 2 indexings, got 1}}
-  %c0 = constant 0: index
-  %0 = linalg.slice %arg0[%c0] : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>, index, memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
-}
-
-// -----
-
-func @slice_rank_vs_range_indices(%arg0: memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
-  // expected-error @+2 {{op expected rank of the view(1) to be the number of ranges(0)}}
-  %c0 = constant 0: index
-  %0 = linalg.slice %arg0[%c0, %c0] : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>, index, index, memref<?xf32, affine_map<(i)[off]->(off + i)>>
+  memref.load %v[%c0] : memref<f32>
 }
 
 // -----
@@ -28,7 +12,7 @@ func @store_number_of_indices(%v : memref<f32>) {
   // expected-error @+3 {{store index operand count not equal to memref rank}}
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
-  store %f0, %v[%c0] : memref<f32>
+  memref.store %f0, %v[%c0] : memref<f32>
 }
 
 // -----
@@ -662,6 +646,28 @@ func @pad_block_args(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
 
 // -----
 
+func @pad_num_yields(%arg0: tensor<?x4xi32>, %arg1: i32) -> tensor<?x9xi32> {
+  // expected-error @+3 {{op expected single yield operand (got 2)}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: index, %arg3: index):  // no predecessors
+    linalg.yield %arg1, %arg1 : i32, i32
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
+func @pad_yield_type(%arg0: tensor<?x4xi32>, %arg1: i8) -> tensor<?x9xi32> {
+  // expected-error @+3 {{op expected yield type to match shape element type}}
+  %0 = linalg.pad_tensor %arg0 low[1, 2] high[2, 3] {
+  ^bb0(%arg2: index, %arg3: index):  // no predecessors
+    linalg.yield %arg1 : i8
+  } : tensor<?x4xi32> to tensor<?x9xi32>
+  return %0 : tensor<?x9xi32>
+}
+
+// -----
+
 func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
@@ -696,4 +702,24 @@ func @illegal_fill_tensor_with_memref_return
   // expected-error @+1 {{expected type of operand #0 ('tensor<?x?xf32>') to match type of corresponding result ('memref<?x?xf32>')}}
   %0 = linalg.fill(%arg0, %arg1) : tensor<?x?xf32>, f32 -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
+}
+
+// -----
+
+func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>, %arg2: memref<2x4xf32>) {
+  // expected-error @+1 {{inferred shaped operand #1 has shape's dimension #0 to be 4, but found 3}}
+  linalg.matmul ins(%arg0, %arg1 : memref<2x4xf32>, memref<3x4xf32>)
+                      outs(%arg2 :memref<2x4xf32>)
+  return
+}
+
+// -----
+
+func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2x1xf32>, %output: memref<1x2x3x1xf32>) {
+  // expected-error @+1 {{inferred shaped operand #0 has shape's dimension #1 to be greater than or equal to 4, but found 3}}
+  linalg.conv_2d_input_nhwc_filter_hwcf
+    { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
+    ins(%input, %filter : memref<1x3x4x2xf32>, memref<3x2x2x1xf32>)
+    outs(%output : memref<1x2x3x1xf32>)
+  return
 }

@@ -1,6 +1,4 @@
-; RUN: llc -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck %s
-target datalayout = "e-m:e-i64:64-n32:64"
-target triple = "powerpc64le-unknown-linux-gnu"
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 ; CHECK-NOT: {{vmrg[hl]w.*(3[23456789]|[456][0-9])}}
 define void @__f0() {

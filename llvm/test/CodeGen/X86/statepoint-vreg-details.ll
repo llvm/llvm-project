@@ -135,16 +135,15 @@ define void @test_deopt_gcpointer(i32 addrspace(1)* %a, i32 addrspace(1)* %b) gc
 ; CHECK-VREG-LABEL: name:            test_deopt_gcpointer
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
-; CHECK-VREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store 8 into %stack.0)
-; CHECK-VREG:    %2:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-VREG:    %2:gr64, %3:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, %0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    $rdi = COPY %2
 ; CHECK-VREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 ; CHECK-VREG:    RET 0
 
 ; CHECK-PREG-LABEL: name:            test_deopt_gcpointer
 ; CHECK-PREG:    renamable $rbx = COPY $rsi
-; CHECK-PREG:    MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rdi :: (store 8 into %stack.0)
-; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 1, killed renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store 8 on %stack.0)
+; CHECK-PREG:    renamable $r14 = COPY $rdi
+; CHECK-PREG:    renamable $rbx, dead renamable $r14 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 1, killed renamable $r14, 2, 2, killed renamable $rbx(tied-def 0), renamable $r14(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 

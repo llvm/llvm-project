@@ -48,23 +48,23 @@ void RedundantBranchConditionCheck::registerMatchers(MatchFinder *Finder) {
           .bind(CondVarStr);
   Finder->addMatcher(
       ifStmt(
-          hasCondition(ignoringParenImpCasts(anyOf(
+          hasCondition(anyOf(
               declRefExpr(hasDeclaration(ImmutableVar)).bind(OuterIfVar1Str),
-              binaryOperator(hasOperatorName("&&"),
-                             hasEitherOperand(ignoringParenImpCasts(
-                                 declRefExpr(hasDeclaration(ImmutableVar))
-                                     .bind(OuterIfVar2Str))))))),
+              binaryOperator(
+                  hasOperatorName("&&"),
+                  hasEitherOperand(declRefExpr(hasDeclaration(ImmutableVar))
+                                       .bind(OuterIfVar2Str))))),
           hasThen(hasDescendant(
-              ifStmt(hasCondition(ignoringParenImpCasts(
-                         anyOf(declRefExpr(hasDeclaration(varDecl(
-                                            equalsBoundNode(CondVarStr))))
-                                .bind(InnerIfVar1Str),
-                               binaryOperator(
-                                   hasAnyOperatorName("&&", "||"),
-                                   hasEitherOperand(ignoringParenImpCasts(
-                                       declRefExpr(hasDeclaration(varDecl(
+              ifStmt(hasCondition(anyOf(
+                         declRefExpr(hasDeclaration(
+                                         varDecl(equalsBoundNode(CondVarStr))))
+                             .bind(InnerIfVar1Str),
+                         binaryOperator(
+                             hasAnyOperatorName("&&", "||"),
+                             hasEitherOperand(
+                                 declRefExpr(hasDeclaration(varDecl(
                                                  equalsBoundNode(CondVarStr))))
-                                     .bind(InnerIfVar2Str))))))))
+                                     .bind(InnerIfVar2Str))))))
                   .bind(InnerIfStr))),
           forFunction(functionDecl().bind(FuncStr)))
           .bind(OuterIfStr),

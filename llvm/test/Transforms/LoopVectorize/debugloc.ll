@@ -14,8 +14,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:   add i64 %index, 2, !dbg ![[LOC]]
 ; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[LOC]]
 ; CHECK: middle.block
-; CHECK:   add <2 x i32> %{{.*}}, %rdx.shuf, !dbg ![[BR_LOC:[0-9]+]]
-; CHECK:   extractelement <2 x i32> %bin.rdx, i32 0, !dbg ![[BR_LOC]]
+; CHECK:   call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %{{.*}}), !dbg ![[BR_LOC:[0-9]+]]
 ; CHECK: for.body
 ; CHECK: br i1{{.*}}, label %for.body,{{.*}}, !dbg ![[BR_LOC]],
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,

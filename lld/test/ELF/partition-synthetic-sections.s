@@ -143,7 +143,7 @@
 // PART0: 0000000000000498     0 NOTYPE  LOCAL  HIDDEN    {{.*}} __part_index_end
 
 // PART-INDEX: Contents of section .dynstr:
-// PART-INDEX-NEXT: 03a8 00663100 66320070 30007061 72743100  .f1.f2.p0.part1.
+// PART-INDEX-NEXT: 03a8 00703000 66310066 32007061 72743100 .p0.f1.f2.part1.
 // PART-INDEX: Contents of section .rodata:
 //                       0x48c + 0xffffff26 = 0x3b2
 //                                0x490 + 0x3b70 = 0x4000

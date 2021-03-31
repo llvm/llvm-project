@@ -35,6 +35,7 @@ add_llvm_target(BPFCodeGen
   BTFDebug.cpp
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   CodeGen
   Core
@@ -46,6 +47,7 @@ add_llvm_target(BPFCodeGen
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   BPF

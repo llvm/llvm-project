@@ -115,7 +115,8 @@ public:
   ///
   /// \return
   ///     The number or arguments in this object.
-  size_t GetArgumentCount() const;
+  size_t GetArgumentCount() const { return m_entries.size(); }
+
   bool empty() const { return GetArgumentCount() == 0; }
 
   /// Gets the NULL terminated C string argument pointer for the argument at
@@ -252,9 +253,9 @@ public:
   ///     If the argument was originally quoted, put in the quote char here.
   void Unshift(llvm::StringRef arg_str, char quote_char = '\0');
 
-  // Clear the arguments.
-  //
-  // For re-setting or blanking out the list of arguments.
+  /// Clear the arguments.
+  ///
+  /// For re-setting or blanking out the list of arguments.
   void Clear();
 
   static lldb::Encoding
@@ -266,21 +267,20 @@ public:
   static std::string GetShellSafeArgument(const FileSpec &shell,
                                           llvm::StringRef unsafe_arg);
 
-  // EncodeEscapeSequences will change the textual representation of common
-  // escape sequences like "\n" (two characters) into a single '\n'. It does
-  // this for all of the supported escaped sequences and for the \0ooo (octal)
-  // and \xXX (hex). The resulting "dst" string will contain the character
-  // versions of all supported escape sequences. The common supported escape
-  // sequences are: "\a", "\b", "\f", "\n", "\r", "\t", "\v", "\'", "\"", "\\".
-
+  /// EncodeEscapeSequences will change the textual representation of common
+  /// escape sequences like "\n" (two characters) into a single '\n'. It does
+  /// this for all of the supported escaped sequences and for the \0ooo (octal)
+  /// and \xXX (hex). The resulting "dst" string will contain the character
+  /// versions of all supported escape sequences. The common supported escape
+  /// sequences are: "\a", "\b", "\f", "\n", "\r", "\t", "\v", "\'", "\"", "\\".
   static void EncodeEscapeSequences(const char *src, std::string &dst);
 
-  // ExpandEscapeSequences will change a string of possibly non-printable
-  // characters and expand them into text. So '\n' will turn into two
-  // characters like "\n" which is suitable for human reading. When a character
-  // is not printable and isn't one of the common in escape sequences listed in
-  // the help for EncodeEscapeSequences, then it will be encoded as octal.
-  // Printable characters are left alone.
+  /// ExpandEscapeSequences will change a string of possibly non-printable
+  /// characters and expand them into text. So '\n' will turn into two
+  /// characters like "\n" which is suitable for human reading. When a character
+  /// is not printable and isn't one of the common in escape sequences listed in
+  /// the help for EncodeEscapeSequences, then it will be encoded as octal.
+  /// Printable characters are left alone.
   static void ExpandEscapedCharacters(const char *src, std::string &dst);
 
   static std::string EscapeLLDBCommandArgument(const std::string &arg,
@@ -290,6 +290,10 @@ private:
   friend struct llvm::yaml::MappingTraits<Args>;
 
   std::vector<ArgEntry> m_entries;
+  /// The arguments as C strings with a trailing nullptr element.
+  ///
+  /// These strings are owned by the ArgEntry object in m_entries with the
+  /// same index.
   std::vector<char *> m_argv;
 };
 

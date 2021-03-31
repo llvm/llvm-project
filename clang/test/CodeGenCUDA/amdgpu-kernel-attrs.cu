@@ -39,7 +39,7 @@ __global__ void num_vgpr_64() {
 // NAMD-NOT: "amdgpu-num-vgpr"
 // NAMD-NOT: "amdgpu-num-sgpr"
 
-// DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,256"{{.*}}"uniform-work-group-size"="true"
+// DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"{{.*}}"uniform-work-group-size"="true"
 // MAX1024-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"
 // CHECK-DAG: attributes [[FLAT_WORK_GROUP_SIZE_32_64]] = {{.*}}"amdgpu-flat-work-group-size"="32,64"
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}}"amdgpu-waves-per-eu"="2"

@@ -162,6 +162,70 @@ struct __rebind_pointer {
 #endif
 };
 
+// to_address
+
+template <bool _UsePointerTraits> struct __to_address_helper;
+
+template <> struct __to_address_helper<true> {
+    template <class _Pointer>
+    using __return_type = decltype(pointer_traits<_Pointer>::to_address(_VSTD::declval<const _Pointer&>()));
+
+    template <class _Pointer>
+    _LIBCPP_CONSTEXPR
+    static __return_type<_Pointer>
+    __do_it(const _Pointer &__p) _NOEXCEPT { return pointer_traits<_Pointer>::to_address(__p); }
+};
+
+template <class _Pointer, bool _Dummy = true>
+using __choose_to_address = __to_address_helper<_IsValidExpansion<__to_address_helper<_Dummy>::template __return_type, _Pointer>::value>;
+
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+_Tp*
+__to_address(_Tp* __p) _NOEXCEPT
+{
+    static_assert(!is_function<_Tp>::value, "_Tp is a function type");
+    return __p;
+}
+
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+typename __choose_to_address<_Pointer>::template __return_type<_Pointer>
+__to_address(const _Pointer& __p) _NOEXCEPT
+{
+    return __choose_to_address<_Pointer>::__do_it(__p);
+}
+
+template <> struct __to_address_helper<false> {
+    template <class _Pointer>
+    using __return_type = typename pointer_traits<_Pointer>::element_type*;
+
+    template <class _Pointer>
+    _LIBCPP_CONSTEXPR
+    static __return_type<_Pointer>
+    __do_it(const _Pointer &__p) _NOEXCEPT { return _VSTD::__to_address(__p.operator->()); }
+};
+
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+_Tp*
+to_address(_Tp* __p) _NOEXCEPT
+{
+    static_assert(!is_function_v<_Tp>, "_Tp is a function type");
+    return __p;
+}
+
+template <class _Pointer>
+inline _LIBCPP_INLINE_VISIBILITY constexpr
+auto
+to_address(const _Pointer& __p) _NOEXCEPT
+{
+    return _VSTD::__to_address(__p);
+}
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

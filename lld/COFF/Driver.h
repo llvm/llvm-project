@@ -93,9 +93,9 @@ public:
 
   void enqueuePath(StringRef path, bool wholeArchive, bool lazy);
 
-private:
   std::unique_ptr<llvm::TarWriter> tar; // for /linkrepro
 
+private:
   // Searches a file from search paths.
   Optional<StringRef> findFile(StringRef filename);
   Optional<StringRef> findLib(StringRef filename);

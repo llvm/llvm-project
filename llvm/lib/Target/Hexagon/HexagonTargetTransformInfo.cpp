@@ -80,8 +80,10 @@ void HexagonTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
-bool HexagonTTIImpl::shouldFavorPostInc() const {
-  return true;
+TTI::AddressingModeKind
+HexagonTTIImpl::getPreferredAddressingMode(const Loop *L,
+                                           ScalarEvolution *SE) const {
+  return TTI::AMK_PostIndexed;
 }
 
 /// --- Vector TTI begin ---
@@ -96,16 +98,28 @@ unsigned HexagonTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   return useHVX() ? 2 : 1;
 }
 
-unsigned HexagonTTIImpl::getRegisterBitWidth(bool Vector) const {
-  return Vector ? getMinVectorRegisterBitWidth() : 32;
+TypeSize
+HexagonTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(32);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    return TypeSize::getFixed(getMinVectorRegisterBitWidth());
+  case TargetTransformInfo::RGK_ScalableVector:
+    return TypeSize::getScalable(0);
+  }
+
+  llvm_unreachable("Unsupported register kind");
 }
 
 unsigned HexagonTTIImpl::getMinVectorRegisterBitWidth() const {
   return useHVX() ? ST.getVectorLength()*8 : 32;
 }
 
-unsigned HexagonTTIImpl::getMinimumVF(unsigned ElemWidth) const {
-  return (8 * ST.getVectorLength()) / ElemWidth;
+ElementCount HexagonTTIImpl::getMinimumVF(unsigned ElemWidth,
+                                          bool IsScalable) const {
+  assert(!IsScalable && "Scalable VFs are not supported for Hexagon");
+  return ElementCount::getFixed((8 * ST.getVectorLength()) / ElemWidth);
 }
 
 unsigned HexagonTTIImpl::getScalarizationOverhead(VectorType *Ty,
@@ -114,9 +128,10 @@ unsigned HexagonTTIImpl::getScalarizationOverhead(VectorType *Ty,
   return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract);
 }
 
-unsigned HexagonTTIImpl::getOperandsScalarizationOverhead(
-      ArrayRef<const Value*> Args, unsigned VF) {
-  return BaseT::getOperandsScalarizationOverhead(Args, VF);
+unsigned
+HexagonTTIImpl::getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
+                                                 ArrayRef<Type *> Tys) {
+  return BaseT::getOperandsScalarizationOverhead(Args, Tys);
 }
 
 unsigned HexagonTTIImpl::getCallInstrCost(Function *F, Type *RetTy,
@@ -157,7 +172,9 @@ unsigned HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     VectorType *VecTy = cast<VectorType>(Src);
     unsigned VecWidth = VecTy->getPrimitiveSizeInBits().getFixedSize();
     if (useHVX() && ST.isTypeForHVX(VecTy)) {
-      unsigned RegWidth = getRegisterBitWidth(true);
+      unsigned RegWidth =
+          getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+              .getFixedSize();
       assert(RegWidth && "Non-zero vector register width expected");
       // Cost of HVX loads.
       if (VecWidth % RegWidth == 0)
@@ -202,7 +219,8 @@ unsigned HexagonTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 unsigned HexagonTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-      int Index, Type *SubTp) {
+                                        ArrayRef<int> Mask, int Index,
+                                        Type *SubTp) {
   return 1;
 }
 

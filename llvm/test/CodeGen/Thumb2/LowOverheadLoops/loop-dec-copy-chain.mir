@@ -260,6 +260,7 @@ body:             |
   ; CHECK:   renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r8 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r3 = nuw nsw t2ADDrs killed renamable $r4, killed renamable $r3, 19, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   dead $lr = tMOVr renamable $r3, 14 /* CC::al */, $noreg
   ; CHECK:   $r12 = tMOVr killed $r3, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r3, dead $cpsr = tMOVi8 0, 14 /* CC::al */, $noreg
   ; CHECK: bb.4.bb28:
@@ -272,7 +273,7 @@ body:             |
   ; CHECK:   renamable $r8 = nuw t2ADDri killed renamable $r8, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $r5, dead $cpsr = tEOR killed renamable $r5, killed renamable $r6, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r6 = tLDRr renamable $r0, $r3, 14 /* CC::al */, $noreg :: (load 4 from %ir.scevgep219)
-  ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 1, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   $r12 = tMOVr $lr, 14 /* CC::al */, $noreg
   ; CHECK:   renamable $r5 = nsw tADDhirr killed renamable $r5, killed renamable $r6, 14 /* CC::al */, $noreg
   ; CHECK:   tSTRr killed renamable $r5, renamable $r0, $r3, 14 /* CC::al */, $noreg :: (store 4 into %ir.scevgep219)

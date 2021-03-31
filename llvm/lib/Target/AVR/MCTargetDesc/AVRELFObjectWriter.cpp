@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AVRFixupKinds.h"
+#include "MCTargetDesc/AVRMCExpr.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/MC/MCAssembler.h"
@@ -72,6 +73,7 @@ unsigned AVRELFObjectWriter::getRelocType(MCContext &Ctx,
     case MCSymbolRefExpr::VK_None:
       return ELF::R_AVR_16;
     case MCSymbolRefExpr::VK_AVR_NONE:
+    case MCSymbolRefExpr::VK_AVR_PM:
       return ELF::R_AVR_16_PM;
     case MCSymbolRefExpr::VK_AVR_DIFF16:
       return ELF::R_AVR_DIFF16;

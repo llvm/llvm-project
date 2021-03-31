@@ -4,3 +4,7 @@
 int main() {
   return 0;
 }
+
+int efi_main() {
+  return 0;
+}

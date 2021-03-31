@@ -301,6 +301,14 @@ void Sema::ActOnPragmaClangSection(SourceLocation PragmaLoc, PragmaClangSectionA
     return;
   }
 
+  if (llvm::Error E =
+          Context.getTargetInfo().isValidSectionSpecifier(SecName)) {
+    Diag(PragmaLoc, diag::err_pragma_section_invalid_for_target)
+        << toString(std::move(E));
+    CSec->Valid = false;
+    return;
+  }
+
   if (UnifySection(SecName, SectionFlags, PragmaLoc))
     return;
 
@@ -1179,4 +1187,52 @@ void Sema::PopPragmaVisibility(bool IsNamespaceEnd, SourceLocation EndLoc) {
   // To simplify the implementation, never keep around an empty stack.
   if (Stack->empty())
     FreeVisContext();
+}
+
+template <typename Ty>
+static bool checkCommonAttributeFeatures(Sema& S, const Ty *Node,
+                                         const ParsedAttr& A) {
+  // Several attributes carry different semantics than the parsing requires, so
+  // those are opted out of the common argument checks.
+  //
+  // We also bail on unknown and ignored attributes because those are handled
+  // as part of the target-specific handling logic.
+  if (A.getKind() == ParsedAttr::UnknownAttribute)
+    return false;
+  // Check whether the attribute requires specific language extensions to be
+  // enabled.
+  if (!A.diagnoseLangOpts(S))
+    return true;
+  // Check whether the attribute appertains to the given subject.
+  if (!A.diagnoseAppertainsTo(S, Node))
+    return true;
+  // Check whether the attribute exists in the target architecture.
+  if (S.CheckAttrTarget(A))
+    return true;
+
+  if (A.hasCustomParsing())
+    return false;
+
+  if (A.getMinArgs() == A.getMaxArgs()) {
+    // If there are no optional arguments, then checking for the argument count
+    // is trivial.
+    if (!A.checkExactlyNumArgs(S, A.getMinArgs()))
+      return true;
+  } else {
+    // There are optional arguments, so checking is slightly more involved.
+    if (A.getMinArgs() && !A.checkAtLeastNumArgs(S, A.getMinArgs()))
+      return true;
+    else if (!A.hasVariadicArg() && A.getMaxArgs() &&
+             !A.checkAtMostNumArgs(S, A.getMaxArgs()))
+      return true;
+  }
+
+  return false;
+}
+
+bool Sema::checkCommonAttributeFeatures(const Decl *D, const ParsedAttr &A) {
+  return ::checkCommonAttributeFeatures(*this, D, A);
+}
+bool Sema::checkCommonAttributeFeatures(const Stmt *S, const ParsedAttr &A) {
+  return ::checkCommonAttributeFeatures(*this, S, A);
 }

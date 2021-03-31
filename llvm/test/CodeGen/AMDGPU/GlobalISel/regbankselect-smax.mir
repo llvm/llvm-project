@@ -13,8 +13,7 @@ body: |
     ; CHECK-LABEL: name: smax_s32_ss
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
+    ; CHECK: [[SMAX:%[0-9]+]]:sgpr(s32) = G_SMAX [[COPY]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_SMAX %0, %1
@@ -90,9 +89,8 @@ body: |
     ; CHECK-LABEL: name: smax_s32_ss_vgpr_use
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
-    ; CHECK: $vgpr0 = COPY [[SELECT]](s32)
+    ; CHECK: [[SMAX:%[0-9]+]]:sgpr(s32) = G_SMAX [[COPY]], [[COPY1]]
+    ; CHECK: $vgpr0 = COPY [[SMAX]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_SMAX %0, %1
@@ -114,9 +112,8 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
     ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s16)
     ; CHECK: [[SEXT1:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC1]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC %8(s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[SEXT]](s32), [[SEXT1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[SEXT]], [[SEXT1]]
+    ; CHECK: [[SMAX:%[0-9]+]]:sgpr(s32) = G_SMAX [[SEXT]], [[SEXT1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SMAX]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s16)
     ; CHECK: $sgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $sgpr0
@@ -144,9 +141,8 @@ body: |
     ; CHECK: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
     ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC]](s16)
     ; CHECK: [[SEXT1:%[0-9]+]]:sgpr(s32) = G_SEXT [[TRUNC1]](s16)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC %8(s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[SEXT]](s32), [[SEXT1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[SEXT]], [[SEXT1]]
+    ; CHECK: [[SMAX:%[0-9]+]]:sgpr(s32) = G_SMAX [[SEXT]], [[SEXT1]]
+    ; CHECK: [[TRUNC2:%[0-9]+]]:sgpr(s16) = G_TRUNC [[SMAX]](s32)
     ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC2]](s16)
     ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $sgpr0
@@ -178,11 +174,9 @@ body: |
     ; CHECK: [[SEXT_INREG1:%[0-9]+]]:sgpr(s32) = G_SEXT_INREG [[BITCAST1]], 16
     ; CHECK: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
     ; CHECK: [[ASHR1:%[0-9]+]]:sgpr(s32) = G_ASHR [[BITCAST1]], [[C1]](s32)
-    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[SEXT_INREG]](s32), [[SEXT_INREG1]]
-    ; CHECK: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s32), [[SEXT_INREG]], [[SEXT_INREG1]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(sgt), [[ASHR]](s32), [[ASHR1]]
-    ; CHECK: [[SELECT1:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP1]](s32), [[ASHR]], [[ASHR1]]
-    ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SELECT]](s32), [[SELECT1]](s32)
+    ; CHECK: [[SMAX:%[0-9]+]]:sgpr(s32) = G_SMAX [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK: [[SMAX1:%[0-9]+]]:sgpr(s32) = G_SMAX [[ASHR]], [[ASHR1]]
+    ; CHECK: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[SMAX]](s32), [[SMAX1]](s32)
     ; CHECK: $sgpr0 = COPY [[BUILD_VECTOR_TRUNC]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $sgpr1

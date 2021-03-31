@@ -410,9 +410,8 @@ bool SSAIfConv::findInsertionPoint() {
     if (!LiveRegUnits.empty()) {
       LLVM_DEBUG({
         dbgs() << "Would clobber";
-        for (SparseSet<unsigned>::const_iterator
-             i = LiveRegUnits.begin(), e = LiveRegUnits.end(); i != e; ++i)
-          dbgs() << ' ' << printRegUnit(*i, TRI);
+        for (unsigned LRU : LiveRegUnits)
+          dbgs() << ' ' << printRegUnit(LRU, TRI);
         dbgs() << " live before " << *I;
       });
       continue;

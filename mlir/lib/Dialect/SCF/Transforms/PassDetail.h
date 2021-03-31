@@ -18,6 +18,10 @@ void registerDialect(DialectRegistry &registry);
 
 class AffineDialect;
 
+namespace memref {
+class MemRefDialect;
+} // end namespace memref
+
 #define GEN_PASS_CLASSES
 #include "mlir/Dialect/SCF/Passes.h.inc"
 

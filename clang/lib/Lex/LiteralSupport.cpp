@@ -1628,16 +1628,28 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
 
     // Check for raw string
     if (ThisTokBuf[0] == 'R') {
+      if (ThisTokBuf[1] != '"') {
+        // The file may have come from PCH and then changed after loading the
+        // PCH; Fail gracefully.
+        return DiagnoseLexingError(StringToks[i].getLocation());
+      }
       ThisTokBuf += 2; // skip R"
 
+      // C++11 [lex.string]p2: A `d-char-sequence` shall consist of at most 16
+      // characters.
+      constexpr unsigned MaxRawStrDelimLen = 16;
+
       const char *Prefix = ThisTokBuf;
-      while (ThisTokBuf[0] != '(')
+      while (ThisTokBuf - Prefix < MaxRawStrDelimLen && ThisTokBuf[0] != '(')
         ++ThisTokBuf;
+      if (ThisTokBuf[0] != '(')
+        return DiagnoseLexingError(StringToks[i].getLocation());
       ++ThisTokBuf; // skip '('
 
       // Remove same number of characters from the end
       ThisTokEnd -= ThisTokBuf - Prefix;
-      assert(ThisTokEnd >= ThisTokBuf && "malformed raw string literal");
+      if (ThisTokEnd < ThisTokBuf)
+        return DiagnoseLexingError(StringToks[i].getLocation());
 
       // C++14 [lex.string]p4: A source-file new-line in a raw string literal
       // results in a new-line in the resulting execution string-literal.

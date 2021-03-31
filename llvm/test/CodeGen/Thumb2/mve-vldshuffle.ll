@@ -25,7 +25,6 @@ define void @arm_cmplx_mag_squared_f16(half* nocapture readonly %pSrc, half* noc
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #1
 ; CHECK-NEXT:    add.w lr, r5, r3, lsr #3
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    and r5, r2, #7
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -155,7 +154,6 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:    add.w r12, r1, r4, lsl #2
 ; CHECK-NEXT:    add.w lr, r5, r3, lsr #2
 ; CHECK-NEXT:    add.w r3, r0, r4, lsl #3
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    and r5, r2, #3
 ; CHECK-NEXT:  .LBB1_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -178,8 +176,7 @@ define void @arm_cmplx_mag_squared_f32(float* nocapture readonly %pSrc, float* n
 ; CHECK-NEXT:    adds r3, #8
 ; CHECK-NEXT:    vmul.f32 s0, s0, s0
 ; CHECK-NEXT:    vfma.f32 s0, s2, s2
-; CHECK-NEXT:    vstr s0, [r12]
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    vstmia r12!, {s0}
 ; CHECK-NEXT:    le lr, .LBB1_7
 ; CHECK-NEXT:  .LBB1_8: @ %while.end
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}

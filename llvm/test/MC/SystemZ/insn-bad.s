@@ -561,6 +561,65 @@
 	jnop	1
 	jnop	0x10000
 
+#CHECK: error: invalid instruction
+#CHECK: jlu     label
+#CHECK: error: invalid instruction
+#CHECK: jlne    label
+#CHECK: error: invalid instruction
+#CHECK: jlnh    label
+#CHECK: error: invalid instruction
+#CHECK: jll     label
+#CHECK: error: invalid instruction
+#CHECK: jlnl    label
+#CHECK: error: invalid instruction
+#CHECK: jlhe    label
+#CHECK: error: invalid instruction
+#CHECK: jlnhe   label
+#CHECK: error: invalid instruction
+#CHECK: jlle    label
+#CHECK: error: invalid instruction
+#CHECK: jlnle   label
+#CHECK: error: invalid instruction
+#CHECK: jlz     label
+#CHECK: error: invalid instruction
+#CHECK: jlnz    label
+#CHECK: error: invalid instruction
+#CHECK: jlp     label
+#CHECK: error: invalid instruction
+#CHECK: jlnp    label
+#CHECK: error: invalid instruction
+#CHECK: jlm     label
+#CHECK: error: invalid instruction
+#CHECK: jlnm    label
+#CHECK: error: invalid instruction
+#CHECK: jllh    label
+#CHECK: error: invalid instruction
+#CHECK: jllnlh  label
+#CHECK: error: invalid instruction
+#CHECK: jlo     label
+#CHECK: error: invalid instruction
+#CHECK: jlno    label
+
+	jlu	label
+	jlne	label
+	jlnh	label
+	jll	label
+	jlnl	label
+	jlhe	label
+	jlnhe	label
+	jlle	label
+	jlnle	label
+	jlz	label
+	jlnz	label
+	jlp	label
+	jlnp	label
+	jlm	label
+	jlnm	label
+	jllh	label
+	jllnlh	label
+	jlo	label
+	jlno	label
+
 #CHECK: error: invalid operand
 #CHECK: brc	foo, bar
 #CHECK: error: invalid operand
@@ -597,6 +656,11 @@
 	jgnop	-1
 	jgnop	1
 	jgnop	0x100000000
+
+
+#CHECK: error: invalid instruction
+#CHECK: jlnop	label
+	jlnop	label
 
 #CHECK: error: invalid operand
 #CHECK: brcl	foo, bar

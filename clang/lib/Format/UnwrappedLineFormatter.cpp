@@ -101,8 +101,13 @@ private:
     if (RootToken.isAccessSpecifier(false) ||
         RootToken.isObjCAccessSpecifier() ||
         (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-         RootToken.Next && RootToken.Next->is(tok::colon)))
-      return Style.AccessModifierOffset;
+         RootToken.Next && RootToken.Next->is(tok::colon))) {
+      // The AccessModifierOffset may be overriden by IndentAccessModifiers,
+      // in which case we take a negative value of the IndentWidth to simulate
+      // the upper indent level.
+      return Style.IndentAccessModifiers ? -Style.IndentWidth
+                                         : Style.AccessModifierOffset;
+    }
     return 0;
   }
 
@@ -1280,13 +1285,6 @@ void UnwrappedLineFormatter::formatFirstToken(
 
   if (Newlines)
     Indent = NewlineIndent;
-
-  // If in Whitemsmiths mode, indent start and end of blocks
-  if (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths) {
-    if (RootToken.isOneOf(tok::l_brace, tok::r_brace, tok::kw_case,
-                          tok::kw_default))
-      Indent += Style.IndentWidth;
-  }
 
   // Preprocessor directives get indented before the hash only if specified
   if (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&

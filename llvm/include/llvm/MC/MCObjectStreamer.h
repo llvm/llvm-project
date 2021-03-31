@@ -146,7 +146,9 @@ public:
                              unsigned Discriminator,
                              StringRef FileName) override;
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
-                                const MCSymbol *Label, unsigned PointerSize);
+                                const MCSymbol *Label,
+                                unsigned PointerSize) override;
+  void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                  const MCSymbol *Label);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,

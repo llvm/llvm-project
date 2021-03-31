@@ -1,0 +1,126 @@
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BCC8,BLS8,BLT8,BEQ8,BMI8,BNE8,BGE8,BCS8,BPL8
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BPL8,BGT8,BHI8,BVC8,BLE8,BVS8,BCC16,BLS16
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BLT16,BEQ16,BMI16,BNE16,BGE16,BCS16,BPL16
+# RUN: llc %s -mtriple=m68k -start-after=prologepilog -O0 -filetype=obj -o - \
+# RUN:   | extract-section .text \
+# RUN:   | FileCheck %s -check-prefixes=BGT16,BHI16,BVC16,BLE16,BVS16
+
+#------------------------------------------------------------------------------
+# MxScc branches if the condition is True
+#------------------------------------------------------------------------------
+
+--- # MxBcc8
+#               ---------------+---------------+-------------------------------
+#                F   E   D   C | B   A   9   8 | 7   6   5   4   3   2   1   0
+#               ---------------+---------------+-------------------------------
+#                0   1   1   0 |   CONDITION   |       8-BIT DISPLACEMENT
+#               ---------------+---------------+-------------------------------
+# BHI8:          0   1   1   0   0   0   1   0 . 0   0   0   0   0   0   0   1
+# BLS8:          0   1   1   0   0   0   1   1 . 0   0   1   0   1   0   1   0
+# BCC8-SAME:     0   1   1   0   0   1   0   0 . 0   0   0   0   0   0   0   1
+# BCS8-SAME:     0   1   1   0   0   1   0   1 . 0   0   0   0   0   0   0   1
+# BNE8-SAME:     0   1   1   0   0   1   1   0 . 0   0   0   0   0   0   0   1
+# BEQ8-SAME:     0   1   1   0   0   1   1   1 . 0   0   0   0   0   0   0   1
+# BVC8-SAME:     0   1   1   0   1   0   0   0 . 0   0   0   0   0   0   0   1
+# BVS8-SAME:     0   1   1   0   1   0   0   1 . 0   0   0   0   0   0   0   1
+# BPL8-SAME:     0   1   1   0   1   0   1   0 . 0   0   0   0   0   0   0   1
+# BMI8-SAME:     0   1   1   0   1   0   1   1 . 0   0   0   0   0   0   0   1
+# BGE8-SAME:     0   1   1   0   1   1   0   0 . 0   0   0   0   0   0   0   1
+# BLT8-SAME:     0   1   1   0   1   1   0   1 . 0   0   0   0   0   0   0   1
+# BGT8-SAME:     0   1   1   0   1   1   1   0 . 0   0   0   0   0   0   0   1
+# BLE8-SAME:     0   1   1   0   1   1   1   1 . 0   0   0   0   0   0   0   1
+#
+# NOTE MxBCC8 branches cannot encode 0 displacement, 0 in displacement instructs
+# to use additional word. Also it cannot encode -1 since all 1s instruct to use
+# two additional words to encode 32bit offset(since M68020).
+name: MxBcc8
+body: |
+  bb.0:
+      Bhi8  1, implicit $ccr
+      Bls8 42, implicit $ccr
+      Bcc8  1, implicit $ccr
+      Bcs8  1, implicit $ccr
+      Bne8  1, implicit $ccr
+      Beq8  1, implicit $ccr
+      Bvc8  1, implicit $ccr
+      Bvs8  1, implicit $ccr
+      Bpl8  1, implicit $ccr
+      Bmi8  1, implicit $ccr
+      Bge8  1, implicit $ccr
+      Blt8  1, implicit $ccr
+      Bgt8  1, implicit $ccr
+      Ble8  1, implicit $ccr
+
+...
+--- # MxBcc16
+#               ---------------+---------------+-------------------------------
+#                F   E   D   C | B   A   9   8 | 7   6   5   4   3   2   1   0
+#               ---------------+---------------+-------------------------------
+#                0   1   1   0 |   CONDITION   | 0   0   0   0   0   0   0   0
+#               ---------------+---------------+-------------------------------
+# BHI16:         0   1   1   0   0   0   1   0 . 0   0   0   0   0   0   0   0
+# BHI16-SAME:    1   1   1   1   1   1   1   1 . 1   1   1   1   1   1   1   1
+#               ---------------------------------------------------------------
+# BLS16-SAME:    0   1   1   0   0   0   1   1 . 0   0   0   0   0   0   0   0
+# BLS16-SAME:    0   0   0   0   0   0   0   0 . 0   0   1   0   1   0   1   0
+#               ---------------------------------------------------------------
+# BCC16-SAME:    0   1   1   0   0   1   0   0 . 0   0   0   0   0   0   0   0
+# BCC16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BCS16:         0   1   1   0   0   1   0   1 . 0   0   0   0   0   0   0   0
+# BCS16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BNE16-SAME:    0   1   1   0   0   1   1   0 . 0   0   0   0   0   0   0   0
+# BNE16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BEQ16-SAME:    0   1   1   0   0   1   1   1 . 0   0   0   0   0   0   0   0
+# BGE16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BVC16-SAME:    0   1   1   0   1   0   0   0 . 0   0   0   0   0   0   0   0
+# BVC16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BVS16-SAME:    0   1   1   0   1   0   0   1 . 0   0   0   0   0   0   0   0
+# BVS16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BPL16-SAME:    0   1   1   0   1   0   1   0 . 0   0   0   0   0   0   0   0
+# BPL16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BMI16-SAME:    0   1   1   0   1   0   1   1 . 0   0   0   0   0   0   0   0
+# BMI16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BGE16-SAME:    0   1   1   0   1   1   0   0 . 0   0   0   0   0   0   0   0
+# BLE16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BLT16-SAME:    0   1   1   0   1   1   0   1 . 0   0   0   0   0   0   0   0
+# BLT16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BGT16-SAME:    0   1   1   0   1   1   1   0 . 0   0   0   0   0   0   0   0
+# BGT16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+#               ---------------------------------------------------------------
+# BLE16-SAME:    0   1   1   0   1   1   1   1 . 0   0   0   0   0   0   0   0
+# BLE16-SAME:    0   0   0   0   0   0   0   0 . 0   0   0   0   0   0   0   0
+name: MxBcc16
+body: |
+  bb.0:
+      Bhi16 -1, implicit $ccr
+      Bls16 42, implicit $ccr
+      Bcc16  0, implicit $ccr
+      Bcs16  0, implicit $ccr
+      Bne16  0, implicit $ccr
+      Beq16  0, implicit $ccr
+      Bvc16  0, implicit $ccr
+      Bvs16  0, implicit $ccr
+      Bpl16  0, implicit $ccr
+      Bmi16  0, implicit $ccr
+      Bge16  0, implicit $ccr
+      Blt16  0, implicit $ccr
+      Bgt16  0, implicit $ccr
+      Ble16  0, implicit $ccr
+
+...

@@ -23,6 +23,7 @@
 // https://groups.google.com/d/msg/llvm-dev/RUegaMg-iqc/wFAVxa6fCgAJ
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -77,7 +78,7 @@ public:
 };
 } // end anonymous namespace
 
-static bool isColdBlock(MachineBasicBlock &MBB,
+static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
                         ProfileSummaryInfo *PSI) {
   Optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
@@ -121,14 +122,26 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
+  SmallVector<MachineBasicBlock *, 2> LandingPads;
   for (auto &MBB : MF) {
-    // FIXME: We retain the entry block and conservatively keep all landing pad
-    // blocks as part of the original function. Once D73739 is submitted, we can
-    // improve the handling of ehpads.
-    if ((MBB.pred_empty() || MBB.isEHPad()))
+    if (MBB.isEntryBlock())
       continue;
-    if (isColdBlock(MBB, MBFI, PSI))
+
+    if (MBB.isEHPad())
+      LandingPads.push_back(&MBB);
+    else if (isColdBlock(MBB, MBFI, PSI))
       MBB.setSectionID(MBBSectionID::ColdSectionID);
+  }
+
+  // We only split out eh pads if all of them are cold.
+  bool HasHotLandingPads = false;
+  for (const MachineBasicBlock *LP : LandingPads) {
+    if (!isColdBlock(*LP, MBFI, PSI))
+      HasHotLandingPads = true;
+  }
+  if (!HasHotLandingPads) {
+    for (MachineBasicBlock *LP : LandingPads)
+      LP->setSectionID(MBBSectionID::ColdSectionID);
   }
 
   auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {

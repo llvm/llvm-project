@@ -12,24 +12,24 @@ module attributes {
       %x = "gpu.block_id"() {dimension = "x"} : () -> index
       %y = "gpu.block_id"() {dimension = "y"} : () -> index
       %z = "gpu.block_id"() {dimension = "z"} : () -> index
-      %0 = load %arg0[%x] : memref<8xi32>
-      %1 = load %arg1[%y, %x] : memref<8x8xi32>
+      %0 = memref.load %arg0[%x] : memref<8xi32>
+      %1 = memref.load %arg1[%y, %x] : memref<8x8xi32>
       %2 = addi %0, %1 : i32
-      store %2, %arg2[%z, %y, %x] : memref<8x8x8xi32>
+      memref.store %2, %arg2[%z, %y, %x] : memref<8x8x8xi32>
       gpu.return
     }
   }
 
   func @main() {
-    %arg0 = alloc() : memref<8xi32>
-    %arg1 = alloc() : memref<8x8xi32>
-    %arg2 = alloc() : memref<8x8x8xi32>
+    %arg0 = memref.alloc() : memref<8xi32>
+    %arg1 = memref.alloc() : memref<8x8xi32>
+    %arg2 = memref.alloc() : memref<8x8x8xi32>
     %value0 = constant 0 : i32
     %value1 = constant 1 : i32
     %value2 = constant 2 : i32
-    %arg3 = memref_cast %arg0 : memref<8xi32> to memref<?xi32>
-    %arg4 = memref_cast %arg1 : memref<8x8xi32> to memref<?x?xi32>
-    %arg5 = memref_cast %arg2 : memref<8x8x8xi32> to memref<?x?x?xi32>
+    %arg3 = memref.cast %arg0 : memref<8xi32> to memref<?xi32>
+    %arg4 = memref.cast %arg1 : memref<8x8xi32> to memref<?x?xi32>
+    %arg5 = memref.cast %arg2 : memref<8x8x8xi32> to memref<?x?x?xi32>
     call @fillResource1DInt(%arg3, %value1) : (memref<?xi32>, i32) -> ()
     call @fillResource2DInt(%arg4, %value2) : (memref<?x?xi32>, i32) -> ()
     call @fillResource3DInt(%arg5, %value0) : (memref<?x?x?xi32>, i32) -> ()
@@ -39,7 +39,7 @@ module attributes {
     gpu.launch_func @kernels::@kernel_addi
         blocks in (%cst8, %cst8, %cst8) threads in (%cst1, %cst1, %cst1)
         args(%arg0 : memref<8xi32>, %arg1 : memref<8x8xi32>, %arg2 : memref<8x8x8xi32>)
-    %arg6 = memref_cast %arg5 : memref<?x?x?xi32> to memref<*xi32>
+    %arg6 = memref.cast %arg5 : memref<?x?x?xi32> to memref<*xi32>
     call @print_memref_i32(%arg6) : (memref<*xi32>) -> ()
     return
   }

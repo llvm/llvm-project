@@ -16,6 +16,7 @@
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -66,12 +67,6 @@ mlir::createLoopFusionPass(unsigned fastMemorySpace,
                            uint64_t localBufSizeThreshold, bool maximalFusion) {
   return std::make_unique<LoopFusion>(fastMemorySpace, localBufSizeThreshold,
                                       maximalFusion);
-}
-
-// TODO: Replace when this is modeled through side-effects/op traits
-static bool isMemRefDereferencingOp(Operation &op) {
-  return isa<AffineReadOpInterface, AffineWriteOpInterface, AffineDmaStartOp,
-             AffineDmaWaitOp>(op);
 }
 
 namespace {
@@ -185,8 +180,8 @@ public:
     // which contain accesses to the same memref 'value'. If the value is a
     // non-memref value, then the dependence is between a graph node which
     // defines an SSA value and another graph node which uses the SSA value
-    // (e.g. a constant operation defining a value which is used inside a loop
-    // nest).
+    // (e.g. a constant or load operation defining a value which is used inside
+    // a loop nest).
     Value value;
   };
 
@@ -264,7 +259,7 @@ public:
         return true;
       // Return true if any use of 'memref' escapes the function.
       for (auto *user : memref.getUsers())
-        if (!isMemRefDereferencingOp(*user))
+        if (!isa<AffineMapAccessInterface>(*user))
           return true;
     }
     return false;
@@ -375,12 +370,34 @@ public:
     return outEdgeCount;
   }
 
+  /// Return all nodes which define SSA values used in node 'id'.
+  void gatherDefiningNodes(unsigned id, DenseSet<unsigned> &definingNodes) {
+    for (MemRefDependenceGraph::Edge edge : inEdges[id])
+      // By definition of edge, if the edge value is a non-memref value,
+      // then the dependence is between a graph node which defines an SSA value
+      // and another graph node which uses the SSA value.
+      if (!edge.value.getType().isa<MemRefType>())
+        definingNodes.insert(edge.id);
+  }
+
   // Computes and returns an insertion point operation, before which the
   // the fused <srcId, dstId> loop nest can be inserted while preserving
   // dependences. Returns nullptr if no such insertion point is found.
   Operation *getFusedLoopNestInsertionPoint(unsigned srcId, unsigned dstId) {
     if (outEdges.count(srcId) == 0)
       return getNode(dstId)->op;
+
+    // Skip if there is any defining node of 'dstId' that depends on 'srcId'.
+    DenseSet<unsigned> definingNodes;
+    gatherDefiningNodes(dstId, definingNodes);
+    if (llvm::any_of(definingNodes, [&](unsigned id) {
+          return hasDependencePath(srcId, id);
+        })) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Can't fuse: a defining op with a user in the dst "
+                    "loop has dependence from the src loop\n");
+      return nullptr;
+    }
 
     // Build set of insts in range (srcId, dstId) which depend on 'srcId'.
     SmallPtrSet<Operation *, 2> srcDepInsts;
@@ -703,7 +720,7 @@ void gatherEscapingMemrefs(unsigned id, MemRefDependenceGraph *mdg,
     // Check if 'memref' escapes through a non-affine op (e.g., std load/store,
     // call op, etc.).
     for (Operation *user : memref.getUsers())
-      if (!isMemRefDereferencingOp(*user))
+      if (!isa<AffineMapAccessInterface>(*user))
         escapingMemRefs.insert(memref);
   }
 }
@@ -768,6 +785,27 @@ bool MemRefDependenceGraph::init(FuncOp f) {
       // could be used by loop nest nodes.
       Node node(nextNodeId++, &op);
       nodes.insert({node.id, node});
+    } else if (isa<CallOpInterface>(op)) {
+      // Create graph node for top-level Call Op that takes any argument of
+      // memref type. Call Op that returns one or more memref type results
+      // is already taken care of, by the previous conditions.
+      if (llvm::any_of(op.getOperandTypes(),
+                       [&](Type t) { return t.isa<MemRefType>(); })) {
+        Node node(nextNodeId++, &op);
+        nodes.insert({node.id, node});
+      }
+    } else if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+      // Create graph node for top-level op, which could have a memory write
+      // side effect.
+      SmallVector<MemoryEffects::EffectInstance, 1> effects;
+      effectInterface.getEffects(effects);
+      if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &it) {
+            return isa<MemoryEffects::Write, MemoryEffects::Free>(
+                it.getEffect());
+          })) {
+        Node node(nextNodeId++, &op);
+        nodes.insert({node.id, node});
+      }
     }
   }
 
@@ -778,10 +816,11 @@ bool MemRefDependenceGraph::init(FuncOp f) {
   }
 
   // Add dependence edges between nodes which produce SSA values and their
-  // users.
+  // users. Load ops can be considered as the ones producing SSA values.
   for (auto &idAndNode : nodes) {
     const Node &node = idAndNode.second;
-    if (!node.loads.empty() || !node.stores.empty())
+    // Stores don't define SSA values, skip them.
+    if (!node.stores.empty())
       continue;
     auto *opInst = node.op;
     for (auto value : opInst->getResults()) {
@@ -909,7 +948,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   if (bufSize <= localBufSizeThreshold && fastMemorySpace.hasValue()) {
     newMemSpace = fastMemorySpace.getValue();
   } else {
-    newMemSpace = oldMemRefType.getMemorySpace();
+    newMemSpace = oldMemRefType.getMemorySpaceAsInt();
   }
   auto newMemRefType = MemRefType::get(newShape, oldMemRefType.getElementType(),
                                        {}, newMemSpace);
@@ -920,7 +959,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
   // consumer loop nests to reduce their live range. Currently they are added
   // at the beginning of the function, because loop nests can be reordered
   // during the fusion pass.
-  Value newMemRef = top.create<AllocOp>(forOp.getLoc(), newMemRefType);
+  Value newMemRef = top.create<memref::AllocOp>(forOp.getLoc(), newMemRefType);
 
   // Build an AffineMap to remap access functions based on lower bound offsets.
   SmallVector<AffineExpr, 4> remapExprs;
@@ -950,7 +989,7 @@ static Value createPrivateMemRef(AffineForOp forOp, Operation *srcStoreOpInst,
 
 /// Walking from node 'srcId' to node 'dstId' (exclusive of 'srcId' and
 /// 'dstId'), if there is any non-affine operation accessing 'memref', return
-/// false. Otherwise, return true.
+/// true. Otherwise, return false.
 static bool hasNonAffineUsersOnThePath(unsigned srcId, unsigned dstId,
                                        Value memref,
                                        MemRefDependenceGraph *mdg) {
@@ -968,7 +1007,7 @@ static bool hasNonAffineUsersOnThePath(unsigned srcId, unsigned dstId,
       // Interrupt the walk if found.
       auto walkResult = op->walk([&](Operation *user) {
         // Skip affine ops.
-        if (isMemRefDereferencingOp(*user))
+        if (isa<AffineMapAccessInterface>(*user))
           return WalkResult::advance();
         // Find a non-affine op that uses the memref.
         if (llvm::is_contained(users, user))
@@ -1383,6 +1422,10 @@ public:
       // Skip if 'dstNode' is not a loop nest.
       if (!isa<AffineForOp>(dstNode->op))
         continue;
+      // Skip if 'dstNode' is a loop nest returning values.
+      // TODO: support loop nests that return values.
+      if (dstNode->op->getNumResults() > 0)
+        continue;
 
       LLVM_DEBUG(llvm::dbgs() << "Evaluating dst loop " << dstId << "\n");
 
@@ -1412,6 +1455,11 @@ public:
           auto srcAffineForOp = cast<AffineForOp>(srcNode->op);
           LLVM_DEBUG(llvm::dbgs() << "Evaluating src loop " << srcId
                                   << " for dst loop " << dstId << "\n");
+
+          // Skip if 'srcNode' is a loop nest returning values.
+          // TODO: support loop nests that return values.
+          if (isa<AffineForOp>(srcNode->op) && srcNode->op->getNumResults() > 0)
+            continue;
 
           DenseSet<Value> producerConsumerMemrefs;
           gatherProducerConsumerMemrefs(srcId, dstId, mdg,
@@ -1890,7 +1938,7 @@ public:
         continue;
       // Use list expected to match the dep graph info.
       auto *op = memref.getDefiningOp();
-      if (isa_and_nonnull<AllocOp>(op))
+      if (isa_and_nonnull<memref::AllocOp>(op))
         op->erase();
     }
   }

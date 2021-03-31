@@ -13,9 +13,9 @@ func @vec2d(%A : memref<?x?x?xf32>) {
    %c0 = constant 0 : index
    %c1 = constant 1 : index
    %c2 = constant 2 : index
-   %M = dim %A, %c0 : memref<?x?x?xf32>
-   %N = dim %A, %c1 : memref<?x?x?xf32>
-   %P = dim %A, %c2 : memref<?x?x?xf32>
+   %M = memref.dim %A, %c0 : memref<?x?x?xf32>
+   %N = memref.dim %A, %c1 : memref<?x?x?xf32>
+   %P = memref.dim %A, %c2 : memref<?x?x?xf32>
    // CHECK: for  {{.*}} = 0 to %{{.*}} {
    // CHECK:   for {{.*}} = 0 to %{{.*}} step 32
    // CHECK:     for {{.*}} = 0 to %{{.*}} step 256
@@ -47,9 +47,9 @@ func @vec2d(%A : memref<?x?x?xf32>) {
 }
 
 func @vector_add_2d(%M : index, %N : index) -> f32 {
-  %A = alloc (%M, %N) : memref<?x?xf32, 0>
-  %B = alloc (%M, %N) : memref<?x?xf32, 0>
-  %C = alloc (%M, %N) : memref<?x?xf32, 0>
+  %A = memref.alloc (%M, %N) : memref<?x?xf32, 0>
+  %B = memref.alloc (%M, %N) : memref<?x?xf32, 0>
+  %C = memref.alloc (%M, %N) : memref<?x?xf32, 0>
   %f1 = constant 1.0 : f32
   %f2 = constant 2.0 : f32
   affine.for %i0 = 0 to %M {
@@ -102,14 +102,14 @@ func @vector_add_2d(%M : index, %N : index) -> f32 {
 func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
-  %M = dim %arg0, %c0 : memref<?x?xf32>
-  %K = dim %arg0, %c1 : memref<?x?xf32>
-  %N = dim %arg2, %c1 : memref<?x?xf32>
+  %M = memref.dim %arg0, %c0 : memref<?x?xf32>
+  %K = memref.dim %arg0, %c1 : memref<?x?xf32>
+  %N = memref.dim %arg2, %c1 : memref<?x?xf32>
   //      VECT: %[[C0:.*]] = constant 0 : index
   // VECT-NEXT: %[[C1:.*]] = constant 1 : index
-  // VECT-NEXT: %[[M:.*]] = dim %{{.*}}, %[[C0]] : memref<?x?xf32>
-  // VECT-NEXT: %[[K:.*]] = dim %{{.*}}, %[[C1]] : memref<?x?xf32>
-  // VECT-NEXT: %[[N:.*]] = dim %{{.*}}, %[[C1]] : memref<?x?xf32>
+  // VECT-NEXT: %[[M:.*]] = memref.dim %{{.*}}, %[[C0]] : memref<?x?xf32>
+  // VECT-NEXT: %[[K:.*]] = memref.dim %{{.*}}, %[[C1]] : memref<?x?xf32>
+  // VECT-NEXT: %[[N:.*]] = memref.dim %{{.*}}, %[[C1]] : memref<?x?xf32>
   //      VECT: {{.*}} #[[$map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:   {{.*}} #[[$map_id1]](%[[N]]) step 8 {
   //      VECT:     %[[VC0:.*]] = constant dense<0.000000e+00> : vector<4x8xf32>

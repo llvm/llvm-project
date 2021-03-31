@@ -6,7 +6,9 @@ set(LIBS
 )
 
 add_flang_unittest(FlangOptimizerTests
+  FIRContextTest.cpp
   InternalNamesTest.cpp
+  KindMappingTest.cpp
 )
 target_link_libraries(FlangOptimizerTests
   PRIVATE

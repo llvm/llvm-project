@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
-#define LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -111,6 +111,16 @@ public:
     return AttributeSpecs[idx].Attr;
   }
 
+  bool getAttrIsImplicitConstByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].isImplicitConst();
+  }
+
+  int64_t getAttrImplicitConstValueByIndex(uint32_t idx) const {
+    assert(idx < AttributeSpecs.size());
+    return AttributeSpecs[idx].getImplicitConstValue();
+  }
+
   /// Get the index of the specified attribute.
   ///
   /// Searches the this abbreviation declaration for the index of the specified
@@ -180,4 +190,4 @@ private:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFABBREVIATIONDECLARATION_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFABBREVIATIONDECLARATION_H

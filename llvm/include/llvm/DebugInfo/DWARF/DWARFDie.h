@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFDIE_H
-#define LLVM_DEBUGINFO_DWARFDIE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFDIE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFDIE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
@@ -478,4 +478,4 @@ inline std::reverse_iterator<DWARFDie::iterator> DWARFDie::rend() const {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFDIE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFDIE_H

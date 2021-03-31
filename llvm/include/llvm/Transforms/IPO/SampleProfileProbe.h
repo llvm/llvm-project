@@ -16,6 +16,10 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/LazyCallGraph.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -29,6 +33,8 @@ class Module;
 using namespace sampleprof;
 using BlockIdMap = std::unordered_map<BasicBlock *, uint32_t>;
 using InstructionIdMap = std::unordered_map<Instruction *, uint32_t>;
+using ProbeFactorMap = std::unordered_map<uint64_t, float>;
+using FuncProbeFactorMap = StringMap<ProbeFactorMap>;
 
 enum class PseudoProbeReservedId { Invalid = 0, Last = Invalid };
 
@@ -41,6 +47,33 @@ public:
       : FunctionGUID(GUID), FunctionHash(Hash) {}
   uint64_t getFunctionGUID() const { return FunctionGUID; }
   uint64_t getFunctionHash() const { return FunctionHash; }
+};
+
+// A pseudo probe verifier that can be run after each IR passes to detect the
+// violation of updating probe factors. In principle, the sum of distribution
+// factor for a probe should be identical before and after a pass. For a
+// function pass, the factor sum for a probe would be typically 100%.
+class PseudoProbeVerifier {
+public:
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+  // Implementation of pass instrumentation callbacks for new pass manager.
+  void runAfterPass(StringRef PassID, Any IR);
+
+private:
+  // Allow a little bias due the rounding to integral factors.
+  constexpr static float DistributionFactorVariance = 0.02f;
+  // Distribution factors from last pass.
+  FuncProbeFactorMap FunctionProbeFactors;
+
+  void collectProbeFactors(const BasicBlock *BB, ProbeFactorMap &ProbeFactors);
+  void runAfterPass(const Module *M);
+  void runAfterPass(const LazyCallGraph::SCC *C);
+  void runAfterPass(const Function *F);
+  void runAfterPass(const Loop *L);
+  bool shouldVerifyFunction(const Function *F);
+  void verifyProbeFactors(const Function *F,
+                          const ProbeFactorMap &ProbeFactors);
 };
 
 // This class serves sample counts correlation for SampleProfileLoader by
@@ -99,6 +132,14 @@ class SampleProfileProbePass : public PassInfoMixin<SampleProfileProbePass> {
 
 public:
   SampleProfileProbePass(TargetMachine *TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+class PseudoProbeUpdatePass : public PassInfoMixin<PseudoProbeUpdatePass> {
+  void runOnFunction(Function &F, FunctionAnalysisManager &FAM);
+
+public:
+  PseudoProbeUpdatePass() {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

@@ -67,7 +67,8 @@ public:
                              TTI::PeelingPreferences &PP);
 
   /// Bias LSR towards creating post-increment opportunities.
-  bool shouldFavorPostInc() const;
+  TTI::AddressingModeKind
+    getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
   // L1 cache prefetch.
   unsigned getPrefetchDistance() const override;
@@ -80,9 +81,9 @@ public:
 
   unsigned getNumberOfRegisters(bool vector) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getMinVectorRegisterBitWidth() const;
-  unsigned getMinimumVF(unsigned ElemWidth) const;
+  ElementCount getMinimumVF(unsigned ElemWidth, bool IsScalable) const;
 
   bool shouldMaximizeVectorBandwidth(bool OptSize) const {
     return true;
@@ -106,7 +107,7 @@ public:
   unsigned getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
                                     bool Insert, bool Extract);
   unsigned getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                            unsigned VF);
+                                            ArrayRef<Type *> Tys);
   unsigned getCallInstrCost(Function *F, Type *RetTy, ArrayRef<Type*> Tys,
                             TTI::TargetCostKind CostKind);
   unsigned getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -121,8 +122,8 @@ public:
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
                         TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency);
-  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
-            Type *SubTp);
+  unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, ArrayRef<int> Mask,
+                          int Index, Type *SubTp);
   unsigned getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                   const Value *Ptr, bool VariableMask,
                                   Align Alignment, TTI::TargetCostKind CostKind,

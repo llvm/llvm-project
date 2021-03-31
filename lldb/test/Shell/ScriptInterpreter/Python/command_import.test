@@ -1,0 +1,20 @@
+# REQUIRES: python
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: echo "print('Rene Magritte')" >> %t/foo.py
+# RUN: echo "print('Jan van Eyck')" >> %t/foo-bar.py
+# RUN: echo "print('Pieter Bruegel the Elder')" >> %t/foo.bar.py
+# RUN: echo "print('Pieter Bruegel the Younger')" >> %t/foo.bar
+
+# RUN: %lldb --script-language python -o 'command script import %t/foo.py' 2>&1 | FileCheck %s --check-prefix MAGRITTE
+# MAGRITTE: Rene Magritte
+
+# RUN: %lldb --script-language python -o 'command script import %t/foo-bar.py' 2>&1 | FileCheck %s --check-prefix VANEYCK
+# VANEYCK-NOT: Jan van Eyck
+# VANEYCK: module importing failed: Python discourages dashes in module names: foo-bar
+
+# RUN: %lldb --script-language python -o 'command script import %t/foo.bar.py' 2>&1 | FileCheck %s --check-prefix BRUEGEL
+# RUN: %lldb --script-language python -o 'command script import %t/foo.bar' 2>&1 | FileCheck %s --check-prefix BRUEGEL
+# BRUEGEL-NOT: Pieter Bruegel the Elder
+# BRUEGEL-NOT: Pieter Bruegel the Younger
+# BRUEGEL: module importing failed: Python does not allow dots in module names: foo.bar

@@ -74,4 +74,4 @@ lpad74:                                           ; preds = %entry
   unreachable
 }
 
-declare i32 @__gxx_personality_v0(...)
+declare i32 @__gxx_personality_v0(...) addrspace(0)

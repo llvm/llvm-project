@@ -95,7 +95,7 @@ private:
 
 class ErrorReporter {
 public:
-  ErrorReporter(ClangTidyContext &Context, bool ApplyFixes,
+  ErrorReporter(ClangTidyContext &Context, FixBehaviour ApplyFixes,
                 llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), std::move(BaseFS)),
         DiagOpts(new DiagnosticOptions()),
@@ -133,8 +133,9 @@ public:
       auto Diag = Diags.Report(Loc, Diags.getCustomDiagID(Level, "%0 [%1]"))
                   << Message.Message << Name;
       // FIXME: explore options to support interactive fix selection.
-      const llvm::StringMap<Replacements> *ChosenFix = selectFirstFix(Error);
-      if (ApplyFixes && ChosenFix) {
+      const llvm::StringMap<Replacements> *ChosenFix;
+      if (ApplyFixes != FB_NoFix &&
+          (ChosenFix = getFixIt(Error, ApplyFixes == FB_FixNotes))) {
         for (const auto &FileAndReplacements : *ChosenFix) {
           for (const auto &Repl : FileAndReplacements.second) {
             ++TotalFixes;
@@ -187,7 +188,7 @@ public:
   }
 
   void finish() {
-    if (ApplyFixes && TotalFixes > 0) {
+    if (TotalFixes > 0) {
       Rewriter Rewrite(SourceMgr, LangOpts);
       for (const auto &FileAndReplacements : FileReplacements) {
         StringRef File = FileAndReplacements.first();
@@ -287,7 +288,7 @@ private:
   SourceManager SourceMgr;
   llvm::StringMap<Replacements> FileReplacements;
   ClangTidyContext &Context;
-  bool ApplyFixes;
+  FixBehaviour ApplyFixes;
   unsigned TotalFixes;
   unsigned AppliedFixes;
   unsigned WarningsAsErrors;
@@ -392,6 +393,10 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   std::vector<std::unique_ptr<ClangTidyCheck>> Checks =
       CheckFactories->createChecks(&Context);
 
+  llvm::erase_if(Checks, [&](std::unique_ptr<ClangTidyCheck> &Check) {
+    return !Check->isLanguageVersionSupported(Context.getLangOpts());
+  });
+
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
   std::unique_ptr<ClangTidyProfiling> Profiling;
@@ -415,8 +420,6 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   }
 
   for (auto &Check : Checks) {
-    if (!Check->isLanguageVersionSupported(Context.getLangOpts()))
-      continue;
     Check->registerMatchers(&*Finder);
     Check->registerPPCallbacks(*SM, PP, ModuleExpanderPP);
   }
@@ -500,7 +503,8 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
              const CompilationDatabase &Compilations,
              ArrayRef<std::string> InputFiles,
              llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> BaseFS,
-             bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
+             bool ApplyAnyFix, bool EnableCheckProfile,
+             llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -527,7 +531,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
   Context.setEnableProfiling(EnableCheckProfile);
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
-  ClangTidyDiagnosticConsumer DiagConsumer(Context);
+  ClangTidyDiagnosticConsumer DiagConsumer(Context, nullptr, true, ApplyAnyFix);
   DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions(),
                        &DiagConsumer, /*ShouldOwnClient=*/false);
   Context.setDiagnosticsEngine(&DE);
@@ -574,7 +578,7 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
 }
 
 void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
-                  ClangTidyContext &Context, bool Fix,
+                  ClangTidyContext &Context, FixBehaviour Fix,
                   unsigned &WarningsAsErrorsCount,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, std::move(BaseFS));

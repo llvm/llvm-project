@@ -14,7 +14,7 @@ define <2 x double> @mask_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X86-SSE-LABEL: mask_sitofp_2i64_2f64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
@@ -32,7 +32,7 @@ define <2 x double> @mask_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: mask_sitofp_2i64_2f64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    retl
 ;
@@ -69,7 +69,7 @@ define <2 x double> @mask_uitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X86-SSE-LABEL: mask_uitofp_2i64_2f64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
@@ -87,7 +87,7 @@ define <2 x double> @mask_uitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X86-AVX512DQ-LABEL: mask_uitofp_2i64_2f64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    retl
 ;
@@ -124,7 +124,7 @@ define <4 x float> @mask_sitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-SSE-LABEL: mask_sitofp_4i64_4f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X86-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
@@ -132,7 +132,7 @@ define <4 x float> @mask_sitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
@@ -140,14 +140,14 @@ define <4 x float> @mask_sitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-AVX512F-LABEL: mask_sitofp_4i64_4f32:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vpmovqd %ymm0, %xmm0
-; X86-AVX512F-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512DQ-LABEL: mask_sitofp_4i64_4f32:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX512DQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vzeroupper
 ; X86-AVX512DQ-NEXT:    retl
@@ -191,7 +191,7 @@ define <4 x float> @mask_uitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-SSE-LABEL: mask_uitofp_4i64_4f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X86-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
@@ -199,7 +199,7 @@ define <4 x float> @mask_uitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; X86-AVX-NEXT:    vandps {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl
@@ -207,14 +207,14 @@ define <4 x float> @mask_uitofp_4i64_4f32(<4 x i64> %a) nounwind {
 ; X86-AVX512F-LABEL: mask_uitofp_4i64_4f32:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    vpmovqd %ymm0, %xmm0
-; X86-AVX512F-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vzeroupper
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512DQ-LABEL: mask_uitofp_4i64_4f32:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vandps {{\.LCPI.*}}, %ymm0, %ymm0
+; X86-AVX512DQ-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vzeroupper
 ; X86-AVX512DQ-NEXT:    retl
@@ -270,7 +270,7 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; X86-SSE-NEXT:    por %xmm2, %xmm3
 ; X86-SSE-NEXT:    pand %xmm3, %xmm0
-; X86-SSE-NEXT:    pandn {{\.LCPI.*}}, %xmm3
+; X86-SSE-NEXT:    pandn {{\.LCPI[0-9]+_[0-9]+}}, %xmm3
 ; X86-SSE-NEXT:    por %xmm0, %xmm3
 ; X86-SSE-NEXT:    pxor %xmm3, %xmm1
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm0 = [2147483903,0,2147483903,0]
@@ -283,7 +283,7 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; X86-SSE-NEXT:    por %xmm0, %xmm1
 ; X86-SSE-NEXT:    pand %xmm1, %xmm3
-; X86-SSE-NEXT:    pandn {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pandn {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    por %xmm3, %xmm1
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X86-SSE-NEXT:    cvtdq2pd %xmm0, %xmm0
@@ -305,16 +305,16 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X86-AVX512F-LABEL: clamp_sitofp_2i64_2f64:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmaxsq {{\.LCPI.*}}, %xmm0, %xmm0
-; X86-AVX512F-NEXT:    vpminsq {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpmaxsq {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpminsq {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-AVX512F-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512DQ-LABEL: clamp_sitofp_2i64_2f64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vpmaxsq {{\.LCPI.*}}, %xmm0, %xmm0
-; X86-AVX512DQ-NEXT:    vpminsq {{\.LCPI.*}}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vpmaxsq {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vpminsq {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    retl
 ;

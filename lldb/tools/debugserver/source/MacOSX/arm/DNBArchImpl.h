@@ -44,49 +44,48 @@ public:
   static void Initialize();
   static const DNBRegisterSetInfo *GetRegisterSetInfo(nub_size_t *num_reg_sets);
 
-  virtual bool GetRegisterValue(uint32_t set, uint32_t reg,
-                                DNBRegisterValue *value);
-  virtual bool SetRegisterValue(uint32_t set, uint32_t reg,
-                                const DNBRegisterValue *value);
-  virtual nub_size_t GetRegisterContext(void *buf, nub_size_t buf_len);
-  virtual nub_size_t SetRegisterContext(const void *buf, nub_size_t buf_len);
-  virtual uint32_t SaveRegisterState();
-  virtual bool RestoreRegisterState(uint32_t save_id);
+  bool GetRegisterValue(uint32_t set, uint32_t reg,
+                        DNBRegisterValue *value) override;
+  bool SetRegisterValue(uint32_t set, uint32_t reg,
+                        const DNBRegisterValue *value) override;
+  nub_size_t GetRegisterContext(void *buf, nub_size_t buf_len) override;
+  nub_size_t SetRegisterContext(const void *buf, nub_size_t buf_len) override;
+  uint32_t SaveRegisterState() override;
+  bool RestoreRegisterState(uint32_t save_id) override;
 
-  virtual kern_return_t GetRegisterState(int set, bool force);
-  virtual kern_return_t SetRegisterState(int set);
-  virtual bool RegisterSetStateIsValid(int set) const;
+  kern_return_t GetRegisterState(int set, bool force) override;
+  kern_return_t SetRegisterState(int set) override;
+  bool RegisterSetStateIsValid(int set) const override;
 
-  virtual uint64_t GetPC(uint64_t failValue); // Get program counter
-  virtual kern_return_t SetPC(uint64_t value);
-  virtual uint64_t GetSP(uint64_t failValue); // Get stack pointer
-  virtual void ThreadWillResume();
-  virtual bool ThreadDidStop();
-  virtual bool NotifyException(MachException::Data &exc);
+  uint64_t GetPC(uint64_t failValue) override; // Get program counter
+  kern_return_t SetPC(uint64_t value) override;
+  uint64_t GetSP(uint64_t failValue) override; // Get stack pointer
+  void ThreadWillResume() override;
+  bool ThreadDidStop() override;
+  bool NotifyException(MachException::Data &exc) override;
 
   static DNBArchProtocol *Create(MachThread *thread);
   static const uint8_t *SoftwareBreakpointOpcode(nub_size_t byte_size);
   static uint32_t GetCPUType();
 
-  virtual uint32_t NumSupportedHardwareBreakpoints();
-  virtual uint32_t NumSupportedHardwareWatchpoints();
-  virtual uint32_t EnableHardwareBreakpoint(nub_addr_t addr, nub_size_t size,
-                                            bool also_set_on_task);
-  virtual bool DisableHardwareBreakpoint(uint32_t hw_break_index,
-                                         bool also_set_on_task);
+  uint32_t NumSupportedHardwareBreakpoints() override;
+  uint32_t NumSupportedHardwareWatchpoints() override;
+  uint32_t EnableHardwareBreakpoint(nub_addr_t addr, nub_size_t size,
+                                    bool also_set_on_task) override;
+  bool DisableHardwareBreakpoint(uint32_t hw_break_index,
+                                 bool also_set_on_task) override;
 
-  virtual uint32_t EnableHardwareWatchpoint(nub_addr_t addr, nub_size_t size,
-                                            bool read, bool write,
-                                            bool also_set_on_task);
-  virtual bool DisableHardwareWatchpoint(uint32_t hw_break_index,
-                                         bool also_set_on_task);
+  uint32_t EnableHardwareWatchpoint(nub_addr_t addr, nub_size_t size, bool read,
+                                    bool write, bool also_set_on_task) override;
+  bool DisableHardwareWatchpoint(uint32_t hw_break_index,
+                                 bool also_set_on_task) override;
   virtual bool DisableHardwareWatchpoint_helper(uint32_t hw_break_index,
                                                 bool also_set_on_task);
   virtual bool ReenableHardwareWatchpoint(uint32_t hw_break_index);
   virtual bool ReenableHardwareWatchpoint_helper(uint32_t hw_break_index);
 
-  virtual bool StepNotComplete();
-  virtual uint32_t GetHardwareWatchpointHit(nub_addr_t &addr);
+  virtual bool StepNotComplete() override;
+  uint32_t GetHardwareWatchpointHit(nub_addr_t &addr) override;
 
 #if defined(ARM_DEBUG_STATE32) && (defined(__arm64__) || defined(__aarch64__))
   typedef arm_debug_state32_t DBG;

@@ -48,13 +48,16 @@ public:
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
 
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP) const;
+
   /// @}
 
   /// \name Vector TTI Implementations
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_SizeAndLatency,

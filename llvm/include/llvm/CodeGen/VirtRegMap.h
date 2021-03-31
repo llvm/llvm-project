@@ -143,12 +143,12 @@ class TargetInstrInfo;
     }
 
     /// returns true if VirtReg is assigned to its preferred physreg.
-    bool hasPreferredPhys(Register VirtReg);
+    bool hasPreferredPhys(Register VirtReg) const;
 
     /// returns true if VirtReg has a known preferred register.
     /// This returns false if VirtReg has a preference that is a virtual
     /// register that hasn't been assigned yet.
-    bool hasKnownPreference(Register VirtReg);
+    bool hasKnownPreference(Register VirtReg) const;
 
     /// records virtReg is a split live interval from SReg.
     void setIsSplitFromReg(Register virtReg, Register SReg) {

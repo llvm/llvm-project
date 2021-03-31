@@ -468,8 +468,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
         snprintf(fdstr, sizeof(fdstr), "--fd=%d", communication_fd);
         snprintf(pidstr, sizeof(pidstr), "--attach=%d", attach_pid);
-        execl(translated_debugserver, "--native-regs", "--setsid", fdstr,
-              "--handoff-attach-from-native", pidstr, (char *)0);
+        execl(translated_debugserver, translated_debugserver, "--native-regs",
+              "--setsid", fdstr, "--handoff-attach-from-native", pidstr,
+              (char *)0);
         DNBLogThreadedIf(LOG_PROCESS, "Failed to launch debugserver for "
                          "translated process: ", errno, strerror(errno));
         __builtin_trap();

@@ -48,9 +48,8 @@ public:
       if (getNestingDepth(forOp) == loopDepth)
         loops.push_back(forOp);
     });
-    for (auto loop : loops) {
-      loopUnrollByFactor(loop, unrollFactor);
-    }
+    for (auto loop : loops)
+      (void)loopUnrollByFactor(loop, unrollFactor);
   }
   Option<uint64_t> unrollFactor{*this, "unroll-factor",
                                 llvm::cl::desc("Loop unroll factor."),

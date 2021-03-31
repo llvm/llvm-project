@@ -54,10 +54,10 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
   ],
   iterator_types = ["parallel", "parallel"]
 }
-func @indexed_generic_matrix(%operand: memref<50x100xf32>, %result: memref<50x100xf32>) {
+func @indexed_generic_matrix(%operand: memref<50x99xf32>, %result: memref<50x50xf32>) {
   linalg.indexed_generic #combined_indices_trait
-     ins(%operand : memref<50x100xf32>)
-    outs(%result : memref<50x100xf32>) {
+     ins(%operand : memref<50x99xf32>)
+    outs(%result : memref<50x50xf32>) {
     ^bb0(%i: index, %j: index, %operand_in: f32, %result_in: f32):
       %i_int = index_cast %i: index to i32
       %i_float = sitofp %i_int : i32 to f32

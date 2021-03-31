@@ -968,10 +968,10 @@ public:
   /// returns defs.  If neither are true then you are silly and it always
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
-  template<bool ReturnUses, bool ReturnDefs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
-  class defusechain_iterator
-    : public std::iterator<std::forward_iterator_tag, MachineInstr, ptrdiff_t> {
+  template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
+            bool ByInstr, bool ByBundle>
+  class defusechain_iterator : public std::iterator<std::forward_iterator_tag,
+                                                    MachineOperand, ptrdiff_t> {
     friend class MachineRegisterInfo;
 
     MachineOperand *Op = nullptr;
@@ -1008,10 +1008,10 @@ public:
     }
 
   public:
-    using reference = std::iterator<std::forward_iterator_tag,
-                                    MachineInstr, ptrdiff_t>::reference;
-    using pointer = std::iterator<std::forward_iterator_tag,
-                                  MachineInstr, ptrdiff_t>::pointer;
+    using reference = std::iterator<std::forward_iterator_tag, MachineOperand,
+                                    ptrdiff_t>::reference;
+    using pointer = std::iterator<std::forward_iterator_tag, MachineOperand,
+                                  ptrdiff_t>::pointer;
 
     defusechain_iterator() = default;
 

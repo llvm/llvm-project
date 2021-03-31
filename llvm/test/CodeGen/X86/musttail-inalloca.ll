@@ -11,9 +11,10 @@ target triple = "i386-pc-windows-msvc19.16.0"
 ; 20 bytes of memory.
 %struct.Args = type { i32, i32, i32, i32, i32 }
 
-declare dso_local x86_thiscallcc void @methodWithVtorDisp(i8* nocapture readonly, <{ %struct.Args }>* inalloca)
+declare dso_local x86_thiscallcc void @methodWithVtorDisp(i8* nocapture readonly, <{ %struct.Args }>* inalloca(<{ %struct.Args }>))
 
-define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struct.Args }>* inalloca %1) #0 {
+; Function Attrs: nounwind optsize
+define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) %1) #0 {
 ; CHECK-LABEL: methodWithVtorDisp_thunk:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %esi
@@ -31,8 +32,16 @@ define dso_local x86_thiscallcc void @methodWithVtorDisp_thunk(i8* %0, <{ %struc
   %5 = load i32, i32* %4, align 4
   %6 = sub i32 0, %5
   %7 = getelementptr i8, i8* %0, i32 %6
-  musttail call x86_thiscallcc void @methodWithVtorDisp(i8* %7, <{ %struct.Args }>* inalloca nonnull %1)
+  %8 = call i8* @llvm.returnaddress(i32 0)
+  call void @__cyg_profile_func_exit(i8* bitcast (void (i8*, <{ %struct.Args }>*)* @methodWithVtorDisp_thunk to i8*), i8* %8)
+  musttail call x86_thiscallcc void @methodWithVtorDisp(i8* %7, <{ %struct.Args }>* inalloca(<{ %struct.Args }>) nonnull %1)
   ret void
 }
 
-attributes #0 = { nounwind optsize "instrument-function-exit-inlined"="__cyg_profile_func_exit"  }
+declare void @__cyg_profile_func_exit(i8*, i8*)
+
+; Function Attrs: nofree nosync nounwind readnone willreturn
+declare i8* @llvm.returnaddress(i32 immarg) #1
+
+attributes #0 = { nounwind optsize }
+attributes #1 = { nofree nosync nounwind readnone willreturn }

@@ -1270,13 +1270,16 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
   const std::size_t BufLen = End - Buf;
   unsigned I = 0;
   while (I < BufLen) {
-    if (Buf[I] == '\n') {
-      LineOffsets.push_back(I + 1);
-    } else if (Buf[I] == '\r') {
-      // If this is \r\n, skip both characters.
-      if (I + 1 < BufLen && Buf[I + 1] == '\n')
-        ++I;
-      LineOffsets.push_back(I + 1);
+    // Use a fast check to catch both newlines
+    if (LLVM_UNLIKELY(Buf[I] <= std::max('\n', '\r'))) {
+      if (Buf[I] == '\n') {
+        LineOffsets.push_back(I + 1);
+      } else if (Buf[I] == '\r') {
+        // If this is \r\n, skip both characters.
+        if (I + 1 < BufLen && Buf[I + 1] == '\n')
+          ++I;
+        LineOffsets.push_back(I + 1);
+      }
     }
     ++I;
   }

@@ -67,6 +67,7 @@ add_llvm_unittest(SupportTests
   ReplaceFileTest.cpp
   RISCVAttributeParserTest.cpp
   ScaledNumberTest.cpp
+  SHA256.cpp
   SourceMgrTest.cpp
   SpecialCaseListTest.cpp
   SuffixTreeTest.cpp

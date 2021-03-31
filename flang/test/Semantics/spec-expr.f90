@@ -79,7 +79,7 @@ end subroutine s7a
 subroutine s7bi(assumedArg)
   integer, dimension(2, *) :: assumedArg
   real, dimension(ubound(assumedArg, 1)) :: realArray1
-  ! Should be an error since 2 is the last dimension of an assumed-size array
+  !ERROR: DIM=2 dimension is out of range for rank-2 assumed-size array
   real, dimension(ubound(assumedArg, 2)) :: realArray2
 end subroutine s7bi
 

@@ -195,6 +195,13 @@ bool BreakpointLocation::InvokeCallback(StoppointCallbackContext *context) {
     return m_owner.InvokeCallback(context, GetID());
 }
 
+bool BreakpointLocation::IsCallbackSynchronous() {
+  if (m_options_up != nullptr && m_options_up->HasCallback())
+    return m_options_up->IsCallbackSynchronous();
+  else
+    return m_owner.GetOptions()->IsCallbackSynchronous();
+}
+
 void BreakpointLocation::SetCallback(BreakpointHitCallback callback,
                                      void *baton, bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free or

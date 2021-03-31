@@ -8,8 +8,8 @@ config.llvm_build_mode = "@LLVM_BUILD_MODE@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lld_obj_root = "@LLD_BINARY_DIR@"
 config.lld_src_root = "@LLD_SOURCE_DIR@"
-config.lld_libs_dir = "@LLVM_LIBRARY_OUTPUT_INTDIR@"
-config.lld_tools_dir = "@LLVM_RUNTIME_OUTPUT_INTDIR@"
+config.lld_libs_dir = "@LLD_LIBS_DIR@"
+config.lld_tools_dir = "@LLD_TOOLS_DIR@"
 config.target_triple = "@TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 
@@ -19,6 +19,8 @@ try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
     config.llvm_build_mode = config.llvm_build_mode % lit_config.params
+    config.lld_libs_dir = config.lld_libs_dir % lit_config.params
+    config.lld_tools_dir = config.lld_tools_dir % lit_config.params
 except KeyError as e:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))

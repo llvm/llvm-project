@@ -2866,6 +2866,34 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
 #undef EXPECT_INVALID_FRAGMENT
 }
 
+TEST_F(DIExpressionTest, replaceArg) {
+#define EXPECT_REPLACE_ARG_EQ(Expr, OldArg, NewArg, ...)                       \
+  do {                                                                         \
+    uint64_t Elements[] = {__VA_ARGS__};                                       \
+    ArrayRef<uint64_t> Expected = Elements;                                    \
+    DIExpression *Expression = DIExpression::replaceArg(Expr, OldArg, NewArg); \
+    EXPECT_EQ(Expression->getElements(), Expected);                            \
+  } while (false)
+
+  auto N = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_LLVM_arg, 1,
+                dwarf::DW_OP_plus, dwarf::DW_OP_LLVM_arg, 2, dwarf::DW_OP_mul});
+  EXPECT_REPLACE_ARG_EQ(N, 0, 1, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 0, 2, dwarf::DW_OP_LLVM_arg, 1,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 2, 0, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 0, dwarf::DW_OP_mul);
+  EXPECT_REPLACE_ARG_EQ(N, 2, 1, dwarf::DW_OP_LLVM_arg, 0,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_plus,
+                        dwarf::DW_OP_LLVM_arg, 1, dwarf::DW_OP_mul);
+
+#undef EXPECT_REPLACE_ARG_EQ
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {
@@ -3054,6 +3082,42 @@ TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
 
   // Clean up Temp for teardown.
   Temp->replaceAllUsesWith(nullptr);
+}
+
+typedef MetadataTest DIArgListTest;
+
+TEST_F(DIArgListTest, get) {
+  SmallVector<ValueAsMetadata *, 2> VMs;
+  VMs.push_back(
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0))));
+  VMs.push_back(
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(2, 0))));
+  DIArgList *DV0 = DIArgList::get(Context, VMs);
+  DIArgList *DV1 = DIArgList::get(Context, VMs);
+  EXPECT_EQ(DV0, DV1);
+}
+
+TEST_F(DIArgListTest, UpdatesOnRAUW) {
+  Type *Ty = Type::getInt1PtrTy(Context);
+  ConstantAsMetadata *CI =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+  std::unique_ptr<GlobalVariable> GV0(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  auto *MD0 = ValueAsMetadata::get(GV0.get());
+
+  SmallVector<ValueAsMetadata *, 2> VMs;
+  VMs.push_back(CI);
+  VMs.push_back(MD0);
+  auto *AL = DIArgList::get(Context, VMs);
+  EXPECT_EQ(AL->getArgs()[0], CI);
+  EXPECT_EQ(AL->getArgs()[1], MD0);
+
+  std::unique_ptr<GlobalVariable> GV1(
+      new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  auto *MD1 = ValueAsMetadata::get(GV1.get());
+  GV0->replaceAllUsesWith(GV1.get());
+  EXPECT_EQ(AL->getArgs()[0], CI);
+  EXPECT_EQ(AL->getArgs()[1], MD1);
 }
 
 typedef MetadataTest TrackingMDRefTest;

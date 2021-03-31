@@ -64,9 +64,10 @@ public:
   Expr *traverseIgnored(Expr *E) const;
   DynTypedNode traverseIgnored(const DynTypedNode &N) const;
 
+  class ParentMap;
+
 private:
   ASTContext &ASTCtx;
-  class ParentMap;
   TraversalKind Traversal = TK_AsIs;
   std::unique_ptr<ParentMap> Parents;
 };

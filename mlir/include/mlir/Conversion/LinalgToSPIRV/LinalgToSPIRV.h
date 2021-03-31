@@ -15,14 +15,14 @@
 
 namespace mlir {
 class MLIRContext;
-class OwningRewritePatternList;
 class SPIRVTypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Appends to a pattern list additional patterns for translating Linalg ops to
 /// SPIR-V ops.
-void populateLinalgToSPIRVPatterns(MLIRContext *context,
-                                   SPIRVTypeConverter &typeConverter,
-                                   OwningRewritePatternList &patterns);
+void populateLinalgToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                   RewritePatternSet &patterns);
 
 } // namespace mlir
 

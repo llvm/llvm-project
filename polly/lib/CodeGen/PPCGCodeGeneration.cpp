@@ -117,6 +117,29 @@ static cl::opt<int>
                cl::desc("Minimal number of compute statements to run on GPU."),
                cl::Hidden, cl::init(10 * 512 * 512));
 
+GPURuntime polly::GPURuntimeChoice;
+static cl::opt<GPURuntime, true> XGPURuntimeChoice(
+    "polly-gpu-runtime", cl::desc("The GPU Runtime API to target"),
+    cl::values(clEnumValN(GPURuntime::CUDA, "libcudart",
+                          "use the CUDA Runtime API"),
+               clEnumValN(GPURuntime::OpenCL, "libopencl",
+                          "use the OpenCL Runtime API")),
+    cl::location(polly::GPURuntimeChoice), cl::init(GPURuntime::CUDA),
+    cl::ZeroOrMore, cl::cat(PollyCategory));
+
+GPUArch polly::GPUArchChoice;
+static cl::opt<GPUArch, true>
+    XGPUArchChoice("polly-gpu-arch", cl::desc("The GPU Architecture to target"),
+                   cl::values(clEnumValN(GPUArch::NVPTX64, "nvptx64",
+                                         "target NVIDIA 64-bit architecture"),
+                              clEnumValN(GPUArch::SPIR32, "spir32",
+                                         "target SPIR 32-bit architecture"),
+                              clEnumValN(GPUArch::SPIR64, "spir64",
+                                         "target SPIR 64-bit architecture")),
+                   cl::location(polly::GPUArchChoice),
+                   cl::init(GPUArch::NVPTX64), cl::ZeroOrMore,
+                   cl::cat(PollyCategory));
+
 extern bool polly::PerfMonitoring;
 
 /// Return  a unique name for a Scop, which is the scop region with the
@@ -1294,12 +1317,13 @@ void GPUNodeBuilder::createKernelCopy(ppcg_kernel_stmt *KernelStmt) {
   isl_ast_expr *Index = isl_ast_expr_copy(KernelStmt->u.c.index);
   Index = isl_ast_expr_address_of(Index);
   Value *GlobalAddr = ExprBuilder.create(Index);
+  Type *IndexTy = cast<PointerType>(GlobalAddr->getType())->getElementType();
 
   if (KernelStmt->u.c.read) {
-    LoadInst *Load = Builder.CreateLoad(GlobalAddr, "shared.read");
+    LoadInst *Load = Builder.CreateLoad(IndexTy, GlobalAddr, "shared.read");
     Builder.CreateStore(Load, LocalAddr);
   } else {
-    LoadInst *Load = Builder.CreateLoad(LocalAddr, "shared.write");
+    LoadInst *Load = Builder.CreateLoad(IndexTy, LocalAddr, "shared.write");
     Builder.CreateStore(Load, GlobalAddr);
   }
 }
@@ -2154,7 +2178,7 @@ void GPUNodeBuilder::prepareKernelArguments(ppcg_kernel *Kernel, Function *FN) {
     if (!gpu_array_is_read_only_scalar(&Prog->array[i])) {
       Type *TypePtr = SAI->getElementType()->getPointerTo();
       Value *TypedArgPtr = Builder.CreatePointerCast(Val, TypePtr);
-      Val = Builder.CreateLoad(TypedArgPtr);
+      Val = Builder.CreateLoad(SAI->getElementType(), TypedArgPtr);
     }
 
     Value *Alloca = BlockGen.getOrCreateAlloca(SAI);
@@ -2191,7 +2215,7 @@ void GPUNodeBuilder::finalizeKernelArguments(ppcg_kernel *Kernel) {
     Value *ArgPtr = &*Arg;
     Type *TypePtr = SAI->getElementType()->getPointerTo();
     Value *TypedArgPtr = Builder.CreatePointerCast(ArgPtr, TypePtr);
-    Value *Val = Builder.CreateLoad(Alloca);
+    Value *Val = Builder.CreateLoad(SAI->getElementType(), Alloca);
     Builder.CreateStore(Val, TypedArgPtr);
     StoredScalar = true;
 
@@ -2548,7 +2572,11 @@ public:
   const DataLayout *DL;
   RegionInfo *RI;
 
-  PPCGCodeGeneration() : ScopPass(ID) {}
+  PPCGCodeGeneration() : ScopPass(ID) {
+    // Apply defaults.
+    Runtime = GPURuntimeChoice;
+    Architecture = GPUArchChoice;
+  }
 
   /// Construct compilation options for PPCG.
   ///

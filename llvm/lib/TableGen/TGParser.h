@@ -243,8 +243,10 @@ private:  // Parser methods.
                          IDParseMode Mode = ParseValueMode);
   Init *ParseValue(Record *CurRec, RecTy *ItemType = nullptr,
                    IDParseMode Mode = ParseValueMode);
-  void ParseValueList(SmallVectorImpl<llvm::Init*> &Result, Record *CurRec,
-                      Record *ArgsRec = nullptr, RecTy *EltTy = nullptr);
+  void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
+                      Record *CurRec, RecTy *ItemType = nullptr);
+  bool ParseTemplateArgValueList(SmallVectorImpl<llvm::Init *> &Result,
+                                 Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
       Record *CurRec);
@@ -264,8 +266,8 @@ private:  // Parser methods.
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
-  void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
-  void CheckRecordAsserts(Record &Rec);
+  bool CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
+                              SMLoc Loc, Record *ArgsRec);
 };
 
 } // end namespace llvm

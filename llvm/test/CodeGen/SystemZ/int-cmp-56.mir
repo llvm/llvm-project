@@ -65,7 +65,7 @@ body:             |
     %8:gr64bit = LG %0, 112, $noreg
     %9:gr64bit = LG %0, 128, $noreg
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @foo, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
     %10:gr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     CGR %10, %1, implicit-def $cc
@@ -142,7 +142,7 @@ body:             |
     %8:gr64bit = LG %0, 112, $noreg
     %9:gr64bit = LG %0, 128, $noreg
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @foo, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
     %10:gr64bit = COPY $r2d
     ADJCALLSTACKUP 0, 0
     CGR %10, %1, implicit-def $cc
@@ -219,7 +219,7 @@ body:             |
     %8:gr32bit = LMux %0, 56, $noreg
     %9:gr32bit = LMux %0, 64, $noreg
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @foo, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
     %10:gr32bit = COPY $r2l
     ADJCALLSTACKUP 0, 0
     CR %10, %1, implicit-def $cc
@@ -296,7 +296,7 @@ body:             |
     %8:gr32bit = LMux %0, 56, $noreg
     %9:gr32bit = LMux %0, 64, $noreg
     ADJCALLSTACKDOWN 0, 0
-    CallBRASL @foo, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
     %10:gr32bit = COPY $r2l
     ADJCALLSTACKUP 0, 0
     CR %10, %1, implicit-def $cc

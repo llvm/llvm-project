@@ -169,7 +169,7 @@ body: |
   MachineDominanceFrontier MDF;
   MDT.runOnMachineFunction(*MF);
   MDF.getBase().analyze(MDT.getBase());
-  WEI.recalculate(MDT, MDF);
+  WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
   // |- bb2 (ehpad), bb3, bb4, bb5, bb6, bb8, bb9, bb10
@@ -344,7 +344,7 @@ body: |
   MachineDominanceFrontier MDF;
   MDT.runOnMachineFunction(*MF);
   MDF.getBase().analyze(MDT.getBase());
-  WEI.recalculate(MDT, MDF);
+  WEI.recalculate(*MF, MDT, MDF);
 
   // Exception info structure:
   // |- bb1 (ehpad), bb2, bb3, bb4, bb5, bb6, bb7, bb8, bb10, bb11, bb12

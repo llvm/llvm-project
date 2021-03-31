@@ -23,6 +23,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
@@ -689,12 +690,9 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
   unsigned StubSize;
   unsigned TAA;
   bool TAAParsed;
-  std::string ErrorStr =
-    MCSectionMachO::ParseSectionSpecifier(SectionSpec, Segment, Section,
-                                          TAA, TAAParsed, StubSize);
-
-  if (!ErrorStr.empty())
-    return Error(Loc, ErrorStr);
+  if (class Error E = MCSectionMachO::ParseSectionSpecifier(
+          SectionSpec, Segment, Section, TAA, TAAParsed, StubSize))
+    return Error(Loc, toString(std::move(E)));
 
   // Issue a warning if the target is not powerpc and Section is a *coal* section.
   Triple TT = getParser().getContext().getObjectFileInfo()->getTargetTriple();

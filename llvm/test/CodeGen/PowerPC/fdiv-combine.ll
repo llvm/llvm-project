@@ -1,6 +1,4 @@
-; RUN: llc -verify-machineinstrs -mcpu=ppc64 < %s | FileCheck %s
-target datalayout = "E-m:e-i64:64-n32:64"
-target triple = "powerpc64-unknown-linux-gnu"
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 
 ; Following test case checks:
 ;   a / D; b / D; c / D;
@@ -14,9 +12,9 @@ define void @three_fdiv_double(double %D, double %a, double %b, double %c) #0 {
 ; CHECK: fmul
 ; CHECK: fmul
 ; CHECK: fmul
-  %div = fdiv double %a, %D
-  %div1 = fdiv double %b, %D
-  %div2 = fdiv double %c, %D
+  %div = fdiv arcp double %a, %D
+  %div1 = fdiv arcp double %b, %D
+  %div2 = fdiv arcp double %c, %D
   tail call void @foo_3d(double %div, double %div1, double %div2)
   ret void
 }
@@ -26,8 +24,8 @@ define void @two_fdiv_double(double %D, double %a, double %b) #0 {
 ; CHECK: fdiv {{[0-9]}}
 ; CHECK: fdiv {{[0-9]}}
 ; CHECK-NOT: fmul
-  %div = fdiv double %a, %D
-  %div1 = fdiv double %b, %D
+  %div = fdiv arcp double %a, %D
+  %div1 = fdiv arcp double %b, %D
   tail call void @foo_2d(double %div, double %div1)
   ret void
 }
@@ -35,5 +33,3 @@ define void @two_fdiv_double(double %D, double %a, double %b) #0 {
 declare void @foo_3d(double, double, double)
 declare void @foo_3_2xd(<2 x double>, <2 x double>, <2 x double>)
 declare void @foo_2d(double, double)
-
-attributes #0 = { "unsafe-fp-math"="true" }

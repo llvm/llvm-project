@@ -484,6 +484,16 @@ public:
       MachineOperand &DefMO = MI.getOperand(I);
       assert(DefMO.isReg() && DefMO.isDef() && "Expected Reg Def operand");
       Register Reg = DefMO.getReg();
+      assert(DefMO.isTied() && "Def is expected to be tied");
+      // We skipped undef uses and did not spill them, so we should not
+      // proceed with defs here.
+      if (MI.getOperand(MI.findTiedOperandIdx(I)).isUndef()) {
+        if (AllowGCPtrInCSR) {
+          NewIndices.push_back(NewMI->getNumOperands());
+          MIB.addReg(Reg, RegState::Define);
+        }
+        continue;
+      }
       if (!AllowGCPtrInCSR) {
         assert(is_contained(RegsToSpill, Reg));
         RegsToReload.push_back(Reg);

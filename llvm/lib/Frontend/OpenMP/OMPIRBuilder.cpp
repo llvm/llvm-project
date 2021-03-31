@@ -41,15 +41,27 @@ static cl::opt<bool>
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
 
+  // Get the function's current attributes.
+  auto Attrs = Fn.getAttributes();
+  auto FnAttrs = Attrs.getFnAttributes();
+  auto RetAttrs = Attrs.getRetAttributes();
+  SmallVector<AttributeSet, 4> ArgAttrs;
+  for (size_t ArgNo = 0; ArgNo < Fn.arg_size(); ++ArgNo)
+    ArgAttrs.emplace_back(Attrs.getParamAttributes(ArgNo));
+
 #define OMP_ATTRS_SET(VarName, AttrSet) AttributeSet VarName = AttrSet;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
-  // Add attributes to the new declaration.
+  // Add attributes to the function declaration.
   switch (FnID) {
 #define OMP_RTL_ATTRS(Enum, FnAttrSet, RetAttrSet, ArgAttrSets)                \
   case Enum:                                                                   \
-    Fn.setAttributes(                                                          \
-        AttributeList::get(Ctx, FnAttrSet, RetAttrSet, ArgAttrSets));          \
+    FnAttrs = FnAttrs.addAttributes(Ctx, FnAttrSet);                           \
+    RetAttrs = RetAttrs.addAttributes(Ctx, RetAttrSet);                        \
+    for (size_t ArgNo = 0; ArgNo < ArgAttrSets.size(); ++ArgNo)                \
+      ArgAttrs[ArgNo] =                                                        \
+          ArgAttrs[ArgNo].addAttributes(Ctx, ArgAttrSets[ArgNo]);              \
+    Fn.setAttributes(AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrs));    \
     break;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   default:
@@ -126,15 +138,23 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 void OpenMPIRBuilder::initialize() { initializeTypes(M); }
 
-void OpenMPIRBuilder::finalize(bool AllowExtractorSinking) {
+void OpenMPIRBuilder::finalize(Function *Fn, bool AllowExtractorSinking) {
   SmallPtrSet<BasicBlock *, 32> ParallelRegionBlockSet;
   SmallVector<BasicBlock *, 32> Blocks;
+  SmallVector<OutlineInfo, 16> DeferredOutlines;
   for (OutlineInfo &OI : OutlineInfos) {
+    // Skip functions that have not finalized yet; may happen with nested
+    // function generation.
+    if (Fn && OI.getFunction() != Fn) {
+      DeferredOutlines.push_back(OI);
+      continue;
+    }
+
     ParallelRegionBlockSet.clear();
     Blocks.clear();
     OI.collectBlocks(ParallelRegionBlockSet, Blocks);
 
-    Function *OuterFn = OI.EntryBB->getParent();
+    Function *OuterFn = OI.getFunction();
     CodeExtractorAnalysisCache CEAC(*OuterFn);
     CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                             /* AggregateArgs */ false,
@@ -199,8 +219,12 @@ void OpenMPIRBuilder::finalize(bool AllowExtractorSinking) {
       OI.PostOutlineCB(*OutlinedFn);
   }
 
-  // Allow finalize to be called multiple times.
-  OutlineInfos.clear();
+  // Remove work items that have been completed.
+  OutlineInfos = std::move(DeferredOutlines);
+}
+
+OpenMPIRBuilder::~OpenMPIRBuilder() {
+  assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
 }
 
 Value *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
@@ -540,11 +564,12 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
   AllocaInst *PrivTIDAddr =
       Builder.CreateAlloca(Int32, nullptr, "tid.addr.local");
-  Instruction *PrivTID = Builder.CreateLoad(PrivTIDAddr, "tid");
+  Instruction *PrivTID = Builder.CreateLoad(Int32, PrivTIDAddr, "tid");
 
   // Add some fake uses for OpenMP provided arguments.
-  ToBeDeleted.push_back(Builder.CreateLoad(TIDAddr, "tid.addr.use"));
-  Instruction *ZeroAddrUse = Builder.CreateLoad(ZeroAddr, "zero.addr.use");
+  ToBeDeleted.push_back(Builder.CreateLoad(Int32, TIDAddr, "tid.addr.use"));
+  Instruction *ZeroAddrUse = Builder.CreateLoad(Int32, ZeroAddr,
+                                                "zero.addr.use");
   ToBeDeleted.push_back(ZeroAddrUse);
 
   // ThenBB
@@ -625,7 +650,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     // Initialize the local TID stack location with the argument value.
     Builder.SetInsertPoint(PrivTID);
     Function::arg_iterator OutlinedAI = OutlinedFn.arg_begin();
-    Builder.CreateStore(Builder.CreateLoad(OutlinedAI), PrivTIDAddr);
+    Builder.CreateStore(Builder.CreateLoad(Int32, OutlinedAI), PrivTIDAddr);
 
     // If no "if" clause was present we do not need the call created during
     // outlining, otherwise we reuse it in the serialized parallel region.
@@ -743,7 +768,7 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
 
       // Load back next to allocations in the to-be-outlined region.
       Builder.restoreIP(InnerAllocaIP);
-      Inner = Builder.CreateLoad(Ptr);
+      Inner = Builder.CreateLoad(V.getType(), Ptr);
     }
 
     Value *ReplacementValue = nullptr;
@@ -1129,8 +1154,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
   Builder.CreateCall(StaticInit,
                      {SrcLoc, ThreadNum, SchedulingType, PLastIter, PLowerBound,
                       PUpperBound, PStride, One, Chunk});
-  Value *LowerBound = Builder.CreateLoad(PLowerBound);
-  Value *InclusiveUpperBound = Builder.CreateLoad(PUpperBound);
+  Value *LowerBound = Builder.CreateLoad(IVTy, PLowerBound);
+  Value *InclusiveUpperBound = Builder.CreateLoad(IVTy, PUpperBound);
   Value *TripCountMinusOne = Builder.CreateSub(InclusiveUpperBound, LowerBound);
   Value *TripCount = Builder.CreateAdd(TripCountMinusOne, One);
   setCanonicalLoopTripCount(CLI, TripCount);
@@ -1162,6 +1187,13 @@ CanonicalLoopInfo *OpenMPIRBuilder::createStaticWorkshareLoop(
 
   CLI->assertOK();
   return CLI;
+}
+
+CanonicalLoopInfo *OpenMPIRBuilder::createWorkshareLoop(
+    const LocationDescription &Loc, CanonicalLoopInfo *CLI,
+    InsertPointTy AllocaIP, bool NeedsBarrier) {
+  // Currently only supports static schedules.
+  return createStaticWorkshareLoop(Loc, CLI, AllocaIP, NeedsBarrier);
 }
 
 /// Make \p Source branch to \p Target.
@@ -1223,6 +1255,127 @@ static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
 
   SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
   DeleteDeadBlocks(BBVec);
+}
+
+CanonicalLoopInfo *
+OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
+                               InsertPointTy ComputeIP) {
+  assert(Loops.size() >= 1 && "At least one loop required");
+  size_t NumLoops = Loops.size();
+
+  // Nothing to do if there is already just one loop.
+  if (NumLoops == 1)
+    return Loops.front();
+
+  CanonicalLoopInfo *Outermost = Loops.front();
+  CanonicalLoopInfo *Innermost = Loops.back();
+  BasicBlock *OrigPreheader = Outermost->getPreheader();
+  BasicBlock *OrigAfter = Outermost->getAfter();
+  Function *F = OrigPreheader->getParent();
+
+  // Setup the IRBuilder for inserting the trip count computation.
+  Builder.SetCurrentDebugLocation(DL);
+  if (ComputeIP.isSet())
+    Builder.restoreIP(ComputeIP);
+  else
+    Builder.restoreIP(Outermost->getPreheaderIP());
+
+  // Derive the collapsed' loop trip count.
+  // TODO: Find common/largest indvar type.
+  Value *CollapsedTripCount = nullptr;
+  for (CanonicalLoopInfo *L : Loops) {
+    Value *OrigTripCount = L->getTripCount();
+    if (!CollapsedTripCount) {
+      CollapsedTripCount = OrigTripCount;
+      continue;
+    }
+
+    // TODO: Enable UndefinedSanitizer to diagnose an overflow here.
+    CollapsedTripCount = Builder.CreateMul(CollapsedTripCount, OrigTripCount,
+                                           {}, /*HasNUW=*/true);
+  }
+
+  // Create the collapsed loop control flow.
+  CanonicalLoopInfo *Result =
+      createLoopSkeleton(DL, CollapsedTripCount, F,
+                         OrigPreheader->getNextNode(), OrigAfter, "collapsed");
+
+  // Build the collapsed loop body code.
+  // Start with deriving the input loop induction variables from the collapsed
+  // one, using a divmod scheme. To preserve the original loops' order, the
+  // innermost loop use the least significant bits.
+  Builder.restoreIP(Result->getBodyIP());
+
+  Value *Leftover = Result->getIndVar();
+  SmallVector<Value *> NewIndVars;
+  NewIndVars.set_size(NumLoops);
+  for (int i = NumLoops - 1; i >= 1; --i) {
+    Value *OrigTripCount = Loops[i]->getTripCount();
+
+    Value *NewIndVar = Builder.CreateURem(Leftover, OrigTripCount);
+    NewIndVars[i] = NewIndVar;
+
+    Leftover = Builder.CreateUDiv(Leftover, OrigTripCount);
+  }
+  // Outermost loop gets all the remaining bits.
+  NewIndVars[0] = Leftover;
+
+  // Construct the loop body control flow.
+  // We progressively construct the branch structure following in direction of
+  // the control flow, from the leading in-between code, the loop nest body, the
+  // trailing in-between code, and rejoining the collapsed loop's latch.
+  // ContinueBlock and ContinuePred keep track of the source(s) of next edge. If
+  // the ContinueBlock is set, continue with that block. If ContinuePred, use
+  // its predecessors as sources.
+  BasicBlock *ContinueBlock = Result->getBody();
+  BasicBlock *ContinuePred = nullptr;
+  auto ContinueWith = [&ContinueBlock, &ContinuePred, DL](BasicBlock *Dest,
+                                                          BasicBlock *NextSrc) {
+    if (ContinueBlock)
+      redirectTo(ContinueBlock, Dest, DL);
+    else
+      redirectAllPredecessorsTo(ContinuePred, Dest, DL);
+
+    ContinueBlock = nullptr;
+    ContinuePred = NextSrc;
+  };
+
+  // The code before the nested loop of each level.
+  // Because we are sinking it into the nest, it will be executed more often
+  // that the original loop. More sophisticated schemes could keep track of what
+  // the in-between code is and instantiate it only once per thread.
+  for (size_t i = 0; i < NumLoops - 1; ++i)
+    ContinueWith(Loops[i]->getBody(), Loops[i + 1]->getHeader());
+
+  // Connect the loop nest body.
+  ContinueWith(Innermost->getBody(), Innermost->getLatch());
+
+  // The code after the nested loop at each level.
+  for (size_t i = NumLoops - 1; i > 0; --i)
+    ContinueWith(Loops[i]->getAfter(), Loops[i - 1]->getLatch());
+
+  // Connect the finished loop to the collapsed loop latch.
+  ContinueWith(Result->getLatch(), nullptr);
+
+  // Replace the input loops with the new collapsed loop.
+  redirectTo(Outermost->getPreheader(), Result->getPreheader(), DL);
+  redirectTo(Result->getAfter(), Outermost->getAfter(), DL);
+
+  // Replace the input loop indvars with the derived ones.
+  for (size_t i = 0; i < NumLoops; ++i)
+    Loops[i]->getIndVar()->replaceAllUsesWith(NewIndVars[i]);
+
+  // Remove unused parts of the input loops.
+  SmallVector<BasicBlock *, 12> OldControlBBs;
+  OldControlBBs.reserve(6 * Loops.size());
+  for (CanonicalLoopInfo *Loop : Loops)
+    Loop->collectControlBlocks(OldControlBBs);
+  removeUnusedBlocksFromParent(OldControlBBs);
+
+#ifndef NDEBUG
+  Result->assertOK();
+#endif
+  return Result;
 }
 
 std::vector<CanonicalLoopInfo *>
@@ -1421,7 +1574,7 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
   Value *Ident = getOrCreateIdent(SrcLocStr);
   Value *ThreadId = getOrCreateThreadID(Ident);
 
-  llvm::Value *DidItLD = Builder.CreateLoad(DidIt);
+  llvm::Value *DidItLD = Builder.CreateLoad(Builder.getInt32Ty(), DidIt);
 
   Value *Args[] = {Ident, ThreadId, BufSize, CpyBuf, CpyFn, DidItLD};
 

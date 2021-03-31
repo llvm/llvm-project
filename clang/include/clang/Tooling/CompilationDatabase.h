@@ -213,6 +213,12 @@ private:
   std::vector<CompileCommand> CompileCommands;
 };
 
+/// Transforms a compile command so that it applies the same configuration to
+/// a different file. Most args are left intact, but tweaks may be needed
+/// to certain flags (-x, -std etc).
+tooling::CompileCommand transferCompileCommand(tooling::CompileCommand,
+                                               StringRef Filename);
+
 /// Returns a wrapped CompilationDatabase that defers to the provided one,
 /// but getCompileCommands() will infer commands for unknown files.
 /// The return value of getAllFiles() or getAllCompileCommands() is unchanged.

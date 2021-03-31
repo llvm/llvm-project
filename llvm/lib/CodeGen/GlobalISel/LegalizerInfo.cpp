@@ -446,8 +446,8 @@ LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
   assert(!llvm::empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
          "Initializer list must have at least two opcodes");
 
-  for (auto I = Opcodes.begin() + 1, E = Opcodes.end(); I != E; ++I)
-    aliasActionDefinitions(Representative, *I);
+  for (unsigned Op : llvm::drop_begin(Opcodes))
+    aliasActionDefinitions(Representative, Op);
 
   auto &Return = getActionDefinitionsBuilder(Representative);
   Return.setIsAliasedByAnother();

@@ -22,7 +22,7 @@
 # GCN: $vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
 # GCN: $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr1, 0, $vgpr5, $vcc, implicit $exec
 # GCN: $vgpr2 = V_CNDMASK_B32_e64 0, $vgpr0, 0, $vgpr4, killed $vcc, implicit $exec
-# GCN: $sgpr0_sgpr1 = V_CMP_LT_U64_e64 $vgpr4_vgpr5, $vgpr0_vgpr1, implicit $exec
+# GCN: $sgpr0_sgpr1 = V_CMP_LT_U64_e64 killed $vgpr4_vgpr5, killed $vgpr0_vgpr1, implicit $exec
 ---
 name:            vgpr64_mixed_use
 tracksRegLiveness: true

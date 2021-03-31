@@ -1,6 +1,6 @@
 # RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s -implicit-check-not=semanticHighlight
 # Send capabilities for both Theia semanticHighlight & standard semanticTokens.
-# clangd should not use/acknowledge the Theia protocol in this case.
+# clangd should not use/acknowledge the Theia protocol.
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"capabilities":{"textDocument":{
   "semanticHighlightingCapabilities":{"semanticHighlighting":true},
   "semanticTokens":{"dynamicRegistration":true}
@@ -18,12 +18,12 @@
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "data": [
-#                  First line, char 5, variable, no modifiers.
+#                  First line, char 5, variable, declaration+globalScope
 # CHECK-NEXT:      0,
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      0
+# CHECK-NEXT:      1025
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "resultId": "1"
 # CHECK-NEXT:  }
@@ -44,12 +44,12 @@
 # CHECK-NEXT:    "edits": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "data": [
-#                      Next line, char 5, variable, no modifiers
+#                      Next line, char 5, variable, declaration+globalScope
 # CHECK-NEXT:          1,
 # CHECK-NEXT:          4,
 # CHECK-NEXT:          1,
 # CHECK-NEXT:          0,
-# CHECK-NEXT:          0
+# CHECK-NEXT:          1025
 # CHECK-NEXT:        ],
 #                    Inserted at position 1
 # CHECK-NEXT:        "deleteCount": 0,
@@ -72,12 +72,12 @@
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      0,
+# CHECK-NEXT:      1025,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      4,
 # CHECK-NEXT:      1,
 # CHECK-NEXT:      0,
-# CHECK-NEXT:      0
+# CHECK-NEXT:      1025
 # CHECK-NEXT:    ],
 # CHECK-NEXT:    "resultId": "3"
 # CHECK-NEXT:  }

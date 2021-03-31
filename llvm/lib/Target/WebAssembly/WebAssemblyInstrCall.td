@@ -48,6 +48,9 @@ defm RET_CALL_RESULTS :
   I<(outs), (ins variable_ops), (outs), (ins), [],
      "return_call_results", "return_call_results", -1>;
 
+// Note that instructions with variable_ops have custom printers in
+// WebAssemblyInstPrinter.cpp.
+
 let variadicOpsAreDefs = 1 in
 defm CALL :
   I<(outs), (ins function32_op:$callee, variable_ops),
@@ -56,9 +59,12 @@ defm CALL :
 
 let variadicOpsAreDefs = 1 in
 defm CALL_INDIRECT :
- I<(outs), (ins TypeIndex:$type, i32imm:$flags, variable_ops),
-   (outs), (ins TypeIndex:$type, i32imm:$flags), [],
-   "call_indirect", "call_indirect\t$type", 0x11>;
+  I<(outs),
+    (ins TypeIndex:$type, table32_op:$table, variable_ops),
+    (outs),
+    (ins TypeIndex:$type, table32_op:$table),
+    [],
+    "call_indirect", "call_indirect\t$type, $table", 0x11>;
 
 let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RET_CALL :
@@ -69,9 +75,9 @@ defm RET_CALL :
 
 let isReturn = 1 in
 defm RET_CALL_INDIRECT :
-  I<(outs), (ins TypeIndex:$type, i32imm:$flags, variable_ops),
-    (outs), (ins TypeIndex:$type, i32imm:$flags), [],
-    "return_call_indirect\t", "return_call_indirect\t$type",
+  I<(outs), (ins TypeIndex:$type, table32_op:$table, variable_ops),
+    (outs), (ins TypeIndex:$type, table32_op:$table), [],
+    "return_call_indirect\t", "return_call_indirect\t$type, $table",
     0x13>,
   Requires<[HasTailCall]>;
 

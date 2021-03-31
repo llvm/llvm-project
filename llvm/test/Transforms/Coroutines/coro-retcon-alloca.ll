@@ -230,6 +230,40 @@ end:
   unreachable
 }
 
+declare i32 @getSize()
+define {i8*, i32} @k(i8* %buffer, i32 %n, i1 %cond) {
+entry:
+  %id = call token @llvm.coro.id.retcon(i32 1024, i32 8, i8* %buffer, i8* bitcast ({i8*, i32} (i8*, i1)* @prototype_g to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
+  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  br i1 %cond, label %alloca_block, label %non_alloca_block
+
+suspend:
+  %unwind = call i1 (...) @llvm.coro.suspend.retcon.i1(i32 %n)
+  br i1 %unwind, label %cleanup, label %resume
+
+resume:
+  br label %cleanup
+
+alloca_block:
+  %size = call i32 @getSize()
+  ; This will get lowered to a dynamic alloca.
+  ; Make sure code that runs after that lowering does not hoist the dynamic
+  ; alloca into the entry block of the resume function.
+  %alloca = call token @llvm.coro.alloca.alloc.i32(i32 %size, i32 8)
+  %ptr = call i8* @llvm.coro.alloca.get(token %alloca)
+  call void @use(i8* %ptr)
+  call void @llvm.coro.alloca.free(token %alloca)
+  br label %suspend
+
+non_alloca_block:
+  %ignore = call i32 @getSize()
+  br label %suspend
+
+cleanup:
+  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  unreachable
+}
+
 declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i1 @llvm.coro.suspend.retcon.i1(...)

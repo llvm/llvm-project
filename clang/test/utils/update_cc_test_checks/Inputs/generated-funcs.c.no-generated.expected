@@ -15,7 +15,7 @@ void foo(void);
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
-// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB2:@.*]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // OMP-NEXT:    call void @foo()
 // OMP-NEXT:    ret i32 0
 //
@@ -41,7 +41,7 @@ void foo(void);
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP2:!llvm.loop !.*]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    call void @foo()
 // NOOMP-NEXT:    ret i32 0
@@ -63,7 +63,7 @@ int main() {
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
-// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
+// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // OMP-NEXT:    ret void
 //
 // NOOMP-LABEL: @foo(
@@ -86,7 +86,7 @@ int main() {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP4:!llvm.loop !.*]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    ret void
 //

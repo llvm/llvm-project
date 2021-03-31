@@ -113,6 +113,10 @@ def apply;
 class GIApplyKind;
 class GIApplyKindWithArgs;
 
+def register_matchinfo: GIDefMatchData<"Register">;
+def build_fn_matchinfo :
+GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
+
 def copy_prop : GICombineRule<
   (defs root:$d),
   (match (COPY $d, $s):$mi,
@@ -267,7 +271,8 @@ def select_constant_cmp: GICombineRule<
 // Fold x op 0 -> x
 def right_identity_zero: GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR):$root,
+  (match (wip_match_opcode G_SUB, G_ADD, G_OR, G_XOR, G_SHL, G_ASHR, G_LSHR,
+                           G_PTR_ADD):$root,
     [{ return Helper.matchConstantOp(${root}->getOperand(2), 0); }]),
   (apply [{ return Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
 >;
@@ -301,6 +306,15 @@ def urem_pow2_to_mask : GICombineRule<
   (match (wip_match_opcode G_UREM):$root,
     [{ return Helper.matchOperandIsKnownToBeAPowerOfTwo(*${root}, 2); }]),
   (apply [{ return Helper.applySimplifyURemByPow2(*${root}); }])
+>;
+
+// Transform d = [su]div(x, y) and r = [su]rem(x, y) - > d, r = [su]divrem(x, y)
+def div_rem_to_divrem_matchdata : GIDefMatchData<"MachineInstr *">;
+def div_rem_to_divrem : GICombineRule<
+  (defs root:$root, div_rem_to_divrem_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SDIV, G_UDIV, G_SREM, G_UREM):$root,
+    [{ return Helper.matchCombineDivRem(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineDivRem(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (x op 0) - > 0
@@ -337,18 +351,16 @@ def constant_fp_op: GICombineRule <
 >;
 
 // Fold int2ptr(ptr2int(x)) -> x
-def p2i_to_i2p_matchinfo: GIDefMatchData<"Register">;
 def p2i_to_i2p: GICombineRule<
-  (defs root:$root, p2i_to_i2p_matchinfo:$info),
+  (defs root:$root, register_matchinfo:$info),
   (match (wip_match_opcode G_INTTOPTR):$root,
     [{ return Helper.matchCombineI2PToP2I(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineI2PToP2I(*${root}, ${info}); }])
 >;
 
 // Fold ptr2int(int2ptr(x)) -> x
-def i2p_to_p2i_matchinfo: GIDefMatchData<"Register">;
 def i2p_to_p2i: GICombineRule<
-  (defs root:$root, i2p_to_p2i_matchinfo:$info),
+  (defs root:$root, register_matchinfo:$info),
   (match (wip_match_opcode G_PTRTOINT):$root,
     [{ return Helper.matchCombineP2IToI2P(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineP2IToI2P(*${root}, ${info}); }])
@@ -389,18 +401,16 @@ def shl_ashr_to_sext_inreg : GICombineRule<
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
 // Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
-def redundant_and_matchinfo : GIDefMatchData<"Register">;
 def redundant_and: GICombineRule <
-  (defs root:$root, redundant_and_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AND):$root,
          [{ return Helper.matchRedundantAnd(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (x | y) -> x or (x | y) -> y when (x | y) is known to equal x or equal y.
-def redundant_or_matchinfo : GIDefMatchData<"Register">;
 def redundant_or: GICombineRule <
-  (defs root:$root, redundant_or_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_OR):$root,
          [{ return Helper.matchRedundantOr(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -418,12 +428,21 @@ def redundant_sext_inreg: GICombineRule <
 
 // Fold (anyext (trunc x)) -> x if the source type is same as
 // the destination type.
-def anyext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
 def anyext_trunc_fold: GICombineRule <
-  (defs root:$root, anyext_trunc_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_ANYEXT):$root,
          [{ return Helper.matchCombineAnyExtTrunc(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.applyCombineAnyExtTrunc(*${root}, ${matchinfo}); }])
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
+>;
+
+// Fold (zext (trunc x)) -> x if the source type is same as the destination type
+// and truncated bits are known to be zero.
+def zext_trunc_fold_matchinfo : GIDefMatchData<"Register">;
+def zext_trunc_fold: GICombineRule <
+  (defs root:$root, zext_trunc_fold_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_ZEXT):$root,
+         [{ return Helper.matchCombineZextTrunc(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold ([asz]ext ([asz]ext x)) -> ([asz]ext x).
@@ -444,9 +463,8 @@ def not_cmp_fold : GICombineRule<
 >;
 
 // Fold (fneg (fneg x)) -> x.
-def fneg_fneg_fold_matchinfo : GIDefMatchData<"Register">;
 def fneg_fneg_fold: GICombineRule <
-  (defs root:$root, fneg_fneg_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FNEG):$root,
          [{ return Helper.matchCombineFNegOfFNeg(*${root}, ${matchinfo}); }]),
   (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
@@ -462,12 +480,11 @@ def unmerge_merge : GICombineRule<
 >;
 
 // Fold (fabs (fabs x)) -> (fabs x).
-def fabs_fabs_fold_matchinfo : GIDefMatchData<"Register">;
 def fabs_fabs_fold: GICombineRule<
-  (defs root:$root, fabs_fabs_fold_matchinfo:$matchinfo),
+  (defs root:$root, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FABS):$root,
          [{ return Helper.matchCombineFAbsOfFAbs(*${root}, ${matchinfo}); }]),
-  (apply [{ return Helper.applyCombineFAbsOfFAbs(*${root}, ${matchinfo}); }])
+  (apply [{ return Helper.replaceSingleDefInstWithReg(*${root}, ${matchinfo}); }])
 >;
 
 // Fold (unmerge cst) -> cst1, cst2, ...
@@ -545,17 +562,50 @@ def combine_insert_vec_elts_build_vector : GICombineRule<
     [{ return Helper.matchCombineInsertVecElts(*${root}, ${info}); }]),
   (apply [{ return Helper.applyCombineInsertVecElts(*${root}, ${info}); }])>;
 
-def load_or_combine_matchdata :
-GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def load_or_combine : GICombineRule<
-  (defs root:$root, load_or_combine_matchdata:$info),
+  (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_OR):$root,
     [{ return Helper.matchLoadOrCombine(*${root}, ${info}); }]),
-  (apply [{ return Helper.applyLoadOrCombine(*${root}, ${info}); }])>;
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
+
+def extend_through_phis_matchdata: GIDefMatchData<"MachineInstr*">;
+def extend_through_phis : GICombineRule<
+  (defs root:$root, extend_through_phis_matchdata:$matchinfo),
+  (match (wip_match_opcode G_PHI):$root,
+    [{ return Helper.matchExtendThroughPhis(*${root}, ${matchinfo}); }]),
+  (apply [{ return Helper.applyExtendThroughPhis(*${root}, ${matchinfo}); }])>;
 
 // Currently only the one combine above.
 def insert_vec_elt_combines : GICombineGroup<
                             [combine_insert_vec_elts_build_vector]>;
+
+def extract_vec_elt_build_vec : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_EXTRACT_VECTOR_ELT):$root,
+    [{ return Helper.matchExtractVecEltBuildVec(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyExtractVecEltBuildVec(*${root}, ${matchinfo}); }])>;
+
+// Fold away full elt extracts from a build_vector.
+def extract_all_elts_from_build_vector_matchinfo :
+  GIDefMatchData<"SmallVector<std::pair<Register, MachineInstr*>>">;
+def extract_all_elts_from_build_vector : GICombineRule<
+  (defs root:$root, extract_all_elts_from_build_vector_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_BUILD_VECTOR):$root,
+    [{ return Helper.matchExtractAllEltsFromBuildVector(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyExtractAllEltsFromBuildVector(*${root}, ${matchinfo}); }])>;
+
+def extract_vec_elt_combines : GICombineGroup<[
+  extract_vec_elt_build_vec,
+  extract_all_elts_from_build_vector]>;
+
+def funnel_shift_to_rotate : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FSHL, G_FSHR):$root,
+    [{ return Helper.matchFunnelShiftToRotate(*${root}); }]),
+  (apply [{ Helper.applyFunnelShiftToRotate(*${root}); }])
+>;
+
+def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
 def undef_combines : GICombineGroup<[undef_to_fp_zero, undef_to_int_zero,
@@ -575,9 +625,12 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
 
 def known_bits_simplifications : GICombineGroup<[
-  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask]>;
+  redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,
+  zext_trunc_fold]>;
 
 def width_reduction_combines : GICombineGroup<[reduce_shl_of_extend]>;
+
+def phi_combines : GICombineGroup<[extend_through_phis]>;
 
 def select_combines : GICombineGroup<[select_undef_cmp, select_constant_cmp]>;
 
@@ -585,9 +638,9 @@ def trivial_combines : GICombineGroup<[copy_prop, mul_to_shl, add_p2i_to_ptradd,
                                        mul_by_neg_one]>;
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
-    ptr_add_immed_chain, combines_for_extload, combine_indexed_load_store,
-    undef_combines, identity_combines, simplify_add_to_sub,
-    hoist_logic_op_with_same_opcode_hands,
+    extract_vec_elt_combines, ptr_add_immed_chain, combines_for_extload,
+    combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
+    simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines,
     known_bits_simplifications, ext_ext_fold,
@@ -595,4 +648,5 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_merge, fabs_fabs_fold, unmerge_cst, unmerge_dead_to_trunc,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
-    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine]>;
+    shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
+    div_rem_to_divrem, funnel_shift_combines]>;

@@ -32,6 +32,7 @@ struct ImageTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
+struct SampledImageTypeStorage;
 struct StructTypeStorage;
 
 } // namespace detail
@@ -233,6 +234,29 @@ public:
                        Optional<StorageClass> storage = llvm::None);
 };
 
+// SPIR-V sampled image type
+class SampledImageType
+    : public Type::TypeBase<SampledImageType, SPIRVType,
+                            detail::SampledImageTypeStorage> {
+public:
+  using Base::Base;
+
+  static SampledImageType get(Type imageType);
+
+  static SampledImageType
+  getChecked(function_ref<InFlightDiagnostic()> emitError, Type imageType);
+
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type imageType);
+
+  Type getImageType() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     Optional<spirv::StorageClass> storage = llvm::None);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       Optional<spirv::StorageClass> storage = llvm::None);
+};
+
 /// SPIR-V struct type. Two kinds of struct types are supported:
 /// - Literal: a literal struct type is uniqued by its fields (types + offset
 /// info + decoration info).
@@ -403,12 +427,11 @@ public:
 
   static MatrixType get(Type columnType, uint32_t columnCount);
 
-  static MatrixType getChecked(Type columnType, uint32_t columnCount,
-                               Location location);
+  static MatrixType getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               Type columnType, uint32_t columnCount);
 
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    Type columnType,
-                                                    uint32_t columnCount);
+  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
+                              Type columnType, uint32_t columnCount);
 
   /// Returns true if the matrix elements are vectors of float elements.
   static bool isValidColumnType(Type columnType);

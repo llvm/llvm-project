@@ -40,17 +40,6 @@
 // CHECK-NEXT:    Section: Undefined
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: __rela_iplt_end
-// CHECK-NEXT:    Value: 0x200188
-// CHECK-NEXT:    Size: 0
-// CHECK-NEXT:    Binding: Local
-// CHECK-NEXT:    Type: None
-// CHECK-NEXT:    Other [
-// CHECK-NEXT:      STV_HIDDEN
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Section: .rela.dyn
-// CHECK-NEXT:  }
-// CHECK-NEXT:  Symbol {
 // CHECK-NEXT:    Name: __rela_iplt_start
 // CHECK-NEXT:    Value: [[RELA]]
 // CHECK-NEXT:    Size: 0
@@ -62,11 +51,22 @@
 // CHECK-NEXT:    Section: .rela.dyn
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: _start
-// CHECK-NEXT:    Value: 0x20118A
+// CHECK-NEXT:    Name: __rela_iplt_end
+// CHECK-NEXT:    Value: 0x200188
+// CHECK-NEXT:    Size: 0
+// CHECK-NEXT:    Binding: Local
+// CHECK-NEXT:    Type: None
+// CHECK-NEXT:    Other [
+// CHECK-NEXT:      STV_HIDDEN
+// CHECK-NEXT:    ]
+// CHECK-NEXT:    Section: .rela.dyn
+// CHECK-NEXT:  }
+// CHECK-NEXT:  Symbol {
+// CHECK-NEXT:    Name: foo
+// CHECK-NEXT:    Value: 0x201188
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: None
+// CHECK-NEXT:    Type: GNU_IFunc
 // CHECK-NEXT:    Other: 0
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
@@ -80,11 +80,11 @@
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }
 // CHECK-NEXT:  Symbol {
-// CHECK-NEXT:    Name: foo
-// CHECK-NEXT:    Value: 0x201188
+// CHECK-NEXT:    Name: _start
+// CHECK-NEXT:    Value: 0x20118A
 // CHECK-NEXT:    Size: 0
 // CHECK-NEXT:    Binding: Global
-// CHECK-NEXT:    Type: GNU_IFunc
+// CHECK-NEXT:    Type: None
 // CHECK-NEXT:    Other: 0
 // CHECK-NEXT:    Section: .text
 // CHECK-NEXT:  }

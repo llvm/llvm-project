@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
-#include "src/errno/llvmlibc_errno.h"
 #include "src/math/cosf.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/CPP/Array.h"
@@ -19,6 +17,7 @@
 #include "utils/UnitTest/Test.h"
 #include <math.h>
 
+#include <errno.h>
 #include <stdint.h>
 
 using __llvm_libc::fputil::isNegativeQuietNaN;
@@ -33,40 +32,40 @@ using __llvm_libc::testing::sdcomp26094Values;
 namespace mpfr = __llvm_libc::testing::mpfr;
 
 TEST(LlvmLibcCosfTest, SpecialNumbers) {
-  llvmlibc_errno = 0;
+  errno = 0;
 
   EXPECT_TRUE(
       isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::aQuietNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   EXPECT_TRUE(isNegativeQuietNaN(
       __llvm_libc::cosf(valueFromBits(BitPatterns::aNegativeQuietNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   EXPECT_TRUE(isQuietNaN(
       __llvm_libc::cosf(valueFromBits(BitPatterns::aSignallingNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   EXPECT_TRUE(isNegativeQuietNaN(
       __llvm_libc::cosf(valueFromBits(BitPatterns::aNegativeSignallingNaN))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   EXPECT_EQ(BitPatterns::one,
             valueAsBits(__llvm_libc::cosf(valueFromBits(BitPatterns::zero))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
   EXPECT_EQ(BitPatterns::one, valueAsBits(__llvm_libc::cosf(
                                   valueFromBits(BitPatterns::negZero))));
-  EXPECT_EQ(llvmlibc_errno, 0);
+  EXPECT_EQ(errno, 0);
 
-  llvmlibc_errno = 0;
+  errno = 0;
   EXPECT_TRUE(isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::inf))));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  EXPECT_EQ(errno, EDOM);
 
-  llvmlibc_errno = 0;
+  errno = 0;
   EXPECT_TRUE(
       isQuietNaN(__llvm_libc::cosf(valueFromBits(BitPatterns::negInf))));
-  EXPECT_EQ(llvmlibc_errno, EDOM);
+  EXPECT_EQ(errno, EDOM);
 }
 
 TEST(LlvmLibcCosfTest, InFloatRange) {

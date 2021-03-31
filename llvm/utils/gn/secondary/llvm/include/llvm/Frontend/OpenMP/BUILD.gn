@@ -9,7 +9,7 @@ tablegen("OMPh") {
 
 tablegen("OMP") {
   visibility = [ ":public_tablegen" ]
-  args = [ "-gen-directive-gen" ]
+  args = [ "-gen-directive-impl" ]
 }
 
 # Groups all tablegen() calls that create .inc files that are included in
@@ -19,7 +19,7 @@ tablegen("OMP") {
 group("public_tablegen") {
   public_deps = [
     # Frontend/OpenMP's public headers include OMP.h.inc.
-    ":OMPh",
     ":OMP",
+    ":OMPh",
   ]
 }

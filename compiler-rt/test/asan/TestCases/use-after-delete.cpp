@@ -14,15 +14,23 @@ int main() {
   // CHECK: {{READ of size 1 at 0x.* thread T0}}
   // CHECK: {{    #0 0x.* in main .*use-after-delete.cpp:}}[[@LINE-4]]
   // CHECK: {{0x.* is located 5 bytes inside of 10-byte region .0x.*,0x.*}}
-  // CHECK: {{freed by thread T0 here:}}
 
-  // CHECK-Linux: {{    #0 0x.* in operator delete\[\]}}
-  // CHECK-Linux: {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-10]]
+  // CHECK: {{freed by thread T0 here:}}
+  // CHECK-Linux:  {{    #0 0x.* in operator delete\[\]}}
+  // CHECK-SunOS:  {{    #0 0x.* in operator delete\[\]}}
+  // CHECK-Windows:{{    #0 0x.* in operator delete\[\]}}
+  // CHECK-FreeBSD:{{    #0 0x.* in operator delete\[\]}}
+  // CHECK-Darwin: {{    #0 0x.* in .*_Zda}}
+  // CHECK-NEXT:   {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-14]]
 
   // CHECK: {{previously allocated by thread T0 here:}}
+  // CHECK-Linux:  {{    #0 0x.* in operator new\[\]}}
+  // CHECK-SunOS:  {{    #0 0x.* in operator new\[\]}}
+  // CHECK-Windows:{{    #0 0x.* in operator new\[\]}}
+  // CHECK-FreeBSD:{{    #0 0x.* in operator new\[\]}}
+  // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
+  // CHECK-NEXT:   {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-23]]
 
-  // CHECK-Linux: {{    #0 0x.* in operator new\[\]}}
-  // CHECK-Linux: {{    #1 0x.* in main .*use-after-delete.cpp:}}[[@LINE-16]]
 
   // CHECK: Shadow byte legend (one shadow byte represents {{[0-9]+}} application bytes):
   // CHECK: Global redzone:

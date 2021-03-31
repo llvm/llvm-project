@@ -86,7 +86,8 @@ protected:
     EXPECT_EQ(N->kind(), NodeType) << Selection;
 
     std::vector<PrintedDecl> ActualDecls;
-    for (const auto &Entry : allTargetDecls(N->ASTNode))
+    for (const auto &Entry :
+         allTargetDecls(N->ASTNode, AST.getHeuristicResolver()))
       ActualDecls.emplace_back(Entry.first, Entry.second);
     return ActualDecls;
   }
@@ -326,9 +327,6 @@ TEST_F(TargetDeclTest, Types) {
   EXPECT_DECLS("TypedefTypeLoc", {"typedef ns::S X", Rel::Alias},
                {"struct S", Rel::Underlying});
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<class T>
     void foo() { [[T]] x; }
@@ -336,9 +334,6 @@ TEST_F(TargetDeclTest, Types) {
   EXPECT_DECLS("TemplateTypeParmTypeLoc", "class T");
   Flags.clear();
 
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Code = R"cpp(
     template<template<typename> class T>
     void foo() { [[T<int>]] x; }
@@ -615,9 +610,6 @@ TEST_F(TargetDeclTest, Lambda) {
 }
 
 TEST_F(TargetDeclTest, OverloadExpr) {
-  // FIXME: Auto-completion in a template requires disabling delayed template
-  // parsing.
-  Flags = {"-fno-delayed-template-parsing"};
   Flags.push_back("--target=x86_64-pc-linux-gnu");
 
   Code = R"cpp(
@@ -676,8 +668,6 @@ TEST_F(TargetDeclTest, OverloadExpr) {
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
-  Flags = {"-fno-delayed-template-parsing"};
-
   // Heuristic resolution of method of dependent field
   Code = R"cpp(
         struct A { void foo() {} };
@@ -758,8 +748,6 @@ TEST_F(TargetDeclTest, DependentExprs) {
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
-  Flags = {"-fno-delayed-template-parsing"};
-
   // Heuristic resolution of dependent type name
   Code = R"cpp(
         template <typename>
@@ -981,7 +969,6 @@ protected:
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-std=c++20");
     TU.ExtraArgs.push_back("-xobjective-c++");
 
@@ -992,16 +979,20 @@ protected:
 
     std::vector<ReferenceLoc> Refs;
     if (const auto *Func = llvm::dyn_cast<FunctionDecl>(TestDecl))
-      findExplicitReferences(Func->getBody(), [&Refs](ReferenceLoc R) {
-        Refs.push_back(std::move(R));
-      });
+      findExplicitReferences(
+          Func->getBody(),
+          [&Refs](ReferenceLoc R) { Refs.push_back(std::move(R)); },
+          AST.getHeuristicResolver());
     else if (const auto *NS = llvm::dyn_cast<NamespaceDecl>(TestDecl))
-      findExplicitReferences(NS, [&Refs, &NS](ReferenceLoc R) {
-        // Avoid adding the namespace foo decl to the results.
-        if (R.Targets.size() == 1 && R.Targets.front() == NS)
-          return;
-        Refs.push_back(std::move(R));
-      });
+      findExplicitReferences(
+          NS,
+          [&Refs, &NS](ReferenceLoc R) {
+            // Avoid adding the namespace foo decl to the results.
+            if (R.Targets.size() == 1 && R.Targets.front() == NS)
+              return;
+            Refs.push_back(std::move(R));
+          },
+          AST.getHeuristicResolver());
     else
       ADD_FAILURE() << "Failed to find ::foo decl for test";
 
@@ -1602,6 +1593,35 @@ TEST_F(FindExplicitReferencesTest, All) {
               "0: targets = {f}\n"
               "1: targets = {I::x}\n"
               "2: targets = {I::setY:}\n"},
+          {
+          // Objective-C: methods
+              R"cpp(
+            @interface I
+              -(void) a:(int)x b:(int)y;
+            @end
+            void foo(I *i) {
+              [$0^i $1^a:1 b:2];
+            }
+          )cpp",
+              "0: targets = {i}\n"
+              "1: targets = {I::a:b:}\n"
+          },
+          {
+          // Objective-C: protocols
+              R"cpp(
+            @interface I
+            @end
+            @protocol P
+            @end
+            void foo() {
+              // FIXME: should reference P
+              $0^I<P> *$1^x;
+            }
+          )cpp",
+              "0: targets = {I}\n"
+              "1: targets = {x}, decl\n"
+          },
+
           // Designated initializers.
           {R"cpp(
             void foo() {

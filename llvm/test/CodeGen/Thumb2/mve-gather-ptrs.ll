@@ -376,38 +376,26 @@ define arm_aapcs_vfpcc <8 x half> @ptr_f16(<8 x half*>* %offptr) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vldr.16 s0, [r1]
-; CHECK-NEXT:    vmov r2, s4
-; CHECK-NEXT:    vmov r1, s0
-; CHECK-NEXT:    vldr.16 s0, [r2]
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    vmov.16 q0[0], r2
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    vldr.16 s8, [r1]
-; CHECK-NEXT:    vmov r1, s8
-; CHECK-NEXT:    vmov.16 q0[2], r1
-; CHECK-NEXT:    vmov r1, s7
-; CHECK-NEXT:    vldr.16 s4, [r1]
 ; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    vldr.16 s0, [r1]
+; CHECK-NEXT:    vmov r2, s7
+; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    vldr.16 s4, [r2]
+; CHECK-NEXT:    vins.f16 s0, s8
+; CHECK-NEXT:    vldr.16 s1, [r1]
+; CHECK-NEXT:    vins.f16 s1, s4
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
-; CHECK-NEXT:    vmov.16 q0[3], r1
 ; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vldr.16 s8, [r0]
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov r0, s5
-; CHECK-NEXT:    vldr.16 s8, [r0]
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.16 q0[5], r0
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    vldr.16 s8, [r0]
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov.16 q0[6], r0
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vldr.16 s2, [r0]
+; CHECK-NEXT:    vldr.16 s8, [r1]
 ; CHECK-NEXT:    vmov r0, s7
-; CHECK-NEXT:    vldr.16 s4, [r0]
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov.16 q0[7], r0
+; CHECK-NEXT:    vins.f16 s2, s8
+; CHECK-NEXT:    vldr.16 s8, [r0]
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vldr.16 s3, [r0]
+; CHECK-NEXT:    vins.f16 s3, s8
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x half*>, <8 x half*>* %offptr, align 4
@@ -701,7 +689,6 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB22_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
@@ -747,7 +734,6 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB23_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16

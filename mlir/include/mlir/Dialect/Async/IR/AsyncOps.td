@@ -85,7 +85,7 @@ def Async_ExecuteOp :
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$dependencies,
       "ValueRange":$operands,
       CArg<"function_ref<void(OpBuilder &, Location, ValueRange)>",
            "nullptr">:$bodyBuilder)>,
@@ -136,7 +136,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$operand,
+    OpBuilder<(ins "Value":$operand,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
   ];
 

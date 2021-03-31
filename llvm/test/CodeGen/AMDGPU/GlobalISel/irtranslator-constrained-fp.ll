@@ -82,11 +82,11 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_strict(<2 x float> %x, <2 x
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[STRICT_FADD:%[0-9]+]]:_(<2 x s32>) = G_STRICT_FADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[STRICT_FADD]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -103,11 +103,11 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_ignore(<2 x float> %x, <2 x
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   %7:_(<2 x s32>) = nofpexcept G_STRICT_FADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %7(<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)
@@ -124,11 +124,11 @@ define <2 x float> @v_constained_fadd_v2f32_fpexcept_maytrap(<2 x float> %x, <2 
   ; CHECK:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr30_sgpr31
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
   ; CHECK:   [[STRICT_FADD:%[0-9]+]]:_(<2 x s32>) = G_STRICT_FADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[STRICT_FADD]](<2 x s32>)
   ; CHECK:   $vgpr0 = COPY [[UV]](s32)

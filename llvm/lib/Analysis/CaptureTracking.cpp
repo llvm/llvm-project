@@ -68,8 +68,8 @@ bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
   if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
     if (GEP->isInBounds())
       return true;
-  bool CanBeNull;
-  return O->getPointerDereferenceableBytes(DL, CanBeNull);
+  bool CanBeNull, CanBeFreed;
+  return O->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
 }
 
 namespace {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_READER_H
-#define LLVM_TEXTAPI_MACHO_READER_H
+#ifndef LLVM_TEXTAPI_MACHO_TEXTAPIREADER_H
+#define LLVM_TEXTAPI_MACHO_TEXTAPIREADER_H
 
 #include "llvm/Support/Error.h"
 
@@ -30,4 +30,4 @@ public:
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_READER_H
+#endif // LLVM_TEXTAPI_MACHO_TEXTAPIREADER_H

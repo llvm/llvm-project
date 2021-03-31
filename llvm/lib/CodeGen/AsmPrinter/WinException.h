@@ -44,6 +44,9 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// The section of the last funclet start.
   MCSection *CurrentFuncletTextSection = nullptr;
 
+  /// The list of symbols to add to the ehcont section
+  std::vector<const MCSymbol *> EHContTargets;
+
   void emitCSpecificHandlerTable(const MachineFunction *MF);
 
   void emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,

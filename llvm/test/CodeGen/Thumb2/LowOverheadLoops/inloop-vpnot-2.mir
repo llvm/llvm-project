@@ -151,7 +151,6 @@ body:             |
   ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $lr = nuw nsw t2ADDrs killed renamable $r4, killed renamable $lr, 19, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS killed renamable $lr
   ; CHECK:   $r4 = tMOVr killed $lr, 14 /* CC::al */, $noreg
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)

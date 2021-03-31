@@ -99,10 +99,15 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
+
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
     return Op.size() >= 8 ? MVT::i64 : MVT::i32;
   }
+
+  bool isIntDivCheap(EVT VT, AttributeList Attr) const override { return true; }
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                          Type *Ty) const override {

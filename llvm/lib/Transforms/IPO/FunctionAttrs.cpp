@@ -149,6 +149,13 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
       if (isNoModRef(MRI))
         continue;
 
+      // A pseudo probe call shouldn't change any function attribute since it
+      // doesn't translate to a real instruction. It comes with a memory access
+      // tag to prevent itself being removed by optimizations and not block
+      // other instructions being optimized.
+      if (isa<PseudoProbeInst>(I))
+        continue;
+
       if (!AliasAnalysis::onlyAccessesArgPointees(MRB)) {
         // The call could access any memory. If that includes writes, note it.
         if (isModSet(MRI))
@@ -1445,8 +1452,7 @@ static bool functionWillReturn(const Function &F) {
   // If there are no loops, then the function is willreturn if all calls in
   // it are willreturn.
   return all_of(instructions(F), [](const Instruction &I) {
-    const auto *CB = dyn_cast<CallBase>(&I);
-    return !CB || CB->hasFnAttr(Attribute::WillReturn);
+    return I.willReturn();
   });
 }
 

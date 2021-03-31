@@ -3,6 +3,15 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
+if(CLANG_BUILT_STANDALONE)
+  # LLVMTestingSupport library is needed for clang-tidy tests.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      AND NOT TARGET LLVMTestingSupport)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      lib/Testing/Support)
+  endif()
+endif()
+
 get_filename_component(CLANG_LINT_SOURCE_DIR
   ${CMAKE_CURRENT_SOURCE_DIR}/../../clang-tidy REALPATH)
 include_directories(${CLANG_LINT_SOURCE_DIR})

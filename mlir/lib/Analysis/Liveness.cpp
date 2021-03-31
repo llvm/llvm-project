@@ -130,7 +130,7 @@ static void buildBlockMapping(Operation *operation,
                               DenseMap<Block *, BlockInfoBuilder> &builders) {
   llvm::SetVector<Block *> toProcess;
 
-  operation->walk([&](Block *block) {
+  operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     BlockInfoBuilder &builder =
         builders.try_emplace(block, block).first->second;
 
@@ -270,7 +270,7 @@ void Liveness::print(raw_ostream &os) const {
   DenseMap<Block *, size_t> blockIds;
   DenseMap<Operation *, size_t> operationIds;
   DenseMap<Value, size_t> valueIds;
-  operation->walk([&](Block *block) {
+  operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     blockIds.insert({block, blockIds.size()});
     for (BlockArgument argument : block->getArguments())
       valueIds.insert({argument, valueIds.size()});
@@ -304,7 +304,7 @@ void Liveness::print(raw_ostream &os) const {
   };
 
   // Dump information about in and out values.
-  operation->walk([&](Block *block) {
+  operation->walk<WalkOrder::PreOrder>([&](Block *block) {
     os << "// - Block: " << blockIds[block] << "\n";
     const auto *liveness = getLiveness(block);
     os << "// --- LiveIn: ";

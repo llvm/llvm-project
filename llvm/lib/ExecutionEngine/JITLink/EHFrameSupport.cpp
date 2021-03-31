@@ -730,6 +730,29 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
   return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
 }
 
+char EHFrameNullTerminator::NullTerminatorBlockContent[] = {0, 0, 0, 0};
+
+EHFrameNullTerminator::EHFrameNullTerminator(StringRef EHFrameSectionName)
+    : EHFrameSectionName(EHFrameSectionName) {}
+
+Error EHFrameNullTerminator::operator()(LinkGraph &G) {
+  auto *EHFrame = G.findSectionByName(EHFrameSectionName);
+
+  if (!EHFrame)
+    return Error::success();
+
+  LLVM_DEBUG({
+    dbgs() << "EHFrameNullTerminator adding null terminator to "
+           << EHFrameSectionName << "\n";
+  });
+
+  auto &NullTerminatorBlock =
+      G.createContentBlock(*EHFrame, StringRef(NullTerminatorBlockContent, 4),
+                           0xfffffffffffffffc, 1, 0);
+  G.addAnonymousSymbol(NullTerminatorBlock, 0, 4, false, true);
+  return Error::success();
+}
+
 EHFrameRegistrar::~EHFrameRegistrar() {}
 
 Error InProcessEHFrameRegistrar::registerEHFrames(
@@ -751,7 +774,7 @@ createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
   if (TT.getObjectFormat() == Triple::MachO)
-    EHFrameSectionName = "__eh_frame";
+    EHFrameSectionName = "__TEXT,__eh_frame";
   else
     EHFrameSectionName = ".eh_frame";
 
@@ -768,8 +791,9 @@ createEHFrameRecorderPass(const Triple &TT,
       Size = R.getSize();
     }
     if (Addr == 0 && Size != 0)
-      return make_error<JITLinkError>("__eh_frame section can not have zero "
-                                      "address with non-zero size");
+      return make_error<JITLinkError>(
+          StringRef(EHFrameSectionName) +
+          " section can not have zero address with non-zero size");
     StoreFrameRange(Addr, Size);
     return Error::success();
   };

@@ -94,6 +94,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include <algorithm>
 #include <cstddef>
@@ -161,6 +162,14 @@ cl::list<std::string>
     SkipFunctionNames("wholeprogramdevirt-skip",
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated);
+
+/// Mechanism to add runtime checking of devirtualization decisions, trapping on
+/// any that are not correct. Useful for debugging undefined behavior leading to
+/// failures with WPD.
+cl::opt<bool>
+    CheckDevirt("wholeprogramdevirt-check", cl::init(false), cl::Hidden,
+                cl::ZeroOrMore,
+                cl::desc("Add code to trap on incorrect devirtualizations"));
 
 namespace {
 struct PatternList {
@@ -805,7 +814,7 @@ void updateVCallVisibilityInIndex(
   for (auto &P : Index) {
     for (auto &S : P.second.SummaryList) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
-      if (!GVar || GVar->vTableFuncs().empty() ||
+      if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic ||
           // Don't upgrade the visibility for symbols exported to the dynamic
           // linker, as we have no information on their eventual use.
@@ -994,12 +1003,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     std::vector<ValueInfo> &TargetsForSlot, const TypeIdCompatibleVtableInfo TIdInfo,
     uint64_t ByteOffset) {
   for (const TypeIdOffsetVtableInfo &P : TIdInfo) {
-    // Find the first non-available_externally linkage vtable initializer.
+    // Find a representative copy of the vtable initializer.
     // We can have multiple available_externally, linkonce_odr and weak_odr
-    // vtable initializers, however we want to skip available_externally as they
-    // do not have type metadata attached, and therefore the summary will not
-    // contain any vtable functions. We can also have multiple external
-    // vtable initializers in the case of comdats, which we cannot check here.
+    // vtable initializers. We can also have multiple external vtable
+    // initializers in the case of comdats, which we cannot check here.
     // The linker should give an error in this case.
     //
     // Also, handle the case of same-named local Vtables with the same path
@@ -1014,14 +1021,27 @@ bool DevirtIndex::tryFindVirtualCallTargets(
           return false;
         LocalFound = true;
       }
-      if (!GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
-        VS = cast<GlobalVarSummary>(S->getBaseObject());
+      auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
+      if (!CurVS->vTableFuncs().empty() ||
+          // Previously clang did not attach the necessary type metadata to
+          // available_externally vtables, in which case there would not
+          // be any vtable functions listed in the summary and we need
+          // to treat this case conservatively (in case the bitcode is old).
+          // However, we will also not have any vtable functions in the
+          // case of a pure virtual base class. In that case we do want
+          // to set VS to avoid treating it conservatively.
+          !GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
+        VS = CurVS;
         // We cannot perform whole program devirtualization analysis on a vtable
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
       }
     }
+    // There will be no VS if all copies are available_externally having no
+    // type metadata. In that case we can't safely perform WPD.
+    if (!VS)
+      return false;
     if (!VS->isLive())
       continue;
     for (auto VTP : VS->vTableFuncs()) {
@@ -1047,8 +1067,27 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       if (RemarksEnabled)
         VCallSite.emitRemark("single-impl",
                              TheFn->stripPointerCasts()->getName(), OREGetter);
-      VCallSite.CB.setCalledOperand(ConstantExpr::getBitCast(
-          TheFn, VCallSite.CB.getCalledOperand()->getType()));
+      auto &CB = VCallSite.CB;
+      IRBuilder<> Builder(&CB);
+      Value *Callee =
+          Builder.CreateBitCast(TheFn, CB.getCalledOperand()->getType());
+
+      // If checking is enabled, add support to compare the virtual function
+      // pointer to the devirtualized target. In case of a mismatch, perform a
+      // debug trap.
+      if (CheckDevirt) {
+        auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
+        Instruction *ThenTerm =
+            SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
+        Builder.SetInsertPoint(ThenTerm);
+        Function *TrapFn = Intrinsic::getDeclaration(&M, Intrinsic::debugtrap);
+        auto *CallTrap = Builder.CreateCall(TrapFn);
+        CallTrap->setDebugLoc(CB.getDebugLoc());
+      }
+
+      // Devirtualize.
+      CB.setCalledOperand(Callee);
+
       // This use is no longer unsafe.
       if (VCallSite.NumUnsafeUses)
         --*VCallSite.NumUnsafeUses;
@@ -1114,7 +1153,7 @@ bool DevirtModule::trySingleImplDevirt(
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
   if (TheFn->hasLocalLinkage()) {
-    std::string NewName = (TheFn->getName() + "$merged").str();
+    std::string NewName = (TheFn->getName() + ".llvm.merged").str();
 
     // Since we are renaming the function, any comdats with the same name must
     // also be renamed. This is required when targeting COFF, as the comdat name

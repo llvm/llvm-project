@@ -115,7 +115,7 @@ public:
   /// @{
 
   unsigned getNumberOfRegisters(unsigned ClassID) const;
-  unsigned getRegisterBitWidth(bool Vector) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
   unsigned getLoadStoreVecRegBitWidth(unsigned AS) const;
   unsigned getMaxInterleaveFactor(unsigned VF);
   int getArithmeticInstrCost(
@@ -127,8 +127,8 @@ public:
       TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr);
-  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, int Index,
-                     VectorType *SubTp);
+  int getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask,
+                     int Index, VectorType *SubTp);
   int getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                        TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
                        const Instruction *I = nullptr);
@@ -230,14 +230,6 @@ public:
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
   bool enableInterleavedAccessVectorization();
-
-  /// Allow vectorizers to form reduction intrinsics in IR. The IR is expanded
-  /// into shuffles and vector math/logic by the backend
-  /// (see TTI::shouldExpandReduction)
-  bool useReductionIntrinsic(unsigned Opcode, Type *Ty,
-                             TTI::ReductionFlags Flags) const {
-    return true;
-  }
 
 private:
   int getGSScalarCost(unsigned Opcode, Type *DataTy, bool VariableMask,

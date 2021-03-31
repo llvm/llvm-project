@@ -60,7 +60,7 @@ add_clang_library(clangBasic
   OpenMPKinds.cpp
   OperatorPrecedence.cpp
   ProfileList.cpp
-  SanitizerBlacklist.cpp
+  NoSanitizeList.cpp
   SanitizerSpecialCaseList.cpp
   Sanitizers.cpp
   SourceLocation.cpp
@@ -78,6 +78,7 @@ add_clang_library(clangBasic
   Targets/Hexagon.cpp
   Targets/Lanai.cpp
   Targets/Le64.cpp
+  Targets/M68k.cpp
   Targets/MSP430.cpp
   Targets/Mips.cpp
   Targets/NVPTX.cpp

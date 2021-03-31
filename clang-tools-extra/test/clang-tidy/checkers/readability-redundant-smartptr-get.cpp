@@ -168,6 +168,42 @@ void Positive() {
   // CHECK-FIXES: if (NULL == x);
 }
 
+template <typename T>
+void testTemplate() {
+  T().get()->Do();
+}
+
+template <typename T>
+void testTemplate2() {
+  std::unique_ptr<T> up;
+  up.get()->Do();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant get() call
+  // CHECK-FIXES: up->Do();
+}
+
+void instantiate() {
+  testTemplate<BarPtr>();
+  testTemplate<std::unique_ptr<Bar>>();
+  testTemplate<Fail2>();
+
+  testTemplate2<Bar>();
+}
+
+struct S {
+
+  void foo() {
+    m_up.get()->Do();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant get() call
+    // CHECK-FIXES: m_up->Do();
+    m_bp.get()->Do();
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: redundant get() call
+    // CHECK-FIXES: m_bp->Do();
+  }
+
+  std::unique_ptr<Bar> m_up;
+  BarPtr m_bp;
+};
+
 #define MACRO(p) p.get()
 
 void Negative() {

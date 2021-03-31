@@ -119,11 +119,17 @@ BasicBlock *CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
 /// values.  The final argument captures information about the cloned code if
 /// non-null.
 ///
-/// VMap contains no non-identity GlobalValue mappings and debug info metadata
-/// will not be cloned.
+/// \pre VMap contains no non-identity GlobalValue mappings.
 ///
 Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
                         ClonedCodeInfo *CodeInfo = nullptr);
+
+enum class CloneFunctionChangeType {
+  LocalChangesOnly,
+  GlobalChanges,
+  DifferentModule,
+  ClonedModule,
+};
 
 /// Clone OldFunc into NewFunc, transforming the old arguments into references
 /// to VMap values.  Note that if NewFunc already has basic blocks, the ones
@@ -131,12 +137,27 @@ Function *CloneFunction(Function *F, ValueToValueMapTy &VMap,
 /// fills in a list of return instructions, and can optionally remap types
 /// and/or append the specified suffix to all values cloned.
 ///
-/// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
-/// mappings.
+/// If \p Changes is \a CloneFunctionChangeType::LocalChangesOnly, VMap is
+/// required to contain no non-identity GlobalValue mappings. Otherwise,
+/// referenced metadata will be cloned.
 ///
+/// If \p Changes is less than \a CloneFunctionChangeType::DifferentModule
+/// indicating cloning into the same module (even if it's LocalChangesOnly), if
+/// debug info metadata transitively references a \a DISubprogram, it will be
+/// cloned, effectively upgrading \p Changes to GlobalChanges while suppressing
+/// cloning of types and compile units.
+///
+/// If \p Changes is \a CloneFunctionChangeType::DifferentModule, the new
+/// module's \c !llvm.dbg.cu will get updated with any newly created compile
+/// units. (\a CloneFunctionChangeType::ClonedModule leaves that work for the
+/// caller.)
+///
+/// FIXME: Consider simplifying this function by splitting out \a
+/// CloneFunctionMetadataInto() and expecting / updating callers to call it
+/// first when / how it's needed.
 void CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
-                       ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-                       SmallVectorImpl<ReturnInst*> &Returns,
+                       ValueToValueMapTy &VMap, CloneFunctionChangeType Changes,
+                       SmallVectorImpl<ReturnInst *> &Returns,
                        const char *NameSuffix = "",
                        ClonedCodeInfo *CodeInfo = nullptr,
                        ValueMapTypeRemapper *TypeMapper = nullptr,
@@ -176,9 +197,10 @@ public:
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       BlockFrequencyInfo *CallerBFI = nullptr,
-      BlockFrequencyInfo *CalleeBFI = nullptr)
+      BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true)
       : CG(cg), GetAssumptionCache(GetAssumptionCache), PSI(PSI),
-        CallerBFI(CallerBFI), CalleeBFI(CalleeBFI) {}
+        CallerBFI(CallerBFI), CalleeBFI(CalleeBFI),
+        UpdateProfile(UpdateProfile) {}
 
   /// If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
@@ -201,6 +223,10 @@ public:
   /// only if CG is null. If CG is non-null, instead the value handle
   /// `InlinedCalls` above is used.
   SmallVector<CallBase *, 8> InlinedCallSites;
+
+  /// Update profile for callee as well as cloned version. We need to do this
+  /// for regular inlining, but not for inlining from sample profile loader.
+  bool UpdateProfile;
 
   void reset() {
     StaticAllocas.clear();
@@ -273,6 +299,13 @@ void updateProfileCallee(
 /// when cloning.
 void identifyNoAliasScopesToClone(
     ArrayRef<BasicBlock *> BBs, SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
+
+/// Find the 'llvm.experimental.noalias.scope.decl' intrinsics in the specified
+/// instruction range and extract their scope. These are candidates for
+/// duplication when cloning.
+void identifyNoAliasScopesToClone(
+    BasicBlock::iterator Start, BasicBlock::iterator End,
+    SmallVectorImpl<MDNode *> &NoAliasDeclScopes);
 
 /// Duplicate the specified list of noalias decl scopes.
 /// The 'Ext' string is added as an extension to the name.

@@ -32,7 +32,7 @@
 using namespace fs;
 
 fs::perms read_umask() {
-    mode_t old_mask = umask(0);
+    auto old_mask = umask(0); // int on Windows, mode_t on POSIX.
     umask(old_mask); // reset the mask to the old value.
     return static_cast<fs::perms>(old_mask);
 }
@@ -118,7 +118,7 @@ TEST_CASE(dest_is_symlink_to_dir)
 {
     scoped_test_env env;
     const path dir = env.create_dir("dir");
-    const path sym = env.create_symlink(dir, "sym_name");
+    const path sym = env.create_directory_symlink(dir, "sym_name");
     std::error_code ec = GetTestEC();
     TEST_CHECK(create_directory(sym, ec) == false);
     TEST_CHECK(!ec);

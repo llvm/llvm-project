@@ -192,17 +192,18 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
 
 Optional<object::SectionedAddress>
 DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
-  if (IsDWO) {
+  if (!AddrOffsetSectionBase) {
     auto R = Context.info_section_units();
     // Surprising if a DWO file has more than one skeleton unit in it - this
     // probably shouldn't be valid, but if a use case is found, here's where to
     // support it (probably have to linearly search for the matching skeleton CU
     // here)
-    if (hasSingleElement(R))
+    if (IsDWO && hasSingleElement(R))
       return (*R.begin())->getAddrOffsetSectionItem(Index);
-  }
-  if (!AddrOffsetSectionBase)
+
     return None;
+  }
+
   uint64_t Offset = *AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
     return None;
@@ -688,15 +689,15 @@ DWARFUnit::getInlinedChainForAddress(uint64_t Address,
   DWARFDie SubroutineDIE =
       (DWO ? *DWO : *this).getSubroutineForAddress(Address);
 
-  if (!SubroutineDIE)
-    return;
-
-  while (!SubroutineDIE.isSubprogramDIE()) {
+  while (SubroutineDIE) {
+    if (SubroutineDIE.isSubprogramDIE()) {
+      InlinedChain.push_back(SubroutineDIE);
+      return;
+    }
     if (SubroutineDIE.getTag() == DW_TAG_inlined_subroutine)
       InlinedChain.push_back(SubroutineDIE);
     SubroutineDIE  = SubroutineDIE.getParent();
   }
-  InlinedChain.push_back(SubroutineDIE);
 }
 
 const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,

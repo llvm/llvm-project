@@ -61,6 +61,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/AddClang.cmake
     DESTINATION ${CLANG_INSTALL_PACKAGE_DIR}
     COMPONENT clang-cmake-exports)
 

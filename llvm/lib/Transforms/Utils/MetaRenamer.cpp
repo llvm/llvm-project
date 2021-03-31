@@ -67,9 +67,9 @@ struct Renamer {
 };
 
 void MetaRename(Function &F) {
-  for (auto AI = F.arg_begin(), AE = F.arg_end(); AI != AE; ++AI)
-    if (!AI->getType()->isVoidTy())
-      AI->setName("arg");
+  for (Argument &Arg : F.args())
+    if (!Arg.getType()->isVoidTy())
+      Arg.setName("arg");
 
   for (auto &BB : F) {
     BB.setName("bb");
@@ -101,12 +101,12 @@ void MetaRename(Module &M,
   }
 
   // Rename all global variables
-  for (auto GI = M.global_begin(), GE = M.global_end(); GI != GE; ++GI) {
-    StringRef Name = GI->getName();
+  for (GlobalVariable &GV : M.globals()) {
+    StringRef Name = GV.getName();
     if (Name.startswith("llvm.") || (!Name.empty() && Name[0] == 1))
       continue;
 
-    GI->setName("global");
+    GV.setName("global");
   }
 
   // Rename all struct types

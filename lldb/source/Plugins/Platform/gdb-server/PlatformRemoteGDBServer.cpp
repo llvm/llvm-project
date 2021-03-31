@@ -30,6 +30,7 @@
 #include "lldb/Utility/UriParser.h"
 
 #include "Plugins/Process/Utility/GDBRemoteSignals.h"
+#include "Plugins/Process/gdb-remote/ProcessGDBRemote.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -202,7 +203,10 @@ Status PlatformRemoteGDBServer::GetFileWithUUID(const FileSpec &platform_file,
 /// Default Constructor
 PlatformRemoteGDBServer::PlatformRemoteGDBServer()
     : Platform(false), // This is a remote platform
-      m_gdb_client() {}
+      m_gdb_client() {
+  m_gdb_client.SetPacketTimeout(
+      process_gdb_remote::ProcessGDBRemote::GetPacketTimeout());
+}
 
 /// Destructor.
 ///
@@ -839,7 +843,7 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   GetPendingGdbServerList(connection_urls);
 
   for (size_t i = 0; i < connection_urls.size(); ++i) {
-    ConnectProcess(connection_urls[i].c_str(), "", debugger, nullptr, error);
+    ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
     if (error.Fail())
       return i; // We already connected to i process succsessfully
   }

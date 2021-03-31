@@ -14,15 +14,12 @@ Kaleidoscope: Implementing a Language with LLVM
   This is the "Kaleidoscope" Language tutorial, showing how to implement a simple
   language using LLVM components in C++.
 
-Kaleidoscope: Implementing a Language with LLVM in Objective Caml
-=================================================================
-
 .. toctree::
    :titlesonly:
    :glob:
    :numbered:
 
-   OCamlLangImpl*
+   MyFirstLanguageFrontend/LangImpl*
 
 Building a JIT in LLVM
 ===============================================

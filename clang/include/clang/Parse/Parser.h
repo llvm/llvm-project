@@ -941,8 +941,8 @@ private:
     bool isActive;
 
   public:
-    explicit TentativeParsingAction(Parser& p) : P(p) {
-      PrevPreferredType = P.PreferredType;
+    explicit TentativeParsingAction(Parser &p)
+        : P(p), PrevPreferredType(P.PreferredType) {
       PrevTok = P.Tok;
       PrevTentativelyDeclaredIdentifierCount =
           P.TentativelyDeclaredIdentifiers.size();
@@ -1991,7 +1991,8 @@ private:
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
-                                          ForRangeInfo *FRI = nullptr);
+                                          ForRangeInfo *FRI = nullptr,
+                                          bool EnterForConditionScope = false);
 
   //===--------------------------------------------------------------------===//
   // C++ Coroutines
@@ -2018,8 +2019,11 @@ private:
   }
   bool MayBeDesignationStart();
   ExprResult ParseBraceInitializer();
-  ExprResult ParseInitializerWithPotentialDesignator(
-      llvm::function_ref<void(const Designation &)> CodeCompleteCB);
+  struct DesignatorCompletionInfo {
+    SmallVectorImpl<Expr *> &InitExprs;
+    QualType PreferredBaseType;
+  };
+  ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -2818,17 +2822,6 @@ private:
   void ParseBorlandTypeAttributes(ParsedAttributes &attrs);
   void ParseOpenCLKernelAttributes(ParsedAttributes &attrs);
   void ParseOpenCLQualifiers(ParsedAttributes &Attrs);
-  /// Parses opencl_unroll_hint attribute if language is OpenCL v2.0
-  /// or higher.
-  /// \return false if error happens.
-  bool MaybeParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
-    if (getLangOpts().OpenCL)
-      return ParseOpenCLUnrollHintAttribute(Attrs);
-    return true;
-  }
-  /// Parses opencl_unroll_hint attribute.
-  /// \return false if error happens.
-  bool ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs);
   void ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs);
 
   VersionTuple ParseVersionTuple(SourceRange &Range);
@@ -3270,6 +3263,10 @@ private:
   OMPClause *ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
                                                 OpenMPClauseKind Kind,
                                                 bool ParseOnly);
+
+  /// Parses the 'sizes' clause of a '#pragma omp tile' directive.
+  OMPClause *ParseOpenMPSizesClause();
+
   /// Parses clause without any additional arguments.
   ///
   /// \param Kind Kind of current clause.
@@ -3295,6 +3292,14 @@ private:
   /// Expected format:
   /// '(' { <allocator> [ '(' <allocator_traits> ')' ] }+ ')'
   OMPClause *ParseOpenMPUsesAllocatorClause(OpenMPDirectiveKind DKind);
+
+  /// Parses clause with an interop variable of kind \a Kind.
+  ///
+  /// \param Kind Kind of current clause.
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
+  //
+  OMPClause *ParseOpenMPInteropClause(OpenMPClauseKind Kind, bool ParseOnly);
 
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP

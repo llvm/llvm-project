@@ -8,8 +8,11 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -454,5 +457,90 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
   TiedTo << "y";
   TiedStream << "0";
   EXPECT_EQ("acegostuv", TiedToBuffer);
+}
+
+TEST(raw_ostreamTest, reserve_stream) {
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "11111111111111111111";
+  uint64_t CurrentPos = OS.tell();
+  OS.reserveExtraSpace(1000);
+  EXPECT_TRUE(Str.capacity() >= CurrentPos + 1000);
+  OS << "hello";
+  OS << 1;
+  OS << 'w' << 'o' << 'r' << 'l' << 'd';
+  OS.flush();
+  EXPECT_EQ("11111111111111111111hello1world", Str);
+}
+
+static void checkFileData(StringRef FileName, StringRef GoldenData) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+      MemoryBuffer::getFileOrSTDIN(FileName);
+  EXPECT_FALSE(BufOrErr.getError());
+
+  EXPECT_EQ((*BufOrErr)->getBufferSize(), GoldenData.size());
+  EXPECT_EQ(memcmp((*BufOrErr)->getBufferStart(), GoldenData.data(),
+                   GoldenData.size()),
+            0);
+}
+
+TEST(raw_ostreamTest, writeToOutputFile) {
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  FileRemover Cleanup(Path);
+
+  ASSERT_THAT_ERROR(writeToOutput(Path,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+  checkFileData(Path, "HelloWorld");
+}
+
+TEST(raw_ostreamTest, writeToNonexistingPath) {
+  StringRef FileName = "/_bad/_path";
+  std::string ErrorMessage = toString(createFileError(
+      FileName, make_error_code(errc::no_such_file_or_directory)));
+
+  EXPECT_THAT_ERROR(writeToOutput(FileName,
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    FailedWithMessage(ErrorMessage));
+}
+
+TEST(raw_ostreamTest, writeToDevNull) {
+  bool DevNullIsUsed = false;
+
+  EXPECT_THAT_ERROR(
+      writeToOutput("/dev/null",
+                    [&](raw_ostream &Out) -> Error {
+                      DevNullIsUsed =
+                          testing::internal::CheckedDowncastToActualType<
+                              raw_null_ostream, raw_ostream>(&Out);
+                      return Error::success();
+                    }),
+      Succeeded());
+
+  EXPECT_TRUE(DevNullIsUsed);
+}
+
+TEST(raw_ostreamTest, writeToStdOut) {
+  outs().flush();
+  testing::internal::CaptureStdout();
+
+  EXPECT_THAT_ERROR(writeToOutput("-",
+                                  [](raw_ostream &Out) -> Error {
+                                    Out << "HelloWorld";
+                                    return Error::success();
+                                  }),
+                    Succeeded());
+  outs().flush();
+
+  std::string CapturedStdOut = testing::internal::GetCapturedStdout();
+  EXPECT_EQ(CapturedStdOut, "HelloWorld");
 }
 }

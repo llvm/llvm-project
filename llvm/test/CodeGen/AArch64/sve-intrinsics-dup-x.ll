@@ -130,12 +130,37 @@ define <vscale x 2 x double> @dup_imm_f64(double %b) {
   ret <vscale x 2 x double> %out
 }
 
+define <vscale x 2 x float> @dup_fmov_imm_f32_2() {
+; CHECK-LABEL: dup_fmov_imm_f32_2:
+; CHECK: mov w8, #1109917696
+; CHECK-NEXT: mov z0.s, w8
+  %out = tail call <vscale x 2 x float> @llvm.aarch64.sve.dup.x.nxv2f32(float 4.200000e+01)
+  ret <vscale x 2 x float> %out
+}
+
+define <vscale x 4 x float> @dup_fmov_imm_f32_4() {
+; CHECK-LABEL: dup_fmov_imm_f32_4:
+; CHECK: mov w8, #1109917696
+; CHECK-NEXT: mov z0.s, w8
+  %out = tail call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float 4.200000e+01)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @dup_fmov_imm_f64_2() {
+; CHECK-LABEL: dup_fmov_imm_f64_2:
+; CHECK: mov x8, #4631107791820423168
+; CHECK-NEXT: mov z0.d, x8
+  %out = tail call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double 4.200000e+01)
+  ret <vscale x 2 x double> %out
+}
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8( i8)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32)
 declare <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64)
 declare <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half)
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.x.nxv8bf16(bfloat)
+declare <vscale x 2 x float> @llvm.aarch64.sve.dup.x.nxv2f32(float)
 declare <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float)
 declare <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double)
 

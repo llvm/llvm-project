@@ -70,7 +70,7 @@ subroutine s1 (q1)
  q1%n = 1
 end subroutine
 !DEF: /f2/fwdpdt DerivedType
-!DEF: /f2/kind INTRINSIC (Function) ProcEntity
+!DEF: /f2/kind INTRINSIC, PURE (Function) ProcEntity
 !DEF: /f2 (Function) Subprogram TYPE(fwdpdt(k=4_4))
 !DEF: /f2/n (Implicit) ObjectEntity INTEGER(4)
 type(fwdpdt(kind(0))) function f2(n)
@@ -92,7 +92,7 @@ end function
 !DEF: /s2/q1 (Implicit) ObjectEntity TYPE(fwdpdt(k=4_4))
 subroutine s2 (q1)
  !DEF: /s2/fwdpdt DerivedType
- !DEF: /s2/kind INTRINSIC (Function) ProcEntity
+ !DEF: /s2/kind INTRINSIC, PURE (Function) ProcEntity
  implicit type(fwdpdt(kind(0)))(q)
  !REF: /s2/fwdpdt
  !DEF: /s2/fwdpdt/k TypeParam INTEGER(4)

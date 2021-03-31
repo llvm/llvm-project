@@ -418,7 +418,7 @@ define <3 x i8> @positive_sameconst_vec_undef1(<3 x i8> %x) {
 
 define <3 x i8> @positive_sameconst_vec_undef2(<3 x i8> %x) {
 ; CHECK-LABEL: @positive_sameconst_vec_undef2(
-; CHECK-NEXT:    [[RET:%.*]] = and <3 x i8> [[X:%.*]], <i8 -8, i8 poison, i8 -8>
+; CHECK-NEXT:    [[RET:%.*]] = and <3 x i8> [[X:%.*]], <i8 -8, i8 undef, i8 -8>
 ; CHECK-NEXT:    ret <3 x i8> [[RET]]
 ;
   %tmp0 = ashr <3 x i8> %x, <i8 3, i8 undef, i8 3>

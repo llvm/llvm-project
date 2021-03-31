@@ -51,8 +51,10 @@ def cimm8_xform : SDNodeXForm<imm, [{
 
 def cimm8 : Operand<i32>, ImmLeaf<i32, [{return isInt<8>(Imm);}], cimm8_xform>;
 
-def gi_cimm8 : GICustomOperandRenderer<"renderImm8">,
+def gi_cimm8 : GICustomOperandRenderer<"renderImm">,
                 GISDNodeXFormEquiv<cimm8_xform>;
+
+def gi_cimm9 : GICustomOperandRenderer<"renderImm">;
 
 def m1 : OperandWithDefaultOps <i32, (ops (i32 -1))>;
 def Z : OperandWithDefaultOps <i32, (ops R0)>;
@@ -206,12 +208,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: // Custom renderers.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICR_Invalid,
-// CHECK-NEXT:   GICR_renderImm8,
+// CHECK-NEXT:   GICR_renderImm,
 // CHECK-NEXT: };
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
 // CHECK-NEXT:   nullptr, // GICR_Invalid
-// CHECK-NEXT:   &MyTargetInstructionSelector::renderImm8, // gi_cimm8
+// CHECK-NEXT:   &MyTargetInstructionSelector::renderImm,
 // CHECK-NEXT: };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
@@ -906,7 +908,7 @@ def MOVimm9 : I<(outs GPR32:$dst), (ins i32imm:$imm), [(set GPR32:$dst, simm9:$i
 // NOOPT-NEXT:    // (imm:{ *:[i32] })<<P:Predicate_cimm8>><<X:cimm8_xform>>:$imm  =>  (MOVcimm8:{ *:[i32] } (cimm8_xform:{ *:[i32] } (imm:{ *:[i32] }):$imm))
 // NOOPT-NEXT:    GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::MOVcimm8,
 // NOOPT-NEXT:    GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm8, // imm
+// NOOPT-NEXT:    GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GICR_renderImm, // imm
 // NOOPT-NEXT:    GIR_EraseFromParent, /*InsnID*/0,
 // NOOPT-NEXT:    GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
 // NOOPT-NEXT:    // GIR_Coverage, 10,

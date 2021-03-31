@@ -1,12 +1,12 @@
-; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --show-unwinder-output | FileCheck %s --check-prefix=CHECK-UNWINDER
+; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --show-unwinder-output --csprof-cold-thres=0 | FileCheck %s --check-prefix=CHECK-UNWINDER
 ; RUN: FileCheck %s --input-file %t
 
-; CHECK:[main:1 @ foo]:44:0
-; CHECK: 2.2: 14
+; CHECK:[main:1 @ foo]:309:0
+; CHECK: 2.1: 14
 ; CHECK: 3: 15
-; CHECK: 3.2: 14 bar:14
-; CHECK: 3.4: 1
-; CHECK:[main:1 @ foo:3.2 @ bar]:14:0
+; CHECK: 3.1: 14 bar:14
+; CHECK: 3.2: 1
+; CHECK:[main:1 @ foo:3.1 @ bar]:84:0
 ; CHECK: 1: 14
 
 ; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Range Counter:
@@ -15,9 +15,8 @@
 ; CHECK-UNWINDER:   (67e, 69b): 1
 ; CHECK-UNWINDER:   (67e, 6ad): 13
 ; CHECK-UNWINDER:   (6bd, 6c8): 14
-; CHECK-UNWINDER: main:1 @ foo:3.2 @ bar
+; CHECK-UNWINDER: main:1 @ foo:3.1 @ bar
 ; CHECK-UNWINDER:   (6af, 6bb): 14
-
 
 ; CHECK-UNWINDER: Binary(inline-cs-noprobe.perfbin)'s Branch Counter:
 ; CHECK-UNWINDER: main:1 @ foo

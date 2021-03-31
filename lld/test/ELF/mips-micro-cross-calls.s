@@ -9,14 +9,14 @@
 # RUN: ld.lld -o %t-eb.exe %t-eb.o %t-eb-pic.o
 # RUN: llvm-objdump -d -t --mattr=-micromips \
 # RUN:              --no-show-raw-insn --print-imm-hex %t-eb.exe \
-# RUN:   | FileCheck --check-prefixes=SYM,REG %s
+# RUN:   | FileCheck --check-prefix=REG %s
 # RUN: llvm-objdump -d -t --mattr=+micromips \
 # RUN:              --no-show-raw-insn --print-imm-hex %t-eb.exe \
-# RUN:   | FileCheck --check-prefixes=SYM,MICRO %s
+# RUN:   | FileCheck --check-prefix=MICRO %s
 
 # REG:  {{0*}}[[FOOT:[0-9a-f]+]]   l     F .text  0000000e 0x80 __microLA25Thunk_foo
-# REG:  {{0*}}[[BAR:[0-9a-f]+]]    g     F .text  00000000 bar
 # REG:  {{0*}}[[MIC:[0-9a-f]+]]    g       .text  00000000 0x80 micro
+# REG:  {{0*}}[[BAR:[0-9a-f]+]]    g     F .text  00000000 bar
 
 # REG:        <__start>:
 # REG-NEXT:      jalx 0x[[MIC]] <micro>

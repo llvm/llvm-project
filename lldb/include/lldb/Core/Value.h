@@ -37,27 +37,32 @@ namespace lldb_private {
 
 class Value {
 public:
-  // Values Less than zero are an error, greater than or equal to zero returns
-  // what the Scalar result is.
-  enum ValueType {
-    // m_value contains...
-    // ============================
-    eValueTypeScalar,      // raw scalar value
-    eValueTypeFileAddress, // file address value
-    eValueTypeLoadAddress, // load address value
-    eValueTypeHostAddress  // host address value (for memory in the process that
-                           // is using liblldb)
+  /// Type that describes Value::m_value.
+  enum class ValueType {
+    Invalid = -1,
+    // m_value contains:
+    /// A raw scalar value.
+    Scalar = 0,
+    /// A file address value.
+    FileAddress,
+    /// A load address value.
+    LoadAddress,
+    /// A host address value (for memory in the process that < A is
+    /// using liblldb).
+    HostAddress
   };
 
-  enum ContextType // Type that describes Value::m_context
-  {
-    // m_context contains...
-    // ====================
-    eContextTypeInvalid,      // undefined
-    eContextTypeRegisterInfo, // RegisterInfo * (can be a scalar or a vector
-                              // register)
-    eContextTypeLLDBType,     // lldb_private::Type *
-    eContextTypeVariable      // lldb_private::Variable *
+  /// Type that describes Value::m_context.
+  enum class ContextType {
+    // m_context contains:
+    /// Undefined.
+    Invalid = -1,
+    /// RegisterInfo * (can be a scalar or a vector register).
+    RegisterInfo = 0,
+    /// lldb_private::Type *.
+    LLDBType,
+    /// lldb_private::Variable *.
+    Variable
   };
 
   Value();
@@ -85,16 +90,16 @@ public:
 
   void ClearContext() {
     m_context = nullptr;
-    m_context_type = eContextTypeInvalid;
+    m_context_type = ContextType::Invalid;
   }
 
   void SetContext(ContextType context_type, void *p) {
     m_context_type = context_type;
     m_context = p;
-    if (m_context_type == eContextTypeRegisterInfo) {
+    if (m_context_type == ContextType::RegisterInfo) {
       RegisterInfo *reg_info = GetRegisterInfo();
       if (reg_info->encoding == lldb::eEncodingVector)
-        SetValueType(eValueTypeScalar);
+        SetValueType(ValueType::Scalar);
     }
   }
 

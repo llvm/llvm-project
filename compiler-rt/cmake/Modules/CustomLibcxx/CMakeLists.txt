@@ -1,8 +1,12 @@
+# TODO(phosek): We should use the runtimes build instead configured with
+# LLVM_ENABLE_RUNTIMES=libcxxabi;libcxx to avoid duplication of logic.
+
 cmake_minimum_required(VERSION 3.13.4)
 project(custom-libcxx C CXX)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
 # Build static libcxxabi.
-set(LIBCXXABI_STANDALONE_BUILD 1)
 set(LIBCXXABI_ENABLE_SHARED OFF CACHE BOOL "")
 set(LIBCXXABI_ENABLE_EXCEPTIONS ON CACHE BOOL "")
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY ON CACHE STRING "")
@@ -11,7 +15,6 @@ set(LIBCXXABI_INCLUDE_TESTS OFF CACHE BOOL "")
 add_subdirectory(${COMPILER_RT_LIBCXXABI_PATH} ${CMAKE_CURRENT_BINARY_DIR}/cxxabi)
 
 # Build static libcxx without exceptions.
-set(LIBCXX_STANDALONE_BUILD 1)
 set(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")

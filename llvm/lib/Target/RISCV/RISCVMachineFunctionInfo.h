@@ -32,6 +32,12 @@ private:
   int MoveF64FrameIndex = -1;
   /// Size of any opaque stack adjustment due to save/restore libcalls.
   unsigned LibCallStackSize = 0;
+  /// Size of RVV stack.
+  uint64_t RVVStackSize = 0;
+  /// Padding required to keep RVV stack aligned within the main stack.
+  uint64_t RVVPadding = 0;
+  /// Size of stack frame to save callee saved registers
+  unsigned CalleeSavedStackSize = 0;
 
 public:
   RISCVMachineFunctionInfo(const MachineFunction &MF) {}
@@ -58,6 +64,15 @@ public:
     return MF.getSubtarget<RISCVSubtarget>().enableSaveRestore() &&
            VarArgsSaveSize == 0 && !MF.getFrameInfo().hasTailCall();
   }
+
+  uint64_t getRVVStackSize() const { return RVVStackSize; }
+  void setRVVStackSize(uint64_t Size) { RVVStackSize = Size; }
+
+  uint64_t getRVVPadding() const { return RVVPadding; }
+  void setRVVPadding(uint64_t Padding) { RVVPadding = Padding; }
+
+  unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
+  void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 };
 
 } // end namespace llvm

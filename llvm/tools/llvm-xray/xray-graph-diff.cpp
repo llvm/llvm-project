@@ -294,10 +294,7 @@ static Twine truncateString(const StringRef &S, size_t n) {
 }
 
 template <typename T> static bool containsNullptr(const T &Collection) {
-  for (const auto &E : Collection)
-    if (E == nullptr)
-      return true;
-  return false;
+  return llvm::is_contained(Collection, nullptr);
 }
 
 static std::string getLabel(const GraphDiffRenderer::GraphT::EdgeValueType &E,

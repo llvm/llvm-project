@@ -35,7 +35,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     // 1-byte long nor fixed length but it matches the value GAS emits.
     MCSectionELF *Sec =
         Context.getELFSection(".MIPS.options", ELF::SHT_MIPS_OPTIONS,
-                              ELF::SHF_ALLOC | ELF::SHF_MIPS_NOSTRIP, 1, "");
+                              ELF::SHF_ALLOC | ELF::SHF_MIPS_NOSTRIP, 1);
     MCA.registerSection(*Sec);
     Sec->setAlignment(Align(8));
     Streamer->SwitchSection(Sec);
@@ -53,7 +53,7 @@ void MipsRegInfoRecord::EmitMipsOptionRecord() {
     Streamer->emitIntValue(ri_gp_value, 8);
   } else {
     MCSectionELF *Sec = Context.getELFSection(".reginfo", ELF::SHT_MIPS_REGINFO,
-                                              ELF::SHF_ALLOC, 24, "");
+                                              ELF::SHF_ALLOC, 24);
     MCA.registerSection(*Sec);
     Sec->setAlignment(MTS->getABI().IsN32() ? Align(8) : Align(4));
     Streamer->SwitchSection(Sec);

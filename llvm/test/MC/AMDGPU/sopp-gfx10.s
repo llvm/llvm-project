@@ -15,3 +15,9 @@ s_sendmsg 10
 
 s_sendmsg sendmsg(MSG_GET_DOORBELL)
 // GFX10: s_sendmsg sendmsg(MSG_GET_DOORBELL) ; encoding: [0x0a,0x00,0x90,0xbf]
+
+s_sendmsg 11
+// GFX10: s_sendmsg sendmsg(MSG_GET_DDID) ; encoding: [0x0b,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(MSG_GET_DDID)
+// GFX10: s_sendmsg sendmsg(MSG_GET_DDID) ; encoding: [0x0b,0x00,0x90,0xbf]

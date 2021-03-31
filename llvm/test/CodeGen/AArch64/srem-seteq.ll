@@ -83,13 +83,10 @@ define i32 @test_srem_odd_bit31(i32 %X) nounwind {
 define i16 @test_srem_even(i16 %X) nounwind {
 ; CHECK-LABEL: test_srem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #9363
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    movk w9, #37449, lsl #16
-; CHECK-NEXT:    smull x9, w8, w9
-; CHECK-NEXT:    lsr x9, x9, #32
-; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    asr w9, w8, #3
+; CHECK-NEXT:    mov w9, #18725
+; CHECK-NEXT:    mul w8, w8, w9
+; CHECK-NEXT:    asr w9, w8, #18
 ; CHECK-NEXT:    add w8, w9, w8, lsr #31
 ; CHECK-NEXT:    mov w9, #14
 ; CHECK-NEXT:    msub w8, w8, w9, w0

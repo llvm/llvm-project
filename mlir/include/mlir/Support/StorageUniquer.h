@@ -135,7 +135,13 @@ public:
   /// instances of this class type. `id` is the type identifier that will be
   /// used to identify this type when creating instances of it via 'get'.
   template <typename Storage> void registerParametricStorageType(TypeID id) {
-    registerParametricStorageTypeImpl(id);
+    // If the storage is trivially destructible, we don't need a destructor
+    // function.
+    if (std::is_trivially_destructible<Storage>::value)
+      return registerParametricStorageTypeImpl(id, nullptr);
+    registerParametricStorageTypeImpl(id, [](BaseStorage *storage) {
+      static_cast<Storage *>(storage)->~Storage();
+    });
   }
   /// Utility override when the storage type represents the type id.
   template <typename Storage> void registerParametricStorageType() {
@@ -244,8 +250,10 @@ private:
       function_ref<BaseStorage *(StorageAllocator &)> ctorFn);
 
   /// Implementation for registering an instance of a derived type with
-  /// parametric storage.
-  void registerParametricStorageTypeImpl(TypeID id);
+  /// parametric storage. This method takes an optional destructor function that
+  /// destructs storage instances when necessary.
+  void registerParametricStorageTypeImpl(
+      TypeID id, function_ref<void(BaseStorage *)> destructorFn);
 
   /// Implementation for getting an instance of a derived type with default
   /// storage.

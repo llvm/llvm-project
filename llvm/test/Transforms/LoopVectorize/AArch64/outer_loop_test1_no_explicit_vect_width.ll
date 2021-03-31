@@ -32,7 +32,7 @@
 ; CHECK: br label %[[InnerLoop:.+]]
 
 ; CHECK: [[InnerLoop]]:
-; CHECK: %[[InnerPhi:.*]] = phi <4 x i64> [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ], [ zeroinitializer, %vector.body ]
+; CHECK: %[[InnerPhi:.*]] = phi <4 x i64> [ zeroinitializer, %vector.body ], [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ]
 ; CHECK: %[[AAddr2:.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* @arr, i64 0, <4 x i64> %[[InnerPhi]], <4 x i64> %[[VecInd]]
 ; CHECK: call void @llvm.masked.scatter.v4i32.v4p0i32(<4 x i32> %[[StoreVal]], <4 x i32*> %[[AAddr2]], i32 4, <4 x i1> <i1 true, i1 true, i1 true
 ; CHECK: %[[InnerPhiNext]] = add nuw nsw <4 x i64> %[[InnerPhi]], <i64 1, i64 1, i64 1, i64 1>
@@ -97,7 +97,7 @@ for.end10:                                        ; preds = %for.inc8
 ; CHECK: br label %[[InnerLoop:.+]]
 
 ; CHECK: [[InnerLoop]]:
-; CHECK: %[[InnerPhi:.*]] = phi <2 x i64> [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ], [ zeroinitializer, %vector.body ]
+; CHECK: %[[InnerPhi:.*]] = phi <2 x i64> [ zeroinitializer, %vector.body ], [ %[[InnerPhiNext:.*]], %[[InnerLoop]] ]
 ; CHECK: %[[AAddr2:.*]] = getelementptr inbounds [8 x [8 x i64]], [8 x [8 x i64]]* @arrY, i64 0, <2 x i64> %[[InnerPhi]], <2 x i64> %[[VecInd]]
 ; CHECK: call void @llvm.masked.scatter.v2i64.v2p0i64(<2 x i64> %[[StoreVal]], <2 x i64*> %[[AAddr2]], i32 4, <2 x i1> <i1 true, i1 true>
 ; CHECK: %[[InnerPhiNext]] = add nuw nsw <2 x i64> %[[InnerPhi]], <i64 1, i64 1>

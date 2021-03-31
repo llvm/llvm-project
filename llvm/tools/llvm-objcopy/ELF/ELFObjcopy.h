@@ -12,6 +12,7 @@
 namespace llvm {
 class Error;
 class MemoryBuffer;
+class raw_ostream;
 
 namespace object {
 class ELFObjectFileBase;
@@ -19,15 +20,14 @@ class ELFObjectFileBase;
 
 namespace objcopy {
 struct CopyConfig;
-class Buffer;
 
 namespace elf {
 Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
-                           Buffer &Out);
+                           raw_ostream &Out);
 Error executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
-                                Buffer &Out);
+                                raw_ostream &Out);
 Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::ELFObjectFileBase &In, Buffer &Out);
+                             object::ELFObjectFileBase &In, raw_ostream &Out);
 
 } // end namespace elf
 } // end namespace objcopy

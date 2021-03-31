@@ -374,17 +374,24 @@ static void CheckMissingAnalysis(bool absent, const T &x) {
   }
 }
 
-const SomeExpr *GetExprHelper::Get(const parser::Expr &x) {
+template <typename T> static const SomeExpr *GetTypedExpr(const T &x) {
   CheckMissingAnalysis(!x.typedExpr, x);
   return common::GetPtrFromOptional(x.typedExpr->v);
+}
+const SomeExpr *GetExprHelper::Get(const parser::Expr &x) {
+  return GetTypedExpr(x);
 }
 const SomeExpr *GetExprHelper::Get(const parser::Variable &x) {
-  CheckMissingAnalysis(!x.typedExpr, x);
-  return common::GetPtrFromOptional(x.typedExpr->v);
+  return GetTypedExpr(x);
 }
 const SomeExpr *GetExprHelper::Get(const parser::DataStmtConstant &x) {
-  CheckMissingAnalysis(!x.typedExpr, x);
-  return common::GetPtrFromOptional(x.typedExpr->v);
+  return GetTypedExpr(x);
+}
+const SomeExpr *GetExprHelper::Get(const parser::AllocateObject &x) {
+  return GetTypedExpr(x);
+}
+const SomeExpr *GetExprHelper::Get(const parser::PointerObject &x) {
+  return GetTypedExpr(x);
 }
 
 const evaluate::Assignment *GetAssignment(const parser::AssignmentStmt &x) {
@@ -432,17 +439,6 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       symbol.details());
-}
-
-const Symbol *FindFunctionResult(const Symbol &symbol) {
-  if (const Symbol * subp{FindSubprogram(symbol)}) {
-    if (const auto &subpDetails{subp->detailsIf<SubprogramDetails>()}) {
-      if (subpDetails->isFunction()) {
-        return &subpDetails->result();
-      }
-    }
-  }
-  return nullptr;
 }
 
 const Symbol *FindOverriddenBinding(const Symbol &symbol) {
@@ -841,9 +837,7 @@ std::optional<parser::MessageFixedText> WhyNotModifiable(
 // Modifiability checks for a data-ref
 std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
     const SomeExpr &expr, const Scope &scope, bool vectorSubscriptIsOk) {
-  if (!evaluate::IsVariable(expr)) {
-    return parser::Message{at, "Expression is not a variable"_en_US};
-  } else if (auto dataRef{evaluate::ExtractDataRef(expr, true)}) {
+  if (auto dataRef{evaluate::ExtractDataRef(expr, true)}) {
     if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
       return parser::Message{at, "Variable has a vector subscript"_en_US};
     }
@@ -865,6 +859,9 @@ std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
                 std::move(*maybeWhyFirst), first.name()}};
       }
     }
+  } else if (!evaluate::IsVariable(expr)) {
+    return parser::Message{
+        at, "'%s' is not a variable"_en_US, expr.AsFortran()};
   } else {
     // reference to function returning POINTER
   }

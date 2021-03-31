@@ -60,6 +60,7 @@
 # CHECK-NEXT:  [[#ZERO]]        S _zero
 # CHECK-NEXT:  [[#FOO]]         T _foo
 # CHECK-NEXT:  {{[0-9af]+}}     T _no_debug
+# CHECK-NEXT:  {{0+}}           A __mh_execute_header
 # CHECK-EMPTY:
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections
@@ -180,6 +181,10 @@ Ldebug_info_start0:
 Ldebug_info_end0:
 .subsections_via_symbols
 .section  __DWARF,__debug_line,regular,debug
+
+.section  __DWARF,__debug_aranges,regular,debug
+ltmp1:
+  .byte 0
 
 #--- no-debug.s
 ## This file has no debug info.

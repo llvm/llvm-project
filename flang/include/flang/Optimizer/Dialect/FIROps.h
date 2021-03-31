@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_DIALECT_FIROPS_H
-#define OPTIMIZER_DIALECT_FIROPS_H
+#ifndef FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
+#define FORTRAN_OPTIMIZER_DIALECT_FIROPS_H
 
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -18,7 +19,7 @@ using namespace mlir;
 namespace fir {
 
 class FirEndOp;
-class LoopOp;
+class DoLoopOp;
 class RealAttr;
 
 void buildCmpFOp(mlir::OpBuilder &builder, mlir::OperationState &result,
@@ -29,7 +30,7 @@ void buildCmpCOp(mlir::OpBuilder &builder, mlir::OperationState &result,
                  mlir::Value rhs);
 unsigned getCaseArgumentOffset(llvm::ArrayRef<mlir::Attribute> cases,
                                unsigned dest);
-LoopOp getForInductionVarOwner(mlir::Value val);
+DoLoopOp getForInductionVarOwner(mlir::Value val);
 bool isReferenceLike(mlir::Type type);
 mlir::ParseResult isValidCaseAttr(mlir::Attribute attr);
 mlir::ParseResult parseCmpfOp(mlir::OpAsmParser &parser,
@@ -46,5 +47,4 @@ mlir::ParseResult parseSelector(mlir::OpAsmParser &parser,
 #define GET_OP_CLASSES
 #include "flang/Optimizer/Dialect/FIROps.h.inc"
 
-
-#endif // OPTIMIZER_DIALECT_FIROPS_H
+#endif // FORTRAN_OPTIMIZER_DIALECT_FIROPS_H

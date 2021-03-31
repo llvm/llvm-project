@@ -48,6 +48,21 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(input[4] == 2);
         assert(input[5] + input[6] == 1 + 1);
     }
+
+    {
+        T input[] = {0, 1, 2, 3, 4, 5, 7, 6};
+        std::nth_element(Iter(input), Iter(input + 6), Iter(input + 8), std::greater<T>());
+        assert(input[6] == 1);
+        assert(input[7] == 0);
+    }
+
+    {
+        T input[] = {1, 0, 2, 3, 4, 5, 6, 7};
+        std::nth_element(Iter(input), Iter(input + 1), Iter(input + 8), std::greater<T>());
+        assert(input[0] == 7);
+        assert(input[1] == 6);
+    }
+
     return true;
 }
 

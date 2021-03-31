@@ -1,0 +1,7 @@
+## This test verifies that llvm-objdump correctly prints function starts data.
+
+RUN: llvm-objdump --macho --function-starts %p/Inputs/hello.exe.macho-i386 | FileCheck %s --check-prefix=32-BIT
+32-BIT: 00001f40
+
+RUN: llvm-objdump --macho --function-starts %p/Inputs/hello.exe.macho-x86_64 | FileCheck %s --check-prefix=64-BIT
+64-BIT: 0000000100000f30

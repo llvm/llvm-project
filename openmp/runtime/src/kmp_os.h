@@ -333,13 +333,13 @@ extern "C" {
 //   Code from libcxx/include/__config
 // Use a function like macro to imply that it must be followed by a semicolon
 #if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
-#  define KMP_FALLTHROUGH() [[fallthrough]]
+#define KMP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
-#  define KMP_FALLTHROUGH() [[clang::fallthrough]]
+#define KMP_FALLTHROUGH() [[clang::fallthrough]]
 #elif __has_attribute(fallthrough) || __GNUC__ >= 7
-#  define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
+#define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
-#  define KMP_FALLTHROUGH() ((void)0)
+#define KMP_FALLTHROUGH() ((void)0)
 #endif
 
 #if KMP_HAVE_ATTRIBUTE_WAITPKG
@@ -680,26 +680,28 @@ extern kmp_real64 __kmp_xchg_real64(volatile kmp_real64 *p, kmp_real64 v);
   __sync_val_compare_and_swap((volatile kmp_uint32 *)(p), (kmp_uint32)(cv),    \
                               (kmp_uint32)(sv))
 #if KMP_ARCH_MIPS
-static inline bool mips_sync_bool_compare_and_swap(
-  volatile kmp_uint64 *p, kmp_uint64 cv, kmp_uint64 sv) {
+static inline bool mips_sync_bool_compare_and_swap(volatile kmp_uint64 *p,
+                                                   kmp_uint64 cv,
+                                                   kmp_uint64 sv) {
   return __atomic_compare_exchange(p, &cv, &sv, false, __ATOMIC_SEQ_CST,
-                                                       __ATOMIC_SEQ_CST);
+                                   __ATOMIC_SEQ_CST);
 }
-static inline bool mips_sync_val_compare_and_swap(
-  volatile kmp_uint64 *p, kmp_uint64 cv, kmp_uint64 sv) {
+static inline bool mips_sync_val_compare_and_swap(volatile kmp_uint64 *p,
+                                                  kmp_uint64 cv,
+                                                  kmp_uint64 sv) {
   __atomic_compare_exchange(p, &cv, &sv, false, __ATOMIC_SEQ_CST,
-                                                __ATOMIC_SEQ_CST);
+                            __ATOMIC_SEQ_CST);
   return cv;
 }
 #define KMP_COMPARE_AND_STORE_ACQ64(p, cv, sv)                                 \
-  mips_sync_bool_compare_and_swap((volatile kmp_uint64 *)(p), (kmp_uint64)(cv),\
-                               (kmp_uint64)(sv))
+  mips_sync_bool_compare_and_swap((volatile kmp_uint64 *)(p),                  \
+                                  (kmp_uint64)(cv), (kmp_uint64)(sv))
 #define KMP_COMPARE_AND_STORE_REL64(p, cv, sv)                                 \
-  mips_sync_bool_compare_and_swap((volatile kmp_uint64 *)(p), (kmp_uint64)(cv),\
-                               (kmp_uint64)(sv))
+  mips_sync_bool_compare_and_swap((volatile kmp_uint64 *)(p),                  \
+                                  (kmp_uint64)(cv), (kmp_uint64)(sv))
 #define KMP_COMPARE_AND_STORE_RET64(p, cv, sv)                                 \
   mips_sync_val_compare_and_swap((volatile kmp_uint64 *)(p), (kmp_uint64)(cv), \
-                              (kmp_uint64)(sv))
+                                 (kmp_uint64)(sv))
 #else
 #define KMP_COMPARE_AND_STORE_ACQ64(p, cv, sv)                                 \
   __sync_bool_compare_and_swap((volatile kmp_uint64 *)(p), (kmp_uint64)(cv),   \
@@ -1076,6 +1078,16 @@ bool __kmp_atomic_compare_store_rel(std::atomic<T> *p, T expected, T desired) {
   return p->compare_exchange_strong(
       expected, desired, std::memory_order_release, std::memory_order_relaxed);
 }
+
+// Symbol lookup on Linux/Windows
+#if KMP_OS_WINDOWS
+extern void *__kmp_lookup_symbol(const char *name);
+#define KMP_DLSYM(name) __kmp_lookup_symbol(name)
+#define KMP_DLSYM_NEXT(name) nullptr
+#else
+#define KMP_DLSYM(name) dlsym(RTLD_DEFAULT, name)
+#define KMP_DLSYM_NEXT(name) dlsym(RTLD_NEXT, name)
+#endif
 
 #endif /* KMP_OS_H */
 // Safe C API

@@ -72,10 +72,10 @@ define i8* @test4(i1* %dummy, i8* %a, i8* %b) {
 ; expressions.
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND1:%.*]] = load volatile i1, i1* [[DUMMY:%.*]]
+; CHECK-NEXT:    [[COND1:%.*]] = load volatile i1, i1* [[DUMMY:%.*]], align 1
 ; CHECK-NEXT:    br i1 [[COND1]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[COND2:%.*]] = load volatile i1, i1* [[DUMMY]]
+; CHECK-NEXT:    [[COND2:%.*]] = load volatile i1, i1* [[DUMMY]], align 1
 ; CHECK-NEXT:    br i1 [[COND2]], label [[THEN:%.*]], label [[END]]
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[END]]
@@ -126,7 +126,7 @@ define i32* @test5(i32 %a, i32 %b, i32 %c, i32* dereferenceable(10) %ptr1, i32* 
 ; CHECK-NEXT:    br i1 [[T1]], label [[BB1:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T2:%.*]] = icmp sgt i32 [[C:%.*]], 1
-; CHECK-NEXT:    [[T3:%.*]] = load i32*, i32** [[PTR3:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = load i32*, i32** [[PTR3:%.*]], align 8
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[T2]], i32* [[T3]], i32* [[PTR2:%.*]]
 ; CHECK-NEXT:    ret i32* [[SPEC_SELECT]]
 ; CHECK:       bb3:

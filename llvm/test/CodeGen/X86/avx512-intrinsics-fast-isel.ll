@@ -1840,7 +1840,7 @@ define <2 x double> @test_mm_cvtu64_sd(<2 x double> %__A, i64 %__B) {
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm1, %xmm1
 ; X86-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; X86-NEXT:    vsubpd {{\.LCPI.*}}, %xmm1, %xmm1
+; X86-NEXT:    vsubpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; X86-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
@@ -1888,7 +1888,7 @@ define <4 x float> @test_mm_cvtu64_ss(<4 x float> %__A, i64 %__B) {
 ; X86-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
@@ -3118,7 +3118,7 @@ entry:
 define <8 x double> @test_mm512_fmsub_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fmsub_round_pd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm2, %zmm2
+; X86-NEXT:    vpxorq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %zmm2
 ; X86-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
@@ -3178,7 +3178,7 @@ entry:
 define <8 x double> @test_mm512_fnmadd_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_round_pd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    vpxorq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
 ; X86-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
@@ -3349,7 +3349,7 @@ entry:
 define <8 x double> @test_mm512_fmsub_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fmsub_pd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm2, %zmm2
+; X86-NEXT:    vpxorq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %zmm2
 ; X86-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; X86-NEXT:    retl
 ;
@@ -3409,7 +3409,7 @@ entry:
 define <8 x double> @test_mm512_fnmadd_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_pd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm0, %zmm0
+; X86-NEXT:    vpxorq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm0, %zmm0
 ; X86-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; X86-NEXT:    retl
 ;
@@ -3582,7 +3582,7 @@ entry:
 define <16 x float> @test_mm512_fmsub_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fmsub_round_ps:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm2, %zmm2
+; X86-NEXT:    vpxord {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm2, %zmm2
 ; X86-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
@@ -3642,7 +3642,7 @@ entry:
 define <16 x float> @test_mm512_fnmadd_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_round_ps:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; X86-NEXT:    vpxord {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-NEXT:    vfmadd213ps {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
@@ -3813,7 +3813,7 @@ entry:
 define <16 x float> @test_mm512_fmsub_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fmsub_ps:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm2, %zmm2
+; X86-NEXT:    vpxord {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm2, %zmm2
 ; X86-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; X86-NEXT:    retl
 ;
@@ -3873,7 +3873,7 @@ entry:
 define <16 x float> @test_mm512_fnmadd_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fnmadd_ps:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm0, %zmm0
+; X86-NEXT:    vpxord {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; X86-NEXT:    retl
 ;
@@ -4046,7 +4046,7 @@ entry:
 define <8 x double> @test_mm512_fmsubadd_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; X86-LABEL: test_mm512_fmsubadd_round_pd:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxorq {{\.LCPI.*}}{1to8}, %zmm2, %zmm2
+; X86-NEXT:    vpxorq {{\.LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %zmm2
 ; X86-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
@@ -4323,7 +4323,7 @@ entry:
 define <16 x float> @test_mm512_fmsubadd_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; X86-LABEL: test_mm512_fmsubadd_round_ps:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vpxord {{\.LCPI.*}}{1to16}, %zmm2, %zmm2
+; X86-NEXT:    vpxord {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm2, %zmm2
 ; X86-NEXT:    vfmaddsub213ps {rn-sae}, %zmm2, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;

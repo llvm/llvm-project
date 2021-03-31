@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/DebugInfo/MSF/IMSFFile.h"

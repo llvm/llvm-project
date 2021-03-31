@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_IR_IRBUILDER_H
-#define LLVM_OPENMP_IR_IRBUILDER_H
+#ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
+#define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/DebugLoc.h"
@@ -31,6 +31,7 @@ public:
   /// Create a new OpenMPIRBuilder operating on the given module \p M. This will
   /// not have an effect on \p M (see initialize).
   OpenMPIRBuilder(Module &M) : M(M), Builder(M.getContext()) {}
+  ~OpenMPIRBuilder();
 
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
@@ -38,10 +39,12 @@ public:
   void initialize();
 
   /// Finalize the underlying module, e.g., by outlining regions.
+  /// \param Fn                    The function to be finalized. If not used,
+  ///                              all functions are finalized.
   /// \param AllowExtractorSinking Flag to include sinking instructions,
   ///                              emitted by CodeExtractor, in the
   ///                              outlined region. Default is false.
-  void finalize(bool AllowExtractorSinking = false);
+  void finalize(Function *Fn = nullptr, bool AllowExtractorSinking = false);
 
   /// Add attributes known for \p FnID to \p Fn.
   void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
@@ -274,6 +277,70 @@ public:
                                          InsertPointTy ComputeIP = {},
                                          const Twine &Name = "loop");
 
+  /// Collapse a loop nest into a single loop.
+  ///
+  /// Merges loops of a loop nest into a single CanonicalLoopNest representation
+  /// that has the same number of innermost loop iterations as the origin loop
+  /// nest. The induction variables of the input loops are derived from the
+  /// collapsed loop's induction variable. This is intended to be used to
+  /// implement OpenMP's collapse clause. Before applying a directive,
+  /// collapseLoops normalizes a loop nest to contain only a single loop and the
+  /// directive's implementation does not need to handle multiple loops itself.
+  /// This does not remove the need to handle all loop nest handling by
+  /// directives, such as the ordered(<n>) clause or the simd schedule-clause
+  /// modifier of the worksharing-loop directive.
+  ///
+  /// Example:
+  /// \code
+  ///   for (int i = 0; i < 7; ++i) // Canonical loop "i"
+  ///     for (int j = 0; j < 9; ++j) // Canonical loop "j"
+  ///       body(i, j);
+  /// \endcode
+  ///
+  /// After collapsing with Loops={i,j}, the loop is changed to
+  /// \code
+  ///   for (int ij = 0; ij < 63; ++ij) {
+  ///     int i = ij / 9;
+  ///     int j = ij % 9;
+  ///     body(i, j);
+  ///   }
+  /// \endcode
+  ///
+  /// In the current implementation, the following limitations apply:
+  ///
+  ///  * All input loops have an induction variable of the same type.
+  ///
+  ///  * The collapsed loop will have the same trip count integer type as the
+  ///    input loops. Therefore it is possible that the collapsed loop cannot
+  ///    represent all iterations of the input loops. For instance, assuming a
+  ///    32 bit integer type, and two input loops both iterating 2^16 times, the
+  ///    theoretical trip count of the collapsed loop would be 2^32 iteration,
+  ///    which cannot be represented in an 32-bit integer. Behavior is undefined
+  ///    in this case.
+  ///
+  ///  * The trip counts of every input loop must be available at \p ComputeIP.
+  ///    Non-rectangular loops are not yet supported.
+  ///
+  ///  * At each nest level, code between a surrounding loop and its nested loop
+  ///    is hoisted into the loop body, and such code will be executed more
+  ///    often than before collapsing (or not at all if any inner loop iteration
+  ///    has a trip count of 0). This is permitted by the OpenMP specification.
+  ///
+  /// \param DL        Debug location for instructions added for collapsing,
+  ///                  such as instructions to compute derive the input loop's
+  ///                  induction variables.
+  /// \param Loops     Loops in the loop nest to collapse. Loops are specified
+  ///                  from outermost-to-innermost and every control flow of a
+  ///                  loop's body must pass through its directly nested loop.
+  /// \param ComputeIP Where additional instruction that compute the collapsed
+  ///                  trip count. If not set, defaults to before the generated
+  ///                  loop.
+  ///
+  /// \returns The CanonicalLoopInfo object representing the collapsed loop.
+  CanonicalLoopInfo *collapseLoops(DebugLoc DL,
+                                   ArrayRef<CanonicalLoopInfo *> Loops,
+                                   InsertPointTy ComputeIP);
+
   /// Modifies the canonical loop to be a statically-scheduled workshare loop.
   ///
   /// This takes a \p LoopInfo representing a canonical loop, such as the one
@@ -299,6 +366,29 @@ public:
                                                InsertPointTy AllocaIP,
                                                bool NeedsBarrier,
                                                Value *Chunk = nullptr);
+
+  /// Modifies the canonical loop to be a workshare loop.
+  ///
+  /// This takes a \p LoopInfo representing a canonical loop, such as the one
+  /// created by \p createCanonicalLoop and emits additional instructions to
+  /// turn it into a workshare loop. In particular, it calls to an OpenMP
+  /// runtime function in the preheader to obtain the loop bounds to be used in
+  /// the current thread, updates the relevant instructions in the canonical
+  /// loop and calls to an OpenMP runtime finalization function after the loop.
+  ///
+  /// \param Loc      The source location description, the insertion location
+  ///                 is not used.
+  /// \param CLI      A descriptor of the canonical loop to workshare.
+  /// \param AllocaIP An insertion point for Alloca instructions usable in the
+  ///                 preheader of the loop.
+  /// \param NeedsBarrier Indicates whether a barrier must be insterted after
+  ///                     the loop.
+  ///
+  /// \returns Updated CanonicalLoopInfo.
+  CanonicalLoopInfo *createWorkshareLoop(const LocationDescription &Loc,
+                                         CanonicalLoopInfo *CLI,
+                                         InsertPointTy AllocaIP,
+                                         bool NeedsBarrier);
 
   /// Tile a loop nest.
   ///
@@ -479,6 +569,9 @@ public:
     /// vector and set.
     void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
                        SmallVectorImpl<BasicBlock *> &BlockVector);
+
+    /// Return the function that contains the region to be outlined.
+    Function *getFunction() const { return EntryBB->getParent(); }
   };
 
   /// Collection of regions that need to be outlined during finalization.
@@ -852,10 +945,12 @@ public:
     return {After, After->begin()};
   };
 
+  Function *getFunction() const { return Header->getParent(); }
+
   /// Consistency self-check.
   void assertOK() const;
 };
 
 } // end namespace llvm
 
-#endif // LLVM_IR_IRBUILDER_H
+#endif // LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H

@@ -15,6 +15,7 @@ if(MLIR_INCLUDE_TESTS)
     MLIRAffineTransformsTestPasses
     MLIRShapeTestPasses
     MLIRSPIRVTestPasses
+    MLIRTestAnalysis
     MLIRTestDialect
     MLIRTestIR
     MLIRTestPass

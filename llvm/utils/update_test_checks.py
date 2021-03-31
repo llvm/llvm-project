@@ -54,6 +54,8 @@ def main():
                       help='Remove attribute annotations (#0) from the end of check line')
   parser.add_argument('--check-attributes', action='store_true',
                       help='Check "Function Attributes" for functions')
+  parser.add_argument('--check-globals', action='store_true',
+                      help='Check global entries (global variables, metadata, attribute sets, ...) for functions')
   parser.add_argument('tests', nargs='+')
   initial_args = common.parse_commandline_args(parser)
 
@@ -111,7 +113,7 @@ def main():
       common.debug('Extracted opt cmd: ' + opt_basename + ' ' + opt_args)
       common.debug('Extracted FileCheck prefixes: ' + str(prefixes))
 
-      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args, 
+      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args,
                                            ti.path)
       builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,
               raw_tool_output, prefixes)
@@ -119,6 +121,7 @@ def main():
     func_dict = builder.finish_and_get_func_dict()
     is_in_function = False
     is_in_function_start = False
+    has_checked_pre_function_globals = False
     prefix_set = set([prefix for prefixes, _ in prefix_list for prefix in prefixes])
     common.debug('Rewriting FileCheck prefixes:', str(prefix_set))
     output_lines = []
@@ -138,13 +141,17 @@ def main():
       # out all the source lines.
       common.dump_input_lines(output_lines, ti, prefix_set, ';')
 
+      args = ti.args
+      if args.check_globals:
+          common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, True)
+
       # Now generate all the checks.
       common.add_checks_at_end(output_lines, prefix_list, builder.func_order(),
                                ';', lambda my_output_lines, prefixes, func:
                                common.add_ir_checks(my_output_lines, ';',
                                                     prefixes,
                                                     func_dict, func, False,
-                                                    ti.args.function_signature,
+                                                    args.function_signature,
                                                     global_vars_seen_dict))
     else:
       # "Normal" mode.
@@ -166,20 +173,23 @@ def main():
                                global_vars_seen_dict)
           is_in_function_start = False
 
-        if is_in_function:
-          if common.should_add_line_to_output(input_line, prefix_set):
+        m = common.IR_FUNCTION_RE.match(input_line)
+        if m and not has_checked_pre_function_globals:
+            if args.check_globals:
+                common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, True)
+            has_checked_pre_function_globals = True
+
+        if common.should_add_line_to_output(input_line, prefix_set, not is_in_function):
             # This input line of the function body will go as-is into the output.
             # Except make leading whitespace uniform: 2 spaces.
             input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(r'  ', input_line)
             output_lines.append(input_line)
-          else:
-            continue
-          if input_line.strip() == '}':
-            is_in_function = False
-          continue
+            if input_line.strip() == '}':
+                 is_in_function = False
+                 continue
 
-        # If it's outside a function, it just gets copied to the output.
-        output_lines.append(input_line)
+        if is_in_function:
+           continue
 
         m = common.IR_FUNCTION_RE.match(input_line)
         if not m:
@@ -190,6 +200,8 @@ def main():
           continue
         is_in_function = is_in_function_start = True
 
+    if args.check_globals:
+        common.add_global_checks(builder.global_var_dict(), ';', prefix_list, output_lines, global_vars_seen_dict, args.preserve_names, False)
     common.debug('Writing %d lines to %s...' % (len(output_lines), ti.path))
 
     with open(ti.path, 'wb') as f:

@@ -55,7 +55,7 @@ class TestGdbRemoteTargetXmlPacket(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(context)
         q_info_registers = self.parse_register_info_packets(context)
 
-        self.assertTrue(len(target_xml_registers) == len(q_info_registers))
+        self.assertEqual(len(target_xml_registers), len(q_info_registers))
         for register in zip(target_xml_registers, q_info_registers):
             xml_info_reg = register[0]
             q_info_reg = register[1]

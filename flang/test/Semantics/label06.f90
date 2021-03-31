@@ -1,5 +1,5 @@
 
-! RUN: not %f18 -funparse-with-symbols %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -fdebug-unparse-with-symbols %s 2>&1 | FileCheck %s
 ! CHECK: Label '10' is not in scope
 ! CHECK: Label '20' was not found
 ! CHECK: Label '30' is not a branch target

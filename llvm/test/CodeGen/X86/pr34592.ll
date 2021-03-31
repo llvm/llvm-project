@@ -14,38 +14,39 @@ define <16 x i64> @pluto(<16 x i64> %arg, <16 x i64> %arg1, <16 x i64> %arg2, <1
 ; CHECK-NEXT:    vmovaps %ymm4, %ymm10
 ; CHECK-NEXT:    vmovaps %ymm3, %ymm9
 ; CHECK-NEXT:    vmovaps %ymm1, %ymm8
-; CHECK-NEXT:    vmovaps %ymm0, %ymm4
+; CHECK-NEXT:    vmovaps %ymm0, %ymm3
 ; CHECK-NEXT:    vmovaps 240(%rbp), %ymm1
-; CHECK-NEXT:    vmovaps 208(%rbp), %ymm3
+; CHECK-NEXT:    vmovaps 208(%rbp), %ymm4
 ; CHECK-NEXT:    vmovaps 176(%rbp), %ymm0
 ; CHECK-NEXT:    vmovaps 144(%rbp), %ymm0
 ; CHECK-NEXT:    vmovaps 112(%rbp), %ymm11
 ; CHECK-NEXT:    vmovaps 80(%rbp), %ymm11
 ; CHECK-NEXT:    vmovaps 48(%rbp), %ymm11
 ; CHECK-NEXT:    vmovaps 16(%rbp), %ymm11
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm4 = ymm6[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-NEXT:    vmovaps %xmm3, %xmm8
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm3 = ymm6[0,1,2,3,4,5],ymm2[6,7]
+; CHECK-NEXT:    vmovaps %xmm4, %xmm6
 ; CHECK-NEXT:    # implicit-def: $ymm2
-; CHECK-NEXT:    vinserti128 $1, %xmm8, %ymm2, %ymm2
-; CHECK-NEXT:    vpalignr {{.*#+}} ymm0 = ymm4[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm4[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
+; CHECK-NEXT:    vinserti128 $1, %xmm6, %ymm2, %ymm2
+; CHECK-NEXT:    vpalignr {{.*#+}} ymm0 = ymm3[8,9,10,11,12,13,14,15],ymm0[0,1,2,3,4,5,6,7],ymm3[24,25,26,27,28,29,30,31],ymm0[16,17,18,19,20,21,22,23]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,0]
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm2[4,5],ymm0[6,7]
-; CHECK-NEXT:    vmovaps %xmm7, %xmm2
-; CHECK-NEXT:    vpslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vextracti128 $1, %ymm7, %xmm2
+; CHECK-NEXT:    vmovq {{.*#+}} xmm6 = xmm2[0],zero
 ; CHECK-NEXT:    # implicit-def: $ymm2
-; CHECK-NEXT:    vmovaps %xmm4, %xmm2
-; CHECK-NEXT:    vpalignr {{.*#+}} ymm3 = ymm3[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm3[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm3 = ymm3[0,1,0,3]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm3 = ymm2[0,1,2,3],ymm3[4,5,6,7]
+; CHECK-NEXT:    vmovaps %xmm6, %xmm2
+; CHECK-NEXT:    # kill: def $xmm3 killed $xmm3 killed $ymm3
+; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; CHECK-NEXT:    vmovaps %xmm7, %xmm3
+; CHECK-NEXT:    vpslldq {{.*#+}} xmm6 = zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    # implicit-def: $ymm3
+; CHECK-NEXT:    vmovaps %xmm6, %xmm3
+; CHECK-NEXT:    vpalignr {{.*#+}} ymm4 = ymm4[8,9,10,11,12,13,14,15],ymm5[0,1,2,3,4,5,6,7],ymm4[24,25,26,27,28,29,30,31],ymm5[16,17,18,19,20,21,22,23]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm4 = ymm4[0,1,0,3]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm3 = ymm3[0,1,2,3],ymm4[4,5,6,7]
 ; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm7[0,1],ymm1[2,3],ymm7[4,5,6,7]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[2,1,1,3]
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm2 = ymm5[0,1,0,1,4,5,4,5]
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm2[6,7]
-; CHECK-NEXT:    vextracti128 $1, %ymm7, %xmm2
-; CHECK-NEXT:    vmovq {{.*#+}} xmm4 = xmm2[0],zero
-; CHECK-NEXT:    # implicit-def: $ymm2
-; CHECK-NEXT:    vmovaps %xmm4, %xmm2
-; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm2 = ymm2[0,1],ymm6[0,1]
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm4 = ymm5[0,1,0,1,4,5,4,5]
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6,7]
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

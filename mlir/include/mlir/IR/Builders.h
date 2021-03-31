@@ -56,8 +56,6 @@ public:
 
   // Locations.
   Location getUnknownLoc();
-  Location getFileLineColLoc(Identifier filename, unsigned line,
-                             unsigned column);
   Location getFusedLoc(ArrayRef<Location> locs,
                        Attribute metadata = Attribute());
 

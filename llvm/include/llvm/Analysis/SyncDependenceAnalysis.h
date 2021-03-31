@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
+#define LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -89,4 +89,4 @@ private:
 
 } // namespace llvm
 
-#endif // LLVM_ANALYSIS_SYNC_DEPENDENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_SYNCDEPENDENCEANALYSIS_H

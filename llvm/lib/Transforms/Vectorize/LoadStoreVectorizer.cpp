@@ -186,7 +186,7 @@ private:
 
   /// Check if this load/store access is misaligned accesses.
   bool accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
-                          unsigned Alignment);
+                          Align Alignment);
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -1061,7 +1061,7 @@ bool Vectorizer::vectorizeStoreChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the store is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment.value())) {
+  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
     if (S0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
       return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
@@ -1206,7 +1206,7 @@ bool Vectorizer::vectorizeLoadChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the load is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment.value())) {
+  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
     if (L0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
       return vectorizeLoadChain(Chains.first, InstructionsProcessed) |
@@ -1301,8 +1301,8 @@ bool Vectorizer::vectorizeLoadChain(
 }
 
 bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
-                                    unsigned Alignment) {
-  if (Alignment % SzInBytes == 0)
+                                    Align Alignment) {
+  if (Alignment.value() % SzInBytes == 0)
     return false;
 
   bool Fast = false;

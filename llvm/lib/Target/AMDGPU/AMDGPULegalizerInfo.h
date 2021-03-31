@@ -183,6 +183,12 @@ public:
 
   bool legalizeTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
+  bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B) const;
+  bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
+                               MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B) const;
   bool legalizeDebugTrapIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &B) const;
 

@@ -1053,15 +1053,16 @@
             mfsrin  %r10,%r12
 
 # Copy-Paste Facility
-# CHECK-BE: copy 2, 19, 1                      # encoding: [0x7c,0x22,0x9e,0x0c]
-# CHECK-LE: copy 2, 19, 1                      # encoding: [0x0c,0x9e,0x22,0x7c]
-            copy 2, 19, 1
-# CHECK-BE: paste 17, 1, 1                     # encoding: [0x7c,0x31,0x0f,0x0c]
-# CHECK-LE: paste 17, 1, 1                     # encoding: [0x0c,0x0f,0x31,0x7c]
-            paste 17, 1, 1
-# CHECK-BE: cp_abort                           # encoding: [0x7c,0x00,0x06,0x8c]
-# CHECK-LE: cp_abort                           # encoding: [0x8c,0x06,0x00,0x7c]
-            cp_abort
+# CHECK-BE: copy 2, 19                        # encoding: [0x7c,0x22,0x9e,0x0c]
+# CHECK-LE: copy 2, 19                        # encoding: [0x0c,0x9e,0x22,0x7c]
+            copy 2, 19
+# CHECK-BE: paste. 17, 1                      # encoding: [0x7c,0x31,0x0f,0x0d]
+# CHECK-LE: paste. 17, 1                      # encoding: [0x0d,0x0f,0x31,0x7c]
+            paste. 17, 1, 1
+# CHECK-BE: cpabort                           # encoding: [0x7c,0x00,0x06,0x8c]
+# CHECK-LE: cpabort                           # encoding: [0x8c,0x06,0x00,0x7c]
+            cpabort
+
 
 # Message Synchronize
 # CHECK-BE: msgsync                            # encoding: [0x7c,0x00,0x06,0xec]

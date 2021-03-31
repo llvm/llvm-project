@@ -156,7 +156,8 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         // If MI has side effects, it should become a barrier for code motion.
         // IOM is rebuild from the next instruction to prevent later
         // instructions from being moved before this MI.
-        if (MI.hasUnmodeledSideEffects() && Next != MBB.end()) {
+        if (MI.hasUnmodeledSideEffects() && !MI.isPseudoProbe() &&
+            Next != MBB.end()) {
           BuildInstOrderMap(Next, IOM);
           SawStore = false;
         }
@@ -234,7 +235,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         MachineBasicBlock::iterator EndIter = std::next(MI.getIterator());
         if (MI.getOperand(0).isReg())
           for (; EndIter != MBB.end() && EndIter->isDebugValue() &&
-                 EndIter->getDebugOperandForReg(MI.getOperand(0).getReg());
+                 EndIter->hasDebugOperandForReg(MI.getOperand(0).getReg());
                ++EndIter, ++Next)
             IOM[&*EndIter] = NewOrder;
         MBB.splice(I, &MBB, MI.getIterator(), EndIter);

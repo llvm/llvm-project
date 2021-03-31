@@ -18,9 +18,9 @@
 // global data tables
 ////////////////////////////////////////////////////////////////////////////////
 
-extern DEVICE
-    omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext, OMP_STATE_COUNT>
-        omptarget_nvptx_device_State[MAX_SM];
+extern omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext,
+                             OMP_STATE_COUNT>
+    omptarget_nvptx_device_State[MAX_SM];
 
 ////////////////////////////////////////////////////////////////////////////////
 // init entry points
@@ -79,7 +79,8 @@ EXTERN void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized) {
   omptarget_nvptx_workFn = 0;
 }
 
-EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
+EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit,
+                                    int16_t RequiresOMPRuntime) {
   PRINT0(LD_IO, "call to __kmpc_spmd_kernel_init\n");
 
   setExecutionParameters(Spmd, RequiresOMPRuntime ? RuntimeInitialized

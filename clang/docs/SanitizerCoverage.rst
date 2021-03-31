@@ -319,7 +319,7 @@ It is sometimes useful to tell SanitizerCoverage to instrument only a subset of 
 functions in your target.
 With ``-fsanitize-coverage-allowlist=allowlist.txt``
 and ``-fsanitize-coverage-blocklist=blocklist.txt``,
-you can specify such a subset through the combination of a allowlist and a blocklist.
+you can specify such a subset through the combination of an allowlist and a blocklist.
 
 SanitizerCoverage will only instrument functions that satisfy two conditions.
 First, the function should belong to a source file with a path that is both allowlisted

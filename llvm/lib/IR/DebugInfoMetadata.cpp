@@ -82,8 +82,8 @@ DILocation *DILocation::getMergedLocations(ArrayRef<const DILocation *> Locs) {
   if (Locs.size() == 1)
     return Locs[0];
   auto *Merged = Locs[0];
-  for (auto I = std::next(Locs.begin()), E = Locs.end(); I != E; ++I) {
-    Merged = getMergedLocation(Merged, *I);
+  for (const DILocation *L : llvm::drop_begin(Locs)) {
+    Merged = getMergedLocation(Merged, L);
     if (Merged == nullptr)
       break;
   }
@@ -359,17 +359,25 @@ DISubrange *DISubrange::getImpl(LLVMContext &Context, Metadata *CountNode,
   DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(DISubrange, Ops);
 }
 
-DISubrange::CountType DISubrange::getCount() const {
-  if (!getRawCountNode())
-    return CountType();
+DISubrange::BoundType DISubrange::getCount() const {
+  Metadata *CB = getRawCountNode();
+  if (!CB)
+    return BoundType();
 
-  if (auto *MD = dyn_cast<ConstantAsMetadata>(getRawCountNode()))
-    return CountType(cast<ConstantInt>(MD->getValue()));
+  assert((isa<ConstantAsMetadata>(CB) || isa<DIVariable>(CB) ||
+          isa<DIExpression>(CB)) &&
+         "Count must be signed constant or DIVariable or DIExpression");
 
-  if (auto *DV = dyn_cast<DIVariable>(getRawCountNode()))
-    return CountType(DV);
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(CB))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
 
-  return CountType();
+  if (auto *MD = dyn_cast<DIVariable>(CB))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(CB))
+    return BoundType(MD);
+
+  return BoundType();
 }
 
 DISubrange::BoundType DISubrange::getLowerBound() const {
@@ -1059,6 +1067,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
+  case dwarf::DW_OP_LLVM_arg:
   case dwarf::DW_OP_regx:
     return 2;
   default:
@@ -1111,11 +1120,11 @@ bool DIExpression::isValid() const {
       // entry values of a simple register location. One reason for this is that
       // we currently can't calculate the size of the resulting DWARF block for
       // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1 &&
-             getNumElements() == 2;
+      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
+    case dwarf::DW_OP_LLVM_arg:
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_constu:
     case dwarf::DW_OP_plus_uconst:
@@ -1271,6 +1280,52 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
   return prependOpcodes(Expr, Ops, StackValue, EntryValue);
 }
 
+DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
+                                           ArrayRef<uint64_t> Ops,
+                                           unsigned ArgNo, bool StackValue) {
+  assert(Expr && "Can't add ops to this expression");
+
+  // Handle non-variadic intrinsics by prepending the opcodes.
+  if (!any_of(Expr->expr_ops(),
+              [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
+    assert(ArgNo == 0 &&
+           "Location Index must be 0 for a non-variadic expression.");
+    SmallVector<uint64_t, 8> NewOps(Ops.begin(), Ops.end());
+    return DIExpression::prependOpcodes(Expr, NewOps, StackValue);
+  }
+
+  SmallVector<uint64_t, 8> NewOps;
+  for (auto Op : Expr->expr_ops()) {
+    Op.appendToVector(NewOps);
+    if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
+      NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
+  }
+
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
+DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
+                                       uint64_t OldArg, uint64_t NewArg) {
+  assert(Expr && "Can't replace args in this expression");
+
+  SmallVector<uint64_t, 8> NewOps;
+
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() != dwarf::DW_OP_LLVM_arg || Op.getArg(0) < OldArg) {
+      Op.appendToVector(NewOps);
+      continue;
+    }
+    NewOps.push_back(dwarf::DW_OP_LLVM_arg);
+    uint64_t Arg = Op.getArg(0) == OldArg ? NewArg : Op.getArg(0);
+    // OldArg has been deleted from the Op list, so decrement all indices
+    // greater than it.
+    if (Arg > OldArg)
+      --Arg;
+    NewOps.push_back(Arg);
+  }
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
                                            bool StackValue,
@@ -1279,9 +1334,10 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
 
   if (EntryValue) {
     Ops.push_back(dwarf::DW_OP_LLVM_entry_value);
-    // Add size info needed for entry value expression.
-    // Add plus one for target register operand.
-    Ops.push_back(Expr->getNumElements() + 1);
+    // Use a block size of 1 for the target register operand.  The
+    // DWARF backend currently cannot emit entry values with a block
+    // size > 1.
+    Ops.push_back(1);
   }
 
   // If there are no ops to prepend, do not even add the DW_OP_stack_value.
@@ -1402,25 +1458,31 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
   return DIExpression::get(Expr->getContext(), Ops);
 }
 
-bool DIExpression::isConstant() const {
-  // Recognize DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment Len Ofs)?.
-  if (getNumElements() != 3 && getNumElements() != 6)
-    return false;
-  if (getElement(0) != dwarf::DW_OP_constu ||
-      getElement(2) != dwarf::DW_OP_stack_value)
-    return false;
-  if (getNumElements() == 6 && getElement(3) != dwarf::DW_OP_LLVM_fragment)
-    return false;
-  return true;
-}
+llvm::Optional<DIExpression::SignedOrUnsignedConstant>
+DIExpression::isConstant() const {
 
-bool DIExpression::isSignedConstant() const {
-  // Recognize DW_OP_consts C
-  if (getNumElements() != 2)
-    return false;
-  if (getElement(0) != dwarf::DW_OP_consts)
-    return false;
-  return true;
+  // Recognize signed and unsigned constants.
+  // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
+  // (DW_OP_LLVM_fragment of Len).
+  // An unsigned constant can be represented as
+  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
+
+  if ((getNumElements() != 2 && getNumElements() != 3 &&
+       getNumElements() != 6) ||
+      (getElement(0) != dwarf::DW_OP_consts &&
+       getElement(0) != dwarf::DW_OP_constu))
+    return None;
+
+  if (getNumElements() == 2 && getElement(0) == dwarf::DW_OP_consts)
+    return SignedOrUnsignedConstant::SignedConstant;
+
+  if ((getNumElements() == 3 && getElement(2) != dwarf::DW_OP_stack_value) ||
+      (getNumElements() == 6 && (getElement(2) != dwarf::DW_OP_stack_value ||
+                                 getElement(3) != dwarf::DW_OP_LLVM_fragment)))
+    return None;
+  return getElement(0) == dwarf::DW_OP_constu
+             ? SignedOrUnsignedConstant::UnsignedConstant
+             : SignedOrUnsignedConstant::SignedConstant;
 }
 
 DIExpression::ExtOps DIExpression::getExtOps(unsigned FromSize, unsigned ToSize,
@@ -1488,4 +1550,43 @@ DIMacroFile *DIMacroFile::getImpl(LLVMContext &Context, unsigned MIType,
                         (MIType, Line, File, Elements));
   Metadata *Ops[] = { File, Elements };
   DEFINE_GETIMPL_STORE(DIMacroFile, (MIType, Line), Ops);
+}
+
+DIArgList *DIArgList::getImpl(LLVMContext &Context,
+                              ArrayRef<ValueAsMetadata *> Args,
+                              StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIArgList, (Args));
+  DEFINE_GETIMPL_STORE_NO_OPS(DIArgList, (Args));
+}
+
+void DIArgList::handleChangedOperand(void *Ref, Metadata *New) {
+  ValueAsMetadata **OldVMPtr = static_cast<ValueAsMetadata **>(Ref);
+  assert((!New || isa<ValueAsMetadata>(New)) &&
+         "DIArgList must be passed a ValueAsMetadata");
+  untrack();
+  ValueAsMetadata *NewVM = cast_or_null<ValueAsMetadata>(New);
+  for (ValueAsMetadata *&VM : Args) {
+    if (&VM == OldVMPtr) {
+      if (NewVM)
+        VM = NewVM;
+      else
+        VM = ValueAsMetadata::get(UndefValue::get(VM->getValue()->getType()));
+    }
+  }
+  track();
+}
+void DIArgList::track() {
+  for (ValueAsMetadata *&VAM : Args)
+    if (VAM)
+      MetadataTracking::track(&VAM, *VAM, *this);
+}
+void DIArgList::untrack() {
+  for (ValueAsMetadata *&VAM : Args)
+    if (VAM)
+      MetadataTracking::untrack(&VAM, *VAM);
+}
+void DIArgList::dropAllReferences() {
+  untrack();
+  Args.clear();
+  MDNode::dropAllReferences();
 }

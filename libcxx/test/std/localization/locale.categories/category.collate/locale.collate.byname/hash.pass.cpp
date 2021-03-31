@@ -8,6 +8,8 @@
 
 // REQUIRES: locale.en_US.UTF-8
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <locale>
 
 // template <class charT> class collate_byname

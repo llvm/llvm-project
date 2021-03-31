@@ -34,7 +34,7 @@ body:             |
     %3 = S_LSHL_B32 %1, killed %1, implicit-def dead $scc
     %4 = V_AND_B32_e64 killed %2, killed %3, implicit $exec
     %5 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFSET killed %4, killed %5, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_OFFSET killed %4, killed %5, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

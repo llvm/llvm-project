@@ -81,7 +81,6 @@ public:
     }
 
     // Try to fold aext(g_constant) when the larger constant type is legal.
-    // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
       const LLT DstTy = MRI.getType(DstReg);
@@ -142,7 +141,6 @@ public:
     }
 
     // Try to fold zext(g_constant) when the larger constant type is legal.
-    // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
       const LLT DstTy = MRI.getType(DstReg);
@@ -197,6 +195,20 @@ public:
       return true;
     }
 
+    // Try to fold sext(g_constant) when the larger constant type is legal.
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
+    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      const LLT DstTy = MRI.getType(DstReg);
+      if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
+        auto &CstVal = SrcMI->getOperand(1);
+        Builder.buildConstant(
+            DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
+        UpdatedDefs.push_back(DstReg);
+        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        return true;
+      }
+    }
+
     return tryFoldImplicitDef(MI, DeadInsts, UpdatedDefs);
   }
 
@@ -211,7 +223,6 @@ public:
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // Try to fold trunc(g_constant) when the smaller constant type is legal.
-    // Can't use MIPattern because we don't have a specific constant in mind.
     auto *SrcMI = MRI.getVRegDef(SrcReg);
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
       const LLT DstTy = MRI.getType(DstReg);

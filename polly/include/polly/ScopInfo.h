@@ -35,14 +35,42 @@
 #include <cstddef>
 #include <forward_list>
 
-using namespace llvm;
-
 namespace llvm {
 void initializeScopInfoRegionPassPass(PassRegistry &);
 void initializeScopInfoWrapperPassPass(PassRegistry &);
 } // end namespace llvm
 
 namespace polly {
+using llvm::AnalysisInfoMixin;
+using llvm::ArrayRef;
+using llvm::AssertingVH;
+using llvm::AssumptionCache;
+using llvm::cast;
+using llvm::DataLayout;
+using llvm::DenseMap;
+using llvm::DenseSet;
+using llvm::function_ref;
+using llvm::isa;
+using llvm::iterator_range;
+using llvm::LoadInst;
+using llvm::make_range;
+using llvm::MapVector;
+using llvm::MemIntrinsic;
+using llvm::Optional;
+using llvm::PassInfoMixin;
+using llvm::PHINode;
+using llvm::RegionNode;
+using llvm::RegionPass;
+using llvm::RGPassManager;
+using llvm::SetVector;
+using llvm::SmallPtrSetImpl;
+using llvm::SmallVector;
+using llvm::SmallVectorImpl;
+using llvm::StringMap;
+using llvm::Type;
+using llvm::Use;
+using llvm::Value;
+using llvm::ValueToValueMap;
 
 class MemoryAccess;
 
@@ -1212,7 +1240,7 @@ private:
   /// The memory accesses of this statement.
   ///
   /// The only side effects of a statement are its memory accesses.
-  using MemoryAccessVec = SmallVector<MemoryAccess *, 8>;
+  using MemoryAccessVec = llvm::SmallVector<MemoryAccess *, 8>;
   MemoryAccessVec MemAccs;
 
   /// Mapping from instructions to (scalar) memory accesses.
@@ -1857,6 +1885,9 @@ private:
   /// in a schedule tree is given in the isl manual.
   isl::schedule Schedule = nullptr;
 
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  bool HasDisableHeuristicsHint = false;
+
   /// Whether the schedule has been modified after derived from the CFG by
   /// ScopBuilder.
   bool ScheduleModified = false;
@@ -2007,7 +2038,6 @@ public:
   ///
   /// A new statement will be created and added to the statement vector.
   ///
-  /// @param Stmt       The parent statement.
   /// @param SourceRel  The source location.
   /// @param TargetRel  The target location.
   /// @param Domain     The original domain under which the copy statement would
@@ -2716,6 +2746,13 @@ public:
   /// various places. If statistics are disabled, only zeros are returned to
   /// avoid the overhead.
   ScopStatistics getStatistics() const;
+
+  /// Is this Scop marked as not to be transformed by an optimization heuristic?
+  /// In this case, only user-directed transformations are allowed.
+  bool hasDisableHeuristicsHint() const { return HasDisableHeuristicsHint; }
+
+  /// Mark this Scop to not apply an optimization heuristic.
+  void markDisableHeuristics() { HasDisableHeuristicsHint = true; }
 };
 
 /// Print Scop scop to raw_ostream OS.

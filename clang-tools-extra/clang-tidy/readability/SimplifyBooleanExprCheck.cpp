@@ -71,10 +71,10 @@ const Expr *getBoolLiteral(const MatchFinder::MatchResult &Result,
 }
 
 internal::BindableMatcher<Stmt> literalOrNegatedBool(bool Value) {
-  return expr(anyOf(cxxBoolLiteral(equals(Value)),
-                    unaryOperator(hasUnaryOperand(ignoringParenImpCasts(
-                                      cxxBoolLiteral(equals(!Value)))),
-                                  hasOperatorName("!"))));
+  return expr(
+      anyOf(cxxBoolLiteral(equals(Value)),
+            unaryOperator(hasUnaryOperand(cxxBoolLiteral(equals(!Value))),
+                          hasOperatorName("!"))));
 }
 
 internal::Matcher<Stmt> returnsBool(bool Value, StringRef Id = "ignored") {
@@ -443,8 +443,7 @@ void SimplifyBooleanExprCheck::matchBoolCondition(MatchFinder *Finder,
                                                   bool Value,
                                                   StringRef BooleanId) {
   Finder->addMatcher(
-      ifStmt(unless(isInTemplateInstantiation()),
-             hasCondition(literalOrNegatedBool(Value).bind(BooleanId)))
+      ifStmt(hasCondition(literalOrNegatedBool(Value).bind(BooleanId)))
           .bind(IfStmtId),
       this);
 }
@@ -453,8 +452,7 @@ void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
                                                   bool Value,
                                                   StringRef TernaryId) {
   Finder->addMatcher(
-      conditionalOperator(unless(isInTemplateInstantiation()),
-                          hasTrueExpression(literalOrNegatedBool(Value)),
+      conditionalOperator(hasTrueExpression(literalOrNegatedBool(Value)),
                           hasFalseExpression(literalOrNegatedBool(!Value)))
           .bind(TernaryId),
       this);
@@ -463,14 +461,12 @@ void SimplifyBooleanExprCheck::matchTernaryResult(MatchFinder *Finder,
 void SimplifyBooleanExprCheck::matchIfReturnsBool(MatchFinder *Finder,
                                                   bool Value, StringRef Id) {
   if (ChainedConditionalReturn)
-    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
-                              hasThen(returnsBool(Value, ThenLiteralId)),
+    Finder->addMatcher(ifStmt(hasThen(returnsBool(Value, ThenLiteralId)),
                               hasElse(returnsBool(!Value)))
                            .bind(Id),
                        this);
   else
-    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
-                              unless(hasParent(ifStmt())),
+    Finder->addMatcher(ifStmt(unless(hasParent(ifStmt())),
                               hasThen(returnsBool(Value, ThenLiteralId)),
                               hasElse(returnsBool(!Value)))
                            .bind(Id),
@@ -495,16 +491,12 @@ void SimplifyBooleanExprCheck::matchIfAssignsBool(MatchFinder *Finder,
   auto Else = anyOf(SimpleElse, compoundStmt(statementCountIs(1),
                                              hasAnySubstatement(SimpleElse)));
   if (ChainedConditionalAssignment)
-    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
-                              hasThen(Then), hasElse(Else))
-                           .bind(Id),
-                       this);
+    Finder->addMatcher(ifStmt(hasThen(Then), hasElse(Else)).bind(Id), this);
   else
-    Finder->addMatcher(ifStmt(unless(isInTemplateInstantiation()),
-                              unless(hasParent(ifStmt())), hasThen(Then),
-                              hasElse(Else))
-                           .bind(Id),
-                       this);
+    Finder->addMatcher(
+        ifStmt(unless(hasParent(ifStmt())), hasThen(Then), hasElse(Else))
+            .bind(Id),
+        this);
 }
 
 void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
@@ -512,11 +504,9 @@ void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
                                                           StringRef Id) {
   Finder->addMatcher(
       compoundStmt(
-          unless(isInTemplateInstantiation()),
           hasAnySubstatement(
               ifStmt(hasThen(returnsBool(Value)), unless(hasElse(stmt())))),
-          hasAnySubstatement(returnStmt(has(ignoringParenImpCasts(
-                                            literalOrNegatedBool(!Value))))
+          hasAnySubstatement(returnStmt(has(literalOrNegatedBool(!Value)))
                                  .bind(CompoundReturnId)))
           .bind(Id),
       this);

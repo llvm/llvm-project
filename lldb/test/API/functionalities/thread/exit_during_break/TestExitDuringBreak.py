@@ -58,6 +58,6 @@ class ExitDuringBreakpointTestCase(TestBase):
         self.runCmd("continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)

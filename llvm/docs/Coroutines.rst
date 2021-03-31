@@ -190,7 +190,7 @@ coroutine. Therefore an async coroutine returns `void`.
   define swiftcc void @async_coroutine(i8* %async.ctxt, i8*, i8*) {
   }
 
-Values live accross a suspend point need to be stored in the coroutine frame to
+Values live across a suspend point need to be stored in the coroutine frame to
 be available in the continuation function. This frame is stored as a tail to the
 `async context`.
 
@@ -1206,7 +1206,7 @@ The third argument is the `async context` argument in the current coroutine.
 The fourth argument is the address of the `async function pointer` struct.
 Lowering will update the context size requirement in this struct by adding the
 coroutine frame size requirement to the initial size requirement as specified by
-the first argument of this intrinisc.
+the first argument of this intrinsic.
 
 
 Semantics:
@@ -1572,7 +1572,7 @@ The second argument is the `context projection function`. It should describe
 how-to restore the `async context` in the continuation function from the first
 argument of the continuation function. Its type is `i8* (i8*)`.
 
-The third argument is the function that models tranfer to the callee at the
+The third argument is the function that models transfer to the callee at the
 suspend point. It should take 3 arguments. Lowering will `musttail` call this
 function.
 
@@ -1760,6 +1760,14 @@ earlier passes.
 
 Areas Requiring Attention
 =========================
+#. When coro.suspend returns -1, the coroutine is suspended, and it's possible
+   that the coroutine has already been destroyed (hence the frame has been freed).
+   We cannot access anything on the frame on the suspend path.
+   However there is nothing that prevents the compiler from moving instructions
+   along that path (e.g. LICM), which can lead to use-after-free. At the moment
+   we disabled LICM for loops that have coro.suspend, but the general problem still
+   exists and requires a general solution.
+
 #. Take advantage of the lifetime intrinsics for the data that goes into the
    coroutine frame. Leave lifetime intrinsics as is for the data that stays in
    allocas.

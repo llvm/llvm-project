@@ -901,8 +901,8 @@ define <8 x double> @combine_vpermi2var_8f64_as_permpd(<8 x double> %x0, <8 x do
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],mem[0]
-; X86-NEXT:    vinsertf128 $1, {{\.LCPI.*}}, %ymm2, %ymm2
-; X86-NEXT:    vinsertf64x4 $1, {{\.LCPI.*}}, %zmm2, %zmm2
+; X86-NEXT:    vinsertf128 $1, {{\.LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm2
+; X86-NEXT:    vinsertf64x4 $1, {{\.LCPI[0-9]+_[0-9]+}}, %zmm2, %zmm2
 ; X86-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm2
 ; X86-NEXT:    vpermpd {{.*#+}} zmm0 = zmm2[2,3,1,1,6,7,5,5]
 ; X86-NEXT:    retl

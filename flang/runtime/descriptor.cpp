@@ -31,9 +31,23 @@ void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
     int rank, const SubscriptValue *extent, ISO::CFI_attribute_t attribute,
     bool addendum) {
   Terminator terminator{__FILE__, __LINE__};
+  // Subtle: the standard CFI_establish() function doesn't allow a zero
+  // elem_len argument in cases where elem_len is not ignored; and when it
+  // returns an error code (CFI_INVALID_ELEM_LEN in this case), it must not
+  // modify the descriptor.  That design makes sense, maybe, for actual
+  // C interoperability, but we need to work around it here.  A zero
+  // incoming element length is replaced by 4 so that it will be valid
+  // for all CHARACTER kinds.
+  std::size_t workaroundElemLen{elementBytes ? elementBytes : 4};
   RUNTIME_CHECK(terminator,
-      ISO::CFI_establish(&raw_, p, attribute, t.raw(), elementBytes, rank,
+      ISO::CFI_establish(&raw_, p, attribute, t.raw(), workaroundElemLen, rank,
           extent) == CFI_SUCCESS);
+  if (elementBytes == 0) {
+    raw_.elem_len = 0;
+    for (int j{0}; j < rank; ++j) {
+      GetDimension(j).SetByteStride(0);
+    }
+  }
   raw_.f18Addendum = addendum;
   DescriptorAddendum *a{Addendum()};
   RUNTIME_CHECK(terminator, addendum == (a != nullptr));

@@ -802,10 +802,13 @@ void createUniquePath(const Twine &Model, SmallVectorImpl<char> &ResultPath,
 /// @param Model Name to base unique path off of.
 /// @param ResultFD Set to the opened file's file descriptor.
 /// @param ResultPath Set to the opened file's absolute path.
+/// @param Flags Set to the opened file's flags.
+/// @param Mode Set to the opened file's permissions.
 /// @returns errc::success if Result{FD,Path} have been successfully set,
 ///          otherwise a platform-specific error_code.
 std::error_code createUniqueFile(const Twine &Model, int &ResultFD,
                                  SmallVectorImpl<char> &ResultPath,
+                                 OpenFlags Flags = OF_None,
                                  unsigned Mode = all_read | all_write);
 
 /// Simpler version for clients that don't want an open file. An empty
@@ -862,12 +865,14 @@ public:
 /// running the assembler.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
                                     int &ResultFD,
-                                    SmallVectorImpl<char> &ResultPath);
+                                    SmallVectorImpl<char> &ResultPath,
+                                    OpenFlags Flags = OF_None);
 
 /// Simpler version for clients that don't want an open file. An empty
 /// file will still be created.
 std::error_code createTemporaryFile(const Twine &Prefix, StringRef Suffix,
-                                    SmallVectorImpl<char> &ResultPath);
+                                    SmallVectorImpl<char> &ResultPath,
+                                    OpenFlags Flags = OF_None);
 
 std::error_code createUniqueDirectory(const Twine &Prefix,
                                       SmallVectorImpl<char> &ResultPath);
@@ -1158,6 +1163,16 @@ std::error_code unlockFile(int FD);
 /// @returns An error code if closing the file failed. Typically, an error here
 /// means that the filesystem may have failed to perform some buffered writes.
 std::error_code closeFile(file_t &F);
+
+#ifdef LLVM_ON_UNIX
+/// @brief Change ownership of a file.
+///
+/// @param Owner The owner of the file to change to.
+/// @param Group The group of the file to change to.
+/// @returns errc::success if successfully updated file ownership, otherwise an
+///          error code is returned.
+std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group);
+#endif
 
 /// RAII class that facilitates file locking.
 class FileLocker {

@@ -223,6 +223,7 @@ namespace {
     void report(const char *msg, const MachineInstr *MI);
     void report(const char *msg, const MachineOperand *MO, unsigned MONum,
                 LLT MOVRegType = LLT{});
+    void report(const Twine &Msg, const MachineInstr *MI);
 
     void report_context(const LiveInterval &LI) const;
     void report_context(const LiveRange &LR, Register VRegUnit,
@@ -498,6 +499,10 @@ void MachineVerifier::report(const char *msg, const MachineOperand *MO,
   errs() << "- operand " << MONum << ":   ";
   MO->print(errs(), MOVRegType, TRI);
   errs() << "\n";
+}
+
+void MachineVerifier::report(const Twine &Msg, const MachineInstr *MI) {
+  report(Msg.str().c_str(), MI);
 }
 
 void MachineVerifier::report_context(SlotIndex Pos) const {
@@ -940,38 +945,42 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     report(ErrorInfo.data(), MI);
 
   // Verify properties of various specific instruction types
-  switch (MI->getOpcode()) {
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+  case TargetOpcode::G_ASSERT_SEXT:
   case TargetOpcode::G_ASSERT_ZEXT: {
+    std::string OpcName =
+        Opc == TargetOpcode::G_ASSERT_ZEXT ? "G_ASSERT_ZEXT" : "G_ASSERT_SEXT";
     if (!MI->getOperand(2).isImm()) {
-      report("G_ASSERT_ZEXT expects an immediate operand #2", MI);
+      report(Twine(OpcName, " expects an immediate operand #2"), MI);
       break;
     }
 
     Register Dst = MI->getOperand(0).getReg();
     Register Src = MI->getOperand(1).getReg();
-    LLT DstTy = MRI->getType(Dst);
     LLT SrcTy = MRI->getType(Src);
-    verifyVectorElementMatch(DstTy, SrcTy, MI);
     int64_t Imm = MI->getOperand(2).getImm();
     if (Imm <= 0) {
-      report("G_ASSERT_ZEXT size must be >= 1", MI);
+      report(Twine(OpcName, " size must be >= 1"), MI);
       break;
     }
 
     if (Imm >= SrcTy.getScalarSizeInBits()) {
-      report("G_ASSERT_ZEXT size must be less than source bit width", MI);
+      report(Twine(OpcName, " size must be less than source bit width"), MI);
       break;
     }
 
     if (MRI->getRegBankOrNull(Src) != MRI->getRegBankOrNull(Dst)) {
-      report("G_ASSERT_ZEXT source and destination register banks must match",
-             MI);
+      report(
+          Twine(OpcName, " source and destination register banks must match"),
+          MI);
       break;
     }
 
     if (MRI->getRegClassOrNull(Src) != MRI->getRegClassOrNull(Dst))
-      report("G_ASSERT_ZEXT source and destination register classes must match",
-             MI);
+      report(
+          Twine(OpcName, " source and destination register classes must match"),
+          MI);
 
     break;
   }
@@ -1276,6 +1285,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (!DstTy.isVector() || !SrcTy.isVector())
       report("G_CONCAT_VECTOR requires vector source and destination operands",
              MI);
+
+    if (MI->getNumOperands() < 3)
+      report("G_CONCAT_VECTOR requires at least 2 source operands", MI);
+
     for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
       if (MRI->getType(MI->getOperand(1).getReg()) !=
           MRI->getType(MI->getOperand(i).getReg()))
@@ -1398,10 +1411,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
-    verifyVectorElementMatch(DstTy, SrcTy, MI);
-
     int64_t Imm = MI->getOperand(2).getImm();
     if (Imm <= 0)
       report("G_SEXT_INREG size must be >= 1", MI);
@@ -1499,26 +1509,28 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_BZERO:
   case TargetOpcode::G_MEMSET: {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
+    std::string Name = Opc == TargetOpcode::G_MEMSET ? "memset" : "bzero";
     if (MMOs.size() != 1) {
-      report("memset must have 1 memory operand", MI);
+      report(Twine(Name, " must have 1 memory operand"), MI);
       break;
     }
 
     if ((!MMOs[0]->isStore() || MMOs[0]->isLoad())) {
-      report("memset memory operand must be a store", MI);
+      report(Twine(Name, " memory operand must be a store"), MI);
       break;
     }
 
     LLT DstPtrTy = MRI->getType(MI->getOperand(0).getReg());
     if (!DstPtrTy.isPointer()) {
-      report("memset operand must be a pointer", MI);
+      report(Twine(Name, " operand must be a pointer"), MI);
       break;
     }
 
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
-      report("inconsistent memset address space", MI);
+      report("inconsistent " + Twine(Name, " address space"), MI);
 
     break;
   }
@@ -1556,6 +1568,28 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Vector reduction requires vector source=", MI);
     break;
   }
+
+  case TargetOpcode::G_SBFX:
+  case TargetOpcode::G_UBFX: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (DstTy.isVector()) {
+      report("Bitfield extraction is not supported on vectors", MI);
+      break;
+    }
+    break;
+  }
+  case TargetOpcode::G_ROTR:
+  case TargetOpcode::G_ROTL: {
+    LLT Src1Ty = MRI->getType(MI->getOperand(1).getReg());
+    LLT Src2Ty = MRI->getType(MI->getOperand(2).getReg());
+    if (Src1Ty.isVector() != Src2Ty.isVector()) {
+      report("Rotate requires operands to be either all scalars or all vectors",
+             MI);
+      break;
+    }
+    break;
+  }
+
   default:
     break;
   }
@@ -1752,9 +1786,12 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (MCOI.OperandType == MCOI::OPERAND_REGISTER &&
           !MO->isReg() && !MO->isFI())
         report("Expected a register operand.", MO, MONum);
-      if ((MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
-           MCOI.OperandType == MCOI::OPERAND_PCREL) && MO->isReg())
-        report("Expected a non-register operand.", MO, MONum);
+      if (MO->isReg()) {
+        if (MCOI.OperandType == MCOI::OPERAND_IMMEDIATE ||
+            (MCOI.OperandType == MCOI::OPERAND_PCREL &&
+             !TII->isPCRelRegisterOperandLegal(*MO)))
+          report("Expected a non-register operand.", MO, MONum);
+      }
     }
 
     int TiedTo = MCID.getOperandConstraint(MONum, MCOI::TIED_TO);
@@ -2186,12 +2223,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
             if (!Register::isPhysicalRegister(MOP.getReg()))
               continue;
 
-            for (const MCPhysReg &SubReg : TRI->subregs(MOP.getReg())) {
-              if (SubReg == Reg) {
-                Bad = false;
-                break;
-              }
-            }
+            if (llvm::is_contained(TRI->subregs(MOP.getReg()), Reg))
+              Bad = false;
           }
         }
         if (Bad)

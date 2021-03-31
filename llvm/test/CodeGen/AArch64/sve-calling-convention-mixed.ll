@@ -41,18 +41,15 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    addvl sp, sp, #-4
+; CHECK-NEXT:    sub sp, sp, #16 // =16
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    ld4d { z1.d, z2.d, z3.d, z4.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld4d { z16.d, z17.d, z18.d, z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    addvl x8, x29, #-4
+; CHECK-NEXT:    add x8, sp, #16 // =16
+; CHECK-NEXT:    add x9, sp, #16 // =16
 ; CHECK-NEXT:    fmov s0, #1.00000000
-; CHECK-NEXT:    st1d { z16.d }, p0, [x29, #-4, mul vl]
-; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
-; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
-; CHECK-NEXT:    st1d { z19.d }, p0, [x8, #3, mul vl]
 ; CHECK-NEXT:    mov w1, #1
 ; CHECK-NEXT:    mov w2, #2
 ; CHECK-NEXT:    mov w3, #3
@@ -60,8 +57,12 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 ; CHECK-NEXT:    mov w5, #5
 ; CHECK-NEXT:    mov w6, #6
 ; CHECK-NEXT:    mov w7, #7
-; CHECK-NEXT:    str x8, [sp, #-16]!
 ; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    st1d { z16.d }, p0, [x9]
+; CHECK-NEXT:    st1d { z17.d }, p0, [x8, #1, mul vl]
+; CHECK-NEXT:    st1d { z18.d }, p0, [x8, #2, mul vl]
+; CHECK-NEXT:    st1d { z19.d }, p0, [x8, #3, mul vl]
+; CHECK-NEXT:    str x8, [sp]
 ; CHECK-NEXT:    bl callee2
 ; CHECK-NEXT:    addvl sp, sp, #4
 ; CHECK-NEXT:    add sp, sp, #16 // =16

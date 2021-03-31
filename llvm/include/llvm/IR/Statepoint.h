@@ -203,14 +203,10 @@ public:
   /// path of invoke.
   inline std::vector<const GCRelocateInst *> getGCRelocates() const;
 
-  /// Get the experimental_gc_result call tied to this statepoint if there is
-  /// one, otherwise return nullptr.
-  const GCResultInst *getGCResult() const {
-    for (auto *U : users())
-      if (auto *GRI = dyn_cast<GCResultInst>(U))
-        return GRI;
-    return nullptr;
-  }
+  /// Returns pair of boolean flags. The first one is true is there is
+  /// a gc.result intrinsic in the same block as statepoint. The second flag
+  /// is true if there is an intrinsic outside of the block with statepoint.
+  inline std::pair<bool, bool> getGCResultLocality() const;
 };
 
 /// Common base class for representing values projected from a statepoint.
@@ -327,6 +323,18 @@ std::vector<const GCRelocateInst *> GCStatepointInst::getGCRelocates() const {
       Result.push_back(Relocate);
   }
   return Result;
+}
+
+std::pair<bool, bool> GCStatepointInst::getGCResultLocality() const {
+  std::pair<bool, bool> Res(false, false);
+  for (auto *U : users())
+    if (auto *GRI = dyn_cast<GCResultInst>(U)) {
+      if (GRI->getParent() == this->getParent())
+        Res.first = true;
+      else
+        Res.second = true;
+    }
+  return Res;
 }
 
 /// Call sites that get wrapped by a gc.statepoint (currently only in

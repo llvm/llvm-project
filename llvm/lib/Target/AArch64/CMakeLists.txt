@@ -29,6 +29,7 @@ add_public_tablegen_target(AArch64CommonTableGen)
 
 add_llvm_target(AArch64CodeGen
   GISel/AArch64CallLowering.cpp
+  GISel/AArch64GlobalISelUtils.cpp
   GISel/AArch64InstructionSelector.cpp
   GISel/AArch64LegalizerInfo.cpp
   GISel/AArch64PreLegalizerCombiner.cpp
@@ -59,6 +60,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
   AArch64LoadStoreOptimizer.cpp
+  AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
   AArch64MacroFusion.cpp
   AArch64MCInstLower.cpp

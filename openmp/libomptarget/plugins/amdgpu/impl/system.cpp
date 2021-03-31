@@ -822,7 +822,6 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
   for (size_t i = 0; i < kernelsSize; i++) {
     assert(msgpack_errors == 0);
     std::string kernelName;
-    std::string languageName;
     std::string symbolName;
 
     msgpack::byte_range element;
@@ -830,11 +829,34 @@ static hsa_status_t get_code_object_custom_metadata(void *binary,
     msgpackErrorCheck(element lookup in kernel metadata, msgpack_errors);
 
     msgpack_errors += map_lookup_string(element, ".name", &kernelName);
-    msgpack_errors += map_lookup_string(element, ".language", &languageName);
     msgpack_errors += map_lookup_string(element, ".symbol", &symbolName);
     msgpackErrorCheck(strings lookup in kernel metadata, msgpack_errors);
 
-    atl_kernel_info_t info = {0, 0, 0, 0, 0, {}, {}, {}};
+    atl_kernel_info_t info = {0, 0, 0, 0, 0, 0, 0, 0, 0, {}, {}, {}};
+
+    uint64_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
+    msgpack_errors += map_lookup_uint64_t(element, ".sgpr_count", &sgpr_count);
+    msgpackErrorCheck(sgpr count metadata lookup in kernel metadata,
+                      msgpack_errors);
+    info.sgpr_count = sgpr_count;
+
+    msgpack_errors += map_lookup_uint64_t(element, ".vgpr_count", &vgpr_count);
+    msgpackErrorCheck(vgpr count metadata lookup in kernel metadata,
+                      msgpack_errors);
+    info.vgpr_count = vgpr_count;
+
+    msgpack_errors +=
+        map_lookup_uint64_t(element, ".sgpr_spill_count", &sgpr_spill_count);
+    msgpackErrorCheck(sgpr spill count metadata lookup in kernel metadata,
+                      msgpack_errors);
+    info.sgpr_spill_count = sgpr_spill_count;
+
+    msgpack_errors +=
+        map_lookup_uint64_t(element, ".vgpr_spill_count", &vgpr_spill_count);
+    msgpackErrorCheck(vgpr spill count metadata lookup in kernel metadata,
+                      msgpack_errors);
+    info.vgpr_spill_count = vgpr_spill_count;
+
     size_t kernel_explicit_args_size = 0;
     uint64_t kernel_segment_size;
     msgpack_errors += map_lookup_uint64_t(element, ".kernarg_segment_size",

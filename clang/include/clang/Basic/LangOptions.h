@@ -264,9 +264,9 @@ public:
   /// Set of enabled sanitizers.
   SanitizerSet Sanitize;
 
-  /// Paths to blacklist files specifying which objects
+  /// Paths to files specifying which objects
   /// (files, functions, variables) should not be instrumented.
-  std::vector<std::string> SanitizerBlacklistFiles;
+  std::vector<std::string> NoSanitizeFiles;
 
   /// Paths to the XRay "always instrument" files specifying which
   /// objects (files, functions, variables) should be imbued with the XRay
@@ -330,6 +330,12 @@ public:
   /// Name of the IR file that contains the result of the OpenMP target
   /// host code generation.
   std::string OMPHostIRFile;
+
+  /// The user provided compilation unit ID, if non-empty. This is used to
+  /// externalize static variables which is needed to support accessing static
+  /// device variables in host code for single source offloading languages
+  /// like CUDA/HIP.
+  std::string CUID;
 
   /// Indicates whether the front-end is explicitly told that the
   /// input is a header file (i.e. -x c-header).

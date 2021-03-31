@@ -48,6 +48,11 @@ protected:
     CHECK(!dirContext_.empty());
     return dirContext_.back();
   }
+  std::optional<DirContext> GetContextIf() {
+    return dirContext_.empty()
+        ? std::nullopt
+        : std::make_optional<DirContext>(dirContext_.back());
+  }
   void PushContext(const parser::CharBlock &source, T dir) {
     dirContext_.emplace_back(source, dir, context_.FindScope(source));
   }
@@ -100,7 +105,7 @@ protected:
   Symbol *DeclarePrivateAccessEntity(Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
 
-  SymbolSet dataSharingAttributeObjects_; // on one directive
+  UnorderedSymbolSet dataSharingAttributeObjects_; // on one directive
   SemanticsContext &context_;
   std::vector<DirContext> dirContext_; // used as a stack
 };
@@ -229,6 +234,41 @@ public:
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
 
+  template <typename A> bool Pre(const parser::Statement<A> &statement) {
+    currentStatementSource_ = statement.source;
+    // Keep track of the labels in all the labelled statements
+    if (statement.label) {
+      auto label{statement.label.value()};
+      // Get the context to check if the labelled statement is in an
+      // enclosing OpenMP construct
+      std::optional<DirContext> thisContext{GetContextIf()};
+      targetLabels_.emplace(
+          label, std::make_pair(currentStatementSource_, thisContext));
+      // Check if a statement that causes a jump to the 'label'
+      // has already been encountered
+      auto range{sourceLabels_.equal_range(label)};
+      for (auto it{range.first}; it != range.second; ++it) {
+        // Check if both the statement with 'label' and the statement that
+        // causes a jump to the 'label' are in the same scope
+        CheckLabelContext(it->second.first, currentStatementSource_,
+            it->second.second, thisContext);
+      }
+    }
+    return true;
+  }
+
+  bool Pre(const parser::InternalSubprogram &) {
+    // Clear the labels being tracked in the previous scope
+    ClearLabels();
+    return true;
+  }
+
+  bool Pre(const parser::ModuleSubprogram &) {
+    // Clear the labels being tracked in the previous scope
+    ClearLabels();
+    return true;
+  }
+
   bool Pre(const parser::SpecificationPart &x) {
     Walk(std::get<std::list<parser::OpenMPDeclarativeConstruct>>(x.t));
     return true;
@@ -262,6 +302,9 @@ public:
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPCriticalConstruct &);
+  void Post(const parser::OpenMPCriticalConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
     PushContext(x.source, llvm::omp::Directive::OMPD_declare_simd);
@@ -302,6 +345,10 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyIn);
     return false;
   }
+  bool Pre(const parser::OmpClause::Copyprivate &x) {
+    ResolveOmpObjectList(x.v, Symbol::Flag::OmpCopyPrivate);
+    return false;
+  }
   bool Pre(const parser::OmpLinearClause &x) {
     std::visit(common::visitors{
                    [&](const parser::OmpLinearClause::WithoutModifier
@@ -318,12 +365,62 @@ public:
         x.u);
     return false;
   }
+
+  bool Pre(const parser::OmpClause::Reduction &x) {
+    const parser::OmpReductionOperator &opr{
+        std::get<parser::OmpReductionOperator>(x.v.t)};
+    if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
+      if (const auto *name{parser::Unwrap<parser::Name>(procD->u)}) {
+        if (!name->symbol) {
+          const auto namePair{currScope().try_emplace(
+              name->source, Attrs{}, ProcEntityDetails{})};
+          auto &symbol{*namePair.first->second};
+          name->symbol = &symbol;
+          name->symbol->set(Symbol::Flag::OmpReduction);
+          AddToContextObjectWithDSA(*name->symbol, Symbol::Flag::OmpReduction);
+        }
+      }
+      if (const auto *procRef{
+              parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
+        ResolveOmp(*procRef->v.thing.component.symbol,
+            Symbol::Flag::OmpReduction, currScope());
+      }
+    }
+    const auto &objList{std::get<parser::OmpObjectList>(x.v.t)};
+    ResolveOmpObjectList(objList, Symbol::Flag::OmpReduction);
+    return false;
+  }
+
   bool Pre(const parser::OmpAlignedClause &x) {
     const auto &alignedNameList{std::get<std::list<parser::Name>>(x.t)};
     ResolveOmpNameList(alignedNameList, Symbol::Flag::OmpAligned);
     return false;
   }
   void Post(const parser::Name &);
+
+  // Keep track of labels in the statements that causes jumps to target labels
+  void Post(const parser::GotoStmt &gotoStmt) { CheckSourceLabel(gotoStmt.v); }
+  void Post(const parser::ComputedGotoStmt &computedGotoStmt) {
+    for (auto &label : std::get<std::list<parser::Label>>(computedGotoStmt.t)) {
+      CheckSourceLabel(label);
+    }
+  }
+  void Post(const parser::ArithmeticIfStmt &arithmeticIfStmt) {
+    CheckSourceLabel(std::get<1>(arithmeticIfStmt.t));
+    CheckSourceLabel(std::get<2>(arithmeticIfStmt.t));
+    CheckSourceLabel(std::get<3>(arithmeticIfStmt.t));
+  }
+  void Post(const parser::AssignedGotoStmt &assignedGotoStmt) {
+    for (auto &label : std::get<std::list<parser::Label>>(assignedGotoStmt.t)) {
+      CheckSourceLabel(label);
+    }
+  }
+  void Post(const parser::AltReturnSpec &altReturnSpec) {
+    CheckSourceLabel(altReturnSpec.v);
+  }
+  void Post(const parser::ErrLabel &errLabel) { CheckSourceLabel(errLabel.v); }
+  void Post(const parser::EndLabel &endLabel) { CheckSourceLabel(endLabel.v); }
+  void Post(const parser::EorLabel &eorLabel) { CheckSourceLabel(eorLabel.v); }
 
   const parser::OmpClause *associatedClause{nullptr};
   void SetAssociatedClause(const parser::OmpClause &c) {
@@ -352,11 +449,18 @@ private:
       Symbol::Flag::OmpThreadprivate};
 
   static constexpr Symbol::Flags dataCopyingAttributeFlags{
-      Symbol::Flag::OmpCopyIn};
+      Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   std::vector<const parser::Name *> allocateNames_; // on one directive
-  SymbolSet privateDataSharingAttributeObjects_; // on one directive
-  SymbolSet stmtFunctionExprSymbols_;
+  UnorderedSymbolSet privateDataSharingAttributeObjects_; // on one directive
+  UnorderedSymbolSet stmtFunctionExprSymbols_;
+  std::multimap<const parser::Label,
+      std::pair<parser::CharBlock, std::optional<DirContext>>>
+      sourceLabels_;
+  std::map<const parser::Label,
+      std::pair<parser::CharBlock, std::optional<DirContext>>>
+      targetLabels_;
+  parser::CharBlock currentStatementSource_;
 
   void AddAllocateName(const parser::Name *&object) {
     allocateNames_.push_back(object);
@@ -390,10 +494,19 @@ private:
 
   void CheckDataCopyingClause(
       const parser::Name &, const Symbol &, Symbol::Flag);
-
   void CheckAssocLoopLevel(std::int64_t level, const parser::OmpClause *clause);
   void CheckPrivateDSAObject(
       const parser::Name &, const Symbol &, Symbol::Flag);
+  void CheckSourceLabel(const parser::Label &);
+  void CheckLabelContext(const parser::CharBlock, const parser::CharBlock,
+      std::optional<DirContext>, std::optional<DirContext>);
+  void ClearLabels() {
+    sourceLabels_.clear();
+    targetLabels_.clear();
+  };
+
+  bool HasSymbolInEnclosingScope(const Symbol &, Scope &);
+  std::int64_t ordCollapseLevel{0};
 };
 
 template <typename T>
@@ -904,6 +1017,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
   case llvm::omp::Directive::OMPD_target_parallel:
+  case llvm::omp::Directive::OMPD_taskgroup:
     PushContext(beginDir.source, beginDir.v);
     break;
   default:
@@ -988,7 +1102,17 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
   }
   ClearDataSharingAttributeObjects();
   SetContextAssociatedLoopLevel(GetAssociatedLoopLevelFromClauses(clauseList));
+
+  if (beginDir.v == llvm::omp::Directive::OMPD_do) {
+    if (const auto &doConstruct{
+            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+      if (doConstruct.value().IsDoWhile()) {
+        return true;
+      }
+    }
+  }
   PrivatizeAssociatedLoopIndexAndCheckLoopLevel(x);
+  ordCollapseLevel = GetAssociatedLoopLevelFromClauses(clauseList) + 1;
   return true;
 }
 
@@ -1031,6 +1155,17 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
           ResolveSeqLoopIndexInParallelOrTaskConstruct(iv);
         } else {
           // TODO: conflict checks with explicitly determined DSA
+        }
+        ordCollapseLevel--;
+        if (ordCollapseLevel) {
+          if (const auto *details{iv.symbol->detailsIf<HostAssocDetails>()}) {
+            const Symbol *tpSymbol = &details->symbol();
+            if (tpSymbol->test(Symbol::Flag::OmpThreadprivate)) {
+              context_.Say(iv.source,
+                  "Loop iteration variable %s is not allowed in THREADPRIVATE."_err_en_US,
+                  iv.ToString());
+            }
+          }
         }
       }
     }
@@ -1136,6 +1271,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionsConstruct &x) {
     break;
   }
   ClearDataSharingAttributeObjects();
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
+  const auto &criticalDir{std::get<parser::OmpCriticalDirective>(x.t)};
+  PushContext(criticalDir.source, llvm::omp::Directive::OMPD_critical);
   return true;
 }
 
@@ -1397,16 +1538,39 @@ void ResolveOmpParts(
 void OmpAttributeVisitor::CheckDataCopyingClause(
     const parser::Name &name, const Symbol &symbol, Symbol::Flag ompFlag) {
   const auto *checkSymbol{&symbol};
-  if (ompFlag == Symbol::Flag::OmpCopyIn) {
-    if (const auto *details{symbol.detailsIf<HostAssocDetails>()})
-      checkSymbol = &details->symbol();
+  if (const auto *details{symbol.detailsIf<HostAssocDetails>()})
+    checkSymbol = &details->symbol();
 
+  if (ompFlag == Symbol::Flag::OmpCopyIn) {
     // List of items/objects that can appear in a 'copyin' clause must be
     // 'threadprivate'
     if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate))
       context_.Say(name.source,
           "Non-THREADPRIVATE object '%s' in COPYIN clause"_err_en_US,
           checkSymbol->name());
+  } else if (ompFlag == Symbol::Flag::OmpCopyPrivate &&
+      GetContext().directive == llvm::omp::Directive::OMPD_single) {
+    // A list item that appears in a 'copyprivate' clause may not appear on a
+    // 'private' or 'firstprivate' clause on a single construct
+    if (IsObjectWithDSA(symbol) &&
+        (symbol.test(Symbol::Flag::OmpPrivate) ||
+            symbol.test(Symbol::Flag::OmpFirstPrivate))) {
+      context_.Say(name.source,
+          "COPYPRIVATE variable '%s' may not appear on a PRIVATE or "
+          "FIRSTPRIVATE clause on a SINGLE construct"_err_en_US,
+          symbol.name());
+    } else {
+      // List of items/objects that can appear in a 'copyprivate' clause must be
+      // either 'private' or 'threadprivate' in enclosing context.
+      if (!checkSymbol->test(Symbol::Flag::OmpThreadprivate) &&
+          !(HasSymbolInEnclosingScope(symbol, currScope()) &&
+              symbol.test(Symbol::Flag::OmpPrivate))) {
+        context_.Say(name.source,
+            "COPYPRIVATE variable '%s' is not PRIVATE or THREADPRIVATE in "
+            "outer context"_err_en_US,
+            symbol.name());
+      }
+    }
   }
 }
 
@@ -1432,6 +1596,61 @@ void OmpAttributeVisitor::CheckPrivateDSAObject(
         "%s clause"_err_en_US,
         name.ToString(), clauseName.str());
   }
+}
+
+void OmpAttributeVisitor::CheckSourceLabel(const parser::Label &label) {
+  // Get the context to check if the statement causing a jump to the 'label' is
+  // in an enclosing OpenMP construct
+  std::optional<DirContext> thisContext{GetContextIf()};
+  sourceLabels_.emplace(
+      label, std::make_pair(currentStatementSource_, thisContext));
+  // Check if the statement with 'label' to which a jump is being introduced
+  // has already been encountered
+  auto it{targetLabels_.find(label)};
+  if (it != targetLabels_.end()) {
+    // Check if both the statement with 'label' and the statement that causes a
+    // jump to the 'label' are in the same scope
+    CheckLabelContext(currentStatementSource_, it->second.first, thisContext,
+        it->second.second);
+  }
+}
+
+// Check for invalid branch into or out of OpenMP structured blocks
+void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
+    const parser::CharBlock target, std::optional<DirContext> sourceContext,
+    std::optional<DirContext> targetContext) {
+  if (targetContext &&
+      (!sourceContext ||
+          (sourceContext->scope != targetContext->scope &&
+              !DoesScopeContain(
+                  &targetContext->scope, sourceContext->scope)))) {
+    context_
+        .Say(source, "invalid branch into an OpenMP structured block"_err_en_US)
+        .Attach(target, "In the enclosing %s directive branched into"_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(targetContext->directive)
+                    .str()));
+  }
+  if (sourceContext &&
+      (!targetContext ||
+          (sourceContext->scope != targetContext->scope &&
+              !DoesScopeContain(
+                  &sourceContext->scope, targetContext->scope)))) {
+    context_
+        .Say(source,
+            "invalid branch leaving an OpenMP structured block"_err_en_US)
+        .Attach(target, "Outside the enclosing %s directive"_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPDirectiveName(sourceContext->directive)
+                    .str()));
+  }
+}
+
+bool OmpAttributeVisitor::HasSymbolInEnclosingScope(
+    const Symbol &symbol, Scope &scope) {
+  const auto symbols{scope.parent().GetSymbols()};
+  auto it{std::find(symbols.begin(), symbols.end(), symbol)};
+  return it != symbols.end();
 }
 
 } // namespace Fortran::semantics

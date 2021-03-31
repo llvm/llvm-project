@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_TAPI_FILE_H
-#define LLVM_OBJECT_TAPI_FILE_H
+#ifndef LLVM_OBJECT_TAPIFILE_H
+#define LLVM_OBJECT_TAPIFILE_H
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -60,4 +60,4 @@ private:
 } // end namespace object.
 } // end namespace llvm.
 
-#endif // LLVM_OBJECT_TAPI_FILE_H
+#endif // LLVM_OBJECT_TAPIFILE_H

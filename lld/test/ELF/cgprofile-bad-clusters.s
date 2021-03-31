@@ -50,14 +50,14 @@ H:
 I:
     .fill 13, 1, 0
 
-# CHECK:          Name: B
-# CHECK-NEXT:     Value: 0x201131
-# CHECK:          Name: C
-# CHECK-NEXT:     Value: 0x20112F
 # CHECK:          Name: D
 # CHECK-NEXT:     Value: 0x201519
 # CHECK:          Name: E
 # CHECK-NEXT:     Value: 0x201130
+# CHECK:          Name: C
+# CHECK-NEXT:     Value: 0x20112F
+# CHECK:          Name: B
+# CHECK-NEXT:     Value: 0x201131
 # CHECK:          Name: F
 # CHECK-NEXT:     Value: 0x201901
 # CHECK:          Name: G

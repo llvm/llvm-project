@@ -9,8 +9,9 @@
 #include <iomanip>
 #include <limits.h>
 
-#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
+
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/CompletionRequest.h"
@@ -641,8 +642,7 @@ unsigned char Editline::BreakLineCommand(int ch) {
       lines.AppendString(new_line_fragment);
 #endif
 
-      int indent_correction = m_fix_indentation_callback(
-          this, lines, 0, m_fix_indentation_callback_baton);
+      int indent_correction = m_fix_indentation_callback(this, lines, 0);
       new_line_fragment = FixIndentation(new_line_fragment, indent_correction);
       m_revert_cursor_index = GetIndentation(new_line_fragment);
     }
@@ -677,8 +677,7 @@ unsigned char Editline::EndOrAddLineCommand(int ch) {
       info->cursor == info->lastchar) {
     if (m_is_input_complete_callback) {
       auto lines = GetInputAsStringList();
-      if (!m_is_input_complete_callback(this, lines,
-                                        m_is_input_complete_callback_baton)) {
+      if (!m_is_input_complete_callback(this, lines)) {
         return BreakLineCommand(ch);
       }
 
@@ -811,8 +810,7 @@ unsigned char Editline::NextLineCommand(int ch) {
     if (m_fix_indentation_callback) {
       StringList lines = GetInputAsStringList();
       lines.AppendString("");
-      indentation = m_fix_indentation_callback(
-          this, lines, 0, m_fix_indentation_callback_baton);
+      indentation = m_fix_indentation_callback(this, lines, 0);
     }
     m_input_lines.insert(
         m_input_lines.end(),
@@ -857,8 +855,8 @@ unsigned char Editline::FixIndentationCommand(int ch) {
   // Save the edits and determine the correct indentation level
   SaveEditedLine();
   StringList lines = GetInputAsStringList(m_current_line_index + 1);
-  int indent_correction = m_fix_indentation_callback(
-      this, lines, cursor_position, m_fix_indentation_callback_baton);
+  int indent_correction =
+      m_fix_indentation_callback(this, lines, cursor_position);
 
   // If it is already correct no special work is needed
   if (indent_correction == 0)
@@ -977,7 +975,7 @@ DisplayCompletions(::EditLine *editline, FILE *output_file,
 }
 
 unsigned char Editline::TabCommand(int ch) {
-  if (m_completion_callback == nullptr)
+  if (!m_completion_callback)
     return CC_ERROR;
 
   const LineInfo *line_info = el_line(m_editline);
@@ -988,7 +986,7 @@ unsigned char Editline::TabCommand(int ch) {
   CompletionResult result;
   CompletionRequest request(line, cursor_index, result);
 
-  m_completion_callback(request, m_completion_callback_baton);
+  m_completion_callback(request);
 
   llvm::ArrayRef<CompletionResult::Completion> results = result.GetResults();
 
@@ -1047,12 +1045,15 @@ unsigned char Editline::TabCommand(int ch) {
 }
 
 unsigned char Editline::ApplyAutosuggestCommand(int ch) {
+  if (!m_suggestion_callback) {
+    return CC_REDISPLAY;
+  }
+
   const LineInfo *line_info = el_line(m_editline);
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (llvm::Optional<std::string> to_add =
-          m_suggestion_callback(line, m_suggestion_callback_baton))
+  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line))
     el_insertstr(m_editline, to_add->c_str());
 
   return CC_REDISPLAY;
@@ -1061,12 +1062,16 @@ unsigned char Editline::ApplyAutosuggestCommand(int ch) {
 unsigned char Editline::TypedCharacter(int ch) {
   std::string typed = std::string(1, ch);
   el_insertstr(m_editline, typed.c_str());
+
+  if (!m_suggestion_callback) {
+    return CC_REDISPLAY;
+  }
+
   const LineInfo *line_info = el_line(m_editline);
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (llvm::Optional<std::string> to_add =
-          m_suggestion_callback(line, m_suggestion_callback_baton)) {
+  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line)) {
     std::string to_add_color = ANSI_FAINT + to_add.getValue() + ANSI_UNFAINT;
     fputs(typed.c_str(), m_output_file);
     fputs(to_add_color.c_str(), m_output_file);
@@ -1445,33 +1450,6 @@ bool Editline::Cancel() {
   }
   m_editor_status = EditorStatus::Interrupted;
   return result;
-}
-
-void Editline::SetSuggestionCallback(SuggestionCallbackType callback,
-                                     void *baton) {
-  m_suggestion_callback = callback;
-  m_suggestion_callback_baton = baton;
-}
-
-void Editline::SetAutoCompleteCallback(CompleteCallbackType callback,
-                                       void *baton) {
-  m_completion_callback = callback;
-  m_completion_callback_baton = baton;
-}
-
-void Editline::SetIsInputCompleteCallback(IsInputCompleteCallbackType callback,
-                                          void *baton) {
-  m_is_input_complete_callback = callback;
-  m_is_input_complete_callback_baton = baton;
-}
-
-bool Editline::SetFixIndentationCallback(FixIndentationCallbackType callback,
-                                         void *baton,
-                                         const char *indent_chars) {
-  m_fix_indentation_callback = callback;
-  m_fix_indentation_callback_baton = baton;
-  m_fix_indentation_callback_chars = indent_chars;
-  return false;
 }
 
 bool Editline::GetLine(std::string &line, bool &interrupted) {

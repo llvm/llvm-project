@@ -861,7 +861,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
       uint64_t Metadata = Data.getULEB128(Cur);
       BBEntries.push_back({Offset, Size, Metadata});
     }
-    Entries.push_back({Address, BBEntries});
+    Entries.push_back({Address, /*NumBlocks=*/{}, BBEntries});
   }
 
   if (!Cur) {
@@ -1191,7 +1191,7 @@ ELFDumper<ELFT>::dumpNoteSection(const Elf_Shdr *Shdr) {
 
     Elf_Note Note(*Header);
     Entries.push_back(
-        {Note.getName(), Note.getDesc(), (llvm::yaml::Hex32)Note.getType()});
+        {Note.getName(), Note.getDesc(), (ELFYAML::ELF_NT)Note.getType()});
 
     Content = Content.drop_front(Header->getSize());
   }

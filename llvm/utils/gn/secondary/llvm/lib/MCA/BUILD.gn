@@ -22,6 +22,7 @@ static_library("MCA") {
     "Stages/DispatchStage.cpp",
     "Stages/EntryStage.cpp",
     "Stages/ExecuteStage.cpp",
+    "Stages/InOrderIssueStage.cpp",
     "Stages/InstructionTables.cpp",
     "Stages/MicroOpQueueStage.cpp",
     "Stages/RetireStage.cpp",

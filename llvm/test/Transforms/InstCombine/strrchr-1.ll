@@ -60,7 +60,7 @@ define void @test_simplify4() {
 
 define void @test_nosimplify1(i32 %chr) {
 ; CHECK-LABEL: @test_nosimplify1(
-; CHECK-NEXT:    [[DST:%.*]] = call i8* @strrchr(i8* nonnull dereferenceable(1) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]])
+; CHECK-NEXT:    [[DST:%.*]] = call i8* @strrchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]])
 ; CHECK-NEXT:    store i8* [[DST]], i8** @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -73,7 +73,7 @@ define void @test_nosimplify1(i32 %chr) {
 
 define i8* @test1(i8* %str, i32 %c) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -83,7 +83,7 @@ define i8* @test1(i8* %str, i32 %c) {
 
 define i8* @test2(i8* %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* noundef [[STR:%.*]], i32 [[C:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 

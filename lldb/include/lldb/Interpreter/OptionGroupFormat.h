@@ -32,13 +32,12 @@ public:
       uint64_t default_count =
           UINT64_MAX); // Pass UINT64_MAX to disable the "--count" option
 
-  ~OptionGroupFormat() override;
+  ~OptionGroupFormat() override = default;
 
   llvm::ArrayRef<OptionDefinition> GetDefinitions() override;
 
   Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_value,
                         ExecutionContext *execution_context) override;
-  Status SetOptionValue(uint32_t, const char *, ExecutionContext *) = delete;
 
   void OptionParsingStarting(ExecutionContext *execution_context) override;
 

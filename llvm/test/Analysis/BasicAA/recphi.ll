@@ -292,4 +292,85 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: Function: nested_loop3
+; CHECK: NoAlias:	i8* %a, i8* %p.base
+; CHECK: NoAlias:	i8* %a, i8* %p.outer
+; CHECK: NoAlias:	i8* %a, i8* %p.outer.next
+; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p.inner
+; PHI-VALUES: MayAlias:	i8* %a, i8* %p.inner
+; CHECK: NoAlias:	i8* %a, i8* %p.inner.next
+define void @nested_loop3(i1 %c, i1 %c2, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %outer_loop
+
+outer_loop:
+  %p.outer = phi i8* [ %p.base, %entry ], [ %p.outer.next, %outer_loop_latch ]
+  %p.outer.next = getelementptr inbounds i8, i8* %p.outer, i64 10
+  br label %inner_loop
+
+inner_loop:
+  %p.inner = phi i8* [ %p.outer, %outer_loop ], [ %p.inner.next, %inner_loop ]
+  %p.inner.next = getelementptr inbounds i8, i8* %p.inner, i64 1
+  br i1 %c, label %inner_loop, label %outer_loop_latch
+
+outer_loop_latch:
+  br i1 %c2, label %outer_loop, label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: Function: sibling_loop
+; CHECK: NoAlias:	i8* %a, i8* %p.base
+; CHECK: NoAlias:	i8* %a, i8* %p1
+; CHECK: NoAlias:	i8* %a, i8* %p1.next
+; CHECK: MayAlias:	i8* %a, i8* %p2
+; CHECK: NoAlias:	i8* %a, i8* %p2.next
+; TODO: %p2 does not alias %a
+define void @sibling_loop(i1 %c, i1 %c2, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %loop1
+
+loop1:
+  %p1 = phi i8* [ %p.base, %entry ], [ %p1.next, %loop1 ]
+  %p1.next = getelementptr inbounds i8, i8* %p1, i64 10
+  br i1 %c, label %loop1, label %loop2
+
+loop2:
+  %p2 = phi i8* [ %p1.next, %loop1 ], [ %p2.next, %loop2 ]
+  %p2.next = getelementptr inbounds i8, i8* %p2, i64 1
+  br i1 %c2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
+; CHECK-LABEL: Function: sibling_loop2
+; CHECK: NoAlias:	i8* %a, i8* %p.base
+; CHECK: NoAlias:	i8* %a, i8* %p1
+; CHECK: NoAlias:	i8* %a, i8* %p1.next
+; NO-PHI-VALUES: NoAlias:	i8* %a, i8* %p2
+; PHI-VALUES: MayAlias:	i8* %a, i8* %p2
+; CHECK: NoAlias:	i8* %a, i8* %p2.next
+define void @sibling_loop2(i1 %c, i1 %c2, i8* noalias %p.base) {
+entry:
+  %a = alloca i8
+  br label %loop1
+
+loop1:
+  %p1 = phi i8* [ %p.base, %entry ], [ %p1.next, %loop1 ]
+  %p1.next = getelementptr inbounds i8, i8* %p1, i64 10
+  br i1 %c, label %loop1, label %loop2
+
+loop2:
+  %p2 = phi i8* [ %p1, %loop1 ], [ %p2.next, %loop2 ]
+  %p2.next = getelementptr inbounds i8, i8* %p2, i64 1
+  br i1 %c2, label %loop2, label %exit
+
+exit:
+  ret void
+}
+
 declare i16 @call(i32)

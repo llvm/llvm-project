@@ -49,6 +49,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   // Enable all kernel inputs if we have the fixed ABI. Don't bother if we don't
   // have any calls.
   const bool UseFixedABI = AMDGPUTargetMachine::EnableFixedFunctionABI &&
+                           CC != CallingConv::AMDGPU_Gfx &&
                            (!isEntryFunction() || HasCalls);
 
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
@@ -61,6 +62,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   }
 
   if (!isEntryFunction()) {
+    if (UseFixedABI)
+      ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
+
     // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
@@ -285,8 +289,6 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
   assert(Size >= 4 && "invalid sgpr spill size");
   assert(TRI->spillSGPRToVGPR() && "not spilling SGPRs to VGPRs");
 
-  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
-
   // Make sure to handle the case where a wide SGPR spill may span between two
   // VGPRs.
   for (unsigned I = 0; I < NumLanes; ++I, ++NumVGPRSpillLanes) {
@@ -312,13 +314,14 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         return false;
       }
 
-      Optional<int> CSRSpillFI;
-      if ((FrameInfo.hasCalls() || !isEntryFunction()) && CSRegs &&
-          isCalleeSavedReg(CSRegs, LaneVGPR)) {
-        CSRSpillFI = FrameInfo.CreateSpillStackObject(4, Align(4));
+      Optional<int> SpillFI;
+      // We need to preserve inactive lanes, so always save, even caller-save
+      // registers.
+      if (!isEntryFunction()) {
+        SpillFI = FrameInfo.CreateSpillStackObject(4, Align(4));
       }
 
-      SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, CSRSpillFI));
+      SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, SpillFI));
 
       // Add this register as live-in to all blocks to avoid machine verifer
       // complaining about use of an undefined physical register.

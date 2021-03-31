@@ -62,13 +62,13 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-.global _Z3fooi
-_Z3fooi:
 .global _Z3bari
 _Z3bari:
-.global _Z3zedi
-_Z3zedi:
 .global _Z3bazi
 _Z3bazi:
+.global _Z3fooi
+_Z3fooi:
+.global _Z3zedi
+_Z3zedi:
 .global _ZSt3qux
 _ZSt3qux:

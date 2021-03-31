@@ -420,13 +420,9 @@ struct DivergencePropagator {
 #ifndef NDEBUG
 static void printBlockSet(ConstBlockSet &Blocks, raw_ostream &Out) {
   Out << "[";
-  bool First = true;
-  for (const auto *BB : Blocks) {
-    if (!First)
-      Out << ", ";
-    First = false;
-    Out << BB->getName();
-  }
+  ListSeparator LS;
+  for (const auto *BB : Blocks)
+    Out << LS << BB->getName();
   Out << "]";
 }
 #endif

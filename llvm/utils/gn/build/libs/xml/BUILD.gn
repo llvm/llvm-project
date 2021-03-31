@@ -1,5 +1,6 @@
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 
 config("xml_config") {
   visibility = [ ":xml" ]
@@ -7,7 +8,7 @@ config("xml_config") {
   if (host_os == "mac") {
     include_dirs = [ "$mac_sdk_path/usr/include/libxml2" ]
   } else {
-    include_dirs = [ "/usr/include/libxml2" ]
+    include_dirs = [ "$sysroot/usr/include/libxml2" ]
   }
 }
 

@@ -13,9 +13,11 @@
 #ifndef GPU_OPS
 #define GPU_OPS
 
+include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -197,7 +199,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [HasParent<"GPUModuleOp">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "StringRef":$name, "FunctionType":$type,
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
       CArg<"TypeRange", "{}">:$workgroupAttributions,
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
@@ -377,7 +379,7 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
+    OpBuilder<(ins "GPUFuncOp":$kernelFunc, "KernelDim3":$gridSize,
       "KernelDim3":$blockSize, "ValueRange":$kernelOperands)>
   ];
 
@@ -480,7 +482,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
          %num_bx : index, %num_by : index, %num_bz : index,
          %num_tx : index, %num_ty : index, %num_tz : index)
       "some_op"(%bx, %tx) : (index, index) -> ()
-      %3 = "std.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
+      %3 = "memref.load"(%val1, %bx) : (memref<?xf32, 1>, index) -> f32
     }
     ```
 
@@ -496,7 +498,7 @@ def GPU_LaunchOp : GPU_Op<"launch">,
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$gridSizeX, "Value":$gridSizeY,
+    OpBuilder<(ins "Value":$gridSizeX, "Value":$gridSizeY,
       "Value":$gridSizeZ, "Value":$blockSizeX, "Value":$blockSizeY,
       "Value":$blockSizeZ)>
   ];
@@ -543,7 +545,7 @@ def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, NoSideEffect,
     by an invocation of the `gpu.func`.
   }];
 
-  let builders = [OpBuilderDAG<(ins), [{ // empty}]>];
+  let builders = [OpBuilder<(ins), [{ // empty}]>];
 
   let parser = [{ return parseReturnOp(parser, result); }];
   let printer = [{ p << getOperationName(); }];
@@ -694,7 +696,8 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-  IsolatedFromAbove, SymbolTable, Symbol,
+  DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
+  SymbolTable, Symbol,
   SingleBlockImplicitTerminator<"ModuleEndOp">
 ]> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
@@ -722,7 +725,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
     ```
   }];
-  let builders = [OpBuilderDAG<(ins "StringRef":$name)>];
+  let builders = [OpBuilder<(ins "StringRef":$name)>];
   let parser = [{ return ::parseGPUModuleOp(parser, result); }];
   let printer = [{ return ::print(p, *this); }];
   let regions = (region SizedRegion<1>:$body);
@@ -812,7 +815,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
   let summary = "GPU memory allocation operation.";
   let description = [{
     The `gpu.alloc` operation allocates a region of memory on the GPU. It is
-    similar to the `std.alloc` op, but supports asynchronous GPU execution.
+    similar to the `memref.alloc` op, but supports asynchronous GPU execution.
 
     The op does not execute before all async dependencies have finished
     executing.
@@ -850,7 +853,7 @@ def GPU_DeallocOp : GPU_Op<"dealloc", [GPU_AsyncOpInterface]> {
   let description = [{
     The `gpu.dealloc` operation frees the region of memory referenced by a
     memref which was originally created by the `gpu.alloc` operation. It is
-    similar to the `std.dealloc` op, but supports asynchronous GPU execution.
+    similar to the `memref.dealloc` op, but supports asynchronous GPU execution.
 
     The op does not execute before all async dependencies have finished
     executing.

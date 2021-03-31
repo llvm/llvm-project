@@ -360,6 +360,25 @@ public:
 
     bool SetRegisterLocationToSame(uint32_t reg_num, bool must_replace);
 
+    // When this UnspecifiedRegistersAreUndefined mode is
+    // set, any register that is not specified by this Row will
+    // be described as Undefined.
+    // This will prevent the unwinder from iterating down the
+    // stack looking for a spill location, or a live register value
+    // at frame 0.
+    // It would be used for an UnwindPlan row where we can't track
+    // spilled registers -- for instance a jitted stack frame where
+    // we have no unwind information or start address -- and registers
+    // MAY have been spilled and overwritten, so providing the
+    // spilled/live value from a newer frame may show an incorrect value.
+    void SetUnspecifiedRegistersAreUndefined(bool unspec_is_undef) {
+      m_unspecified_registers_are_undefined = unspec_is_undef;
+    }
+
+    bool GetUnspecifiedRegistersAreUndefined() {
+      return m_unspecified_registers_are_undefined;
+    }
+
     void Clear();
 
     void Dump(Stream &s, const UnwindPlan *unwind_plan, Thread *thread,
@@ -372,6 +391,7 @@ public:
     FAValue m_cfa_value;
     FAValue m_afa_value;
     collection m_register_locations;
+    bool m_unspecified_registers_are_undefined;
   }; // class Row
 
   typedef std::shared_ptr<Row> RowSP;

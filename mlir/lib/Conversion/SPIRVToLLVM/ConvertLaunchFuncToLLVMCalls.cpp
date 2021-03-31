@@ -94,7 +94,7 @@ static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
 
 /// Fills `globalVariableMap` with SPIR-V global variables that represent kernel
 /// arguments from the given SPIR-V module. We assume that the module contains a
-/// single entry point function. Hence, all `spv.globalVariable`s with a bind
+/// single entry point function. Hence, all `spv.GlobalVariable`s with a bind
 /// attribute are kernel arguments.
 static LogicalResult getKernelGlobalVariables(
     spirv::ModuleOp module,
@@ -273,15 +273,13 @@ public:
 
     // Specify options to lower Standard to LLVM and pull in the conversion
     // patterns.
-    LowerToLLVMOptions options = {
-        /*useBarePtrCallConv=*/false,
-        /*emitCWrappers=*/true,
-        /*indexBitwidth=*/kDeriveIndexBitwidthFromDataLayout};
+    LowerToLLVMOptions options(module.getContext());
+    options.emitCWrappers = true;
     auto *context = module.getContext();
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    patterns.insert<GPULaunchLowering>(typeConverter);
+    patterns.add<GPULaunchLowering>(typeConverter);
 
     // Pull in SPIR-V type conversion patterns to convert SPIR-V global
     // variable's type to LLVM dialect type.
@@ -295,7 +293,7 @@ public:
     // Finally, modify the kernel function in SPIR-V modules to avoid symbolic
     // conflicts.
     for (auto spvModule : module.getOps<spirv::ModuleOp>())
-      encodeKernelName(spvModule);
+      (void)encodeKernelName(spvModule);
   }
 };
 } // namespace

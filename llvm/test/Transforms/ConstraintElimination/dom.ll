@@ -135,3 +135,434 @@ bb2:
   call void @use(i1 %c.3)
   ret i32 20
 }
+
+
+define void @test_cond_from_preheader(i32 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[BB2:%.*]]
+; CHECK:       pre:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP:%.*]], label [[BB2]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %bb2
+
+pre:
+  %c.1 = icmp ule i32 %x, 10
+  br i1 %c.1, label %loop, label %bb2
+
+loop:
+  %t.1 = icmp ule i32 %x, 10
+  call void @use(i1 %t.1)
+  %f.1 = icmp ugt i32 %x, 10
+  call void @use(i1 %f.1)
+
+  %c.2 = icmp ule i32 %x, 9
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i32 %x, 9
+  call void @use(i1 %c.3)
+
+  br i1 true, label %exit, label %loop
+
+exit:
+  %c.4 = icmp ule i32 %x, 10
+  call void @use(i1 %c.4)
+  ret void
+
+bb2:
+  %c.5 = icmp ugt i32 %x, 10
+  call void @use(i1 %c.5)
+  ret void
+}
+
+define void @test_cond_from_preheader_successors_flipped(i32 %x, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader_successors_flipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[BB2:%.*]]
+; CHECK:       pre:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[BB2]], label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[X]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[X]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %bb2
+
+pre:
+  %c.1 = icmp ule i32 %x, 10
+  br i1 %c.1, label %bb2, label %loop
+
+loop:
+  %f.1 = icmp ule i32 %x, 10
+  call void @use(i1 %f.1)
+  %t.1 = icmp ugt i32 %x, 10
+  call void @use(i1 %t.1)
+
+  %c.2 = icmp ule i32 %x, 11
+  call void @use(i1 %c.2)
+  %c.3 = icmp ugt i32 %x, 11
+  call void @use(i1 %c.3)
+
+  br i1 true, label %exit, label %loop
+
+exit:
+  %f.2 = icmp ule i32 %x, 10
+  call void @use(i1 %f.2)
+  ret void
+
+bb2:
+  %c.5 = icmp ugt i32 %x, 10
+  call void @use(i1 %c.5)
+  ret void
+}
+
+define void @test_cond_from_preheader_and(i32 %x, i32 %y, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[Y:%.*]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+; CHECK:       pre:
+; CHECK-NEXT:    [[X_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[Y_1:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    br i1 [[AND]], label [[LOOP:%.*]], label [[EXIT_1:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ugt i32 [[Y]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %exit
+
+exit:
+  %c.5 = icmp ugt i32 %y, 10
+  call void @use(i1 %c.5)
+  ret void
+
+pre:
+  %x.1 = icmp ule i32 %x, 10
+  %y.1 = icmp ugt i32 %y, 99
+  %and = and i1 %x.1, %y.1
+  br i1 %and, label %loop, label %exit.1
+
+loop:
+  %t.1 = icmp ule i32 %x, 10
+  call void @use(i1 %t.1)
+  %f.1 = icmp ugt i32 %x, 10
+  call void @use(i1 %f.1)
+  %c.1 = icmp ule i32 %x, 9
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %x, 9
+  call void @use(i1 %c.2)
+
+
+  %t.2 = icmp ugt i32 %y, 99
+  call void @use(i1 %t.2)
+  %f.2 = icmp ule i32 %y, 99
+  call void @use(i1 %f.2)
+
+  %c.3 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.3)
+  %c.4 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.4)
+
+  br i1 true, label %exit, label %loop
+
+exit.1:
+  %c.6 = icmp ugt i32 %y, 10
+  call void @use(i1 %c.6)
+  ret void
+}
+
+
+define void @test_cond_from_preheader_and_successors_flipped(i32 %x, i32 %y, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader_and_successors_flipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_9:%.*]] = icmp ugt i32 [[Y:%.*]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    ret void
+; CHECK:       pre:
+; CHECK-NEXT:    [[X_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[Y_1:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    br i1 [[AND]], label [[EXIT_1:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[Y]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %exit
+
+exit:
+  %c.9 = icmp ugt i32 %y, 10
+  call void @use(i1 %c.9)
+  ret void
+
+pre:
+  %x.1 = icmp ule i32 %x, 10
+  %y.1 = icmp ugt i32 %y, 99
+  %and = and i1 %x.1, %y.1
+  br i1 %and, label %exit.1, label %loop
+
+loop:
+  %c.1 = icmp ule i32 %x, 10
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %x, 10
+  call void @use(i1 %c.2)
+  %c.3 = icmp ule i32 %x, 9
+  call void @use(i1 %c.3)
+  %c.4 = icmp ugt i32 %x, 9
+  call void @use(i1 %c.4)
+
+
+  %c.5 = icmp ugt i32 %y, 99
+  call void @use(i1 %c.5)
+  %c.6 = icmp ule i32 %y, 99
+  call void @use(i1 %c.6)
+
+  %c.7 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.7)
+  %c.8 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.8)
+
+  br i1 true, label %exit, label %loop
+
+exit.1:
+  %t.1 = icmp ugt i32 %y, 10
+  call void @use(i1 %t.1)
+  ret void
+}
+
+define void @test_cond_from_preheader_or(i32 %x, i32 %y, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[Y:%.*]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    ret void
+; CHECK:       pre:
+; CHECK-NEXT:    [[X_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[Y_1:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    br i1 [[OR]], label [[EXIT_1:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i32 [[X]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i32 [[X]], 11
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[Y]], 98
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i32 [[Y]], 98
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %exit
+
+exit:
+  %c.5 = icmp ugt i32 %y, 10
+  call void @use(i1 %c.5)
+  ret void
+
+pre:
+  %x.1 = icmp ule i32 %x, 10
+  %y.1 = icmp ugt i32 %y, 99
+  %or = or i1 %x.1, %y.1
+  br i1 %or, label %exit.1, label %loop
+
+loop:
+  %t.1 = icmp ugt i32 %x, 10
+  call void @use(i1 %t.1)
+  %f.1 = icmp ule i32 %x, 10
+  call void @use(i1 %f.1)
+  %c.1 = icmp ugt i32 %x, 11
+  call void @use(i1 %c.1)
+  %c.2 = icmp ule i32 %x, 11
+  call void @use(i1 %c.2)
+
+
+  %t.2 = icmp ule i32 %y, 99
+  call void @use(i1 %t.2)
+  %f.2 = icmp ugt i32 %y, 99
+  call void @use(i1 %f.2)
+
+  %c.3 = icmp ule i32 %y, 98
+  call void @use(i1 %c.3)
+  %c.4 = icmp ule i32 %y, 98
+  call void @use(i1 %c.4)
+
+  br i1 true, label %exit, label %loop
+
+exit.1:
+  %c.6 = icmp ule i32 %y, 100
+  call void @use(i1 %c.6)
+  ret void
+}
+
+define void @test_cond_from_preheader_or_successor_flipped(i32 %x, i32 %y, i1 %c) {
+; CHECK-LABEL: @test_cond_from_preheader_or_successor_flipped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[PRE:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_9:%.*]] = icmp ugt i32 [[Y:%.*]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_9]])
+; CHECK-NEXT:    ret void
+; CHECK:       pre:
+; CHECK-NEXT:    [[X_1:%.*]] = icmp ule i32 [[X:%.*]], 10
+; CHECK-NEXT:    [[Y_1:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[X_1]], [[Y_1]]
+; CHECK-NEXT:    br i1 [[OR]], label [[LOOP:%.*]], label [[EXIT_1:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_1]])
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 [[C_2]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ugt i32 [[X]], 9
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ugt i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 [[C_5]])
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i32 [[Y]], 99
+; CHECK-NEXT:    call void @use(i1 [[C_6]])
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_7]])
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ugt i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 [[C_8]])
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP]]
+; CHECK:       exit.1:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i32 [[Y]], 100
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %pre, label %exit
+
+exit:
+  %c.9 = icmp ugt i32 %y, 10
+  call void @use(i1 %c.9)
+  ret void
+
+pre:
+  %x.1 = icmp ule i32 %x, 10
+  %y.1 = icmp ugt i32 %y, 99
+  %or = or i1 %x.1, %y.1
+  br i1 %or, label %loop, label %exit.1
+
+loop:
+  %c.1 = icmp ule i32 %x, 10
+  call void @use(i1 %c.1)
+  %c.2 = icmp ugt i32 %x, 10
+  call void @use(i1 %c.2)
+  %c.3 = icmp ule i32 %x, 9
+  call void @use(i1 %c.3)
+  %c.4 = icmp ugt i32 %x, 9
+  call void @use(i1 %c.4)
+
+  %c.5 = icmp ugt i32 %y, 99
+  call void @use(i1 %c.5)
+  %c.6 = icmp ule i32 %y, 99
+  call void @use(i1 %c.6)
+
+  %c.7 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.7)
+  %c.8 = icmp ugt i32 %y, 100
+  call void @use(i1 %c.8)
+
+  br i1 true, label %exit, label %loop
+
+exit.1:
+  %t.1 = icmp ule i32 %y, 100
+  call void @use(i1 %t.1)
+  ret void
+}

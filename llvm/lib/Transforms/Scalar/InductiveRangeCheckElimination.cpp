@@ -360,7 +360,7 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
     return;
 
   // TODO: Do the same for OR, XOR, NOT etc?
-  if (match(Condition, m_And(m_Value(), m_Value()))) {
+  if (match(Condition, m_LogicalAnd(m_Value(), m_Value()))) {
     extractRangeChecksFromCond(L, SE, cast<User>(Condition)->getOperandUse(0),
                                Checks, Visited);
     extractRangeChecksFromCond(L, SE, cast<User>(Condition)->getOperandUse(1),

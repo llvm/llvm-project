@@ -293,8 +293,8 @@ public:
   /// Return a string representing the type of dependence that the dependence
   /// analysis identified between the two given nodes. This function assumes
   /// that there is a memory dependence between the given two nodes.
-  const std::string getDependenceString(const NodeType &Src,
-                                        const NodeType &Dst) const;
+  std::string getDependenceString(const NodeType &Src,
+                                  const NodeType &Dst) const;
 
 protected:
   // Name of the graph.
@@ -470,7 +470,7 @@ bool DependenceGraphInfo<NodeType>::getDependencies(
 }
 
 template <typename NodeType>
-const std::string
+std::string
 DependenceGraphInfo<NodeType>::getDependenceString(const NodeType &Src,
                                                    const NodeType &Dst) const {
   std::string Str;

@@ -26,8 +26,8 @@ define i32 @test3(i8* %t0) nounwind {
 ; V5: lsls
 ; V5: asrs
 
-; V6: ldrb
-; V6: sxtb
+; V6: mov
+; V6: ldrsb
     %tmp.s = load i8, i8* %t0
     %tmp1.s = sext i8 %tmp.s to i32
     ret i32 %tmp1.s
@@ -38,8 +38,8 @@ define i32 @test4(i16* %t0) nounwind {
 ; V5: lsls
 ; V5: asrs
 
-; V6: ldrh
-; V6: sxth
+; V6: mov
+; V6: ldrsh
     %tmp.s = load i16, i16* %t0
     %tmp1.s = sext i16 %tmp.s to i32
     ret i32 %tmp1.s

@@ -9,7 +9,9 @@
  define float @FloatConstantPool() {
 ; CHECK-LABEL: FloatConstantPool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plfs f1, .LCPI0_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 0
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 8388577
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: FloatConstantPool:
@@ -24,7 +26,9 @@ entry:
  define double @DoubleConstantPool() {
 ; CHECK-LABEL: DoubleConstantPool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plfd f1, .LCPI1_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1048574
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 780229072
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: DoubleConstantPool:
@@ -39,8 +43,12 @@ entry:
  define ppc_fp128 @LongDoubleConstantPool() {
 ; CHECK-LABEL: LongDoubleConstantPool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plfd f1, .LCPI2_0@PCREL(0), 1
-; CHECK-NEXT:    plfd f2, .LCPI2_1@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 56623104
+; CHECK-NEXT:    xxsplti32dx vs2, 0, -2146625897
+; CHECK-NEXT:    xxsplti32dx vs1, 1, -609716532
+; CHECK-NEXT:    xxsplti32dx vs2, 1, 1339675259
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
+; CHECK-NEXT:    # kill: def $f2 killed $f2 killed $vsl2
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: LongDoubleConstantPool:
@@ -185,9 +193,11 @@ entry:
 define double @two_constants(double %a) {
 ; CHECK-LABEL: two_constants:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plfd f0, .LCPI11_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs0, 0, 1074446467
+; CHECK-NEXT:    xxsplti32dx vs0, 1, 309237645
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    plfd f1, .LCPI11_1@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1073922179
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 309237645
 ; CHECK-NEXT:    xsadddp f1, f0, f1
 ; CHECK-NEXT:    blr
 ;
@@ -212,11 +222,15 @@ define double @two_constants_two_bb(i32 %m, double %a) {
 ; CHECK-NEXT:    cmplwi r3, 0
 ; CHECK-NEXT:    beq cr0, .LBB12_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    plfd f1, .LCPI12_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1074935889
+; CHECK-NEXT:    xxsplti32dx vs1, 1, -343597384
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB12_2: # %if.end
-; CHECK-NEXT:    plfd f0, .LCPI12_1@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs0, 0, 1076085391
+; CHECK-NEXT:    xxsplti32dx vs0, 1, 1546188227
 ; CHECK-NEXT:    xsadddp f1, f1, f0
+; CHECK-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: two_constants_two_bb:
@@ -248,11 +262,14 @@ return:
 define double @three_constants_f64(double %a, double %c) {
 ; CHECK-LABEL: three_constants_f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plfd f0, .LCPI13_0@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs0, 0, 1074446467
+; CHECK-NEXT:    xxsplti32dx vs0, 1, 309237645
 ; CHECK-NEXT:    xsadddp f0, f1, f0
-; CHECK-NEXT:    plfd f1, .LCPI13_1@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1073922179
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 309237645
 ; CHECK-NEXT:    xsadddp f0, f0, f1
-; CHECK-NEXT:    plfd f1, .LCPI13_2@PCREL(0), 1
+; CHECK-NEXT:    xxsplti32dx vs1, 0, 1073948393
+; CHECK-NEXT:    xxsplti32dx vs1, 1, 2027224564
 ; CHECK-NEXT:    xsadddp f1, f0, f1
 ; CHECK-NEXT:    blr
 ;
@@ -340,21 +357,26 @@ entry:
 
 define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK-LABEL: three_constants_ppcf128:
-; CHECK:         .localentry three_constants_ppcf128, 1
-; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    plfd f3, .LCPI16_0@PCREL(0), 1
-; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-DAG:     xxlxor f4, f4, f4
+; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
+; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-NEXT:    plfd f3, .LCPI16_1@PCREL(0), 1
-; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-DAG:     xxlxor f4, f4, f4
+; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxsplti32dx vs3, 1, -1719329096
+; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-NEXT:    plfd f3, .LCPI16_2@PCREL(0), 1
-; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-DAG:     xxlxor f4, f4, f4
+; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxsplti32dx vs3, 1, 8724152
+; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
 ; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)

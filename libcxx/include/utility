@@ -76,15 +76,15 @@ struct pair
     template <class U, class V> explicit(see-below) pair(pair<U, V>&& p);        // constexpr in C++14
     template <class... Args1, class... Args2>
         pair(piecewise_construct_t, tuple<Args1...> first_args,
-             tuple<Args2...> second_args);
+             tuple<Args2...> second_args);                                       // constexpr in C++20
 
-    template <class U, class V> pair& operator=(const pair<U, V>& p);
+    template <class U, class V> pair& operator=(const pair<U, V>& p);            // constexpr in C++20
     pair& operator=(pair&& p) noexcept(is_nothrow_move_assignable<T1>::value &&
-                                       is_nothrow_move_assignable<T2>::value);
-    template <class U, class V> pair& operator=(pair<U, V>&& p);
+                                       is_nothrow_move_assignable<T2>::value);   // constexpr in C++20
+    template <class U, class V> pair& operator=(pair<U, V>&& p);                 // constexpr in C++20
 
     void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
-                                is_nothrow_swappable_v<T2>);
+                                is_nothrow_swappable_v<T2>);                     // constexpr in C++20
 };
 
 template <class T1, class T2> bool operator==(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
@@ -94,10 +94,10 @@ template <class T1, class T2> bool operator> (const pair<T1,T2>&, const pair<T1,
 template <class T1, class T2> bool operator>=(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
 template <class T1, class T2> bool operator<=(const pair<T1,T2>&, const pair<T1,T2>&); // constexpr in C++14
 
-template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);   // constexpr in C++14
+template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);                // constexpr in C++14
 template <class T1, class T2>
 void
-swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));
+swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));            // constexpr in C++20
 
 struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 inline constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
@@ -190,6 +190,10 @@ template <size_t I>
   };
 template <size_t I>
   inline constexpr in_place_index_t<I> in_place_index{};
+
+// [utility.underlying], to_underlying
+template <class T>
+    constexpr underlying_type_t<T> to_underlying( T value ) noexcept; // C++2b
 
 }  // std
 
@@ -1622,7 +1626,20 @@ template <class _Type, class ...>
 using __enable_hash_helper _LIBCPP_NODEBUG_TYPE = _Type;
 #endif
 
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr typename underlying_type<_Tp>::type
+__to_underlying(_Tp __val) noexcept {
+  return static_cast<typename underlying_type<_Tp>::type>(__val);
+}
 #endif // !_LIBCPP_CXX03_LANG
+
+#if _LIBCPP_STD_VER > 20
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr underlying_type_t<_Tp>
+to_underlying(_Tp __val) noexcept {
+  return _VSTD::__to_underlying(__val);
+}
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

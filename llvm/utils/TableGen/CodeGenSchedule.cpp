@@ -708,10 +708,10 @@ void CodeGenSchedModels::collectSchedRW() {
 /// Compute a SchedWrite name from a sequence of writes.
 std::string CodeGenSchedModels::genRWName(ArrayRef<unsigned> Seq, bool IsRead) {
   std::string Name("(");
-  for (auto I = Seq.begin(), E = Seq.end(); I != E; ++I) {
-    if (I != Seq.begin())
-      Name += '_';
-    Name += getSchedRW(*I, IsRead).Name;
+  ListSeparator LS("_");
+  for (unsigned I : Seq) {
+    Name += LS;
+    Name += getSchedRW(I, IsRead).Name;
   }
   Name += ')';
   return Name;
@@ -990,10 +990,10 @@ CodeGenSchedModels::createSchedClassName(Record *ItinClassDef,
 std::string CodeGenSchedModels::createSchedClassName(const RecVec &InstDefs) {
 
   std::string Name;
-  for (RecIter I = InstDefs.begin(), E = InstDefs.end(); I != E; ++I) {
-    if (I != InstDefs.begin())
-      Name += '_';
-    Name += (*I)->getName();
+  ListSeparator LS("_");
+  for (const Record *InstDef : InstDefs) {
+    Name += LS;
+    Name += InstDef->getName();
   }
   return Name;
 }
@@ -2262,25 +2262,18 @@ void PredTransitions::dump() const {
   for (std::vector<PredTransition>::const_iterator
          TI = TransVec.begin(), TE = TransVec.end(); TI != TE; ++TI) {
     dbgs() << "{";
-    for (SmallVectorImpl<PredCheck>::const_iterator
-           PCI = TI->PredTerm.begin(), PCE = TI->PredTerm.end();
-         PCI != PCE; ++PCI) {
-      if (PCI != TI->PredTerm.begin())
-        dbgs() << ", ";
-      dbgs() << SchedModels.getSchedRW(PCI->RWIdx, PCI->IsRead).Name
-             << ":" << PCI->Predicate->getName();
-    }
+    ListSeparator LS;
+    for (const PredCheck &PC : TI->PredTerm)
+      dbgs() << LS << SchedModels.getSchedRW(PC.RWIdx, PC.IsRead).Name << ":"
+             << PC.Predicate->getName();
     dbgs() << "},\n  => {";
     for (SmallVectorImpl<SmallVector<unsigned,4>>::const_iterator
            WSI = TI->WriteSequences.begin(), WSE = TI->WriteSequences.end();
          WSI != WSE; ++WSI) {
       dbgs() << "(";
-      for (SmallVectorImpl<unsigned>::const_iterator
-             WI = WSI->begin(), WE = WSI->end(); WI != WE; ++WI) {
-        if (WI != WSI->begin())
-          dbgs() << ", ";
-        dbgs() << SchedModels.getSchedWrite(*WI).Name;
-      }
+      ListSeparator LS;
+      for (unsigned N : *WSI)
+        dbgs() << LS << SchedModels.getSchedWrite(N).Name;
       dbgs() << "),";
     }
     dbgs() << "}\n";

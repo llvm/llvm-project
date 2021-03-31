@@ -1,22 +1,26 @@
 ! RUN: %S/test_errors.sh %s %t %f18 -fopenmp
-! XFAIL: *
-
 ! OpenMP Version 4.5
 ! 2.7.1 Loop Construct
 ! The do-loop cannot be a DO WHILE or a DO loop without loop control.
 
 program omp_do
-  integer i, j, k
-  i = 0
-
+  integer ::  i = 0,k
   !$omp do
-  !ERROR: !$OMP DO cannot be a DO WHILE or DO without loop control
-  do while (i .lt. 10)
-    do j = 1, 10
-      print *, "Hello"
-    end do
-    i = i + 1
+  !ERROR: The DO loop cannot be a DO WHILE with DO directive.
+  do while (i <= 10)
+    print *, "it",i
+    i = i+1
   end do
   !$omp end do
 
+  !$omp do
+  !ERROR: The DO loop cannot be a DO WHILE with DO directive.
+  do while (i <= 10)
+    do while (j <= 10)
+      print *, "it",k
+      j = j+1
+    end do
+    i = i+1
+  end do
+  !$omp end do
 end program omp_do

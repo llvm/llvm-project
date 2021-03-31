@@ -1058,7 +1058,10 @@ ConstantRange::smax(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::smax(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smax(getSignedMax(), Other.getSignedMax()) + 1;
-  return getNonEmpty(std::move(NewL), std::move(NewU));
+  ConstantRange Res = getNonEmpty(std::move(NewL), std::move(NewU));
+  if (isSignWrappedSet() || Other.isSignWrappedSet())
+    return Res.intersectWith(unionWith(Other, Signed), Signed);
+  return Res;
 }
 
 ConstantRange
@@ -1069,7 +1072,10 @@ ConstantRange::umax(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::umax(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umax(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  return getNonEmpty(std::move(NewL), std::move(NewU));
+  ConstantRange Res = getNonEmpty(std::move(NewL), std::move(NewU));
+  if (isWrappedSet() || Other.isWrappedSet())
+    return Res.intersectWith(unionWith(Other, Unsigned), Unsigned);
+  return Res;
 }
 
 ConstantRange
@@ -1080,7 +1086,10 @@ ConstantRange::smin(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::smin(getSignedMin(), Other.getSignedMin());
   APInt NewU = APIntOps::smin(getSignedMax(), Other.getSignedMax()) + 1;
-  return getNonEmpty(std::move(NewL), std::move(NewU));
+  ConstantRange Res = getNonEmpty(std::move(NewL), std::move(NewU));
+  if (isSignWrappedSet() || Other.isSignWrappedSet())
+    return Res.intersectWith(unionWith(Other, Signed), Signed);
+  return Res;
 }
 
 ConstantRange
@@ -1091,7 +1100,10 @@ ConstantRange::umin(const ConstantRange &Other) const {
     return getEmpty();
   APInt NewL = APIntOps::umin(getUnsignedMin(), Other.getUnsignedMin());
   APInt NewU = APIntOps::umin(getUnsignedMax(), Other.getUnsignedMax()) + 1;
-  return getNonEmpty(std::move(NewL), std::move(NewU));
+  ConstantRange Res = getNonEmpty(std::move(NewL), std::move(NewU));
+  if (isWrappedSet() || Other.isWrappedSet())
+    return Res.intersectWith(unionWith(Other, Unsigned), Unsigned);
+  return Res;
 }
 
 ConstantRange
@@ -1256,12 +1268,6 @@ ConstantRange ConstantRange::srem(const ConstantRange &RHS) const {
 }
 
 ConstantRange ConstantRange::binaryNot() const {
-  if (isEmptySet())
-    return getEmpty();
-
-  if (isWrappedSet())
-    return getFull();
-
   return ConstantRange(APInt::getAllOnesValue(getBitWidth())).sub(*this);
 }
 

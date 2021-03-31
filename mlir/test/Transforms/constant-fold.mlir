@@ -13,8 +13,8 @@ func @affine_for(%p : memref<f32>) {
 
       %2 = addf %0, %1 : f32
 
-      // CHECK-NEXT: store [[C]], [[ARG]][]
-      store %2, %p[] : memref<f32>
+      // CHECK-NEXT: memref.store [[C]], [[ARG]][]
+      memref.store %2, %p[] : memref<f32>
     }
   }
   return
@@ -548,7 +548,7 @@ func @dim(%x : tensor<8x4xf32>) -> index {
 
   // CHECK:[[C4:%.+]] = constant 4 : index
   %c1 = constant 1 : index
-  %0 = dim %x, %c1 : tensor<8x4xf32>
+  %0 = memref.dim %x, %c1 : tensor<8x4xf32>
 
   // CHECK-NEXT: return [[C4]]
   return %0 : index
@@ -793,7 +793,7 @@ func @splat_fold() -> (vector<4xf32>, tensor<4xf32>) {
 
 // CHECK-LABEL: func @subview_scalar_fold
 func @subview_scalar_fold(%arg0: memref<f32>) -> memref<f32> {
-  // CHECK-NOT: subview
-  %c = subview %arg0[] [] [] : memref<f32> to memref<f32>
+  // CHECK-NOT: memref.subview
+  %c = memref.subview %arg0[] [] [] : memref<f32> to memref<f32>
   return %c : memref<f32>
 }

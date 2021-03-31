@@ -81,6 +81,9 @@ public:
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
 
+  /// Process subprogram.
+  void processSubprogram(DISubprogram *SP);
+
   /// Clear all lists.
   void reset();
 
@@ -89,7 +92,6 @@ private:
 
   void processCompileUnit(DICompileUnit *CU);
   void processScope(DIScope *Scope);
-  void processSubprogram(DISubprogram *SP);
   void processType(DIType *DT);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);

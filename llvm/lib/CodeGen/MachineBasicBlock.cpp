@@ -87,6 +87,17 @@ MCSymbol *MachineBasicBlock::getSymbol() const {
   return CachedMCSymbol;
 }
 
+MCSymbol *MachineBasicBlock::getEHCatchretSymbol() const {
+  if (!CachedEHCatchretMCSymbol) {
+    const MachineFunction *MF = getParent();
+    SmallString<128> SymbolName;
+    raw_svector_ostream(SymbolName)
+        << "$ehgcr_" << MF->getFunctionNumber() << '_' << getNumber();
+    CachedEHCatchretMCSymbol = MF->getContext().getOrCreateSymbol(SymbolName);
+  }
+  return CachedEHCatchretMCSymbol;
+}
+
 MCSymbol *MachineBasicBlock::getEndSymbol() const {
   if (!CachedEndMCSymbol) {
     const MachineFunction *MF = getParent();
@@ -243,18 +254,22 @@ MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
   return I;
 }
 
-MachineBasicBlock::iterator MachineBasicBlock::getFirstNonDebugInstr() {
+MachineBasicBlock::iterator
+MachineBasicBlock::getFirstNonDebugInstr(bool SkipPseudoOp) {
   // Skip over begin-of-block dbg_value instructions.
-  return skipDebugInstructionsForward(begin(), end());
+  return skipDebugInstructionsForward(begin(), end(), SkipPseudoOp);
 }
 
-MachineBasicBlock::iterator MachineBasicBlock::getLastNonDebugInstr() {
+MachineBasicBlock::iterator
+MachineBasicBlock::getLastNonDebugInstr(bool SkipPseudoOp) {
   // Skip over end-of-block dbg_value instructions.
   instr_iterator B = instr_begin(), I = instr_end();
   while (I != B) {
     --I;
     // Return instruction that starts a bundle.
     if (I->isDebugInstr() || I->isInsideBundle())
+      continue;
+    if (SkipPseudoOp && I->isPseudoProbe())
       continue;
     return I;
   }
@@ -883,6 +898,32 @@ MachineBasicBlock::transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB) {
   normalizeSuccProbs();
 }
 
+/// A block emptied (i.e., with all instructions moved out of it) won't be
+/// sampled at run time. In such cases, AutoFDO will be informed of zero samples
+/// collected for the block. This is not accurate and could lead to misleading
+/// weights assigned for the block. A way to mitigate that is to treat such
+/// block as having unknown counts in the AutoFDO profile loader and allow the
+/// counts inference tool a chance to calculate a relatively reasonable weight
+/// for it. This can be done by moving all pseudo probes in the emptied block
+/// i.e, /c this, to before /c ToMBB and tag them dangling. Note that this is
+/// not needed for dead blocks which really have a zero weight. It's per
+/// transforms to decide whether to call this function or not.
+void MachineBasicBlock::moveAndDanglePseudoProbes(MachineBasicBlock *ToMBB) {
+  SmallVector<MachineInstr *, 4> ToBeMoved;
+  for (MachineInstr &MI : instrs()) {
+    if (MI.isPseudoProbe()) {
+      MI.addPseudoProbeAttribute(PseudoProbeAttributes::Dangling);
+      ToBeMoved.push_back(&MI);
+    }
+  }
+
+  MachineBasicBlock::iterator I = ToMBB->getFirstTerminator();
+  for (MachineInstr *MI : ToBeMoved) {
+    MI->removeFromParent();
+    ToMBB->insert(I, MI);
+  }
+}
+
 bool MachineBasicBlock::isPredecessor(const MachineBasicBlock *MBB) const {
   return is_contained(predecessors(), MBB);
 }
@@ -1075,10 +1116,9 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
          I != E; ++I)
       NewTerminators.push_back(&*I);
 
-    for (SmallVectorImpl<MachineInstr*>::iterator I = Terminators.begin(),
-        E = Terminators.end(); I != E; ++I) {
-      if (!is_contained(NewTerminators, *I))
-        Indexes->removeMachineInstrFromMaps(**I);
+    for (MachineInstr *Terminator : Terminators) {
+      if (!is_contained(NewTerminators, Terminator))
+        Indexes->removeMachineInstrFromMaps(*Terminator);
     }
   }
 
@@ -1361,6 +1401,14 @@ MachineBasicBlock::findDebugLoc(instr_iterator MBBI) {
   return {};
 }
 
+DebugLoc MachineBasicBlock::rfindDebugLoc(reverse_instr_iterator MBBI) {
+  // Skip debug declarations, we don't want a DebugLoc from them.
+  MBBI = skipDebugInstructionsBackward(MBBI, instr_rbegin());
+  if (!MBBI->isDebugInstr())
+    return MBBI->getDebugLoc();
+  return {};
+}
+
 /// Find the previous valid DebugLoc preceding MBBI, skipping and DBG_VALUE
 /// instructions.  Return UnknownLoc if there is none.
 DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
@@ -1368,6 +1416,16 @@ DebugLoc MachineBasicBlock::findPrevDebugLoc(instr_iterator MBBI) {
   // Skip debug instructions, we don't want a DebugLoc from them.
   MBBI = prev_nodbg(MBBI, instr_begin());
   if (!MBBI->isDebugInstr()) return MBBI->getDebugLoc();
+  return {};
+}
+
+DebugLoc MachineBasicBlock::rfindPrevDebugLoc(reverse_instr_iterator MBBI) {
+  if (MBBI == instr_rend())
+    return {};
+  // Skip debug declarations, we don't want a DebugLoc from them.
+  MBBI = next_nodbg(MBBI, instr_rend());
+  if (MBBI != instr_rend())
+    return MBBI->getDebugLoc();
   return {};
 }
 

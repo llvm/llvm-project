@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 #define LLVM_CLANG_LIB_CODEGEN_TARGETINFO_H
 
+#include "CGBuilder.h"
 #include "CodeGenModule.h"
 #include "CGValue.h"
 #include "clang/AST/Type.h"
@@ -124,6 +125,16 @@ public:
   virtual llvm::Value *encodeReturnAddress(CodeGen::CodeGenFunction &CGF,
                                            llvm::Value *Address) const {
     return Address;
+  }
+
+  /// Performs a target specific test of a floating point value for things
+  /// like IsNaN, Infinity, ... Nullptr is returned if no implementation
+  /// exists.
+  virtual llvm::Value *
+  testFPKind(llvm::Value *V, unsigned BuiltinID, CGBuilderTy &Builder,
+             CodeGenModule &CGM) const {
+    assert(V->getType()->isFloatingPointTy() && "V should have an FP type.");
+    return nullptr;
   }
 
   /// Corrects the low-level LLVM type for a given constraint and "usual"

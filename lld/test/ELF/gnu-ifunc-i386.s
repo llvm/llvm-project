@@ -39,17 +39,6 @@
 // CHECK-NEXT:   Section: Undefined
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: __rel_iplt_end
-// CHECK-NEXT:   Value: 0x4000E4
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .rel.dyn
-// CHECK-NEXT: }
-// CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: __rel_iplt_start
 // CHECK-NEXT:   Value: [[RELA]]
 // CHECK-NEXT:   Size: 0
@@ -61,13 +50,15 @@
 // CHECK-NEXT:   Section: .rel.dyn
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
-// CHECK-NEXT:   Name: _start
-// CHECK-NEXT:   Value: 0x4010E6
+// CHECK-NEXT:   Name: __rel_iplt_end
+// CHECK-NEXT:   Value: 0x4000E4
 // CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Global
+// CHECK-NEXT:   Binding: Local
 // CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: .text
+// CHECK-NEXT:   Other [
+// CHECK-NEXT:     STV_HIDDEN
+// CHECK-NEXT:   ]
+// CHECK-NEXT:   Section: .rel.dyn
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: bar
@@ -80,7 +71,7 @@
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: bar_resolver
-// CHECK-NEXT:   Value: 0x4010E5
+// CHECK-NEXT:   Value: 0x4010E4
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
@@ -98,10 +89,19 @@
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: foo_resolver
-// CHECK-NEXT:   Value: 0x4010E4
+// CHECK-NEXT:   Value: 0x4010E5
 // CHECK-NEXT:   Size: 0
 // CHECK-NEXT:   Binding: Global
 // CHECK-NEXT:   Type: Function
+// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Section: .text
+// CHECK-NEXT: }
+// CHECK-NEXT: Symbol {
+// CHECK-NEXT:   Name: _start
+// CHECK-NEXT:   Value: 0x4010E6
+// CHECK-NEXT:   Size: 0
+// CHECK-NEXT:   Binding: Global
+// CHECK-NEXT:   Type: None
 // CHECK-NEXT:   Other: 0
 // CHECK-NEXT:   Section: .text
 // CHECK-NEXT: }
@@ -109,9 +109,9 @@
 
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
-// DISASM-NEXT: <foo_resolver>:
+// DISASM-NEXT: <bar_resolver>:
 // DISASM-NEXT:   4010e4:       retl
-// DISASM: <bar_resolver>:
+// DISASM:      <foo_resolver>:
 // DISASM-NEXT:   4010e5:       retl
 // DISASM:      <_start>:
 // DISASM-NEXT:   4010e6:       calll 0x401100 <foo>
@@ -130,6 +130,14 @@
 // DISASM-NEXT:                 pushl $8
 // DISASM-NEXT:                 jmp 0x0
 
+.type bar STT_GNU_IFUNC
+.globl bar
+bar:
+.type bar_resolver STT_FUNC
+.globl bar_resolver
+bar_resolver:
+ ret
+
 .text
 .type foo STT_GNU_IFUNC
 .globl foo
@@ -137,14 +145,6 @@ foo:
 .type foo_resolver STT_FUNC
 .globl foo_resolver
 foo_resolver:
- ret
-
-.type bar STT_GNU_IFUNC
-.globl bar
-bar:
-.type bar_resolver STT_FUNC
-.globl bar_resolver
-bar_resolver:
  ret
 
 .globl _start

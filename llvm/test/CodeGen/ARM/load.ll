@@ -96,8 +96,8 @@ entry:
 ; Immediate offset of zero
 
 ; CHECK-LABEL: ldrsb_ri_zero
-; CHECK-T1: ldrb    r0, [r0]
-; CHECK-T1: sxtb    r0, r0
+; CHECK-T1: movs    r1, #0
+; CHECK-T1: ldrsb   r0, [r0, r1]
 ; CHECK-T2: ldrsb.w r0, [r0]
 define i32 @ldrsb_ri_zero(i8* %p) {
 entry:
@@ -107,8 +107,8 @@ entry:
 }
 
 ; CHECK-LABEL: ldrsh_ri_zero
-; CHECK-T1: ldrh    r0, [r0]
-; CHECK-T1: sxth    r0, r0
+; CHECK-T1: movs    r1, #0
+; CHECK-T1: ldrsh   r0, [r0, r1]
 ; CHECK-T2: ldrsh.w r0, [r0]
 define i32 @ldrsh_ri_zero(i16* %p) {
 entry:

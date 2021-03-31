@@ -1,4 +1,4 @@
-; RUN: %lli -force-interpreter %s
+; RUN: %lli -jit-kind=mcjit -force-interpreter %s
 
 define i32 @func() {
 entry:

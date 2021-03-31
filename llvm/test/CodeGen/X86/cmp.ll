@@ -108,12 +108,12 @@ define dso_local i32 @test5(double %A) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ucomisd {{.*}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    ucomisd {{.*}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI.*}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %bb12

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_TPIHASHING_H
-#define LLVM_DEBUGINFO_PDB_TPIHASHING_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_TPIHASHING_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_TPIHASHING_H
 
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/Support/Error.h"
@@ -68,4 +68,4 @@ Expected<TagRecordHash> hashTagRecord(const codeview::CVType &Type);
 } // end namespace pdb
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_PDB_TPIHASHING_H
+#endif // LLVM_DEBUGINFO_PDB_NATIVE_TPIHASHING_H

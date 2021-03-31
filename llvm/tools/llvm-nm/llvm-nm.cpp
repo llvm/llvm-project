@@ -47,7 +47,7 @@ using namespace llvm;
 using namespace object;
 
 namespace {
-enum OutputFormatTy { bsd, sysv, posix, darwin };
+enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };
 
 cl::OptionCategory NMCat("llvm-nm Options");
 
@@ -55,7 +55,9 @@ cl::opt<OutputFormatTy> OutputFormat(
     "format", cl::desc("Specify output format"),
     cl::values(clEnumVal(bsd, "BSD format"), clEnumVal(sysv, "System V format"),
                clEnumVal(posix, "POSIX.2 format"),
-               clEnumVal(darwin, "Darwin -m format")),
+               clEnumVal(darwin, "Darwin -m format"),
+               cl::OptionEnumValue{"just-symbols", int(just_symbols),
+                                   "just symbol names"}),
     cl::init(bsd), cl::cat(NMCat));
 cl::alias OutputFormat2("f", cl::desc("Alias for --format"),
                         cl::aliasopt(OutputFormat));
@@ -117,6 +119,9 @@ cl::alias PrintFileNameA("A", cl::desc("Alias for --print-file-name"),
 cl::alias PrintFileNameo("o", cl::desc("Alias for --print-file-name"),
                          cl::aliasopt(PrintFileName), cl::Grouping);
 
+cl::opt<bool> Quiet("quiet", cl::desc("Suppress 'no symbols' diagnostic"),
+                    cl::cat(NMCat));
+
 cl::opt<bool> DebugSyms("debug-syms",
                         cl::desc("Show all symbols, even debugger only"),
                         cl::cat(NMCat));
@@ -177,9 +182,9 @@ cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
                      cl::aliasopt(AddressRadix));
 
 cl::opt<bool> JustSymbolName("just-symbol-name",
-                             cl::desc("Print just the symbol's name"),
+                             cl::desc("Alias for --format=just-symbols"),
                              cl::cat(NMCat));
-cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
+cl::alias JustSymbolNames("j", cl::desc("Alias for --format-just-symbols"),
                           cl::aliasopt(JustSymbolName), cl::Grouping);
 
 cl::opt<bool>
@@ -232,7 +237,7 @@ std::string ToolName;
 
 static void error(Twine Message, Twine Path = Twine()) {
   HadError = true;
-  WithColor::error(errs(), ToolName) << Path << ": " << Message << ".\n";
+  WithColor::error(errs(), ToolName) << Path << ": " << Message << "\n";
 }
 
 static bool error(std::error_code EC, Twine Path = Twine()) {
@@ -262,13 +267,13 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
     errs() << "(" << NameOrErr.get() << ")";
 
   if (!ArchitectureName.empty())
-    errs() << " (for architecture " << ArchitectureName << ") ";
+    errs() << " (for architecture " << ArchitectureName << ")";
 
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
-  errs() << " " << Buf << "\n";
+  errs() << ": " << Buf << "\n";
 }
 
 // This version of error() prints the file name and which architecture slice it
@@ -281,13 +286,13 @@ static void error(llvm::Error E, StringRef FileName,
   WithColor::error(errs(), ToolName) << FileName;
 
   if (!ArchitectureName.empty())
-    errs() << " (for architecture " << ArchitectureName << ") ";
+    errs() << " (for architecture " << ArchitectureName << ")";
 
   std::string Buf;
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
-  errs() << " " << Buf << "\n";
+  errs() << ": " << Buf << "\n";
 }
 
 namespace {
@@ -737,16 +742,6 @@ static void writeFileName(raw_ostream &S, StringRef ArchiveName,
   }
 }
 
-static bool isSpecialSym(SymbolicFile &Obj, StringRef Name) {
-  auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-  if (!ELFObj)
-    return false;
-  uint16_t EMachine = ELFObj->getEMachine();
-  if (EMachine != ELF::EM_ARM && EMachine != ELF::EM_AARCH64)
-    return false;
-  return !Name.empty() && Name[0] == '$';
-}
-
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    StringRef ArchiveName,
                                    StringRef ArchitectureName) {
@@ -769,10 +764,10 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
   }
 
   if (!PrintFileName) {
-    if (OutputFormat == posix && MultipleFiles && printName) {
+    if ((OutputFormat == bsd || OutputFormat == posix ||
+         OutputFormat == just_symbols) &&
+        MultipleFiles && printName) {
       outs() << '\n' << CurrentFilename << ":\n";
-    } else if (OutputFormat == bsd && MultipleFiles && printName) {
-      outs() << "\n" << CurrentFilename << ":\n";
     } else if (OutputFormat == sysv) {
       outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n";
       if (isSymbolList64Bit(Obj))
@@ -835,13 +830,14 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     bool Undefined = SymFlags & SymbolRef::SF_Undefined;
     bool Global = SymFlags & SymbolRef::SF_Global;
     bool Weak = SymFlags & SymbolRef::SF_Weak;
+    bool FormatSpecific = SymFlags & SymbolRef::SF_FormatSpecific;
     if ((!Undefined && UndefinedOnly) || (Undefined && DefinedOnly) ||
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols) ||
-        (!SpecialSyms && isSpecialSym(Obj, Name)))
+        (FormatSpecific && !(SpecialSyms || DebugSyms)))
       continue;
     if (PrintFileName)
       writeFileName(outs(), ArchiveName, ArchitectureName);
-    if ((JustSymbolName ||
+    if ((OutputFormat == just_symbols ||
          (UndefinedOnly && MachO && OutputFormat != darwin)) &&
         OutputFormat != posix) {
       outs() << Name << "\n";
@@ -1807,7 +1803,14 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         error(SymFlagsOrErr.takeError(), Obj.getFileName());
         return;
       }
-      if (!DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
+
+      // Don't drop format specifc symbols for ARM and AArch64 ELF targets, they
+      // are used to repesent mapping symbols and needed to honor the
+      // --special-syms option.
+      auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
+      if ((!ELFObj || (ELFObj->getEMachine() != ELF::EM_ARM &&
+                       ELFObj->getEMachine() != ELF::EM_AARCH64)) &&
+          !DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;
@@ -1861,7 +1864,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
 
   CurrentFilename = Obj.getFileName();
 
-  if (Symbols.empty() && SymbolList.empty()) {
+  if (Symbols.empty() && SymbolList.empty() && !Quiet) {
     writeFileName(errs(), ArchiveName, ArchitectureName);
     errs() << "no symbols\n";
   }
@@ -2248,6 +2251,8 @@ int main(int argc, char **argv) {
     OutputFormat = posix;
   if (DarwinFormat)
     OutputFormat = darwin;
+  if (JustSymbolName)
+    OutputFormat = just_symbols;
 
   // The relative order of these is important. If you pass --size-sort it should
   // only print out the size. However, if you pass -S --size-sort, it should

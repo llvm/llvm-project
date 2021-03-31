@@ -806,7 +806,7 @@ template <typename A> bool IsAllocatableOrPointer(const A &x) {
 // Procedure and pointer detection predicates
 bool IsProcedure(const Expr<SomeType> &);
 bool IsFunction(const Expr<SomeType> &);
-bool IsProcedurePointer(const Expr<SomeType> &);
+bool IsProcedurePointerTarget(const Expr<SomeType> &);
 bool IsNullPointer(const Expr<SomeType> &);
 bool IsObjectPointer(const Expr<SomeType> &, FoldingContext &);
 
@@ -839,10 +839,12 @@ template <typename A> SymbolVector GetSymbolVector(const A &x) {
 const Symbol *GetLastTarget(const SymbolVector &);
 
 // Collects all of the Symbols in an expression
-template <typename A> semantics::SymbolSet CollectSymbols(const A &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeType> &);
-extern template semantics::SymbolSet CollectSymbols(const Expr<SomeInteger> &);
-extern template semantics::SymbolSet CollectSymbols(
+template <typename A> semantics::UnorderedSymbolSet CollectSymbols(const A &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeType> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Expr<SomeInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
@@ -963,6 +965,7 @@ const Symbol *FindCommonBlockContaining(const Symbol &);
 int CountLenParameters(const DerivedTypeSpec &);
 int CountNonConstantLenParameters(const DerivedTypeSpec &);
 const Symbol &GetUsedModule(const UseDetails &);
+const Symbol *FindFunctionResult(const Symbol &);
 
 } // namespace Fortran::semantics
 

@@ -1164,8 +1164,8 @@ void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  float FPImm =
-      MO.isFPImm() ? MO.getFPImm() : AArch64_AM::getFPImmFloat(MO.getImm());
+  float FPImm = MO.isDFPImm() ? bit_cast<double>(MO.getDFPImm())
+                              : AArch64_AM::getFPImmFloat(MO.getImm());
 
   // 8 decimal places are enough to perfectly represent permitted floats.
   O << format("#%.8f", FPImm);

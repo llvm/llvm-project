@@ -133,7 +133,7 @@ macOS
 Building LLDB with CMake
 ------------------------
 
-The LLVM project is migrating to a single monolithic respository for LLVM and
+The LLVM project is migrating to a single monolithic repository for LLVM and
 its subprojects. This is the recommended way to build LLDB. Check out the
 source-tree with git:
 

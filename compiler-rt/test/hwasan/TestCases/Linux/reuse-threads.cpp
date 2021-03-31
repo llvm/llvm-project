@@ -10,7 +10,7 @@
 
 #include <sanitizer/hwasan_interface.h>
 
-#include "../utils.h"
+#include "utils.h"
 
 pthread_barrier_t bar;
 
@@ -37,7 +37,7 @@ void start_stop_threads() {
 int main() {
   // Cut off initial threads.
   // CHECK: === test start ===
-  untag_fprintf(stderr, "=== test start ===\n");
+  fprintf(stderr, "=== test start ===\n");
 
   // CHECK: Creating  : T{{[0-9]+}} [[A:0x[0-9a-f]+]] stack:
   // CHECK: Creating  : T{{[0-9]+}} [[B:0x[0-9a-f]+]] stack:

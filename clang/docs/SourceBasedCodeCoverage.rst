@@ -251,7 +251,7 @@ the exported data at a high level in the llvm-cov source code.
 Interpreting reports
 ====================
 
-There are four statistics tracked in a coverage summary:
+There are five statistics tracked in a coverage summary:
 
 * Function coverage is the percentage of functions which have been executed at
   least once. A function is considered to be executed if any of its
@@ -260,7 +260,8 @@ There are four statistics tracked in a coverage summary:
 * Instantiation coverage is the percentage of function instantiations which
   have been executed at least once. Template functions and static inline
   functions from headers are two kinds of functions which may have multiple
-  instantiations.
+  instantiations. This statistic is hidden by default in reports, but can be
+  enabled via the ``-show-instantiation-summary`` option.
 
 * Line coverage is the percentage of code lines which have been executed at
   least once. Only executable lines within function bodies are considered to be
@@ -304,6 +305,19 @@ Format compatibility guarantees
   Only a major version increment indicates a backwards-incompatible change. A
   minor version increment is for added functionality, and patch version
   increments are for bugfixes.
+
+Impact of llvm optimizations on coverage reports
+================================================
+
+llvm optimizations (such as inlining or CFG simplification) should have no
+impact on coverage report quality. This is due to the fact that the mapping
+from source regions to profile counters is immutable, and is generated before
+the llvm optimizer kicks in. The optimizer can't prove that profile counter
+instrumentation is safe to delete (because it's not: it affects the profile the
+program emits), and so leaves it alone.
+
+Note that this coverage feature does not rely on information that can degrade
+during the course of optimization, such as debug info line tables.
 
 Using the profiling runtime without static initializers
 =======================================================

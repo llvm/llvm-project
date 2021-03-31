@@ -194,6 +194,25 @@ define i16 @lsl_i16_5(i16 %a) {
   ret i16 %result
 }
 
+define i16 @lsl_i16_6(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f) {
+; CHECK-LABEL: lsl_i16_6
+; CHECK:       mov r24, r14
+; CHECK-NEXT:  mov r25, r15
+; CHECK-NEXT:  swap r25
+; CHECK-NEXT:  swap r24
+; CHECK-NEXT:  andi r25, 240
+; CHECK-NEXT:  eor r25, r24
+; CHECK-NEXT:  andi r24, 240
+; CHECK-NEXT:  eor r25, r24
+; CHECK-NEXT:  lsl r24
+; CHECK-NEXT:  rol r25
+; CHECK-NEXT:  lsl r24
+; CHECK-NEXT:  rol r25
+; CHECK-NEXT:  ret
+  %result = shl i16 %f, 6
+  ret i16 %result
+}
+
 define i16 @lsl_i16_9(i16 %a) {
 ; CHECK-LABEL: lsl_i16_9
 ; CHECK:       mov r25, r24
@@ -230,6 +249,25 @@ define i16 @lsr_i16_5(i16 %a) {
 ; CHECK-NEXT:  ror r24
 ; CHECK-NEXT:  ret
   %result = lshr i16 %a, 5
+  ret i16 %result
+}
+
+define i16 @lsr_i16_6(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f) {
+; CHECK-LABEL: lsr_i16_6
+; CHECK:       mov r24, r14
+; CHECK-NEXT:  mov r25, r15
+; CHECK-NEXT:  swap r25
+; CHECK-NEXT:  swap r24
+; CHECK-NEXT:  andi r24, 15
+; CHECK-NEXT:  eor r24, r25
+; CHECK-NEXT:  andi r25, 15
+; CHECK-NEXT:  eor r24, r25
+; CHECK-NEXT:  lsr r25
+; CHECK-NEXT:  ror r24
+; CHECK-NEXT:  lsr r25
+; CHECK-NEXT:  ror r24
+; CHECK-NEXT: ret
+  %result = lshr i16 %f, 6
   ret i16 %result
 }
 

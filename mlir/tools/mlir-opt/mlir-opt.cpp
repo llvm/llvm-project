@@ -60,17 +60,20 @@ void registerMemRefBoundCheck();
 void registerPatternsTestPass();
 void registerSimpleParametricTilingPass();
 void registerTestAffineLoopParametricTilingPass();
+void registerTestAliasAnalysisPass();
 void registerTestCallGraphPass();
 void registerTestConstantFold();
 void registerTestConvVectorization();
-void registerTestConvertGPUKernelToCubinPass();
-void registerTestConvertGPUKernelToHsacoPass();
+void registerTestGpuSerializeToCubinPass();
+void registerTestGpuSerializeToHsacoPass();
+void registerTestDataLayoutQuery();
 void registerTestDecomposeCallGraphTypes();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
 void registerTestGpuParallelLoopMappingPass();
+void registerTestIRVisitorsPass();
 void registerTestInterfaces();
 void registerTestLinalgCodegenStrategy();
 void registerTestLinalgFusionTransforms();
@@ -83,6 +86,7 @@ void registerTestLivenessPass();
 void registerTestLoopFusion();
 void registerTestLoopMappingPass();
 void registerTestLoopUnrollingPass();
+void registerTestMathPolynomialApproximationPass();
 void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestNumberOfBlockExecutionsPass();
@@ -129,20 +133,23 @@ void registerTestPasses() {
   test::registerPatternsTestPass();
   test::registerSimpleParametricTilingPass();
   test::registerTestAffineLoopParametricTilingPass();
+  test::registerTestAliasAnalysisPass();
   test::registerTestCallGraphPass();
   test::registerTestConstantFold();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
-  test::registerTestConvertGPUKernelToCubinPass();
+  test::registerTestGpuSerializeToCubinPass();
 #endif
 #if MLIR_ROCM_CONVERSIONS_ENABLED
-  test::registerTestConvertGPUKernelToHsacoPass();
+  test::registerTestGpuSerializeToHsacoPass();
 #endif
   test::registerTestConvVectorization();
   test::registerTestDecomposeCallGraphTypes();
+  test::registerTestDataLayoutQuery();
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
   test::registerTestExpandTanhPass();
   test::registerTestGpuParallelLoopMappingPass();
+  test::registerTestIRVisitorsPass();
   test::registerTestInterfaces();
   test::registerTestLinalgCodegenStrategy();
   test::registerTestLinalgFusionTransforms();
@@ -155,6 +162,7 @@ void registerTestPasses() {
   test::registerTestLoopFusion();
   test::registerTestLoopMappingPass();
   test::registerTestLoopUnrollingPass();
+  test::registerTestMathPolynomialApproximationPass();
   test::registerTestMemRefDependenceCheck();
   test::registerTestMemRefStrideCalculation();
   test::registerTestNumberOfBlockExecutionsPass();

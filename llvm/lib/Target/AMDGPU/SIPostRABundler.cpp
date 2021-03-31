@@ -48,9 +48,17 @@ private:
 
   SmallSet<Register, 16> Defs;
 
-  bool isDependentLoad(const MachineInstr &MI) const;
+  void collectUsedRegUnits(const MachineInstr &MI,
+                           BitVector &UsedRegUnits) const;
 
+  bool isBundleCandidate(const MachineInstr &MI) const;
+  bool isDependentLoad(const MachineInstr &MI) const;
+  bool canBundle(const MachineInstr &MI, const MachineInstr &NextMI) const;
 };
+
+constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
+                              SIInstrFlags::SMRD | SIInstrFlags::DS |
+                              SIInstrFlags::FLAT | SIInstrFlags::MIMG;
 
 } // End anonymous namespace.
 
@@ -80,55 +88,125 @@ bool SIPostRABundler::isDependentLoad(const MachineInstr &MI) const {
   return false;
 }
 
+void SIPostRABundler::collectUsedRegUnits(const MachineInstr &MI,
+                                          BitVector &UsedRegUnits) const {
+  for (const MachineOperand &Op : MI.operands()) {
+    if (!Op.isReg() || !Op.readsReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    assert(!Op.getSubReg() &&
+           "subregister indexes should not be present after RA");
+
+    for (MCRegUnitIterator Units(Reg, TRI); Units.isValid(); ++Units)
+      UsedRegUnits.set(*Units);
+  }
+}
+
+bool SIPostRABundler::isBundleCandidate(const MachineInstr &MI) const {
+  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
+  return IMemFlags != 0 && MI.mayLoadOrStore() && !MI.isBundled();
+}
+
+bool SIPostRABundler::canBundle(const MachineInstr &MI,
+                                const MachineInstr &NextMI) const {
+  const uint64_t IMemFlags = MI.getDesc().TSFlags & MemFlags;
+
+  return (IMemFlags != 0 && MI.mayLoadOrStore() && !NextMI.isBundled() &&
+          NextMI.mayLoad() == MI.mayLoad() && NextMI.mayStore() == MI.mayStore() &&
+          ((NextMI.getDesc().TSFlags & MemFlags) == IMemFlags) &&
+          !isDependentLoad(NextMI));
+}
+
 bool SIPostRABundler::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
-  bool Changed = false;
-  const uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
-                            SIInstrFlags::SMRD | SIInstrFlags::DS |
-                            SIInstrFlags::FLAT | SIInstrFlags::MIMG;
+  BitVector BundleUsedRegUnits(TRI->getNumRegUnits());
+  BitVector KillUsedRegUnits(TRI->getNumRegUnits());
 
+  bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::instr_iterator Next;
     MachineBasicBlock::instr_iterator B = MBB.instr_begin();
     MachineBasicBlock::instr_iterator E = MBB.instr_end();
+
     for (auto I = B; I != E; I = Next) {
       Next = std::next(I);
-
-      const uint64_t IMemFlags = I->getDesc().TSFlags & MemFlags;
-
-      if (IMemFlags == 0 || I->isBundled() || !I->mayLoadOrStore() ||
-          B->mayLoad() != I->mayLoad() || B->mayStore() != I->mayStore() ||
-          ((B->getDesc().TSFlags & MemFlags) != IMemFlags) ||
-          isDependentLoad(*I)) {
-
-        if (B != I) {
-          if (std::next(B) != I) {
-            finalizeBundle(MBB, B, I);
-            Changed = true;
-          }
-          Next = I;
-        }
-
-        B = Next;
-        Defs.clear();
+      if (!isBundleCandidate(*I))
         continue;
+
+      assert(Defs.empty());
+
+      if (I->getNumExplicitDefs() != 0)
+        Defs.insert(I->defs().begin()->getReg());
+
+      MachineBasicBlock::instr_iterator BundleStart = I;
+      MachineBasicBlock::instr_iterator BundleEnd = I;
+      unsigned ClauseLength = 1;
+      for (I = Next; I != E; I = Next) {
+        Next = std::next(I);
+
+        assert(BundleEnd != I);
+        if (canBundle(*BundleEnd, *I)) {
+          BundleEnd = I;
+          if (I->getNumExplicitDefs() != 0)
+            Defs.insert(I->defs().begin()->getReg());
+          ++ClauseLength;
+        } else if (!I->isMetaInstruction()) {
+          // Allow meta instructions in between bundle candidates, but do not
+          // start or end a bundle on one.
+          //
+          // TODO: It may be better to move meta instructions like dbg_value
+          // after the bundle. We're relying on the memory legalizer to unbundle
+          // these.
+          break;
+        }
       }
 
-      if (I->getNumExplicitDefs() == 0)
-        continue;
+      Next = std::next(BundleEnd);
+      if (ClauseLength > 1) {
+        Changed = true;
 
-      Defs.insert(I->defs().begin()->getReg());
+        // Before register allocation, kills are inserted after potential soft
+        // clauses to hint register allocation. Look for kills that look like
+        // this, and erase them.
+        if (Next != E && Next->isKill()) {
+
+          // TODO: Should maybe back-propagate kill flags to the bundle.
+          for (const MachineInstr &BundleMI : make_range(BundleStart, Next))
+            collectUsedRegUnits(BundleMI, BundleUsedRegUnits);
+
+          BundleUsedRegUnits.flip();
+
+          while (Next != E && Next->isKill()) {
+            MachineInstr &Kill = *Next;
+            collectUsedRegUnits(Kill, KillUsedRegUnits);
+
+            KillUsedRegUnits &= BundleUsedRegUnits;
+
+            // Erase the kill if it's a subset of the used registers.
+            //
+            // TODO: Should we just remove all kills? Is there any real reason to
+            // keep them after RA?
+            if (KillUsedRegUnits.none()) {
+              ++Next;
+              Kill.eraseFromParent();
+            } else
+              break;
+
+            KillUsedRegUnits.reset();
+          }
+
+          BundleUsedRegUnits.reset();
+        }
+
+        finalizeBundle(MBB, BundleStart, Next);
+      }
+
+      Defs.clear();
     }
-
-    if (B != E && std::next(B) != E) {
-      finalizeBundle(MBB, B, E);
-      Changed = true;
-    }
-
-    Defs.clear();
   }
 
   return Changed;

@@ -62,7 +62,13 @@ TEST_CASE(test_error_reporting)
     } cases[] = {
         {dne, dne},
         {file, dir},
-        {dir, file}
+#ifndef _WIN32
+        // The spec doesn't say that this case must be an error; fs.op.rename
+        // note 1.2.1 says that a file may be overwritten by a rename.
+        // On Windows, with rename() implemented with MoveFileExW, overwriting
+        // a file with a directory is not an error.
+        {dir, file},
+#endif
     };
     for (auto& TC : cases) {
         auto from_before = status(TC.from);

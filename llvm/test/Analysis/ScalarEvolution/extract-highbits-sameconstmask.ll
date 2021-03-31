@@ -7,9 +7,9 @@ define i32 @div(i32 %val) nounwind {
 ; CHECK-LABEL: 'div'
 ; CHECK-NEXT:  Classifying expressions for: @div
 ; CHECK-NEXT:    %tmp1 = udiv i32 %val, 16
-; CHECK-NEXT:    -->  (%val /u 16) U: [0,268435456) S: [0,268435456)
+; CHECK-NEXT:    --> (%val /u 16) U: [0,268435456) S: [0,268435456)
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, 16
-; CHECK-NEXT:    -->  (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:  Determining loop execution counts for: @div
 ;
   %tmp1 = udiv i32 %val, 16
@@ -21,9 +21,9 @@ define i32 @sdiv(i32 %val) nounwind {
 ; CHECK-LABEL: 'sdiv'
 ; CHECK-NEXT:  Classifying expressions for: @sdiv
 ; CHECK-NEXT:    %tmp1 = sdiv i32 %val, 16
-; CHECK-NEXT:    -->  %tmp1 U: full-set S: [-134217728,134217728)
+; CHECK-NEXT:    --> %tmp1 U: [-134217728,134217728) S: [-134217728,134217728)
 ; CHECK-NEXT:    %tmp2 = mul i32 %tmp1, 16
-; CHECK-NEXT:    -->  (16 * %tmp1)<nsw> U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * %tmp1)<nsw> U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:  Determining loop execution counts for: @sdiv
 ;
   %tmp1 = sdiv i32 %val, 16
@@ -39,7 +39,7 @@ define i32 @mask_b(i32 %val) nounwind {
 ; CHECK-LABEL: 'mask_b'
 ; CHECK-NEXT:  Classifying expressions for: @mask_b
 ; CHECK-NEXT:    %masked = and i32 %val, -16
-; CHECK-NEXT:    -->  (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_b
 ;
   %masked = and i32 %val, -16
@@ -50,9 +50,9 @@ define i32 @mask_d(i32 %val) nounwind {
 ; CHECK-LABEL: 'mask_d'
 ; CHECK-NEXT:  Classifying expressions for: @mask_d
 ; CHECK-NEXT:    %lowbitscleared = lshr i32 %val, 4
-; CHECK-NEXT:    -->  (%val /u 16) U: [0,268435456) S: [0,268435456)
+; CHECK-NEXT:    --> (%val /u 16) U: [0,268435456) S: [0,268435456)
 ; CHECK-NEXT:    %masked = shl i32 %lowbitscleared, 4
-; CHECK-NEXT:    -->  (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
+; CHECK-NEXT:    --> (16 * (%val /u 16))<nuw> U: [0,-15) S: [-2147483648,2147483633)
 ; CHECK-NEXT:  Determining loop execution counts for: @mask_d
 ;
   %lowbitscleared = lshr i32 %val, 4

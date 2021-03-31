@@ -47,7 +47,7 @@ namespace util {
 bool getBroadcastedShape(ArrayRef<int64_t> shape1, ArrayRef<int64_t> shape2,
                          SmallVectorImpl<int64_t> &resultShape);
 
-/// Returns true if a broadcast between the 2 shapes is guaranteed to be
+/// Returns true if a broadcast between n shapes is guaranteed to be
 /// successful and not result in an error. False does not guarantee that the
 /// shapes are not broadcastable; it might guarantee that they are not
 /// broadcastable or it might mean that this function does not have enough
@@ -59,6 +59,7 @@ bool getBroadcastedShape(ArrayRef<int64_t> shape1, ArrayRef<int64_t> shape2,
 /// dimension, while this function will return false because it's possible for
 /// both shapes to have a dimension greater than 1 and different which would
 /// fail to broadcast.
+bool staticallyKnownBroadcastable(ArrayRef<SmallVector<int64_t, 6>> shapes);
 bool staticallyKnownBroadcastable(ArrayRef<int64_t> shape1,
                                   ArrayRef<int64_t> shape2);
 

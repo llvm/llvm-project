@@ -90,8 +90,10 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
   (void) ctx;                                                                  \
 
 #define COMMON_INTERCEPT_FUNCTION(name) ASAN_INTERCEPT_FUNC(name)
-#define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
+#define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
   ASAN_INTERCEPT_FUNC_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
+  ASAN_INTERCEPT_FUNC_VER_UNVERSIONED_FALLBACK(name, ver)
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
   ASAN_WRITE_RANGE(ctx, ptr, size)
 #define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
@@ -672,6 +674,7 @@ void InitializeAsanInterceptors() {
 
   // Intercept threading-related functions
 #if ASAN_INTERCEPT_PTHREAD_CREATE
+// TODO: this should probably have an unversioned fallback for newer arches?
 #if defined(ASAN_PTHREAD_CREATE_VERSION)
   ASAN_INTERCEPT_FUNC_VER(pthread_create, ASAN_PTHREAD_CREATE_VERSION);
 #else

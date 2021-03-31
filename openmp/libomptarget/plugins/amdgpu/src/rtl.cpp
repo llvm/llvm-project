@@ -38,6 +38,7 @@
 #include "Debug.h"
 #include "get_elf_mach_gfx_name.h"
 #include "omptargetplugin.h"
+#include "print_tracing.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
@@ -560,8 +561,8 @@ static RTLDeviceInfoTy DeviceInfo;
 namespace {
 
 int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
-                     __tgt_async_info *AsyncInfoPtr) {
-  assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+                     __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
   // Return success if we are not copying back to host from target.
   if (!HstPtr)
@@ -587,8 +588,8 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
 }
 
 int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
-                   __tgt_async_info *AsyncInfoPtr) {
-  assert(AsyncInfoPtr && "AsyncInfoPtr is nullptr");
+                   __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
   atmi_status_t err;
   assert(DeviceId < DeviceInfo.NumberOfDevices && "Device ID too large");
   // Return success if we are not doing host to target.
@@ -621,20 +622,20 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
 // there are no outstanding kernels that need to be synchronized. Any async call
 // may be passed a Queue==0, at which point the cuda implementation will set it
 // to non-null (see getStream). The cuda streams are per-device. Upstream may
-// change this interface to explicitly initialize the async_info_pointer, but
+// change this interface to explicitly initialize the AsyncInfo_pointer, but
 // until then hsa lazily initializes it as well.
 
-void initAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
+void initAsyncInfo(__tgt_async_info *AsyncInfo) {
   // set non-null while using async calls, return to null to indicate completion
-  assert(async_info_ptr);
-  if (!async_info_ptr->Queue) {
-    async_info_ptr->Queue = reinterpret_cast<void *>(UINT64_MAX);
+  assert(AsyncInfo);
+  if (!AsyncInfo->Queue) {
+    AsyncInfo->Queue = reinterpret_cast<void *>(UINT64_MAX);
   }
 }
-void finiAsyncInfoPtr(__tgt_async_info *async_info_ptr) {
-  assert(async_info_ptr);
-  assert(async_info_ptr->Queue);
-  async_info_ptr->Queue = 0;
+void finiAsyncInfo(__tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo);
+  assert(AsyncInfo->Queue);
+  AsyncInfo->Queue = 0;
 }
 
 bool elf_machine_id_is_amdgcn(__tgt_device_image *image) {
@@ -714,7 +715,7 @@ int32_t __tgt_rtl_init_device(int device_id) {
     DeviceInfo.GPUName[device_id] = GetInfoName;
   }
 
-  if (print_kernel_trace == 4)
+  if (print_kernel_trace & STARTUP_DETAILS)
     fprintf(stderr, "Device#%-2d CU's: %2d %s\n", device_id,
             DeviceInfo.ComputeUnits[device_id],
             DeviceInfo.GPUName[device_id].c_str());
@@ -1025,6 +1026,9 @@ struct device_environment {
   //  - under review in trunk is debug_level, device_num
   //  - rocmcc matches aomp, patch to swap num_devices and device_num
 
+  // The symbol may also have been deadstripped because the device side
+  // accessors were unused.
+
   // If the symbol is in .data (aomp, rocm) it can be written directly.
   // If it is in .bss, we must wait for it to be allocated space on the
   // gpu (trunk) and initialize after loading.
@@ -1069,39 +1073,43 @@ struct device_environment {
   bool in_image() { return si.sh_type != SHT_NOBITS; }
 
   atmi_status_t before_loading(void *data, size_t size) {
-    assert(valid);
-    if (in_image()) {
-      DP("Setting global device environment before load (%u bytes)\n", si.size);
-      uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
-      void *pos = (char *)data + offset;
-      memcpy(pos, &host_device_env, si.size);
+    if (valid) {
+      if (in_image()) {
+        DP("Setting global device environment before load (%u bytes)\n",
+           si.size);
+        uint64_t offset = (char *)si.addr - (char *)image->ImageStart;
+        void *pos = (char *)data + offset;
+        memcpy(pos, &host_device_env, si.size);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
 
   atmi_status_t after_loading() {
-    assert(valid);
-    if (!in_image()) {
-      DP("Setting global device environment after load (%u bytes)\n", si.size);
-      int device_id = host_device_env.device_num;
-
-      void *state_ptr;
-      uint32_t state_ptr_size;
-      atmi_status_t err = atmi_interop_hsa_get_symbol_info(
-          get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
-      if (err != ATMI_STATUS_SUCCESS) {
-        DP("failed to find %s in loaded image\n", sym());
-        return err;
-      }
-
-      if (state_ptr_size != si.size) {
-        DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+    if (valid) {
+      if (!in_image()) {
+        DP("Setting global device environment after load (%u bytes)\n",
            si.size);
-        return ATMI_STATUS_ERROR;
-      }
+        int device_id = host_device_env.device_num;
 
-      return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
-                                                  state_ptr_size, device_id);
+        void *state_ptr;
+        uint32_t state_ptr_size;
+        atmi_status_t err = atmi_interop_hsa_get_symbol_info(
+            get_gpu_mem_place(device_id), sym(), &state_ptr, &state_ptr_size);
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("failed to find %s in loaded image\n", sym());
+          return err;
+        }
+
+        if (state_ptr_size != si.size) {
+          DP("Symbol had size %u before loading, %u after\n", state_ptr_size,
+             si.size);
+          return ATMI_STATUS_ERROR;
+        }
+
+        return DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &host_device_env,
+                                                    state_ptr_size, device_id);
+      }
     }
     return ATMI_STATUS_SUCCESS;
   }
@@ -1165,9 +1173,6 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   {
     auto env = device_environment(device_id, DeviceInfo.NumberOfDevices, image,
                                   img_size);
-    if (!env.valid) {
-      return NULL;
-    }
 
     atmi_status_t err = module_register_from_memory_to_place(
         (void *)image->ImageStart, img_size, get_gpu_place(device_id),
@@ -1196,6 +1201,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   {
     // the device_State array is either large value in bss or a void* that
     // needs to be assigned to a pointer to an array of size device_state_bytes
+    // If absent, it has been deadstripped and needs no setup.
 
     void *state_ptr;
     uint32_t state_ptr_size;
@@ -1204,52 +1210,54 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         &state_ptr, &state_ptr_size);
 
     if (err != ATMI_STATUS_SUCCESS) {
-      fprintf(stderr, "failed to find device_state symbol\n");
-      return NULL;
-    }
-
-    if (state_ptr_size < sizeof(void *)) {
-      fprintf(stderr, "unexpected size of state_ptr %u != %zu\n",
-              state_ptr_size, sizeof(void *));
-      return NULL;
-    }
-
-    // if it's larger than a void*, assume it's a bss array and no further
-    // initialization is required. Only try to set up a pointer for
-    // sizeof(void*)
-    if (state_ptr_size == sizeof(void *)) {
-      uint64_t device_State_bytes =
-          get_device_State_bytes((char *)image->ImageStart, img_size);
-      if (device_State_bytes == 0) {
+      DP("No device_state symbol found, skipping initialization\n");
+    } else {
+      if (state_ptr_size < sizeof(void *)) {
+        DP("unexpected size of state_ptr %u != %zu\n", state_ptr_size,
+           sizeof(void *));
         return NULL;
       }
 
-      auto &dss = DeviceInfo.deviceStateStore[device_id];
-      if (dss.first.get() == nullptr) {
-        assert(dss.second == 0);
-        void *ptr = NULL;
-        atmi_status_t err =
-            atmi_calloc(&ptr, device_State_bytes, get_gpu_mem_place(device_id));
-        if (err != ATMI_STATUS_SUCCESS) {
-          fprintf(stderr, "Failed to allocate device_state array\n");
+      // if it's larger than a void*, assume it's a bss array and no further
+      // initialization is required. Only try to set up a pointer for
+      // sizeof(void*)
+      if (state_ptr_size == sizeof(void *)) {
+        uint64_t device_State_bytes =
+            get_device_State_bytes((char *)image->ImageStart, img_size);
+        if (device_State_bytes == 0) {
+          DP("Can't initialize device_State, missing size information\n");
           return NULL;
         }
-        dss = {std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
-               device_State_bytes};
-      }
 
-      void *ptr = dss.first.get();
-      if (device_State_bytes != dss.second) {
-        fprintf(stderr, "Inconsistent sizes of device_State unsupported\n");
-        exit(1);
-      }
+        auto &dss = DeviceInfo.deviceStateStore[device_id];
+        if (dss.first.get() == nullptr) {
+          assert(dss.second == 0);
+          void *ptr = NULL;
+          atmi_status_t err = atmi_calloc(&ptr, device_State_bytes,
+                                          get_gpu_mem_place(device_id));
+          if (err != ATMI_STATUS_SUCCESS) {
+            DP("Failed to allocate device_state array\n");
+            return NULL;
+          }
+          dss = {
+              std::unique_ptr<void, RTLDeviceInfoTy::atmiFreePtrDeletor>{ptr},
+              device_State_bytes,
+          };
+        }
 
-      // write ptr to device memory so it can be used by later kernels
-      err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr,
-                                                 sizeof(void *), device_id);
-      if (err != ATMI_STATUS_SUCCESS) {
-        fprintf(stderr, "memcpy install of state_ptr failed\n");
-        return NULL;
+        void *ptr = dss.first.get();
+        if (device_State_bytes != dss.second) {
+          DP("Inconsistent sizes of device_State unsupported\n");
+          return NULL;
+        }
+
+        // write ptr to device memory so it can be used by later kernels
+        err = DeviceInfo.freesignalpool_memcpy_h2d(state_ptr, &ptr,
+                                                   sizeof(void *), device_id);
+        if (err != ATMI_STATUS_SUCCESS) {
+          DP("memcpy install of state_ptr failed\n");
+          return NULL;
+        }
       }
     }
   }
@@ -1285,9 +1293,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
           get_gpu_mem_place(device_id), e->name, &varptr, &varsize);
 
       if (err != ATMI_STATUS_SUCCESS) {
-        DP("Loading global '%s' (Failed)\n", e->name);
         // Inform the user what symbol prevented offloading
-        fprintf(stderr, "Loading global '%s' (Failed)\n", e->name);
+        DP("Loading global '%s' (Failed)\n", e->name);
         return NULL;
       }
 
@@ -1481,9 +1488,16 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
   return DeviceInfo.getOffloadEntriesTable(device_id);
 }
 
-void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *) {
+void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
   void *ptr = NULL;
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
+
+  if (kind != TARGET_ALLOC_DEFAULT) {
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
+  }
+
   atmi_status_t err = atmi_malloc(&ptr, size, get_gpu_mem_place(device_id));
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
@@ -1494,21 +1508,20 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *) {
 int32_t __tgt_rtl_data_submit(int device_id, void *tgt_ptr, void *hst_ptr,
                               int64_t size) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  __tgt_async_info async_info;
-  int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, &async_info);
+  __tgt_async_info AsyncInfo;
+  int32_t rc = dataSubmit(device_id, tgt_ptr, hst_ptr, size, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_submit_async(int device_id, void *tgt_ptr, void *hst_ptr,
-                                    int64_t size,
-                                    __tgt_async_info *async_info_ptr) {
+                                    int64_t size, __tgt_async_info *AsyncInfo) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  if (async_info_ptr) {
-    initAsyncInfoPtr(async_info_ptr);
-    return dataSubmit(device_id, tgt_ptr, hst_ptr, size, async_info_ptr);
+  if (AsyncInfo) {
+    initAsyncInfo(AsyncInfo);
+    return dataSubmit(device_id, tgt_ptr, hst_ptr, size, AsyncInfo);
   } else {
     return __tgt_rtl_data_submit(device_id, tgt_ptr, hst_ptr, size);
   }
@@ -1517,21 +1530,21 @@ int32_t __tgt_rtl_data_submit_async(int device_id, void *tgt_ptr, void *hst_ptr,
 int32_t __tgt_rtl_data_retrieve(int device_id, void *hst_ptr, void *tgt_ptr,
                                 int64_t size) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  __tgt_async_info async_info;
-  int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, &async_info);
+  __tgt_async_info AsyncInfo;
+  int32_t rc = dataRetrieve(device_id, hst_ptr, tgt_ptr, size, &AsyncInfo);
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  return __tgt_rtl_synchronize(device_id, &async_info);
+  return __tgt_rtl_synchronize(device_id, &AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_retrieve_async(int device_id, void *hst_ptr,
                                       void *tgt_ptr, int64_t size,
-                                      __tgt_async_info *async_info_ptr) {
-  assert(async_info_ptr && "async_info is nullptr");
+                                      __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
-  initAsyncInfoPtr(async_info_ptr);
-  return dataRetrieve(device_id, hst_ptr, tgt_ptr, size, async_info_ptr);
+  initAsyncInfo(AsyncInfo);
+  return dataRetrieve(device_id, hst_ptr, tgt_ptr, size, AsyncInfo);
 }
 
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
@@ -1562,7 +1575,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
   if (Max_Teams > DeviceInfo.HardTeamLimit)
     Max_Teams = DeviceInfo.HardTeamLimit;
 
-  if (print_kernel_trace == 4) {
+  if (print_kernel_trace & STARTUP_DETAILS) {
     fprintf(stderr, "RTLDeviceInfoTy::Max_Teams: %d\n",
             RTLDeviceInfoTy::Max_Teams);
     fprintf(stderr, "Max_Teams: %d\n", Max_Teams);
@@ -1595,7 +1608,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     DP("Reduced threadsPerGroup to flat-attr-group-size limit %d\n",
        threadsPerGroup);
   }
-  if (print_kernel_trace == 4)
+  if (print_kernel_trace & STARTUP_DETAILS)
     fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
   DP("Preparing %d threads\n", threadsPerGroup);
 
@@ -1608,7 +1621,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     num_groups = Max_Teams;
   DP("Set default num of groups %d\n", num_groups);
 
-  if (print_kernel_trace == 4) {
+  if (print_kernel_trace & STARTUP_DETAILS) {
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "num_teams: %d\n", num_teams);
   }
@@ -1628,7 +1641,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
   if (num_teams > 0) {
     num_groups = (num_teams < num_groups) ? num_teams : num_groups;
   }
-  if (print_kernel_trace == 4) {
+  if (print_kernel_trace & STARTUP_DETAILS) {
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "DeviceInfo.EnvNumTeams %d\n", DeviceInfo.EnvNumTeams);
     fprintf(stderr, "DeviceInfo.EnvTeamLimit %d\n", DeviceInfo.EnvTeamLimit);
@@ -1661,13 +1674,13 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
     }
     if (num_groups > Max_Teams) {
       num_groups = Max_Teams;
-      if (print_kernel_trace == 4)
+      if (print_kernel_trace & STARTUP_DETAILS)
         fprintf(stderr, "Limiting num_groups %d to Max_Teams %d \n", num_groups,
                 Max_Teams);
     }
     if (num_groups > num_teams && num_teams > 0) {
       num_groups = num_teams;
-      if (print_kernel_trace == 4)
+      if (print_kernel_trace & STARTUP_DETAILS)
         fprintf(stderr, "Limiting num_groups %d to clause num_teams %d \n",
                 num_groups, num_teams);
     }
@@ -1681,7 +1694,7 @@ void getLaunchVals(int &threadsPerGroup, int &num_groups, int ConstWGSize,
         num_groups > DeviceInfo.EnvMaxTeamsDefault)
       num_groups = DeviceInfo.EnvMaxTeamsDefault;
   }
-  if (print_kernel_trace == 4) {
+  if (print_kernel_trace & STARTUP_DETAILS) {
     fprintf(stderr, "threadsPerGroup: %d\n", threadsPerGroup);
     fprintf(stderr, "num_groups: %d\n", num_groups);
     fprintf(stderr, "loop_tripcount: %ld\n", loop_tripcount);
@@ -1746,6 +1759,19 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
   KernelTy *KernelInfo = (KernelTy *)tgt_entry_ptr;
 
+  std::string kernel_name = std::string(KernelInfo->Name);
+  uint32_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
+
+  {
+    assert(KernelInfoTable[device_id].find(kernel_name) !=
+           KernelInfoTable[device_id].end());
+    auto it = KernelInfoTable[device_id][kernel_name];
+    sgpr_count = it.sgpr_count;
+    vgpr_count = it.vgpr_count;
+    sgpr_spill_count = it.sgpr_spill_count;
+    vgpr_spill_count = it.vgpr_spill_count;
+  }
+
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
    */
@@ -1761,14 +1787,19 @@ int32_t __tgt_rtl_run_target_team_region_locked(
                 loop_tripcount, // From run_region arg
                 KernelInfo->device_id);
 
-  if (print_kernel_trace >= 1)
+  if (print_kernel_trace >= LAUNCH) {
     // enum modes are SPMD, GENERIC, NONE 0,1,2
-    fprintf(stderr,
+    // if doing rtl timing, print to stderr, unless stdout requested.
+    bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
+    fprintf(traceToStdout ? stdout : stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
-            "reqd:(%4dX%4d) n:%s\n",
+            "reqd:(%4dX%4d) sgpr_count:%u vgpr_count:%u sgpr_spill_count:%u "
+            "vgpr_spill_count:%u tripcount:%lu n:%s\n",
             device_id, KernelInfo->ExecutionMode, KernelInfo->ConstWGSize,
             arg_num, num_groups, threadsPerGroup, num_teams, thread_limit,
-            KernelInfo->Name);
+            sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count,
+            loop_tripcount, KernelInfo->Name);
+  }
 
   // Run on the device.
   {
@@ -1796,7 +1827,6 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->reserved2 = 0;           // atmi writes id_ here
     packet->completion_signal = {0}; // may want a pool of signals
 
-    std::string kernel_name = std::string(KernelInfo->Name);
     {
       assert(KernelInfoTable[device_id].find(kernel_name) !=
              KernelInfoTable[device_id].end());
@@ -1912,9 +1942,9 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           void *tgt_entry_ptr, void **tgt_args,
                                           ptrdiff_t *tgt_offsets,
                                           int32_t arg_num,
-                                          __tgt_async_info *async_info_ptr) {
-  assert(async_info_ptr && "async_info is nullptr");
-  initAsyncInfoPtr(async_info_ptr);
+                                          __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
+  initAsyncInfo(AsyncInfo);
 
   // use one team and one thread
   // fix thread num
@@ -1925,15 +1955,14 @@ int32_t __tgt_rtl_run_target_region_async(int32_t device_id,
                                           thread_limit, 0);
 }
 
-int32_t __tgt_rtl_synchronize(int32_t device_id,
-                              __tgt_async_info *async_info_ptr) {
-  assert(async_info_ptr && "async_info is nullptr");
+int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
+  assert(AsyncInfo && "AsyncInfo is nullptr");
 
-  // Cuda asserts that async_info_ptr->Queue is non-null, but this invariant
+  // Cuda asserts that AsyncInfo->Queue is non-null, but this invariant
   // is not ensured by devices.cpp for amdgcn
-  // assert(async_info_ptr->Queue && "async_info_ptr->Queue is nullptr");
-  if (async_info_ptr->Queue) {
-    finiAsyncInfoPtr(async_info_ptr);
+  // assert(AsyncInfo->Queue && "AsyncInfo->Queue is nullptr");
+  if (AsyncInfo->Queue) {
+    finiAsyncInfo(AsyncInfo);
   }
   return OFFLOAD_SUCCESS;
 }

@@ -107,6 +107,24 @@ def testStandardAttrCasts():
 run(testStandardAttrCasts)
 
 
+# CHECK-LABEL: TEST: testAffineMapAttr
+def testAffineMapAttr():
+  with Context() as ctx:
+    d0 = AffineDimExpr.get(0)
+    d1 = AffineDimExpr.get(1)
+    c2 = AffineConstantExpr.get(2)
+    map0 = AffineMap.get(2, 3, [])
+
+    # CHECK: affine_map<(d0, d1)[s0, s1, s2] -> ()>
+    attr_built = AffineMapAttr.get(map0)
+    print(str(attr_built))
+
+    attr_parsed = Attribute.parse(str(attr_built))
+    assert attr_built == attr_parsed
+
+run(testAffineMapAttr)
+
+
 # CHECK-LABEL: TEST: testFloatAttr
 def testFloatAttr():
   with Context(), Location.unknown():

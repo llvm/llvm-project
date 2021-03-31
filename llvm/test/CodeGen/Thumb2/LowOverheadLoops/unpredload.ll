@@ -5,7 +5,7 @@ define void @arm_cmplx_mag_squared_q15_mve(i16* %pSrc, i16* %pDst, i32 %blockSiz
 ; CHECK-LABEL: arm_cmplx_mag_squared_q15_mve:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    subs.w r12, r2, #8
+; CHECK-NEXT:    subs.w r3, r2, #8
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -57,9 +57,9 @@ define i32 @bad(i32* readonly %x, i32* nocapture readonly %y, i32 %n) {
 ; CHECK-NEXT:    subs r3, r2, r3
 ; CHECK-NEXT:    add.w r12, r3, #3
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    add.w r3, r3, r12, lsr #2
 ; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    dls lr, lr
+; CHECK-NEXT:    dls lr, r3
 ; CHECK-NEXT:  .LBB1_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2

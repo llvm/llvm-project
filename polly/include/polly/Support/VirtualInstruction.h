@@ -17,6 +17,7 @@
 #include "polly/ScopInfo.h"
 
 namespace polly {
+using llvm::User;
 
 /// Determine the nature of a value's use within a statement.
 ///

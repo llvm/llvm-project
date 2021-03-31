@@ -211,7 +211,7 @@ public:
 
   void SetDisplayRecognizedArguments(bool b);
 
-  const ProcessLaunchInfo &GetProcessLaunchInfo();
+  const ProcessLaunchInfo &GetProcessLaunchInfo() const;
 
   void SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);
 
@@ -226,6 +226,10 @@ public:
   bool GetAutoInstallMainExecutable() const;
 
   void UpdateLaunchInfoFromProperties();
+
+  void SetDebugUtilityExpression(bool debug);
+
+  bool GetDebugUtilityExpression() const;
 
 private:
   // Callbacks for m_launch_info.
@@ -1122,7 +1126,12 @@ public:
   ///
   /// \return
   ///   The trace object. It might be undefined.
-  const lldb::TraceSP &GetTrace();
+  lldb::TraceSP &GetTrace();
+
+  /// Similar to \a GetTrace, but this also tries to create a \a Trace object
+  /// if not available using the default supported tracing technology for
+  /// this process.
+  llvm::Expected<lldb::TraceSP &> GetTraceOrCreate();
 
   // Since expressions results can persist beyond the lifetime of a process,
   // and the const expression results are available after a process is gone, we

@@ -35,11 +35,11 @@ using namespace lldb_private;
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_single_step(true), m_enabled(false), m_stream_sp(stream_sp) {}
+      m_enabled(false), m_stream_sp(stream_sp) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_single_step(true), m_enabled(false), m_stream_sp() {}
+      m_enabled(false), m_stream_sp() {}
 
 Stream *ThreadPlanTracer::GetLogStream() {
   if (m_stream_sp)
@@ -75,7 +75,7 @@ void ThreadPlanTracer::Log() {
 }
 
 bool ThreadPlanTracer::TracerExplainsStop() {
-  if (m_enabled && m_single_step) {
+  if (m_enabled) {
     lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
     return (stop_info->GetStopReason() == eStopReasonTrace);
   } else
@@ -191,7 +191,7 @@ void ThreadPlanAssemblyTracer::Log() {
 
     for (int arg_index = 0; arg_index < num_args; ++arg_index) {
       Value value;
-      value.SetValueType(Value::eValueTypeScalar);
+      value.SetValueType(Value::ValueType::Scalar);
       value.SetCompilerType(intptr_type);
       value_list.PushValue(value);
     }

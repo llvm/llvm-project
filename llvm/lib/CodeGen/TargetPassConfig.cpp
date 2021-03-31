@@ -858,11 +858,11 @@ void TargetPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOpt::None && !DisableConstantHoisting)
     addPass(createConstantHoistingPass());
 
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createReplaceWithVeclibLegacyPass());
+
   if (getOptLevel() != CodeGenOpt::None && !DisablePartialLibcallInlining)
     addPass(createPartiallyInlineLibCallsPass());
-
-  // Instrument function entry and exit, e.g. with calls to mcount().
-  addPass(createPostInlineEntryExitInstrumenterPass());
 
   // Add scalarization of target's unsupported masked memory intrinsics pass.
   // the unsupported intrinsic will be replaced with a chain of basic blocks,
@@ -1187,12 +1187,14 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   // Machine function splitter uses the basic block sections feature. Both
-  // cannot be enabled at the same time.
-  if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter) {
-    addPass(createMachineFunctionSplitterPass());
-  } else if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
+  // cannot be enabled at the same time. Basic block sections takes precedence.
+  // FIXME: In principle, BasicBlockSection::Labels and splitting can used
+  // together. Update this check once we have addressed any issues.
+  if (TM->getBBSectionsType() != llvm::BasicBlockSection::None) {
     addPass(llvm::createBasicBlockSectionsPass(TM->getBBSectionsFuncListBuf()));
+  } else if (TM->Options.EnableMachineFunctionSplitter ||
+             EnableMachineFunctionSplitter) {
+    addPass(createMachineFunctionSplitterPass());
   }
 
   // Add passes that directly emit MI after all other MI passes.

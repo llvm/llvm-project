@@ -7,8 +7,8 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*/
 
-#ifndef LLVM_DISASSEMBLER_TYPES_H
-#define LLVM_DISASSEMBLER_TYPES_H
+#ifndef LLVM_C_DISASSEMBLERTYPES_H
+#define LLVM_C_DISASSEMBLERTYPES_H
 
 #include "llvm-c/DataTypes.h"
 #ifdef __cplusplus

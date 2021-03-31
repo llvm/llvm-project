@@ -6,39 +6,65 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Dialect/GPU/Passes.h"
+
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassManager.h"
-#include "mlir/Target/NVVMIR.h"
+#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
 
 #if MLIR_CUDA_CONVERSIONS_ENABLED
-static OwnedBlob compilePtxToCubinForTesting(const std::string &, Location,
-                                             StringRef) {
-  const char data[] = "CUBIN";
-  return std::make_unique<std::vector<char>>(data, data + sizeof(data) - 1);
+namespace {
+class TestSerializeToCubinPass
+    : public PassWrapper<TestSerializeToCubinPass, gpu::SerializeToBlobPass> {
+public:
+  TestSerializeToCubinPass();
+
+private:
+  void getDependentDialects(DialectRegistry &registry) const override;
+
+  // Serializes PTX to CUBIN.
+  std::unique_ptr<std::vector<char>>
+  serializeISA(const std::string &isa) override;
+};
+} // namespace
+
+TestSerializeToCubinPass::TestSerializeToCubinPass() {
+  this->triple = "nvptx64-nvidia-cuda";
+  this->chip = "sm_35";
+  this->features = "+ptx60";
+}
+
+void TestSerializeToCubinPass::getDependentDialects(
+    DialectRegistry &registry) const {
+  registerNVVMDialectTranslation(registry);
+  gpu::SerializeToBlobPass::getDependentDialects(registry);
+}
+
+std::unique_ptr<std::vector<char>>
+TestSerializeToCubinPass::serializeISA(const std::string &) {
+  std::string data = "CUBIN";
+  return std::make_unique<std::vector<char>>(data.begin(), data.end());
 }
 
 namespace mlir {
 namespace test {
-void registerTestConvertGPUKernelToCubinPass() {
-  PassPipelineRegistration<>(
-      "test-kernel-to-cubin",
-      "Convert all kernel functions to CUDA cubin blobs",
-      [](OpPassManager &pm) {
+// Register test pass to serialize GPU module to a CUBIN binary annotation.
+void registerTestGpuSerializeToCubinPass() {
+  PassRegistration<TestSerializeToCubinPass> registerSerializeToCubin(
+      "test-gpu-to-cubin",
+      "Lower GPU kernel function to CUBIN binary annotations", [] {
         // Initialize LLVM NVPTX backend.
         LLVMInitializeNVPTXTarget();
         LLVMInitializeNVPTXTargetInfo();
         LLVMInitializeNVPTXTargetMC();
         LLVMInitializeNVPTXAsmPrinter();
 
-        pm.addPass(createConvertGPUKernelToBlobPass(
-            translateModuleToNVVMIR, compilePtxToCubinForTesting,
-            "nvptx64-nvidia-cuda", "sm_35", "+ptx60", "nvvm.cubin"));
+        return std::make_unique<TestSerializeToCubinPass>();
       });
 }
 } // namespace test
 } // namespace mlir
-#endif
+#endif // MLIR_CUDA_CONVERSIONS_ENABLED

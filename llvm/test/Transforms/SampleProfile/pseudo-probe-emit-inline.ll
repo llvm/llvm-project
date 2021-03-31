@@ -11,14 +11,14 @@
 ; RUN: llvm-objdump --section-headers  %t4 | FileCheck %s --check-prefix=CHECK-OBJ
 
 define dso_local void @foo2() !dbg !7 {
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1:]], i64 1, i32 0), !dbg ![[#]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
 ; CHECK-ASM: .pseudoprobe	[[#GUID1:]] 1 0 0
   ret void, !dbg !10
 }
 
 define dso_local void @foo() #0 !dbg !11 {
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0), !dbg ![[#]]
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0), !dbg ![[#DL1:]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0, i64 -1), !dbg ![[#DL1:]]
 ; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID2]]:2
   call void @foo2(), !dbg !12
@@ -26,9 +26,9 @@ define dso_local void @foo() #0 !dbg !11 {
 }
 
 define dso_local i32 @entry() !dbg !14 {
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID3:]], i64 1, i32 0), !dbg ![[#]]
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 1, i32 0), !dbg ![[#DL2:]]
-; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0), !dbg ![[#DL3:]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID3:]], i64 1, i32 0, i64 -1), !dbg ![[#]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID2]], i64 1, i32 0, i64 -1), !dbg ![[#DL2:]]
+; CHECK-IL:  call void @llvm.pseudoprobe(i64 [[#GUID1]], i64 1, i32 0, i64 -1), !dbg ![[#DL3:]]
 ; CHECK-ASM: .pseudoprobe	[[#GUID3:]] 1 0 0
 ; CHECK-ASM: .pseudoprobe	[[#GUID2]] 1 0 0 @ [[#GUID3]]:2
 ; CHECK-ASM: .pseudoprobe	[[#GUID1]] 1 0 0 @ [[#GUID3]]:2 @ [[#GUID2]]:2
@@ -41,13 +41,13 @@ define dso_local i32 @entry() !dbg !14 {
 ; CHECK-IL: ![[#SCOPE2:]] = distinct !DISubprogram(name: "foo"
 ; CHECK-IL: ![[#DL1]] = !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL1:]])
 ; CHECK-IL: ![[#INL1]] = distinct !DILocation(line: 7, column: 3, scope: ![[#BL1:]])
-;; A discriminator of 134217751 which is 0x8000017 in hexdecimal, stands for a direct call probe
-;; with an index of 2.
-; CHECK-IL: ![[#BL1]] = !DILexicalBlockFile(scope: ![[#SCOPE2]], file: !1, discriminator: 134217751)
+;; A discriminator of 186646551 which is 0xb200017 in hexdecimal, stands for a direct call probe
+;; with an index of 2 and a scale of 100%.
+; CHECK-IL: ![[#BL1]] = !DILexicalBlockFile(scope: ![[#SCOPE2]], file: !1, discriminator: 186646551)
 ; CHECK-IL: ![[#SCOPE3:]] = distinct !DISubprogram(name: "entry"
 ; CHECK-IL: ![[#DL2]] = !DILocation(line: 7, column: 3,  scope: ![[#SCOPE2]], inlinedAt: ![[#INL2:]])
 ; CHECK-IL: ![[#INL2]] = distinct !DILocation(line: 11, column: 3, scope: ![[#BL2:]])
-; CHECK-IL: ![[#BL2]] = !DILexicalBlockFile(scope: ![[#SCOPE3]], file: !1, discriminator: 134217751)
+; CHECK-IL: ![[#BL2]] = !DILexicalBlockFile(scope: ![[#SCOPE3]], file: !1, discriminator: 186646551)
 ; CHECK-IL: ![[#DL3]] = !DILocation(line: 3, column: 1,  scope: ![[#SCOPE1]], inlinedAt: ![[#INL3:]])
 ; CHECK-IL: ![[#INL3]] = distinct !DILocation(line: 7, column: 3,  scope: ![[#BL1]], inlinedAt: ![[#INL2]])
 

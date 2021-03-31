@@ -55,7 +55,7 @@ const char *StatErrorString(int stat) {
   }
 }
 
-int ToErrmsg(Descriptor *errmsg, int stat) {
+int ToErrmsg(const Descriptor *errmsg, int stat) {
   if (stat != StatOk && errmsg && errmsg->raw().base_addr &&
       errmsg->type() == TypeCode(TypeCategory::Character, 1) &&
       errmsg->rank() == 0) {
@@ -63,7 +63,7 @@ int ToErrmsg(Descriptor *errmsg, int stat) {
       char *buffer{errmsg->OffsetElement()};
       std::size_t bufferLength{errmsg->ElementBytes()};
       std::size_t msgLength{std::strlen(msg)};
-      if (msgLength <= bufferLength) {
+      if (msgLength >= bufferLength) {
         std::memcpy(buffer, msg, bufferLength);
       } else {
         std::memcpy(buffer, msg, msgLength);
@@ -75,7 +75,7 @@ int ToErrmsg(Descriptor *errmsg, int stat) {
 }
 
 int ReturnError(
-    Terminator &terminator, int stat, Descriptor *errmsg, bool hasStat) {
+    Terminator &terminator, int stat, const Descriptor *errmsg, bool hasStat) {
   if (stat == StatOk || hasStat) {
     return ToErrmsg(errmsg, stat);
   } else if (const char *msg{StatErrorString(stat)}) {

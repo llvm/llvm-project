@@ -1309,7 +1309,7 @@ void MipsTargetELFStreamer::emitMipsAbiFlags() {
   MCContext &Context = MCA.getContext();
   MCStreamer &OS = getStreamer();
   MCSectionELF *Sec = Context.getELFSection(
-      ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24, "");
+      ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24);
   MCA.registerSection(*Sec);
   Sec->setAlignment(Align(8));
   OS.SwitchSection(Sec);

@@ -111,24 +111,26 @@ public:
   }
 
   /// getLastCalleeSavedAlias - Returns the last callee saved register that
-  /// overlaps PhysReg, or 0 if Reg doesn't overlap a CalleeSavedAliases.
-  unsigned getLastCalleeSavedAlias(unsigned PhysReg) const {
-    assert(Register::isPhysicalRegister(PhysReg));
-    if (PhysReg < CalleeSavedAliases.size())
+  /// overlaps PhysReg, or NoRegister if Reg doesn't overlap a
+  /// CalleeSavedAliases.
+  MCRegister getLastCalleeSavedAlias(MCRegister PhysReg) const {
+    if (PhysReg.id() < CalleeSavedAliases.size())
       return CalleeSavedAliases[PhysReg];
-    return 0;
+    return MCRegister::NoRegister;
   }
 
   /// Get the minimum register cost in RC's allocation order.
   /// This is the smallest value in RegCosts[Reg] for all
   /// the registers in getOrder(RC).
-  uint8_t getMinCost(const TargetRegisterClass *RC) { return get(RC).MinCost; }
+  uint8_t getMinCost(const TargetRegisterClass *RC) const {
+    return get(RC).MinCost;
+  }
 
   /// Get the position of the last cost change in getOrder(RC).
   ///
   /// All registers in getOrder(RC).slice(getLastCostChange(RC)) will have the
   /// same cost according to RegCosts[Reg].
-  unsigned getLastCostChange(const TargetRegisterClass *RC) {
+  unsigned getLastCostChange(const TargetRegisterClass *RC) const {
     return get(RC).LastCostChange;
   }
 

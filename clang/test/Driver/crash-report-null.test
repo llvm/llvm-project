@@ -1,7 +1,7 @@
 // RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH=1 not %clang -fsyntax-only -x c /dev/null -lstdc++ 2>&1 | FileCheck %s
 
 // FIXME: Investigating. "fatal error: file 'nul' modified since it was first processed"
-// XFAIL: windows-gnu
+// UNSUPPORTED: system-windows
 
 // CHECK: PLEASE submit a bug report to {{.*}} and include the crash backtrace, preprocessed source, and associated run script.
 // CHECK: Preprocessed source(s) and associated run script(s) are located at:

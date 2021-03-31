@@ -29,8 +29,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_ADT_FUNCTION_EXTRAS_H
-#define LLVM_ADT_FUNCTION_EXTRAS_H
+#ifndef LLVM_ADT_FUNCTIONEXTRAS_H
+#define LLVM_ADT_FUNCTIONEXTRAS_H
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -59,6 +59,15 @@ template <typename T>
 using EnableIfTrivial =
     std::enable_if_t<llvm::is_trivially_move_constructible<T>::value &&
                      std::is_trivially_destructible<T>::value>;
+template <typename CallableT, typename ThisT>
+using EnableUnlessSameType = std::enable_if_t<!std::is_same<
+    std::remove_cv_t<std::remove_reference_t<CallableT>>, ThisT>::value>;
+template <typename CallableT, typename Ret, typename... Params>
+using EnableIfCallable =
+    std::enable_if_t<std::is_void<Ret>::value ||
+                     std::is_convertible<decltype(std::declval<CallableT>()(
+                                             std::declval<Params>()...)),
+                                         Ret>::value>;
 
 template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
 protected:
@@ -346,7 +355,10 @@ public:
   unique_function &operator=(const unique_function &) = delete;
 
   template <typename CallableT>
-  unique_function(CallableT Callable)
+  unique_function(
+      CallableT Callable,
+      detail::EnableUnlessSameType<CallableT, unique_function> * = nullptr,
+      detail::EnableIfCallable<CallableT, R, P...> * = nullptr)
       : Base(std::forward<CallableT>(Callable),
              typename Base::template CalledAs<CallableT>{}) {}
 
@@ -369,7 +381,10 @@ public:
   unique_function &operator=(const unique_function &) = delete;
 
   template <typename CallableT>
-  unique_function(CallableT Callable)
+  unique_function(
+      CallableT Callable,
+      detail::EnableUnlessSameType<CallableT, unique_function> * = nullptr,
+      detail::EnableIfCallable<const CallableT, R, P...> * = nullptr)
       : Base(std::forward<CallableT>(Callable),
              typename Base::template CalledAs<const CallableT>{}) {}
 
@@ -380,4 +395,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_ADT_FUNCTION_H
+#endif // LLVM_ADT_FUNCTIONEXTRAS_H

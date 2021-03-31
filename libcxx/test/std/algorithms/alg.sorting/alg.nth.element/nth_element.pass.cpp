@@ -47,6 +47,21 @@ TEST_CONSTEXPR_CXX20 bool test()
         assert(input[4] == 4);
         assert(input[5] + input[6] == 5 + 9);
     }
+
+    {
+        T input[] = {0, 1, 2, 3, 4, 5, 7, 6};
+        std::nth_element(Iter(input), Iter(input + 6), Iter(input + 8));
+        assert(input[6] == 6);
+        assert(input[7] == 7);
+    }
+
+    {
+        T input[] = {1, 0, 2, 3, 4, 5, 6, 7};
+        std::nth_element(Iter(input), Iter(input + 1), Iter(input + 8));
+        assert(input[0] == 0);
+        assert(input[1] == 1);
+    }
+
     return true;
 }
 

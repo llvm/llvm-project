@@ -34,13 +34,7 @@ def CC_SI_Gfx : CallingConv<[
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31
   ]>>>,
 
-  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
-  CCIfType<[v3i32, v3f32], CCAssignToStack<12, 4>>,
-  CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
-  CCIfType<[v5i32, v5f32], CCAssignToStack<20, 4>>,
-  CCIfType<[v8i32, v8f32], CCAssignToStack<32, 4>>,
-  CCIfType<[v16i32, v16f32], CCAssignToStack<64, 4>>
+  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>
 ]>;
 
 def RetCC_SI_Gfx : CallingConv<[
@@ -75,13 +69,7 @@ def RetCC_SI_Gfx : CallingConv<[
     VGPR128, VGPR129, VGPR130, VGPR131, VGPR132, VGPR133, VGPR134, VGPR135
   ]>>>,
 
-  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
-  CCIfType<[v3i32, v3f32], CCAssignToStack<12, 4>>,
-  CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
-  CCIfType<[v5i32, v5f32], CCAssignToStack<20, 4>>,
-  CCIfType<[v8i32, v8f32], CCAssignToStack<32, 4>>,
-  CCIfType<[v16i32, v16f32], CCAssignToStack<64, 4>>
+  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>
 ]>;
 
 def CC_SI_SHADER : CallingConv<[
@@ -175,6 +163,10 @@ def CSR_AMDGPU_VGPRs : CalleeSavedRegs<
     (sequence "VGPR%u", 248, 255))
 >;
 
+def CSR_AMDGPU_AGPRs_32_255 : CalleeSavedRegs<
+  (sequence "AGPR%u", 32, 255)
+>;
+
 def CSR_AMDGPU_SGPRs_32_105 : CalleeSavedRegs<
   (sequence "SGPR%u", 32, 105)
 >;
@@ -184,6 +176,13 @@ def CSR_AMDGPU_AllVGPRs : CalleeSavedRegs<
   (sequence "VGPR%u", 0, 255)
 >;
 
+def CSR_AMDGPU_AllAGPRs : CalleeSavedRegs<
+  (sequence "AGPR%u", 0, 255)
+>;
+def CSR_AMDGPU_AllVectorRegs : CalleeSavedRegs<
+  (add CSR_AMDGPU_AllVGPRs, CSR_AMDGPU_AllAGPRs)
+>;
+
 // Just to get the regmask, not for calling convention purposes.
 def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
   (add (sequence "SGPR%u", 0, 105), VCC_LO, VCC_HI)
@@ -191,6 +190,10 @@ def CSR_AMDGPU_AllAllocatableSRegs : CalleeSavedRegs<
 
 def CSR_AMDGPU_HighRegs : CalleeSavedRegs<
   (add CSR_AMDGPU_VGPRs, CSR_AMDGPU_SGPRs_32_105)
+>;
+
+def CSR_AMDGPU_HighRegs_With_AGPRs : CalleeSavedRegs<
+  (add CSR_AMDGPU_HighRegs, CSR_AMDGPU_AGPRs_32_255)
 >;
 
 def CSR_AMDGPU_NoRegs : CalleeSavedRegs<(add)>;
@@ -205,13 +208,7 @@ def CC_AMDGPU_Func : CallingConv<[
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
-  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
-  CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
-  CCIfType<[v3i32, v3f32], CCAssignToStack<12, 4>>,
-  CCIfType<[v4i32, v4f32, v2i64, v2f64], CCAssignToStack<16, 4>>,
-  CCIfType<[v5i32, v5f32], CCAssignToStack<20, 4>>,
-  CCIfType<[v8i32, v8f32], CCAssignToStack<32, 4>>,
-  CCIfType<[v16i32, v16f32], CCAssignToStack<64, 4>>
+  CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>
 ]>;
 
 // Calling convention for leaf functions

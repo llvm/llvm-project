@@ -21,7 +21,7 @@ against Python comes with some constraints to be aware of.
     use it from Python 2 and vice versa.
 
 2.  It is not possible to build and link LLDB against one distribution on
-    Python and use it through a interpreter coming from another distribution.
+    Python and use it through an interpreter coming from another distribution.
     For example, on macOS, if you build and link against Python from
     python.org, you cannot import the lldb module from the Python interpreter
     installed with Homebrew.

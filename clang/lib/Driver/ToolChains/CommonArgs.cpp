@@ -9,6 +9,7 @@
 #include "CommonArgs.h"
 #include "Arch/AArch64.h"
 #include "Arch/ARM.h"
+#include "Arch/M68k.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
@@ -372,6 +373,9 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
       return A->getValue();
     return "";
 
+  case llvm::Triple::m68k:
+    return m68k::getM68kTargetCPU(Args);
+
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
   case llvm::Triple::mips64:
@@ -399,9 +403,14 @@ std::string tools::getCPUName(const ArgList &Args, const llvm::Triple &T,
     if (!TargetCPUName.empty())
       return TargetCPUName;
 
-    if (T.isOSAIX())
-      TargetCPUName = "pwr4";
-    else if (T.getArch() == llvm::Triple::ppc64le)
+    if (T.isOSAIX()) {
+      unsigned major, minor, unused_micro;
+      T.getOSVersion(major, minor, unused_micro);
+      // The minimal arch level moved from pwr4 for AIX7.1 to
+      // pwr7 for AIX7.2.
+      TargetCPUName =
+          (major < 7 || (major == 7 && minor < 2)) ? "pwr4" : "pwr7";
+    } else if (T.getArch() == llvm::Triple::ppc64le)
       TargetCPUName = "ppc64le";
     else if (T.getArch() == llvm::Triple::ppc64)
       TargetCPUName = "ppc64";
@@ -604,6 +613,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     else
       CmdArgs.push_back("-plugin-opt=new-pass-manager");
   }
+
+  // Pass an option to enable pseudo probe emission.
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-plugin-opt=pseudo-probe-for-profiling");
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
@@ -1005,12 +1019,13 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
     return Args.MakeArgString(T);
   } else {
     // Use the compilation dir.
-    SmallString<128> T(
-        Args.getLastArgValue(options::OPT_fdebug_compilation_dir));
+    Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
+                             options::OPT_fdebug_compilation_dir_EQ);
+    SmallString<128> T(A ? A->getValue() : "");
     SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
     AddPostfix(F);
     T += F;
-    return Args.MakeArgString(F);
+    return Args.MakeArgString(T);
   }
 }
 
@@ -1361,11 +1376,19 @@ bool tools::isObjCAutoRefCount(const ArgList &Args) {
 
 enum class LibGccType { UnspecifiedLibGcc, StaticLibGcc, SharedLibGcc };
 
-static LibGccType getLibGccType(const Driver &D, const ArgList &Args) {
+static LibGccType getLibGccType(const ToolChain &TC, const Driver &D,
+                                const ArgList &Args) {
   if (Args.hasArg(options::OPT_static_libgcc) ||
       Args.hasArg(options::OPT_static) || Args.hasArg(options::OPT_static_pie))
     return LibGccType::StaticLibGcc;
-  if (Args.hasArg(options::OPT_shared_libgcc) || D.CCCIsCXX())
+  if (Args.hasArg(options::OPT_shared_libgcc))
+    return LibGccType::SharedLibGcc;
+  // The Android NDK only provides libunwind.a, not libunwind.so.
+  if (TC.getTriple().isAndroid())
+    return LibGccType::StaticLibGcc;
+  // For MinGW, don't imply a shared libgcc here, we only want to return
+  // SharedLibGcc if that was explicitly requested.
+  if (D.CCCIsCXX() && !TC.getTriple().isOSCygMing())
     return LibGccType::SharedLibGcc;
   return LibGccType::UnspecifiedLibGcc;
 }
@@ -1387,12 +1410,12 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
                              ArgStringList &CmdArgs, const ArgList &Args) {
   ToolChain::UnwindLibType UNW = TC.GetUnwindLibType(Args);
   // Targets that don't use unwind libraries.
-  if (TC.getTriple().isAndroid() || TC.getTriple().isOSIAMCU() ||
-      TC.getTriple().isOSBinFormatWasm() ||
+  if ((TC.getTriple().isAndroid() && UNW == ToolChain::UNW_Libgcc) ||
+      TC.getTriple().isOSIAMCU() || TC.getTriple().isOSBinFormatWasm() ||
       UNW == ToolChain::UNW_None)
     return;
 
-  LibGccType LGT = getLibGccType(D, Args);
+  LibGccType LGT = getLibGccType(TC, D, Args);
   bool AsNeeded = LGT == LibGccType::UnspecifiedLibGcc &&
                   !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
   if (AsNeeded)
@@ -1429,20 +1452,12 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
 
 static void AddLibgcc(const ToolChain &TC, const Driver &D,
                       ArgStringList &CmdArgs, const ArgList &Args) {
-  LibGccType LGT = getLibGccType(D, Args);
+  LibGccType LGT = getLibGccType(TC, D, Args);
   if (LGT != LibGccType::SharedLibGcc)
     CmdArgs.push_back("-lgcc");
   AddUnwindLibrary(TC, D, CmdArgs, Args);
   if (LGT == LibGccType::SharedLibGcc)
     CmdArgs.push_back("-lgcc");
-
-  // According to Android ABI, we have to link with libdl if we are
-  // linking with non-static libgcc.
-  //
-  // NOTE: This fixes a link error on Android MIPS as well.  The non-static
-  // libgcc for MIPS relies on _Unwind_Find_FDE and dl_iterate_phdr from libdl.
-  if (TC.getTriple().isAndroid() && LGT != LibGccType::StaticLibGcc)
-    CmdArgs.push_back("-ldl");
 }
 
 void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
@@ -1468,6 +1483,13 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
       AddLibgcc(TC, D, CmdArgs, Args);
     break;
   }
+
+  // On Android, the unwinder uses dl_iterate_phdr (or one of
+  // dl_unwind_find_exidx/__gnu_Unwind_Find_exidx on arm32) from libdl.so. For
+  // statically-linked executables, these functions come from libc.a instead.
+  if (TC.getTriple().isAndroid() && !Args.hasArg(options::OPT_static) &&
+      !Args.hasArg(options::OPT_static_pie))
+    CmdArgs.push_back("-ldl");
 }
 
 SmallString<128> tools::getStatsFileName(const llvm::opt::ArgList &Args,
@@ -1620,5 +1642,65 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       // Disable all outlining behaviour.
       addArg(Twine("-enable-machine-outliner=never"));
     }
+  }
+}
+
+void tools::addOpenMPDeviceRTL(const Driver &D,
+                               const llvm::opt::ArgList &DriverArgs,
+                               llvm::opt::ArgStringList &CC1Args,
+                               StringRef BitcodeSuffix,
+                               const llvm::Triple &Triple) {
+  SmallVector<StringRef, 8> LibraryPaths;
+  // Add user defined library paths from LIBRARY_PATH.
+  llvm::Optional<std::string> LibPath =
+      llvm::sys::Process::GetEnv("LIBRARY_PATH");
+  if (LibPath) {
+    SmallVector<StringRef, 8> Frags;
+    const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
+    llvm::SplitString(*LibPath, Frags, EnvPathSeparatorStr);
+    for (StringRef Path : Frags)
+      LibraryPaths.emplace_back(Path.trim());
+  }
+
+  // Add path to lib / lib64 folder.
+  SmallString<256> DefaultLibPath = llvm::sys::path::parent_path(D.Dir);
+  llvm::sys::path::append(DefaultLibPath, Twine("lib") + CLANG_LIBDIR_SUFFIX);
+  LibraryPaths.emplace_back(DefaultLibPath.c_str());
+
+  OptSpecifier LibomptargetBCPathOpt =
+      Triple.isAMDGCN() ? options::OPT_libomptarget_amdgcn_bc_path_EQ
+                        : options::OPT_libomptarget_nvptx_bc_path_EQ;
+
+  StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgcn" : "nvptx";
+  // First check whether user specifies bc library
+  if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {
+    std::string LibOmpTargetName(A->getValue());
+    if (llvm::sys::fs::exists(LibOmpTargetName)) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetName));
+    } else {
+      D.Diag(diag::err_drv_omp_offload_target_bcruntime_not_found)
+          << LibOmpTargetName;
+    }
+  } else {
+    bool FoundBCLibrary = false;
+
+    std::string LibOmpTargetName =
+        "libomptarget-" + BitcodeSuffix.str() + ".bc";
+
+    for (StringRef LibraryPath : LibraryPaths) {
+      SmallString<128> LibOmpTargetFile(LibraryPath);
+      llvm::sys::path::append(LibOmpTargetFile, LibOmpTargetName);
+      if (llvm::sys::fs::exists(LibOmpTargetFile)) {
+        CC1Args.push_back("-mlink-builtin-bitcode");
+        CC1Args.push_back(DriverArgs.MakeArgString(LibOmpTargetFile));
+        FoundBCLibrary = true;
+        break;
+      }
+    }
+
+    if (!FoundBCLibrary)
+      D.Diag(diag::err_drv_omp_offload_target_missingbcruntime)
+          << LibOmpTargetName << ArchPrefix;
   }
 }

@@ -218,6 +218,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(CST_CODE, INLINEASM)
       STRINGIFY_CODE(CST_CODE, CE_SHUFVEC_EX)
       STRINGIFY_CODE(CST_CODE, CE_UNOP)
+      STRINGIFY_CODE(CST_CODE, DSO_LOCAL_EQUIVALENT)
     case bitc::CST_CODE_BLOCKADDRESS:
       return "CST_CODE_BLOCKADDRESS";
       STRINGIFY_CODE(CST_CODE, DATA)
@@ -361,6 +362,7 @@ static Optional<const char *> GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(METADATA, GLOBAL_VAR_EXPR)
       STRINGIFY_CODE(METADATA, INDEX_OFFSET)
       STRINGIFY_CODE(METADATA, INDEX)
+      STRINGIFY_CODE(METADATA, ARG_LIST)
     }
   case bitc::METADATA_KIND_BLOCK_ID:
     switch (CodeID) {

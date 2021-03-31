@@ -238,6 +238,14 @@ struct Fragment {
     std::vector<Located<std::string>> FullyQualifiedNamespaces;
   };
   StyleBlock Style;
+
+  /// Describes code completion preferences.
+  struct CompletionBlock {
+    /// Whether code completion should include suggestions from scopes that are
+    /// not visible. The required scope prefix will be inserted.
+    llvm::Optional<Located<bool>> AllScopes;
+  };
+  CompletionBlock Completion;
 };
 
 } // namespace config

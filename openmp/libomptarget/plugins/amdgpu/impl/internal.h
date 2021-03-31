@@ -97,6 +97,10 @@ typedef struct atl_kernel_info_s {
   uint64_t kernel_object;
   uint32_t group_segment_size;
   uint32_t private_segment_size;
+  uint32_t sgpr_count;
+  uint32_t vgpr_count;
+  uint32_t sgpr_spill_count;
+  uint32_t vgpr_spill_count;
   uint32_t kernel_segment_size;
   uint32_t num_args;
   std::vector<uint64_t> arg_alignments;

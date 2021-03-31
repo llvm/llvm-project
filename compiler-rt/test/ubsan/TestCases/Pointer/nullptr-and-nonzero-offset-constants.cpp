@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
   base = (char *)0;
   result = base + 0;
   // CHECK-C: {{.*}}.cpp:[[@LINE-1]]:17: runtime error: applying zero offset to null pointer
+  // CHECK-CPP-NOT: runtime error:
 
   base = (char *)0;
   result = base + 1;

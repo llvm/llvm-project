@@ -349,7 +349,7 @@ multiclass SelMinMax_pats<PatFrag CmpOp, PatFrag Val,
 }
 
 multiclass MinMax_pats<InstHexagon PickT, InstHexagon PickS,
-                       PatFrag Sel, PatFrag CmpOp,
+                       SDPatternOperator Sel, SDPatternOperator CmpOp,
                        ValueType CmpType, PatFrag CmpPred> {
   def: Pat<(Sel (CmpType (CmpOp CmpPred:$Vs, CmpPred:$Vt)),
                 CmpPred:$Vt, CmpPred:$Vs),

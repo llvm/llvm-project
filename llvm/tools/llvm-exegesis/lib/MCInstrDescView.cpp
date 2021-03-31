@@ -374,8 +374,10 @@ void DumpMCOperand(const MCRegisterInfo &MCRegisterInfo, const MCOperand &Op,
     OS << MCRegisterInfo.getName(Op.getReg());
   else if (Op.isImm())
     OS << Op.getImm();
-  else if (Op.isFPImm())
-    OS << Op.getFPImm();
+  else if (Op.isDFPImm())
+    OS << bit_cast<double>(Op.getDFPImm());
+  else if (Op.isSFPImm())
+    OS << bit_cast<float>(Op.getSFPImm());
   else if (Op.isExpr())
     OS << "Expr";
   else if (Op.isInst())

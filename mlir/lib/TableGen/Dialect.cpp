@@ -77,6 +77,10 @@ bool Dialect::hasRegionResultAttrVerify() const {
   return def->getValueAsBit("hasRegionResultAttrVerify");
 }
 
+bool Dialect::hasOperationInterfaceFallback() const {
+  return def->getValueAsBit("hasOperationInterfaceFallback");
+}
+
 bool Dialect::operator==(const Dialect &other) const {
   return def == other.def;
 }

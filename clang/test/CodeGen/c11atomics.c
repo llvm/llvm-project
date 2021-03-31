@@ -45,13 +45,13 @@ _Atomic(vector) v;
 void testinc(void)
 {
   // Special case for suffix bool++, sets to true and returns the old value.
-  // CHECK: atomicrmw xchg i8* @b, i8 1 seq_cst
+  // CHECK: atomicrmw xchg i8* @b, i8 1 seq_cst, align 1
   b++;
-  // CHECK: atomicrmw add i32* @i, i32 1 seq_cst
+  // CHECK: atomicrmw add i32* @i, i32 1 seq_cst, align 4
   i++;
-  // CHECK: atomicrmw add i64* @l, i64 1 seq_cst
+  // CHECK: atomicrmw add i64* @l, i64 1 seq_cst, align 8
   l++;
-  // CHECK: atomicrmw add i16* @s, i16 1 seq_cst
+  // CHECK: atomicrmw add i16* @s, i16 1 seq_cst, align 2
   s++;
   // Prefix increment
   // Special case for bool: set to true and return true
@@ -60,13 +60,13 @@ void testinc(void)
   // Currently, we have no variant of atomicrmw that returns the new value, so
   // we have to generate an atomic add, which returns the old value, and then a
   // non-atomic add.
-  // CHECK: atomicrmw add i32* @i, i32 1 seq_cst
+  // CHECK: atomicrmw add i32* @i, i32 1 seq_cst, align 4
   // CHECK: add i32
   ++i;
-  // CHECK: atomicrmw add i64* @l, i64 1 seq_cst
+  // CHECK: atomicrmw add i64* @l, i64 1 seq_cst, align 8
   // CHECK: add i64
   ++l;
-  // CHECK: atomicrmw add i16* @s, i16 1 seq_cst
+  // CHECK: atomicrmw add i16* @s, i16 1 seq_cst, align 2
   // CHECK: add i16
   ++s;
 }
@@ -75,21 +75,21 @@ void testdec(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
   b--;
-  // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst
+  // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst, align 4
   i--;
-  // CHECK: atomicrmw sub i64* @l, i64 1 seq_cst
+  // CHECK: atomicrmw sub i64* @l, i64 1 seq_cst, align 8
   l--;
-  // CHECK: atomicrmw sub i16* @s, i16 1 seq_cst
+  // CHECK: atomicrmw sub i16* @s, i16 1 seq_cst, align 2
   s--;
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
   --b;
-  // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst
+  // CHECK: atomicrmw sub i32* @i, i32 1 seq_cst, align 4
   // CHECK: sub i32
   --i;
-  // CHECK: atomicrmw sub i64* @l, i64 1 seq_cst
+  // CHECK: atomicrmw sub i64* @l, i64 1 seq_cst, align 8
   // CHECK: sub i64
   --l;
-  // CHECK: atomicrmw sub i16* @s, i16 1 seq_cst
+  // CHECK: atomicrmw sub i16* @s, i16 1 seq_cst, align 2
   // CHECK: sub i16
   --s;
 }
@@ -97,9 +97,9 @@ void testdec(void)
 void testaddeq(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
-  // CHECK: atomicrmw add i32* @i, i32 42 seq_cst
-  // CHECK: atomicrmw add i64* @l, i64 42 seq_cst
-  // CHECK: atomicrmw add i16* @s, i16 42 seq_cst
+  // CHECK: atomicrmw add i32* @i, i32 42 seq_cst, align 4
+  // CHECK: atomicrmw add i64* @l, i64 42 seq_cst, align 8
+  // CHECK: atomicrmw add i16* @s, i16 42 seq_cst, align 2
   b += 42;
   i += 42;
   l += 42;
@@ -109,9 +109,9 @@ void testaddeq(void)
 void testsubeq(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
-  // CHECK: atomicrmw sub i32* @i, i32 42 seq_cst
-  // CHECK: atomicrmw sub i64* @l, i64 42 seq_cst
-  // CHECK: atomicrmw sub i16* @s, i16 42 seq_cst
+  // CHECK: atomicrmw sub i32* @i, i32 42 seq_cst, align 4
+  // CHECK: atomicrmw sub i64* @l, i64 42 seq_cst, align 8
+  // CHECK: atomicrmw sub i16* @s, i16 42 seq_cst, align 2
   b -= 42;
   i -= 42;
   l -= 42;
@@ -121,9 +121,9 @@ void testsubeq(void)
 void testxoreq(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
-  // CHECK: atomicrmw xor i32* @i, i32 42 seq_cst
-  // CHECK: atomicrmw xor i64* @l, i64 42 seq_cst
-  // CHECK: atomicrmw xor i16* @s, i16 42 seq_cst
+  // CHECK: atomicrmw xor i32* @i, i32 42 seq_cst, align 4
+  // CHECK: atomicrmw xor i64* @l, i64 42 seq_cst, align 8
+  // CHECK: atomicrmw xor i16* @s, i16 42 seq_cst, align 2
   b ^= 42;
   i ^= 42;
   l ^= 42;
@@ -133,9 +133,9 @@ void testxoreq(void)
 void testoreq(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
-  // CHECK: atomicrmw or i32* @i, i32 42 seq_cst
-  // CHECK: atomicrmw or i64* @l, i64 42 seq_cst
-  // CHECK: atomicrmw or i16* @s, i16 42 seq_cst
+  // CHECK: atomicrmw or i32* @i, i32 42 seq_cst, align 4
+  // CHECK: atomicrmw or i64* @l, i64 42 seq_cst, align 8
+  // CHECK: atomicrmw or i16* @s, i16 42 seq_cst, align 2
   b |= 42;
   i |= 42;
   l |= 42;
@@ -145,9 +145,9 @@ void testoreq(void)
 void testandeq(void)
 {
   // CHECK: call arm_aapcscc zeroext i1 @__atomic_compare_exchange(i32 1, i8* @b
-  // CHECK: atomicrmw and i32* @i, i32 42 seq_cst
-  // CHECK: atomicrmw and i64* @l, i64 42 seq_cst
-  // CHECK: atomicrmw and i16* @s, i16 42 seq_cst
+  // CHECK: atomicrmw and i32* @i, i32 42 seq_cst, align 4
+  // CHECK: atomicrmw and i64* @l, i64 42 seq_cst, align 8
+  // CHECK: atomicrmw and i16* @s, i16 42 seq_cst, align 2
   b &= 42;
   i &= 42;
   l &= 42;

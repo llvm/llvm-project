@@ -1,5 +1,5 @@
-; RUN: opt < %s -loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s
-; RUN: opt < %s -loop-unroll -unroll-runtime=true -verify-dom-info -unroll-runtime-multi-exit=false -verify-loop-info -S | FileCheck %s -check-prefix=NOUNROLL
+; RUN: opt < %s -unroll-runtime-other-exit-predictable=false -loop-unroll -unroll-runtime=true -verify-dom-info -verify-loop-info -instcombine -S | FileCheck %s
+; RUN: opt < %s -unroll-runtime-other-exit-predictable=false -loop-unroll -unroll-runtime=true -verify-dom-info -unroll-runtime-multi-exit=false -verify-loop-info -S | FileCheck %s -check-prefix=NOUNROLL
 
 ; this tests when unrolling multiple exit loop occurs by default (i.e. without specifying -unroll-runtime-multi-exit)
 

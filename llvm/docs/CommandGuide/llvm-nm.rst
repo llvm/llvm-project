@@ -149,7 +149,8 @@ OPTIONS
 
 .. option:: --format=<format>, -f
 
- Select an output format; *format* may be *sysv*, *posix*, *darwin*, or *bsd*.
+ Select an output format; *format* may be *sysv*, *posix*, *darwin*, *bsd* or
+ *just-symbols*.
  The default is *bsd*.
 
 .. option:: --help, -h
@@ -162,7 +163,7 @@ OPTIONS
 
 .. option:: --just-symbol-name, -j
 
- Print just the symbol names.
+ Print just the symbol names. Alias for `--format=just-symbols``.
 
 .. option:: -m
 
@@ -203,6 +204,10 @@ OPTIONS
 .. option:: --print-size, -S
 
  Show symbol size as well as address (not applicable for Mach-O).
+
+.. option:: --quiet
+
+ Suppress 'no symbols' diagnostic.
 
 .. option:: --radix=<RADIX>, -t
 

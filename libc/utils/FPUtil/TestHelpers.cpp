@@ -10,8 +10,6 @@
 
 #include "FPBits.h"
 
-#include "llvm/ADT/StringExtras.h"
-
 #include <string>
 
 namespace __llvm_libc {
@@ -26,7 +24,7 @@ uintToHex(T X, size_t Length = sizeof(T) * 2) {
 
   for (auto it = s.rbegin(), end = s.rend(); it != end; ++it, X >>= 4) {
     unsigned char Mod = static_cast<unsigned char>(X) & 15;
-    *it = llvm::hexdigit(Mod, true);
+    *it = (Mod < 10 ? '0' + Mod : 'a' + Mod - 10);
   }
 
   return s;

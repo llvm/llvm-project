@@ -340,7 +340,8 @@ class VSCodeTestCaseBase(TestBase):
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
                          terminateCommands=None, sourcePath=None,
-                         debuggerRoot=None, runInTerminal=False):
+                         debuggerRoot=None, runInTerminal=False,
+                         disconnectAutomatically=True):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and launch the process.
         '''
@@ -350,4 +351,5 @@ class VSCodeTestCaseBase(TestBase):
         return self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal)
+                    terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal,
+                    disconnectAutomatically=disconnectAutomatically)

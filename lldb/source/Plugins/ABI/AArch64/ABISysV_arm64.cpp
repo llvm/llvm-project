@@ -356,6 +356,7 @@ bool ABISysV_arm64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
 
   row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 2 * ptr_size);
   row->SetOffset(0);
+  row->SetUnspecifiedRegistersAreUndefined(true);
 
   row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, ptr_size * -2, true);
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * -1, true);
@@ -622,7 +623,7 @@ ValueObjectSP ABISysV_arm64::GetReturnValueObjectImpl(
 
   const uint32_t type_flags = return_compiler_type.GetTypeInfo(nullptr);
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
-    value.SetValueType(Value::eValueTypeScalar);
+    value.SetValueType(Value::ValueType::Scalar);
 
     bool success = false;
     if (type_flags & eTypeIsInteger || type_flags & eTypeIsPointer) {

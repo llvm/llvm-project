@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Timer.h"
 #include "Utility/UuidCompatibility.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -138,7 +139,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   size_t framework_pos = raw_path.find("LLDB.framework");
   if (framework_pos != std::string::npos) {
     framework_pos += strlen("LLDB.framework");
-#if TARGET_OS_EMBEDDED
+#if TARGET_OS_IPHONE
     // Shallow bundle
     raw_path.resize(framework_pos);
 #else
@@ -473,6 +474,8 @@ llvm::StringRef HostInfoMacOSX::GetXcodeSDKPath(XcodeSDK sdk) {
   static std::mutex g_sdk_path_mutex;
 
   std::lock_guard<std::mutex> guard(g_sdk_path_mutex);
+  LLDB_SCOPED_TIMER();
+
   auto it = g_sdk_path.find(sdk.GetString());
   if (it != g_sdk_path.end())
     return it->second;

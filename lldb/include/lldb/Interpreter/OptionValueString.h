@@ -17,32 +17,25 @@
 
 namespace lldb_private {
 
-class OptionValueString : public OptionValue {
+class OptionValueString : public Cloneable<OptionValueString, OptionValue> {
 public:
   typedef Status (*ValidatorCallback)(const char *string, void *baton);
 
   enum Options { eOptionEncodeCharacterEscapeSequences = (1u << 0) };
 
-  OptionValueString()
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {}
+  OptionValueString() = default;
 
   OptionValueString(ValidatorCallback validator, void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {}
+      : m_validator(validator), m_validator_baton(baton) {}
 
-  OptionValueString(const char *value)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {
+  OptionValueString(const char *value) {
     if (value && value[0]) {
       m_current_value.assign(value);
       m_default_value.assign(value);
     }
   }
 
-  OptionValueString(const char *current_value, const char *default_value)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(), m_validator_baton() {
+  OptionValueString(const char *current_value, const char *default_value) {
     if (current_value && current_value[0])
       m_current_value.assign(current_value);
     if (default_value && default_value[0])
@@ -51,8 +44,7 @@ public:
 
   OptionValueString(const char *value, ValidatorCallback validator,
                     void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {
+      : m_validator(validator), m_validator_baton(baton) {
     if (value && value[0]) {
       m_current_value.assign(value);
       m_default_value.assign(value);
@@ -61,8 +53,7 @@ public:
 
   OptionValueString(const char *current_value, const char *default_value,
                     ValidatorCallback validator, void *baton = nullptr)
-      : OptionValue(), m_current_value(), m_default_value(), m_options(),
-        m_validator(validator), m_validator_baton(baton) {
+      : m_validator(validator), m_validator_baton(baton) {
     if (current_value && current_value[0])
       m_current_value.assign(current_value);
     if (default_value && default_value[0])
@@ -81,16 +72,11 @@ public:
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void Clear() override {
     m_current_value = m_default_value;
     m_value_was_set = false;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   // Subclass specific functions
 
@@ -109,7 +95,6 @@ public:
   const char *GetDefaultValue() const { return m_default_value.c_str(); }
   llvm::StringRef GetDefaultValueAsRef() const { return m_default_value; }
 
-  Status SetCurrentValue(const char *) = delete;
   Status SetCurrentValue(llvm::StringRef value);
 
   Status AppendToCurrentValue(const char *value);
@@ -129,8 +114,8 @@ protected:
   std::string m_current_value;
   std::string m_default_value;
   Flags m_options;
-  ValidatorCallback m_validator;
-  void *m_validator_baton;
+  ValidatorCallback m_validator = nullptr;
+  void *m_validator_baton = nullptr;
 };
 
 } // namespace lldb_private

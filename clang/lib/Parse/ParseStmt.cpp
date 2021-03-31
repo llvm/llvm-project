@@ -20,6 +20,8 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/TypoCorrection.h"
+#include "llvm/ADT/STLExtras.h"
+
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -98,10 +100,15 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
+  // Because we're parsing either a statement or a declaration, the order of
+  // attribute parsing is important. [[]] attributes at the start of a
+  // statement are different from [[]] attributes that follow an __attribute__
+  // at the start of the statement. Thus, we're not using MaybeParseAttributes
+  // here because we don't want to allow arbitrary orderings.
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs, nullptr, /*MightBeObjCMessageSend*/ true);
-  if (!MaybeParseOpenCLUnrollHintAttribute(Attrs))
-    return StmtError();
+  if (getLangOpts().OpenCL)
+    MaybeParseGNUAttributes(Attrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, Attrs);
@@ -165,14 +172,13 @@ Retry:
   switch (Kind) {
   case tok::at: // May be a @try or @throw statement
     {
-      ProhibitAttributes(Attrs); // TODO: is it correct?
       AtLoc = ConsumeToken();  // consume @
       return ParseObjCAtStatement(AtLoc, StmtCtx);
     }
 
   case tok::code_completion:
-    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     cutOffParsing();
+    Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     return StmtError();
 
   case tok::identifier: {
@@ -210,7 +216,11 @@ Retry:
     if ((getLangOpts().CPlusPlus || getLangOpts().MicrosoftExt ||
          (StmtCtx & ParsedStmtContext::AllowDeclarationsInC) !=
              ParsedStmtContext()) &&
-        (GNUAttributeLoc.isValid() || isDeclarationStatement())) {
+        ((GNUAttributeLoc.isValid() &&
+          !(!Attrs.empty() &&
+            llvm::all_of(
+                Attrs, [](ParsedAttr &Attr) { return Attr.isStmtAttr(); }))) ||
+         isDeclarationStatement())) {
       SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       DeclGroupPtrTy Decl;
       if (GNUAttributeLoc.isValid()) {
@@ -715,8 +725,8 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
     ColonLoc = SourceLocation();
 
     if (Tok.is(tok::code_completion)) {
-      Actions.CodeCompleteCase(getCurScope());
       cutOffParsing();
+      Actions.CodeCompleteCase(getCurScope());
       return StmtError();
     }
 
@@ -1461,8 +1471,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     // Pop the 'else' scope if needed.
     InnerScope.Exit();
   } else if (Tok.is(tok::code_completion)) {
-    Actions.CodeCompleteAfterIf(getCurScope(), IsBracedThen);
     cutOffParsing();
+    Actions.CodeCompleteAfterIf(getCurScope(), IsBracedThen);
     return StmtError();
   } else if (InnerStatementTrailingElseLoc.isValid()) {
     Diag(InnerStatementTrailingElseLoc, diag::warn_dangling_else);
@@ -1816,10 +1826,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   FullExprArg ThirdPart(Actions);
 
   if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
     Actions.CodeCompleteOrdinaryName(getCurScope(),
                                      C99orCXXorObjC? Sema::PCC_ForInit
                                                    : Sema::PCC_Expression);
-    cutOffParsing();
     return StmtError();
   }
 
@@ -1887,8 +1897,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       ConsumeToken(); // consume 'in'
 
       if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteObjCForCollection(getCurScope(), DG);
         cutOffParsing();
+        Actions.CodeCompleteObjCForCollection(getCurScope(), DG);
         return StmtError();
       }
       Collection = ParseExpression();
@@ -1923,8 +1933,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       ConsumeToken(); // consume 'in'
 
       if (Tok.is(tok::code_completion)) {
-        Actions.CodeCompleteObjCForCollection(getCurScope(), nullptr);
         cutOffParsing();
+        Actions.CodeCompleteObjCForCollection(getCurScope(), nullptr);
         return StmtError();
       }
       Collection = ParseExpression();
@@ -1948,7 +1958,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   }
 
   // Parse the second part of the for specifier.
-  getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
   if (!ForEach && !ForRangeInfo.ParsedForRangeDecl() &&
       !SecondPart.isInvalid()) {
     // Parse the second part of the for specifier.
@@ -1964,7 +1973,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
         SecondPart =
             ParseCXXCondition(nullptr, ForLoc, Sema::ConditionKind::Boolean,
-                              MightBeForRangeStmt ? &ForRangeInfo : nullptr);
+                              MightBeForRangeStmt ? &ForRangeInfo : nullptr,
+                              /*EnterForConditionScope*/ true);
 
         if (ForRangeInfo.ParsedForRangeDecl()) {
           Diag(FirstPart.get() ? FirstPart.get()->getBeginLoc()
@@ -1981,6 +1991,9 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
           }
         }
       } else {
+        // We permit 'continue' and 'break' in the condition of a for loop.
+        getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
+
         ExprResult SecondExpr = ParseExpression();
         if (SecondExpr.isInvalid())
           SecondPart = Sema::ConditionError();
@@ -1991,6 +2004,11 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       }
     }
   }
+
+  // Enter a break / continue scope, if we didn't already enter one while
+  // parsing the second part.
+  if (!(getCurScope()->getFlags() & Scope::ContinueScope))
+    getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
 
   // Parse the third part of the for statement.
   if (!ForEach && !ForRangeInfo.ParsedForRangeDecl()) {
@@ -2177,9 +2195,9 @@ StmtResult Parser::ParseReturnStatement() {
       PreferredType.enterReturn(Actions, Tok.getLocation());
     // FIXME: Code completion for co_return.
     if (Tok.is(tok::code_completion) && !IsCoreturn) {
+      cutOffParsing();
       Actions.CodeCompleteExpression(getCurScope(),
                                      PreferredType.get(Tok.getLocation()));
-      cutOffParsing();
       return StmtError();
     }
 
@@ -2547,20 +2565,4 @@ void Parser::ParseMicrosoftIfExistsStatement(StmtVector &Stmts) {
       Stmts.push_back(R.get());
   }
   Braces.consumeClose();
-}
-
-bool Parser::ParseOpenCLUnrollHintAttribute(ParsedAttributes &Attrs) {
-  MaybeParseGNUAttributes(Attrs);
-
-  if (Attrs.empty())
-    return true;
-
-  if (Attrs.begin()->getKind() != ParsedAttr::AT_OpenCLUnrollHint)
-    return true;
-
-  if (!(Tok.is(tok::kw_for) || Tok.is(tok::kw_while) || Tok.is(tok::kw_do))) {
-    Diag(Tok, diag::err_opencl_unroll_hint_on_non_loop);
-    return false;
-  }
-  return true;
 }

@@ -8,9 +8,8 @@ body: |
     liveins: $q0
     ; CHECK-LABEL: name: test_eve_1
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[C]](s32)
-    ; CHECK: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[SEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x s64>), [[C]](s64)
     ; CHECK: $x0 = COPY [[EVEC]](s64)
     ; CHECK: RET_ReallyLR
     %0:_(<2 x s64>) = COPY $q0

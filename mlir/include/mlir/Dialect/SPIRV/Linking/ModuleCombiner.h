@@ -41,10 +41,10 @@ class ModuleOp;
 ///
 /// For deduplication, the following 3 cases are taken into consideration:
 ///
-///   - If 2 spv.globalVariable's have either the same descriptor set + binding
+///   - If 2 spv.GlobalVariable's have either the same descriptor set + binding
 ///   or the same build_in attribute value, then replace one of them using the
 ///   other.
-///   - If 2 spv.specConstant's have the same spec_id attribute value, then
+///   - If 2 spv.SpecConstant's have the same spec_id attribute value, then
 ///   replace one of them using the other.
 ///   - If 2 spv.func's are identical replace one of them using the other.
 ///

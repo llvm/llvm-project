@@ -19,7 +19,8 @@ namespace __dfsan {
 #if defined(__x86_64__)
 struct Mapping {
   static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnionTableAddr = 0x200000000000;
+  static const uptr kOriginAddr = 0x200000000000;
+  static const uptr kUnionTableAddr = 0x300000000000;
   static const uptr kAppAddr = 0x700000008000;
   static const uptr kShadowMask = ~0x700000000000;
 };
@@ -60,6 +61,9 @@ extern int vmaSize;
 
 enum MappingType {
   MAPPING_SHADOW_ADDR,
+#if defined(__x86_64__)
+  MAPPING_ORIGIN_ADDR,
+#endif
   MAPPING_UNION_TABLE_ADDR,
   MAPPING_APP_ADDR,
   MAPPING_SHADOW_MASK
@@ -69,6 +73,10 @@ template<typename Mapping, int Type>
 uptr MappingImpl(void) {
   switch (Type) {
     case MAPPING_SHADOW_ADDR: return Mapping::kShadowAddr;
+#if defined(__x86_64__)
+    case MAPPING_ORIGIN_ADDR:
+      return Mapping::kOriginAddr;
+#endif
     case MAPPING_UNION_TABLE_ADDR: return Mapping::kUnionTableAddr;
     case MAPPING_APP_ADDR: return Mapping::kAppAddr;
     case MAPPING_SHADOW_MASK: return Mapping::kShadowMask;
@@ -93,6 +101,15 @@ uptr MappingArchImpl(void) {
 ALWAYS_INLINE
 uptr ShadowAddr() {
   return MappingArchImpl<MAPPING_SHADOW_ADDR>();
+}
+
+ALWAYS_INLINE
+uptr OriginAddr() {
+#if defined(__x86_64__)
+  return MappingArchImpl<MAPPING_ORIGIN_ADDR>();
+#else
+  return 0;
+#endif
 }
 
 ALWAYS_INLINE

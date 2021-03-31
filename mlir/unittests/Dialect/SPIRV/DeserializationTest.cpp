@@ -189,11 +189,11 @@ TEST_F(DeserializationTest, OpMemberNameSuccess) {
   std::swap(typeDecl, binary);
 
   SmallVector<uint32_t, 5> operands1 = {structType, 0};
-  spirv::encodeStringLiteralInto(operands1, "i1");
+  (void)spirv::encodeStringLiteralInto(operands1, "i1");
   addInstruction(spirv::Opcode::OpMemberName, operands1);
 
   SmallVector<uint32_t, 5> operands2 = {structType, 1};
-  spirv::encodeStringLiteralInto(operands2, "i2");
+  (void)spirv::encodeStringLiteralInto(operands2, "i2");
   addInstruction(spirv::Opcode::OpMemberName, operands2);
 
   binary.append(typeDecl.begin(), typeDecl.end());
@@ -228,7 +228,7 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
   std::swap(typeDecl, binary);
 
   SmallVector<uint32_t, 5> operands = {structType, 0};
-  spirv::encodeStringLiteralInto(operands, "int32");
+  (void)spirv::encodeStringLiteralInto(operands, "int32");
   operands.push_back(42);
   addInstruction(spirv::Opcode::OpMemberName, operands);
 

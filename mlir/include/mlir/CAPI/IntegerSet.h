@@ -19,6 +19,6 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/IntegerSet.h"
 
-DEFINE_C_API_METHODS(MlirIntegerSet, mlir::IntegerSet);
+DEFINE_C_API_METHODS(MlirIntegerSet, mlir::IntegerSet)
 
 #endif // MLIR_CAPI_INTEGERSET_H

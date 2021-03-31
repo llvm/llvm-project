@@ -130,7 +130,7 @@ private:
   /// Initialize all of the passes within this pass manager with the given
   /// initialization generation. The initialization generation is used to detect
   /// if a pass manager has already been initialized.
-  void initialize(MLIRContext *context, unsigned newInitGeneration);
+  LogicalResult initialize(MLIRContext *context, unsigned newInitGeneration);
 
   /// A pointer to an internal implementation instance.
   std::unique_ptr<detail::OpPassManagerImpl> impl;
@@ -178,7 +178,6 @@ public:
   /// Run the passes within this manager on the provided operation. The
   /// specified operation must have the same name as the one provided the pass
   /// manager on construction.
-  LLVM_NODISCARD
   LogicalResult run(Operation *op);
 
   /// Return an instance of the context.

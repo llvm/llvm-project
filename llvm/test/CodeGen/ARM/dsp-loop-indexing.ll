@@ -1,8 +1,19 @@
-; RUN: llc -mtriple=thumbv7em -mattr=+fp-armv8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-backedge-indexing=false %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
-; RUN: llc -mtriple=thumbv8 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
-; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-complexity-limit=2147483647 %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-COMPLEX
+; RUN: llc -mtriple=thumbv7em -mattr=+fp-armv8 %s -o - | \
+; RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp %s -o - | \
+; RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-DEFAULT
+
+; -lsr-backedge-indexing=false
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-preferred-addressing-mode=postindexed %s -o - | \
+; RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
+
+; RUN: llc -mtriple=thumbv8 %s -o - | \
+; RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=DISABLED
+
+; RUN: llc -mtriple=thumbv8m.main -mattr=+fp-armv8,+dsp -lsr-complexity-limit=2147483647 %s -o - | \
+; RUN:     FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-COMPLEX
 
 ; CHECK-LABEL: test_qadd_2
 ; CHECK: @ %loop

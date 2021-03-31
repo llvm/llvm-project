@@ -60,17 +60,9 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
 } // end anonymous namespace.
 
 void BuiltinDialect::initialize() {
-  addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
-           Float80Type, Float128Type, FunctionType, IndexType, IntegerType,
-           MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-           RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
-  addAttributes<AffineMapAttr, ArrayAttr, DenseIntOrFPElementsAttr,
-                DenseStringElementsAttr, DictionaryAttr, FloatAttr,
-                SymbolRefAttr, IntegerAttr, IntegerSetAttr, OpaqueAttr,
-                OpaqueElementsAttr, SparseElementsAttr, StringAttr, TypeAttr,
-                UnitAttr>();
-  addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
-                UnknownLoc>();
+  registerTypes();
+  registerAttributes();
+  registerLocationAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/IR/BuiltinOps.cpp.inc"
@@ -90,7 +82,7 @@ FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
   return cast<FuncOp>(Operation::create(state));
 }
 FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
-                      iterator_range<dialect_attr_iterator> attrs) {
+                      Operation::dialect_attr_range attrs) {
   SmallVector<NamedAttribute, 8> attrRef(attrs);
   return create(location, name, type, llvm::makeArrayRef(attrRef));
 }
@@ -162,11 +154,11 @@ static LogicalResult verify(FuncOp op) {
 void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
   // Add the attributes of this function to dest.
   llvm::MapVector<Identifier, Attribute> newAttrs;
-  for (auto &attr : dest.getAttrs())
+  for (const auto &attr : dest->getAttrs())
     newAttrs.insert(attr);
-  for (auto &attr : getAttrs())
+  for (const auto &attr : (*this)->getAttrs())
     newAttrs.insert(attr);
-  dest->setAttrs(DictionaryAttr::get(newAttrs.takeVector(), getContext()));
+  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs.takeVector()));
 
   // Clone the body.
   getBody().cloneInto(&dest.getBody(), mapper);
@@ -217,7 +209,7 @@ FuncOp FuncOp::clone() {
 
 void ModuleOp::build(OpBuilder &builder, OperationState &state,
                      Optional<StringRef> name) {
-  ensureTerminator(*state.addRegion(), builder, state.location);
+  state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
         mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
@@ -230,10 +222,21 @@ ModuleOp ModuleOp::create(Location loc, Optional<StringRef> name) {
   return builder.create<ModuleOp>(loc, name);
 }
 
+DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
+  // Take the first and only (if present) attribute that implements the
+  // interface. This needs a linear search, but is called only once per data
+  // layout object construction that is used for repeated queries.
+  for (Attribute attr : llvm::make_second_range(getOperation()->getAttrs())) {
+    if (auto spec = attr.dyn_cast<DataLayoutSpecInterface>())
+      return spec;
+  }
+  return {};
+}
+
 static LogicalResult verify(ModuleOp op) {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : op.getAttrs()) {
+  for (auto attr : op->getAttrs()) {
     if (!attr.first.strref().contains('.') &&
         !llvm::is_contained(
             ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
@@ -242,6 +245,23 @@ static LogicalResult verify(ModuleOp op) {
       return op.emitOpError() << "can only contain attributes with "
                                  "dialect-prefixed names, found: '"
                               << attr.first << "'";
+  }
+
+  // Check that there is at most one data layout spec attribute.
+  StringRef layoutSpecAttrName;
+  DataLayoutSpecInterface layoutSpec;
+  for (const NamedAttribute &na : op->getAttrs()) {
+    if (auto spec = na.second.dyn_cast<DataLayoutSpecInterface>()) {
+      if (layoutSpec) {
+        InFlightDiagnostic diag =
+            op.emitOpError() << "expects at most one data layout attribute";
+        diag.attachNote() << "'" << layoutSpecAttrName
+                          << "' is a data layout attribute";
+        diag.attachNote() << "'" << na.first << "' is a data layout attribute";
+      }
+      layoutSpecAttrName = na.first.strref();
+      layoutSpec = spec;
+    }
   }
 
   return success();

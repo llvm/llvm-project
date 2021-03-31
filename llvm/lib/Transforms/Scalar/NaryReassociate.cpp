@@ -222,15 +222,14 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   for (const auto Node : depth_first(DT)) {
     BasicBlock *BB = Node->getBlock();
-    for (auto I = BB->begin(); I != BB->end(); ++I) {
-      Instruction *OrigI = &*I;
+    for (Instruction &OrigI : *BB) {
       const SCEV *OrigSCEV = nullptr;
-      if (Instruction *NewI = tryReassociate(OrigI, OrigSCEV)) {
+      if (Instruction *NewI = tryReassociate(&OrigI, OrigSCEV)) {
         Changed = true;
-        OrigI->replaceAllUsesWith(NewI);
+        OrigI.replaceAllUsesWith(NewI);
 
         // Add 'OrigI' to the list of dead instructions.
-        DeadInsts.push_back(WeakTrackingVH(OrigI));
+        DeadInsts.push_back(WeakTrackingVH(&OrigI));
         // Add the rewritten instruction to SeenExprs; the original
         // instruction is deleted.
         const SCEV *NewSCEV = SE->getSCEV(NewI);
@@ -258,7 +257,7 @@ bool NaryReassociatePass::doOneIteration(Function &F) {
         if (NewSCEV != OrigSCEV)
           SeenExprs[OrigSCEV].push_back(WeakTrackingVH(NewI));
       } else if (OrigSCEV)
-        SeenExprs[OrigSCEV].push_back(WeakTrackingVH(OrigI));
+        SeenExprs[OrigSCEV].push_back(WeakTrackingVH(&OrigI));
     }
   }
   // Delete all dead instructions from 'DeadInsts'.
@@ -364,8 +363,8 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   // Look for GEP's closest dominator that has the same SCEV as GEP except that
   // the I-th index is replaced with LHS.
   SmallVector<const SCEV *, 4> IndexExprs;
-  for (auto Index = GEP->idx_begin(); Index != GEP->idx_end(); ++Index)
-    IndexExprs.push_back(SE->getSCEV(*Index));
+  for (Use &Index : GEP->indices())
+    IndexExprs.push_back(SE->getSCEV(Index));
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
   if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&

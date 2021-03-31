@@ -14,7 +14,7 @@
 # RUN: yaml2obj %t/fat.dylib.yaml > %t/fat.dylib
 # RUN: %lld -lSystem %t/test.o %t/fat.dylib -o %t/test
 # RUN: llvm-objdump --macho --lazy-bind %t/test | FileCheck %s
-# CHECK: __DATA   __la_symbol_ptr    0x100001008 foo  _foo
+# CHECK: __DATA   __la_symbol_ptr    0x100002000 foo  _foo
 
 #--- test.s
 .globl _main

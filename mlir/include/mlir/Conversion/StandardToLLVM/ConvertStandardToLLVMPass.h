@@ -14,11 +14,14 @@
 #include <memory>
 
 namespace mlir {
+class DataLayout;
 class LLVMTypeConverter;
+class MLIRContext;
 class ModuleOp;
 template <typename T>
 class OperationPass;
-class OwningRewritePatternList;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Value to pass as bitwidth for the index type when the converter is expected
 /// to derive the bitwidth from the LLVM data layout.
@@ -26,10 +29,14 @@ static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 
 /// Options to control the Standard dialect to LLVM lowering. The struct is used
 /// to share lowering options between passes, patterns, and type converter.
-struct LowerToLLVMOptions {
+class LowerToLLVMOptions {
+public:
+  explicit LowerToLLVMOptions(MLIRContext *ctx);
+  explicit LowerToLLVMOptions(MLIRContext *ctx, DataLayout dl);
+
   bool useBarePtrCallConv = false;
   bool emitCWrappers = false;
-  unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout;
+
   /// Use aligned_alloc for heap allocations.
   bool useAlignedAlloc = false;
 
@@ -38,44 +45,52 @@ struct LowerToLLVMOptions {
   // TODO: this should be replaced by MLIR data layout when one exists.
   llvm::DataLayout dataLayout = llvm::DataLayout("");
 
-  /// Get a statically allocated copy of the default LowerToLLVMOptions.
-  static const LowerToLLVMOptions &getDefaultOptions() {
-    static LowerToLLVMOptions options;
-    return options;
+  /// Set the index bitwidth to the given value.
+  void overrideIndexBitwidth(unsigned bitwidth) {
+    assert(bitwidth != kDeriveIndexBitwidthFromDataLayout &&
+           "can only override to a concrete bitwidth");
+    indexBitwidth = bitwidth;
   }
+
+  /// Get the index bitwidth.
+  unsigned getIndexBitwidth() const { return indexBitwidth; }
+
+private:
+  unsigned indexBitwidth;
 };
 
 /// Collect a set of patterns to convert memory-related operations from the
 /// Standard dialect to the LLVM dialect, excluding non-memory-related
 /// operations and FuncOp.
-void populateStdToLLVMMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateStdToLLVMMemoryConversionPatterns(LLVMTypeConverter &converter,
+                                               RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
-void populateStdToLLVMNonMemoryConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateStdToLLVMNonMemoryConversionPatterns(LLVMTypeConverter &converter,
+                                                  RewritePatternSet &patterns);
 
 /// Collect the default pattern to convert a FuncOp to the LLVM dialect. If
 /// `emitCWrappers` is set, the pattern will also produce functions
 /// that pass memref descriptors by pointer-to-structure in addition to the
 /// default unpacked form.
-void populateStdToLLVMFuncOpConversionPattern(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+void populateStdToLLVMFuncOpConversionPattern(LLVMTypeConverter &converter,
+                                              RewritePatternSet &patterns);
 
 /// Collect the patterns to convert from the Standard dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter and the LowerToLLVMOptions
 /// by reference meaning the references have to remain alive during the entire
 /// pattern lifetime.
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         OwningRewritePatternList &patterns);
+                                         RewritePatternSet &patterns);
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// stdlib malloc/free is used by default for allocating memrefs allocated with
-/// std.alloc, while LLVM's alloca is used for those allocated with std.alloca.
+/// memref.alloc, while LLVM's alloca is used for those allocated with
+/// memref.alloca.
+std::unique_ptr<OperationPass<ModuleOp>> createLowerToLLVMPass();
 std::unique_ptr<OperationPass<ModuleOp>>
-createLowerToLLVMPass(const LowerToLLVMOptions &options =
-                          LowerToLLVMOptions::getDefaultOptions());
+createLowerToLLVMPass(const LowerToLLVMOptions &options);
 
 } // namespace mlir
 

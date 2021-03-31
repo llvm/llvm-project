@@ -53,6 +53,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
 #include "mlir/IR/Operation.h"
@@ -425,8 +426,8 @@ private:
 
     // TODO: provide a generic interface to create dialect-specific
     // Alloc and CopyOp nodes.
-    auto alloc = builder.create<AllocOp>(terminator->getLoc(), memRefType,
-                                         dynamicOperands);
+    auto alloc = builder.create<memref::AllocOp>(terminator->getLoc(),
+                                                 memRefType, dynamicOperands);
 
     // Create a new copy operation that copies to contents of the old
     // allocation to the new one.
@@ -499,7 +500,7 @@ private:
           continue;
         // If there is no dealloc node, insert one in the right place.
         OpBuilder builder(nextOp);
-        builder.create<DeallocOp>(alloc.getLoc(), alloc);
+        builder.create<memref::DeallocOp>(alloc.getLoc(), alloc);
       }
     }
   }

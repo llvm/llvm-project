@@ -9,7 +9,7 @@
 #define SINGLE_PRECISION
 #include "fp_lib.h"
 
-#ifndef __SOFT_FP__
+#ifndef __SOFTFP__
 // Support for systems that have hardware floating-point; can set the invalid
 // flag as a side-effect of computation.
 

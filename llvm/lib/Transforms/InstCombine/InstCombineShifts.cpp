@@ -1145,6 +1145,16 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
+    // Look for a "splat" mul pattern - it replicates bits across each half of
+    // a value, so a right shift is just a mask of the low bits:
+    // lshr i32 (mul nuw X, Pow2+1), 16 --> and X, Pow2-1
+    // TODO: Generalize to allow more than just half-width shifts?
+    const APInt *MulC;
+    if (match(Op0, m_NUWMul(m_Value(X), m_APInt(MulC))) &&
+        ShAmt * 2 == BitWidth && (*MulC - 1).isPowerOf2() &&
+        MulC->logBase2() == ShAmt)
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
+
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
         MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmt), 0, &I)) {
@@ -1319,6 +1329,15 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
   // See if we can turn a signed shr into an unsigned shr.
   if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))
     return BinaryOperator::CreateLShr(Op0, Op1);
+
+  // ashr (xor %x, -1), %y  -->  xor (ashr %x, %y), -1
+  Value *X;
+  if (match(Op0, m_OneUse(m_Not(m_Value(X))))) {
+    // Note that we must drop 'exact'-ness of the shift!
+    // Note that we can't keep undef's in -1 vector constant!
+    auto *NewAShr = Builder.CreateAShr(X, Op1, Op0->getName() + ".not");
+    return BinaryOperator::CreateNot(NewAShr);
+  }
 
   return nullptr;
 }

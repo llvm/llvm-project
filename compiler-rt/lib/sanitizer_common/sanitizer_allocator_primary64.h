@@ -19,7 +19,7 @@ template<class SizeClassAllocator> struct SizeClassAllocator64LocalCache;
 // The template parameter Params is a class containing the actual parameters.
 //
 // Space: a portion of address space of kSpaceSize bytes starting at SpaceBeg.
-// If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically my mmap.
+// If kSpaceBeg is ~0 then SpaceBeg is chosen dynamically by mmap.
 // Otherwise SpaceBeg=kSpaceBeg (fixed address).
 // kSpaceSize is a power of two.
 // At the beginning the entire space is mprotect-ed, then small parts of it
@@ -69,25 +69,45 @@ class SizeClassAllocator64 {
     return base + (static_cast<uptr>(ptr32) << kCompactPtrScale);
   }
 
-  void Init(s32 release_to_os_interval_ms) {
+  // If heap_start is nonzero, assumes kSpaceSize bytes are already mapped R/W
+  // at heap_start and places the heap there.  This mode requires kSpaceBeg ==
+  // ~(uptr)0.
+  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
-    if (kUsingConstantSpaceBeg) {
-      CHECK(IsAligned(kSpaceBeg, SizeClassMap::kMaxSize));
-      CHECK_EQ(kSpaceBeg, address_range.Init(TotalSpaceSize,
-                                             PrimaryAllocatorName, kSpaceBeg));
+    PremappedHeap = heap_start != 0;
+    if (PremappedHeap) {
+      CHECK(!kUsingConstantSpaceBeg);
+      NonConstSpaceBeg = heap_start;
+      uptr RegionInfoSize = AdditionalSize();
+      RegionInfoSpace =
+          address_range.Init(RegionInfoSize, PrimaryAllocatorName);
+      CHECK_NE(RegionInfoSpace, ~(uptr)0);
+      CHECK_EQ(RegionInfoSpace,
+               address_range.MapOrDie(RegionInfoSpace, RegionInfoSize,
+                                      "SizeClassAllocator: region info"));
+      MapUnmapCallback().OnMap(RegionInfoSpace, RegionInfoSize);
     } else {
-      // Combined allocator expects that an 2^N allocation is always aligned to
-      // 2^N. For this to work, the start of the space needs to be aligned as
-      // high as the largest size class (which also needs to be a power of 2).
-      NonConstSpaceBeg = address_range.InitAligned(
-          TotalSpaceSize, SizeClassMap::kMaxSize, PrimaryAllocatorName);
-      CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
+      if (kUsingConstantSpaceBeg) {
+        CHECK(IsAligned(kSpaceBeg, SizeClassMap::kMaxSize));
+        CHECK_EQ(kSpaceBeg,
+                 address_range.Init(TotalSpaceSize, PrimaryAllocatorName,
+                                    kSpaceBeg));
+      } else {
+        // Combined allocator expects that an 2^N allocation is always aligned
+        // to 2^N. For this to work, the start of the space needs to be aligned
+        // as high as the largest size class (which also needs to be a power of
+        // 2).
+        NonConstSpaceBeg = address_range.InitAligned(
+            TotalSpaceSize, SizeClassMap::kMaxSize, PrimaryAllocatorName);
+        CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
+      }
+      RegionInfoSpace = SpaceEnd();
+      MapWithCallbackOrDie(RegionInfoSpace, AdditionalSize(),
+                           "SizeClassAllocator: region info");
     }
     SetReleaseToOSIntervalMs(release_to_os_interval_ms);
-    MapWithCallbackOrDie(SpaceEnd(), AdditionalSize(),
-                         "SizeClassAllocator: region info");
     // Check that the RegionInfo array is aligned on the CacheLine size.
-    DCHECK_EQ(SpaceEnd() % kCacheLineSize, 0);
+    DCHECK_EQ(RegionInfoSpace % kCacheLineSize, 0);
   }
 
   s32 ReleaseToOSIntervalMs() const {
@@ -144,6 +164,17 @@ class SizeClassAllocator64 {
     CompactPtrT *free_array = GetFreeArray(region_beg);
 
     BlockingMutexLock l(&region->mutex);
+#if SANITIZER_WINDOWS
+    /* On Windows unmapping of memory during __sanitizer_purge_allocator is
+    explicit and immediate, so unmapped regions must be explicitly mapped back
+    in when they are accessed again. */
+    if (region->rtoi.last_released_bytes > 0) {
+      MmapFixedOrDie(region_beg, region->mapped_user,
+                                      "SizeClassAllocator: region data");
+      region->rtoi.n_freed_at_last_release = 0;
+      region->rtoi.last_released_bytes = 0;
+    }
+#endif
     if (UNLIKELY(region->num_freed_chunks < n_chunks)) {
       if (UNLIKELY(!PopulateFreeArray(stat, class_id, region,
                                       n_chunks - region->num_freed_chunks)))
@@ -360,8 +391,7 @@ class SizeClassAllocator64 {
     }
     ~PackedCounterArray() {
       if (buffer) {
-        memory_mapper->UnmapPackedCounterArrayBuffer(
-            reinterpret_cast<uptr>(buffer), buffer_size);
+        memory_mapper->UnmapPackedCounterArrayBuffer(buffer, buffer_size);
       }
     }
 
@@ -586,6 +616,11 @@ class SizeClassAllocator64 {
 
   atomic_sint32_t release_to_os_interval_ms_;
 
+  uptr RegionInfoSpace;
+
+  // True if the user has already mapped the entire heap R/W.
+  bool PremappedHeap;
+
   struct Stats {
     uptr n_allocated;
     uptr n_freed;
@@ -615,7 +650,7 @@ class SizeClassAllocator64 {
 
   RegionInfo *GetRegionInfo(uptr class_id) const {
     DCHECK_LT(class_id, kNumClasses);
-    RegionInfo *regions = reinterpret_cast<RegionInfo *>(SpaceEnd());
+    RegionInfo *regions = reinterpret_cast<RegionInfo *>(RegionInfoSpace);
     return &regions[class_id];
   }
 
@@ -640,6 +675,9 @@ class SizeClassAllocator64 {
   }
 
   bool MapWithCallback(uptr beg, uptr size, const char *name) {
+    if (PremappedHeap)
+      return beg >= NonConstSpaceBeg &&
+             beg + size <= NonConstSpaceBeg + kSpaceSize;
     uptr mapped = address_range.Map(beg, size, name);
     if (UNLIKELY(!mapped))
       return false;
@@ -649,11 +687,18 @@ class SizeClassAllocator64 {
   }
 
   void MapWithCallbackOrDie(uptr beg, uptr size, const char *name) {
+    if (PremappedHeap) {
+      CHECK_GE(beg, NonConstSpaceBeg);
+      CHECK_LE(beg + size, NonConstSpaceBeg + kSpaceSize);
+      return;
+    }
     CHECK_EQ(beg, address_range.MapOrDie(beg, size, name));
     MapUnmapCallback().OnMap(beg, size);
   }
 
   void UnmapWithCallbackOrDie(uptr beg, uptr size) {
+    if (PremappedHeap)
+      return;
     MapUnmapCallback().OnUnmap(beg, size);
     address_range.Unmap(beg, size);
   }
@@ -792,17 +837,16 @@ class SizeClassAllocator64 {
       return released_bytes;
     }
 
-    uptr MapPackedCounterArrayBuffer(uptr buffer_size) {
+    void *MapPackedCounterArrayBuffer(uptr buffer_size) {
       // TODO(alekseyshl): The idea to explore is to check if we have enough
       // space between num_freed_chunks*sizeof(CompactPtrT) and
       // mapped_free_array to fit buffer_size bytes and use that space instead
       // of mapping a temporary one.
-      return reinterpret_cast<uptr>(
-          MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters"));
+      return MmapOrDieOnFatalError(buffer_size, "ReleaseToOSPageCounters");
     }
 
-    void UnmapPackedCounterArrayBuffer(uptr buffer, uptr buffer_size) {
-      UnmapOrDie(reinterpret_cast<void *>(buffer), buffer_size);
+    void UnmapPackedCounterArrayBuffer(void *buffer, uptr buffer_size) {
+      UnmapOrDie(buffer, buffer_size);
     }
 
     // Releases [from, to) range of pages back to OS.
@@ -823,6 +867,9 @@ class SizeClassAllocator64 {
 
   // Attempts to release RAM occupied by freed chunks back to OS. The region is
   // expected to be locked.
+  //
+  // TODO(morehouse): Support a callback on memory release so HWASan can release
+  // aliases as well.
   void MaybeReleaseToOS(uptr class_id, bool force) {
     RegionInfo *region = GetRegionInfo(class_id);
     const uptr chunk_size = ClassIdToSize(class_id);

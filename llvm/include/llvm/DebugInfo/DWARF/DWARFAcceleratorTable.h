@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
-#define LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -595,4 +595,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFACCELERATORTABLE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H

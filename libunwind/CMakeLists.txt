@@ -63,6 +63,7 @@ option(LIBUNWIND_ENABLE_THREADS "Build libunwind with threading support." ON)
 option(LIBUNWIND_WEAK_PTHREAD_LIB "Use weak references to refer to pthread functions." OFF)
 option(LIBUNWIND_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBUNWIND_INCLUDE_DOCS "Build the libunwind documentation." ${LLVM_INCLUDE_DOCS})
+option(LIBUNWIND_INCLUDE_TESTS "Build the libunwind tests." ${LLVM_INCLUDE_TESTS})
 option(LIBUNWIND_IS_BAREMETAL "Build libunwind for baremetal targets." OFF)
 option(LIBUNWIND_USE_FRAME_HEADER_CACHE "Cache frame headers for unwinding. Requires locking dl_iterate_phdr." OFF)
 option(LIBUNWIND_REMEMBER_HEAP_ALLOC "Use heap instead of the stack for .cfi_remember_state." OFF)
@@ -101,7 +102,7 @@ elseif(LIBUNWIND_BUILD_32_BITS)
   message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
 
-option(LIBUNWIND_HERMETIC_STATIC_LIBRARY
+option(LIBUNWIND_HIDE_SYMBOLS
   "Do not export any symbols from the static library." OFF)
 
 #===============================================================================
@@ -320,7 +321,7 @@ endif()
 
 # Disable DLL annotations on Windows for static builds.
 if (WIN32 AND LIBUNWIND_ENABLE_STATIC AND NOT LIBUNWIND_ENABLE_SHARED)
-  add_definitions(-D_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS)
+  add_definitions(-D_LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
 if (LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
@@ -344,6 +345,6 @@ if (LIBUNWIND_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
 
-if (EXISTS ${LLVM_CMAKE_PATH})
+if (LIBUNWIND_INCLUDE_TESTS AND EXISTS ${LLVM_CMAKE_PATH})
   add_subdirectory(test)
 endif()

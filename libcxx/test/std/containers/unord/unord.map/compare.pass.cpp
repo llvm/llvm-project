@@ -12,8 +12,8 @@
 //           class Alloc = allocator<pair<const Key, T>>>
 // class unordered_map
 
-// https://bugs.llvm.org/show_bug.cgi?id=16538
-// https://bugs.llvm.org/show_bug.cgi?id=16549
+// https://llvm.org/PR16538
+// https://llvm.org/PR16549
 
 #include <unordered_map>
 #include <cassert>

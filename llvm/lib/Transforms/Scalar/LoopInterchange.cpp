@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -186,12 +187,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  unsigned numRows = DepMatrix.size();
-  for (unsigned i = 0; i < numRows; ++i) {
-    char TmpVal = DepMatrix[i][ToIndx];
-    DepMatrix[i][ToIndx] = DepMatrix[i][FromIndx];
-    DepMatrix[i][FromIndx] = TmpVal;
-  }
+  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
+    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
 // Checks if outermost non '=','S'or'I' dependence in the dependence matrix is
@@ -449,7 +446,15 @@ struct LoopInterchange {
     return processLoopList(populateWorklist(*L));
   }
 
-  bool isComputableLoopNest(LoopVector LoopList) {
+  bool run(LoopNest &LN) {
+    const auto &LoopList = LN.getLoops();
+    for (unsigned I = 1; I < LoopList.size(); ++I)
+      if (LoopList[I]->getParentLoop() != LoopList[I - 1])
+        return false;
+    return processLoopList(LoopList);
+  }
+
+  bool isComputableLoopNest(ArrayRef<Loop *> LoopList) {
     for (Loop *L : LoopList) {
       const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
       if (isa<SCEVCouldNotCompute>(ExitCountOuter)) {
@@ -468,13 +473,13 @@ struct LoopInterchange {
     return true;
   }
 
-  unsigned selectLoopForInterchange(const LoopVector &LoopList) {
+  unsigned selectLoopForInterchange(ArrayRef<Loop *> LoopList) {
     // TODO: Add a better heuristic to select the loop to be interchanged based
     // on the dependence matrix. Currently we select the innermost loop.
     return LoopList.size() - 1;
   }
 
-  bool processLoopList(LoopVector LoopList) {
+  bool processLoopList(ArrayRef<Loop *> LoopList) {
     bool Changed = false;
     unsigned LoopNestDepth = LoopList.size();
     if (LoopNestDepth < 2) {
@@ -515,14 +520,12 @@ struct LoopInterchange {
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
     // Move the selected loop outwards to the best possible position.
+    Loop *LoopToBeInterchanged = LoopList[SelecLoopId];
     for (unsigned i = SelecLoopId; i > 0; i--) {
-      bool Interchanged =
-          processLoop(LoopList, i, i - 1, LoopNestExit, DependencyMatrix);
+      bool Interchanged = processLoop(LoopToBeInterchanged, LoopList[i - 1], i,
+                                      i - 1, LoopNestExit, DependencyMatrix);
       if (!Interchanged)
         return Changed;
-      // Loops interchanged reflect the same in LoopList
-      std::swap(LoopList[i - 1], LoopList[i]);
-
       // Update the DependencyMatrix
       interChangeDependencies(DependencyMatrix, i, i - 1);
 #ifdef DUMP_DEP_MATRICIES
@@ -534,14 +537,11 @@ struct LoopInterchange {
     return Changed;
   }
 
-  bool processLoop(LoopVector LoopList, unsigned InnerLoopId,
+  bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
                    unsigned OuterLoopId, BasicBlock *LoopNestExit,
                    std::vector<std::vector<char>> &DependencyMatrix) {
-    LLVM_DEBUG(dbgs() << "Processing Inner Loop Id = " << InnerLoopId
+    LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
-    Loop *InnerLoop = LoopList[InnerLoopId];
-    Loop *OuterLoop = LoopList[OuterLoopId];
-
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
     if (!LIL.canInterchangeLoops(InnerLoopId, OuterLoopId, DependencyMatrix)) {
       LLVM_DEBUG(dbgs() << "Not interchanging loops. Cannot prove legality.\n");
@@ -616,6 +616,22 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
   // the outer loop header when interchanging.
   if (InnerLoopPreHeader != OuterLoopHeader &&
       containsUnsafeInstructions(InnerLoopPreHeader))
+    return false;
+
+  BasicBlock *InnerLoopExit = InnerLoop->getExitBlock();
+  // Ensure the inner loop exit block flows to the outer loop latch possibly
+  // through empty blocks.
+  const BasicBlock &SuccInner =
+      LoopNest::skipEmptyBlockUntil(InnerLoopExit, OuterLoopLatch);
+  if (&SuccInner != OuterLoopLatch) {
+    LLVM_DEBUG(dbgs() << "Inner loop exit block " << *InnerLoopExit
+                      << " does not lead to the outer loop latch.\n";);
+    return false;
+  }
+  // The inner loop exit block does flow to the outer loop latch and not some
+  // other BBs, now make sure it contains safe instructions, since it will be
+  // moved into the (new) inner loop after interchange.
+  if (containsUnsafeInstructions(InnerLoopExit))
     return false;
 
   LLVM_DEBUG(dbgs() << "Loops are perfectly nested\n");
@@ -1269,9 +1285,7 @@ bool LoopInterchangeTransform::transform() {
         assert(!NewI->mayHaveSideEffects() &&
                "Moving instructions with side-effects may change behavior of "
                "the loop nest!");
-        for (auto UI = WorkList[i]->use_begin(), UE = WorkList[i]->use_end();
-             UI != UE;) {
-          Use &U = *UI++;
+        for (Use &U : llvm::make_early_inc_range(WorkList[i]->uses())) {
           Instruction *UserI = cast<Instruction>(U.getUser());
           if (!InnerLoop->contains(UserI->getParent()) ||
               UserI->getParent() == NewLatch || UserI == InductionPHI)
@@ -1682,14 +1696,15 @@ Pass *llvm::createLoopInterchangePass() {
   return new LoopInterchangeLegacyPass();
 }
 
-PreservedAnalyses LoopInterchangePass::run(Loop &L, LoopAnalysisManager &AM,
+PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,
+                                           LoopAnalysisManager &AM,
                                            LoopStandardAnalysisResults &AR,
                                            LPMUpdater &U) {
-  Function &F = *L.getHeader()->getParent();
+  Function &F = *LN.getParent();
 
   DependenceInfo DI(&F, &AR.AA, &AR.SE, &AR.LI);
   OptimizationRemarkEmitter ORE(&F);
-  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &ORE).run(&L))
+  if (!LoopInterchange(&AR.SE, &AR.LI, &DI, &AR.DT, &ORE).run(LN))
     return PreservedAnalyses::all();
   return getLoopPassPreservedAnalyses();
 }

@@ -80,6 +80,13 @@ enum class GuardCFLevel {
   Full,      // Enable all protections.
 };
 
+enum class ICFLevel {
+  None,
+  Safe, // Safe ICF for all sections.
+  All,  // Aggressive ICF for code, but safe ICF for data, similar to MSVC's
+        // behavior.
+};
+
 // Global configuration.
 struct Configuration {
   enum ManifestKind { SideBySide, Embed, No };
@@ -95,7 +102,7 @@ struct Configuration {
   std::string importName;
   bool demangle = true;
   bool doGC = true;
-  bool doICF = true;
+  ICFLevel doICF = ICFLevel::None;
   bool tailMerge;
   bool relocatable = true;
   bool forceMultiple = false;
@@ -207,6 +214,12 @@ struct Configuration {
 
   // Used for /lto-obj-path:
   llvm::StringRef ltoObjPath;
+
+  // Used for /lto-cs-profile-generate:
+  bool ltoCSProfileGenerate = false;
+
+  // Used for /lto-cs-profile-path
+  llvm::StringRef ltoCSProfileFile;
 
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,

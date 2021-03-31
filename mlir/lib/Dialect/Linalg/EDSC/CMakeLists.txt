@@ -10,6 +10,8 @@ add_mlir_dialect_library(MLIRLinalgEDSC
   MLIRAffine
   MLIRAffineEDSC
   MLIRLinalg
+  MLIRMath
+  MLIRMemRef
   MLIRSCF
   MLIRStandard
   )

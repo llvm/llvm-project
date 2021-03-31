@@ -83,6 +83,8 @@ struct ReferencesResult {
   enum ReferenceAttributes : unsigned {
     Declaration = 1 << 0,
     Definition = 1 << 1,
+    // The occurrence is an override of the target base method.
+    Override = 1 << 2,
   };
   struct Reference {
     Location Loc;

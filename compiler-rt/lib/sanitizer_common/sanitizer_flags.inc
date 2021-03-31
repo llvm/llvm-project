@@ -59,6 +59,8 @@ COMMON_FLAG(
     bool, log_exe_name, false,
     "Mention name of executable when reporting error and "
     "append executable name to logs (as in \"log_path.exe_name.pid\").")
+COMMON_FLAG(const char *, log_suffix, nullptr,
+            "String to append to log file name, e.g. \".txt\".")
 COMMON_FLAG(
     bool, log_to_syslog, (bool)SANITIZER_ANDROID || (bool)SANITIZER_MAC,
     "Write all sanitizer output to syslog in addition to other means of "

@@ -5,14 +5,12 @@ import platform
 import re
 import subprocess
 import sys
-import tempfile
 
 import lit.formats
 import lit.util
 
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst
-from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
@@ -83,9 +81,41 @@ if config.llvm_use_sanitizer:
     # Propagate path to symbolizer for ASan/MSan.
     llvm_config.with_system_environment(
         ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])
-llvm_config.with_environment('PATHTOCLANG', llvm_config.config.clang)
-llvm_config.with_environment('PATHTOCLANGPP', llvm_config.use_llvm_tool('clang++'))
-llvm_config.with_environment('PATHTOCLANGCL', llvm_config.use_llvm_tool('clang-cl'))
+
+def add_host_triple(clang):
+  return '{} --target={}'.format(clang, config.host_triple)
+
+# The set of arches we can build.
+targets = set(config.targets_to_build)
+# Add aliases to the target set.
+if 'AArch64' in targets:
+  targets.add('arm64')
+if 'ARM' in config.targets_to_build:
+  targets.add('thumbv7')
+
+def can_target_host():
+  # Check if the targets set contains anything that looks like our host arch.
+  # The arch name in the triple and targets set may be spelled differently
+  # (e.g. x86 vs X86).
+  return any(config.host_triple.lower().startswith(x.lower())
+             for x in targets)
+
+# Dexter tests run on the host machine. If the host arch is supported add
+# 'dexter' as an available feature and force the dexter tests to use the host
+# triple.
+if can_target_host():
+  config.available_features.add('dexter')
+  if config.host_triple != config.target_triple:
+    print('Forcing dexter tests to use host triple {}.'.format(config.host_triple))
+  llvm_config.with_environment('PATHTOCLANG',
+                               add_host_triple(llvm_config.config.clang))
+  llvm_config.with_environment('PATHTOCLANGPP',
+                               add_host_triple(llvm_config.use_llvm_tool('clang++')))
+  llvm_config.with_environment('PATHTOCLANGCL',
+                               add_host_triple(llvm_config.use_llvm_tool('clang-cl')))
+else:
+  print('Host triple {} not supported. Skipping dexter tests in the '
+        'debuginfo-tests project.'.format(config.host_triple))
 
 # Check which debuggers are available:
 built_lldb = llvm_config.use_llvm_tool('lldb', search_env='CLANG')
@@ -102,14 +132,14 @@ if lldb_path is not None:
 # for running a test.
 dexter_path = os.path.join(config.debuginfo_tests_src_root,
                            'dexter', 'dexter.py')
-dexter_test_cmd = '"{}" "{}" test'.format(config.python3_executable, dexter_path)
+dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
 if lldb_path is not None:
   dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
 tools.append(ToolSubst('%dexter', dexter_test_cmd))
 
 # For testing other bits of dexter that aren't under the "test" subcommand,
 # have a %dexter_base substitution.
-dexter_base_cmd = '"{}" "{}"'.format(config.python3_executable, dexter_path)
+dexter_base_cmd = '"{}" "{}"'.format(sys.executable, dexter_path)
 tools.append(ToolSubst('%dexter_base', dexter_base_cmd))
 
 # Set up commands for DexTer regression tests.
@@ -129,9 +159,9 @@ else:
 # Typical command would take the form:
 # ./path_to_py/python.exe ./path_to_dex/dexter.py test --fail-lt 1.0 -w --builder clang --debugger lldb --cflags '-O0 -g'
 dexter_regression_test_command = ' '.join(
-  # "python3", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
-  ["{}".format(config.python3_executable),
-  "{}".format(dexter_path),
+  # "python", "dexter.py", test, fail_mode, builder, debugger, cflags, ldflags
+  ['"{}"'.format(sys.executable),
+  '"{}"'.format(dexter_path),
   'test',
   '--fail-lt 1.0 -w',
   dexter_regression_test_builder,
@@ -149,7 +179,6 @@ lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 # available_features: REQUIRES/UNSUPPORTED lit commands look at this list.
 if platform.system() == 'Darwin':
-    import subprocess
     xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version']).decode("utf-8")
     match = re.search('lldb-(\d+)', xcode_lldb_vers)
     if match:

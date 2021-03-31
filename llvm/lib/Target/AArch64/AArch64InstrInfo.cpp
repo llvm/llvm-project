@@ -35,6 +35,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
@@ -4054,9 +4055,8 @@ bool llvm::rewriteAArch64FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   return false;
 }
 
-void AArch64InstrInfo::getNoop(MCInst &NopInst) const {
-  NopInst.setOpcode(AArch64::HINT);
-  NopInst.addOperand(MCOperand::createImm(0));
+MCInst AArch64InstrInfo::getNop() const {
+  return MCInstBuilder(AArch64::HINT).addImm(0);
 }
 
 // AArch64 supports MachineCombiner.
@@ -7171,6 +7171,26 @@ AArch64InstrInfo::describeLoadedValue(const MachineInstr &MI,
   return TargetInstrInfo::describeLoadedValue(MI, Reg);
 }
 
+bool AArch64InstrInfo::isExtendLikelyToBeFolded(
+    MachineInstr &ExtMI, MachineRegisterInfo &MRI) const {
+  assert(ExtMI.getOpcode() == TargetOpcode::G_SEXT ||
+         ExtMI.getOpcode() == TargetOpcode::G_ZEXT ||
+         ExtMI.getOpcode() == TargetOpcode::G_ANYEXT);
+
+  // Anyexts are nops.
+  if (ExtMI.getOpcode() == TargetOpcode::G_ANYEXT)
+    return true;
+
+  Register DefReg = ExtMI.getOperand(0).getReg();
+  if (!MRI.hasOneNonDBGUse(DefReg))
+    return false;
+
+  // It's likely that a sext/zext as a G_PTR_ADD offset will be folded into an
+  // addressing mode.
+  auto *UserMI = &*MRI.use_instr_nodbg_begin(DefReg);
+  return UserMI->getOpcode() == TargetOpcode::G_PTR_ADD;
+}
+
 uint64_t AArch64InstrInfo::getElementSizeForOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::ElementSizeMask;
 }
@@ -7181,6 +7201,11 @@ bool AArch64InstrInfo::isPTestLikeOpcode(unsigned Opc) const {
 
 bool AArch64InstrInfo::isWhileOpcode(unsigned Opc) const {
   return get(Opc).TSFlags & AArch64::InstrFlagIsWhile;
+}
+
+unsigned int
+AArch64InstrInfo::getTailDuplicateSize(CodeGenOpt::Level OptLevel) const {
+  return OptLevel >= CodeGenOpt::Aggressive ? 6 : 2;
 }
 
 unsigned llvm::getBLRCallOpcode(const MachineFunction &MF) {

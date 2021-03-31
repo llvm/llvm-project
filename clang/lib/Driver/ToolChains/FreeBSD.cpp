@@ -290,6 +290,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
+  addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -408,8 +409,8 @@ void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 void FreeBSD::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
-  addLibStdCXXIncludePaths(getDriver().SysRoot, "/usr/include/c++/4.2", "", "",
-                           "", "", DriverArgs, CC1Args);
+  addLibStdCXXIncludePaths(getDriver().SysRoot + "/usr/include/c++/4.2", "", "",
+                           DriverArgs, CC1Args);
 }
 
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,

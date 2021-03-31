@@ -4,5 +4,5 @@
 
 # Expose the corresponding C-Extension module with a well-known name at this
 # level.
-from .. import _load_extension
+from .._cext_loader import _load_extension
 _cextTransforms = _load_extension("_mlirTransforms")

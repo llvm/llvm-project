@@ -261,6 +261,7 @@ enum class TraceLevel {
 bool fromJSON(const llvm::json::Value &E, TraceLevel &Out, llvm::json::Path);
 
 struct NoParams {};
+inline llvm::json::Value toJSON(const NoParams &) { return nullptr; }
 inline bool fromJSON(const llvm::json::Value &, NoParams &, llvm::json::Path) {
   return true;
 }
@@ -449,9 +450,8 @@ struct ClientCapabilities {
   bool SemanticTokens = false;
   /// Client supports Theia semantic highlighting extension.
   /// https://github.com/microsoft/vscode-languageserver-node/pull/367
-  /// This will be ignored if the client also supports semanticTokens.
+  /// clangd no longer supports this, we detect it just to log a warning.
   /// textDocument.semanticHighlightingCapabilities.semanticHighlighting
-  /// FIXME: drop this support once clients support LSP 3.16 Semantic Tokens.
   bool TheiaSemanticHighlighting = false;
 
   /// Supported encodings for LSP character offsets. (clangd extension).
@@ -474,6 +474,14 @@ struct ClientCapabilities {
   /// This is a clangd extension.
   /// window.implicitWorkDoneProgressCreate
   bool ImplicitProgressCreation = false;
+
+  /// Whether the client claims to cancel stale requests.
+  /// general.staleRequestSupport.cancel
+  bool CancelsStaleRequests = false;
+
+  /// Whether the client implementation supports a refresh request sent from the
+  /// server to the client.
+  bool SemanticTokenRefreshSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &,
               llvm::json::Path);
@@ -541,6 +549,8 @@ struct InitializeParams {
 
   /// The capabilities provided by the client (editor or tool)
   ClientCapabilities capabilities;
+  /// The same data as capabilities, but not parsed (to expose to modules).
+  llvm::json::Object rawCapabilities;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   llvm::Optional<TraceLevel> trace;
@@ -914,26 +924,13 @@ struct TweakArgs {
 bool fromJSON(const llvm::json::Value &, TweakArgs &, llvm::json::Path);
 llvm::json::Value toJSON(const TweakArgs &A);
 
-/// Exact commands are not specified in the protocol so we define the
-/// ones supported by Clangd here. The protocol specifies the command arguments
-/// to be "any[]" but to make this safer and more manageable, each command we
-/// handle maps to a certain llvm::Optional of some struct to contain its
-/// arguments. Different commands could reuse the same llvm::Optional as
-/// arguments but a command that needs different arguments would simply add a
-/// new llvm::Optional and not use any other ones. In practice this means only
-/// one argument type will be parsed and set.
 struct ExecuteCommandParams {
-  // Command to apply fix-its. Uses WorkspaceEdit as argument.
-  const static llvm::StringLiteral CLANGD_APPLY_FIX_COMMAND;
-  // Command to apply the code action. Uses TweakArgs as argument.
-  const static llvm::StringLiteral CLANGD_APPLY_TWEAK;
-
-  /// The command identifier, e.g. CLANGD_APPLY_FIX_COMMAND
+  /// The identifier of the actual command handler.
   std::string command;
 
-  // Arguments
-  llvm::Optional<WorkspaceEdit> workspaceEdit;
-  llvm::Optional<TweakArgs> tweakArgs;
+  // This is `arguments?: []any` in LSP.
+  // All clangd's commands accept a single argument (or none => null).
+  llvm::json::Value argument = nullptr;
 };
 bool fromJSON(const llvm::json::Value &, ExecuteCommandParams &,
               llvm::json::Path);
@@ -993,7 +990,7 @@ struct DocumentSymbol {
   SymbolKind kind;
 
   /// Indicates if this symbol is deprecated.
-  bool deprecated;
+  bool deprecated = false;
 
   /// The range enclosing this symbol not including leading/trailing whitespace
   /// but everything else like comments. This information is typically used to
@@ -1059,8 +1056,13 @@ bool operator==(const SymbolDetails &, const SymbolDetails &);
 
 /// The parameters of a Workspace Symbol Request.
 struct WorkspaceSymbolParams {
-  /// A non-empty query string
+  /// A query string to filter symbols by.
+  /// Clients may send an empty string here to request all the symbols.
   std::string query;
+
+  /// Max results to return, overriding global default. 0 means no limit.
+  /// Clangd extension.
+  llvm::Optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, WorkspaceSymbolParams &,
               llvm::json::Path);
@@ -1109,6 +1111,10 @@ bool fromJSON(const llvm::json::Value &, CompletionContext &, llvm::json::Path);
 
 struct CompletionParams : TextDocumentPositionParams {
   CompletionContext context;
+
+  /// Max results to return, overriding global default. 0 means no limit.
+  /// Clangd extension.
+  llvm::Optional<int> limit;
 };
 bool fromJSON(const llvm::json::Value &, CompletionParams &, llvm::json::Path);
 
@@ -1565,33 +1571,6 @@ struct SemanticTokensOrDelta {
   llvm::Optional<std::vector<SemanticToken>> tokens; // encoded as integer array
 };
 llvm::json::Value toJSON(const SemanticTokensOrDelta &);
-
-/// Represents a semantic highlighting information that has to be applied on a
-/// specific line of the text document.
-struct TheiaSemanticHighlightingInformation {
-  /// The line these highlightings belong to.
-  int Line = 0;
-  /// The base64 encoded string of highlighting tokens.
-  std::string Tokens;
-  /// Is the line in an inactive preprocessor branch?
-  /// This is a clangd extension.
-  /// An inactive line can still contain highlighting tokens as well;
-  /// clients should combine line style and token style if possible.
-  bool IsInactive = false;
-};
-bool operator==(const TheiaSemanticHighlightingInformation &Lhs,
-                const TheiaSemanticHighlightingInformation &Rhs);
-llvm::json::Value
-toJSON(const TheiaSemanticHighlightingInformation &Highlighting);
-
-/// Parameters for the semantic highlighting (server-side) push notification.
-struct TheiaSemanticHighlightingParams {
-  /// The textdocument these highlightings belong to.
-  VersionedTextDocumentIdentifier TextDocument;
-  /// The lines of highlightings that should be sent.
-  std::vector<TheiaSemanticHighlightingInformation> Lines;
-};
-llvm::json::Value toJSON(const TheiaSemanticHighlightingParams &Highlighting);
 
 struct SelectionRangeParams {
   /// The text document.

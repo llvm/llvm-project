@@ -9,9 +9,10 @@
 #ifndef LLD_MACHO_INPUT_SECTION_H
 #define LLD_MACHO_INPUT_SECTION_H
 
+#include "Relocations.h"
+
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/BinaryFormat/MachO.h"
 
 namespace lld {
@@ -21,19 +22,7 @@ class InputFile;
 class InputSection;
 class OutputSection;
 class Symbol;
-
-struct Reloc {
-  uint8_t type;
-  bool pcrel;
-  uint8_t length;
-  // The offset from the start of the subsection that this relocation belongs
-  // to.
-  uint32_t offset;
-  // Adding this offset to the address of the referent symbol or subsection
-  // gives the destination that this relocation refers to.
-  uint64_t addend;
-  llvm::PointerUnion<Symbol *, InputSection *> referent;
-};
+class Defined;
 
 class InputSection {
 public:
@@ -86,6 +75,34 @@ inline bool isDebugSection(uint32_t flags) {
 bool isCodeSection(InputSection *);
 
 extern std::vector<InputSection *> inputSections;
+
+namespace section_names {
+
+constexpr const char pageZero[] = "__pagezero";
+constexpr const char common[] = "__common";
+constexpr const char header[] = "__mach_header";
+constexpr const char rebase[] = "__rebase";
+constexpr const char binding[] = "__binding";
+constexpr const char weakBinding[] = "__weak_binding";
+constexpr const char lazyBinding[] = "__lazy_binding";
+constexpr const char export_[] = "__export";
+constexpr const char functionStarts[] = "__func_starts";
+constexpr const char symbolTable[] = "__symbol_table";
+constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
+constexpr const char stringTable[] = "__string_table";
+constexpr const char codeSignature[] = "__code_signature";
+constexpr const char got[] = "__got";
+constexpr const char threadPtrs[] = "__thread_ptrs";
+constexpr const char unwindInfo[] = "__unwind_info";
+constexpr const char compactUnwind[] = "__compact_unwind";
+constexpr const char ehFrame[] = "__eh_frame";
+constexpr const char text[] = "__text";
+constexpr const char stubs[] = "__stubs";
+constexpr const char stubHelper[] = "__stub_helper";
+constexpr const char laSymbolPtr[] = "__la_symbol_ptr";
+constexpr const char data[] = "__data";
+
+} // namespace section_names
 
 } // namespace macho
 

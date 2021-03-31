@@ -944,7 +944,7 @@ public:
     return nullptr;
   }
 
-  const SDNodeFlags getFlags() const { return Flags; }
+  SDNodeFlags getFlags() const { return Flags; }
   void setFlags(SDNodeFlags NewFlags) { Flags = NewFlags; }
 
   /// Clear any flags in this node that aren't also set in Flags.
@@ -1677,12 +1677,17 @@ bool isNullOrNullSplat(SDValue V, bool AllowUndefs = false);
 /// Return true if the value is a constant 1 integer or a splatted vector of a
 /// constant 1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
-bool isOneOrOneSplat(SDValue V);
+bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 
 /// Return true if the value is a constant -1 integer or a splatted vector of a
 /// constant -1 integer (with no undefs).
 /// Does not permit build vector implicit truncation.
-bool isAllOnesOrAllOnesSplat(SDValue V);
+bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
+
+/// Return true if \p V is either a integer or FP constant.
+inline bool isIntOrFPConstant(SDValue V) {
+  return isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V);
+}
 
 class GlobalAddressSDNode : public SDNode {
   friend class SelectionDAG;

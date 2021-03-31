@@ -32,6 +32,10 @@ def LLVM_Dialect : Dialect {
     static StringRef getDataLayoutAttrName() { return "llvm.data_layout"; }
     static StringRef getAlignAttrName() { return "llvm.align"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
+    static StringRef getLoopAttrName() { return "llvm.loop"; }
+    static StringRef getParallelAccessAttrName() { return "parallel_access"; }
+    static StringRef getLoopOptionsAttrName() { return "options"; }
+    static StringRef getAccessGroupsAttrName() { return "access_groups"; }
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
@@ -63,21 +67,6 @@ def LLVM_AnyInteger : Type<
   CPred<"$_self.isa<::mlir::IntegerType>()">,
   "LLVM integer type">;
 
-// Type constraints accepting LLVM integer type of a specific width.
-class LLVM_IntBase<int width> :
-    Type<And<[
-        LLVM_AnyInteger.predicate,
-        CPred<"$_self.cast<::mlir::IntegerType>().getWidth() == "
-              # width>]>,
-        "LLVM " # width # "-bit integer type">,
-    BuildableType<
-        "::mlir::IntegerType::get($_builder.getContext(), "
-        # width # ")">;
-
-def LLVM_i1 : LLVM_IntBase<1>;
-def LLVM_i8 : LLVM_IntBase<8>;
-def LLVM_i32 : LLVM_IntBase<32>;
-
 // Type constraint accepting LLVM primitive types, i.e. all types except void
 // and function.
 def LLVM_PrimitiveType : Type<
@@ -107,8 +96,8 @@ class LLVM_PointerTo<Type pointee> : Type<
 
 // Type constraints accepting LLVM pointer type to integer of a specific width.
 class LLVM_IntPtrBase<int width> : Type<
-  LLVM_PointerTo<LLVM_IntBase<width>>.predicate,
-  "LLVM pointer to " # LLVM_IntBase<width>.summary>,
+  LLVM_PointerTo<I<width>>.predicate,
+  "LLVM pointer to " # I<width>.summary>,
   BuildableType<"::mlir::LLVM::LLVMPointerType::get("
                 "::mlir::IntegerType::get($_builder.getContext(), "
                 # width #"))">;
@@ -234,12 +223,13 @@ class ListIntSubst<string pattern, list<int> values> {
 // or result in the operation.
 def LLVM_IntrPatterns {
   string operand =
-    [{convertType(opInst.getOperand($0).getType())}];
+    [{moduleTranslation.convertType(opInst.getOperand($0).getType())}];
   string result =
-    [{convertType(opInst.getResult($0).getType())}];
+    [{moduleTranslation.convertType(opInst.getResult($0).getType())}];
   string structResult =
-    [{convertType(opInst.getResult(0).getType().cast<LLVM::LLVMStructType>()
-                                                   .getBody()[$0])}];
+    [{moduleTranslation.convertType(
+        opInst.getResult(0).getType().cast<LLVM::LLVMStructType>()
+              .getBody()[$0])}];
 }
 
 
@@ -258,7 +248,8 @@ def LLVM_IntrPatterns {
 // `llvm::Intrinsic` enum; one usually wants these to be related.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
-                      list<OpTrait> traits, int numResults>
+                      list<OpTrait> traits, int numResults,
+                      bit requiresAccessGroup = 0>
     : LLVM_OpBase<dialect, opName, traits>,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
   string resultPattern = !if(!gt(numResults, 1),
@@ -274,20 +265,22 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             ListIntSubst<LLVM_IntrPatterns.operand,
                          overloadedOperands>.lst), ", ") # [{
         });
-    auto operands = lookupValues(opInst.getOperands());
-    }] # !if(!gt(numResults, 0), "$res = ", "")
-       # [{builder.CreateCall(fn, operands);
-  }];
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    }] # [{auto *inst = builder.CreateCall(fn, operands);
+    }] # !if(!gt(requiresAccessGroup, 0),
+      "moduleTranslation.setAccessGroupsMetadata(op, inst);",
+      "(void) inst;")
+    # !if(!gt(numResults, 0), "$res = inst;", "");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
 // the intrinsic into the LLVM dialect and prefixes its name with "intr.".
 class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<OpTrait> traits,
-                  int numResults>
+                  int numResults, bit requiresAccessGroup = 0>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
-                      numResults>;
+                      numResults, requiresAccessGroup>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -340,7 +333,7 @@ class LLVM_VectorReductionAcc<string mnem>
         { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
                            ", ") # [{
         });
-    auto operands = lookupValues(opInst.getOperands());
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
     llvm::FastMathFlags origFM = builder.getFastMathFlags();
     llvm::FastMathFlags tempFM = origFM;
     tempFM.setAllowReassoc($reassoc);

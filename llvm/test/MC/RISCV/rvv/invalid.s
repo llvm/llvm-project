@@ -1,6 +1,15 @@
 # RUN: not llvm-mc -triple=riscv64 --mattr=+experimental-v --mattr=+f %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
+vsetivli a2, 32, e8,m1
+# CHECK-ERROR: immediate must be an integer in the range [0, 31]
+
+vsetivli a2, zero, e8,m1
+# CHECK-ERROR: immediate must be an integer in the range [0, 31]
+
+vsetivli a2, 5, e31
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
 vsetvli a2, a0, e31
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
@@ -44,6 +53,15 @@ vsetvli a2, a0, e8,m1,tu,mut
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,tut,mu
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1
+# CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+
+vsetvli a2, a0, e8,m1,ta
 # CHECK-ERROR: operand must be e[8|16|32|64|128|256|512|1024],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vadd.vv v1, v3, v2, v4.t
@@ -580,3 +598,70 @@ vnsrl.wv v0, v4, v20, v0.t
 vfncvt.xu.f.w v0, v4, v0.t
 # CHECK-ERROR: The destination vector register group cannot overlap the mask register.
 # CHECK-ERROR-LABEL: vfncvt.xu.f.w v0, v4, v0.t
+
+vl2re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl4re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vl8re8.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs2r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs4r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v1, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v2, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v3, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v4, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v5, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v6, (a0)
+# CHECK-ERROR: invalid operand for instruction
+
+vs8r.v v7, (a0)
+# CHECK-ERROR: invalid operand for instruction
+

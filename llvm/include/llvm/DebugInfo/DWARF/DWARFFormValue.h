@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFFORMVALUE_H
-#define LLVM_DEBUGINFO_DWARFFORMVALUE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
@@ -323,4 +323,4 @@ inline Optional<ArrayRef<uint8_t>> toBlock(const Optional<DWARFFormValue> &V) {
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFFORMVALUE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFFORMVALUE_H

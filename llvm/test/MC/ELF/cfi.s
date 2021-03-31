@@ -1,5 +1,11 @@
+// RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
 // RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sr --sd - | FileCheck %s
 // RUN: not llvm-mc -triple=x86_64 -o - -defsym=ERR=1 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+// ASM:      .cfi_lsda 3, bar
+// ASM-NEXT: nop
+// ASM:      .cfi_personality 0, foo
+// ASM-NEXT: .cfi_lsda 3, bar
 
 f1:
         .cfi_startproc
@@ -438,18 +444,18 @@ f37:
 // CHECK:        }
 
 .ifdef ERR
-// ERR: [[#@LINE+1]]:15: error: Expected an identifier
+// ERR: [[#@LINE+1]]:15: error: expected .eh_frame or .debug_frame
 .cfi_sections $
-// ERR: [[#@LINE+1]]:28: error: unexpected token in '.cfi_sections' directive
+// ERR: [[#@LINE+1]]:28: error: unexpected token
 .cfi_sections .debug_frame $
-// ERR: [[#@LINE+1]]:39: error: unexpected token in '.cfi_sections' directive
+// ERR: [[#@LINE+1]]:39: error: unexpected token
 .cfi_sections .debug_frame, .eh_frame $
 
 // ERR: [[#@LINE+1]]:16: error: unexpected token in '.cfi_startproc' directive
 .cfi_startproc $
-// ERR: [[#@LINE+1]]:23: error: unexpected token in '.cfi_startproc' directive
+// ERR: [[#@LINE+1]]:23: error: expected newline in '.cfi_startproc' directive
 .cfi_startproc simple $
 
-// ERR: [[#@LINE+1]]:14: error: unexpected token in '.cfi_endproc' directive
+// ERR: [[#@LINE+1]]:14: error: expected newline in '.cfi_endproc' directive
 .cfi_endproc $
 .endif

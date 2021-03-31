@@ -158,17 +158,17 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             reg_info['generic']: 1 for reg_info in reg_infos if 'generic' in reg_info}
 
         # Ensure we have a program counter register.
-        self.assertTrue('pc' in generic_regs)
+        self.assertIn('pc', generic_regs)
 
         # Ensure we have a frame pointer register. PPC64le's FP is the same as SP
         if self.getArchitecture() != 'powerpc64le':
-            self.assertTrue('fp' in generic_regs)
+            self.assertIn('fp', generic_regs)
 
         # Ensure we have a stack pointer register.
-        self.assertTrue('sp' in generic_regs)
+        self.assertIn('sp', generic_regs)
 
         # Ensure we have a flags register.
-        self.assertTrue('flags' in generic_regs)
+        self.assertIn('flags', generic_regs)
 
     def test_qRegisterInfo_contains_at_least_one_register_set(self):
         self.build()
@@ -208,6 +208,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         return " avx " in cpuinfo
 
     @expectedFailureAll(oslist=["windows"]) # no avx for now.
+    @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
     @add_test_categories(["llgs"])
     def test_qRegisterInfo_contains_avx_registers(self):
         self.build()
@@ -348,7 +349,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             # Increment loop
             reg_index += 1
 
-    def Hg_switches_to_3_threads(self):
+    def Hg_switches_to_3_threads(self, pass_pid=False):
         # Startup the inferior with three threads (main + 2 new ones).
         procs = self.prep_debug_monitor_and_inferior(
             inferior_args=["thread:new", "thread:new"])
@@ -362,12 +363,16 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         threads = self.wait_for_thread_count(3)
         self.assertEqual(len(threads), 3)
 
+        pid_str = ""
+        if pass_pid:
+            pid_str = "p{0:x}.".format(procs["inferior"].pid)
+
         # verify we can $H to each thead, and $qC matches the thread we set.
         for thread in threads:
             # Change to each thread, verify current thread id.
             self.reset_test_sequence()
             self.test_sequence.add_log_lines(
-                ["read packet: $Hg{0:x}#00".format(thread),  # Set current thread.
+                ["read packet: $Hg{0}{1:x}#00".format(pid_str, thread),  # Set current thread.
                  "send packet: $OK#00",
                  "read packet: $qC#00",
                  {"direction": "send", "regex": r"^\$QC([0-9a-fA-F]+)#", "capture": {1: "thread_id"}}],
@@ -391,6 +396,53 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.build()
         self.set_inferior_startup_attach()
         self.Hg_switches_to_3_threads()
+
+    @expectedFailureAll(oslist=["windows"]) # expect 4 threads
+    def test_Hg_switches_to_3_threads_attach_pass_correct_pid(self):
+        self.build()
+        self.set_inferior_startup_attach()
+        self.Hg_switches_to_3_threads(pass_pid=True)
+
+    def Hg_fails_on_pid(self, pass_pid):
+        # Start the inferior.
+        procs = self.prep_debug_monitor_and_inferior(
+            inferior_args=["thread:new"])
+
+        self.run_process_then_stop(run_seconds=1)
+
+        threads = self.wait_for_thread_count(2)
+        self.assertEqual(len(threads), 2)
+
+        if pass_pid == -1:
+            pid_str = "p-1."
+        else:
+            pid_str = "p{0:x}.".format(pass_pid)
+        thread = threads[1]
+
+        self.test_sequence.add_log_lines(
+            ["read packet: $Hg{0}{1:x}#00".format(pid_str, thread),  # Set current thread.
+             "send packet: $Eff#00"],
+            True)
+
+        self.expect_gdbremote_sequence()
+
+    @expectedFailureAll(oslist=["windows"])
+    def test_Hg_fails_on_another_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.Hg_fails_on_pid(1)
+
+    @expectedFailureAll(oslist=["windows"])
+    def test_Hg_fails_on_zero_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.Hg_fails_on_pid(0)
+
+    @expectedFailureAll(oslist=["windows"])
+    def test_Hg_fails_on_minus_one_pid(self):
+        self.build()
+        self.set_inferior_startup_launch()
+        self.Hg_fails_on_pid(-1)
 
     def Hc_then_Csignal_signals_correct_thread(self, segfault_signo):
         # NOTE only run this one in inferior-launched mode: we can't grab inferior stdout when running attached,
@@ -442,7 +494,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
             # Ensure we haven't seen this tid yet.
             thread_id = int(context.get("thread_id"), 16)
-            self.assertFalse(thread_id in signaled_tids)
+            self.assertNotIn(thread_id, signaled_tids)
             signaled_tids[thread_id] = 1
 
             # Send SIGUSR1 to the thread that signaled the SIGSEGV.
@@ -490,7 +542,7 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
             print_thread_id = context.get("print_thread_id")
             self.assertIsNotNone(print_thread_id)
             print_thread_id = int(print_thread_id, 16)
-            self.assertFalse(print_thread_id in print_thread_ids)
+            self.assertNotIn(print_thread_id, print_thread_ids)
 
             # Now remember this print (i.e. inferior-reflected) thread id and
             # ensure we don't hit it again.
@@ -629,12 +681,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         mem_region_dict = self.parse_memory_region_packet(context)
 
         # Ensure there are no errors reported.
-        self.assertFalse("error" in mem_region_dict)
+        self.assertNotIn("error", mem_region_dict)
 
         # Ensure code address is readable and executable.
-        self.assertTrue("permissions" in mem_region_dict)
-        self.assertTrue("r" in mem_region_dict["permissions"])
-        self.assertTrue("x" in mem_region_dict["permissions"])
+        self.assertIn("permissions", mem_region_dict)
+        self.assertIn("r", mem_region_dict["permissions"])
+        self.assertIn("x", mem_region_dict["permissions"])
 
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(code_address, mem_region_dict)
@@ -681,12 +733,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         mem_region_dict = self.parse_memory_region_packet(context)
 
         # Ensure there are no errors reported.
-        self.assertFalse("error" in mem_region_dict)
+        self.assertNotIn("error", mem_region_dict)
 
         # Ensure address is readable and executable.
-        self.assertTrue("permissions" in mem_region_dict)
-        self.assertTrue("r" in mem_region_dict["permissions"])
-        self.assertTrue("w" in mem_region_dict["permissions"])
+        self.assertIn("permissions", mem_region_dict)
+        self.assertIn("r", mem_region_dict["permissions"])
+        self.assertIn("w", mem_region_dict["permissions"])
 
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(
@@ -734,12 +786,12 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         mem_region_dict = self.parse_memory_region_packet(context)
 
         # Ensure there are no errors reported.
-        self.assertFalse("error" in mem_region_dict)
+        self.assertNotIn("error", mem_region_dict)
 
         # Ensure address is readable and executable.
-        self.assertTrue("permissions" in mem_region_dict)
-        self.assertTrue("r" in mem_region_dict["permissions"])
-        self.assertTrue("w" in mem_region_dict["permissions"])
+        self.assertIn("permissions", mem_region_dict)
+        self.assertIn("r", mem_region_dict["permissions"])
+        self.assertIn("w", mem_region_dict["permissions"])
 
         # Ensure the start address and size encompass the address we queried.
         self.assert_address_within_memory_region(heap_address, mem_region_dict)

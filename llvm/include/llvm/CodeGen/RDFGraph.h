@@ -221,8 +221,8 @@
 // mark " indicates that the node is a shadow.
 //
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_RDFGRAPH_H
-#define LLVM_LIB_TARGET_HEXAGON_RDFGRAPH_H
+#ifndef LLVM_CODEGEN_RDFGRAPH_H
+#define LLVM_CODEGEN_RDFGRAPH_H
 
 #include "RDFRegisters.h"
 #include "llvm/ADT/SmallVector.h"
@@ -961,4 +961,4 @@ namespace rdf {
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_TARGET_HEXAGON_RDFGRAPH_H
+#endif // LLVM_CODEGEN_RDFGRAPH_H

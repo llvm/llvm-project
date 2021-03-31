@@ -648,7 +648,7 @@ bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // can't address variables from the stack pointer.  MS inline asm can
   // reference locals while also adjusting the stack pointer.  When we can't
   // use both the SP and the FP, we need a separate base pointer register.
-  bool CantUseFP = needsStackRealignment(MF);
+  bool CantUseFP = hasStackRealignment(MF);
   return CantUseFP && CantUseSP(MFI);
 }
 
@@ -728,8 +728,8 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FIOffset;
   Register BasePtr;
   if (MI.isReturn()) {
-    assert((!needsStackRealignment(MF) ||
-           MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&
+    assert((!hasStackRealignment(MF) ||
+            MF.getFrameInfo().isFixedObjectIndex(FrameIndex)) &&
            "Return instruction can only reference SP relative frame objects");
     FIOffset =
         TFI->getFrameIndexReferenceSP(MF, FrameIndex, BasePtr, 0).getFixed();
@@ -875,10 +875,20 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   default:
     llvm_unreachable("Unexpected machine instruction on tile register!");
     break;
+  case X86::COPY: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    ShapeT Shape = getTileShape(SrcReg, VRM, MRI);
+    VRM->assignVirt2Shape(VirtReg, Shape);
+    return Shape;
+  }
   // We only collect the tile shape that is defined.
   case X86::PTILELOADDV:
   case X86::PTDPBSSDV:
+  case X86::PTDPBSUDV:
+  case X86::PTDPBUSDV:
+  case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
+  case X86::PTDPBF16PSV:
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFEXPRESSION_H
-#define LLVM_DEBUGINFO_DWARFEXPRESSION_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
+#define LLVM_DEBUGINFO_DWARF_DWARFEXPRESSION_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"

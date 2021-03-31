@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_CONFIG
 #define _LIBCPP_CONFIG
 
+#include <__config_site>
+
 #if defined(_MSC_VER) && !defined(__clang__)
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    define _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
@@ -640,6 +642,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HIDDEN
 #define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #define _LIBCPP_TEMPLATE_VIS
+#define _LIBCPP_TEMPLATE_DATA_VIS
 #define _LIBCPP_ENUM_VIS
 
 #endif // defined(_LIBCPP_OBJECT_FORMAT_COFF)
@@ -686,6 +689,14 @@ typedef __char32_t char32_t;
 #    endif
 #  else
 #    define _LIBCPP_TEMPLATE_VIS
+#  endif
+#endif
+
+#ifndef _LIBCPP_TEMPLATE_DATA_VIS
+#  if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#    define _LIBCPP_TEMPLATE_DATA_VIS __attribute__ ((__visibility__("default")))
+#  else
+#    define _LIBCPP_TEMPLATE_DATA_VIS
 #  endif
 #endif
 
@@ -830,6 +841,10 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
 #else
 #  define _LIBCPP_CONSTEVAL consteval
+#endif
+
+#if !defined(__cpp_concepts) || __cpp_concepts < 201907L
+#define _LIBCPP_HAS_NO_CONCEPTS
 #endif
 
 #ifdef _LIBCPP_CXX03_LANG
@@ -1132,6 +1147,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
       defined(__CloudABI__) || \
       defined(__sun__) || \
       defined(__MVS__) || \
+      defined(_AIX) || \
       (defined(__MINGW32__) && __has_include(<pthread.h>))
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(__Fuchsia__)
@@ -1443,6 +1459,13 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 # define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
 #else
 # define _LIBCPP_INIT_PRIORITY_MAX
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+#define _LIBCPP_FORMAT_PRINTF(a, b)                                            \
+  __attribute__((__format__(__printf__, a, b)))
+#else
+#define _LIBCPP_FORMAT_PRINTF(a, b)
 #endif
 
 #endif // __cplusplus

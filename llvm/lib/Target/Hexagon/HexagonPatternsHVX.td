@@ -95,21 +95,41 @@ def unalignedstore: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
 
 // HVX loads
 
-multiclass HvxLd_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
+multiclass HvxLdfi_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
+                       PatFrag ImmPred> {
+  def: Pat<(ResType (Load (add (i32 AddrFI:$fi), ImmPred:$Off))),
+           (MI AddrFI:$fi, imm:$Off)>;
+  def: Pat<(ResType (Load (IsOrAdd (i32 AddrFI:$fi), ImmPred:$Off))),
+           (MI AddrFI:$fi, imm:$Off)>;
+  def: Pat<(ResType (Load AddrFI:$fi)), (ResType (MI AddrFI:$fi, 0))>;
+}
+
+multiclass HvxLdgi_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
                      PatFrag ImmPred> {
+  def: Pat<(ResType (Load (add I32:$Rt, ImmPred:$Off))),
+           (MI I32:$Rt, imm:$Off)>;
   def: Pat<(ResType (Load I32:$Rt)),
            (MI I32:$Rt, 0)>;
-  def: Pat<(ResType (Load (add I32:$Rt, ImmPred:$s))),
-           (MI I32:$Rt, imm:$s)>;
+}
+
+multiclass HvxLdc_pat<InstHexagon MI, PatFrag Load, ValueType ResType> {
   // The HVX selection code for shuffles can generate vector constants.
   // Calling "Select" on the resulting loads from CP fails without these
   // patterns.
-  def: Pat<(ResType (Load (HexagonCP tconstpool:$A))),
-           (MI (A2_tfrsi imm:$A), 0)>;
-  def: Pat<(ResType (Load (HexagonAtPcrel tconstpool:$A))),
-           (MI (C4_addipc imm:$A), 0)>;
+  def: Pat<(ResType (Load (HexagonCP tconstpool:$Addr))),
+           (MI (A2_tfrsi imm:$Addr), 0)>;
+  def: Pat<(ResType (Load (HexagonAtPcrel tconstpool:$Addr))),
+           (MI (C4_addipc imm:$Addr), 0)>;
 }
 
+multiclass HvxLd_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
+                     PatFrag ImmPred> {
+  defm: HvxLdfi_pat<MI, Load, ResType, ImmPred>;
+  defm: HvxLdgi_pat<MI, Load, ResType, ImmPred>;
+  defm: HvxLdc_pat <MI, Load, ResType>;
+}
+
+// Aligned loads: everything, plus loads with valignaddr node.
 multiclass HvxLda_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
                       PatFrag ImmPred> {
   let AddedComplexity = 50 in {
@@ -122,41 +142,61 @@ multiclass HvxLda_pat<InstHexagon MI, PatFrag Load, ValueType ResType,
 }
 
 let Predicates = [UseHVX] in {
+  // alignedload will match a non-temporal load as well, so try non-temporal
+  // first.
   defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecI8,  IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecI16, IsVecOff>;
   defm: HvxLda_pat<V6_vL32b_nt_ai, alignednontemporalload, VecI32, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI8,  IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI16, IsVecOff>;
+  defm: HvxLda_pat<V6_vL32b_ai,               alignedload, VecI32, IsVecOff>;
 
-  defm: HvxLda_pat<V6_vL32b_ai, alignedload, VecI8,  IsVecOff>;
-  defm: HvxLda_pat<V6_vL32b_ai, alignedload, VecI16, IsVecOff>;
-  defm: HvxLda_pat<V6_vL32b_ai, alignedload, VecI32, IsVecOff>;
-
-  defm: HvxLd_pat<V6_vL32Ub_ai,  unalignedload, VecI8,  IsVecOff>;
-  defm: HvxLd_pat<V6_vL32Ub_ai,  unalignedload, VecI16, IsVecOff>;
-  defm: HvxLd_pat<V6_vL32Ub_ai,  unalignedload, VecI32, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI8,  IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI16, IsVecOff>;
+  defm: HvxLd_pat<V6_vL32Ub_ai,             unalignedload, VecI32, IsVecOff>;
 }
+
 
 // HVX stores
 
-multiclass HvxSt_pat<InstHexagon MI, PatFrag Store, PatFrag ImmPred,
-                     PatFrag Value> {
+multiclass HvxStfi_pat<InstHexagon MI, PatFrag Store, PatFrag Value,
+                       PatFrag ImmPred> {
+  def: Pat<(Store Value:$Vs, (add (i32 AddrFI:$fi), ImmPred:$Off)),
+           (MI AddrFI:$fi, imm:$Off, Value:$Vs)>;
+  def: Pat<(Store Value:$Vs, (IsOrAdd (i32 AddrFI:$fi), ImmPred:$Off)),
+           (MI AddrFI:$fi, imm:$Off, Value:$Vs)>;
+  def: Pat<(Store Value:$Vs, AddrFI:$fi),
+           (MI AddrFI:$fi, 0, Value:$Vs)>;
+}
+
+multiclass HvxStgi_pat<InstHexagon MI, PatFrag Store, PatFrag Value,
+                       PatFrag ImmPred> {
+  def: Pat<(Store Value:$Vs, (add I32:$Rt, ImmPred:$Off)),
+           (MI I32:$Rt, imm:$Off, Value:$Vs)>;
+  def: Pat<(Store Value:$Vs, (IsOrAdd I32:$Rt, ImmPred:$Off)),
+           (MI I32:$Rt, imm:$Off, Value:$Vs)>;
   def: Pat<(Store Value:$Vs, I32:$Rt),
            (MI I32:$Rt, 0, Value:$Vs)>;
-  def: Pat<(Store Value:$Vs, (add I32:$Rt, ImmPred:$s)),
-           (MI I32:$Rt, imm:$s, Value:$Vs)>;
+}
+
+multiclass HvxSt_pat<InstHexagon MI, PatFrag Store, PatFrag Value,
+                     PatFrag ImmPred> {
+  defm: HvxStfi_pat<MI, Store, Value, ImmPred>;
+  defm: HvxStgi_pat<MI, Store, Value, ImmPred>;
 }
 
 let Predicates = [UseHVX] in {
-  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, IsVecOff, HVI8>;
-  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, IsVecOff, HVI16>;
-  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, IsVecOff, HVI32>;
-
-  defm: HvxSt_pat<V6_vS32b_ai, alignedstore, IsVecOff, HVI8>;
-  defm: HvxSt_pat<V6_vS32b_ai, alignedstore, IsVecOff, HVI16>;
-  defm: HvxSt_pat<V6_vS32b_ai, alignedstore, IsVecOff, HVI32>;
-
-  defm: HvxSt_pat<V6_vS32Ub_ai, unalignedstore, IsVecOff, HVI8>;
-  defm: HvxSt_pat<V6_vS32Ub_ai, unalignedstore, IsVecOff, HVI16>;
-  defm: HvxSt_pat<V6_vS32Ub_ai, unalignedstore, IsVecOff, HVI32>;
+  // alignedstore will match a non-temporal store as well, so try non-temporal
+  // first.
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore,  HVI8, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVI16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_nt_ai, alignednontemporalstore, HVI32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore,  HVI8, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVI16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32b_ai,               alignedstore, HVI32, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore,  HVI8, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVI16, IsVecOff>;
+  defm: HvxSt_pat<V6_vS32Ub_ai,            unalignedstore, HVI32, IsVecOff>;
 }
 
 // Bitcasts between same-size vector types are no-ops, except for the

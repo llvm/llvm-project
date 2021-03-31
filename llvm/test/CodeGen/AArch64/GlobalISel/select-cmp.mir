@@ -270,3 +270,91 @@ body:             |
     RET_ReallyLR implicit $w0
 
 ...
+---
+name:            cmp_add_rhs
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; The CSINC should use the add's RHS.
+
+    ; CHECK-LABEL: name: cmp_add_rhs
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %cmp_lhs:gpr32 = COPY $w0
+    ; CHECK: %cmp_rhs:gpr32 = COPY $w1
+    ; CHECK: %add_rhs:gpr32 = COPY $w2
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+    ; CHECK: %add:gpr32 = CSINCWr %add_rhs, %add_rhs, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %cmp_lhs:gpr(s32) = COPY $w0
+    %cmp_rhs:gpr(s32) = COPY $w1
+    %add_rhs:gpr(s32) = COPY $w2
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %cmp_lhs(s32), %cmp_rhs
+    %add:gpr(s32) = G_ADD %cmp, %add_rhs
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_add_lhs
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $w2
+
+    ; The CSINC should use the add's LHS.
+
+    ; CHECK-LABEL: name: cmp_add_lhs
+    ; CHECK: liveins: $w0, $w1, $w2
+    ; CHECK: %cmp_lhs:gpr32 = COPY $w0
+    ; CHECK: %cmp_rhs:gpr32 = COPY $w1
+    ; CHECK: %add_lhs:gpr32 = COPY $w2
+    ; CHECK: [[SUBSWrr:%[0-9]+]]:gpr32 = SUBSWrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
+    ; CHECK: %add:gpr32 = CSINCWr %add_lhs, %add_lhs, 1, implicit $nzcv
+    ; CHECK: $w0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $w0
+    %cmp_lhs:gpr(s32) = COPY $w0
+    %cmp_rhs:gpr(s32) = COPY $w1
+    %add_lhs:gpr(s32) = COPY $w2
+    %cmp:gpr(s32) = G_ICMP intpred(eq), %cmp_lhs(s32), %cmp_rhs
+    %add:gpr(s32) = G_ADD %add_lhs, %cmp
+    $w0 = COPY %add(s32)
+    RET_ReallyLR implicit $w0
+
+...
+---
+name:            cmp_add_lhs_vector
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $q0, $q1, $q2
+
+    ; We don't emit CSINC with vectors, so there should be no optimization here.
+
+    ; CHECK-LABEL: name: cmp_add_lhs_vector
+    ; CHECK: liveins: $q0, $q1, $q2
+    ; CHECK: %cmp_lhs:fpr128 = COPY $q0
+    ; CHECK: %cmp_rhs:fpr128 = COPY $q1
+    ; CHECK: %add_lhs:fpr128 = COPY $q2
+    ; CHECK: [[CMEQv4i32_:%[0-9]+]]:fpr128 = CMEQv4i32 %cmp_lhs, %cmp_rhs
+    ; CHECK: %add:fpr128 = ADDv4i32 %add_lhs, [[CMEQv4i32_]]
+    ; CHECK: $q0 = COPY %add
+    ; CHECK: RET_ReallyLR implicit $q0
+    %cmp_lhs:fpr(<4 x s32>) = COPY $q0
+    %cmp_rhs:fpr(<4 x s32>) = COPY $q1
+    %add_lhs:fpr(<4 x s32>) = COPY $q2
+    %cmp:fpr(<4 x s32>) = G_ICMP intpred(eq), %cmp_lhs(<4 x s32>), %cmp_rhs
+    %add:fpr(<4 x s32>) = G_ADD %add_lhs, %cmp
+    $q0 = COPY %add(<4 x s32>)
+    RET_ReallyLR implicit $q0

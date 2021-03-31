@@ -24,6 +24,7 @@ enum class OptionBit {
   TrackAllocationStacks,
   UseOddEvenTags,
   UseMemoryTagging,
+  AddLargeAllocationSlack,
 };
 
 struct Options {

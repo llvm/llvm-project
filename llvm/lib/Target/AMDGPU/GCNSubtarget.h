@@ -41,24 +41,16 @@ class GCNSubtarget final : public AMDGPUGenSubtargetInfo,
   using AMDGPUSubtarget::getMaxWavesPerEU;
 
 public:
-  enum TrapHandlerAbi {
-    TrapHandlerAbiNone = 0,
-    TrapHandlerAbiHsa = 1
+  // Following 2 enums are documented at:
+  //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
+  enum class TrapHandlerAbi {
+    NONE   = 0x00,
+    AMDHSA = 0x01,
   };
 
-  enum TrapID {
-    TrapIDHardwareReserved = 0,
-    TrapIDHSADebugTrap = 1,
-    TrapIDLLVMTrap = 2,
-    TrapIDLLVMDebugTrap = 3,
-    TrapIDDebugBreakpoint = 7,
-    TrapIDDebugReserved8 = 8,
-    TrapIDDebugReservedFE = 0xfe,
-    TrapIDDebugReservedFF = 0xff
-  };
-
-  enum TrapRegValues {
-    LLVMTrapHandlerRegValue = 1
+  enum class TrapID {
+    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSADebugTrap = 0x03,
   };
 
 private:
@@ -82,6 +74,7 @@ protected:
   bool FastFMAF32;
   bool FastDenormalF32;
   bool HalfRate64Ops;
+  bool FullRate64Ops;
 
   // Dynamically set bits that enable features.
   bool FlatForGlobal;
@@ -95,6 +88,7 @@ protected:
   // for XNACK.
   bool EnableXNACK;
 
+  bool EnableTgSplit;
   bool EnableCuMode;
   bool TrapHandler;
 
@@ -110,10 +104,11 @@ protected:
   bool FP64;
   bool FMA;
   bool MIMG_R128;
-  bool GCN3Encoding;
+  bool IsGCN;
   bool CIInsts;
   bool GFX8Insts;
   bool GFX9Insts;
+  bool GFX90AInsts;
   bool GFX10Insts;
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
@@ -132,6 +127,9 @@ protected:
   bool HasSDWAOutModsVOPC;
   bool HasDPP;
   bool HasDPP8;
+  bool Has64BitDPP;
+  bool HasPackedFP32Ops;
+  bool HasExtendedImageInsts;
   bool HasR128A16;
   bool HasGFX10A16;
   bool HasG16;
@@ -144,6 +142,7 @@ protected:
   bool HasDot4Insts;
   bool HasDot5Insts;
   bool HasDot6Insts;
+  bool HasDot7Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddInsts;
@@ -157,6 +156,7 @@ protected:
   bool HasVscnt;
   bool HasGetWaveIdInst;
   bool HasSMemTimeInst;
+  bool HasShaderCyclesRegister;
   bool HasRegisterBanking;
   bool HasVOP3Literal;
   bool HasNoDataDepHazard;
@@ -167,10 +167,16 @@ protected:
   bool ScalarFlatScratchInsts;
   bool AddNoCarryInsts;
   bool HasUnpackedD16VMem;
+  bool R600ALUInst;
+  bool CaymanISA;
+  bool CFALUBug;
   bool LDSMisalignedBug;
   bool HasMFMAInlineLiteralBug;
+  bool HasVertexCache;
+  short TexVTXClauseSize;
   bool UnalignedBufferAccess;
   bool UnalignedDSAccess;
+  bool HasPackedTID;
   bool ScalarizeGlobal;
 
   bool HasVcmpxPermlaneHazard;
@@ -241,6 +247,10 @@ public:
     return RegBankInfo.get();
   }
 
+  const AMDGPU::IsaInfo::AMDGPUTargetID &getTargetID() const {
+    return TargetID;
+  }
+
   // Nothing implemented, just prevent crashes on use.
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -293,6 +303,10 @@ public:
 
   bool hasHalfRate64Ops() const {
     return HalfRate64Ops;
+  }
+
+  bool hasFullRate64Ops() const {
+    return FullRate64Ops;
   }
 
   bool hasAddr64() const {
@@ -370,7 +384,12 @@ public:
   }
 
   TrapHandlerAbi getTrapHandlerAbi() const {
-    return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
+    return isAmdHsaOS() ? TrapHandlerAbi::AMDHSA : TrapHandlerAbi::NONE;
+  }
+
+  bool supportsGetDoorbellID() const {
+    // The S_GETREG DOORBELL_ID is supported by all GFX9 onward targets.
+    return getGeneration() >= GFX9;
   }
 
   /// True if the offset field of DS instructions works as expected. On SI, the
@@ -508,6 +527,10 @@ public:
 
   bool isXNACKEnabled() const {
     return TargetID.isXnackOnOrAny();
+  }
+
+  bool isTgSplitEnabled() const {
+    return EnableTgSplit;
   }
 
   bool isCuModeEnabled() const {
@@ -666,6 +689,10 @@ public:
     return HasDot6Insts;
   }
 
+  bool hasDot7Insts() const {
+    return HasDot7Insts;
+  }
+
   bool hasMAIInsts() const {
     return HasMAIInsts;
   }
@@ -692,6 +719,10 @@ public:
 
   bool hasSMemTimeInst() const {
     return HasSMemTimeInst;
+  }
+
+  bool hasShaderCyclesRegister() const {
+    return HasShaderCyclesRegister;
   }
 
   bool hasRegisterBanking() const {
@@ -780,6 +811,9 @@ public:
     return GFX8Insts;
   }
 
+  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
+  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
+
   bool hasDPP() const {
     return HasDPP;
   }
@@ -794,6 +828,18 @@ public:
 
   bool hasDPP8() const {
     return HasDPP8;
+  }
+
+  bool has64BitDPP() const {
+    return Has64BitDPP;
+  }
+
+  bool hasPackedFP32Ops() const {
+    return HasPackedFP32Ops;
+  }
+
+  bool hasExtendedImageInsts() const {
+    return HasExtendedImageInsts;
   }
 
   bool hasR128A16() const {
@@ -895,6 +941,13 @@ public:
   }
 
   bool hasHardClauses() const { return getGeneration() >= GFX10; }
+
+  bool hasGFX90AInsts() const { return GFX90AInsts; }
+
+  /// Return if operations acting on VGPR tuples require even alignment.
+  bool needsAlignedVGPRs() const { return GFX90AInsts; }
+
+  bool hasPackedTID() const { return HasPackedTID; }
 
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs

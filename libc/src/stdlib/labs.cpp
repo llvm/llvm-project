@@ -8,13 +8,10 @@
 
 #include "src/stdlib/labs.h"
 #include "src/__support/common.h"
-#include "src/stdlib/abs_utils.h"
+#include "src/__support/integer_operations.h"
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(long, labs, (long n)) {
-  // integer_abs from abs_utils.h.
-  return integer_abs(n);
-}
+LLVM_LIBC_FUNCTION(long, labs, (long n)) { return integerAbs(n); }
 
 } // namespace __llvm_libc

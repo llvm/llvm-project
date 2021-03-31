@@ -968,4 +968,20 @@ define void @udiv_v32i64(<32 x i64>* %a, <32 x i64>* %b) #0 {
   ret void
 }
 
+; This used to crash because isUnaryPredicate and BuildUDIV don't know how
+; a SPLAT_VECTOR of fixed vector type should be handled.
+define void @udiv_constantsplat_v8i32(<8 x i32>* %a) #0 {
+; CHECK-LABEL: udiv_constantsplat_v8i32:
+; CHECK: ptrue [[PG:p[0-9]+]].s, vl[[#min(div(VBYTES,4),8)]]
+; CHECK-NEXT: ld1w { [[OP1:z[0-9]+]].s }, [[PG]]/z, [x0]
+; CHECK-NEXT: mov [[OP2:z[0-9]+]].s, #95
+; CHECK-NEXT: udiv [[RES:z[0-9]+]].s, [[PG]]/m, [[OP1]].s, [[OP2]].s
+; CHECK-NEXT: st1w { [[RES]].s }, [[PG]], [x0]
+; CHECK-NEXT: ret
+  %op1 = load <8 x i32>, <8 x i32>* %a
+  %res = udiv <8 x i32> %op1, <i32 95, i32 95, i32 95, i32 95, i32 95, i32 95, i32 95, i32 95>
+  store <8 x i32> %res, <8 x i32>* %a
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }

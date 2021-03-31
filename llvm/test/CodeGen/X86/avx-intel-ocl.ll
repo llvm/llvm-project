@@ -67,27 +67,27 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 
 ; test calling conventions - prolog and epilog
 ; WIN64-LABEL: test_prolog_epilog
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
-; WIN64: vmovaps {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
+; WIN64: vmovups {{%ymm([6-9]|1[0-5])}}, {{.*(%rbp).*}}     # 32-byte Spill
 ; WIN64: call
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
-; WIN64: vmovaps {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
+; WIN64: vmovups {{.*(%rbp).*}}, {{%ymm([6-9]|1[0-5])}}     # 32-byte Reload
 
 ; X64-LABEL: test_prolog_epilog
 ; X64: vmovups {{%ymm([8-9]|1[0-5])}}, {{.*}}(%rsp)  ## 32-byte Spill

@@ -12,7 +12,6 @@
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-#include <zircon/limits.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -97,7 +96,9 @@ void GuardedPoolAllocator::deallocateInGuardedPool(void *Ptr,
   Check(Status == ZX_OK, "Vmar unmapping failed");
 }
 
-size_t GuardedPoolAllocator::getPlatformPageSize() { return ZX_PAGE_SIZE; }
+size_t GuardedPoolAllocator::getPlatformPageSize() {
+  return _zx_system_get_page_size();
+}
 
 void GuardedPoolAllocator::installAtFork() {}
 } // namespace gwp_asan

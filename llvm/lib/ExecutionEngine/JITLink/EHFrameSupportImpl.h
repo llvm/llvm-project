@@ -116,6 +116,17 @@ private:
   Edge::Kind NegDelta32;
 };
 
+/// Add a 32-bit null-terminator to the end of the eh-frame section.
+class EHFrameNullTerminator {
+public:
+  EHFrameNullTerminator(StringRef EHFrameSectionName);
+  Error operator()(LinkGraph &G);
+
+private:
+  static char NullTerminatorBlockContent[];
+  StringRef EHFrameSectionName;
+};
+
 } // end namespace jitlink
 } // end namespace llvm
 

@@ -23,7 +23,6 @@
 
 static constexpr unsigned default_disasm_byte_size = 32;
 static constexpr unsigned default_disasm_num_ins = 4;
-static constexpr unsigned large_function_threshold = 8000;
 
 using namespace lldb;
 using namespace lldb_private;
@@ -223,7 +222,7 @@ CommandObjectDisassemble::~CommandObjectDisassemble() = default;
 llvm::Error CommandObjectDisassemble::CheckRangeSize(const AddressRange &range,
                                                      llvm::StringRef what) {
   if (m_options.num_instructions > 0 || m_options.force ||
-      range.GetByteSize() < large_function_threshold)
+      range.GetByteSize() < GetDebugger().GetStopDisassemblyMaxSize())
     return llvm::Error::success();
   StreamString msg;
   msg << "Not disassembling " << what << " because it is very large ";

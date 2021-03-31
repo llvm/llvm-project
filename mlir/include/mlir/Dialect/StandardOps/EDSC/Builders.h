@@ -44,21 +44,6 @@ protected:
   SmallVector<int64_t, 8> steps;
 };
 
-/// A MemRefBoundsCapture represents the information required to step through a
-/// MemRef. It has placeholders for non-contiguous tensors that fit within the
-/// Fortran subarray model.
-/// At the moment it can only capture a MemRef with an identity layout map.
-// TODO: Support MemRefs with layoutMaps.
-class MemRefBoundsCapture : public BoundsCapture {
-public:
-  explicit MemRefBoundsCapture(Value v);
-
-  unsigned fastestVarying() const { return rank() - 1; }
-
-private:
-  Value base;
-};
-
 /// A VectorBoundsCapture represents the information required to step through a
 /// Vector accessing each scalar element at a time. It is the counterpart of
 /// a MemRefBoundsCapture but for vectors. This exists purely for boilerplate

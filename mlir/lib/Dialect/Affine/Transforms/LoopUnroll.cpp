@@ -96,7 +96,7 @@ void LoopUnroll::runOnFunction() {
         loops.push_back(forOp);
     });
     for (auto forOp : loops)
-      loopUnrollFull(forOp);
+      (void)loopUnrollFull(forOp);
     return;
   }
 

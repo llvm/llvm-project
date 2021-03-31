@@ -60,22 +60,19 @@ namespace clang {
     bool handleDiagnostics(const DiagnosticInfo &DI) override;
 
     bool isAnalysisRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-              CodeGenOpts.OptimizationRemarkAnalysisPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(PassName);
     }
     bool isMissedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkMissedPattern &&
-              CodeGenOpts.OptimizationRemarkMissedPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemarkMissed.patternMatches(PassName);
     }
     bool isPassedOptRemarkEnabled(StringRef PassName) const override {
-      return (CodeGenOpts.OptimizationRemarkPattern &&
-              CodeGenOpts.OptimizationRemarkPattern->match(PassName));
+      return CodeGenOpts.OptimizationRemark.patternMatches(PassName);
     }
 
     bool isAnyRemarkEnabled() const override {
-      return (CodeGenOpts.OptimizationRemarkAnalysisPattern ||
-              CodeGenOpts.OptimizationRemarkMissedPattern ||
-              CodeGenOpts.OptimizationRemarkPattern);
+      return CodeGenOpts.OptimizationRemarkAnalysis.hasValidPattern() ||
+             CodeGenOpts.OptimizationRemarkMissed.hasValidPattern() ||
+             CodeGenOpts.OptimizationRemark.hasValidPattern();
     }
 
   private:
@@ -304,14 +301,7 @@ namespace clang {
       if (!getModule())
         return;
 
-      // Install an inline asm handler so that diagnostics get printed through
-      // our diagnostics hooks.
       LLVMContext &Ctx = getModule()->getContext();
-      LLVMContext::InlineAsmDiagHandlerTy OldHandler =
-        Ctx.getInlineAsmDiagnosticHandler();
-      void *OldContext = Ctx.getInlineAsmDiagnosticContext();
-      Ctx.setInlineAsmDiagnosticHandler(InlineAsmDiagHandler, this);
-
       std::unique_ptr<DiagnosticHandler> OldDiagnosticHandler =
           Ctx.getDiagnosticHandler();
       Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
@@ -344,8 +334,6 @@ namespace clang {
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                         LangOpts, C.getTargetInfo().getDataLayout(),
                         getModule(), Action, std::move(AsmOutStream));
-
-      Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
       Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
@@ -380,12 +368,6 @@ namespace clang {
       Gen->HandleVTable(RD);
     }
 
-    static void InlineAsmDiagHandler(const llvm::SMDiagnostic &SM,void *Context,
-                                     unsigned LocCookie) {
-      SourceLocation Loc = SourceLocation::getFromRawEncoding(LocCookie);
-      ((BackendConsumer*)Context)->InlineAsmDiagHandler2(SM, Loc);
-    }
-
     /// Get the best possible source location to represent a diagnostic that
     /// may have associated debug info.
     const FullSourceLoc
@@ -393,14 +375,13 @@ namespace clang {
                                 bool &BadDebugInfo, StringRef &Filename,
                                 unsigned &Line, unsigned &Column) const;
 
-    void InlineAsmDiagHandler2(const llvm::SMDiagnostic &,
-                               SourceLocation LocCookie);
-
     void DiagnosticHandlerImpl(const llvm::DiagnosticInfo &DI);
     /// Specialized handler for InlineAsm diagnostic.
     /// \return True if the diagnostic has been successfully reported, false
     /// otherwise.
     bool InlineAsmDiagHandler(const llvm::DiagnosticInfoInlineAsm &D);
+    /// Specialized handler for diagnostics reported using SMDiagnostic.
+    void SrcMgrDiagHandler(const llvm::DiagnosticInfoSrcMgr &D);
     /// Specialized handler for StackSize diagnostic.
     /// \return True if the diagnostic has been successfully reported, false
     /// otherwise.
@@ -459,64 +440,6 @@ static FullSourceLoc ConvertBackendLocation(const llvm::SMDiagnostic &D,
   return FullSourceLoc(NewLoc, CSM);
 }
 
-
-/// InlineAsmDiagHandler2 - This function is invoked when the backend hits an
-/// error parsing inline asm.  The SMDiagnostic indicates the error relative to
-/// the temporary memory buffer that the inline asm parser has set up.
-void BackendConsumer::InlineAsmDiagHandler2(const llvm::SMDiagnostic &D,
-                                            SourceLocation LocCookie) {
-  // There are a couple of different kinds of errors we could get here.  First,
-  // we re-format the SMDiagnostic in terms of a clang diagnostic.
-
-  // Strip "error: " off the start of the message string.
-  StringRef Message = D.getMessage();
-  if (Message.startswith("error: "))
-    Message = Message.substr(7);
-
-  // If the SMDiagnostic has an inline asm source location, translate it.
-  FullSourceLoc Loc;
-  if (D.getLoc() != SMLoc())
-    Loc = ConvertBackendLocation(D, Context->getSourceManager());
-
-  unsigned DiagID;
-  switch (D.getKind()) {
-  case llvm::SourceMgr::DK_Error:
-    DiagID = diag::err_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Warning:
-    DiagID = diag::warn_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Note:
-    DiagID = diag::note_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Remark:
-    llvm_unreachable("remarks unexpected");
-  }
-  // If this problem has clang-level source location information, report the
-  // issue in the source with a note showing the instantiated
-  // code.
-  if (LocCookie.isValid()) {
-    Diags.Report(LocCookie, DiagID).AddString(Message);
-
-    if (D.getLoc().isValid()) {
-      DiagnosticBuilder B = Diags.Report(Loc, diag::note_fe_inline_asm_here);
-      // Convert the SMDiagnostic ranges into SourceRange and attach them
-      // to the diagnostic.
-      for (const std::pair<unsigned, unsigned> &Range : D.getRanges()) {
-        unsigned Column = D.getColumnNo();
-        B << SourceRange(Loc.getLocWithOffset(Range.first - Column),
-                         Loc.getLocWithOffset(Range.second - Column));
-      }
-    }
-    return;
-  }
-
-  // Otherwise, report the backend issue as occurring in the generated .s file.
-  // If Loc is invalid, we still need to report the issue, it just gets no
-  // location info.
-  Diags.Report(Loc, DiagID).AddString(Message);
-}
-
 #define ComputeDiagID(Severity, GroupName, DiagID)                             \
   do {                                                                         \
     switch (Severity) {                                                        \
@@ -552,6 +475,65 @@ void BackendConsumer::InlineAsmDiagHandler2(const llvm::SMDiagnostic &D,
       break;                                                                   \
     }                                                                          \
   } while (false)
+
+void BackendConsumer::SrcMgrDiagHandler(const llvm::DiagnosticInfoSrcMgr &DI) {
+  const llvm::SMDiagnostic &D = DI.getSMDiag();
+
+  unsigned DiagID;
+  if (DI.isInlineAsmDiag())
+    ComputeDiagID(DI.getSeverity(), inline_asm, DiagID);
+  else
+    ComputeDiagID(DI.getSeverity(), source_mgr, DiagID);
+
+  // This is for the empty BackendConsumer that uses the clang diagnostic
+  // handler for IR input files.
+  if (!Context) {
+    D.print(nullptr, llvm::errs());
+    Diags.Report(DiagID).AddString("cannot compile inline asm");
+    return;
+  }
+
+  // There are a couple of different kinds of errors we could get here.
+  // First, we re-format the SMDiagnostic in terms of a clang diagnostic.
+
+  // Strip "error: " off the start of the message string.
+  StringRef Message = D.getMessage();
+  (void)Message.consume_front("error: ");
+
+  // If the SMDiagnostic has an inline asm source location, translate it.
+  FullSourceLoc Loc;
+  if (D.getLoc() != SMLoc())
+    Loc = ConvertBackendLocation(D, Context->getSourceManager());
+
+  // If this problem has clang-level source location information, report the
+  // issue in the source with a note showing the instantiated
+  // code.
+  if (DI.isInlineAsmDiag()) {
+    SourceLocation LocCookie =
+        SourceLocation::getFromRawEncoding(DI.getLocCookie());
+    if (LocCookie.isValid()) {
+      Diags.Report(LocCookie, DiagID).AddString(Message);
+
+      if (D.getLoc().isValid()) {
+        DiagnosticBuilder B = Diags.Report(Loc, diag::note_fe_inline_asm_here);
+        // Convert the SMDiagnostic ranges into SourceRange and attach them
+        // to the diagnostic.
+        for (const std::pair<unsigned, unsigned> &Range : D.getRanges()) {
+          unsigned Column = D.getColumnNo();
+          B << SourceRange(Loc.getLocWithOffset(Range.first - Column),
+                           Loc.getLocWithOffset(Range.second - Column));
+        }
+      }
+      return;
+    }
+  }
+
+  // Otherwise, report the backend issue as occurring in the generated .s file.
+  // If Loc is invalid, we still need to report the issue, it just gets no
+  // location info.
+  Diags.Report(Loc, DiagID).AddString(Message);
+  return;
+}
 
 bool
 BackendConsumer::InlineAsmDiagHandler(const llvm::DiagnosticInfoInlineAsm &D) {
@@ -722,15 +704,13 @@ void BackendConsumer::OptimizationRemarkHandler(
   if (D.isPassed()) {
     // Optimization remarks are active only if the -Rpass flag has a regular
     // expression that matches the name of the pass name in \p D.
-    if (CodeGenOpts.OptimizationRemarkPattern &&
-        CodeGenOpts.OptimizationRemarkPattern->match(D.getPassName()))
+    if (CodeGenOpts.OptimizationRemark.patternMatches(D.getPassName()))
       EmitOptimizationMessage(D, diag::remark_fe_backend_optimization_remark);
   } else if (D.isMissed()) {
     // Missed optimization remarks are active only if the -Rpass-missed
     // flag has a regular expression that matches the name of the pass
     // name in \p D.
-    if (CodeGenOpts.OptimizationRemarkMissedPattern &&
-        CodeGenOpts.OptimizationRemarkMissedPattern->match(D.getPassName()))
+    if (CodeGenOpts.OptimizationRemarkMissed.patternMatches(D.getPassName()))
       EmitOptimizationMessage(
           D, diag::remark_fe_backend_optimization_remark_missed);
   } else {
@@ -741,8 +721,7 @@ void BackendConsumer::OptimizationRemarkHandler(
       ShouldAlwaysPrint = ORA->shouldAlwaysPrint();
 
     if (ShouldAlwaysPrint ||
-        (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-         CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+        CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
       EmitOptimizationMessage(
           D, diag::remark_fe_backend_optimization_remark_analysis);
   }
@@ -755,8 +734,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
-      (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-       CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+      CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
     EmitOptimizationMessage(
         D, diag::remark_fe_backend_optimization_remark_analysis_fpcommute);
 }
@@ -768,8 +746,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // regular expression that matches the name of the pass name in \p D.
 
   if (D.shouldAlwaysPrint() ||
-      (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
-       CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
+      CodeGenOpts.OptimizationRemarkAnalysis.patternMatches(D.getPassName()))
     EmitOptimizationMessage(
         D, diag::remark_fe_backend_optimization_remark_analysis_aliasing);
 }
@@ -791,6 +768,9 @@ void BackendConsumer::DiagnosticHandlerImpl(const DiagnosticInfo &DI) {
       return;
     ComputeDiagID(Severity, inline_asm, DiagID);
     break;
+  case llvm::DK_SrcMgr:
+    SrcMgrDiagHandler(cast<DiagnosticInfoSrcMgr>(DI));
+    return;
   case llvm::DK_StackSize:
     if (StackSizeDiagHandler(cast<DiagnosticInfoStackSize>(DI)))
       return;
@@ -987,30 +967,6 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return std::move(Result);
 }
 
-static void BitcodeInlineAsmDiagHandler(const llvm::SMDiagnostic &SM,
-                                         void *Context,
-                                         unsigned LocCookie) {
-  SM.print(nullptr, llvm::errs());
-
-  auto Diags = static_cast<DiagnosticsEngine *>(Context);
-  unsigned DiagID;
-  switch (SM.getKind()) {
-  case llvm::SourceMgr::DK_Error:
-    DiagID = diag::err_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Warning:
-    DiagID = diag::warn_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Note:
-    DiagID = diag::note_fe_inline_asm;
-    break;
-  case llvm::SourceMgr::DK_Remark:
-    llvm_unreachable("remarks unexpected");
-  }
-
-  Diags->Report(DiagID).AddString("cannot compile inline asm");
-}
-
 std::unique_ptr<llvm::Module>
 CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
@@ -1113,7 +1069,14 @@ void CodeGenAction::ExecuteAction() {
   EmbedBitcode(TheModule.get(), CodeGenOpts, *MainFile);
 
   LLVMContext &Ctx = TheModule->getContext();
-  Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler, &Diagnostics);
+
+  // Restore any diagnostic handler previously set before returning from this
+  // function.
+  struct RAII {
+    LLVMContext &Ctx;
+    std::unique_ptr<DiagnosticHandler> PrevHandler = Ctx.getDiagnosticHandler();
+    ~RAII() { Ctx.setDiagnosticHandler(std::move(PrevHandler)); }
+  } _{Ctx};
 
   // Set clang diagnostic handler. To do this we need to create a fake
   // BackendConsumer.

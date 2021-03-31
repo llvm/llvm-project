@@ -126,13 +126,17 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   initializeGlobalISel(PR);
 }
 
+static bool isLittleEndianTriple(const Triple &T) {
+  return T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle;
+}
+
 /// Return the datalayout string of a subtarget.
 static std::string getDataLayoutString(const Triple &T) {
   bool is64Bit = T.getArch() == Triple::ppc64 || T.getArch() == Triple::ppc64le;
   std::string Ret;
 
   // Most PPC* platforms are big endian, PPC(64)LE is little endian.
-  if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
+  if (isLittleEndianTriple(T))
     Ret = "e";
   else
     Ret = "E";
@@ -157,9 +161,8 @@ static std::string getDataLayoutString(const Triple &T) {
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.
-  if ((T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppc64) &&
-      (T.isOSAIX() || T.isOSLinux()))
-    Ret += "-v256:256:256-v512:512:512";
+  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
+    Ret += "-S128-v256:256:256-v512:512:512";
 
   return Ret;
 }
@@ -318,7 +321,8 @@ PPCTargetMachine::PPCTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveRelocModel(TT, RM),
                         getEffectivePPCCodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())),
-      TargetABI(computeTargetABI(TT, Options)) {
+      TargetABI(computeTargetABI(TT, Options)),
+      Endianness(isLittleEndianTriple(TT) ? Endian::LITTLE : Endian::BIG) {
   initAsmInfo();
 }
 
@@ -541,6 +545,12 @@ PPCTargetMachine::getTargetTransformInfo(const Function &F) {
   return TargetTransformInfo(PPCTTIImpl(this, F));
 }
 
+bool PPCTargetMachine::isLittleEndian() const {
+  assert(Endianness != Endian::NOT_DETECTED &&
+         "Unable to determine endianness");
+  return Endianness == Endian::LITTLE;
+}
+
 static MachineSchedRegistry
 PPCPreRASchedRegistry("ppc-prera",
                       "Run PowerPC PreRA specific scheduler",
@@ -568,6 +578,6 @@ bool PPCPassConfig::addRegBankSelect() {
 }
 
 bool PPCPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelect(getOptLevel()));
   return false;
 }

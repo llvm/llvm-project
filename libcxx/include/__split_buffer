@@ -20,8 +20,8 @@ template <bool>
 class __split_buffer_common
 {
 protected:
-    void __throw_length_error() const;
-    void __throw_out_of_range() const;
+    _LIBCPP_NORETURN void __throw_length_error() const;
+    _LIBCPP_NORETURN void __throw_out_of_range() const;
 };
 
 template <class _Tp, class _Allocator = allocator<_Tp> >

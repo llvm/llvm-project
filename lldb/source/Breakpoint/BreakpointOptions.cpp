@@ -453,8 +453,6 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                           : nullptr,
                       context, break_id, break_loc_id);
     } else if (IsCallbackSynchronous()) {
-      // If a synchronous callback is called at async time, it should not say
-      // to stop.
       return false;
     }
   }
@@ -649,7 +647,7 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
       options.SetPrintErrors(true);
       options.SetAddToHistory(false);
 
-      debugger.GetCommandInterpreter().HandleCommands(commands, &exe_ctx,
+      debugger.GetCommandInterpreter().HandleCommands(commands, exe_ctx,
                                                       options, result);
       result.GetImmediateOutputStream()->Flush();
       result.GetImmediateErrorStream()->Flush();

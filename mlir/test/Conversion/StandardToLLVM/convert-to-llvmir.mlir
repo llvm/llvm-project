@@ -490,9 +490,9 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK-NEXT: %12 = llvm.xor %arg2, %arg3 : i32
   %12 = xor %arg2, %arg3 : i32
 // CHECK-NEXT: %13 = "llvm.intr.exp"(%arg0) : (f32) -> f32
-  %13 = std.exp %arg0 : f32
+  %13 = math.exp %arg0 : f32
 // CHECK-NEXT: %14 = "llvm.intr.exp2"(%arg0) : (f32) -> f32
-  %14 = std.exp2 %arg0 : f32
+  %14 = math.exp2 %arg0 : f32
 // CHECK-NEXT: %15 = llvm.mlir.constant(7.900000e-01 : f64) : f64
   %15 = constant 7.9e-01 : f64
 // CHECK-NEXT: %16 = llvm.shl %arg2, %arg3 : i32
@@ -502,9 +502,9 @@ func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 // CHECK-NEXT: %18 = llvm.lshr %arg2, %arg3 : i32
   %18 = shift_right_unsigned %arg2, %arg3 : i32
 // CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg0) : (f32) -> f32
-  %19 = std.sqrt %arg0 : f32
+  %19 = math.sqrt %arg0 : f32
 // CHECK-NEXT: %{{[0-9]+}} = "llvm.intr.sqrt"(%arg4) : (f64) -> f64
-  %20 = std.sqrt %arg4 : f64
+  %20 = math.sqrt %arg4 : f64
   return %0, %4 : f32, i32
 }
 
@@ -766,31 +766,6 @@ func @fcmp(f32, f32) -> () {
   return
 }
 
-// CHECK-LABEL: @vec_bin
-func @vec_bin(%arg0: vector<2x2x2xf32>) -> vector<2x2x2xf32> {
-  %0 = addf %arg0, %arg0 : vector<2x2x2xf32>
-  return %0 : vector<2x2x2xf32>
-
-//  CHECK-NEXT: llvm.mlir.undef : !llvm.array<2 x array<2 x vector<2xf32>>>
-
-// This block appears 2x2 times
-//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//  CHECK-NEXT: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//  CHECK-NEXT: llvm.fadd %{{.*}} : vector<2xf32>
-//  CHECK-NEXT: llvm.insertvalue %{{.*}}[0, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
-
-// We check the proper indexing of extract/insert in the remaining 3 positions.
-//       CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[0, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//       CHECK: llvm.extractvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[1, 0] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//       CHECK: llvm.extractvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
-//       CHECK: llvm.insertvalue %{{.*}}[1, 1] : !llvm.array<2 x array<2 x vector<2xf32>>>
-
-// And we're done
-//   CHECK-NEXT: return
-}
-
 // CHECK-LABEL: @splat
 // CHECK-SAME: %[[A:arg[0-9]+]]: vector<4xf32>
 // CHECK-SAME: %[[ELT:arg[0-9]+]]: f32
@@ -811,7 +786,7 @@ func @splat(%a: vector<4xf32>, %b: f32) -> vector<4xf32> {
 func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.mlir.constant(2048 : index) : i64
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<i8>, ptr<i8>, i64, array<1 x i64>, array<1 x i64>)>
-  %0 = alloc() : memref<2048xi8>
+  %0 = memref.alloc() : memref<2048xi8>
 
   // Test two dynamic sizes.
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -827,7 +802,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %[[ARG0]], %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %1 = view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
+  %1 = memref.view %0[%arg2][%arg0, %arg1] : memref<2048xi8> to memref<?x?xf32>
 
   // Test one dynamic size.
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -844,7 +819,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mul %{{.*}}, %[[ARG1]]
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %3 = view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
+  %3 = memref.view %0[%arg2][%arg1] : memref<2048xi8> to memref<4x?xf32>
 
   // Test static sizes.
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
@@ -862,12 +837,12 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mlir.constant(4 : index) : i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %5 = view %0[%arg2][] : memref<2048xi8> to memref<64x4xf32>
+  %5 = memref.view %0[%arg2][] : memref<2048xi8> to memref<64x4xf32>
 
   // Test view memory space.
   // CHECK: llvm.mlir.constant(2048 : index) : i64
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<i8, 4>, ptr<i8, 4>, i64, array<1 x i64>, array<1 x i64>)>
-  %6 = alloc() : memref<2048xi8, 4>
+  %6 = memref.alloc() : memref<2048xi8, 4>
 
   // CHECK: llvm.mlir.undef : !llvm.struct<(ptr<f32, 4>, ptr<f32, 4>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: %[[BASE_PTR_4:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<i8, 4>, ptr<i8, 4>, i64, array<1 x i64>, array<1 x i64>)>
@@ -884,7 +859,7 @@ func @view(%arg0 : index, %arg1 : index, %arg2 : index) {
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[3, 0] : !llvm.struct<(ptr<f32, 4>, ptr<f32, 4>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.mlir.constant(4 : index) : i64
   // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32, 4>, ptr<f32, 4>, i64, array<2 x i64>, array<2 x i64>)>
-  %7 = view %6[%arg2][] : memref<2048xi8, 4> to memref<64x4xf32, 4>
+  %7 = memref.view %6[%arg2][] : memref<2048xi8, 4> to memref<64x4xf32, 4>
 
   return
 }
@@ -944,7 +919,7 @@ func @subview(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg0 : index, 
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : i32
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
 
-  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
+  %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
   to memref<?x?xf32, offset: ?, strides: [?, ?]>
   return
@@ -1005,7 +980,7 @@ func @subview_non_zero_addrspace(%0 : memref<64x4xf32, offset: 0, strides: [4, 1
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : i32
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG0]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32, 3>, ptr<f32, 3>, i32, array<2 x i32>, array<2 x i32>)>
 
-  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
+  %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][%arg0, %arg1] :
     memref<64x4xf32, offset: 0, strides: [4, 1], 3>
     to memref<?x?xf32, offset: ?, strides: [?, ?], 3>
   return
@@ -1080,7 +1055,7 @@ func @subview_const_size(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %arg
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG7]], %[[STRIDE0]] : i32
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST4]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
   // CHECK32: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
-  %1 = subview %0[%arg0, %arg1][4, 2][%arg0, %arg1] :
+  %1 = memref.subview %0[%arg0, %arg1][4, 2][%arg0, %arg1] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
     to memref<4x2xf32, offset: ?, strides: [?, ?]>
   return
@@ -1151,7 +1126,7 @@ func @subview_const_stride(%0 : memref<64x4xf32, offset: 0, strides: [4, 1]>, %a
   // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[ARG7]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
   // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
-  %1 = subview %0[%arg0, %arg1][%arg0, %arg1][1, 2] :
+  %1 = memref.subview %0[%arg0, %arg1][%arg0, %arg1][1, 2] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
     to memref<?x?xf32, offset: ?, strides: [4, 2]>
   return
@@ -1181,7 +1156,7 @@ func @subview_const_stride_and_offset(%0 : memref<64x4xf32, offset: 0, strides: 
   // CHECK32: %[[CST4:.*]] = llvm.mlir.constant(4 : i64)
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST62]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
   // CHECK32: llvm.insertvalue %[[CST4]], %[[DESC5]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
-  %1 = subview %0[0, 8][62, 3][1, 1] :
+  %1 = memref.subview %0[0, 8][62, 3][1, 1] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
     to memref<62x3xf32, offset: 8, strides: [4, 1]>
   return
@@ -1226,7 +1201,7 @@ func @subview_mixed_static_dynamic(%0 : memref<64x4xf32, offset: 0, strides: [4,
   // CHECK32: %[[DESCSTRIDE0:.*]] = llvm.mul %[[ARG0]], %[[STRIDE0]] : i32
   // CHECK32: %[[DESC5:.*]] = llvm.insertvalue %[[CST62]], %[[DESC4]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
   // CHECK32: llvm.insertvalue %[[DESCSTRIDE0]], %[[DESC5]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i32, array<2 x i32>, array<2 x i32>)>
-  %1 = subview %0[%arg1, 8][62, %arg2][%arg0, 1] :
+  %1 = memref.subview %0[%arg1, 8][62, %arg2][%arg0, 1] :
     memref<64x4xf32, offset: 0, strides: [4, 1]>
     to memref<62x?xf32, offset: ?, strides: [?, 1]>
   return
@@ -1252,7 +1227,7 @@ func @subview_leading_operands(%0 : memref<5x3xf32>, %1: memref<5x?xf32>) {
   // CHECK: %[[C3_3:.*]] = llvm.mlir.constant(3 : i64) : i64
   // CHECK: llvm.insertvalue %[[C3_2]], %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.insertvalue %[[C3_3]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %2 = subview %0[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
+  %2 = memref.subview %0[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
 
   return
 }
@@ -1284,7 +1259,7 @@ func @subview_leading_operands_dynamic(%0 : memref<5x?xf32>) {
   // CHECK: %[[MUL:.*]] = llvm.mul %[[C1_2]], %[[ST0]]  : i64
   // CHECK: llvm.insertvalue %[[C3]], %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
   // CHECK: llvm.insertvalue %[[MUL]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
-  %1 = subview %0[2][3][1]: memref<5x?xf32> to memref<3x?xf32, offset: ?, strides: [?, 1]>
+  %1 = memref.subview %0[2][3][1]: memref<5x?xf32> to memref<3x?xf32, offset: ?, strides: [?, 1]>
   return
 }
 
@@ -1306,7 +1281,7 @@ func @subview_rank_reducing_leading_operands(%0 : memref<5x3xf32>) {
   // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
   // CHECK: llvm.insertvalue %[[C3]], %{{.*}}[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: llvm.insertvalue %[[C1]], %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
-  %1 = subview %0[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
+  %1 = memref.subview %0[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
 
   return
 }
@@ -1371,7 +1346,7 @@ func @assume_alignment(%0 : memref<4x4xf16>) {
   // CHECK-NEXT: %[[MASKED_PTR:.*]] = llvm.and %[[INT]], %[[MASK:.*]] : i64
   // CHECK-NEXT: %[[CONDITION:.*]] = llvm.icmp "eq" %[[MASKED_PTR]], %[[ZERO]] : i64
   // CHECK-NEXT: "llvm.intr.assume"(%[[CONDITION]]) : (i1) -> ()
-  assume_alignment %0, 16 : memref<4x4xf16>
+  memref.assume_alignment %0, 16 : memref<4x4xf16>
   return
 }
 
@@ -1418,7 +1393,7 @@ func @rank_of_ranked(%ranked: memref<?xi32>) {
 // CHECK32-LABEL: func @dim_of_unranked
 func @dim_of_unranked(%unranked: memref<*xi32>) -> index {
   %c0 = constant 0 : index
-  %dim = dim %unranked, %c0 : memref<*xi32>
+  %dim = memref.dim %unranked, %c0 : memref<*xi32>
   return %dim : index
 }
 // CHECK-NEXT: llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>

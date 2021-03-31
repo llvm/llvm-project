@@ -1,5 +1,5 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL --implicit-check-not=uninteresting %s
+; RUN: llvm-reduce --test FileCheck --test-arg --check-prefix=CHECK-ALL --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck --check-prefix=CHECK-ALL --implicit-check-not=uninteresting %s < %t
 
 declare void @llvm.uninteresting()
 declare void @uninteresting()

@@ -204,7 +204,7 @@ void SelectionDAG::setGraphAttrs(const SDNode *N, const char *Attrs) {
 
 /// getGraphAttrs - Get graph attributes for a node. (eg. "color=red".)
 /// Used from getNodeAttributes.
-const std::string SelectionDAG::getGraphAttrs(const SDNode *N) const {
+std::string SelectionDAG::getGraphAttrs(const SDNode *N) const {
 #ifndef NDEBUG
   std::map<const SDNode *, std::string>::const_iterator I =
     NodeGraphAttrs.find(N);

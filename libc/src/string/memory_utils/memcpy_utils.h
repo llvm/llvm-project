@@ -9,6 +9,7 @@
 #ifndef LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_UTILS_H
 
+#include "src/__support/sanitizer.h"
 #include "src/string/memory_utils/utils.h"
 #include <stddef.h> // size_t
 
@@ -30,18 +31,28 @@ extern "C" void LLVM_LIBC_MEMCPY_MONITOR(char *__restrict,
                                          const char *__restrict, size_t);
 #endif
 
+// Copies `kBlockSize` bytes from `src` to `dst` using a for loop.
+// This code requires the use of `-fno-buitin-memcpy` to prevent the compiler
+// from turning the for-loop back into `__builtin_memcpy`.
+template <size_t kBlockSize>
+static void ForLoopCopy(char *__restrict dst, const char *__restrict src) {
+  for (size_t i = 0; i < kBlockSize; ++i)
+    dst[i] = src[i];
+}
+
 // Copies `kBlockSize` bytes from `src` to `dst`.
 template <size_t kBlockSize>
 static void CopyBlock(char *__restrict dst, const char *__restrict src) {
 #if defined(LLVM_LIBC_MEMCPY_MONITOR)
   LLVM_LIBC_MEMCPY_MONITOR(dst, src, kBlockSize);
+#elif LLVM_LIBC_HAVE_MEMORY_SANITIZER || LLVM_LIBC_HAVE_ADDRESS_SANITIZER
+  ForLoopCopy<kBlockSize>(dst, src);
 #elif defined(USE_BUILTIN_MEMCPY_INLINE)
   __builtin_memcpy_inline(dst, src, kBlockSize);
 #elif defined(USE_BUILTIN_MEMCPY)
   __builtin_memcpy(dst, src, kBlockSize);
 #else
-  for (size_t i = 0; i < kBlockSize; ++i)
-    dst[i] = src[i];
+  ForLoopCopy<kBlockSize>(dst, src);
 #endif
 }
 

@@ -87,7 +87,10 @@ class DbgEng(DebuggerBase):
         # but is something that should be considered in the future.
         raise NotImplementedError('add_conditional_breakpoint is not yet implemented by dbgeng')
 
-    def _delete_conditional_breakpoint(self, file_, line, condition):
+    def get_triggered_breakpoint_ids(self):
+      raise NotImplementedError('get_triggered_breakpoint_ids is not yet implemented by dbgeng')
+
+    def delete_breakpoint(self, id):
         # breakpoint setting/deleting is not supported by dbgeng at this moment
         # but is something that should be considered in the future.
         raise NotImplementedError('delete_conditional_breakpoint is not yet implemented by dbgeng')
@@ -103,8 +106,11 @@ class DbgEng(DebuggerBase):
         self.step_info = res
 
     def go(self):
-        # We never go -- we always single step.
-        pass
+        # FIXME: running freely doesn't seem to reliably stop when back in a
+        # relevant source file -- this is likely to be a problem when setting
+        # breakpoints. Until that's fixed, single step instead of running
+        # freely. This isn't very efficient, but at least makes progress.
+        self.step()
 
     def _get_step_info(self, watches, step_index):
         frames = self.step_info

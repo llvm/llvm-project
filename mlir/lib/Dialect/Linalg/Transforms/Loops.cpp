@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/EDSC/Intrinsics.h"
 #include "mlir/Dialect/SCF/EDSC/Builders.h"
 #include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
@@ -50,14 +51,6 @@ static SmallVector<Value, 8> makeCanonicalAffineApplies(OpBuilder &b,
     res.push_back(affine_apply(exprMap, operands));
   }
   return res;
-}
-
-static SmallVector<Value, 4> permuteIvs(ArrayRef<Value> ivs,
-                                        Optional<AffineMap> permutation) {
-  return permutation ? applyMapToValues(ScopedContext::getBuilderRef(),
-                                        ScopedContext::getLocation(),
-                                        permutation.getValue(), ivs)
-                     : SmallVector<Value, 4>(ivs.begin(), ivs.end());
 }
 
 template <typename IndexedValueType, typename OpType>
@@ -178,40 +171,6 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs,
                                              outputBuffers);
 }
 
-template <typename IndexedValueType>
-static void emitScalarImplementation(ArrayRef<Value> allIvs, CopyOp copyOp) {
-  assert(copyOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto nPar = copyOp.getNumParallelLoops();
-  assert(nPar == allIvs.size());
-  auto inputIvs =
-      permuteIvs(allIvs.take_front(nPar), copyOp.inputPermutation());
-  auto outputIvs =
-      permuteIvs(allIvs.take_front(nPar), copyOp.outputPermutation());
-  SmallVector<Value, 8> iivs(inputIvs.begin(), inputIvs.end());
-  SmallVector<Value, 8> oivs(outputIvs.begin(), outputIvs.end());
-  IndexedValueType O(copyOp.getOutputBuffer(0)), I(copyOp.getInput(0));
-  // Emit the proper scalar assignment, whether we are dealing with a 0-D or
-  // an n-D loop nest; with or without permutations.
-  // clang-format off
-    nPar > 0 ? O(oivs) = I(iivs) :
-               O() = I();
-  // clang-format on
-}
-
-template <typename IndexedValueType>
-static void emitScalarImplementation(ArrayRef<Value> allIvs, FillOp fillOp) {
-  assert(fillOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  auto nPar = fillOp.getNumParallelLoops();
-  assert(nPar == allIvs.size());
-  auto ivs = SmallVector<Value, 4>(allIvs.begin(), allIvs.begin() + nPar);
-  IndexedValueType O(fillOp.getOutputBuffer(0));
-  // Emit the proper scalar assignment, whether we are dealing with a 0-D or
-  // an n-D loop nest; with or without permutations.
-  nPar > 0 ? O(ivs) = fillOp.value() : O() = fillOp.value();
-}
-
 // Create a padded view into the given `input` tensor using the 'indices'
 // to access the tensor. `skipPadding` lists the dimensions for which no padding
 // is needed e.g. the non-spatial dimensions for convolutions.
@@ -242,7 +201,7 @@ Value getPaddedInput(Value input, ArrayRef<Value> indices,
       conds.push_back(leftOutOfBound);
     else
       conds.push_back(conds.back() || leftOutOfBound);
-    Value rightBound = std_dim(input, idx);
+    Value rightBound = memref_dim(input, idx);
     conds.push_back(conds.back() || (sge(dim, rightBound)));
 
     // When padding is involved, the indices will only be shifted to negative,
@@ -349,12 +308,12 @@ static void emitScalarImplementation(ArrayRef<Value> allIvs, ConvOp convOp) {
   IndexedValueType F(convOp.filter()), O(convOp.output());
 
   // Emit scalar form. Padded conv involves an affine.max in the memory access
-  // which is not allowed by affine.load. Override to use an StdIndexedValue
+  // which is not allowed by affine.load. Override to use an MemRefIndexedValue
   // when there is non-zero padding.
   if (hasPadding(convOp)) {
     Type type = convOp.input().getType().cast<MemRefType>().getElementType();
     Value padValue = std_constant(type, getPadValueAttr<ConvOp>(type));
-    Value paddedInput = getPaddedInput<StdIndexedValue>(
+    Value paddedInput = getPaddedInput<MemRefIndexedValue>(
         convOp.input(), imIdx,
         /* Only need to pad the window dimensions */
         {0, static_cast<int>(imIdx.size()) - 1}, padValue);
@@ -380,9 +339,9 @@ static Value getPoolingInput(PoolingOp op, ArrayRef<Value> inputIndices) {
     Type type =
         op.input().getType().template cast<MemRefType>().getElementType();
     Value padValue = std_constant(type, getPadValueAttr<PoolingOp>(type));
-    return getPaddedInput<StdIndexedValue>(op.input(), inputIndices,
-                                           /*Pad every dimension*/ {},
-                                           padValue);
+    return getPaddedInput<MemRefIndexedValue>(op.input(), inputIndices,
+                                              /*Pad every dimension*/ {},
+                                              padValue);
   }
   IndexedValueType input(op.input());
   return input(inputIndices);
@@ -533,8 +492,8 @@ linalgOpToLoopsImpl(Operation *op, OpBuilder &builder,
         assert(iterArgs.empty() && "unexpected iterArgs");
         allIvs.append(ivs.begin(), ivs.end());
         llvm::TypeSwitch<Operation *>(op)
-            .Case<CopyOp, FillOp, ConvOp, PoolingMaxOp, PoolingMinOp,
-                  PoolingSumOp, IndexedGenericOp, LinalgOp>([&](auto op) {
+            .Case<ConvOp, PoolingMaxOp, PoolingMinOp, PoolingSumOp,
+                  IndexedGenericOp, LinalgOp>([&](auto op) {
               emitScalarImplementation<IndexedValueTy>(allIvs, op);
             })
             .Default([&](Operation *op) { assert(false && "unexpected op"); });
@@ -561,8 +520,9 @@ namespace {
 template <typename LoopType>
 class LinalgRewritePattern : public RewritePattern {
 public:
-  LinalgRewritePattern(ArrayRef<unsigned> interchangeVector)
-      : RewritePattern(/*benefit=*/1, MatchAnyOpTypeTag()),
+  LinalgRewritePattern(MLIRContext *context,
+                       ArrayRef<unsigned> interchangeVector)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
         interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
 
   LogicalResult matchAndRewrite(Operation *op,
@@ -586,13 +546,13 @@ template <typename LoopType>
 static void lowerLinalgToLoopsImpl(FuncOp funcOp,
                                    ArrayRef<unsigned> interchangeVector) {
   MLIRContext *context = funcOp.getContext();
-  OwningRewritePatternList patterns;
-  patterns.insert<LinalgRewritePattern<LoopType>>(interchangeVector);
-  DimOp::getCanonicalizationPatterns(patterns, context);
+  RewritePatternSet patterns(context);
+  patterns.add<LinalgRewritePattern<LoopType>>(context, interchangeVector);
+  memref::DimOp::getCanonicalizationPatterns(patterns, context);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);
-  patterns.insert<FoldAffineOp>(context);
+  patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
 namespace {
@@ -635,12 +595,18 @@ struct FoldAffineOp : public RewritePattern {
 
 struct LowerToAffineLoops
     : public LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+  }
   void runOnFunction() override {
     lowerLinalgToLoopsImpl<AffineForOp>(getFunction(), interchangeVector);
   }
 };
 
 struct LowerToLoops : public LinalgLowerToLoopsBase<LowerToLoops> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect, scf::SCFDialect>();
+  }
   void runOnFunction() override {
     lowerLinalgToLoopsImpl<scf::ForOp>(getFunction(), interchangeVector);
   }

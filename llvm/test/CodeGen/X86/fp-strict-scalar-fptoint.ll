@@ -679,7 +679,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; X87-NEXT:    andl $-8, %esp
 ; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    flds 8(%ebp)
-; X87-NEXT:    flds {{\.LCPI.*}}
+; X87-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X87-NEXT:    fcom %st(1)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
@@ -1319,7 +1319,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; X87-NEXT:    andl $-8, %esp
 ; X87-NEXT:    subl $16, %esp
 ; X87-NEXT:    fldl 8(%ebp)
-; X87-NEXT:    flds {{\.LCPI.*}}
+; X87-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
 ; X87-NEXT:    fcom %st(1)
 ; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax

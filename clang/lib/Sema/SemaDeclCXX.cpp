@@ -254,8 +254,7 @@ void Sema::ImplicitExceptionSpecification::CalledStmt(Stmt *S) {
     ComputedEST = EST_None;
 }
 
-ExprResult Sema::ConvertParamDefaultArgument(const ParmVarDecl *Param,
-                                             Expr *Arg,
+ExprResult Sema::ConvertParamDefaultArgument(ParmVarDecl *Param, Expr *Arg,
                                              SourceLocation EqualLoc) {
   if (RequireCompleteType(Param->getLocation(), Param->getType(),
                           diag::err_typecheck_decl_incomplete_type))
@@ -857,17 +856,25 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       Previous.clear();
     }
 
+    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
+
+    // Find the shadowed declaration before filtering for scope.
+    NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
+                                  ? getShadowedDeclaration(BD, Previous)
+                                  : nullptr;
+
     bool ConsiderLinkage = DC->isFunctionOrMethod() &&
                            DS.getStorageClassSpec() == DeclSpec::SCS_extern;
     FilterLookupForScope(Previous, DC, S, ConsiderLinkage,
                          /*AllowInlineNamespace*/false);
+
     if (!Previous.empty()) {
       auto *Old = Previous.getRepresentativeDecl();
       Diag(B.NameLoc, diag::err_redefinition) << B.Name;
       Diag(Old->getLocation(), diag::note_previous_definition);
+    } else if (ShadowedDecl && !D.isRedeclaration()) {
+      CheckShadow(BD, ShadowedDecl, Previous);
     }
-
-    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
     PushOnScopeChains(BD, S, true);
     Bindings.push_back(BD);
     ParsingInitForAutoVars.insert(BD);
@@ -4122,13 +4129,9 @@ ValueDecl *Sema::tryLookupCtorInitMemberDecl(CXXRecordDecl *ClassDecl,
                                              IdentifierInfo *MemberOrBase) {
   if (SS.getScopeRep() || TemplateTypeTy)
     return nullptr;
-  DeclContext::lookup_result Result = ClassDecl->lookup(MemberOrBase);
-  if (Result.empty())
-    return nullptr;
-  ValueDecl *Member;
-  if ((Member = dyn_cast<FieldDecl>(Result.front())) ||
-      (Member = dyn_cast<IndirectFieldDecl>(Result.front())))
-    return Member;
+  for (auto *D : ClassDecl->lookup(MemberOrBase))
+    if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D))
+      return cast<ValueDecl>(D);
   return nullptr;
 }
 
@@ -5231,6 +5234,20 @@ static const void *GetKeyForMember(ASTContext &Context,
   return Member->getAnyMember()->getCanonicalDecl();
 }
 
+static void AddInitializerToDiag(const Sema::SemaDiagnosticBuilder &Diag,
+                                 const CXXCtorInitializer *Previous,
+                                 const CXXCtorInitializer *Current) {
+  if (Previous->isAnyMemberInitializer())
+    Diag << 0 << Previous->getAnyMember();
+  else
+    Diag << 1 << Previous->getTypeSourceInfo()->getType();
+
+  if (Current->isAnyMemberInitializer())
+    Diag << 0 << Current->getAnyMember();
+  else
+    Diag << 1 << Current->getTypeSourceInfo()->getType();
+}
+
 static void DiagnoseBaseOrMemInitializerOrder(
     Sema &SemaRef, const CXXConstructorDecl *Constructor,
     ArrayRef<CXXCtorInitializer *> Inits) {
@@ -5280,10 +5297,15 @@ static void DiagnoseBaseOrMemInitializerOrder(
   unsigned NumIdealInits = IdealInitKeys.size();
   unsigned IdealIndex = 0;
 
-  CXXCtorInitializer *PrevInit = nullptr;
+  // Track initializers that are in an incorrect order for either a warning or
+  // note if multiple ones occur.
+  SmallVector<unsigned> WarnIndexes;
+  // Correlates the index of an initializer in the init-list to the index of
+  // the field/base in the class.
+  SmallVector<std::pair<unsigned, unsigned>, 32> CorrelatedInitOrder;
+
   for (unsigned InitIndex = 0; InitIndex != Inits.size(); ++InitIndex) {
-    CXXCtorInitializer *Init = Inits[InitIndex];
-    const void *InitKey = GetKeyForMember(SemaRef.Context, Init);
+    const void *InitKey = GetKeyForMember(SemaRef.Context, Inits[InitIndex]);
 
     // Scan forward to try to find this initializer in the idealized
     // initializers list.
@@ -5294,20 +5316,8 @@ static void DiagnoseBaseOrMemInitializerOrder(
     // If we didn't find this initializer, it must be because we
     // scanned past it on a previous iteration.  That can only
     // happen if we're out of order;  emit a warning.
-    if (IdealIndex == NumIdealInits && PrevInit) {
-      Sema::SemaDiagnosticBuilder D =
-        SemaRef.Diag(PrevInit->getSourceLocation(),
-                     diag::warn_initializer_out_of_order);
-
-      if (PrevInit->isAnyMemberInitializer())
-        D << 0 << PrevInit->getAnyMember()->getDeclName();
-      else
-        D << 1 << PrevInit->getTypeSourceInfo()->getType();
-
-      if (Init->isAnyMemberInitializer())
-        D << 0 << Init->getAnyMember()->getDeclName();
-      else
-        D << 1 << Init->getTypeSourceInfo()->getType();
+    if (IdealIndex == NumIdealInits && InitIndex) {
+      WarnIndexes.push_back(InitIndex);
 
       // Move back to the initializer's location in the ideal list.
       for (IdealIndex = 0; IdealIndex != NumIdealInits; ++IdealIndex)
@@ -5317,8 +5327,54 @@ static void DiagnoseBaseOrMemInitializerOrder(
       assert(IdealIndex < NumIdealInits &&
              "initializer not found in initializer list");
     }
+    CorrelatedInitOrder.emplace_back(IdealIndex, InitIndex);
+  }
 
-    PrevInit = Init;
+  if (WarnIndexes.empty())
+    return;
+
+  // Sort based on the ideal order, first in the pair.
+  llvm::sort(CorrelatedInitOrder,
+             [](auto &LHS, auto &RHS) { return LHS.first < RHS.first; });
+
+  // Introduce a new scope as SemaDiagnosticBuilder needs to be destroyed to
+  // emit the diagnostic before we can try adding notes.
+  {
+    Sema::SemaDiagnosticBuilder D = SemaRef.Diag(
+        Inits[WarnIndexes.front() - 1]->getSourceLocation(),
+        WarnIndexes.size() == 1 ? diag::warn_initializer_out_of_order
+                                : diag::warn_some_initializers_out_of_order);
+
+    for (unsigned I = 0; I < CorrelatedInitOrder.size(); ++I) {
+      if (CorrelatedInitOrder[I].second == I)
+        continue;
+      // Ideally we would be using InsertFromRange here, but clang doesn't
+      // appear to handle InsertFromRange correctly when the source range is
+      // modified by another fix-it.
+      D << FixItHint::CreateReplacement(
+          Inits[I]->getSourceRange(),
+          Lexer::getSourceText(
+              CharSourceRange::getTokenRange(
+                  Inits[CorrelatedInitOrder[I].second]->getSourceRange()),
+              SemaRef.getSourceManager(), SemaRef.getLangOpts()));
+    }
+
+    // If there is only 1 item out of order, the warning expects the name and
+    // type of each being added to it.
+    if (WarnIndexes.size() == 1) {
+      AddInitializerToDiag(D, Inits[WarnIndexes.front() - 1],
+                           Inits[WarnIndexes.front()]);
+      return;
+    }
+  }
+  // More than 1 item to warn, create notes letting the user know which ones
+  // are bad.
+  for (unsigned WarnIndex : WarnIndexes) {
+    const clang::CXXCtorInitializer *PrevInit = Inits[WarnIndex - 1];
+    auto D = SemaRef.Diag(PrevInit->getSourceLocation(),
+                          diag::note_initializer_out_of_order);
+    AddInitializerToDiag(D, PrevInit, Inits[WarnIndex]);
+    D << PrevInit->getSourceRange();
   }
 }
 
@@ -5386,7 +5442,7 @@ bool CheckRedundantUnionInit(Sema &S,
 
   return false;
 }
-}
+} // namespace
 
 /// ActOnMemInitializers - Handle the member initializers for a constructor.
 void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
@@ -7624,7 +7680,7 @@ public:
 
 private:
   Subobject getCompleteObject() {
-    return Subobject{Subobject::CompleteObject, nullptr, FD->getLocation()};
+    return Subobject{Subobject::CompleteObject, RD, FD->getLocation()};
   }
 
   Subobject getBase(CXXBaseSpecifier *Base) {
@@ -7677,10 +7733,14 @@ private:
 
     if (Args[0]->getType()->isOverloadableType())
       S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
-    else {
+    else if (OO == OO_EqualEqual ||
+             !Args[0]->getType()->isFunctionPointerType()) {
       // FIXME: We determine whether this is a valid expression by checking to
       // see if there's a viable builtin operator candidate for it. That isn't
       // really what the rules ask us to do, but should give the right results.
+      //
+      // Note that the builtin operator for relational comparisons on function
+      // pointers is the only known case which cannot be used.
       S.AddBuiltinOperatorCandidates(OO, FD->getLocation(), Args, CandidateSet);
     }
 
@@ -9660,9 +9720,9 @@ public:
 
     bool foundSameNameMethod = false;
     SmallVector<CXXMethodDecl *, 8> overloadedMethods;
-    for (Path.Decls = BaseRecord->lookup(Name); !Path.Decls.empty();
-         Path.Decls = Path.Decls.slice(1)) {
-      NamedDecl *D = Path.Decls.front();
+    for (Path.Decls = BaseRecord->lookup(Name).begin();
+         Path.Decls != DeclContext::lookup_iterator(); ++Path.Decls) {
+      NamedDecl *D = *Path.Decls;
       if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(D)) {
         MD = MD->getCanonicalDecl();
         foundSameNameMethod = true;
@@ -15201,13 +15261,12 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, const RecordType *Record) {
 /// to form a proper call to this constructor.
 ///
 /// \returns true if an error occurred, false otherwise.
-bool
-Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
-                              MultiExprArg ArgsPtr,
-                              SourceLocation Loc,
-                              SmallVectorImpl<Expr*> &ConvertedArgs,
-                              bool AllowExplicit,
-                              bool IsListInitialization) {
+bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
+                                   QualType DeclInitType, MultiExprArg ArgsPtr,
+                                   SourceLocation Loc,
+                                   SmallVectorImpl<Expr *> &ConvertedArgs,
+                                   bool AllowExplicit,
+                                   bool IsListInitialization) {
   // FIXME: This duplicates a lot of code from Sema::ConvertArgumentsForCall.
   unsigned NumArgs = ArgsPtr.size();
   Expr **Args = ArgsPtr.data();
@@ -15234,7 +15293,7 @@ Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
-  CheckConstructorCall(Constructor,
+  CheckConstructorCall(Constructor, DeclInitType,
                        llvm::makeArrayRef(AllArgs.data(), AllArgs.size()),
                        Proto, Loc);
 
@@ -15261,11 +15320,13 @@ CheckOperatorNewDeleteDeclarationScope(Sema &SemaRef,
   return false;
 }
 
-static QualType
-RemoveAddressSpaceFromPtr(Sema &SemaRef, const PointerType *PtrTy) {
-  QualType QTy = PtrTy->getPointeeType();
-  QTy = SemaRef.Context.removeAddrSpaceQualType(QTy);
-  return SemaRef.Context.getPointerType(QTy);
+static CanQualType RemoveAddressSpaceFromPtr(Sema &SemaRef,
+                                             const PointerType *PtrTy) {
+  auto &Ctx = SemaRef.Context;
+  Qualifiers PtrQuals = PtrTy->getPointeeType().getQualifiers();
+  PtrQuals.removeAddressSpace();
+  return Ctx.getPointerType(Ctx.getCanonicalType(Ctx.getQualifiedType(
+      PtrTy->getPointeeType().getUnqualifiedType(), PtrQuals)));
 }
 
 static inline bool
@@ -15277,11 +15338,14 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   QualType ResultType =
       FnDecl->getType()->castAs<FunctionType>()->getReturnType();
 
-  // The operator is valid on any address space for OpenCL.
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
-    if (auto *PtrTy = ResultType->getAs<PointerType>()) {
+    // The operator is valid on any address space for OpenCL.
+    // Drop address space from actual and expected result types.
+    if (const auto *PtrTy = ResultType->getAs<PointerType>())
       ResultType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-    }
+
+    if (auto ExpectedPtrTy = ExpectedResultType->getAs<PointerType>())
+      ExpectedResultType = RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
   }
 
   // Check that the result type is what we expect.
@@ -15311,10 +15375,14 @@ CheckOperatorNewDeleteTypes(Sema &SemaRef, const FunctionDecl *FnDecl,
   QualType FirstParamType = FnDecl->getParamDecl(0)->getType();
   if (SemaRef.getLangOpts().OpenCLCPlusPlus) {
     // The operator is valid on any address space for OpenCL.
-    if (auto *PtrTy =
-            FnDecl->getParamDecl(0)->getType()->getAs<PointerType>()) {
+    // Drop address space from actual and expected first parameter types.
+    if (const auto *PtrTy =
+            FnDecl->getParamDecl(0)->getType()->getAs<PointerType>())
       FirstParamType = RemoveAddressSpaceFromPtr(SemaRef, PtrTy);
-    }
+
+    if (auto ExpectedPtrTy = ExpectedFirstParamType->getAs<PointerType>())
+      ExpectedFirstParamType =
+          RemoveAddressSpaceFromPtr(SemaRef, ExpectedPtrTy);
   }
 
   // Check that the first parameter type is what we expect.

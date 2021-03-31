@@ -49,7 +49,7 @@ static linalg::GenericOp createGenericOpFromNamedOp(linalg::LinalgOp namedOp,
       indexingMaps, iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
         edsc::ScopedContext scope(bodyBuilder, loc);
-        regionBuilder(*bodyBuilder.getBlock());
+        regionBuilder(*bodyBuilder.getBlock(), /*captures=*/{});
       });
 }
 
@@ -104,7 +104,7 @@ struct LinalgNamedOpGeneralizationPattern : RewritePattern {
   LinalgNamedOpGeneralizationPattern(MLIRContext *context,
                                      linalg::LinalgTransformationFilter marker,
                                      PatternBenefit benefit = 1)
-      : RewritePattern(benefit, MatchAnyOpTypeTag()),
+      : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
         marker(std::move(marker)) {}
 
   LogicalResult matchAndRewrite(Operation *rootOp,
@@ -143,10 +143,10 @@ struct LinalgGeneralizationPass
 
 void LinalgGeneralizationPass::runOnFunction() {
   FuncOp func = getFunction();
-  OwningRewritePatternList patterns;
-  linalg::populateLinalgConvGeneralizationPatterns(&getContext(), patterns);
-  linalg::populateLinalgNamedOpsGeneralizationPatterns(&getContext(), patterns);
-  applyPatternsAndFoldGreedily(func.getBody(), std::move(patterns));
+  RewritePatternSet patterns(&getContext());
+  linalg::populateLinalgConvGeneralizationPatterns(patterns);
+  linalg::populateLinalgNamedOpsGeneralizationPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(func.getBody(), std::move(patterns));
 }
 
 linalg::GenericOp GeneralizeConvOp::createGenericOp(linalg::ConvOp convOp,
@@ -167,15 +167,14 @@ linalg::GenericOp GeneralizeConvOp::createGenericOp(linalg::ConvOp convOp,
 }
 
 void mlir::linalg::populateLinalgConvGeneralizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
-    linalg::LinalgTransformationFilter marker) {
-  patterns.insert<GeneralizeConvOp>(context, marker);
+    RewritePatternSet &patterns, linalg::LinalgTransformationFilter marker) {
+  patterns.add<GeneralizeConvOp>(patterns.getContext(), marker);
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
-    MLIRContext *context, OwningRewritePatternList &patterns,
-    linalg::LinalgTransformationFilter marker) {
-  patterns.insert<LinalgNamedOpGeneralizationPattern>(context, marker);
+    RewritePatternSet &patterns, linalg::LinalgTransformationFilter marker) {
+  patterns.add<LinalgNamedOpGeneralizationPattern>(patterns.getContext(),
+                                                   marker);
 }
 
 std::unique_ptr<OperationPass<FuncOp>> mlir::createLinalgGeneralizationPass() {

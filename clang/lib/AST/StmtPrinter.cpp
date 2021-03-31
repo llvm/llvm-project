@@ -636,6 +636,10 @@ void StmtPrinter::VisitSEHLeaveStmt(SEHLeaveStmt *Node) {
 //  OpenMP directives printing methods
 //===----------------------------------------------------------------------===//
 
+void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
+  PrintStmt(Node->getLoopStmt());
+}
+
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
   OMPClausePrinter Printer(OS, Policy);
@@ -657,6 +661,11 @@ void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {
 
 void StmtPrinter::VisitOMPSimdDirective(OMPSimdDirective *Node) {
   Indent() << "#pragma omp simd";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
+  Indent() << "#pragma omp tile";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -953,6 +962,16 @@ void StmtPrinter::VisitOMPTargetTeamsDistributeSimdDirective(
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPInteropDirective(OMPInteropDirective *Node) {
+  Indent() << "#pragma omp interop";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPDispatchDirective(OMPDispatchDirective *Node) {
+  Indent() << "#pragma omp dispatch";
+  PrintOMPExecutableDirective(Node);
+}
+
 //===----------------------------------------------------------------------===//
 //  Expr printing methods.
 //===----------------------------------------------------------------------===//
@@ -1156,6 +1175,10 @@ void StmtPrinter::VisitIntegerLiteral(IntegerLiteral *Node) {
   case BuiltinType::ULong:     OS << "UL"; break;
   case BuiltinType::LongLong:  OS << "LL"; break;
   case BuiltinType::ULongLong: OS << "ULL"; break;
+  case BuiltinType::Int128:
+    break; // no suffix.
+  case BuiltinType::UInt128:
+    break; // no suffix.
   }
 }
 

@@ -113,6 +113,6 @@ class TestOSPluginStepping(TestBase):
             self.process.Continue()
             os_thread = self.get_os_thread()
             self.assertTrue(os_thread.IsValid(), "The OS thread is back after continue")
-            self.assertTrue("step out" in os_thread.GetStopDescription(100), "Completed step out plan")
+            self.assertIn("step out", os_thread.GetStopDescription(100), "Completed step out plan")
         
         

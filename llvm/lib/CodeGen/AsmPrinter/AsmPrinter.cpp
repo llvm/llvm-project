@@ -709,7 +709,12 @@ void AsmPrinter::emitFunctionHeader() {
   emitConstantPool();
 
   // Print the 'header' of function.
-  MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
+  // If basic block sections is desired and function sections is off,
+  // explicitly request a unique section for this function.
+  if (MF->front().isBeginSection() && !TM.getFunctionSections())
+    MF->setSection(getObjFileLowering().getUniqueSectionForFunction(F, TM));
+  else
+    MF->setSection(getObjFileLowering().SectionForGlobal(&F, TM));
   OutStreamer->SwitchSection(MF->getSection());
 
   if (!MAI->hasVisibilityOnlyWithLinkage())
@@ -819,9 +824,6 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (CurrentFnSym->isVariable())
     report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
                        "' is a protected alias");
-  if (CurrentFnSym->isDefined())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' label emitted multiple times to assembly file");
 
   OutStreamer->emitLabel(CurrentFnSym);
 
@@ -900,7 +902,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
 /// means the target will need to handle MI in EmitInstruction.
 static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   // This code handles only the 4-operand target-independent form.
-  if (MI->getNumOperands() != 4)
+  if (MI->isNonListDebugValue() && MI->getNumOperands() != 4)
     return false;
 
   SmallString<128> Str;
@@ -916,19 +918,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   OS << V->getName();
   OS << " <- ";
 
-  // The second operand is only an offset if it's an immediate.
-  bool MemLoc = MI->isIndirectDebugValue();
-  auto Offset = StackOffset::getFixed(MemLoc ? MI->getOperand(1).getImm() : 0);
   const DIExpression *Expr = MI->getDebugExpression();
   if (Expr->getNumElements()) {
     OS << '[';
-    bool NeedSep = false;
+    ListSeparator LS;
     for (auto Op : Expr->expr_ops()) {
-      if (NeedSep)
-        OS << ", ";
-      else
-        NeedSep = true;
-      OS << dwarf::OperationEncodingString(Op.getOp());
+      OS << LS << dwarf::OperationEncodingString(Op.getOp());
       for (unsigned I = 0; I < Op.getNumArgs(); ++I)
         OS << ' ' << Op.getArg(I);
     }
@@ -936,55 +931,70 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
   }
 
   // Register or immediate value. Register 0 means undef.
-  if (MI->getDebugOperand(0).isFPImm()) {
-    APFloat APF = APFloat(MI->getDebugOperand(0).getFPImm()->getValueAPF());
-    if (MI->getDebugOperand(0).getFPImm()->getType()->isFloatTy()) {
-      OS << (double)APF.convertToFloat();
-    } else if (MI->getDebugOperand(0).getFPImm()->getType()->isDoubleTy()) {
-      OS << APF.convertToDouble();
-    } else {
-      // There is no good way to print long double.  Convert a copy to
-      // double.  Ah well, it's only a comment.
-      bool ignored;
-      APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                  &ignored);
-      OS << "(long double) " << APF.convertToDouble();
+  for (const MachineOperand &Op : MI->debug_operands()) {
+    if (&Op != MI->debug_operands().begin())
+      OS << ", ";
+    switch (Op.getType()) {
+    case MachineOperand::MO_FPImmediate: {
+      APFloat APF = APFloat(Op.getFPImm()->getValueAPF());
+      if (Op.getFPImm()->getType()->isFloatTy()) {
+        OS << (double)APF.convertToFloat();
+      } else if (Op.getFPImm()->getType()->isDoubleTy()) {
+        OS << APF.convertToDouble();
+      } else {
+        // There is no good way to print long double.  Convert a copy to
+        // double.  Ah well, it's only a comment.
+        bool ignored;
+        APF.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                    &ignored);
+        OS << "(long double) " << APF.convertToDouble();
+      }
+      break;
     }
-  } else if (MI->getDebugOperand(0).isImm()) {
-    OS << MI->getDebugOperand(0).getImm();
-  } else if (MI->getDebugOperand(0).isCImm()) {
-    MI->getDebugOperand(0).getCImm()->getValue().print(OS, false /*isSigned*/);
-  } else if (MI->getDebugOperand(0).isTargetIndex()) {
-    auto Op = MI->getDebugOperand(0);
-    OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
-    // NOTE: Want this comment at start of line, don't emit with AddComment.
-    AP.OutStreamer->emitRawComment(OS.str());
-    return true;
-  } else {
-    Register Reg;
-    if (MI->getDebugOperand(0).isReg()) {
-      Reg = MI->getDebugOperand(0).getReg();
-    } else {
-      assert(MI->getDebugOperand(0).isFI() && "Unknown operand type");
-      const TargetFrameLowering *TFI = AP.MF->getSubtarget().getFrameLowering();
-      Offset += TFI->getFrameIndexReference(
-          *AP.MF, MI->getDebugOperand(0).getIndex(), Reg);
-      MemLoc = true;
+    case MachineOperand::MO_Immediate: {
+      OS << Op.getImm();
+      break;
     }
-    if (Reg == 0) {
-      // Suppress offset, it is not meaningful here.
-      OS << "undef";
+    case MachineOperand::MO_CImmediate: {
+      Op.getCImm()->getValue().print(OS, false /*isSigned*/);
+      break;
+    }
+    case MachineOperand::MO_TargetIndex: {
+      OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
       // NOTE: Want this comment at start of line, don't emit with AddComment.
       AP.OutStreamer->emitRawComment(OS.str());
-      return true;
+      break;
     }
-    if (MemLoc)
-      OS << '[';
-    OS << printReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
+    case MachineOperand::MO_Register:
+    case MachineOperand::MO_FrameIndex: {
+      Register Reg;
+      Optional<StackOffset> Offset;
+      if (Op.isReg()) {
+        Reg = Op.getReg();
+      } else {
+        const TargetFrameLowering *TFI =
+            AP.MF->getSubtarget().getFrameLowering();
+        Offset = TFI->getFrameIndexReference(*AP.MF, Op.getIndex(), Reg);
+      }
+      if (!Reg) {
+        // Suppress offset, it is not meaningful here.
+        OS << "undef";
+        break;
+      }
+      // The second operand is only an offset if it's an immediate.
+      if (MI->isIndirectDebugValue())
+        Offset = StackOffset::getFixed(MI->getDebugOffset().getImm());
+      if (Offset)
+        OS << '[';
+      OS << printReg(Reg, AP.MF->getSubtarget().getRegisterInfo());
+      if (Offset)
+        OS << '+' << Offset->getFixed() << ']';
+      break;
+    }
+    default:
+      llvm_unreachable("Unknown operand type");
+    }
   }
-
-  if (MemLoc)
-    OS << '+' << Offset.getFixed() << ']';
 
   // NOTE: Want this comment at start of line, don't emit with AddComment.
   AP.OutStreamer->emitRawComment(OS.str());
@@ -1068,17 +1078,19 @@ void AsmPrinter::emitFrameAlloc(const MachineInstr &MI) {
 
 /// Returns the BB metadata to be emitted in the .llvm_bb_addr_map section for a
 /// given basic block. This can be used to capture more precise profile
-/// information. We use the last 3 bits (LSBs) to ecnode the following
+/// information. We use the last 4 bits (LSBs) to encode the following
 /// information:
 ///  * (1): set if return block (ret or tail call).
 ///  * (2): set if ends with a tail call.
 ///  * (3): set if exception handling (EH) landing pad.
+///  * (4): set if the block can fall through to its next.
 /// The remaining bits are zero.
 static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
   const TargetInstrInfo *TII = MBB.getParent()->getSubtarget().getInstrInfo();
   return ((unsigned)MBB.isReturnBlock()) |
          ((!MBB.empty() && TII->isTailCall(MBB.back())) << 1) |
-         (MBB.isEHPad() << 2);
+         (MBB.isEHPad() << 2) |
+         (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1227,6 +1239,7 @@ void AsmPrinter::emitFunctionBody() {
         emitInlineAsm(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
+      case TargetOpcode::DBG_VALUE_LIST:
         if (isVerbose()) {
           if (!emitDebugValueComment(&MI, *this))
             emitInstruction(&MI);
@@ -1352,8 +1365,7 @@ void AsmPrinter::emitFunctionBody() {
   const Triple &TT = TM.getTargetTriple();
   if (!HasAnyRealCode && (MAI->hasSubsectionsViaSymbols() ||
                           (TT.isOSWindows() && TT.isOSBinFormatCOFF()))) {
-    MCInst Noop;
-    MF->getSubtarget().getInstrInfo()->getNoop(Noop);
+    MCInst Noop = MF->getSubtarget().getInstrInfo()->getNop();
 
     // Targets can opt-out of emitting the noop here by leaving the opcode
     // unspecified.
@@ -1418,8 +1430,8 @@ void AsmPrinter::emitFunctionBody() {
   }
 
   // Emit section containing BB address offsets and their metadata, when
-  // BB labels are requested for this function.
-  if (MF->hasBBLabels())
+  // BB labels are requested for this function. Skip empty functions.
+  if (MF->hasBBLabels() && HasAnyRealCode)
     emitBBAddrMapSection(*MF);
 
   // Emit section containing stack size metadata.
@@ -1831,7 +1843,7 @@ bool AsmPrinter::doFinalization(Module &M) {
 
       OutStreamer->SwitchSection(
           OutContext.getELFSection(".llvm_sympart", ELF::SHT_LLVM_SYMPART, 0, 0,
-                                   "", ++UniqueID, nullptr));
+                                   "", false, ++UniqueID, nullptr));
       OutStreamer->emitBytes(GV.getPartition());
       OutStreamer->emitZeros(1);
       OutStreamer->emitValue(
@@ -2992,8 +3004,7 @@ void AsmPrinter::printOffset(int64_t Offset, raw_ostream &OS) const {
 }
 
 void AsmPrinter::emitNops(unsigned N) {
-  MCInst Nop;
-  MF->getSubtarget().getInstrInfo()->getNoop(Nop);
+  MCInst Nop = MF->getSubtarget().getInstrInfo()->getNop();
   for (; N; --N)
     EmitToStreamer(*OutStreamer, Nop);
 }
@@ -3201,6 +3212,11 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
+  if (MBB.isEHCatchretTarget() &&
+      MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
+    OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
+  }
+
   // With BB sections, each basic block must handle CFI information on its own
   // if it begins a section (Entry block is handled separately by
   // AsmPrinterHandler::beginFunction).
@@ -3378,13 +3394,13 @@ void AsmPrinter::emitXRayTable() {
       GroupName = F.getComdat()->getName();
     }
     InstMap = OutContext.getELFSection("xray_instr_map", ELF::SHT_PROGBITS,
-                                       Flags, 0, GroupName,
+                                       Flags, 0, GroupName, F.hasComdat(),
                                        MCSection::NonUniqueID, LinkedToSym);
 
     if (!TM.Options.XRayOmitFunctionIndex)
       FnSledIndex = OutContext.getELFSection(
           "xray_fn_idx", ELF::SHT_PROGBITS, Flags | ELF::SHF_WRITE, 0,
-          GroupName, MCSection::NonUniqueID, LinkedToSym);
+          GroupName, F.hasComdat(), MCSection::NonUniqueID, LinkedToSym);
   } else if (MF->getSubtarget().getTargetTriple().isOSBinFormatMachO()) {
     InstMap = OutContext.getMachOSection("__DATA", "xray_instr_map", 0,
                                          SectionKind::getReadOnlyWithRel());
@@ -3468,9 +3484,9 @@ void AsmPrinter::emitPatchableFunctionEntries() {
     const MCSymbolELF *LinkedToSym = nullptr;
     StringRef GroupName;
 
-    // GNU as < 2.35 did not support section flag 'o'. Use SHF_LINK_ORDER only
-    // if we are using the integrated assembler.
-    if (MAI->useIntegratedAssembler()) {
+    // GNU as < 2.35 did not support section flag 'o'. GNU ld < 2.36 did not
+    // support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
+    if (MAI->useIntegratedAssembler() || MAI->binutilsIsAtLeast(2, 36)) {
       Flags |= ELF::SHF_LINK_ORDER;
       if (F.hasComdat()) {
         Flags |= ELF::SHF_GROUP;
@@ -3480,7 +3496,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
     }
     OutStreamer->SwitchSection(OutContext.getELFSection(
         "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0, GroupName,
-        MCSection::NonUniqueID, LinkedToSym));
+        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym));
     emitAlignment(Align(PointerSize));
     OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }

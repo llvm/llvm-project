@@ -93,7 +93,7 @@ private:
 
   /// Helper conversion for a Toy AST location to an MLIR location.
   mlir::Location loc(Location loc) {
-    return builder.getFileLineColLoc(builder.getIdentifier(*loc.file), loc.line,
+    return mlir::FileLineColLoc::get(builder.getIdentifier(*loc.file), loc.line,
                                      loc.col);
   }
 

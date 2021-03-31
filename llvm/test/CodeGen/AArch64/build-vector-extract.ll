@@ -208,7 +208,6 @@ define <2 x i64> @extract0_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract0_i16_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 0
@@ -221,7 +220,6 @@ define <2 x i64> @extract0_i16_zext_insert0_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract0_i16_zext_insert0_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[0], x8
 ; CHECK-NEXT:    ret
@@ -235,7 +233,6 @@ define <2 x i64> @extract1_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract1_i16_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 1
@@ -248,7 +245,6 @@ define <2 x i64> @extract1_i16_zext_insert0_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract1_i16_zext_insert0_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[0], x8
 ; CHECK-NEXT:    ret
@@ -262,7 +258,6 @@ define <2 x i64> @extract2_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract2_i16_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 2
@@ -275,7 +270,6 @@ define <2 x i64> @extract2_i16_zext_insert0_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract2_i16_zext_insert0_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[0], x8
 ; CHECK-NEXT:    ret
@@ -289,7 +283,6 @@ define <2 x i64> @extract3_i16_zext_insert0_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract3_i16_zext_insert0_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 3
@@ -302,7 +295,6 @@ define <2 x i64> @extract3_i16_zext_insert0_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract3_i16_zext_insert0_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[0], x8
 ; CHECK-NEXT:    ret
@@ -316,7 +308,6 @@ define <2 x i64> @extract0_i16_zext_insert1_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract0_i16_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 0
@@ -329,7 +320,6 @@ define <2 x i64> @extract0_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract0_i16_zext_insert1_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[0]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
@@ -343,7 +333,6 @@ define <2 x i64> @extract1_i16_zext_insert1_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract1_i16_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 1
@@ -356,7 +345,6 @@ define <2 x i64> @extract1_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract1_i16_zext_insert1_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
@@ -370,7 +358,6 @@ define <2 x i64> @extract2_i16_zext_insert1_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract2_i16_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 2
@@ -383,7 +370,6 @@ define <2 x i64> @extract2_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract2_i16_zext_insert1_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
@@ -397,7 +383,6 @@ define <2 x i64> @extract3_i16_zext_insert1_i64_undef(<8 x i16> %x) {
 ; CHECK-LABEL: extract3_i16_zext_insert1_i64_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    dup v0.2d, x8
 ; CHECK-NEXT:    ret
   %e = extractelement <8 x i16> %x, i32 3
@@ -410,7 +395,6 @@ define <2 x i64> @extract3_i16_zext_insert1_i64_zero(<8 x i16> %x) {
 ; CHECK-LABEL: extract3_i16_zext_insert1_i64_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umov w8, v0.h[3]
-; CHECK-NEXT:    and x8, x8, #0xffff
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.d[1], x8
 ; CHECK-NEXT:    ret
@@ -419,6 +403,209 @@ define <2 x i64> @extract3_i16_zext_insert1_i64_zero(<8 x i16> %x) {
   %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 1
   ret <2 x i64> %r
 }
+
+; i8
+
+define <2 x i64> @extract0_i8_zext_insert0_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract0_i8_zext_insert0_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 0
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract0_i8_zext_insert0_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract0_i8_zext_insert0_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[0], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 0
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract1_i8_zext_insert0_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract1_i8_zext_insert0_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 1
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract1_i8_zext_insert0_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract1_i8_zext_insert0_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[0], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 1
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract2_i8_zext_insert0_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract2_i8_zext_insert0_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[2]
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 2
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract2_i8_zext_insert0_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract2_i8_zext_insert0_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[2]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[0], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 2
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract3_i8_zext_insert0_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract3_i8_zext_insert0_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[3]
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 3
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract3_i8_zext_insert0_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract3_i8_zext_insert0_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[3]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[0], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 3
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract0_i8_zext_insert1_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract0_i8_zext_insert1_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 0
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract0_i8_zext_insert1_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract0_i8_zext_insert1_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 0
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract1_i8_zext_insert1_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract1_i8_zext_insert1_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 1
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract1_i8_zext_insert1_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract1_i8_zext_insert1_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[1]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 1
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract2_i8_zext_insert1_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract2_i8_zext_insert1_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[2]
+; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 2
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract2_i8_zext_insert1_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract2_i8_zext_insert1_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[2]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 2
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract3_i8_zext_insert1_i64_undef(<16 x i8> %x) {
+; CHECK-LABEL: extract3_i8_zext_insert1_i64_undef:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[3]
+; CHECK-NEXT:    dup v0.2d, x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 3
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> undef, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @extract3_i8_zext_insert1_i64_zero(<16 x i8> %x) {
+; CHECK-LABEL: extract3_i8_zext_insert1_i64_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umov w8, v0.b[3]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    ret
+  %e = extractelement <16 x i8> %x, i32 3
+  %z = zext i8 %e to i64
+  %r = insertelement <2 x i64> zeroinitializer, i64 %z, i32 1
+  ret <2 x i64> %r
+}
+
 
 ; This would crash because we did not expect to create
 ; a shuffle for a vector where the source operand is

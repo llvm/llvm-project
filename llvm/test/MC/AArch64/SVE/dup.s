@@ -240,3 +240,25 @@ dup     z5.q, z17.q[3]
 // CHECK-ENCODING: [0x25,0x22,0xf0,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: 25 22 f0 05 <unknown>
+
+// --------------------------------------------------------------------------//
+// Tests where the negative immediate is in bounds when interpreted
+// as the element type.
+
+dup     z0.b, #-129
+// CHECK-INST: mov     z0.b, #127
+// CHECK-ENCODING: [0xe0,0xcf,0x38,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 cf 38 25 <unknown>
+
+dup     z0.h, #-33024
+// CHECK-INST: mov     z0.h, #32512
+// CHECK-ENCODING: [0xe0,0xef,0x78,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 ef 78 25 <unknown>
+
+dup     z0.h, #-129, lsl #8
+// CHECK-INST: mov     z0.h, #32512
+// CHECK-ENCODING: [0xe0,0xef,0x78,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 ef 78 25 <unknown>

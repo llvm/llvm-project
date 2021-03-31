@@ -9,8 +9,8 @@
 // Check that we emitted relocations for the ifunc calls
 // CHECK: Relocations [
 // CHECK-NEXT:   Section (4) .rel.dyn {
-// CHECK-NEXT:     0x4011F4 R_386_PLT32 bar
 // CHECK-NEXT:     0x4011EF R_386_PLT32 foo
+// CHECK-NEXT:     0x4011F4 R_386_PLT32 bar
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .rel.plt {
 // CHECK-NEXT:     0x4032D4 R_386_JUMP_SLOT bar2

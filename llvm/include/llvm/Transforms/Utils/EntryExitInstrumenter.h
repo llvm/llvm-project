@@ -28,6 +28,8 @@ struct EntryExitInstrumenterPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   bool PostInlining;
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LTO_LTOMODULE_H
-#define LLVM_LTO_LTOMODULE_H
+#ifndef LLVM_LTO_LEGACY_LTOMODULE_H
+#define LLVM_LTO_LEGACY_LTOMODULE_H
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/StringMap.h"

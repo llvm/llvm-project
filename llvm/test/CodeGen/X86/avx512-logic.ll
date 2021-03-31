@@ -911,7 +911,7 @@ define <16 x i32> @ternlog_maskz_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
@@ -933,7 +933,7 @@ define <8 x i64> @ternlog_maskz_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i6
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
@@ -977,7 +977,7 @@ define <16 x i32> @ternlog_masky_or_and_mask(<16 x i32> %x, <16 x i32> %y, <16 x
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtd %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL-NEXT:    retq
@@ -1023,7 +1023,7 @@ define <8 x i64> @ternlog_masky_xor_and_mask(<8 x i64> %x, <8 x i64> %y, <8 x i6
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; KNL-NEXT:    vpcmpgtq %zmm2, %zmm3, %k1
-; KNL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    vpxorq %zmm1, %zmm0, %zmm1 {%k1}
 ; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL-NEXT:    retq

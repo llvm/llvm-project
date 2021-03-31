@@ -23,7 +23,7 @@
   define void @ldrhrox(i64* %addr) { ret void }
   define void @ldbbrox(i64* %addr) { ret void }
   define void @ldrqrox(i64* %addr) { ret void }
-  attributes #0 = { optsize minsize }
+  attributes #0 = { optsize }
   attributes #1 = { "target-features"="+lsl-fast" }
 ...
 

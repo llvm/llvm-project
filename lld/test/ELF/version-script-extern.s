@@ -21,7 +21,7 @@
 # DSO-NEXT:      Section: Undefined
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
-# DSO-NEXT:      Name: _Z3bari@@LIBSAMPLE_2.0
+# DSO-NEXT:      Name: _Z3fooi@@LIBSAMPLE_1.0
 # DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
@@ -30,7 +30,7 @@
 # DSO-NEXT:      Section: .text
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
-# DSO-NEXT:      Name: _Z3fooi@@LIBSAMPLE_1.0
+# DSO-NEXT:      Name: _Z3bari@@LIBSAMPLE_2.0
 # DSO-NEXT:      Value:
 # DSO-NEXT:      Size: 0
 # DSO-NEXT:      Binding: Global
@@ -72,12 +72,12 @@
 # DSO-NEXT:      Name:
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
-# DSO-NEXT:      Version: 3
-# DSO-NEXT:      Name: _Z3bari@@LIBSAMPLE_2.0
-# DSO-NEXT:    }
-# DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 2
 # DSO-NEXT:      Name: _Z3fooi@@LIBSAMPLE_1.0
+# DSO-NEXT:    }
+# DSO-NEXT:    Symbol {
+# DSO-NEXT:      Version: 3
+# DSO-NEXT:      Name: _Z3bari@@LIBSAMPLE_2.0
 # DSO-NEXT:    }
 # DSO-NEXT:    Symbol {
 # DSO-NEXT:      Version: 2

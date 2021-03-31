@@ -105,9 +105,9 @@ void LowerIntrinsics::getAnalysisUsage(AnalysisUsage &AU) const {
 bool LowerIntrinsics::doInitialization(Module &M) {
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "LowerIntrinsics didn't require GCModuleInfo!?");
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-    if (!I->isDeclaration() && I->hasGC())
-      MI->getFunctionInfo(*I); // Instantiate the GC strategy.
+  for (Function &F : M)
+    if (!F.isDeclaration() && F.hasGC())
+      MI->getFunctionInfo(F); // Instantiate the GC strategy.
 
   return false;
 }
@@ -317,8 +317,8 @@ bool GCMachineCodeAnalysis::runOnMachineFunction(MachineFunction &MF) {
   // size, we use UINT64_MAX to represent this.
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  const bool DynamicFrameSize = MFI.hasVarSizedObjects() ||
-    RegInfo->needsStackRealignment(MF);
+  const bool DynamicFrameSize =
+      MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(MF);
   FI->setFrameSize(DynamicFrameSize ? UINT64_MAX : MFI.getStackSize());
 
   // Find all safe points.

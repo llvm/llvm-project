@@ -21,15 +21,7 @@ namespace clangd {
 class ParsedAST;
 class SymbolIndex;
 
-/// Gets dirty buffer for a given file \p AbsPath.
-/// Returns None if there is no dirty buffer for the given file.
-using DirtyBufferGetter =
-    llvm::function_ref<llvm::Optional<std::string>(PathRef AbsPath)>;
-
 struct RenameOptions {
-  /// If true, enable cross-file rename; otherwise, only allows to rename a
-  /// symbol that's only used in the current file.
-  bool AllowCrossFile = false;
   /// The maximum number of affected files (0 means no limit), only meaningful
   /// when AllowCrossFile = true.
   /// If the actual number exceeds the limit, rename is forbidden.
@@ -45,14 +37,14 @@ struct RenameInputs {
   ParsedAST &AST;
   llvm::StringRef MainFilePath;
 
+  // The filesystem to query when performing cross file renames.
+  // If this is set, Index must also be set, likewise if this is nullptr, Index
+  // must also be nullptr.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
+
   const SymbolIndex *Index = nullptr;
 
   RenameOptions Opts = {};
-  // When set, used by the rename to get file content for all rename-related
-  // files.
-  // If there is no corresponding dirty buffer, we will use the file content
-  // from disk.
-  DirtyBufferGetter GetDirtyBuffer = nullptr;
 };
 
 struct RenameResult {

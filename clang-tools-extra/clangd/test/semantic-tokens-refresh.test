@@ -1,0 +1,42 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"capabilities":{
+  "workspace":{"semanticTokens":{"refreshSupport":true}}
+}}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri": "test:///foo.cpp",
+  "languageId": "cpp",
+  "text": "int x = 2;"
+}}}
+# Expect a request after initial preamble build.
+# CHECK:        "method": "workspace/semanticTokens/refresh",
+# CHECK-NEXT:   "params": null
+# CHECK-NEXT:  }
+---
+# Reply with success.
+{"jsonrpc":"2.0","id":0}
+---
+# Preamble stays the same, no refresh requests.
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{
+  "textDocument": {"uri":"test:///foo.cpp","version":2},
+  "contentChanges":[{"text":"int x = 2;\nint y = 3;"}]
+}}
+# CHECK-NOT:  "method": "workspace/semanticTokens/refresh"
+---
+# Preamble changes
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{
+  "textDocument": {"uri":"test:///foo.cpp","version":2},
+  "contentChanges":[{"text":"#define FOO"}]
+}}
+# Expect a request after initial preamble build.
+# CHECK:        "method": "workspace/semanticTokens/refresh",
+# CHECK-NEXT:   "params": null
+# CHECK-NEXT:  }
+---
+# Reply with error, to make sure there are no crashes.
+{"jsonrpc":"2.0","id":1,"error":{"code": 0, "message": "msg"}}
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+

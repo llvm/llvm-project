@@ -57,8 +57,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_CODEGEN_MODULOSCHEDULE_H
-#define LLVM_LIB_CODEGEN_MODULOSCHEDULE_H
+#ifndef LLVM_CODEGEN_MODULOSCHEDULE_H
+#define LLVM_CODEGEN_MODULOSCHEDULE_H
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -386,4 +386,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_LIB_CODEGEN_MODULOSCHEDULE_H
+#endif // LLVM_CODEGEN_MODULOSCHEDULE_H

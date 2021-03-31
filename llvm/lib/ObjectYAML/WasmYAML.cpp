@@ -367,13 +367,21 @@ void MappingTraits<WasmYAML::Limits>::mapping(IO &IO,
                                               WasmYAML::Limits &Limits) {
   if (!IO.outputting() || Limits.Flags)
     IO.mapOptional("Flags", Limits.Flags);
-  IO.mapRequired("Initial", Limits.Initial);
+  IO.mapRequired("Minimum", Limits.Minimum);
   if (!IO.outputting() || Limits.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     IO.mapOptional("Maximum", Limits.Maximum);
 }
 
 void MappingTraits<WasmYAML::ElemSegment>::mapping(
     IO &IO, WasmYAML::ElemSegment &Segment) {
+  if (!IO.outputting() || Segment.Flags)
+    IO.mapOptional("Flags", Segment.Flags);
+  if (!IO.outputting() ||
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+    IO.mapOptional("TableNumber", Segment.TableNumber);
+  if (!IO.outputting() ||
+      Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND)
+    IO.mapOptional("ElemKind", Segment.ElemKind);
   IO.mapRequired("Offset", Segment.Offset);
   IO.mapRequired("Functions", Segment.Functions);
 }
@@ -614,6 +622,7 @@ void ScalarEnumerationTraits<WasmYAML::RelocType>::enumeration(
 #define WASM_RELOC(name, value) IO.enumCase(Type, #name, wasm::name);
 #include "llvm/BinaryFormat/WasmRelocs.def"
 #undef WASM_RELOC
+  IO.enumFallback<Hex32>(Type);
 }
 
 } // end namespace yaml

@@ -3337,6 +3337,13 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
       TailDupSize = TailDupPlacementAggressiveThreshold;
   }
 
+  // If there's no threshold provided through options, query the target
+  // information for a threshold instead.
+  if (TailDupPlacementThreshold.getNumOccurrences() == 0 &&
+      (PassConfig->getOptLevel() < CodeGenOpt::Aggressive ||
+       TailDupPlacementAggressiveThreshold.getNumOccurrences() == 0))
+    TailDupSize = TII->getTailDuplicateSize(PassConfig->getOptLevel());
+
   if (allowTailDupPlacement()) {
     MPDT = &getAnalysis<MachinePostDominatorTree>();
     bool OptForSize = MF.getFunction().hasOptSize() ||

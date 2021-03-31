@@ -24,7 +24,7 @@ class TestVLA(TestBase):
         var_opts.SetUseDynamic(lldb.eDynamicCanRunTarget)
         all_locals = self.frame().GetVariables(var_opts)
         for value in all_locals:
-            self.assertFalse("vla_expr" in value.name)
+            self.assertNotIn("vla_expr", value.name)
 
     @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
     def test_vla(self):

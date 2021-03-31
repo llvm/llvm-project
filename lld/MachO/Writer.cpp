@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
+#include "MapFile.h"
 #include "MergedOutputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 
 #include <algorithm>
@@ -47,11 +49,15 @@ public:
   void scanSymbols();
   void createOutputSections();
   void createLoadCommands();
+  void finalizeAddressses();
+  void finalizeLinkEditSegment();
   void assignAddresses(OutputSegment *);
 
   void openFile();
   void writeSections();
   void writeUuid();
+  void writeCodeSignature();
+  void writeOutputFile();
 
   void run();
 
@@ -62,8 +68,12 @@ public:
   StringTableSection *stringTableSection = nullptr;
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
+  CodeSignatureSection *codeSignatureSection = nullptr;
   UnwindInfoSection *unwindInfoSection = nullptr;
+  FunctionStartsSection *functionStartsSection = nullptr;
+
   LCUuid *uuidCommand = nullptr;
+  OutputSegment *linkEditSegment = nullptr;
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
@@ -110,6 +120,25 @@ public:
   WeakBindingSection *weakBindingSection;
   LazyBindingSection *lazyBindingSection;
   ExportSection *exportSection;
+};
+
+class LCFunctionStarts : public LoadCommand {
+public:
+  explicit LCFunctionStarts(FunctionStartsSection *functionStartsSection)
+      : functionStartsSection(functionStartsSection) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_FUNCTION_STARTS;
+    c->cmdsize = getSize();
+    c->dataoff = functionStartsSection->fileOff;
+    c->datasize = functionStartsSection->getFileSize();
+  }
+
+private:
+  FunctionStartsSection *functionStartsSection;
 };
 
 class LCDysymtab : public LoadCommand {
@@ -168,7 +197,7 @@ public:
         seg->lastSection()->addr + seg->lastSection()->getSize() - c->vmaddr;
     c->nsects = seg->numNonHiddenSections();
 
-    for (OutputSection *osec : seg->getSections()) {
+    for (const OutputSection *osec : seg->getSections()) {
       if (!isZeroFill(osec->flags)) {
         assert(osec->fileOff >= seg->fileOff);
         c->filesize = std::max(
@@ -332,7 +361,8 @@ private:
 
 class LCBuildVersion : public LoadCommand {
 public:
-  LCBuildVersion(const PlatformInfo &platform) : platform(platform) {}
+  LCBuildVersion(PlatformKind platform, const PlatformInfo &platformInfo)
+      : platform(platform), platformInfo(platformInfo) {}
 
   const int ntools = 1;
 
@@ -344,13 +374,13 @@ public:
     auto *c = reinterpret_cast<build_version_command *>(buf);
     c->cmd = LC_BUILD_VERSION;
     c->cmdsize = getSize();
-    c->platform = static_cast<uint32_t>(platform.kind);
-    c->minos = ((platform.minimum.getMajor() << 020) |
-                (platform.minimum.getMinor().getValueOr(0) << 010) |
-                platform.minimum.getSubminor().getValueOr(0));
-    c->sdk = ((platform.sdk.getMajor() << 020) |
-              (platform.sdk.getMinor().getValueOr(0) << 010) |
-              platform.sdk.getSubminor().getValueOr(0));
+    c->platform = static_cast<uint32_t>(platform);
+    c->minos = ((platformInfo.minimum.getMajor() << 020) |
+                (platformInfo.minimum.getMinor().getValueOr(0) << 010) |
+                platformInfo.minimum.getSubminor().getValueOr(0));
+    c->sdk = ((platformInfo.sdk.getMajor() << 020) |
+              (platformInfo.sdk.getMinor().getValueOr(0) << 010) |
+              platformInfo.sdk.getSubminor().getValueOr(0));
     c->ntools = ntools;
     auto *t = reinterpret_cast<build_tool_version *>(&c[1]);
     t->tool = TOOL_LD;
@@ -358,7 +388,8 @@ public:
                  LLVM_VERSION_PATCH;
   }
 
-  const PlatformInfo &platform;
+  PlatformKind platform;
+  const PlatformInfo &platformInfo;
 };
 
 // Stores a unique identifier for the output file based on an MD5 hash of its
@@ -400,22 +431,104 @@ public:
   mutable uint8_t *uuidBuf;
 };
 
+class LCCodeSignature : public LoadCommand {
+public:
+  LCCodeSignature(CodeSignatureSection *section) : section(section) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_CODE_SIGNATURE;
+    c->cmdsize = getSize();
+    c->dataoff = static_cast<uint32_t>(section->fileOff);
+    c->datasize = section->getSize();
+  }
+
+  CodeSignatureSection *section;
+};
+
 } // namespace
 
-void Writer::scanRelocations() {
-  for (InputSection *isec : inputSections) {
-    // We do not wish to add rebase opcodes for __LD,__compact_unwind, because
-    // it doesn't actually end up in the final binary. TODO: filtering it out
-    // before Writer runs might be cleaner...
-    if (isec->segname == segment_names::ld)
-      continue;
+// Adds stubs and bindings where necessary (e.g. if the symbol is a
+// DylibSymbol.)
+static void prepareBranchTarget(Symbol *sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    if (in.stubs->addEntry(dysym)) {
+      if (sym->isWeakDef()) {
+        in.binding->addEntry(dysym, in.lazyPointers->isec,
+                             sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                                 sym->stubsIndex * WordSize);
+      } else {
+        in.lazyBinding->addEntry(dysym);
+      }
+    }
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isExternalWeakDef()) {
+      if (in.stubs->addEntry(sym)) {
+        in.rebase->addEntry(in.lazyPointers->isec, sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                                 sym->stubsIndex * WordSize);
+      }
+    }
+  }
+}
 
-    for (Reloc &r : isec->relocs) {
-      if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
-        if (isa<Undefined>(s))
-          treatUndefinedSymbol(toString(*s), toString(isec->file));
-        else
-          target->prepareSymbolRelocation(s, isec, r);
+// Can a symbol's address can only be resolved at runtime?
+static bool needsBinding(const Symbol *sym) {
+  if (isa<DylibSymbol>(sym))
+    return true;
+  if (const auto *defined = dyn_cast<Defined>(sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
+static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
+                                    const Reloc &r) {
+  const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
+
+  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
+    prepareBranchTarget(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
+      in.got->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    if (needsBinding(sym))
+      in.tlvPointers->addEntry(sym);
+  } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
+    // References from thread-local variable sections are treated as offsets
+    // relative to the start of the referent section, and therefore have no
+    // need of rebase opcodes.
+    if (!(isThreadLocalVariables(isec->flags) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+  }
+}
+
+void Writer::scanRelocations() {
+  TimeTraceScope timeScope("Scan relocations");
+  for (InputSection *isec : inputSections) {
+    if (isec->segname == segment_names::ld) {
+      prepareCompactUnwind(isec);
+      continue;
+    }
+
+    for (auto it = isec->relocs.begin(); it != isec->relocs.end(); ++it) {
+      Reloc &r = *it;
+      if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
+        // Skip over the following UNSIGNED relocation -- it's just there as the
+        // minuend, and doesn't have the usual UNSIGNED semantics. We don't want
+        // to emit rebase opcodes for it.
+        it = std::next(it);
+        assert(isa<Defined>(it->referent.dyn_cast<Symbol *>()));
+        continue;
+      }
+      if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *undefined = dyn_cast<Undefined>(sym))
+          treatUndefinedSymbol(*undefined);
+        // treatUndefinedSymbol() can replace sym with a DylibSymbol; re-check.
+        if (!isa<Undefined>(sym) && validateSymbolRelocation(sym, isec, r))
+          prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
         if (!r.pcrel)
@@ -426,29 +539,41 @@ void Writer::scanRelocations() {
 }
 
 void Writer::scanSymbols() {
-  for (const macho::Symbol *sym : symtab->getSymbols()) {
+  TimeTraceScope timeScope("Scan symbols");
+  for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (defined->overridesWeakDef)
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-      dysym->file->refState = std::max(dysym->file->refState, dysym->refState);
+      if (dysym->isDynamicLookup())
+        continue;
+      dysym->getFile()->refState =
+          std::max(dysym->getFile()->refState, dysym->refState);
     }
   }
 }
 
 void Writer::createLoadCommands() {
+  uint8_t segIndex = 0;
+  for (OutputSegment *seg : outputSegments) {
+    in.header->addLoadCommand(make<LCSegment>(seg->name, seg));
+    seg->index = segIndex++;
+  }
+
   in.header->addLoadCommand(make<LCDyldInfo>(
       in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
+  if (functionStartsSection)
+    in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
   for (StringRef path : config->runtimePaths)
     in.header->addLoadCommand(make<LCRPath>(path));
 
   switch (config->outputType) {
   case MH_EXECUTE:
-    in.header->addLoadCommand(make<LCMain>());
     in.header->addLoadCommand(make<LCLoadDylinker>());
+    in.header->addLoadCommand(make<LCMain>());
     break;
   case MH_DYLIB:
     in.header->addLoadCommand(make<LCDylib>(LC_ID_DYLIB, config->installName,
@@ -461,20 +586,24 @@ void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  in.header->addLoadCommand(make<LCBuildVersion>(config->platform));
-
   uuidCommand = make<LCUuid>();
   in.header->addLoadCommand(uuidCommand);
 
-  uint8_t segIndex = 0;
-  for (OutputSegment *seg : outputSegments) {
-    in.header->addLoadCommand(make<LCSegment>(seg->name, seg));
-    seg->index = segIndex++;
-  }
+  in.header->addLoadCommand(
+      make<LCBuildVersion>(config->target.Platform, config->platformInfo));
 
-  uint64_t dylibOrdinal = 1;
+  int64_t dylibOrdinal = 1;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      if (dylibFile->isBundleLoader) {
+        dylibFile->ordinal = BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE;
+        // Shortcut since bundle-loader does not re-export the symbols.
+
+        dylibFile->reexport = false;
+        continue;
+      }
+
+      dylibFile->ordinal = dylibOrdinal++;
       LoadCommandType lcType =
           dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
               ? LC_LOAD_WEAK_DYLIB
@@ -482,13 +611,15 @@ void Writer::createLoadCommands() {
       in.header->addLoadCommand(make<LCDylib>(lcType, dylibFile->dylibName,
                                               dylibFile->compatibilityVersion,
                                               dylibFile->currentVersion));
-      dylibFile->ordinal = dylibOrdinal++;
 
       if (dylibFile->reexport)
         in.header->addLoadCommand(
             make<LCDylib>(LC_REEXPORT_DYLIB, dylibFile->dylibName));
     }
   }
+
+  if (codeSignatureSection)
+    in.header->addLoadCommand(make<LCCodeSignature>(codeSignatureSection));
 
   const uint32_t MACOS_MAXPATHLEN = 1024;
   config->headerPad = std::max(
@@ -529,19 +660,22 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   };
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (InputFile *file : inputFiles)
+  for (const InputFile *file : inputFiles) {
     if (isa<ObjFile>(file))
-      for (lld::macho::Symbol *sym : file->symbols)
+      for (Symbol *sym : file->symbols)
         if (auto *d = dyn_cast<Defined>(sym))
           addSym(*d);
+  }
 
   return sectionPriorities;
 }
 
 static int segmentOrder(OutputSegment *seg) {
   return StringSwitch<int>(seg->name)
-      .Case(segment_names::pageZero, -2)
-      .Case(segment_names::text, -1)
+      .Case(segment_names::pageZero, -4)
+      .Case(segment_names::text, -3)
+      .Case(segment_names::dataConst, -2)
+      .Case(segment_names::data, -1)
       // Make sure __LINKEDIT is the last segment (i.e. all its hidden
       // sections must be ordered after other sections).
       .Case(segment_names::linkEdit, std::numeric_limits<int>::max())
@@ -553,12 +687,14 @@ static int sectionOrder(OutputSection *osec) {
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -1)
+        .Case(section_names::header, -4)
+        .Case(section_names::text, -3)
+        .Case(section_names::stubs, -2)
+        .Case(section_names::stubHelper, -1)
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(0);
-  }
-  if (segname == segment_names::data) {
+  } else if (segname == segment_names::data) {
     // For each thread spawned, dyld will initialize its TLVs by copying the
     // address range from the start of the first thread-local data section to
     // the end of the last one. We therefore arrange these sections contiguously
@@ -574,19 +710,23 @@ static int sectionOrder(OutputSection *osec) {
     case S_ZEROFILL:
       return std::numeric_limits<int>::max();
     default:
-      return 0;
+      return StringSwitch<int>(osec->name)
+          .Case(section_names::laSymbolPtr, -2)
+          .Case(section_names::data, -1)
+          .Default(0);
     }
-  }
-  if (segname == segment_names::linkEdit) {
+  } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::rebase, -8)
-        .Case(section_names::binding, -7)
-        .Case(section_names::weakBinding, -6)
-        .Case(section_names::lazyBinding, -5)
-        .Case(section_names::export_, -4)
+        .Case(section_names::rebase, -9)
+        .Case(section_names::binding, -8)
+        .Case(section_names::weakBinding, -7)
+        .Case(section_names::lazyBinding, -6)
+        .Case(section_names::export_, -5)
+        .Case(section_names::functionStarts, -4)
         .Case(section_names::symbolTable, -3)
         .Case(section_names::indirectSymbolTable, -2)
         .Case(section_names::stringTable, -1)
+        .Case(section_names::codeSignature, std::numeric_limits<int>::max())
         .Default(0);
   }
   // ZeroFill sections must always be the at the end of their segments,
@@ -605,6 +745,8 @@ static std::function<bool(T, T)> compareByOrder(F ord) {
 // segments, output sections within each segment, and input sections within each
 // output segment.
 static void sortSegmentsAndSections() {
+  TimeTraceScope timeScope("Sort segments and sections");
+
   llvm::stable_sort(outputSegments,
                     compareByOrder<OutputSegment *>(segmentOrder));
 
@@ -614,12 +756,11 @@ static void sortSegmentsAndSections() {
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
     seg->sortOutputSections(compareByOrder<OutputSection *>(sectionOrder));
-    for (auto *osec : seg->getSections()) {
+    for (OutputSection *osec : seg->getSections()) {
       // Now that the output sections are sorted, assign the final
       // output section indices.
       if (!osec->isHidden())
         osec->index = ++sectionIndex;
-
       if (!firstTLVDataSection && isThreadLocalData(osec->flags))
         firstTLVDataSection = osec;
 
@@ -635,12 +776,27 @@ static void sortSegmentsAndSections() {
   }
 }
 
+static NamePair maybeRenameSection(NamePair key) {
+  auto newNames = config->sectionRenameMap.find(key);
+  if (newNames != config->sectionRenameMap.end())
+    return newNames->second;
+  auto newName = config->segmentRenameMap.find(key.first);
+  if (newName != config->segmentRenameMap.end())
+    return std::make_pair(newName->second, key.second);
+  return key;
+}
+
 void Writer::createOutputSections() {
+  TimeTraceScope timeScope("Create output sections");
   // First, create hidden sections
   stringTableSection = make<StringTableSection>();
   unwindInfoSection = make<UnwindInfoSection>(); // TODO(gkm): only when no -r
   symtabSection = make<SymtabSection>(*stringTableSection);
   indirectSymtabSection = make<IndirectSymtabSection>();
+  if (config->adhocCodesign)
+    codeSignatureSection = make<CodeSignatureSection>();
+  if (config->emitFunctionStarts)
+    functionStartsSection = make<FunctionStartsSection>();
 
   switch (config->outputType) {
   case MH_EXECUTE:
@@ -654,13 +810,12 @@ void Writer::createOutputSections() {
   }
 
   // Then merge input sections into output sections.
-  MapVector<std::pair<StringRef, StringRef>, MergedOutputSection *>
-      mergedOutputSections;
+  MapVector<NamePair, MergedOutputSection *> mergedOutputSections;
   for (InputSection *isec : inputSections) {
-    MergedOutputSection *&osec =
-        mergedOutputSections[{isec->segname, isec->name}];
+    NamePair names = maybeRenameSection({isec->segname, isec->name});
+    MergedOutputSection *&osec = mergedOutputSections[names];
     if (osec == nullptr)
-      osec = make<MergedOutputSection>(isec->name);
+      osec = make<MergedOutputSection>(names.second);
     osec->mergeInput(isec);
   }
 
@@ -686,14 +841,52 @@ void Writer::createOutputSections() {
             ssec->name);
     }
   }
+
+  // dyld requires __LINKEDIT segment to always exist (even if empty).
+  linkEditSegment = getOrCreateOutputSegment(segment_names::linkEdit);
+}
+
+void Writer::finalizeAddressses() {
+  TimeTraceScope timeScope("Finalize addresses");
+  // Ensure that segments (and the sections they contain) are allocated
+  // addresses in ascending order, which dyld requires.
+  //
+  // Note that at this point, __LINKEDIT sections are empty, but we need to
+  // determine addresses of other segments/sections before generating its
+  // contents.
+  for (OutputSegment *seg : outputSegments)
+    if (seg != linkEditSegment)
+      assignAddresses(seg);
+
+  // FIXME(gkm): create branch-extension thunks here, then adjust addresses
+}
+
+void Writer::finalizeLinkEditSegment() {
+  TimeTraceScope timeScope("Finalize __LINKEDIT segment");
+  // Fill __LINKEDIT contents.
+  in.rebase->finalizeContents();
+  in.binding->finalizeContents();
+  in.weakBinding->finalizeContents();
+  in.lazyBinding->finalizeContents();
+  in.exports->finalizeContents();
+  symtabSection->finalizeContents();
+  indirectSymtabSection->finalizeContents();
+
+  if (functionStartsSection)
+    functionStartsSection->finalizeContents();
+
+  // Now that __LINKEDIT is filled out, do a proper calculation of its
+  // addresses and offsets.
+  assignAddresses(linkEditSegment);
 }
 
 void Writer::assignAddresses(OutputSegment *seg) {
-  addr = alignTo(addr, PageSize);
-  fileOff = alignTo(fileOff, PageSize);
+  uint64_t pageSize = target->getPageSize();
+  addr = alignTo(addr, pageSize);
+  fileOff = alignTo(fileOff, pageSize);
   seg->fileOff = fileOff;
 
-  for (auto *osec : seg->getSections()) {
+  for (OutputSection *osec : seg->getSections()) {
     if (!osec->isNeeded())
       continue;
     addr = alignTo(addr, osec->align);
@@ -705,6 +898,7 @@ void Writer::assignAddresses(OutputSegment *seg) {
     addr += osec->getSize();
     fileOff += osec->getFileSize();
   }
+  seg->fileSize = fileOff - seg->fileOff;
 }
 
 void Writer::openFile() {
@@ -721,67 +915,50 @@ void Writer::openFile() {
 
 void Writer::writeSections() {
   uint8_t *buf = buffer->getBufferStart();
-  for (OutputSegment *seg : outputSegments)
-    for (OutputSection *osec : seg->getSections())
+  for (const OutputSegment *seg : outputSegments)
+    for (const OutputSection *osec : seg->getSections())
       osec->writeTo(buf + osec->fileOff);
 }
 
 void Writer::writeUuid() {
+  TimeTraceScope timeScope("Computing UUID");
   uint64_t digest =
       xxHash64({buffer->getBufferStart(), buffer->getBufferEnd()});
   uuidCommand->writeUuid(digest);
 }
 
-void Writer::run() {
-  // dyld requires __LINKEDIT segment to always exist (even if empty).
-  OutputSegment *linkEditSegment =
-      getOrCreateOutputSegment(segment_names::linkEdit);
+void Writer::writeCodeSignature() {
+  if (codeSignatureSection)
+    codeSignatureSection->writeHashes(buffer->getBufferStart());
+}
 
+void Writer::writeOutputFile() {
+  TimeTraceScope timeScope("Write output file");
+  openFile();
+  if (errorCount())
+    return;
+  writeSections();
+  writeUuid();
+  writeCodeSignature();
+
+  if (auto e = buffer->commit())
+    error("failed to write to the output file: " + toString(std::move(e)));
+}
+
+void Writer::run() {
   prepareBranchTarget(config->entry);
   scanRelocations();
   if (in.stubHelper->isNeeded())
     in.stubHelper->setup();
   scanSymbols();
-
-  // Sort and assign sections to their respective segments. No more sections nor
-  // segments may be created after these methods run.
   createOutputSections();
+  // No more sections nor segments are created beyond this point.
   sortSegmentsAndSections();
-
   createLoadCommands();
-
-  // Ensure that segments (and the sections they contain) are allocated
-  // addresses in ascending order, which dyld requires.
-  //
-  // Note that at this point, __LINKEDIT sections are empty, but we need to
-  // determine addresses of other segments/sections before generating its
-  // contents.
-  for (OutputSegment *seg : outputSegments)
-    if (seg != linkEditSegment)
-      assignAddresses(seg);
-
-  // Fill __LINKEDIT contents.
-  in.rebase->finalizeContents();
-  in.binding->finalizeContents();
-  in.weakBinding->finalizeContents();
-  in.lazyBinding->finalizeContents();
-  in.exports->finalizeContents();
-  symtabSection->finalizeContents();
-  indirectSymtabSection->finalizeContents();
-
-  // Now that __LINKEDIT is filled out, do a proper calculation of its
-  // addresses and offsets.
-  assignAddresses(linkEditSegment);
-
-  openFile();
-  if (errorCount())
-    return;
-
-  writeSections();
-  writeUuid();
-
-  if (auto e = buffer->commit())
-    error("failed to write to the output file: " + toString(std::move(e)));
+  finalizeAddressses();
+  finalizeLinkEditSegment();
+  writeMapFile();
+  writeOutputFile();
 }
 
 void macho::writeResult() { Writer().run(); }

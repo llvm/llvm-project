@@ -43,7 +43,7 @@ exit:
 ;; ARM-NEXT:     Section: [[MIXED_SECT:[^ ]+]]
 
 ;; ARM:        Symbol {
-;; ARM:          Name: $a
+;; ARM:          Name: $d
 ;; ARM-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; ARM-NEXT:     Size: 0
 ;; ARM-NEXT:     Binding: Local
@@ -52,7 +52,7 @@ exit:
 ;; ARM-NEXT:     Section: [[MIXED_SECT]]
 
 ;; ARM:        Symbol {
-;; ARM:          Name: $d
+;; ARM:          Name: $a
 ;; ARM-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; ARM-NEXT:     Size: 0
 ;; ARM-NEXT:     Binding: Local
@@ -63,8 +63,8 @@ exit:
 ;; ARM-NOT:     ${{[atd]}}
 
 ;; TMB:        Symbol {
-;; TMB:          Name: $d.1
-;; TMB-NEXT:     Value: 0x{{[0-9A-F]+}}
+;; TMB:          Name: $t
+;; TMB-NEXT:     Value: 0x0
 ;; TMB-NEXT:     Size: 0
 ;; TMB-NEXT:     Binding: Local
 ;; TMB-NEXT:     Type: None
@@ -72,8 +72,8 @@ exit:
 ;; TMB-NEXT:     Section: [[MIXED_SECT:[^ ]+]]
 
 ;; TMB:        Symbol {
-;; TMB:          Name: $t
-;; TMB-NEXT:     Value: 0x0
+;; TMB:          Name: $d.1
+;; TMB-NEXT:     Value: 0x{{[0-9A-F]+}}
 ;; TMB-NEXT:     Size: 0
 ;; TMB-NEXT:     Binding: Local
 ;; TMB-NEXT:     Type: None

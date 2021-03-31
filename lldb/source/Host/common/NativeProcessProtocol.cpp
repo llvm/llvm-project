@@ -522,7 +522,8 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
   static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
   static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_ppc_opcode[] = {0x7f, 0xe0, 0x00, 0x08}; // trap
+  static const uint8_t g_ppcle_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
@@ -544,8 +545,12 @@ NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   case llvm::Triple::systemz:
     return llvm::makeArrayRef(g_s390x_opcode);
 
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+    return llvm::makeArrayRef(g_ppc_opcode);
+
   case llvm::Triple::ppc64le:
-    return llvm::makeArrayRef(g_ppc64le_opcode);
+    return llvm::makeArrayRef(g_ppcle_opcode);
 
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -568,6 +573,8 @@ size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
   case llvm::Triple::mips64el:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
     // On these architectures the PC doesn't get updated for breakpoint hits.
     return 0;

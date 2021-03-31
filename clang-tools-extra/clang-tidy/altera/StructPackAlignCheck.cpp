@@ -11,7 +11,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <math.h>
-#include <sstream>
 
 using namespace clang::ast_matchers;
 
@@ -109,15 +108,13 @@ void StructPackAlignCheck::check(const MatchFinder::MatchResult &Result) {
   AlignedAttr *Attribute = Struct->getAttr<AlignedAttr>();
   std::string NewAlignQuantity = std::to_string((int)NewAlign.getQuantity());
   if (Attribute) {
-    std::ostringstream FixItString;
-    FixItString << "aligned(" << NewAlignQuantity << ")";
-    FixIt =
-        FixItHint::CreateReplacement(Attribute->getRange(), FixItString.str());
+    FixIt = FixItHint::CreateReplacement(
+        Attribute->getRange(),
+        (Twine("aligned(") + NewAlignQuantity + ")").str());
   } else {
-    std::ostringstream FixItString;
-    FixItString << " __attribute__((aligned(" << NewAlignQuantity << ")))";
-    FixIt = FixItHint::CreateInsertion(Struct->getEndLoc().getLocWithOffset(1),
-                                       FixItString.str());
+    FixIt = FixItHint::CreateInsertion(
+        Struct->getEndLoc().getLocWithOffset(1),
+        (Twine(" __attribute__((aligned(") + NewAlignQuantity + ")))").str());
   }
 
   // And suggest the minimum power-of-two alignment for the struct as a whole

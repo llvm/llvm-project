@@ -80,3 +80,24 @@ namespace TypeQualifier {
   template<typename T> A<sizeof(sizeof(T::error))>::type f() {} // expected-note {{'int' cannot be used prior to '::'}}
   int k = f<int>(); // expected-error {{no matching}}
 }
+
+namespace MemberOfInstantiationDependentBase {
+  template<typename T> struct A { template<int> void f(int); };
+  template<typename T> struct B { using X = A<T>; };
+  template<typename T> struct C1 : B<int> {
+    using X = typename C1::X;
+    void f(X *p) {
+      p->f<0>(0);
+      p->template f<0>(0);
+    }
+  };
+  template<typename T> struct C2 : B<int> {
+    using X = typename C2<T>::X;
+    void f(X *p) {
+      p->f<0>(0);
+      p->template f<0>(0);
+    }
+  };
+  void q(C1<int> *c) { c->f(0); }
+  void q(C2<int> *c) { c->f(0); }
+}

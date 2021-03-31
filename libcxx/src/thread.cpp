@@ -70,7 +70,7 @@ thread::detach()
 }
 
 unsigned
-thread::hardware_concurrency() _NOEXCEPT
+thread::hardware_concurrency() noexcept
 {
 #if defined(_SC_NPROCESSORS_ONLN)
     long result = sysconf(_SC_NPROCESSORS_ONLN);

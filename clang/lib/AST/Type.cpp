@@ -2086,8 +2086,9 @@ bool Type::isUnsignedIntegerOrEnumerationType() const {
 bool Type::hasUnsignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
-  else
-    return isUnsignedIntegerOrEnumerationType();
+  if (const auto *VT = dyn_cast<MatrixType>(CanonicalType))
+    return VT->getElementType()->isUnsignedIntegerOrEnumerationType();
+  return isUnsignedIntegerOrEnumerationType();
 }
 
 bool Type::isFloatingType() const {
@@ -2228,10 +2229,11 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
     return !Rec->isCompleteDefinition();
   }
   case ConstantArray:
+  case VariableArray:
     // An array is incomplete if its element type is incomplete
     // (C++ [dcl.array]p1).
-    // We don't handle variable arrays (they're not allowed in C++) or
-    // dependent-sized arrays (dependent types are never treated as incomplete).
+    // We don't handle dependent-sized arrays (dependent types are never treated
+    // as incomplete).
     return cast<ArrayType>(CanonicalType)->getElementType()
              ->isIncompleteType(Def);
   case IncompleteArray:
@@ -2279,6 +2281,8 @@ bool Type::isSizelessBuiltinType() const {
       // SVE Types
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64SVEACLETypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
       return true;
     default:
       return false;
@@ -3088,6 +3092,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id: \
     return #Name;
 #include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId)                                        \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/RISCVVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -4110,6 +4118,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
+#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/RISCVVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:

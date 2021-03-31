@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
@@ -380,7 +381,6 @@ protected:
   /// representation to the MI representation.
   /// Adds IR based lowering and target specific optimization passes and finally
   /// the core instruction selection passes.
-  /// \returns true if an error occurred, false otherwise.
   void addISelPasses(AddIRPass &) const;
 
   /// Add the actual instruction selection passes. This does not include
@@ -650,6 +650,11 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   // Prepare expensive constants for SelectionDAG.
   if (getOptLevel() != CodeGenOpt::None && !Opt.DisableConstantHoisting)
     addPass(ConstantHoistingPass());
+
+  // Replace calls to LLVM intrinsics (e.g., exp, log) operating on vector
+  // operands with calls to the corresponding functions in a vector library.
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(ReplaceWithVeclib());
 
   if (getOptLevel() != CodeGenOpt::None && !Opt.DisablePartialLibcallInlining)
     addPass(PartiallyInlineLibCallsPass());

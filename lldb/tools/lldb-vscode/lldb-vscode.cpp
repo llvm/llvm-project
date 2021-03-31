@@ -16,7 +16,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
 // We also need to #undef GetObject (which is defined to GetObjectW) because
@@ -49,13 +49,15 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
 #ifndef PATH_MAX
 #define PATH_MAX MAX_PATH
 #endif
@@ -132,7 +134,7 @@ SOCKET AcceptConnection(int portno) {
           *g_vsc.log << "error: accept (" << strerror(errno) << ")"
                      << std::endl;
     }
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
     closesocket(sockfd);
 #else
     close(sockfd);
@@ -347,6 +349,34 @@ void SendStdOutStdErr(lldb::SBProcess &process) {
     g_vsc.SendOutput(OutputType::Stdout, llvm::StringRef(buffer, count));
   while ((count = process.GetSTDERR(buffer, sizeof(buffer))) > 0)
     g_vsc.SendOutput(OutputType::Stderr, llvm::StringRef(buffer, count));
+}
+
+void ProgressEventThreadFunction() {
+  lldb::SBListener listener("lldb-vscode.progress.listener");
+  g_vsc.debugger.GetBroadcaster().AddListener(
+      listener, lldb::SBDebugger::eBroadcastBitProgress);
+  g_vsc.broadcaster.AddListener(listener, eBroadcastBitStopProgressThread);
+  lldb::SBEvent event;
+  bool done = false;
+  while (!done) {
+    if (listener.WaitForEvent(1, event)) {
+      const auto event_mask = event.GetType();
+      if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
+        if (event_mask & eBroadcastBitStopProgressThread) {
+          done = true;
+        }
+      } else {
+        uint64_t progress_id = 0;
+        uint64_t completed = 0;
+        uint64_t total = 0;
+        bool is_debugger_specific = false;
+        const char *message = lldb::SBDebugger::GetProgressFromEvent(
+            event, progress_id, completed, total, is_debugger_specific);
+        if (message)
+          g_vsc.SendProgressEvent(progress_id, message, completed, total);
+      }
+    }
+  }
 }
 
 // All events from the debugger, target, process, thread and frames are
@@ -806,6 +836,10 @@ void request_disconnect(const llvm::json::Object &request) {
     g_vsc.broadcaster.BroadcastEventByType(eBroadcastBitStopEventThread);
     g_vsc.event_thread.join();
   }
+  if (g_vsc.progress_event_thread.joinable()) {
+    g_vsc.broadcaster.BroadcastEventByType(eBroadcastBitStopProgressThread);
+    g_vsc.progress_event_thread.join();
+  }
 }
 
 void request_exceptionInfo(const llvm::json::Object &request) {
@@ -1125,6 +1159,7 @@ void request_evaluate(const llvm::json::Object &request) {
   auto arguments = request.getObject("arguments");
   lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
   const auto expression = GetString(arguments, "expression");
+  llvm::StringRef context = GetString(arguments, "context");
 
   if (!expression.empty() && expression[0] == '`') {
     auto result =
@@ -1133,13 +1168,17 @@ void request_evaluate(const llvm::json::Object &request) {
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
     // Always try to get the answer from the local variables if possible. If
-    // this fails, then actually evaluate an expression using the expression
-    // parser. "frame variable" is more reliable than the expression parser in
+    // this fails, then if the context is not "hover", actually evaluate an
+    // expression using the expression parser.
+    //
+    // "frame variable" is more reliable than the expression parser in
     // many cases and it is faster.
     lldb::SBValue value = frame.GetValueForVariablePath(
         expression.data(), lldb::eDynamicDontRunTarget);
-    if (value.GetError().Fail())
+
+    if (value.GetError().Fail() && context != "hover")
       value = frame.EvaluateExpression(expression.data());
+
     if (value.GetError().Fail()) {
       response["success"] = llvm::json::Value(false);
       // This error object must live until we're done with the pointer returned
@@ -1352,6 +1391,8 @@ void request_modules(const llvm::json::Object &request) {
 // }
 void request_initialize(const llvm::json::Object &request) {
   g_vsc.debugger = lldb::SBDebugger::Create(true /*source_init_files*/);
+  g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
+
   // Create an empty target right away since we might get breakpoint requests
   // before we are given an executable to launch in a "launch" request, or a
   // executable when attaching to a process by process ID in a "attach"
@@ -1448,6 +1489,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsDelayedStackTraceLoading", true);
   // The debug adapter supports the 'loadedSources' request.
   body.try_emplace("supportsLoadedSourcesRequest", false);
+  // The debug adapter supports sending progress reporting events.
+  body.try_emplace("supportsProgressReporting", true);
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -3003,7 +3046,7 @@ EXAMPLES:
 // emitted to the debug adaptor.
 void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                llvm::StringRef comm_file, char *argv[]) {
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
   llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
   exit(EXIT_FAILURE);
 #else
@@ -3037,6 +3080,9 @@ void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 }
 
 int main(int argc, char *argv[]) {
+  llvm::InitLLVM IL(argc, argv, /*InstallPipeSignalExitHandler=*/false);
+  llvm::PrettyStackTraceProgram X(argc, argv);
+
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
   g_vsc.debug_adaptor_path = program_path.str().str();
@@ -3085,7 +3131,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-#if LLVM_ON_UNIX
+#if !defined(_WIN32)
   if (input_args.hasArg(OPT_wait_for_debugger)) {
     printf("Paused waiting for debugger to attach (pid = %i)...\n", getpid());
     pause();

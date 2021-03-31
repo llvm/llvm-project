@@ -8,6 +8,16 @@
 
 // UNSUPPORTED: no-exceptions
 
+// The situation for the alignment of exception objects is badly messed up
+// before macOS 10.14. The test fails on macOS 10.9 to 10.12, passes on macOS
+// 10.13 (no investigation done), and passes afterwards. Just mark all the OSes
+// before 10.14 as unsupported.
+// UNSUPPORTED: with_system_cxx_lib=macosx10.13
+// UNSUPPORTED: with_system_cxx_lib=macosx10.12
+// UNSUPPORTED: with_system_cxx_lib=macosx10.11
+// UNSUPPORTED: with_system_cxx_lib=macosx10.10
+// UNSUPPORTED: with_system_cxx_lib=macosx10.9
+
 // Check that the pointer __cxa_allocate_exception returns is aligned to the
 // default alignment for the target architecture.
 

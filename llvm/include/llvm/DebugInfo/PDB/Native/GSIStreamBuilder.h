@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_GSISTREAMBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_GSISTREAMBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_GSISTREAMBUILDER_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"

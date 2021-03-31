@@ -29,10 +29,7 @@ struct A : virtual B0, virtual B1 {
 	virtual void g() { printf("A"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct A
+// CHECK-LABEL:   0 | struct A{{$}}
 // CHECK-NEXT:    0 |   (A vftable pointer)
 // CHECK-NEXT:    4 |   (A vbtable pointer)
 // CHECK-NEXT:    8 |   int a
@@ -46,10 +43,7 @@ struct A : virtual B0, virtual B1 {
 // CHECK-NEXT:   52 |     int a
 // CHECK-NEXT:      | [sizeof=64, align=16
 // CHECK-NEXT:      |  nvsize=12, nvalign=16]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct A
+// CHECK-X64-LABEL:   0 | struct A{{$}}
 // CHECK-X64-NEXT:    0 |   (A vftable pointer)
 // CHECK-X64-NEXT:    8 |   (A vbtable pointer)
 // CHECK-X64-NEXT:   16 |   int a
@@ -71,10 +65,7 @@ struct C : virtual B0, virtual B1, VAlign32 {
 	virtual void g() { printf("C"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct C
+// CHECK-LABEL:   0 | struct C{{$}}
 // CHECK-NEXT:    0 |   (C vftable pointer)
 // CHECK-NEXT:   32 |   struct VAlign32 (base)
 // CHECK-NEXT:   32 |     (VAlign32 vbtable pointer)
@@ -90,10 +81,7 @@ struct C : virtual B0, virtual B1, VAlign32 {
 // CHECK-NEXT:  128 |   struct Align32 (virtual base) (empty)
 // CHECK-NEXT:      | [sizeof=128, align=32
 // CHECK-NEXT:      |  nvsize=64, nvalign=32]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct C
+// CHECK-X64-LABEL:   0 | struct C{{$}}
 // CHECK-X64-NEXT:    0 |   (C vftable pointer)
 // CHECK-X64-NEXT:   32 |   struct VAlign32 (base)
 // CHECK-X64-NEXT:   32 |     (VAlign32 vbtable pointer)
@@ -117,8 +105,7 @@ struct __declspec(align(32)) D : virtual B0, virtual B1  {
 	virtual void g() { printf("D"); }
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct D
+// CHECK-LABEL:   0 | struct D{{$}}
 // CHECK-NEXT:    0 |   (D vftable pointer)
 // CHECK-NEXT:    4 |   (D vbtable pointer)
 // CHECK-NEXT:    8 |   int a
@@ -132,8 +119,7 @@ struct __declspec(align(32)) D : virtual B0, virtual B1  {
 // CHECK-NEXT:   84 |     int a
 // CHECK-NEXT:      | [sizeof=96, align=32
 // CHECK-NEXT:      |  nvsize=12, nvalign=32]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct D
+// CHECK-X64-LABEL:   0 | struct D{{$}}
 // CHECK-X64-NEXT:    0 |   (D vftable pointer)
 // CHECK-X64-NEXT:    8 |   (D vbtable pointer)
 // CHECK-X64-NEXT:   16 |   int a
@@ -156,17 +142,13 @@ struct CT : virtual AT {
 };
 CT::~CT(){}
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct CT
+// CHECK-LABEL:   0 | struct CT{{$}}
 // CHECK-NEXT:    0 |   (CT vbtable pointer)
 // CHECK-NEXT:    4 |   struct AT (virtual base)
 // CHECK-NEXT:    4 |     (AT vftable pointer)
 // CHECK-NEXT:      | [sizeof=8, align=4
 // CHECK-NEXT:      |  nvsize=4, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct CT
+// CHECK-X64-LABEL:   0 | struct CT{{$}}
 // CHECK-X64-NEXT:    0 |   (CT vbtable pointer)
 // CHECK-X64-NEXT:    8 |   struct AT (virtual base)
 // CHECK-X64-NEXT:    8 |     (AT vftable pointer)
@@ -187,10 +169,7 @@ struct XC : virtual XB {
 	virtual void foo() {}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct XC
+// CHECK-LABEL:   0 | struct XC{{$}}
 // CHECK-NEXT:    0 |   (XC vbtable pointer)
 // CHECK-NEXT:    4 |   (vtordisp for vbase XB)
 // CHECK-NEXT:    8 |   struct XB (virtual base)
@@ -200,10 +179,7 @@ struct XC : virtual XB {
 // CHECK-NEXT:   24 |     int b
 // CHECK-NEXT:      | [sizeof=32, align=8
 // CHECK-NEXT:      |  nvsize=4, nvalign=8]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct XC
+// CHECK-X64-LABEL:   0 | struct XC{{$}}
 // CHECK-X64-NEXT:    0 |   (XC vbtable pointer)
 // CHECK-X64-NEXT:   12 |   (vtordisp for vbase XB)
 // CHECK-X64-NEXT:   16 |   struct XB (virtual base)
@@ -219,10 +195,7 @@ namespace pragma_test1 {
 struct A { virtual ~A(); virtual void foo(); int a; };
 struct B : virtual A { virtual ~B(); virtual void bar(); int b; };
 struct C : virtual B { int c; };
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct pragma_test1::C
+// CHECK-LABEL:   0 | struct pragma_test1::C{{$}}
 // CHECK-NEXT:    0 |   (C vbtable pointer)
 // CHECK-NEXT:    4 |   int c
 // CHECK-NEXT:    8 |   struct pragma_test1::A (virtual base)
@@ -234,9 +207,6 @@ struct C : virtual B { int c; };
 // CHECK-NEXT:   24 |     int b
 // CHECK-NEXT:      | [sizeof=28, align=4
 // CHECK-NEXT:      |  nvsize=8, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
 }
 
 namespace pragma_test2 {
@@ -245,10 +215,7 @@ struct A { virtual ~A(); virtual void foo(); int a; };
 struct B : virtual A { virtual ~B(); virtual void bar(); int b; };
 struct C : virtual B { int c; };
 #pragma vtordisp(pop)
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct pragma_test2::C
+// CHECK-LABEL:   0 | struct pragma_test2::C{{$}}
 // CHECK-NEXT:    0 |   (C vbtable pointer)
 // CHECK-NEXT:    4 |   int c
 // CHECK-NEXT:    8 |   (vtordisp for vbase A)
@@ -263,9 +230,6 @@ struct C : virtual B { int c; };
 // CHECK-NEXT:   32 |     int b
 // CHECK-NEXT:      | [sizeof=36, align=4
 // CHECK-NEXT:      |  nvsize=8, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
 }
 
 namespace pragma_test3 {
@@ -274,10 +238,7 @@ struct A { virtual ~A(); virtual void foo(); int a; };
 struct B : virtual A { virtual ~B(); virtual void foo(); int b; };
 struct C : virtual B { int c; };
 #pragma vtordisp(pop)
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct pragma_test3::C
+// CHECK-LABEL:   0 | struct pragma_test3::C{{$}}
 // CHECK-NEXT:    0 |   (C vbtable pointer)
 // CHECK-NEXT:    4 |   int c
 // CHECK-NEXT:    8 |   (vtordisp for vbase A)
@@ -290,9 +251,6 @@ struct C : virtual B { int c; };
 // CHECK-NEXT:   24 |     int b
 // CHECK-NEXT:      | [sizeof=28, align=4
 // CHECK-NEXT:      |  nvsize=8, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
 }
 
 namespace pragma_test4 {
@@ -315,10 +273,7 @@ struct B : virtual A {
 #pragma vtordisp(pop)
 
 struct C : virtual B<int> { int c; };
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct pragma_test4::C
+// CHECK-LABEL:   0 | struct pragma_test4::C{{$}}
 // CHECK-NEXT:    0 |   (C vbtable pointer)
 // CHECK-NEXT:    4 |   int c
 //   Pragma applies to B, which has vbase A.
@@ -333,9 +288,6 @@ struct C : virtual B<int> { int c; };
 // CHECK-NEXT:   28 |     int b
 // CHECK-NEXT:      | [sizeof=32, align=4
 // CHECK-NEXT:      |  nvsize=8, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
 }
 
 struct GA {
@@ -348,11 +300,7 @@ struct GC: public virtual GA {
 };
 struct GD: public virtual GC, public virtual GB {};
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct GD
+// CHECK-LABEL:   0 | struct GD{{$}}
 // CHECK-NEXT:    0 |   (GD vbtable pointer)
 // CHECK-NEXT:    4 |   (vtordisp for vbase GA)
 // CHECK-NEXT:    8 |   struct GA (virtual base)
@@ -364,11 +312,7 @@ struct GD: public virtual GC, public virtual GB {};
 // CHECK-NEXT:   16 |       (GA vftable pointer)
 // CHECK-NEXT:      | [sizeof=20, align=4
 // CHECK-NEXT:      |  nvsize=4, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct GD
+// CHECK-X64-LABEL:   0 | struct GD{{$}}
 // CHECK-X64-NEXT:    0 |   (GD vbtable pointer)
 // CHECK-X64-NEXT:   12 |   (vtordisp for vbase GA)
 // CHECK-X64-NEXT:   16 |   struct GA (virtual base)
@@ -391,10 +335,7 @@ struct HB : virtual HA {};
 struct HC : virtual HB {};
 #pragma vtordisp(pop)
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct HC
+// CHECK-LABEL:   0 | struct HC{{$}}
 // CHECK-NEXT:    0 |   (HC vbtable pointer)
 // CHECK-NEXT:    4 |   (vtordisp for vbase HA)
 // CHECK-NEXT:    8 |   struct HA (virtual base)
@@ -403,10 +344,7 @@ struct HC : virtual HB {};
 // CHECK-NEXT:   12 |     (HB vbtable pointer)
 // CHECK-NEXT:      | [sizeof=16, align=4
 // CHECK-NEXT:      |  nvsize=4, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct HC
+// CHECK-X64-LABEL:   0 | struct HC{{$}}
 // CHECK-X64-NEXT:    0 |   (HC vbtable pointer)
 // CHECK-X64-NEXT:   12 |   (vtordisp for vbase HA)
 // CHECK-X64-NEXT:   16 |   struct HA (virtual base)
@@ -424,17 +362,13 @@ struct __declspec(dllexport) IB : virtual IA {
   IB() {}
 };
 
-// CHECK: *** Dumping AST Record Layout
-// CHECK: *** Dumping AST Record Layout
-// CHECK-NEXT:    0 | struct IB
+// CHECK-LABEL:   0 | struct IB{{$}}
 // CHECK-NEXT:    0 |   (IB vbtable pointer)
 // CHECK-NEXT:    4 |   struct IA (virtual base)
 // CHECK-NEXT:    4 |     (IA vftable pointer)
 // CHECK-NEXT:      | [sizeof=8, align=4
 // CHECK-NEXT:      |  nvsize=4, nvalign=4]
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64: *** Dumping AST Record Layout
-// CHECK-X64-NEXT:    0 | struct IB
+// CHECK-X64-LABEL:   0 | struct IB{{$}}
 // CHECK-X64-NEXT:    0 |   (IB vbtable pointer)
 // CHECK-X64-NEXT:    8 |   struct IA (virtual base)
 // CHECK-X64-NEXT:    8 |     (IA vftable pointer)

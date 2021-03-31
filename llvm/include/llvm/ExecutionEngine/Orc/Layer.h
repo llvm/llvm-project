@@ -17,6 +17,8 @@
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
@@ -129,8 +131,10 @@ private:
 };
 
 /// Interface for Layers that accept object files.
-class ObjectLayer {
+class ObjectLayer : public RTTIExtends<ObjectLayer, RTTIRoot> {
 public:
+  static char ID;
+
   ObjectLayer(ExecutionSession &ES);
   virtual ~ObjectLayer();
 

@@ -208,7 +208,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
   %sum_0 = constant 0.0 : f32
   %c0 = constant 0.0 : f32
   %sum = scf.for %iv = %lb to %ub step %step iter_args(%sum_iter = %sum_0) -> (f32) {
-	  %t = load %buffer[%iv] : memref<1024xf32>
+	  %t = memref.load %buffer[%iv] : memref<1024xf32>
 	  %cond = cmpf ugt, %t, %c0 : f32
 	  %sum_next = scf.if %cond -> (f32) {
 	    %new_sum = addf %sum_iter, %t : f32
@@ -229,7 +229,7 @@ func @conditional_reduce(%buffer: memref<1024xf32>, %lb: index, %ub: index, %ste
 //  CHECK-NEXT: %[[ZERO:.*]] = constant
 //  CHECK-NEXT: %[[RESULT:.*]] = scf.for %[[IV:.*]] = %[[ARG1]] to %[[ARG2]] step %[[ARG3]]
 //  CHECK-SAME: iter_args(%[[ITER:.*]] = %[[INIT]]) -> (f32) {
-//  CHECK-NEXT: %[[T:.*]] = load %[[ARG0]][%[[IV]]]
+//  CHECK-NEXT: %[[T:.*]] = memref.load %[[ARG0]][%[[IV]]]
 //  CHECK-NEXT: %[[COND:.*]] = cmpf ugt, %[[T]], %[[ZERO]]
 //  CHECK-NEXT: %[[IFRES:.*]] = scf.if %[[COND]] -> (f32) {
 //  CHECK-NEXT: %[[THENRES:.*]] = addf %[[ITER]], %[[T]]

@@ -262,4 +262,15 @@ TEST(UniqueFunctionTest, Const) {
   EXPECT_EQ("const", X());
 }
 
+// Test that overloads on unique_functions are resolved as expected.
+std::string returns(StringRef) { return "not a function"; }
+std::string returns(unique_function<double()> F) { return "number"; }
+std::string returns(unique_function<StringRef()> F) { return "string"; }
+
+TEST(UniqueFunctionTest, SFINAE) {
+  EXPECT_EQ("not a function", returns("boo!"));
+  EXPECT_EQ("number", returns([] { return 42; }));
+  EXPECT_EQ("string", returns([] { return "hello"; }));
+}
+
 } // anonymous namespace

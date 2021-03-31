@@ -152,6 +152,7 @@ def HasDirectMove : Predicate<"Subtarget->hasDirectMove()">;
 def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
 def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
 def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
+def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
 
 //--------------------- VSX-specific instruction formats ---------------------//
 // By default, all VSX instructions are to be selected over their Altivec
@@ -1810,6 +1811,14 @@ let PPC970_Single = 1, AddedComplexity = 400 in {
 }
 
 //----------------------------- DAG Definitions ------------------------------//
+
+// Output dag used to bitcast f32 to i32 and f64 to i64
+def Bitcast {
+  dag FltToInt = (i32 (MFVSRWZ (EXTRACT_SUBREG (XXSLDWI (XSCVDPSPN $A),
+                      (XSCVDPSPN $A), 3), sub_64)));
+  dag DblToLong = (i64 (MFVSRD $A));
+}
+
 def FpMinMax {
   dag F32Min = (COPY_TO_REGCLASS (XSMINDP (COPY_TO_REGCLASS $A, VSFRC),
                                           (COPY_TO_REGCLASS $B, VSFRC)),
@@ -2429,6 +2438,8 @@ def MrgWords {
 // [HasVSX, HasDirectMove, NoP9Altivec, IsLittleEndian]
 // [HasVSX, HasDirectMove, NoP9Vector, IsLittleEndian]
 // [HasVSX, HasP9Vector]
+// [HasVSX, HasP9Vector, NoP10Vector]
+// [HasVSX, HasP9Vector, IsBigEndian]
 // [HasVSX, HasP9Vector, IsBigEndian, IsPPC64]
 // [HasVSX, HasP9Vector, IsLittleEndian]
 // [HasVSX, HasP9Altivec]
@@ -3345,10 +3356,8 @@ def : Pat<(store (f64 (extractelt v2f64:$A, 1)), xoaddr:$src),
 let Predicates = [HasVSX, HasDirectMove] in {
 // bitconvert f32 -> i32
 // (convert to 32-bit fp single, shift right 1 word, move to GPR)
-def : Pat<(i32 (bitconvert f32:$S)),
-          (i32 (MFVSRWZ (EXTRACT_SUBREG
-                          (XXSLDWI (XSCVDPSPN $S), (XSCVDPSPN $S), 3),
-                          sub_64)))>;
+def : Pat<(i32 (bitconvert f32:$A)), Bitcast.FltToInt>;
+
 // bitconvert i32 -> f32
 // (move to FPR, shift left 1 word, convert to 64-bit fp single)
 def : Pat<(f32 (bitconvert i32:$A)),
@@ -3357,8 +3366,7 @@ def : Pat<(f32 (bitconvert i32:$A)),
 
 // bitconvert f64 -> i64
 // (move to GPR, nothing else needed)
-def : Pat<(i64 (bitconvert f64:$S)),
-          (i64 (MFVSRD $S))>;
+def : Pat<(i64 (bitconvert f64:$A)), Bitcast.DblToLong>;
 
 // bitconvert i64 -> f64
 // (move to FPR, nothing else needed)
@@ -3730,9 +3738,6 @@ def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
           (STXVX $rS, xoaddr:$dst)>;
 
 // Build vectors from i8 loads
-defm : ScalToVecWPermute<v16i8, ScalarLoads.Li8,
-                         (VSPLTBs 7, (LXSIBZX xoaddr:$src)),
-                         (VSPLTBs 7, (LXSIBZX xoaddr:$src))>;
 defm : ScalToVecWPermute<v8i16, ScalarLoads.ZELi8,
                          (VSPLTHs 3, (LXSIBZX xoaddr:$src)),
                          (VSPLTHs 3, (LXSIBZX xoaddr:$src))>;
@@ -3750,9 +3755,6 @@ defm : ScalToVecWPermute<v2i64, ScalarLoads.SELi8i64,
                          (XXPERMDIs (VEXTSB2Ds (LXSIBZX xoaddr:$src)), 0)>;
 
 // Build vectors from i16 loads
-defm : ScalToVecWPermute<v8i16, ScalarLoads.Li16,
-                         (VSPLTHs 3, (LXSIHZX xoaddr:$src)),
-                         (VSPLTHs 3, (LXSIHZX xoaddr:$src))>;
 defm : ScalToVecWPermute<v4i32, ScalarLoads.ZELi16,
                          (XXSPLTWs (LXSIHZX xoaddr:$src), 1),
                          (XXSPLTWs (LXSIHZX xoaddr:$src), 1)>;
@@ -3949,6 +3951,38 @@ def : Pat<(v4f32 (PPCldsplat xoaddr:$A)),
 def : Pat<(v4i32 (PPCldsplat xoaddr:$A)),
           (v4i32 (LXVWSX xoaddr:$A))>;
 } // HasVSX, HasP9Vector
+
+// Any Power9 VSX subtarget with equivalent length but better Power10 VSX
+// patterns.
+// Two identical blocks are required due to the slightly different predicates:
+// One without P10 instructions, the other is BigEndian only with P10 instructions.
+let Predicates = [HasVSX, HasP9Vector, NoP10Vector] in {
+// Little endian Power10 subtargets produce a shorter pattern but require a
+// COPY_TO_REGCLASS. The COPY_TO_REGCLASS makes it appear to need two instructions 
+// to perform the operation, when only one instruction is produced in practice.
+// The NoP10Vector predicate excludes these patterns from Power10 VSX subtargets.
+defm : ScalToVecWPermute<v16i8, ScalarLoads.Li8,
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src)),
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src))>;
+// Build vectors from i16 loads
+defm : ScalToVecWPermute<v8i16, ScalarLoads.Li16,
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src)),
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src))>;
+} // HasVSX, HasP9Vector, NoP10Vector
+
+// Any big endian Power9 VSX subtarget
+let Predicates = [HasVSX, HasP9Vector, IsBigEndian] in {
+// Power10 VSX subtargets produce a shorter pattern for little endian targets
+// but this is still the best pattern for Power9 and Power10 VSX big endian
+// Build vectors from i8 loads
+defm : ScalToVecWPermute<v16i8, ScalarLoads.Li8,
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src)),
+                         (VSPLTBs 7, (LXSIBZX xoaddr:$src))>;
+// Build vectors from i16 loads
+defm : ScalToVecWPermute<v8i16, ScalarLoads.Li16,
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src)),
+                         (VSPLTHs 3, (LXSIHZX xoaddr:$src))>;
+} // HasVSX, HasP9Vector, NoP10Vector
 
 // Big endian 64Bit Power9 subtarget.
 let Predicates = [HasVSX, HasP9Vector, IsBigEndian, IsPPC64] in {

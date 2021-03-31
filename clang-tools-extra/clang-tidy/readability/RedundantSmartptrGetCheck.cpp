@@ -18,15 +18,30 @@ namespace readability {
 
 namespace {
 internal::Matcher<Expr> callToGet(const internal::Matcher<Decl> &OnClass) {
-  return cxxMemberCallExpr(
-             on(expr(anyOf(hasType(OnClass),
-                           hasType(qualType(
-                               pointsTo(decl(OnClass).bind("ptr_to_ptr"))))))
-                    .bind("smart_pointer")),
-             unless(callee(memberExpr(hasObjectExpression(cxxThisExpr())))),
-             callee(cxxMethodDecl(
-                 hasName("get"),
-                 returns(qualType(pointsTo(type().bind("getType")))))))
+  return expr(
+             anyOf(cxxMemberCallExpr(
+                       on(expr(anyOf(hasType(OnClass),
+                                     hasType(qualType(pointsTo(
+                                         decl(OnClass).bind("ptr_to_ptr"))))))
+                              .bind("smart_pointer")),
+                       unless(callee(
+                           memberExpr(hasObjectExpression(cxxThisExpr())))),
+                       callee(cxxMethodDecl(hasName("get"),
+                                            returns(qualType(pointsTo(
+                                                type().bind("getType"))))))),
+                   cxxDependentScopeMemberExpr(
+                       hasMemberName("get"),
+                       hasObjectExpression(
+                           expr(hasType(qualType(hasCanonicalType(
+                                    templateSpecializationType(hasDeclaration(
+                                        classTemplateDecl(has(cxxRecordDecl(
+                                            OnClass,
+                                            hasMethod(cxxMethodDecl(
+                                                hasName("get"),
+                                                returns(qualType(
+                                                    pointsTo(type().bind(
+                                                        "getType")))))))))))))))
+                               .bind("smart_pointer")))))
       .bind("redundant_get");
 }
 
@@ -47,10 +62,9 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
   const auto Smartptr = anyOf(knownSmartptr(), QuacksLikeASmartptr);
 
   // Catch 'ptr.get()->Foo()'
-  Finder->addMatcher(
-      memberExpr(expr().bind("memberExpr"), isArrow(),
-                 hasObjectExpression(ignoringImpCasts(callToGet(Smartptr)))),
-      Callback);
+  Finder->addMatcher(memberExpr(expr().bind("memberExpr"), isArrow(),
+                                hasObjectExpression(callToGet(Smartptr))),
+                     Callback);
 
   // Catch '*ptr.get()' or '*ptr->get()'
   Finder->addMatcher(
@@ -58,8 +72,8 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
       Callback);
 
   // Catch '!ptr.get()'
-  const auto CallToGetAsBool = ignoringParenImpCasts(callToGet(
-      recordDecl(Smartptr, has(cxxConversionDecl(returns(booleanType()))))));
+  const auto CallToGetAsBool = callToGet(
+      recordDecl(Smartptr, has(cxxConversionDecl(returns(booleanType())))));
   Finder->addMatcher(
       unaryOperator(hasOperatorName("!"), hasUnaryOperand(CallToGetAsBool)),
       Callback);
@@ -69,6 +83,10 @@ void registerMatchersForGetArrowStart(MatchFinder *Finder,
 
   // Catch 'ptr.get() ? X : Y'
   Finder->addMatcher(conditionalOperator(hasCondition(CallToGetAsBool)),
+                     Callback);
+
+  Finder->addMatcher(cxxDependentScopeMemberExpr(hasObjectExpression(
+                         callExpr(has(callToGet(Smartptr))).bind("obj"))),
                      Callback);
 }
 
@@ -82,9 +100,8 @@ void registerMatchersForGetEquals(MatchFinder *Finder,
   // Matches against nullptr.
   Finder->addMatcher(
       binaryOperator(hasAnyOperatorName("==", "!="),
-                     hasOperands(ignoringImpCasts(anyOf(
-                                     cxxNullPtrLiteralExpr(), gnuNullExpr(),
-                                     integerLiteral(equals(0)))),
+                     hasOperands(anyOf(cxxNullPtrLiteralExpr(), gnuNullExpr(),
+                                       integerLiteral(equals(0))),
                                  callToGet(knownSmartptr()))),
       Callback);
 
@@ -138,13 +155,21 @@ void RedundantSmartptrGetCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
+  auto SR = GetCall->getSourceRange();
+  // CXXDependentScopeMemberExpr source range does not include parens
+  // Extend the source range of the get call to account for them.
+  if (isa<CXXDependentScopeMemberExpr>(GetCall))
+    SR.setEnd(Lexer::getLocForEndOfToken(SR.getEnd(), 0, *Result.SourceManager,
+                                         getLangOpts())
+                  .getLocWithOffset(1));
+
   StringRef SmartptrText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(Smartptr->getSourceRange()),
       *Result.SourceManager, getLangOpts());
   // Replace foo->get() with *foo, and foo.get() with foo.
   std::string Replacement = Twine(IsPtrToPtr ? "*" : "", SmartptrText).str();
   diag(GetCall->getBeginLoc(), "redundant get() call on smart pointer")
-      << FixItHint::CreateReplacement(GetCall->getSourceRange(), Replacement);
+      << FixItHint::CreateReplacement(SR, Replacement);
 }
 
 } // namespace readability

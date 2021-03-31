@@ -7,9 +7,8 @@ define <2 x half> @f16_vec_param(<2 x half> %v) {
   ; CHECK:   liveins: $d0
   ; CHECK:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
   ; CHECK:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY [[UV]](<2 x s16>)
   ; CHECK:   [[DEF:%[0-9]+]]:_(<2 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[COPY1]](<2 x s16>), [[DEF]](<2 x s16>)
+  ; CHECK:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[DEF]](<2 x s16>)
   ; CHECK:   $d0 = COPY [[CONCAT_VECTORS]](<4 x s16>)
   ; CHECK:   RET_ReallyLR implicit $d0
   ret <2 x half> %v

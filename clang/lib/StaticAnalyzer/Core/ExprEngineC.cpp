@@ -526,10 +526,9 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_ReinterpretMemberPointer: {
         SVal V = state->getSVal(Ex, LCtx);
         if (auto PTMSV = V.getAs<nonloc::PointerToMember>()) {
-          SVal CastedPTMSV = svalBuilder.makePointerToMember(
-              getBasicVals().accumCXXBase(
-                  llvm::make_range<CastExpr::path_const_iterator>(
-                      CastE->path_begin(), CastE->path_end()), *PTMSV));
+          SVal CastedPTMSV =
+              svalBuilder.makePointerToMember(getBasicVals().accumCXXBase(
+                  CastE->path(), *PTMSV, CastE->getCastKind()));
           state = state->BindExpr(CastE, LCtx, CastedPTMSV);
           Bldr.generateNode(CastE, Pred, state);
           continue;

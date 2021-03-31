@@ -317,32 +317,28 @@ define void @test_ldst_7(<256 x i1>* %vpp, <256 x i1>* %vp2)  {
 ; test case is a constant that fits within 34-bits.
 ; CHECK-LABEL: test_ldst_7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li r5, 0
-; CHECK-NEXT:    ori r5, r5, 32799
+; CHECK-NEXT:    pli r5, 32799
 ; CHECK-NEXT:    lxvpx vsp0, r3, r5
 ; CHECK-NEXT:    stxvpx vsp0, r4, r5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NOMMA-LABEL: test_ldst_7:
 ; CHECK-NOMMA:       # %bb.0: # %entry
-; CHECK-NOMMA-NEXT:    li r5, 0
-; CHECK-NOMMA-NEXT:    ori r5, r5, 32799
+; CHECK-NOMMA-NEXT:    pli r5, 32799
 ; CHECK-NOMMA-NEXT:    lxvpx vsp0, r3, r5
 ; CHECK-NOMMA-NEXT:    stxvpx vsp0, r4, r5
 ; CHECK-NOMMA-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_ldst_7:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    li r5, 0
-; CHECK-BE-NEXT:    ori r5, r5, 32799
+; CHECK-BE-NEXT:    pli r5, 32799
 ; CHECK-BE-NEXT:    lxvpx vsp0, r3, r5
 ; CHECK-BE-NEXT:    stxvpx vsp0, r4, r5
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-BE-NOMMA-LABEL: test_ldst_7:
 ; CHECK-BE-NOMMA:       # %bb.0: # %entry
-; CHECK-BE-NOMMA-NEXT:    li r5, 0
-; CHECK-BE-NOMMA-NEXT:    ori r5, r5, 32799
+; CHECK-BE-NOMMA-NEXT:    pli r5, 32799
 ; CHECK-BE-NOMMA-NEXT:    lxvpx vsp0, r3, r5
 ; CHECK-BE-NOMMA-NEXT:    stxvpx vsp0, r4, r5
 ; CHECK-BE-NOMMA-NEXT:    blr

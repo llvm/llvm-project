@@ -145,5 +145,17 @@ void NVVMDialect::initialize() {
   allowUnknownOperations();
 }
 
+LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
+                                                    NamedAttribute attr) {
+  // Kernel function attribute should be attached to functions.
+  if (attr.first == NVVMDialect::getKernelFuncAttrName()) {
+    if (!isa<LLVM::LLVMFuncOp>(op)) {
+      return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
+                             << "' attribute attached to unexpected op";
+    }
+  }
+  return success();
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"

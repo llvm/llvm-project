@@ -246,7 +246,7 @@ breakpoint on all the methods that implement that selector in the classes in
 your program. Similarly, a file and line breakpoint might result in multiple
 locations if that file and line were inlined in different places in your code.
 
-The logical breakpoint has an integer id, and it's locations have an id within
+The logical breakpoint has an integer id, and its locations have an id within
 their parent breakpoint (the two are joined by a ".", e.g. 1.1 in the example
 above.)
 
@@ -324,7 +324,7 @@ do:
 Breakpoint Names
 ----------------
 
-Breakpoints carry two orthognal sets of information: one specifies where to set the breakpoint, and the other how to react when the breakpoint is hit. The latter set of information (e.g. commands, conditions, hit-count, auto-continue...) we call breakpoint options.
+Breakpoints carry two orthogonal sets of information: one specifies where to set the breakpoint, and the other how to react when the breakpoint is hit. The latter set of information (e.g. commands, conditions, hit-count, auto-continue...) we call breakpoint options.
 
 It is fairly common to want to apply one set of options to a number of breakpoints. For instance, you might want to check that self == nil and if it is, print a backtrace and continue, on a number of methods. One convenient way to do that would be to make all the breakpoints, then configure the options with:
 

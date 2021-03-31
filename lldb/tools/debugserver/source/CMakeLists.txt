@@ -129,7 +129,7 @@ endif()
 
 if(LLDB_USE_ENTITLEMENTS)
   if(APPLE_EMBEDDED)
-    set(entitlements ${CMAKE_CURRENT_SOURCE_DIR}/debugserver-entitlements.plist)
+    set(entitlements ${DEBUGSERVER_RESOURCE_DIR}/debugserver-entitlements.plist)
   else()
     if (LLDB_USE_PRIVATE_ENTITLEMENTS)
       set(entitlements ${DEBUGSERVER_RESOURCE_DIR}/debugserver-macosx-private-entitlements.plist)

@@ -35,8 +35,11 @@ OpTrait OpTrait::create(const llvm::Init *init) {
 
 OpTrait::OpTrait(Kind kind, const llvm::Record *def) : def(def), kind(kind) {}
 
-llvm::StringRef NativeOpTrait::getTrait() const {
-  return def->getValueAsString("trait");
+std::string NativeOpTrait::getTrait() const {
+  llvm::StringRef trait = def->getValueAsString("trait");
+  llvm::StringRef cppNamespace = def->getValueAsString("cppNamespace");
+  return cppNamespace.empty() ? trait.str()
+                              : (cppNamespace + "::" + trait).str();
 }
 
 llvm::StringRef InternalOpTrait::getTrait() const {

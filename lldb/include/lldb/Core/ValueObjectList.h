@@ -19,7 +19,7 @@
 namespace lldb_private {
 class ValueObject;
 
-// A collection of ValueObject values that
+/// A collection of ValueObject values that.
 class ValueObjectList {
 public:
   const ValueObjectList &operator=(const ValueObjectList &rhs);

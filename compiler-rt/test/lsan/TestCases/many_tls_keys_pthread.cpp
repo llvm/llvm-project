@@ -5,8 +5,9 @@
 // RUN: %env_lsan_opts=$LSAN_BASE:"use_tls=1" %run %t 2>&1
 // RUN: %env_lsan_opts="" %run %t 2>&1
 
-// Patch r303906 did not fix all the problems.
-// UNSUPPORTED: arm-linux,armhf-linux
+// On glibc, this requires the range returned by GetTLS to include
+// specific_1stblock and specific in `struct pthread`.
+// UNSUPPORTED: arm-linux, armhf-linux
 
 // TSD on NetBSD does not use TLS
 // UNSUPPORTED: netbsd

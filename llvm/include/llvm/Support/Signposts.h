@@ -41,4 +41,4 @@ public:
 
 } // end namespace llvm
 
-#endif // ifndef LLVM_SUPPORT_SIGNPOSTS_H
+#endif // LLVM_SUPPORT_SIGNPOSTS_H

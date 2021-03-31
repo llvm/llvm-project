@@ -1,21 +1,30 @@
-// RUN: %clang_cc1 -fprofile-instrument=clang -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm %s -o - | FileCheck %s
 
 // RUN: echo "fun:test1" > %t-func.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fprofile-list=%t-func.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FUNC
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-func.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FUNC
 
 // RUN: echo "src:%s" | sed -e 's/\\/\\\\/g' > %t-file.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fprofile-list=%t-file.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FILE
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-file.list -emit-llvm %s -o - | FileCheck %s --check-prefix=FILE
 
 // RUN: echo -e "[clang]\nfun:test1\n[llvm]\nfun:test2" > %t-section.list
 // RUN: %clang_cc1 -fprofile-instrument=llvm -fprofile-list=%t-section.list -emit-llvm %s -o - | FileCheck %s --check-prefix=SECTION
 
 // RUN: echo -e "fun:test*\n!fun:test1" > %t-exclude.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fprofile-list=%t-exclude.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-exclude.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
 
 // RUN: echo "!fun:test1" > %t-exclude-only.list
-// RUN: %clang_cc1 -fprofile-instrument=clang -fprofile-list=%t-exclude-only.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
+// RUN: %clang_cc1 -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -fprofile-list=%t-exclude-only.list -emit-llvm %s -o - | FileCheck %s --check-prefix=EXCLUDE
 
 unsigned i;
+
+// CHECK: test1
+// CHECK: test2
+// FUNC: test1
+// FUNC-NOT: test2
+// FILE: test1
+// FILE: test2
+// EXCLUDE-NOT: test1
+// EXCLUDE: test2
 
 // CHECK-NOT: noprofile
 // CHECK: @test1

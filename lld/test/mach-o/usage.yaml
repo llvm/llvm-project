@@ -1,4 +1,4 @@
-# RUN: not ld64.lld | FileCheck %s
+# RUN: not ld64.lld.darwinold | FileCheck %s
 #
 # Test that running darwin linker with no option prints out usage message.
 #

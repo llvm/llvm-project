@@ -472,3 +472,30 @@ define i8 @test23v(<2 x i8> %A) {
   %E = xor i8 %D, 12
   ret i8 %E
 }
+
+; ~(a | b) | (~a & b);
+define i32 @PR45977_f1(i32 %a, i32 %b) {
+; CHECK-LABEL: @PR45977_f1(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %not = xor i32 %a, -1
+  %andnot = and i32 %not, %b
+  %or = or i32 %a, %b
+  %notor = xor i32 %or, -1
+  %res = or i32 %notor, %andnot
+  ret i32 %res
+}
+
+; (a | b) ^ (a | ~b)
+define i32 @PR45977_f2(i32 %a, i32 %b) {
+; CHECK-LABEL: @PR45977_f2(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], -1
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %or = or i32 %a, %b
+  %not = xor i32 %b, -1
+  %ornot = or i32 %a, %not
+  %res = xor i32 %or, %ornot
+  ret i32 %res
+}

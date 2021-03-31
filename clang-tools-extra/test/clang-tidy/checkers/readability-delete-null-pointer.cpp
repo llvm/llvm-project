@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-delete-null-pointer %t
+// RUN: %check_clang_tidy %s readability-delete-null-pointer %t -- -- -fno-delayed-template-parsing
 
 #define NULL 0
 
@@ -36,6 +36,34 @@ void instantiate() {
   TemplPtr<int> ti3;
   ti3.foo();
 }
+
+template <typename T>
+struct NeverInstantiated {
+  void foo() {
+    // t1
+    if (mem) // t2
+      delete mem;
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
+    // CHECK-FIXES: // t1
+    // CHECK-FIXES-NEXT: {{^    }}// t2
+    // CHECK-FIXES-NEXT: delete mem;
+  }
+  T mem;
+};
+
+template <typename T>
+struct NeverInstantiatedPtr {
+  void foo() {
+    // t3
+    if (mem) // t4
+      delete mem;
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: 'if' statement is unnecessary;
+    // CHECK-FIXES: // t3
+    // CHECK-FIXES-NEXT: {{^    }}// t4
+    // CHECK-FIXES-NEXT: delete mem;
+  }
+  T *mem;
+};
 
 void f() {
   int *ps = 0;

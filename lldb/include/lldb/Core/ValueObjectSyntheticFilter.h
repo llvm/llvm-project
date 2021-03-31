@@ -27,11 +27,11 @@ class Declaration;
 class Status;
 class SyntheticChildrenFrontEnd;
 
-// A ValueObject that obtains its children from some source other than
-// real information
-// This is currently used to implement Python-based children and filters but
-// you can bind it to any source of synthetic information and have it behave
-// accordingly
+/// A ValueObject that obtains its children from some source other than
+/// real information.
+/// This is currently used to implement Python-based children and filters but
+/// you can bind it to any source of synthetic information and have it behave
+/// accordingly.
 class ValueObjectSynthetic : public ValueObject {
 public:
   ~ValueObjectSynthetic() override;
@@ -148,9 +148,9 @@ protected:
   /// Guarded by m_child_mutex;
   SyntheticChildrenCache m_synthetic_children_cache;
 
-  uint32_t m_synthetic_children_count; // FIXME use the ValueObject's
-                                       // ChildrenManager instead of a special
-                                       // purpose solution
+  // FIXME: use the ValueObject's  ChildrenManager instead of a special purpose
+  // solution.
+  uint32_t m_synthetic_children_count;
 
   ConstString m_parent_type_name;
 

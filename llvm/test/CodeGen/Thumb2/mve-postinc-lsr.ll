@@ -24,7 +24,6 @@ define void @fma(float* noalias nocapture readonly %A, float* noalias nocapture 
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    add.w lr, r5, r6, lsr #2
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:  .LBB0_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -43,17 +42,13 @@ define void @fma(float* noalias nocapture readonly %A, float* noalias nocapture 
 ; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
 ; CHECK-NEXT:    add.w r1, r1, r12, lsl #2
 ; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB0_7: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s0, [r0]
-; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    vldr s2, [r1]
-; CHECK-NEXT:    adds r1, #4
+; CHECK-NEXT:    vldmia r0!, {s0}
+; CHECK-NEXT:    vldmia r1!, {s2}
 ; CHECK-NEXT:    vldr s4, [r2]
 ; CHECK-NEXT:    vfma.f32 s4, s2, s0
-; CHECK-NEXT:    vstr s4, [r2]
-; CHECK-NEXT:    adds r2, #4
+; CHECK-NEXT:    vstmia r2!, {s4}
 ; CHECK-NEXT:    le lr, .LBB0_7
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}
@@ -136,7 +131,6 @@ define void @fma_tailpred(float* noalias nocapture readonly %A, float* noalias n
 ; CHECK-NEXT:    vldrw.u32 q0, [r4]
 ; CHECK-NEXT:    add.w lr, lr, r12, lsr #2
 ; CHECK-NEXT:    sub.w r12, r3, #1
-; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vdup.32 q1, r12
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
@@ -734,17 +728,16 @@ define i8* @signext(i8* %input_row, i8* %input_col, i16 zeroext %output_ch, i16 
 ; CHECK-NEXT:    bge .LBB5_3
 ; CHECK-NEXT:  @ %bb.6: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB5_5 Depth=1
-; CHECK-NEXT:    ldr r2, [sp, #92]
+; CHECK-NEXT:    ldr.w lr, [sp, #92]
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r10
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mla r3, r9, r2, r0
+; CHECK-NEXT:    mla r3, r9, lr, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    mov r8, r10
-; CHECK-NEXT:    dlstp.16 lr, r2
+; CHECK-NEXT:    dlstp.16 lr, lr
 ; CHECK-NEXT:  .LBB5_7: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB5_5 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -908,17 +901,16 @@ define i8* @signext_optsize(i8* %input_row, i8* %input_col, i16 zeroext %output_
 ; CHECK-NEXT:    bge .LBB6_6
 ; CHECK-NEXT:  @ %bb.4: @ %for.body24.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB6_3 Depth=1
-; CHECK-NEXT:    ldr r2, [sp, #92]
+; CHECK-NEXT:    ldr.w lr, [sp, #92]
 ; CHECK-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; CHECK-NEXT:    mov r6, r10
 ; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    mov r12, r10
-; CHECK-NEXT:    mla r3, r9, r2, r0
+; CHECK-NEXT:    mla r3, r9, lr, r0
 ; CHECK-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    ldrd r7, r0, [sp] @ 8-byte Folded Reload
-; CHECK-NEXT:    mov r11, r2
 ; CHECK-NEXT:    mov r8, r10
-; CHECK-NEXT:    dlstp.16 lr, r2
+; CHECK-NEXT:    dlstp.16 lr, lr
 ; CHECK-NEXT:  .LBB6_5: @ %for.body24
 ; CHECK-NEXT:    @ Parent Loop BB6_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
@@ -1171,14 +1163,14 @@ define arm_aapcs_vfpcc void @_Z37_arm_radix4_butterfly_inverse_f32_mvePK21arm_cf
 ; CHECK-NEXT:    bne .LBB7_6
 ; CHECK-NEXT:    b .LBB7_2
 ; CHECK-NEXT:  .LBB7_9:
-; CHECK-NEXT:    adr r0, .LCPI7_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    adr r1, .LCPI7_0
 ; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; CHECK-NEXT:    lsr.w lr, r0, #3
-; CHECK-NEXT:    wls lr, lr, .LBB7_12
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    vadd.i32 q1, q1, r1
+; CHECK-NEXT:    lsrs r0, r0, #3
+; CHECK-NEXT:    vldrw.u32 q2, [q1, #64]!
+; CHECK-NEXT:    wls lr, r0, .LBB7_12
 ; CHECK-NEXT:  @ %bb.10:
 ; CHECK-NEXT:    vldr s0, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov r0, s0

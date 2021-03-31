@@ -170,7 +170,9 @@ protected:
   /// should not rely on any state accessible during the execution of a pass.
   /// For example, `getContext`/`getOperation`/`getAnalysis`/etc. should not be
   /// invoked within this hook.
-  virtual void initialize(MLIRContext *context) {}
+  /// Returns a LogicalResult to indicate failure, in which case the pass
+  /// pipeline won't execute.
+  virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
   /// Schedule an arbitrary pass pipeline on the provided operation.
   /// This can be invoke any time in a pass to dynamic schedule more passes.

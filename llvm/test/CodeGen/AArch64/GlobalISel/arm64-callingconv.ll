@@ -156,9 +156,9 @@ define void @caller_s128(i128 *%ptr) {
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load 16 from %ir.ptr)
   ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
-  ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK:   $x0 = COPY [[UV]](s64)
   ; CHECK:   $x1 = COPY [[UV1]](s64)
+  ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[LOAD]](s128)
   ; CHECK:   $x2 = COPY [[UV2]](s64)
   ; CHECK:   $x3 = COPY [[UV3]](s64)
   ; CHECK:   $x4 = COPY [[COPY]](p0)

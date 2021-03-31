@@ -22,7 +22,6 @@ class FrameUtilsTestCase(TestBase):
         self.line = line_number('main.c',
                                 "// Find the line number here.")
 
-    @add_test_categories(['pyapi'])
     def test_frame_utils(self):
         """Test utility functions for the frame object."""
         self.build()
@@ -40,7 +39,7 @@ class FrameUtilsTestCase(TestBase):
 
         if not process:
             self.fail("SBTarget.LaunchProcess() failed")
-        self.assertTrue(process.GetState() == lldb.eStateStopped,
+        self.assertEqual(process.GetState(), lldb.eStateStopped,
                         PROCESS_STOPPED)
 
         import lldbsuite.test.lldbutil as lldbutil

@@ -18,6 +18,7 @@ import lit.reports
 import lit.run
 import lit.Test
 import lit.util
+from lit.TestTimes import record_test_times
 
 
 def main(builtin_params={}):
@@ -68,7 +69,9 @@ def main(builtin_params={}):
     determine_order(discovered_tests, opts.order)
 
     selected_tests = [t for t in discovered_tests if
-                      opts.filter.search(t.getFullName())]
+        opts.filter.search(t.getFullName()) and not
+        opts.filter_out.search(t.getFullName())]
+
     if not selected_tests:
         sys.stderr.write('error: filter did not match any tests '
                          '(of %d discovered).  ' % len(discovered_tests))
@@ -95,11 +98,15 @@ def main(builtin_params={}):
 
     selected_tests = selected_tests[:opts.max_tests]
 
+    mark_xfail(discovered_tests, opts)
+
     mark_excluded(discovered_tests, selected_tests)
 
     start = time.time()
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
+
+    record_test_times(selected_tests, lit_config)
 
     if opts.time_tests:
         print_histogram(discovered_tests)
@@ -118,8 +125,11 @@ def main(builtin_params={}):
 
     has_failure = any(t.isFailure() for t in discovered_tests)
     if has_failure:
-        sys.exit(1)
-
+        if opts.ignoreFail:
+            sys.stderr.write("\nExiting with status 0 instead of 1 because "
+                             "'--ignore-fail' was specified.\n")
+        else:
+            sys.exit(1)
 
 def create_params(builtin_params, user_params):
     def parse(p):
@@ -156,20 +166,12 @@ def print_discovered(tests, show_suites, show_tests):
 
 def determine_order(tests, order):
     from lit.cl_arguments import TestOrder
-    if order == TestOrder.EARLY_TESTS_THEN_BY_NAME:
-        tests.sort(key=lambda t: (not t.isEarlyTest(), t.getFullName()))
-    elif order == TestOrder.FAILING_FIRST:
-        def by_mtime(test):
-            return os.path.getmtime(test.getFilePath())
-        tests.sort(key=by_mtime, reverse=True)
-    elif order == TestOrder.RANDOM:
+    if order == TestOrder.RANDOM:
         import random
         random.shuffle(tests)
-
-
-def touch_file(test):
-    if test.isFailure():
-        os.utime(test.getFilePath(), None)
+    else:
+        assert order == TestOrder.DEFAULT, 'Unknown TestOrder value'
+        tests.sort(key=lambda t: (not t.previous_failure, -t.previous_elapsed, t.getFullName()))
 
 
 def filter_by_shard(tests, run, shards, lit_config):
@@ -189,6 +191,11 @@ def filter_by_shard(tests, run, shards, lit_config):
     return selected_tests
 
 
+def mark_xfail(selected_tests, opts):
+    for t in selected_tests:
+        if os.sep.join(t.path_in_suite) in opts.xfail:
+            t.xfails += '*'
+
 def mark_excluded(discovered_tests, selected_tests):
     excluded_tests = set(discovered_tests) - set(selected_tests)
     result = lit.Test.Result(lit.Test.EXCLUDED)
@@ -198,15 +205,9 @@ def mark_excluded(discovered_tests, selected_tests):
 
 def run_tests(tests, lit_config, opts, discovered_tests):
     workers = min(len(tests), opts.workers)
-    display = lit.display.create_display(opts, len(tests), discovered_tests,
-                                         workers)
+    display = lit.display.create_display(opts, tests, discovered_tests, workers)
 
-    def progress_callback(test):
-        display.update(test)
-        if opts.order == lit.cl_arguments.TestOrder.FAILING_FIRST:
-            touch_file(test)
-
-    run = lit.run.Run(tests, lit_config, workers, progress_callback,
+    run = lit.run.Run(tests, lit_config, workers, display.update,
                       opts.max_failures, opts.timeout)
 
     display.print_header()
@@ -268,7 +269,7 @@ def print_results(tests, elapsed, opts):
         tests_by_code[test.result.code].append(test)
 
     for code in lit.Test.ResultCode.all_codes():
-        print_group(tests_by_code[code], code, opts.shown_codes)
+        print_group(sorted(tests_by_code[code], key=lambda t: t.getFullName()), code, opts.shown_codes)
 
     print_summary(tests_by_code, opts.quiet, elapsed)
 

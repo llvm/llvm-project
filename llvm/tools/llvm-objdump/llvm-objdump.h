@@ -1,3 +1,4 @@
+//===--- llvm-objdump.h -----------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -41,6 +42,7 @@ extern cl::opt<std::string> MCPU;
 extern cl::opt<bool> NoShowRawInsn;
 extern cl::opt<bool> NoLeadingAddr;
 extern cl::opt<std::string> Prefix;
+extern cl::opt<uint32_t> PrefixStrip;
 extern cl::opt<bool> PrintImmHex;
 extern cl::opt<bool> PrivateHeaders;
 extern cl::opt<bool> Relocations;

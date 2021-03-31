@@ -110,9 +110,8 @@ bool llvm::objcarc::CanUse(const Instruction *Inst, const Value *Ptr,
   }
 
   // Check each operand for a match.
-  for (User::const_op_iterator OI = Inst->op_begin(), OE = Inst->op_end();
-       OI != OE; ++OI) {
-    const Value *Op = *OI;
+  for (const Use &U : Inst->operands()) {
+    const Value *Op = U;
     if (IsPotentialRetainableObjPtr(Op, *PA.getAA()) && PA.related(Ptr, Op))
       return true;
   }

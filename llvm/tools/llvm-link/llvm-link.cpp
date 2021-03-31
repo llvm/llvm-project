@@ -110,6 +110,9 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
     cl::desc("Preserve use-list order when writing LLVM assembly."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<bool> NoVerify("disable-verify",
+                              cl::desc("Do not run the verifier"), cl::Hidden);
+
 static ExitOnError ExitOnErr;
 
 // Read the specified bitcode file in and return it. This routine searches the
@@ -246,8 +249,10 @@ public:
 Module &ModuleLazyLoaderCache::operator()(const char *argv0,
                                           const std::string &Identifier) {
   auto &Module = ModuleMap[Identifier];
-  if (!Module)
+  if (!Module) {
     Module = createLazyModule(argv0, Identifier);
+    assert(Module && "Failed to create lazy module!");
+  }
   return *Module;
 }
 } // anonymous namespace
@@ -309,7 +314,7 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     // Load the specified source module.
     auto &SrcModule = ModuleLoaderCache(argv0, FileName);
 
-    if (verifyModule(SrcModule, &errs())) {
+    if (!NoVerify && verifyModule(SrcModule, &errs())) {
       errs() << argv0 << ": " << FileName;
       WithColor::error() << "input module is broken!\n";
       return false;
@@ -370,7 +375,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
     // Note that when ODR merging types cannot verify input files in here When
     // doing that debug metadata in the src module might already be pointing to
     // the destination.
-    if (DisableDITypeMap && verifyModule(*M, &errs())) {
+    if (DisableDITypeMap && !NoVerify && verifyModule(*M, &errs())) {
       errs() << argv0 << ": " << File << ": ";
       WithColor::error() << "input module is broken!\n";
       return false;
@@ -469,7 +474,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (verifyModule(*Composite, &errs())) {
+  if (!NoVerify && verifyModule(*Composite, &errs())) {
     errs() << argv[0] << ": ";
     WithColor::error() << "linked module is broken!\n";
     return 1;

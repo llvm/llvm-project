@@ -25,7 +25,23 @@ struct c {
            ) : -1);
 };
 
+// Check that we can evaluate statement-expressions properly when
+// constant-folding inside an ICE.
+void PR49239() {
+  goto check_not_vla;
+  char not_vla[__builtin_constant_p(1) ? ({ 42; }) : -1]; // expected-warning {{statement expression}}
+check_not_vla:;
+  _Static_assert(sizeof(not_vla) == 42, ""); // expected-warning {{C11 extension}}
 
+  // It's not clear that this should be valid: __builtin_expect(expr1, expr2)
+  // should probably be an ICE if and only if expr1 is an ICE, but we roughly
+  // follow GCC in treating it as an ICE if and only if we can evaluate expr1
+  // regardless of whether it's an ICE.
+  goto check_also_not_vla;
+  char also_not_vla[__builtin_expect(({ 76; }), 0)]; // expected-warning {{statement expression}}
+check_also_not_vla:;
+  _Static_assert(sizeof(also_not_vla) == 76, ""); // expected-warning {{C11 extension}}
+}
 
 
 void test1(int n, int* p) { *(n ? p : (void *)(7-7)) = 1; }

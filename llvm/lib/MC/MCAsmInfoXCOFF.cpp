@@ -23,6 +23,8 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
   UseDotAlignForAlignment = true;
+  UsesDwarfFileAndLocDirectives = false;
+  DwarfSectionSizeRequired = false;
   if (UseLEB128Directives == cl::BOU_UNSET)
     HasLEB128Directives = false;
   ZeroDirective = "\t.space\t";

@@ -165,14 +165,12 @@ TEST_F(SelectionDAGAddressAnalysisTest, unknownSizeFrameObjects) {
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(*MF, FI);
   SDValue Value = DAG->getConstant(0, Loc, SubVecVT);
-  TypeSize Offset0 = TypeSize::Fixed(0);
   TypeSize Offset1 = SubVecVT.getStoreSize();
-  SDValue Index0 = DAG->getMemBasePlusOffset(FIPtr, Offset0, Loc);
   SDValue Index1 = DAG->getMemBasePlusOffset(FIPtr, Offset1, Loc);
-  SDValue Store0 = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index0,
-                                 PtrInfo.getWithOffset(Offset0));
+  SDValue Store0 =
+      DAG->getStore(DAG->getEntryNode(), Loc, Value, FIPtr, PtrInfo);
   SDValue Store1 = DAG->getStore(DAG->getEntryNode(), Loc, Value, Index1,
-                                 PtrInfo.getWithOffset(Offset1));
+                                 MachinePointerInfo(PtrInfo.getAddrSpace()));
   Optional<int64_t> NumBytes0 = MemoryLocation::getSizeOrUnknown(
       cast<StoreSDNode>(Store0)->getMemoryVT().getStoreSize());
   Optional<int64_t> NumBytes1 = MemoryLocation::getSizeOrUnknown(

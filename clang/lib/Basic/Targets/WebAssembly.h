@@ -27,7 +27,6 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
-    UnimplementedSIMD128,
   } SIMDLevel = NoSIMD;
 
   bool HasNontrappingFPToInt = false;
@@ -138,6 +137,8 @@ private:
   bool hasExtIntType() const override { return true; }
 
   bool hasProtectedVisibility() const override { return false; }
+
+  void adjust(LangOptions &Opts) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

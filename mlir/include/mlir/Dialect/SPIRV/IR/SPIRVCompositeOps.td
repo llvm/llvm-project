@@ -111,7 +111,7 @@ def SPV_CompositeExtractOp : SPV_Op<"CompositeExtract",
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$composite, "ArrayRef<int32_t>":$indices)>
+    OpBuilder<(ins "Value":$composite, "ArrayRef<int32_t>":$indices)>
   ];
 
   let hasFolder = 1;
@@ -164,18 +164,18 @@ def SPV_CompositeInsertOp : SPV_Op<"CompositeInsert",
   );
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$object, "Value":$composite,
-      "ArrayRef<int32_t>":$indices)>
+    OpBuilder<(ins "Value":$object, "Value":$composite,
+                      "ArrayRef<int32_t>":$indices)>
   ];
 }
 
 // -----
 
-def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
-            [NoSideEffect,
-            TypesMatchWith<"type of 'result' matches element type of 'vector'",
-                     "vector", "result",
-                     "$_self.cast<mlir::VectorType>().getElementType()">]> {
+def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic", [
+    NoSideEffect,
+    TypesMatchWith<"type of 'result' matches element type of 'vector'",
+                   "vector", "result",
+                   "$_self.cast<mlir::VectorType>().getElementType()">]> {
   let summary = [{
     Extract a single, dynamically selected, component of a vector.
   }];
@@ -193,13 +193,6 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
     or equal to the number of components in Vector.
 
     <!-- End of AutoGen section -->
-
-    ```
-	scalar-type ::= integer-type | float-type | boolean-type 
-    vector-extract-dynamic-op ::= `spv.VectorExtractDynamic ` ssa-use `[` ssa-use `]`
-                                    `:` `vector<` integer-literal `x` scalar-type `>` `,`
-                                    integer-type
-    ```mlir
 
     #### Example:
 
@@ -226,12 +219,13 @@ def SPV_VectorExtractDynamicOp : SPV_Op<"VectorExtractDynamic",
 
 // -----
 
-def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic",
-        [NoSideEffect,
-        TypesMatchWith<"type of 'component' matches element type of 'vector'",
-                "vector", "component",
-                "$_self.cast<mlir::VectorType>().getElementType()">,
-                AllTypesMatch<["vector", "result"]>]> {
+def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic", [
+    NoSideEffect,
+    TypesMatchWith<
+      "type of 'component' matches element type of 'vector'",
+      "vector", "component",
+      "$_self.cast<mlir::VectorType>().getElementType()">,
+    AllTypesMatch<["vector", "result"]>]> {
   let summary = [{
     Make a copy of a vector, with a single, variably selected, component
     modified.
@@ -284,6 +278,66 @@ def SPV_VectorInsertDynamicOp : SPV_Op<"VectorInsertDynamic",
   
   let assemblyFormat = [{
     $component `,` $vector `[` $index `]` attr-dict `:` type($vector) `,` type($index) 
+  }];
+}
+
+// -----
+
+def SPV_VectorShuffleOp : SPV_Op<"VectorShuffle", [
+    NoSideEffect, AllElementTypesMatch<["vector1", "vector2", "result"]>]> {
+  let summary = [{
+    Select arbitrary components from two vectors to make a new vector.
+  }];
+
+  let description = [{
+    Result Type must be an OpTypeVector. The number of components in Result
+    Type must be the same as the number of Component operands.
+
+    Vector 1 and Vector 2 must both have vector types, with the same
+    Component Type as Result Type. They do not have to have the same number
+    of components as Result Type or with each other. They are logically
+    concatenated, forming a single vector with Vector 1’s components
+    appearing before Vector 2’s. The components of this logical vector are
+    logically numbered with a single consecutive set of numbers from 0 to N
+    - 1, where N is the total number of components.
+
+    Components are these logical numbers (see above), selecting which of the
+    logically numbered components form the result. Each component is an
+    unsigned 32-bit integer.  They can select the components in any order
+    and can repeat components. The first component of the result is selected
+    by the first Component operand,  the second component of the result is
+    selected by the second Component operand, etc. A Component literal may
+    also be FFFFFFFF, which means the corresponding result component has no
+    source and is undefined. All Component literals must either be FFFFFFFF
+    or in [0, N - 1] (inclusive).
+
+    Note: A vector “swizzle” can be done by using the vector for both Vector
+    operands, or using an OpUndef for one of the Vector operands.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.VectorShuffle [1: i32, 3: i32, 5: i32]
+                           %vector1: vector<4xf32>, %vector2: vector<2xf32>
+                        -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_Vector:$vector1,
+    SPV_Vector:$vector2,
+    I32ArrayAttr:$components
+  );
+
+  let results = (outs
+    SPV_Vector:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $components $vector1 `:` type($vector1) `,`
+                          $vector2 `:` type($vector2) `->` type($result)
   }];
 }
 

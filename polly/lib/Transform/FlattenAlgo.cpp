@@ -129,10 +129,14 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
 /// Because this function takes an isl_union_map, the out dimensions could be
 /// different. We return the maximum number in this case. However, a different
 /// number of dimensions is not supported by the other code in this file.
-size_t scheduleScatterDims(const isl::union_map &Schedule) {
-  unsigned Dims = 0;
-  for (isl::map Map : Schedule.get_map_list())
+isl_size scheduleScatterDims(const isl::union_map &Schedule) {
+  isl_size Dims = 0;
+  for (isl::map Map : Schedule.get_map_list()) {
+    if (!Map)
+      continue;
+
     Dims = std::max(Dims, Map.dim(isl::dim::out));
+  }
   return Dims;
 }
 

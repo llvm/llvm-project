@@ -825,6 +825,22 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       AsanInvalidPointerSub = true;
     }
 
+    if (TC.getTriple().isOSDarwin() &&
+        (Args.hasArg(options::OPT_mkernel) ||
+         Args.hasArg(options::OPT_fapple_kext))) {
+      AsanDtorKind = llvm::AsanDtorKind::None;
+    }
+
+    if (const auto *Arg =
+            Args.getLastArg(options::OPT_sanitize_address_destructor_kind_EQ)) {
+      auto parsedAsanDtorKind = AsanDtorKindFromString(Arg->getValue());
+      if (parsedAsanDtorKind == llvm::AsanDtorKind::Invalid) {
+        TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
+            << Arg->getOption().getName() << Arg->getValue();
+      }
+      AsanDtorKind = parsedAsanDtorKind;
+    }
+
   } else {
     AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
@@ -931,10 +947,15 @@ static bool hasTargetFeatureMTE(const llvm::opt::ArgStringList &CmdArgs) {
 void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             types::ID InputType) const {
-  // NVPTX/AMDGPU doesn't currently support sanitizers.  Bailing out here means
+  // NVPTX doesn't currently support sanitizers.  Bailing out here means
   // that e.g. -fsanitize=address applies only to host code, which is what we
   // want for now.
-  if (TC.getTriple().isNVPTX() || TC.getTriple().isAMDGPU())
+  //
+  // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
+  if (TC.getTriple().isNVPTX() ||
+      (TC.getTriple().isAMDGPU() &&
+       !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                     false)))
     return;
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
@@ -1072,6 +1093,13 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanInvalidPointerSub) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-asan-detect-invalid-pointer-sub");
+  }
+
+  // Only pass the option to the frontend if the user requested,
+  // otherwise the frontend will just use the codegen default.
+  if (AsanDtorKind != llvm::AsanDtorKind::Invalid) {
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-destructor-kind=" +
+                                         AsanDtorKindToString(AsanDtorKind)));
   }
 
   if (!HwasanAbi.empty()) {

@@ -114,7 +114,7 @@ define void @test3(%struct.s* sret(%struct.s) %a4) {
 ; Check that the alignment is bumped up the alignment of the sret type.
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[A4_CAST:%.*]] = bitcast %struct.s* [[A4:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 4 dereferenceable(16) [[A4_CAST]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 4 dereferenceable(16) [[A4_CAST]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    call void @use(i8* [[A4_CAST]])
 ; CHECK-NEXT:    ret void
 ;

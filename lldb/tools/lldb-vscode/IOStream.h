@@ -11,7 +11,7 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
-#if !LLVM_ON_UNIX
+#if defined(_WIN32)
 // We need to #define NOMINMAX in order to skip `min()` and `max()` macro
 // definitions that conflict with other system headers.
 // We also need to #undef GetObject (which is defined to GetObjectW) because

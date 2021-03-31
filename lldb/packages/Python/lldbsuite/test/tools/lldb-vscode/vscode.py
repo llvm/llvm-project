@@ -113,6 +113,7 @@ class DebugCommunication(object):
         self.initialize_body = None
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
+        self.progress_events = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -139,7 +140,7 @@ class DebugCommunication(object):
         for module in module_list:
             modules[module['name']] = module
         return modules
-        
+
     def get_output(self, category, timeout=0.0, clear=True):
         self.output_condition.acquire()
         output = None
@@ -225,6 +226,13 @@ class DebugCommunication(object):
                 self.breakpoint_events.append(packet)
                 # no need to add 'breakpoint' event packets to our packets list
                 return keepGoing
+            elif event.startswith('progress'):
+                # Progress events come in as 'progressStart', 'progressUpdate',
+                # and 'progressEnd' events. Keep these around in case test
+                # cases want to verify them.
+                self.progress_events.append(packet)
+                # No need to add 'progress' event packets to our packets list.
+                return keepGoing
 
         elif packet_type == 'response':
             if packet['command'] == 'disconnect':
@@ -304,7 +312,7 @@ class DebugCommunication(object):
                 return response_or_request
             else:
                 if response_or_request['command'] == 'runInTerminal':
-                    subprocess.Popen(response_or_request['arguments']['args'], 
+                    subprocess.Popen(response_or_request['arguments']['args'],
                         env=response_or_request['arguments']['env'])
                     self.send_packet({
                         "type": "response",
@@ -317,7 +325,7 @@ class DebugCommunication(object):
                 else:
                     desc = 'unkonwn reverse request "%s"' % (response_or_request['command'])
                     raise ValueError(desc)
-            
+
         return None
 
     def wait_for_event(self, filter=None, timeout=None):
@@ -567,13 +575,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_evaluate(self, expression, frameIndex=0, threadId=None):
+    def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex,
                                          threadId=threadId)
         if stackFrame is None:
             return []
         args_dict = {
             'expression': expression,
+            'context': context,
             'frameId': stackFrame['id'],
         }
         command_dict = {
@@ -787,7 +796,7 @@ class DebugCommunication(object):
         }
         response = self.send_recv(command_dict)
         return response
-        
+
     def request_completions(self, text):
         args_dict = {
             'text': text,

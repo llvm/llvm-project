@@ -156,7 +156,7 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
 
       Intrinsic::ID ID = Call->getIntrinsicID();
       if (ID == Intrinsic::start_loop_iterations ||
-          ID == Intrinsic::test_set_loop_iterations)
+          ID == Intrinsic::test_start_loop_iterations)
         return cast<IntrinsicInst>(&I);
     }
     return nullptr;

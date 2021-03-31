@@ -54,8 +54,8 @@
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       Constant Hoisting
+; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Partially inline calls to library functions
-; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:     Stack Safety Analysis
@@ -195,12 +195,12 @@
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       AArch64 Compress Jump Tables
-; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
+; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Assembly Printer

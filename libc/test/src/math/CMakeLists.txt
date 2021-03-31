@@ -1070,3 +1070,6 @@ add_fp_unittest(
     libc.src.math.fmaf
     libc.utils.FPUtil.fputil
 )
+
+add_subdirectory(generic)
+add_subdirectory(exhaustive)

@@ -5,19 +5,22 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Coding style: https://mlir.llvm.org/getting_started/DeveloperGuide/
+//
+//===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Types.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace fir;
 
-namespace fir {
-namespace detail {
+namespace fir::detail {
 
 struct RealAttributeStorage : public mlir::AttributeStorage {
   using KeyTy = std::pair<int, llvm::APFloat>;
@@ -40,7 +43,7 @@ struct RealAttributeStorage : public mlir::AttributeStorage {
         RealAttributeStorage(key);
   }
 
-  int getFKind() const { return kind; }
+  KindTy getFKind() const { return kind; }
   llvm::APFloat getValue() const { return value; }
 
 private:
@@ -71,55 +74,66 @@ struct TypeAttributeStorage : public mlir::AttributeStorage {
 private:
   mlir::Type value;
 };
-} // namespace detail
+} // namespace fir::detail
 
-ExactTypeAttr ExactTypeAttr::get(mlir::Type value) {
+//===----------------------------------------------------------------------===//
+// Attributes for SELECT TYPE
+//===----------------------------------------------------------------------===//
+
+ExactTypeAttr fir::ExactTypeAttr::get(mlir::Type value) {
   return Base::get(value.getContext(), value);
 }
 
-mlir::Type ExactTypeAttr::getType() const { return getImpl()->getType(); }
+mlir::Type fir::ExactTypeAttr::getType() const { return getImpl()->getType(); }
 
-SubclassAttr SubclassAttr::get(mlir::Type value) {
+SubclassAttr fir::SubclassAttr::get(mlir::Type value) {
   return Base::get(value.getContext(), value);
 }
 
-mlir::Type SubclassAttr::getType() const { return getImpl()->getType(); }
+mlir::Type fir::SubclassAttr::getType() const { return getImpl()->getType(); }
+
+//===----------------------------------------------------------------------===//
+// Attributes for SELECT CASE
+//===----------------------------------------------------------------------===//
 
 using AttributeUniquer = mlir::detail::AttributeUniquer;
 
-ClosedIntervalAttr ClosedIntervalAttr::get(mlir::MLIRContext *ctxt) {
+ClosedIntervalAttr fir::ClosedIntervalAttr::get(mlir::MLIRContext *ctxt) {
   return AttributeUniquer::get<ClosedIntervalAttr>(ctxt);
 }
 
-UpperBoundAttr UpperBoundAttr::get(mlir::MLIRContext *ctxt) {
+UpperBoundAttr fir::UpperBoundAttr::get(mlir::MLIRContext *ctxt) {
   return AttributeUniquer::get<UpperBoundAttr>(ctxt);
 }
 
-LowerBoundAttr LowerBoundAttr::get(mlir::MLIRContext *ctxt) {
+LowerBoundAttr fir::LowerBoundAttr::get(mlir::MLIRContext *ctxt) {
   return AttributeUniquer::get<LowerBoundAttr>(ctxt);
 }
 
-PointIntervalAttr PointIntervalAttr::get(mlir::MLIRContext *ctxt) {
+PointIntervalAttr fir::PointIntervalAttr::get(mlir::MLIRContext *ctxt) {
   return AttributeUniquer::get<PointIntervalAttr>(ctxt);
 }
 
+//===----------------------------------------------------------------------===//
 // RealAttr
+//===----------------------------------------------------------------------===//
 
-RealAttr RealAttr::get(mlir::MLIRContext *ctxt,
-                       const RealAttr::ValueType &key) {
+RealAttr fir::RealAttr::get(mlir::MLIRContext *ctxt,
+                            const RealAttr::ValueType &key) {
   return Base::get(ctxt, key);
 }
 
-int RealAttr::getFKind() const { return getImpl()->getFKind(); }
+KindTy fir::RealAttr::getFKind() const { return getImpl()->getFKind(); }
 
-llvm::APFloat RealAttr::getValue() const { return getImpl()->getValue(); }
+llvm::APFloat fir::RealAttr::getValue() const { return getImpl()->getValue(); }
 
+//===----------------------------------------------------------------------===//
 // FIR attribute parsing
+//===----------------------------------------------------------------------===//
 
-namespace {
-mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
-                                 mlir::DialectAsmParser &parser,
-                                 mlir::Type type) {
+static mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
+                                        mlir::DialectAsmParser &parser,
+                                        mlir::Type type) {
   int kind = 0;
   if (parser.parseLess() || parser.parseInteger(kind) || parser.parseComma()) {
     parser.emitError(parser.getNameLoc(), "expected '<' kind ','");
@@ -154,11 +168,10 @@ mlir::Attribute parseFirRealAttr(FIROpsDialect *dialect,
   }
   return RealAttr::get(dialect->getContext(), {kind, value});
 }
-} // namespace
 
-mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,
-                                  mlir::DialectAsmParser &parser,
-                                  mlir::Type type) {
+mlir::Attribute fir::parseFirAttribute(FIROpsDialect *dialect,
+                                       mlir::DialectAsmParser &parser,
+                                       mlir::Type type) {
   auto loc = parser.getNameLoc();
   llvm::StringRef attrName;
   if (parser.parseKeyword(&attrName)) {
@@ -197,10 +210,12 @@ mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,
   return {};
 }
 
+//===----------------------------------------------------------------------===//
 // FIR attribute pretty printer
+//===----------------------------------------------------------------------===//
 
-void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
-                       mlir::DialectAsmPrinter &p) {
+void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
+                            mlir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
   if (auto exact = attr.dyn_cast<fir::ExactTypeAttr>()) {
     os << fir::ExactTypeAttr::getAttrName() << '<';
@@ -224,8 +239,16 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
     a.getValue().bitcastToAPInt().toStringUnsigned(ss, 16);
     os << ss << '>';
   } else {
-    llvm_unreachable("attribute pretty-printer is not implemented");
+    // don't know how to print the attribute, so use a default
+    os << "<(unknown attribute)>";
   }
 }
 
-} // namespace fir
+//===----------------------------------------------------------------------===//
+// FIROpsDialect
+//===----------------------------------------------------------------------===//
+
+void FIROpsDialect::registerAttributes() {
+  addAttributes<ClosedIntervalAttr, ExactTypeAttr, LowerBoundAttr,
+                PointIntervalAttr, RealAttr, SubclassAttr, UpperBoundAttr>();
+}

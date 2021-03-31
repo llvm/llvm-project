@@ -76,7 +76,7 @@ void SwapIndex::relations(
   return snapshot()->relations(R, CB);
 }
 
-llvm::unique_function<bool(llvm::StringRef) const>
+llvm::unique_function<IndexContents(llvm::StringRef) const>
 SwapIndex::indexedFiles() const {
   // The index snapshot should outlive this method return value.
   auto SnapShot = snapshot();

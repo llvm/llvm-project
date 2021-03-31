@@ -29,7 +29,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             for key in verify:
                 verify_value = verify[key]
                 actual_value = actual[key]
-                self.assertTrue(verify_value == actual_value,
+                self.assertEqual(verify_value, actual_value,
                                 '"%s" keys don\'t match (%s != %s)' % (
                                     key, actual_value, verify_value))
         if 'startswith' in verify_dict:
@@ -69,8 +69,8 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
     def verify_variables(self, verify_dict, variables, varref_dict=None):
         for variable in variables:
             name = variable['name']
-            self.assertTrue(name in verify_dict,
-                            'variable "%s" in verify dictionary' % (name))
+            self.assertIn(name, verify_dict,
+                          'variable "%s" in verify dictionary' % (name))
             self.verify_values(verify_dict[name], variable, varref_dict)
 
     @skipIfWindows
@@ -87,7 +87,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         lines = [breakpoint1_line]
         # Set breakpoint in the thread function so we can step the threads
         breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.assertTrue(len(breakpoint_ids) == len(lines),
+        self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
         locals = self.vscode.get_local_variables()
@@ -152,7 +152,7 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         # Verify setting the start index to a value that is out of range
         # results in an empty list
         response = self.vscode.request_variables(varRef, start=32, count=1)
-        self.assertTrue(len(response['body']['variables']) == 0,
+        self.assertEqual(len(response['body']['variables']), 0,
                         'verify we get no variable back for invalid start')
 
         # Test evaluate
@@ -197,12 +197,12 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         # Test setting variables
         self.set_local('argc', 123)
         argc = self.get_local_as_int('argc')
-        self.assertTrue(argc == 123,
+        self.assertEqual(argc, 123,
                         'verify argc was set to 123 (123 != %i)' % (argc))
 
         self.set_local('argv', 0x1234)
         argv = self.get_local_as_int('argv')
-        self.assertTrue(argv == 0x1234,
+        self.assertEqual(argv, 0x1234,
                         'verify argv was set to 0x1234 (0x1234 != %#x)' % (
                             argv))
 
@@ -219,5 +219,5 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
         self.vscode.request_setVariable(varRef, "x", 111)
         response = self.vscode.request_variables(varRef, start=0, count=1)
         value = response['body']['variables'][0]['value']
-        self.assertTrue(value == '111',
+        self.assertEqual(value, '111',
                         'verify pt.x got set to 111 (111 != %s)' % (value))

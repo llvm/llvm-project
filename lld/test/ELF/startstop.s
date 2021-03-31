@@ -31,13 +31,6 @@
 // SYMBOL-NEXT: ]
 
 // SYMBOL: Symbol {
-// SYMBOL:   Name: __start_bar
-// SYMBOL:   Value: 0x1342
-// SYMBOL:   STV_HIDDEN
-// SYMBOL:   Section: bar
-// SYMBOL: }
-// SYMBOL-NOT:   Section: __stop_bar
-// SYMBOL: Symbol {
 // SYMBOL:   Name: __start_foo
 // SYMBOL:   Value: 0x133F
 // SYMBOL:   STV_HIDDEN
@@ -49,18 +42,25 @@
 // SYMBOL:   STV_HIDDEN
 // SYMBOL:   Section: foo
 // SYMBOL: }
-
 // SYMBOL: Symbol {
-// SYMBOL:   Name: __stop_zed1
-// SYMBOL:   Value: 0x3408
-// SYMBOL:   STV_PROTECTED
-// SYMBOL:   Section: zed1
+// SYMBOL:   Name: __start_bar
+// SYMBOL:   Value: 0x1342
+// SYMBOL:   STV_HIDDEN
+// SYMBOL:   Section: bar
 // SYMBOL: }
+// SYMBOL-NOT:   Section: __stop_bar
+
 // SYMBOL: Symbol {
 // SYMBOL:   Name: __stop_zed2
 // SYMBOL:   Value: 0x3418
 // SYMBOL:   STV_PROTECTED
 // SYMBOL:   Section: zed2
+// SYMBOL: }
+// SYMBOL: Symbol {
+// SYMBOL:   Name: __stop_zed1
+// SYMBOL:   Value: 0x3408
+// SYMBOL:   STV_PROTECTED
+// SYMBOL:   Section: zed1
 // SYMBOL: }
 
 .hidden __start_foo

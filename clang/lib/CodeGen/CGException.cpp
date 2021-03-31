@@ -1343,7 +1343,8 @@ namespace {
         CGF.EmitBlock(RethrowBB);
         if (SavedExnVar) {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn,
-            CGF.Builder.CreateAlignedLoad(SavedExnVar, CGF.getPointerAlign()));
+            CGF.Builder.CreateAlignedLoad(CGF.Int8PtrTy, SavedExnVar,
+                                          CGF.getPointerAlign()));
         } else {
           CGF.EmitRuntimeCallOrInvoke(RethrowFn);
         }
@@ -1552,17 +1553,8 @@ llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
   CurrentFuncletPad = Builder.CreateCleanupPad(ParentPad);
 
   // Emit the __std_terminate call.
-  llvm::Value *Exn = nullptr;
-  // In case of wasm personality, we need to pass the exception value to
-  // __clang_call_terminate function.
-  if (getLangOpts().CPlusPlus &&
-      EHPersonality::get(*this).isWasmPersonality()) {
-    llvm::Function *GetExnFn =
-        CGM.getIntrinsic(llvm::Intrinsic::wasm_get_exception);
-    Exn = Builder.CreateCall(GetExnFn, CurrentFuncletPad);
-  }
   llvm::CallInst *terminateCall =
-      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, Exn);
+      CGM.getCXXABI().emitTerminateForUnexpectedException(*this, nullptr);
   terminateCall->setDoesNotReturn();
   Builder.CreateUnreachable();
 
@@ -1702,10 +1694,8 @@ struct CaptureFinder : ConstStmtVisitor<CaptureFinder> {
 
   void VisitDeclRefExpr(const DeclRefExpr *E) {
     // If this is already a capture, just make sure we capture 'this'.
-    if (E->refersToEnclosingVariableOrCapture()) {
+    if (E->refersToEnclosingVariableOrCapture())
       Captures.insert(ParentThis);
-      return;
-    }
 
     const auto *D = dyn_cast<VarDecl>(E->getDecl());
     if (D && D->isLocalVarDeclOrParm() && D->hasLocalStorage())
@@ -1865,17 +1855,18 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
 
   // Create llvm.localrecover calls for all captures.
   for (const VarDecl *VD : Finder.Captures) {
-    if (isa<ImplicitParamDecl>(VD)) {
-      CGM.ErrorUnsupported(VD, "'this' captured by SEH");
-      CXXThisValue = llvm::UndefValue::get(ConvertTypeForMem(VD->getType()));
-      continue;
-    }
     if (VD->getType()->isVariablyModifiedType()) {
       CGM.ErrorUnsupported(VD, "VLA captured by SEH");
       continue;
     }
     assert((isa<ImplicitParamDecl>(VD) || VD->isLocalVarDeclOrParm()) &&
            "captured non-local variable");
+
+    auto L = ParentCGF.LambdaCaptureFields.find(VD);
+    if (L != ParentCGF.LambdaCaptureFields.end()) {
+      LambdaCaptureFields[VD] = L->second;
+      continue;
+    }
 
     // If this decl hasn't been declared yet, it will be declared in the
     // OutlinedStmt.
@@ -1884,8 +1875,30 @@ void CodeGenFunction::EmitCapturedLocals(CodeGenFunction &ParentCGF,
       continue;
 
     Address ParentVar = I->second;
-    setAddrOfLocalVar(
-        VD, recoverAddrOfEscapedLocal(ParentCGF, ParentVar, ParentFP));
+    Address Recovered =
+        recoverAddrOfEscapedLocal(ParentCGF, ParentVar, ParentFP);
+    setAddrOfLocalVar(VD, Recovered);
+
+    if (isa<ImplicitParamDecl>(VD)) {
+      CXXABIThisAlignment = ParentCGF.CXXABIThisAlignment;
+      CXXThisAlignment = ParentCGF.CXXThisAlignment;
+      CXXABIThisValue = Builder.CreateLoad(Recovered, "this");
+      if (ParentCGF.LambdaThisCaptureField) {
+        LambdaThisCaptureField = ParentCGF.LambdaThisCaptureField;
+        // We are in a lambda function where "this" is captured so the
+        // CXXThisValue need to be loaded from the lambda capture
+        LValue ThisFieldLValue =
+            EmitLValueForLambdaField(LambdaThisCaptureField);
+        if (!LambdaThisCaptureField->getType()->isPointerType()) {
+          CXXThisValue = ThisFieldLValue.getAddress(*this).getPointer();
+        } else {
+          CXXThisValue = EmitLoadOfLValue(ThisFieldLValue, SourceLocation())
+                             .getScalarVal();
+        }
+      } else {
+        CXXThisValue = CXXABIThisValue;
+      }
+    }
   }
 
   if (Finder.SEHCodeSlot.isValid()) {
@@ -1953,6 +1966,7 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args,
                 OutlinedStmt->getBeginLoc(), OutlinedStmt->getBeginLoc());
   CurSEHParent = ParentCGF.CurSEHParent;
+  CurCodeDecl = ParentCGF.CurCodeDecl;
 
   CGM.SetInternalFunctionAttributes(GlobalDecl(), CurFn, FnInfo);
   EmitCapturedLocals(ParentCGF, OutlinedStmt, IsFilter);
@@ -2025,8 +2039,8 @@ void CodeGenFunction::EmitSEHExceptionCodeSave(CodeGenFunction &ParentCGF,
   llvm::Type *PtrsTy = llvm::StructType::get(RecordTy, CGM.VoidPtrTy);
   llvm::Value *Ptrs = Builder.CreateBitCast(SEHInfo, PtrsTy->getPointerTo());
   llvm::Value *Rec = Builder.CreateStructGEP(PtrsTy, Ptrs, 0);
-  Rec = Builder.CreateAlignedLoad(Rec, getPointerAlign());
-  llvm::Value *Code = Builder.CreateAlignedLoad(Rec, getIntAlign());
+  Rec = Builder.CreateAlignedLoad(RecordTy, Rec, getPointerAlign());
+  llvm::Value *Code = Builder.CreateAlignedLoad(Int32Ty, Rec, getIntAlign());
   assert(!SEHCodeSlotStack.empty() && "emitting EH code outside of __except");
   Builder.CreateStore(Code, SEHCodeSlotStack.back());
 }

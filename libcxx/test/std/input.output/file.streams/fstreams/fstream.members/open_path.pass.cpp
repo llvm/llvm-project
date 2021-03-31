@@ -44,7 +44,7 @@ int main(int, char**) {
     stream >> x;
     assert(x == 3.25);
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
   {
     std::wfstream stream;
     assert(!stream.is_open());
@@ -57,7 +57,7 @@ int main(int, char**) {
     stream >> x;
     assert(x == 3.25);
   }
-  std::remove(p.c_str());
+  std::remove(p.string().c_str());
 
   return 0;
 }

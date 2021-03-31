@@ -108,7 +108,7 @@ RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-segment-
 INVALID-SEGMENT-FILEOFF: macho-invalid-segment-fileoff': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
 
 RUN: not llvm-nm %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -check-prefix INVALID-SEGMENT-FILEOFF-NM %s
-INVALID-SEGMENT-FILEOFF-NM: macho-invalid-segment-fileoff truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
+INVALID-SEGMENT-FILEOFF-NM: macho-invalid-segment-fileoff: truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)
 
 RUN: not llvm-size %p/Inputs/macho-invalid-segment-fileoff 2>&1 | FileCheck -DFILE=%p/Inputs/macho-invalid-segment-fileoff -check-prefix INVALID-SEGMENT-FILEOFF-SIZE %s
 INVALID-SEGMENT-FILEOFF-SIZE: error: '[[FILE]]': truncated or malformed object (load command 0 fileoff field in LC_SEGMENT extends past the end of the file)

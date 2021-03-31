@@ -51,7 +51,7 @@ class UbsanBasicTestCase(TestBase):
             substrs=['1 match found'])
 
         # We should be stopped in __ubsan_on_report
-        self.assertTrue("__ubsan_on_report" in frame.GetFunctionName())
+        self.assertIn("__ubsan_on_report", frame.GetFunctionName())
 
         # The stopped thread backtrace should contain either 'align line'
         found = False

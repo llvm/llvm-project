@@ -41,6 +41,6 @@ def bax : Instruction {
 
 // CHECK: tmp = fieldFromInstruction(insn, 9, 7) << 1;
 // CHECK: tmp = 0x1;
-// CHECK: tmp |= fieldFromInstruction(insn, 9, 7) << 1;
+// CHECK: insertBits(tmp, fieldFromInstruction(insn, 9, 7), 1, 7);
 // CHECK: tmp = 0x100000000;
-// CHECK: tmp |= fieldFromInstruction(insn, 8, 7) << 25;
+// CHECK: insertBits(tmp, fieldFromInstruction(insn, 8, 7), 25, 7);

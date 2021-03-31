@@ -19,7 +19,7 @@
 // UNSUPPORTED: with_system_cxx_lib=macosx10.9
 
 // This test is designed to cause and allow TSAN to detect a race condition
-// in std::async, as reported in https://bugs.llvm.org/show_bug.cgi?id=38682.
+// in std::async, as reported in https://llvm.org/PR38682.
 
 #include <cassert>
 #include <functional>

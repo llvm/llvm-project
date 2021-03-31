@@ -14,20 +14,17 @@ define i16 @v_mul_i16(i16 %a, i16 %b) {
   ret i16 %r.val
 }
 
-; FIXME: Should emit scalar mul or maybe i16 v_mul here
 ; GCN-LABEL: {{^}}s_mul_i16:
-; SI: v_mul_u32_u24
-; VI: s_mul_i16
+; GCN: s_mul_i16
 define amdgpu_kernel void @s_mul_i16(i16 %a, i16 %b) {
   %r.val = mul i16 %a, %b
   store volatile i16 %r.val, i16 addrspace(1)* null
   ret void
 }
 
-; FIXME: Should emit u16 mul here. Instead it's worse than SI
+; FIXME: Should emit u16 mul here.
 ; GCN-LABEL: {{^}}v_mul_i16_uniform_load:
-; SI: v_mul_u32_u24
-; GFX89: v_mul_lo_u32
+; GCN: v_mul_lo_u32
 define amdgpu_kernel void @v_mul_i16_uniform_load(
     i16 addrspace(1)* %r,
     i16 addrspace(1)* %a,

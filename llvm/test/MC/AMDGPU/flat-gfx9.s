@@ -53,10 +53,11 @@ flat_atomic_cmpswap v[1:2], v[3:4] slc
 // VI:   flat_atomic_cmpswap v[1:2], v[3:4] slc ; encoding: [0x00,0x00,0x06,0xdd,0x01,0x03,0x00,0x00]
 
 flat_atomic_cmpswap v[1:2], v[3:4] offset:4095 glc
-// GCNERR: error: invalid operand for instruction
+// GFX9-ERR: error: instruction must not use glc
+// VI-ERR: error: flat offset modifier is not supported on this GPU
 
 flat_atomic_cmpswap v[1:2], v[3:4] glc
-// GCNERR: error: invalid operand for instruction
+// GCNERR: error: instruction must not use glc
 
 flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc
 // GFX9: flat_atomic_cmpswap v0, v[1:2], v[3:4] offset:4095 glc ; encoding: [0xff,0x0f,0x05,0xdd,0x01,0x03,0x00,0x00]

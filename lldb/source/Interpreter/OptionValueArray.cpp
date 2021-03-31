@@ -303,15 +303,16 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
   return error;
 }
 
-lldb::OptionValueSP OptionValueArray::DeepCopy() const {
-  OptionValueArray *copied_array =
-      new OptionValueArray(m_type_mask, m_raw_value_dump);
-  lldb::OptionValueSP copied_value_sp(copied_array);
-  *static_cast<OptionValue *>(copied_array) = *this;
-  copied_array->m_callback = m_callback;
-  const uint32_t size = m_values.size();
-  for (uint32_t i = 0; i < size; ++i) {
-    copied_array->AppendValue(m_values[i]->DeepCopy());
-  }
-  return copied_value_sp;
+OptionValueSP
+OptionValueArray::DeepCopy(const OptionValueSP &new_parent) const {
+  auto copy_sp = OptionValue::DeepCopy(new_parent);
+  // copy_sp->GetAsArray cannot be used here as it doesn't work for derived
+  // types that override GetType returning a different value.
+  auto *array_value_ptr = static_cast<OptionValueArray *>(copy_sp.get());
+  lldbassert(array_value_ptr);
+
+  for (auto &value : array_value_ptr->m_values)
+    value = value->DeepCopy(copy_sp);
+
+  return copy_sp;
 }

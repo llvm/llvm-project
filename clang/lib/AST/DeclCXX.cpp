@@ -1593,6 +1593,20 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
+void CXXRecordDecl::setDeviceLambdaManglingNumber(unsigned Num) const {
+  assert(isLambda() && "Not a lambda closure type!");
+  if (Num)
+    getASTContext().DeviceLambdaManglingNumbers[this] = Num;
+}
+
+unsigned CXXRecordDecl::getDeviceLambdaManglingNumber() const {
+  assert(isLambda() && "Not a lambda closure type!");
+  auto I = getASTContext().DeviceLambdaManglingNumbers.find(this);
+  if (I != getASTContext().DeviceLambdaManglingNumbers.end())
+    return I->second;
+  return 0;
+}
+
 static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
   QualType T =
       cast<CXXConversionDecl>(Conv->getUnderlyingDecl()->getAsFunction())
@@ -2492,16 +2506,15 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R,
                                        SourceLocation EllipsisLoc)
-    : Initializee(TInfo), MemberOrEllipsisLocation(EllipsisLoc), Init(Init),
+    : Initializee(TInfo), Init(Init), MemberOrEllipsisLocation(EllipsisLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(IsVirtual),
       IsWritten(false), SourceOrder(0) {}
 
-CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
-                                       FieldDecl *Member,
+CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context, FieldDecl *Member,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+    : Initializee(Member), Init(Init), MemberOrEllipsisLocation(MemberLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
       IsWritten(false), SourceOrder(0) {}
 
@@ -2510,7 +2523,7 @@ CXXCtorInitializer::CXXCtorInitializer(ASTContext &Context,
                                        SourceLocation MemberLoc,
                                        SourceLocation L, Expr *Init,
                                        SourceLocation R)
-    : Initializee(Member), MemberOrEllipsisLocation(MemberLoc), Init(Init),
+    : Initializee(Member), Init(Init), MemberOrEllipsisLocation(MemberLoc),
       LParenLoc(L), RParenLoc(R), IsDelegating(false), IsVirtual(false),
       IsWritten(false), SourceOrder(0) {}
 

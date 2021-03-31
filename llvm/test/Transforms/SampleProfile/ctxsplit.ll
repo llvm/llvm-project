@@ -1,14 +1,14 @@
 ; Check the nonflattened part of the ctxsplit profile will be read in thinlto
 ; postlink phase while flattened part of the ctxsplit profile will not be read.
-; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=POSTLINK
+; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -use-profiled-call-graph=0 -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=POSTLINK
 ;
 ; Check both the flattened and nonflattened parts of the ctxsplit profile will
 ; be read in thinlto prelink phase.
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=PRELINK
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -use-profiled-call-graph=0 -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=PRELINK
 ;
 ; Check both the flattened and nonflattened parts of the ctxsplit profile will
 ; be read in non-thinlto mode.
-; RUN: opt < %s -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=NOTHINLTO
+; RUN: opt < %s -passes='default<O2>' -pgo-kind=pgo-sample-use-pipeline -use-profiled-call-graph=0 -profile-file=%S/Inputs/ctxsplit.extbinary.afdo -S | FileCheck %s --check-prefix=NOTHINLTO
 
 ; POSTLINK: define dso_local i32 @goo() {{.*}} !prof ![[ENTRY1:[0-9]+]] {
 ; POSTLINK: define dso_local i32 @foo() {{.*}} !prof ![[ENTRY2:[0-9]+]] {

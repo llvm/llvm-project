@@ -126,7 +126,7 @@ llvm-tblgen Options
 
 .. option:: -gen-attrs
 
-  Geneerate attributes.
+  Generate attributes.
 
 .. option:: -gen-automata
 
@@ -138,7 +138,7 @@ llvm-tblgen Options
 
 .. option:: -gen-compress-inst-emitter
 
-  Generate RISCV compressed instructions.
+  Generate RISC-V compressed instructions.
 
 .. option:: -gen-ctags
 
@@ -218,7 +218,7 @@ llvm-tblgen Options
 
 .. option:: -gicombiner-show-expansions
 
-  Make -gen-global-isel-combiner use C++ comments to indicate occurences
+  Make -gen-global-isel-combiner use C++ comments to indicate occurrences
   of code expansion.
 
 .. option:: -gicombiner-stop-after-build
@@ -540,6 +540,18 @@ clang-tblgen Options
 .. option:: -gen-arm-cde-builtin-aliases
 
   Generate list of valid ARM CDE builtin aliases for Clang.
+
+.. option:: -gen-riscv-vector-header
+
+  Generate ``riscv_vector.h`` for Clang.
+
+.. option:: -gen-riscv-vector-builtins
+
+  Generate ``riscv_vector_builtins.inc`` for Clang.
+
+.. option:: -gen-riscv-vector-builtin-codegen
+
+  Generate ``riscv_vector_builtin_cg.inc`` for Clang.
 
 .. option:: -gen-attr-docs
 

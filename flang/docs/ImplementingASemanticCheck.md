@@ -67,7 +67,7 @@ of the call to `intentOutFunc()`:
 
 I also used this program to produce a parse tree for the program using the command:
 ```bash
-  f18 -fdebug-dump-parse-tree -fparse-only testfun.f90
+  f18 -fdebug-dump-parse-tree -fsyntax-only testfun.f90
 ```
 
 Here's the relevant fragment of the parse tree produced by the compiler:

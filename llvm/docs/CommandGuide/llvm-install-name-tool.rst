@@ -35,7 +35,7 @@ the same `<rpath>` value.
  Change an install name ``<old_install_name>`` to ``<new_install_name>`` in the
  specified binary. Can be specified multiple times to change multiple dependent shared
  library install names. Option is ignored if ``<old_install_name>`` is not listed
- in the specfied binary.
+ in the specified binary.
 
 .. option:: -delete_rpath <rpath>
 
@@ -54,7 +54,7 @@ the same `<rpath>` value.
 .. option:: -id <name>
 
  Change shared library's identification name under LC_ID_DYLIB to ``<name>`` in the
- specfied binary. If specified multiple times, only the last :option:`-id` option is
+ specified binary. If specified multiple times, only the last :option:`-id` option is
  selected. Option is ignored if the specified Mach-O binary is not a dynamic shared library.
 
 .. option:: -rpath <old_rpath> <new_rpath>

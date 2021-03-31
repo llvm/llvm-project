@@ -1,0 +1,308 @@
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: matmul
+  cpp_op_name: MatmulOp
+  doc: |-
+    Performs a matrix multiplacation of two 2D inputs.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+  implements:
+  - LinalgContractionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
+    element_type_var: T1
+  - !<LinalgTensorDef>
+    name: B
+    usage: input
+    shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
+    element_type_var: T2
+  - !<LinalgTensorDef>
+    name: C
+    usage: output
+    shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
+    element_type_var: U
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2, d1)>
+    - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d1)>
+  iterator_types:
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: C
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: C
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: B
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: batch_matmul
+  cpp_op_name: BatchMatmulOp
+  doc: |-
+    Performs a batched matrix multiplacation of two 3D inputs.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+  implements:
+  - LinalgContractionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
+    element_type_var: T1
+  - !<LinalgTensorDef>
+    name: B
+    usage: input
+    shape: affine_map<()[s0, s1, s2, s3] -> (s0, s3, s2)>
+    element_type_var: T2
+  - !<LinalgTensorDef>
+    name: C
+    usage: output
+    shape: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
+    element_type_var: U
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d3)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d3, d2)>
+    - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d2)>
+  iterator_types:
+  - parallel
+  - parallel
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: C
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: C
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: B
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: matvec
+  cpp_op_name: MatvecOp
+  doc: |-
+    Performs a matrix-vector multiplication.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+  implements:
+  - LinalgContractionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    element_type_var: T1
+  - !<LinalgTensorDef>
+    name: y
+    usage: input
+    shape: affine_map<()[s0, s1] -> (s1)>
+    element_type_var: T2
+  - !<LinalgTensorDef>
+    name: x
+    usage: output
+    shape: affine_map<()[s0, s1] -> (s0)>
+    element_type_var: U
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+    - affine_map<(d0, d1)[s0, s1] -> (d1)>
+    - affine_map<(d0, d1)[s0, s1] -> (d0)>
+  iterator_types:
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: x
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: x
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: y
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: vecmat
+  cpp_op_name: VecmatOp
+  doc: |-
+    Performs a vector-matrix multiplacation.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+  implements:
+  - LinalgContractionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: y
+    usage: input
+    shape: affine_map<()[s0, s1] -> (s1)>
+    element_type_var: T1
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0, s1] -> (s1, s0)>
+    element_type_var: T2
+  - !<LinalgTensorDef>
+    name: x
+    usage: output
+    shape: affine_map<()[s0, s1] -> (s0)>
+    element_type_var: U
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> (d1)>
+    - affine_map<(d0, d1)[s0, s1] -> (d1, d0)>
+    - affine_map<(d0, d1)[s0, s1] -> (d0)>
+  iterator_types:
+  - parallel
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: x
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: x
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: y
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: dot
+  cpp_op_name: DotOp
+  doc: |-
+    Performs a dot product of two vectors to a scalar result.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+  implements:
+  - LinalgContractionOpInterface
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !<LinalgTensorDef>
+    name: A
+    usage: input
+    shape: affine_map<()[s0] -> (s0)>
+    element_type_var: T1
+  - !<LinalgTensorDef>
+    name: B
+    usage: input
+    shape: affine_map<()[s0] -> (s0)>
+    element_type_var: T2
+  - !<LinalgTensorDef>
+    name: C
+    usage: output
+    shape: affine_map<()[s0] -> ()>
+    element_type_var: U
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<(d0)[s0] -> (d0)>
+    - affine_map<(d0)[s0] -> (d0)>
+    - affine_map<(d0)[s0] -> ()>
+  iterator_types:
+  - reduction
+  assignments:
+  - !ScalarAssign
+    arg: C
+    value: !ScalarExpression
+      scalar_apply:
+        fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: C
+        - !ScalarExpression
+          scalar_apply:
+            fn_name: mul
+            operands:
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: A
+            - !ScalarExpression
+              symbolic_cast:
+                type_var: U
+                operands:
+                - !ScalarExpression
+                  scalar_arg: B
+

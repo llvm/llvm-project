@@ -168,13 +168,24 @@ public:
   }
 };
 
+struct DefaultSizeClassConfig {
+  static const uptr NumBits = 3;
+  static const uptr MinSizeLog = 5;
+  static const uptr MidSizeLog = 8;
+  static const uptr MaxSizeLog = 17;
+  static const u32 MaxNumCachedHint = 10;
+  static const uptr MaxBytesCachedLog = 10;
+};
+
+typedef FixedSizeClassMap<DefaultSizeClassConfig> DefaultSizeClassMap;
+
 struct AndroidSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
   static const uptr NumBits = 7;
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 6;
   static const uptr MaxSizeLog = 16;
-  static const u32 MaxNumCachedHint = 14;
+  static const u32 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 13;
 
   static constexpr u32 Classes[] = {
@@ -208,31 +219,20 @@ struct AndroidSizeClassConfig {
 
 typedef TableSizeClassMap<AndroidSizeClassConfig> AndroidSizeClassMap;
 
-struct DefaultSizeClassConfig {
-  static const uptr NumBits = 3;
-  static const uptr MinSizeLog = 5;
-  static const uptr MidSizeLog = 8;
-  static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 8;
-  static const uptr MaxBytesCachedLog = 10;
-};
-
-typedef FixedSizeClassMap<DefaultSizeClassConfig> DefaultSizeClassMap;
-
 struct SvelteSizeClassConfig {
 #if SCUDO_WORDSIZE == 64U
   static const uptr NumBits = 4;
   static const uptr MinSizeLog = 4;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 4;
+  static const u32 MaxNumCachedHint = 13;
   static const uptr MaxBytesCachedLog = 10;
 #else
   static const uptr NumBits = 4;
   static const uptr MinSizeLog = 3;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 14;
-  static const u32 MaxNumCachedHint = 5;
+  static const u32 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 10;
 #endif
 };

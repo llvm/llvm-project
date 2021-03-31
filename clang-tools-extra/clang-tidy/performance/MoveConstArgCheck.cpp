@@ -47,13 +47,11 @@ void MoveConstArgCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(MoveCallMatcher, this);
 
-  auto ConstParamMatcher = forEachArgumentWithParam(
-      MoveCallMatcher, parmVarDecl(hasType(references(isConstQualified()))));
-
-  Finder->addMatcher(callExpr(ConstParamMatcher).bind("receiving-expr"), this);
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxConstructExpr(ConstParamMatcher).bind("receiving-expr")),
+      invocation(forEachArgumentWithParam(
+                     MoveCallMatcher,
+                     parmVarDecl(hasType(references(isConstQualified())))))
+          .bind("receiving-expr"),
       this);
 }
 

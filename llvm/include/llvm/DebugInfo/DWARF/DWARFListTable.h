@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARFLISTTABLE_H
-#define LLVM_DEBUGINFO_DWARFLISTTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
+#define LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
@@ -113,7 +113,7 @@ public:
   void dump(DataExtractor Data, raw_ostream &OS,
             DIDumpOptions DumpOpts = {}) const;
   Optional<uint64_t> getOffsetEntry(DataExtractor Data, uint32_t Index) const {
-    if (Index > HeaderData.OffsetEntryCount)
+    if (Index >= HeaderData.OffsetEntryCount)
       return None;
 
     return getOffsetEntry(Data, getHeaderOffset() + getHeaderSize(Format), Format, Index);
@@ -289,4 +289,4 @@ DWARFListTableBase<DWARFListType>::findList(DWARFDataExtractor Data,
 
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_DWARFLISTTABLE_H
+#endif // LLVM_DEBUGINFO_DWARF_DWARFLISTTABLE_H

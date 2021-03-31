@@ -18,6 +18,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include <bitset>
@@ -429,18 +434,25 @@ public:
   CodeGenCoverage *CoverageInfo = nullptr;
   GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
+  BlockFrequencyInfo *BFI = nullptr;
+  // For some predicates, we need to track the current MBB.
+  MachineBasicBlock *CurMBB = nullptr;
 
   virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
     llvm_unreachable("TableGen should have emitted implementation");
   }
 
   /// Setup per-MF selector state.
-  virtual void setupMF(MachineFunction &mf,
-                       GISelKnownBits &KB,
-                       CodeGenCoverage &covinfo) {
+  virtual void setupMF(MachineFunction &mf, GISelKnownBits *KB,
+                       CodeGenCoverage &covinfo, ProfileSummaryInfo *psi,
+                       BlockFrequencyInfo *bfi) {
     CoverageInfo = &covinfo;
-    KnownBits = &KB;
+    KnownBits = KB;
     MF = &mf;
+    PSI = psi;
+    BFI = bfi;
+    CurMBB = nullptr;
     setupGeneratedPerFunctionState(mf);
   }
 
@@ -462,6 +474,12 @@ protected:
 
     MatcherState(unsigned MaxRenderers);
   };
+
+  bool shouldOptForSize(const MachineFunction *MF) const {
+    const auto &F = MF->getFunction();
+    return F.hasOptSize() || F.hasMinSize() ||
+           (PSI && BFI && CurMBB && llvm::shouldOptForSize(*CurMBB, PSI, BFI));
+  }
 
 public:
   template <class PredicateBitset, class ComplexMatcherMemFn,

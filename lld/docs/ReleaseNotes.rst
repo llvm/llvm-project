@@ -29,7 +29,8 @@ ELF Improvements
 Breaking changes
 ----------------
 
-* ...
+* ``--shuffle-sections=<seed>`` has been changed to ``--shuffle-sections=<section-glob>=<seed>``.
+  Specify ``*`` as ``<section-glob>`` to get the previous behavior.
 
 COFF Improvements
 -----------------

@@ -437,3 +437,10 @@ Status RemoteAwarePlatform::KillProcess(const lldb::pid_t pid) {
     return m_remote_platform_sp->KillProcess(pid);
   return Status("the platform is not currently connected");
 }
+
+size_t RemoteAwarePlatform::ConnectToWaitingProcesses(Debugger &debugger,
+                                                Status &error) {
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->ConnectToWaitingProcesses(debugger, error);
+  return Platform::ConnectToWaitingProcesses(debugger, error);
+}

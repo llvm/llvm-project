@@ -2,6 +2,9 @@
 
 ! C1568 The procedure-name shall have been declared to be a separate module
 ! procedure in the containing program unit or an ancestor of that program unit.
+! C1547 MODULE shall appear only in the function-stmt or subroutine-stmt of a
+! module subprogram or of a nonabstract interface body that is declared in the
+! scoping unit of a module or submodule.
 module m1
   interface
     module subroutine sub1(arg1)
@@ -89,3 +92,8 @@ contains
   module procedure b
   end procedure
 end
+
+!ERROR: 'c1547' is a MODULE procedure which must be declared within a MODULE or SUBMODULE
+real module function c1547()
+  func = 0.0
+end function

@@ -7,8 +7,8 @@
 /// -gsplit-dwarf=split is equivalent to -gsplit-dwarf.
 // RUN: %clang -### -c -target x86_64 -gsplit-dwarf=split -g %s 2>&1 | FileCheck %s --check-prefixes=NOINLINE,SPLIT
 
-// INLINE-NOT: "-fno-split-dwarf-inlining"
-// NOINLINE:   "-fno-split-dwarf-inlining"
+// INLINE:     "-fsplit-dwarf-inlining"
+// NOINLINE-NOT: "-fsplit-dwarf-inlining"
 // SPLIT:      "-debug-info-kind=limited"
 // SPLIT-SAME: "-ggnu-pubnames"
 // SPLIT-SAME: "-split-dwarf-file" "split-debug.dwo" "-split-dwarf-output" "split-debug.dwo"

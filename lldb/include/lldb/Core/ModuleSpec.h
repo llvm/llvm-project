@@ -30,9 +30,9 @@ public:
         m_object_name(), m_object_offset(0), m_object_size(0),
         m_source_mappings() {}
 
-  /// If the \param data argument is passed, its contents will be used
+  /// If the \c data argument is passed, its contents will be used
   /// as the module contents instead of trying to read them from
-  /// \param file_spec.
+  /// \c file_spec .
   ModuleSpec(const FileSpec &file_spec, const UUID &uuid = UUID(),
              lldb::DataBufferSP data = lldb::DataBufferSP())
       : m_file(file_spec), m_platform_file(), m_symbol_file(), m_arch(),

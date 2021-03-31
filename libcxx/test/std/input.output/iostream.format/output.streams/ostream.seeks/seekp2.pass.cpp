@@ -59,7 +59,7 @@ int main(int, char**)
         assert(seekoff_called == 2);
         assert(os.fail());
     }
-    { // See https://bugs.llvm.org/show_bug.cgi?id=21361
+    { // See https://llvm.org/PR21361
         seekoff_called = 0;
         testbuf<char> sb;
         std::ostream os(&sb);

@@ -192,8 +192,18 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   InstructionCost NewCost =
       TTI.getMemoryOpCost(Instruction::Load, MinVecTy, Alignment, AS);
   // Optionally, we are shuffling the loaded vector element(s) into place.
+  // For the mask set everything but element 0 to undef to prevent poison from
+  // propagating from the extra loaded memory. This will also optionally
+  // shrink/grow the vector from the loaded size to the output size.
+  // We assume this operation has no cost in codegen if there was no offset.
+  // Note that we could use freeze to avoid poison problems, but then we might
+  // still need a shuffle to change the vector size.
+  unsigned OutputNumElts = Ty->getNumElements();
+  SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
+  assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
+  Mask[0] = OffsetEltIndex;
   if (OffsetEltIndex)
-    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy);
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, MinVecTy, Mask);
 
   // We can aggressively convert to the vector form because the backend can
   // invert this transform if it does not result in a performance win.
@@ -205,17 +215,6 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   IRBuilder<> Builder(Load);
   Value *CastedPtr = Builder.CreateBitCast(SrcPtr, MinVecTy->getPointerTo(AS));
   Value *VecLd = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
-
-  // Set everything but element 0 to undef to prevent poison from propagating
-  // from the extra loaded memory. This will also optionally shrink/grow the
-  // vector from the loaded size to the output size.
-  // We assume this operation has no cost in codegen if there was no offset.
-  // Note that we could use freeze to avoid poison problems, but then we might
-  // still need a shuffle to change the vector size.
-  unsigned OutputNumElts = Ty->getNumElements();
-  SmallVector<int, 16> Mask(OutputNumElts, UndefMaskElem);
-  assert(OffsetEltIndex < MinVecNumElts && "Address offset too big");
-  Mask[0] = OffsetEltIndex;
   VecLd = Builder.CreateShuffleVector(VecLd, Mask);
 
   replaceValue(I, *VecLd);
@@ -516,15 +515,6 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
   if (!SrcTy || !DestTy || I.getOperand(0)->getType() != SrcTy)
     return false;
 
-  // The new shuffle must not cost more than the old shuffle. The bitcast is
-  // moved ahead of the shuffle, so assume that it has the same cost as before.
-  InstructionCost DestCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DestTy);
-  InstructionCost SrcCost =
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy);
-  if (DestCost > SrcCost || !DestCost.isValid())
-    return false;
-
   unsigned DestNumElts = DestTy->getNumElements();
   unsigned SrcNumElts = SrcTy->getNumElements();
   SmallVector<int, 16> NewMask;
@@ -542,6 +532,16 @@ bool VectorCombine::foldBitcastShuf(Instruction &I) {
     if (!widenShuffleMaskElts(ScaleFactor, Mask, NewMask))
       return false;
   }
+
+  // The new shuffle must not cost more than the old shuffle. The bitcast is
+  // moved ahead of the shuffle, so assume that it has the same cost as before.
+  InstructionCost DestCost = TTI.getShuffleCost(
+      TargetTransformInfo::SK_PermuteSingleSrc, DestTy, NewMask);
+  InstructionCost SrcCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, SrcTy, Mask);
+  if (DestCost > SrcCost || !DestCost.isValid())
+    return false;
+
   // bitcast (shuf V, MaskC) --> shuf (bitcast V), MaskC'
   ++NumShufOfBitcast;
   Value *CastV = Builder.CreateBitCast(V, DestTy);
@@ -725,8 +725,10 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
   int ExpensiveIndex = ConvertToShuf == Ext0 ? Index0 : Index1;
   auto *CmpTy = cast<FixedVectorType>(CmpInst::makeCmpResultType(X->getType()));
   InstructionCost NewCost = TTI.getCmpSelInstrCost(CmpOpcode, X->getType());
-  NewCost +=
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy);
+  SmallVector<int, 32> ShufMask(VecTy->getNumElements(), UndefMaskElem);
+  ShufMask[CheapIndex] = ExpensiveIndex;
+  NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, CmpTy,
+                                ShufMask);
   NewCost += TTI.getArithmeticInstrCost(I.getOpcode(), CmpTy);
   NewCost += TTI.getVectorInstrCost(Ext0->getOpcode(), CmpTy, CheapIndex);
 

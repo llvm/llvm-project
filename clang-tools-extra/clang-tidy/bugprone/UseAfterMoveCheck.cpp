@@ -310,9 +310,7 @@ void UseAfterMoveFinder::getReinits(
                // Assignment. In addition to the overloaded assignment operator,
                // test for built-in assignment as well, since template functions
                // may be instantiated to use std::move() on built-in types.
-               binaryOperator(hasOperatorName("="), hasLHS(DeclRefMatcher)),
-               cxxOperatorCallExpr(hasOverloadedOperatorName("="),
-                                   hasArgument(0, DeclRefMatcher)),
+               binaryOperation(hasOperatorName("="), hasLHS(DeclRefMatcher)),
                // Declaration. We treat this as a type of reinitialization too,
                // so we don't need to treat it separately.
                declStmt(hasDescendant(equalsNode(MovedVariable))),
@@ -400,7 +398,13 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                hasArgument(0, declRefExpr().bind("arg")),
                anyOf(hasAncestor(lambdaExpr().bind("containing-lambda")),
                      hasAncestor(functionDecl().bind("containing-func"))),
-               unless(inDecltypeOrTemplateArg()))
+               unless(inDecltypeOrTemplateArg()),
+               // try_emplace is a common maybe-moving function that returns a
+               // bool to tell callers whether it moved. Ignore std::move inside
+               // try_emplace to avoid false positives as we don't track uses of
+               // the bool.
+               unless(hasParent(cxxMemberCallExpr(
+                   callee(cxxMethodDecl(hasName("try_emplace")))))))
           .bind("call-move");
 
   Finder->addMatcher(

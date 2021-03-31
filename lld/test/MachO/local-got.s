@@ -12,12 +12,12 @@
 ## address offset and the contents at that address very similarly, so am using
 ## --match-full-lines to make sure we match on the right thing.
 # CHECK:      Contents of section __TEXT,__cstring:
-# CHECK-NEXT: 100000424 {{.*}}
+# CHECK-NEXT: 100000434 {{.*}}
 
 ## 1st 8 bytes refer to the start of __cstring + 0xe, 2nd 8 bytes refer to the
 ## start of __cstring
 # CHECK:      Contents of section __DATA_CONST,__got:
-# CHECK-NEXT: [[#%X,ADDR:]]  32040000 01000000 24040000 01000000 {{.*}}
+# CHECK-NEXT: [[#%X,ADDR:]]  42040000 01000000 34040000 01000000 {{.*}}
 # CHECK-NEXT: [[#ADDR + 16]] 00000000 00000000 {{.*}}
 
 ## Check that the rebase table is empty.

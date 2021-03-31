@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_SYMBOLS_H
 #define LLD_MACHO_SYMBOLS_H
 
+#include "InputFiles.h"
 #include "InputSection.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
@@ -21,8 +22,6 @@ namespace macho {
 
 class InputSection;
 class MachHeaderSection;
-class DylibFile;
-class ArchiveFile;
 
 struct StringRefZ {
   StringRefZ(const char *s) : data(s), size(-1) {}
@@ -40,12 +39,11 @@ public:
     CommonKind,
     DylibKind,
     LazyKind,
-    DSOHandleKind,
   };
 
   virtual ~Symbol() {}
 
-  Kind kind() const { return static_cast<Kind>(symbolKind); }
+  Kind kind() const { return symbolKind; }
 
   StringRef getName() const {
     if (nameSize == (uint32_t)-1)
@@ -83,22 +81,25 @@ public:
 
   uint32_t symtabIndex = UINT32_MAX;
 
+  InputFile *getFile() const { return file; }
+
 protected:
-  Symbol(Kind k, StringRefZ name)
-      : symbolKind(k), nameData(name.data), nameSize(name.size) {}
+  Symbol(Kind k, StringRefZ name, InputFile *file)
+      : symbolKind(k), nameData(name.data), nameSize(name.size), file(file) {}
 
   Kind symbolKind;
   const char *nameData;
   mutable uint32_t nameSize;
+  InputFile *file;
 };
 
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ name, InputSection *isec, uint32_t value, bool isWeakDef,
-          bool isExternal, bool isPrivateExtern)
-      : Symbol(DefinedKind, name), isec(isec), value(value),
+  Defined(StringRefZ name, InputFile *file, InputSection *isec, uint32_t value,
+          bool isWeakDef, bool isExternal, bool isPrivateExtern)
+      : Symbol(DefinedKind, name, file), isec(isec), value(value),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
-        weakDef(isWeakDef), external(isExternal) {}
+        includeInSymtab(true), weakDef(isWeakDef), external(isExternal) {}
 
   bool isWeakDef() const override { return weakDef; }
   bool isExternalWeakDef() const {
@@ -116,11 +117,15 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
+  InputFile *file;
   InputSection *isec;
   uint32_t value;
 
   bool overridesWeakDef : 1;
+  // Whether this symbol should appear in the output binary's export trie.
   bool privateExtern : 1;
+  // Whether this symbol should appear in the output symbol table.
+  bool includeInSymtab : 1;
 
 private:
   const bool weakDef : 1;
@@ -136,8 +141,8 @@ enum class RefState : uint8_t { Unreferenced = 0, Weak = 1, Strong = 2 };
 
 class Undefined : public Symbol {
 public:
-  Undefined(StringRefZ name, RefState refState)
-      : Symbol(UndefinedKind, name), refState(refState) {
+  Undefined(StringRefZ name, InputFile *file, RefState refState)
+      : Symbol(UndefinedKind, name, file), refState(refState) {
     assert(refState != RefState::Unreferenced);
   }
 
@@ -167,7 +172,7 @@ class CommonSymbol : public Symbol {
 public:
   CommonSymbol(StringRefZ name, InputFile *file, uint64_t size, uint32_t align,
                bool isPrivateExtern)
-      : Symbol(CommonKind, name), file(file), size(size),
+      : Symbol(CommonKind, name, file), size(size),
         align(align != 1 ? align : llvm::PowerOf2Ceil(size)),
         privateExtern(isPrivateExtern) {
     // TODO: cap maximum alignment
@@ -175,7 +180,6 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == CommonKind; }
 
-  InputFile *const file;
   const uint64_t size;
   const uint32_t align;
   const bool privateExtern;
@@ -185,18 +189,23 @@ class DylibSymbol : public Symbol {
 public:
   DylibSymbol(DylibFile *file, StringRefZ name, bool isWeakDef,
               RefState refState, bool isTlv)
-      : Symbol(DylibKind, name), file(file), refState(refState),
-        weakDef(isWeakDef), tlv(isTlv) {}
+      : Symbol(DylibKind, name, file), refState(refState), weakDef(isWeakDef),
+        tlv(isTlv) {}
 
   bool isWeakDef() const override { return weakDef; }
   bool isWeakRef() const override { return refState == RefState::Weak; }
   bool isReferenced() const { return refState != RefState::Unreferenced; }
   bool isTlv() const override { return tlv; }
+  bool isDynamicLookup() const { return file == nullptr; }
   bool hasStubsHelper() const { return stubsHelperIndex != UINT32_MAX; }
+
+  DylibFile *getFile() const {
+    assert(!isDynamicLookup());
+    return cast<DylibFile>(file);
+  }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
 
-  DylibFile *file;
   uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
 
@@ -210,46 +219,15 @@ private:
 class LazySymbol : public Symbol {
 public:
   LazySymbol(ArchiveFile *file, const llvm::object::Archive::Symbol &sym)
-      : Symbol(LazyKind, sym.getName()), file(file), sym(sym) {}
+      : Symbol(LazyKind, sym.getName(), file), sym(sym) {}
+
+  ArchiveFile *getFile() const { return cast<ArchiveFile>(file); }
+  void fetchArchiveMember();
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
 
-  void fetchArchiveMember();
-
 private:
-  ArchiveFile *file;
   const llvm::object::Archive::Symbol sym;
-};
-
-// The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit which
-// does e.g. cleanup of static global variables. The ABI document says that the
-// pointer can point to any address in one of the dylib's segments, but in
-// practice ld64 seems to set it to point to the header, so that's what's
-// implemented here.
-//
-// The ARM C++ ABI uses __dso_handle similarly, but I (int3) have not yet
-// tested this on an ARM platform.
-//
-// DSOHandle effectively functions like a Defined symbol, but it doesn't belong
-// to an InputSection.
-class DSOHandle : public Symbol {
-public:
-  DSOHandle(const MachHeaderSection *header)
-      : Symbol(DSOHandleKind, name), header(header) {}
-
-  const MachHeaderSection *header;
-
-  uint64_t getVA() const override;
-
-  uint64_t getFileOffset() const override;
-
-  bool isWeakDef() const override { return false; }
-
-  bool isTlv() const override { return false; }
-
-  static constexpr StringRef name = "___dso_handle";
-
-  static bool classof(const Symbol *s) { return s->kind() == DSOHandleKind; }
 };
 
 union SymbolUnion {
@@ -258,7 +236,6 @@ union SymbolUnion {
   alignas(CommonSymbol) char c[sizeof(CommonSymbol)];
   alignas(DylibSymbol) char d[sizeof(DylibSymbol)];
   alignas(LazySymbol) char e[sizeof(LazySymbol)];
-  alignas(DSOHandle) char f[sizeof(DSOHandle)];
 };
 
 template <typename T, typename... ArgT>

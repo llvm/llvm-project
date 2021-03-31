@@ -68,7 +68,7 @@ public:
   // Return the offset of the backchain.
   unsigned getBackchainOffset(MachineFunction &MF) const {
     // The back chain is stored topmost with packed-stack.
-    return usePackedStack(MF) ? SystemZMC::CallFrameSize - 8 : 0;
+    return usePackedStack(MF) ? SystemZMC::ELFCallFrameSize - 8 : 0;
   }
 };
 } // end namespace llvm

@@ -15,11 +15,12 @@ define i16 @f1(i16 %dummy, i16 *%src, i16 %cmp, i16 %swap) {
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
 ; CHECK-MAIN-DAG: sll %r3, 3
 ; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: llhr %r4, %r4
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll %r2, [[OLD]], 16(%r3)
-; CHECK-MAIN: risbg %r4, %r2, 32, 47, 0
-; CHECK-MAIN: crjlh %r2, %r4, [[EXIT:\.[^ ]*]]
 ; CHECK-MAIN: risbg %r5, %r2, 32, 47, 0
+; CHECK-MAIN: llhr %r2, %r2
+; CHECK-MAIN: crjlh %r2, %r4, [[EXIT:\.[^ ]*]]
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -48,7 +49,6 @@ define i16 @f2(i16 *%src) {
 ;
 ; CHECK-SHIFT-LABEL: f2:
 ; CHECK-SHIFT: lhi [[SWAP:%r[0-9]+]], 88
-; CHECK-SHIFT: risbg
 ; CHECK-SHIFT: risbg [[SWAP]], {{%r[0-9]+}}, 32, 47, 0
 ; CHECK-SHIFT: br %r14
   %pair = cmpxchg i16 *%src, i16 42, i16 88 seq_cst seq_cst
@@ -62,12 +62,13 @@ define i32 @f3(i16 %dummy, i16 *%src, i16 %cmp, i16 %swap) {
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r3, 0, 189, 0{{$}}
 ; CHECK-MAIN-DAG: sll %r3, 3
 ; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: llhr %r2, %r4
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r3)
-; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
-; CHECK-MAIN: cr [[TMP]], %r4
-; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
 ; CHECK-MAIN: risbg %r5, [[TMP]], 32, 47, 0
+; CHECK-MAIN: llhr %r14, %r14
+; CHECK-MAIN: cr [[TMP]], %r2
+; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r5, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -97,12 +98,13 @@ declare void @g()
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-MAIN-DAG: sll %r2, 3
 ; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: llhr %r3, %r3
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r2)
-; CHECK-MAIN: risbg %r3, [[TMP]], 32, 47, 0
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
+; CHECK-MAIN: llhr %r14, %r14
 ; CHECK-MAIN: cr [[TMP]], %r3
 ; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
-; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]
@@ -135,12 +137,13 @@ exit:
 ; CHECK-MAIN: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-MAIN-DAG: sll %r2, 3
 ; CHECK-MAIN-DAG: l [[OLD:%r[0-9]+]], 0([[RISBG]])
+; CHECK-MAIN-DAG: llhr %r3, %r3
 ; CHECK-MAIN: [[LOOP:\.[^ ]*]]:
 ; CHECK-MAIN: rll [[TMP:%r[0-9]+]], [[OLD]], 16(%r2)
-; CHECK-MAIN: risbg %r3, [[TMP]], 32, 47, 0
+; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
+; CHECK-MAIN: llhr %r14, %r14
 ; CHECK-MAIN: cr [[TMP]], %r3
 ; CHECK-MAIN: jlh [[EXIT:\.[^ ]*]]
-; CHECK-MAIN: risbg %r4, [[TMP]], 32, 47, 0
 ; CHECK-MAIN: rll [[NEW:%r[0-9]+]], %r4, -16({{%r[1-9]+}})
 ; CHECK-MAIN: cs [[OLD]], [[NEW]], 0([[RISBG]])
 ; CHECK-MAIN: jl [[LOOP]]

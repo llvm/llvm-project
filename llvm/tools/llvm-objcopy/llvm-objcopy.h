@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_OBJCOPY_OBJCOPY_H
 
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 

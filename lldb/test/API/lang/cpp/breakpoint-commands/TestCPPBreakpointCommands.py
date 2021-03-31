@@ -20,8 +20,8 @@ class CPPBreakpointCommandsTestCase(TestBase):
                                                   self.a_out_module,
                                                   self.nested_comp_unit)
         num_locations = bkpt.GetNumLocations()
-        self.assertTrue(
-            num_locations == expected_num_locations,
+        self.assertEqual(
+            num_locations, expected_num_locations,
             "Wrong number of locations for '%s', expected: %d got: %d" %
             (name,
              expected_num_locations,

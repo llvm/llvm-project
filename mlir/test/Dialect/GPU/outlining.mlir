@@ -29,7 +29,7 @@ func @launch() {
                                         %block_z = %bDimZ) {
     "use"(%0): (f32) -> ()
     "some_op"(%bx, %block_x) : (index, index) -> ()
-    %42 = load %1[%tx] : memref<?xf32, 1>
+    %42 = memref.load %1[%tx] : memref<?xf32, 1>
     gpu.terminator
   }
   return
@@ -55,7 +55,7 @@ func @launch() {
 // CHECK-NEXT: ^[[BLOCK]]:
 // CHECK-NEXT: "use"(%[[KERNEL_ARG0]]) : (f32) -> ()
 // CHECK-NEXT: "some_op"(%[[BID]], %[[BDIM]]) : (index, index) -> ()
-// CHECK-NEXT: = load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
+// CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
 // -----
 
@@ -118,7 +118,7 @@ func @extra_constants(%arg0: memref<?xf32>) {
   %cst = constant 8 : index
   %cst2 = constant 2 : index
   %c0 = constant 0 : index
-  %cst3 = dim %arg0, %c0 : memref<?xf32>
+  %cst3 = memref.dim %arg0, %c0 : memref<?xf32>
   // CHECK: gpu.launch_func @extra_constants_kernel::@extra_constants_kernel blocks in (%[[CST]], %[[CST]], %[[CST]]) threads in (%[[CST]], %[[CST]], %[[CST]]) args(%[[ARG0]] : memref<?xf32>)
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst,
                                        %grid_z = %cst)
@@ -134,7 +134,7 @@ func @extra_constants(%arg0: memref<?xf32>) {
 // CHECK-SAME: %[[KARG0:.*]]: memref<?xf32>
 // CHECK: constant 2
 // CHECK: constant 0
-// CHECK: dim %[[KARG0]]
+// CHECK: memref.dim %[[KARG0]]
 
 // -----
 
@@ -145,8 +145,8 @@ func @extra_constants_noarg(%arg0: memref<?xf32>, %arg1: memref<?xf32>) {
   %cst = constant 8 : index
   %cst2 = constant 2 : index
   %c0 = constant 0 : index
-  // CHECK: dim %[[ARG1]]
-  %cst3 = dim %arg1, %c0 : memref<?xf32>
+  // CHECK: memref.dim %[[ARG1]]
+  %cst3 = memref.dim %arg1, %c0 : memref<?xf32>
   // CHECK: gpu.launch_func @extra_constants_noarg_kernel::@extra_constants_noarg_kernel blocks in (%[[CST]], %[[CST]], %[[CST]]) threads in (%[[CST]], %[[CST]], %[[CST]]) args(%[[ARG0]] : memref<?xf32>, {{.*}} : index)
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst,
                                        %grid_z = %cst)
@@ -192,10 +192,10 @@ func @multiple_uses(%arg0 : memref<?xf32>) {
 func @multiple_uses2(%arg0 : memref<*xf32>) {
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  %d = dim %arg0, %c2 : memref<*xf32>
+  %d = memref.dim %arg0, %c2 : memref<*xf32>
   // CHECK: gpu.func {{.*}} {
   // CHECK:   %[[C2:.*]] = constant 2 : index
-  // CHECK:   %[[D:.*]] = dim %[[ARG:.*]], %[[C2]]
+  // CHECK:   %[[D:.*]] = memref.dim %[[ARG:.*]], %[[C2]]
   // CHECK:   "use1"(%[[D]])
   // CHECK:   "use2"(%[[C2]], %[[C2]])
   // CHECK:   "use3"(%[[ARG]])

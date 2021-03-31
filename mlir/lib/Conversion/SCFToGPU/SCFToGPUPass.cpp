@@ -47,12 +47,10 @@ struct ForLoopMapper : public ConvertAffineForToGPUBase<ForLoopMapper> {
 struct ParallelLoopToGpuPass
     : public ConvertParallelLoopToGpuBase<ParallelLoopToGpuPass> {
   void runOnOperation() override {
-    OwningRewritePatternList patterns;
-    populateParallelLoopToGPUPatterns(patterns, &getContext());
+    RewritePatternSet patterns(&getContext());
+    populateParallelLoopToGPUPatterns(patterns);
     ConversionTarget target(getContext());
-    target.addLegalDialect<AffineDialect, complex::ComplexDialect,
-                           gpu::GPUDialect, scf::SCFDialect,
-                           StandardOpsDialect>();
+    target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
     configureParallelLoopToGPULegality(target);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

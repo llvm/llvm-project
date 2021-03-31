@@ -21,17 +21,51 @@
 #include "llvm-c/Core.h"
 #include "llvm-c/Support.h"
 #include "llvm/Config/llvm-config.h"
-#include "caml/alloc.h"
-#include "caml/custom.h"
 #include "caml/memory.h"
 #include "caml/fail.h"
 #include "caml/callback.h"
+
+#include "llvm_ocaml.h"
 
 value llvm_string_of_message(char* Message) {
   value String = caml_copy_string(Message);
   LLVMDisposeMessage(Message);
 
   return String;
+}
+
+CAMLprim value ptr_to_option(void *Ptr) {
+  CAMLparam0();
+  CAMLlocal1(Option);
+  if (!Ptr)
+    CAMLreturn(Val_int(0));
+  Option = caml_alloc_small(1, 0);
+  Store_field(Option, 0, (value)Ptr);
+  CAMLreturn(Option);
+}
+
+CAMLprim value cstr_to_string(const char *Str, mlsize_t Len) {
+  CAMLparam0();
+  CAMLlocal1(String);
+  if (Str) {
+    String = caml_alloc_string(Len);
+    memcpy((char *)String_val(String), Str, Len);
+  } else {
+    String = caml_alloc_string(0);
+  }
+  CAMLreturn(String);
+}
+
+CAMLprim value cstr_to_string_option(const char *CStr, mlsize_t Len) {
+  CAMLparam0();
+  CAMLlocal2(Option, String);
+  if (!CStr)
+    CAMLreturn(Val_int(0));
+  String = caml_alloc_string(Len);
+  memcpy((char *)String_val(String), CStr, Len);
+  Option = caml_alloc_small(1, 0);
+  Store_field(Option, 0, (value)String);
+  CAMLreturn(Option);
 }
 
 void llvm_raise(value Prototype, char *Message) {
@@ -65,7 +99,7 @@ CAMLprim value llvm_enable_pretty_stacktrace(value Unit) {
 }
 
 CAMLprim value llvm_parse_command_line_options(value Overview, value Args) {
-  char *COverview;
+  const char *COverview;
   if (Overview == Val_int(0)) {
     COverview = NULL;
   } else {
@@ -236,7 +270,7 @@ CAMLprim value llvm_get_string_attr_kind(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeKind(A, &Length);
   value Result = caml_alloc_string(Length);
-  memcpy(String_val(Result), String, Length);
+  memcpy((char *)String_val(Result), String, Length);
   return Result;
 }
 
@@ -245,7 +279,7 @@ CAMLprim value llvm_get_string_attr_value(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeValue(A, &Length);
   value Result = caml_alloc_string(Length);
-  memcpy(String_val(Result), String, Length);
+  memcpy((char *)String_val(Result), String, Length);
   return Result;
 }
 
@@ -313,9 +347,36 @@ CAMLprim value llvm_string_of_llmodule(LLVMModuleRef M) {
   CAMLreturn(ModuleStr);
 }
 
+/* llmodule -> string */
+CAMLprim value llvm_get_module_identifier(LLVMModuleRef M) {
+  size_t Len;
+  const char *Name = LLVMGetModuleIdentifier(M, &Len);
+  return cstr_to_string(Name, (mlsize_t)Len);
+}
+
+/* llmodule -> string -> unit */
+CAMLprim value llvm_set_module_identifier(LLVMModuleRef M, value Id) {
+  LLVMSetModuleIdentifier(M, String_val(Id), caml_string_length(Id));
+  return Val_unit;
+}
+
 /* llmodule -> string -> unit */
 CAMLprim value llvm_set_module_inline_asm(LLVMModuleRef M, value Asm) {
   LLVMSetModuleInlineAsm(M, String_val(Asm));
+  return Val_unit;
+}
+
+/* llmodule -> string -> llmetadata option */
+CAMLprim value llvm_get_module_flag(LLVMModuleRef M, value Key) {
+  return ptr_to_option(
+      LLVMGetModuleFlag(M, String_val(Key), caml_string_length(Key)));
+}
+
+CAMLprim value llvm_add_module_flag(LLVMModuleRef M,
+                                    LLVMModuleFlagBehavior Behaviour, value Key,
+                                    LLVMMetadataRef Val) {
+  LLVMAddModuleFlag(M, Int_val(Behaviour), String_val(Key),
+                    caml_string_length(Key), Val);
   return Val_unit;
 }
 
@@ -480,17 +541,13 @@ CAMLprim value llvm_struct_set_body(LLVMTypeRef Ty,
 }
 
 /* lltype -> string option */
-CAMLprim value llvm_struct_name(LLVMTypeRef Ty)
-{
-  CAMLparam0();
-  CAMLlocal1(result);
-  const char *C = LLVMGetStructName(Ty);
-  if (C) {
-    result = caml_alloc_small(1, 0);
-    Store_field(result, 0, caml_copy_string(C));
-    CAMLreturn(result);
-  }
-  CAMLreturn(Val_int(0));
+CAMLprim value llvm_struct_name(LLVMTypeRef Ty) {
+  const char *CStr = LLVMGetStructName(Ty);
+  size_t Len;
+  if (!CStr)
+    return Val_int(0);
+  Len = strlen(CStr);
+  return cstr_to_string_option(CStr, Len);
 }
 
 /* lltype -> lltype array */
@@ -828,19 +885,9 @@ CAMLprim LLVMValueRef llvm_mdnull(LLVMContextRef C) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_get_mdstring(LLVMValueRef V) {
-  CAMLparam0();
-  CAMLlocal2(Option, Str);
-  const char *S;
   unsigned Len;
-
-  if ((S = LLVMGetMDString(V, &Len))) {
-    Str = caml_alloc_string(Len);
-    memcpy(String_val(Str), S, Len);
-    Option = alloc(1,0);
-    Store_field(Option, 0, Str);
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  const char *CStr = LLVMGetMDString(V, &Len);
+  return cstr_to_string_option(CStr, Len);
 }
 
 CAMLprim value llvm_get_mdnode_operands(LLVMValueRef V) {
@@ -868,6 +915,17 @@ CAMLprim value llvm_get_namedmd(LLVMModuleRef M, value Name)
 CAMLprim value llvm_append_namedmd(LLVMModuleRef M, value Name, LLVMValueRef Val) {
   LLVMAddNamedMetadataOperand(M, String_val(Name), Val);
   return Val_unit;
+}
+
+/* llvalue -> llmetadata */
+CAMLprim LLVMMetadataRef llvm_value_as_metadata(LLVMValueRef Val) {
+  return LLVMValueAsMetadata(Val);
+}
+
+/* llcontext -> llmetadata -> llvalue */
+CAMLprim LLVMValueRef llvm_metadata_as_value(LLVMContextRef C,
+                                             LLVMMetadataRef MD) {
+  return LLVMMetadataAsValue(C, MD);
 }
 
 /*--... Operations on scalar constants .....................................--*/
@@ -985,22 +1043,12 @@ CAMLprim LLVMValueRef llvm_const_vector(value ElementVals) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_string_of_const(LLVMValueRef Const) {
-  const char *S;
   size_t Len;
-  CAMLparam0();
-  CAMLlocal2(Option, Str);
-
-  if(LLVMIsAConstantDataSequential(Const) && LLVMIsConstantString(Const)) {
-    S = LLVMGetAsString(Const, &Len);
-    Str = caml_alloc_string(Len);
-    memcpy(String_val(Str), S, Len);
-
-    Option = alloc(1, 0);
-    Field(Option, 0) = Str;
-    CAMLreturn(Option);
-  } else {
-    CAMLreturn(Val_int(0));
-  }
+  const char *CStr;
+  if (!LLVMIsAConstantDataSequential(Const) || !LLVMIsConstantString(Const))
+    return Val_int(0);
+  CStr = LLVMGetAsString(Const, &Len);
+  return cstr_to_string_option(CStr, Len);
 }
 
 /* llvalue -> int -> llvalue */
@@ -1160,6 +1208,25 @@ CAMLprim value llvm_set_alignment(value Bytes, LLVMValueRef Global) {
   return Val_unit;
 }
 
+/* llvalue -> (llmdkind * llmetadata) array */
+CAMLprim value llvm_global_copy_all_metadata(LLVMValueRef Global) {
+  CAMLparam0();
+  CAMLlocal2(Array, Pair);
+  size_t NumEntries;
+  LLVMValueMetadataEntry *Entries =
+      LLVMGlobalCopyAllMetadata(Global, &NumEntries);
+  Array = caml_alloc_tuple(NumEntries);
+  for (int i = 0; i < NumEntries; i++) {
+    Pair = caml_alloc_tuple(2);
+    Store_field(Pair, 0, Val_int(LLVMValueMetadataEntriesGetKind(Entries, i)));
+    Store_field(Pair, 1,
+                (value)LLVMValueMetadataEntriesGetMetadata(Entries, i));
+    Store_field(Array, i, Pair);
+  }
+  LLVMDisposeValueMetadataEntries(Entries);
+  CAMLreturn(Array);
+}
+
 /*--... Operations on uses .................................................--*/
 
 /* llvalue -> lluse option */
@@ -1266,6 +1333,11 @@ CAMLprim LLVMValueRef llvm_define_qualified_global(value Name,
 CAMLprim value llvm_delete_global(LLVMValueRef GlobalVar) {
   LLVMDeleteGlobal(GlobalVar);
   return Val_unit;
+}
+
+/* llvalue -> llvalue option */
+CAMLprim value llvm_global_initializer(LLVMValueRef GlobalVar) {
+  return ptr_to_option(LLVMGetInitializer(GlobalVar));
 }
 
 /* llvalue -> llvalue -> unit */
@@ -1541,7 +1613,7 @@ CAMLprim value llvm_instr_get_opcode(LLVMValueRef Inst) {
   if (!LLVMIsAInstruction(Inst))
       failwith("Not an instruction");
   o = LLVMGetInstructionOpcode(Inst);
-  assert (o <= LLVMCallBr);
+  assert(o <= LLVMFreeze);
   return Val_int(o);
 }
 
@@ -2511,7 +2583,7 @@ CAMLprim LLVMMemoryBufferRef llvm_memorybuffer_of_string(value Name, value Strin
 /* llmemorybuffer -> string */
 CAMLprim value llvm_memorybuffer_as_string(LLVMMemoryBufferRef MemBuf) {
   value String = caml_alloc_string(LLVMGetBufferSize(MemBuf));
-  memcpy(String_val(String), LLVMGetBufferStart(MemBuf),
+  memcpy((char *)String_val(String), LLVMGetBufferStart(MemBuf),
          LLVMGetBufferSize(MemBuf));
 
   return String;

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
-#define LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
+#ifndef LLVM_TEXTAPI_MACHO_INTERFACEFILE_H
+#define LLVM_TEXTAPI_MACHO_INTERFACEFILE_H
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
@@ -336,9 +336,10 @@ public:
   /// Add a library for inlining to top level library.
   ///
   ///\param Document The library to inline with top level library.
-  void addDocument(std::shared_ptr<InterfaceFile> &&Document) {
-    Documents.emplace_back(std::move(Document));
-  }
+  void addDocument(std::shared_ptr<InterfaceFile> &&Document);
+
+  /// Returns the pointer to parent document if exists or nullptr otherwise.
+  InterfaceFile *getParent() const { return Parent; }
 
   /// Get the list of inlined libraries.
   ///
@@ -397,6 +398,14 @@ public:
         fn);
   }
 
+  /// The equality is determined by attributes that impact linking
+  /// compatibilities. UUIDs, Path, & FileKind are irrelevant since these by
+  /// itself should not impact linking.
+  /// This is an expensive operation.
+  bool operator==(const InterfaceFile &O) const;
+
+  bool operator!=(const InterfaceFile &O) const { return !(*this == O); }
+
 private:
   llvm::BumpPtrAllocator Allocator;
   StringRef copyString(StringRef String) {
@@ -425,9 +434,25 @@ private:
   std::vector<std::shared_ptr<InterfaceFile>> Documents;
   std::vector<std::pair<Target, std::string>> UUIDs;
   SymbolMapType Symbols;
+  InterfaceFile *Parent = nullptr;
 };
+
+template <typename DerivedT, typename KeyInfoT, typename BucketT>
+bool operator==(const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
+                                   KeyInfoT, BucketT> &LHS,
+                const DenseMapBase<DerivedT, SymbolsMapKey, MachO::Symbol *,
+                                   KeyInfoT, BucketT> &RHS) {
+  if (LHS.size() != RHS.size())
+    return false;
+  for (auto KV : LHS) {
+    auto I = RHS.find(KV.first);
+    if (I == RHS.end() || *I->second != *KV.second)
+      return false;
+  }
+  return true;
+}
 
 } // end namespace MachO.
 } // end namespace llvm.
 
-#endif // LLVM_TEXTAPI_MACHO_INTERFACE_FILE_H
+#endif // LLVM_TEXTAPI_MACHO_INTERFACEFILE_H

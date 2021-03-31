@@ -12,8 +12,8 @@
 
 #include <cassert>
 #include <cstdio>
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #include <dlfcn.h>
 #include <ffi.h>
 #include <gelf.h>
@@ -93,10 +93,7 @@ public:
     return &E.Table;
   }
 
-  RTLDeviceInfoTy(int32_t num_devices) {
-
-    FuncGblEntries.resize(num_devices);
-  }
+  RTLDeviceInfoTy(int32_t num_devices) { FuncGblEntries.resize(num_devices); }
 
   ~RTLDeviceInfoTy() {
     // Close dynamic libraries
@@ -230,7 +227,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   Elf64_Addr entries_addr = libInfo->l_addr + entries_offset;
 
   DP("Pointer to first entry to be loaded is (" DPxMOD ").\n",
-      DPxPTR(entries_addr));
+     DPxPTR(entries_addr));
 
   // Table of pointers to all the entries in the target.
   __tgt_offload_entry *entries_table = (__tgt_offload_entry *)entries_addr;
@@ -245,7 +242,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   }
 
   DP("Entries table range is (" DPxMOD ")->(" DPxMOD ")\n",
-      DPxPTR(entries_begin), DPxPTR(entries_end));
+     DPxPTR(entries_begin), DPxPTR(entries_end));
   DeviceInfo.createOffloadTable(device_id, entries_begin, entries_end);
 
   elf_end(e);
@@ -253,8 +250,23 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   return DeviceInfo.getOffloadEntriesTable(device_id);
 }
 
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr) {
-  void *ptr = malloc(size);
+// Sample implementation of explicit memory allocator. For this plugin all kinds
+// are equivalent to each other.
+void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr,
+                           int32_t kind) {
+  void *ptr = NULL;
+
+  switch (kind) {
+  case TARGET_ALLOC_DEVICE:
+  case TARGET_ALLOC_HOST:
+  case TARGET_ALLOC_SHARED:
+  case TARGET_ALLOC_DEFAULT:
+    ptr = malloc(size);
+    break;
+  default:
+    REPORT("Invalid target data allocation kind");
+  }
+
   return ptr;
 }
 
@@ -307,7 +319,7 @@ int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
   DP("Running entry point at " DPxMOD "...\n", DPxPTR(tgt_entry_ptr));
 
   void (*entry)(void);
-  *((void**) &entry) = tgt_entry_ptr;
+  *((void **)&entry) = tgt_entry_ptr;
   ffi_call(&cif, entry, NULL, &args[0]);
   return OFFLOAD_SUCCESS;
 }

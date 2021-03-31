@@ -112,6 +112,16 @@ bool DominatorTree::invalidate(Function &F, const PreservedAnalyses &PA,
            PAC.preservedSet<CFGAnalyses>());
 }
 
+bool DominatorTree::dominates(const BasicBlock *BB, const Use &U) const {
+  Instruction *UserInst = cast<Instruction>(U.getUser());
+  if (auto *PN = dyn_cast<PHINode>(UserInst))
+    // A phi use using a value from a block is dominated by the end of that
+    // block.  Note that the phi's parent block may not be.
+    return dominates(BB, PN->getIncomingBlock(U));
+  else
+    return properlyDominates(BB, UserInst->getParent());
+}
+
 // dominates - Return true if Def dominates a use in User. This performs
 // the special checks necessary if Def and User are in the same basic block.
 // Note that Def doesn't dominate a use in Def itself!
@@ -222,9 +232,7 @@ bool DominatorTree::dominates(const BasicBlockEdge &BBE,
   // other predecessors. Since the only way out of X is via NormalDest, X can
   // only properly dominate a node if NormalDest dominates that node too.
   int IsDuplicateEdge = 0;
-  for (const_pred_iterator PI = pred_begin(End), E = pred_end(End);
-       PI != E; ++PI) {
-    const BasicBlock *BB = *PI;
+  for (const BasicBlock *BB : predecessors(End)) {
     if (BB == Start) {
       // If there are multiple edges between Start and End, by definition they
       // can't dominate anything.

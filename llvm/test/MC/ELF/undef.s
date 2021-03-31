@@ -1,6 +1,14 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj --symbols - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s | llvm-readelf -s - | FileCheck %s
 
 // Test which symbols should be in the symbol table
+
+# CHECK:      Symbol table '.symtab' contains 5 entries:
+# CHECK-NEXT: Num:    Value          Size Type    Bind   Vis       Ndx Name
+# CHECK-NEXT:   0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT   UND 
+# CHECK-NEXT:   1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT     4 .Lsym8
+# CHECK-NEXT:   2: 0000000000000000     0 OBJECT  GLOBAL DEFAULT   UND sym6
+# CHECK-NEXT:   3: 0000000000000000     0 NOTYPE  GLOBAL HIDDEN    UND hidden
+# CHECK-NEXT:   4: 0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND undef
 
 .Lsym2:
 .Lsym3:
@@ -22,53 +30,3 @@
 
 test2_a = undef
 test2_b = undef + 1
-
-// CHECK:      Symbols [
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name:  (0)
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: .Lsym8
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Local
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: .rodata.str1.1
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: hidden
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other [
-// CHECK-NEXT:       STV_HIDDEN
-// CHECK-NEXT:     ]
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: sym6
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: Object
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT:   Symbol {
-// CHECK-NEXT:     Name: undef
-// CHECK-NEXT:     Value: 0x0
-// CHECK-NEXT:     Size: 0
-// CHECK-NEXT:     Binding: Global
-// CHECK-NEXT:     Type: None
-// CHECK-NEXT:     Other: 0
-// CHECK-NEXT:     Section: Undefined
-// CHECK-NEXT:   }
-// CHECK-NEXT: ]

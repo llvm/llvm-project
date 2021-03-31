@@ -30,7 +30,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
-#include <stdint.h>
+#include <cstdint>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "x86-isel"
@@ -4621,34 +4622,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
-    case Intrinsic::x86_tdpbssd_internal: {
-      if (!Subtarget->hasAMXTILE())
-        break;
-      SDValue Chain = Node->getOperand(0);
-      unsigned Opc = X86::PTDPBSSDV;
-      SDValue Ops[] = {Node->getOperand(2),
-                       Node->getOperand(3),
-                       Node->getOperand(4),
-                       Node->getOperand(5),
-                       Node->getOperand(6),
-                       Node->getOperand(7),
-                       Chain};
-      MachineSDNode *CNode =
-          CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
-      ReplaceNode(Node, CNode);
-      return;
-    }
-    case Intrinsic::x86_tilezero_internal: {
-      if (!Subtarget->hasAMXTILE())
-        break;
-      unsigned Opc = X86::PTILEZEROV;
-      SDValue Chain = Node->getOperand(0);
-      SDValue Ops[] = {Node->getOperand(2), Node->getOperand(3), Chain};
-      MachineSDNode *CNode =
-          CurDAG->getMachineNode(Opc, dl, {MVT::x86amx, MVT::Other}, Ops);
-      ReplaceNode(Node, CNode);
-      return;
-    }
     }
     break;
   }
@@ -5543,11 +5516,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         if (auto *LoadN = dyn_cast<LoadSDNode>(N0.getOperand(0).getNode())) {
           if (!LoadN->isSimple()) {
             unsigned NumVolBits = LoadN->getValueType(0).getSizeInBits();
-            if (MOpc == X86::TEST8mi && NumVolBits != 8)
-              break;
-            else if (MOpc == X86::TEST16mi && NumVolBits != 16)
-              break;
-            else if (MOpc == X86::TEST32mi && NumVolBits != 32)
+            if ((MOpc == X86::TEST8mi && NumVolBits != 8) ||
+                (MOpc == X86::TEST16mi && NumVolBits != 16) ||
+                (MOpc == X86::TEST32mi && NumVolBits != 32))
               break;
           }
         }

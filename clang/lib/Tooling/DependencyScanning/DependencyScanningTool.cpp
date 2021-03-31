@@ -14,8 +14,8 @@ namespace tooling{
 namespace dependencies{
 
 std::vector<std::string> FullDependencies::getAdditionalCommandLine(
-    std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-    std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const {
+    std::function<StringRef(ModuleID)> LookupPCMPath,
+    std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
   std::vector<std::string> Ret = AdditionalNonPathCommandLine;
 
   dependencies::detail::appendCommonModuleArguments(
@@ -109,7 +109,7 @@ DependencyScanningTool::getFullDependencies(
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
-      ClangModuleDeps[MD.ContextHash + MD.ModuleName] = std::move(MD);
+      ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
     }
 
     void handleContextHash(std::string Hash) override {
@@ -119,14 +119,14 @@ DependencyScanningTool::getFullDependencies(
     FullDependenciesResult getFullDependencies() const {
       FullDependencies FD;
 
-      FD.ContextHash = std::move(ContextHash);
+      FD.ID.ContextHash = std::move(ContextHash);
 
       FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
       for (auto &&M : ClangModuleDeps) {
         auto &MD = M.second;
         if (MD.ImportedByMainFile)
-          FD.ClangModuleDeps.push_back({MD.ModuleName, ContextHash});
+          FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
       }
 
       FullDependenciesResult FDR;

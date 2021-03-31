@@ -5,13 +5,18 @@
 ; CHECK: fixedStack:
 ; CHECK-DAG:  - { id: [[STACK0:[0-9]+]], type: default, offset: 0, size: 1,
 ; CHECK-DAG:  - { id: [[STACK8:[0-9]+]], type: default, offset: 1, size: 1,
-; CHECK: [[LHS_ADDR:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[STACK0]]
-; CHECK: [[LHS:%[0-9]+]]:_(s8) = G_LOAD [[LHS_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK0]], align 16)
-; CHECK: [[RHS_ADDR:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[STACK8]]
-; CHECK: [[RHS:%[0-9]+]]:_(s8) = G_LOAD [[RHS_ADDR]](p0) :: (invariant load 1 from %fixed-stack.[[STACK8]])
-; CHECK: [[SUM:%[0-9]+]]:_(s8) = G_ADD [[LHS]], [[RHS]]
-; CHECK: [[SUM32:%[0-9]+]]:_(s32) = G_SEXT [[SUM]](s8)
-; CHECK: $w0 = COPY [[SUM32]](s32)
+; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load 1 from %fixed-stack.1, align 16)
+; CHECK:   [[ASSERT_SEXT:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD]], 8
+; CHECK:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT]](s32)
+; CHECK:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+; CHECK:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (invariant load 1 from %fixed-stack.0)
+; CHECK:   [[ASSERT_SEXT1:%[0-9]+]]:_(s32) = G_ASSERT_SEXT [[LOAD1]], 8
+; CHECK:   [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[ASSERT_SEXT1]](s32)
+; CHECK:   [[ADD:%[0-9]+]]:_(s8) = G_ADD [[TRUNC]], [[TRUNC1]]
+; CHECK:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[ADD]](s8)
+; CHECK:   $w0 = COPY [[SEXT]](s32)
+; CHECK:   RET_ReallyLR implicit $w0
 define signext i8 @test_stack_slots([8 x i64], i8 signext %lhs, i8 signext %rhs) {
   %sum = add i8 %lhs, %rhs
   ret i8 %sum

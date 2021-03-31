@@ -158,3 +158,15 @@ clang_tablegen("arm_cde_builtin_aliases") {
   args = [ "-gen-arm-cde-builtin-aliases" ]
   td_file = "arm_cde.td"
 }
+
+# RISC-V
+
+clang_tablegen("riscv_vector_builtins") {
+  args = [ "-gen-riscv-vector-builtins" ]
+  td_file = "riscv_vector.td"
+}
+
+clang_tablegen("riscv_vector_builtin_cg") {
+  args = [ "-gen-riscv-vector-builtin-codegen" ]
+  td_file = "riscv_vector.td"
+}

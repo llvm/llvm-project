@@ -15,6 +15,7 @@
 
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
@@ -63,6 +64,14 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND);
 /// <typename U> struct Foo<int, U> will return '<int, U>'. Returns an empty
 /// string if decl is not a template specialization.
 std::string printTemplateSpecializationArgs(const NamedDecl &ND);
+
+/// Print the Objective-C method name, including the full container name, e.g.
+/// `-[MyClass(Category) method:]`
+std::string printObjCMethod(const ObjCMethodDecl &Method);
+
+/// Print the Objective-C container name including categories, e.g. `MyClass`,
+// `MyClass()`, `MyClass(Category)`, and `MyProtocol`.
+std::string printObjCContainer(const ObjCContainerDecl &C);
 
 /// Gets the symbol ID for a declaration. Returned SymbolID might be null.
 SymbolID getSymbolID(const Decl *D);

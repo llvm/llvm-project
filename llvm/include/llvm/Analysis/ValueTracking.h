@@ -370,10 +370,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// that the returned value has pointer type if the specified value does. If
   /// the MaxLookup value is non-zero, it limits the number of instructions to
   /// be stripped off.
-  Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6);
-  inline const Value *getUnderlyingObject(const Value *V,
-                                          unsigned MaxLookup = 6) {
-    return getUnderlyingObject(const_cast<Value *>(V), MaxLookup);
+  const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
+  inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
+    // Force const to avoid infinite recursion.
+    const Value *VConst = V;
+    return const_cast<Value *>(getUnderlyingObject(VConst, MaxLookup));
   }
 
   /// This method is similar to getUnderlyingObject except that it can
@@ -460,7 +461,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// for such instructions, moving them may change the resulting value.
   bool isSafeToSpeculativelyExecute(const Value *V,
                                     const Instruction *CtxI = nullptr,
-                                    const DominatorTree *DT = nullptr);
+                                    const DominatorTree *DT = nullptr,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
   /// Returns true if the result or effects of the given instructions \p I
   /// depend on or influence global memory.
@@ -582,6 +584,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// poison.
   /// Formally, given I = `r = op v1 v2 .. vN`, propagatesPoison returns true
   /// if, for all i, r is evaluated to poison or op raises UB if vi = poison.
+  /// If vi is a vector or an aggregate and r is a single value, any poison
+  /// element in vi should make r poison or raise UB.
   /// To filter out operands that raise UB on poison, you can use
   /// getGuaranteedNonPoisonOp.
   bool propagatesPoison(const Operator *I);
@@ -590,6 +594,11 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// if I is executed and that operand has a poison value.
   void getGuaranteedNonPoisonOps(const Instruction *I,
                                  SmallPtrSetImpl<const Value *> &Ops);
+  /// Insert operands of I into Ops such that I will trigger undefined behavior
+  /// if I is executed and that operand is not a well-defined value
+  /// (i.e. has undef bits or poison).
+  void getGuaranteedWellDefinedOps(const Instruction *I,
+                                   SmallPtrSetImpl<const Value *> &Ops);
 
   /// Return true if the given instruction must trigger undefined behavior
   /// when I is executed with any operands which appear in KnownPoison holding
@@ -729,6 +738,8 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// For example, signed minimum is the inverse of signed maximum.
   SelectPatternFlavor getInverseMinMaxFlavor(SelectPatternFlavor SPF);
 
+  Intrinsic::ID getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID);
+
   /// Return the canonical inverse comparison predicate for the specified
   /// minimum/maximum flavor.
   CmpInst::Predicate getInverseMinMaxPred(SelectPatternFlavor SPF);
@@ -740,6 +751,37 @@ constexpr unsigned MaxAnalysisRecursionDepth = 6;
   /// Intrinsic::not_intrinsic.
   std::pair<Intrinsic::ID, bool>
   canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL);
+
+  /// Attempt to match a simple first order recurrence cycle of the form:
+  ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
+  ///   %inc = binop %iv, %step
+  /// OR
+  ///   %iv = phi Ty [%Start, %Entry], [%Inc, %backedge]
+  ///   %inc = binop %step, %iv
+  ///
+  /// A first order recurrence is a formula with the form: X_n = f(X_(n-1))
+  ///
+  /// A couple of notes on subtleties in that definition:
+  /// * The Step does not have to be loop invariant.  In math terms, it can
+  ///   be a free variable.  We allow recurrences with both constant and
+  ///   variable coefficients. Callers may wish to filter cases where Step
+  ///   does not dominate P.
+  /// * For non-commutative operators, we will match both forms.  This
+  ///   results in some odd recurrence structures.  Callers may wish to filter
+  ///   out recurrences where the phi is not the LHS of the returned operator.
+  /// * Because of the structure matched, the caller can assume as a post
+  ///   condition of the match the presence of a Loop with P's parent as it's
+  ///   header *except* in unreachable code.  (Dominance decays in unreachable
+  ///   code.)
+  ///
+  /// NOTE: This is intentional simple.  If you want the ability to analyze
+  /// non-trivial loop conditons, see ScalarEvolution instead.
+  bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
+                             Value *&Start, Value *&Step);
+
+  /// Analogous to the above, but starting from the binary operator
+  bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
+                                    Value *&Start, Value *&Step);
 
   /// Return true if RHS is known to be implied true by LHS.  Return false if
   /// RHS is known to be implied false by LHS.  Otherwise, return None if no

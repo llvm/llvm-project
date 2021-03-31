@@ -52,3 +52,10 @@ bool llvm::dwarf::utils::isConfigurationSupported(Triple &T) {
   std::string Err;
   return TargetRegistry::lookupTarget(T.getTriple(), Err);
 }
+
+bool llvm::dwarf::utils::isObjectEmissionSupported(Triple &T) {
+  initLLVMIfNeeded();
+  std::string Err;
+  const Target *TheTarget = TargetRegistry::lookupTarget(T.getTriple(), Err);
+  return TheTarget && TheTarget->hasMCAsmBackend();
+}

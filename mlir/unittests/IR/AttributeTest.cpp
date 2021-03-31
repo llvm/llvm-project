@@ -151,7 +151,7 @@ TEST(DenseSplatTest, BF16Splat) {
 TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
   Type stringType =
-      OpaqueType::get(&context, Identifier::get("test", &context), "string");
+      OpaqueType::get(Identifier::get("test", &context), "string");
   StringRef value = "test-string";
   testSplat(stringType, value);
 }
@@ -159,7 +159,7 @@ TEST(DenseSplatTest, StringSplat) {
 TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
   Type stringType =
-      OpaqueType::get(&context, Identifier::get("test", &context), "string");
+      OpaqueType::get(Identifier::get("test", &context), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);
   testSplat(stringType, stringAttr);
 }

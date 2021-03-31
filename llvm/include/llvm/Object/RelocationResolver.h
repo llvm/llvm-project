@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OBJECT_RELOCVISITOR_H
-#define LLVM_OBJECT_RELOCVISITOR_H
+#ifndef LLVM_OBJECT_RELOCATIONRESOLVER_H
+#define LLVM_OBJECT_RELOCATIONRESOLVER_H
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -45,4 +45,4 @@ uint64_t resolveRelocation(RelocationResolver Resolver, const RelocationRef &R,
 } // end namespace object
 } // end namespace llvm
 
-#endif // LLVM_OBJECT_RELOCVISITOR_H
+#endif // LLVM_OBJECT_RELOCATIONRESOLVER_H

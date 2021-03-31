@@ -683,7 +683,7 @@ bool TailDuplicator::isSimpleBB(MachineBasicBlock *TailBB) {
     return false;
   if (TailBB->pred_empty())
     return false;
-  MachineBasicBlock::iterator I = TailBB->getFirstNonDebugInstr();
+  MachineBasicBlock::iterator I = TailBB->getFirstNonDebugInstr(true);
   if (I == TailBB->end())
     return true;
   return I->isUnconditionalBranch();
@@ -778,6 +778,12 @@ bool TailDuplicator::duplicateSimpleBB(
       PredBB->removeSuccessor(TailBB, true);
       assert(PredBB->succ_size() <= 1);
     }
+
+    // For AutoFDO, since BB is going to be removed, we won't be able to sample
+    // it. To avoid assigning a zero weight for BB, move all its pseudo probes
+    // into Succ and mark them dangling. This should allow the counts inference
+    // a chance to get a more reasonable weight for BB.
+    TailBB->moveAndDanglePseudoProbes(PredBB);
 
     if (PredTBB)
       TII->insertBranch(*PredBB, PredTBB, PredFBB, PredCond, DL);
@@ -1035,10 +1041,9 @@ void TailDuplicator::removeDeadBlock(
 
   MachineFunction *MF = MBB->getParent();
   // Update the call site info.
-  std::for_each(MBB->begin(), MBB->end(), [MF](const MachineInstr &MI) {
+  for (const MachineInstr &MI : *MBB)
     if (MI.shouldUpdateCallSiteInfo())
       MF->eraseCallSiteInfo(&MI);
-  });
 
   if (RemovalCallback)
     (*RemovalCallback)(MBB);

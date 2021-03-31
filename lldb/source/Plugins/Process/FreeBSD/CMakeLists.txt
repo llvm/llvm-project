@@ -1,24 +1,20 @@
-add_lldb_library(lldbPluginProcessFreeBSD PLUGIN
-  ProcessFreeBSD.cpp
-  FreeBSDThread.cpp
-  ProcessMonitor.cpp
-
-  POSIXStopInfo.cpp
-  RegisterContextPOSIXProcessMonitor_arm.cpp
-  RegisterContextPOSIXProcessMonitor_arm64.cpp
-  RegisterContextPOSIXProcessMonitor_powerpc.cpp
-  RegisterContextPOSIXProcessMonitor_x86.cpp
-  RegisterContextPOSIXProcessMonitor_mips64.cpp
+add_lldb_library(lldbPluginProcessFreeBSD
+  NativeProcessFreeBSD.cpp
+  NativeRegisterContextFreeBSD.cpp
+  NativeRegisterContextFreeBSD_arm.cpp
+  NativeRegisterContextFreeBSD_arm64.cpp
+  NativeRegisterContextFreeBSD_mips64.cpp
+  NativeRegisterContextFreeBSD_powerpc.cpp
+  NativeRegisterContextFreeBSD_x86_64.cpp
+  NativeThreadFreeBSD.cpp
 
   LINK_LIBS
-    lldbBreakpoint
-    lldbCore
     lldbHost
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
     lldbPluginProcessPOSIX
+    lldbPluginProcessUtility
   LINK_COMPONENTS
     Support
   )

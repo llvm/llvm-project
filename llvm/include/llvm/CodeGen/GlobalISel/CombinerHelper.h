@@ -14,8 +14,8 @@
 //
 //===--------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
-#define LLVM_CODEGEN_GLOBALISEL_COMBINER_HELPER_H
+#ifndef LLVM_CODEGEN_GLOBALISEL_COMBINERHELPER_H
+#define LLVM_CODEGEN_GLOBALISEL_COMBINERHELPER_H
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
@@ -155,6 +155,11 @@ public:
   /// Match sext_inreg(load p), imm -> sextload p
   bool matchSextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
   bool applySextInRegOfLoad(MachineInstr &MI, std::tuple<Register, unsigned> &MatchInfo);
+
+  /// Try to combine G_[SU]DIV and G_[SU]REM into a single G_[SU]DIVREM
+  /// when their source operands are identical.
+  bool matchCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI);
+  void applyCombineDivRem(MachineInstr &MI, MachineInstr *&OtherMI);
 
   /// If a brcond's true block is not the fallthrough, make it so by inverting
   /// the condition and swapping operands.
@@ -315,6 +320,9 @@ public:
   /// Transform anyext(trunc(x)) to x.
   bool matchCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
   bool applyCombineAnyExtTrunc(MachineInstr &MI, Register &Reg);
+
+  /// Transform zext(trunc(x)) to x.
+  bool matchCombineZextTrunc(MachineInstr &MI, Register &Reg);
 
   /// Transform [asz]ext([asz]ext(x)) to [asz]ext x.
   bool matchCombineExtOfExt(MachineInstr &MI,
@@ -483,8 +491,25 @@ public:
   /// bswap.
   bool matchLoadOrCombine(MachineInstr &MI,
                           std::function<void(MachineIRBuilder &)> &MatchInfo);
-  bool applyLoadOrCombine(MachineInstr &MI,
-                          std::function<void(MachineIRBuilder &)> &MatchInfo);
+
+  bool matchExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
+  bool applyExtendThroughPhis(MachineInstr &MI, MachineInstr *&ExtMI);
+
+  bool matchExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
+  void applyExtractVecEltBuildVec(MachineInstr &MI, Register &Reg);
+
+  bool matchExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+  void applyExtractAllEltsFromBuildVector(
+      MachineInstr &MI,
+      SmallVectorImpl<std::pair<Register, MachineInstr *>> &MatchInfo);
+
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  bool applyBuildFn(MachineInstr &MI,
+                    std::function<void(MachineIRBuilder &)> &MatchInfo);
+  bool matchFunnelShiftToRotate(MachineInstr &MI);
+  void applyFunnelShiftToRotate(MachineInstr &MI);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

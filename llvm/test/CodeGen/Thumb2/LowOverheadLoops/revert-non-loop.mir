@@ -4,7 +4,7 @@
 # CHECK: bb.0.entry:
 # CHECK:   tBcc %bb.2, 3
 # CHECK: bb.1.not.preheader:
-# CHECK:   t2CMPri renamable $lr, 0, 14
+# CHECK:   $lr = t2SUBri killed renamable $lr, 0, 14
 # CHECK:   tBcc %bb.4, 0
 # CHECK:   tB %bb.2
 # CHECK: bb.3.while.body:
@@ -119,7 +119,7 @@ body:             |
     successors: %bb.2(0x40000000), %bb.4(0x40000000)
     liveins: $lr, $r0, $r1
   
-    t2WhileLoopStart renamable $lr, %bb.4, implicit-def dead $cpsr
+    $lr = t2WhileLoopStartLR killed renamable $lr, %bb.4, implicit-def dead $cpsr
     tB %bb.2, 14, $noreg
   
   bb.2.while.body.preheader:

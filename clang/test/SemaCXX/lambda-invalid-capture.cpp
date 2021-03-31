@@ -18,7 +18,7 @@ void captures_invalid_array_type() {
 }
 
 int pr43080(int i) { // expected-note {{declared here}}
-  return [] { // expected-note {{begins here}}
+  return [] {        // expected-note {{begins here}} expected-note 2 {{capture 'i' by}} expected-note 2 {{default capture by}}
     return sizeof i <
       i; // expected-error {{variable 'i' cannot be implicitly captured in a lambda with no capture-default specified}}
   }();

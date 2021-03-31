@@ -50,12 +50,27 @@ extern cl::opt<bool> EnableVPlanNativePath;
 
 #define DEBUG_TYPE "vplan"
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   const VPInstruction *Instr = dyn_cast<VPInstruction>(&V);
   VPSlotTracker SlotTracker(
       (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
   V.print(OS, SlotTracker);
   return OS;
+}
+#endif
+
+Value *VPLane::getAsRuntimeExpr(IRBuilder<> &Builder,
+                                const ElementCount &VF) const {
+  switch (LaneKind) {
+  case VPLane::Kind::ScalableLast:
+    // Lane = RuntimeVF - VF.getKnownMinValue() + Lane
+    return Builder.CreateSub(getRuntimeVF(Builder, Builder.getInt32Ty(), VF),
+                             Builder.getInt32(VF.getKnownMinValue() - Lane));
+  case VPLane::Kind::First:
+    return Builder.getInt32(Lane);
+  }
+  llvm_unreachable("Unknown lane kind");
 }
 
 VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
@@ -70,6 +85,7 @@ VPValue::~VPValue() {
     Def->removeDefinedValue(this);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
   if (const VPRecipeBase *R = dyn_cast_or_null<VPRecipeBase>(Def))
     R->print(OS, "", SlotTracker);
@@ -92,34 +108,7 @@ void VPDef::dump() const {
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
-
-VPUser *VPRecipeBase::toVPUser() {
-  if (auto *U = dyn_cast<VPInstruction>(this))
-    return U;
-  if (auto *U = dyn_cast<VPWidenRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPWidenCallRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPWidenSelectRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPWidenGEPRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPBlendRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPInterleaveRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPReplicateRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPBranchOnMaskRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPWidenMemoryInstructionRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPReductionRecipe>(this))
-    return U;
-  if (auto *U = dyn_cast<VPPredInstPHIRecipe>(this))
-    return U;
-  return nullptr;
-}
+#endif
 
 // Get the top-most entry block of \p Start. This is the entry block of the
 // containing VPlan. This function is templated to support both const and non-const blocks
@@ -199,6 +188,58 @@ VPBlockBase *VPBlockBase::getEnclosingBlockWithPredecessors() {
   return Parent->getEnclosingBlockWithPredecessors();
 }
 
+static VPValue *getSingleOperandOrNull(VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static const VPValue *getSingleOperandOrNull(const VPUser &U) {
+  if (U.getNumOperands() == 1)
+    return U.getOperand(0);
+
+  return nullptr;
+}
+
+static void resetSingleOpUser(VPUser &U, VPValue *NewVal) {
+  assert(U.getNumOperands() <= 1 && "Didn't expect more than one operand!");
+  if (!NewVal) {
+    if (U.getNumOperands() == 1)
+      U.removeLastOperand();
+    return;
+  }
+
+  if (U.getNumOperands() == 1)
+    U.setOperand(0, NewVal);
+  else
+    U.addOperand(NewVal);
+}
+
+VPValue *VPBlockBase::getCondBit() {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+const VPValue *VPBlockBase::getCondBit() const {
+  return getSingleOperandOrNull(CondBitUser);
+}
+
+void VPBlockBase::setCondBit(VPValue *CV) {
+  resetSingleOpUser(CondBitUser, CV);
+}
+
+VPValue *VPBlockBase::getPredicate() {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+const VPValue *VPBlockBase::getPredicate() const {
+  return getSingleOperandOrNull(PredicateUser);
+}
+
+void VPBlockBase::setPredicate(VPValue *CV) {
+  resetSingleOpUser(PredicateUser, CV);
+}
+
 void VPBlockBase::deleteCFG(VPBlockBase *Entry) {
   SmallVector<VPBlockBase *, 8> Blocks(depth_first(Entry));
 
@@ -217,24 +258,25 @@ VPBasicBlock::iterator VPBasicBlock::getFirstNonPhi() {
 }
 
 Value *VPTransformState::get(VPValue *Def, const VPIteration &Instance) {
-  if (!Def->getDef() && OrigLoop->isLoopInvariant(Def->getLiveInIRValue()))
+  if (!Def->getDef())
     return Def->getLiveInIRValue();
 
-  if (hasScalarValue(Def, Instance))
-    return Data.PerPartScalars[Def][Instance.Part][Instance.Lane];
-
-  if (hasVectorValue(Def, Instance.Part)) {
-    assert(Data.PerPartOutput.count(Def));
-    auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
-    if (!VecPart->getType()->isVectorTy()) {
-      assert(Instance.Lane == 0 && "cannot get lane > 0 for scalar");
-      return VecPart;
-    }
-    // TODO: Cache created scalar values.
-    return Builder.CreateExtractElement(VecPart,
-                                        Builder.getInt32(Instance.Lane));
+  if (hasScalarValue(Def, Instance)) {
+    return Data
+        .PerPartScalars[Def][Instance.Part][Instance.Lane.mapToCacheIndex(VF)];
   }
-  return Callback.getOrCreateScalarValue(VPValue2Value[Def], Instance);
+
+  assert(hasVectorValue(Def, Instance.Part));
+  auto *VecPart = Data.PerPartOutput[Def][Instance.Part];
+  if (!VecPart->getType()->isVectorTy()) {
+    assert(Instance.Lane.isFirstLane() && "cannot get lane > 0 for scalar");
+    return VecPart;
+  }
+  // TODO: Cache created scalar values.
+  Value *Lane = Instance.Lane.getAsRuntimeExpr(Builder, VF);
+  auto *Extract = Builder.CreateExtractElement(VecPart, Lane);
+  // set(Def, Extract, Instance);
+  return Extract;
 }
 
 BasicBlock *
@@ -286,8 +328,7 @@ VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
 }
 
 void VPBasicBlock::execute(VPTransformState *State) {
-  bool Replica = State->Instance &&
-                 !(State->Instance->Part == 0 && State->Instance->Lane == 0);
+  bool Replica = State->Instance && !State->Instance->isFirstIteration();
   VPBasicBlock *PrevVPBB = State->CFG.PrevVPBB;
   VPBlockBase *SingleHPred = nullptr;
   BasicBlock *NewBB = State->CFG.PrevBB; // Reuse it if possible.
@@ -328,17 +369,15 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
   VPValue *CBV;
   if (EnableVPlanNativePath && (CBV = getCondBit())) {
-    Value *IRCBV = CBV->getUnderlyingValue();
-    assert(IRCBV && "Unexpected null underlying value for condition bit");
+    assert(CBV->getUnderlyingValue() &&
+           "Unexpected null underlying value for condition bit");
 
     // Condition bit value in a VPBasicBlock is used as the branch selector. In
     // the VPlan-native path case, since all branches are uniform we generate a
     // branch instruction using the condition value from vector lane 0 and dummy
     // successors. The successors are fixed later when the successor blocks are
     // visited.
-    Value *NewCond = State->Callback.getOrCreateVectorValues(IRCBV, 0);
-    NewCond = State->Builder.CreateExtractElement(NewCond,
-                                                  State->Builder.getInt32(0));
+    Value *NewCond = State->get(CBV, {0, 0});
 
     // Replace the temporary unreachable terminator with the new conditional
     // branch.
@@ -359,11 +398,48 @@ void VPBasicBlock::dropAllReferences(VPValue *NewValue) {
     for (auto *Def : R.definedValues())
       Def->replaceAllUsesWith(NewValue);
 
-    if (auto *User = R.toVPUser())
-      for (unsigned I = 0, E = User->getNumOperands(); I != E; I++)
-        User->setOperand(I, NewValue);
+    for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
+      R.setOperand(I, NewValue);
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
+                         VPSlotTracker &SlotTracker) const {
+  O << Indent << getName() << ":\n";
+  if (const VPValue *Pred = getPredicate()) {
+    O << Indent << "BlockPredicate:";
+    Pred->printAsOperand(O, SlotTracker);
+    if (const auto *PredInst = dyn_cast<VPInstruction>(Pred))
+      O << " (" << PredInst->getParent()->getName() << ")";
+    O << '\n';
+  }
+
+  auto RecipeIndent = Indent + "  ";
+  for (const VPRecipeBase &Recipe : *this) {
+    Recipe.print(O, RecipeIndent, SlotTracker);
+    O << '\n';
+  }
+
+  if (getSuccessors().empty()) {
+    O << Indent << "No successors\n";
+  } else {
+    O << Indent << "Successor(s): ";
+    ListSeparator LS;
+    for (auto *Succ : getSuccessors())
+      O << LS << Succ->getName();
+    O << '\n';
+  }
+
+  if (const VPValue *CBV = getCondBit()) {
+    O << Indent << "CondBit: ";
+    CBV->printAsOperand(O, SlotTracker);
+    if (const auto *CBI = dyn_cast<VPInstruction>(CBV))
+      O << " (" << CBI->getParent()->getName() << ")";
+    O << '\n';
+  }
+}
+#endif
 
 void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
   for (VPBlockBase *Block : depth_first(Entry))
@@ -401,14 +477,14 @@ void VPRegionBlock::execute(VPTransformState *State) {
   assert(!State->Instance && "Replicating a Region with non-null instance.");
 
   // Enter replicating mode.
-  State->Instance = {0, 0};
+  State->Instance = VPIteration(0, 0);
 
   for (unsigned Part = 0, UF = State->UF; Part < UF; ++Part) {
     State->Instance->Part = Part;
     assert(!State->VF.isScalable() && "VF is assumed to be non scalable.");
     for (unsigned Lane = 0, VF = State->VF.getKnownMinValue(); Lane < VF;
          ++Lane) {
-      State->Instance->Lane = Lane;
+      State->Instance->Lane = VPLane(Lane, VPLane::Kind::First);
       // Visit the VPBlocks connected to \p this, starting from it.
       for (VPBlockBase *Block : RPOT) {
         LLVM_DEBUG(dbgs() << "LV: VPBlock in RPO " << Block->getName() << '\n');
@@ -420,6 +496,19 @@ void VPRegionBlock::execute(VPTransformState *State) {
   // Exit replicating mode.
   State->Instance.reset();
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
+                          VPSlotTracker &SlotTracker) const {
+  O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
+  auto NewIndent = Indent + "  ";
+  for (auto *BlockBase : depth_first(Entry)) {
+    O << '\n';
+    BlockBase->print(O, NewIndent, SlotTracker);
+  }
+  O << Indent << "}\n";
+}
+#endif
 
 void VPRecipeBase::insertBefore(VPRecipeBase *InsertPos) {
   assert(!Parent && "Recipe already in some VPBasicBlock");
@@ -497,7 +586,7 @@ void VPInstruction::generateInstruction(VPTransformState &State,
   }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
-    Value *VIVElem0 = State.get(getOperand(0), {Part, 0});
+    Value *VIVElem0 = State.get(getOperand(0), VPIteration(Part, 0));
     // Get the original loop tripcount.
     Value *ScalarTC = State.TripCount;
 
@@ -520,6 +609,7 @@ void VPInstruction::execute(VPTransformState &State) {
     generateInstruction(State, Part);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstruction::dump() const {
   VPSlotTracker SlotTracker(getParent()->getPlan());
   print(dbgs(), "", SlotTracker);
@@ -527,7 +617,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "EMIT ";
+  O << Indent << "EMIT ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -560,6 +650,7 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     Operand->printAsOperand(O, SlotTracker);
   }
 }
+#endif
 
 /// Generate the code inside the body of the vectorized loop. Assumes a single
 /// LoopVectorBody basic-block was created for this. Introduce additional
@@ -651,7 +742,25 @@ void VPlan::execute(VPTransformState *State) {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
-void VPlan::dump() const { dbgs() << *this << '\n'; }
+void VPlan::print(raw_ostream &O) const {
+  VPSlotTracker SlotTracker(this);
+
+  O << "VPlan '" << Name << "' {";
+  for (const VPBlockBase *Block : depth_first(getEntry())) {
+    O << '\n';
+    Block->print(O, "", SlotTracker);
+  }
+  O << "}\n";
+}
+
+LLVM_DUMP_METHOD
+void VPlan::printDOT(raw_ostream &O) const {
+  VPlanPrinter Printer(O, *this);
+  Printer.dump();
+}
+
+LLVM_DUMP_METHOD
+void VPlan::dump() const { print(dbgs()); }
 #endif
 
 void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
@@ -694,6 +803,7 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 const Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
@@ -770,44 +880,32 @@ void VPlanPrinter::dumpEdges(const VPBlockBase *Block) {
 }
 
 void VPlanPrinter::dumpBasicBlock(const VPBasicBlock *BasicBlock) {
+  // Implement dot-formatted dump by performing plain-text dump into the
+  // temporary storage followed by some post-processing.
   OS << Indent << getUID(BasicBlock) << " [label =\n";
   bumpIndent(1);
-  OS << Indent << "\"" << DOT::EscapeString(BasicBlock->getName()) << ":\\n\"";
-  bumpIndent(1);
+  std::string Str;
+  raw_string_ostream SS(Str);
+  // Use no indentation as we need to wrap the lines into quotes ourselves.
+  BasicBlock->print(SS, "", SlotTracker);
 
-  // Dump the block predicate.
-  const VPValue *Pred = BasicBlock->getPredicate();
-  if (Pred) {
-    OS << " +\n" << Indent << " \"BlockPredicate: \"";
-    if (const VPInstruction *PredI = dyn_cast<VPInstruction>(Pred)) {
-      PredI->printAsOperand(OS, SlotTracker);
-      OS << " (" << DOT::EscapeString(PredI->getParent()->getName())
-         << ")\\l\"";
-    } else
-      Pred->printAsOperand(OS, SlotTracker);
-  }
+  // We need to process each line of the output separately, so split
+  // single-string plain-text dump.
+  SmallVector<StringRef, 0> Lines;
+  StringRef(Str).rtrim('\n').split(Lines, "\n");
 
-  for (const VPRecipeBase &Recipe : *BasicBlock) {
-    OS << " +\n" << Indent << "\"";
-    Recipe.print(OS, Indent, SlotTracker);
-    OS << "\\l\"";
-  }
+  auto EmitLine = [&](StringRef Line, StringRef Suffix) {
+    OS << Indent << '"' << DOT::EscapeString(Line.str()) << "\\l\"" << Suffix;
+  };
 
-  // Dump the condition bit.
-  const VPValue *CBV = BasicBlock->getCondBit();
-  if (CBV) {
-    OS << " +\n" << Indent << " \"CondBit: ";
-    if (const VPInstruction *CBI = dyn_cast<VPInstruction>(CBV)) {
-      CBI->printAsOperand(OS, SlotTracker);
-      OS << " (" << DOT::EscapeString(CBI->getParent()->getName()) << ")\\l\"";
-    } else {
-      CBV->printAsOperand(OS, SlotTracker);
-      OS << "\"";
-    }
-  }
+  // Don't need the "+" after the last line.
+  for (auto Line : make_range(Lines.begin(), Lines.end() - 1))
+    EmitLine(Line, " +\n");
+  EmitLine(Lines.back(), "\n");
 
-  bumpIndent(-2);
-  OS << "\n" << Indent << "]\n";
+  bumpIndent(-1);
+  OS << Indent << "]\n";
+
   dumpEdges(BasicBlock);
 }
 
@@ -827,30 +925,26 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   dumpEdges(Region);
 }
 
-void VPlanPrinter::printAsIngredient(raw_ostream &O, const Value *V) {
-  std::string IngredientString;
-  raw_string_ostream RSO(IngredientString);
+void VPlanIngredient::print(raw_ostream &O) const {
   if (auto *Inst = dyn_cast<Instruction>(V)) {
     if (!Inst->getType()->isVoidTy()) {
-      Inst->printAsOperand(RSO, false);
-      RSO << " = ";
+      Inst->printAsOperand(O, false);
+      O << " = ";
     }
-    RSO << Inst->getOpcodeName() << " ";
+    O << Inst->getOpcodeName() << " ";
     unsigned E = Inst->getNumOperands();
     if (E > 0) {
-      Inst->getOperand(0)->printAsOperand(RSO, false);
+      Inst->getOperand(0)->printAsOperand(O, false);
       for (unsigned I = 1; I < E; ++I)
-        Inst->getOperand(I)->printAsOperand(RSO << ", ", false);
+        Inst->getOperand(I)->printAsOperand(O << ", ", false);
     }
   } else // !Inst
-    V->printAsOperand(RSO, false);
-  RSO.flush();
-  O << DOT::EscapeString(IngredientString);
+    V->printAsOperand(O, false);
 }
 
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-CALL ";
+  O << Indent << "WIDEN-CALL ";
 
   auto *CI = cast<CallInst>(getUnderlyingInstr());
   if (CI->getType()->isVoidTy())
@@ -867,7 +961,7 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-SELECT ";
+  O << Indent << "WIDEN-SELECT ";
   printAsOperand(O, SlotTracker);
   O << " = select ";
   getOperand(0)->printAsOperand(O, SlotTracker);
@@ -880,7 +974,7 @@ void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "WIDEN ";
+  O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
   O << " = " << getUnderlyingInstr()->getOpcodeName() << " ";
   printOperands(O, SlotTracker);
@@ -888,18 +982,19 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
                                           VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-INDUCTION";
-  if (Trunc) {
+  O << Indent << "WIDEN-INDUCTION";
+  if (getTruncInst()) {
     O << "\\l\"";
     O << " +\n" << Indent << "\"  " << VPlanIngredient(IV) << "\\l\"";
-    O << " +\n" << Indent << "\"  " << VPlanIngredient(Trunc);
+    O << " +\n" << Indent << "\"  ";
+    getVPValue(0)->printAsOperand(O, SlotTracker);
   } else
     O << " " << VPlanIngredient(IV);
 }
 
 void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-GEP ";
+  O << Indent << "WIDEN-GEP ";
   O << (IsPtrLoopInvariant ? "Inv" : "Var");
   size_t IndicesNumber = IsIndexLoopInvariant.size();
   for (size_t I = 0; I < IndicesNumber; ++I)
@@ -913,12 +1008,12 @@ void VPWidenGEPRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
-  O << "WIDEN-PHI " << VPlanIngredient(Phi);
+  O << Indent << "WIDEN-PHI " << VPlanIngredient(getUnderlyingValue());
 }
 
 void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
-  O << "BLEND ";
+  O << Indent << "BLEND ";
   Phi->printAsOperand(O, false);
   O << " =";
   if (getNumIncomingValues() == 1) {
@@ -938,7 +1033,7 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << "REDUCE ";
+  O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
@@ -954,7 +1049,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
-  O << (IsUniform ? "CLONE " : "REPLICATE ");
+  O << Indent << (IsUniform ? "CLONE " : "REPLICATE ");
 
   if (!getUnderlyingInstr()->getType()->isVoidTy()) {
     printAsOperand(O, SlotTracker);
@@ -969,13 +1064,15 @@ void VPReplicateRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPPredInstPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << "PHI-PREDICATED-INSTRUCTION ";
+  O << Indent << "PHI-PREDICATED-INSTRUCTION ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
   printOperands(O, SlotTracker);
 }
 
 void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << "WIDEN ";
+  O << Indent << "WIDEN ";
 
   if (!isStore()) {
     getVPValue()->printAsOperand(O, SlotTracker);
@@ -985,6 +1082,7 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O, const Twine &Indent,
 
   printOperands(O, SlotTracker);
 }
+#endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *CanonicalIV = State.CanonicalIV;
@@ -1011,12 +1109,14 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCanonicalIVRecipe::print(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
-  O << "EMIT ";
+  O << Indent << "EMIT ";
   getVPValue()->printAsOperand(O, SlotTracker);
   O << " = WIDEN-CANONICAL-INDUCTION";
 }
+#endif
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
 
@@ -1035,6 +1135,7 @@ void VPValue::replaceAllUsesWith(VPValue *New) {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
   if (const Value *UV = getUnderlyingValue()) {
     OS << "ir<";
@@ -1055,6 +1156,7 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     Op->printAsOperand(O, SlotTracker);
   });
 }
+#endif
 
 void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
                                           Old2NewTy &Old2New,
@@ -1069,6 +1171,8 @@ void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
                                          InterleavedAccessInfo &IAI) {
   if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
     for (VPRecipeBase &VPI : *VPBB) {
+      if (isa<VPWidenPHIRecipe>(&VPI))
+        continue;
       assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
       auto *VPInst = cast<VPInstruction>(&VPI);
       auto *Inst = cast<Instruction>(VPInst->getUnderlyingValue());
@@ -1130,9 +1234,6 @@ void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
 
   for (const VPValue *V : Plan.VPExternalDefs)
-    assignSlot(V);
-
-  for (const VPValue *V : Plan.VPCBVs)
     assignSlot(V);
 
   if (Plan.BackedgeTakenCount)

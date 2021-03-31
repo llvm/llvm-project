@@ -15,7 +15,6 @@
 #include "string_utils.h"
 
 #include <lib/sync/mutex.h> // for sync_mutex_t
-#include <limits.h>         // for PAGE_SIZE
 #include <stdlib.h>         // for getenv()
 #include <zircon/compiler.h>
 #include <zircon/sanitizer.h>
@@ -23,7 +22,7 @@
 
 namespace scudo {
 
-uptr getPageSize() { return PAGE_SIZE; }
+uptr getPageSize() { return _zx_system_get_page_size(); }
 
 void NORETURN die() { __builtin_trap(); }
 
@@ -133,6 +132,16 @@ void unmap(void *Addr, uptr Size, uptr Flags, MapPlatformData *Data) {
       CHECK_EQ(_zx_handle_close(Data->Vmo), ZX_OK);
     memset(Data, 0, sizeof(*Data));
   }
+}
+
+void setMemoryPermission(UNUSED uptr Addr, UNUSED uptr Size, UNUSED uptr Flags,
+                         UNUSED MapPlatformData *Data) {
+  const zx_vm_option_t Prot =
+      (Flags & MAP_NOACCESS) ? 0 : (ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  DCHECK(Data);
+  DCHECK_NE(Data->Vmar, ZX_HANDLE_INVALID);
+  if (_zx_vmar_protect(Data->Vmar, Prot, Addr, Size) != ZX_OK)
+    dieOnMapUnmapError();
 }
 
 void releasePagesToOS(UNUSED uptr BaseAddress, uptr Offset, uptr Size,

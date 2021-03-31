@@ -1,6 +1,6 @@
 // RUN: touch %t.o
 
-// RUN: %clang -target arm64_32-apple-watchos5.2 -fuse-ld= \
+// RUN: %clang -target arm64_32-apple-watchos5.2 -fuse-ld=lld.darwinold \
 // RUN:   -isysroot %S/Inputs/WatchOS6.0.sdk -mlinker-version=0 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-OLD %s
@@ -8,7 +8,7 @@
 // RUN:   -isysroot %S/Inputs/WatchOS6.0.sdk -mlinker-version=400 \
 // RUN:   -### %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-OLD %s
-// RUN: %clang -target arm64_32-apple-watchos5.2 -fuse-ld=lld.darwinnew \
+// RUN: %clang -target arm64_32-apple-watchos5.2 -fuse-ld=lld \
 // RUN:   -isysroot %S/Inputs/WatchOS6.0.sdk -mlinker-version=0 \
 // RUN:   -### %t.o -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck --check-prefix=LINKER-NEW %s

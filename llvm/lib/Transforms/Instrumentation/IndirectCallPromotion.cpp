@@ -393,8 +393,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
   InstrProfSymtab Symtab;
   if (Error E = Symtab.create(M, InLTO)) {
     std::string SymtabFailure = toString(std::move(E));
-    LLVM_DEBUG(dbgs() << "Failed to create symtab: " << SymtabFailure << "\n");
-    (void)SymtabFailure;
+    M.getContext().emitError("Failed to create symtab: " + SymtabFailure);
     return false;
   }
   bool Changed = false;

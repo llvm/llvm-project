@@ -105,8 +105,8 @@ class CreateDuringStepTestCase(TestBase):
         num_threads = process.GetNumThreads()
 
         # Make sure we see only two threads
-        self.assertTrue(
-            num_threads == 2,
+        self.assertEqual(
+            num_threads, 2,
             'Number of expected threads and actual threads do not match.')
 
         # Get the thread objects
@@ -138,8 +138,8 @@ class CreateDuringStepTestCase(TestBase):
         num_threads = process.GetNumThreads()
 
         # Check to see that we increased the number of threads as expected
-        self.assertTrue(
-            num_threads == 3,
+        self.assertEqual(
+            num_threads, 3,
             'Number of expected threads and actual threads do not match after thread exit.')
 
         stop_reason = stepping_thread.GetStopReason()
@@ -149,6 +149,6 @@ class CreateDuringStepTestCase(TestBase):
         self.runCmd("process continue")
 
         # At this point, the inferior process should have exited.
-        self.assertTrue(
-            process.GetState() == lldb.eStateExited,
+        self.assertEqual(
+            process.GetState(), lldb.eStateExited,
             PROCESS_EXITED)

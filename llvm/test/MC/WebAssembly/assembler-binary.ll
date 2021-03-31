@@ -50,7 +50,7 @@ entry:
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Memory:
-; CHECK-NEXT:           Initial:         0x0
+; CHECK-NEXT:           Minimum:         0x0
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           bar
 ; CHECK-NEXT:         Kind:            FUNCTION

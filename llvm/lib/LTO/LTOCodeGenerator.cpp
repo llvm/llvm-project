@@ -285,8 +285,8 @@ LTOCodeGenerator::compileOptimized() {
     return nullptr;
 
   // read .o file into memory buffer
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getFile(name, -1, false);
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr = MemoryBuffer::getFile(
+      name, /*IsText=*/false, /*RequiresNullTerminator=*/false);
   if (std::error_code EC = BufferOrErr.getError()) {
     emitError(EC.message());
     sys::fs::remove(NativeObjectPath);
@@ -545,7 +545,6 @@ bool LTOCodeGenerator::optimize() {
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());
 
-
   ModuleSummaryIndex CombinedIndex(false);
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
@@ -573,6 +572,7 @@ bool LTOCodeGenerator::compileOptimized(lto::AddStreamFn AddStream,
 
   ModuleSummaryIndex CombinedIndex(false);
 
+  Config.CodeGenOnly = true;
   Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
                       CombinedIndex);
   assert(!Err && "unexpected code-generation failure");

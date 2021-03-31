@@ -60,8 +60,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
   /// 'dest' that is attached to an operation registered to the current dialect.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
                        BlockAndValueMapping &) const final {
-    // Return true here when inlining into spv.func, spv.selection, and
-    // spv.loop operations.
+    // Return true here when inlining into spv.func, spv.mlir.selection, and
+    // spv.mlir.loop operations.
     auto *op = dest->getParentOp();
     return isa<spirv::FuncOp, spirv::SelectionOp, spirv::LoopOp>(op);
   }
@@ -115,10 +115,8 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::initialize() {
-  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
-           PointerType, RuntimeArrayType, StructType>();
-
-  addAttributes<InterfaceVarABIAttr, TargetEnvAttr, VerCapExtAttr>();
+  registerAttributes();
+  registerTypes();
 
   // Add SPIR-V ops.
   addOperations<
@@ -225,6 +223,23 @@ static Type parseAndVerifyMatrixType(SPIRVDialect const &dialect,
   } else {
     parser.emitError(typeLoc, "matrix must be composed using vector "
                               "type, got ")
+        << type;
+    return Type();
+  }
+
+  return type;
+}
+
+static Type parseAndVerifySampledImageType(SPIRVDialect const &dialect,
+                                           DialectAsmParser &parser) {
+  Type type;
+  llvm::SMLoc typeLoc = parser.getCurrentLocation();
+  if (parser.parseType(type))
+    return Type();
+
+  if (!type.isa<ImageType>()) {
+    parser.emitError(typeLoc,
+                     "sampled image must be composed using image type, got ")
         << type;
     return Type();
   }
@@ -530,6 +545,21 @@ static Type parseImageType(SPIRVDialect const &dialect,
   return ImageType::get(value.getValue());
 }
 
+// sampledImage-type :: = `!spv.sampledImage<` image-type `>`
+static Type parseSampledImageType(SPIRVDialect const &dialect,
+                                  DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  Type parsedType = parseAndVerifySampledImageType(dialect, parser);
+  if (!parsedType)
+    return Type();
+
+  if (parser.parseGreater())
+    return Type();
+  return SampledImageType::get(parsedType);
+}
+
 // Parse decorations associated with a member.
 static ParseResult parseStructMemberDecorations(
     SPIRVDialect const &dialect, DialectAsmParser &parser,
@@ -707,6 +737,7 @@ static Type parseStructType(SPIRVDialect const &dialect,
 //              | image-type
 //              | pointer-type
 //              | runtime-array-type
+//              | sampled-image-type
 //              | struct-type
 Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
   StringRef keyword;
@@ -723,6 +754,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parsePointerType(*this, parser);
   if (keyword == "rtarray")
     return parseRuntimeArrayType(*this, parser);
+  if (keyword == "sampled_image")
+    return parseSampledImageType(*this, parser);
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -761,6 +794,10 @@ static void print(ImageType type, DialectAsmPrinter &os) {
      << stringifyImageSamplingInfo(type.getSamplingInfo()) << ", "
      << stringifyImageSamplerUseInfo(type.getSamplerUseInfo()) << ", "
      << stringifyImageFormat(type.getImageFormat()) << ">";
+}
+
+static void print(SampledImageType type, DialectAsmPrinter &os) {
+  os << "sampled_image<" << type.getImageType() << ">";
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
@@ -825,7 +862,7 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixNVType, PointerType, RuntimeArrayType,
-            ImageType, StructType, MatrixType>(
+            ImageType, SampledImageType, StructType, MatrixType>(
           [&](auto type) { print(type, os); })
       .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }

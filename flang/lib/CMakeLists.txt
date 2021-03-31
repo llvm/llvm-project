@@ -10,6 +10,4 @@ if(FLANG_BUILD_NEW_DRIVER)
   add_subdirectory(FrontendTool)
 endif()
 
-if(LINK_WITH_FIR)
-  add_subdirectory(Optimizer)
-endif()
+add_subdirectory(Optimizer)

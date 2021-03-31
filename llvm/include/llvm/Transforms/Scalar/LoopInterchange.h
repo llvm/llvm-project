@@ -15,7 +15,7 @@
 namespace llvm {
 
 struct LoopInterchangePass : public PassInfoMixin<LoopInterchangePass> {
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+  PreservedAnalyses run(LoopNest &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &U);
 };
 

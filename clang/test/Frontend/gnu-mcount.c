@@ -43,10 +43,10 @@ int f() {
 
 // CHECK-LABEL: f
 // TODO: add profiling support for arm-baremetal
-// UNSUPPORTED-NOT: "instrument-function-entry-inlined"=
-// CHECK-ARM-EABI: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"="\01mcount"{{.*}} }
-// MCOUNT: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"="mcount"
-// UNDER: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"="\01_mcount"
-// UNDER_UNDER: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"="__mcount"
-// CHECK-ARM64-EABI-FREEBSD: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"=".mcount"{{.*}} }
-// CHECK-ARM-EABI-MEABI-GNU: attributes #{{[0-9]+}} = { {{.*}}"instrument-function-entry-inlined"="llvm.arm.gnu.eabi.mcount"{{.*}} }
+// UNSUPPORTED-NOT: call void
+// CHECK-ARM-EABI: call void @"\01mcount"()
+// MCOUNT: call void @mcount()
+// UNDER: call void @"\01_mcount"()
+// UNDER_UNDER: call void @__mcount()
+// CHECK-ARM64-EABI-FREEBSD: call void @.mcount()
+// CHECK-ARM-EABI-MEABI-GNU: call void @llvm.arm.gnu.eabi.mcount()

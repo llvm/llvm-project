@@ -63,8 +63,8 @@ public:
   void EndCOFFSymbolDef() override {}
 
   /// Record .symver aliases for later processing.
-  void emitELFSymverDirective(StringRef AliasName,
-                              const MCSymbol *Aliasee) override;
+  void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
+                              bool KeepOriginalSym) override;
 
   // Emit ELF .symver aliases and ensure they have the same binding as the
   // defined symbol they alias with.

@@ -103,7 +103,7 @@ spv.func @cooperative_matrix_fdiv(%a : !spv.coopmatrix<8x16xf32, Subgroup>, %b :
 
 // CHECK-LABEL: @cooperative_matrix_access_chain
 spv.func @cooperative_matrix_access_chain(%a : !spv.ptr<!spv.coopmatrix<8x16xf32, Subgroup>, Function>) -> !spv.ptr<f32, Function> "None" {
-  %0 = spv.constant 0: i32
+  %0 = spv.Constant 0: i32
   // CHECK: {{%.*}} = spv.AccessChain {{%.*}}[{{%.*}}] : !spv.ptr<!spv.coopmatrix<8x16xf32, Subgroup>, Function>, i32
   %1 = spv.AccessChain %a[%0] : !spv.ptr<!spv.coopmatrix<8x16xf32, Subgroup>, Function>, i32
   spv.ReturnValue %1 : !spv.ptr<f32, Function>

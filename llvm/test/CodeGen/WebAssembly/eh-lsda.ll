@@ -231,10 +231,15 @@ catch:                                            ; preds = %catch.fallthrough2
 }
 
 declare void @may_throw()
-declare i32 @llvm.eh.typeid.for(i8*)
-declare i8* @llvm.wasm.get.exception(token)
-declare i32 @llvm.wasm.get.ehselector(token)
+; Function Attrs: nounwind
+declare i32 @llvm.eh.typeid.for(i8*) #0
+; Function Attrs: nounwind
+declare i8* @llvm.wasm.get.exception(token) #0
+; Function Attrs: nounwind
+declare i32 @llvm.wasm.get.ehselector(token) #0
 declare void @__cxa_rethrow()
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare i32 @__gxx_wasm_personality_v0(...)
+
+attributes #0 = { nounwind }

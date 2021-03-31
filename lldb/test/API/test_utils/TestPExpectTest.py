@@ -2,14 +2,9 @@
 Test the PExpectTest test functions.
 """
 
+from lldbsuite.test.lldbpexpect import *
 
-import lldb
-import lldbsuite.test.lldbutil as lldbutil
-from lldbsuite.test.lldbtest import *
-from textwrap import dedent
-
-
-class TestPExpectTestCase(TestBase):
+class TestPExpectTestCase(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True

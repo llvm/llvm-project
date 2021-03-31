@@ -38,11 +38,11 @@ public:
   /// Adds a string-to-string mapping from \p Path to \p CanonicalPath.
   void addMapping(llvm::StringRef Path, llvm::StringRef CanonicalPath);
 
-  /// Returns the canonical include for symbol with \p QualifiedName.
-  /// \p Header is the file the declaration was reachable from.
-  /// Header itself will be returned if there is no relevant mapping.
-  llvm::StringRef mapHeader(llvm::StringRef Header,
-                            llvm::StringRef QualifiedName) const;
+  /// Returns the overridden include for symbol with \p QualifiedName, or "".
+  llvm::StringRef mapSymbol(llvm::StringRef QualifiedName) const;
+
+  /// Returns the overridden include for for files in \p Header, or "".
+  llvm::StringRef mapHeader(llvm::StringRef Header) const;
 
   /// Adds mapping for system headers and some special symbols (e.g. STL symbols
   /// in <iosfwd> need to be mapped individually). Approximately, the following

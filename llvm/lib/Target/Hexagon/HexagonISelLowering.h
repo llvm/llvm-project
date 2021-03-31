@@ -318,8 +318,9 @@ public:
                           bool *Fast) const override;
 
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
-      unsigned Alignment, MachineMemOperand::Flags Flags, bool *Fast)
-      const override;
+                                      Align Alignment,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast) const override;
 
   /// Returns relocation base for the given PIC jumptable.
   SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)

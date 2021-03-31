@@ -4,7 +4,7 @@ set(LLVM_TARGETS_TO_BUILD X86;ARM;AArch64;RISCV CACHE STRING "")
 
 set(PACKAGE_VENDOR Fuchsia CACHE STRING "")
 
-set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm" CACHE STRING "")
+set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "")
 set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
@@ -179,7 +179,7 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}-unknown-fuchsia_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
     set(RUNTIMES_${target}-unknown-fuchsia_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}-unknown-fuchsia_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
-    set(RUNTIMES_${target}-unknown-fuchsia_LIBUNWIND_HERMETIC_STATIC_LIBRARY ON CACHE BOOL "")
+    set(RUNTIMES_${target}-unknown-fuchsia_LIBUNWIND_HIDE_SYMBOLS ON CACHE BOOL "")
     set(RUNTIMES_${target}-unknown-fuchsia_LIBUNWIND_INSTALL_STATIC_LIBRARY OFF CACHE BOOL "")
     set(RUNTIMES_${target}-unknown-fuchsia_LIBCXXABI_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}-unknown-fuchsia_LIBCXXABI_USE_LLVM_UNWINDER ON CACHE BOOL "")
@@ -249,7 +249,6 @@ endif()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")
 set(LLVM_RUNTIME_TARGETS "${RUNTIME_TARGETS}" CACHE STRING "")
-set(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS "${RUNTIME_BUILD_ID_LINK}" CACHE STRING "")
 
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
@@ -264,6 +263,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-elfabi
   llvm-gsymutil
   llvm-lib
+  llvm-lipo
   llvm-mt
   llvm-nm
   llvm-objcopy

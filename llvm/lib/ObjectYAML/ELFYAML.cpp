@@ -70,6 +70,100 @@ void ScalarEnumerationTraits<ELFYAML::ELF_PT>::enumeration(
   IO.enumFallback<Hex32>(Value);
 }
 
+void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
+    IO &IO, ELFYAML::ELF_NT &Value) {
+#define ECase(X) IO.enumCase(Value, #X, ELF::X)
+  // Generic note types.
+  ECase(NT_VERSION);
+  ECase(NT_ARCH);
+  ECase(NT_GNU_BUILD_ATTRIBUTE_OPEN);
+  ECase(NT_GNU_BUILD_ATTRIBUTE_FUNC);
+  // Core note types.
+  ECase(NT_PRSTATUS);
+  ECase(NT_FPREGSET);
+  ECase(NT_PRPSINFO);
+  ECase(NT_TASKSTRUCT);
+  ECase(NT_AUXV);
+  ECase(NT_PSTATUS);
+  ECase(NT_FPREGS);
+  ECase(NT_PSINFO);
+  ECase(NT_LWPSTATUS);
+  ECase(NT_LWPSINFO);
+  ECase(NT_WIN32PSTATUS);
+  ECase(NT_PPC_VMX);
+  ECase(NT_PPC_VSX);
+  ECase(NT_PPC_TAR);
+  ECase(NT_PPC_PPR);
+  ECase(NT_PPC_DSCR);
+  ECase(NT_PPC_EBB);
+  ECase(NT_PPC_PMU);
+  ECase(NT_PPC_TM_CGPR);
+  ECase(NT_PPC_TM_CFPR);
+  ECase(NT_PPC_TM_CVMX);
+  ECase(NT_PPC_TM_CVSX);
+  ECase(NT_PPC_TM_SPR);
+  ECase(NT_PPC_TM_CTAR);
+  ECase(NT_PPC_TM_CPPR);
+  ECase(NT_PPC_TM_CDSCR);
+  ECase(NT_386_TLS);
+  ECase(NT_386_IOPERM);
+  ECase(NT_X86_XSTATE);
+  ECase(NT_S390_HIGH_GPRS);
+  ECase(NT_S390_TIMER);
+  ECase(NT_S390_TODCMP);
+  ECase(NT_S390_TODPREG);
+  ECase(NT_S390_CTRS);
+  ECase(NT_S390_PREFIX);
+  ECase(NT_S390_LAST_BREAK);
+  ECase(NT_S390_SYSTEM_CALL);
+  ECase(NT_S390_TDB);
+  ECase(NT_S390_VXRS_LOW);
+  ECase(NT_S390_VXRS_HIGH);
+  ECase(NT_S390_GS_CB);
+  ECase(NT_S390_GS_BC);
+  ECase(NT_ARM_VFP);
+  ECase(NT_ARM_TLS);
+  ECase(NT_ARM_HW_BREAK);
+  ECase(NT_ARM_HW_WATCH);
+  ECase(NT_ARM_SVE);
+  ECase(NT_ARM_PAC_MASK);
+  ECase(NT_FILE);
+  ECase(NT_PRXFPREG);
+  ECase(NT_SIGINFO);
+  // LLVM-specific notes.
+  ECase(NT_LLVM_HWASAN_GLOBALS);
+  // GNU note types
+  ECase(NT_GNU_ABI_TAG);
+  ECase(NT_GNU_HWCAP);
+  ECase(NT_GNU_BUILD_ID);
+  ECase(NT_GNU_GOLD_VERSION);
+  ECase(NT_GNU_PROPERTY_TYPE_0);
+  // FreeBSD note types.
+  ECase(NT_FREEBSD_ABI_TAG);
+  ECase(NT_FREEBSD_NOINIT_TAG);
+  ECase(NT_FREEBSD_ARCH_TAG);
+  ECase(NT_FREEBSD_FEATURE_CTL);
+  // FreeBSD core note types.
+  ECase(NT_FREEBSD_THRMISC);
+  ECase(NT_FREEBSD_PROCSTAT_PROC);
+  ECase(NT_FREEBSD_PROCSTAT_FILES);
+  ECase(NT_FREEBSD_PROCSTAT_VMMAP);
+  ECase(NT_FREEBSD_PROCSTAT_GROUPS);
+  ECase(NT_FREEBSD_PROCSTAT_UMASK);
+  ECase(NT_FREEBSD_PROCSTAT_RLIMIT);
+  ECase(NT_FREEBSD_PROCSTAT_OSREL);
+  ECase(NT_FREEBSD_PROCSTAT_PSSTRINGS);
+  ECase(NT_FREEBSD_PROCSTAT_AUXV);
+  // AMD specific notes. (Code Object V2)
+  ECase(NT_AMD_HSA_METADATA);
+  ECase(NT_AMD_HSA_ISA_NAME);
+  ECase(NT_AMD_PAL_METADATA);
+  // AMDGPU specific notes. (Code Object V3)
+  ECase(NT_AMDGPU_METADATA);
+#undef ECase
+  IO.enumFallback<Hex32>(Value);
+}
+
 void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
     IO &IO, ELFYAML::ELF_EM &Value) {
 #define ECase(X) IO.enumCase(Value, #X, ELF::X)
@@ -365,6 +459,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_HEXAGON_MACH_V66);
     BCase(EF_HEXAGON_MACH_V67);
     BCase(EF_HEXAGON_MACH_V67T);
+    BCase(EF_HEXAGON_MACH_V68);
     BCase(EF_HEXAGON_ISA_V2);
     BCase(EF_HEXAGON_ISA_V3);
     BCase(EF_HEXAGON_ISA_V4);
@@ -375,6 +470,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCase(EF_HEXAGON_ISA_V65);
     BCase(EF_HEXAGON_ISA_V66);
     BCase(EF_HEXAGON_ISA_V67);
+    BCase(EF_HEXAGON_ISA_V68);
     break;
   case ELF::EM_AVR:
     BCase(EF_AVR_ARCH_AVR1);
@@ -441,6 +537,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX906, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX908, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90A, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90C, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
@@ -449,8 +546,33 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1031, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1032, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1033, EF_AMDGPU_MACH);
-    BCase(EF_AMDGPU_XNACK);
-    BCase(EF_AMDGPU_SRAM_ECC);
+    switch (Object->Header.ABIVersion) {
+    default:
+      // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
+      LLVM_FALLTHROUGH;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      BCase(EF_AMDGPU_FEATURE_XNACK_V3);
+      BCase(EF_AMDGPU_FEATURE_SRAMECC_V3);
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_ANY_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_OFF_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_XNACK_ON_V4,
+                EF_AMDGPU_FEATURE_XNACK_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_ANY_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_OFF_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      BCaseMask(EF_AMDGPU_FEATURE_SRAMECC_ON_V4,
+                EF_AMDGPU_FEATURE_SRAMECC_V4);
+      break;
+    }
     break;
   default:
     break;
@@ -555,6 +677,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
   BCase(SHF_GROUP);
   BCase(SHF_TLS);
   BCase(SHF_COMPRESSED);
+  BCase(SHF_GNU_RETAIN);
   switch (Object->getMachine()) {
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
@@ -690,6 +813,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
     break;
   case ELF::EM_PPC64:
 #include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+    break;
+  case ELF::EM_68K:
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
     break;
   default:
     // Nothing to do.
@@ -1569,6 +1695,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("Address", E.Address, Hex64(0));
+  IO.mapOptional("NumBlocks", E.NumBlocks);
   IO.mapOptional("BBEntries", E.BBEntries);
 }
 

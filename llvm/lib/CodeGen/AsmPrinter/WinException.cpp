@@ -55,6 +55,14 @@ void WinException::endModule() {
   for (const Function &F : *M)
     if (F.hasFnAttribute("safeseh"))
       OS.EmitCOFFSafeSEH(Asm->getSymbol(&F));
+
+  if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
+    // Emit the symbol index of each ehcont target.
+    OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
+    for (const MCSymbol *S : EHContTargets) {
+      OS.EmitCOFFSymbolIndex(S);
+    }
+  }
 }
 
 void WinException::beginFunction(const MachineFunction *MF) {
@@ -163,6 +171,12 @@ void WinException::endFunction(const MachineFunction *MF) {
       emitExceptionTable();
 
     Asm->OutStreamer->PopSection();
+  }
+
+  if (!MF->getCatchretTargets().empty()) {
+    // Copy the function's catchret targets to a module-level list.
+    EHContTargets.insert(EHContTargets.end(), MF->getCatchretTargets().begin(),
+                         MF->getCatchretTargets().end());
   }
 }
 

@@ -1,8 +1,11 @@
-set(LLVM_SOURCE_DIR "${LLVM_MAIN_SRC_DIR}")
-set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}")
-set(LLVM_BUILD_MODE "%(build_mode)s")
-set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}/%(build_config)s")
-set(LLVM_LIBS_DIR "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/%(build_config)s")
+if (CMAKE_CFG_INTDIR STREQUAL ".")
+  set(LLVM_BUILD_MODE ".")
+else ()
+  set(LLVM_BUILD_MODE "%(build_mode)s")
+endif ()
+
+string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLD_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "${LLVM_BUILD_MODE}" LLD_TOOLS_DIR "${LLVM_RUNTIME_OUTPUT_INTDIR}")
 
 llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB

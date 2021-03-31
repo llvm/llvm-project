@@ -163,9 +163,6 @@ struct CopyConfig {
   StringRef AddGnuDebugLink;
   // Cached gnu_debuglink's target CRC
   uint32_t GnuDebugLinkCRC32;
-  StringRef BuildIdLinkDir;
-  Optional<StringRef> BuildIdLinkInput;
-  Optional<StringRef> BuildIdLinkOutput;
   Optional<StringRef> ExtractPartition;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
@@ -218,6 +215,7 @@ struct CopyConfig {
   bool ExtractDWO = false;
   bool ExtractMainPartition = false;
   bool KeepFileSymbols = false;
+  bool KeepUndefined = false;
   bool LocalizeHidden = false;
   bool OnlyKeepDebug = false;
   bool PreserveDates = false;

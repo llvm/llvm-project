@@ -133,16 +133,13 @@ void InitializeDbgHelpIfNeeded() {
   }
 }
 
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wframe-larger-than="
-#endif
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();
 
   // See https://docs.microsoft.com/en-us/windows/win32/debug/retrieving-symbol-information-by-address
-  char buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(CHAR)];
-  PSYMBOL_INFO symbol = (PSYMBOL_INFO)buffer;
+  InternalMmapVector<char> buffer(sizeof(SYMBOL_INFO) +
+                                  MAX_SYM_NAME * sizeof(CHAR));
+  PSYMBOL_INFO symbol = (PSYMBOL_INFO)&buffer[0];
   symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
   symbol->MaxNameLen = MAX_SYM_NAME;
   DWORD64 offset = 0;
@@ -166,9 +163,6 @@ bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   // Otherwise, try llvm-symbolizer.
   return got_fileline;
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 
 const char *WinSymbolizerTool::Demangle(const char *name) {
   CHECK(is_dbghelp_initialized);
@@ -230,7 +224,7 @@ bool SymbolizerProcess::StartSymbolizerSubprocess() {
   // Compute the command line. Wrap double quotes around everything.
   const char *argv[kArgVMax];
   GetArgV(path_, argv);
-  InternalScopedString command_line(kMaxPathLength * 3);
+  InternalScopedString command_line;
   for (int i = 0; argv[i]; i++) {
     const char *arg = argv[i];
     int arglen = internal_strlen(arg);
@@ -288,8 +282,15 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
     return;
   }
 
-  // Add llvm-symbolizer in case the binary has dwarf.
+  // Add llvm-symbolizer.
   const char *user_path = common_flags()->external_symbolizer_path;
+
+  if (user_path && internal_strchr(user_path, '%')) {
+    char *new_path = (char *)InternalAlloc(kMaxPathLength);
+    SubstituteForFlagValue(user_path, new_path, kMaxPathLength);
+    user_path = new_path;
+  }
+
   const char *path =
       user_path ? user_path : FindPathToBinary("llvm-symbolizer.exe");
   if (path) {

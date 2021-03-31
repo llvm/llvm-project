@@ -240,6 +240,12 @@ MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
   return buildInstr(TargetOpcode::COPY, Res, Op);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildAssertSExt(const DstOp &Res,
+                                                      const SrcOp &Op,
+                                                      unsigned Size) {
+  return buildInstr(TargetOpcode::G_ASSERT_SEXT, Res, Op).addImm(Size);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildAssertZExt(const DstOp &Res,
                                                       const SrcOp &Op,
                                                       unsigned Size) {
@@ -478,6 +484,15 @@ MachineInstrBuilder MachineIRBuilder::buildZExtOrTrunc(const DstOp &Res,
 MachineInstrBuilder MachineIRBuilder::buildAnyExtOrTrunc(const DstOp &Res,
                                                          const SrcOp &Op) {
   return buildExtOrTrunc(TargetOpcode::G_ANYEXT, Res, Op);
+}
+
+MachineInstrBuilder MachineIRBuilder::buildZExtInReg(const DstOp &Res,
+                                                     const SrcOp &Op,
+                                                     int64_t ImmOp) {
+  LLT ResTy = Res.getLLTTy(*getMRI());
+  auto Mask = buildConstant(
+      ResTy, APInt::getLowBitsSet(ResTy.getScalarSizeInBits(), ImmOp));
+  return buildAnd(ResTy, Op, Mask);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,

@@ -276,6 +276,8 @@ struct _LIBCPP_TYPE_VIS space_info {
   uintmax_t available;
 };
 
+// On Windows, the library never identifies files as  block, character, fifo
+// or socket.
 enum class _LIBCPP_ENUM_VIS file_type : signed char {
   none = 0,
   not_found = -1,
@@ -289,6 +291,10 @@ enum class _LIBCPP_ENUM_VIS file_type : signed char {
   unknown = 8
 };
 
+// On Windows, these permission bits map to one single readonly flag per
+// file, and the executable bit is always returned as set. When setting
+// permissions, as long as the write bit is set for either owner, group or
+// others, the readonly flag is cleared.
 enum class _LIBCPP_ENUM_VIS perms : unsigned {
   none = 0,
 
@@ -921,7 +927,7 @@ public:
   typedef basic_string<value_type> string_type;
   typedef basic_string_view<value_type> __string_view;
 
-  enum class _LIBCPP_ENUM_VIS format : unsigned char {
+  enum _LIBCPP_ENUM_VIS format : unsigned char {
     auto_format,
     native_format,
     generic_format
@@ -973,8 +979,8 @@ public:
     return *this;
   }
 
-  template <class = void>
-  _LIBCPP_INLINE_VISIBILITY path& operator=(string_type&& __s) noexcept {
+  _LIBCPP_INLINE_VISIBILITY
+  path& operator=(string_type&& __s) noexcept {
     __pn_ = _VSTD::move(__s);
     return *this;
   }
@@ -1006,14 +1012,44 @@ public:
     return *this;
   }
 
-private:
-  template <class _ECharT>
-  static bool __source_is_absolute(_ECharT __first_or_null) {
-    return __is_separator(__first_or_null);
-  }
-
 public:
   // appends
+#if defined(_LIBCPP_WIN32API)
+  path& operator/=(const path& __p) {
+    auto __p_root_name = __p.__root_name();
+    auto __p_root_name_size = __p_root_name.size();
+    if (__p.is_absolute() ||
+        (!__p_root_name.empty() && __p_root_name != root_name())) {
+      __pn_ = __p.__pn_;
+      return *this;
+    }
+    if (__p.has_root_directory()) {
+      path __root_name_str = root_name();
+      __pn_ = __root_name_str.native();
+      __pn_ += __string_view(__p.__pn_).substr(__p_root_name_size);
+      return *this;
+    }
+    if (has_filename() || (!has_root_directory() && is_absolute()))
+      __pn_ += preferred_separator;
+    __pn_ += __string_view(__p.__pn_).substr(__p_root_name_size);
+    return *this;
+  }
+  template <class _Source>
+  _LIBCPP_INLINE_VISIBILITY _EnableIfPathable<_Source>
+  operator/=(const _Source& __src) {
+    return operator/=(path(__src));
+  }
+
+  template <class _Source>
+  _EnableIfPathable<_Source> append(const _Source& __src) {
+    return operator/=(path(__src));
+  }
+
+  template <class _InputIt>
+  path& append(_InputIt __first, _InputIt __last) {
+    return operator/=(path(__first, __last));
+  }
+#else
   path& operator/=(const path& __p) {
     if (__p.is_absolute()) {
       __pn_ = __p.__pn_;
@@ -1038,7 +1074,8 @@ public:
   _EnableIfPathable<_Source> append(const _Source& __src) {
     using _Traits = __is_pathable<_Source>;
     using _CVT = _PathCVT<_SourceChar<_Source> >;
-    if (__source_is_absolute(_Traits::__first_or_null(__src)))
+    bool __source_is_absolute = __is_separator(_Traits::__first_or_null(__src));
+    if (__source_is_absolute)
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
@@ -1051,13 +1088,14 @@ public:
     typedef typename iterator_traits<_InputIt>::value_type _ItVal;
     static_assert(__can_convert_char<_ItVal>::value, "Must convertible");
     using _CVT = _PathCVT<_ItVal>;
-    if (__first != __last && __source_is_absolute(*__first))
+    if (__first != __last && __is_separator(*__first))
       __pn_.clear();
     else if (has_filename())
       __pn_ += preferred_separator;
     _CVT::__append_range(__pn_, __first, __last);
     return *this;
   }
+#endif
 
   // concatenation
   _LIBCPP_INLINE_VISIBILITY
@@ -1161,7 +1199,12 @@ public:
 #if defined(_LIBCPP_WIN32API)
   _LIBCPP_INLINE_VISIBILITY _VSTD::wstring wstring() const { return __pn_; }
 
-  _VSTD::wstring generic_wstring() const { return __pn_; }
+  _VSTD::wstring generic_wstring() const {
+    _VSTD::wstring __s;
+    __s.resize(__pn_.size());
+    _VSTD::replace_copy(__pn_.begin(), __pn_.end(), __s.begin(), '\\', '/');
+    return __s;
+  }
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
   template <class _ECharT, class _Traits = char_traits<_ECharT>,
@@ -1198,13 +1241,24 @@ public:
             class _Allocator = allocator<_ECharT> >
   basic_string<_ECharT, _Traits, _Allocator>
   generic_string(const _Allocator& __a = _Allocator()) const {
-    return string<_ECharT, _Traits, _Allocator>(__a);
+    using _Str = basic_string<_ECharT, _Traits, _Allocator>;
+    _Str __s = string<_ECharT, _Traits, _Allocator>(__a);
+    // Note: This (and generic_u8string below) is slightly suboptimal as
+    // it iterates twice over the string; once to convert it to the right
+    // character type, and once to replace path delimiters.
+    _VSTD::replace(__s.begin(), __s.end(),
+                   static_cast<_ECharT>('\\'), static_cast<_ECharT>('/'));
+    return __s;
   }
 
   _VSTD::string generic_string() const { return generic_string<char>(); }
   _VSTD::u16string generic_u16string() const { return generic_string<char16_t>(); }
   _VSTD::u32string generic_u32string() const { return generic_string<char32_t>(); }
-  __u8_string generic_u8string() const { return u8string(); }
+  __u8_string generic_u8string() const {
+    __u8_string __s = u8string();
+    _VSTD::replace(__s.begin(), __s.end(), '\\', '/');
+    return __s;
+  }
 #endif /* !_LIBCPP_HAS_NO_LOCALIZATION */
 #else /* _LIBCPP_WIN32API */
 
@@ -1295,7 +1349,11 @@ public:
     return string_type(__root_directory());
   }
   _LIBCPP_INLINE_VISIBILITY path root_path() const {
+#if defined(_LIBCPP_WIN32API)
+    return string_type(__root_path_raw());
+#else
     return root_name().append(string_type(__root_directory()));
+#endif
   }
   _LIBCPP_INLINE_VISIBILITY path relative_path() const {
     return string_type(__relative_path());
@@ -1341,7 +1399,28 @@ public:
   }
 
   _LIBCPP_INLINE_VISIBILITY bool is_absolute() const {
+#if defined(_LIBCPP_WIN32API)
+    __string_view __root_name_str = __root_name();
+    __string_view __root_dir = __root_directory();
+    if (__root_name_str.size() == 2 && __root_name_str[1] == ':') {
+      // A drive letter with no root directory is relative, e.g. x:example.
+      return !__root_dir.empty();
+    }
+    // If no root name, it's relative, e.g. \example is relative to the current drive
+    if (__root_name_str.empty())
+      return false;
+    if (__root_name_str.size() < 3)
+      return false;
+    // A server root name, like \\server, is always absolute
+    if (__root_name_str[0] != '/' && __root_name_str[0] != '\\')
+      return false;
+    if (__root_name_str[1] != '/' && __root_name_str[1] != '\\')
+      return false;
+    // Seems to be a server root name
+    return true;
+#else
     return has_root_directory();
+#endif
   }
   _LIBCPP_INLINE_VISIBILITY bool is_relative() const { return !is_absolute(); }
 
@@ -1495,7 +1574,7 @@ _LIBCPP_INLINE_VISIBILITY _LIBCPP_DEPRECATED_WITH_CHAR8_T
       "'char' or 'char8_t'");
 #if defined(_LIBCPP_WIN32API)
   using _Traits = __is_pathable<_Source>;
-  return u8path(__unwrap_iter(_Traits::__range_begin(__s)), __unwrap_iter(_Traits::__range_end(__s)));
+  return u8path(_VSTD::__unwrap_iter(_Traits::__range_begin(__s)), _VSTD::__unwrap_iter(_Traits::__range_end(__s)));
 #else
   return path(__s);
 #endif

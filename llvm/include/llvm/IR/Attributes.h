@@ -18,6 +18,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
@@ -107,10 +108,13 @@ public:
   static Attribute getWithAllocSizeArgs(LLVMContext &Context,
                                         unsigned ElemSizeArg,
                                         const Optional<unsigned> &NumElemsArg);
+  static Attribute getWithVScaleRangeArgs(LLVMContext &Context,
+                                          unsigned MinValue, unsigned MaxValue);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
   static Attribute getWithStructRetType(LLVMContext &Context, Type *Ty);
   static Attribute getWithByRefType(LLVMContext &Context, Type *Ty);
   static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
+  static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -157,7 +161,7 @@ public:
   bool hasAttribute(StringRef Val) const;
 
   /// Return the attribute's kind as an enum (Attribute::AttrKind). This
-  /// requires the attribute to be an enum or integer attribute.
+  /// requires the attribute to be an enum, integer, or type attribute.
   Attribute::AttrKind getKindAsEnum() const;
 
   /// Return the attribute's value as an integer. This requires that the
@@ -195,6 +199,10 @@ public:
   /// Returns the argument numbers for the allocsize attribute (or pair(0, 0)
   /// if not known).
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+
+  /// Returns the argument numbers for the vscale_range attribute (or pair(0, 0)
+  /// if not known).
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -318,7 +326,9 @@ public:
   Type *getStructRetType() const;
   Type *getByRefType() const;
   Type *getPreallocatedType() const;
+  Type *getInAllocaType() const;
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   using iterator = const Attribute *;
@@ -513,6 +523,12 @@ public:
     return removeAttributes(C, ArgNo + FirstArgIndex, AttrsToRemove);
   }
 
+  /// Remove noundef attribute and other attributes that imply undefined
+  /// behavior if a `undef` or `poison` value is passed from this attribute
+  /// list. Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList
+  removeParamUndefImplyingAttributes(LLVMContext &C, unsigned ArgNo) const;
+
   /// Remove all attributes at the specified arg index from this
   /// attribute list. Returns a new list because attribute lists are immutable.
   LLVM_NODISCARD AttributeList removeParamAttributes(LLVMContext &C,
@@ -570,6 +586,13 @@ public:
                         const Optional<unsigned> &NumElemsArg) {
     return addAllocSizeAttr(C, ArgNo + FirstArgIndex, ElemSizeArg, NumElemsArg);
   }
+
+  /// Add the vscale_range attribute to the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  LLVM_NODISCARD AttributeList addVScaleRangeAttr(LLVMContext &C,
+                                                  unsigned Index,
+                                                  unsigned MinValue,
+                                                  unsigned MaxValue);
 
   //===--------------------------------------------------------------------===//
   // AttributeList Accessors
@@ -663,6 +686,9 @@ public:
   /// Return the preallocated type for the specified function parameter.
   Type *getParamPreallocatedType(unsigned ArgNo) const;
 
+  /// Return the inalloca type for the specified function parameter.
+  Type *getParamInAllocaType(unsigned ArgNo) const;
+
   /// Get the stack alignment.
   MaybeAlign getStackAlignment(unsigned Index) const;
 
@@ -688,6 +714,9 @@ public:
   /// Get the allocsize argument numbers (or pair(0, 0) if unknown).
   std::pair<unsigned, Optional<unsigned>>
   getAllocSizeArgs(unsigned Index) const;
+
+  /// Get the vscale_range argument numbers (or pair(0, 0) if unknown).
+  std::pair<unsigned, unsigned> getVScaleRangeArgs(unsigned Index) const;
 
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
@@ -756,16 +785,18 @@ template <> struct DenseMapInfo<AttributeList> {
 /// equality, presence of attributes, etc.
 class AttrBuilder {
   std::bitset<Attribute::EndAttrKinds> Attrs;
-  std::map<std::string, std::string, std::less<>> TargetDepAttrs;
+  std::map<SmallString<32>, SmallString<32>, std::less<>> TargetDepAttrs;
   MaybeAlign Alignment;
   MaybeAlign StackAlignment;
   uint64_t DerefBytes = 0;
   uint64_t DerefOrNullBytes = 0;
   uint64_t AllocSizeArgs = 0;
+  uint64_t VScaleRangeArgs = 0;
   Type *ByValType = nullptr;
   Type *StructRetType = nullptr;
   Type *ByRefType = nullptr;
   Type *PreallocatedType = nullptr;
+  Type *InAllocaType = nullptr;
 
 public:
   AttrBuilder() = default;
@@ -860,9 +891,16 @@ public:
   /// Retrieve the preallocated type.
   Type *getPreallocatedType() const { return PreallocatedType; }
 
+  /// Retrieve the inalloca type.
+  Type *getInAllocaType() const { return InAllocaType; }
+
   /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+
+  /// Retrieve the vscale_range args, if the vscale_range attribute exists.  If
+  /// it doesn't exist, pair(0, 0) is returned.
+  std::pair<unsigned, unsigned> getVScaleRangeArgs() const;
 
   /// This turns an alignment into the form used internally in Attribute.
   /// This call has no effect if Align is not set.
@@ -900,6 +938,9 @@ public:
   AttrBuilder &addAllocSizeAttr(unsigned ElemSizeArg,
                                 const Optional<unsigned> &NumElemsArg);
 
+  /// This turns two ints into the form used internally in Attribute.
+  AttrBuilder &addVScaleRangeAttr(unsigned MinValue, unsigned MaxValue);
+
   /// This turns a byval type into the form used internally in Attribute.
   AttrBuilder &addByValAttr(Type *Ty);
 
@@ -912,16 +953,23 @@ public:
   /// This turns a preallocated type into the form used internally in Attribute.
   AttrBuilder &addPreallocatedAttr(Type *Ty);
 
+  /// This turns an inalloca type into the form used internally in Attribute.
+  AttrBuilder &addInAllocaAttr(Type *Ty);
+
   /// Add an allocsize attribute, using the representation returned by
   /// Attribute.getIntValue().
   AttrBuilder &addAllocSizeAttrFromRawRepr(uint64_t RawAllocSizeRepr);
+
+  /// Add a vscale_range attribute, using the representation returned by
+  /// Attribute.getIntValue().
+  AttrBuilder &addVScaleRangeAttrFromRawRepr(uint64_t RawVScaleRangeRepr);
 
   /// Return true if the builder contains no target-independent
   /// attributes.
   bool empty() const { return Attrs.none(); }
 
   // Iterators for target-dependent attributes.
-  using td_type = std::pair<std::string, std::string>;
+  using td_type = decltype(TargetDepAttrs)::value_type;
   using td_iterator = decltype(TargetDepAttrs)::iterator;
   using td_const_iterator = decltype(TargetDepAttrs)::const_iterator;
   using td_range = iterator_range<td_iterator>;

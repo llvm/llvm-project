@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func @slice_depth1_loop_nest() {
-  %0 = alloc() : memref<100xf32>
+  %0 = memref.alloc() : memref<100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
     affine.store %cst, %0[%i0] : memref<100xf32>
@@ -24,9 +24,9 @@ func @slice_depth1_loop_nest() {
 
 // CHECK-LABEL: func @should_fuse_reduction_to_pointwise() {
 func @should_fuse_reduction_to_pointwise() {
-  %a = alloc() : memref<10x10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10x10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
   %cf7 = constant 7.0 : f32
 
@@ -64,9 +64,9 @@ func @should_fuse_reduction_to_pointwise() {
 
 // CHECK-LABEL: func @should_fuse_avoiding_dependence_cycle() {
 func @should_fuse_avoiding_dependence_cycle() {
-  %a = alloc() : memref<10xf32>
-  %b = alloc() : memref<10xf32>
-  %c = alloc() : memref<10xf32>
+  %a = memref.alloc() : memref<10xf32>
+  %b = memref.alloc() : memref<10xf32>
+  %c = memref.alloc() : memref<10xf32>
 
   %cf7 = constant 7.0 : f32
 

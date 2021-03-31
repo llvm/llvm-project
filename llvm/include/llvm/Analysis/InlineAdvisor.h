@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-#ifndef LLVM_INLINEADVISOR_H_
-#define LLVM_INLINEADVISOR_H_
+#ifndef LLVM_ANALYSIS_INLINEADVISOR_H
+#define LLVM_ANALYSIS_INLINEADVISOR_H
 
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Config/llvm-config.h"
@@ -283,4 +283,4 @@ void setInlineRemark(CallBase &CB, StringRef Message);
 /// Utility for extracting the inline cost message to a string.
 std::string inlineCostStr(const InlineCost &IC);
 } // namespace llvm
-#endif // LLVM_INLINEADVISOR_H_
+#endif // LLVM_ANALYSIS_INLINEADVISOR_H

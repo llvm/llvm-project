@@ -91,6 +91,23 @@ Value *IRBuilderBase::CreateVScale(Constant *Scaling, const Twine &Name) {
              : CreateMul(CI, Scaling);
 }
 
+Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
+  if (isa<ScalableVectorType>(DstType))
+    return CreateIntrinsic(Intrinsic::experimental_stepvector, {DstType}, {},
+                           nullptr, Name);
+
+  Type *STy = DstType->getScalarType();
+  unsigned NumEls = cast<FixedVectorType>(DstType)->getNumElements();
+
+  // Create a vector of consecutive numbers from zero to VF.
+  SmallVector<Constant *, 8> Indices;
+  for (unsigned i = 0; i < NumEls; ++i)
+    Indices.push_back(ConstantInt::get(STy, i));
+
+  // Add the consecutive indices to the vector value.
+  return ConstantVector::get(Indices);
+}
+
 CallInst *IRBuilderBase::CreateMemSet(Value *Ptr, Value *Val, Value *Size,
                                       MaybeAlign Align, bool isVolatile,
                                       MDNode *TBAATag, MDNode *ScopeTag,
@@ -522,14 +539,14 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
                                             Value *Mask, Value *PassThru,
                                             const Twine &Name) {
-  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
+  auto *PtrsTy = cast<VectorType>(Ptrs->getType());
   auto *PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  unsigned NumElts = PtrsTy->getNumElements();
-  auto *DataTy = FixedVectorType::get(PtrTy->getElementType(), NumElts);
+  ElementCount NumElts = PtrsTy->getElementCount();
+  auto *DataTy = VectorType::get(PtrTy->getElementType(), NumElts);
 
   if (!Mask)
     Mask = Constant::getAllOnesValue(
-        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
+        VectorType::get(Type::getInt1Ty(Context), NumElts));
 
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
@@ -552,20 +569,20 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
                                              Align Alignment, Value *Mask) {
-  auto *PtrsTy = cast<FixedVectorType>(Ptrs->getType());
-  auto *DataTy = cast<FixedVectorType>(Data->getType());
-  unsigned NumElts = PtrsTy->getNumElements();
+  auto *PtrsTy = cast<VectorType>(Ptrs->getType());
+  auto *DataTy = cast<VectorType>(Data->getType());
+  ElementCount NumElts = PtrsTy->getElementCount();
 
 #ifndef NDEBUG
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
-  assert(NumElts == DataTy->getNumElements() &&
+  assert(NumElts == DataTy->getElementCount() &&
          PtrTy->getElementType() == DataTy->getElementType() &&
          "Incompatible pointer and data types");
 #endif
 
   if (!Mask)
     Mask = Constant::getAllOnesValue(
-        FixedVectorType::get(Type::getInt1Ty(Context), NumElts));
+        VectorType::get(Type::getInt1Ty(Context), NumElts));
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
   Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
@@ -990,6 +1007,22 @@ Value *IRBuilderBase::CreateStripInvariantGroup(Value *Ptr) {
   if (PtrType != Int8PtrTy)
     return CreateBitCast(Fn, PtrType);
   return Fn;
+}
+
+Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
+  auto *Ty = cast<VectorType>(V->getType());
+  if (isa<ScalableVectorType>(Ty)) {
+    Module *M = BB->getParent()->getParent();
+    Function *F = Intrinsic::getDeclaration(
+        M, Intrinsic::experimental_vector_reverse, Ty);
+    return Insert(CallInst::Create(F, V), Name);
+  }
+  // Keep the original behaviour for fixed vector
+  SmallVector<int, 8> ShuffleMask;
+  int NumElts = Ty->getElementCount().getKnownMinValue();
+  for (int i = 0; i < NumElts; ++i)
+    ShuffleMask.push_back(NumElts - i - 1);
+  return CreateShuffleVector(V, ShuffleMask, Name);
 }
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,

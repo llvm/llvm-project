@@ -32,7 +32,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
-#include "lldb/Core/AddressResolverName.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -2416,13 +2415,13 @@ bool SBTarget::IsLoaded(const SBModule &module) const {
 
   TargetSP target_sp(GetSP());
   if (!target_sp)
-    return LLDB_RECORD_RESULT(false);
+    return false;
 
   ModuleSP module_sp(module.GetSP());
   if (!module_sp)
-    return LLDB_RECORD_RESULT(false);
+    return false;
 
-  return LLDB_RECORD_RESULT(module_sp->IsLoadedInTarget(target_sp.get()));
+  return module_sp->IsLoadedInTarget(target_sp.get());
 }
 
 lldb::SBLaunchInfo SBTarget::GetLaunchInfo() const {

@@ -134,12 +134,9 @@ body:
   ret void
 }
 
-; TODO: This should use s_mul_i32 instead of v_mul_u32_u24 + v_readfirstlane!
-;
 ; GCN-LABEL: {{^}}test_mul24:
-; GCN: v_mul_u32_u24_e32
-; GCN: v_readfirstlane_b32
-; GCN: s_mov_b32 m0,
+; GCN: s_and_b32 s0, s0, 0x1ff
+; GCN: s_mul_i32 m0, s0, 0x3000
 ; GCN: s_sendmsg sendmsg(MSG_INTERRUPT)
 define amdgpu_gs void @test_mul24(i32 inreg %arg) {
 body:

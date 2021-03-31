@@ -22,19 +22,10 @@ namespace dependencies{
 
 /// The full dependencies and module graph for a specific input.
 struct FullDependencies {
-  /// The name of the C++20 module this translation unit exports. This may
-  /// include `:` for C++20 module partitons.
+  /// The identifier of the C++20 module this translation unit exports.
   ///
-  /// If the translation unit is not a module then this will be empty.
-  std::string ExportedModuleName;
-
-  /// The context hash represents the set of compiler options that may make one
-  /// version of a module incompatible with another. This includes things like
-  /// language mode, predefined macros, header search paths, etc...
-  ///
-  /// Modules with the same name but a different \c ContextHash should be
-  /// treated as separate modules for the purpose of a build.
-  std::string ContextHash;
+  /// If the translation unit is not a module then \c ID.ModuleName is empty.
+  ModuleID ID;
 
   /// A collection of absolute paths to files that this translation unit
   /// directly depends on, not including transitive dependencies.
@@ -45,7 +36,7 @@ struct FullDependencies {
   ///
   /// This may include modules with a different context hash when it can be
   /// determined that the differences are benign for this compilation.
-  std::vector<ClangModuleDep> ClangModuleDeps;
+  std::vector<ModuleID> ClangModuleDeps;
 
   /// A partial addtional set of command line arguments that can be used to
   /// build this translation unit.
@@ -65,8 +56,8 @@ struct FullDependencies {
   ///                         transitive set of dependencies for this
   ///                         compilation.
   std::vector<std::string> getAdditionalCommandLine(
-      std::function<StringRef(ClangModuleDep)> LookupPCMPath,
-      std::function<const ModuleDeps &(ClangModuleDep)> LookupModuleDeps) const;
+      std::function<StringRef(ModuleID)> LookupPCMPath,
+      std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const;
 };
 
 struct FullDependenciesResult {

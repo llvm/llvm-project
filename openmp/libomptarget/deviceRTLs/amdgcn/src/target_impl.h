@@ -18,16 +18,15 @@
 
 #include "amdgcn_interface.h"
 
-#include <assert.h>
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define DEVICE __attribute__((device))
-#define INLINE inline DEVICE
-#define NOINLINE __attribute__((noinline)) DEVICE
-#define SHARED(NAME) __attribute__((shared)) NAME
-#define EXTERN_SHARED(NAME) __attribute__((shared)) NAME
+// subset of inttypes.h
+#define PRId64 "ld"
+#define PRIu64 "lu"
+
+#define INLINE inline
+#define NOINLINE __attribute__((noinline))
 #define ALIGN(N) __attribute__((aligned(N)))
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -68,11 +67,6 @@ enum : __kmpc_impl_lanemask_t {
   __kmpc_impl_all_lanes = ~(__kmpc_impl_lanemask_t)0
 };
 
-// DEVICE versions of part of libc
-INLINE void __assert_fail(const char *, const char *, unsigned int,
-                          const char *) {
-  __builtin_trap();
-}
 EXTERN int printf(const char *, ...);
 
 #endif

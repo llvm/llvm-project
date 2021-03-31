@@ -22,6 +22,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:    clrldi r3, r3, 48
 ; CHECK-NEXT:    bl __gnu_h2f_ieee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r30, r30, -1
@@ -46,6 +47,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdphp f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
+; CHECK-P9-NEXT:    clrlwi r3, r3, 16
 ; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    xscvhpdp f0, f0
@@ -263,16 +265,17 @@ define void @func_48785(half %arg) #0 {
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    fmr f31, f1
 ; CHECK-NEXT:    li r30, 0
+; CHECK-NEXT:    li r29, 0
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB3_1: # %bb1
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    fmr f1, f31
-; CHECK-NEXT:    sldi r29, r30, 1
 ; CHECK-NEXT:    bl __gnu_f2h_ieee
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi r30, r30, 12
-; CHECK-NEXT:    sth r3, 0(r29)
-; CHECK-NEXT:    cmpldi r30, 0
+; CHECK-NEXT:    addi r29, r29, -12
+; CHECK-NEXT:    sth r3, 0(r30)
+; CHECK-NEXT:    addi r30, r30, 24
+; CHECK-NEXT:    cmpldi r29, 0
 ; CHECK-NEXT:    bne+ cr0, .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %bb5
 ;

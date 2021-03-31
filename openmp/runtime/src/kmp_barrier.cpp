@@ -73,9 +73,9 @@ static bool __kmp_linear_barrier_gather_template(
               gtid, team->t.t_id, tid, __kmp_gtid_from_tid(0, team),
               team->t.t_id, 0, &thr_bar->b_arrived, thr_bar->b_arrived,
               thr_bar->b_arrived + KMP_BARRIER_STATE_BUMP));
-    // Mark arrival to master thread
+    // Mark arrival to primary thread
     /* After performing this write, a worker thread may not assume that the team
-       is valid any more - it could be deallocated by the master thread at any
+       is valid any more - it could be deallocated by the primary thread at any
        time. */
     ANNOTATE_BARRIER_BEGIN(this_thr);
     kmp_flag_64<> flag(&thr_bar->b_arrived, other_threads[0]);
@@ -166,7 +166,7 @@ static bool __kmp_linear_barrier_release_template(
     KMP_DEBUG_ASSERT(team != NULL);
     other_threads = team->t.t_threads;
 
-    KA_TRACE(20, ("__kmp_linear_barrier_release: T#%d(%d:%d) master enter for "
+    KA_TRACE(20, ("__kmp_linear_barrier_release: T#%d(%d:%d) primary enter for "
                   "barrier type %d\n",
                   gtid, team->t.t_id, tid, bt));
 
@@ -204,11 +204,11 @@ static bool __kmp_linear_barrier_release_template(
              other_threads[i]->th.th_bar[bt].bb.b_go + KMP_BARRIER_STATE_BUMP));
         ANNOTATE_BARRIER_BEGIN(other_threads[i]);
         kmp_flag_64<> flag(&other_threads[i]->th.th_bar[bt].bb.b_go,
-                         other_threads[i]);
+                           other_threads[i]);
         flag.release();
       }
     }
-  } else { // Wait for the MASTER thread to release us
+  } else { // Wait for the PRIMARY thread to release us
     KA_TRACE(20, ("__kmp_linear_barrier_release: T#%d wait go(%p) == %u\n",
                   gtid, &thr_bar->b_go, KMP_BARRIER_STATE_BUMP));
     if (cancellable) {
@@ -288,10 +288,9 @@ static bool __kmp_linear_barrier_release_cancellable(
 }
 
 // Tree barrier
-static void
-__kmp_tree_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
-                          int tid, void (*reduce)(void *, void *)
-                                       USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+static void __kmp_tree_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_tree_gather);
   kmp_team_t *team = this_thr->th.th_team;
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
@@ -301,7 +300,7 @@ __kmp_tree_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
   kmp_uint32 branch_factor = 1 << branch_bits;
   kmp_uint32 child;
   kmp_uint32 child_tid;
-  kmp_uint64 new_state;
+  kmp_uint64 new_state = 0;
 
   KA_TRACE(
       20, ("__kmp_tree_barrier_gather: T#%d(%d:%d) enter for barrier type %d\n",
@@ -379,13 +378,13 @@ __kmp_tree_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
 
     // Mark arrival to parent thread
     /* After performing this write, a worker thread may not assume that the team
-       is valid any more - it could be deallocated by the master thread at any
+       is valid any more - it could be deallocated by the primary thread at any
        time.  */
     ANNOTATE_BARRIER_BEGIN(this_thr);
     kmp_flag_64<> flag(&thr_bar->b_arrived, other_threads[parent_tid]);
     flag.release();
   } else {
-    // Need to update the team arrived pointer if we are the master thread
+    // Need to update the team arrived pointer if we are the primary thread
     if (nproc > 1) // New value was already computed above
       team->t.t_bar[bt].b_arrived = new_state;
     else
@@ -455,7 +454,7 @@ static void __kmp_tree_barrier_release(
   } else {
     team = __kmp_threads[gtid]->th.th_team;
     KMP_DEBUG_ASSERT(team != NULL);
-    KA_TRACE(20, ("__kmp_tree_barrier_release: T#%d(%d:%d) master enter for "
+    KA_TRACE(20, ("__kmp_tree_barrier_release: T#%d(%d:%d) primary enter for "
                   "barrier type %d\n",
                   gtid, team->t.t_id, tid, bt));
   }
@@ -508,10 +507,9 @@ static void __kmp_tree_barrier_release(
 }
 
 // Hyper Barrier
-static void
-__kmp_hyper_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
-                           int tid, void (*reduce)(void *, void *)
-                                        USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+static void __kmp_hyper_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_hyper_gather);
   kmp_team_t *team = this_thr->th.th_team;
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
@@ -558,7 +556,7 @@ __kmp_hyper_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
       // Mark arrival to parent thread
       /* After performing this write (in the last iteration of the enclosing for
          loop), a worker thread may not assume that the team is valid any more
-         - it could be deallocated by the master thread at any time.  */
+         - it could be deallocated by the primary thread at any time.  */
       ANNOTATE_BARRIER_BEGIN(this_thr);
       p_flag.set_waiter(other_threads[parent_tid]);
       p_flag.release();
@@ -616,7 +614,7 @@ __kmp_hyper_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
   }
 
   if (KMP_MASTER_TID(tid)) {
-    // Need to update the team arrived pointer if we are the master thread
+    // Need to update the team arrived pointer if we are the primary thread
     if (new_state == KMP_BARRIER_UNUSED_STATE)
       team->t.t_bar[bt].b_arrived += KMP_BARRIER_STATE_BUMP;
     else
@@ -652,14 +650,14 @@ static void __kmp_hyper_barrier_release(
      been gathered. If KMP_REVERSE_HYPER_BAR is defined (default) the threads
      are released in the reverse order of the corresponding gather, otherwise
      threads are released in the same order. */
-  if (KMP_MASTER_TID(tid)) { // master
+  if (KMP_MASTER_TID(tid)) { // primary thread
     team = __kmp_threads[gtid]->th.th_team;
     KMP_DEBUG_ASSERT(team != NULL);
-    KA_TRACE(20, ("__kmp_hyper_barrier_release: T#%d(%d:%d) master enter for "
+    KA_TRACE(20, ("__kmp_hyper_barrier_release: T#%d(%d:%d) primary enter for "
                   "barrier type %d\n",
                   gtid, team->t.t_id, tid, bt));
 #if KMP_BARRIER_ICV_PUSH
-    if (propagate_icvs) { // master already has ICVs in final destination; copy
+    if (propagate_icvs) { // primary already has ICVs in final destination; copy
       copy_icvs(&thr_bar->th_fixed_icvs,
                 &team->t.t_implicit_task_taskdata[tid].td_icvs);
     }
@@ -816,15 +814,15 @@ static bool __kmp_init_hierarchical_barrier_thread(enum barrier_type bt,
   }
 
   if (uninitialized || team_sz_changed || tid_changed) {
-    thr_bar->my_level = thr_bar->depth - 1; // default for master
-    thr_bar->parent_tid = -1; // default for master
-    if (!KMP_MASTER_TID(
-            tid)) { // if not master, find parent thread in hierarchy
+    thr_bar->my_level = thr_bar->depth - 1; // default for primary thread
+    thr_bar->parent_tid = -1; // default for primary thread
+    if (!KMP_MASTER_TID(tid)) {
+      // if not primary thread, find parent thread in hierarchy
       kmp_uint32 d = 0;
       while (d < thr_bar->depth) { // find parent based on level of thread in
         // hierarchy, and note level
         kmp_uint32 rem;
-        if (d == thr_bar->depth - 2) { // reached level right below the master
+        if (d == thr_bar->depth - 2) { // reached level right below the primary
           thr_bar->parent_tid = 0;
           thr_bar->my_level = d;
           break;
@@ -875,7 +873,7 @@ static void __kmp_hierarchical_barrier_gather(
   kmp_bstate_t *thr_bar = &this_thr->th.th_bar[bt].bb;
   kmp_uint32 nproc = this_thr->th.th_team_nproc;
   kmp_info_t **other_threads = team->t.t_threads;
-  kmp_uint64 new_state;
+  kmp_uint64 new_state = 0;
 
   int level = team->t.t_level;
   if (other_threads[0]
@@ -1009,7 +1007,7 @@ static void __kmp_hierarchical_barrier_gather(
       }
     }
   }
-  // All subordinates are gathered; now release parent if not master thread
+  // All subordinates are gathered; now release parent if not primary thread
 
   if (!KMP_MASTER_TID(tid)) { // worker threads release parent in hierarchy
     KA_TRACE(20, ("__kmp_hierarchical_barrier_gather: T#%d(%d:%d) releasing"
@@ -1020,7 +1018,7 @@ static void __kmp_hierarchical_barrier_gather(
                   thr_bar->b_arrived + KMP_BARRIER_STATE_BUMP));
     /* Mark arrival to parent: After performing this write, a worker thread may
        not assume that the team is valid any more - it could be deallocated by
-       the master thread at any time. */
+       the primary thread at any time. */
     if (thr_bar->my_level || __kmp_dflt_blocktime != KMP_MAX_BLOCKTIME ||
         !thr_bar->use_oncore_barrier) { // Parent is waiting on my b_arrived
       // flag; release it
@@ -1036,7 +1034,7 @@ static void __kmp_hierarchical_barrier_gather(
       flag.set_waiter(other_threads[thr_bar->parent_tid]);
       flag.release();
     }
-  } else { // Master thread needs to update the team's b_arrived value
+  } else { // Primary thread needs to update the team's b_arrived value
     team->t.t_bar[bt].b_arrived = new_state;
     KA_TRACE(20, ("__kmp_hierarchical_barrier_gather: T#%d(%d:%d) set team %d "
                   "arrived(%p) = %llu\n",
@@ -1061,7 +1059,7 @@ static void __kmp_hierarchical_barrier_release(
   if (KMP_MASTER_TID(tid)) {
     team = __kmp_threads[gtid]->th.th_team;
     KMP_DEBUG_ASSERT(team != NULL);
-    KA_TRACE(20, ("__kmp_hierarchical_barrier_release: T#%d(%d:%d) master "
+    KA_TRACE(20, ("__kmp_hierarchical_barrier_release: T#%d(%d:%d) primary "
                   "entered barrier type %d\n",
                   gtid, team->t.t_id, tid, bt));
   } else { // Worker threads
@@ -1139,7 +1137,7 @@ static void __kmp_hierarchical_barrier_release(
     __kmp_init_implicit_task(team->t.t_ident, team->t.t_threads[tid], team, tid,
                              FALSE);
     if (KMP_MASTER_TID(
-            tid)) { // master already has copy in final destination; copy
+            tid)) { // primary already has copy in final destination; copy
       copy_icvs(&thr_bar->th_fixed_icvs,
                 &team->t.t_implicit_task_taskdata[tid].td_icvs);
     } else if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
@@ -1289,7 +1287,7 @@ template <> struct is_cancellable<false> {
    If reduce is non-NULL, do a split reduction barrier, otherwise, do a split
    barrier
    When cancellable = false,
-     Returns 0 if master thread, 1 if worker thread.
+     Returns 0 if primary thread, 1 if worker thread.
    When cancellable = true
      Returns 0 if not cancelled, 1 if cancelled.  */
 template <bool cancellable = false>
@@ -1376,7 +1374,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
 #endif /* USE_ITT_BUILD */
 #if USE_DEBUGGER
     // Let the debugger know: the thread arrived to the barrier and waiting.
-    if (KMP_MASTER_TID(tid)) { // Master counter is stored in team structure.
+    if (KMP_MASTER_TID(tid)) { // Primary thread counter stored in team struct
       team->t.t_bar[bt].b_master_arrived += 1;
     } else {
       this_thr->th.th_bar[bt].bb.b_worker_arrived += 1;
@@ -1444,7 +1442,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
         }
       }
 #if USE_ITT_BUILD
-      /* TODO: In case of split reduction barrier, master thread may send
+      /* TODO: In case of split reduction barrier, primary thread may send
          acquired event early, before the final summation into the shared
          variable is done (final summation can be a long operation for array
          reductions).  */
@@ -1476,7 +1474,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
           break;
         case 3:
           if (__itt_metadata_add_ptr) {
-            // Initialize with master's wait time
+            // Initialize with primary thread's wait time
             kmp_uint64 delta = cur_time - this_thr->th.th_bar_arrive_time;
             // Set arrive time to zero to be able to check it in
             // __kmp_invoke_task(); the same is done inside the loop below
@@ -1596,7 +1594,7 @@ static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
   return status;
 }
 
-// Returns 0 if master thread, 1 if worker thread.
+// Returns 0 if primary thread, 1 if worker thread.
 int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
                   size_t reduce_size, void *reduce_data,
                   void (*reduce)(void *, void *)) {
@@ -1614,7 +1612,7 @@ int __kmp_barrier_gomp_cancel(int gtid) {
       int tid = __kmp_tid_from_gtid(gtid);
       kmp_info_t *this_thr = __kmp_threads[gtid];
       if (KMP_MASTER_TID(tid)) {
-        // Master does not need to revert anything
+        // Primary thread does not need to revert anything
       } else {
         // Workers need to revert their private b_arrived flag
         this_thr->th.th_bar[bs_plain_barrier].bb.b_arrived -=
@@ -1631,6 +1629,7 @@ int __kmp_barrier_gomp_cancel(int gtid) {
 void __kmp_end_split_barrier(enum barrier_type bt, int gtid) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_end_split_barrier);
   KMP_SET_THREAD_STATE_BLOCK(PLAIN_BARRIER);
+  KMP_DEBUG_ASSERT(bt < bs_last_barrier);
   int tid = __kmp_tid_from_gtid(gtid);
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
@@ -1672,6 +1671,9 @@ void __kmp_end_split_barrier(enum barrier_type bt, int gtid) {
 void __kmp_join_barrier(int gtid) {
   KMP_TIME_PARTITIONED_BLOCK(OMP_join_barrier);
   KMP_SET_THREAD_STATE_BLOCK(FORK_JOIN_BARRIER);
+
+  KMP_DEBUG_ASSERT(__kmp_threads && __kmp_threads[gtid]);
+
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team;
   kmp_uint nproc;
@@ -1708,7 +1710,6 @@ void __kmp_join_barrier(int gtid) {
   KMP_MB();
 
   // Verify state
-  KMP_DEBUG_ASSERT(__kmp_threads && __kmp_threads[gtid]);
   KMP_DEBUG_ASSERT(TCR_PTR(this_thr->th.th_team));
   KMP_DEBUG_ASSERT(TCR_PTR(this_thr->th.th_root));
   KMP_DEBUG_ASSERT(this_thr == team->t.t_threads[tid]);
@@ -1809,7 +1810,7 @@ void __kmp_join_barrier(int gtid) {
   }
 
   /* From this point on, the team data structure may be deallocated at any time
-     by the master thread - it is unsafe to reference it in any of the worker
+     by the primary thread - it is unsafe to reference it in any of the worker
      threads. Any per-team data items that need to be referenced before the
      end of the barrier should be moved to the kmp_task_team_t structs.  */
   if (KMP_MASTER_TID(tid)) {
@@ -1820,7 +1821,7 @@ void __kmp_join_barrier(int gtid) {
       KMP_CHECK_UPDATE(team->t.t_display_affinity, 0);
     }
 #if KMP_STATS_ENABLED
-    // Have master thread flag the workers to indicate they are now waiting for
+    // Have primary thread flag the workers to indicate they are now waiting for
     // next parallel region, Also wake them up so they switch their timers to
     // idle.
     for (int i = 0; i < team->t.t_nproc; ++i) {
@@ -1862,7 +1863,7 @@ void __kmp_join_barrier(int gtid) {
         break;
       case 3:
         if (__itt_metadata_add_ptr) {
-          // Initialize with master's wait time
+          // Initialize with primary thread's wait time
           kmp_uint64 delta = cur_time - this_thr->th.th_bar_arrive_time;
           // Set arrive time to zero to be able to check it in
           // __kmp_invoke_task(); the same is done inside the loop below
@@ -1922,7 +1923,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
   KA_TRACE(10, ("__kmp_fork_barrier: T#%d(%d:%d) has arrived\n", gtid,
                 (team != NULL) ? team->t.t_id : -1, tid));
 
-  // th_team pointer only valid for master thread here
+  // th_team pointer only valid for primary thread here
   if (KMP_MASTER_TID(tid)) {
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     if (__itt_sync_create_ptr || KMP_ITT_DEBUG) {
@@ -1933,6 +1934,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
 
 #ifdef KMP_DEBUG
+    KMP_DEBUG_ASSERT(team);
     kmp_info_t **other_threads = team->t.t_threads;
     int i;
 
@@ -1958,8 +1960,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
       __kmp_task_team_setup(this_thr, team, 0);
     }
 
-    /* The master thread may have changed its blocktime between the join barrier
-       and the fork barrier. Copy the blocktime info to the thread, where
+    /* The primary thread may have changed its blocktime between join barrier
+       and fork barrier. Copy the blocktime info to the thread, where
        __kmp_wait_template() can access it when the team struct is not
        guaranteed to exist. */
     // See note about the corresponding code in __kmp_join_barrier() being
@@ -1974,7 +1976,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
       this_thr->th.th_team_bt_intervals = KMP_BLOCKTIME_INTERVAL(team, tid);
 #endif
     }
-  } // master
+  } // primary thread
 
   switch (__kmp_barrier_release_pattern[bs_forkjoin_barrier]) {
   case bp_hyper_bar: {
@@ -2013,7 +2015,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
     if (KMP_MASTER_TID(ds_tid) &&
         (ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait) ||
          ompt_callbacks.ompt_callback(ompt_callback_sync_region)))
-      codeptr = team->t.ompt_team_info.master_return_address;
+      codeptr = team ? team->t.ompt_team_info.master_return_address : NULL;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
           ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
@@ -2027,7 +2029,8 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
-          ompt_scope_end, NULL, task_data, 0, ds_tid, ompt_task_implicit); // TODO: Can this be ompt_task_initial?
+          ompt_scope_end, NULL, task_data, 0, ds_tid,
+          ompt_task_implicit); // TODO: Can this be ompt_task_initial?
     }
   }
 #endif
@@ -2050,25 +2053,25 @@ void __kmp_fork_barrier(int gtid, int tid) {
   }
 
   /* We can now assume that a valid team structure has been allocated by the
-     master and propagated to all worker threads. The current thread, however,
-     may not be part of the team, so we can't blindly assume that the team
-     pointer is non-null.  */
+     primary thread and propagated to all worker threads. The current thread,
+     however, may not be part of the team, so we can't blindly assume that the
+     team pointer is non-null.  */
   team = (kmp_team_t *)TCR_PTR(this_thr->th.th_team);
   KMP_DEBUG_ASSERT(team != NULL);
   tid = __kmp_tid_from_gtid(gtid);
 
 #if KMP_BARRIER_ICV_PULL
-  /* Master thread's copy of the ICVs was set up on the implicit taskdata in
-     __kmp_reinitialize_team. __kmp_fork_call() assumes the master thread's
+  /* Primary thread's copy of the ICVs was set up on the implicit taskdata in
+     __kmp_reinitialize_team. __kmp_fork_call() assumes the primary thread's
      implicit task has this data before this function is called. We cannot
-     modify __kmp_fork_call() to look at the fixed ICVs in the master's thread
-     struct, because it is not always the case that the threads arrays have
-     been allocated when __kmp_fork_call() is executed. */
+     modify __kmp_fork_call() to look at the fixed ICVs in the primary thread's
+     thread struct, because it is not always the case that the threads arrays
+     have been allocated when __kmp_fork_call() is executed. */
   {
     KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(USER_icv_copy);
-    if (!KMP_MASTER_TID(tid)) { // master thread already has ICVs
-      // Copy the initial ICVs from the master's thread struct to the implicit
-      // task for this tid.
+    if (!KMP_MASTER_TID(tid)) { // primary thread already has ICVs
+      // Copy the initial ICVs from the primary thread's thread struct to the
+      // implicit task for this tid.
       KA_TRACE(10,
                ("__kmp_fork_barrier: T#%d(%d) is PULLing ICVs\n", gtid, tid));
       __kmp_init_implicit_task(team->t.t_ident, team->t.t_threads[tid], team,
@@ -2108,7 +2111,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
 #if KMP_AFFINITY_SUPPORTED
         || (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed)
 #endif
-            ) {
+    ) {
       // NULL means use the affinity-format-var ICV
       __kmp_aux_display_affinity(gtid, NULL);
       this_thr->th.th_prev_num_threads = team->t.t_nproc;
@@ -2139,13 +2142,13 @@ void __kmp_setup_icv_copy(kmp_team_t *team, int new_nproc,
   KMP_DEBUG_ASSERT(team && new_nproc && new_icvs);
   KMP_DEBUG_ASSERT((!TCR_4(__kmp_init_parallel)) || new_icvs->nproc);
 
-/* Master thread's copy of the ICVs was set up on the implicit taskdata in
-   __kmp_reinitialize_team. __kmp_fork_call() assumes the master thread's
+/* Primary thread's copy of the ICVs was set up on the implicit taskdata in
+   __kmp_reinitialize_team. __kmp_fork_call() assumes the primary thread's
    implicit task has this data before this function is called. */
 #if KMP_BARRIER_ICV_PULL
-  /* Copy ICVs to master's thread structure into th_fixed_icvs (which remains
-     untouched), where all of the worker threads can access them and make their
-     own copies after the barrier. */
+  /* Copy ICVs to primary thread's thread structure into th_fixed_icvs (which
+     remains untouched), where all of the worker threads can access them and
+     make their own copies after the barrier. */
   KMP_DEBUG_ASSERT(team->t.t_threads[0]); // The threads arrays should be
   // allocated at this point
   copy_icvs(
@@ -2159,12 +2162,12 @@ void __kmp_setup_icv_copy(kmp_team_t *team, int new_nproc,
   KF_TRACE(10, ("__kmp_setup_icv_copy: PUSH: T#%d this_thread=%p team=%p\n", 0,
                 team->t.t_threads[0], team));
 #else
-  // Copy the ICVs to each of the non-master threads.  This takes O(nthreads)
+  // Copy the ICVs to each of the non-primary threads.  This takes O(nthreads)
   // time.
   ngo_load(new_icvs);
   KMP_DEBUG_ASSERT(team->t.t_threads[0]); // The threads arrays should be
   // allocated at this point
-  for (int f = 1; f < new_nproc; ++f) { // Skip the master thread
+  for (int f = 1; f < new_nproc; ++f) { // Skip the primary thread
     // TODO: GEH - pass in better source location info since usually NULL here
     KF_TRACE(10, ("__kmp_setup_icv_copy: LINEAR: T#%d this_thread=%p team=%p\n",
                   f, team->t.t_threads[f], team));

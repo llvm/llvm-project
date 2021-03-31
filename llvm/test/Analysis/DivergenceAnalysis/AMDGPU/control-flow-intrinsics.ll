@@ -1,8 +1,9 @@
-; RUN: opt -mtriple=amdgcn-mesa-mesa3d -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple=amdgcn-mesa-mesa3d -enable-new-pm=0 -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
+; RUN: opt -mtriple amdgcn-mesa-mesa3d -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Tests control flow intrinsics that should be treated as uniform
 
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_if_break':
+; CHECK: Divergence Analysis' for function 'test_if_break':
 ; CHECK: DIVERGENT: %cond = icmp eq i32 %arg0, 0
 ; CHECK-NOT: DIVERGENT
 ; CHECK: ret void
@@ -14,7 +15,7 @@ entry:
   ret void
 }
 
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_if':
+; CHECK: Divergence Analysis' for function 'test_if':
 ; CHECK: DIVERGENT: %cond = icmp eq i32 %arg0, 0
 ; CHECK-NEXT: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
@@ -33,7 +34,7 @@ entry:
 }
 
 ; The result should still be treated as divergent, even with a uniform source.
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_if_uniform':
+; CHECK: Divergence Analysis' for function 'test_if_uniform':
 ; CHECK-NOT: DIVERGENT
 ; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.if.i64(i1 %cond)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
@@ -51,7 +52,7 @@ entry:
   ret void
 }
 
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_loop_uniform':
+; CHECK: Divergence Analysis' for function 'test_loop_uniform':
 ; CHECK: DIVERGENT: %loop = call i1 @llvm.amdgcn.loop.i64(i64 %mask)
 define amdgpu_ps void @test_loop_uniform(i64 inreg %mask) {
 entry:
@@ -61,7 +62,7 @@ entry:
   ret void
 }
 
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_else':
+; CHECK: Divergence Analysis' for function 'test_else':
 ; CHECK: DIVERGENT: %else = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
 ; CHECK: DIVERGENT:       %else.bool = extractvalue { i1, i64 } %else, 0
 ; CHECK: {{^[ \t]+}}%else.mask = extractvalue { i1, i64 } %else, 1
@@ -77,7 +78,7 @@ entry:
 }
 
 ; This case is probably always broken
-; CHECK: Printing analysis 'Legacy Divergence Analysis' for function 'test_else_divergent_mask':
+; CHECK: Divergence Analysis' for function 'test_else_divergent_mask':
 ; CHECK: DIVERGENT: %if = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 %mask)
 ; CHECK-NEXT: DIVERGENT: %if.bool = extractvalue { i1, i64 } %if, 0
 ; CHECK-NOT: DIVERGENT

@@ -292,8 +292,7 @@ uint64_t DWARFUnit::GetDWOId() {
 
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
-  llvm::Optional<uint64_t> addr_base, gnu_addr_base, ranges_base,
-      gnu_ranges_base;
+  llvm::Optional<uint64_t> addr_base, gnu_addr_base, gnu_ranges_base;
 
   DWARFAttributes attributes;
   size_t num_attributes = cu_die.GetAttributes(this, attributes);
@@ -320,8 +319,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
       SetLoclistsBase(form_value.Unsigned());
       break;
     case DW_AT_rnglists_base:
-      ranges_base = form_value.Unsigned();
-      SetRangesBase(*ranges_base);
+      SetRangesBase(form_value.Unsigned());
       break;
     case DW_AT_str_offsets_base:
       SetStrOffsetsBase(form_value.Unsigned());
@@ -784,12 +782,11 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
 
 llvm::Expected<DWARFUnitHeader>
 DWARFUnitHeader::extract(const DWARFDataExtractor &data,
-                         DIERef::Section section, lldb::offset_t *offset_ptr,
-                         const llvm::DWARFUnitIndex *index) {
+                         DIERef::Section section,
+                         lldb_private::DWARFContext &context,
+                         lldb::offset_t *offset_ptr) {
   DWARFUnitHeader header;
   header.m_offset = *offset_ptr;
-  if (index)
-    header.m_index_entry = index->getFromOffset(*offset_ptr);
   header.m_length = data.GetDWARFInitialLength(offset_ptr);
   header.m_version = data.GetU16(offset_ptr);
   if (header.m_version == 5) {
@@ -804,6 +801,16 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
     header.m_addr_size = data.GetU8(offset_ptr);
     header.m_unit_type =
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
+  }
+
+  if (context.isDwo()) {
+    if (header.IsTypeUnit()) {
+      header.m_index_entry =
+          context.GetAsLLVM().getTUIndex().getFromOffset(header.m_offset);
+    } else {
+      header.m_index_entry =
+          context.GetAsLLVM().getCUIndex().getFromOffset(header.m_offset);
+    }
   }
 
   if (header.m_index_entry) {
@@ -856,12 +863,11 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
 llvm::Expected<DWARFUnitSP>
 DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
                    const DWARFDataExtractor &debug_info,
-                   DIERef::Section section, lldb::offset_t *offset_ptr,
-                   const llvm::DWARFUnitIndex *index) {
+                   DIERef::Section section, lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
-  auto expected_header =
-      DWARFUnitHeader::extract(debug_info, section, offset_ptr, index);
+  auto expected_header = DWARFUnitHeader::extract(
+      debug_info, section, dwarf.GetDWARFContext(), offset_ptr);
   if (!expected_header)
     return expected_header.takeError();
 

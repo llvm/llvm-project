@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly "-passes=scop(print<polly-delicm>)" -disable-output < %s | FileCheck %s
 ;
 ; Simple test for the existence of the DeLICM pass.
 ;

@@ -113,16 +113,16 @@ void mlirOpPrintingFlagsUseLocalScope(MlirOpPrintingFlags flags) {
 MlirLocation mlirLocationFileLineColGet(MlirContext context,
                                         MlirStringRef filename, unsigned line,
                                         unsigned col) {
-  return wrap(
-      FileLineColLoc::get(unwrap(filename), line, col, unwrap(context)));
+  return wrap(Location(
+      FileLineColLoc::get(unwrap(context), unwrap(filename), line, col)));
 }
 
 MlirLocation mlirLocationCallSiteGet(MlirLocation callee, MlirLocation caller) {
-  return wrap(CallSiteLoc::get(unwrap(callee), unwrap(caller)));
+  return wrap(Location(CallSiteLoc::get(unwrap(callee), unwrap(caller))));
 }
 
 MlirLocation mlirLocationUnknownGet(MlirContext context) {
-  return wrap(UnknownLoc::get(unwrap(context)));
+  return wrap(Location(UnknownLoc::get(unwrap(context))));
 }
 
 bool mlirLocationEqual(MlirLocation l1, MlirLocation l2) {
@@ -305,6 +305,10 @@ bool mlirOperationEqual(MlirOperation op, MlirOperation other) {
   return unwrap(op) == unwrap(other);
 }
 
+MlirContext mlirOperationGetContext(MlirOperation op) {
+  return wrap(unwrap(op)->getContext());
+}
+
 MlirIdentifier mlirOperationGetName(MlirOperation op) {
   return wrap(unwrap(op)->getName().getIdentifier());
 }
@@ -461,6 +465,10 @@ bool mlirBlockEqual(MlirBlock block, MlirBlock other) {
   return unwrap(block) == unwrap(other);
 }
 
+MlirOperation mlirBlockGetParentOperation(MlirBlock block) {
+  return wrap(unwrap(block)->getParentOp());
+}
+
 MlirBlock mlirBlockGetNextInRegion(MlirBlock block) {
   return wrap(unwrap(block)->getNextNode());
 }
@@ -477,7 +485,7 @@ MlirOperation mlirBlockGetTerminator(MlirBlock block) {
   if (cppBlock->empty())
     return wrap(static_cast<Operation *>(nullptr));
   Operation &back = cppBlock->back();
-  if (!back.isKnownTerminator())
+  if (!back.hasTrait<OpTrait::IsTerminator>())
     return wrap(static_cast<Operation *>(nullptr));
   return wrap(&back);
 }
@@ -523,6 +531,10 @@ void mlirBlockDestroy(MlirBlock block) { delete unwrap(block); }
 
 intptr_t mlirBlockGetNumArguments(MlirBlock block) {
   return static_cast<intptr_t>(unwrap(block)->getNumArguments());
+}
+
+MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type) {
+  return wrap(unwrap(block)->addArgument(unwrap(type)));
 }
 
 MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
@@ -647,6 +659,10 @@ MlirNamedAttribute mlirNamedAttributeGet(MlirIdentifier name,
 
 MlirIdentifier mlirIdentifierGet(MlirContext context, MlirStringRef str) {
   return wrap(Identifier::get(unwrap(str), unwrap(context)));
+}
+
+MlirContext mlirIdentifierGetContext(MlirIdentifier ident) {
+  return wrap(unwrap(ident).getContext());
 }
 
 bool mlirIdentifierEqual(MlirIdentifier ident, MlirIdentifier other) {

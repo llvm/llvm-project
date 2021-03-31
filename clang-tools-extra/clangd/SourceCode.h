@@ -203,6 +203,10 @@ using FileEdits = llvm::StringMap<Edit>;
 /// Replacements to formatted ones if succeeds.
 llvm::Error reformatEdit(Edit &E, const format::FormatStyle &Style);
 
+/// Apply an incremental update to a text document.
+llvm::Error applyChange(std::string &Contents,
+                        const TextDocumentContentChangeEvent &Change);
+
 /// Collects identifiers with counts in the source code.
 llvm::StringMap<unsigned> collectIdentifiers(llvm::StringRef Content,
                                              const format::FormatStyle &Style);

@@ -110,7 +110,6 @@ llvm-project/mlir/test/IR/print-ir-nesting.mlir`:
     "dialect.innerop6"() : () -> ()
     "dialect.innerop7"() : () -> ()
   }) {"other attribute" = 42 : i64} : () -> ()
-  "module_terminator"() : () -> ()
 }) : () -> ()
 ```
 
@@ -147,7 +146,6 @@ visiting op: 'module' with 0 operands and 0 results
              0 nested regions:
             visiting op: 'dialect.innerop7' with 0 operands and 0 results
              0 nested regions:
-      visiting op: 'module_terminator' with 0 operands and 0 results
        0 nested regions:
 ```
 

@@ -6,7 +6,7 @@ subroutine sub
 end
 
 use m1
-!ERROR: Error reading module file for module 'm2'
+!ERROR: Cannot read module file for module 'm2': Source file 'm2.mod' was not found
 use m2
 !ERROR: 'sub' is not a module
 use sub

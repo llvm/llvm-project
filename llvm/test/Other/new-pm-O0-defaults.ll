@@ -35,12 +35,16 @@
 ; CHECK-PRE-LINK-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO-NEXT: Running pass: Annotation2MetadataPass
+; CHECK-THINLTO-NEXT: Running pass: LowerTypeTestsPass
+; CHECK-THINLTO-NEXT: Running pass: EliminateAvailableExternallyPass
+; CHECK-THINLTO-NEXT: Running pass: GlobalDCEPass
 ; CHECK-LTO-NEXT: Running pass: Annotation2MetadataPass
 ; CHECK-LTO-NEXT: Running pass: WholeProgramDevirtPass
 ; CHECK-LTO-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
+; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

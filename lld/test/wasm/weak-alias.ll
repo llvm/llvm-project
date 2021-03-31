@@ -37,11 +37,11 @@ entry:
 ; CHECK-NEXT:         ElemType:        FUNCREF
 ; CHECK-NEXT:         Limits:
 ; CHECK-NEXT:           Flags:           [ HAS_MAX ]
-; CHECK-NEXT:           Initial:         0x2
+; CHECK-NEXT:           Minimum:         0x2
 ; CHECK-NEXT:           Maximum:         0x2
 ; CHECK-NEXT:   - Type:            MEMORY
 ; CHECK-NEXT:     Memories:
-; CHECK-NEXT:       - Initial:         0x2
+; CHECK-NEXT:       - Minimum:         0x2
 ; CHECK-NEXT:   - Type:            GLOBAL
 ; CHECK-NEXT:     Globals:
 ; CHECK-NEXT:       - Index:           0
@@ -145,23 +145,23 @@ entry:
 ; RELOC-NEXT:   - Type:            IMPORT
 ; RELOC-NEXT:     Imports:
 ; RELOC-NEXT:       - Module:          env
-; RELOC-NEXT:         Field:           __stack_pointer
-; RELOC-NEXT:         Kind:            GLOBAL
-; RELOC-NEXT:         GlobalType:      I32
-; RELOC-NEXT:         GlobalMutable:   true
-; RELOC-NEXT:       - Module:          env
 ; RELOC-NEXT:         Field:           __indirect_function_table
 ; RELOC-NEXT:         Kind:            TABLE
 ; RELOC-NEXT:         Table:
 ; RELOC-NEXT:           Index:           0
 ; RELOC-NEXT:           ElemType:        FUNCREF
 ; RELOC-NEXT:           Limits:
-; RELOC-NEXT:             Initial:         0x1
+; RELOC-NEXT:             Minimum:         0x2
+; RELOC-NEXT:       - Module:          env
+; RELOC-NEXT:         Field:           __stack_pointer
+; RELOC-NEXT:         Kind:            GLOBAL
+; RELOC-NEXT:         GlobalType:      I32
+; RELOC-NEXT:         GlobalMutable:   true
 ; RELOC-NEXT:   - Type:            FUNCTION
 ; RELOC-NEXT:     FunctionTypes:   [ 0, 1, 1, 1, 1, 1 ]
 ; RELOC-NEXT:   - Type:            MEMORY
 ; RELOC-NEXT:     Memories:
-; RELOC-NEXT:       - Initial:         0x0
+; RELOC-NEXT:       - Minimum:         0x0
 ; RELOC-NEXT:   - Type:            ELEM
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - Offset:

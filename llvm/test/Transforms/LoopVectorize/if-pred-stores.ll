@@ -196,10 +196,53 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
 ; UNROLL-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; UNROLL-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 undef, i32 0)
+; UNROLL-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], undef
+; UNROLL-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; UNROLL-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; UNROLL-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
+; UNROLL-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL:       vector.ph:
+; UNROLL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; UNROLL-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; UNROLL-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
+; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
+; UNROLL:       vector.body:
+; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
+; UNROLL-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ undef, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; UNROLL-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[PREDPHI5:%.*]], [[PRED_STORE_CONTINUE4]] ]
+; UNROLL-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
+; UNROLL-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
+; UNROLL-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 1
+; UNROLL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION1]]
+; UNROLL-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP4]], align 4
+; UNROLL-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP5]], align 4
+; UNROLL-NEXT:    br i1 undef, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE4]]
+; UNROLL:       pred.store.if:
+; UNROLL-NEXT:    store i32 2, i32* [[TMP4]], align 4
+; UNROLL-NEXT:    br label [[PRED_STORE_CONTINUE4]]
+; UNROLL:       pred.store.continue4:
+; UNROLL-NEXT:    [[TMP8:%.*]] = add i32 [[VEC_PHI]], 1
+; UNROLL-NEXT:    [[TMP9:%.*]] = add i32 [[VEC_PHI2]], 1
+; UNROLL-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP8]]
+; UNROLL-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP9]]
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNROLL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL:       middle.block:
+; UNROLL-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI5]], [[PREDPHI]]
+; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; UNROLL-NEXT:    [[TMP11:%.*]] = xor i1 [[CMP_N]], true
+; UNROLL-NEXT:    call void @llvm.assume(i1 [[TMP11]])
+; UNROLL-NEXT:    br label [[SCALAR_PH]]
+; UNROLL:       scalar.ph:
+; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ undef, [[ENTRY:%.*]] ]
+; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NEXT:    br label [[FOR_BODY14:%.*]]
 ; UNROLL:       for.body14:
-; UNROLL-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; UNROLL-NEXT:    [[INEWCHUNKS_120:%.*]] = phi i32 [ [[INEWCHUNKS_2:%.*]], [[FOR_INC23]] ], [ undef, [[ENTRY]] ]
+; UNROLL-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; UNROLL-NEXT:    [[INEWCHUNKS_120:%.*]] = phi i32 [ [[INEWCHUNKS_2:%.*]], [[FOR_INC23]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDVARS_IV3]]
 ; UNROLL-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARRAYIDX16]], align 4
 ; UNROLL-NEXT:    br i1 undef, label [[IF_THEN18:%.*]], label [[FOR_INC23]]
@@ -221,8 +264,16 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY:       for.body9:
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[COND:%.*]], label [[FOR_INC26:%.*]], label [[FOR_BODY14_PREHEADER:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body14.preheader:
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 undef, i32 0)
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = sub i32 [[SMAX]], undef
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.ph:
+; UNROLL-NOSIMPLIFY-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE4:%.*]] ]
@@ -231,33 +282,33 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDUCTION1:%.*]] = add i64 [[OFFSET_IDX]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION1]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]], align 4
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP1]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDUCTION1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP3]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP4]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 undef, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; UNROLL-NOSIMPLIFY:       pred.store.if:
-; UNROLL-NOSIMPLIFY-NEXT:    store i32 2, i32* [[TMP0]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 2, i32* [[TMP3]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue:
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 undef, label [[PRED_STORE_IF3:%.*]], label [[PRED_STORE_CONTINUE4]]
 ; UNROLL-NOSIMPLIFY:       pred.store.if3:
-; UNROLL-NOSIMPLIFY-NEXT:    store i32 2, i32* [[TMP1]], align 4
+; UNROLL-NOSIMPLIFY-NEXT:    store i32 2, i32* [[TMP4]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE4]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue4:
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = add i32 [[VEC_PHI]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add i32 [[VEC_PHI2]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP4]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP5]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = add i32 [[VEC_PHI]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = add i32 [[VEC_PHI2]], 1
+; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP7]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP8]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI5]], [[PREDPHI]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1, 0
+; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_INC26_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
-; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ undef, [[MIDDLE_BLOCK]] ], [ undef, [[FOR_BODY14_PREHEADER]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ undef, [[FOR_BODY14_PREHEADER]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ undef, [[FOR_BODY14_PREHEADER]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY14:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body14:
@@ -287,10 +338,49 @@ define void @bug18724(i1 %cond) {
 ; VEC-NEXT:  entry:
 ; VEC-NEXT:    [[TMP0:%.*]] = xor i1 [[COND:%.*]], true
 ; VEC-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; VEC-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 undef, i32 0)
+; VEC-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], undef
+; VEC-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; VEC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; VEC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
+; VEC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; VEC:       vector.ph:
+; VEC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; VEC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; VEC-NEXT:    [[IND_END:%.*]] = add i64 undef, [[N_VEC]]
+; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
+; VEC:       vector.body:
+; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
+; VEC-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ <i32 undef, i32 0>, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[PRED_STORE_CONTINUE2]] ]
+; VEC-NEXT:    [[OFFSET_IDX:%.*]] = add i64 undef, [[INDEX]]
+; VEC-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 0
+; VEC-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[TMP4]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
+; VEC-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <2 x i32>*
+; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP7]], align 4
+; VEC-NEXT:    br i1 undef, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
+; VEC:       pred.store.if:
+; VEC-NEXT:    store i32 2, i32* [[TMP5]], align 4
+; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
+; VEC:       pred.store.continue2:
+; VEC-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[VEC_PHI]], <i32 1, i32 1>
+; VEC-NEXT:    [[PREDPHI]] = select <2 x i1> undef, <2 x i32> [[VEC_PHI]], <2 x i32> [[TMP8]]
+; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; VEC-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; VEC-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; VEC:       middle.block:
+; VEC-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI]])
+; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; VEC-NEXT:    [[TMP11:%.*]] = xor i1 [[CMP_N]], true
+; VEC-NEXT:    call void @llvm.assume(i1 [[TMP11]])
+; VEC-NEXT:    br label [[SCALAR_PH]]
+; VEC:       scalar.ph:
+; VEC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ undef, [[ENTRY:%.*]] ]
+; VEC-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    br label [[FOR_BODY14:%.*]]
 ; VEC:       for.body14:
-; VEC-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; VEC-NEXT:    [[INEWCHUNKS_120:%.*]] = phi i32 [ [[INEWCHUNKS_2:%.*]], [[FOR_INC23]] ], [ undef, [[ENTRY]] ]
+; VEC-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_INC23:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; VEC-NEXT:    [[INEWCHUNKS_120:%.*]] = phi i32 [ [[INEWCHUNKS_2:%.*]], [[FOR_INC23]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; VEC-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds [768 x i32], [768 x i32]* undef, i64 0, i64 [[INDVARS_IV3]]
 ; VEC-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARRAYIDX16]], align 4
 ; VEC-NEXT:    br i1 undef, label [[IF_THEN18:%.*]], label [[FOR_INC23]]
@@ -367,7 +457,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL:       pred.store.continue6:
 ; UNROLL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -386,7 +476,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
 ; UNROLL-NEXT:    [[TMP7]] = add i64 [[TMP1]], -1
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; UNROLL-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; UNROLL:       for.end:
 ; UNROLL-NEXT:    ret void
 ;
@@ -485,7 +575,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC:       pred.store.continue3:
 ; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -504,7 +594,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
 ; VEC-NEXT:    [[TMP7]] = add i64 [[TMP1]], -1
 ; VEC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; VEC-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; VEC:       for.end:
 ; VEC-NEXT:    ret void
 ;

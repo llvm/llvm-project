@@ -16,13 +16,13 @@ func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK: scf.for
 //      CHECK:   scf.for
 //      CHECK:     scf.for
-//      CHECK:       %[[T7:.+]] = subview %[[ARG0]]
-//      CHECK:       %[[T12:.+]] = subview %[[ARG1]]
-//      CHECK:       %[[T17:.+]] = subview %[[ARG2]]
-//      CHECK:       %[[T18:.+]] = alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 3>
-//      CHECK:       %[[T19:.+]] = subview %[[T18]]
-//      CHECK:       %[[T20:.+]] = alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 3>
-//      CHECK:       %[[T21:.+]] = subview %[[T20]]
+//      CHECK:       %[[T7:.+]] = memref.subview %[[ARG0]]
+//      CHECK:       %[[T12:.+]] = memref.subview %[[ARG1]]
+//      CHECK:       %[[T17:.+]] = memref.subview %[[ARG2]]
+//      CHECK:       %[[T18:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 3>
+//      CHECK:       %[[T19:.+]] = memref.subview %[[T18]]
+//      CHECK:       %[[T20:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 3>
+//      CHECK:       %[[T21:.+]] = memref.subview %[[T20]]
 //      CHECK:       linalg.fill(%[[T19]], %[[C42]])
 //      CHECK:       linalg.copy(%[[T7]], %[[T19]])
 //      CHECK:       linalg.fill(%[[T21]], %[[C42]])
@@ -30,5 +30,5 @@ func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK:       linalg.matmul ins(%[[T19]], %[[T12]]{{.*}} outs(%[[T21]]
 //  CHECK-NOT:       linalg.fill
 //      CHECK:       linalg.copy(%[[T21]], %[[T17]])
-//      CHECK:       dealloc %[[T18]]
-//      CHECK:       dealloc %[[T20]]
+//      CHECK:       memref.dealloc %[[T18]]
+//      CHECK:       memref.dealloc %[[T20]]

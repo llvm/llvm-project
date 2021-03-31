@@ -25,7 +25,7 @@
 
 namespace lldb_private {
 
-// A child of another ValueObject.
+/// A child of another ValueObject.
 class ValueObjectChild : public ValueObject {
 public:
   ~ValueObjectChild() override;
@@ -70,10 +70,6 @@ protected:
   bool m_is_base_class;
   bool m_is_deref_of_parent;
   llvm::Optional<LazyBool> m_can_update_with_invalid_exe_ctx;
-
-  //
-  //  void
-  //  ReadValueFromMemory (ValueObject* parent, lldb::addr_t address);
 
   friend class ValueObject;
   friend class ValueObjectConstResult;

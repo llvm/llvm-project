@@ -117,7 +117,7 @@ static int writeStringRef(const StringRef &Str, raw_ostream &OS) {
 
 static int writeLimits(const WasmYAML::Limits &Lim, raw_ostream &OS) {
   writeUint8(OS, Lim.Flags);
-  encodeULEB128(Lim.Initial, OS);
+  encodeULEB128(Lim.Minimum, OS);
   if (Lim.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     encodeULEB128(Lim.Maximum, OS);
   return 0;
@@ -484,8 +484,23 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
                                      WasmYAML::ElemSection &Section) {
   encodeULEB128(Section.Segments.size(), OS);
   for (auto &Segment : Section.Segments) {
-    encodeULEB128(Segment.TableIndex, OS);
+    encodeULEB128(Segment.Flags, OS);
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_HAS_TABLE_NUMBER)
+      encodeULEB128(Segment.TableNumber, OS);
+
     writeInitExpr(OS, Segment.Offset);
+
+    if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_MASK_HAS_ELEM_KIND) {
+      // We only support active function table initializers, for which the elem
+      // kind is specified to be written as 0x00 and interpreted to mean
+      // "funcref".
+      if (Segment.ElemKind != uint32_t(wasm::ValType::FUNCREF)) {
+        reportError("unexpected elemkind: " + Twine(Segment.ElemKind));
+        return;
+      }
+      const uint8_t ElemKind = 0;
+      writeUint8(OS, ElemKind);
+    }
 
     encodeULEB128(Segment.Functions.size(), OS);
     for (auto &Function : Segment.Functions)
@@ -575,7 +590,8 @@ void WasmWriter::writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
     case wasm::R_WASM_FUNCTION_OFFSET_I32:
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
     case wasm::R_WASM_SECTION_OFFSET_I32:
-      encodeULEB128(Reloc.Addend, OS);
+      encodeSLEB128(Reloc.Addend, OS);
+      break;
     }
   }
 }

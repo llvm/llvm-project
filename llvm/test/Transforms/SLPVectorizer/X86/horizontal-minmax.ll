@@ -9,6 +9,13 @@
 @arrp = local_unnamed_addr global [32 x i32*] zeroinitializer, align 16
 @var = global i32 zeroinitializer, align 8
 
+declare i32 @llvm.smax.i32(i32, i32)
+declare i16 @llvm.smin.i16(i16, i16)
+declare i64 @llvm.umax.i64(i64, i64)
+declare i8 @llvm.umin.i8(i8, i8)
+declare i32 @llvm.smin.i32(i32, i32)
+declare i32 @llvm.umin.i32(i32, i32)
+
 define i32 @maxi8(i32) {
 ; CHECK-LABEL: @maxi8(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
@@ -198,8 +205,8 @@ define i32 @maxi32(i32) {
   ret i32 %95
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - InstCombine creates maxnum intrinsics for fcmp+select with fastmath on the select.
+
 define float @maxf8(float) {
 ; DEFAULT-LABEL: @maxf8(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -277,8 +284,8 @@ define float @maxf8(float) {
   ret float %23
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - maxnum intrinsics match what InstCombine creates for fcmp+select with fastmath on the select.
+
 define float @maxf16(float) {
 ; DEFAULT-LABEL: @maxf16(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -428,8 +435,8 @@ define float @maxf16(float) {
   ret float %47
 }
 
-; FIXME: Use fmaxnum intrinsics to match what InstCombine creates for fcmp+select
-; with fastmath on the select.
+; Note: legacy test - InstCombine creates maxnum intrinsics for fcmp+select with fastmath on the select.
+
 define float @maxf32(float) {
 ; DEFAULT-LABEL: @maxf32(
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([32 x float], [32 x float]* @arr1, i64 0, i64 0), align 16
@@ -1000,4 +1007,220 @@ define i32* @maxp8(i32) {
   %22 = icmp ugt i32* %20, %21
   %23 = select i1 %22, i32* %20, i32* %21
   ret i32* %23
+}
+
+define i32 @smax_intrinsic_rdx_v8i32(i32* %p0) {
+; CHECK-LABEL: @smax_intrinsic_rdx_v8i32(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %p1 = getelementptr inbounds i32, i32* %p0, i64 1
+  %p2 = getelementptr inbounds i32, i32* %p0, i64 2
+  %p3 = getelementptr inbounds i32, i32* %p0, i64 3
+  %p4 = getelementptr inbounds i32, i32* %p0, i64 4
+  %p5 = getelementptr inbounds i32, i32* %p0, i64 5
+  %p6 = getelementptr inbounds i32, i32* %p0, i64 6
+  %p7 = getelementptr inbounds i32, i32* %p0, i64 7
+  %t0 = load i32, i32* %p0, align 4
+  %t1 = load i32, i32* %p1, align 4
+  %t2 = load i32, i32* %p2, align 4
+  %t3 = load i32, i32* %p3, align 4
+  %t4 = load i32, i32* %p4, align 4
+  %t5 = load i32, i32* %p5, align 4
+  %t6 = load i32, i32* %p6, align 4
+  %t7 = load i32, i32* %p7, align 4
+  %m10 = tail call i32 @llvm.smax.i32(i32 %t1, i32 %t0)
+  %m32 = tail call i32 @llvm.smax.i32(i32 %t3, i32 %t2)
+  %m54 = tail call i32 @llvm.smax.i32(i32 %t5, i32 %t4)
+  %m76 = tail call i32 @llvm.smax.i32(i32 %t7, i32 %t6)
+  %m3210 = tail call i32 @llvm.smax.i32(i32 %m32, i32 %m10)
+  %m7654 = tail call i32 @llvm.smax.i32(i32 %m76, i32 %m54)
+  %m = tail call i32 @llvm.smax.i32(i32 %m7654, i32 %m3210)
+  ret i32 %m
+}
+
+define i16 @smin_intrinsic_rdx_v8i16(i16* %p0) {
+; CHECK-LABEL: @smin_intrinsic_rdx_v8i16(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i16, i16* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[P0]] to <8 x i16>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> [[TMP2]])
+; CHECK-NEXT:    ret i16 [[TMP3]]
+;
+  %p1 = getelementptr inbounds i16, i16* %p0, i64 1
+  %p2 = getelementptr inbounds i16, i16* %p0, i64 2
+  %p3 = getelementptr inbounds i16, i16* %p0, i64 3
+  %p4 = getelementptr inbounds i16, i16* %p0, i64 4
+  %p5 = getelementptr inbounds i16, i16* %p0, i64 5
+  %p6 = getelementptr inbounds i16, i16* %p0, i64 6
+  %p7 = getelementptr inbounds i16, i16* %p0, i64 7
+  %t0 = load i16, i16* %p0, align 4
+  %t1 = load i16, i16* %p1, align 4
+  %t2 = load i16, i16* %p2, align 4
+  %t3 = load i16, i16* %p3, align 4
+  %t4 = load i16, i16* %p4, align 4
+  %t5 = load i16, i16* %p5, align 4
+  %t6 = load i16, i16* %p6, align 4
+  %t7 = load i16, i16* %p7, align 4
+  %m10 = tail call i16 @llvm.smin.i16(i16 %t1, i16 %t0)
+  %m32 = tail call i16 @llvm.smin.i16(i16 %t3, i16 %t2)
+  %m54 = tail call i16 @llvm.smin.i16(i16 %t5, i16 %t4)
+  %m76 = tail call i16 @llvm.smin.i16(i16 %t7, i16 %t6)
+  %m3210 = tail call i16 @llvm.smin.i16(i16 %m32, i16 %m10)
+  %m7654 = tail call i16 @llvm.smin.i16(i16 %m76, i16 %m54)
+  %m = tail call i16 @llvm.smin.i16(i16 %m7654, i16 %m3210)
+  ret i16 %m
+}
+
+define i64 @umax_intrinsic_rdx_v4i64(i64* %p0) {
+; DEFAULT-LABEL: @umax_intrinsic_rdx_v4i64(
+; DEFAULT-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, i64* [[P0:%.*]], i64 1
+; DEFAULT-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 2
+; DEFAULT-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 3
+; DEFAULT-NEXT:    [[T0:%.*]] = load i64, i64* [[P0]], align 4
+; DEFAULT-NEXT:    [[T1:%.*]] = load i64, i64* [[P1]], align 4
+; DEFAULT-NEXT:    [[T2:%.*]] = load i64, i64* [[P2]], align 4
+; DEFAULT-NEXT:    [[T3:%.*]] = load i64, i64* [[P3]], align 4
+; DEFAULT-NEXT:    [[M10:%.*]] = tail call i64 @llvm.umax.i64(i64 [[T1]], i64 [[T0]])
+; DEFAULT-NEXT:    [[M32:%.*]] = tail call i64 @llvm.umax.i64(i64 [[T3]], i64 [[T2]])
+; DEFAULT-NEXT:    [[M:%.*]] = tail call i64 @llvm.umax.i64(i64 [[M32]], i64 [[M10]])
+; DEFAULT-NEXT:    ret i64 [[M]]
+;
+; THRESH-LABEL: @umax_intrinsic_rdx_v4i64(
+; THRESH-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, i64* [[P0:%.*]], i64 1
+; THRESH-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 2
+; THRESH-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 3
+; THRESH-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P0]] to <4 x i64>*
+; THRESH-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* [[TMP1]], align 4
+; THRESH-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[TMP2]])
+; THRESH-NEXT:    ret i64 [[TMP3]]
+;
+  %p1 = getelementptr inbounds i64, i64* %p0, i64 1
+  %p2 = getelementptr inbounds i64, i64* %p0, i64 2
+  %p3 = getelementptr inbounds i64, i64* %p0, i64 3
+  %t0 = load i64, i64* %p0, align 4
+  %t1 = load i64, i64* %p1, align 4
+  %t2 = load i64, i64* %p2, align 4
+  %t3 = load i64, i64* %p3, align 4
+  %m10 = tail call i64 @llvm.umax.i64(i64 %t1, i64 %t0)
+  %m32 = tail call i64 @llvm.umax.i64(i64 %t3, i64 %t2)
+  %m = tail call i64 @llvm.umax.i64(i64 %m32, i64 %m10)
+  ret i64 %m
+}
+
+define i8 @umin_intrinsic_rdx_v16i8(i8* %p0) {
+; CHECK-LABEL: @umin_intrinsic_rdx_v16i8(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P0:%.*]], i64 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 7
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 8
+; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 9
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 10
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 11
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 12
+; CHECK-NEXT:    [[PD:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 13
+; CHECK-NEXT:    [[PE:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 14
+; CHECK-NEXT:    [[PF:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 15
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[P0]] to <16 x i8>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> [[TMP2]])
+; CHECK-NEXT:    ret i8 [[TMP3]]
+;
+  %p1 = getelementptr inbounds i8, i8* %p0, i64 1
+  %p2 = getelementptr inbounds i8, i8* %p0, i64 2
+  %p3 = getelementptr inbounds i8, i8* %p0, i64 3
+  %p4 = getelementptr inbounds i8, i8* %p0, i64 4
+  %p5 = getelementptr inbounds i8, i8* %p0, i64 5
+  %p6 = getelementptr inbounds i8, i8* %p0, i64 6
+  %p7 = getelementptr inbounds i8, i8* %p0, i64 7
+  %p8 = getelementptr inbounds i8, i8* %p0, i64 8
+  %p9 = getelementptr inbounds i8, i8* %p0, i64 9
+  %pa = getelementptr inbounds i8, i8* %p0, i64 10
+  %pb = getelementptr inbounds i8, i8* %p0, i64 11
+  %pc = getelementptr inbounds i8, i8* %p0, i64 12
+  %pd = getelementptr inbounds i8, i8* %p0, i64 13
+  %pe = getelementptr inbounds i8, i8* %p0, i64 14
+  %pf = getelementptr inbounds i8, i8* %p0, i64 15
+  %t0 = load i8, i8* %p0, align 4
+  %t1 = load i8, i8* %p1, align 4
+  %t2 = load i8, i8* %p2, align 4
+  %t3 = load i8, i8* %p3, align 4
+  %t4 = load i8, i8* %p4, align 4
+  %t5 = load i8, i8* %p5, align 4
+  %t6 = load i8, i8* %p6, align 4
+  %t7 = load i8, i8* %p7, align 4
+  %t8 = load i8, i8* %p8, align 4
+  %t9 = load i8, i8* %p9, align 4
+  %ta = load i8, i8* %pa, align 4
+  %tb = load i8, i8* %pb, align 4
+  %tc = load i8, i8* %pc, align 4
+  %td = load i8, i8* %pd, align 4
+  %te = load i8, i8* %pe, align 4
+  %tf = load i8, i8* %pf, align 4
+  %m10 = tail call i8 @llvm.umin.i8(i8 %t1, i8 %t0)
+  %m32 = tail call i8 @llvm.umin.i8(i8 %t3, i8 %t2)
+  %m54 = tail call i8 @llvm.umin.i8(i8 %t5, i8 %t4)
+  %m76 = tail call i8 @llvm.umin.i8(i8 %t7, i8 %t6)
+  %m98 = tail call i8 @llvm.umin.i8(i8 %t9, i8 %t8)
+  %mba = tail call i8 @llvm.umin.i8(i8 %tb, i8 %ta)
+  %mdc = tail call i8 @llvm.umin.i8(i8 %td, i8 %tc)
+  %mfe = tail call i8 @llvm.umin.i8(i8 %tf, i8 %te)
+  %m3210 = tail call i8 @llvm.umin.i8(i8 %m32, i8 %m10)
+  %m7654 = tail call i8 @llvm.umin.i8(i8 %m76, i8 %m54)
+  %mdc98 = tail call i8 @llvm.umin.i8(i8 %mdc, i8 %m98)
+  %mfeba = tail call i8 @llvm.umin.i8(i8 %mfe, i8 %mba)
+  %ml = tail call i8 @llvm.umin.i8(i8 %m3210, i8 %m7654)
+  %mh = tail call i8 @llvm.umin.i8(i8 %mfeba, i8 %mdc98)
+  %m = tail call i8 @llvm.umin.i8(i8 %mh, i8 %ml)
+  ret i8 %m
+}
+
+; This should not crash.
+
+define void @PR49730() {
+; CHECK-LABEL: @PR49730(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> undef, [[TMP1]]
+; CHECK-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP3]], i32 [[T12]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP4]], i32 undef)
+; CHECK-NEXT:    [[T14:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP5]], i32 93)
+; CHECK-NEXT:    ret void
+;
+  %t = call i32 @llvm.smin.i32(i32 undef, i32 2)
+  %t1 = sub nsw i32 undef, %t
+  %t2 = call i32 @llvm.umin.i32(i32 undef, i32 %t1)
+  %t3 = call i32 @llvm.smin.i32(i32 undef, i32 2)
+  %t4 = sub nsw i32 undef, %t3
+  %t5 = call i32 @llvm.umin.i32(i32 %t2, i32 %t4)
+  %t6 = call i32 @llvm.smin.i32(i32 undef, i32 1)
+  %t7 = sub nuw nsw i32 undef, %t6
+  %t8 = call i32 @llvm.umin.i32(i32 %t5, i32 %t7)
+  %t9 = call i32 @llvm.smin.i32(i32 undef, i32 1)
+  %t10 = sub nsw i32 undef, %t9
+  %t11 = call i32 @llvm.umin.i32(i32 %t8, i32 %t10)
+  %t12 = sub nsw i32 undef, undef
+  %t13 = call i32 @llvm.umin.i32(i32 %t11, i32 %t12)
+  %t14 = call i32 @llvm.umin.i32(i32 %t13, i32 93)
+  ret void
 }

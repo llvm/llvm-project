@@ -181,7 +181,8 @@
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
-#if check(nontype_template_args, 0, 0, 0, 201411, 201911, 201911)
+#if check(nontype_template_args, 0, 0, 0, 201411, 201411, 201411)
+// FIXME: 201911 in C++20
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 

@@ -19,12 +19,21 @@ struct CostTest : public testing::Test {
 
 } // namespace
 
+TEST_F(CostTest, DefaultCtor) {
+  InstructionCost DefaultCost;
+
+  ASSERT_TRUE(DefaultCost.isValid());
+  EXPECT_EQ(*(DefaultCost.getValue()), 0);
+}
+
 TEST_F(CostTest, Operators) {
+
   InstructionCost VThree = 3;
   InstructionCost VNegTwo = -2;
   InstructionCost VSix = 6;
   InstructionCost IThreeA = InstructionCost::getInvalid(3);
   InstructionCost IThreeB = InstructionCost::getInvalid(3);
+  InstructionCost ITwo = InstructionCost::getInvalid(2);
   InstructionCost TmpCost;
 
   EXPECT_NE(VThree, VNegTwo);
@@ -33,10 +42,15 @@ TEST_F(CostTest, Operators) {
   EXPECT_EQ(IThreeA, IThreeB);
   EXPECT_GE(IThreeA, VNegTwo);
   EXPECT_LT(VSix, IThreeA);
+  EXPECT_LT(VThree, ITwo);
+  EXPECT_GE(ITwo, VThree);
   EXPECT_EQ(VSix - IThreeA, IThreeB);
   EXPECT_EQ(VThree - VNegTwo, 5);
   EXPECT_EQ(VThree * VNegTwo, -6);
   EXPECT_EQ(VSix / VThree, 2);
+  EXPECT_NE(IThreeA, ITwo);
+  EXPECT_LT(ITwo, IThreeA);
+  EXPECT_GT(IThreeA, ITwo);
 
   EXPECT_FALSE(IThreeA.isValid());
   EXPECT_EQ(IThreeA.getState(), InstructionCost::Invalid);

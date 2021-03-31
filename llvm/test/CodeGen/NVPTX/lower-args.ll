@@ -23,5 +23,12 @@ entry:
   %arg.idx.val.val = load i32, i32* %arg.idx.val, align 4
   %add.i = add nsw i32 %arg.idx.val.val, %arg.idx2.val
   store i32 %add.i, i32* %arg.idx1.val, align 4
+
+  ; let the pointer escape so we still create a local copy this test uses to
+  ; check the load alignment.
+  %tmp = call i32* @escape(i32* nonnull %arg.idx2)
   ret void
 }
+
+; Function Attrs: convergent nounwind
+declare dso_local i32* @escape(i32*) local_unnamed_addr

@@ -206,10 +206,10 @@ mov     z0.h, #65280
 // CHECK-UNKNOWN: e0 ff 78 25 <unknown>
 
 mov     z0.h, #-33024
-// CHECK-INST: dupm z0.h, #0x7f00
-// CHECK-ENCODING: [0xc0,0x44,0xc0,0x05]
+// CHECK-INST: mov z0.h, #32512
+// CHECK-ENCODING: [0xe0,0xef,0x78,0x25]
 // CHECK-ERROR: instruction requires: sve
-// CHECK-UNKNOWN: c0 44 c0 05 <unknown>
+// CHECK-UNKNOWN: e0 ef 78 25 <unknown>
 
 mov     z0.h, #-32769
 // CHECK-INST: mov z0.h, #32767
@@ -373,6 +373,58 @@ mov     z21.d, p0/z, #32512
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: f5 2f d0 05  <unknown>
 
+
+// --------------------------------------------------------------------------//
+// Tests where the negative immediate is in bounds when interpreted
+// as the element type.
+
+mov     z0.b, #-129
+// CHECK-INST: mov     z0.b, #127
+// CHECK-ENCODING: [0xe0,0xcf,0x38,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 cf 38 25 <unknown>
+
+mov     z0.h, #-129, lsl #8
+// CHECK-INST: mov     z0.h, #32512
+// CHECK-ENCODING: [0xe0,0xef,0x78,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 ef 78 25 <unknown>
+
+mov     z5.h, #0xfffa
+// CHECK-INST: mov     z5.h, #-6
+// CHECK-ENCODING: [0x45,0xdf,0x78,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 df 78 25 <unknown>
+
+mov     z5.s, #0xfffffffa
+// CHECK-INST: mov     z5.s, #-6
+// CHECK-ENCODING: [0x45,0xdf,0xb8,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 df b8 25 <unknown>
+
+mov     z5.d, #0xfffffffffffffffa
+// CHECK-INST: mov     z5.d, #-6
+// CHECK-ENCODING: [0x45,0xdf,0xf8,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: 45 df f8 25 <unknown>
+
+mov     z0.b, p0/z, #-129
+// CHECK-INST: mov     z0.b, p0/z, #127
+// CHECK-ENCODING: [0xe0,0x0f,0x10,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 0f 10 05 <unknown>
+
+mov     z0.h, p0/z, #-33024
+// CHECK-INST: mov     z0.h, p0/z, #32512
+// CHECK-ENCODING: [0xe0,0x2f,0x50,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 2f 50 05 <unknown>
+
+mov     z0.h, p0/z, #-129, lsl #8
+// CHECK-INST: mov     z0.h, p0/z, #32512
+// CHECK-ENCODING: [0xe0,0x2f,0x50,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 2f 50 05 <unknown>
 
 // --------------------------------------------------------------------------//
 // Tests for merging variant (/m) and testing the range of predicate (> 7)

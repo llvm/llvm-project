@@ -7,4 +7,4 @@ endif()
 add_subdirectory(
   llvm-exegesis
 )
-
+add_subdirectory(llvm-profgen)

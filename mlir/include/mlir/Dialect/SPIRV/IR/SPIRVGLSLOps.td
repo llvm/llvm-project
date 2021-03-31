@@ -1012,4 +1012,116 @@ def SPV_GLSLFmaOp : SPV_GLSLTernaryArithmeticOp<"Fma", 50, SPV_Float> {
   }];
 }
 
+// ----
+
+def SPV_GLSLFrexpStructOp : SPV_GLSLOp<"FrexpStruct", 52, [NoSideEffect]> {
+  let summary = "Splits x into two components such that x = significand * 2^exponent";
+
+  let description = [{
+    Result is a structure containing x split into a floating-point significand
+    in the range (-1.0, 0.5] or [0.5, 1.0) and an integral exponent of 2, such that:
+
+    x = significand * 2^exponent
+
+    If x is a zero, the exponent is 0.0. If x is an infinity or a NaN, the
+    exponent is undefined. If x is 0.0, the significand is 0.0. If x is -0.0,
+    the significand is -0.0
+
+    Result Type must be an OpTypeStruct with two members. Member 0 must have
+    the same type as the type of x. Member 0 holds the significand. Member 1
+    must be a scalar or vector with integer component type, with 32-bit
+    component width. Member 1 holds the exponent. These two members and x must
+    have the same number of components.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    <!-- End of AutoGen section -->
+    ```
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    integer-scalar-vector-type ::= integer-type |
+                                 `vector<` integer-literal `x` integer-type `>`
+    frexpstruct-op ::= ssa-id `=` `spv.GLSL.FrexpStruct` ssa-use `:`
+                                  `!spv.struct<` float-scalar-vector-type `,`
+                                                  integer-scalar-vector-type `>`
+    ```
+    #### Example:
+
+    ```mlir
+    %2 = spv.GLSL.FrexpStruct %0 : f32 -> !spv.struct<f32, i32>
+    %3 = spv.GLSL.FrexpStruct %0 : vector<3xf32> -> !spv.struct<vector<3xf32>, vector<3xi32>>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Float>:$operand
+  );
+
+  let results = (outs
+    SPV_AnyStruct:$result
+  );
+
+  let assemblyFormat = [{
+    attr-dict $operand `:` type($operand) `->` type($result)
+  }];
+
+  let verifier = [{ return ::verifyGLSLFrexpStructOp(*this); }];
+}
+
+def SPV_GLSLLdexpOp :
+  SPV_GLSLOp<"Ldexp", 53, [
+      NoSideEffect, AllTypesMatch<["x", "y"]>]> {
+  let summary = "Builds y such that y = significand * 2^exponent";
+
+  let description = [{
+    Builds a floating-point number from x and the corresponding
+    integral exponent of two in exp:
+
+    significand * 2^exponent
+
+    If this product is too large to be represented in the floating-point
+    type, the resulting value is undefined. If exp is greater than +128
+    (single precision) or +1024 (double precision), the resulting value is
+    undefined. If exp is less than -126 (single precision) or -1022 (double precision),
+    the result may be flushed to zero. Additionally, splitting the value
+    into a significand and exponent using frexp and then reconstructing a
+    floating-point value using ldexp should yield the original input for
+    zero and all finite non-denormalized values.
+
+    The operand x must be a scalar or vector whose component type is floating-point.
+
+    The exp operand must be a scalar or vector with integer component type.
+    The number of components in x and exp must be the same.
+
+    Result Type must be the same type as the type of x. Results are computed per
+    component.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %y = spv.GLSL.Ldexp %x : f32, %exp : i32 -> f32
+    %y = spv.GLSL.Ldexp %x : vector<3xf32>, %exp : vector<3xi32> -> vector<3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Float>:$x,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$exp
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOf<SPV_Float>:$y
+  );
+
+  let assemblyFormat = [{
+    attr-dict $x `:` type($x) `,` $exp `:` type($exp) `->` type($y)
+  }];
+
+  let verifier = [{ return ::verify(*this); }];
+}
+
+
 #endif // MLIR_DIALECT_SPIRV_IR_GLSL_OPS

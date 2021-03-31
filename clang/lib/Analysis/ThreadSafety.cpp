@@ -2051,15 +2051,11 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
 
     if (ME && MD) {
       if (ME->isArrow()) {
-        if (MD->isConst())
-          checkPtAccess(CE->getImplicitObjectArgument(), AK_Read);
-        else // FIXME -- should be AK_Written
-          checkPtAccess(CE->getImplicitObjectArgument(), AK_Read);
+        // Should perhaps be AK_Written if !MD->isConst().
+        checkPtAccess(CE->getImplicitObjectArgument(), AK_Read);
       } else {
-        if (MD->isConst())
-          checkAccess(CE->getImplicitObjectArgument(), AK_Read);
-        else     // FIXME -- should be AK_Written
-          checkAccess(CE->getImplicitObjectArgument(), AK_Read);
+        // Should perhaps be AK_Written if !MD->isConst().
+        checkAccess(CE->getImplicitObjectArgument(), AK_Read);
       }
     }
 

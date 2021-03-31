@@ -2,7 +2,7 @@
 # Compile a source file and check errors against those listed in the file.
 # Change the compiler by setting the F18 environment variable.
 
-F18_OPTIONS="-fparse-only"
+F18_OPTIONS="-fsyntax-only"
 srcdir=$(dirname $0)
 source $srcdir/common.sh
 [[ ! -f $src ]] && die "File not found: $src"

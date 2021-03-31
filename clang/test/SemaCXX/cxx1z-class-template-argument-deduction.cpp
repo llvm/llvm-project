@@ -416,6 +416,17 @@ B b(0, {});
 
 }
 
+namespace no_crash_on_default_arg {
+class A {
+  template <typename T> class B {
+    B(int c = 1);
+  };
+  // This used to crash due to unparsed default arg above. The diagnostic could
+  // be improved, but the point of this test is to simply check we do not crash.
+  B(); // expected-error {{deduction guide declaration without trailing return type}}
+};
+} // namespace no_crash_on_default_arg
+
 #pragma clang diagnostic push
 #pragma clang diagnostic warning "-Wctad-maybe-unsupported"
 namespace test_implicit_ctad_warning {
@@ -532,6 +543,18 @@ namespace PR47175 {
   int m = n<int>;
 }
 
+// Ensure we don't crash when CTAD fails.
+template <typename T1, typename T2>
+struct Foo {   // expected-note{{candidate function template not viable}}
+  Foo(T1, T2); // expected-note{{candidate function template not viable}}
+};
+
+template <typename... Args>
+void insert(Args &&...args);
+
+void foo() {
+  insert(Foo(2, 2, 2)); // expected-error{{no viable constructor or deduction guide}}
+}
 #else
 
 // expected-no-diagnostics

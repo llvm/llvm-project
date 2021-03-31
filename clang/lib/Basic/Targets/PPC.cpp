@@ -66,6 +66,10 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       PairedVectorMemops = true;
     } else if (Feature == "+mma") {
       HasMMA = true;
+    } else if (Feature == "+rop-protect") {
+      HasROPProtect = true;
+    } else if (Feature == "+privileged") {
+      HasPrivileged = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -193,8 +197,14 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__POWER9_VECTOR__");
   if (HasMMA)
     Builder.defineMacro("__MMA__");
+  if (HasROPProtect)
+    Builder.defineMacro("__ROP_PROTECT__");
+  if (HasPrivileged)
+    Builder.defineMacro("__PRIVILEGED__");
   if (HasP10Vector)
     Builder.defineMacro("__POWER10_VECTOR__");
+  if (HasPCRelativeMemops)
+    Builder.defineMacro("__PCREL__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -318,9 +328,11 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr9", true)
                         .Case("pwr8", true)
                         .Default(false);
-  Features["float128"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("pwr9", true)
-                        .Default(false);
+
+  // ROP Protect is off by default.
+  Features["rop-protect"] = false;
+  // Privileged instructions are off by default.
+  Features["privileged"] = false;
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
@@ -355,6 +367,19 @@ bool PPCTargetInfo::initFeatureMap(
       llvm::find(FeaturesVec, "+mma") != FeaturesVec.end()) {
     // We have MMA on PPC but not power 10 and above.
     Diags.Report(diag::err_opt_not_valid_with_opt) << "-mmma" << CPU;
+    return false;
+  }
+
+  if (!(ArchDefs & ArchDefinePwr8) &&
+      llvm::find(FeaturesVec, "+rop-protect") != FeaturesVec.end()) {
+    // We can turn on ROP Protect on Power 8 and above.
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
+    return false;
+  }
+
+  if (!(ArchDefs & ArchDefinePwr8) &&
+      llvm::find(FeaturesVec, "+privileged") != FeaturesVec.end()) {
+    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mprivileged" << CPU;
     return false;
   }
 
@@ -396,6 +421,8 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("pcrelative-memops", HasPCRelativeMemops)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
+      .Case("rop-protect", HasROPProtect)
+      .Case("privileged", HasPrivileged)
       .Default(false);
 }
 
@@ -554,6 +581,7 @@ void PPCTargetInfo::adjust(LangOptions &Opts) {
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
                            : &llvm::APFloat::PPCDoubleDouble();
+  Opts.IEEE128 = 1;
 }
 
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {

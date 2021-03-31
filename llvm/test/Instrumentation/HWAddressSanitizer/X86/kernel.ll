@@ -15,15 +15,10 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load(
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
 
-; ABORT: call void asm sideeffect "int3\0Anopl 64(%rax)", "{rdi}"(i64 %[[A]])
-; ABORT: unreachable
-; RECOVER: call void asm sideeffect "int3\0Anopl 96(%rax)", "{rdi}"(i64 %[[A]])
-; RECOVER: br label
+; ABORT: call void @__hwasan_load1(i64 %[[A]])
+; RECOVER: call void @__hwasan_load1_noabort(i64 %[[A]])
 
-; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
-; CHECK: %[[UNTAGGED:[^ ]*]] = or i64 %[[A]], -72057594037927936
-; CHECK: %[[UNTAGGED_PTR:[^ ]*]] = inttoptr i64 %[[UNTAGGED]] to i8*
-; CHECK: %[[G:[^ ]*]] = load i8, i8* %[[UNTAGGED_PTR]], align 4
+; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
 ; CHECK: ret i8 %[[G]]
 
 entry:

@@ -67,22 +67,31 @@ define i16 @halfinsts_add_i16(i16 %arg0) #1 {
 define <2 x i16> @halfinsts_add_v2i16(<2 x i16> %arg0) #1 {
   ; CHECK-LABEL: name: halfinsts_add_v2i16
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY4]]
-  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
-  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY5]], [[COPY6]]
-  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
-  ; CHECK:   $vgpr0 = COPY [[COPY7]](s32)
-  ; CHECK:   $vgpr1 = COPY [[COPY8]](s32)
-  ; CHECK:   [[COPY9:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY2]]
-  ; CHECK:   S_SETPC_B64_return [[COPY9]], implicit $vgpr0, implicit $vgpr1
+  ; CHECK:   liveins: $vgpr0, $sgpr30_sgpr31
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+  ; CHECK:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $sgpr30_sgpr31
+  ; CHECK:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+  ; CHECK:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
+  ; CHECK:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
+  ; CHECK:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[BITCAST]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[BITCAST1]](s32)
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
+  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY4]], [[COPY5]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C1]]
+  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY7]], [[C1]]
+  ; CHECK:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; CHECK:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; CHECK:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
+  ; CHECK:   [[COPY8:%[0-9]+]]:ccr_sgpr_64 = COPY [[COPY1]]
+  ; CHECK:   S_SETPC_B64_return [[COPY8]], implicit $vgpr0
   %add = add <2 x i16> %arg0, %arg0
   ret <2 x i16> %add
 }

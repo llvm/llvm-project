@@ -10,8 +10,8 @@
 // data in an adhoc format, suitable for human inspection.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_INCLUDE_LLVM_XRAY_RECORDPRINTER_H_
-#define LLVM_INCLUDE_LLVM_XRAY_RECORDPRINTER_H_
+#ifndef LLVM_XRAY_RECORDPRINTER_H
+#define LLVM_XRAY_RECORDPRINTER_H
 
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/FDRRecords.h"
@@ -46,4 +46,4 @@ public:
 } // namespace xray
 } // namespace llvm
 
-#endif // LLVM_INCLUDE_LLVM_XRAY_RECORDPRINTER_H
+#endif // LLVM_XRAY_RECORDPRINTER_H

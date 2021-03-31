@@ -6,6 +6,11 @@
 // RUN:            -fcuda-is-device -target-feature +ptx61 -DPTX61 \
 // RUN:            -S -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefixes=CHECK_M16,CHECK_M32_M8 %s
+// Make sure builtins still work with the latest combination of GPU & PTX.
+// RUN: %clang_cc1 -triple nvptx64-unknown-unknown -target-cpu sm_86 \
+// RUN:            -fcuda-is-device -target-feature +ptx72 -DPTX61 \
+// RUN:            -S -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefixes=CHECK_M16,CHECK_M32_M8 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_60 \
 // RUN:   -DPTX61 -fcuda-is-device -S -o /dev/null -x cuda -verify=pre-sm_70 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown \

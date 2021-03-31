@@ -87,7 +87,7 @@ struct DriverOptions {
   bool warnOnNonstandardUsage{false}; // -Mstandard
   bool warningsAreErrors{false}; // -Werror
   Fortran::parser::Encoding encoding{Fortran::parser::Encoding::LATIN_1};
-  bool parseOnly{false};
+  bool syntaxOnly{false};
   bool dumpProvenance{false};
   bool dumpCookedChars{false};
   bool dumpUnparse{false};
@@ -217,7 +217,7 @@ std::string CompileFortran(
             Fortran::common::LanguageFeature::BackslashEscapes));
     return {};
   }
-  if (driver.parseOnly) {
+  if (driver.syntaxOnly) {
     return {};
   }
 
@@ -369,8 +369,8 @@ int main(int argc, char *const argv[]) {
       driver.dumpUnparse = true;
     } else if (arg == "-ftime-parse") {
       driver.timeParse = true;
-    } else if (arg == "-fparse-only") {
-      driver.parseOnly = true;
+    } else if (arg == "-fparse-only" || arg == "-fsyntax-only") {
+      driver.syntaxOnly = true;
     } else if (arg == "-c") {
       driver.compileOnly = true;
     } else if (arg == "-o") {
@@ -405,7 +405,7 @@ int main(int argc, char *const argv[]) {
           << "  -ed                  enable fixed form D lines\n"
           << "  -E                   prescan & preprocess only\n"
           << "  -ftime-parse         measure parsing time\n"
-          << "  -fparse-only         parse only, no output except messages\n"
+          << "  -fsyntax-only        parse only, no output except messages\n"
           << "  -funparse            parse & reformat only, no code "
              "generation\n"
           << "  -fdump-provenance    dump the provenance table (no code)\n"

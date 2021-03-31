@@ -43,4 +43,4 @@ protected:
 
 } // End namespace llvm.
 
-#endif // LLVM_CODEGEN_GLOBALISEL_GICOMBINER_H
+#endif // LLVM_CODEGEN_GLOBALISEL_COMBINER_H

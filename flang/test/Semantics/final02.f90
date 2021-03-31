@@ -1,4 +1,4 @@
-!RUN: %f18 -fparse-only %s 2>&1 | FileCheck %s
+!RUN: %f18 -fsyntax-only %s 2>&1 | FileCheck %s
 module m
   type :: t1
     integer :: n

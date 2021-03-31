@@ -454,10 +454,10 @@ bool CGPassManager::RunAllPassesOnSCC(CallGraphSCC &CurSCC, CallGraph &CG,
       std::string Functions;
   #ifndef NDEBUG
       raw_string_ostream OS(Functions);
-      for (CallGraphSCC::iterator I = CurSCC.begin(), E = CurSCC.end();
-           I != E; ++I) {
-        if (I != CurSCC.begin()) OS << ", ";
-        (*I)->print(OS);
+      ListSeparator LS;
+      for (const CallGraphNode *CGN : CurSCC) {
+        OS << LS;
+        CGN->print(OS);
       }
       OS.flush();
   #endif
@@ -734,12 +734,9 @@ Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &OS,
 
 static std::string getDescription(const CallGraphSCC &SCC) {
   std::string Desc = "SCC (";
-  bool First = true;
+  ListSeparator LS;
   for (CallGraphNode *CGN : SCC) {
-    if (First)
-      First = false;
-    else
-      Desc += ", ";
+    Desc += LS;
     Function *F = CGN->getFunction();
     if (F)
       Desc += F->getName();

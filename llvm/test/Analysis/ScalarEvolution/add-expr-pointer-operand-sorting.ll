@@ -37,7 +37,7 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:    %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint ([1 x i32]* @b to i64)
 ; CHECK-NEXT:    --> ((-1 * (ptrtoint [1 x i32]* @b to i64)) + (ptrtoint i32* %1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
-; CHECK-NEXT:    --> %sub.ptr.div U: full-set S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> %sub.ptr.div U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [1 x i8], [1 x i8]* %arrayidx, i64 0, i64 %sub.ptr.div
 ; CHECK-NEXT:    --> ({((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> + %sub.ptr.div) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %2 = load i8, i8* %arrayidx1, align 1

@@ -182,6 +182,8 @@ public:
   virtual void setParsingMSInlineAsm(bool V) = 0;
   virtual bool isParsingMSInlineAsm() = 0;
 
+  virtual bool discardLTOSymbol(StringRef) const { return false; }
+
   virtual bool isParsingMasm() const { return false; }
 
   virtual bool defineMacro(StringRef Name, StringRef Value) { return true; }
@@ -258,6 +260,7 @@ public:
   /// success.
   bool parseOptionalToken(AsmToken::TokenKind T);
 
+  bool parseEOL();
   bool parseEOL(const Twine &ErrMsg);
 
   bool parseMany(function_ref<bool()> parseOne, bool hasComma = true);

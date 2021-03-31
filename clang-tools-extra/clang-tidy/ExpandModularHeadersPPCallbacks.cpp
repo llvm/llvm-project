@@ -230,7 +230,7 @@ void ExpandModularHeadersPPCallbacks::HasInclude(SourceLocation Loc, StringRef,
 void ExpandModularHeadersPPCallbacks::PragmaOpenCLExtension(
     SourceLocation NameLoc, const IdentifierInfo *, SourceLocation StateLoc,
     unsigned) {
-  // FIME: Figure out whether it's the right location to parse to.
+  // FIXME: Figure out whether it's the right location to parse to.
   parseToLocation(NameLoc);
 }
 void ExpandModularHeadersPPCallbacks::PragmaWarning(SourceLocation Loc,
@@ -256,7 +256,7 @@ void ExpandModularHeadersPPCallbacks::MacroExpands(const Token &MacroNameTok,
                                                    const MacroDefinition &,
                                                    SourceRange Range,
                                                    const MacroArgs *) {
-  // FIME: Figure out whether it's the right location to parse to.
+  // FIXME: Figure out whether it's the right location to parse to.
   parseToLocation(Range.getBegin());
 }
 void ExpandModularHeadersPPCallbacks::MacroDefined(const Token &MacroNameTok,
@@ -271,12 +271,12 @@ void ExpandModularHeadersPPCallbacks::MacroUndefined(
 void ExpandModularHeadersPPCallbacks::Defined(const Token &MacroNameTok,
                                               const MacroDefinition &,
                                               SourceRange Range) {
-  // FIME: Figure out whether it's the right location to parse to.
+  // FIXME: Figure out whether it's the right location to parse to.
   parseToLocation(Range.getBegin());
 }
 void ExpandModularHeadersPPCallbacks::SourceRangeSkipped(
     SourceRange Range, SourceLocation EndifLoc) {
-  // FIME: Figure out whether it's the right location to parse to.
+  // FIXME: Figure out whether it's the right location to parse to.
   parseToLocation(EndifLoc);
 }
 void ExpandModularHeadersPPCallbacks::If(SourceLocation Loc, SourceRange,

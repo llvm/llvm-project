@@ -8,6 +8,7 @@
 
 #include "mlir/Transforms/Bufferize.h"
 #include "PassDetail.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Transforms.h"
@@ -24,12 +25,12 @@ struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
     auto *context = &getContext();
 
     BufferizeTypeConverter typeConverter;
-    OwningRewritePatternList patterns;
+    RewritePatternSet patterns(context);
     ConversionTarget target(*context);
 
     populateBufferizeMaterializationLegality(target);
-    populateSCFStructuralTypeConversionsAndLegality(context, typeConverter,
-                                                    patterns, target);
+    populateSCFStructuralTypeConversionsAndLegality(typeConverter, patterns,
+                                                    target);
     if (failed(applyPartialConversion(func, target, std::move(patterns))))
       return signalPassFailure();
   };

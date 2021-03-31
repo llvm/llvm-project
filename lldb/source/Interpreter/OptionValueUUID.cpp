@@ -58,10 +58,6 @@ Status OptionValueUUID::SetValueFromString(llvm::StringRef value,
   return error;
 }
 
-lldb::OptionValueSP OptionValueUUID::DeepCopy() const {
-  return OptionValueSP(new OptionValueUUID(*this));
-}
-
 void OptionValueUUID::AutoComplete(CommandInterpreter &interpreter,
                                    CompletionRequest &request) {
   ExecutionContext exe_ctx(interpreter.GetExecutionContext());

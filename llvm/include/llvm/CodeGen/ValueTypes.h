@@ -100,8 +100,11 @@ namespace llvm {
     /// Return a VT for a vector type whose attributes match ourselves
     /// with the exception of the element type that is chosen by the caller.
     EVT changeVectorElementType(EVT EltVT) const {
-      if (isSimple() && EltVT.isSimple())
+      if (isSimple()) {
+        assert(EltVT.isSimple() &&
+               "Can't change simple vector VT to have extended element VT");
         return getSimpleVT().changeVectorElementType(EltVT.getSimpleVT());
+      }
       return changeExtendedVectorElementType(EltVT);
     }
 

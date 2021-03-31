@@ -852,8 +852,9 @@ static std::time_t getTime() {
 
 // Create .file symbols.
 void WinCOFFObjectWriter::createFileSymbols(MCAssembler &Asm) {
-  for (const std::string &Name : Asm.getFileNames()) {
+  for (const std::pair<std::string, size_t> &It : Asm.getFileNames()) {
     // round up to calculate the number of auxiliary symbols required
+    const std::string &Name = It.first;
     unsigned SymbolSize = UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size;
     unsigned Count = (Name.size() + SymbolSize - 1) / SymbolSize;
 

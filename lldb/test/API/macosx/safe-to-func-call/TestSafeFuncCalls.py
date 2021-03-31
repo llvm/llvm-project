@@ -49,6 +49,6 @@ class TestSafeFuncCalls(TestBase):
 
         self.assertTrue(main_thread.SafeToCallFunctions(),
                         "It is safe to call functions on the main thread")
-        self.assertTrue(
-            select_thread.SafeToCallFunctions() == False,
+        self.assertEqual(
+            select_thread.SafeToCallFunctions(), False,
             "It is not safe to call functions on the select thread")

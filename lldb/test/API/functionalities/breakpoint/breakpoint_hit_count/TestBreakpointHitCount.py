@@ -93,8 +93,8 @@ class BreakpointHitCountTestCase(TestBase):
 
         frame0 = thread.GetFrameAtIndex(0)
         location1 = breakpoint.FindLocationByAddress(frame0.GetPC())
-        self.assertTrue(
-            frame0.GetLineEntry().GetLine() == self.a_int_body_line_no,
+        self.assertEqual(
+            frame0.GetLineEntry().GetLine(), self.a_int_body_line_no,
             "Stopped in int a(int)")
         self.assertTrue(location1)
         self.assertEqual(location1.GetHitCount(), 1)
@@ -110,8 +110,8 @@ class BreakpointHitCountTestCase(TestBase):
 
         frame0 = thread.GetFrameAtIndex(0)
         location2 = breakpoint.FindLocationByAddress(frame0.GetPC())
-        self.assertTrue(
-            frame0.GetLineEntry().GetLine() == self.a_float_body_line_no,
+        self.assertEqual(
+            frame0.GetLineEntry().GetLine(), self.a_float_body_line_no,
             "Stopped in float a(float)")
         self.assertTrue(location2)
         self.assertEqual(location2.GetHitCount(), 1)

@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.1 | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL1.2 | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=clc++ | FileCheck %s --check-prefix=CHECK20
+// RUN: %clang_cc1 -O0 -triple spir-unknown-unknown -internal-isystem ../../lib/Headers -include opencl-c.h -emit-llvm -o - %s -verify -cl-std=CL3.0 | FileCheck %s
 
 // Test including the default header as a module.
 // The module should be compiled only once and loaded from cache afterwards.
@@ -81,7 +82,7 @@ void test_atomics(__generic volatile unsigned int* a) {
 #endif
 
 // Verify that ATOMIC_VAR_INIT is defined.
-#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ == CL_VERSION_2_0)
 global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 // CHECK-MOD: Reading modules
@@ -150,5 +151,89 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
+// OpenCL C features.
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
+
+#ifndef  __opencl_c_pipes
+#error "Feature macro __opencl_c_pipes should be defined"
+#endif
+#ifndef __opencl_c_generic_address_space
+#error "Feature macro __opencl_c_generic_address_space should be defined"
+#endif
+#ifndef __opencl_c_work_group_collective_functions
+#error "Feature macro __opencl_c_work_group_collective_functions should be defined"
+#endif
+#ifndef __opencl_c_atomic_order_acq_rel
+#error "Feature macro __opencl_c_atomic_order_acq_rel should be defined"
+#endif
+#ifndef __opencl_c_atomic_order_seq_cst
+#error "Feature macro __opencl_c_atomic_order_seq_cst should be defined"
+#endif
+#ifndef __opencl_c_atomic_scope_device
+#error "Feature macro __opencl_c_atomic_scope_device should be defined"
+#endif
+#ifndef __opencl_c_atomic_scope_all_devices
+#error "Feature macro __opencl_c_atomic_scope_all_devices should be defined"
+#endif
+#ifndef __opencl_c_device_enqueue
+#error "Feature macro __opencl_c_device_enqueue should be defined"
+#endif
+#ifndef __opencl_c_read_write_images
+#error "Feature macro __opencl_c_read_write_images should be defined"
+#endif
+#ifndef __opencl_c_program_scope_global_variables
+#error "Feature macro __opencl_c_program_scope_global_variables should be defined"
+#endif
+#ifndef __opencl_c_images
+#error "Feature macro __opencl_c_images should be defined"
+#endif
+
+#elif (__OPENCL_C_VERSION__ < 200)
+
+#ifdef  __opencl_c_pipes
+#error "Incorret feature macro __opencl_c_pipes define"
+#endif
+#ifdef __opencl_c_generic_address_space
+#error "Incorret feature macro __opencl_c_generic_address_space define"
+#endif
+#ifdef __opencl_c_work_group_collective_functions
+#error "Incorret feature macro __opencl_c_work_group_collective_functions define"
+#endif
+#ifdef __opencl_c_atomic_order_acq_rel
+#error "Incorret feature macro __opencl_c_atomic_order_acq_rel define"
+#endif
+#ifdef __opencl_c_atomic_order_seq_cst
+#error "Incorret feature macro __opencl_c_atomic_order_seq_cst define"
+#endif
+#ifdef __opencl_c_atomic_scope_device
+#error "Incorret feature macro __opencl_c_atomic_scope_device define"
+#endif
+#ifdef __opencl_c_atomic_scope_all_devices
+#error "Incorret feature macro __opencl_c_atomic_scope_all_devices define"
+#endif
+#ifdef __opencl_c_device_enqueue
+#error "Incorret feature macro __opencl_c_device_enqueue define"
+#endif
+#ifdef __opencl_c_read_write_images
+#error "Incorret feature macro __opencl_c_read_write_images define"
+#endif
+#ifdef __opencl_c_program_scope_global_variables
+#error "Incorret feature macro __opencl_c_program_scope_global_variables define"
+#endif
+#ifdef __opencl_c_images
+#error "Incorret feature macro __opencl_c_images define"
+#endif
+#ifdef __opencl_c_3d_image_writes
+#error "Incorret feature macro __opencl_c_3d_image_writes define"
+#endif
+#ifdef __opencl_c_fp64
+#error "Incorret feature macro __opencl_c_fp64 define"
+#endif
+#ifdef __opencl_c_subgroups
+#error "Incorret feature macro __opencl_c_subgroups define"
+#endif
+
+#endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
 
 #endif // defined(__SPIR__)

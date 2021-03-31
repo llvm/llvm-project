@@ -65,9 +65,8 @@ void CriticalAntiDepBreaker::StartBlock(MachineBasicBlock *BB) {
   bool IsReturnBlock = BB->isReturnBlock();
 
   // Examine the live-in regs of all successors.
-  for (MachineBasicBlock::succ_iterator SI = BB->succ_begin(),
-         SE = BB->succ_end(); SI != SE; ++SI)
-    for (const auto &LI : (*SI)->liveins()) {
+  for (const MachineBasicBlock *Succ : BB->successors())
+    for (const auto &LI : Succ->liveins()) {
       for (MCRegAliasIterator AI(LI.PhysReg, TRI, true); AI.isValid(); ++AI) {
         unsigned Reg = *AI;
         Classes[Reg] = reinterpret_cast<TargetRegisterClass *>(-1);
@@ -143,17 +142,16 @@ static const SDep *CriticalPathStep(const SUnit *SU) {
   const SDep *Next = nullptr;
   unsigned NextDepth = 0;
   // Find the predecessor edge with the greatest depth.
-  for (SUnit::const_pred_iterator P = SU->Preds.begin(), PE = SU->Preds.end();
-       P != PE; ++P) {
-    const SUnit *PredSU = P->getSUnit();
-    unsigned PredLatency = P->getLatency();
+  for (const SDep &P : SU->Preds) {
+    const SUnit *PredSU = P.getSUnit();
+    unsigned PredLatency = P.getLatency();
     unsigned PredTotalLatency = PredSU->getDepth() + PredLatency;
     // In the case of a latency tie, prefer an anti-dependency edge over
     // other types of edges.
     if (NextDepth < PredTotalLatency ||
-        (NextDepth == PredTotalLatency && P->getKind() == SDep::Anti)) {
+        (NextDepth == PredTotalLatency && P.getKind() == SDep::Anti)) {
       NextDepth = PredTotalLatency;
-      Next = &*P;
+      Next = &P;
     }
   }
   return Next;
@@ -426,9 +424,8 @@ findSuitableFreeRegister(RegRefIter RegRefBegin,
       continue;
     // If NewReg overlaps any of the forbidden registers, we can't use it.
     bool Forbidden = false;
-    for (SmallVectorImpl<unsigned>::iterator it = Forbid.begin(),
-           ite = Forbid.end(); it != ite; ++it)
-      if (TRI->regsOverlap(NewReg, *it)) {
+    for (unsigned R : Forbid)
+      if (TRI->regsOverlap(NewReg, R)) {
         Forbidden = true;
         break;
       }
@@ -582,11 +579,11 @@ BreakAntiDependencies(const std::vector<SUnit> &SUnits,
             // Also, if there are dependencies on other SUnits with the
             // same register as the anti-dependency, don't attempt to
             // break it.
-            for (SUnit::const_pred_iterator P = CriticalPathSU->Preds.begin(),
-                 PE = CriticalPathSU->Preds.end(); P != PE; ++P)
-              if (P->getSUnit() == NextSU ?
-                    (P->getKind() != SDep::Anti || P->getReg() != AntiDepReg) :
-                    (P->getKind() == SDep::Data && P->getReg() == AntiDepReg)) {
+            for (const SDep &P : CriticalPathSU->Preds)
+              if (P.getSUnit() == NextSU
+                      ? (P.getKind() != SDep::Anti || P.getReg() != AntiDepReg)
+                      : (P.getKind() == SDep::Data &&
+                         P.getReg() == AntiDepReg)) {
                 AntiDepReg = 0;
                 break;
               }

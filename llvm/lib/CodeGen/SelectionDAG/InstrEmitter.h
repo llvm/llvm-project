@@ -25,6 +25,7 @@ class MachineInstrBuilder;
 class MCInstrDesc;
 class SDDbgLabel;
 class SDDbgValue;
+class SDDbgOperand;
 class TargetLowering;
 class TargetMachine;
 
@@ -108,6 +109,11 @@ public:
   /// (which do not go into the machine instrs.)
   static unsigned CountResults(SDNode *Node);
 
+  void AddDbgValueLocationOps(MachineInstrBuilder &MIB,
+                              const MCInstrDesc &DbgValDesc,
+                              ArrayRef<SDDbgOperand> Locations,
+                              DenseMap<SDValue, Register> &VRBaseMap);
+
   /// EmitDbgValue - Generate machine instruction for a dbg_value node.
   ///
   MachineInstr *EmitDbgValue(SDDbgValue *SD,
@@ -148,7 +154,6 @@ private:
   void EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
                        DenseMap<SDValue, Register> &VRBaseMap);
 };
-
-}
+} // namespace llvm
 
 #endif

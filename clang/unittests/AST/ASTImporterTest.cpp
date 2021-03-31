@@ -246,6 +246,24 @@ TEST_P(ImportPath, CycleAfterCycle) {
   EXPECT_FALSE(path.hasCycleAtBack());
 }
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, SourceLocExpr> sourceLocExpr;
+
+AST_MATCHER_P(SourceLocExpr, hasBuiltinStr, StringRef, Str) {
+  return Node.getBuiltinStr() == Str;
+}
+
+TEST_P(ImportExpr, ImportSourceLocExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("void declToImport() { (void)__builtin_FILE(); }", Lang_CXX03, "",
+             Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_FILE")))));
+  testImport("void declToImport() { (void)__builtin_COLUMN(); }", Lang_CXX03,
+             "", Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_COLUMN")))));
+}
+
 TEST_P(ImportExpr, ImportStringLiteral) {
   MatchVerifier<Decl> Verifier;
   testImport("void declToImport() { (void)\"foo\"; }", Lang_CXX03, "",
@@ -613,6 +631,15 @@ TEST_P(ImportType, ImportDependentTemplateSpecialization) {
                  fieldDecl(hasType(dependentTemplateSpecializationType())))))));
 }
 
+TEST_P(ImportType, ImportDeducedTemplateSpecialization) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template <typename T>"
+             "class C { public: C(T); };"
+             "C declToImport(123);",
+             Lang_CXX17, "", Lang_CXX17, Verifier,
+             varDecl(hasType(deducedTemplateSpecializationType())));
+}
+
 const internal::VariadicDynCastAllOfMatcher<Stmt, SizeOfPackExpr>
     sizeOfPackExpr;
 
@@ -733,6 +760,12 @@ TEST_P(ImportDecl, ImportRecordDeclInFunc) {
              Lang_C99, "", Lang_C99, Verifier,
              functionDecl(hasBody(compoundStmt(
                  has(declStmt(hasSingleDecl(varDecl(hasName("d")))))))));
+}
+
+TEST_P(ImportDecl, ImportedVarDeclPreservesThreadLocalStorage) {
+  MatchVerifier<Decl> Verifier;
+  testImport("thread_local int declToImport;", Lang_CXX11, "", Lang_CXX11,
+             Verifier, varDecl(hasThreadStorageDuration()));
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportRecordTypeInFunc) {
@@ -2561,9 +2594,9 @@ TEST_P(ImportFriendFunctions, Lookup) {
     auto FromName = FromD->getDeclName();
     auto *Class = FirstDeclMatcher<CXXRecordDecl>().match(FromTU, ClassPattern);
     auto LookupRes = Class->noload_lookup(FromName);
-    ASSERT_EQ(LookupRes.size(), 0u);
+    ASSERT_TRUE(LookupRes.empty());
     LookupRes = FromTU->noload_lookup(FromName);
-    ASSERT_EQ(LookupRes.size(), 1u);
+    ASSERT_TRUE(LookupRes.isSingleResult());
   }
 
   auto *ToD = cast<FunctionDecl>(Import(FromD, Lang_CXX03));
@@ -2572,9 +2605,9 @@ TEST_P(ImportFriendFunctions, Lookup) {
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
   auto *Class = FirstDeclMatcher<CXXRecordDecl>().match(ToTU, ClassPattern);
   auto LookupRes = Class->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 0u);
+  EXPECT_TRUE(LookupRes.empty());
   LookupRes = ToTU->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 1u);
+  EXPECT_TRUE(LookupRes.isSingleResult());
 
   EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, FunctionPattern), 1u);
   auto *To0 = FirstDeclMatcher<FunctionDecl>().match(ToTU, FunctionPattern);
@@ -2608,9 +2641,9 @@ TEST_P(ImportFriendFunctions, LookupWithProtoAfter) {
   auto *FromClass =
       FirstDeclMatcher<CXXRecordDecl>().match(FromTU, ClassPattern);
   auto LookupRes = FromClass->noload_lookup(FromName);
-  ASSERT_EQ(LookupRes.size(), 0u);
+  ASSERT_TRUE(LookupRes.empty());
   LookupRes = FromTU->noload_lookup(FromName);
-  ASSERT_EQ(LookupRes.size(), 1u);
+  ASSERT_TRUE(LookupRes.isSingleResult());
 
   auto *ToFriend = cast<FunctionDecl>(Import(FromFriend, Lang_CXX03));
   auto ToName = ToFriend->getDeclName();
@@ -2618,10 +2651,10 @@ TEST_P(ImportFriendFunctions, LookupWithProtoAfter) {
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
   auto *ToClass = FirstDeclMatcher<CXXRecordDecl>().match(ToTU, ClassPattern);
   LookupRes = ToClass->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 0u);
+  EXPECT_TRUE(LookupRes.empty());
   LookupRes = ToTU->noload_lookup(ToName);
   // Test is disabled because this result is 2.
-  EXPECT_EQ(LookupRes.size(), 1u);
+  EXPECT_TRUE(LookupRes.isSingleResult());
 
   ASSERT_EQ(DeclCounter<FunctionDecl>().match(ToTU, FunctionPattern), 2u);
   ToFriend = FirstDeclMatcher<FunctionDecl>().match(ToTU, FunctionPattern);
@@ -2652,9 +2685,9 @@ TEST_P(ImportFriendFunctions, LookupWithProtoBefore) {
   auto *FromClass =
       FirstDeclMatcher<CXXRecordDecl>().match(FromTU, ClassPattern);
   auto LookupRes = FromClass->noload_lookup(FromName);
-  ASSERT_EQ(LookupRes.size(), 0u);
+  ASSERT_TRUE(LookupRes.empty());
   LookupRes = FromTU->noload_lookup(FromName);
-  ASSERT_EQ(LookupRes.size(), 1u);
+  ASSERT_TRUE(LookupRes.isSingleResult());
 
   auto *ToNormal = cast<FunctionDecl>(Import(FromNormal, Lang_CXX03));
   auto ToName = ToNormal->getDeclName();
@@ -2662,9 +2695,9 @@ TEST_P(ImportFriendFunctions, LookupWithProtoBefore) {
 
   auto *ToClass = FirstDeclMatcher<CXXRecordDecl>().match(ToTU, ClassPattern);
   LookupRes = ToClass->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 0u);
+  EXPECT_TRUE(LookupRes.empty());
   LookupRes = ToTU->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 1u);
+  EXPECT_TRUE(LookupRes.isSingleResult());
 
   EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, FunctionPattern), 2u);
   ToNormal = FirstDeclMatcher<FunctionDecl>().match(ToTU, FunctionPattern);
@@ -2694,9 +2727,9 @@ TEST_P(ImportFriendFunctions, ImportFriendChangesLookup) {
   ASSERT_FALSE(FromFriendF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   ASSERT_TRUE(FromFriendF->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
   auto LookupRes = FromNormalTU->noload_lookup(FromNormalName);
-  ASSERT_EQ(LookupRes.size(), 1u);
+  ASSERT_TRUE(LookupRes.isSingleResult());
   LookupRes = FromFriendTU->noload_lookup(FromFriendName);
-  ASSERT_EQ(LookupRes.size(), 1u);
+  ASSERT_TRUE(LookupRes.isSingleResult());
 
   auto *ToNormalF = cast<FunctionDecl>(Import(FromNormalF, Lang_CXX03));
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
@@ -2704,12 +2737,12 @@ TEST_P(ImportFriendFunctions, ImportFriendChangesLookup) {
   EXPECT_TRUE(ToNormalF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
   EXPECT_FALSE(ToNormalF->isInIdentifierNamespace(Decl::IDNS_OrdinaryFriend));
   LookupRes = ToTU->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 1u);
+  EXPECT_TRUE(LookupRes.isSingleResult());
   EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, Pattern), 1u);
 
   auto *ToFriendF = cast<FunctionDecl>(Import(FromFriendF, Lang_CXX03));
   LookupRes = ToTU->noload_lookup(ToName);
-  EXPECT_EQ(LookupRes.size(), 1u);
+  EXPECT_TRUE(LookupRes.isSingleResult());
   EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, Pattern), 2u);
 
   EXPECT_TRUE(ToNormalF->isInIdentifierNamespace(Decl::IDNS_Ordinary));
@@ -4031,11 +4064,11 @@ TEST_P(DeclContextTest,
 
   ASSERT_TRUE(L.getAsDecl());
   // Simulate the private function DeclContext::reconcileExternalVisibleStorage.
-  // The point here is to have a Vec with only one element, which is not the
-  // one we are going to delete from the DC later.
+  // We do not have a list with one element.
   L.setHasExternalDecls();
-  ASSERT_TRUE(L.getAsVector());
-  ASSERT_EQ(1u, L.getAsVector()->size());
+  ASSERT_FALSE(L.getAsList());
+  auto Results = L.getLookupResult();
+  ASSERT_EQ(1u, std::distance(Results.begin(), Results.end()));
 
   // This asserts in the old implementation.
   DC->removeDecl(A0);
@@ -5591,30 +5624,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDefaultConstructibleLambdas) {
             2u);
 }
 
-TEST_P(ASTImporterOptionSpecificTestBase, ImplicitlyDeclareSelf) {
-  Decl *FromTU = getTuDecl(R"(
-                           __attribute__((objc_root_class))
-                           @interface Root
-                           @end
-                           @interface C : Root
-                             -(void)method;
-                           @end
-                           @implementation C
-                             -(void)method {}
-                           @end
-                           )",
-                           Lang_OBJCXX, "input.mm");
-  auto *FromMethod = LastDeclMatcher<ObjCMethodDecl>().match(
-      FromTU, namedDecl(hasName("method")));
-  ASSERT_TRUE(FromMethod);
-  auto ToMethod = Import(FromMethod, Lang_OBJCXX);
-  ASSERT_TRUE(ToMethod);
-
-  // Both methods should have their implicit parameters.
-  EXPECT_TRUE(FromMethod->getSelfDecl() != nullptr);
-  EXPECT_TRUE(ToMethod->getSelfDecl() != nullptr);
-}
-
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ImportAutoFunctions, ReturnWithTypedefDeclaredInside) {
@@ -6206,6 +6215,47 @@ TEST_P(ASTImporterOptionSpecificTestBase,
       classTemplateDecl(hasName("basic_stringbuf"), unless(isImplicit())));
   auto *To2 = cast_or_null<ClassTemplateDecl>(Import(From2, Lang_CXX11));
   EXPECT_TRUE(To2);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportOfCapturedVLAType) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      void declToImport(int N) {
+        int VLA[N];
+        [&VLA] {}; // FieldDecl inside the lambda.
+      }
+      )",
+      Lang_CXX14);
+  auto *FromFD = FirstDeclMatcher<FieldDecl>().match(FromTU, fieldDecl());
+  ASSERT_TRUE(FromFD);
+  ASSERT_TRUE(FromFD->hasCapturedVLAType());
+
+  auto *ToFD = Import(FromFD, Lang_CXX14);
+  EXPECT_TRUE(ToFD);
+  EXPECT_TRUE(ToFD->hasCapturedVLAType());
+  EXPECT_NE(FromFD->getCapturedVLAType(), ToFD->getCapturedVLAType());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class T> struct A {
+        enum tagname { enumerator };
+      };
+      template struct A<int>;
+      )",
+      Lang_CXX03);
+  auto *FromD = FirstDeclMatcher<EnumDecl>().match(
+      FromTU, enumDecl(hasName("tagname"),
+                       hasParent(classTemplateSpecializationDecl())));
+  ASSERT_TRUE(FromD);
+  ASSERT_TRUE(FromD->getMemberSpecializationInfo());
+
+  auto *ToD = Import(FromD, Lang_CXX03);
+  EXPECT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getMemberSpecializationInfo());
+  EXPECT_EQ(FromD->getTemplateSpecializationKind(),
+            ToD->getTemplateSpecializationKind());
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,

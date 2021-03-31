@@ -16,12 +16,13 @@
 
 namespace lldb_private {
 
-class OptionValueFileColonLine : public OptionValue {
+class OptionValueFileColonLine :
+    public Cloneable<OptionValueFileColonLine, OptionValue> {
 public:
   OptionValueFileColonLine();
   OptionValueFileColonLine(const llvm::StringRef input);
 
-  ~OptionValueFileColonLine() override {}
+  ~OptionValueFileColonLine() override = default;
 
   OptionValue::Type GetType() const override { return eTypeFileLineColumn; }
 
@@ -31,17 +32,12 @@ public:
   Status
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
-  Status
-  SetValueFromString(const char *,
-                     VarSetOperationType = eVarSetOperationAssign) = delete;
 
   void Clear() override {
     m_file_spec.Clear();
     m_line_number = LLDB_INVALID_LINE_NUMBER;
     m_column_number = LLDB_INVALID_COLUMN_NUMBER;
   }
-
-  lldb::OptionValueSP DeepCopy() const override;
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;

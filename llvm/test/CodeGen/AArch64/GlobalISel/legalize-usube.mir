@@ -2,6 +2,75 @@
 # RUN: llc -mtriple aarch64 -verify-machineinstrs -run-pass=legalizer -debugify-and-strip-all-safe %s -o - | FileCheck %s
 
 ---
+name:            narrow_scalar_usube_s128
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_usube_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
+    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY2]], %carry_in
+    ; CHECK: %19:_(s64), %carry_out:_(s1) = G_USUBE [[COPY1]], [[COPY3]], [[USUBE1]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[USUBE]](s64)
+    ; CHECK: $x1 = COPY %19(s64)
+    ; CHECK: $x2 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %lhs:_(s128) = G_MERGE_VALUES %0, %1
+    %rhs:_(s128) = G_MERGE_VALUES %2, %3
+    %carry_in:_(s1) = G_TRUNC %4
+    %sub:_(s128), %carry_out:_(s1) = G_USUBE %lhs, %rhs, %carry_in
+    %sub0:_(s64), %sub1:_(s64) = G_UNMERGE_VALUES %sub
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %sub0
+    $x1 = COPY %sub1
+    $x2 = COPY %carry_out_ext
+
+...
+---
+name:            narrow_scalar_usube_big_nonpow2
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: narrow_scalar_usube_big_nonpow2
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY $x4
+    ; CHECK: %carry_in:_(s1) = G_TRUNC [[COPY4]](s64)
+    ; CHECK: [[USUBE:%[0-9]+]]:_(s64), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[COPY]], [[COPY1]], %carry_in
+    ; CHECK: [[USUBE2:%[0-9]+]]:_(s64), [[USUBE3:%[0-9]+]]:_(s1) = G_USUBE [[COPY1]], [[COPY2]], [[USUBE1]]
+    ; CHECK: %24:_(s64), %carry_out:_(s1) = G_USUBE [[COPY2]], [[COPY3]], [[USUBE3]]
+    ; CHECK: %carry_out_ext:_(s64) = G_ANYEXT %carry_out(s1)
+    ; CHECK: $x0 = COPY [[USUBE]](s64)
+    ; CHECK: $x1 = COPY [[USUBE2]](s64)
+    ; CHECK: $x2 = COPY %24(s64)
+    ; CHECK: $x3 = COPY %carry_out_ext(s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s64) = COPY $x1
+    %2:_(s64) = COPY $x2
+    %3:_(s64) = COPY $x3
+    %4:_(s64) = COPY $x4
+    %lhs:_(s192) = G_MERGE_VALUES %0, %1, %2
+    %rhs:_(s192) = G_MERGE_VALUES %1, %2, %3
+    %carry_in:_(s1) = G_TRUNC %4
+    %sub:_(s192), %carry_out:_(s1) = G_USUBE %lhs, %rhs, %carry_in
+    %sub0:_(s64), %sub1:_(s64), %sub2:_(s64) = G_UNMERGE_VALUES %sub
+    %carry_out_ext:_(s64) = G_ANYEXT %carry_out
+    $x0 = COPY %sub0
+    $x1 = COPY %sub1
+    $x2 = COPY %sub2
+    $x3 = COPY %carry_out_ext
+
+...
+---
 name:            widen_scalar_usube_s8
 body:             |
   bb.0.entry:

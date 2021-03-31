@@ -65,7 +65,7 @@ void SliceAnalysisTestPass::runOnOperation() {
         return WalkResult::advance();
       std::string append =
           std::string("__backward_slice__") + std::to_string(opNum);
-      createBackwardSliceFunction(op, append);
+      (void)createBackwardSliceFunction(op, append);
       opNum++;
       return WalkResult::advance();
     });

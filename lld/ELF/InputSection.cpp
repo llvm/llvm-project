@@ -901,7 +901,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       continue;
     }
 
-    if (expr != R_ABS && expr != R_DTPREL && expr != R_RISCV_ADD) {
+    // R_ABS/R_DTPREL and some other relocations can be used from non-SHF_ALLOC
+    // sections.
+    if (expr != R_ABS && expr != R_DTPREL && expr != R_GOTPLTREL &&
+        expr != R_RISCV_ADD) {
       std::string msg = getLocation<ELFT>(offset) +
                         ": has non-ABS relocation " + toString(type) +
                         " against symbol '" + toString(sym) + "'";
@@ -1426,8 +1429,7 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t offset) {
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
-  const SectionPiece &piece =
-      *(const_cast<MergeInputSection *>(this)->getSectionPiece (offset));
+  const SectionPiece &piece = *getSectionPiece(offset);
   uint64_t addend = offset - piece.inputOff;
   return piece.outputOff + addend;
 }

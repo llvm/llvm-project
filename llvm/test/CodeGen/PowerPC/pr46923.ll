@@ -8,7 +8,6 @@ define i1 @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; CHECK-NEXT:    blr
 entry:
   br label %next

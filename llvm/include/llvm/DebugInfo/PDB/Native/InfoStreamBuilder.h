@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAMBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAMBUILDER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"

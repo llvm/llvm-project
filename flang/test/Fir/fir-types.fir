@@ -1,7 +1,6 @@
 // Test the FIR types
-
-// RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
-// UNSUPPORTED: !fir
+// Parse types and check that we can reparse what we print.
+// RUN: fir-opt %s | fir-opt | FileCheck %s
 
 // Fortran Intrinsic types
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
@@ -9,11 +8,15 @@
 // CHECK-LABEL: func private @it3() -> !fir.complex<8>
 // CHECK-LABEL: func private @it4() -> !fir.logical<1>
 // CHECK-LABEL: func private @it5() -> !fir.char<1>
+// CHECK-LABEL: func private @it6() -> !fir.char<2,10>
+// CHECK-LABEL: func private @it7() -> !fir.char<4,?>
 func private @it1() -> !fir.int<4>
 func private @it2() -> !fir.real<8>
 func private @it3() -> !fir.complex<8>
 func private @it4() -> !fir.logical<1>
 func private @it5() -> !fir.char<1>
+func private @it6() -> !fir.char<2,10>
+func private @it7() -> !fir.char<4,?>
 
 // Fortran Derived types (records)
 // CHECK-LABEL: func private @dvd1() -> !fir.type<derived1>
@@ -68,11 +71,17 @@ func private @box4() -> !fir.box<none>
 func private @box5() -> !fir.box<!fir.type<derived3{f:f32}>>
 
 // FIR misc. types
-// CHECK-LABEL: func private @oth1() -> !fir.dims<1>
+// CHECK-LABEL: func private @oth1() -> !fir.shape<1>
 // CHECK-LABEL: func private @oth2() -> !fir.field
 // CHECK-LABEL: func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
-// CHECK-LABEL: func private @oth4() -> !fir.dims<15>
-func private @oth1() -> !fir.dims<1>
+// CHECK-LABEL: func private @oth4() -> !fir.shapeshift<15>
+// CHECK-LABEL: func private @oth5() -> !fir.slice<8>
+func private @oth1() -> !fir.shape<1>
 func private @oth2() -> !fir.field
 func private @oth3() -> !fir.tdesc<!fir.type<derived7{f1:f32,f2:f32}>>
-func private @oth4() -> !fir.dims<15>
+func private @oth4() -> !fir.shapeshift<15>
+func private @oth5() -> !fir.slice<8>
+
+// FIR vector
+// CHECK-LABEL: func private @vecty(i1) -> !fir.vector<10:i32>
+func private @vecty(i1) -> !fir.vector<10:i32>

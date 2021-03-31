@@ -7,7 +7,7 @@
 // RUN:       sym = .;" > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
 // RUN: llvm-readobj --sections --symbols %t2 | FileCheck --check-prefix=CHECK-ELF %s
-// RUN: llvm-objdump --no-show-raw-insn --start-address=0x11000 --stop-address=0x1103c -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-show-raw-insn --start-address=0x11000 --stop-address=0x11048 -d %t2 | FileCheck %s
 
 // An example of thunk generation that takes the maximum number of permitted
 // passes to converge. We start with a set of branches of which all but one are
@@ -35,21 +35,24 @@
 // CHECK-ELF-NEXT:     Value: 0x101104C
 
 // CHECK: 00011000 <_start>:
-// CHECK-NEXT:    11000:        b.w     #14680132 <__Thumbv7ABSLongThunk_f3>
-// CHECK-NEXT:    11004:        b.w     #14680128 <__Thumbv7ABSLongThunk_f3>
-// CHECK-NEXT:    11008:        b.w     #14680128 <__Thumbv7ABSLongThunk_f4>
-// CHECK-NEXT:    1100c:        b.w     #14680124 <__Thumbv7ABSLongThunk_f4>
-// CHECK-NEXT:    11010:        b.w     #14680124 <__Thumbv7ABSLongThunk_f5>
-// CHECK-NEXT:    11014:        b.w     #14680120 <__Thumbv7ABSLongThunk_f5>
-// CHECK-NEXT:    11018:        b.w     #14680120 <__Thumbv7ABSLongThunk_f6>
-// CHECK-NEXT:    1101c:        b.w     #14680116 <__Thumbv7ABSLongThunk_f6>
-// CHECK-NEXT:    11020:        b.w     #14680116 <__Thumbv7ABSLongThunk_f7>
-// CHECK-NEXT:    11024:        b.w     #14680112 <__Thumbv7ABSLongThunk_f7>
-// CHECK-NEXT:    11028:        b.w     #14680112 <__Thumbv7ABSLongThunk_f8>
-// CHECK-NEXT:    1102c:        b.w     #14680108 <__Thumbv7ABSLongThunk_f8>
-// CHECK-NEXT:    11030:        b.w     #14680108 <__Thumbv7ABSLongThunk_f9>
-// CHECK-NEXT:    11034:        b.w     #14680104 <__Thumbv7ABSLongThunk_f9>
-// CHECK-NEXT:    11038:        b.w     #14680104 <__Thumbv7ABSLongThunk_f10>
+// CHECK-NEXT:    11000:       b.w     #14680132 <__Thumbv7ABSLongThunk_f2>
+// CHECK-NEXT:    11004:       b.w     #14680128 <__Thumbv7ABSLongThunk_f2>
+// CHECK-NEXT:    11008:       b.w     #14680128 <__Thumbv7ABSLongThunk_f3>
+// CHECK-NEXT:    1100c:       b.w     #14680124 <__Thumbv7ABSLongThunk_f3>
+// CHECK-NEXT:    11010:       b.w     #14680124 <__Thumbv7ABSLongThunk_f4>
+// CHECK-NEXT:    11014:       b.w     #14680120 <__Thumbv7ABSLongThunk_f4>
+// CHECK-NEXT:    11018:       b.w     #14680120 <__Thumbv7ABSLongThunk_f5>
+// CHECK-NEXT:    1101c:       b.w     #14680116 <__Thumbv7ABSLongThunk_f5>
+// CHECK-NEXT:    11020:       b.w     #14680116 <__Thumbv7ABSLongThunk_f6>
+// CHECK-NEXT:    11024:       b.w     #14680112 <__Thumbv7ABSLongThunk_f6>
+// CHECK-NEXT:    11028:       b.w     #14680112 <__Thumbv7ABSLongThunk_f7>
+// CHECK-NEXT:    1102c:       b.w     #14680108 <__Thumbv7ABSLongThunk_f7>
+// CHECK-NEXT:    11030:       b.w     #14680108 <__Thumbv7ABSLongThunk_f8>
+// CHECK-NEXT:    11034:       b.w     #14680104 <__Thumbv7ABSLongThunk_f8>
+// CHECK-NEXT:    11038:       b.w     #14680104 <__Thumbv7ABSLongThunk_f9>
+// CHECK-NEXT:    1103c:       b.w     #14680100 <__Thumbv7ABSLongThunk_f9>
+// CHECK-NEXT:    11040:       b.w     #14680100 <__Thumbv7ABSLongThunk_f10>
+// CHECK-NEXT:    11044:       b.w     #14680096 <__Thumbv7ABSLongThunk_f10>
 
 
         .thumb

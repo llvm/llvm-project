@@ -891,8 +891,10 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
      << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
                getCIEId(IsDWARF64, IsEH))
      << " CIE\n"
-     << "  Format:                " << FormatString(IsDWARF64) << "\n"
-     << format("  Version:               %d\n", Version)
+     << "  Format:                " << FormatString(IsDWARF64) << "\n";
+  if (IsEH && Version != 1)
+    OS << "WARNING: unsupported CIE version\n";
+  OS << format("  Version:               %d\n", Version)
      << "  Augmentation:          \"" << Augmentation << "\"\n";
   if (Version >= 4) {
     OS << format("  Address size:          %u\n", (uint32_t)AddressSize);
@@ -1012,11 +1014,6 @@ Error DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
       StringRef AugmentationString(Augmentation ? Augmentation : "");
-      // TODO: we should provide a way to report a warning and continue dumping.
-      if (IsEH && Version != 1)
-        return createStringError(errc::not_supported,
-                                 "unsupported CIE version: %" PRIu8, Version);
-
       uint8_t AddressSize = Version < 4 ? Data.getAddressSize() :
                                           Data.getU8(&Offset);
       Data.setAddressSize(AddressSize);

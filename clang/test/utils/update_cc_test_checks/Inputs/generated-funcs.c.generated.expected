@@ -34,7 +34,7 @@ void foo(void) {
 // OMP-NEXT:  entry:
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
-// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB2:@.*]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
+// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*))
 // OMP-NEXT:    ret void
 //
 //
@@ -57,7 +57,7 @@ void foo(void) {
 // OMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // OMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // OMP-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// OMP-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* [[GLOB1:@.*]], i32 [[TMP1]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP1]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // OMP-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 33554431
 // OMP-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -97,7 +97,7 @@ void foo(void) {
 // OMP:       omp.inner.for.end:
 // OMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP:       omp.loop.exit:
-// OMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* [[GLOB1]], i32 [[TMP1]])
+// OMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // OMP-NEXT:    ret void
 //
 //
@@ -107,7 +107,7 @@ void foo(void) {
 // OMP-NEXT:    [[I:%.*]] = alloca i32, align 4
 // OMP-NEXT:    store i32 0, i32* [[RETVAL]], align 4
 // OMP-NEXT:    store i32 0, i32* [[I]], align 4
-// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+// OMP-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
 // OMP-NEXT:    call void @foo()
 // OMP-NEXT:    ret i32 0
 //
@@ -131,7 +131,7 @@ void foo(void) {
 // OMP-NEXT:    store i32 0, i32* [[DOTOMP_IS_LAST]], align 4
 // OMP-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // OMP-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// OMP-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* [[GLOB1]], i32 [[TMP1]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-NEXT:    call void @__kmpc_for_static_init_4(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]], i32 34, i32* [[DOTOMP_IS_LAST]], i32* [[DOTOMP_LB]], i32* [[DOTOMP_UB]], i32* [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DOTOMP_UB]], align 4
 // OMP-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 33554431
 // OMP-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -171,7 +171,7 @@ void foo(void) {
 // OMP:       omp.inner.for.end:
 // OMP-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP:       omp.loop.exit:
-// OMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* [[GLOB1]], i32 [[TMP1]])
+// OMP-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB1]], i32 [[TMP1]])
 // OMP-NEXT:    ret void
 //
 //
@@ -197,7 +197,7 @@ void foo(void) {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP2:!llvm.loop !.*]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    call void @foo()
 // NOOMP-NEXT:    ret i32 0
@@ -223,7 +223,7 @@ void foo(void) {
 // NOOMP-NEXT:    [[TMP2:%.*]] = load i32, i32* [[I]], align 4
 // NOOMP-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP2]], 1
 // NOOMP-NEXT:    store i32 [[INC]], i32* [[I]], align 4
-// NOOMP-NEXT:    br label [[FOR_COND]], [[LOOP4:!llvm.loop !.*]]
+// NOOMP-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // NOOMP:       for.end:
 // NOOMP-NEXT:    ret void
 //

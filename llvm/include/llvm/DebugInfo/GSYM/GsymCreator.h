@@ -294,4 +294,4 @@ public:
 } // namespace gsym
 } // namespace llvm
 
-#endif // #ifndef LLVM_DEBUGINFO_GSYM_GSYMCREATOR_H
+#endif // LLVM_DEBUGINFO_GSYM_GSYMCREATOR_H

@@ -4,6 +4,10 @@
 # RUN: not llvm-objcopy --rename-section=.foo.bar --rename-section=.foo=.other %t %t2 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 # RUN: not llvm-objcopy --rename-section=.foo=.bar --rename-section=.foo=.other %t %t2 2>&1 | FileCheck %s --check-prefix=MULTIPLE-RENAMES
 
+## Section renames don't chain:
+# RUN: llvm-objcopy --rename-section=.foo=.bar --rename-section=.bar=.baz %t %t3
+# RUN: cmp %t2 %t3
+
 !ELF
 FileHeader:
   Class:           ELFCLASS64

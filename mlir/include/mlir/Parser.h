@@ -25,6 +25,7 @@ class StringRef;
 
 namespace mlir {
 namespace detail {
+
 /// Given a block containing operations that have just been parsed, if the block
 /// contains a single operation of `ContainerOpT` type then remove it from the
 /// block and return it. If the block does not contain just that operation,
@@ -37,12 +38,11 @@ inline OwningOpRef<ContainerOpT> constructContainerOpForParserIfNecessary(
     Block *parsedBlock, MLIRContext *context, Location sourceFileLoc) {
   static_assert(
       ContainerOpT::template hasTrait<OpTrait::OneRegion>() &&
-          std::is_base_of<typename OpTrait::SingleBlockImplicitTerminator<
-                              typename ContainerOpT::ImplicitTerminatorOpT>::
-                              template Impl<ContainerOpT>,
-                          ContainerOpT>::value,
+          (ContainerOpT::template hasTrait<OpTrait::NoTerminator>() ||
+           OpTrait::template hasSingleBlockImplicitTerminator<
+               ContainerOpT>::value),
       "Expected `ContainerOpT` to have a single region with a single "
-      "block that has an implicit terminator");
+      "block that has an implicit terminator or does not require one");
 
   // Check to see if we parsed a single instance of this operation.
   if (llvm::hasSingleElement(*parsedBlock)) {

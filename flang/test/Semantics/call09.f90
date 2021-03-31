@@ -76,7 +76,7 @@ module m
     call s01(sin) ! ok
     !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
     call s01(null(intPtr))
-    !ERROR: Actual argument associated with procedure dummy argument 'p=' is not a procedure
+    !ERROR: Actual argument associated with procedure dummy argument 'p=' is typeless
     call s01(B"0101")
     !ERROR: Actual procedure argument has an implicit interface which is not known to be compatible with dummy argument 'p=' which has an explicit interface
     call s01(extfunc)

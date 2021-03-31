@@ -12,16 +12,16 @@
 # CHECK1: : DW_OP_breg31 WSP+16)
 # CHECK1: DW_AT_type {{.*}}ty32
 #
-# CHECK2: : DW_OP_breg29 W29+0, DW_OP_lit8, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECK2: : DW_OP_breg31 WSP+16, DW_OP_lit16, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
 # CHECK2: DW_AT_type {{.*}}svint32_t
 #
-# CHECK3: : DW_OP_breg29 W29+0, DW_OP_lit16, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECK3: : DW_OP_breg31 WSP+16, DW_OP_lit8, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
 # CHECK3: DW_AT_type {{.*}}svint32_t
 #
-# CHECK4: : DW_OP_breg29 W29+0, DW_OP_lit17, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECK4: : DW_OP_breg31 WSP+16, DW_OP_lit7, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
 # CHECK4: DW_AT_type {{.*}}svbool_t
 #
-# CHECK5: : DW_OP_breg29 W29+0, DW_OP_lit18, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_minus)
+# CHECK5: : DW_OP_breg31 WSP+16, DW_OP_lit6, DW_OP_bregx VG+0, DW_OP_mul, DW_OP_plus)
 # CHECK5: DW_AT_type {{.*}}svbool_t
 
 --- |

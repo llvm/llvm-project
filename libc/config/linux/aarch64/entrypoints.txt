@@ -20,18 +20,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # errno.h entrypoints
     libc.src.errno.__errno_location
 
-    # fenv.h entrypoints
-    libc.src.fenv.feclearexcept
-    libc.src.fenv.fegetround
-    libc.src.fenv.fesetround
-    libc.src.fenv.feraiseexcept
-    libc.src.fenv.fetestexcept
-
-    # stdlib.h entrypoints
-    libc.src.stdlib.abs
-    libc.src.stdlib.labs
-    libc.src.stdlib.llabs
-
     # string.h entrypoints
     libc.src.string.bzero
     libc.src.string.memchr
@@ -43,6 +31,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcat
     libc.src.string.strchr
     libc.src.string.strcpy
+    libc.src.string.strcmp
     libc.src.string.strcspn
     libc.src.string.strlen
     libc.src.string.strncpy
@@ -56,6 +45,19 @@ set(TARGET_LIBC_ENTRYPOINTS
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
+    # fenv.h entrypoints
+    libc.src.fenv.feclearexcept
+    libc.src.fenv.fegetenv
+    libc.src.fenv.fegetexceptflag
+    libc.src.fenv.fegetround
+    libc.src.fenv.feholdexcept
+    libc.src.fenv.fesetenv
+    libc.src.fenv.fesetexceptflag
+    libc.src.fenv.fesetround
+    libc.src.fenv.feraiseexcept
+    libc.src.fenv.fetestexcept
+    libc.src.fenv.feupdateenv
+
     # math.h entrypoints
     libc.src.math.copysign
     libc.src.math.copysignf
@@ -90,6 +92,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.llrint
+    libc.src.math.llrintf
+    libc.src.math.llrintl
+    libc.src.math.llround
+    libc.src.math.llroundf
+    libc.src.math.llroundl
+    libc.src.math.lrint
+    libc.src.math.lrintf
+    libc.src.math.lrintl
+    libc.src.math.lround
+    libc.src.math.lroundf
+    libc.src.math.lroundl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -99,6 +113,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modf
     libc.src.math.modff
     libc.src.math.modfl
+    libc.src.math.nearbyint
+    libc.src.math.nearbyintf
+    libc.src.math.nearbyintl
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
@@ -108,6 +125,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.remquof
     libc.src.math.remquo
     libc.src.math.remquol
+    libc.src.math.rint
+    libc.src.math.rintf
+    libc.src.math.rintl
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
@@ -119,4 +139,18 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+)
+
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # stdlib.h entrypoints
+    libc.src.stdlib.abs
+    libc.src.stdlib.labs
+    libc.src.stdlib.llabs
+  )
+endif()
+
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+  ${TARGET_LIBM_ENTRYPOINTS}
 )

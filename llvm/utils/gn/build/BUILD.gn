@@ -1,5 +1,6 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/sysroot.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 import("//llvm/utils/gn/build/toolchain/target_flags.gni")
 
@@ -42,24 +43,6 @@ config("compiler_defaults") {
   cflags = target_flags
   ldflags = target_flags + target_ldflags
 
-  if ((current_os == "ios" || current_os == "mac") && clang_base_path != "") {
-    if (current_os == "ios" && current_cpu == "arm64") {
-      sdk_path = ios_sdk_path
-    } else if (current_os == "ios" && current_cpu == "x64") {
-      sdk_path = iossim_sdk_path
-    } else if (current_os == "mac") {
-      sdk_path = mac_sdk_path
-    }
-    cflags += [
-      "-isysroot",
-      sdk_path,
-    ]
-    ldflags += [
-      "-isysroot",
-      sdk_path,
-    ]
-  }
-
   # Mostly for compiler-rt, see compiler-rt/cmake/config-ix.cmake
   if (current_os == "ios") {
     asmflags += [ "-miphoneos-version-min=8.0" ]
@@ -90,7 +73,6 @@ config("compiler_defaults") {
       }
     } else if (symbol_level == 1) {
       cflags += [ "-g1" ]
-
       # For linetable-only -g1 builds, --gdb-index makes links ~8% slower, but
       # links are 4x faster than -g builds so it's a fairly small absolute cost.
       # On the other hand, gdb startup is well below 1s with and without the
@@ -236,11 +218,7 @@ config("compiler_defaults") {
 
   # On Windows, the linker is not invoked through the compiler driver.
   if (use_lld && host_os != "win") {
-    if (host_os == "mac") {
-      ldflags += [ "-fuse-ld=lld.darwinnew" ]
-    } else {
-      ldflags += [ "-fuse-ld=lld" ]
-    }
+    ldflags += [ "-fuse-ld=lld" ]
   }
 
   if (llvm_build_instrumented_coverage) {
@@ -282,6 +260,38 @@ config("compiler_defaults") {
       ]
     }
   }
+  if (sysroot != "") {
+    if (current_os == "win") {
+      assert(is_clang, "sysroot only works with clang-cl as host compiler")
+      cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+    } else if (current_os != "ios" && current_os != "mac") {
+      cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+    }
+  }
+  if ((current_os == "ios" || current_os == "mac") &&
+      (clang_base_path != "" || sysroot != "")) {
+    if (current_os == "ios" && current_cpu == "arm64") {
+      sdk_path = ios_sdk_path
+    } else if (current_os == "ios" && current_cpu == "x64") {
+      sdk_path = iossim_sdk_path
+    } else if (current_os == "mac") {
+      sdk_path = mac_sdk_path
+    }
+    cflags += [
+      "-isysroot",
+      rebase_path(sdk_path, root_build_dir),
+    ]
+    ldflags += [
+      "-isysroot",
+      rebase_path(sdk_path, root_build_dir),
+    ]
+  }
+  if (sysroot != "" && current_os != "win" && is_clang) {
+    cflags += [ "-Wpoison-system-directories" ]
+  }
+  assert(
+      !use_goma || sysroot != "",
+      "goma needs a sysroot: run `llvm/utils/sysroot.py make-fake --out-dir=sysroot` and add `sysroot = \"//sysroot\"` to your args.gn")
 
   if (use_ubsan) {
     assert(is_clang && current_os == "linux",

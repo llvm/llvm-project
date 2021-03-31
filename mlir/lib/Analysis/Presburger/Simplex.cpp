@@ -272,7 +272,7 @@ LogicalResult Simplex::restoreRow(Unknown &u) {
 
     pivot(*maybePivot);
     if (u.orientation == Orientation::Column)
-      return LogicalResult::Success; // the unknown is unbounded above.
+      return success(); // the unknown is unbounded above.
   }
   return success(tableau(u.pos, 1) >= 0);
 }
@@ -509,7 +509,7 @@ Optional<Fraction> Simplex::computeOptimum(Direction direction, Unknown &u) {
   Optional<Fraction> optimum = computeRowOptimum(direction, row);
   if (u.restricted && direction == Direction::Down &&
       (!optimum || *optimum < Fraction(0, 1)))
-    restoreRow(u);
+    (void)restoreRow(u);
   return optimum;
 }
 
@@ -572,7 +572,7 @@ void Simplex::detectRedundant() {
     if (!minimum || *minimum < Fraction(0, 1)) {
       // Constraint is unbounded below or can attain negative sample values and
       // hence is not redundant.
-      restoreRow(u);
+      (void)restoreRow(u);
       continue;
     }
 

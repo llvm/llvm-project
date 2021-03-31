@@ -407,9 +407,9 @@ TEST(ClangdServerTest, SearchLibDir) {
 
   // Put crtbegin.o into LibDir/64 to trick clang into thinking there's a gcc
   // installation there.
-  SmallString<64> DummyLibFile;
-  llvm::sys::path::append(DummyLibFile, LibDir, "64", "crtbegin.o");
-  FS.Files[DummyLibFile] = "";
+  SmallString<64> MockLibFile;
+  llvm::sys::path::append(MockLibFile, LibDir, "64", "crtbegin.o");
+  FS.Files[MockLibFile] = "";
 
   SmallString<64> IncludeDir("/randomusr/include/c++");
   llvm::sys::path::append(IncludeDir, Version);
@@ -945,7 +945,7 @@ void f() {}
   FS.Files[Path] = Code;
   runAddDocument(Server, Path, Code);
 
-  auto Replaces = runFormatFile(Server, Path, Code);
+  auto Replaces = runFormatFile(Server, Path, /*Rng=*/llvm::None);
   EXPECT_TRUE(static_cast<bool>(Replaces));
   auto Changed = tooling::applyAllReplacements(Code, *Replaces);
   EXPECT_TRUE(static_cast<bool>(Changed));

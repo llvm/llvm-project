@@ -3,6 +3,7 @@ set(LLVM_OPTIONAL_SOURCES
   CastInterfaces.cpp
   ControlFlowInterfaces.cpp
   CopyOpInterface.cpp
+  DataLayoutInterfaces.cpp
   DerivedAttributeOpInterface.cpp
   InferTypeOpInterface.cpp
   LoopLikeInterface.cpp
@@ -31,6 +32,7 @@ add_mlir_interface_library(CallInterfaces)
 add_mlir_interface_library(CastInterfaces)
 add_mlir_interface_library(ControlFlowInterfaces)
 add_mlir_interface_library(CopyOpInterface)
+add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(InferTypeOpInterface)
 add_mlir_interface_library(LoopLikeInterface)

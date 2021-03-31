@@ -335,6 +335,6 @@ bool MipsPassConfig::addRegBankSelect() {
 }
 
 bool MipsPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect());
+  addPass(new InstructionSelect(getOptLevel()));
   return false;
 }

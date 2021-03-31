@@ -355,7 +355,7 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
     CompilerType clang_uint32_type =
         clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
             lldb::eEncodingUint, 32);
-    input_value.SetValueType(Value::eValueTypeScalar);
+    input_value.SetValueType(Value::ValueType::Scalar);
     input_value.SetCompilerType(clang_uint32_type);
     //        input_value.SetContext (Value::eContextTypeClangType,
     //        clang_uint32_type);
@@ -1111,6 +1111,12 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
       // it.
     }
   }
+  return false;
+}
+
+bool DynamicLoaderMacOSXDYLD::IsFullyInitialized() {
+  if (ReadAllImageInfosStructure())
+    return m_dyld_all_image_infos.libSystemInitialized;
   return false;
 }
 

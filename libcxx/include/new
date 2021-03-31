@@ -314,7 +314,7 @@ void* __libcpp_aligned_alloc(std::size_t __alignment, std::size_t __size) {
   return ::_aligned_malloc(__size, __alignment);
 #else
   void* __result = nullptr;
-  ::posix_memalign(&__result, __alignment, __size);
+  (void)::posix_memalign(&__result, __alignment, __size);
   // If posix_memalign fails, __result is unmodified so we still return `nullptr`.
   return __result;
 #endif

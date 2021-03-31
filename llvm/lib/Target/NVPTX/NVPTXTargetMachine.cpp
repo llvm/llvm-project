@@ -227,7 +227,9 @@ void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB,
                                PassBuilder::OptimizationLevel Level) {
         FunctionPassManager FPM(DebugPassManager);
         FPM.addPass(NVVMReflectPass(Subtarget.getSmVersion()));
-        FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
+        // FIXME: NVVMIntrRangePass is causing numerical discrepancies,
+        // investigate and re-enable.
+        // FPM.addPass(NVVMIntrRangePass(Subtarget.getSmVersion()));
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 }

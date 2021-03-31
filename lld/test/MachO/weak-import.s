@@ -24,7 +24,7 @@
 
 # WEAK-SYS:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-SYS-NEXT: cmdsize
-# WEAK-SYS-NEXT:    name /usr/lib/libSystem.B.dylib
+# WEAK-SYS-NEXT:    name /usr/lib/libSystem.dylib
 
 # WEAK-SYS:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-SYS-NEXT: cmdsize
@@ -32,7 +32,7 @@
 
 # SYS:               cmd LC_LOAD_DYLIB
 # SYS-NEXT:      cmdsize
-# SYS-NEXT:         name /usr/lib/libSystem.B.dylib
+# SYS-NEXT:         name /usr/lib/libSystem.dylib
 
 # WEAK-FOO:          cmd LC_LOAD_WEAK_DYLIB
 # WEAK-FOO-NEXT: cmdsize

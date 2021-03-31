@@ -17,7 +17,7 @@ using namespace __ubsan;
 UndefinedBehaviorReport::UndefinedBehaviorReport(const char *IssueKind,
                                                  Location &Loc,
                                                  InternalScopedString &Msg)
-    : IssueKind(IssueKind), Loc(Loc), Buffer(Msg.length() + 1) {
+    : IssueKind(IssueKind), Loc(Loc) {
   // We have the common sanitizer reporting lock, so it's safe to register a
   // new UB report.
   RegisterUndefinedBehaviorReport(this);
@@ -52,9 +52,9 @@ void __ubsan::__ubsan_get_current_report_data(const char **OutIssueKind,
 
   // Ensure that the first character of the diagnostic text can't start with a
   // lowercase letter.
-  char FirstChar = Buf.data()[0];
+  char FirstChar = *Buf.data();
   if (FirstChar >= 'a' && FirstChar <= 'z')
-    Buf.data()[0] = FirstChar - 'a' + 'A';
+    *Buf.data() += 'A' - 'a';
 
   *OutIssueKind = CurrentUBR->IssueKind;
   *OutMessage = Buf.data();

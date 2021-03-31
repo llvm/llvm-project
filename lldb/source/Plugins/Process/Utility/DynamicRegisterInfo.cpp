@@ -697,6 +697,14 @@ RegisterInfo *DynamicRegisterInfo::GetRegisterInfoAtIndex(uint32_t i) {
   return nullptr;
 }
 
+const RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(uint32_t kind,
+                                                         uint32_t num) const {
+  uint32_t reg_index = ConvertRegisterKindToRegisterNumber(kind, num);
+  if (reg_index != LLDB_INVALID_REGNUM)
+    return &m_regs[reg_index];
+  return nullptr;
+}
+
 const RegisterSet *DynamicRegisterInfo::GetRegisterSet(uint32_t i) const {
   if (i < m_sets.size())
     return &m_sets[i];

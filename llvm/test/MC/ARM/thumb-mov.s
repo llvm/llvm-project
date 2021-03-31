@@ -13,13 +13,15 @@
         movs pc, r0
         movs r0, pc
         movs pc, pc
-// CHECK: error: operand must be a register in range [r0, r14]
+// CHECK: error: invalid instruction, any one of the following would fix this:
 // CHECK-NEXT: movs pc, r0
 // CHECK: note: operand must be a register in range [r0, r14]
-// CHECK-NEXT: movs r0, pc
 // CHECK: note: invalid operand for instruction
+// CHECK: error: invalid instruction, any one of the following would fix this:
 // CHECK-NEXT: movs r0, pc
-// CHECK: error: invalid instruction
+// CHECK: note: operand must be a register in range [r0, r14]
+// CHECK: note: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 // CHECK-NEXT: movs pc, pc
 
         // mov.w selects t2MOVr
@@ -39,13 +41,15 @@
         movs.w pc, r0
         movs.w r0, pc
         movs.w pc, pc
-// CHECK: error: operand must be a register in range [r0, r14]
+// CHECK: error: invalid instruction, any one of the following would fix this:
 // CHECK-NEXT: movs.w pc, r0
 // CHECK: note: operand must be a register in range [r0, r14]
-// CHECK-NEXT: movs.w r0, pc
 // CHECK: note: invalid operand for instruction
+// CHECK: error: invalid instruction, any one of the following would fix this:
 // CHECK-NEXT: movs.w r0, pc
-// CHECK: error: invalid instruction
+// CHECK: note: operand must be a register in range [r0, r14]
+// CHECK: note: invalid operand for instruction
+// CHECK: error: invalid operand for instruction
 // CHECK-NEXT: movs.w pc, pc
 
 
@@ -104,3 +108,11 @@
         mov.w r0, sp
 // CHECK: mov.w sp, r0                @ encoding: [0x4f,0xea,0x00,0x0d]
 // CHECK: mov.w r0, sp                @ encoding: [0x4f,0xea,0x0d,0x00]
+
+        // `movs pc, lr` is an alias for `subs pc, lr, #0`/`eret`.
+        movs   pc, lr
+        movs.w pc, lr
+// CHECK-V7: subs pc, lr, #0             @ encoding: [0xde,0xf3,0x00,0x8f]
+// CHECK-V7: subs pc, lr, #0             @ encoding: [0xde,0xf3,0x00,0x8f]
+// CHECK-V8: eret                        @ encoding: [0xde,0xf3,0x00,0x8f]
+// CHECK-V8: eret                        @ encoding: [0xde,0xf3,0x00,0x8f]

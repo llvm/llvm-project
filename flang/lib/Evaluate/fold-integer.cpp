@@ -7,8 +7,43 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "flang/Evaluate/check-expression.h"
 
 namespace Fortran::evaluate {
+
+// Class to retrieve the constant lower bound of an expression which is an
+// array that devolves to a type of Constant<T>
+class GetConstantArrayLboundHelper {
+public:
+  GetConstantArrayLboundHelper(ConstantSubscript dim) : dim_{dim} {}
+
+  template <typename T> ConstantSubscript GetLbound(const T &) {
+    // The method is needed for template expansion, but we should never get
+    // here in practice.
+    CHECK(false);
+    return 0;
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Constant<T> &x) {
+    // Return the lower bound
+    return x.lbounds()[dim_];
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Parentheses<T> &x) {
+    // Strip off the parentheses
+    return GetLbound(x.left());
+  }
+
+  template <typename T> ConstantSubscript GetLbound(const Expr<T> &x) {
+    // recurse through Expr<T>'a until we hit a constant
+    return std::visit([&](const auto &inner) { return GetLbound(inner); },
+        //      [&](const auto &) { return 0; },
+        x.u);
+  }
+
+private:
+  ConstantSubscript dim_;
+};
 
 template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
@@ -23,7 +58,7 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         if (auto dim64{GetInt64Arg(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_en_US,
+                                   "rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -50,6 +85,9 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
         } else {
           lowerBoundsAreOne = symbol.Rank() == 0; // LBOUND(array%component)
         }
+      }
+      if (IsActuallyConstant(*array)) {
+        return Expr<T>{GetConstantArrayLboundHelper{*dim}.GetLbound(*array)};
       }
       if (lowerBoundsAreOne) {
         if (dim) {
@@ -78,7 +116,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (auto dim64{GetInt64Arg(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
             context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_en_US,
+                                   "rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -95,8 +133,11 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           takeBoundsFromShape = false;
           if (dim) {
-            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank) {
-              return Expr<T>{-1};
+            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank - 1) {
+              context.messages().Say("DIM=%jd dimension is out of range for "
+                                     "rank-%d assumed-size array"_err_en_US,
+                  rank, rank);
+              return MakeInvalidIntrinsic<T>(std::move(funcRef));
             } else if (auto ub{GetUpperBound(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
@@ -595,12 +636,11 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "storage_size") { // in bits
-    if (const auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-      if (auto type{expr->GetType()}) {
-        if (auto bytes{type->MeasureSizeInBytes(context, true)}) {
-          return Expr<T>{
-              Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
-        }
+    if (auto info{
+            characteristics::TypeAndShape::Characterize(args[0], context)}) {
+      if (auto bytes{info->MeasureElementSizeInBytes(context, true)}) {
+        return Expr<T>{
+            Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
       }
     }
   } else if (name == "ubound") {

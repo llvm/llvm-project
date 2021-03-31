@@ -37,7 +37,8 @@ using namespace mlir::scf;
 /// %i0 + j0 and %i1 + %j1.
 //
 /// The old loop is replaced with the new one.
-void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
+std::pair<ParallelOp, ParallelOp>
+mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   OpBuilder b(op);
   auto zero = b.create<ConstantIndexOp>(op.getLoc(), 0);
   SmallVector<Value, 2> tileSizeConstants;
@@ -125,6 +126,7 @@ void mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes) {
   }
 
   op.erase();
+  return std::make_pair(outerLoop, innerLoop);
 }
 
 namespace {

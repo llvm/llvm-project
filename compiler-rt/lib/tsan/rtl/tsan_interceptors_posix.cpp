@@ -769,6 +769,11 @@ static void *mmap_interceptor(ThreadState *thr, uptr pc, Mmap real_mmap,
   if (!fix_mmap_addr(&addr, sz, flags)) return MAP_FAILED;
   void *res = real_mmap(addr, sz, prot, flags, fd, off);
   if (res != MAP_FAILED) {
+    if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + sz - 1)) {
+      Report("ThreadSanitizer: mmap at bad address: addr=%p size=%p res=%p\n",
+             addr, (void*)sz, res);
+      Die();
+    }
     if (fd > 0) FdAccess(thr, pc, fd);
     MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, sz);
   }
@@ -2258,6 +2263,8 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver)                          \
   INTERCEPT_FUNCTION_VER(name, ver)
+#define COMMON_INTERCEPT_FUNCTION_VER_UNVERSIONED_FALLBACK(name, ver) \
+  (INTERCEPT_FUNCTION_VER(name, ver) || INTERCEPT_FUNCTION(name))
 
 #define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size)                    \
   MemoryAccessRange(((TsanInterceptorContext *)ctx)->thr,                 \

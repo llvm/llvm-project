@@ -184,6 +184,10 @@ def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
   FeatureISAVersion9_0_9.Features
 >;
 
+def : ProcessorModel<"gfx90a", SIDPFullSpeedModel,
+  FeatureISAVersion9_0_A.Features
+>;
+
 def : ProcessorModel<"gfx90c", SIQuarterSpeedModel,
   FeatureISAVersion9_0_C.Features
 >;

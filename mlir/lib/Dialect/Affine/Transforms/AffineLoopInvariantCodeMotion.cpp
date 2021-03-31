@@ -61,11 +61,6 @@ areAllOpsInTheBlockListInvariant(Region &blockList, Value indVar,
                                  SmallPtrSetImpl<Operation *> &definedOps,
                                  SmallPtrSetImpl<Operation *> &opsToHoist);
 
-static bool isMemRefDereferencingOp(Operation &op) {
-  // TODO: Support DMA Ops.
-  return isa<AffineReadOpInterface, AffineWriteOpInterface>(op);
-}
-
 // Returns true if the individual op is loop invariant.
 bool isOpLoopInvariant(Operation &op, Value indVar,
                        SmallPtrSetImpl<Operation *> &definedOps,
@@ -89,7 +84,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
     // which are themselves not being hoisted.
     definedOps.insert(&op);
 
-    if (isMemRefDereferencingOp(op)) {
+    if (isa<AffineMapAccessInterface>(op)) {
       Value memref = isa<AffineReadOpInterface>(op)
                          ? cast<AffineReadOpInterface>(op).getMemRef()
                          : cast<AffineWriteOpInterface>(op).getMemRef();

@@ -518,9 +518,8 @@ void MachineOutliner::findCandidates(
   // First, find all of the repeated substrings in the tree of minimum length
   // 2.
   std::vector<Candidate> CandidatesForRepeatedSeq;
-  for (auto It = ST.begin(), Et = ST.end(); It != Et; ++It) {
+  for (const SuffixTree::RepeatedSubstring &RS : ST) {
     CandidatesForRepeatedSeq.clear();
-    SuffixTree::RepeatedSubstring RS = *It;
     unsigned StringLen = RS.Length;
     for (const unsigned &StartIdx : RS.StartIndices) {
       unsigned EndIdx = StartIdx + StringLen - 1;
@@ -807,7 +806,7 @@ bool MachineOutliner::outline(Module &M,
             if (MOP.isDef()) {
               // Introduce DefRegs set to skip the redundant register.
               DefRegs.insert(MOP.getReg());
-              if (UseRegs.count(MOP.getReg()))
+              if (!MOP.isDead() && UseRegs.count(MOP.getReg()))
                 // Since the regiester is modeled as defined,
                 // it is not necessary to be put in use register set.
                 UseRegs.erase(MOP.getReg());

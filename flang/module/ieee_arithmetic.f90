@@ -9,6 +9,18 @@
 ! See Fortran 2018, clause 17.2
 module ieee_arithmetic
 
+  use __Fortran_builtins, only: &
+    ieee_support_datatype => __builtin_ieee_support_datatype, &
+    ieee_support_denormal => __builtin_ieee_support_denormal, &
+    ieee_support_divide => __builtin_ieee_support_divide, &
+    ieee_support_inf => __builtin_ieee_support_inf, &
+    ieee_support_io => __builtin_ieee_support_io, &
+    ieee_support_nan => __builtin_ieee_support_nan, &
+    ieee_support_sqrt => __builtin_ieee_support_sqrt, &
+    ieee_support_standard => __builtin_ieee_support_standard, &
+    ieee_support_subnormal => __builtin_ieee_support_subnormal, &
+    ieee_support_underflow_control => __builtin_ieee_support_underflow_control
+
   type :: ieee_class_type
     private
     integer(kind=1) :: which = 0
@@ -71,6 +83,15 @@ module ieee_arithmetic
     module procedure ieee_copy_sign_a10
     module procedure ieee_copy_sign_a16
   end interface ieee_copy_sign
+
+  generic :: ieee_support_rounding => ieee_support_rounding_, &
+    ieee_support_rounding_2, ieee_support_rounding_3, &
+    ieee_support_rounding_4, ieee_support_rounding_8, &
+    ieee_support_rounding_10, ieee_support_rounding_16
+  private :: ieee_support_rounding_, &
+    ieee_support_rounding_2, ieee_support_rounding_3, &
+    ieee_support_rounding_4, ieee_support_rounding_8, &
+    ieee_support_rounding_10, ieee_support_rounding_16
 
   ! TODO: more interfaces (_fma, &c.)
 
@@ -180,5 +201,40 @@ module ieee_arithmetic
   _COPYSIGN(10,16,80)
   _COPYSIGN(16,16,128)
 #undef _COPYSIGN
+
+  pure logical function ieee_support_rounding_(round_type)
+    type(ieee_round_type), intent(in) :: round_type
+    ieee_support_rounding_ = .true.
+  end function
+  pure logical function ieee_support_rounding_2(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=2), intent(in) :: x
+    ieee_support_rounding_2 = .true.
+  end function
+  pure logical function ieee_support_rounding_3(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=3), intent(in) :: x
+    ieee_support_rounding_3 = .true.
+  end function
+  pure logical function ieee_support_rounding_4(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=4), intent(in) :: x
+    ieee_support_rounding_4 = .true.
+  end function
+  pure logical function ieee_support_rounding_8(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=8), intent(in) :: x
+    ieee_support_rounding_8 = .true.
+  end function
+  pure logical function ieee_support_rounding_10(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=10), intent(in) :: x
+    ieee_support_rounding_10 = .true.
+  end function
+  pure logical function ieee_support_rounding_16(round_type,x)
+    type(ieee_round_type), intent(in) :: round_type
+    real(kind=16), intent(in) :: x
+    ieee_support_rounding_16 = .true.
+  end function
 
 end module ieee_arithmetic

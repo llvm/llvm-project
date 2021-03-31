@@ -605,6 +605,17 @@ unsigned LLVMGetEnumAttributeKind(LLVMAttributeRef A);
 uint64_t LLVMGetEnumAttributeValue(LLVMAttributeRef A);
 
 /**
+ * Create a type attribute
+ */
+LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
+                                         LLVMTypeRef type_ref);
+
+/**
+ * Get the type attribute's value.
+ */
+LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A);
+
+/**
  * Create a string attribute.
  */
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
@@ -626,6 +637,7 @@ const char *LLVMGetStringAttributeValue(LLVMAttributeRef A, unsigned *Length);
  */
 LLVMBool LLVMIsEnumAttribute(LLVMAttributeRef A);
 LLVMBool LLVMIsStringAttribute(LLVMAttributeRef A);
+LLVMBool LLVMIsTypeAttribute(LLVMAttributeRef A);
 
 /**
  * Obtain a Type from a context by its registered name.
@@ -2249,6 +2261,8 @@ void LLVMSetUnnamedAddr(LLVMValueRef Global, LLVMBool HasUnnamedAddr);
  * @see llvm::AllocaInst::getAlignment()
  * @see llvm::LoadInst::getAlignment()
  * @see llvm::StoreInst::getAlignment()
+ * @see llvm::AtomicRMWInst::setAlignment()
+ * @see llvm::AtomicCmpXchgInst::setAlignment()
  * @see llvm::GlobalValue::getAlignment()
  */
 unsigned LLVMGetAlignment(LLVMValueRef V);
@@ -2258,6 +2272,8 @@ unsigned LLVMGetAlignment(LLVMValueRef V);
  * @see llvm::AllocaInst::setAlignment()
  * @see llvm::LoadInst::setAlignment()
  * @see llvm::StoreInst::setAlignment()
+ * @see llvm::AtomicRMWInst::setAlignment()
+ * @see llvm::AtomicCmpXchgInst::setAlignment()
  * @see llvm::GlobalValue::setAlignment()
  */
 void LLVMSetAlignment(LLVMValueRef V, unsigned Bytes);

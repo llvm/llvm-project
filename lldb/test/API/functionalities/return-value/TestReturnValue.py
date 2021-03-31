@@ -19,7 +19,8 @@ class ReturnValueTestCase(TestBase):
             "aarch64" and self.getPlatform() == "linux")
 
     def affected_by_pr44132(self):
-        return ((self.getArchitecture() == "aarch64" or self.getArchitecture() == 'arm') and self.getPlatform() == "linux")
+        return (self.getArchitecture() in ["aarch64", "arm"] and
+                self.getPlatform() in ["freebsd", "linux"])
 
     # ABIMacOSX_arm can't fetch simple values inside a structure
     def affected_by_radar_34562999(self):
@@ -124,7 +125,7 @@ class ReturnValueTestCase(TestBase):
         #self.assertTrue(return_value.IsValid())
         #return_float = float(return_value.GetValue())
 
-        #self.assertTrue(in_float == return_float)
+        #self.assertEqual(in_float, return_float)
 
         if not self.affected_by_radar_34562999() and not self.affected_by_pr44132():
             self.return_and_test_struct_value("return_one_int")

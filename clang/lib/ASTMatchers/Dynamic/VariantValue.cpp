@@ -22,7 +22,9 @@ namespace dynamic {
 std::string ArgKind::asString() const {
   switch (getArgKind()) {
   case AK_Matcher:
-    return (Twine("Matcher<") + MatcherKind.asStringRef() + ">").str();
+    return (Twine("Matcher<") + NodeKind.asStringRef() + ">").str();
+  case AK_Node:
+    return NodeKind.asStringRef().str();
   case AK_Boolean:
     return "boolean";
   case AK_Double:
@@ -38,13 +40,13 @@ std::string ArgKind::asString() const {
 bool ArgKind::isConvertibleTo(ArgKind To, unsigned *Specificity) const {
   if (K != To.K)
     return false;
-  if (K != AK_Matcher) {
+  if (K != AK_Matcher && K != AK_Node) {
     if (Specificity)
       *Specificity = 1;
     return true;
   }
   unsigned Distance;
-  if (!MatcherKind.isBaseOf(To.MatcherKind, &Distance))
+  if (!NodeKind.isBaseOf(To.NodeKind, &Distance))
     return false;
 
   if (Specificity)
@@ -107,8 +109,8 @@ public:
   }
 
   bool isConvertibleTo(ASTNodeKind Kind, unsigned *Specificity) const override {
-    return ArgKind(Matcher.getSupportedKind())
-        .isConvertibleTo(Kind, Specificity);
+    return ArgKind::MakeMatcherArg(Matcher.getSupportedKind())
+        .isConvertibleTo(ArgKind::MakeMatcherArg(Kind), Specificity);
   }
 
 private:
@@ -167,8 +169,9 @@ public:
     unsigned MaxSpecificity = 0;
     for (const DynTypedMatcher &Matcher : Matchers) {
       unsigned ThisSpecificity;
-      if (ArgKind(Matcher.getSupportedKind())
-              .isConvertibleTo(Kind, &ThisSpecificity)) {
+      if (ArgKind::MakeMatcherArg(Matcher.getSupportedKind())
+              .isConvertibleTo(ArgKind::MakeMatcherArg(Kind),
+                               &ThisSpecificity)) {
         MaxSpecificity = std::max(MaxSpecificity, ThisSpecificity);
       }
     }
@@ -441,6 +444,11 @@ bool VariantValue::isConvertibleTo(ArgKind Kind, unsigned *Specificity) const {
       return false;
     *Specificity = 1;
     return true;
+
+  case ArgKind::AK_Node:
+    if (!isNodeKind())
+      return false;
+    return getMatcher().isConvertibleTo(Kind.getNodeKind(), Specificity);
 
   case ArgKind::AK_Matcher:
     if (!isMatcher())

@@ -1948,7 +1948,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     IRBuilder<> IRB(&I);
     Value *Addr = I.getOperand(0);
-    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, I.getType(), Align(1),
+    Value *Val = I.getOperand(1);
+    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, Val->getType(), Align(1),
                                           /*isStore*/ true)
                            .first;
 
@@ -1959,9 +1960,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The other argument can potentially be uninitialized, but we can not
     // detect this situation reliably without possible false positives.
     if (isa<AtomicCmpXchgInst>(I))
-      insertShadowCheck(I.getOperand(1), &I);
+      insertShadowCheck(Val, &I);
 
-    IRB.CreateStore(getCleanShadow(&I), ShadowPtr);
+    IRB.CreateStore(getCleanShadow(Val), ShadowPtr);
 
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
@@ -2188,8 +2189,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!MS.TrackOrigins) return;
     IRBuilder<> IRB(&I);
     OriginCombiner OC(this, IRB);
-    for (Instruction::op_iterator OI = I.op_begin(); OI != I.op_end(); ++OI)
-      OC.Add(OI->get());
+    for (Use &Op : I.operands())
+      OC.Add(Op.get());
     OC.Done(&I);
   }
 
@@ -2239,8 +2240,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleShadowOr(Instruction &I) {
     IRBuilder<> IRB(&I);
     ShadowAndOriginCombiner SC(this, IRB);
-    for (Instruction::op_iterator OI = I.op_begin(); OI != I.op_end(); ++OI)
-      SC.Add(OI->get());
+    for (Use &Op : I.operands())
+      SC.Add(Op.get());
     SC.Done(&I);
   }
 
@@ -4049,8 +4050,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         NumRetOutputs = 1;
     }
     InlineAsm::ConstraintInfoVector Constraints = IA->ParseConstraints();
-    for (size_t i = 0, n = Constraints.size(); i < n; i++) {
-      InlineAsm::ConstraintInfo Info = Constraints[i];
+    for (const InlineAsm::ConstraintInfo &Info : Constraints) {
       switch (Info.Type) {
       case InlineAsm::isOutput:
         NumOutputs++;

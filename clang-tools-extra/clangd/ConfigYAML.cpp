@@ -63,6 +63,7 @@ public:
     Dict.handle("Index", [&](Node &N) { parse(F.Index, N); });
     Dict.handle("Style", [&](Node &N) { parse(F.Style, N); });
     Dict.handle("Diagnostics", [&](Node &N) { parse(F.Diagnostics, N); });
+    Dict.handle("Completion", [&](Node &N) { parse(F.Completion, N); });
     Dict.parse(N);
     return !(N.failed() || HadError);
   }
@@ -162,6 +163,19 @@ private:
                 [&](Node &N) { F.Server = scalarValue(N, "Server"); });
     Dict.handle("MountPoint",
                 [&](Node &N) { F.MountPoint = scalarValue(N, "MountPoint"); });
+    Dict.parse(N);
+  }
+
+  void parse(Fragment::CompletionBlock &F, Node &N) {
+    DictParser Dict("Completion", this);
+    Dict.handle("AllScopes", [&](Node &N) {
+      if (auto Value = scalarValue(N, "AllScopes")) {
+        if (auto AllScopes = llvm::yaml::parseBool(**Value))
+          F.AllScopes = *AllScopes;
+        else
+          warning("AllScopes should be a boolean", N);
+      }
+    });
     Dict.parse(N);
   }
 

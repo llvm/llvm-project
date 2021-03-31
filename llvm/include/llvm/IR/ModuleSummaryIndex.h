@@ -228,7 +228,9 @@ struct ValueInfo {
   /// protected and hidden.
   GlobalValue::VisibilityTypes getELFVisibility() const;
 
-  bool isDSOLocal() const;
+  /// Checks if all summaries are DSO local (have the flag set). When DSOLocal
+  /// propagation has been done, set the parameter to enable fast check.
+  bool isDSOLocal(bool WithDSOLocalPropagation = false) const;
 
   /// Checks if all copies are eligible for auto-hiding (have flag set).
   bool canAutoHide() const;
@@ -1055,6 +1057,10 @@ private:
   /// read/write only.
   bool WithAttributePropagation = false;
 
+  /// Indicates that summary-based DSOLocal propagation has run and the flag in
+  /// every summary of a GV is synchronized.
+  bool WithDSOLocalPropagation = false;
+
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
@@ -1209,6 +1215,9 @@ public:
   void setWithAttributePropagation() {
     WithAttributePropagation = true;
   }
+
+  bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
+  void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
 
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();
@@ -1513,7 +1522,7 @@ public:
   /// Print out strongly connected components for debugging.
   void dumpSCCs(raw_ostream &OS);
 
-  /// Analyze index and detect unmodified globals
+  /// Do the access attribute and DSOLocal propagation in combined index.
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.

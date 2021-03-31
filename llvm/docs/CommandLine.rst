@@ -387,7 +387,7 @@ now is:
     -quiet        - Don't print informational messages
 
 In this case, it is sort of awkward that flag names correspond directly to enum
-names, because we probably don't want a enum definition named "``g``" in our
+names, because we probably don't want an enum definition named "``g``" in our
 program.  Because of this, we can alternatively write this example like this:
 
 .. code-block:: c++

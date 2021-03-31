@@ -748,10 +748,13 @@ static void addModule(LTO &Lto, claimed_file &F, const void *View,
 
     case LDPR_RESOLVED_IR:
     case LDPR_RESOLVED_EXEC:
-    case LDPR_RESOLVED_DYN:
     case LDPR_PREEMPTED_IR:
     case LDPR_PREEMPTED_REG:
     case LDPR_UNDEF:
+      break;
+
+    case LDPR_RESOLVED_DYN:
+      R.ExportDynamic = true;
       break;
 
     case LDPR_PREVAILING_DEF_IRONLY:
@@ -915,7 +918,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   case options::OT_BC_ONLY:
     Conf.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
       std::error_code EC;
-      raw_fd_ostream OS(output_name, EC, sys::fs::OpenFlags::OF_None);
+      SmallString<128> TaskFilename;
+      getOutputFileName(output_name, /* TempOutFile */ false, TaskFilename,
+                        Task);
+      raw_fd_ostream OS(TaskFilename, EC, sys::fs::OpenFlags::OF_None);
       if (EC)
         message(LDPL_FATAL, "Failed to write the output file.");
       WriteBitcodeToFile(M, OS, /* ShouldPreserveUseListOrder */ false);

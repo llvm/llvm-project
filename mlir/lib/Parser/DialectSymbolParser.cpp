@@ -63,21 +63,34 @@ public:
 
   /// Parse a floating point value from the stream.
   ParseResult parseFloat(double &result) override {
-    bool negative = parser.consumeIf(Token::minus);
+    bool isNegative = parser.consumeIf(Token::minus);
     Token curTok = parser.getToken();
+    llvm::SMLoc loc = curTok.getLoc();
 
     // Check for a floating point value.
     if (curTok.is(Token::floatliteral)) {
       auto val = curTok.getFloatingPointValue();
       if (!val.hasValue())
-        return emitError(curTok.getLoc(), "floating point value too large");
+        return emitError(loc, "floating point value too large");
       parser.consumeToken(Token::floatliteral);
-      result = negative ? -*val : *val;
+      result = isNegative ? -*val : *val;
       return success();
     }
 
-    // TODO: support hex floating point values.
-    return emitError(getCurrentLocation(), "expected floating point literal");
+    // Check for a hexadecimal float value.
+    if (curTok.is(Token::integer)) {
+      Optional<APFloat> apResult;
+      if (failed(parser.parseFloatFromIntegerLiteral(
+              apResult, curTok, isNegative, APFloat::IEEEdouble(),
+              /*typeSizeInBits=*/64)))
+        return failure();
+
+      parser.consumeToken(Token::integer);
+      result = apResult->convertToDouble();
+      return success();
+    }
+
+    return emitError(loc, "expected floating point literal");
   }
 
   /// Parse an optional integer value from the stream.
@@ -524,9 +537,9 @@ Attribute Parser::parseExtendedAttr(Type type) {
 
         // Otherwise, form a new opaque attribute.
         return OpaqueAttr::getChecked(
+            [&] { return emitError(loc); },
             Identifier::get(dialectName, state.context), symbolData,
-            attrType ? attrType : NoneType::get(state.context),
-            getEncodedSourceLocation(loc));
+            attrType ? attrType : NoneType::get(state.context));
       });
 
   // Ensure that the attribute has the same type as requested.
@@ -563,7 +576,7 @@ Type Parser::parseExtendedType() {
 
         // Otherwise, form a new opaque type.
         return OpaqueType::getChecked(
-            getEncodedSourceLocation(loc),
+            [&] { return emitError(loc); },
             Identifier::get(dialectName, state.context), symbolData);
       });
 }

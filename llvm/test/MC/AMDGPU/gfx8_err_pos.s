@@ -8,6 +8,11 @@ image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 a16
 // CHECK-NEXT:{{^}}image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 a16
 // CHECK-NEXT:{{^}}                                                      ^
 
+image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 noa16
+// CHECK: error: a16 modifier is not supported on this GPU
+// CHECK-NEXT:{{^}}image_gather4 v[5:8], v1, s[8:15], s[12:15] dmask:0x1 noa16
+// CHECK-NEXT:{{^}}                                                      ^
+
 //==============================================================================
 // expected a 20-bit unsigned offset
 

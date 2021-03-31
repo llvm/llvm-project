@@ -292,17 +292,17 @@ define float @PR35538(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, float* [[TMP2]], i32 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast float* [[TMP6]] to <4 x float>*
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP10]] = select <4 x i1> [[TMP8]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP9]], <4 x float> [[WIDE_LOAD2]], <4 x float> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf ogt <4 x float> [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call nnan ninf float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
+; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = fcmp nnan ninf nsz ogt <4 x float> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select nnan ninf nsz <4 x i1> [[RDX_MINMAX_CMP]], <4 x float> [[TMP10]], <4 x float> [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call nnan ninf nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -320,7 +320,7 @@ define float @PR35538(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[MAX_013:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[MAX_0_]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load float, float* [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp nnan ninf oge float [[TMP14]], [[MAX_013]]
+; CHECK-NEXT:    [[CMP1_INV:%.*]] = fcmp nnan ninf nsz oge float [[TMP14]], [[MAX_013]]
 ; CHECK-NEXT:    [[MAX_0_]] = select i1 [[CMP1_INV]], float [[TMP14]], float [[MAX_013]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -343,7 +343,7 @@ for.body:
   %max.013 = phi float [ -1.000000e+00, %for.body.lr.ph ], [ %max.0., %for.body ]
   %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
   %0 = load float, float* %arrayidx, align 4
-  %cmp1.inv = fcmp nnan ninf oge float %0, %max.013
+  %cmp1.inv = fcmp nnan ninf nsz oge float %0, %max.013
   %max.0. = select i1 %cmp1.inv, float %0, float %max.013
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -437,4 +437,4 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="false" "unsafe-fp-math"="false" }
+attributes #0 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "unsafe-fp-math"="false" }

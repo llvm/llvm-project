@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
 
 ! Check OpenACC canonalization validity for the construct defined below:
 !   2.9 Loop

@@ -143,8 +143,9 @@ function(add_mlir_dialect_python_bindings tblgen_target)
     "DEPENDS"
     ${ARGN})
 
+  set(dialect_filename "_${ARG_DIALECT_NAME}_ops_gen.py")
   set(LLVM_TARGET_DEFINITIONS ${ARG_TD_FILE})
-  mlir_tablegen("${ARG_DIALECT_NAME}.py" -gen-python-op-bindings
+  mlir_tablegen("${dialect_filename}" -gen-python-op-bindings
                 -bind-dialect=${ARG_DIALECT_NAME})
   add_public_tablegen_target(
     ${tblgen_target})
@@ -154,9 +155,9 @@ function(add_mlir_dialect_python_bindings tblgen_target)
 
   add_custom_command(
     TARGET ${tblgen_target} POST_BUILD
-    COMMENT "Copying generated python source \"dialects/${ARG_DIALECT_NAME}.py\""
+    COMMENT "Copying generated python source \"dialects/${dialect_filename}\""
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-      "${CMAKE_CURRENT_BINARY_DIR}/${ARG_DIALECT_NAME}.py"
-      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${ARG_DIALECT_NAME}.py")
+      "${CMAKE_CURRENT_BINARY_DIR}/${dialect_filename}"
+      "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialect_filename}")
 endfunction()
 

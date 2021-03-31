@@ -49,7 +49,17 @@ DynTypedNode ParentMapContext::traverseIgnored(const DynTypedNode &N) const {
   return N;
 }
 
+template <typename T, typename... U>
+std::tuple<bool, DynTypedNodeList, const T *, const U *...>
+matchParents(const DynTypedNodeList &NodeList,
+             ParentMapContext::ParentMap *ParentMap);
+
+template <typename, typename...> struct MatchParents;
+
 class ParentMapContext::ParentMap {
+
+  template <typename, typename...> friend struct ::MatchParents;
+
   /// Contains parents of a node.
   using ParentVector = llvm::SmallVector<DynTypedNode, 2>;
 
@@ -117,11 +127,72 @@ public:
     if (Node.getNodeKind().hasPointerIdentity()) {
       auto ParentList =
           getDynNodeFromMap(Node.getMemoizationData(), PointerParents);
-      if (ParentList.size() == 1 && TK == TK_IgnoreUnlessSpelledInSource) {
-        const auto *E = ParentList[0].get<Expr>();
-        const auto *Child = Node.get<Expr>();
-        if (E && Child)
-          return AscendIgnoreUnlessSpelledInSource(E, Child);
+      if (ParentList.size() > 0 && TK == TK_IgnoreUnlessSpelledInSource) {
+
+        const auto *ChildExpr = Node.get<Expr>();
+
+        {
+          // Don't match explicit node types because different stdlib
+          // implementations implement this in different ways and have
+          // different intermediate nodes.
+          // Look up 4 levels for a cxxRewrittenBinaryOperator as that is
+          // enough for the major stdlib implementations.
+          auto RewrittenBinOpParentsList = ParentList;
+          int I = 0;
+          while (ChildExpr && RewrittenBinOpParentsList.size() == 1 &&
+                 I++ < 4) {
+            const auto *S = RewrittenBinOpParentsList[0].get<Stmt>();
+            if (!S)
+              break;
+
+            const auto *RWBO = dyn_cast<CXXRewrittenBinaryOperator>(S);
+            if (!RWBO) {
+              RewrittenBinOpParentsList = getDynNodeFromMap(S, PointerParents);
+              continue;
+            }
+            if (RWBO->getLHS()->IgnoreUnlessSpelledInSource() != ChildExpr &&
+                RWBO->getRHS()->IgnoreUnlessSpelledInSource() != ChildExpr)
+              break;
+            return DynTypedNode::create(*RWBO);
+          }
+        }
+
+        const auto *ParentExpr = ParentList[0].get<Expr>();
+        if (ParentExpr && ChildExpr)
+          return AscendIgnoreUnlessSpelledInSource(ParentExpr, ChildExpr);
+
+        {
+          auto AncestorNodes =
+              matchParents<DeclStmt, CXXForRangeStmt>(ParentList, this);
+          if (std::get<bool>(AncestorNodes) &&
+              std::get<const CXXForRangeStmt *>(AncestorNodes)
+                      ->getLoopVarStmt() ==
+                  std::get<const DeclStmt *>(AncestorNodes))
+            return std::get<DynTypedNodeList>(AncestorNodes);
+        }
+        {
+          auto AncestorNodes = matchParents<VarDecl, DeclStmt, CXXForRangeStmt>(
+              ParentList, this);
+          if (std::get<bool>(AncestorNodes) &&
+              std::get<const CXXForRangeStmt *>(AncestorNodes)
+                      ->getRangeStmt() ==
+                  std::get<const DeclStmt *>(AncestorNodes))
+            return std::get<DynTypedNodeList>(AncestorNodes);
+        }
+        {
+          auto AncestorNodes =
+              matchParents<CXXMethodDecl, CXXRecordDecl, LambdaExpr>(ParentList,
+                                                                     this);
+          if (std::get<bool>(AncestorNodes))
+            return std::get<DynTypedNodeList>(AncestorNodes);
+        }
+        {
+          auto AncestorNodes =
+              matchParents<FunctionTemplateDecl, CXXRecordDecl, LambdaExpr>(
+                  ParentList, this);
+          if (std::get<bool>(AncestorNodes))
+            return std::get<DynTypedNodeList>(AncestorNodes);
+        }
       }
       return ParentList;
     }
@@ -193,6 +264,59 @@ public:
     return DynTypedNode::create(*E);
   }
 };
+
+template <typename Tuple, std::size_t... Is>
+auto tuple_pop_front_impl(const Tuple &tuple, std::index_sequence<Is...>) {
+  return std::make_tuple(std::get<1 + Is>(tuple)...);
+}
+
+template <typename Tuple> auto tuple_pop_front(const Tuple &tuple) {
+  return tuple_pop_front_impl(
+      tuple, std::make_index_sequence<std::tuple_size<Tuple>::value - 1>());
+}
+
+template <typename T, typename... U> struct MatchParents {
+  static std::tuple<bool, DynTypedNodeList, const T *, const U *...>
+  match(const DynTypedNodeList &NodeList,
+        ParentMapContext::ParentMap *ParentMap) {
+    if (const auto *TypedNode = NodeList[0].get<T>()) {
+      auto NextParentList =
+          ParentMap->getDynNodeFromMap(TypedNode, ParentMap->PointerParents);
+      if (NextParentList.size() == 1) {
+        auto TailTuple = MatchParents<U...>::match(NextParentList, ParentMap);
+        if (std::get<bool>(TailTuple)) {
+          return std::tuple_cat(
+              std::make_tuple(true, std::get<DynTypedNodeList>(TailTuple),
+                              TypedNode),
+              tuple_pop_front(tuple_pop_front(TailTuple)));
+        }
+      }
+    }
+    return std::tuple_cat(std::make_tuple(false, NodeList),
+                          std::tuple<const T *, const U *...>());
+  }
+};
+
+template <typename T> struct MatchParents<T> {
+  static std::tuple<bool, DynTypedNodeList, const T *>
+  match(const DynTypedNodeList &NodeList,
+        ParentMapContext::ParentMap *ParentMap) {
+    if (const auto *TypedNode = NodeList[0].get<T>()) {
+      auto NextParentList =
+          ParentMap->getDynNodeFromMap(TypedNode, ParentMap->PointerParents);
+      if (NextParentList.size() == 1)
+        return std::make_tuple(true, NodeList, TypedNode);
+    }
+    return std::make_tuple(false, NodeList, nullptr);
+  }
+};
+
+template <typename T, typename... U>
+std::tuple<bool, DynTypedNodeList, const T *, const U *...>
+matchParents(const DynTypedNodeList &NodeList,
+             ParentMapContext::ParentMap *ParentMap) {
+  return MatchParents<T, U...>::match(NodeList, ParentMap);
+}
 
 /// Template specializations to abstract away from pointers and TypeLocs.
 /// @{

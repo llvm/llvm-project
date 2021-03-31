@@ -33,10 +33,10 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/LineEditor/LineEditor.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
-#include <fstream>
 #include <string>
 
 using namespace clang;
@@ -73,16 +73,15 @@ static cl::opt<std::string> PreloadFile(
 
 bool runCommandsInFile(const char *ExeName, std::string const &FileName,
                        QuerySession &QS) {
-  std::ifstream Input(FileName.c_str());
-  if (!Input.is_open()) {
-    llvm::errs() << ExeName << ": cannot open " << FileName << "\n";
-    return 1;
+  auto Buffer = llvm::MemoryBuffer::getFile(FileName);
+  if (!Buffer) {
+    llvm::errs() << ExeName << ": cannot open " << FileName << ": "
+                 << Buffer.getError().message() << "\n";
+    return true;
   }
 
-  std::string FileContent((std::istreambuf_iterator<char>(Input)),
-                          std::istreambuf_iterator<char>());
+  StringRef FileContentRef(Buffer.get()->getBuffer());
 
-  StringRef FileContentRef(FileContent);
   while (!FileContentRef.empty()) {
     QueryRef Q = QueryParser::parse(FileContentRef, QS);
     if (!Q->run(llvm::outs(), QS))

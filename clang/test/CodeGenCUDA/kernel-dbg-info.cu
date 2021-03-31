@@ -30,6 +30,9 @@ extern "C" __global__ void ckernel(int *a) {
   *a = 1;
 }
 
+// Kernel symbol for launching kernel.
+// CHECK: @[[SYM:ckernel]] = constant void (i32*)* @__device_stub__ckernel, align 8
+
 // Device side kernel names
 // CHECK: @[[CKERN:[0-9]*]] = {{.*}} c"ckernel\00"
 
@@ -40,7 +43,7 @@ extern "C" __global__ void ckernel(int *a) {
 // Make sure there is no !dbg between function attributes and '{'
 // CHECK: define{{.*}} void @[[CSTUB:__device_stub__ckernel]]{{.*}} #{{[0-9]+}} {
 // CHECK-NOT: call {{.*}}@hipLaunchByPtr{{.*}}!dbg
-// CHECK: call {{.*}}@hipLaunchByPtr{{.*}}@[[CSTUB]]
+// CHECK: call {{.*}}@hipLaunchByPtr{{.*}}@[[SYM]]
 // CHECK-NOT: ret {{.*}}!dbg
 
 // CHECK-LABEL: define {{.*}}@_Z8hostfuncPi{{.*}}!dbg

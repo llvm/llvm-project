@@ -455,11 +455,13 @@ static Sema::TemplateDeductionResult DeduceNullPtrTemplateArgument(
     const NonTypeTemplateParmDecl *NTTP, QualType NullPtrType,
     TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
-  Expr *Value =
-      S.ImpCastExprToType(new (S.Context) CXXNullPtrLiteralExpr(
-                              S.Context.NullPtrTy, NTTP->getLocation()),
-                          NullPtrType, CK_NullToPointer)
-          .get();
+  Expr *Value = S.ImpCastExprToType(
+                     new (S.Context) CXXNullPtrLiteralExpr(S.Context.NullPtrTy,
+                                                           NTTP->getLocation()),
+                     NullPtrType,
+                     NullPtrType->isMemberPointerType() ? CK_NullToMemberPointer
+                                                        : CK_NullToPointer)
+                    .get();
   return DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP,
                                        DeducedTemplateArgument(Value),
                                        Value->getType(), Info, Deduced);
@@ -3869,7 +3871,7 @@ static bool AdjustFunctionParmAndArgTypesForDeduction(
     //   "lvalue reference to A" is used in place of A for type deduction.
     if (isForwardingReference(QualType(ParamRefType, 0), FirstInnerIndex) &&
         Arg->isLValue()) {
-      if (S.getLangOpts().OpenCL)
+      if (S.getLangOpts().OpenCL  && !ArgType.hasAddressSpace())
         ArgType = S.Context.getAddrSpaceQualType(ArgType, LangAS::opencl_generic);
       ArgType = S.Context.getLValueReferenceType(ArgType);
     }

@@ -248,7 +248,7 @@ bool CompilerType::IsPointerToScalarType() const {
 
 bool CompilerType::IsArrayOfScalarType() const {
   CompilerType element_type;
-  if (IsArrayType(&element_type, nullptr, nullptr))
+  if (IsArrayType(&element_type))
     return element_type.IsScalarType();
   return false;
 }

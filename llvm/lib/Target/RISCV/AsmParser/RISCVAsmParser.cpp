@@ -894,6 +894,21 @@ static MCRegister convertFPR64ToFPR32(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_F;
 }
 
+static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
+                                  unsigned Kind) {
+  unsigned RegClassID;
+  if (Kind == MCK_VRM2)
+    RegClassID = RISCV::VRM2RegClassID;
+  else if (Kind == MCK_VRM4)
+    RegClassID = RISCV::VRM4RegClassID;
+  else if (Kind == MCK_VRM8)
+    RegClassID = RISCV::VRM8RegClassID;
+  else
+    return 0;
+  return RI.getMatchingSuperReg(Reg, RISCV::sub_vrm1_0,
+                                &RISCVMCRegisterClasses[RegClassID]);
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
@@ -905,6 +920,7 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg);
   bool IsRegFPR64C =
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
+  bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
   // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
@@ -917,6 +933,14 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // register from FPR64 to FPR16 if necessary.
   if (IsRegFPR64 && Kind == MCK_FPR16) {
     Op.Reg.RegNum = convertFPR64ToFPR16(Reg);
+    return Match_Success;
+  }
+  // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
+  // the register from VR to VRM2/VRM4/VRM8 if necessary.
+  if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
+    Op.Reg.RegNum = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
+    if (Op.Reg.RegNum == 0)
+      return Match_InvalidOperand;
     return Match_Success;
   }
   return Match_InvalidOperand;
@@ -1496,80 +1520,84 @@ OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   SMLoc S = getLoc();
-  if (getLexer().getKind() != AsmToken::Identifier)
+  if (getLexer().isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
 
-  // Parse "e8,m1,t[a|u],m[a|u]"
-  StringRef Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_front("e"))
-    return MatchOperand_NoMatch;
-  unsigned Sew;
-  if (Name.getAsInteger(10, Sew))
-    return MatchOperand_NoMatch;
-  if (!RISCVVType::isValidSEW(Sew))
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+  SmallVector<AsmToken, 7> VTypeIElements;
+  // Put all the tokens for vtypei operand into VTypeIElements vector.
+  while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    VTypeIElements.push_back(getLexer().getTok());
+    getLexer().Lex();
+    if (getLexer().is(AsmToken::EndOfStatement))
+      break;
+    if (getLexer().isNot(AsmToken::Comma))
+      goto MatchFail;
+    AsmToken Comma = getLexer().getTok();
+    VTypeIElements.push_back(Comma);
+    getLexer().Lex();
+  }
 
-  if (!getLexer().is(AsmToken::Comma))
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+  if (VTypeIElements.size() == 7) {
+    // The VTypeIElements layout is:
+    // SEW comma LMUL comma TA comma MA
+    //  0    1    2     3    4   5    6
+    StringRef Name = VTypeIElements[0].getIdentifier();
+    if (!Name.consume_front("e"))
+      goto MatchFail;
+    unsigned Sew;
+    if (Name.getAsInteger(10, Sew))
+      goto MatchFail;
+    if (!RISCVVType::isValidSEW(Sew))
+      goto MatchFail;
 
-  Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_front("m"))
-    return MatchOperand_NoMatch;
-  // "m" or "mf"
-  bool Fractional = Name.consume_front("f");
-  unsigned Lmul;
-  if (Name.getAsInteger(10, Lmul))
-    return MatchOperand_NoMatch;
-  if (!RISCVVType::isValidLMUL(Lmul, Fractional))
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+    Name = VTypeIElements[2].getIdentifier();
+    if (!Name.consume_front("m"))
+      goto MatchFail;
+    // "m" or "mf"
+    bool Fractional = Name.consume_front("f");
+    unsigned Lmul;
+    if (Name.getAsInteger(10, Lmul))
+      goto MatchFail;
+    if (!RISCVVType::isValidLMUL(Lmul, Fractional))
+      goto MatchFail;
 
-  if (!getLexer().is(AsmToken::Comma))
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+    // ta or tu
+    Name = VTypeIElements[4].getIdentifier();
+    bool TailAgnostic;
+    if (Name == "ta")
+      TailAgnostic = true;
+    else if (Name == "tu")
+      TailAgnostic = false;
+    else
+      goto MatchFail;
 
-  Name = getLexer().getTok().getIdentifier();
-  // ta or tu
-  bool TailAgnostic;
-  if (Name == "ta")
-    TailAgnostic = true;
-  else if (Name == "tu")
-    TailAgnostic = false;
-  else
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+    // ma or mu
+    Name = VTypeIElements[6].getIdentifier();
+    bool MaskAgnostic;
+    if (Name == "ma")
+      MaskAgnostic = true;
+    else if (Name == "mu")
+      MaskAgnostic = false;
+    else
+      goto MatchFail;
 
-  if (!getLexer().is(AsmToken::Comma))
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+    unsigned SewLog2 = Log2_32(Sew / 8);
+    unsigned LmulLog2 = Log2_32(Lmul);
+    RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
+    RISCVVLMUL VLMUL =
+        static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
 
-  Name = getLexer().getTok().getIdentifier();
-  // ma or mu
-  bool MaskAgnostic;
-  if (Name == "ma")
-    MaskAgnostic = true;
-  else if (Name == "mu")
-    MaskAgnostic = false;
-  else
-    return MatchOperand_NoMatch;
-  getLexer().Lex();
+    unsigned VTypeI =
+        RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
+    Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
+    return MatchOperand_Success;
+  }
 
-  if (getLexer().getKind() != AsmToken::EndOfStatement)
-    return MatchOperand_NoMatch;
-
-  unsigned SewLog2 = Log2_32(Sew / 8);
-  unsigned LmulLog2 = Log2_32(Lmul);
-  RISCVVSEW VSEW = static_cast<RISCVVSEW>(SewLog2);
-  RISCVVLMUL VLMUL =
-      static_cast<RISCVVLMUL>(Fractional ? 8 - LmulLog2 : LmulLog2);
-
-  unsigned VTypeI =
-      RISCVVType::encodeVTYPE(VLMUL, VSEW, TailAgnostic, MaskAgnostic);
-  Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
-
-  return MatchOperand_Success;
+// If NoMatch, unlex all the tokens that comprise a vtypei operand
+MatchFail:
+  while (!VTypeIElements.empty())
+    getLexer().UnLex(VTypeIElements.pop_back_val());
+  return MatchOperand_NoMatch;
 }
 
 OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {

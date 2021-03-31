@@ -173,7 +173,9 @@ define dso_local double @UsesX2AsConstPoolTOC() local_unnamed_addr {
 ; CHECK-LARGE:     add r2, r2, r12
 ; CHECK-S-NOT:       .localentry
 ; CHECK-ALL:       # %bb.0: # %entry
-; CHECK-S-NEXT:    plfd f1, .LCPI7_0@PCREL(0), 1
+; CHECK-S-NEXT:    xxsplti32dx vs1, 0, 1078011044
+; CHECK-S-NEXT:    xxsplti32dx vs1, 1, -337824948
+; CHECK-S-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; CHECK-S-NEXT:    blr
 entry:
   ret double 0x404124A4EBDD334C

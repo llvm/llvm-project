@@ -406,9 +406,9 @@ into a form that will resemble:
 #map0 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 func @example(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
-  %0 = memref_cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %1 = memref_cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
-  %2 = memref_cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %0 = memref.cast %arg0 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %1 = memref.cast %arg1 : memref<?x?xf32> to memref<?x?xf32, #map0>
+  %2 = memref.cast %arg2 : memref<?x?xf32> to memref<?x?xf32, #map0>
   call @pointwise_add(%0, %1, %2) : (memref<?x?xf32, #map0>, memref<?x?xf32, #map0>, memref<?x?xf32, #map0>) -> ()
   return
 }
@@ -518,9 +518,9 @@ A set of ops that manipulate metadata but do not move memory. These ops take
 generally alias the operand `view`. At the moment the existing ops are:
 
 ```
-* `std.view`,
+* `memref.view`,
 * `std.subview`,
-* `std.transpose`.
+* `memref.transpose`.
 * `linalg.range`,
 * `linalg.slice`,
 * `linalg.reshape`,
@@ -582,8 +582,9 @@ better adapt to Linalg:
     resorting to more general MLIR parsing.
 1.  Reduction dimensions are specified with angle bracket notation on the
     operation they apply to (e.g. `std_add<k>` specifies that `k` is a reduction
-    dimension). In TC, a reduction is specified with `op=` operator and the
-    reduction dimensions are inferred.
+    dimension). In TC, the reduction dimensions are inferred. If one of the
+    operand is not used in any expressions, it will be considered a shape-only
+    operand, and the result of the indexing_map will be reduction dimensions.
 1.  The parallel and reduction dimension are ordered by the textual program
     order. For instance, in the comprehension `O(i, j) = std_add<k, l>(...)`,
     `i` (resp. `j`) is a parallel iterator encoded by affine dimension of
@@ -661,6 +662,18 @@ void batchmatmul::regionBuilder(ArrayRef<BlockArgument> args) {
   (linalg_yield(ValueRange{ _5 }));
 }
 ```
+
+### YAML Based Named Structured Ops
+
+Linalg provides a declarative generation tool (`mlir-linalg-ods-yaml-gen`) to
+automatically produce named ops from a YAML-based op description format
+intended to capture the structure of the named ops and be generated from a
+higher level "mathy" DSL syntax. This facility is currently in flight and is
+intended to subsume the above when ready. See the C++ class to YAML mapping
+traits in `mlir-mlinalg-ods-yaml-gen.cpp` as the source of truth for the schema.
+
+Most of the above documentation roughly applies to this path and will be ported
+as migration continues.
 
 ## Open Issues and Design Alternatives<a name="open_issues"></a>
 

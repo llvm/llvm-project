@@ -50,6 +50,16 @@ test_kernel:
 // CHECK-NEXT: }
 
 // CHECK:      Symbol {
+// CHECK:        Name: lds4 (39)
+// CHECK-NEXT:   Value: 0x4
+// CHECK-NEXT:   Size: 0
+// CHECK-NEXT:   Binding: Global (0x1)
+// CHECK-NEXT:   Type: Object (0x1)
+// CHECK-NEXT:   Other: 0
+// CHECK-NEXT:   Section: Processor Specific (0xFF00)
+// CHECK-NEXT: }
+
+// CHECK:      Symbol {
 // CHECK:        Name: lds1 (49)
 // CHECK-NEXT:   Value: 0x8
 // CHECK-NEXT:   Size: 387
@@ -70,13 +80,3 @@ test_kernel:
 // CHECK-NEXT: }
 
 // CHECK-NOT:    Name: lds3
-
-// CHECK:      Symbol {
-// CHECK:        Name: lds4 (39)
-// CHECK-NEXT:   Value: 0x4
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Global (0x1)
-// CHECK-NEXT:   Type: Object (0x1)
-// CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: Processor Specific (0xFF00)
-// CHECK-NEXT: }

@@ -479,8 +479,8 @@ LLVM_NODISCARD Optional<Negator::Result> Negator::run(Value *Root) {
   if (!Negated) {
     // We must cleanup newly-inserted instructions, to avoid any potential
     // endless combine looping.
-    llvm::for_each(llvm::reverse(NewInstructions),
-                   [&](Instruction *I) { I->eraseFromParent(); });
+    for (Instruction *I : llvm::reverse(NewInstructions))
+      I->eraseFromParent();
     return llvm::None;
   }
   return std::make_pair(ArrayRef<Instruction *>(NewInstructions), Negated);
@@ -523,8 +523,8 @@ LLVM_NODISCARD Value *Negator::Negate(bool LHSIsZero, Value *Root,
   NegatorNumInstructionsNegatedSuccess += Res->first.size();
 
   // They are in def-use order, so nothing fancy, just insert them in order.
-  llvm::for_each(Res->first,
-                 [&](Instruction *I) { IC.Builder.Insert(I, I->getName()); });
+  for (Instruction *I : Res->first)
+    IC.Builder.Insert(I, I->getName());
 
   // And return the new root.
   return Res->second;

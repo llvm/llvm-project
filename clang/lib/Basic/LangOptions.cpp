@@ -28,7 +28,7 @@ void LangOptions::resetNonModularOptions() {
 #include "clang/Basic/LangOptions.def"
 
   // These options do not affect AST generation.
-  SanitizerBlacklistFiles.clear();
+  NoSanitizeFiles.clear();
   XRayAlwaysInstrumentFiles.clear();
   XRayNeverInstrumentFiles.clear();
 

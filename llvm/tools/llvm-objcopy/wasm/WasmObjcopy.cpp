@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "WasmObjcopy.h"
-#include "Buffer.h"
 #include "CopyConfig.h"
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/FileOutputBuffer.h"
 
 namespace llvm {
 namespace objcopy {
@@ -72,10 +72,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     Obj.addSectionWithOwnedContents(Sec, std::move(Buf));
   }
 
-  if (!Config.AddGnuDebugLink.empty() || !Config.BuildIdLinkDir.empty() ||
-      Config.BuildIdLinkInput || Config.BuildIdLinkOutput ||
-      Config.ExtractPartition || !Config.SplitDWO.empty() ||
-      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
+  if (!Config.AddGnuDebugLink.empty() || Config.ExtractPartition ||
+      !Config.SplitDWO.empty() || !Config.SymbolsPrefix.empty() ||
+      !Config.AllocSectionsPrefix.empty() ||
       Config.DiscardMode != DiscardType::None || Config.NewSymbolVisibility ||
       !Config.SymbolsToAdd.empty() || !Config.RPathToAdd.empty() ||
       !Config.OnlySection.empty() || !Config.SymbolsToGlobalize.empty() ||
@@ -93,7 +92,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
 }
 
 Error executeObjcopyOnBinary(const CopyConfig &Config,
-                             object::WasmObjectFile &In, Buffer &Out) {
+                             object::WasmObjectFile &In, raw_ostream &Out) {
   Reader TheReader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = TheReader.create();
   if (!ObjOrErr)

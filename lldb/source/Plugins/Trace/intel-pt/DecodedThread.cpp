@@ -62,3 +62,8 @@ size_t DecodedThread::SetCursorPosition(size_t new_position) {
   m_position = std::min(new_position, GetLastPosition());
   return m_position;
 }
+
+DecodedThread::DecodedThread(Error error) {
+  m_instructions.emplace_back(std::move(error));
+  m_position = GetLastPosition();
+}

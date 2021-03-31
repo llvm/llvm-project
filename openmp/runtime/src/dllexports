@@ -360,6 +360,7 @@ kmpc_set_defaults                           224
         __kmpc_team_static_init_4u          256
         __kmpc_team_static_init_8           257
         __kmpc_team_static_init_8u          258
+        __kmpc_push_num_teams_51            284
 %endif
 
 %ifndef stub
@@ -389,6 +390,9 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_taskred_init                 277
         __kmpc_taskred_modifier_init        278
         __kmpc_omp_target_task_alloc        279
+        __kmpc_error                        281
+        __kmpc_masked                       282
+        __kmpc_end_masked                   283
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
@@ -554,12 +558,20 @@ kmp_set_disp_num_buffers                    890
     omp_cgroup_mem_alloc                   DATA
     omp_pteam_mem_alloc                    DATA
     omp_thread_mem_alloc                   DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_alloc         DATA
+    llvm_omp_target_shared_mem_alloc       DATA
+    llvm_omp_target_device_mem_alloc       DATA
 
     omp_default_mem_space                  DATA
     omp_large_cap_mem_space                DATA
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
+    # Preview of target memory support
+    llvm_omp_target_host_mem_space         DATA
+    llvm_omp_target_shared_mem_space       DATA
+    llvm_omp_target_device_mem_space       DATA
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved

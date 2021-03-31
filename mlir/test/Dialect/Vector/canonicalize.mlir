@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='func(canonicalize)' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // -----
 
@@ -255,13 +255,27 @@ func @transpose_3D_sequence(%arg : vector<4x3x2xf32>) -> vector<4x3x2xf32> {
 func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
   %c0 = constant 0 : index
   %f0 = constant 0.0 : f32
-  %0 = memref_cast %A : memref<4x8xf32> to memref<?x?xf32>
+  %0 = memref.cast %A : memref<4x8xf32> to memref<?x?xf32>
 
   // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : memref<4x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %0[%c0, %c0], %f0 : memref<?x?xf32>, vector<4x8xf32>
 
   // CHECK: vector.transfer_write %{{.*}} {masked = [false, false]} : vector<4x8xf32>, memref<4x8xf32>
   vector.transfer_write %1, %0[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32>
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: cast_transfers
+func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
+
+  // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : tensor<4x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
+
   return %1 : vector<4x8xf32>
 }
 
@@ -556,6 +570,20 @@ func @bitcast_folding(%I1: vector<4x8xf32>, %I2: vector<2xi32>) -> (vector<4x8xf
   return %0, %2 : vector<4x8xf32>, vector<2xi32>
 }
 
+// CHECK-LABEL: func @bitcast_f16_to_f32
+//              bit pattern: 0x40004000
+//       CHECK-DAG: %[[CST1:.+]] = constant dense<2.00390625> : vector<4xf32>
+//              bit pattern: 0x00000000
+//       CHECK-DAG: %[[CST0:.+]] = constant dense<0.000000e+00> : vector<4xf32>
+//       CHECK: return %[[CST0]], %[[CST1]]
+func @bitcast_f16_to_f32() -> (vector<4xf32>, vector<4xf32>) {
+  %cst0 = constant dense<0.0> : vector<8xf16> // bit pattern: 0x0000
+  %cst1 = constant dense<2.0> : vector<8xf16> // bit pattern: 0x4000
+  %cast0 = vector.bitcast %cst0: vector<8xf16> to vector<4xf32>
+  %cast1 = vector.bitcast %cst1: vector<8xf16> to vector<4xf32>
+  return %cast0, %cast1: vector<4xf32>, vector<4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: broadcast_folding1
@@ -584,8 +612,8 @@ func @broadcast_folding2() -> vector<4x16xi32> {
 // -----
 
 // CHECK-LABEL: shape_cast_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<3x4x2xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<20x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<20x2xf32>, vector<3x4x2xi32>
 func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
   %cst = constant dense<2.000000e+00> : vector<5x4x2xf32>
@@ -598,8 +626,8 @@ func @shape_cast_constant() -> (vector<20x2xf32>, vector<3x4x2xi32>) {
 // -----
 
 // CHECK-LABEL: extract_strided_constant
-//       CHECK: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
-//       CHECK: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST1:.*]] = constant dense<1> : vector<2x13x3xi32>
+//       CHECK-DAG: %[[CST0:.*]] = constant dense<2.000000e+00> : vector<12x2xf32>
 //       CHECK: return %[[CST0]], %[[CST1]] : vector<12x2xf32>, vector<2x13x3xi32>
 func @extract_strided_constant() -> (vector<12x2xf32>, vector<2x13x3xi32>) {
   %cst = constant dense<2.000000e+00> : vector<29x7xf32>
@@ -690,9 +718,84 @@ func @dead_load(%base: memref<?xf32>, %indices: vector<16xi32>,
   %c0 = constant 0 : index
   %0 = vector.maskedload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
-  %1 = vector.gather %base[%indices], %mask, %passthru :
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
     memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   %2 = vector.expandload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return
+}
+
+// -----
+
+#contraction_accesses0 = [
+  affine_map<(i, j, k) -> (i, k)>,
+  affine_map<(i, j, k) -> (k, j)>,
+  affine_map<(i, j, k) -> (i, j)>
+]
+#contraction_trait0 = {
+  indexing_maps = #contraction_accesses0,
+  iterator_types = ["parallel", "parallel", "reduction"]
+}
+
+// CHECK-LABEL: func @contractions
+//  CHECK-SAME:   %[[A:[0-9a-zA-Z]+]]: vector<2x3xf32>
+//  CHECK-SAME:   %[[B:[0-9a-zA-Z]+]]: vector<3x4xf32>
+//  CHECK-SAME:   %[[C:[0-9a-zA-Z]+]]: vector<2x4xf32>
+//  CHECK-SAME:   %[[A_I8:[0-9a-zA-Z]+]]: vector<2x3xi8>
+//  CHECK-SAME:   %[[B_I8:[0-9a-zA-Z]+]]: vector<3x4xi8>
+//  CHECK-SAME:   %[[C_I8:[0-9a-zA-Z]+]]: vector<2x4xi8>
+func @contractions(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4xf32>,
+                   %a_i8: vector<2x3xi8>, %b_i8: vector<3x4xi8>, %c_i8: vector<2x4xi8>)
+  -> (vector<2x4xf32>, vector<2x4xi8>)
+{
+  // CHECK-NOT: constant
+  %vf_0 = constant dense <0.0>: vector<2x4xf32>
+  // CHECK-NOT: addf
+  //     CHECK: %[[D:.*]] = vector.contract {{.*}} %[[A]], %[[B]], %[[C]]
+  %0 = vector.contract #contraction_trait0 %a, %b, %vf_0:
+    vector<2x3xf32>, vector<3x4xf32> into vector<2x4xf32>
+  // CHECK-NOT: addf
+  %1 = addf %0, %c: vector<2x4xf32>
+
+  // CHECK-NOT: constant
+  %vi8_0 = constant dense <0>: vector<2x4xi8>
+  // CHECK-NOT: addi
+  //     CHECK: %[[D_I8:.*]] = vector.contract {{.*}} %[[A_I8]], %[[B_I8]], %[[C_I8]]
+  %i8_0 = vector.contract #contraction_trait0 %a_i8, %b_i8, %vi8_0:
+    vector<2x3xi8>, vector<3x4xi8> into vector<2x4xi8>
+  // CHECK-NOT: addi
+  %i8_1 = addi %i8_0, %c_i8: vector<2x4xi8>
+
+  // CHECK: return %[[D]], %[[D_I8]]
+  return %1, %i8_1: vector<2x4xf32>, vector<2x4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @transfer_folding_1
+//  CHECK-SAME:   %[[T0:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>
+//  CHECK-SAME:   %[[T1:[0-9a-zA-Z]+]]: tensor<2x3x4xf32>
+func @transfer_folding_1(%t0: tensor<2x3x4xf32>, %t1: tensor<2x3x4xf32>)
+  -> (tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>)
+{
+  %c0 = constant 0 : index
+  %pad = constant 0.0 : f32
+  %v = vector.transfer_read %t0[%c0, %c0, %c0], %pad {masked = [false, false, false]} :
+    tensor<2x3x4xf32>, vector<2x3x4xf32>
+
+  %r0 = vector.transfer_write %v, %t1[%c0, %c0, %c0] {masked = [false, false, false]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+  %t2 = "test.constant"() { value = dense<6.0> : tensor<2x3x4xf32>} : () -> (tensor<2x3x4xf32>)
+  %r1 = vector.transfer_write %v, %t2[%c0, %c0, %c0] {masked = [false, false, false]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+
+  // CHECK-NEXT: some_op_that_may_have_side_effects
+  %t3 = "some_op_that_may_have_side_effects"() : () -> (tensor<2x3x4xf32>)
+  %r2 = vector.transfer_write %v, %t0[%c0, %c0, %c0] {masked = [false, false, false]} :
+    vector<2x3x4xf32>, tensor<2x3x4xf32>
+
+  // CHECK-NEXT: return %[[T0]], %[[T0]], %[[T0]]
+  return %r0, %r1, %r2: tensor<2x3x4xf32>, tensor<2x3x4xf32>, tensor<2x3x4xf32>
 }

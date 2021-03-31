@@ -269,19 +269,14 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
   auto CycleFreq = FH.CycleFrequency;
 
   unsigned id_counter = 0;
+  int NumOutputRecords = 0;
 
-  OS << "{\n  \"traceEvents\": [";
+  OS << "{\n  \"traceEvents\": [\n";
   DenseMap<uint32_t, StackTrieNode *> StackCursorByThreadId{};
   DenseMap<uint32_t, SmallVector<StackTrieNode *, 4>> StackRootsByThreadId{};
   DenseMap<unsigned, StackTrieNode *> StacksByStackId{};
   std::forward_list<StackTrieNode> NodeStore{};
-  int loop_count = 0;
   for (const auto &R : Records) {
-    if (loop_count++ == 0)
-      OS << "\n";
-    else
-      OS << ",\n";
-
     // Chrome trace event format always wants data in micros.
     // CyclesPerMicro = CycleHertz / 10^6
     // TSC / CyclesPerMicro == TSC * 10^6 / CycleHertz == MicroTimestamp
@@ -306,6 +301,9 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
       // type of B for begin or E for end, thread id, process id,
       // timestamp in microseconds, and a stack frame id. The ids are logged
       // in an id dictionary after the events.
+      if (NumOutputRecords++ > 0) {
+        OS << ",\n";
+      }
       writeTraceViewerRecord(Version, OS, R.FuncId, R.TId, R.PId, Symbolize,
                              FuncIdHelper, EventTimestampUs, *StackCursor, "B");
       break;
@@ -318,7 +316,7 @@ void TraceConverter::exportAsChromeTraceEventFormat(const Trace &Records,
       // (And/Or in loop termination below)
       StackTrieNode *PreviousCursor = nullptr;
       do {
-        if (PreviousCursor != nullptr) {
+        if (NumOutputRecords++ > 0) {
           OS << ",\n";
         }
         writeTraceViewerRecord(Version, OS, StackCursor->FuncId, R.TId, R.PId,

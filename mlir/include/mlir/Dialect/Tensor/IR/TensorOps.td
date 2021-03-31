@@ -91,7 +91,7 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$tensor, CArg<"ValueRange", "{}">:$indices), [{
+    OpBuilder<(ins "Value":$tensor, CArg<"ValueRange", "{}">:$indices), [{
       auto resType = tensor.getType().cast<ShapedType>().getElementType();
       build($_builder, $_state, resType, tensor, indices);
     }]>];
@@ -131,9 +131,9 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Type":$elementType, "ValueRange":$elements)>,
+    OpBuilder<(ins "Type":$elementType, "ValueRange":$elements)>,
     // Special case builder for when `elements` has size >=1.
-    OpBuilderDAG<(ins "ValueRange":$elements)>
+    OpBuilder<(ins "ValueRange":$elements)>
   ];
 
   let hasCanonicalizer = 1;
@@ -175,7 +175,7 @@ def Tensor_GenerateOp : Tensor_Op<"generate",
 
   let builders = [
     // Build op and populate its body per callback function.
-    OpBuilderDAG<(ins "Type":$resultTy, "ValueRange":$dynamicExtents,
+    OpBuilder<(ins "Type":$resultTy, "ValueRange":$dynamicExtents,
       "function_ref<void(OpBuilder &, Location, ValueRange)>")>,
   ];
 
@@ -200,7 +200,7 @@ def Tensor_YieldOp : Tensor_Op<"yield",
   let assemblyFormat = "$value attr-dict `:` type($value)";
   // Dummy builder to appease code in templated ensureTerminator that
   // GenerateOp's auto-generated parser calls.
-  let builders = [OpBuilderDAG<(ins), [{ /* nothing to do */ }]>];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
   let verifier = ?;
 }
 

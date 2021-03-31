@@ -111,6 +111,9 @@ public:
   /// If this is a byref argument, return its type.
   Type *getParamByRefType() const;
 
+  /// If this is an inalloca argument, return its type.
+  Type *getParamInAllocaType() const;
+
   /// Return true if this argument has the nest attribute.
   bool hasNestAttr() const;
 
@@ -119,6 +122,9 @@ public:
 
   /// Return true if this argument has the nocapture attribute.
   bool hasNoCaptureAttr() const;
+
+  /// Return true if this argument has the nofree attribute.
+  bool hasNoFreeAttr() const;
 
   /// Return true if this argument has the sret attribute.
   bool hasStructRetAttr() const;

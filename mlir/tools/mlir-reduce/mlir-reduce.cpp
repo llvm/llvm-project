@@ -89,11 +89,12 @@ int main(int argc, char **argv) {
   if (!output)
     llvm::report_fatal_error(errorMessage);
 
-  mlir::MLIRContext context;
-  registerAllDialects(context.getDialectRegistry());
+  mlir::DialectRegistry registry;
+  registerAllDialects(registry);
 #ifdef MLIR_INCLUDE_TESTS
-  mlir::test::registerTestDialect(context.getDialectRegistry());
+  mlir::test::registerTestDialect(registry);
 #endif
+  mlir::MLIRContext context(registry);
 
   mlir::OwningModuleRef moduleRef;
   if (failed(loadModule(context, moduleRef, inputFilename)))

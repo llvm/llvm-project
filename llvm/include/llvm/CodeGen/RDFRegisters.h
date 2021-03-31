@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
-#define LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
+#ifndef LLVM_CODEGEN_RDFREGISTERS_H
+#define LLVM_CODEGEN_RDFREGISTERS_H
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -276,4 +276,4 @@ namespace std {
     }
   };
 }
-#endif // LLVM_LIB_TARGET_HEXAGON_RDFREGISTERS_H
+#endif // LLVM_CODEGEN_RDFREGISTERS_H

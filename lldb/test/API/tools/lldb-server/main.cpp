@@ -11,6 +11,7 @@
 #include <signal.h>
 #include <unistd.h>
 #endif
+#include "thread.h"
 #include <setjmp.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,17 +19,6 @@
 #include <thread>
 #include <time.h>
 #include <vector>
-
-#if defined(__APPLE__)
-__OSX_AVAILABLE_STARTING(__MAC_10_6, __IPHONE_3_2)
-int pthread_threadid_np(pthread_t, __uint64_t *);
-#elif defined(__linux__)
-#include <sys/syscall.h>
-#elif defined(__NetBSD__)
-#include <lwp.h>
-#elif defined(_WIN32)
-#include <windows.h>
-#endif
 
 static const char *const RETVAL_PREFIX = "retval:";
 static const char *const SLEEP_PREFIX = "sleep:";
@@ -70,28 +60,6 @@ static void print_pid() {
 #endif
 }
 
-static void print_thread_id() {
-// Put in the right magic here for your platform to spit out the thread id (tid)
-// that debugserver/lldb-gdbserver would see as a TID. Otherwise, let the else
-// clause print out the unsupported text so that the unit test knows to skip
-// verifying thread ids.
-#if defined(__APPLE__)
-  __uint64_t tid = 0;
-  pthread_threadid_np(pthread_self(), &tid);
-  printf("%" PRIx64, tid);
-#elif defined(__linux__)
-  // This is a call to gettid() via syscall.
-  printf("%" PRIx64, static_cast<uint64_t>(syscall(__NR_gettid)));
-#elif defined(__NetBSD__)
-  // Technically lwpid_t is 32-bit signed integer
-  printf("%" PRIx64, static_cast<uint64_t>(_lwp_self()));
-#elif defined(_WIN32)
-  printf("%" PRIx64, static_cast<uint64_t>(::GetCurrentThreadId()));
-#else
-  printf("{no-tid-support}");
-#endif
-}
-
 static void signal_handler(int signo) {
 #if defined(_WIN32)
   // No signal support on Windows.
@@ -109,15 +77,12 @@ static void signal_handler(int signo) {
   }
 
   // Print notice that we received the signal on a given thread.
-  {
-    std::lock_guard<std::mutex> lock(g_print_mutex);
-    if (signal_name)
-      printf("received %s on thread id: ", signal_name);
-    else
-      printf("received signo %d (%s) on thread id: ", signo, strsignal(signo));
-    print_thread_id();
-    printf("\n");
-  }
+  char buf[100];
+  if (signal_name)
+    snprintf(buf, sizeof(buf), "received %s on thread id: %" PRIx64 "\n", signal_name, get_thread_id());
+  else
+    snprintf(buf, sizeof(buf), "received signo %d (%s) on thread id: %" PRIx64 "\n", signo, strsignal(signo), get_thread_id());
+  write(STDOUT_FILENO, buf, strlen(buf));
 
   // Reset the signal handler if we're one of the expected signal handlers.
   switch (signo) {
@@ -195,9 +160,7 @@ static void *thread_func(void *arg) {
   const int this_thread_index = s_thread_index++;
   if (g_print_thread_ids) {
     std::lock_guard<std::mutex> lock(g_print_mutex);
-    printf("thread %d id: ", this_thread_index);
-    print_thread_id();
-    printf("\n");
+    printf("thread %d id: %" PRIx64 "\n", this_thread_index, get_thread_id());
   }
 
   if (g_threads_do_segfault) {
@@ -229,9 +192,7 @@ static void *thread_func(void *arg) {
 
     {
       std::lock_guard<std::mutex> lock(g_print_mutex);
-      printf("thread ");
-      print_thread_id();
-      printf(": past SIGSEGV\n");
+      printf("thread %" PRIx64 ": past SIGSEGV\n", get_thread_id());
     }
   }
 
@@ -362,9 +323,7 @@ int main(int argc, char **argv) {
         // And announce us.
         {
           std::lock_guard<std::mutex> lock(g_print_mutex);
-          printf("thread 0 id: ");
-          print_thread_id();
-          printf("\n");
+          printf("thread 0 id: %" PRIx64 "\n", get_thread_id());
         }
       } else if (std::strstr(argv[i] + strlen(THREAD_PREFIX),
                              THREAD_COMMAND_SEGFAULT)) {

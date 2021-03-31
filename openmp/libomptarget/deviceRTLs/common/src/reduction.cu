@@ -12,6 +12,7 @@
 #pragma omp declare target
 
 #include "common/omptarget.h"
+#include "target/shuffle.h"
 #include "target_impl.h"
 
 EXTERN
@@ -19,18 +20,6 @@ void __kmpc_nvptx_end_reduce(int32_t global_tid) {}
 
 EXTERN
 void __kmpc_nvptx_end_reduce_nowait(int32_t global_tid) {}
-
-EXTERN int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size) {
-  return __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, val, delta, size);
-}
-
-EXTERN int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size) {
-   uint32_t lo, hi;
-   __kmpc_impl_unpack(val, lo, hi);
-   hi = __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, hi, delta, size);
-   lo = __kmpc_impl_shfl_down_sync(__kmpc_impl_all_lanes, lo, delta, size);
-   return __kmpc_impl_pack(lo, hi);
-}
 
 INLINE static void gpu_regular_warp_reduce(void *reduce_data,
                                            kmp_ShuffleReductFctPtr shflFct) {
@@ -84,16 +73,16 @@ static int32_t nvptx_parallel_reduce_nowait(
   uint32_t NumThreads = GetNumberOfOmpThreads(isSPMDExecutionMode);
   if (NumThreads == 1)
     return 1;
-  /*
-   * This reduce function handles reduction within a team. It handles
-   * parallel regions in both L1 and L2 parallelism levels. It also
-   * supports Generic, SPMD, and NoOMP modes.
-   *
-   * 1. Reduce within a warp.
-   * 2. Warp master copies value to warp 0 via shared memory.
-   * 3. Warp 0 reduces to a single value.
-   * 4. The reduced value is available in the thread that returns 1.
-   */
+    /*
+     * This reduce function handles reduction within a team. It handles
+     * parallel regions in both L1 and L2 parallelism levels. It also
+     * supports Generic, SPMD, and NoOMP modes.
+     *
+     * 1. Reduce within a warp.
+     * 2. Warp master copies value to warp 0 via shared memory.
+     * 3. Warp 0 reduces to a single value.
+     * 4. The reduced value is available in the thread that returns 1.
+     */
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
   uint32_t WarpsNeeded = (NumThreads + WARPSIZE - 1) / WARPSIZE;
@@ -185,8 +174,8 @@ INLINE static uint32_t roundToWarpsize(uint32_t s) {
 
 INLINE static uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-DEVICE static volatile uint32_t IterCnt = 0;
-DEVICE static volatile uint32_t Cnt = 0;
+static volatile uint32_t IterCnt = 0;
+static volatile uint32_t Cnt = 0;
 EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     kmp_Ident *loc, int32_t global_tid, void *global_buffer,
     int32_t num_of_records, void *reduce_data, kmp_ShuffleReductFctPtr shflFct,

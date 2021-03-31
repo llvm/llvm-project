@@ -200,7 +200,7 @@ isSafeToSpeculatePHIUsers(PHINode &PN, DominatorTree &DT,
 /// different incoming edges' cost by looking at their respective
 /// probabilities.
 static bool isSafeAndProfitableToSpeculateAroundPHI(
-    PHINode &PN, SmallDenseMap<PHINode *, int, 16> &CostSavingsMap,
+    PHINode &PN, SmallDenseMap<PHINode *, InstructionCost, 16> &CostSavingsMap,
     SmallPtrSetImpl<Instruction *> &PotentialSpecSet,
     SmallPtrSetImpl<Instruction *> &UnsafeSet, DominatorTree &DT,
     TargetTransformInfo &TTI) {
@@ -209,8 +209,8 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
   // occur.
   bool NonFreeMat = false;
   struct CostsAndCount {
-    int MatCost = TargetTransformInfo::TCC_Free;
-    int FoldedCost = TargetTransformInfo::TCC_Free;
+    InstructionCost MatCost = TargetTransformInfo::TCC_Free;
+    InstructionCost FoldedCost = TargetTransformInfo::TCC_Free;
     int Count = 0;
   };
   SmallDenseMap<ConstantInt *, CostsAndCount, 16> CostsAndCounts;
@@ -231,7 +231,7 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
     if (!InsertResult.second)
       continue;
 
-    int &MatCost = InsertResult.first->second.MatCost;
+    InstructionCost &MatCost = InsertResult.first->second.MatCost;
     MatCost = TTI.getIntImmCost(IncomingC->getValue(), IncomingC->getType(),
                                 TargetTransformInfo::TCK_SizeAndLatency);
     NonFreeMat |= MatCost != TTI.TCC_Free;
@@ -281,8 +281,9 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
 
     for (auto &IncomingConstantAndCostsAndCount : CostsAndCounts) {
       ConstantInt *IncomingC = IncomingConstantAndCostsAndCount.first;
-      int MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
-      int &FoldedCost = IncomingConstantAndCostsAndCount.second.FoldedCost;
+      InstructionCost MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
+      InstructionCost &FoldedCost =
+          IncomingConstantAndCostsAndCount.second.FoldedCost;
       if (IID)
         FoldedCost +=
           TTI.getIntImmCostIntrin(IID, Idx, IncomingC->getValue(),
@@ -312,19 +313,20 @@ static bool isSafeAndProfitableToSpeculateAroundPHI(
   }
 
   // Compute the total cost savings afforded by this PHI node.
-  int TotalMatCost = TTI.TCC_Free, TotalFoldedCost = TTI.TCC_Free;
+  InstructionCost TotalMatCost = TTI.TCC_Free, TotalFoldedCost = TTI.TCC_Free;
   for (auto IncomingConstantAndCostsAndCount : CostsAndCounts) {
-    int MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
-    int FoldedCost = IncomingConstantAndCostsAndCount.second.FoldedCost;
+    InstructionCost MatCost = IncomingConstantAndCostsAndCount.second.MatCost;
+    InstructionCost FoldedCost =
+        IncomingConstantAndCostsAndCount.second.FoldedCost;
     int Count = IncomingConstantAndCostsAndCount.second.Count;
 
     TotalMatCost += MatCost * Count;
     TotalFoldedCost += FoldedCost * Count;
   }
+  assert(TotalMatCost.isValid() && "Constants must be  materializable");
   assert(TotalFoldedCost <= TotalMatCost && "If each constant's folded cost is "
                                             "less that its materialized cost, "
                                             "the sum must be as well.");
-
   LLVM_DEBUG(dbgs() << "    Cost savings " << (TotalMatCost - TotalFoldedCost)
                     << ": " << PN << "\n");
   CostSavingsMap[&PN] = TotalMatCost - TotalFoldedCost;
@@ -421,11 +423,11 @@ static void visitPHIUsersAndDepsInPostOrder(ArrayRef<PHINode *> PNs,
 /// straightforward to then update these costs when we mark a PHI for
 /// speculation so that subsequent PHIs don't re-pay the cost of already
 /// speculated instructions.
-static SmallVector<PHINode *, 16>
-findProfitablePHIs(ArrayRef<PHINode *> PNs,
-                   const SmallDenseMap<PHINode *, int, 16> &CostSavingsMap,
-                   const SmallPtrSetImpl<Instruction *> &PotentialSpecSet,
-                   int NumPreds, DominatorTree &DT, TargetTransformInfo &TTI) {
+static SmallVector<PHINode *, 16> findProfitablePHIs(
+    ArrayRef<PHINode *> PNs,
+    const SmallDenseMap<PHINode *, InstructionCost, 16> &CostSavingsMap,
+    const SmallPtrSetImpl<Instruction *> &PotentialSpecSet, int NumPreds,
+    DominatorTree &DT, TargetTransformInfo &TTI) {
   SmallVector<PHINode *, 16> SpecPNs;
 
   // First, establish a reverse mapping from immediate users of the PHI nodes
@@ -447,7 +449,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
   // Now do a DFS across the operand graph of the users, computing cost as we
   // go and when all costs for a given PHI are known, checking that PHI for
   // profitability.
-  SmallDenseMap<Instruction *, int, 16> SpecCostMap;
+  SmallDenseMap<Instruction *, InstructionCost, 16> SpecCostMap;
   visitPHIUsersAndDepsInPostOrder(
       PNs,
       /*IsVisited*/
@@ -462,7 +464,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
       [&](Instruction *I) {
         // We've fully visited the operands, so sum their cost with this node
         // and update the cost map.
-        int Cost = TTI.TCC_Free;
+        InstructionCost Cost = TTI.TCC_Free;
         for (Value *OpV : I->operand_values())
           if (auto *OpI = dyn_cast<Instruction>(OpV)) {
             auto CostMapIt = SpecCostMap.find(OpI);
@@ -494,7 +496,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
         // cost will be completely shared.
         SmallVector<Instruction *, 16> SpecWorklist;
         for (auto *PN : llvm::make_range(UserPNsSplitIt, UserPNs.end())) {
-          int SpecCost = TTI.TCC_Free;
+          InstructionCost SpecCost = TTI.TCC_Free;
           for (Use &U : PN->uses())
             SpecCost +=
                 SpecCostMap.find(cast<Instruction>(U.getUser()))->second;
@@ -502,7 +504,7 @@ findProfitablePHIs(ArrayRef<PHINode *> PNs,
           // When the user count of a PHI node hits zero, we should check its
           // profitability. If profitable, we should mark it for speculation
           // and zero out the cost of everything it depends on.
-          int CostSavings = CostSavingsMap.find(PN)->second;
+          InstructionCost CostSavings = CostSavingsMap.find(PN)->second;
           if (SpecCost > CostSavings) {
             LLVM_DEBUG(dbgs() << "  Not profitable, speculation cost: " << *PN
                               << "\n"
@@ -739,7 +741,7 @@ static bool tryToSpeculatePHIs(SmallVectorImpl<PHINode *> &PNs,
   LLVM_DEBUG(dbgs() << "Evaluating phi nodes for speculation:\n");
 
   // Savings in cost from speculating around a PHI node.
-  SmallDenseMap<PHINode *, int, 16> CostSavingsMap;
+  SmallDenseMap<PHINode *, InstructionCost, 16> CostSavingsMap;
 
   // Remember the set of instructions that are candidates for speculation so
   // that we can quickly walk things within that space. This prunes out

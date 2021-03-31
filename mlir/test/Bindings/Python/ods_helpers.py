@@ -29,7 +29,7 @@ def testOdsBuildDefaultImplicitRegions():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       op = TestFixedRegionsOp.build_generic(results=[], operands=[])
       # CHECK: NUM_REGIONS: 2
       print(f"NUM_REGIONS: {len(op.regions)}")
@@ -84,7 +84,7 @@ def testOdsBuildDefaultNonVariadic():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       t0 = IntegerType.get_signless(8)
@@ -111,7 +111,7 @@ def testOdsBuildDefaultSizedVariadic():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       v2 = add_dummy_value()
@@ -125,8 +125,8 @@ def testOdsBuildDefaultSizedVariadic():
       # CHECK: %[[V2:.+]] = "custom.value"
       # CHECK: %[[V3:.+]] = "custom.value"
       # CHECK: "custom.test_op"(%[[V0]], %[[V1]], %[[V2]], %[[V3]])
-      # CHECK-SAME: operand_segment_sizes = dense<[1, 2, 1]> : vector<3xi64>
-      # CHECK-SAME: result_segment_sizes = dense<[2, 1, 1]> : vector<3xi64>
+      # CHECK-SAME: operand_segment_sizes = dense<[1, 2, 1]> : vector<3xi32>
+      # CHECK-SAME: result_segment_sizes = dense<[2, 1, 1]> : vector<3xi32>
       # CHECK-SAME: : (i32, i32, i32, i32) -> (i8, i16, i32, i64)
       op = TestOp.build_generic(
           results=[[t0, t1], t2, t3],
@@ -187,7 +187,7 @@ def testOdsBuildDefaultCastError():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
     m = Module.create()
-    with InsertionPoint.at_block_terminator(m.body):
+    with InsertionPoint(m.body):
       v0 = add_dummy_value()
       v1 = add_dummy_value()
       t0 = IntegerType.get_signless(8)

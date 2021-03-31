@@ -303,3 +303,33 @@ Sections:
     Type:  SHT_NOTE
     Size:  0x1
     Notes: []
+
+## Check that we can use NT_* names for the note type.
+
+# RUN: yaml2obj --docnum=15 %s -o %t15
+# RUN: llvm-readobj --sections --section-data %t15 | FileCheck %s --check-prefix=TEXTUAL-TYPE
+
+# TEXTUAL-TYPE:      Name: .note.foo
+# TEXTUAL-TYPE:      SectionData (
+# TEXTUAL-TYPE-NEXT:   0000: 03000000 00000000 03000000 41420000  |............AB..|
+# TEXTUAL-TYPE-NEXT:   0010: 04000000 03000000 01000000 41424300  |............ABC.|
+# TEXTUAL-TYPE-NEXT:   0020: 12345600                             |.4V.|
+# TEXTUAL-TYPE-NEXT: )
+
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .note.foo
+    Type:  SHT_NOTE
+    Flags: [ SHF_ALLOC ]
+    Notes:
+      - Name: AB
+        Desc: ''
+        Type: NT_GNU_BUILD_ID
+      - Name: ABC
+        Desc: '123456'
+        Type: NT_VERSION

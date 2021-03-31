@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
 #include "CGCleanup.h"
@@ -826,9 +827,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
                                                      Out);
 
-    // Blacklist based on the mangled type.
-    if (!CGM.getContext().getSanitizerBlacklist().isBlacklistedType(
-            SanitizerKind::Vptr, Out.str())) {
+    // Contained in NoSanitizeList based on the mangled type.
+    if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
+                                                           Out.str())) {
       llvm::hash_code TypeHash = hash_value(Out.str());
 
       // Load the vptr, and compute hash_16_bytes(TypeHash, vptr).
@@ -850,9 +851,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
                                             llvm::ConstantInt::get(IntPtrTy,
                                                                    CacheSize-1));
       llvm::Value *Indices[] = { Builder.getInt32(0), Slot };
-      llvm::Value *CacheVal =
-        Builder.CreateAlignedLoad(Builder.CreateInBoundsGEP(Cache, Indices),
-                                  getPointerAlign());
+      llvm::Value *CacheVal = Builder.CreateAlignedLoad(
+          IntPtrTy, Builder.CreateInBoundsGEP(HashTable, Cache, Indices),
+          getPointerAlign());
 
       // If the hash isn't in the cache, call a runtime handler to perform the
       // hard work of checking whether the vptr is for an object of the right
@@ -3389,7 +3390,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
                 SourceLocation());
 
-  // This function should not be affected by blacklist. This function does
+  // This function is not affected by NoSanitizeList. This function does
   // not have a source location, but "src:*" would still apply. Revert any
   // changes to SanOpts made in StartFunction.
   SanOpts = CGM.getLangOpts().Sanitize;
@@ -3567,6 +3568,7 @@ static const Expr *isSimpleArrayDecayOperand(const Expr *E) {
 }
 
 static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
+                                          llvm::Type *elemType,
                                           llvm::Value *ptr,
                                           ArrayRef<llvm::Value*> indices,
                                           bool inbounds,
@@ -3578,7 +3580,7 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                       CodeGenFunction::NotSubtraction, loc,
                                       name);
   } else {
-    return CGF.Builder.CreateGEP(ptr, indices, name);
+    return CGF.Builder.CreateGEP(elemType, ptr, indices, name);
   }
 }
 
@@ -3672,8 +3674,8 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   if (!LastIndex ||
       (!CGF.IsInPreservedAIRegion && !IsPreserveAIArrayBase(CGF, Base))) {
     eltPtr = emitArraySubscriptGEP(
-        CGF, addr.getPointer(), indices, inbounds, signedIndices,
-        loc, name);
+        CGF, addr.getElementType(), addr.getPointer(), indices, inbounds,
+        signedIndices, loc, name);
   } else {
     // Remember the original array subscript for bpf target
     unsigned idx = LastIndex->getZExtValue();
@@ -3798,8 +3800,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     CharUnits EltAlign =
       getArrayElementAlign(Addr.getAlignment(), Idx, InterfaceSize);
     llvm::Value *EltPtr =
-        emitArraySubscriptGEP(*this, Addr.getPointer(), ScaledIdx, false,
-                              SignedIndices, E->getExprLoc());
+        emitArraySubscriptGEP(*this, Addr.getElementType(), Addr.getPointer(),
+                              ScaledIdx, false, SignedIndices, E->getExprLoc());
     Addr = Address(EltPtr, EltAlign);
 
     // Cast back.
@@ -4871,8 +4873,12 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *calleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
-  return CGCallee::forDirect(calleePtr, GD);
+  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
+      FD->hasAttr<CUDAGlobalAttr>())
+    CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
+        cast<llvm::GlobalValue>(CalleePtr->stripPointerCasts()));
+  return CGCallee::forDirect(CalleePtr, GD);
 }
 
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
@@ -5123,9 +5129,9 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
         getContext().getFunctionTypeWithExceptionSpec(PointeeType, EST_None);
       llvm::Constant *FTRTTIConst =
           CGM.GetAddrOfRTTIDescriptor(ProtoTy, /*ForEH=*/true);
-      llvm::Type *PrefixStructTyElems[] = {PrefixSig->getType(), Int32Ty};
+      llvm::Type *PrefixSigType = PrefixSig->getType();
       llvm::StructType *PrefixStructTy = llvm::StructType::get(
-          CGM.getLLVMContext(), PrefixStructTyElems, /*isPacked=*/true);
+          CGM.getLLVMContext(), {PrefixSigType, Int32Ty}, /*isPacked=*/true);
 
       llvm::Value *CalleePtr = Callee.getFunctionPointer();
 
@@ -5134,7 +5140,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
       llvm::Value *CalleeSigPtr =
           Builder.CreateConstGEP2_32(PrefixStructTy, CalleePrefixStruct, 0, 0);
       llvm::Value *CalleeSig =
-          Builder.CreateAlignedLoad(CalleeSigPtr, getIntAlign());
+          Builder.CreateAlignedLoad(PrefixSigType, CalleeSigPtr, getIntAlign());
       llvm::Value *CalleeSigMatch = Builder.CreateICmpEQ(CalleeSig, PrefixSig);
 
       llvm::BasicBlock *Cont = createBasicBlock("cont");
@@ -5145,7 +5151,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
       llvm::Value *CalleeRTTIPtr =
           Builder.CreateConstGEP2_32(PrefixStructTy, CalleePrefixStruct, 0, 1);
       llvm::Value *CalleeRTTIEncoded =
-          Builder.CreateAlignedLoad(CalleeRTTIPtr, getPointerAlign());
+          Builder.CreateAlignedLoad(Int32Ty, CalleeRTTIPtr, getPointerAlign());
       llvm::Value *CalleeRTTI =
           DecodeAddrUsedInPrologue(CalleePtr, CalleeRTTIEncoded);
       llvm::Value *CalleeRTTIMatch =
@@ -5266,6 +5272,18 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
     Callee.setFunctionPointer(CalleePtr);
   }
 
+  // HIP function pointer contains kernel handle when it is used in triple
+  // chevron. The kernel stub needs to be loaded from kernel handle and used
+  // as callee.
+  if (CGM.getLangOpts().HIP && !CGM.getLangOpts().CUDAIsDevice &&
+      isa<CUDAKernelCallExpr>(E) &&
+      (!TargetDecl || !isa<FunctionDecl>(TargetDecl))) {
+    llvm::Value *Handle = Callee.getFunctionPointer();
+    auto *Cast =
+        Builder.CreateBitCast(Handle, Handle->getType()->getPointerTo());
+    auto *Stub = Builder.CreateLoad(Address(Cast, CGM.getPointerAlign()));
+    Callee.setFunctionPointer(Stub);
+  }
   llvm::CallBase *CallOrInvoke = nullptr;
   RValue Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &CallOrInvoke,
                          E->getExprLoc());

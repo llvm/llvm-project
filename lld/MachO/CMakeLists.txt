@@ -6,6 +6,7 @@ include_directories(${LLVM_MAIN_SRC_DIR}/../libunwind/include)
 
 add_lld_library(lldMachO2
   Arch/X86_64.cpp
+  Arch/ARM64.cpp
   UnwindInfoSection.cpp
   Driver.cpp
   DriverUtils.cpp
@@ -18,15 +19,18 @@ add_lld_library(lldMachO2
   ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp
+  Relocations.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
   Target.cpp
+  MapFile.cpp
   Writer.cpp
 
   LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BinaryFormat
+  BitReader
   Core
   DebugInfoDWARF
   LTO

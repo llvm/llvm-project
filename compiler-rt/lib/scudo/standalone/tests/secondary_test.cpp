@@ -27,29 +27,29 @@ template <typename Config> static void testSecondaryBasic(void) {
   std::unique_ptr<SecondaryT> L(new SecondaryT);
   L->init(&S);
   const scudo::uptr Size = 1U << 16;
-  void *P = L->allocate(Size);
+  void *P = L->allocate(scudo::Options{}, Size);
   EXPECT_NE(P, nullptr);
   memset(P, 'A', Size);
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
-  L->deallocate(P);
+  L->deallocate(scudo::Options{}, P);
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!L->canCache(Size))
     EXPECT_DEATH(memset(P, 'A', Size), "");
 
   const scudo::uptr Align = 1U << 16;
-  P = L->allocate(Size + Align, Align);
+  P = L->allocate(scudo::Options{}, Size + Align, Align);
   EXPECT_NE(P, nullptr);
   void *AlignedP = reinterpret_cast<void *>(
       scudo::roundUpTo(reinterpret_cast<scudo::uptr>(P), Align));
   memset(AlignedP, 'A', Size);
-  L->deallocate(P);
+  L->deallocate(scudo::Options{}, P);
 
   std::vector<void *> V;
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate(Size));
+    V.push_back(L->allocate(scudo::Options{}, Size));
   std::shuffle(V.begin(), V.end(), std::mt19937(std::random_device()()));
   while (!V.empty()) {
-    L->deallocate(V.back());
+    L->deallocate(scudo::Options{}, V.back());
     V.pop_back();
   }
   scudo::ScopedString Str(1024);
@@ -59,11 +59,14 @@ template <typename Config> static void testSecondaryBasic(void) {
 
 struct NoCacheConfig {
   typedef scudo::MapAllocatorNoCache SecondaryCache;
+  static const bool MaySupportMemoryTagging = false;
 };
 
 struct TestConfig {
   typedef scudo::MapAllocatorCache<TestConfig> SecondaryCache;
+  static const bool MaySupportMemoryTagging = false;
   static const scudo::u32 SecondaryCacheEntriesArraySize = 128U;
+  static const scudo::u32 SecondaryCacheQuarantineSize = 0U;
   static const scudo::u32 SecondaryCacheDefaultMaxEntriesCount = 64U;
   static const scudo::uptr SecondaryCacheDefaultMaxEntrySize = 1UL << 20;
   static const scudo::s32 SecondaryCacheMinReleaseToOsIntervalMs = INT32_MIN;
@@ -97,12 +100,12 @@ TEST(ScudoSecondaryTest, SecondaryCombinations) {
             scudo::roundUpTo((1U << SizeLog) + Delta, MinAlign);
         const scudo::uptr Size =
             HeaderSize + UserSize + (Align > MinAlign ? Align - HeaderSize : 0);
-        void *P = L->allocate(Size, Align);
+        void *P = L->allocate(scudo::Options{}, Size, Align);
         EXPECT_NE(P, nullptr);
         void *AlignedP = reinterpret_cast<void *>(
             scudo::roundUpTo(reinterpret_cast<scudo::uptr>(P), Align));
         memset(AlignedP, 0xff, UserSize);
-        L->deallocate(P);
+        L->deallocate(scudo::Options{}, P);
       }
     }
   }
@@ -117,7 +120,7 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   std::vector<void *> V;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   for (scudo::uptr I = 0; I < 32U; I++)
-    V.push_back(L->allocate((std::rand() % 16) * PageSize));
+    V.push_back(L->allocate(scudo::Options{}, (std::rand() % 16) * PageSize));
   auto Lambda = [V](scudo::uptr Block) {
     EXPECT_NE(std::find(V.begin(), V.end(), reinterpret_cast<void *>(Block)),
               V.end());
@@ -126,7 +129,7 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   L->iterateOverBlocks(Lambda);
   L->enable();
   while (!V.empty()) {
-    L->deallocate(V.back());
+    L->deallocate(scudo::Options{}, V.back());
     V.pop_back();
   }
   scudo::ScopedString Str(1024);
@@ -172,14 +175,14 @@ static void performAllocations(LargeAllocator *L) {
   for (scudo::uptr I = 0; I < 128U; I++) {
     // Deallocate 75% of the blocks.
     const bool Deallocate = (rand() & 3) != 0;
-    void *P = L->allocate((std::rand() % 16) * PageSize);
+    void *P = L->allocate(scudo::Options{}, (std::rand() % 16) * PageSize);
     if (Deallocate)
-      L->deallocate(P);
+      L->deallocate(scudo::Options{}, P);
     else
       V.push_back(P);
   }
   while (!V.empty()) {
-    L->deallocate(V.back());
+    L->deallocate(scudo::Options{}, V.back());
     V.pop_back();
   }
 }

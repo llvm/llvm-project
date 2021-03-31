@@ -42,7 +42,7 @@
 
 #elif TEST_STD_VER == 20
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++20"
 #   endif
@@ -51,13 +51,13 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 
 #elif TEST_STD_VER > 20
 
-# if defined(__cpp_concepts) && __cpp_concepts >= 201811L
+# if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #   ifndef __cpp_lib_math_constants
 #     error "__cpp_lib_math_constants should be defined in c++2b"
 #   endif
@@ -66,7 +66,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_math_constants
-#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201811L is not defined!"
+#     error "__cpp_lib_math_constants should not be defined when defined(__cpp_concepts) && __cpp_concepts >= 201907L is not defined!"
 #   endif
 # endif
 

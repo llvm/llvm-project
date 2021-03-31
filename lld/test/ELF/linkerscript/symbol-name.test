@@ -1,0 +1,8 @@
+# REQUIRES: x86
+## Test that . and $ can be used by symbol names in expressions.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: ld.lld -T %s %t.o -o /dev/null
+
+a0 = DEFINED(.TOC.) ? .TOC. : 0;
+a1 = DEFINED(__global_pointer$) ? __global_pointer$ : 0;

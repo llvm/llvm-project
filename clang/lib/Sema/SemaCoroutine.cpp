@@ -996,7 +996,8 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
 
   // Move the return value if we can
   if (E) {
-    auto NRVOCandidate = this->getCopyElisionCandidate(E->getType(), E, CES_AsIfByStdMove);
+    const VarDecl *NRVOCandidate = this->getCopyElisionCandidate(
+        E->getType(), E, CES_ImplicitlyMovableCXX20);
     if (NRVOCandidate) {
       InitializedEntity Entity =
           InitializedEntity::InitializeResult(Loc, E->getType(), NRVOCandidate);

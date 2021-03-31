@@ -20,11 +20,11 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
 //  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?xf32, #[[$map0]]>,
 //  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?xf32, #[[$map0]]>,
 //  CHECK-SAME: %[[arg2:[a-zA-z0-9]*]]: memref<f32>) {
-//       CHECK:   %[[o0:.*]] = memref_cast %[[arg0]] :
+//       CHECK:   %[[o0:.*]] = memref.cast %[[arg0]] :
 //  CHECK-SAME:     memref<?xf32, #[[$map0]]> to memref<?xf32, #[[$map6]]>
-//       CHECK:   %[[o1:.*]] = memref_cast %[[arg1]] :
+//       CHECK:   %[[o1:.*]] = memref.cast %[[arg1]] :
 //  CHECK-SAME:     memref<?xf32, #[[$map0]]> to memref<?xf32, #[[$map6]]>
-//       CHECK:   %[[o2:.*]] = memref_cast %[[arg2]] :
+//       CHECK:   %[[o2:.*]] = memref.cast %[[arg2]] :
 //  CHECK-SAME:     memref<f32> to memref<f32, #[[$map7]]>
 //       CHECK:   call @linalg_dot_viewsxf32_viewsxf32_viewf32(
 //  CHECK-SAME:     %[[o0]], %[[o1]], %[[o2]]) :
@@ -37,9 +37,9 @@ func @copy(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memre
 // CHECK-LABEL: func @copy(
 //  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>,
 //  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>) {
-//       CHECK:   %[[o0:.*]] = memref_cast %[[arg0]] :
+//       CHECK:   %[[o0:.*]] = memref.cast %[[arg0]] :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$map1]]> to memref<?x?x?xf32, #[[$map8]]>
-//       CHECK:   %[[o1:.*]] = memref_cast %[[arg1]] :
+//       CHECK:   %[[o1:.*]] = memref.cast %[[arg1]] :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$map1]]> to memref<?x?x?xf32, #[[$map8]]>
 //       CHECK:   call @linalg_copy_viewsxsxsxf32_viewsxsxsxf32(%[[o0]], %[[o1]]) :
 //  CHECK-SAME:   memref<?x?x?xf32, #[[$map8]]>, memref<?x?x?xf32, #[[$map8]]>
@@ -53,13 +53,13 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
 // CHECK-LABEL: func @copy_transpose(
 //  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>,
 //  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?x?x?xf32, #[[$map1]]>) {
-//       CHECK:   %[[t0:.*]] = transpose %[[arg0]]
+//       CHECK:   %[[t0:.*]] = memref.transpose %[[arg0]]
 //  CHECK-SAME:     (d0, d1, d2) -> (d0, d2, d1) : memref<?x?x?xf32, #[[$map1]]>
-//       CHECK:   %[[t1:.*]] = transpose %[[arg1]]
+//       CHECK:   %[[t1:.*]] = memref.transpose %[[arg1]]
 //  CHECK-SAME:     (d0, d1, d2) -> (d2, d1, d0) : memref<?x?x?xf32, #[[$map1]]>
-//       CHECK:   %[[o0:.*]] = memref_cast %[[t0]] :
+//       CHECK:   %[[o0:.*]] = memref.cast %[[t0]] :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$map2]]> to memref<?x?x?xf32, #[[$map8]]>
-//       CHECK:   %[[o1:.*]] = memref_cast %[[t1]] :
+//       CHECK:   %[[o1:.*]] = memref.cast %[[t1]] :
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$map4]]> to memref<?x?x?xf32, #[[$map8]]>
 //       CHECK:   call @linalg_copy_viewsxsxsxf32_viewsxsxsxf32(%[[o0]], %[[o1]]) :
 //  CHECK-SAME:   memref<?x?x?xf32, #[[$map8]]>, memref<?x?x?xf32, #[[$map8]]>

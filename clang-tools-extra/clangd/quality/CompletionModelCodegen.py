@@ -131,18 +131,19 @@ def gen_header_code(features_json, cpp_class, filename):
                     feature, feature))
         elif f["kind"] == "ENUM":
             setters.append(
-                "void set%s(unsigned V) { %s = 1 << V; }" % (feature, feature))
+                "void set%s(unsigned V) { %s = 1LL << V; }" % (feature, feature))
         else:
             raise ValueError("Unhandled feature type.", f["kind"])
 
     # Class members represent all the features of the Example.
     class_members = [
-        "uint32_t %s = 0;" % f['name']
+        "uint%d_t %s = 0;"
+        % (64 if f["kind"] == "ENUM" else 32, f['name'])
         for f in features_json
     ]
     getters = [
-        "LLVM_ATTRIBUTE_ALWAYS_INLINE uint32_t get%s() const { return %s; }"
-        % (f['name'], f['name'])
+        "LLVM_ATTRIBUTE_ALWAYS_INLINE uint%d_t get%s() const { return %s; }"
+        % (64 if f["kind"] == "ENUM" else 32, f['name'], f['name'])
         for f in features_json
     ]
     nline = "\n  "
@@ -245,7 +246,7 @@ def gen_cpp_code(forest_json, features_json, filename, cpp_class):
 
 %s
 
-#define BIT(X) (1 << X)
+#define BIT(X) (1LL << X)
 
 %s
 

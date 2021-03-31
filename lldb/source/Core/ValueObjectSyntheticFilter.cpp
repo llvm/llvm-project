@@ -190,7 +190,7 @@ bool ValueObjectSynthetic::UpdateValue() {
     // children count for a synthetic VO that might indeed happen, so we need
     // to tell the upper echelons that they need to come back to us asking for
     // children
-    m_children_count_valid = false;
+    m_flags.m_children_count_valid = false;
     {
       std::lock_guard<std::mutex> guard(m_child_mutex);
       m_synthetic_children_cache.clear();

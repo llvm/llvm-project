@@ -314,22 +314,14 @@ entry:
 define arm_aapcs_vfpcc void @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
 ; CHECK-LABEL: vmovn16_b2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-NEXT:    vmov.16 q2[0], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-NEXT:    vmov.16 q2[1], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[3]
-; CHECK-NEXT:    vmov.16 q2[2], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[2]
-; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[5]
-; CHECK-NEXT:    vmov.16 q2[4], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[4]
-; CHECK-NEXT:    vmov.16 q2[5], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[7]
-; CHECK-NEXT:    vmov.16 q2[6], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[6]
-; CHECK-NEXT:    vmov.16 q2[7], r1
+; CHECK-NEXT:    vmovx.f16 s9, s5
+; CHECK-NEXT:    vins.f16 s9, s1
+; CHECK-NEXT:    vmovx.f16 s8, s4
+; CHECK-NEXT:    vins.f16 s8, s0
+; CHECK-NEXT:    vmovx.f16 s10, s6
+; CHECK-NEXT:    vins.f16 s10, s2
+; CHECK-NEXT:    vmovx.f16 s11, s7
+; CHECK-NEXT:    vins.f16 s11, s3
 ; CHECK-NEXT:    vstrw.32 q2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -341,22 +333,14 @@ entry:
 define arm_aapcs_vfpcc void @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
 ; CHECK-LABEL: vmovn16_b3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-NEXT:    vmov.16 q2[0], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[0]
-; CHECK-NEXT:    vmov.16 q2[1], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[3]
-; CHECK-NEXT:    vmov.16 q2[2], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[2]
-; CHECK-NEXT:    vmov.16 q2[3], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[5]
-; CHECK-NEXT:    vmov.16 q2[4], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[4]
-; CHECK-NEXT:    vmov.16 q2[5], r1
-; CHECK-NEXT:    vmov.u16 r1, q0[7]
-; CHECK-NEXT:    vmov.16 q2[6], r1
-; CHECK-NEXT:    vmov.u16 r1, q1[6]
-; CHECK-NEXT:    vmov.16 q2[7], r1
+; CHECK-NEXT:    vmovx.f16 s9, s1
+; CHECK-NEXT:    vins.f16 s9, s5
+; CHECK-NEXT:    vmovx.f16 s8, s0
+; CHECK-NEXT:    vins.f16 s8, s4
+; CHECK-NEXT:    vmovx.f16 s10, s2
+; CHECK-NEXT:    vins.f16 s10, s6
+; CHECK-NEXT:    vmovx.f16 s11, s3
+; CHECK-NEXT:    vins.f16 s11, s7
 ; CHECK-NEXT:    vstrw.32 q2, [r0]
 ; CHECK-NEXT:    bx lr
 entry:

@@ -12,16 +12,16 @@
 // better decisions.
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
-#define LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
+#ifndef LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H
+#define LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Pass.h"
 #include <memory>
 
 namespace llvm {
+class DivergenceInfo;
 class Function;
-class GPUDivergenceAnalysis;
 class Module;
 class raw_ostream;
 class TargetTransformInfo;
@@ -63,7 +63,7 @@ private:
                                       const TargetTransformInfo &TTI) const;
 
   // (optional) handle to new DivergenceAnalysis
-  std::unique_ptr<GPUDivergenceAnalysis> gpuDA;
+  std::unique_ptr<DivergenceInfo> gpuDA;
 
   // Stores all divergent values.
   DenseSet<const Value *> DivergentValues;
@@ -73,4 +73,4 @@ private:
 };
 } // End llvm namespace
 
-#endif //LLVM_ANALYSIS_LEGACY_DIVERGENCE_ANALYSIS_H
+#endif // LLVM_ANALYSIS_LEGACYDIVERGENCEANALYSIS_H

@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
-#define LLVM_TRANSFORMS_UTILS_ASSUMEBUNDLEQUERIES_H
+#ifndef LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
+#define LLVM_ANALYSIS_ASSUMEBUNDLEQUERIES_H
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Instructions.h"
@@ -106,6 +106,15 @@ struct RetainedKnowledge {
            ArgValue == Other.ArgValue;
   }
   bool operator!=(RetainedKnowledge Other) const { return !(*this == Other); }
+  /// This is only intended for use in std::min/std::max between attribute that
+  /// only differ in ArgValue.
+  bool operator<(RetainedKnowledge Other) const {
+    assert(((AttrKind == Other.AttrKind && WasOn == Other.WasOn) ||
+            AttrKind == Attribute::None || Other.AttrKind == Attribute::None) &&
+           "This is only intend for use in min/max to select the best for "
+           "RetainedKnowledge that is otherwise equal");
+    return ArgValue < Other.ArgValue;
+  }
   operator bool() const { return AttrKind != Attribute::None; }
   static RetainedKnowledge none() { return RetainedKnowledge{}; }
 };

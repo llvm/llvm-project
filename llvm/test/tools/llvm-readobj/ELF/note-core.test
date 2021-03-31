@@ -252,6 +252,7 @@
 
 # CHECK-GNU:      Owner Data size  Description
 # CHECK-GNU-NEXT: CORE  0x00000000 [[DESC]]
+# CHECK-GNU-EMPTY:
 
 # CHECK-LLVM:      Note {
 # CHECK-LLVM-NEXT:   Owner: CORE

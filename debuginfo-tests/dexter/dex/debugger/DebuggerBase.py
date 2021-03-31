@@ -125,26 +125,46 @@ class DebuggerBase(object, metaclass=abc.ABCMeta):
         pass
 
     def add_breakpoint(self, file_, line):
+        """Returns a unique opaque breakpoint id.
+
+        The ID type depends on the debugger being used, but will probably be
+        an int.
+        """
         return self._add_breakpoint(self._external_to_debug_path(file_), line)
 
     @abc.abstractmethod
     def _add_breakpoint(self, file_, line):
+        """Returns a unique opaque breakpoint id.
+        """
         pass
 
     def add_conditional_breakpoint(self, file_, line, condition):
+        """Returns a unique opaque breakpoint id.
+
+        The ID type depends on the debugger being used, but will probably be
+        an int.
+        """
         return self._add_conditional_breakpoint(
             self._external_to_debug_path(file_), line, condition)
 
     @abc.abstractmethod
     def _add_conditional_breakpoint(self, file_, line, condition):
+        """Returns a unique opaque breakpoint id.
+        """
         pass
 
-    def delete_conditional_breakpoint(self, file_, line, condition):
-        return self._delete_conditional_breakpoint(
-            self._external_to_debug_path(file_), line, condition)
+    @abc.abstractmethod
+    def delete_breakpoint(self, id):
+        """Delete a breakpoint by id.
+
+        Raises a KeyError if no breakpoint with this id exists.
+        """
+        pass
 
     @abc.abstractmethod
-    def _delete_conditional_breakpoint(self, file_, line, condition):
+    def get_triggered_breakpoint_ids(self):
+        """Returns a set of opaque ids for just-triggered breakpoints.
+        """
         pass
 
     @abc.abstractmethod

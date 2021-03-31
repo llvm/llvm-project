@@ -121,6 +121,7 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
+  let SchedRW              = ps.SchedRW;
 }
 
 class VOPC_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -760,7 +761,7 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 
 // We need to use COPY_TO_REGCLASS to w/a the problem when ReplaceAllUsesWith()
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
-multiclass ICMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
@@ -807,7 +808,7 @@ defm : ICMP_Pattern <COND_SGE, V_CMP_GE_I16_e64, i16>;
 defm : ICMP_Pattern <COND_SLT, V_CMP_LT_I16_e64, i16>;
 defm : ICMP_Pattern <COND_SLE, V_CMP_LE_I16_e64, i16>;
 
-multiclass FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> {
+multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
   def : GCNPat <
     (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),

@@ -327,17 +327,11 @@
 #   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_memory
-#     error "__cpp_lib_constexpr_memory should be defined in c++20"
-#   endif
-#   if __cpp_lib_constexpr_memory != 201811L
-#     error "__cpp_lib_constexpr_memory should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_memory
-#     error "__cpp_lib_constexpr_memory should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_memory
+#   error "__cpp_lib_constexpr_memory should be defined in c++20"
+# endif
+# if __cpp_lib_constexpr_memory != 201811L
+#   error "__cpp_lib_constexpr_memory should have the value 201811L in c++20"
 # endif
 
 # ifndef __cpp_lib_enable_shared_from_this
@@ -483,17 +477,11 @@
 #   error "__cpp_lib_constexpr_dynamic_alloc should have the value 201907L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_constexpr_memory
-#     error "__cpp_lib_constexpr_memory should be defined in c++2b"
-#   endif
-#   if __cpp_lib_constexpr_memory != 201811L
-#     error "__cpp_lib_constexpr_memory should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_constexpr_memory
-#     error "__cpp_lib_constexpr_memory should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_constexpr_memory
+#   error "__cpp_lib_constexpr_memory should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_memory != 201811L
+#   error "__cpp_lib_constexpr_memory should have the value 201811L in c++2b"
 # endif
 
 # ifndef __cpp_lib_enable_shared_from_this

@@ -89,6 +89,7 @@ option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF
 option(LIBCXXABI_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
 option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
+option(LIBCXXABI_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)
 option(LIBCXXABI_HAS_EXTERNAL_THREAD_API
   "Build libc++abi with an externalized threading API.
   This option may only be set to ON when LIBCXXABI_ENABLE_THREADS=ON." OFF)
@@ -155,9 +156,23 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-set(LIBCXXABI_LIBCXX_INCLUDES "${LIBCXXABI_LIBCXX_PATH}/include" CACHE PATH
+# TODO: This is a workaround for the fact that Standalone builds can't use
+# targets from the other runtimes (so the cxx-headers target doesn't exist).
+set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
-message(STATUS "Libc++abi will be using libc++ includes from ${LIBCXXABI_LIBCXX_INCLUDES}")
+if (LIBCXXABI_STANDALONE_BUILD)
+  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
+    message(FATAL_ERROR
+      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
+      "Please provide the path to where the libc++ headers have been installed.")
+  endif()
+  add_library(cxx-headers INTERFACE)
+  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC" OR "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    target_compile_options(cxx-headers INTERFACE /I "${LIBCXXABI_LIBCXX_INCLUDES}")
+  else()
+    target_compile_options(cxx-headers INTERFACE -I "${LIBCXXABI_LIBCXX_INCLUDES}")
+  endif()
+endif()
 
 option(LIBCXXABI_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." OFF)
@@ -179,6 +194,7 @@ set(CMAKE_MODULE_PATH
   )
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++)
   if(LIBCXX_LIBDIR_SUBDIR)
@@ -186,9 +202,11 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
     string(APPEND LIBCXXABI_INSTALL_LIBRARY_DIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
 elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
+  set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX})
 else()
+  set(LIBCXXABI_HEADER_DIR ${CMAKE_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXXABI_LIBDIR_SUFFIX})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX})
 endif()
@@ -374,6 +392,11 @@ if (NOT LIBCXXABI_ENABLE_THREADS)
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
                         " is also set to ON.")
   endif()
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "LIBCXXABI_HAS_WIN32_THREAD_API can only"
+                        " be set to ON when LIBCXXABI_ENABLE_THREADS"
+                        " is also set to ON.")
+  endif()
   if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
     message(FATAL_ERROR "LIBCXXABI_HAS_EXTERNAL_THREAD_API can only"
                         " be set to ON when LIBCXXABI_ENABLE_THREADS"
@@ -394,10 +417,23 @@ if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)
                         " and LIBCXXABI_HAS_PTHREAD_API cannot be both"
                         " set to ON at the same time.")
   endif()
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXXABI_HAS_EXTERNAL_THREAD_API"
+                        " and LIBCXXABI_HAS_WIN32_THREAD_API cannot be both"
+                        " set to ON at the same time.")
+  endif()
   if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
     message(FATAL_ERROR "The options LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY"
                         " and LIBCXXABI_HAS_EXTERNAL_THREAD_API cannot be both"
                         " set to ON at the same time.")
+  endif()
+endif()
+
+if (LIBCXXABI_HAS_PTHREAD_API)
+  if (LIBCXXABI_HAS_WIN32_THREAD_API)
+    message(FATAL_ERROR "The options LIBCXXABI_HAS_PTHREAD_API"
+            "and LIBCXXABI_HAS_WIN32_THREAD_API cannot be both"
+            "set to ON at the same time.")
   endif()
 endif()
 
@@ -426,6 +462,10 @@ endif()
 
 if (LIBCXXABI_HAS_PTHREAD_API)
   add_definitions(-D_LIBCPP_HAS_THREAD_API_PTHREAD)
+endif()
+
+if (LIBCXXABI_HAS_WIN32_THREAD_API)
+  add_definitions(-D_LIBCPP_HAS_THREAD_API_WIN32)
 endif()
 
 if (LIBCXXABI_HAS_EXTERNAL_THREAD_API)

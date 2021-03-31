@@ -313,10 +313,8 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
   // Knowing that this alloca is promotable, we know that it's safe to kill all
   // instructions except for load and store.
 
-  for (auto UI = AI->use_begin(), UE = AI->use_end(); UI != UE;) {
-    Instruction *I = cast<Instruction>(UI->getUser());
-    Use &U = *UI;
-    ++UI;
+  for (Use &U : llvm::make_early_inc_range(AI->uses())) {
+    Instruction *I = cast<Instruction>(U.getUser());
     if (isa<LoadInst>(I) || isa<StoreInst>(I))
       continue;
 
@@ -330,10 +328,8 @@ static void removeIntrinsicUsers(AllocaInst *AI) {
       // The only users of this bitcast/GEP instruction are lifetime intrinsics.
       // Follow the use/def chain to erase them now instead of leaving it for
       // dead code elimination later.
-      for (auto UUI = I->use_begin(), UUE = I->use_end(); UUI != UUE;) {
-        Instruction *Inst = cast<Instruction>(UUI->getUser());
-        Use &UU = *UUI;
-        ++UUI;
+      for (Use &UU : llvm::make_early_inc_range(I->uses())) {
+        Instruction *Inst = cast<Instruction>(UU.getUser());
 
         // Drop the use of I in droppable instructions.
         if (Inst->isDroppable()) {

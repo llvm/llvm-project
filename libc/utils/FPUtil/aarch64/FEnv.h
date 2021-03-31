@@ -19,6 +19,15 @@ namespace __llvm_libc {
 namespace fputil {
 
 struct FEnv {
+  struct FPState {
+    uint32_t ControlWord;
+    uint32_t StatusWord;
+  };
+
+  static_assert(
+      sizeof(fenv_t) == sizeof(FPState),
+      "Internal floating point state does not match the public fenv_t type.");
+
   static constexpr uint32_t ToNearest = 0x0;
   static constexpr uint32_t Upward = 0x1;
   static constexpr uint32_t Downward = 0x2;
@@ -93,6 +102,14 @@ static inline int testExcept(int excepts) {
   uint32_t statusWord = FEnv::getStatusWord();
   return FEnv::exceptionStatusToMacro(
       (statusWord >> FEnv::ExceptionStatusFlagsBitPosition) & toTest);
+}
+
+static inline int setExcept(int excepts) {
+  uint32_t statusWord = FEnv::getControlWord();
+  uint32_t statusValue = FEnv::getStatusValueForExcept(excepts);
+  statusWord |= (statusValue << FEnv::ExceptionStatusFlagsBitPosition);
+  FEnv::writeStatusWord(statusWord);
+  return 0;
 }
 
 static inline int raiseExcept(int excepts) {
@@ -195,6 +212,20 @@ static inline int setRound(int mode) {
   controlWord |= (bitValue << FEnv::RoundingControlBitPosition);
   FEnv::writeControlWord(controlWord);
 
+  return 0;
+}
+
+static inline int getEnv(fenv_t *envp) {
+  FEnv::FPState *state = reinterpret_cast<FEnv::FPState *>(envp);
+  state->ControlWord = FEnv::getControlWord();
+  state->StatusWord = FEnv::getStatusWord();
+  return 0;
+}
+
+static inline int setEnv(const fenv_t *envp) {
+  const FEnv::FPState *state = reinterpret_cast<const FEnv::FPState *>(envp);
+  FEnv::writeControlWord(state->ControlWord);
+  FEnv::writeStatusWord(state->StatusWord);
   return 0;
 }
 

@@ -108,7 +108,6 @@ MODULE_PASS("strip-debug-declare", StripDebugDeclarePass())
 MODULE_PASS("strip-nondebug", StripNonDebugSymbolsPass())
 MODULE_PASS("strip-nonlinetable-debuginfo", StripNonLineTableDebugInfoPass())
 MODULE_PASS("synthetic-counts-propagation", SyntheticCountsPropagation())
-MODULE_PASS("unique-internal-linkage-names", UniqueInternalLinkageNamesPass())
 MODULE_PASS("verify", VerifierPass())
 MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 MODULE_PASS("dfsan", DataFlowSanitizerPass())
@@ -119,6 +118,7 @@ MODULE_PASS("kasan-module", ModuleAddressSanitizerPass(/*CompileKernel=*/true, f
 MODULE_PASS("sancov-module", ModuleSanitizerCoveragePass())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("poison-checking", PoisonCheckingPass())
+MODULE_PASS("pseudo-probe-update", PseudoProbeUpdatePass())
 #undef MODULE_PASS
 
 #ifndef CGSCC_ANALYSIS
@@ -171,6 +171,7 @@ FUNCTION_ANALYSIS("targetir",
                   TM ? TM->getTargetIRAnalysis() : TargetIRAnalysis())
 FUNCTION_ANALYSIS("verify", VerifierAnalysis())
 FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+FUNCTION_ANALYSIS("divergence", DivergenceAnalysis())
 
 #ifndef FUNCTION_ALIAS_ANALYSIS
 #define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
@@ -272,6 +273,7 @@ FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(dbgs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(dbgs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(dbgs()))
 FUNCTION_PASS("print<da>", DependenceAnalysisPrinterPass(dbgs()))
+FUNCTION_PASS("print<divergence>", DivergenceAnalysisPrinterPass(dbgs()))
 FUNCTION_PASS("print<domtree>", DominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<postdomtree>", PostDominatorTreePrinterPass(dbgs()))
 FUNCTION_PASS("print<delinearization>", DelinearizationPrinterPass(dbgs()))

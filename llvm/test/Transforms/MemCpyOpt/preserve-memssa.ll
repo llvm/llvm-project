@@ -40,8 +40,6 @@ define void @test2(i8* noalias %in) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL_I1_I:%.*]] = tail call i8* @get_ptr()
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, i8* [[CALL_I1_I]], i64 10
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP0]], i8 0, i64 0, i1 false)
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[CALL_I1_I]], i8* [[IN:%.*]], i64 10, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -69,8 +67,6 @@ define void @test4(i32 %n, i8* noalias %ptr.0, i8* noalias %ptr.1, i32* %ptr.2) 
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ELEM_I:%.*]] = getelementptr i8, i8* [[PTR_0:%.*]], i64 8
 ; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[PTR_2:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, i8* [[ELEM_I]], i64 10
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP1]], i8 0, i64 0, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[ELEM_I]], i8* [[PTR_1:%.*]], i64 10, i1 false)
 ; CHECK-NEXT:    ret void
 ;

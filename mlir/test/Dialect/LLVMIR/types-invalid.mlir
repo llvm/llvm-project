@@ -153,35 +153,15 @@ func @scalable_void_vector() {
 
 // -----
 
-// expected-warning @+1 {{deprecated syntax, drop '!llvm.' for integers}}
-func private @deprecated_int() -> !llvm.i32
-
-// -----
-
 // expected-error @+1 {{unexpected type, expected keyword}}
 func private @unexpected_type() -> !llvm.tensor<*xf32>
 
 // -----
 
-// expected-warning @+1 {{deprecated syntax, use bf16 instead}}
-func private @deprecated_bfloat() -> !llvm.bfloat
-
-// -----
-
-// expected-warning @+1 {{deprecated syntax, use f16 instead}}
-func private @deprecated_half() -> !llvm.half
-
-// -----
-
-// expected-warning @+1 {{deprecated syntax, use f32 instead}}
-func private @deprecated_float() -> !llvm.float
-
-// -----
-
-// expected-warning @+1 {{deprecated syntax, use f64 instead}}
-func private @deprecated_double() -> !llvm.double
-
-// -----
-
 // expected-error @+1 {{unexpected type, expected keyword}}
 func private @unexpected_type() -> !llvm.f32
+
+// -----
+
+// expected-error @below {{cannot use !llvm.vec for built-in primitives, use 'vector' instead}}
+func private @llvm_vector_primitive() -> !llvm.vec<4 x f32>

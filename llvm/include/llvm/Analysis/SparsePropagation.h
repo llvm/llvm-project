@@ -470,8 +470,7 @@ void SparseSolver<LatticeKey, LatticeVal, KeyInfo>::Solve() {
   while (!BBWorkList.empty() || !ValueWorkList.empty()) {
     // Process the value work list.
     while (!ValueWorkList.empty()) {
-      Value *V = ValueWorkList.back();
-      ValueWorkList.pop_back();
+      Value *V = ValueWorkList.pop_back_val();
 
       LLVM_DEBUG(dbgs() << "\nPopped off V-WL: " << *V << "\n");
 

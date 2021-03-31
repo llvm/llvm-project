@@ -24,6 +24,13 @@ def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
   let dependentDialects = ["LLVM::LLVMDialect"];
+  let hasOperationAttrVerify = 1;
+
+  let extraClassDeclaration = [{
+    /// Get the name of the attribute used to annotate external kernel
+    /// functions.
+    static StringRef getKernelFuncAttrName() { return "rocdl.kernel"; }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -169,7 +176,7 @@ def ROCDL_MubufStoreOp :
                  LLVM_Type:$glc,
                  LLVM_Type:$slc)>{
   string llvmBuilder = [{
-    auto vdataType = convertType(op.vdata().getType());
+    auto vdataType = moduleTranslation.convertType(op.vdata().getType());
     createIntrinsicCall(builder,
           llvm::Intrinsic::amdgcn_buffer_store, {$vdata, $rsrc, $vindex,
           $offset, $glc, $slc}, {vdataType});

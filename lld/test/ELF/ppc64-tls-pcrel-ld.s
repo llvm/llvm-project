@@ -22,8 +22,8 @@
 # LD-RELOC: 0000000001004168  0000000000000044 R_PPC64_DTPMOD64                  0
 
 # LD-SYM:      Symbol table '.symtab' contains 11 entries:
-# LD-SYM:      5: 0000000000000000     0 TLS     LOCAL  DEFAULT    13 x
-# LD-SYM-NEXT: 6: 0000000000000004     0 TLS     LOCAL  DEFAULT    13 y
+# LD-SYM:      0000000000000000     0 TLS     LOCAL  DEFAULT    13 x
+# LD-SYM:      0000000000000004     0 TLS     LOCAL  DEFAULT    13 y
 
 # LD-GOT:      section '.got':
 # LD-GOT-NEXT: 0x01004160 60c10001 00000000 00000000 00000000
@@ -32,8 +32,8 @@
 # LDTOLE-RELOC: There are no relocations in this file.
 
 # LDTOLE-SYM:      Symbol table '.symtab' contains 9 entries:
-# LDTOLE-SYM:      5: 0000000000000000     0 TLS     LOCAL  DEFAULT     6 x
-# LDTOLE-SYM-NEXT: 6: 0000000000000004     0 TLS     LOCAL  DEFAULT     6 y
+# LDTOLE-SYM:      0000000000000000     0 TLS     LOCAL  DEFAULT     6 x
+# LDTOLE-SYM:      0000000000000004     0 TLS     LOCAL  DEFAULT     6 y
 
 # LDTOLE-GOT:      section '.got':
 # LDTOLE-GOT-NEXT: 0x01004020 20c00001 00000000

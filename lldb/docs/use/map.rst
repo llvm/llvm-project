@@ -199,7 +199,7 @@ Execution Commands
                <td class="content">
                </td>
                <td class="content">
-                  <b>(lldb)</b> process launch -v DEBUG=1
+                  <b>(lldb)</b> process launch -E DEBUG=1
                   <br>
                </td>
          </tr>

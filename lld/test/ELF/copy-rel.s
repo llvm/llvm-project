@@ -14,8 +14,8 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   .rela.dyn {
-# CHECK-NEXT:     R_X86_64_COPY bar 0x0
 # CHECK-NEXT:     R_X86_64_COPY foo 0x0
+# CHECK-NEXT:     R_X86_64_COPY bar 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 

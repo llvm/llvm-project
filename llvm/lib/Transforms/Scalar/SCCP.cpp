@@ -144,9 +144,8 @@ class SCCPSolver : public InstVisitor<SCCPSolver> {
   /// represented here for efficient lookup.
   SmallPtrSet<Function *, 16> MRVFunctionsTracked;
 
-  /// MustTailFunctions - Each function here is a callee of non-removable
-  /// musttail call site.
-  SmallPtrSet<Function *, 16> MustTailCallees;
+  /// A list of functions whose return cannot be modified.
+  SmallPtrSet<Function *, 16> MustPreserveReturnsInFunctions;
 
   /// TrackingIncomingArguments - This is the set of functions for whose
   /// arguments we make optimistic assumptions about and try to prove as
@@ -238,16 +237,14 @@ public:
       TrackedRetVals.insert(std::make_pair(F, ValueLatticeElement()));
   }
 
-  /// AddMustTailCallee - If the SCCP solver finds that this function is called
-  /// from non-removable musttail call site.
-  void AddMustTailCallee(Function *F) {
-    MustTailCallees.insert(F);
+  /// Add function to the list of functions whose return cannot be modified.
+  void addToMustPreserveReturnsInFunctions(Function *F) {
+    MustPreserveReturnsInFunctions.insert(F);
   }
 
-  /// Returns true if the given function is called from non-removable musttail
-  /// call site.
-  bool isMustTailCallee(Function *F) {
-    return MustTailCallees.count(F);
+  /// Returns true if the return of the given function cannot be modified.
+  bool mustPreserveReturn(Function *F) {
+    return MustPreserveReturnsInFunctions.count(F);
   }
 
   void AddArgumentTrackedFunction(Function *F) {
@@ -317,12 +314,6 @@ public:
   /// values tracked by the pass.
   const SmallPtrSet<Function *, 16> getMRVFunctionsTracked() {
     return MRVFunctionsTracked;
-  }
-
-  /// getMustTailCallees - Get the set of functions which are called
-  /// from non-removable musttail call sites.
-  const SmallPtrSet<Function *, 16> getMustTailCallees() {
-    return MustTailCallees;
   }
 
   /// markOverdefined - Mark the specified value overdefined.  This
@@ -1650,16 +1641,19 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   assert(Const && "Constant is nullptr here!");
 
   // Replacing `musttail` instructions with constant breaks `musttail` invariant
-  // unless the call itself can be removed
-  CallInst *CI = dyn_cast<CallInst>(V);
-  if (CI && CI->isMustTailCall() && !CI->isSafeToRemove()) {
-    Function *F = CI->getCalledFunction();
+  // unless the call itself can be removed.
+  // Calls with "clang.arc.attachedcall" implicitly use the return value and
+  // those uses cannot be updated with a constant.
+  CallBase *CB = dyn_cast<CallBase>(V);
+  if (CB && ((CB->isMustTailCall() && !CB->isSafeToRemove()) ||
+             CB->getOperandBundle(LLVMContext::OB_clang_arc_attachedcall))) {
+    Function *F = CB->getCalledFunction();
 
     // Don't zap returns of the callee
     if (F)
-      Solver.AddMustTailCallee(F);
+      Solver.addToMustPreserveReturnsInFunctions(F);
 
-    LLVM_DEBUG(dbgs() << "  Can\'t treat the result of musttail call : " << *CI
+    LLVM_DEBUG(dbgs() << "  Can\'t treat the result of call " << *CB
                       << " as a constant\n");
     return false;
   }
@@ -1821,11 +1815,12 @@ static void findReturnsToZap(Function &F,
   if (!Solver.isArgumentTrackedFunction(&F))
     return;
 
-  // There is a non-removable musttail call site of this function. Zapping
-  // returns is not allowed.
-  if (Solver.isMustTailCallee(&F)) {
-    LLVM_DEBUG(dbgs() << "Can't zap returns of the function : " << F.getName()
-                      << " due to present musttail call of it\n");
+  if (Solver.mustPreserveReturn(&F)) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Can't zap returns of the function : " << F.getName()
+        << " due to present musttail or \"clang.arc.attachedcall\" call of "
+           "it\n");
     return;
   }
 

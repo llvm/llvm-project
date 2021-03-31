@@ -16,23 +16,48 @@
 namespace mlir {
 
 // Forward declarations.
+class ConversionTarget;
 class MLIRContext;
-class OwningRewritePatternList;
+class Operation;
 class TypeConverter;
+class RewritePatternSet;
+using OwningRewritePatternList = RewritePatternSet;
 
 /// Add a pattern to the given pattern list to convert the operand and result
 /// types of a CallOp with the given type converter.
-void populateCallOpTypeConversionPattern(OwningRewritePatternList &patterns,
-                                         MLIRContext *ctx,
+void populateCallOpTypeConversionPattern(RewritePatternSet &patterns,
                                          TypeConverter &converter);
 
-/// Add a pattern to the given pattern list to rewrite branch operations and
-/// `return` to use operands that have been legalized by the conversion
-/// framework. This can only be done if the branch operation implements the
-/// BranchOpInterface. Only needed for partial conversions.
-void populateBranchOpInterfaceAndReturnOpTypeConversionPattern(
-    OwningRewritePatternList &patterns, MLIRContext *ctx,
-    TypeConverter &converter);
+/// Add a pattern to the given pattern list to rewrite branch operations to use
+/// operands that have been legalized by the conversion framework. This can only
+/// be done if the branch operation implements the BranchOpInterface. Only
+/// needed for partial conversions.
+void populateBranchOpInterfaceTypeConversionPattern(RewritePatternSet &patterns,
+                                                    TypeConverter &converter);
+
+/// Return true if op is a BranchOpInterface op whose operands are all legal
+/// according to converter.
+bool isLegalForBranchOpInterfaceTypeConversionPattern(Operation *op,
+                                                      TypeConverter &converter);
+
+/// Add a pattern to the given pattern list to rewrite `return` ops to use
+/// operands that have been legalized by the conversion framework.
+void populateReturnOpTypeConversionPattern(RewritePatternSet &patterns,
+                                           TypeConverter &converter);
+
+/// For ReturnLike ops (except `return`), return True. If op is a `return` &&
+/// returnOpAlwaysLegal is false, legalize op according to converter. Otherwise,
+/// return false.
+bool isLegalForReturnOpTypeConversionPattern(Operation *op,
+                                             TypeConverter &converter,
+                                             bool returnOpAlwaysLegal = false);
+
+/// Return true if op is neither BranchOpInterface nor ReturnLike.
+///
+/// TODO Try to get rid of this function and invert the meaning of
+/// `isLegalForBranchOpInterfaceTypeConversionPattern` and
+/// `isLegalForReturnOpTypeConversionPattern`.
+bool isNotBranchOpInterfaceOrReturnLikeOp(Operation *op);
 } // end namespace mlir
 
 #endif // MLIR_DIALECT_STANDARDOPS_TRANSFORMS_FUNCCONVERSIONS_H_

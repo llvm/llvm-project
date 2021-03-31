@@ -573,6 +573,11 @@ class CoverageMapping {
 
   CoverageMapping() = default;
 
+  // Load coverage records from readers.
+  static Error loadFromReaders(
+      ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+      IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
+
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
@@ -996,7 +1001,10 @@ enum CovMapVersion {
   Version4 = 3,
   // Branch regions referring to two counters are added
   Version5 = 4,
-  // The current version is Version5.
+  // Compilation directory is stored separately and combined with relative
+  // filenames to produce an absolute file path.
+  Version6 = 5,
+  // The current version is Version6.
   CurrentVersion = INSTR_PROF_COVMAP_VERSION
 };
 

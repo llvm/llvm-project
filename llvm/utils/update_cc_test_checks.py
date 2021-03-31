@@ -176,7 +176,7 @@ def config():
   return args, parser
 
 
-def get_function_body(builder, args, filename, clang_args, extra_commands, 
+def get_function_body(builder, args, filename, clang_args, extra_commands,
                       prefixes):
   # TODO Clean up duplication of asm/common build_function_body_dictionary
   # Invoke external tool and extract function bodies.
@@ -203,6 +203,14 @@ def get_function_body(builder, args, filename, clang_args, extra_commands,
           'are discouraged in Clang testsuite.', file=sys.stderr)
     sys.exit(1)
 
+def exec_run_line(exe):
+  popen = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+  stdout, stderr = popen.communicate()
+  if popen.returncode != 0:
+    sys.stderr.write('Failed to run ' + ' '.join(exe) + '\n')
+    sys.stderr.write(stderr)
+    sys.stderr.write(stdout)
+    sys.exit(3)
 
 def main():
   initial_args, parser = config()
@@ -213,6 +221,13 @@ def main():
     # Build a list of clang command lines and check prefixes from RUN lines.
     run_list = []
     line2spell_and_mangled_list = collections.defaultdict(list)
+
+    subs = {
+      '%s' : ti.path,
+      '%t' : tempfile.NamedTemporaryFile().name,
+      '%S' : os.getcwd(),
+    }
+
     for l in ti.run_lines:
       commands = [cmd.strip() for cmd in l.split('|')]
 
@@ -221,25 +236,34 @@ def main():
       if m:
         triple_in_cmd = m.groups()[0]
 
-      # Apply %clang substitution rule, replace %s by `filename`, and append args.clang_args
-      clang_args = shlex.split(commands[0])
-      if clang_args[0] not in SUBST:
-        print('WARNING: Skipping non-clang RUN line: ' + l, file=sys.stderr)
+      # Parse executable args.
+      exec_args = shlex.split(commands[0])
+      # Execute non-clang runline.
+      if exec_args[0] not in SUBST:
+        print('NOTE: Executing non-clang RUN line: ' + l, file=sys.stderr)
+        # Do lit-like substitutions.
+        for s in subs:
+          exec_args = [i.replace(s, subs[s]) if s in i else i for i in exec_args]
+        exec_run_line(exec_args)
         continue
+      # This is a clang runline, apply %clang substitution rule, do lit-like substitutions,
+      # and append args.clang_args
+      clang_args = exec_args
       clang_args[0:1] = SUBST[clang_args[0]]
-      clang_args = [ti.path if i == '%s' else i for i in clang_args] + ti.args.clang_args
-
-      # Permit piping the output through opt
-      if not (len(commands) == 2 or
-              (len(commands) == 3 and commands[1].startswith('opt'))):
-        print('WARNING: Skipping non-clang RUN line: ' + l, file=sys.stderr)
+      for s in subs:
+        clang_args = [i.replace(s, subs[s]) if s in i else i for i in clang_args]
+      clang_args += ti.args.clang_args
 
       # Extract -check-prefix in FileCheck args
       filecheck_cmd = commands[-1]
       common.verify_filecheck_prefixes(filecheck_cmd)
       if not filecheck_cmd.startswith('FileCheck '):
-        print('WARNING: Skipping non-FileChecked RUN line: ' + l, file=sys.stderr)
+        print('NOTE: Executing non-FileChecked clang RUN line: ' + l, file=sys.stderr)
+        # Execute non-filechecked clang runline.
+        exe = [ti.args.clang] + clang_args
+        exec_run_line(exe)
         continue
+
       check_prefixes = [item for m in common.CHECK_PREFIX_RE.finditer(filecheck_cmd)
                                for item in m.group(1).split(',')]
       if not check_prefixes:
@@ -257,7 +281,7 @@ def main():
       common.debug('Extracted clang cmd: clang {}'.format(clang_args))
       common.debug('Extracted FileCheck prefixes: {}'.format(prefixes))
 
-      get_function_body(builder, ti.args, ti.path, clang_args, extra_commands, 
+      get_function_body(builder, ti.args, ti.path, clang_args, extra_commands,
                         prefixes)
 
       # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
@@ -301,7 +325,7 @@ def main():
                              prefixes,
                              func_dict, func)
 
-      common.add_checks_at_end(output_lines, run_list, builder.func_order(), 
+      common.add_checks_at_end(output_lines, run_list, builder.func_order(),
                                '//', lambda my_output_lines, prefixes, func:
                                check_generator(my_output_lines,
                                                prefixes, func))

@@ -115,10 +115,23 @@ TEST(HighlightsTest, All) {
           f.[[^~]]Foo();
         }
       )cpp",
+      R"cpp(// ObjC methods with split selectors.
+        @interface Foo
+          +(void) [[x]]:(int)a [[y]]:(int)b;
+        @end
+        @implementation Foo
+          +(void) [[x]]:(int)a [[y]]:(int)b {}
+        @end
+        void go() {
+          [Foo [[x]]:2 [[^y]]:4];
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
-    auto AST = TestTU::withCode(T.code()).build();
+    auto TU = TestTU::withCode(T.code());
+    TU.ExtraArgs.push_back("-xobjective-c++");
+    auto AST = TU.build();
     EXPECT_THAT(findDocumentHighlights(AST, T.point()), HighlightsFrom(T))
         << Test;
   }
@@ -896,9 +909,6 @@ TEST(LocateSymbol, All) {
     TestTU TU;
     TU.Code = std::string(T.code());
 
-    // FIXME: Auto-completion in a template requires disabling delayed template
-    // parsing.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
@@ -1706,6 +1716,15 @@ void checkFindRefs(llvm::StringRef Test, bool UseIndex = false) {
   for (const auto &R : T.ranges("decl"))
     ExpectedLocations.push_back(
         AllOf(RangeIs(R), AttrsAre(ReferencesResult::Declaration)));
+  for (const auto &R : T.ranges("overridedecl"))
+    ExpectedLocations.push_back(AllOf(
+        RangeIs(R),
+        AttrsAre(ReferencesResult::Declaration | ReferencesResult::Override)));
+  for (const auto &R : T.ranges("overridedef"))
+    ExpectedLocations.push_back(
+        AllOf(RangeIs(R), AttrsAre(ReferencesResult::Declaration |
+                                   ReferencesResult::Definition |
+                                   ReferencesResult::Override)));
   EXPECT_THAT(
       findReferences(AST, T.point(), 0, UseIndex ? TU.index().get() : nullptr)
           .References,
@@ -1857,6 +1876,26 @@ TEST(FindReferences, WithinAST) {
         Vector<int> x2;
         Vector<double> y;
       )cpp",
+      R"cpp(// Dependent code
+        template <typename T> void $decl[[foo]](T t);
+        template <typename T> void bar(T t) { [[foo]](t); } // foo in bar is uninstantiated.
+        void baz(int x) { [[f^oo]](x); }
+      )cpp",
+      R"cpp(
+        namespace ns {
+        struct S{};
+        void $decl[[foo]](S s);
+        } // namespace ns
+        template <typename T> void foo(T t);
+        // FIXME: Maybe report this foo as a ref to ns::foo (because of ADL)
+        // when bar<ns::S> is instantiated?
+        template <typename T> void bar(T t) { foo(t); }
+        void baz(int x) {
+          ns::S s;
+          bar<ns::S>(s);
+          [[f^oo]](s);
+        }
+      )cpp",
   };
   for (const char *Test : Tests)
     checkFindRefs(Test);
@@ -1871,9 +1910,34 @@ TEST(FindReferences, IncludeOverrides) {
         };
         class Derived : public Base {
         public:
+          void $overridedecl[[func]]() override;
+        };
+        void Derived::$overridedef[[func]]() {}
+        void test(Derived* D) {
+          D->func();  // No references to the overrides.
+        })cpp";
+  checkFindRefs(Test, /*UseIndex=*/true);
+}
+
+TEST(FindReferences, RefsToBaseMethod) {
+  llvm::StringRef Test =
+      R"cpp(
+        class BaseBase {
+        public:
+          virtual void [[func]]();
+        };
+        class Base : public BaseBase {
+        public:
           void [[func]]() override;
         };
-        void test(Derived* D) {
+        class Derived : public Base {
+        public:
+          void $decl[[fu^nc]]() override;
+        };
+        void test(BaseBase* BB, Base* B, Derived* D) {
+          // refs to overridden methods in complete type hierarchy are reported.
+          BB->[[func]]();
+          B->[[func]]();
           D->[[func]]();
         })cpp";
   checkFindRefs(Test, /*UseIndex=*/true);

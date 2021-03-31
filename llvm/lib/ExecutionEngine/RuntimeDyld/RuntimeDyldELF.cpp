@@ -266,6 +266,25 @@ void RuntimeDyldELF::resolveX86_64Relocation(const SectionEntry &Section,
     break;
   case ELF::R_X86_64_NONE:
     break;
+  case ELF::R_X86_64_8: {
+    Value += Addend;
+    assert((int64_t)Value <= INT8_MAX && (int64_t)Value >= INT8_MIN);
+    uint8_t TruncatedAddr = (Value & 0xFF);
+    *Section.getAddressWithOffset(Offset) = TruncatedAddr;
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", TruncatedAddr) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
+    break;
+  }
+  case ELF::R_X86_64_16: {
+    Value += Addend;
+    assert((int64_t)Value <= INT16_MAX && (int64_t)Value >= INT16_MIN);
+    uint16_t TruncatedAddr = (Value & 0xFFFF);
+    support::ulittle16_t::ref(Section.getAddressWithOffset(Offset)) =
+        TruncatedAddr;
+    LLVM_DEBUG(dbgs() << "Writing " << format("%p", TruncatedAddr) << " at "
+                      << format("%p\n", Section.getAddressWithOffset(Offset)));
+    break;
+  }
   case ELF::R_X86_64_64: {
     support::ulittle64_t::ref(Section.getAddressWithOffset(Offset)) =
         Value + Addend;
@@ -409,6 +428,25 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
   case ELF::R_AARCH64_PREL64:
     write(isBE, TargetPtr, Value + Addend - FinalAddress);
     break;
+  case ELF::R_AARCH64_CONDBR19: {
+    uint64_t BranchImm = Value + Addend - FinalAddress;
+
+    assert(isInt<21>(BranchImm));
+    *TargetPtr &= 0xff00001fU;
+    // Immediate:20:2 goes in bits 23:5 of Bcc, CBZ, CBNZ
+    or32le(TargetPtr, (BranchImm & 0x001FFFFC) << 3);
+    break;
+  }
+  case ELF::R_AARCH64_TSTBR14: {
+    uint64_t BranchImm = Value + Addend - FinalAddress;
+
+    assert(isInt<16>(BranchImm));
+
+    *TargetPtr &= 0xfff8001fU;
+    // Immediate:15:2 goes in bits 18:5 of TBZ, TBNZ
+    or32le(TargetPtr, (BranchImm & 0x0FFFFFFC) << 3);
+    break;
+  }
   case ELF::R_AARCH64_CALL26: // fallthrough
   case ELF::R_AARCH64_JUMP26: {
     // Operation: S+A-P. Set Call or B immediate value to bits fff_fffc of the
@@ -481,6 +519,33 @@ void RuntimeDyldELF::resolveAArch64Relocation(const SectionEntry &Section,
     // from bits 11:4 of X
     or32AArch64Imm(TargetPtr, getBits(Value + Addend, 4, 11));
     break;
+  case ELF::R_AARCH64_LD_PREL_LO19: {
+    // Operation: S + A - P
+    uint64_t Result = Value + Addend - FinalAddress;
+
+    // "Check that -2^20 <= result < 2^20".
+    assert(isInt<21>(Result));
+
+    *TargetPtr &= 0xff00001fU;
+    // Immediate goes in bits 23:5 of LD imm instruction, taken
+    // from bits 20:2 of X
+    *TargetPtr |= ((Result & 0xffc) << (5 - 2));
+    break;
+  }
+  case ELF::R_AARCH64_ADR_PREL_LO21: {
+    // Operation: S + A - P
+    uint64_t Result = Value + Addend - FinalAddress;
+
+    // "Check that -2^20 <= result < 2^20".
+    assert(isInt<21>(Result));
+
+    *TargetPtr &= 0x9f00001fU;
+    // Immediate goes in bits 23:5, 30:29 of ADR imm instruction, taken
+    // from bits 20:0 of X
+    *TargetPtr |= ((Result & 0xffc) << (5 - 2));
+    *TargetPtr |= (Result & 0x3) << 29;
+    break;
+  }
   }
 }
 

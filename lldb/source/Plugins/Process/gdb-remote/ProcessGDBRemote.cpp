@@ -213,6 +213,10 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
   return process_sp;
 }
 
+std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
+  return std::chrono::seconds(GetGlobalPluginProperties()->GetPacketTimeout());
+}
+
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
                                 bool plugin_specified_by_name) {
   if (plugin_specified_by_name)
@@ -1199,34 +1203,26 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
   return error;
 }
 
-lldb::user_id_t ProcessGDBRemote::StartTrace(const TraceOptions &options,
-                                             Status &error) {
-  return m_gdb_comm.SendStartTracePacket(options, error);
+llvm::Expected<TraceSupportedResponse> ProcessGDBRemote::TraceSupported() {
+  return m_gdb_comm.SendTraceSupported();
 }
 
-Status ProcessGDBRemote::StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
-  return m_gdb_comm.SendStopTracePacket(uid, thread_id);
+llvm::Error ProcessGDBRemote::TraceStop(const TraceStopRequest &request) {
+  return m_gdb_comm.SendTraceStop(request);
 }
 
-Status ProcessGDBRemote::GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                                 llvm::MutableArrayRef<uint8_t> &buffer,
-                                 size_t offset) {
-  return m_gdb_comm.SendGetDataPacket(uid, thread_id, buffer, offset);
+llvm::Error ProcessGDBRemote::TraceStart(const llvm::json::Value &request) {
+  return m_gdb_comm.SendTraceStart(request);
 }
 
-Status ProcessGDBRemote::GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                                     llvm::MutableArrayRef<uint8_t> &buffer,
-                                     size_t offset) {
-  return m_gdb_comm.SendGetMetaDataPacket(uid, thread_id, buffer, offset);
+llvm::Expected<std::string>
+ProcessGDBRemote::TraceGetState(llvm::StringRef type) {
+  return m_gdb_comm.SendTraceGetState(type);
 }
 
-Status ProcessGDBRemote::GetTraceConfig(lldb::user_id_t uid,
-                                        TraceOptions &options) {
-  return m_gdb_comm.SendGetTraceConfigPacket(uid, options);
-}
-
-llvm::Expected<TraceTypeInfo> ProcessGDBRemote::GetSupportedTraceType() {
-  return m_gdb_comm.SendGetSupportedTraceType();
+llvm::Expected<std::vector<uint8_t>>
+ProcessGDBRemote::TraceGetBinaryData(const TraceGetBinaryDataRequest &request) {
+  return m_gdb_comm.SendTraceGetBinaryData(request);
 }
 
 void ProcessGDBRemote::DidExit() {
@@ -1748,7 +1744,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     if (thread_sp) {
       ThreadGDBRemote *gdb_thread =
           static_cast<ThreadGDBRemote *>(thread_sp.get());
-      gdb_thread->GetRegisterContext()->InvalidateIfNeeded(true);
+      RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
+
+      gdb_reg_ctx_sp->InvalidateIfNeeded(true);
 
       auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
       if (iter != m_thread_ids.end()) {
@@ -1760,7 +1758,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
         DataBufferSP buffer_sp(new DataBufferHeap(
             reg_value_extractor.GetStringRef().size() / 2, 0));
         reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
-        gdb_thread->PrivateSetRegisterValue(pair.first, buffer_sp->GetData());
+        uint32_t lldb_regnum =
+            gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+                eRegisterKindProcessPlugin, pair.first);
+        gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
       }
 
       // AArch64 SVE specific code below calls AArch64SVEReconfigure to update
@@ -1897,6 +1898,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithExec(*thread_sp));
               handled = true;
+            } else if (reason == "processor trace") {
+              thread_sp->SetStopInfo(StopInfo::CreateStopReasonProcessorTrace(
+                  *thread_sp, description.c_str()));
             }
           } else if (!signo) {
             addr_t pc = thread_sp->GetRegisterContext()->GetPC();

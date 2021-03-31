@@ -93,7 +93,7 @@ int test_trunc_int() {
   } const U = {15};  // 0b00001111
   return U.i;
 }
-// CHECK: define dso_local i32 @test_trunc_int()
+// CHECK: define{{.*}} i32 @test_trunc_int()
 // CHECK: ret i32 -1
 
 int test_trunc_three_bits() {
@@ -102,7 +102,7 @@ int test_trunc_three_bits() {
   } const U = {15};  // 0b00001111
   return U.i;
 }
-// CHECK: define dso_local i32 @test_trunc_three_bits()
+// CHECK: define{{.*}} i32 @test_trunc_three_bits()
 // CHECK: ret i32 -1
 
 int test_trunc_1() {
@@ -111,7 +111,7 @@ int test_trunc_1() {
   } const U = {15};  // 0b00001111
   return U.i;
 }
-// CHECK: define dso_local i32 @test_trunc_1()
+// CHECK: define{{.*}} i32 @test_trunc_1()
 // CHECK: ret i32 -1
 
 int test_trunc_zero() {
@@ -120,7 +120,7 @@ int test_trunc_zero() {
   } const U = {80};  // 0b01010000
   return U.i;
 }
-// CHECK: define dso_local i32 @test_trunc_zero()
+// CHECK: define{{.*}} i32 @test_trunc_zero()
 // CHECK: ret i32 0
 
 int test_constexpr() {
@@ -129,7 +129,7 @@ int test_constexpr() {
   } const U = {1 + 2 + 4 + 8}; // 0b00001111
   return U.i;
 }
-// CHECK: define dso_local i32 @test_constexpr()
+// CHECK: define{{.*}} i32 @test_constexpr()
 // CHECK: ret i32 -1
 
 int test_notrunc() {
@@ -138,7 +138,7 @@ int test_notrunc() {
   } const U = {1 + 2 + 4 + 8}; // 0b00001111
   return U.i;
 }
-// CHECK: define dso_local i32 @test_notrunc()
+// CHECK: define{{.*}} i32 @test_notrunc()
 // CHECK: ret i32 15
 
 long long test_trunc_long_long() {
@@ -147,6 +147,6 @@ long long test_trunc_long_long() {
   } const U = {0b0100111101001101};
   return U.i;
 }
-// CHECK: define dso_local i64 @test_trunc_long_long()
+// CHECK: define{{.*}} i64 @test_trunc_long_long()
 // CHECK: ret i64 3917
 }

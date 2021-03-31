@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sve" | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sve" -convert-std-to-llvm | mlir-opt | FileCheck %s
 
 func @arm_sve_sdot(%a: !arm_sve.vector<16xi8>,
                    %b: !arm_sve.vector<16xi8>,

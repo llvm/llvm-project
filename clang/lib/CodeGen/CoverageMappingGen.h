@@ -93,8 +93,9 @@ class CoverageMappingModuleGen {
   llvm::SmallDenseMap<const FileEntry *, unsigned, 8> FileEntries;
   std::vector<llvm::Constant *> FunctionNames;
   std::vector<FunctionInfo> FunctionRecords;
-  std::map<std::string, std::string> ProfilePrefixMap;
+  std::map<std::string, std::string> CoveragePrefixMap;
 
+  std::string getCurrentDirname();
   std::string normalizeFilename(StringRef Filename);
 
   /// Emit a function record.

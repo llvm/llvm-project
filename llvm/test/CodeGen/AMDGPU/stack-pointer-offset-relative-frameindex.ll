@@ -67,7 +67,6 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR-NEXT:    s_cbranch_execz BB0_2
 ; FLATSCR-NEXT:  ; %bb.1: ; %if.then4.i
 ; FLATSCR-NEXT:    s_movk_i32 vcc_lo, 0x4000
-; FLATSCR-NEXT:    s_nop 1
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[0:1], off, vcc_lo offset:4
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    v_add_nc_u32_e32 v0, v1, v0

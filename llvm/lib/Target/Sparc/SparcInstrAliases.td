@@ -521,3 +521,6 @@ def : InstAlias<"signx $rd", (SRArr IntRegs:$rd, IntRegs:$rd, G0), 0>, Requires<
 
 // signx reg, rd -> sra reg, %g0, rd
 def : InstAlias<"signx $rs1, $rd", (SRArr IntRegs:$rd, IntRegs:$rs1, G0), 0>, Requires<[HasV9]>;
+
+// sir -> sir 0
+def : InstAlias<"sir", (SIR 0), 0>;

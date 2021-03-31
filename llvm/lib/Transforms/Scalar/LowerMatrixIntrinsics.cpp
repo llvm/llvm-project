@@ -413,7 +413,9 @@ public:
   /// \p VT * N.
   unsigned getNumOps(Type *ST, unsigned N) {
     return std::ceil((ST->getPrimitiveSizeInBits() * N).getFixedSize() /
-                     double(TTI.getRegisterBitWidth(true)));
+                     double(TTI.getRegisterBitWidth(
+                                   TargetTransformInfo::RGK_FixedWidthVector)
+                                .getFixedSize()));
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -797,15 +799,16 @@ public:
   /// vectors.
   MatrixTy loadMatrix(Type *Ty, Value *Ptr, MaybeAlign MAlign, Value *Stride,
                       bool IsVolatile, ShapeInfo Shape, IRBuilder<> &Builder) {
-    auto VType = cast<VectorType>(Ty);
-    Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
+    auto *VType = cast<VectorType>(Ty);
+    Type *EltTy = VType->getElementType();
+    Type *VecTy = FixedVectorType::get(EltTy, Shape.getStride());
+    Value *EltPtr = createElementPtr(Ptr, EltTy, Builder);
     MatrixTy Result;
     for (unsigned I = 0, E = Shape.getNumVectors(); I < E; ++I) {
       Value *GEP = computeVectorAddr(EltPtr, Builder.getInt64(I), Stride,
-                                     Shape.getStride(), VType->getElementType(),
-                                     Builder);
+                                     Shape.getStride(), EltTy, Builder);
       Value *Vector = Builder.CreateAlignedLoad(
-          GEP, getAlignForIndex(I, Stride, VType->getElementType(), MAlign),
+          VecTy, GEP, getAlignForIndex(I, Stride, EltTy, MAlign),
           IsVolatile, "col.load");
 
       Result.addVector(Vector);
@@ -997,8 +1000,7 @@ public:
 
     ToRemove.push_back(Inst);
     Value *Flattened = nullptr;
-    for (auto I = Inst->use_begin(), E = Inst->use_end(); I != E;) {
-      Use &U = *I++;
+    for (Use &U : llvm::make_early_inc_range(Inst->uses())) {
       if (ShapeMap.find(U.getUser()) == ShapeMap.end()) {
         if (!Flattened)
           Flattened = Matrix.embedInVector(Builder);
@@ -1013,7 +1015,8 @@ public:
                           const MatrixTy &B, bool AllowContraction,
                           IRBuilder<> &Builder, bool isTiled) {
     const unsigned VF = std::max<unsigned>(
-        TTI.getRegisterBitWidth(true) /
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedSize() /
             Result.getElementType()->getPrimitiveSizeInBits().getFixedSize(),
         1U);
     unsigned R = Result.getNumRows();
@@ -1179,10 +1182,11 @@ public:
     const unsigned M = LShape.NumColumns;
     auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
 
-    const unsigned VF =
-        std::max<unsigned>(TTI.getRegisterBitWidth(true) /
-                               EltType->getPrimitiveSizeInBits().getFixedSize(),
-                           1U);
+    const unsigned VF = std::max<unsigned>(
+        TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
+                .getFixedSize() /
+            EltType->getPrimitiveSizeInBits().getFixedSize(),
+        1U);
 
     // Cost model for tiling
     //

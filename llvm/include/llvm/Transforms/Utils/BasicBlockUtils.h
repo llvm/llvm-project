@@ -109,8 +109,9 @@ bool MergeBlockSuccessorsIntoGivenBlocks(
     DomTreeUpdater *DTU = nullptr, LoopInfo *LI = nullptr);
 
 /// Try to remove redundant dbg.value instructions from given basic block.
-/// Returns true if at least one instruction was removed.
-bool RemoveRedundantDbgInstrs(BasicBlock *BB);
+/// Returns true if at least one instruction was removed. Remove redundant
+/// pseudo ops when RemovePseudoOp is true.
+bool RemoveRedundantDbgInstrs(BasicBlock *BB, bool RemovePseudoOp = false);
 
 /// Replace all uses of an instruction (specified by BI) with a value, then
 /// remove and delete the original instruction.

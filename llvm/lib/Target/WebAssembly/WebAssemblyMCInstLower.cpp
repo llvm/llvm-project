@@ -161,6 +161,8 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
       report_fatal_error("Global indexes with offsets not supported");
     if (WasmSym->isEvent())
       report_fatal_error("Event indexes with offsets not supported");
+    if (WasmSym->isTable())
+      report_fatal_error("Table indexes with offsets not supported");
 
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
@@ -285,13 +287,13 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case MachineOperand::MO_FPImmediate: {
-      // TODO: MC converts all floating point immediate operands to double.
-      // This is fine for numeric values, but may cause NaNs to change bits.
       const ConstantFP *Imm = MO.getFPImm();
+      const uint64_t BitPattern =
+          Imm->getValueAPF().bitcastToAPInt().getZExtValue();
       if (Imm->getType()->isFloatTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToFloat());
+        MCOp = MCOperand::createSFPImm(static_cast<uint32_t>(BitPattern));
       else if (Imm->getType()->isDoubleTy())
-        MCOp = MCOperand::createFPImm(Imm->getValueAPF().convertToDouble());
+        MCOp = MCOperand::createDFPImm(BitPattern);
       else
         llvm_unreachable("unknown floating point immediate type");
       break;

@@ -58,15 +58,24 @@ public:
     flush();
   }
 
+  // Overloads accepting ObjectFile does not support COFF currently
   Expected<DILineInfo> symbolizeCode(const ObjectFile &Obj,
                                      object::SectionedAddress ModuleOffset);
   Expected<DILineInfo> symbolizeCode(const std::string &ModuleName,
                                      object::SectionedAddress ModuleOffset);
   Expected<DIInliningInfo>
+  symbolizeInlinedCode(const ObjectFile &Obj,
+                       object::SectionedAddress ModuleOffset);
+  Expected<DIInliningInfo>
   symbolizeInlinedCode(const std::string &ModuleName,
                        object::SectionedAddress ModuleOffset);
+
+  Expected<DIGlobal> symbolizeData(const ObjectFile &Obj,
+                                   object::SectionedAddress ModuleOffset);
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
                                    object::SectionedAddress ModuleOffset);
+  Expected<std::vector<DILocal>>
+  symbolizeFrame(const ObjectFile &Obj, object::SectionedAddress ModuleOffset);
   Expected<std::vector<DILocal>>
   symbolizeFrame(const std::string &ModuleName,
                  object::SectionedAddress ModuleOffset);
@@ -81,9 +90,21 @@ private:
   // corresponding debug info. These objects can be the same.
   using ObjectPair = std::pair<const ObjectFile *, const ObjectFile *>;
 
+  template <typename T>
   Expected<DILineInfo>
-  symbolizeCodeCommon(SymbolizableModule *Info,
+  symbolizeCodeCommon(const T &ModuleSpecifier,
                       object::SectionedAddress ModuleOffset);
+  template <typename T>
+  Expected<DIInliningInfo>
+  symbolizeInlinedCodeCommon(const T &ModuleSpecifier,
+                             object::SectionedAddress ModuleOffset);
+  template <typename T>
+  Expected<DIGlobal> symbolizeDataCommon(const T &ModuleSpecifier,
+                                         object::SectionedAddress ModuleOffset);
+  template <typename T>
+  Expected<std::vector<DILocal>>
+  symbolizeFrameCommon(const T &ModuleSpecifier,
+                       object::SectionedAddress ModuleOffset);
 
   /// Returns a SymbolizableModule or an error if loading debug info failed.
   /// Only one attempt is made to load a module, and errors during loading are
@@ -91,6 +112,7 @@ private:
   /// failed to load will return nullptr.
   Expected<SymbolizableModule *>
   getOrCreateModuleInfo(const std::string &ModuleName);
+  Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
   Expected<SymbolizableModule *>
   createModuleInfo(const ObjectFile *Obj,

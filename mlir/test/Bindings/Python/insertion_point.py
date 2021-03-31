@@ -129,8 +129,13 @@ run(test_insert_at_block_terminator_missing)
 def test_insert_at_end_with_terminator_errors():
   with Context() as ctx, Location.unknown():
     ctx.allow_unregistered_dialects = True
-    m = Module.create()  # Module is created with a terminator.
-    with InsertionPoint(m.body):
+    module = Module.parse(r"""
+      func @foo() -> () {
+        return
+      }
+    """)
+    entry_block = module.body.operations[0].regions[0].blocks[0]
+    with InsertionPoint(entry_block):
       try:
         Operation.create("custom.op1", results=[], operands=[])
       except IndexError as e:

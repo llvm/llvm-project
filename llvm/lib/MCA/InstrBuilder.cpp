@@ -570,6 +570,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   ID->HasSideEffects = MCDesc.hasUnmodeledSideEffects();
   ID->BeginGroup = SCDesc.BeginGroup;
   ID->EndGroup = SCDesc.EndGroup;
+  ID->RetireOOO = SCDesc.RetireOOO;
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);

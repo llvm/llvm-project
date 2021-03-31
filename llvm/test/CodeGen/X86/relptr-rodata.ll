@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: .long hidden-relro2
 @relro2 = constant i32 trunc (i64 sub (i64 ptrtoint (i8* @hidden to i64), i64 ptrtoint (i32* @relro2 to i64)) to i32)
 
-; CHECK:      .section .rodata.cst8
+; CHECK:      .section .rodata.obj
 ; CHECK-NEXT: .globl obj
 ; CHECK:      obj:
 ; CHECK:      .long 0

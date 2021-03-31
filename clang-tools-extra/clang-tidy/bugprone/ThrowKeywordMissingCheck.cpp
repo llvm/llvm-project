@@ -21,17 +21,16 @@ void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
       cxxConstructorDecl(hasAnyConstructorInitializer(anything()));
 
   Finder->addMatcher(
-      expr(anyOf(cxxFunctionalCastExpr(), cxxBindTemporaryExpr(),
-                 cxxTemporaryObjectExpr()),
-           hasType(cxxRecordDecl(
-               isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
-           unless(anyOf(hasAncestor(stmt(
-                            anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
-                        hasAncestor(varDecl()),
-                        allOf(hasAncestor(CtorInitializerList),
-                              unless(hasAncestor(cxxCatchStmt()))))))
+      cxxConstructExpr(
+          hasType(cxxRecordDecl(
+              isSameOrDerivedFrom(matchesName("[Ee]xception|EXCEPTION")))),
+          unless(anyOf(hasAncestor(stmt(
+                           anyOf(cxxThrowExpr(), callExpr(), returnStmt()))),
+                       hasAncestor(varDecl()),
+                       allOf(hasAncestor(CtorInitializerList),
+                             unless(hasAncestor(cxxCatchStmt()))))))
           .bind("temporary-exception-not-thrown"),
-      this); 
+      this);
 }
 
 void ThrowKeywordMissingCheck::check(const MatchFinder::MatchResult &Result) {

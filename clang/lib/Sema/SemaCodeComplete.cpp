@@ -381,6 +381,8 @@ public:
 } // namespace
 
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
+  if (!Enabled)
+    return;
   if (isa<BlockDecl>(S.CurContext)) {
     if (sema::BlockScopeInfo *BSI = S.getCurBlock()) {
       ComputeType = nullptr;
@@ -399,14 +401,30 @@ void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
 }
 
 void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
+  if (!Enabled)
+    return;
   auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
   ComputeType = nullptr;
   Type = VD ? VD->getType() : QualType();
   ExpectedLoc = Tok;
 }
 
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig);
+
+void PreferredTypeBuilder::enterDesignatedInitializer(SourceLocation Tok,
+                                                      QualType BaseType,
+                                                      const Designation &D) {
+  if (!Enabled)
+    return;
+  ComputeType = nullptr;
+  Type = getDesignatedType(BaseType, D);
+  ExpectedLoc = Tok;
+}
+
 void PreferredTypeBuilder::enterFunctionArgument(
     SourceLocation Tok, llvm::function_ref<QualType()> ComputeType) {
+  if (!Enabled)
+    return;
   this->ComputeType = ComputeType;
   Type = QualType();
   ExpectedLoc = Tok;
@@ -414,6 +432,8 @@ void PreferredTypeBuilder::enterFunctionArgument(
 
 void PreferredTypeBuilder::enterParenExpr(SourceLocation Tok,
                                           SourceLocation LParLoc) {
+  if (!Enabled)
+    return;
   // expected type for parenthesized expression does not change.
   if (ExpectedLoc == LParLoc)
     ExpectedLoc = Tok;
@@ -531,6 +551,8 @@ static QualType getPreferredTypeOfUnaryArg(Sema &S, QualType ContextType,
 
 void PreferredTypeBuilder::enterBinary(Sema &S, SourceLocation Tok, Expr *LHS,
                                        tok::TokenKind Op) {
+  if (!Enabled)
+    return;
   ComputeType = nullptr;
   Type = getPreferredTypeOfBinaryRHS(S, LHS, Op);
   ExpectedLoc = Tok;
@@ -538,7 +560,7 @@ void PreferredTypeBuilder::enterBinary(Sema &S, SourceLocation Tok, Expr *LHS,
 
 void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
                                           Expr *Base) {
-  if (!Base)
+  if (!Enabled || !Base)
     return;
   // Do we have expected type for Base?
   if (ExpectedLoc != Base->getBeginLoc())
@@ -551,6 +573,8 @@ void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
 void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,
                                       tok::TokenKind OpKind,
                                       SourceLocation OpLoc) {
+  if (!Enabled)
+    return;
   ComputeType = nullptr;
   Type = getPreferredTypeOfUnaryArg(S, this->get(OpLoc), OpKind);
   ExpectedLoc = Tok;
@@ -558,6 +582,8 @@ void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,
 
 void PreferredTypeBuilder::enterSubscript(Sema &S, SourceLocation Tok,
                                           Expr *LHS) {
+  if (!Enabled)
+    return;
   ComputeType = nullptr;
   Type = S.getASTContext().IntTy;
   ExpectedLoc = Tok;
@@ -565,12 +591,16 @@ void PreferredTypeBuilder::enterSubscript(Sema &S, SourceLocation Tok,
 
 void PreferredTypeBuilder::enterTypeCast(SourceLocation Tok,
                                          QualType CastType) {
+  if (!Enabled)
+    return;
   ComputeType = nullptr;
   Type = !CastType.isNull() ? CastType.getCanonicalType() : QualType();
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterCondition(Sema &S, SourceLocation Tok) {
+  if (!Enabled)
+    return;
   ComputeType = nullptr;
   Type = S.getASTContext().BoolTy;
   ExpectedLoc = Tok;
@@ -4784,8 +4814,16 @@ static void AddRecordMembersCompletionResults(
 // in case of specializations. Since we might not have a decl for the
 // instantiation/specialization yet, e.g. dependent code.
 static RecordDecl *getAsRecordDecl(const QualType BaseType) {
-  if (auto *RD = BaseType->getAsRecordDecl())
+  if (auto *RD = BaseType->getAsRecordDecl()) {
+    if (const auto *CTSD =
+            llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+      // Template might not be instantiated yet, fall back to primary template
+      // in such cases.
+      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
+        RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    }
     return RD;
+  }
 
   if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
     if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
@@ -5158,6 +5196,88 @@ private:
 
   llvm::DenseMap<const IdentifierInfo *, Member> Results;
 };
+
+// Returns a type for E that yields acceptable member completions.
+// In particular, when E->getType() is DependentTy, try to guess a likely type.
+// We accept some lossiness (like dropping parameters).
+// We only try to handle common expressions on the LHS of MemberExpr.
+QualType getApproximateType(const Expr *E) {
+  QualType Unresolved = E->getType();
+  if (Unresolved.isNull() ||
+      !Unresolved->isSpecificBuiltinType(BuiltinType::Dependent))
+    return Unresolved;
+  E = E->IgnoreParens();
+  // A call: approximate-resolve callee to a function type, get its return type
+  if (const CallExpr *CE = llvm::dyn_cast<CallExpr>(E)) {
+    QualType Callee = getApproximateType(CE->getCallee());
+    if (Callee.isNull() ||
+        Callee->isSpecificPlaceholderType(BuiltinType::BoundMember))
+      Callee = Expr::findBoundMemberType(CE->getCallee());
+    if (Callee.isNull())
+      return Unresolved;
+
+    if (const auto *FnTypePtr = Callee->getAs<PointerType>()) {
+      Callee = FnTypePtr->getPointeeType();
+    } else if (const auto *BPT = Callee->getAs<BlockPointerType>()) {
+      Callee = BPT->getPointeeType();
+    }
+    if (const FunctionType *FnType = Callee->getAs<FunctionType>())
+      return FnType->getReturnType().getNonReferenceType();
+
+    // Unresolved call: try to guess the return type.
+    if (const auto *OE = llvm::dyn_cast<OverloadExpr>(CE->getCallee())) {
+      // If all candidates have the same approximate return type, use it.
+      // Discard references and const to allow more to be "the same".
+      // (In particular, if there's one candidate + ADL, resolve it).
+      const Type *Common = nullptr;
+      for (const auto *D : OE->decls()) {
+        QualType ReturnType;
+        if (const auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+          ReturnType = FD->getReturnType();
+        else if (const auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(D))
+          ReturnType = FTD->getTemplatedDecl()->getReturnType();
+        if (ReturnType.isNull())
+          continue;
+        const Type *Candidate =
+            ReturnType.getNonReferenceType().getCanonicalType().getTypePtr();
+        if (Common && Common != Candidate)
+          return Unresolved; // Multiple candidates.
+        Common = Candidate;
+      }
+      if (Common != nullptr)
+        return QualType(Common, 0);
+    }
+  }
+  // A dependent member: approximate-resolve the base, then lookup.
+  if (const auto *CDSME = llvm::dyn_cast<CXXDependentScopeMemberExpr>(E)) {
+    QualType Base = CDSME->isImplicitAccess()
+                        ? CDSME->getBaseType()
+                        : getApproximateType(CDSME->getBase());
+    if (CDSME->isArrow() && !Base.isNull())
+      Base = Base->getPointeeType(); // could handle unique_ptr etc here?
+    RecordDecl *RD = Base.isNull() ? nullptr : getAsRecordDecl(Base);
+    if (RD && RD->isCompleteDefinition()) {
+      for (const auto &Member : RD->lookup(CDSME->getMember()))
+        if (const ValueDecl *VD = llvm::dyn_cast<ValueDecl>(Member))
+          return VD->getType().getNonReferenceType();
+    }
+  }
+  return Unresolved;
+}
+
+// If \p Base is ParenListExpr, assume a chain of comma operators and pick the
+// last expr. We expect other ParenListExprs to be resolved to e.g. constructor
+// calls before here. (So the ParenListExpr should be nonempty, but check just
+// in case)
+Expr *unwrapParenList(Expr *Base) {
+  if (auto *PLE = llvm::dyn_cast_or_null<ParenListExpr>(Base)) {
+    if (PLE->getNumExprs() == 0)
+      return nullptr;
+    Base = PLE->getExpr(PLE->getNumExprs() - 1);
+  }
+  return Base;
+}
+
 } // namespace
 
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
@@ -5165,13 +5285,15 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
                                            SourceLocation OpLoc, bool IsArrow,
                                            bool IsBaseExprStatement,
                                            QualType PreferredType) {
+  Base = unwrapParenList(Base);
+  OtherOpBase = unwrapParenList(OtherOpBase);
   if (!Base || !CodeCompleter)
     return;
 
   ExprResult ConvertedBase = PerformMemberExprBaseConversion(Base, IsArrow);
   if (ConvertedBase.isInvalid())
     return;
-  QualType ConvertedBaseType = ConvertedBase.get()->getType();
+  QualType ConvertedBaseType = getApproximateType(ConvertedBase.get());
 
   enum CodeCompletionContext::Kind contextKind;
 
@@ -5207,7 +5329,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       return false;
     Base = ConvertedBase.get();
 
-    QualType BaseType = Base->getType();
+    QualType BaseType = getApproximateType(Base);
     if (BaseType.isNull())
       return false;
     ExprValueKind BaseKind = Base->getValueKind();
@@ -5589,20 +5711,22 @@ ProduceSignatureHelp(Sema &SemaRef, Scope *S,
                      unsigned CurrentArg, SourceLocation OpenParLoc) {
   if (Candidates.empty())
     return QualType();
-  SemaRef.CodeCompleter->ProcessOverloadCandidates(
-      SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
+  if (SemaRef.getPreprocessor().isCodeCompletionReached())
+    SemaRef.CodeCompleter->ProcessOverloadCandidates(
+        SemaRef, CurrentArg, Candidates.data(), Candidates.size(), OpenParLoc);
   return getParamType(SemaRef, Candidates, CurrentArg);
 }
 
 QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
                                         ArrayRef<Expr *> Args,
                                         SourceLocation OpenParLoc) {
-  if (!CodeCompleter)
+  Fn = unwrapParenList(Fn);
+  if (!CodeCompleter || !Fn)
     return QualType();
 
   // FIXME: Provide support for variadic template functions.
   // Ignore type-dependent call expressions entirely.
-  if (!Fn || Fn->isTypeDependent() || anyNullArguments(Args))
+  if (Fn->isTypeDependent() || anyNullArguments(Args))
     return QualType();
   // In presence of dependent args we surface all possible signatures using the
   // non-dependent args in the prefix. Afterwards we do a post filtering to make
@@ -5754,25 +5878,39 @@ QualType Sema::ProduceCtorInitMemberSignatureHelp(
   return QualType();
 }
 
-void Sema::CodeCompleteDesignator(const QualType BaseType,
+static QualType getDesignatedType(QualType BaseType, const Designation &Desig) {
+  for (unsigned I = 0; I < Desig.getNumDesignators(); ++I) {
+    if (BaseType.isNull())
+      break;
+    QualType NextType;
+    const auto &D = Desig.getDesignator(I);
+    if (D.isArrayDesignator() || D.isArrayRangeDesignator()) {
+      if (BaseType->isArrayType())
+        NextType = BaseType->getAsArrayTypeUnsafe()->getElementType();
+    } else {
+      assert(D.isFieldDesignator());
+      auto *RD = getAsRecordDecl(BaseType);
+      if (RD && RD->isCompleteDefinition()) {
+        for (const auto &Member : RD->lookup(D.getField()))
+          if (const FieldDecl *FD = llvm::dyn_cast<FieldDecl>(Member)) {
+            NextType = FD->getType();
+            break;
+          }
+      }
+    }
+    BaseType = NextType;
+  }
+  return BaseType;
+}
+
+void Sema::CodeCompleteDesignator(QualType BaseType,
                                   llvm::ArrayRef<Expr *> InitExprs,
                                   const Designation &D) {
+  BaseType = getDesignatedType(BaseType, D);
   if (BaseType.isNull())
     return;
-  // FIXME: Handle nested designations, e.g. : .x.^
-  if (!D.empty())
-    return;
-
   const auto *RD = getAsRecordDecl(BaseType);
-  if (!RD)
-    return;
-  if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-    // Template might not be instantiated yet, fall back to primary template in
-    // such cases.
-    if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
-      RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-  }
-  if (RD->fields().empty())
+  if (!RD || RD->fields().empty())
     return;
 
   CodeCompletionContext CCC(CodeCompletionContext::CCC_DotMemberAccess,

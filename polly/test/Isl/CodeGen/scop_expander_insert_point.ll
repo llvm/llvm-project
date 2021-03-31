@@ -4,7 +4,8 @@
 ; CHECK:      entry:
 ; CHECK-NEXT:   %outvalue.141.phiops = alloca i64
 ; CHECK-NEXT:   %.preload.s2a = alloca i8
-; CHECK-NEXT:   %divpolly = sdiv i32 undef, 1
+; CHECK-NEXT:   %umax = call i32 @llvm.umax.i32(i32 undef, i32 1)
+; CHECK-NEXT:   %divpolly = sdiv i32 undef, %umax
 ; CHECK-NEXT:   %div = sdiv i32 undef, undef
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

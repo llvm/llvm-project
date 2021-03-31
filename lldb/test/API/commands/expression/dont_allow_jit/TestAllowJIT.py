@@ -69,7 +69,7 @@ class TestAllowJIT(TestBase):
         # Again use it and ensure we fail:
         result = frame.EvaluateExpression("call_me(10)", options)
         self.assertTrue(result.GetError().Fail(), "expression failed with no JIT")
-        self.assertTrue("Can't evaluate the expression without a running target" in result.GetError().GetCString(), "Got right error")
+        self.assertIn("Can't evaluate the expression without a running target", result.GetError().GetCString(), "Got right error")
 
         # Finally set the allow JIT value back to true and make sure that works:
         options.SetAllowJIT(True)

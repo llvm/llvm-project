@@ -51,20 +51,29 @@ protected:
 
   using SegmentLayoutMap = DenseMap<unsigned, SegmentLayout>;
 
+  // Returns the PassConfiguration for this instance. This can be used by
+  // JITLinkerBase implementations to add late passes that reference their
+  // own data structures (e.g. for ELF implementations to locate / construct
+  // a GOT start symbol prior to fixup).
+  PassConfiguration &getPassConfig() { return Passes; }
+
   // Phase 1:
   //   1.1: Run pre-prune passes
   //   1.2: Prune graph
   //   1.3: Run post-prune passes
   //   1.4: Sort blocks into segments
-  //   1.5: Allocate segment memory
-  //   1.6: Identify externals and make an async call to resolve function
+  //   1.5: Allocate segment memory, update node vmaddrs to target vmaddrs
+  //   1.6: Run post-allocation passes
+  //   1.7: Notify context of final assigned symbol addresses
+  //   1.8: Identify external symbols and make an async call to resolve
   void linkPhase1(std::unique_ptr<JITLinkerBase> Self);
 
   // Phase 2:
   //   2.1: Apply resolution results
-  //   2.2: Fix up block contents
-  //   2.3: Call OnResolved callback
-  //   2.3: Make an async call to transfer and finalize memory.
+  //   2.2: Run pre-fixup passes
+  //   2.3: Fix up block contents
+  //   2.4: Run post-fixup passes
+  //   2.5: Make an async call to transfer and finalize memory.
   void linkPhase2(std::unique_ptr<JITLinkerBase> Self,
                   Expected<AsyncLookupResult> LookupResult,
                   SegmentLayoutMap Layout);
@@ -72,9 +81,6 @@ protected:
   // Phase 3:
   //   3.1: Call OnFinalized callback, handing off allocation.
   void linkPhase3(std::unique_ptr<JITLinkerBase> Self, Error Err);
-
-  // For debug dumping of the link graph.
-  virtual StringRef getEdgeKindName(Edge::Kind K) const = 0;
 
   // Align a JITTargetAddress to conform with block alignment requirements.
   static JITTargetAddress alignToBlock(JITTargetAddress Addr, Block &B) {
@@ -105,8 +111,6 @@ private:
   void copyBlockContentToWorkingMemory(const SegmentLayoutMap &Layout,
                                        JITLinkMemoryManager::Allocation &Alloc);
   void deallocateAndBailOut(Error Err);
-
-  void dumpGraph(raw_ostream &OS);
 
   std::unique_ptr<JITLinkContext> Ctx;
   std::unique_ptr<LinkGraph> G;
@@ -156,7 +160,7 @@ private:
 
         // Dispatch to LinkerImpl for fixup.
         auto *BlockData = const_cast<char *>(B->getContent().data());
-        if (auto Err = impl().applyFixup(*B, E, BlockData))
+        if (auto Err = impl().applyFixup(G, *B, E, BlockData))
           return Err;
       }
     }

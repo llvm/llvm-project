@@ -38,7 +38,7 @@ public:
       auto loop = fakeRead->getParentOfType<scf::ForOp>();
 
       OpBuilder b(loop);
-      loop.moveOutOfLoop({fakeRead});
+      (void)loop.moveOutOfLoop({fakeRead});
       fakeWrite->moveAfter(loop);
       auto newLoop = cloneWithNewYields(b, loop, fakeRead->getResult(0),
                                         fakeCompute->getResult(0));

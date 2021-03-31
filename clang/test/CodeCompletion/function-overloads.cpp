@@ -21,6 +21,8 @@ namespace NS {
 void test_adl() {
   NS::X x;
   g(x, x);
+  (void)(f)(1, 2, 3);
+  (void)(test, test, test, f)(1, 2, 3);
 }
 
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:10:9 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
@@ -31,6 +33,10 @@ void test_adl() {
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:10:21 %s -o - | FileCheck -check-prefix=CHECK-CC4 %s
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:23:7 %s -o - | \
 // RUN:    FileCheck -check-prefix=CHECK-CC5 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:24:13 %s -o - | \
+// RUN:    FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:25:31 %s -o - | \
+// RUN:    FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: OVERLOAD: [#int#]f(<#float x#>, float y)
 // CHECK-CC1: OVERLOAD: [#int#]f(<#int i#>)
 // CHECK-CC1-NOT, CHECK-CC2-NOT: OVERLOAD: A(

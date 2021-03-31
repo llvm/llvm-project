@@ -27,8 +27,8 @@ main:
 
 # CHECK-LABEL: <main>:
 # CHECK-EMPTY:
-# CHECK-NEXT:       3: 41 88 80 80 80 00     i32.const       8
+# CHECK-NEXT:       3: 41 84 80 80 80 00     i32.const       4
 # CHECK-NEXT:                        00000004:  R_WASM_MEMORY_ADDR_SLEB      sym_a+0
-# CHECK-NEXT:       9: 36 02 8c 80 80 80 00  i32.store       12
+# CHECK-NEXT:       9: 36 02 88 80 80 80 00  i32.store       8
 # CHECK-NEXT:                        0000000b:  R_WASM_MEMORY_ADDR_LEB      sym_b+0
 # CHECK-NEXT:      10: 0b            end

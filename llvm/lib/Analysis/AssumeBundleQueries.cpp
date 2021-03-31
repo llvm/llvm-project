@@ -88,9 +88,11 @@ void llvm::fillMapFromAssume(CallInst &AssumeCI, RetainedKnowledgeMap &Result) {
       Result[Key][&Assume] = {0, 0};
       continue;
     }
-    unsigned Val = cast<ConstantInt>(
-                       getValueFromBundleOpInfo(Assume, Bundles, ABA_Argument))
-                       ->getZExtValue();
+    auto *CI = dyn_cast<ConstantInt>(
+        getValueFromBundleOpInfo(Assume, Bundles, ABA_Argument));
+    if (!CI)
+      continue;
+    unsigned Val = CI->getZExtValue();
     auto Lookup = Result.find(Key);
     if (Lookup == Result.end() || !Lookup->second.count(&Assume)) {
       Result[Key][&Assume] = {Val, Val};
@@ -157,9 +159,8 @@ llvm::getKnowledgeFromUse(const Use *U,
     return RetainedKnowledge::none();
   RetainedKnowledge RK =
       getKnowledgeFromBundle(*cast<CallInst>(U->getUser()), *Bundle);
-  for (auto Attr : AttrKinds)
-    if (Attr == RK.AttrKind)
-      return RK;
+  if (llvm::is_contained(AttrKinds, RK.AttrKind))
+    return RK;
   return RetainedKnowledge::none();
 }
 

@@ -722,68 +722,6 @@ _ValueType __libcpp_acquire_load(_ValueType const* __value) {
 #endif
 }
 
-template <bool _UsePointerTraits> struct __to_address_helper;
-
-template <> struct __to_address_helper<true> {
-    template <class _Pointer>
-    using __return_type = decltype(pointer_traits<_Pointer>::to_address(_VSTD::declval<const _Pointer&>()));
-
-    template <class _Pointer>
-    _LIBCPP_CONSTEXPR
-    static __return_type<_Pointer>
-    __do_it(const _Pointer &__p) _NOEXCEPT { return pointer_traits<_Pointer>::to_address(__p); }
-};
-
-template <class _Pointer, bool _Dummy = true>
-using __choose_to_address = __to_address_helper<_IsValidExpansion<__to_address_helper<_Dummy>::template __return_type, _Pointer>::value>;
-
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-_Tp*
-__to_address(_Tp* __p) _NOEXCEPT
-{
-    static_assert(!is_function<_Tp>::value, "_Tp is a function type");
-    return __p;
-}
-
-template <class _Pointer>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-typename __choose_to_address<_Pointer>::template __return_type<_Pointer>
-__to_address(const _Pointer& __p) _NOEXCEPT {
-  return __choose_to_address<_Pointer>::__do_it(__p);
-}
-
-template <> struct __to_address_helper<false> {
-    template <class _Pointer>
-    using __return_type = typename pointer_traits<_Pointer>::element_type*;
-
-    template <class _Pointer>
-    _LIBCPP_CONSTEXPR
-    static __return_type<_Pointer>
-    __do_it(const _Pointer &__p) _NOEXCEPT { return _VSTD::__to_address(__p.operator->()); }
-};
-
-
-#if _LIBCPP_STD_VER > 17
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY constexpr
-_Tp*
-to_address(_Tp* __p) _NOEXCEPT
-{
-    static_assert(!is_function_v<_Tp>, "_Tp is a function type");
-    return __p;
-}
-
-template <class _Pointer>
-inline _LIBCPP_INLINE_VISIBILITY constexpr
-auto
-to_address(const _Pointer& __p) _NOEXCEPT
-{
-    return _VSTD::__to_address(__p);
-}
-#endif
-
 template <class _Tp> class allocator;
 
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
@@ -2391,7 +2329,7 @@ uninitialized_move_n(_InputIt __first, _Size __n, _ForwardIt __first_res) {
 
 // NOTE: Relaxed and acq/rel atomics (for increment and decrement respectively)
 // should be sufficient for thread safety.
-// See https://bugs.llvm.org/show_bug.cgi?id=22803
+// See https://llvm.org/PR22803
 #if defined(__clang__) && __has_builtin(__atomic_add_fetch)          \
                        && defined(__ATOMIC_RELAXED)                  \
                        && defined(__ATOMIC_ACQ_REL)
@@ -2647,7 +2585,7 @@ private:
             _Alloc *__alloc = reinterpret_cast<_Alloc*>(__first);
             return __alloc;
         }
-        _Tp* __get_elem() _NOEXCEPT {
+        _LIBCPP_NO_CFI _Tp* __get_elem() _NOEXCEPT {
             _CompressedPair *__as_pair = reinterpret_cast<_CompressedPair*>(__blob_);
             typename _CompressedPair::_Base2* __second = _CompressedPair::__get_second_base(__as_pair);
             _Tp *__elem = reinterpret_cast<_Tp*>(__second);
@@ -2682,6 +2620,24 @@ struct __compatible_with
     : is_convertible<_Tp*, _Up*> {};
 #endif // _LIBCPP_STD_VER > 14
 
+template <class _Dp, class _Pt,
+    class = decltype(_VSTD::declval<_Dp>()(_VSTD::declval<_Pt>()))>
+static true_type __well_formed_deleter_test(int);
+
+template <class, class>
+static false_type __well_formed_deleter_test(...);
+
+template <class _Dp, class _Pt>
+struct __well_formed_deleter : decltype(__well_formed_deleter_test<_Dp, _Pt>(0)) {};
+
+template<class _Dp, class _Tp, class _Yp>
+struct __shared_ptr_deleter_ctor_reqs
+{
+    static const bool value = __compatible_with<_Tp, _Yp>::value &&
+                              is_move_constructible<_Dp>::value &&
+                              __well_formed_deleter<_Dp, _Tp*>::value;
+};
+
 #if defined(_LIBCPP_ABI_ENABLE_SHARED_PTR_TRIVIAL_ABI)
 #  define _LIBCPP_SHARED_PTR_TRIVIAL_ABI __attribute__((trivial_abi))
 #else
@@ -2714,10 +2670,10 @@ public:
                             typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
     template<class _Yp, class _Dp>
         shared_ptr(_Yp* __p, _Dp __d,
-                   typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
+                   typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type = __nat());
     template<class _Yp, class _Dp, class _Alloc>
         shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
-                   typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type = __nat());
+                   typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type = __nat());
     template <class _Dp> shared_ptr(nullptr_t __p, _Dp __d);
     template <class _Dp, class _Alloc> shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a);
     template<class _Yp> _LIBCPP_INLINE_VISIBILITY shared_ptr(const shared_ptr<_Yp>& __r, element_type* __p) _NOEXCEPT;
@@ -2983,7 +2939,7 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p,
 template<class _Tp>
 template<class _Yp, class _Dp>
 shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type)
+                            typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type)
     : __ptr_(__p)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -2992,7 +2948,11 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d,
 #endif  // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
         typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+#ifndef _LIBCPP_CXX03_LANG
+        __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+#else
         __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
+#endif // not _LIBCPP_CXX03_LANG
         __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
@@ -3015,7 +2975,11 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
 #endif  // _LIBCPP_NO_EXCEPTIONS
         typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
         typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT > _CntrlBlk;
+#ifndef _LIBCPP_CXX03_LANG
+        __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
+#else
         __cntrl_ = new _CntrlBlk(__p, __d, _AllocT());
+#endif // not _LIBCPP_CXX03_LANG
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }
     catch (...)
@@ -3029,7 +2993,7 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d)
 template<class _Tp>
 template<class _Yp, class _Dp, class _Alloc>
 shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
-                            typename enable_if<__compatible_with<_Yp, element_type>::value, __nat>::type)
+                            typename enable_if<__shared_ptr_deleter_ctor_reqs<_Dp, _Yp, element_type>::value, __nat>::type)
     : __ptr_(__p)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -3041,7 +3005,12 @@ shared_ptr<_Tp>::shared_ptr(_Yp* __p, _Dp __d, _Alloc __a,
         typedef __allocator_destructor<_A2> _D2;
         _A2 __a2(__a);
         unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-        ::new ((void*)_VSTD::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
+        ::new ((void*)_VSTD::addressof(*__hold2.get()))
+#ifndef _LIBCPP_CXX03_LANG
+            _CntrlBlk(__p, _VSTD::move(__d), __a);
+#else
+            _CntrlBlk(__p, __d, __a);
+#endif // not _LIBCPP_CXX03_LANG
         __cntrl_ = _VSTD::addressof(*__hold2.release());
         __enable_weak_this(__p, __p);
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -3068,7 +3037,12 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t __p, _Dp __d, _Alloc __a)
         typedef __allocator_destructor<_A2> _D2;
         _A2 __a2(__a);
         unique_ptr<_CntrlBlk, _D2> __hold2(__a2.allocate(1), _D2(__a2, 1));
-        ::new ((void*)_VSTD::addressof(*__hold2.get())) _CntrlBlk(__p, __d, __a);
+        ::new ((void*)_VSTD::addressof(*__hold2.get()))
+#ifndef _LIBCPP_CXX03_LANG
+            _CntrlBlk(__p, _VSTD::move(__d), __a);
+#else
+            _CntrlBlk(__p, __d, __a);
+#endif // not _LIBCPP_CXX03_LANG
         __cntrl_ = _VSTD::addressof(*__hold2.release());
 #ifndef _LIBCPP_NO_EXCEPTIONS
     }

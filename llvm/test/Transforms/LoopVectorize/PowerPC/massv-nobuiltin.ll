@@ -9,7 +9,7 @@ declare float @atanhf(float) #1
 ; Check that functions marked as nobuiltin are not lowered to massv entries.
 define void @atanh_f64(double* nocapture %varray) {
 ; CHECK-LABEL: @atanh_f64(
-; CHECK-NOT: __atanhd2_massv{{.*}}<2 x double>
+; CHECK-NOT: __atanhd2_P8{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:
@@ -32,7 +32,7 @@ for.end:
 
 define void @atanh_f32(float* nocapture %varray) {
 ; CHECK-LABEL: @atanh_f32(
-; CHECK-NOT: __atanhf4_massv{{.*}}<2 x double>
+; CHECK-NOT: __atanhf4_P8{{.*}}<2 x double>
 ; CHECK: ret void
 ;
 entry:

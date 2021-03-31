@@ -14,6 +14,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
@@ -114,6 +115,11 @@ LoopPassManager::runWithLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // Check if the current pass preserved the loop-nest object or not.
     IsLoopNestPtrValid &= PassPA->getChecker<LoopNestAnalysis>().preserved();
 
+    // After running the loop pass, the parent loop might change and we need to
+    // notify the updater, otherwise U.ParentL might gets outdated and triggers
+    // assertion failures in addSiblingLoops and addChildLoops.
+    U.setParentLoop(L.getParentLoop());
+
     // FIXME: Historically, the pass managers all called the LLVM context's
     // yield function here. We don't have a generic way to acquire the
     // context and it isn't yet clear what the right pattern is for yielding
@@ -157,6 +163,11 @@ LoopPassManager::runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
     // Finally, we intersect the final preserved analyses to compute the
     // aggregate preserved set for this pass manager.
     PA.intersect(std::move(*PassPA));
+
+    // After running the loop pass, the parent loop might change and we need to
+    // notify the updater, otherwise U.ParentL might gets outdated and triggers
+    // assertion failures in addSiblingLoops and addChildLoops.
+    U.setParentLoop(L.getParentLoop());
 
     // FIXME: Historically, the pass managers all called the LLVM context's
     // yield function here. We don't have a generic way to acquire the
@@ -281,8 +292,17 @@ PreservedAnalyses FunctionToLoopPassAdaptor::run(Function &F,
     else
       PI.runAfterPass<Loop>(*Pass, *L, PassPA);
 
-    // FIXME: We should verify the set of analyses relevant to Loop passes
-    // are preserved.
+#ifndef NDEBUG
+    // LoopAnalysisResults should always be valid.
+    // Note that we don't LAR.SE.verify() because that can change observed SE
+    // queries. See PR44815.
+    if (VerifyDomInfo)
+      LAR.DT.verify();
+    if (VerifyLoopInfo)
+      LAR.LI.verify(LAR.DT);
+    if (LAR.MSSA && VerifyMemorySSA)
+      LAR.MSSA->verifyMemorySSA();
+#endif
 
     // If the loop hasn't been deleted, we need to handle invalidation here.
     if (!Updater.skipCurrentLoop())

@@ -195,8 +195,11 @@ private:
 };
 
 class StructureConstructor;
-using StructureConstructorValues =
-    std::map<SymbolRef, common::CopyableIndirection<Expr<SomeType>>>;
+struct ComponentCompare {
+  bool operator()(SymbolRef x, SymbolRef y) const;
+};
+using StructureConstructorValues = std::map<SymbolRef,
+    common::CopyableIndirection<Expr<SomeType>>, ComponentCompare>;
 
 template <>
 class Constant<SomeDerived>

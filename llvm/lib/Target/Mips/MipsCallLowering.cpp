@@ -175,6 +175,7 @@ Register MipsIncomingValueHandler::getStackAddress(const CCValAssign &VA,
   unsigned Offset = VA.getLocMemOffset();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
+  // FIXME: This should only be immutable for non-byval memory arguments.
   int FI = MFI.CreateFixedObject(Size, Offset, true);
   MachinePointerInfo MPO =
       MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
@@ -664,6 +665,7 @@ void MipsCallLowering::subTargetRegTypeForCallingConv(
   }
 }
 
+// FIXME: This should be removed and the generic version used
 void MipsCallLowering::splitToValueTypes(
     const DataLayout &DL, const ArgInfo &OrigArg, unsigned OriginalIndex,
     SmallVectorImpl<ArgInfo> &SplitArgs,

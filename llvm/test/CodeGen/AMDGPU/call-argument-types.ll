@@ -80,14 +80,15 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 ; GCN-LABEL: {{^}}test_call_external_void_func_i1_signext:
 
 ; HSA: buffer_load_ubyte [[VAR:v[0-9]+]]
-; HSA: s_mov_b32 s32, 0
+; HSA-DAG: s_mov_b32 s32, 0
 ; MESA-DAG: buffer_load_ubyte [[VAR:v[0-9]+]]
 ; MESA-DAG: s_mov_b32 s32, 0{{$}}
 
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_signext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_signext@rel32@hi+12
-; GCN-NEXT: v_bfe_i32 v0, v0, 0, 1
+; MESA-DAG: v_bfe_i32 v0, v0, 0, 1
+; HSA: v_bfe_i32 v0, v3, 0, 1
 ; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
@@ -99,18 +100,24 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; FIXME: load should be scheduled before getpc
 ; GCN-LABEL: {{^}}test_call_external_void_func_i1_zeroext:
 
-; HSA: buffer_load_ubyte v0
+; HSA: buffer_load_ubyte v3
 ; HSA-DAG: s_mov_b32 s32, 0{{$}}
 
 ; MESA: buffer_load_ubyte v0
 ; MESA-DAG: s_mov_b32 s32, 0{{$}}
 
-; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
-; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
-; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
-; GCN-NEXT: v_and_b32_e32 v0, 1, v0
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
-; GCN-NEXT: s_endpgm
+; MESA: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
+; MESA-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
+; MESA-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
+; MESA-NEXT: v_and_b32_e32 v0, 1, v0
+; MESA-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; MESA-NEXT: s_endpgm
+; HSA: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
+; HSA-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1_zeroext@rel32@lo+4
+; HSA-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1_zeroext@rel32@hi+12
+; HSA-NEXT: v_and_b32_e32 v0, 1, v3
+; HSA-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; HSA-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   %var = load volatile i1, i1 addrspace(1)* undef
   call void @external_void_func_i1_zeroext(i1 %var)
@@ -136,7 +143,8 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; FIXME: don't wait before call
 ; GCN-LABEL: {{^}}test_call_external_void_func_i8_signext:
 
-; GCN-DAG: buffer_load_sbyte v0
+; MESA-DAG: buffer_load_sbyte v0
+; HSA-DAG: buffer_load_sbyte v3
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_signext@rel32@lo+4
 ; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+12
@@ -144,7 +152,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN-DAG: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
@@ -154,7 +162,8 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_i8_zeroext:
 
-; GCN-DAG: buffer_load_ubyte v0
+; MESA-DAG: buffer_load_ubyte v0
+; HSA-DAG: buffer_load_ubyte v3
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_zeroext@rel32@lo+4
 ; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+12
@@ -162,7 +171,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN-DAG: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   %var = load volatile i8, i8 addrspace(1)* undef
@@ -183,7 +192,8 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_i16_signext:
 
-; GCN-DAG: buffer_load_sshort v0
+; MESA-DAG: buffer_load_sshort v0
+; HSA-DAG: buffer_load_sshort v3
 ; GCN-DAG: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-DAG: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_signext@rel32@lo+4
 ; GCN-DAG: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+12
@@ -191,7 +201,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN-DAG: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
@@ -208,7 +218,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GCN-DAG: s_mov_b32 s32, 0
 
 ; GCN-NOT: s_waitcnt
-; GCN-NEXT: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
+; GCN-DAG: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   %var = load volatile i16, i16 addrspace(1)* undef
@@ -481,7 +491,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_v3i32_imm: {{.*}}
 
-; GCN-NOT: v3
+; GCN-NOT: v3,
 ; GCN-DAG: v_mov_b32_e32 v0, 3
 ; GCN-DAG: v_mov_b32_e32 v1, 4
 ; GCN-DAG: v_mov_b32_e32 v2, 5
@@ -586,7 +596,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[20:23], off
 ; GCN-DAG: buffer_load_dwordx4 v[24:27], off
 ; GCN-DAG: buffer_load_dwordx4 v[28:31], off
-; GCN-NOT: s_waitcnt
+; MESA-NOT: s_waitcnt
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   %ptr = load <32 x i32> addrspace(1)*, <32 x i32> addrspace(1)* addrspace(4)* undef
@@ -611,7 +621,8 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GCN-DAG: buffer_load_dwordx4 v[28:31], off
 
 ; GCN: s_waitcnt
-; GCN: buffer_store_dword [[VAL1]], off, s[{{[0-9]+}}:{{[0-9]+}}], s32{{$}}
+; MESA: buffer_store_dword [[VAL1]], off, s[{{[0-9]+}}:{{[0-9]+}}], s32{{$}}
+; HSA: buffer_store_dword [[VAL1]], off, s[{{[0-9]+}}:{{[0-9]+}}], s32 offset:4
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
@@ -634,9 +645,11 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(i32 addrspace(1)*
 }
 
 ; GCN-LABEL: {{^}}test_call_external_void_func_struct_i8_i32:
-; GCN: buffer_load_ubyte v0, off
-; GCN: buffer_load_dword v1, off
-; GCN-NOT: s_waitcnt
+; MESA: buffer_load_ubyte v0, off
+; MESA-DAG: buffer_load_dword v1, off
+; HSA: buffer_load_ubyte v3, off
+; HSA-DAG: buffer_load_dword v4, off
+; MESA-NOT: s_waitcnt
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   %ptr0 = load { i8, i32 } addrspace(1)*, { i8, i32 } addrspace(1)* addrspace(4)* undef
@@ -738,15 +751,19 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}tail_call_byval_align16:
-; GCN-NOT: s32
-; GCN: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
-; GCN: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:12
+; GCN-NOT: s32,
+; MESA: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32 offset:8
+; MESA: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:12
+; HSA: buffer_load_dword [[VREG1:v[0-9]+]], off, s[0:3], s32
+; HSA: buffer_load_dword [[VREG2:v[0-9]+]], off, s[0:3], s32 offset:24
 
 ; GCN: s_getpc_b64
 
-; GCN: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:4
-; GCN: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
-; GCN-NOT: s32
+; MESA: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:4
+; MESA: buffer_store_dword [[VREG1]], off, s[0:3], s32{{$}}
+; HSA: buffer_store_dword [[VREG2]], off, s[0:3], s32 offset:16
+; HSA: buffer_store_dword [[VREG1]], off, s[0:3], s32
+; GCN-NOT: s32,
 ; GCN: s_setpc_b64
 define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 entry:
@@ -757,11 +774,16 @@ entry:
 
 ; GCN-LABEL: {{^}}tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v32, off, s[0:3], s32 offset:4
-; GCN: buffer_load_dword v33, off, s[0:3], s32{{$}}
-; GCN: s_getpc_b64
-; GCN: buffer_store_dword v33, off, s[0:3], s32{{$}}
-; GCN: buffer_store_dword v32, off, s[0:3], s32 offset:4
+; MESA: buffer_load_dword v32, off, s[0:3], s32 offset:4
+; MESA: buffer_load_dword v33, off, s[0:3], s32{{$}}
+; MESA: s_getpc_b64
+; MESA: buffer_store_dword v33, off, s[0:3], s32{{$}}
+; MESA: buffer_store_dword v32, off, s[0:3], s32 offset:4
+; HSA: buffer_load_dword v32, off, s[0:3], s32 offset:8
+; HSA: buffer_load_dword v33, off, s[0:3], s32 offset:4
+; HSA: s_getpc_b64
+; HSA: buffer_store_dword v33, off, s[0:3], s32 offset:4
+; HSA: buffer_store_dword v32, off, s[0:3], s32 offset:8
 ; GCN-NOT: s32
 ; GCN: s_setpc_b64
 define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, double %tmp) #0 {
@@ -771,16 +793,27 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}stack_12xv3i32:
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: buffer_store_dword [[REG12]], {{.*$}}
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
-; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
-; GCN: v_mov_b32_e32 v31, 11
-; GCN: s_getpc
+; MESA: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; MESA: buffer_store_dword [[REG12]], {{.*$}}
+; MESA: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; MESA: buffer_store_dword [[REG13]], {{.*}} offset:4
+; MESA: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; MESA: buffer_store_dword [[REG14]], {{.*}} offset:8
+; MESA: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; MESA: buffer_store_dword [[REG15]], {{.*}} offset:12
+; MESA: v_mov_b32_e32 v31, 11
+; MESA: s_getpc
+; HSA: v_mov_b32_e32 [[REG12:v[0-9]+]], 11
+; HSA: buffer_store_dword [[REG12]], {{.*$}}
+; HSA: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; HSA: buffer_store_dword [[REG12]], {{.*}} offset:4
+; HSA: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; HSA: buffer_store_dword [[REG13]], {{.*}} offset:8
+; HSA: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; HSA: buffer_store_dword [[REG14]], {{.*}} offset:12
+; HSA: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; HSA: buffer_store_dword [[REG15]], {{.*}} offset:16
+; HSA: s_getpc
 define void @stack_12xv3i32() #0 {
 entry:
   call void @external_void_func_12xv3i32(
@@ -800,16 +833,25 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}stack_12xv3f32:
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: buffer_store_dword [[REG12]], {{.*$}}
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:4
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:8
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
-; GCN: buffer_store_dword [[REG15]], {{.*}} offset:12
-; GCN: v_mov_b32_e32 v31, 0x41300000
-; GCN: s_getpc
+; MESA: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; MESA: buffer_store_dword [[REG12]], {{.*$}}
+; MESA: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; MESA: buffer_store_dword [[REG13]], {{.*}} offset:4
+; MESA: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; MESA: buffer_store_dword [[REG14]], {{.*}} offset:8
+; MESA: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; MESA: buffer_store_dword [[REG15]], {{.*}} offset:12
+; MESA: v_mov_b32_e32 v31, 0x41300000
+; MESA: s_getpc
+; HSA: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; HSA: buffer_store_dword [[REG12]], {{.*}} offset:4
+; HSA: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; HSA: buffer_store_dword [[REG13]], {{.*}} offset:8
+; HSA: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; HSA: buffer_store_dword [[REG14]], {{.*}} offset:12
+; HSA: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; HSA: buffer_store_dword [[REG15]], {{.*}} offset:16
+; HSA: s_getpc
 define void @stack_12xv3f32() #0 {
 entry:
   call void @external_void_func_12xv3f32(
@@ -830,24 +872,41 @@ entry:
 
 ; GCN-LABEL: {{^}}stack_8xv5i32:
 
-; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
-; GCN: buffer_store_dword [[REG8]], {{.*$}}
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
-; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
-; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
-; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
-; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
-; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
+; MESA: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
+; MESA: buffer_store_dword [[REG8]], {{.*$}}
+; MESA: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
+; MESA: buffer_store_dword [[REG9]], {{.*}} offset:4
+; MESA: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
+; MESA: buffer_store_dword [[REG10]], {{.*}} offset:8
+; MESA: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
+; MESA: buffer_store_dword [[REG11]], {{.*}} offset:12
+; MESA: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; MESA: buffer_store_dword [[REG12]], {{.*}} offset:16
+; MESA: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; MESA: buffer_store_dword [[REG13]], {{.*}} offset:20
+; MESA: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; MESA: buffer_store_dword [[REG14]], {{.*}} offset:24
+; MESA: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; MESA: buffer_store_dword [[REG15]], {{.*}} offset:28
+; HSA: v_mov_b32_e32 [[REG8:v[0-9]+]], 8
+; HSA: buffer_store_dword [[REG8]], {{.*}} offset:4
+; HSA: v_mov_b32_e32 [[REG9:v[0-9]+]], 9
+; HSA: buffer_store_dword [[REG9]], {{.*}} offset:8
+; HSA: v_mov_b32_e32 [[REG10:v[0-9]+]], 10
+; HSA: buffer_store_dword [[REG10]], {{.*}} offset:12
+; HSA: v_mov_b32_e32 [[REG11:v[0-9]+]], 11
+; HSA: buffer_store_dword [[REG11]], {{.*}} offset:16
+; HSA: v_mov_b32_e32 [[REG12:v[0-9]+]], 12
+; HSA: buffer_store_dword [[REG12]], {{.*}} offset:20
+; HSA: v_mov_b32_e32 [[REG13:v[0-9]+]], 13
+; HSA: buffer_store_dword [[REG13]], {{.*}} offset:24
+; HSA: v_mov_b32_e32 [[REG14:v[0-9]+]], 14
+; HSA: buffer_store_dword [[REG14]], {{.*}} offset:28
+; HSA: v_mov_b32_e32 [[REG15:v[0-9]+]], 15
+; HSA: buffer_store_dword [[REG15]], {{.*}} offset:32
 
-; GCN: v_mov_b32_e32 v31, 7
+
+; MESA: v_mov_b32_e32 v31, 7
 ; GCN: s_getpc
 define void @stack_8xv5i32() #0 {
 entry:
@@ -864,24 +923,42 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}stack_8xv5f32:
-; GCN: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
-; GCN: buffer_store_dword [[REG8]], {{.*$}}
-; GCN: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
-; GCN: buffer_store_dword [[REG9]], {{.*}} offset:4
-; GCN: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
-; GCN: buffer_store_dword [[REG10]], {{.*}} offset:8
-; GCN: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
-; GCN: buffer_store_dword [[REG11]], {{.*}} offset:12
-; GCN: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
-; GCN: buffer_store_dword [[REG12]], {{.*}} offset:16
-; GCN: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
-; GCN: buffer_store_dword [[REG13]], {{.*}} offset:20
-; GCN: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
-; GCN: buffer_store_dword [[REG14]], {{.*}} offset:24
-; GCN: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
-; GCN: buffer_store_dword [[REG15]], {{.*}} offset:28
+; MESA: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
+; MESA: buffer_store_dword [[REG8]], {{.*$}}
+; MESA: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
+; MESA: buffer_store_dword [[REG9]], {{.*}} offset:4
+; MESA: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
+; MESA: buffer_store_dword [[REG10]], {{.*}} offset:8
+; MESA: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
+; MESA: buffer_store_dword [[REG11]], {{.*}} offset:12
+; MESA: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; MESA: buffer_store_dword [[REG12]], {{.*}} offset:16
+; MESA: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; MESA: buffer_store_dword [[REG13]], {{.*}} offset:20
+; MESA: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; MESA: buffer_store_dword [[REG14]], {{.*}} offset:24
+; MESA: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; MESA: buffer_store_dword [[REG15]], {{.*}} offset:28
+; MESA: v_mov_b32_e32 v31, 0x40e00000
 
-; GCN: v_mov_b32_e32 v31, 0x40e00000
+; HSA: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x40e00000
+; HSA: buffer_store_dword [[REG8]], {{.*$}}
+; HSA: v_mov_b32_e32 [[REG8:v[0-9]+]], 0x41000000
+; HSA: buffer_store_dword [[REG8]], {{.*}} offset:4
+; HSA: v_mov_b32_e32 [[REG9:v[0-9]+]], 0x41100000
+; HSA: buffer_store_dword [[REG9]], {{.*}} offset:8
+; HSA: v_mov_b32_e32 [[REG10:v[0-9]+]], 0x41200000
+; HSA: buffer_store_dword [[REG10]], {{.*}} offset:12
+; HSA: v_mov_b32_e32 [[REG11:v[0-9]+]], 0x41300000
+; HSA: buffer_store_dword [[REG11]], {{.*}} offset:16
+; HSA: v_mov_b32_e32 [[REG12:v[0-9]+]], 0x41400000
+; HSA: buffer_store_dword [[REG12]], {{.*}} offset:20
+; HSA: v_mov_b32_e32 [[REG13:v[0-9]+]], 0x41500000
+; HSA: buffer_store_dword [[REG13]], {{.*}} offset:24
+; HSA: v_mov_b32_e32 [[REG14:v[0-9]+]], 0x41600000
+; HSA: buffer_store_dword [[REG14]], {{.*}} offset:28
+; HSA: v_mov_b32_e32 [[REG15:v[0-9]+]], 0x41700000
+; HSA: buffer_store_dword [[REG15]], {{.*}} offset:32
 ; GCN: s_getpc
 define void @stack_8xv5f32() #0 {
 entry:

@@ -28,8 +28,8 @@ class DataExtractor;
 class Declaration;
 class Status;
 
-// A ValueObject that represents memory at a given address, viewed as some
-// set lldb type.
+/// A ValueObject that represents memory at a given address, viewed as some
+/// set lldb type.
 class ValueObjectDynamicValue : public ValueObject {
 public:
   ~ValueObjectDynamicValue() override;

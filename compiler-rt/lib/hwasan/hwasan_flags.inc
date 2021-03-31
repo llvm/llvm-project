@@ -72,3 +72,12 @@ HWASAN_FLAG(uptr, malloc_bisect_right, 0,
 HWASAN_FLAG(bool, malloc_bisect_dump, false,
             "Print all allocations within [malloc_bisect_left, "
             "malloc_bisect_right] range ")
+
+
+// Exit if we fail to enable the AArch64 kernel ABI relaxation which allows
+// tagged pointers in syscalls.  This is the default, but being able to disable
+// that behaviour is useful for running the testsuite on more platforms (the
+// testsuite can run since we manually ensure any pointer arguments to syscalls
+// are untagged before the call.
+HWASAN_FLAG(bool, fail_without_syscall_abi, true,
+            "Exit if fail to request relaxed syscall ABI.")

@@ -252,8 +252,8 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
          "No kext in Microsoft ABI");
   CodeGenModule &CGM = CGF.CGM;
   llvm::Value *VTable = CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
-  Ty = Ty->getPointerTo()->getPointerTo();
-  VTable = CGF.Builder.CreateBitCast(VTable, Ty);
+  Ty = Ty->getPointerTo();
+  VTable = CGF.Builder.CreateBitCast(VTable, Ty->getPointerTo());
   assert(VTable && "BuildVirtualCall = kext vtbl pointer is null");
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   const VTableLayout &VTLayout = CGM.getItaniumVTableContext().getVTableLayout(RD);
@@ -264,7 +264,7 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
   llvm::Value *VFuncPtr =
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc = CGF.Builder.CreateAlignedLoad(
-      VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
+      Ty, VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
   CGCallee Callee(GD, VFunc);
   return Callee;
 }

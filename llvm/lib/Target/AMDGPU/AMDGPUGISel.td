@@ -113,14 +113,6 @@ def gi_mubuf_offset :
     GIComplexOperandMatcher<s64, "selectMUBUFOffset">,
     GIComplexPatternEquiv<MUBUFOffset>;
 
-def gi_mubuf_addr64_atomic :
-    GIComplexOperandMatcher<s64, "selectMUBUFAddr64Atomic">,
-    GIComplexPatternEquiv<MUBUFAddr64Atomic>;
-
-def gi_mubuf_offset_atomic :
-    GIComplexOperandMatcher<s64, "selectMUBUFOffsetAtomic">,
-    GIComplexPatternEquiv<MUBUFOffsetAtomic>;
-
 def gi_smrd_buffer_imm :
     GIComplexOperandMatcher<s64, "selectSMRDBufferImm">,
     GIComplexPatternEquiv<SMRDBufferImm>;
@@ -174,6 +166,9 @@ def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE1, AMDGPUcvt_f32_ubyte1>;
 def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE2, AMDGPUcvt_f32_ubyte2>;
 def : GINodeEquiv<G_AMDGPU_CVT_F32_UBYTE3, AMDGPUcvt_f32_ubyte3>;
 
+def : GINodeEquiv<G_AMDGPU_CVT_PK_I16_I32, AMDGPUpk_i16_i32_impl>;
+def : GINodeEquiv<G_AMDGPU_MED3, AMDGPUsmed3>;
+
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;
@@ -216,6 +211,8 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FADD, SIbuffer_atomic_fadd>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMIN, SIbuffer_atomic_fmin>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_FMAX, SIbuffer_atomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 def : GINodeEquiv<G_AMDGPU_S_BUFFER_LOAD, SIsbuffer_load>;
 
@@ -302,16 +299,16 @@ foreach Ty = [i64, p0, p1, p4] in {
   defm : SMRD_Pattern <"S_LOAD_DWORDX2",  Ty>;
 }
 
-def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm32">,
+def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i32timm>;
 
-def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm16">,
+def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i16timm>;
 
-def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm8">,
+def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i8timm>;
 
-def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm1">,
+def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm">,
   GISDNodeXFormEquiv<as_i1timm>;
 
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
@@ -323,17 +320,14 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
 def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
   GISDNodeXFormEquiv<IMMPopCount>;
 
-def gi_extract_glc : GICustomOperandRenderer<"renderExtractGLC">,
-  GISDNodeXFormEquiv<extract_glc>;
-
-def gi_extract_slc : GICustomOperandRenderer<"renderExtractSLC">,
-  GISDNodeXFormEquiv<extract_slc>;
-
-def gi_extract_dlc : GICustomOperandRenderer<"renderExtractDLC">,
-  GISDNodeXFormEquiv<extract_dlc>;
+def gi_extract_cpol : GICustomOperandRenderer<"renderExtractCPol">,
+  GISDNodeXFormEquiv<extract_cpol>;
 
 def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
   GISDNodeXFormEquiv<extract_swz>;
+
+def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
+  GISDNodeXFormEquiv<set_glc>;
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;

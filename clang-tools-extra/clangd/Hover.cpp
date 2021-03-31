@@ -22,6 +22,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
@@ -42,6 +43,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -64,6 +66,15 @@ PrintingPolicy getPrintingPolicy(PrintingPolicy Base) {
 std::string getLocalScope(const Decl *D) {
   std::vector<std::string> Scopes;
   const DeclContext *DC = D->getDeclContext();
+
+  // ObjC scopes won't have multiple components for us to join, instead:
+  // - Methods: "-[Class methodParam1:methodParam2]"
+  // - Classes, categories, and protocols: "MyClass(Category)"
+  if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC))
+    return printObjCMethod(*MD);
+  else if (const ObjCContainerDecl *CD = dyn_cast<ObjCContainerDecl>(DC))
+    return printObjCContainer(*CD);
+
   auto GetName = [](const TypeDecl *D) {
     if (!D->getDeclName().isEmpty()) {
       PrintingPolicy Policy = D->getASTContext().getPrintingPolicy();
@@ -89,6 +100,11 @@ std::string getLocalScope(const Decl *D) {
 /// declaration \p D. Returns empty if it is contained global namespace.
 std::string getNamespaceScope(const Decl *D) {
   const DeclContext *DC = D->getDeclContext();
+
+  // ObjC does not have the concept of namespaces, so instead we support
+  // local scopes.
+  if (isa<ObjCMethodDecl, ObjCContainerDecl>(DC))
+    return "";
 
   if (const TagDecl *TD = dyn_cast<TagDecl>(DC))
     return getNamespaceScope(TD);
@@ -332,6 +348,19 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
   // FIXME: handle variadics.
 }
 
+// Non-negative numbers are printed using min digits
+// 0     => 0x0
+// 100   => 0x64
+// Negative numbers are sign-extended to 32/64 bits
+// -2    => 0xfffffffe
+// -2^32 => 0xfffffffeffffffff
+static llvm::FormattedNumber printHex(const llvm::APSInt &V) {
+  uint64_t Bits = V.getExtValue();
+  if (V.isNegative() && V.getMinSignedBits() <= 32)
+    return llvm::format_hex(uint32_t(Bits), 0);
+  return llvm::format_hex(Bits, 0);
+}
+
 llvm::Optional<std::string> printExprValue(const Expr *E,
                                            const ASTContext &Ctx) {
   // InitListExpr has two forms, syntactic and semantic. They are the same thing
@@ -366,8 +395,17 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
     for (const EnumConstantDecl *ECD :
          T->castAs<EnumType>()->getDecl()->enumerators())
       if (ECD->getInitVal() == Val)
-        return llvm::formatv("{0} ({1})", ECD->getNameAsString(), Val).str();
+        return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
+                             printHex(Constant.Val.getInt()))
+            .str();
   }
+  // Show hex value of integers if they're at least 10 (or negative!)
+  if (T->isIntegralOrEnumerationType() &&
+      Constant.Val.getInt().getMinSignedBits() <= 64 &&
+      Constant.Val.getInt().uge(10))
+    return llvm::formatv("{0} ({1})", Constant.Val.getAsString(Ctx, T),
+                         printHex(Constant.Val.getInt()))
+        .str();
   return Constant.Val.getAsString(Ctx, T);
 }
 
@@ -887,7 +925,8 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     std::vector<const Decl *> Result;
     if (const SelectionTree::Node *N = ST.commonAncestor()) {
       // FIXME: Fill in HighlightRange with range coming from N->ASTNode.
-      auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias);
+      auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Alias,
+                                            AST.getHeuristicResolver());
       if (!Decls.empty()) {
         HI = getHoverContents(Decls.front(), PP, Index);
         // Layout info only shown when hovering on the field/class itself.

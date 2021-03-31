@@ -590,7 +590,7 @@ define i1 @length16_eq_const(i8* %X) nounwind optsize {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
@@ -688,7 +688,7 @@ define i1 @length24_eq(i8* %x, i8* %y) nounwind optsize {
 ; X64-AVX-NEXT:    vmovq {{.*#+}} xmm2 = mem[0],zero
 ; X64-AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; X64-AVX-NEXT:    vpxor (%rsi), %xmm0, %xmm0
-; X64-AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
@@ -715,8 +715,8 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    movdqu 8(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
@@ -854,8 +854,8 @@ define i1 @length32_eq_const(i8* %X) nounwind optsize {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm1
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI.*}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF

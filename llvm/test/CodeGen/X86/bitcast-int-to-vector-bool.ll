@@ -205,17 +205,15 @@ define <32 x i1> @bitcast_i32_32i1(i32 %a0) {
 ; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,1,1,4,4,5,5]
 ; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9241421688590303745,9241421688590303745]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpxor %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsrlw $7, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

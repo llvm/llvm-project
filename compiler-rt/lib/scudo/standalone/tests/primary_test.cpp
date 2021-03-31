@@ -58,6 +58,8 @@ template <typename SizeClassMapT> struct TestConfig1 {
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
 template <typename SizeClassMapT> struct TestConfig2 {
@@ -66,6 +68,8 @@ template <typename SizeClassMapT> struct TestConfig2 {
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
 template <typename SizeClassMapT> struct TestConfig3 {
@@ -74,6 +78,8 @@ template <typename SizeClassMapT> struct TestConfig3 {
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = true;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
 TEST(ScudoPrimaryTest, BasicPrimary) {
@@ -91,6 +97,8 @@ struct SmallRegionsConfig {
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
+  typedef scudo::uptr PrimaryCompactPtrT;
+  static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -115,7 +123,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
       break;
     }
     for (scudo::u32 J = 0; J < B->getCount(); J++)
-      memset(B->get(J), 'B', Size);
+      memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
     Batches.push_back(B);
   }
   while (!Batches.empty()) {

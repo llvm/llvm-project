@@ -1,5 +1,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=gfx90a -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GFX90A -check-prefix=FUNC %s
 
 declare double @llvm.fma.f64(double, double, double) nounwind readnone
 declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>) nounwind readnone
@@ -8,6 +9,7 @@ declare double @llvm.fabs.f64(double) nounwind readnone
 
 ; FUNC-LABEL: {{^}}fma_f64:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -21,6 +23,8 @@ define amdgpu_kernel void @fma_f64(double addrspace(1)* %out, double addrspace(1
 ; FUNC-LABEL: {{^}}fma_v2f64:
 ; SI: v_fma_f64
 ; SI: v_fma_f64
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %in1,
                        <2 x double> addrspace(1)* %in2, <2 x double> addrspace(1)* %in3) {
    %r0 = load <2 x double>, <2 x double> addrspace(1)* %in1
@@ -36,6 +40,10 @@ define amdgpu_kernel void @fma_v2f64(<2 x double> addrspace(1)* %out, <2 x doubl
 ; SI: v_fma_f64
 ; SI: v_fma_f64
 ; SI: v_fma_f64
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_v4f64(<4 x double> addrspace(1)* %out, <4 x double> addrspace(1)* %in1,
                        <4 x double> addrspace(1)* %in2, <4 x double> addrspace(1)* %in3) {
    %r0 = load <4 x double>, <4 x double> addrspace(1)* %in1
@@ -48,6 +56,7 @@ define amdgpu_kernel void @fma_v4f64(<4 x double> addrspace(1)* %out, <4 x doubl
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src0:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], |v\[[0-9]+:[0-9]+\]|, v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], |v\[[0-9]+:[0-9]+\]|, v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_abs_src0(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -61,6 +70,7 @@ define amdgpu_kernel void @fma_f64_abs_src0(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src1:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|}}
 define amdgpu_kernel void @fma_f64_abs_src1(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -74,6 +84,7 @@ define amdgpu_kernel void @fma_f64_abs_src1(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_src2:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|}}
+; GFX90A: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], \|v\[[0-9]+:[0-9]+\]\|}}
 define amdgpu_kernel void @fma_f64_abs_src2(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -87,6 +98,7 @@ define amdgpu_kernel void @fma_f64_abs_src2(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src0:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_neg_src0(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -100,6 +112,7 @@ define amdgpu_kernel void @fma_f64_neg_src0(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src1:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_neg_src1(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -113,6 +126,7 @@ define amdgpu_kernel void @fma_f64_neg_src1(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_neg_src2:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_neg_src2(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -126,6 +140,7 @@ define amdgpu_kernel void @fma_f64_neg_src2(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src0:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_abs_neg_src0(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -140,6 +155,7 @@ define amdgpu_kernel void @fma_f64_abs_neg_src0(double addrspace(1)* %out, doubl
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src1:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|, v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
 define amdgpu_kernel void @fma_f64_abs_neg_src1(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -154,6 +170,7 @@ define amdgpu_kernel void @fma_f64_abs_neg_src1(double addrspace(1)* %out, doubl
 
 ; FUNC-LABEL: {{^}}fma_f64_abs_neg_src2:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
+; GFX90A: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], -\|v\[[0-9]+:[0-9]+\]\|}}
 define amdgpu_kernel void @fma_f64_abs_neg_src2(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -168,6 +185,7 @@ define amdgpu_kernel void @fma_f64_abs_neg_src2(double addrspace(1)* %out, doubl
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src0:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_lit_src0(double addrspace(1)* %out,
                      double addrspace(1)* %in2, double addrspace(1)* %in3) {
    %r1 = load double, double addrspace(1)* %in2
@@ -179,6 +197,7 @@ define amdgpu_kernel void @fma_f64_lit_src0(double addrspace(1)* %out,
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src1:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
+; GFX90A: v_fmac_f64_e32 {{v\[[0-9]+:[0-9]+\], 2.0, v\[[0-9]+:[0-9]+\]}}
 define amdgpu_kernel void @fma_f64_lit_src1(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in3) {
    %r0 = load double, double addrspace(1)* %in1
@@ -190,6 +209,7 @@ define amdgpu_kernel void @fma_f64_lit_src1(double addrspace(1)* %out, double ad
 
 ; FUNC-LABEL: {{^}}fma_f64_lit_src2:
 ; SI: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0}}
+; GFX90A: v_fma_f64 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\], 2.0}}
 define amdgpu_kernel void @fma_f64_lit_src2(double addrspace(1)* %out, double addrspace(1)* %in1,
                      double addrspace(1)* %in2) {
    %r0 = load double, double addrspace(1)* %in1

@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: LIBCXX-WINDOWS-FIXME
+
 // <filesystem>
 
 // path temp_directory_path();
@@ -55,10 +57,24 @@ TEST_CASE(basic_tests)
       std::string name;
       path p;
     } cases[] = {
+#ifdef _WIN32
+        {"TMP", env.create_dir("dir1")},
+        {"TEMP", env.create_dir("dir2")},
+        {"USERPROFILE", env.create_dir("dir3")}
+#else
         {"TMPDIR", env.create_dir("dir1")},
         {"TMP", env.create_dir("dir2")},
         {"TEMP", env.create_dir("dir3")},
         {"TEMPDIR", env.create_dir("dir4")}
+#endif
+    };
+    TestCase ignored_cases[] = {
+#ifdef _WIN32
+        {"TMPDIR", env.create_dir("dir5")},
+        {"TEMPDIR", env.create_dir("dir6")},
+#else
+        {"USERPROFILE", env.create_dir("dir5")},
+#endif
     };
     for (auto& TC : cases) {
         PutEnv(TC.name, TC.p);
@@ -108,12 +124,30 @@ TEST_CASE(basic_tests)
         UnsetEnv(TC.name);
     }
     // No env variables are defined
+    path fallback;
     {
         std::error_code ec = GetTestEC();
         path ret = temp_directory_path(ec);
         TEST_CHECK(!ec);
+#ifndef _WIN32
+        // On Windows, the function falls back to the Windows folder.
         TEST_CHECK(ret == "/tmp");
+#endif
         TEST_CHECK(is_directory(ret));
+        fallback = ret;
+    }
+    for (auto& TC : ignored_cases) {
+        // Check that certain variables are ignored
+        PutEnv(TC.name, TC.p);
+        std::error_code ec = GetTestEC();
+        path ret = temp_directory_path(ec);
+        TEST_CHECK(!ec);
+
+        // Check that we return the same as above when no vars were defined.
+        TEST_CHECK(ret == fallback);
+
+        // Finally erase this env variable
+        UnsetEnv(TC.name);
     }
 }
 

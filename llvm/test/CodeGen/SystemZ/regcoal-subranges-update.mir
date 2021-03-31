@@ -63,7 +63,7 @@ body:             |
   ; CHECK:   $r3d = LGHI 0
   ; CHECK:   $r4d = LGHI 0
   ; CHECK:   $r5d = COPY [[LGFR]]
-  ; CHECK:   KILL killed $r2d, killed $r3d, killed $r4d, $r5d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+  ; CHECK:   KILL killed $r2d, killed $r3d, killed $r4d, $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
   ; CHECK:   ADJCALLSTACKUP 0, 0
   ; CHECK:   [[LGHI]]:addr64bit = nuw nsw LA [[LGHI]], 1, $noreg
   ; CHECK:   J %bb.1
@@ -85,7 +85,7 @@ body:             |
     $r3d = COPY %2
     $r4d = COPY %2
     $r5d = COPY killed %4
-    KILL killed $r2d, killed $r3d, killed $r4d, killed $r5d, csr_systemz, implicit-def dead $r14d, implicit-def dead $cc
+    KILL killed $r2d, killed $r3d, killed $r4d, killed $r5d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
     ADJCALLSTACKUP 0, 0
     %1:gr64bit = nuw nsw LA killed %0, 1, $noreg
     %7:addr64bit = COPY killed %1

@@ -170,10 +170,10 @@ MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGet(intptr_t rank,
 
 /// Same as "mlirVectorTypeGet" but returns a nullptr wrapping MlirType on
 /// illegal arguments, emitting appropriate diagnostics.
-MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGetChecked(intptr_t rank,
+MLIR_CAPI_EXPORTED MlirType mlirVectorTypeGetChecked(MlirLocation loc,
+                                                     intptr_t rank,
                                                      const int64_t *shape,
-                                                     MlirType elementType,
-                                                     MlirLocation loc);
+                                                     MlirType elementType);
 
 //===----------------------------------------------------------------------===//
 // Ranked / Unranked Tensor type.
@@ -196,10 +196,9 @@ MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGet(intptr_t rank,
 
 /// Same as "mlirRankedTensorTypeGet" but returns a nullptr wrapping MlirType on
 /// illegal arguments, emitting appropriate diagnostics.
-MLIR_CAPI_EXPORTED MlirType mlirRankedTensorTypeGetChecked(intptr_t rank,
-                                                           const int64_t *shape,
-                                                           MlirType elementType,
-                                                           MlirLocation loc);
+MLIR_CAPI_EXPORTED MlirType
+mlirRankedTensorTypeGetChecked(MlirLocation loc, intptr_t rank,
+                               const int64_t *shape, MlirType elementType);
 
 /// Creates an unranked tensor type with the given element type in the same
 /// context as the element type. The type is owned by the context.
@@ -208,7 +207,7 @@ MLIR_CAPI_EXPORTED MlirType mlirUnrankedTensorTypeGet(MlirType elementType);
 /// Same as "mlirUnrankedTensorTypeGet" but returns a nullptr wrapping MlirType
 /// on illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType
-mlirUnrankedTensorTypeGetChecked(MlirType elementType, MlirLocation loc);
+mlirUnrankedTensorTypeGetChecked(MlirLocation loc, MlirType elementType);
 
 //===----------------------------------------------------------------------===//
 // Ranked / Unranked MemRef type.
@@ -225,38 +224,38 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAUnrankedMemRef(MlirType type);
 /// same context as element type. The type is owned by the context.
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGet(
     MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
-    MlirAffineMap const *affineMaps, unsigned memorySpace);
+    MlirAffineMap const *affineMaps, MlirAttribute memorySpace);
 
 /// Same as "mlirMemRefTypeGet" but returns a nullptr-wrapping MlirType o
 /// illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeGetChecked(
-    MlirType elementType, intptr_t rank, const int64_t *shape, intptr_t numMaps,
-    MlirAffineMap const *affineMaps, unsigned memorySpace, MlirLocation loc);
+    MlirLocation loc, MlirType elementType, intptr_t rank, const int64_t *shape,
+    intptr_t numMaps, MlirAffineMap const *affineMaps,
+    MlirAttribute memorySpace);
 
 /// Creates a MemRef type with the given rank, shape, memory space and element
 /// type in the same context as the element type. The type has no affine maps,
 /// i.e. represents a default row-major contiguous memref. The type is owned by
 /// the context.
-MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeContiguousGet(MlirType elementType,
-                                                        intptr_t rank,
-                                                        const int64_t *shape,
-                                                        unsigned memorySpace);
+MLIR_CAPI_EXPORTED MlirType
+mlirMemRefTypeContiguousGet(MlirType elementType, intptr_t rank,
+                            const int64_t *shape, MlirAttribute memorySpace);
 
 /// Same as "mlirMemRefTypeContiguousGet" but returns a nullptr wrapping
 /// MlirType on illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirMemRefTypeContiguousGetChecked(
-    MlirType elementType, intptr_t rank, const int64_t *shape,
-    unsigned memorySpace, MlirLocation loc);
+    MlirLocation loc, MlirType elementType, intptr_t rank, const int64_t *shape,
+    MlirAttribute memorySpace);
 
 /// Creates an Unranked MemRef type with the given element type and in the given
 /// memory space. The type is owned by the context of element type.
-MLIR_CAPI_EXPORTED MlirType mlirUnrankedMemRefTypeGet(MlirType elementType,
-                                                      unsigned memorySpace);
+MLIR_CAPI_EXPORTED MlirType
+mlirUnrankedMemRefTypeGet(MlirType elementType, MlirAttribute memorySpace);
 
 /// Same as "mlirUnrankedMemRefTypeGet" but returns a nullptr wrapping
 /// MlirType on illegal arguments, emitting appropriate diagnostics.
 MLIR_CAPI_EXPORTED MlirType mlirUnrankedMemRefTypeGetChecked(
-    MlirType elementType, unsigned memorySpace, MlirLocation loc);
+    MlirLocation loc, MlirType elementType, MlirAttribute memorySpace);
 
 /// Returns the number of affine layout maps in the given MemRef type.
 MLIR_CAPI_EXPORTED intptr_t mlirMemRefTypeGetNumAffineMaps(MlirType type);
@@ -266,10 +265,11 @@ MLIR_CAPI_EXPORTED MlirAffineMap mlirMemRefTypeGetAffineMap(MlirType type,
                                                             intptr_t pos);
 
 /// Returns the memory space of the given MemRef type.
-MLIR_CAPI_EXPORTED unsigned mlirMemRefTypeGetMemorySpace(MlirType type);
+MLIR_CAPI_EXPORTED MlirAttribute mlirMemRefTypeGetMemorySpace(MlirType type);
 
 /// Returns the memory spcae of the given Unranked MemRef type.
-MLIR_CAPI_EXPORTED unsigned mlirUnrankedMemrefGetMemorySpace(MlirType type);
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirUnrankedMemrefGetMemorySpace(MlirType type);
 
 //===----------------------------------------------------------------------===//
 // Tuple type.

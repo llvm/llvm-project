@@ -28,6 +28,10 @@ class AffineForOp;
 class Location;
 class OpBuilder;
 
+namespace memref {
+class AllocOp;
+} // end namespace memref
+
 /// Replaces all "dereferencing" uses of `oldMemRef` with `newMemRef` while
 /// optionally remapping the old memref's indices using the supplied affine map,
 /// `indexRemap`. The new memref could be of a different shape or rank.
@@ -88,7 +92,7 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 /// Rewrites the memref defined by this alloc op to have an identity layout map
 /// and updates all its indexing uses. Returns failure if any of its uses
 /// escape (while leaving the IR in a valid state).
-LogicalResult normalizeMemRef(AllocOp op);
+LogicalResult normalizeMemRef(memref::AllocOp *op);
 
 /// Uses the old memref type map layout and computes the new memref type to have
 /// a new shape and a layout map, where the old layout map has been normalized

@@ -309,10 +309,9 @@ static bool avoidZeroOffsetLandingPad(MachineFunction &MF) {
       MachineBasicBlock::iterator MI = MBB.begin();
       while (!MI->isEHLabel())
         ++MI;
-      MCInst Noop;
-      MF.getSubtarget().getInstrInfo()->getNoop(Noop);
+      MCInst Nop = MF.getSubtarget().getInstrInfo()->getNop();
       BuildMI(MBB, MI, DebugLoc(),
-              MF.getSubtarget().getInstrInfo()->get(Noop.getOpcode()));
+              MF.getSubtarget().getInstrInfo()->get(Nop.getOpcode()));
       return false;
     }
   }

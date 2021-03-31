@@ -9,3 +9,27 @@ add_mlir_interface(SideEffectInterfaces)
 add_mlir_interface(VectorInterfaces)
 add_mlir_interface(ViewLikeInterface)
 
+set(LLVM_TARGET_DEFINITIONS DataLayoutInterfaces.td)
+mlir_tablegen(DataLayoutAttrInterface.h.inc -gen-attr-interface-decls)
+mlir_tablegen(DataLayoutAttrInterface.cpp.inc -gen-attr-interface-defs)
+mlir_tablegen(DataLayoutOpInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(DataLayoutOpInterface.cpp.inc -gen-op-interface-defs)
+mlir_tablegen(DataLayoutTypeInterface.h.inc -gen-type-interface-decls)
+mlir_tablegen(DataLayoutTypeInterface.cpp.inc -gen-type-interface-defs)
+add_public_tablegen_target(MLIRDataLayoutInterfacesIncGen)
+add_dependencies(mlir-generic-headers MLIRDataLayoutInterfacesIncGen)
+
+add_mlir_doc(DataLayoutInterfaces
+  -gen-attr-interface-docs
+  DataLayoutAttrInterface
+  Interfaces/)
+
+add_mlir_doc(DataLayoutInterfaces
+  -gen-type-interface-docs
+  DataLayoutTypeInterface
+  Interfaces/)
+
+add_mlir_doc(DataLayoutInterfaces
+  -gen-op-interface-docs
+  DataLayoutOpInterface
+  Interfaces/)

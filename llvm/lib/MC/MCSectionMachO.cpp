@@ -174,12 +174,12 @@ bool MCSectionMachO::isVirtualSection() const {
 /// flavored .s file.  If successful, this fills in the specified Out
 /// parameters and returns an empty string.  When an invalid section
 /// specifier is present, this returns a string indicating the problem.
-std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
-                                                  StringRef &Segment,    // Out.
-                                                  StringRef &Section,    // Out.
-                                                  unsigned  &TAA,        // Out.
-                                                  bool      &TAAParsed,  // Out.
-                                                  unsigned  &StubSize) { // Out.
+Error MCSectionMachO::ParseSectionSpecifier(StringRef Spec,       // In.
+                                            StringRef &Segment,   // Out.
+                                            StringRef &Section,   // Out.
+                                            unsigned &TAA,        // Out.
+                                            bool &TAAParsed,      // Out.
+                                            unsigned &StubSize) { // Out.
   TAAParsed = false;
 
   SmallVector<StringRef, 5> SplitSpec;
@@ -194,25 +194,23 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
   StringRef Attrs = GetEmptyOrTrim(3);
   StringRef StubSizeStr = GetEmptyOrTrim(4);
 
-  // Verify that the segment is present and not too long.
-  if (Segment.empty() || Segment.size() > 16)
-    return "mach-o section specifier requires a segment whose length is "
-           "between 1 and 16 characters";
-
-  // Verify that the section is present and not too long.
+  // Verify that the section is present.
   if (Section.empty())
-    return "mach-o section specifier requires a segment and section "
-           "separated by a comma";
+    return createStringError(inconvertibleErrorCode(),
+                             "mach-o section specifier requires a segment "
+                             "and section separated by a comma");
 
+  // Verify that the section is not too long.
   if (Section.size() > 16)
-    return "mach-o section specifier requires a section whose length is "
-           "between 1 and 16 characters";
+    return createStringError(inconvertibleErrorCode(),
+                             "mach-o section specifier requires a section "
+                             "whose length is between 1 and 16 characters");
 
   // If there is no comma after the section, we're done.
   TAA = 0;
   StubSize = 0;
   if (SectionType.empty())
-    return "";
+    return Error::success();
 
   // Figure out which section type it is.
   auto TypeDescriptor =
@@ -223,7 +221,9 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
 
   // If we didn't find the section type, reject it.
   if (TypeDescriptor == std::end(SectionTypeDescriptors))
-    return "mach-o section specifier uses an unknown section type";
+    return createStringError(inconvertibleErrorCode(),
+                             "mach-o section specifier uses an unknown "
+                             "section type");
 
   // Remember the TypeID.
   TAA = TypeDescriptor - std::begin(SectionTypeDescriptors);
@@ -233,9 +233,10 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
   if (Attrs.empty()) {
     // S_SYMBOL_STUBS always require a symbol stub size specifier.
     if (TAA == MachO::S_SYMBOL_STUBS)
-      return "mach-o section specifier of type 'symbol_stubs' requires a size "
-             "specifier";
-    return "";
+      return createStringError(inconvertibleErrorCode(),
+                               "mach-o section specifier of type "
+                               "'symbol_stubs' requires a size specifier");
+    return Error::success();
   }
 
   // The attribute list is a '+' separated list of attributes.
@@ -249,7 +250,9 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
                         return SectionAttr.trim() == Descriptor.AssemblerName;
                       });
     if (AttrDescriptorI == std::end(SectionAttrDescriptors))
-      return "mach-o section specifier has invalid attribute";
+      return createStringError(inconvertibleErrorCode(),
+                               "mach-o section specifier has invalid "
+                               "attribute");
 
     TAA |= AttrDescriptorI->AttrFlag;
   }
@@ -258,19 +261,24 @@ std::string MCSectionMachO::ParseSectionSpecifier(StringRef Spec,        // In.
   if (StubSizeStr.empty()) {
     // S_SYMBOL_STUBS always require a symbol stub size specifier.
     if (TAA == MachO::S_SYMBOL_STUBS)
-      return "mach-o section specifier of type 'symbol_stubs' requires a size "
-      "specifier";
-    return "";
+      return createStringError(inconvertibleErrorCode(),
+                               "mach-o section specifier of type "
+                               "'symbol_stubs' requires a size specifier");
+    return Error::success();
   }
 
   // If we have a stub size spec, we must have a sectiontype of S_SYMBOL_STUBS.
   if ((TAA & MachO::SECTION_TYPE) != MachO::S_SYMBOL_STUBS)
-    return "mach-o section specifier cannot have a stub size specified because "
-           "it does not have type 'symbol_stubs'";
+    return createStringError(inconvertibleErrorCode(),
+                             "mach-o section specifier cannot have a stub "
+                             "size specified because it does not have type "
+                             "'symbol_stubs'");
 
   // Convert the stub size from a string to an integer.
   if (StubSizeStr.getAsInteger(0, StubSize))
-    return "mach-o section specifier has a malformed stub size";
+    return createStringError(inconvertibleErrorCode(),
+                             "mach-o section specifier has a malformed "
+                             "stub size");
 
-  return "";
+  return Error::success();
 }

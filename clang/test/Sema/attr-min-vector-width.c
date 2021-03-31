@@ -5,7 +5,7 @@ void f(void) __attribute__((__min_vector_width__(i))); /* expected-error {{'__mi
 
 void f2(void) __attribute__((__min_vector_width__(128)));
 
-void f3(void) __attribute__((__min_vector_width__(128), __min_vector_width__(256))); /* expected-warning {{attribute '__min_vector_width__' is already applied with different parameters}} */
+void f3(void) __attribute__((__min_vector_width__(128), __min_vector_width__(256))); /* expected-warning {{attribute '__min_vector_width__' is already applied with different arguments}} */
 
 void f4(void) __attribute__((__min_vector_width__())); /* expected-error {{'__min_vector_width__' attribute takes one argument}} */
 

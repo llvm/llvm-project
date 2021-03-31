@@ -117,7 +117,7 @@ static FloatType parseExpressedTypeAndRange(DialectAsmParser &parser,
 ///   storage-range ::= integer-literal `:` integer-literal
 ///   storage-type ::= (`i` | `u`) integer-literal
 ///   expressed-type-spec ::= `:` `f` integer-literal
-static Type parseAnyType(DialectAsmParser &parser, Location loc) {
+static Type parseAnyType(DialectAsmParser &parser) {
   IntegerType storageType;
   FloatType expressedType;
   unsigned typeFlags = 0;
@@ -155,8 +155,8 @@ static Type parseAnyType(DialectAsmParser &parser, Location loc) {
     return nullptr;
   }
 
-  return AnyQuantizedType::getChecked(typeFlags, storageType, expressedType,
-                                      storageTypeMin, storageTypeMax, loc);
+  return parser.getChecked<AnyQuantizedType>(
+      typeFlags, storageType, expressedType, storageTypeMin, storageTypeMax);
 }
 
 static ParseResult parseQuantParams(DialectAsmParser &parser, double &scale,
@@ -191,7 +191,7 @@ static ParseResult parseQuantParams(DialectAsmParser &parser, double &scale,
 ///   axis-spec ::= `:` integer-literal
 ///   scale-zero ::= float-literal `:` integer-literal
 ///   scale-zero-list ::= `{` scale-zero (`,` scale-zero)* `}`
-static Type parseUniformType(DialectAsmParser &parser, Location loc) {
+static Type parseUniformType(DialectAsmParser &parser) {
   IntegerType storageType;
   FloatType expressedType;
   unsigned typeFlags = 0;
@@ -278,14 +278,14 @@ static Type parseUniformType(DialectAsmParser &parser, Location loc) {
   if (isPerAxis) {
     ArrayRef<double> scalesRef(scales.begin(), scales.end());
     ArrayRef<int64_t> zeroPointsRef(zeroPoints.begin(), zeroPoints.end());
-    return UniformQuantizedPerAxisType::getChecked(
+    return parser.getChecked<UniformQuantizedPerAxisType>(
         typeFlags, storageType, expressedType, scalesRef, zeroPointsRef,
-        quantizedDimension, storageTypeMin, storageTypeMax, loc);
+        quantizedDimension, storageTypeMin, storageTypeMax);
   }
 
-  return UniformQuantizedType::getChecked(typeFlags, storageType, expressedType,
-                                          scales.front(), zeroPoints.front(),
-                                          storageTypeMin, storageTypeMax, loc);
+  return parser.getChecked<UniformQuantizedType>(
+      typeFlags, storageType, expressedType, scales.front(), zeroPoints.front(),
+      storageTypeMin, storageTypeMax);
 }
 
 /// Parses an CalibratedQuantizedType.
@@ -294,7 +294,7 @@ static Type parseUniformType(DialectAsmParser &parser, Location loc) {
 ///   expressed-spec ::= expressed-type `<` calibrated-range `>`
 ///   expressed-type ::= `f` integer-literal
 ///   calibrated-range ::= float-literal `:` float-literal
-static Type parseCalibratedType(DialectAsmParser &parser, Location loc) {
+static Type parseCalibratedType(DialectAsmParser &parser) {
   FloatType expressedType;
   double min;
   double max;
@@ -313,24 +313,22 @@ static Type parseCalibratedType(DialectAsmParser &parser, Location loc) {
     return nullptr;
   }
 
-  return CalibratedQuantizedType::getChecked(expressedType, min, max, loc);
+  return parser.getChecked<CalibratedQuantizedType>(expressedType, min, max);
 }
 
 /// Parse a type registered to this dialect.
 Type QuantizationDialect::parseType(DialectAsmParser &parser) const {
-  Location loc = parser.getEncodedSourceLoc(parser.getNameLoc());
-
   // All types start with an identifier that we switch on.
   StringRef typeNameSpelling;
   if (failed(parser.parseKeyword(&typeNameSpelling)))
     return nullptr;
 
   if (typeNameSpelling == "uniform")
-    return parseUniformType(parser, loc);
+    return parseUniformType(parser);
   if (typeNameSpelling == "any")
-    return parseAnyType(parser, loc);
+    return parseAnyType(parser);
   if (typeNameSpelling == "calibrated")
-    return parseCalibratedType(parser, loc);
+    return parseCalibratedType(parser);
 
   parser.emitError(parser.getNameLoc(),
                    "unknown quantized type " + typeNameSpelling);

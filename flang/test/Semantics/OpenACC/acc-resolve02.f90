@@ -1,4 +1,4 @@
-! RUN: %S/../test_errors.sh %s %t %f18 -fopenacc
+! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
 
 subroutine compute()
   integer :: a(3), c, i

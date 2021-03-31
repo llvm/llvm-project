@@ -422,7 +422,7 @@ GFX7, GFX8 and GFX10 only.
     r128                Specifies 128 bits texture resource size.
     =================== ================================================
 
-.. WARNING:: Using this modifier should descrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
+.. WARNING:: Using this modifier should decrease *rsrc* operand size from 8 to 4 dwords, but assembler does not currently support this feature.
 
 tfe
 ~~~
@@ -831,7 +831,7 @@ GFX10 only.
 
 Unified format is a replacement for :ref:`data<amdgpu_synid_format_data>`
 and :ref:`numeric<amdgpu_synid_format_num>` formats. For compatibility with older ISA,
-:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepthed
+:ref:`syntax with data and numeric formats<amdgpu_synid_fmt>` is still accepted
 provided that the combination of formats can be mapped to a unified format.
 
 Supported unified formats and equivalent combinations of data and numeric formats
@@ -1186,7 +1186,7 @@ invalid lanes is disabled.
     ======================================== ================================================
     Syntax                                   Description
     ======================================== ================================================
-    bound_ctrl:0                             Enables data sharing with invalid lanes.
+    bound_ctrl:1                             Enables data sharing with invalid lanes.
 
                                              Accessing data from an invalid lane will
                                              return zero.

@@ -41,18 +41,21 @@ multiclass V_INTERP_P1_F32_m : VINTRP_m <
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]
 >;
 
-let OtherPredicates = [has32BankLDS] in {
+let OtherPredicates = [has32BankLDS, isNotGFX90APlus] in {
 
 defm V_INTERP_P1_F32 : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS]
+} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus]
 
-let OtherPredicates = [has16BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
+let OtherPredicates = [has16BankLDS, isNotGFX90APlus],
+    Constraints = "@earlyclobber $vdst", isAsmParserOnly=1 in {
 
 defm V_INTERP_P1_F32_16bank : V_INTERP_P1_F32_m;
 
-} // End OtherPredicates = [has32BankLDS], Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
+} // End OtherPredicates = [has32BankLDS, isNotGFX90APlus],
+  //     Constraints = "@earlyclobber $vdst", isAsmParserOnly=1
 
+let OtherPredicates = [isNotGFX90APlus] in {
 let DisableEncoding = "$src0", Constraints = "$src0 = $vdst" in {
 
 defm V_INTERP_P2_F32 : VINTRP_m <
@@ -73,6 +76,8 @@ defm V_INTERP_MOV_F32 : VINTRP_m <
   [(set f32:$vdst, (int_amdgcn_interp_mov (i32 timm:$vsrc),
                    (i32 timm:$attrchan), (i32 timm:$attr), M0))]>;
 
+} // End OtherPredicates = [isNotGFX90APlus]
+
 } // End Uses = [MODE, M0, EXEC]
 
 //===----------------------------------------------------------------------===//
@@ -84,11 +89,6 @@ def ATOMIC_FENCE : SPseudoInstSI<
   "ATOMIC_FENCE $ordering, $scope"> {
   let hasSideEffects = 1;
   let maybeAtomic = 1;
-}
-
-def VOP_I64_I64_DPP : VOPProfile <[i64, i64, untyped, untyped]> {
-  let HasExt = 1;
-  let HasExtDPP = 1;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
@@ -107,7 +107,7 @@ def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)>;
 
 // 64-bit vector move with dpp. Expanded post-RA.
-def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64_DPP> {
+def V_MOV_B64_DPP_PSEUDO : VOP_DPP_Pseudo <"v_mov_b64_dpp", VOP_I64_I64> {
   let Size = 16; // Requires two 8-byte v_mov_b32_dpp to complete.
 }
 
@@ -119,17 +119,18 @@ def WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 // turned into a copy by WQM pass, but does not seed WQM requirements.
 def SOFT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
-// Pseudoinstruction for @llvm.amdgcn.wwm. It is turned into a copy post-RA, so
+// Pseudoinstruction for @llvm.amdgcn.strict.wwm. It is turned into a copy post-RA, so
 // that the @earlyclobber is respected. The @earlyclobber is to make sure that
-// the instruction that defines $src0 (which is run in WWM) doesn't
+// the instruction that defines $src0 (which is run in Whole Wave Mode) doesn't
 // accidentally clobber inactive channels of $vdst.
 let Constraints = "@earlyclobber $vdst" in {
-def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
+def STRICT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 }
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Uses = [EXEC];
   let Defs = [EXEC, SCC];
   let hasSideEffects = 0;
@@ -137,7 +138,21 @@ def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let mayStore = 0;
 }
 
-def EXIT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+def EXIT_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def ENTER_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
+  let Uses = [EXEC];
+  let Defs = [EXEC, SCC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -232,6 +247,7 @@ def S_MOV_B64_term : WrapTerminatorInst<S_MOV_B64>;
 def S_XOR_B64_term : WrapTerminatorInst<S_XOR_B64>;
 def S_OR_B64_term : WrapTerminatorInst<S_OR_B64>;
 def S_ANDN2_B64_term : WrapTerminatorInst<S_ANDN2_B64>;
+def S_AND_B64_term : WrapTerminatorInst<S_AND_B64>;
 }
 
 let WaveSizePredicate = isWave32 in {
@@ -239,6 +255,7 @@ def S_MOV_B32_term : WrapTerminatorInst<S_MOV_B32>;
 def S_XOR_B32_term : WrapTerminatorInst<S_XOR_B32>;
 def S_OR_B32_term : WrapTerminatorInst<S_OR_B32>;
 def S_ANDN2_B32_term : WrapTerminatorInst<S_ANDN2_B32>;
+def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 }
 
 
@@ -256,19 +273,6 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
 
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
-
-// Dummy terminator instruction to use after control flow instructions
-// replaced with exec mask operations.
-def SI_MASK_BRANCH : VPseudoInstSI <
-  (outs), (ins brtarget:$target)> {
-  let isBranch = 0;
-  let isTerminator = 1;
-  let isBarrier = 0;
-  let SchedRW = [];
-  let hasNoSchedulingInfo = 1;
-  let FixedSize = 1;
-  let Size = 0;
-}
 
 let isTerminator = 1 in {
 
@@ -339,23 +343,21 @@ multiclass PseudoInstKill <dag ins> {
   // required in degenerate cases (when V_CMPX cannot be used due to constant
   // bus limitations) and because it allows us to avoid having to track SCC
   // liveness across basic blocks.
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _PSEUDO : PseudoInstSI <(outs), ins> {
     let isConvergent = 1;
     let usesCustomInserter = 1;
   }
 
-  let Defs = [EXEC,VCC,SCC] in
+  let Defs = [EXEC,SCC] in
   def _TERMINATOR : SPseudoInstSI <(outs), ins> {
     let isTerminator = 1;
   }
 }
 
 defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
+let Defs = [VCC] in
 defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
-
-let Defs = [EXEC] in
-def SI_KILL_CLEANUP : SPseudoInstSI <(outs), (ins)>;
 
 let Defs = [EXEC,VCC] in
 def SI_ILLEGAL_COPY : SPseudoInstSI <
@@ -377,6 +379,18 @@ def SI_PS_LIVE : PseudoInstSI <
   [(set i1:$dst, (int_amdgcn_ps_live))]> {
   let SALU = 1;
 }
+
+let Uses = [EXEC] in {
+def SI_LIVE_MASK : PseudoInstSI <
+  (outs SReg_1:$dst), (ins),
+  [(set i1:$dst, (int_amdgcn_live_mask))]> {
+  let SALU = 1;
+}
+let Defs = [EXEC,SCC] in {
+// Demote: Turn a pixel shader thread into a helper lane.
+def SI_DEMOTE_I1 : SPseudoInstSI <(outs), (ins SCSrc_i1:$src, i1imm:$killvalue)>;
+} // End Defs = [EXEC,SCC]
+} // End Uses = [EXEC]
 
 def SI_MASKED_UNREACHABLE : SPseudoInstSI <(outs), (ins),
   [(int_amdgcn_unreachable)],
@@ -465,7 +479,7 @@ def SI_CALL : SPseudoInstSI <
 
 // Tail call handling pseudo
 def SI_TCRETURN : SPseudoInstSI <(outs),
-  (ins SSrc_b64:$src0, unknown:$callee, i32imm:$fpdiff),
+  (ins SReg_64:$src0, unknown:$callee, i32imm:$fpdiff),
   [(AMDGPUtc_return i64:$src0, tglobaladdr:$callee, i32:$fpdiff)]> {
   let Size = 4;
   let isCall = 1;
@@ -749,6 +763,16 @@ def : Pat <
 def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote i1:$src),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, 0)
+>;
+
+def : Pat <
+  (int_amdgcn_wqm_demote (i1 (not i1:$src))),
+  (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
   // TODO: we could add more variants for other types of conditionals
@@ -1351,6 +1375,19 @@ def : GCNPat <
 //     sub1)
 // >;
 
+// COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
+// of the real value.
+def : GCNPat <
+  (fneg (v2f32 SReg_64:$src)),
+  (v2f32 (REG_SEQUENCE SReg_64,
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub0,
+         (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1))
+>;
+
 } // End let AddedComplexity = 1
 
 def : GCNPat <
@@ -1414,6 +1451,15 @@ def : GCNPat <
                   (V_MOV_B32_e32 (i32 0x80000000))), // Set sign bit.
     sub1)
 >;
+
+def : GCNPat <
+  (getDivergentFrag<fneg>.ret (v2f32 VReg_64:$src)),
+  (V_PK_ADD_F32 11 /* OP_SEL_1 | NEG_LO | HEG_HI */, VReg_64:$src,
+                11 /* OP_SEL_1 | NEG_LO | HEG_HI */, 0,
+                0, 0, 0, 0, 0)
+> {
+  let SubtargetPredicate = HasPackedFP32Ops;
+}
 
 def : GCNPat <
   (fcopysign f16:$src0, f16:$src1),
@@ -1534,8 +1580,15 @@ def : GCNPat <
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
+let OtherPredicates = [isNotGFX90APlus] in
 // FIXME: Should use _e64 and select source modifiers.
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
+
+let OtherPredicates = [isGFX90APlus] in
+def : GCNPat <
+  (fpow f32:$src0, f32:$src1),
+  (V_EXP_F32_e32 (V_MUL_LEGACY_F32_e64 0, f32:$src1, SRCMODS.NONE, (V_LOG_F32_e32 f32:$src0), 0, 0))
+>;
 
 def : GCNPat <
   (i32 (sext i1:$src0)),
@@ -1795,6 +1848,8 @@ class FPToI1Pat<Instruction Inst, int KOne, ValueType kone_type, ValueType vt, S
   (i1 (Inst 0, (kone_type KOne), $src0_modifiers, $src0, DSTCLAMP.NONE))
 >;
 
+def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_ONE, i16, f16, fp_to_uint>;
+def : FPToI1Pat<V_CMP_EQ_F16_e64, CONST.FP16_NEG_ONE, i16, f16, fp_to_sint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_ONE, i32, f32, fp_to_uint>;
 def : FPToI1Pat<V_CMP_EQ_F32_e64, CONST.FP32_NEG_ONE, i32, f32, fp_to_sint>;
 def : FPToI1Pat<V_CMP_EQ_F64_e64, CONST.FP64_ONE, i64, f64, fp_to_uint>;
@@ -2143,6 +2198,17 @@ def : GCNPat <
                   SRCMODS.NONE, $src2)
 >;
 
+let SubtargetPredicate = isGFX90APlus in
+def : GCNPat <
+  (fma (f64 (VOP3Mods0 f64:$src0, i32:$src0_modifiers, i1:$clamp, i32:$omod)),
+       (f64 (VOP3Mods f64:$src1, i32:$src1_modifiers)),
+       (f64 (VOP3NoMods f64:$src2))),
+  (V_FMAC_F64_e64 $src0_modifiers, $src0, $src1_modifiers, $src1,
+                  SRCMODS.NONE, $src2, $clamp, $omod)
+>;
+
+// COPY is workaround tablegen bug from multiple outputs
+// from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
   (v2i16 (build_vector (i16 0), (i16 SReg_32:$src1))),
   (S_LSHL_B32 SReg_32:$src1, (i16 16))
@@ -2235,7 +2301,7 @@ def : GCNPat <
 def : GCNPat <
   (i64 (int_amdgcn_mov_dpp i64:$src, timm:$dpp_ctrl, timm:$row_mask,
                            timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO VReg_64:$src, VReg_64:$src,
+  (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$src, VReg_64_Align2:$src,
                         (as_i32timm $dpp_ctrl), (as_i32timm $row_mask),
                         (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
@@ -2244,7 +2310,7 @@ def : GCNPat <
 def : GCNPat <
   (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO VReg_64:$old, VReg_64:$src, (as_i32timm $dpp_ctrl),
+  (V_MOV_B64_DPP_PSEUDO VReg_64_Align2:$old, VReg_64_Align2:$src, (as_i32timm $dpp_ctrl),
                         (as_i32timm $row_mask), (as_i32timm $bank_mask),
                         (as_i1timm $bound_ctrl))
 >;
@@ -2575,6 +2641,18 @@ def G_AMDGPU_CVT_F32_UBYTE#N : AMDGPUGenericInstruction {
 }
 }
 
+def G_AMDGPU_CVT_PK_I16_I32 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_MED3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.
@@ -2616,6 +2694,8 @@ def G_AMDGPU_BUFFER_ATOMIC_XOR : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_INC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_DEC : BufferAtomicGenericInstruction;
 def G_AMDGPU_BUFFER_ATOMIC_FADD : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FMIN : BufferAtomicGenericInstruction;
+def G_AMDGPU_BUFFER_ATOMIC_FMAX : BufferAtomicGenericInstruction;
 
 def G_AMDGPU_BUFFER_ATOMIC_CMPSWAP : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);

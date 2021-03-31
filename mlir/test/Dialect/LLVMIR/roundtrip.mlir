@@ -284,8 +284,8 @@ func @null() {
 
 // CHECK-LABEL: @atomicrmw
 func @atomicrmw(%ptr : !llvm.ptr<f32>, %val : f32) {
-  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} unordered : f32
-  %0 = llvm.atomicrmw fadd %ptr, %val unordered : f32
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} monotonic : f32
+  %0 = llvm.atomicrmw fadd %ptr, %val monotonic : f32
   llvm.return
 }
 
@@ -418,4 +418,21 @@ func @fastmathFlags(%arg0: f32, %arg1: f32, %arg2: i32) {
 // CHECK: {{.*}} = llvm.fneg %arg0 : f32
   %10 = llvm.fneg %arg0 {fastmathFlags = #llvm.fastmath<>} : f32
   return
+}
+
+module {
+  // CHECK-LABEL: @loopOptions
+  llvm.func @loopOptions() {
+    // CHECK: llvm.br
+    // CHECK-SAME: llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
+    llvm.br ^bb1 {llvm.loop = {options = #llvm.loopopts<disable_unroll = true, disable_licm = true, interleave_count = 1, disable_pipeline = true, pipeline_initiation_interval = 1>}, parallel_access = [@metadata::@group1]}
+  ^bb1:
+    llvm.return
+  }
+  // CHECK: llvm.metadata @metadata attributes {test_attribute} {
+  llvm.metadata @metadata attributes {test_attribute} {
+    // CHECK: llvm.access_group @group1
+    llvm.access_group @group1
+    llvm.return
+  }
 }

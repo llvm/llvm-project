@@ -187,12 +187,21 @@ public:
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + BTF::BTFDataSecVarSize * Vars.size();
   }
-  void addVar(uint32_t Id, const MCSymbol *Sym, uint32_t Size) {
+  void addDataSecEntry(uint32_t Id, const MCSymbol *Sym, uint32_t Size) {
     Vars.push_back(std::make_tuple(Id, Sym, Size));
   }
   std::string getName() { return Name; }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
+};
+
+/// Handle binary floating point type.
+class BTFTypeFloat : public BTFTypeBase {
+  StringRef Name;
+
+public:
+  BTFTypeFloat(uint32_t SizeInBits, StringRef TypeName);
+  void completeType(BTFDebug &BDebug) override;
 };
 
 /// String table.

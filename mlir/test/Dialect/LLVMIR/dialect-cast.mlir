@@ -3,12 +3,13 @@
 // These are the supported cases, just make sure they don't trigger errors, op
 // syntax is tested elsewhere.
 
-func @mlir_dialect_cast(%0: index, %1: i32, %2: bf16, %3: f16, %4: f32, %5: f64,
+func @mlir_dialect_cast(%0: index, %1: vector<2x2x2xf32>,
                         %6: vector<42xf32>, %7: memref<42xf32>,
                         %8: memref<?xf32>, %9: memref<f32>,
                         %10: memref<*xf32>) {
   llvm.mlir.cast %0 : index to i64
   llvm.mlir.cast %0 : index to i32
+  llvm.mlir.cast %1 : vector<2x2x2xf32> to !llvm.array<2 x array<2 x vector<2xf32>>>
   llvm.mlir.cast %7 : memref<42xf32> to !llvm.ptr<f32>
   llvm.mlir.cast %7 : memref<42xf32> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
   llvm.mlir.cast %8 : memref<?xf32> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1xi64>, array<1xi64>)>
@@ -65,15 +66,29 @@ func @mlir_dialect_cast_f64(%0 : f64) {
 // -----
 
 func @mlir_dialect_cast_integer_non_integer(%0 : i16) {
-  // expected-error@+1 {{unsupported cast}}
+  // expected-error@+1 {{invalid cast between integer and non-integer}}
   llvm.mlir.cast %0 : i16 to f16
 }
 
 // -----
 
 func @mlir_dialect_cast_scalable_vector(%0 : vector<2xf32>) {
-  // expected-error@+1 {{vector types should not be casted}}
+  // expected-error@+1 {{invalid cast for vector types}}
   llvm.mlir.cast %0 : vector<2xf32> to !llvm.vec<?x2xf32>
+}
+
+// -----
+
+func @mlir_dialect_cast_vector_to_self(%0 : vector<2xf32>) {
+  // expected-error@+1 {{vector types should not be casted}}
+  llvm.mlir.cast %0 : vector<2xf32> to vector<2xf32>
+}
+
+// -----
+
+func @mlir_dialect_cast_nd_vector(%0 : vector<2x2xf32>) {
+  // expected-error@+1 {{invalid cast for vector, expected array}}
+  llvm.mlir.cast %0 : vector<2x2xf32> to !llvm.struct<()>
 }
 
 // -----

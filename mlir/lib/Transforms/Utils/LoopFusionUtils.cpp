@@ -388,7 +388,7 @@ void mlir::fuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
   // Promote any single iteration slice loops.
   for (AffineForOp forOp : sliceLoops)
-    promoteIfSingleIteration(forOp);
+    (void)promoteIfSingleIteration(forOp);
 }
 
 /// Collect loop nest statistics (eg. loop trip count and operation count)

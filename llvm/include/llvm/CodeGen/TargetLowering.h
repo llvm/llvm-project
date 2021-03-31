@@ -528,10 +528,6 @@ public:
     return false;
   }
 
-  /// If a branch or a select condition is skewed in one direction by more than
-  /// this factor, it is very likely to be predicted correctly.
-  virtual BranchProbability getPredictableBranchThreshold() const;
-
   /// Return true if the following transform is beneficial:
   /// fold (conv (load x)) -> (load (conv*)x)
   /// On architectures that don't natively support some vector loads
@@ -1611,7 +1607,7 @@ public:
   /// helps to ensure that such replacements don't generate code that causes an
   /// alignment error (trap) on the target machine.
   virtual bool allowsMisalignedMemoryAccesses(
-      EVT, unsigned AddrSpace = 0, unsigned Align = 1,
+      EVT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool * /*Fast*/ = nullptr) const {
     return false;
@@ -2458,6 +2454,8 @@ public:
     case ISD::UDIV:
     case ISD::SREM:
     case ISD::UREM:
+    case ISD::SSUBSAT:
+    case ISD::USUBSAT:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -2711,6 +2709,13 @@ public:
     return isOperationLegal(ISD::FMAD, N->getValueType(0));
   }
 
+  // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
+  // than FMUL and ADD is delegated to the machine combiner.
+  virtual bool generateFMAsInMachineCombiner(EVT VT,
+                                             CodeGenOpt::Level OptLevel) const {
+    return false;
+  }
+
   /// Return true if it's profitable to narrow operations of type VT1 to
   /// VT2. e.g. on x86, it's profitable to narrow from i32 to i8 but not from
   /// i32 to i16.
@@ -2788,6 +2793,10 @@ public:
   virtual bool shouldAvoidTransformToShift(EVT VT, unsigned Amount) const {
     return false;
   }
+
+  /// Does this target require the clearing of high-order bits in a register
+  /// passed to the fp16 to fp conversion library function.
+  virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
   //===--------------------------------------------------------------------===//
   // Runtime Library hooks
@@ -4406,6 +4415,12 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandBSWAP(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand BITREVERSE nodes. Expands scalar/vector BITREVERSE nodes.
+  /// Returns SDValue() if expand fails.
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandBITREVERSE(SDNode *N, SelectionDAG &DAG) const;
+
   /// Turn load of vector type into a load of the individual elements.
   /// \param LD load to expand
   /// \returns BUILD_VECTOR and TokenFactor nodes.
@@ -4493,6 +4508,33 @@ public:
   /// Expand an SREM or UREM using SDIV/UDIV or SDIVREM/UDIVREM, if legal.
   /// Returns true if the expansion was successful.
   bool expandREM(SDNode *Node, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
+  /// method accepts vectors as its arguments.
+  SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Legalize a SETCC with given LHS and RHS and condition code CC on the
+  /// current target.
+  ///
+  /// If the SETCC has been legalized using AND / OR, then the legalized node
+  /// will be stored in LHS. RHS and CC will be set to SDValue(). NeedInvert
+  /// will be set to false.
+  ///
+  /// If the SETCC has been legalized by using getSetCCSwappedOperands(),
+  /// then the values of LHS and RHS will be swapped, CC will be set to the
+  /// new condition, and NeedInvert will be set to false.
+  ///
+  /// If the SETCC has been legalized using the inverse condcode, then LHS and
+  /// RHS will be unchanged, CC will set to the inverted condcode, and
+  /// NeedInvert will be set to true. The caller must invert the result of the
+  /// SETCC with SelectionDAG::getLogicalNOT() or take equivalent action to swap
+  /// the effect of a true/false result.
+  ///
+  /// \returns true if the SetCC has been legalized, false if it hasn't.
+  bool LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT, SDValue &LHS,
+                             SDValue &RHS, SDValue &CC, bool &NeedInvert,
+                             const SDLoc &dl, SDValue &Chain,
+                             bool IsSignaling = false) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

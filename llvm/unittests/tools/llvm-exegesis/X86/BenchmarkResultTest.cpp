@@ -67,7 +67,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
                                         .addReg(X86::AL)
                                         .addReg(X86::AH)
                                         .addImm(123)
-                                        .addFPImm(0.5));
+                                        .addDFPImm(bit_cast<uint64_t>(0.5)));
   ToDisk.Key.Config = "config";
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{X86::AL, APInt(8, "-1", 10)},

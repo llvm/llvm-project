@@ -328,13 +328,20 @@ PreservedAnalyses ModuleSanitizerCoveragePass::run(Module &M,
 std::pair<Value *, Value *>
 ModuleSanitizerCoverage::CreateSecStartEnd(Module &M, const char *Section,
                                            Type *Ty) {
-  GlobalVariable *SecStart = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionStart(Section));
+  // Use ExternalWeak so that if all sections are discarded due to section
+  // garbage collection, the linker will not report undefined symbol errors.
+  // Windows defines the start/stop symbols in compiler-rt so no need for
+  // ExternalWeak.
+  GlobalValue::LinkageTypes Linkage = TargetTriple.isOSBinFormatCOFF()
+                                          ? GlobalVariable::ExternalLinkage
+                                          : GlobalVariable::ExternalWeakLinkage;
+  GlobalVariable *SecStart =
+      new GlobalVariable(M, Ty->getPointerElementType(), false, Linkage,
+                         nullptr, getSectionStart(Section));
   SecStart->setVisibility(GlobalValue::HiddenVisibility);
-  GlobalVariable *SecEnd = new GlobalVariable(
-      M, Ty->getPointerElementType(), false, GlobalVariable::ExternalLinkage,
-      nullptr, getSectionEnd(Section));
+  GlobalVariable *SecEnd =
+      new GlobalVariable(M, Ty->getPointerElementType(), false, Linkage,
+                         nullptr, getSectionEnd(Section));
   SecEnd->setVisibility(GlobalValue::HiddenVisibility);
   IRBuilder<> IRB(M.getContext());
   if (!TargetTriple.isOSBinFormatCOFF())
@@ -499,10 +506,7 @@ bool ModuleSanitizerCoverage::instrumentModule(
     IRBuilder<> IRBCtor(Ctor->getEntryBlock().getTerminator());
     IRBCtor.CreateCall(InitFunction, {SecStartEnd.first, SecStartEnd.second});
   }
-  // We don't reference these arrays directly in any of our runtime functions,
-  // so we need to prevent them from being dead stripped.
-  if (TargetTriple.isOSBinFormatMachO())
-    appendToUsed(M, GlobalsToAppendToUsed);
+  appendToUsed(M, GlobalsToAppendToUsed);
   appendToCompilerUsed(M, GlobalsToAppendToCompilerUsed);
   return true;
 }
@@ -676,16 +680,26 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
-  if (TargetTriple.supportsCOMDAT() && !F.isInterposable())
-    if (auto Comdat =
-            GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
+  if (TargetTriple.supportsCOMDAT() &&
+      (TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+    if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Align(DL->getTypeStoreSize(Ty).getFixedSize()));
-  GlobalsToAppendToUsed.push_back(Array);
-  GlobalsToAppendToCompilerUsed.push_back(Array);
-  MDNode *MD = MDNode::get(F.getContext(), ValueAsMetadata::get(&F));
-  Array->addMetadata(LLVMContext::MD_associated, *MD);
+
+  // sancov_pcs parallels the other metadata section(s). Optimizers (e.g.
+  // GlobalOpt/ConstantMerge) may not discard sancov_pcs and the other
+  // section(s) as a unit, so we conservatively retain all unconditionally in
+  // the compiler.
+  //
+  // With comdat (COFF/ELF), the linker can guarantee the associated sections
+  // will be retained or discarded as a unit, so llvm.compiler.used is
+  // sufficient. Otherwise, conservatively make all of them retained by the
+  // linker.
+  if (Array->hasComdat())
+    GlobalsToAppendToCompilerUsed.push_back(Array);
+  else
+    GlobalsToAppendToUsed.push_back(Array);
 
   return Array;
 }
@@ -833,10 +847,10 @@ void ModuleSanitizerCoverage::InjectTraceForGep(
     Function &, ArrayRef<GetElementPtrInst *> GepTraceTargets) {
   for (auto GEP : GepTraceTargets) {
     IRBuilder<> IRB(GEP);
-    for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
-      if (!isa<ConstantInt>(*I) && (*I)->getType()->isIntegerTy())
+    for (Use &Idx : GEP->indices())
+      if (!isa<ConstantInt>(Idx) && Idx->getType()->isIntegerTy())
         IRB.CreateCall(SanCovTraceGepFunction,
-                       {IRB.CreateIntCast(*I, IntptrTy, true)});
+                       {IRB.CreateIntCast(Idx, IntptrTy, true)});
   }
 }
 

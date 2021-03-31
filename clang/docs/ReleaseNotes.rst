@@ -71,12 +71,24 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
-- ...
+- -Wshadow now also checks for shadowed structured bindings
+- ``-B <prefix>`` (when ``<prefix>`` is a directory) was overloaded to additionally
+  detect GCC installations under ``<prefix>`` (``lib{,32,64}/gcc{,-cross}/$triple``).
+  This behavior was incompatible with GCC, caused interop issues with
+  ``--gcc-toolchain``, and was thus dropped. Specify ``--gcc-toolchain=<dir>``
+  instead. ``-B``'s other GCC-compatible semantics are preserved:
+  ``$prefix/$triple-$file`` and ``$prefix$file`` are searched for executables,
+  libraries, includes, and data files used by the compiler.
 
 Removed Compiler Flags
 -------------------------
 
-- ...
+- The clang-cl ``/fallback`` flag, which made clang-cl invoke Microsoft Visual
+  C++ on files it couldn't compile itself, has been removed.
+
+- ``-Wreturn-std-move-in-c++11``, which checked whether an entity is affected by
+  `CWG1579 <https://wg21.link/CWG1579>`_ to become implicitly movable, has been
+  removed.
 
 New Pragmas in Clang
 --------------------
@@ -146,6 +158,10 @@ Build System Changes
 These are major changes to the build system that have happened since the 12.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
+- The option ``LIBCLANG_INCLUDE_CLANG_TOOLS_EXTRA`` no longer exists. There were
+  two releases with that flag forced off, and no uses were added that forced it
+  on. The recommended replacement is clangd.
+
 - ...
 
 AST Matchers
@@ -158,6 +174,47 @@ clang-format
 
 - Option ``SpacesInLineCommentPrefix`` has been added to control the
   number of spaces in a line comments prefix.
+
+- Option ``SortIncludes`` has been updated from a ``bool`` to an
+  ``enum`` with backwards compatibility. In addition to the previous
+  ``true``/``false`` states (now ``CaseSensitive``/``Never``), a third
+  state has been added (``CaseInsensitive``) which causes an alphabetical sort
+  with case used as a tie-breaker.
+
+  .. code-block:: c++
+
+    // Never (previously false)
+    #include "B/A.h"
+    #include "A/B.h"
+    #include "a/b.h"
+    #include "A/b.h"
+    #include "B/a.h"
+
+    // CaseSensitive (previously true)
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
+    #include "a/b.h"
+
+    // CaseInsensitive
+    #include "A/B.h"
+    #include "A/b.h"
+    #include "a/b.h"
+    #include "B/A.h"
+    #include "B/a.h"
+
+- ``BasedOnStyle: InheritParentConfig`` allows to use the ``.clang-format`` of
+  the parent directories to overwrite only parts of it.
+
+- Option ``IndentAccessModifiers`` has been added to be able to give access
+  modifiers their own indentation level inside records.
+
+- Option ``ShortNamespaceLines`` has been added to give better control
+  over ``FixNamespaceComments`` when determining a namespace length.
+
+- Support for Whitesmiths has been improved, with fixes for ``namespace`` blocks
+  and ``case`` blocks and labels.
 
 libclang
 --------

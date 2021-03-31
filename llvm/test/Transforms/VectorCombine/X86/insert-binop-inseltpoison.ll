@@ -128,7 +128,7 @@ define <2 x i64> @ins1_ins1_sdiv(i64 %x, i64 %y) {
 define <2 x i64> @ins1_ins1_udiv(i64 %x, i64 %y) {
 ; CHECK-LABEL: @ins1_ins1_udiv(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = udiv i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> <i64 6, i64 poison>, i64 [[R_SCALAR]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> <i64 6, i64 undef>, i64 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %i0 = insertelement <2 x i64> <i64 42, i64 undef>, i64 %x, i32 1
@@ -143,7 +143,7 @@ define <2 x i64> @ins1_ins1_udiv(i64 %x, i64 %y) {
 define <2 x i64> @ins1_ins1_urem(i64 %x, i64 %y) {
 ; CHECK-LABEL: @ins1_ins1_urem(
 ; CHECK-NEXT:    [[R_SCALAR:%.*]] = urem i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[R_SCALAR]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> <i64 undef, i64 0>, i64 [[R_SCALAR]], i64 1
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %i0 = insertelement <2 x i64> <i64 42, i64 undef>, i64 %x, i64 1

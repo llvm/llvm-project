@@ -181,26 +181,22 @@ define <2 x i8> @and1_shl1_is_cmp_eq_0_vec_undef(<2 x i8> %x) {
   ret <2 x i8> %and
 }
 
-; (1 >> x) & 1 --> zext(x == 0)
+; The mask is unnecessary.
 
 define i8 @and1_lshr1_is_cmp_eq_0(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP1]] to i8
-; CHECK-NEXT:    ret i8 [[AND]]
+; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[SH]]
 ;
   %sh = lshr i8 1, %x
   %and = and i8 %sh, 1
   ret i8 %and
 }
 
-; Don't do it if the shift has another use.
-
 define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_multiuse(
 ; CHECK-NEXT:    [[SH:%.*]] = lshr i8 1, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SH]], 1
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[SH]], [[AND]]
+; CHECK-NEXT:    [[ADD:%.*]] = shl nuw nsw i8 [[SH]], 1
 ; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %sh = lshr i8 1, %x
@@ -209,13 +205,12 @@ define i8 @and1_lshr1_is_cmp_eq_0_multiuse(i8 %x) {
   ret i8 %add
 }
 
-; (1 >> x) & 1 --> zext(x == 0)
+; The mask is unnecessary.
 
 define <2 x i8> @and1_lshr1_is_cmp_eq_0_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @and1_lshr1_is_cmp_eq_0_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[AND:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
-; CHECK-NEXT:    ret <2 x i8> [[AND]]
+; CHECK-NEXT:    [[SH:%.*]] = lshr <2 x i8> <i8 1, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SH]]
 ;
   %sh = lshr <2 x i8> <i8 1, i8 1>, %x
   %and = and <2 x i8> %sh, <i8 1, i8 1>

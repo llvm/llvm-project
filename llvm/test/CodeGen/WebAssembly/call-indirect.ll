@@ -22,7 +22,7 @@ define void @call_indirect_void(void ()* %callee) {
 ; OBJ-NEXT:        Field:           __linear_memory
 ; OBJ-NEXT:        Kind:            MEMORY
 ; OBJ-NEXT:        Memory:
-; OBJ-NEXT:          Initial:         0x0
+; OBJ-NEXT:          Minimum:         0x0
 ; OBJ-NEXT:      - Module:          env
 ; OBJ-NEXT:        Field:           __indirect_function_table
 ; OBJ-NEXT:        Kind:            TABLE

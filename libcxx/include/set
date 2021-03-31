@@ -429,6 +429,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__tree>
 #include <__node_handle>
 #include <functional>
+#include <iterator> // __libcpp_erase_if_container
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -450,7 +451,7 @@ public:
     typedef key_type                                 value_type;
     typedef _Compare                                 key_compare;
     typedef key_compare                              value_compare;
-    typedef typename __identity<_Allocator>::type    allocator_type;
+    typedef __identity_t<_Allocator>                 allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -852,12 +853,12 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _Compare = less<typename iterator_traits<_InputIterator>::value_type>,
-         class _Allocator = allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class _Compare = less<__iter_value_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>>
 set(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-  -> set<typename iterator_traits<_InputIterator>::value_type, _Compare, _Allocator>;
+  -> set<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
@@ -869,8 +870,8 @@ set(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator())
 template<class _InputIterator, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
 set(_InputIterator, _InputIterator, _Allocator)
-  -> set<typename iterator_traits<_InputIterator>::value_type,
-         less<typename iterator_traits<_InputIterator>::value_type>, _Allocator>;
+  -> set<__iter_value_type<_InputIterator>,
+         less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 template<class _Key, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
@@ -964,7 +965,7 @@ template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
     typename set<_Key, _Compare, _Allocator>::size_type
     erase_if(set<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 
@@ -974,11 +975,11 @@ class _LIBCPP_TEMPLATE_VIS multiset
 {
 public:
     // types:
-    typedef _Key                                      key_type;
+    typedef _Key                                     key_type;
     typedef key_type                                 value_type;
-    typedef _Compare                                  key_compare;
+    typedef _Compare                                 key_compare;
     typedef key_compare                              value_compare;
-    typedef typename __identity<_Allocator>::type    allocator_type;
+    typedef __identity_t<_Allocator>                 allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -1379,12 +1380,12 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template<class _InputIterator,
-         class _Compare = less<typename iterator_traits<_InputIterator>::value_type>,
-         class _Allocator = allocator<typename iterator_traits<_InputIterator>::value_type>,
+         class _Compare = less<__iter_value_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_value_type<_InputIterator>>,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>,
          class = _EnableIf<!__is_allocator<_Compare>::value, void>>
 multiset(_InputIterator, _InputIterator, _Compare = _Compare(), _Allocator = _Allocator())
-  -> multiset<typename iterator_traits<_InputIterator>::value_type, _Compare, _Allocator>;
+  -> multiset<__iter_value_type<_InputIterator>, _Compare, _Allocator>;
 
 template<class _Key, class _Compare = less<_Key>,
          class _Allocator = allocator<_Key>,
@@ -1396,8 +1397,8 @@ multiset(initializer_list<_Key>, _Compare = _Compare(), _Allocator = _Allocator(
 template<class _InputIterator, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
 multiset(_InputIterator, _InputIterator, _Allocator)
-  -> multiset<typename iterator_traits<_InputIterator>::value_type,
-         less<typename iterator_traits<_InputIterator>::value_type>, _Allocator>;
+  -> multiset<__iter_value_type<_InputIterator>,
+         less<__iter_value_type<_InputIterator>>, _Allocator>;
 
 template<class _Key, class _Allocator,
          class = _EnableIf<__is_allocator<_Allocator>::value, void>>
@@ -1490,7 +1491,7 @@ template <class _Key, class _Compare, class _Allocator, class _Predicate>
 inline _LIBCPP_INLINE_VISIBILITY
     typename multiset<_Key, _Compare, _Allocator>::size_type
     erase_if(multiset<_Key, _Compare, _Allocator>& __c, _Predicate __pred) {
-  return __libcpp_erase_if_container(__c, __pred);
+  return _VSTD::__libcpp_erase_if_container(__c, __pred);
 }
 #endif
 

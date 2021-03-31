@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Driver.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
+#include "ObjC.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
@@ -16,11 +17,15 @@
 #include "lld/Common/Reproduce.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/LTO/LTO.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TextAPI/MachO/InterfaceFile.h"
 #include "llvm/TextAPI/MachO/TextAPIReader.h"
 
 using namespace llvm;
@@ -36,9 +41,9 @@ using namespace lld::macho;
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const opt::OptTable::Info optInfo[] = {
+static const OptTable::Info optInfo[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
+  {X1, X2, X10,         X11,         OPT_##ID, Option::KIND##Class,            \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
 #include "Options.inc"
 #undef OPTION
@@ -48,9 +53,10 @@ MachOOptTable::MachOOptTable() : OptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
-static void handleColorDiagnostics(opt::InputArgList &args) {
-  auto *arg = args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
-                              OPT_no_color_diagnostics);
+static void handleColorDiagnostics(InputArgList &args) {
+  const Arg *arg =
+      args.getLastArg(OPT_color_diagnostics, OPT_color_diagnostics_eq,
+                      OPT_no_color_diagnostics);
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
@@ -68,7 +74,7 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   }
 }
 
-opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
+InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Make InputArgList from string vectors.
   unsigned missingIndex;
   unsigned missingCount;
@@ -77,7 +83,7 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
   cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, vec);
-  opt::InputArgList args = ParseArgs(vec, missingIndex, missingCount);
+  InputArgList args = ParseArgs(vec, missingIndex, missingCount);
 
   // Handle -fatal_warnings early since it converts missing argument warnings
   // to errors.
@@ -88,7 +94,7 @@ opt::InputArgList MachOOptTable::parse(ArrayRef<const char *> argv) {
 
   handleColorDiagnostics(args);
 
-  for (opt::Arg *arg : args.filtered(OPT_UNKNOWN)) {
+  for (const Arg *arg : args.filtered(OPT_UNKNOWN)) {
     std::string nearest;
     if (findNearest(arg->getAsString(args), nearest) > 1)
       error("unknown argument '" + arg->getAsString(args) + "'");
@@ -113,12 +119,12 @@ static std::string rewritePath(StringRef s) {
 
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
-std::string macho::createResponseFile(const opt::InputArgList &args) {
+std::string macho::createResponseFile(const InputArgList &args) {
   SmallString<0> data;
   raw_svector_ostream os(data);
 
   // Copy the command line to the output while rewriting paths.
-  for (auto *arg : args) {
+  for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_reproduce:
       break;
@@ -159,12 +165,15 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
   // they are consistent.
   if (fs::exists(path))
     return std::string(path);
+  else
+    depTracker->logFileNotFound(path);
 
   SmallString<261> location = path;
   path::replace_extension(location, ".tbd");
   if (fs::exists(location))
     return std::string(location);
-
+  else
+    depTracker->logFileNotFound(location);
   return {};
 }
 
@@ -173,7 +182,8 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
 Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
-                                       DylibFile *umbrella) {
+                                       DylibFile *umbrella,
+                                       bool isBundleLoader) {
   StringRef path = mbref.getBufferIdentifier();
   DylibFile *&file = loadedDylibs[CachedHashStringRef(path)];
   if (file)
@@ -187,13 +197,35 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
             ": " + toString(result.takeError()));
       return {};
     }
-    file = make<DylibFile>(**result, umbrella);
+    file = make<DylibFile>(**result, umbrella, isBundleLoader);
   } else {
     assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
-           magic == file_magic::macho_dynamically_linked_shared_lib_stub);
-    file = make<DylibFile>(mbref, umbrella);
+           magic == file_magic::macho_dynamically_linked_shared_lib_stub ||
+           magic == file_magic::macho_executable ||
+           magic == file_magic::macho_bundle);
+    file = make<DylibFile>(mbref, umbrella, isBundleLoader);
   }
   return file;
+}
+
+Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
+                                               uint32_t modTime,
+                                               StringRef archiveName,
+                                               bool objCOnly) {
+  switch (identify_magic(mb.getBuffer())) {
+  case file_magic::macho_object:
+    if (!objCOnly || hasObjCSection(mb))
+      return make<ObjFile>(mb, modTime, archiveName);
+    return None;
+  case file_magic::bitcode:
+    if (!objCOnly || check(isBitcodeContainingObjCCategory(mb)))
+      return make<BitcodeFile>(mb);
+    return None;
+  default:
+    error(archiveName + ": archive member " + mb.getBufferIdentifier() +
+          " has unhandled file type");
+    return None;
+  }
 }
 
 uint32_t macho::getModTime(StringRef path) {
@@ -211,4 +243,54 @@ void macho::printArchiveMemberLoad(StringRef reason, const InputFile *f) {
     message(toString(f));
   if (config->printWhyLoad)
     message(reason + " forced load of " + toString(f));
+}
+
+macho::DependencyTracker::DependencyTracker(StringRef path)
+    : path(path), active(!path.empty()) {
+  if (active && fs::exists(path) && !fs::can_write(path)) {
+    warn("Ignoring dependency_info option since specified path is not "
+         "writeable.");
+    active = false;
+  }
+}
+
+void macho::DependencyTracker::write(llvm::StringRef version,
+                                     const llvm::SetVector<InputFile *> &inputs,
+                                     llvm::StringRef output) {
+  if (!active)
+    return;
+
+  std::error_code ec;
+  llvm::raw_fd_ostream os(path, ec, llvm::sys::fs::OF_None);
+  if (ec) {
+    warn("Error writing dependency info to file");
+    return;
+  }
+
+  auto addDep = [&os](DepOpCode opcode, const StringRef &path) {
+    // XXX: Even though DepOpCode's underlying type is uint8_t,
+    // this cast is still needed because Clang older than 10.x has a bug,
+    // where it doesn't know to cast the enum to its underlying type.
+    // Hence `<< DepOpCode` is ambiguous to it.
+    os << static_cast<uint8_t>(opcode);
+    os << path;
+    os << '\0';
+  };
+
+  addDep(DepOpCode::Version, version);
+
+  // Sort the input by its names.
+  std::vector<StringRef> inputNames;
+  inputNames.reserve(inputs.size());
+  for (InputFile *f : inputs)
+    inputNames.push_back(f->getName());
+  llvm::sort(inputNames);
+
+  for (const StringRef &in : inputNames)
+    addDep(DepOpCode::Input, in);
+
+  for (const std::string &f : notFounds)
+    addDep(DepOpCode::NotFound, f);
+
+  addDep(DepOpCode::Output, output);
 }

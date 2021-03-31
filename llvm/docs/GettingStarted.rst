@@ -38,6 +38,10 @@ This is an example workflow and configuration to get and build the LLVM source:
    * ``git clone https://github.com/llvm/llvm-project.git``
    * Or, on windows, ``git clone --config core.autocrlf=false
      https://github.com/llvm/llvm-project.git``
+   * To save storage and speed-up the checkout time, you may want to do a 
+     `shallow clone <https://git-scm.com/docs/git-clone#Documentation/git-clone.txt---depthltdepthgt>`_. 
+     For example, to get the latest revision of the LLVM project, use 
+     ``git clone --depth 1 https://github.com/llvm/llvm-project.git``
 
 #. Configure and build LLVM and Clang:
 
@@ -556,31 +560,6 @@ When reverting changes using git, the default message will say "This reverts
 commit XYZ". Leave this at the end of the commit message, but add some details
 before it as to why the commit is being reverted. A brief explanation and/or
 links to bots that demonstrate the problem are sufficient.
-
-Checkout via SVN (deprecated)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The SVN repository is no longer updated, but it is still available for now. If
-you need to check the code out of SVN rather than git for some reason, you can
-do it like so:
-
-* ``cd where-you-want-llvm-to-live``
-* Read-Only: ``svn co https://llvm.org/svn/llvm-project/llvm/trunk llvm``
-* Read-Write: ``svn co https://user@llvm.org/svn/llvm-project/llvm/trunk llvm``
-
-This will create an '``llvm``' directory in the current directory and fully
-populate it with the LLVM source code, Makefiles, test directories, and local
-copies of documentation files.
-
-If you want to get a specific release (as opposed to the most recent revision),
-you can check it out from the '``tags``' directory (instead of '``trunk``'). The
-following releases are located in the following subdirectories of the '``tags``'
-directory:
-
-* Release 3.5.0 and later: **RELEASE_350/final** and so on
-* Release 2.9 through 3.4: **RELEASE_29/final** and so on
-* Release 1.1 through 2.8: **RELEASE_11** and so on
-* Release 1.0: **RELEASE_1**
 
 Local LLVM Configuration
 ------------------------

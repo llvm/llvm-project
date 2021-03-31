@@ -114,6 +114,9 @@ class IncludeStructure {
 public:
   std::vector<Inclusion> MainFileIncludes;
 
+  // Return all transitively reachable files.
+  llvm::ArrayRef<std::string> allHeaders() const { return RealPathNames; }
+
   // Return all transitively reachable files, and their minimum include depth.
   // All transitive includes (absolute paths), with their minimum include depth.
   // Root --> 0, #included file --> 1, etc.

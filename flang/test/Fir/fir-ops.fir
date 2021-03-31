@@ -1,7 +1,6 @@
 // Test the FIR operations
 
-// RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
-// UNSUPPORTED: !fir
+// RUN: fir-opt %s | fir-opt | FileCheck %s
 
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
 // CHECK: func private @box1() -> !fir.boxchar<2>
@@ -98,12 +97,12 @@ func @instructions() {
   %23 = fir.extract_value %22, %21 : (!fir.type<derived{f:f32}>, !fir.field) -> f32
 
 // CHECK: [[VAL_26:%.*]] = constant 1 : i32
-// CHECK: [[VAL_27:%.*]] = fir.gendims [[VAL_26]], [[VAL_21]], [[VAL_26]] : (i32, i32, i32) -> !fir.dims<1>
+// CHECK: [[VAL_27:%.*]] = fir.shape [[VAL_21]] : (i32) -> !fir.shape<1>
 // CHECK: [[VAL_28:%.*]] = constant 1.0
 // CHECK: [[VAL_29:%.*]] = fir.insert_value [[VAL_24]], [[VAL_28]], [[VAL_23]] : (!fir.type<derived{f:f32}>, f32, !fir.field) -> !fir.type<derived{f:f32}>
 // CHECK: [[VAL_30:%.*]] = fir.len_param_index f, !fir.type<derived3{f:f32}>
   %c1 = constant 1 : i32
-  %24 = fir.gendims %c1, %19, %c1 : (i32, i32, i32) -> !fir.dims<1>
+  %24 = fir.shape %19 : (i32) -> !fir.shape<1>
   %cf1 = constant 1.0 : f32
   %25 = fir.insert_value %22, %cf1, %21 : (!fir.type<derived{f:f32}>, f32, !fir.field) -> !fir.type<derived{f:f32}>
   %26 = fir.len_param_index f, !fir.type<derived3{f:f32}>
@@ -143,7 +142,7 @@ func @boxing_match() {
 // CHECK: [[VAL_40:%.*]] = fir.alloca !fir.char<1>
 // CHECK: [[VAL_41:%.*]] = fir.alloca tuple<i32, f64>
 // CHECK: [[VAL_42:%.*]] = fir.embox [[VAL_38]] : (!fir.ref<i32>) -> !fir.box<i32>
-// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.dims<0>)
+// CHECK: [[VAL_43:%.*]]:6 = fir.unbox [[VAL_42]] : (!fir.box<i32>) -> (!fir.ref<i32>, i32, i32, !fir.tdesc<i32>, i32, !fir.array<3x?xindex>)
 // CHECK: [[VAL_44:%.*]] = constant 8 : i32
 // CHECK: [[VAL_45:%.*]] = fir.undefined !fir.char<1>
 // CHECK: [[VAL_46:%.*]] = fir.emboxchar [[VAL_40]], [[VAL_44]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -169,7 +168,7 @@ func @boxing_match() {
   %d3 = fir.alloca !fir.char<1>
   %e6 = fir.alloca tuple<i32,f64>
   %1 = fir.embox %0 : (!fir.ref<i32>) -> !fir.box<i32>
-  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.dims<0>)
+  %2:6 = fir.unbox %1 : (!fir.box<i32>) -> (!fir.ref<i32>,i32,i32,!fir.tdesc<i32>,i32,!fir.array<3x?xindex>)
   %c8 = constant 8 : i32
   %3 = fir.undefined !fir.char<1>
   %4 = fir.emboxchar %d3, %c8 : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
@@ -443,44 +442,44 @@ fir.dispatch_table @dispatch_tbl {
 }
 
 // CHECK-LABEL: func @compare_real(
-// CHECK-SAME: [[VAL_133:%.*]]: !fir.real<16>, [[VAL_134:%.*]]: !fir.real<16>) {
-func @compare_real(%a : !fir.real<16>, %b : !fir.real<16>) {
+// CHECK-SAME: [[VAL_133:%.*]]: f128, [[VAL_134:%.*]]: f128) {
+func @compare_real(%a : f128, %b : f128) {
 
-// CHECK: [[VAL_135:%.*]] = fir.cmpf "false", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_136:%.*]] = fir.cmpf "oeq", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_137:%.*]] = fir.cmpf "ogt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_138:%.*]] = fir.cmpf "oge", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %d0 = fir.cmpf "false", %a, %b : !fir.real<16>
-  %d1 = fir.cmpf "oeq", %a, %b : !fir.real<16>
-  %d2 = fir.cmpf "ogt", %a, %b : !fir.real<16>
-  %d3 = fir.cmpf "oge", %a, %b : !fir.real<16>
+// CHECK: [[VAL_135:%.*]] = fir.cmpf "false", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_136:%.*]] = fir.cmpf "oeq", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_137:%.*]] = fir.cmpf "ogt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_138:%.*]] = fir.cmpf "oge", [[VAL_133]], [[VAL_134]] : f128
+  %d0 = fir.cmpf "false", %a, %b : f128
+  %d1 = fir.cmpf "oeq", %a, %b : f128
+  %d2 = fir.cmpf "ogt", %a, %b : f128
+  %d3 = fir.cmpf "oge", %a, %b : f128
 
-// CHECK: [[VAL_139:%.*]] = fir.cmpf "olt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_140:%.*]] = fir.cmpf "ole", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_141:%.*]] = fir.cmpf "one", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_142:%.*]] = fir.cmpf "ord", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %a0 = fir.cmpf "olt", %a, %b : !fir.real<16>
-  %a1 = fir.cmpf "ole", %a, %b : !fir.real<16>
-  %a2 = fir.cmpf "one", %a, %b : !fir.real<16>
-  %a3 = fir.cmpf "ord", %a, %b : !fir.real<16>
+// CHECK: [[VAL_139:%.*]] = fir.cmpf "olt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_140:%.*]] = fir.cmpf "ole", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_141:%.*]] = fir.cmpf "one", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_142:%.*]] = fir.cmpf "ord", [[VAL_133]], [[VAL_134]] : f128
+  %a0 = fir.cmpf "olt", %a, %b : f128
+  %a1 = fir.cmpf "ole", %a, %b : f128
+  %a2 = fir.cmpf "one", %a, %b : f128
+  %a3 = fir.cmpf "ord", %a, %b : f128
 
-// CHECK: [[VAL_143:%.*]] = fir.cmpf "ueq", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_144:%.*]] = fir.cmpf "ugt", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_145:%.*]] = fir.cmpf "uge", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_146:%.*]] = fir.cmpf "ult", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %b0 = fir.cmpf "ueq", %a, %b : !fir.real<16>
-  %b1 = fir.cmpf "ugt", %a, %b : !fir.real<16>
-  %b2 = fir.cmpf "uge", %a, %b : !fir.real<16>
-  %b3 = fir.cmpf "ult", %a, %b : !fir.real<16>
+// CHECK: [[VAL_143:%.*]] = fir.cmpf "ueq", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_144:%.*]] = fir.cmpf "ugt", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_145:%.*]] = fir.cmpf "uge", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_146:%.*]] = fir.cmpf "ult", [[VAL_133]], [[VAL_134]] : f128
+  %b0 = fir.cmpf "ueq", %a, %b : f128
+  %b1 = fir.cmpf "ugt", %a, %b : f128
+  %b2 = fir.cmpf "uge", %a, %b : f128
+  %b3 = fir.cmpf "ult", %a, %b : f128
 
-// CHECK: [[VAL_147:%.*]] = fir.cmpf "ule", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_148:%.*]] = fir.cmpf "une", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_149:%.*]] = fir.cmpf "uno", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-// CHECK: [[VAL_150:%.*]] = fir.cmpf "true", [[VAL_133]], [[VAL_134]] : !fir.real<16>
-  %c0 = fir.cmpf "ule", %a, %b : !fir.real<16>
-  %c1 = fir.cmpf "une", %a, %b : !fir.real<16>
-  %c2 = fir.cmpf "uno", %a, %b : !fir.real<16>
-  %c3 = fir.cmpf "true", %a, %b : !fir.real<16>
+// CHECK: [[VAL_147:%.*]] = fir.cmpf "ule", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_148:%.*]] = fir.cmpf "une", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_149:%.*]] = fir.cmpf "uno", [[VAL_133]], [[VAL_134]] : f128
+// CHECK: [[VAL_150:%.*]] = fir.cmpf "true", [[VAL_133]], [[VAL_134]] : f128
+  %c0 = fir.cmpf "ule", %a, %b : f128
+  %c1 = fir.cmpf "une", %a, %b : f128
+  %c2 = fir.cmpf "uno", %a, %b : f128
+  %c3 = fir.cmpf "true", %a, %b : f128
 
 // CHECK: return
 // CHECK: }
@@ -532,52 +531,54 @@ func @compare_complex(%a : !fir.complex<16>, %b : !fir.complex<16>) {
 }
 
 // CHECK-LABEL: func @arith_real(
-// CHECK-SAME: [[VAL_169:%.*]]: !fir.real<16>, [[VAL_170:%.*]]: !fir.real<16>) -> !fir.real<16> {
-func @arith_real(%a : !fir.real<16>, %b : !fir.real<16>) -> !fir.real<16> {
+// CHECK-SAME: [[VAL_169:%.*]]: f128, [[VAL_170:%.*]]: f128) -> f128 {
+func @arith_real(%a : f128, %b : f128) -> f128 {
 
 // CHECK: [[VAL_171:%.*]] = constant 1.0
-// CHECK: [[VAL_172:%.*]] = fir.convert [[VAL_171]] : (f32) -> !fir.real<16>
-// CHECK: [[VAL_173:%.*]] = fir.negf [[VAL_169]] : !fir.real<16>
-// CHECK: [[VAL_174:%.*]] = fir.addf [[VAL_172]], [[VAL_173]] : !fir.real<16>
-// CHECK: [[VAL_175:%.*]] = fir.subf [[VAL_174]], [[VAL_170]] : !fir.real<16>
-// CHECK: [[VAL_176:%.*]] = fir.mulf [[VAL_173]], [[VAL_175]] : !fir.real<16>
-// CHECK: [[VAL_177:%.*]] = fir.divf [[VAL_176]], [[VAL_169]] : !fir.real<16>
+// CHECK: [[VAL_172:%.*]] = fir.convert [[VAL_171]] : (f32) -> f128
+// CHECK: [[VAL_173:%.*]] = fir.negf [[VAL_169]] : f128
+// CHECK: [[VAL_174:%.*]] = addf [[VAL_172]], [[VAL_173]] : f128
+// CHECK: [[VAL_175:%.*]] = subf [[VAL_174]], [[VAL_170]] : f128
+// CHECK: [[VAL_176:%.*]] = mulf [[VAL_173]], [[VAL_175]] : f128
+// CHECK: [[VAL_177:%.*]] = divf [[VAL_176]], [[VAL_169]] : f128
+// CHECK: [[VAL_178:%.*]] = fir.modf [[VAL_177]], [[VAL_170]] : f128
   %c1 = constant 1.0 : f32
-  %0 = fir.convert %c1 : (f32) -> !fir.real<16>
-  %1 = fir.negf %a : !fir.real<16>
-  %2 = fir.addf %0, %1 : !fir.real<16>
-  %3 = fir.subf %2, %b : !fir.real<16>
-  %4 = fir.mulf %1, %3 : !fir.real<16>
-  %5 = fir.divf %4, %a : !fir.real<16>
-// CHECK: return [[VAL_177]] : !fir.real<16>
+  %0 = fir.convert %c1 : (f32) -> f128
+  %1 = fir.negf %a : f128
+  %2 = addf %0, %1 : f128
+  %3 = subf %2, %b : f128
+  %4 = mulf %1, %3 : f128
+  %5 = divf %4, %a : f128
+  %6 = fir.modf %5, %b : f128
+// CHECK: return [[VAL_178]] : f128
 // CHECK: }
-  return %5 : !fir.real<16>
+  return %6 : f128
 }
 
 // CHECK-LABEL: func @arith_complex(
-// CHECK-SAME: [[VAL_178:%.*]]: !fir.complex<16>, [[VAL_179:%.*]]: !fir.complex<16>) -> !fir.complex<16> {
+// CHECK-SAME: [[VAL_179:%.*]]: !fir.complex<16>, [[VAL_180:%.*]]: !fir.complex<16>) -> !fir.complex<16> {
 func @arith_complex(%a : !fir.complex<16>, %b : !fir.complex<16>) -> !fir.complex<16> {
-// CHECK: [[VAL_180:%.*]] = fir.negc [[VAL_178]] : !fir.complex<16>
-// CHECK: [[VAL_181:%.*]] = fir.addc [[VAL_179]], [[VAL_180]] : !fir.complex<16>
-// CHECK: [[VAL_182:%.*]] = fir.subc [[VAL_181]], [[VAL_179]] : !fir.complex<16>
-// CHECK: [[VAL_183:%.*]] = fir.mulc [[VAL_180]], [[VAL_182]] : !fir.complex<16>
-// CHECK: [[VAL_184:%.*]] = fir.divc [[VAL_183]], [[VAL_178]] : !fir.complex<16>
+// CHECK: [[VAL_181:%.*]] = fir.negc [[VAL_179]] : !fir.complex<16>
+// CHECK: [[VAL_182:%.*]] = fir.addc [[VAL_180]], [[VAL_181]] : !fir.complex<16>
+// CHECK: [[VAL_183:%.*]] = fir.subc [[VAL_182]], [[VAL_180]] : !fir.complex<16>
+// CHECK: [[VAL_184:%.*]] = fir.mulc [[VAL_181]], [[VAL_183]] : !fir.complex<16>
+// CHECK: [[VAL_185:%.*]] = fir.divc [[VAL_184]], [[VAL_179]] : !fir.complex<16>
   %1 = fir.negc %a : !fir.complex<16>
   %2 = fir.addc %b, %1 : !fir.complex<16>
   %3 = fir.subc %2, %b : !fir.complex<16>
   %4 = fir.mulc %1, %3 : !fir.complex<16>
   %5 = fir.divc %4, %a : !fir.complex<16>
-// CHECK: return [[VAL_184]] : !fir.complex<16>
+// CHECK: return [[VAL_185]] : !fir.complex<16>
 // CHECK: }
   return %5 : !fir.complex<16>
 }
 
-// CHECK-LABEL: func @character_literal() -> !fir.array<13x!fir.char<1>> {
-func @character_literal() -> !fir.array<13 x !fir.char<1>> {
-// CHECK: [[VAL_185:%.*]] = fir.string_lit "Hello, World!"(13) : !fir.char<1>
-  %0 = fir.string_lit "Hello, World!"(13) : !fir.char<1>
-// CHECK: return [[VAL_185]] : !fir.array<13x!fir.char<1>>
-  return %0 : !fir.array<13 x !fir.char<1>>
+// CHECK-LABEL: func @character_literal() -> !fir.char<1,13> {
+func @character_literal() -> !fir.char<1,13> {
+// CHECK: [[VAL_186:%.*]] = fir.string_lit "Hello, World!"(13) : !fir.char<1,13>
+  %0 = fir.string_lit "Hello, World!"(13) : !fir.char<1,13>
+// CHECK: return [[VAL_186]] : !fir.char<1,13>
+  return %0 : !fir.char<1,13>
 // CHECK: }
 }
 
@@ -585,14 +586,14 @@ func @character_literal() -> !fir.array<13 x !fir.char<1>> {
 func private @earlyexit2(%a : i32) -> i1
 
 // CHECK-LABEL: func @early_exit(
-// CHECK-SAME: [[VAL_186:%.*]]: i1, [[VAL_187:%.*]]: i32) -> i1 {
+// CHECK-SAME: [[VAL_187:%.*]]: i1, [[VAL_188:%.*]]: i32) -> i1 {
 func @early_exit(%ok : i1, %k : i32) -> i1 {
-// CHECK: [[VAL_188:%.*]] = constant 1 : index
-// CHECK: [[VAL_189:%.*]] = constant 100 : index
+// CHECK: [[VAL_189:%.*]] = constant 1 : index
+// CHECK: [[VAL_190:%.*]] = constant 100 : index
   %c1 = constant 1 : index
   %c100 = constant 100 : index
 
-// CHECK: [[VAL_190:%.*]], [[VAL_191:%.*]] = fir.iterate_while ([[VAL_192:%.*]] = [[VAL_188]] to [[VAL_189]] step [[VAL_188]]) and ([[VAL_193:%.*]] = [[VAL_186]]) iter_args([[VAL_194:%.*]] = [[VAL_187]]) -> (i32) {
+// CHECK: %[[VAL_191:.*]]:2 = fir.iterate_while ([[VAL_192:%.*]] = [[VAL_189]] to [[VAL_190]] step [[VAL_189]]) and ([[VAL_193:%.*]] = [[VAL_187]]) iter_args([[VAL_194:%.*]] = [[VAL_188]]) -> (i32) {
 // CHECK: [[VAL_195:%.*]] = call @earlyexit2([[VAL_194]]) : (i32) -> i1
 // CHECK: fir.result [[VAL_195]], [[VAL_194]] : i1, i32
 // CHECK: }
@@ -600,7 +601,118 @@ func @early_exit(%ok : i1, %k : i32) -> i1 {
     %stop = call @earlyexit2(%v) : (i32) -> i1
     fir.result %stop, %v : i1, i32
   }
-// CHECK: return [[VAL_190]] : i1
+// CHECK: return %[[VAL_191]]#0 : i1
 // CHECK: }
   return %newOk#0 : i1
+}
+
+// CHECK-LABEL: @array_access
+func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
+  // CHECK-DAG: %[[c1:.*]] = constant 100
+  // CHECK-DAG: %[[c2:.*]] = constant 50
+  %c100 = constant 100 : index
+  %c50 = constant 50 : index
+  // CHECK: %[[sh:.*]] = fir.shape %[[c1]], %[[c2]] : {{.*}} -> !fir.shape<2>
+  %shape = fir.shape %c100, %c50 : (index, index) -> !fir.shape<2>
+  %c47 = constant 47 : index
+  %c78 = constant 78 : index
+  %c3 = constant 3 : index
+  %c18 = constant 18 : index
+  %c36 = constant 36 : index
+  %c4 = constant 4 : index
+  // CHECK: %[[sl:.*]] = fir.slice {{.*}} -> !fir.slice<2>
+  %slice = fir.slice %c47, %c78, %c3, %c18, %c36, %c4 : (index,index,index,index,index,index) -> !fir.slice<2>
+  %c0 = constant 0 : index
+  %c99 = constant 99 : index
+  %c1 = constant 1 : index
+  fir.do_loop %i = %c0 to %c99 step %c1 {
+    %c49 = constant 49 : index
+    fir.do_loop %j = %c0 to %c49 step %c1 {
+      // CHECK: fir.array_coor %{{.*}}(%[[sh]]) [%[[sl]]] %{{.*}}, %{{.*}} :
+      %p = fir.array_coor %arr(%shape)[%slice] %i, %j : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.slice<2>, index, index) -> !fir.ref<f32>
+      %x = constant 42.0 : f32
+      fir.store %x to %p : !fir.ref<f32>
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: @test_is_present
+func @test_is_present(%arg0: !fir.box<!fir.array<?xf32>>) -> i1 {
+  // CHECK: fir.is_present %{{.*}} : (!fir.box<!fir.array<?xf32>>) -> i1
+  %0 = fir.is_present %arg0 : (!fir.box<!fir.array<?xf32>>) -> i1
+  return %0 : i1
+}
+// CHECK-LABEL: @test_absent
+func @test_absent() -> i1 {
+  // CHECK: fir.absent !fir.box<!fir.array<?xf32>>
+  %0 = fir.absent !fir.box<!fir.array<?xf32>>
+  %1 = fir.call @_QPfoo(%0) : (!fir.box<!fir.array<?xf32>>) -> i1
+  return %1 : i1
+}
+
+// CHECK-LABEL: @test_misc_ops(
+// CHECK-SAME: [[ARR1:%.*]]: !fir.ref<!fir.array<?x?xf32>>, [[INDXM:%.*]]: index, [[INDXN:%.*]]: index, [[INDXO:%.*]]: index, [[INDXP:%.*]]: index)
+func @test_misc_ops(%arr1 : !fir.ref<!fir.array<?x?xf32>>, %m : index, %n : index, %o : index, %p : index) {
+  // CHECK: [[I10:%.*]] = constant 10 : index
+  // CHECK: [[J20:%.*]] = constant 20 : index
+  // CHECK: [[C2:%.*]] = constant 2 : index
+  // CHECK: [[C9:%.*]] = constant 9 : index
+  // CHECK: [[C1_I32:%.*]] = constant 9 : i32
+  %i10 = constant 10 : index
+  %j20 = constant 20 : index
+  %c2 = constant 2 : index
+  %c9 = constant 9 : index
+  %c1_i32 = constant 9 : i32
+
+  // CHECK: [[ARR2:%.*]] = fir.zero_bits !fir.array<10xi32>
+  // CHECK: [[ARR3:%.*]] = fir.insert_on_range [[ARR2]], [[C1_I32]], [[C2]], [[C9]] : (!fir.array<10xi32>, i32, index, index) -> !fir.array<10xi32>
+  // CHECK: fir.call @noret1([[ARR3]]) : (!fir.array<10xi32>) -> ()
+  %arr2 = fir.zero_bits !fir.array<10xi32>
+  %arr3 = fir.insert_on_range %arr2, %c1_i32, %c2, %c9 : (!fir.array<10xi32>, i32, index, index) -> !fir.array<10xi32>
+  fir.call @noret1(%arr3) : (!fir.array<10xi32>) -> ()
+
+  // CHECK: [[SHAPE:%.*]] = fir.shape_shift [[INDXM:%.*]], [[INDXN:%.*]], [[INDXO:%.*]], [[INDXP:%.*]] : (index, index, index, index) -> !fir.shapeshift<2>
+  // CHECK: [[AV1:%.*]] = fir.array_load [[ARR1]]([[SHAPE]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  // CHECK: [[FVAL:%.*]] = fir.array_fetch [[AV1]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, index, index) -> f32
+  // CHECK: [[AV2:%.*]] = fir.array_update [[AV1]], [[FVAL]], [[I10]], [[J20]] : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
+  // CHECK: fir.array_merge_store [[AV1]], [[AV2]] to [[ARR1]] : !fir.ref<!fir.array<?x?xf32>>
+  %s = fir.shape_shift %m, %n, %o, %p : (index, index, index, index) -> !fir.shapeshift<2>
+  %av1 = fir.array_load %arr1(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
+  %f = fir.array_fetch %av1, %i10, %j20 : (!fir.array<?x?xf32>, index, index) -> f32
+  %av2 = fir.array_update %av1, %f, %i10, %j20 : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
+  fir.array_merge_store %av1, %av2 to %arr1 : !fir.ref<!fir.array<?x?xf32>>
+
+  return
+}
+
+// CHECK-LABEL: @test_shift
+func @test_shift(%arg0: !fir.box<!fir.array<?xf32>>) -> !fir.ref<f32> {
+  %c4 = constant 4 : index
+  %c100 = constant 100 : index
+  // CHECK: fir.shift %{{.*}} : (index) -> !fir.shift<1>
+  %0 = fir.shift %c4 : (index) -> !fir.shift<1>
+  %1 = fir.array_coor %arg0(%0) %c100 : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, index) -> !fir.ref<f32>
+  return %1 : !fir.ref<f32>
+} 
+
+func private @bar_rebox_test(!fir.box<!fir.array<?x?xf32>>)
+// CHECK-LABEL: @test_rebox(
+func @test_rebox(%arg0: !fir.box<!fir.array<?xf32>>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %c2 = constant 2 : index
+  %c3 = constant 3 : index
+  %c4 = constant 4 : index
+  %c10 = constant 10 : index
+  %c33 = constant 33 : index
+  %0 = fir.slice %c10, %c33, %c2 : (index, index, index) -> !fir.slice<1>
+  %1 = fir.shift %c0 : (index) -> !fir.shift<1>
+  // CHECK: fir.rebox %{{.*}}(%{{.*}}) [%{{.*}}] : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  %2 = fir.rebox %arg0(%1) [%0] : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  %3 = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
+  // CHECK: fir.rebox %{{.*}}(%{{.*}}) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+  %4 = fir.rebox %2(%3) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
+  fir.call @bar_rebox_test(%4) : (!fir.box<!fir.array<?x?xf32>>) -> ()
+  return
 }

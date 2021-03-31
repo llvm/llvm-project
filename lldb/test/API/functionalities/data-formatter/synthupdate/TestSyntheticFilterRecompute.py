@@ -55,8 +55,8 @@ class SyntheticFilterRecomputingTestCase(TestBase):
         if self.TraceOn():
             self.runCmd("expr --dynamic-type run-target --ptr-depth 1 -- x")
 
-        self.assertTrue(
-            id_x.GetSummary() == '@"5 elements"',
+        self.assertEqual(
+            id_x.GetSummary(), '@"5 elements"',
             "array does not get correct summary")
 
         self.runCmd("next")
@@ -70,14 +70,14 @@ class SyntheticFilterRecomputingTestCase(TestBase):
         if self.TraceOn():
             self.runCmd("expr --dynamic-type run-target --ptr-depth 1 -- x")
 
-        self.assertTrue(
-            id_x.GetNumChildren() == 7,
+        self.assertEqual(
+            id_x.GetNumChildren(), 7,
             "dictionary does not have 7 children")
         id_x.SetPreferSyntheticValue(False)
-        self.assertFalse(
-            id_x.GetNumChildren() == 7,
+        self.assertNotEqual(
+            id_x.GetNumChildren(), 7,
             "dictionary still looks synthetic")
         id_x.SetPreferSyntheticValue(True)
-        self.assertTrue(
-            id_x.GetSummary() == "7 key/value pairs",
+        self.assertEqual(
+            id_x.GetSummary(), "7 key/value pairs",
             "dictionary does not get correct summary")

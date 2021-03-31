@@ -4311,19 +4311,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32-NEXT:    addu $1, $2, $25
 ; MIPS32-NEXT:    lw $1, %got(y)($1)
 ; MIPS32-NEXT:    addiu $2, $zero, -4
-; MIPS32-NEXT:    and $2, $1, $2
+; MIPS32-NEXT:    and $3, $1, $2
 ; MIPS32-NEXT:    andi $1, $1, 3
-; MIPS32-NEXT:    sll $3, $1, 3
-; MIPS32-NEXT:    ori $1, $zero, 255
-; MIPS32-NEXT:    sllv $6, $1, $3
+; MIPS32-NEXT:    sll $1, $1, 3
+; MIPS32-NEXT:    ori $2, $zero, 255
+; MIPS32-NEXT:    sllv $6, $2, $1
 ; MIPS32-NEXT:    nor $7, $zero, $6
-; MIPS32-NEXT:    andi $1, $4, 255
-; MIPS32-NEXT:    sllv $4, $1, $3
-; MIPS32-NEXT:    andi $1, $5, 255
-; MIPS32-NEXT:    sllv $5, $1, $3
+; MIPS32-NEXT:    andi $2, $4, 255
+; MIPS32-NEXT:    sllv $4, $2, $1
+; MIPS32-NEXT:    andi $2, $5, 255
+; MIPS32-NEXT:    sllv $5, $2, $1
 ; MIPS32-NEXT:  $BB12_1: # %entry
 ; MIPS32-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32-NEXT:    ll $8, 0($2)
+; MIPS32-NEXT:    ll $8, 0($3)
 ; MIPS32-NEXT:    and $9, $8, $6
 ; MIPS32-NEXT:    bne $9, $4, $BB12_3
 ; MIPS32-NEXT:    nop
@@ -4331,17 +4331,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; MIPS32-NEXT:    and $8, $8, $7
 ; MIPS32-NEXT:    or $8, $8, $5
-; MIPS32-NEXT:    sc $8, 0($2)
+; MIPS32-NEXT:    sc $8, 0($3)
 ; MIPS32-NEXT:    beqz $8, $BB12_1
 ; MIPS32-NEXT:    nop
 ; MIPS32-NEXT:  $BB12_3: # %entry
-; MIPS32-NEXT:    srlv $1, $9, $3
-; MIPS32-NEXT:    sll $1, $1, 24
-; MIPS32-NEXT:    sra $1, $1, 24
+; MIPS32-NEXT:    srlv $2, $9, $1
+; MIPS32-NEXT:    sll $2, $2, 24
+; MIPS32-NEXT:    sra $2, $2, 24
 ; MIPS32-NEXT:  # %bb.4: # %entry
-; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    sra $2, $1, 24
+; MIPS32-NEXT:    nop
 ;
 ; MIPS32O0-LABEL: AtomicCmpSwap8:
 ; MIPS32O0:       # %bb.0: # %entry
@@ -4511,19 +4510,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS4-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS4-NEXT:    ld $1, %got_disp(y)($1)
 ; MIPS4-NEXT:    daddiu $2, $zero, -4
-; MIPS4-NEXT:    and $2, $1, $2
+; MIPS4-NEXT:    and $3, $1, $2
 ; MIPS4-NEXT:    andi $1, $1, 3
-; MIPS4-NEXT:    sll $3, $1, 3
-; MIPS4-NEXT:    ori $1, $zero, 255
-; MIPS4-NEXT:    sllv $6, $1, $3
+; MIPS4-NEXT:    sll $1, $1, 3
+; MIPS4-NEXT:    ori $2, $zero, 255
+; MIPS4-NEXT:    sllv $6, $2, $1
 ; MIPS4-NEXT:    nor $7, $zero, $6
-; MIPS4-NEXT:    andi $1, $4, 255
-; MIPS4-NEXT:    sllv $4, $1, $3
-; MIPS4-NEXT:    andi $1, $5, 255
-; MIPS4-NEXT:    sllv $5, $1, $3
+; MIPS4-NEXT:    andi $2, $4, 255
+; MIPS4-NEXT:    sllv $4, $2, $1
+; MIPS4-NEXT:    andi $2, $5, 255
+; MIPS4-NEXT:    sllv $5, $2, $1
 ; MIPS4-NEXT:  .LBB12_1: # %entry
 ; MIPS4-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS4-NEXT:    ll $8, 0($2)
+; MIPS4-NEXT:    ll $8, 0($3)
 ; MIPS4-NEXT:    and $9, $8, $6
 ; MIPS4-NEXT:    bne $9, $4, .LBB12_3
 ; MIPS4-NEXT:    nop
@@ -4531,17 +4530,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS4-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; MIPS4-NEXT:    and $8, $8, $7
 ; MIPS4-NEXT:    or $8, $8, $5
-; MIPS4-NEXT:    sc $8, 0($2)
+; MIPS4-NEXT:    sc $8, 0($3)
 ; MIPS4-NEXT:    beqz $8, .LBB12_1
 ; MIPS4-NEXT:    nop
 ; MIPS4-NEXT:  .LBB12_3: # %entry
-; MIPS4-NEXT:    srlv $1, $9, $3
-; MIPS4-NEXT:    sll $1, $1, 24
-; MIPS4-NEXT:    sra $1, $1, 24
+; MIPS4-NEXT:    srlv $2, $9, $1
+; MIPS4-NEXT:    sll $2, $2, 24
+; MIPS4-NEXT:    sra $2, $2, 24
 ; MIPS4-NEXT:  # %bb.4: # %entry
-; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    sra $2, $1, 24
+; MIPS4-NEXT:    nop
 ;
 ; MIPS64-LABEL: AtomicCmpSwap8:
 ; MIPS64:       # %bb.0: # %entry
@@ -4550,19 +4548,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(AtomicCmpSwap8)))
 ; MIPS64-NEXT:    ld $1, %got_disp(y)($1)
 ; MIPS64-NEXT:    daddiu $2, $zero, -4
-; MIPS64-NEXT:    and $2, $1, $2
+; MIPS64-NEXT:    and $3, $1, $2
 ; MIPS64-NEXT:    andi $1, $1, 3
-; MIPS64-NEXT:    sll $3, $1, 3
-; MIPS64-NEXT:    ori $1, $zero, 255
-; MIPS64-NEXT:    sllv $6, $1, $3
+; MIPS64-NEXT:    sll $1, $1, 3
+; MIPS64-NEXT:    ori $2, $zero, 255
+; MIPS64-NEXT:    sllv $6, $2, $1
 ; MIPS64-NEXT:    nor $7, $zero, $6
-; MIPS64-NEXT:    andi $1, $4, 255
-; MIPS64-NEXT:    sllv $4, $1, $3
-; MIPS64-NEXT:    andi $1, $5, 255
-; MIPS64-NEXT:    sllv $5, $1, $3
+; MIPS64-NEXT:    andi $2, $4, 255
+; MIPS64-NEXT:    sllv $4, $2, $1
+; MIPS64-NEXT:    andi $2, $5, 255
+; MIPS64-NEXT:    sllv $5, $2, $1
 ; MIPS64-NEXT:  .LBB12_1: # %entry
 ; MIPS64-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS64-NEXT:    ll $8, 0($2)
+; MIPS64-NEXT:    ll $8, 0($3)
 ; MIPS64-NEXT:    and $9, $8, $6
 ; MIPS64-NEXT:    bne $9, $4, .LBB12_3
 ; MIPS64-NEXT:    nop
@@ -4570,17 +4568,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS64-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; MIPS64-NEXT:    and $8, $8, $7
 ; MIPS64-NEXT:    or $8, $8, $5
-; MIPS64-NEXT:    sc $8, 0($2)
+; MIPS64-NEXT:    sc $8, 0($3)
 ; MIPS64-NEXT:    beqz $8, .LBB12_1
 ; MIPS64-NEXT:    nop
 ; MIPS64-NEXT:  .LBB12_3: # %entry
-; MIPS64-NEXT:    srlv $1, $9, $3
-; MIPS64-NEXT:    sll $1, $1, 24
-; MIPS64-NEXT:    sra $1, $1, 24
+; MIPS64-NEXT:    srlv $2, $9, $1
+; MIPS64-NEXT:    sll $2, $2, 24
+; MIPS64-NEXT:    sra $2, $2, 24
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    sra $2, $1, 24
+; MIPS64-NEXT:    nop
 ;
 ; MIPS64R2-LABEL: AtomicCmpSwap8:
 ; MIPS64R2:       # %bb.0: # %entry
@@ -4737,19 +4734,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O1-NEXT:    addu $1, $2, $25
 ; O1-NEXT:    lw $1, %got(y)($1)
 ; O1-NEXT:    addiu $2, $zero, -4
-; O1-NEXT:    and $2, $1, $2
+; O1-NEXT:    and $3, $1, $2
 ; O1-NEXT:    andi $1, $1, 3
-; O1-NEXT:    sll $3, $1, 3
-; O1-NEXT:    ori $1, $zero, 255
-; O1-NEXT:    sllv $6, $1, $3
+; O1-NEXT:    sll $1, $1, 3
+; O1-NEXT:    ori $2, $zero, 255
+; O1-NEXT:    sllv $6, $2, $1
 ; O1-NEXT:    nor $7, $zero, $6
-; O1-NEXT:    andi $1, $4, 255
-; O1-NEXT:    sllv $4, $1, $3
-; O1-NEXT:    andi $1, $5, 255
-; O1-NEXT:    sllv $5, $1, $3
+; O1-NEXT:    andi $2, $4, 255
+; O1-NEXT:    sllv $4, $2, $1
+; O1-NEXT:    andi $2, $5, 255
+; O1-NEXT:    sllv $5, $2, $1
 ; O1-NEXT:  $BB12_1: # %entry
 ; O1-NEXT:    # =>This Inner Loop Header: Depth=1
-; O1-NEXT:    ll $8, 0($2)
+; O1-NEXT:    ll $8, 0($3)
 ; O1-NEXT:    and $9, $8, $6
 ; O1-NEXT:    bne $9, $4, $BB12_3
 ; O1-NEXT:    nop
@@ -4757,17 +4754,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O1-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; O1-NEXT:    and $8, $8, $7
 ; O1-NEXT:    or $8, $8, $5
-; O1-NEXT:    sc $8, 0($2)
+; O1-NEXT:    sc $8, 0($3)
 ; O1-NEXT:    beqz $8, $BB12_1
 ; O1-NEXT:    nop
 ; O1-NEXT:  $BB12_3: # %entry
-; O1-NEXT:    srlv $1, $9, $3
-; O1-NEXT:    sll $1, $1, 24
-; O1-NEXT:    sra $1, $1, 24
+; O1-NEXT:    srlv $2, $9, $1
+; O1-NEXT:    sll $2, $2, 24
+; O1-NEXT:    sra $2, $2, 24
 ; O1-NEXT:  # %bb.4: # %entry
-; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    jr $ra
-; O1-NEXT:    sra $2, $1, 24
+; O1-NEXT:    nop
 ;
 ; O2-LABEL: AtomicCmpSwap8:
 ; O2:       # %bb.0: # %entry
@@ -4776,19 +4772,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O2-NEXT:    addu $1, $2, $25
 ; O2-NEXT:    lw $1, %got(y)($1)
 ; O2-NEXT:    addiu $2, $zero, -4
-; O2-NEXT:    and $2, $1, $2
+; O2-NEXT:    and $3, $1, $2
 ; O2-NEXT:    andi $1, $1, 3
-; O2-NEXT:    sll $3, $1, 3
-; O2-NEXT:    ori $1, $zero, 255
-; O2-NEXT:    sllv $6, $1, $3
+; O2-NEXT:    sll $1, $1, 3
+; O2-NEXT:    ori $2, $zero, 255
+; O2-NEXT:    sllv $6, $2, $1
 ; O2-NEXT:    nor $7, $zero, $6
-; O2-NEXT:    andi $1, $4, 255
-; O2-NEXT:    sllv $4, $1, $3
-; O2-NEXT:    andi $1, $5, 255
-; O2-NEXT:    sllv $5, $1, $3
+; O2-NEXT:    andi $2, $4, 255
+; O2-NEXT:    sllv $4, $2, $1
+; O2-NEXT:    andi $2, $5, 255
+; O2-NEXT:    sllv $5, $2, $1
 ; O2-NEXT:  $BB12_1: # %entry
 ; O2-NEXT:    # =>This Inner Loop Header: Depth=1
-; O2-NEXT:    ll $8, 0($2)
+; O2-NEXT:    ll $8, 0($3)
 ; O2-NEXT:    and $9, $8, $6
 ; O2-NEXT:    bne $9, $4, $BB12_3
 ; O2-NEXT:    nop
@@ -4796,17 +4792,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O2-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; O2-NEXT:    and $8, $8, $7
 ; O2-NEXT:    or $8, $8, $5
-; O2-NEXT:    sc $8, 0($2)
+; O2-NEXT:    sc $8, 0($3)
 ; O2-NEXT:    beqz $8, $BB12_1
 ; O2-NEXT:    nop
 ; O2-NEXT:  $BB12_3: # %entry
-; O2-NEXT:    srlv $1, $9, $3
-; O2-NEXT:    sll $1, $1, 24
-; O2-NEXT:    sra $1, $1, 24
+; O2-NEXT:    srlv $2, $9, $1
+; O2-NEXT:    sll $2, $2, 24
+; O2-NEXT:    sra $2, $2, 24
 ; O2-NEXT:  # %bb.4: # %entry
-; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    jr $ra
-; O2-NEXT:    sra $2, $1, 24
+; O2-NEXT:    nop
 ;
 ; O3-LABEL: AtomicCmpSwap8:
 ; O3:       # %bb.0: # %entry
@@ -4815,19 +4810,19 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O3-NEXT:    addu $1, $2, $25
 ; O3-NEXT:    addiu $2, $zero, -4
 ; O3-NEXT:    lw $1, %got(y)($1)
-; O3-NEXT:    and $2, $1, $2
+; O3-NEXT:    and $3, $1, $2
 ; O3-NEXT:    andi $1, $1, 3
-; O3-NEXT:    sll $3, $1, 3
-; O3-NEXT:    ori $1, $zero, 255
-; O3-NEXT:    sllv $6, $1, $3
-; O3-NEXT:    andi $1, $4, 255
-; O3-NEXT:    sllv $4, $1, $3
-; O3-NEXT:    andi $1, $5, 255
+; O3-NEXT:    ori $2, $zero, 255
+; O3-NEXT:    sll $1, $1, 3
+; O3-NEXT:    sllv $6, $2, $1
+; O3-NEXT:    andi $2, $4, 255
+; O3-NEXT:    sllv $4, $2, $1
+; O3-NEXT:    andi $2, $5, 255
 ; O3-NEXT:    nor $7, $zero, $6
-; O3-NEXT:    sllv $5, $1, $3
+; O3-NEXT:    sllv $5, $2, $1
 ; O3-NEXT:  $BB12_1: # %entry
 ; O3-NEXT:    # =>This Inner Loop Header: Depth=1
-; O3-NEXT:    ll $8, 0($2)
+; O3-NEXT:    ll $8, 0($3)
 ; O3-NEXT:    and $9, $8, $6
 ; O3-NEXT:    bne $9, $4, $BB12_3
 ; O3-NEXT:    nop
@@ -4835,17 +4830,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; O3-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; O3-NEXT:    and $8, $8, $7
 ; O3-NEXT:    or $8, $8, $5
-; O3-NEXT:    sc $8, 0($2)
+; O3-NEXT:    sc $8, 0($3)
 ; O3-NEXT:    beqz $8, $BB12_1
 ; O3-NEXT:    nop
 ; O3-NEXT:  $BB12_3: # %entry
-; O3-NEXT:    srlv $1, $9, $3
-; O3-NEXT:    sll $1, $1, 24
-; O3-NEXT:    sra $1, $1, 24
+; O3-NEXT:    srlv $2, $9, $1
+; O3-NEXT:    sll $2, $2, 24
+; O3-NEXT:    sra $2, $2, 24
 ; O3-NEXT:  # %bb.4: # %entry
-; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    jr $ra
-; O3-NEXT:    sra $2, $1, 24
+; O3-NEXT:    nop
 ;
 ; MIPS32EB-LABEL: AtomicCmpSwap8:
 ; MIPS32EB:       # %bb.0: # %entry
@@ -4854,20 +4848,20 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32EB-NEXT:    addu $1, $2, $25
 ; MIPS32EB-NEXT:    lw $1, %got(y)($1)
 ; MIPS32EB-NEXT:    addiu $2, $zero, -4
-; MIPS32EB-NEXT:    and $2, $1, $2
+; MIPS32EB-NEXT:    and $3, $1, $2
 ; MIPS32EB-NEXT:    andi $1, $1, 3
 ; MIPS32EB-NEXT:    xori $1, $1, 3
-; MIPS32EB-NEXT:    sll $3, $1, 3
-; MIPS32EB-NEXT:    ori $1, $zero, 255
-; MIPS32EB-NEXT:    sllv $6, $1, $3
+; MIPS32EB-NEXT:    sll $1, $1, 3
+; MIPS32EB-NEXT:    ori $2, $zero, 255
+; MIPS32EB-NEXT:    sllv $6, $2, $1
 ; MIPS32EB-NEXT:    nor $7, $zero, $6
-; MIPS32EB-NEXT:    andi $1, $4, 255
-; MIPS32EB-NEXT:    sllv $4, $1, $3
-; MIPS32EB-NEXT:    andi $1, $5, 255
-; MIPS32EB-NEXT:    sllv $5, $1, $3
+; MIPS32EB-NEXT:    andi $2, $4, 255
+; MIPS32EB-NEXT:    sllv $4, $2, $1
+; MIPS32EB-NEXT:    andi $2, $5, 255
+; MIPS32EB-NEXT:    sllv $5, $2, $1
 ; MIPS32EB-NEXT:  $BB12_1: # %entry
 ; MIPS32EB-NEXT:    # =>This Inner Loop Header: Depth=1
-; MIPS32EB-NEXT:    ll $8, 0($2)
+; MIPS32EB-NEXT:    ll $8, 0($3)
 ; MIPS32EB-NEXT:    and $9, $8, $6
 ; MIPS32EB-NEXT:    bne $9, $4, $BB12_3
 ; MIPS32EB-NEXT:    nop
@@ -4875,17 +4869,16 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32EB-NEXT:    # in Loop: Header=BB12_1 Depth=1
 ; MIPS32EB-NEXT:    and $8, $8, $7
 ; MIPS32EB-NEXT:    or $8, $8, $5
-; MIPS32EB-NEXT:    sc $8, 0($2)
+; MIPS32EB-NEXT:    sc $8, 0($3)
 ; MIPS32EB-NEXT:    beqz $8, $BB12_1
 ; MIPS32EB-NEXT:    nop
 ; MIPS32EB-NEXT:  $BB12_3: # %entry
-; MIPS32EB-NEXT:    srlv $1, $9, $3
-; MIPS32EB-NEXT:    sll $1, $1, 24
-; MIPS32EB-NEXT:    sra $1, $1, 24
+; MIPS32EB-NEXT:    srlv $2, $9, $1
+; MIPS32EB-NEXT:    sll $2, $2, 24
+; MIPS32EB-NEXT:    sra $2, $2, 24
 ; MIPS32EB-NEXT:  # %bb.4: # %entry
-; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    jr $ra
-; MIPS32EB-NEXT:    sra $2, $1, 24
+; MIPS32EB-NEXT:    nop
 entry:
   %pair0 = cmpxchg i8* @y, i8 %oldval, i8 %newval monotonic monotonic
   %0 = extractvalue { i8, i1 } %pair0, 0
@@ -4924,9 +4917,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32-NEXT:    sll $1, $1, 24
 ; MIPS32-NEXT:    sra $1, $1, 24
 ; MIPS32-NEXT:  # %bb.4: # %entry
-; MIPS32-NEXT:    sll $2, $5, 24
-; MIPS32-NEXT:    sra $2, $2, 24
-; MIPS32-NEXT:    xor $1, $1, $2
+; MIPS32-NEXT:    xor $1, $1, $5
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    sltiu $2, $1, 1
 ;
@@ -5119,9 +5110,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS4-NEXT:    sll $1, $1, 24
 ; MIPS4-NEXT:    sra $1, $1, 24
 ; MIPS4-NEXT:  # %bb.4: # %entry
-; MIPS4-NEXT:    sll $2, $5, 24
-; MIPS4-NEXT:    sra $2, $2, 24
-; MIPS4-NEXT:    xor $1, $1, $2
+; MIPS4-NEXT:    xor $1, $1, $5
 ; MIPS4-NEXT:    jr $ra
 ; MIPS4-NEXT:    sltiu $2, $1, 1
 ;
@@ -5156,9 +5145,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS64-NEXT:    sll $1, $1, 24
 ; MIPS64-NEXT:    sra $1, $1, 24
 ; MIPS64-NEXT:  # %bb.4: # %entry
-; MIPS64-NEXT:    sll $2, $5, 24
-; MIPS64-NEXT:    sra $2, $2, 24
-; MIPS64-NEXT:    xor $1, $1, $2
+; MIPS64-NEXT:    xor $1, $1, $5
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    sltiu $2, $1, 1
 ;
@@ -5335,9 +5322,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O1-NEXT:    sll $1, $1, 24
 ; O1-NEXT:    sra $1, $1, 24
 ; O1-NEXT:  # %bb.4: # %entry
-; O1-NEXT:    sll $2, $5, 24
-; O1-NEXT:    sra $2, $2, 24
-; O1-NEXT:    xor $1, $1, $2
+; O1-NEXT:    xor $1, $1, $5
 ; O1-NEXT:    jr $ra
 ; O1-NEXT:    sltiu $2, $1, 1
 ;
@@ -5372,9 +5357,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O2-NEXT:    sll $1, $1, 24
 ; O2-NEXT:    sra $1, $1, 24
 ; O2-NEXT:  # %bb.4: # %entry
-; O2-NEXT:    sll $2, $5, 24
-; O2-NEXT:    sra $2, $2, 24
-; O2-NEXT:    xor $1, $1, $2
+; O2-NEXT:    xor $1, $1, $5
 ; O2-NEXT:    jr $ra
 ; O2-NEXT:    sltiu $2, $1, 1
 ;
@@ -5409,9 +5392,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; O3-NEXT:    sll $1, $1, 24
 ; O3-NEXT:    sra $1, $1, 24
 ; O3-NEXT:  # %bb.4: # %entry
-; O3-NEXT:    sll $2, $5, 24
-; O3-NEXT:    sra $2, $2, 24
-; O3-NEXT:    xor $1, $1, $2
+; O3-NEXT:    xor $1, $1, $5
 ; O3-NEXT:    jr $ra
 ; O3-NEXT:    sltiu $2, $1, 1
 ;
@@ -5447,9 +5428,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32EB-NEXT:    sll $1, $1, 24
 ; MIPS32EB-NEXT:    sra $1, $1, 24
 ; MIPS32EB-NEXT:  # %bb.4: # %entry
-; MIPS32EB-NEXT:    sll $2, $5, 24
-; MIPS32EB-NEXT:    sra $2, $2, 24
-; MIPS32EB-NEXT:    xor $1, $1, $2
+; MIPS32EB-NEXT:    xor $1, $1, $5
 ; MIPS32EB-NEXT:    jr $ra
 ; MIPS32EB-NEXT:    sltiu $2, $1, 1
 entry:

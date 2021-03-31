@@ -64,7 +64,6 @@ def testTraverseOpRegionBlockIterators():
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 1: return
-  # CHECK:    OP 1: module_terminator
   walk_operations("", op)
 
 run(testTraverseOpRegionBlockIterators)
@@ -101,7 +100,6 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
   # CHECK:           OP 1: return
-  # CHECK:    OP 1: module_terminator
   walk_operations("", module.operation)
 
 run(testTraverseOpRegionBlockIndices)
@@ -470,7 +468,7 @@ def testOperationPrint():
   print(bytes_value)
 
   # Test get_asm with options.
-  # CHECK: value = opaque<"", "0xDEADBEEF"> : tensor<4xi32>
+  # CHECK: value = opaque<"_", "0xDEADBEEF"> : tensor<4xi32>
   # CHECK: "std.return"(%arg0) : (i32) -> () -:4:7
   module.operation.print(large_elements_limit=2, enable_debug_info=True,
       pretty_debug_info=True, print_generic_op_form=True, use_local_scope=True)
@@ -492,7 +490,7 @@ def testKnownOpView():
     # addf should map to a known OpView class in the std dialect.
     # We know the OpView for it defines an 'lhs' attribute.
     addf = module.body.operations[2]
-    # CHECK: <mlir.dialects.std._AddFOp object
+    # CHECK: <mlir.dialects._std_ops_gen._AddFOp object
     print(repr(addf))
     # CHECK: "custom.f32"()
     print(addf.lhs)
@@ -546,9 +544,9 @@ run(testSingleResultProperty)
 def testPrintInvalidOperation():
   ctx = Context()
   with Location.unknown(ctx):
-    module = Operation.create("module", regions=1)
-    # This block does not have a terminator, it may crash the custom printer.
-    # Verify that we fallback to the generic printer for safety.
+    module = Operation.create("module", regions=2)
+    # This module has two region and is invalid verify that we fallback
+    # to the generic printer for safety.
     block = module.regions[0].blocks.append()
     # CHECK: // Verification failed, printing generic form
     # CHECK: "module"() ( {

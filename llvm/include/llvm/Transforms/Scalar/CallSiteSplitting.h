@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING__H
-#define LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING__H
+#ifndef LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING_H
+#define LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING_H
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -20,4 +20,4 @@ struct CallSiteSplittingPass : PassInfoMixin<CallSiteSplittingPass> {
 };
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING__H
+#endif // LLVM_TRANSFORMS_SCALAR_CALLSITESPLITTING_H

@@ -12,6 +12,15 @@ import json
 import lit.formats
 import lit.util
 
+# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
+# it's not available.
+try:
+  import shlex
+  sh_quote = shlex.quote
+except:
+  import pipes
+  sh_quote = pipes.quote
+
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
@@ -134,6 +143,9 @@ def get_lit_conf(name, default=None):
 
 emulator = get_lit_conf('emulator', None)
 
+def get_ios_commands_dir():
+  return os.path.join(config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands")
+
 # Allow tests to be executed on a simulator or remotely.
 if emulator:
   config.substitutions.append( ('%run', emulator) )
@@ -173,7 +185,7 @@ elif config.host_os == 'Darwin' and config.apple_platform != "osx":
   if config.apple_platform != "ios" and config.apple_platform != "iossim":
     config.available_features.add(config.apple_platform)
 
-  ios_commands_dir = os.path.join(config.compiler_rt_src_root, "test", "sanitizer_common", "ios_commands")
+  ios_commands_dir = get_ios_commands_dir()
 
   run_wrapper = os.path.join(ios_commands_dir, ios_or_iossim + "_run.py")
   env_wrapper = os.path.join(ios_commands_dir, ios_or_iossim + "_env.py")
@@ -591,3 +603,19 @@ if append_target_cflags:
 
 config.clang = " " + " ".join(run_wrapper + [config.compile_wrapper, config.clang]) + " "
 config.target_cflags = " " + " ".join(target_cflags + extra_cflags) + " "
+
+if config.host_os == 'Darwin':
+  config.substitutions.append((
+    "%get_pid_from_output", 
+    "{} {}/get_pid_from_output.py".format(
+      sh_quote(config.python_executable), 
+      sh_quote(get_ios_commands_dir())
+    ))
+  )
+  config.substitutions.append(
+    ("%print_crashreport_for_pid", 
+    "{} {}/print_crashreport_for_pid.py".format(
+      sh_quote(config.python_executable), 
+      sh_quote(get_ios_commands_dir())
+    ))
+  )

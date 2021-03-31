@@ -152,10 +152,10 @@ def SDTIntTruncOp  : SDTypeProfile<1, 1, [  // trunc
 def SDTFPUnaryOp  : SDTypeProfile<1, 1, [   // fneg, fsqrt, etc
   SDTCisSameAs<0, 1>, SDTCisFP<0>
 ]>;
-def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fround
+def SDTFPRoundOp  : SDTypeProfile<1, 1, [   // fpround
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<0, 1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
-def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fextend
+def SDTFPExtendOp  : SDTypeProfile<1, 1, [  // fpextend
   SDTCisFP<0>, SDTCisFP<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntToFPOp : SDTypeProfile<1, 1, [    // [su]int_to_fp
@@ -241,6 +241,9 @@ def SDTMaskedLoad: SDTypeProfile<1, 4, [       // masked load
 def SDTVecShuffle : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>
 ]>;
+def SDTVecSlice : SDTypeProfile<1, 3, [     // vector splice
+  SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisInt<3>
+]>;
 def SDTVecExtract : SDTypeProfile<1, 2, [   // vector extract
   SDTCisEltOfVec<0, 1>, SDTCisPtrTy<2>
 ]>;
@@ -254,6 +257,9 @@ def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
   SDTCisFP<0>, SDTCisVec<1>
 ]>;
 
+def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
+  SDTCisVec<0>, SDTCisSameAs<0,1>
+]>;
 
 def SDTSubVecExtract : SDTypeProfile<1, 2, [// subvector extract
   SDTCisSubVecOfVec<0,1>, SDTCisInt<2>
@@ -480,6 +486,7 @@ def fceil      : SDNode<"ISD::FCEIL"      , SDTFPUnaryOp>;
 def ffloor     : SDNode<"ISD::FFLOOR"     , SDTFPUnaryOp>;
 def fnearbyint : SDNode<"ISD::FNEARBYINT" , SDTFPUnaryOp>;
 def fround     : SDNode<"ISD::FROUND"     , SDTFPUnaryOp>;
+def froundeven : SDNode<"ISD::FROUNDEVEN" , SDTFPUnaryOp>;
 
 def lround     : SDNode<"ISD::LROUND"     , SDTFPToIntOp>;
 def llround    : SDNode<"ISD::LLROUND"    , SDTFPToIntOp>;
@@ -540,6 +547,8 @@ def strict_lround     : SDNode<"ISD::STRICT_LROUND",
 def strict_llround    : SDNode<"ISD::STRICT_LLROUND",
                                SDTFPToIntOp, [SDNPHasChain]>;
 def strict_fround     : SDNode<"ISD::STRICT_FROUND",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_froundeven : SDNode<"ISD::STRICT_FROUNDEVEN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ftrunc     : SDNode<"ISD::STRICT_FTRUNC",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -651,8 +660,12 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
+def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
+def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
+def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
+                       [SDTCisVec<0>, SDTCisInt<1>]>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
 
@@ -914,8 +927,8 @@ def vtFP       : PatLeaf<(vt),  [{ return N->getVT().isFloatingPoint(); }]>;
 // bitcasts and check for either opcode, except when used as a pattern root.
 // When used as a pattern root, only fixed-length build_vector and scalable
 // splat_vector are supported.
-def immAllOnesV; // ISD::isConstantSplatVectorAllOnes
-def immAllZerosV; // ISD::isConstantSplatVectorAllZeros
+def immAllOnesV  : SDPatternOperator; // ISD::isConstantSplatVectorAllOnes
+def immAllZerosV : SDPatternOperator; // ISD::isConstantSplatVectorAllZeros
 
 // Other helper fragments.
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;
@@ -1406,6 +1419,9 @@ def any_llround    : PatFrags<(ops node:$src),
 def any_fround     : PatFrags<(ops node:$src),
                               [(strict_fround node:$src),
                                (fround node:$src)]>;
+def any_froundeven : PatFrags<(ops node:$src),
+                              [(strict_froundeven node:$src),
+                               (froundeven node:$src)]>;
 def any_ftrunc     : PatFrags<(ops node:$src),
                               [(strict_ftrunc node:$src),
                                (ftrunc node:$src)]>;

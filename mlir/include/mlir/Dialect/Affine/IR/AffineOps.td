@@ -72,9 +72,14 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
   // has a constant builder. That way we wouldn't need to explicitly specify the
   // result types here.
   let builders = [
-    OpBuilderDAG<(ins "AffineMap":$map, "ValueRange":$mapOperands),
+    OpBuilder<(ins "AffineMap":$map, "ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(), map, mapOperands);
+    }]>,
+    OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
+    [{
+      build($_builder, $_state, $_builder.getIndexType(),
+            AffineMap::inferFromExprList(exprList).front(), mapOperands);
     }]>
   ];
 
@@ -213,11 +218,11 @@ def AffineForOp : Affine_Op<"for",
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
+    OpBuilder<(ins "int64_t":$lowerBound, "int64_t":$upperBound,
       CArg<"int64_t", "1">:$step, CArg<"ValueRange", "llvm::None">:$iterArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
            "nullptr">:$bodyBuilder)>,
-    OpBuilderDAG<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
+    OpBuilder<(ins "ValueRange":$lbOperands, "AffineMap":$lbMap,
       "ValueRange":$ubOperands, "AffineMap":$ubMap, CArg<"int64_t", "1">:$step,
       CArg<"ValueRange", "llvm::None">:$iterArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
@@ -233,7 +238,7 @@ def AffineForOp : Affine_Op<"for",
     static StringRef getLowerBoundAttrName() { return "lower_bound"; }
     static StringRef getUpperBoundAttrName() { return "upper_bound"; }
 
-    Value getInductionVar() { return getBody()->getArgument(0); }
+    BlockArgument getInductionVar() { return getBody()->getArgument(0); }
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front();
     }
@@ -411,9 +416,9 @@ def AffineIfOp : Affine_Op<"if",
   let skipDefaultBuilders = 1;
 
   let builders = [
-    OpBuilderDAG<(ins "IntegerSet":$set, "ValueRange":$args,
+    OpBuilder<(ins "IntegerSet":$set, "ValueRange":$args,
       "bool":$withElseRegion)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes, "IntegerSet":$set,
+    OpBuilder<(ins "TypeRange":$resultTypes, "IntegerSet":$set,
       "ValueRange":$args, "bool":$withElseRegion)>,
   ];
 
@@ -458,6 +463,7 @@ def AffineIfOp : Affine_Op<"if",
 class AffineLoadOpBase<string mnemonic, list<OpTrait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
         [DeclareOpInterfaceMethods<AffineReadOpInterface>,
+        DeclareOpInterfaceMethods<AffineMapAccessInterface>,
         MemRefsNormalizable])> {
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$memref,
@@ -505,11 +511,11 @@ def AffineLoadOp : AffineLoadOpBase<"load"> {
 
   let builders = [
     /// Builds an affine load op with the specified map and operands.
-    OpBuilderDAG<(ins "AffineMap":$map, "ValueRange":$operands)>,
+    OpBuilder<(ins "AffineMap":$map, "ValueRange":$operands)>,
     /// Builds an affine load op with an identity map and operands.
-    OpBuilderDAG<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices)>,
+    OpBuilder<(ins "Value":$memref, CArg<"ValueRange", "{}">:$indices)>,
     /// Builds an affine load op with the specified map and its operands.
-    OpBuilderDAG<(ins "Value":$memref, "AffineMap":$map,
+    OpBuilder<(ins "Value":$memref, "AffineMap":$map,
       "ValueRange":$mapOperands)>
   ];
 
@@ -525,7 +531,7 @@ class AffineMinMaxOpBase<string mnemonic, list<OpTrait> traits = []> :
   let results = (outs Index);
 
   let builders = [
-    OpBuilderDAG<(ins "AffineMap":$affineMap, "ValueRange":$mapOperands),
+    OpBuilder<(ins "AffineMap":$affineMap, "ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(), affineMap, mapOperands);
     }]>
@@ -591,7 +597,7 @@ def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
 
 def AffineParallelOp : Affine_Op<"parallel",
     [ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+     DeclareOpInterfaceMethods<LoopLikeOpInterface>, MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
@@ -650,12 +656,12 @@ def AffineParallelOp : Affine_Op<"parallel",
   let regions = (region SizedRegion<1>:$region);
 
   let builders = [
-    OpBuilderDAG<(ins "TypeRange":$resultTypes,
+    OpBuilder<(ins "TypeRange":$resultTypes,
       "ArrayRef<AtomicRMWKind>":$reductions, "ArrayRef<int64_t>":$ranges)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes,
+    OpBuilder<(ins "TypeRange":$resultTypes,
       "ArrayRef<AtomicRMWKind>":$reductions, "AffineMap":$lbMap,
       "ValueRange":$lbArgs, "AffineMap":$ubMap, "ValueRange":$ubArgs)>,
-    OpBuilderDAG<(ins "TypeRange":$resultTypes,
+    OpBuilder<(ins "TypeRange":$resultTypes,
       "ArrayRef<AtomicRMWKind>":$reductions, "AffineMap":$lbMap,
       "ValueRange":$lbArgs, "AffineMap":$ubMap, "ValueRange":$ubArgs,
       "ArrayRef<int64_t>":$steps)>
@@ -698,7 +704,8 @@ def AffineParallelOp : Affine_Op<"parallel",
   let hasFolder = 1;
 }
 
-def AffinePrefetchOp : Affine_Op<"prefetch"> {
+def AffinePrefetchOp : Affine_Op<"prefetch",
+  [DeclareOpInterfaceMethods<AffineMapAccessInterface>]> {
   let summary = "affine prefetch operation";
   let description = [{
     The "affine.prefetch" op prefetches data from a memref location described
@@ -724,7 +731,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
                    BoolAttr:$isDataCache);
 
   let builders = [
-    OpBuilderDAG<(ins "Value":$memref, "AffineMap":$map,
+    OpBuilder<(ins "Value":$memref, "AffineMap":$map,
       "ArrayRef<Value>":$mapOperands, "bool":$isWrite, "unsigned":$localityHint,
       "bool":$isDataCache),
     [{
@@ -752,9 +759,11 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
       return (*this)->getAttr(getMapAttrName()).cast<AffineMapAttr>();
     }
 
+    /// Impelements the AffineMapAccessInterface.
     /// Returns the AffineMapAttr associated with 'memref'.
     NamedAttribute getAffineMapAttrForMemRef(Value mref) {
-      assert(mref == memref());
+      assert(mref == memref() &&
+             "Expected mref argument to match memref operand");
       return {Identifier::get(getMapAttrName(), getContext()),
         getAffineMapAttr()};
     }
@@ -777,6 +786,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch"> {
 class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
     Affine_Op<mnemonic, !listconcat(traits,
     [DeclareOpInterfaceMethods<AffineWriteOpInterface>,
+    DeclareOpInterfaceMethods<AffineMapAccessInterface>,
     MemRefsNormalizable])> {
   code extraClassDeclarationBase = [{
     /// Returns the operand index of the value to be stored.
@@ -790,13 +800,6 @@ class AffineStoreOpBase<string mnemonic, list<OpTrait> traits = []> :
     /// Returns the affine map used to index the memref for this operation.
     AffineMapAttr getAffineMapAttr() {
       return (*this)->getAttr(getMapAttrName()).cast<AffineMapAttr>();
-    }
-
-    /// Returns the AffineMapAttr associated with 'memref'.
-    NamedAttribute getAffineMapAttrForMemRef(Value memref) {
-      assert(memref == getMemRef());
-      return {Identifier::get(getMapAttrName(), getContext()),
-              getAffineMapAttr()};
     }
 
     static StringRef getMapAttrName() { return "map"; }
@@ -832,9 +835,9 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$valueToStore, "Value":$memref,
+    OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
       "ValueRange":$indices)>,
-    OpBuilderDAG<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
+    OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
       "ValueRange":$mapOperands)>
   ];
 
@@ -844,7 +847,8 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
   let hasFolder = 1;
 }
 
-def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike]> {
+def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike,
+    MemRefsNormalizable]> {
   let summary = "Yield values to parent operation";
   let description = [{
     "affine.yield" yields zero or more SSA values from an affine op region and
@@ -862,7 +866,7 @@ def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike]> {
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [
-    OpBuilderDAG<(ins), [{ build($_builder, $_state, llvm::None); }]>
+    OpBuilder<(ins), [{ build($_builder, $_state, llvm::None); }]>
   ];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
@@ -912,13 +916,13 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
 
   let builders = [
     /// Builds an affine vector load op with the specified map and operands.
-    OpBuilderDAG<(ins "VectorType":$resultType, "AffineMap":$map,
+    OpBuilder<(ins "VectorType":$resultType, "AffineMap":$map,
       "ValueRange":$operands)>,
     /// Builds an affine vector load op with an identity map and operands.
-    OpBuilderDAG<(ins "VectorType":$resultType, "Value":$memref,
+    OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
       CArg<"ValueRange", "{}">:$indices)>,
     /// Builds an affine vector load op with the specified map and its operands.
-    OpBuilderDAG<(ins "VectorType":$resultType, "Value":$memref,
+    OpBuilder<(ins "VectorType":$resultType, "Value":$memref,
       "AffineMap":$map, "ValueRange":$mapOperands)>
   ];
 
@@ -978,9 +982,9 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 
   let skipDefaultBuilders = 1;
   let builders = [
-    OpBuilderDAG<(ins "Value":$valueToStore, "Value":$memref,
+    OpBuilder<(ins "Value":$valueToStore, "Value":$memref,
       "ValueRange":$indices)>,
-    OpBuilderDAG<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
+    OpBuilder<(ins "Value":$valueToStore, "Value":$memref, "AffineMap":$map,
       "ValueRange":$mapOperands)>
   ];
 

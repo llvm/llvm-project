@@ -128,6 +128,7 @@ set(cuda_src_files
   ${devicertl_common_directory}/src/support.cu
   ${devicertl_common_directory}/src/sync.cu
   ${devicertl_common_directory}/src/task.cu
+  ${devicertl_common_directory}/src/shuffle.cpp
   src/target_impl.cu
 )
 
@@ -137,8 +138,10 @@ set(bc_flags -S -x c++ -O1 -std=c++14
              -Xclang -emit-llvm-bc
              -Xclang -aux-triple -Xclang ${aux_triple}
              -fopenmp -fopenmp-cuda-mode -Xclang -fopenmp-is-device
+             -Xclang -target-feature -Xclang +ptx61
              -D__CUDACC__
              -I${devicertl_base_directory}
+             -I${devicertl_common_directory}/include
              -I${devicertl_nvptx_directory}/src)
 
 if(${LIBOMPTARGET_NVPTX_DEBUG})
@@ -150,73 +153,51 @@ endif()
 # Create target to build all Bitcode libraries.
 add_custom_target(omptarget-nvptx-bc)
 
-# This map is from clang/lib/Driver/ToolChains/Cuda.cpp.
-# The last element is the default case.
-set(cuda_version_list 110 102 101 100 92 91 90 80)
-set(ptx_feature_list 70 65 64 63 61 61 60 42)
-# The following two lines of ugly code is not needed when the minimal CMake
-# version requirement is 3.17+.
-list(LENGTH cuda_version_list num_version_supported)
-math(EXPR loop_range "${num_version_supported} - 1")
-
-# Generate a Bitcode library for all the compute capabilities the user
-# requested and all PTX version we know for now.
+# Generate a Bitcode library for all the compute capabilities the user requested
 foreach(sm ${nvptx_sm_list})
-  set(sm_flags -Xclang -target-cpu -Xclang sm_${sm} "-D__CUDA_ARCH__=${sm}0")
+  set(cuda_flags -Xclang -target-cpu -Xclang sm_${sm} "-D__CUDA_ARCH__=${sm}0")
+  set(bc_files "")
+  foreach(src ${cuda_src_files})
+    get_filename_component(infile ${src} ABSOLUTE)
+    get_filename_component(outfile ${src} NAME)
+    set(outfile "${outfile}-sm_${sm}.bc")
 
-  # Uncomment the following code and remove those ugly part if the feature
-  # is available.
-  # foreach(cuda_version ptx_num IN ZIP_LISTS cuda_version_list ptx_feature_list)
-  foreach(itr RANGE ${loop_range})
-    list(GET cuda_version_list ${itr} cuda_version)
-    list(GET ptx_feature_list ${itr} ptx_num)
-    set(cuda_flags ${sm_flags})
-    list(APPEND cuda_flags -Xclang -target-feature -Xclang +ptx${ptx_num})
-    list(APPEND cuda_flags "-DCUDA_VERSION=${cuda_version}00")
-
-    set(bc_files "")
-    foreach(src ${cuda_src_files})
-      get_filename_component(infile ${src} ABSOLUTE)
-      get_filename_component(outfile ${src} NAME)
-      set(outfile "${outfile}-cuda_${cuda_version}-sm_${sm}.bc")
-
-      add_custom_command(OUTPUT ${outfile}
-        COMMAND ${cuda_compiler} ${bc_flags}
-          ${cuda_flags} ${MAX_SM_DEFINITION} ${infile} -o ${outfile}
-        DEPENDS ${infile}
-        IMPLICIT_DEPENDS CXX ${infile}
-        COMMENT "Building LLVM bitcode ${outfile}"
-        VERBATIM
-      )
-      set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile})
-
-      list(APPEND bc_files ${outfile})
-    endforeach()
-
-    set(bclib_name "libomptarget-nvptx-cuda_${cuda_version}-sm_${sm}.bc")
-
-    # Link to a bitcode library.
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
-        COMMAND ${bc_linker}
-          -o ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} ${bc_files}
-        DEPENDS ${bc_files}
-        COMMENT "Linking LLVM bitcode ${bclib_name}"
+    add_custom_command(OUTPUT ${outfile}
+      COMMAND ${cuda_compiler} ${bc_flags}
+        ${cuda_flags} ${MAX_SM_DEFINITION} ${infile} -o ${outfile}
+      DEPENDS ${infile}
+      IMPLICIT_DEPENDS CXX ${infile}
+      COMMENT "Building LLVM bitcode ${outfile}"
+      VERBATIM
     )
-    set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
+    set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile})
 
-    set(bclib_target_name "omptarget-nvptx-cuda_${cuda_version}-sm_${sm}-bc")
-
-    add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
-    add_dependencies(omptarget-nvptx-bc ${bclib_target_name})
-
-    # Copy library to destination.
-    add_custom_command(TARGET ${bclib_target_name} POST_BUILD
-                      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
-                      ${LIBOMPTARGET_LIBRARY_DIR})
-
-    # Install bitcode library under the lib destination folder.
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+    list(APPEND bc_files ${outfile})
   endforeach()
+
+  set(bclib_name "libomptarget-nvptx-sm_${sm}.bc")
+
+  # Link to a bitcode library.
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+      COMMAND ${bc_linker}
+        -o ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} ${bc_files}
+      DEPENDS ${bc_files}
+      COMMENT "Linking LLVM bitcode ${bclib_name}"
+  )
+  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${bclib_name})
+
+  set(bclib_target_name "omptarget-nvptx-sm_${sm}-bc")
+
+  add_custom_target(${bclib_target_name} ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name})
+  add_dependencies(omptarget-nvptx-bc ${bclib_target_name})
+
+  # Copy library to destination.
+  add_custom_command(TARGET ${bclib_target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+                    ${LIBOMPTARGET_LIBRARY_DIR})
+
+  # Install bitcode library under the lib destination folder.
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 endforeach()
 
 # Test will be enabled if the building machine supports CUDA

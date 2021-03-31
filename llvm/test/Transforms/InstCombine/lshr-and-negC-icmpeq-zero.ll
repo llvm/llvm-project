@@ -179,12 +179,13 @@ define i1 @scalar_lshr_and_negC_eq_extra_use_lshr_and(i32 %x, i32 %y, i32 %z, i3
 
 ; Negative tests
 
-; X is constant
+; TODO: This could be reduced to lshr+icmp ult.
 
 define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant1(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant1(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 12345, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[LSHR]], 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 16376
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 12345, %y
@@ -193,10 +194,13 @@ define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant1(i32 %y) {
   ret i1 %r
 }
 
+; TODO: This could be reduced to lshr+icmp ult.
+
 define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant2(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant2(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 268435456, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[LSHR]], 8
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 536870904
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %lshr = lshr i32 268435456, %y

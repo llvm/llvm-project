@@ -114,6 +114,7 @@ struct InfoByHwMode {
     Map.insert(std::make_pair(DefaultMode, I));
   }
 
+protected:
   MapType Map;
 };
 
@@ -178,6 +179,10 @@ struct RegSizeInfoByHwMode : public InfoByHwMode<RegSizeInfo> {
   bool hasStricterSpillThan(const RegSizeInfoByHwMode &I) const;
 
   void writeToStream(raw_ostream &OS) const;
+
+  void insertRegSizeForMode(unsigned Mode, RegSizeInfo Info) {
+    Map.insert(std::make_pair(Mode, Info));
+  }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const ValueTypeByHwMode &T);

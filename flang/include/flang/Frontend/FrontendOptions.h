@@ -8,6 +8,9 @@
 #ifndef LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 #define LLVM_FLANG_FRONTEND_FRONTENDOPTIONS_H
 
+#include "flang/Common/Fortran-features.h"
+#include "flang/Parser/characters.h"
+#include "flang/Parser/unparse.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -31,6 +34,35 @@ enum ActionKind {
   /// Emit a .o file.
   EmitObj,
 
+  /// Parse, unparse the parse-tree and output a Fortran source file
+  DebugUnparse,
+
+  /// Parse, resolve the sybmols, unparse the parse-tree and then output a
+  /// Fortran source file
+  DebugUnparseWithSymbols,
+
+  /// Parse, run semantics and then output symbols from semantics
+  DebugDumpSymbols,
+
+  /// Parse, run semantics and then output the parse tree
+  DebugDumpParseTree,
+
+  /// Dump provenance
+  DebugDumpProvenance,
+
+  /// Parse then output the parsing log
+  DebugDumpParsingLog,
+
+  /// Parse then output the number of objects in the parse tree and the overall
+  /// size
+  DebugMeasureParseTree,
+
+  /// Parse, run semantics and then output the pre-FIR tree
+  DebugPreFIRTree,
+
+  /// Parse, run semantics and then dump symbol sources map
+  GetSymbolsSources
+
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)
 };
@@ -39,29 +71,13 @@ enum ActionKind {
 /// \return True if the file extension should be processed as fixed form
 bool isFixedFormSuffix(llvm::StringRef suffix);
 
+// TODO: Find a more suitable location for this. Added for compability with
+// f18.cpp (this is equivalent to `asFortran` defined there).
+Fortran::parser::AnalyzedObjectsAsFortran getBasicAsFortran();
+
 /// \param suffix The file extension
 /// \return True if the file extension should be processed as free form
 bool isFreeFormSuffix(llvm::StringRef suffix);
-
-inline const char *GetActionKindName(const ActionKind ak) {
-  switch (ak) {
-  case InputOutputTest:
-    return "InputOutputTest";
-  case PrintPreprocessedInput:
-    return "PrintPreprocessedInput";
-  case ParseSyntaxOnly:
-    return "ParseSyntaxOnly";
-  default:
-    return "<unknown ActionKind>";
-    // TODO:
-    // case RunPreprocessor:
-    // case ParserSyntaxOnly:
-    // case EmitLLVM:
-    // case EmitLLVMOnly:
-    // case EmitCodeGenOnly:
-    // (...)
-  }
-}
 
 enum class Language : uint8_t {
   Unknown,
@@ -72,6 +88,18 @@ enum class Language : uint8_t {
 
   /// @{ Languages that the frontend can parse and compile.
   Fortran,
+};
+
+// Source file layout
+enum class FortranForm {
+  /// The user has not specified a form. Base the form off the file extension.
+  Unknown,
+
+  /// -ffree-form
+  FixedForm,
+
+  /// -ffixed-form
+  FreeForm
 };
 
 /// The kind of a file that we've been handed as an input.
@@ -150,6 +178,9 @@ public:
   /// Show the -version text.
   unsigned showVersion_ : 1;
 
+  /// Instrument the parse to get a more verbose log
+  unsigned instrumentedParse_ : 1;
+
   /// The input files and their types.
   std::vector<FrontendInputFile> inputs_;
 
@@ -158,6 +189,19 @@ public:
 
   /// The frontend action to perform.
   frontend::ActionKind programAction_;
+
+  // The form to process files in, if specified.
+  FortranForm fortranForm_ = FortranForm::Unknown;
+
+  // The column after which characters are ignored in fixed form lines in the
+  // source file.
+  int fixedFormColumns_ = 72;
+
+  // Language features
+  common::LanguageFeatureControl features_;
+
+  // Source file encoding
+  Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
 
 public:
   FrontendOptions() : showHelp_(false), showVersion_(false) {}

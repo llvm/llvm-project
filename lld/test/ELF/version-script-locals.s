@@ -5,28 +5,28 @@
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=EXACT %s
 # EXACT:  DynamicSymbols [
-# EXACT:      _start
 # EXACT-NOT:  foo1
 # EXACT:      foo2
 # EXACT:      foo3
+# EXACT:      _start
 
 # RUN: echo "VERSION_1.0 { local: foo*; };" > %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=WC %s
 # WC:  DynamicSymbols [
-# WC:      _start
 # WC-NOT:  foo1
 # WC-NOT:  foo2
 # WC-NOT:  foo3
+# WC:      _start
 
 # RUN: echo "VERSION_1.0 { global: *; local: foo*; };" > %t.script
 # RUN: ld.lld --version-script %t.script -shared %t.o -o %t.so
 # RUN: llvm-readobj --dyn-syms %t.so | FileCheck --check-prefix=MIX %s
 # MIX:  DynamicSymbols [
-# MIX:      _start@@VERSION_1.0
 # MIX-NOT:  foo1
 # MIX-NOT:  foo2
 # MIX-NOT:  foo3
+# MIX:      _start@@VERSION_1.0
 
 .globl foo1
 foo1:

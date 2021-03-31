@@ -77,30 +77,30 @@ public:
   int32_t initRequires(int64_t RequiresFlags);
 
   __tgt_target_table *loadBinary(int32_t DeviceId, __tgt_device_image *Image);
-  int64_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+  int64_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo);
   int32_t isDataExchangeable(int32_t SrcDevId, int32_t DstDevId);
 
   void *dataAlloc(int32_t DeviceId, int64_t Size, void *HstPtr);
   int32_t dataDelete(int32_t DeviceId, void *TgtPtr);
 
   int32_t dataSubmitAsync(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                          int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                          int64_t Size, __tgt_async_info *AsyncInfo);
   int32_t dataRetrieveAsync(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                            int64_t Size, __tgt_async_info *AsyncInfo);
 
   int32_t dataExchangeAsync(int32_t SrcDevId, void *SrcPtr, int32_t DstDevId,
                             void *DstPtr, int64_t Size,
-                            __tgt_async_info *AsyncInfoPtr);
+                            __tgt_async_info *AsyncInfo);
 
   int32_t runTargetRegionAsync(int32_t DeviceId, void *TgtEntryPtr,
                                void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t ArgNum, __tgt_async_info *AsyncInfoPtr);
+                               int32_t ArgNum, __tgt_async_info *AsyncInfo);
 
   int32_t runTargetTeamRegionAsync(int32_t DeviceId, void *TgtEntryPtr,
                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
                                    int32_t ArgNum, int32_t TeamNum,
                                    int32_t ThreadLimit, uint64_t LoopTripCount,
-                                   __tgt_async_info *AsyncInfoPtr);
+                                   __tgt_async_info *AsyncInfo);
 };
 
 class RemoteClientManager {
@@ -138,30 +138,30 @@ public:
   int32_t initRequires(int64_t RequiresFlags);
 
   __tgt_target_table *loadBinary(int32_t DeviceId, __tgt_device_image *Image);
-  int64_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfoPtr);
+  int64_t synchronize(int32_t DeviceId, __tgt_async_info *AsyncInfo);
   int32_t isDataExchangeable(int32_t SrcDevId, int32_t DstDevId);
 
   void *dataAlloc(int32_t DeviceId, int64_t Size, void *HstPtr);
   int32_t dataDelete(int32_t DeviceId, void *TgtPtr);
 
   int32_t dataSubmitAsync(int32_t DeviceId, void *TgtPtr, void *HstPtr,
-                          int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                          int64_t Size, __tgt_async_info *AsyncInfo);
   int32_t dataRetrieveAsync(int32_t DeviceId, void *HstPtr, void *TgtPtr,
-                            int64_t Size, __tgt_async_info *AsyncInfoPtr);
+                            int64_t Size, __tgt_async_info *AsyncInfo);
 
   int32_t dataExchangeAsync(int32_t SrcDevId, void *SrcPtr, int32_t DstDevId,
                             void *DstPtr, int64_t Size,
-                            __tgt_async_info *AsyncInfoPtr);
+                            __tgt_async_info *AsyncInfo);
 
   int32_t runTargetRegionAsync(int32_t DeviceId, void *TgtEntryPtr,
                                void **TgtArgs, ptrdiff_t *TgtOffsets,
-                               int32_t ArgNum, __tgt_async_info *AsyncInfoPtr);
+                               int32_t ArgNum, __tgt_async_info *AsyncInfo);
 
   int32_t runTargetTeamRegionAsync(int32_t DeviceId, void *TgtEntryPtr,
                                    void **TgtArgs, ptrdiff_t *TgtOffsets,
                                    int32_t ArgNum, int32_t TeamNum,
                                    int32_t ThreadLimit, uint64_t LoopTripCount,
-                                   __tgt_async_info *AsyncInfoPtr);
+                                   __tgt_async_info *AsyncInfo);
 };
 
 #endif

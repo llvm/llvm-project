@@ -21,7 +21,6 @@
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Lower constant intrinsics
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
-; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       AArch64 Stack Tagging
@@ -40,7 +39,6 @@
 ; CHECK-NEXT:       AArch64PostLegalizerLowering
 ; CHECK-NEXT:       RegBankSelect
 ; CHECK-NEXT:       Localizer
-; CHECK-NEXT:       Analysis for ComputingKnownBits
 ; CHECK-NEXT:       InstructionSelect
 ; CHECK-NEXT:       ResetMachineFunction
 ; CHECK-NEXT:       AArch64 Instruction Selection
@@ -64,10 +62,10 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
-; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
+; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Assembly Printer

@@ -74,7 +74,7 @@ SIntMax Value::getSIntValue() const {
     // to SIntMax.
     const unsigned ExtraBits =
       sizeof(SIntMax) * 8 - getType().getIntegerBitWidth();
-    return SIntMax(Val) << ExtraBits >> ExtraBits;
+    return SIntMax(UIntMax(Val) << ExtraBits) >> ExtraBits;
   }
   if (getType().getIntegerBitWidth() == 64)
     return *reinterpret_cast<s64*>(Val);

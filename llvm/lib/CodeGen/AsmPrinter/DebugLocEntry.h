@@ -34,10 +34,10 @@ struct TargetIndexLocation {
   }
 };
 
-/// A single location or constant.
-class DbgValueLoc {
-  /// Any complex address location expression for this DbgValueLoc.
-  const DIExpression *Expression;
+/// A single location or constant within a variable location description, with
+/// either a single entry (with an optional DIExpression) used for a DBG_VALUE,
+/// or a list of entries used for a DBG_VALUE_LIST.
+class DbgValueLocEntry {
 
   /// Type of entry that this represents.
   enum EntryType {
@@ -64,24 +64,16 @@ class DbgValueLoc {
   };
 
 public:
-  DbgValueLoc(const DIExpression *Expr, int64_t i)
-      : Expression(Expr), EntryKind(E_Integer) {
-    Constant.Int = i;
-  }
-  DbgValueLoc(const DIExpression *Expr, const ConstantFP *CFP)
-      : Expression(Expr), EntryKind(E_ConstantFP) {
+  DbgValueLocEntry(int64_t i) : EntryKind(E_Integer) { Constant.Int = i; }
+  DbgValueLocEntry(const ConstantFP *CFP) : EntryKind(E_ConstantFP) {
     Constant.CFP = CFP;
   }
-  DbgValueLoc(const DIExpression *Expr, const ConstantInt *CIP)
-      : Expression(Expr), EntryKind(E_ConstantInt) {
+  DbgValueLocEntry(const ConstantInt *CIP) : EntryKind(E_ConstantInt) {
     Constant.CIP = CIP;
   }
-  DbgValueLoc(const DIExpression *Expr, MachineLocation Loc)
-      : Expression(Expr), EntryKind(E_Location), Loc(Loc) {
-    assert(cast<DIExpression>(Expr)->isValid());
-  }
-  DbgValueLoc(const DIExpression *Expr, TargetIndexLocation Loc)
-      : Expression(Expr), EntryKind(E_TargetIndexLocation), TIL(Loc) {}
+  DbgValueLocEntry(MachineLocation Loc) : EntryKind(E_Location), Loc(Loc) {}
+  DbgValueLocEntry(TargetIndexLocation Loc)
+      : EntryKind(E_TargetIndexLocation), TIL(Loc) {}
 
   bool isLocation() const { return EntryKind == E_Location; }
   bool isTargetIndexLocation() const {
@@ -95,11 +87,7 @@ public:
   const ConstantInt *getConstantInt() const { return Constant.CIP; }
   MachineLocation getLoc() const { return Loc; }
   TargetIndexLocation getTargetIndexLocation() const { return TIL; }
-  bool isFragment() const { return getExpression()->isFragment(); }
-  bool isEntryVal() const { return getExpression()->isEntryValue(); }
-  const DIExpression *getExpression() const { return Expression; }
-  friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
-  friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
+  friend bool operator==(const DbgValueLocEntry &, const DbgValueLocEntry &);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     if (isLocation()) {
@@ -111,6 +99,77 @@ public:
       Constant.CIP->dump();
     else if (isConstantFP())
       Constant.CFP->dump();
+  }
+#endif
+};
+
+/// The location of a single variable, composed of an expression and 0 or more
+/// DbgValueLocEntries.
+class DbgValueLoc {
+  /// Any complex address location expression for this DbgValueLoc.
+  const DIExpression *Expression;
+
+  SmallVector<DbgValueLocEntry, 2> ValueLocEntries;
+
+  bool IsVariadic;
+
+public:
+  DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs)
+      : Expression(Expr), ValueLocEntries(Locs.begin(), Locs.end()),
+        IsVariadic(true) {
+#ifndef NDEBUG
+    // Currently, DBG_VALUE_VAR expressions must use stack_value.
+    assert(Expr && Expr->isValid() &&
+           is_contained(Locs, dwarf::DW_OP_stack_value));
+    for (DbgValueLocEntry &Entry : ValueLocEntries) {
+      assert(!Entry.isConstantFP() && !Entry.isConstantInt() &&
+             "Constant values should only be present in non-variadic "
+             "DBG_VALUEs.");
+    }
+#endif
+  }
+
+  DbgValueLoc(const DIExpression *Expr, ArrayRef<DbgValueLocEntry> Locs,
+              bool IsVariadic)
+      : Expression(Expr), ValueLocEntries(Locs.begin(), Locs.end()),
+        IsVariadic(IsVariadic) {
+#ifndef NDEBUG
+    assert(cast<DIExpression>(Expr)->isValid() ||
+           !any_of(Locs, [](auto LE) { return LE.isLocation(); }));
+    if (!IsVariadic) {
+      assert(ValueLocEntries.size() == 1);
+    } else {
+      // Currently, DBG_VALUE_VAR expressions must use stack_value.
+      assert(Expr && Expr->isValid() &&
+             is_contained(Expr->getElements(), dwarf::DW_OP_stack_value));
+      for (DbgValueLocEntry &Entry : ValueLocEntries) {
+        assert(!Entry.isConstantFP() && !Entry.isConstantInt() &&
+               "Constant values should only be present in non-variadic "
+               "DBG_VALUEs.");
+      }
+    }
+#endif
+  }
+
+  DbgValueLoc(const DIExpression *Expr, DbgValueLocEntry Loc)
+      : Expression(Expr), ValueLocEntries(1, Loc), IsVariadic(false) {
+    assert(((Expr && Expr->isValid()) || !Loc.isLocation()) &&
+           "DBG_VALUE with a machine location must have a valid expression.");
+  }
+
+  bool isFragment() const { return getExpression()->isFragment(); }
+  bool isEntryVal() const { return getExpression()->isEntryValue(); }
+  bool isVariadic() const { return IsVariadic; }
+  const DIExpression *getExpression() const { return Expression; }
+  const ArrayRef<DbgValueLocEntry> getLocEntries() const {
+    return ValueLocEntries;
+  }
+  friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
+  friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const {
+    for (DbgValueLocEntry DV : ValueLocEntries)
+      DV.dump();
     if (Expression)
       Expression->dump();
   }
@@ -180,28 +239,30 @@ public:
                 DwarfCompileUnit &TheCU);
 };
 
-/// Compare two DbgValueLocs for equality.
-inline bool operator==(const DbgValueLoc &A,
-                       const DbgValueLoc &B) {
+/// Compare two DbgValueLocEntries for equality.
+inline bool operator==(const DbgValueLocEntry &A, const DbgValueLocEntry &B) {
   if (A.EntryKind != B.EntryKind)
     return false;
 
-  if (A.Expression != B.Expression)
-    return false;
-
   switch (A.EntryKind) {
-  case DbgValueLoc::E_Location:
+  case DbgValueLocEntry::E_Location:
     return A.Loc == B.Loc;
-  case DbgValueLoc::E_TargetIndexLocation:
+  case DbgValueLocEntry::E_TargetIndexLocation:
     return A.TIL == B.TIL;
-  case DbgValueLoc::E_Integer:
+  case DbgValueLocEntry::E_Integer:
     return A.Constant.Int == B.Constant.Int;
-  case DbgValueLoc::E_ConstantFP:
+  case DbgValueLocEntry::E_ConstantFP:
     return A.Constant.CFP == B.Constant.CFP;
-  case DbgValueLoc::E_ConstantInt:
+  case DbgValueLocEntry::E_ConstantInt:
     return A.Constant.CIP == B.Constant.CIP;
   }
   llvm_unreachable("unhandled EntryKind");
+}
+
+/// Compare two DbgValueLocs for equality.
+inline bool operator==(const DbgValueLoc &A, const DbgValueLoc &B) {
+  return A.ValueLocEntries == B.ValueLocEntries &&
+         A.Expression == B.Expression && A.IsVariadic == B.IsVariadic;
 }
 
 /// Compare two fragments based on their offset.

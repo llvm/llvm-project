@@ -20,6 +20,7 @@ void
 test(const S& s, const typename S::value_type* str, typename S::size_type pos,
       typename S::size_type n, typename S::size_type x)
 {
+    LIBCPP_ASSERT_NOEXCEPT(s.rfind(str, pos, n));
     assert(s.rfind(str, pos, n) == x);
     if (x != S::npos)
         assert(x <= pos && x + n <= s.size());

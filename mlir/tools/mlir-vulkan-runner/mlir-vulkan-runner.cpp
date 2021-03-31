@@ -16,14 +16,20 @@
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/StandardToSPIRV/StandardToSPIRVPass.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/ExecutionEngine/JitRunner.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -40,10 +46,8 @@ static LogicalResult runMLIRPasses(ModuleOp module) {
   modulePM.addPass(spirv::createLowerABIAttributesPass());
   modulePM.addPass(spirv::createUpdateVersionCapabilityExtensionPass());
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  LowerToLLVMOptions llvmOptions = {
-      /*useBarePtrCallConv =*/false,
-      /*emitCWrappers = */ true,
-      /*indexBitwidth =*/kDeriveIndexBitwidthFromDataLayout};
+  LowerToLLVMOptions llvmOptions(module.getContext(), DataLayout(module));
+  llvmOptions.emitCWrappers = true;
   passManager.addPass(createLowerToLLVMPass(llvmOptions));
   passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
   return passManager.run(module);
@@ -61,5 +65,11 @@ int main(int argc, char **argv) {
   mlir::JitRunnerConfig jitRunnerConfig;
   jitRunnerConfig.mlirTransformer = runMLIRPasses;
 
-  return mlir::JitRunnerMain(argc, argv, jitRunnerConfig);
+  mlir::DialectRegistry registry;
+  registry.insert<mlir::LLVM::LLVMDialect, mlir::gpu::GPUDialect,
+                  mlir::spirv::SPIRVDialect, mlir::StandardOpsDialect,
+                  mlir::memref::MemRefDialect>();
+  mlir::registerLLVMDialectTranslation(registry);
+
+  return mlir::JitRunnerMain(argc, argv, registry, jitRunnerConfig);
 }

@@ -373,7 +373,7 @@ define i32 @test9(i32 %a) nounwind {
 define <4 x i32> @test10(<4 x i32> %a) nounwind {
 ; X86-LABEL: test10:
 ; X86:       # %bb.0:
-; X86-NEXT:    andnps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    andnps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: test10:
@@ -394,14 +394,11 @@ define <4 x i32> @test10(<4 x i32> %a) nounwind {
 define i32 @PR17487(i1 %tobool) {
 ; X86-LABEL: PR17487:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X86-NEXT:    pandn {{\.LCPI.*}}, %xmm0
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X86-NEXT:    movd %xmm0, %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    notb %cl
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpl $1, %ecx
-; X86-NEXT:    setne %al
+; X86-NEXT:    testb $1, %cl
+; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: PR17487:

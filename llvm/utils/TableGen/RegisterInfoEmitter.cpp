@@ -1029,9 +1029,10 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
     ArrayRef<const CodeGenRegister*> Roots = RegBank.getRegUnit(i).getRoots();
     assert(!Roots.empty() && "All regunits must have a root register.");
     assert(Roots.size() <= 2 && "More than two roots not supported yet.");
-    OS << "  { " << getQualifiedName(Roots.front()->TheDef);
-    for (unsigned r = 1; r != Roots.size(); ++r)
-      OS << ", " << getQualifiedName(Roots[r]->TheDef);
+    OS << "  { ";
+    ListSeparator LS;
+    for (const CodeGenRegister *R : Roots)
+      OS << LS << getQualifiedName(R->TheDef);
     OS << " },\n";
   }
   OS << "};\n\n";
@@ -1083,12 +1084,15 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   for (const auto &RC : RegisterClasses) {
     assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
+    uint32_t RegSize = 0;
+    if (RC.RSI.isSimple())
+      RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
-       << RegClassStrings.get(RC.getName()) << ", "
-       << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
-       << RC.getQualifiedName() + "RegClassID" << ", "
-       << RC.CopyCost << ", "
-       << ( RC.Allocatable ? "true" : "false" ) << " },\n";
+       << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
+       << ", sizeof(" << RC.getName() << "Bits), "
+       << RC.getQualifiedName() + "RegClassID"
+       << ", " << RegSize << ", " << RC.CopyCost << ", "
+       << (RC.Allocatable ? "true" : "false") << " },\n";
   }
 
   OS << "};\n\n";

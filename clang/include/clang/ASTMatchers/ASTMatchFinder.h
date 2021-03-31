@@ -110,6 +110,12 @@ public:
     /// This id is used, for example, for the profiling output.
     /// It defaults to "<unknown>".
     virtual StringRef getID() const;
+
+    /// TraversalKind to use while matching and processing
+    /// the result nodes. This API is temporary to facilitate
+    /// third parties porting existing code to the default
+    /// behavior of clang-tidy.
+    virtual llvm::Optional<TraversalKind> getCheckTraversalKind() const;
   };
 
   /// Called when parsing is finished. Intended for testing only.
@@ -280,6 +286,11 @@ public:
   void run(const MatchFinder::MatchResult &Result) override {
     Nodes.push_back(Result.Nodes);
   }
+
+  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+    return llvm::None;
+  }
+
   SmallVector<BoundNodes, 1> Nodes;
 };
 }

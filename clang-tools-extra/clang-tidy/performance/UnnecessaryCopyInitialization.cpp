@@ -206,13 +206,10 @@ void UnnecessaryCopyInitialization::handleCopyFromMethodReturn(
 
   auto Diagnostic =
       diag(Var.getLocation(),
-           IsConstQualified ? "the const qualified variable %0 is "
-                              "copy-constructed from a const reference; "
-                              "consider making it a const reference"
-                            : "the variable %0 is copy-constructed from a "
-                              "const reference but is only used as const "
-                              "reference; consider making it a const reference")
-      << &Var;
+           "the %select{|const qualified }0variable %1 is copy-constructed "
+           "from a const reference%select{ but is only used as const "
+           "reference|}0; consider making it a const reference")
+      << IsConstQualified << &Var;
   if (IssueFix)
     recordFixes(Var, Context, Diagnostic);
 }

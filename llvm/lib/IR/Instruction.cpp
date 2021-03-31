@@ -633,12 +633,26 @@ bool Instruction::isSafeToRemove() const {
          !this->isTerminator();
 }
 
+bool Instruction::willReturn() const {
+  if (const auto *CB = dyn_cast<CallBase>(this))
+    // FIXME: Temporarily assume that all side-effect free intrinsics will
+    // return. Remove this workaround once all intrinsics are appropriately
+    // annotated.
+    return CB->hasFnAttr(Attribute::WillReturn) ||
+           (isa<IntrinsicInst>(CB) && CB->onlyReadsMemory());
+  return true;
+}
+
 bool Instruction::isLifetimeStartOrEnd() const {
   auto II = dyn_cast<IntrinsicInst>(this);
   if (!II)
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
+}
+
+bool Instruction::isDebugOrPseudoInst() const {
+  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
 const Instruction *

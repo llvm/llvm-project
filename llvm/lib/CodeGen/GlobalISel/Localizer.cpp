@@ -82,8 +82,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
   // we start doing CSE across blocks.
   auto &MBB = MF.front();
   auto &TL = *MF.getSubtarget().getTargetLowering();
-  for (auto RI = MBB.rbegin(), RE = MBB.rend(); RI != RE; ++RI) {
-    MachineInstr &MI = *RI;
+  for (MachineInstr &MI : llvm::reverse(MBB)) {
     if (!TL.shouldLocalize(MI, TTI))
       continue;
     LLVM_DEBUG(dbgs() << "Should localize: " << MI);

@@ -5,7 +5,7 @@
 
 ; FUNC-LABEL: {{^}}srem_i16_7:
 ; GFX9: s_movk_i32 {{s[0-9]+}}, 0x4925
-; GFX9: v_mul_i32_i24_sdwa
+; GFX9: v_mul_lo_u32
 define amdgpu_kernel void @srem_i16_7(i16 addrspace(1)* %out, i16 addrspace(1)* %in) {
   %num = load i16, i16 addrspace(1) * %in
   %result = srem i16 %num, 7
@@ -29,6 +29,7 @@ define amdgpu_kernel void @srem_i32_4(i32 addrspace(1)* %out, i32 addrspace(1)* 
   ret void
 }
 
+; FIXME: uniform i16 srem should not use VALU instructions
 ; FUNC-LABEL: {{^}}srem_i32_7:
 ; SI: s_mov_b32 [[MAGIC:s[0-9]+]], 0x92492493
 ; SI: v_mul_hi_i32 {{v[0-9]+}}, {{v[0-9]+}}, [[MAGIC]]

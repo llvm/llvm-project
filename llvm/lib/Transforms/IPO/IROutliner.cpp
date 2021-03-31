@@ -435,11 +435,9 @@ static void findConstants(IRSimilarityCandidate &C, DenseSet<unsigned> &NotSame,
 /// analyzing.
 /// \param [in] CurrentInputs - The set of inputs found by the
 /// CodeExtractor.
-/// \param [out] EndInputNumbers - The global value numbers for the extracted
-/// arguments.
 /// \param [in] OutputMappings - The mapping of values that have been replaced
 /// by a new output value.
-/// \param [out] EndInputs - The global value numbers for the extracted
+/// \param [out] EndInputNumbers - The global value numbers for the extracted
 /// arguments.
 static void mapInputsToGVNs(IRSimilarityCandidate &C,
                             SetVector<Value *> &CurrentInputs,
@@ -563,7 +561,7 @@ static void getCodeExtractorArguments(
 /// overall function.
 ///
 /// \param [in,out] Region - The region of code to be analyzed.
-/// \param [in] InputsGVNs - The global value numbering of the input values
+/// \param [in] InputGVNs - The global value numbering of the input values
 /// collected.
 /// \param [in] ArgInputs - The values of the arguments to the extracted
 /// function.
@@ -1081,7 +1079,6 @@ alignOutputBlockWithAggFunc(OutlinableGroup &OG, OutlinableRegion &Region,
 /// matches the needed stores for the extracted section.
 /// \param [in] M - The module we are outlining from.
 /// \param [in] OG - The group of regions to be outlined.
-/// \param [in] OS - The region that is being analyzed.
 /// \param [in] EndBB - The final block of the extracted function.
 /// \param [in,out] OutputStoreBBs - The existing output blocks.
 void createSwitchStatement(Module &M, OutlinableGroup &OG, BasicBlock *EndBB,
