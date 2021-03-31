@@ -3064,6 +3064,72 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportOfEquivalentField) {
   EXPECT_EQ(ToF1, ToF2);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportBitfields) {
+  Decl *FromTU = getTuDecl("struct A { unsigned x : 3; };", Lang_CXX03);
+  auto *FromF =
+      FirstDeclMatcher<FieldDecl>().match(FromTU, fieldDecl(hasName("x")));
+
+  ASSERT_TRUE(FromF->isBitField());
+  ASSERT_EQ(3u, FromF->getBitWidthValue(FromTU->getASTContext()));
+  auto *ToField = Import(FromF, Lang_CXX03);
+  auto *ToTU = ToField->getTranslationUnitDecl();
+
+  EXPECT_TRUE(ToField->isBitField());
+  EXPECT_EQ(3u, ToField->getBitWidthValue(ToTU->getASTContext()));
+
+  const auto *FromBT = FromF->getBitWidth()->getType()->getAs<BuiltinType>();
+  const auto *ToBT = ToField->getBitWidth()->getType()->getAs<BuiltinType>();
+  ASSERT_TRUE(FromBT);
+  ASSERT_EQ(BuiltinType::Int, FromBT->getKind());
+  EXPECT_TRUE(ToBT);
+  EXPECT_EQ(BuiltinType::Int, ToBT->getKind());
+}
+
+struct ImportBlock : ASTImporterOptionSpecificTestBase {};
+const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl> blockDecl;
+TEST_P(ImportBlock, ImportBlocksAreUnsupported) {
+  const auto *Code = R"(
+    void test_block__capture_null() {
+      int *p = 0;
+      ^(){
+        *p = 1;
+      }();
+    })";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX03);
+  auto *FromBlock = FirstDeclMatcher<BlockDecl>().match(FromTU, blockDecl());
+  ASSERT_TRUE(FromBlock);
+
+  auto ToBlockOrError = importOrError(FromBlock, Lang_CXX03);
+
+  const auto ExpectUnsupportedConstructError = [](const ImportError &Error) {
+    EXPECT_EQ(ImportError::UnsupportedConstruct, Error.Error);
+  };
+  llvm::handleAllErrors(ToBlockOrError.takeError(),
+                        ExpectUnsupportedConstructError);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportParmVarDecl) {
+  const auto *Code = R"(
+    template <typename T> struct Wrapper {
+      Wrapper(T Value = {}) {}
+    };
+    template class Wrapper<int>;
+    )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromVar = FirstDeclMatcher<ParmVarDecl>().match(
+      FromTU, parmVarDecl(hasType(asString("int"))));
+  ASSERT_TRUE(FromVar);
+  ASSERT_TRUE(FromVar->hasUninstantiatedDefaultArg());
+  ASSERT_TRUE(FromVar->getUninstantiatedDefaultArg());
+
+  const auto *ToVar = Import(FromVar, Lang_CXX11);
+  EXPECT_TRUE(ToVar);
+  EXPECT_TRUE(ToVar->hasUninstantiatedDefaultArg());
+  EXPECT_TRUE(ToVar->getUninstantiatedDefaultArg());
+  EXPECT_NE(FromVar->getUninstantiatedDefaultArg(),
+            ToVar->getUninstantiatedDefaultArg());
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportOfNonEquivalentField) {
   Decl *ToF1;
   {
@@ -6271,6 +6337,11 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportFixedPointExpr,
                         ExtendWithOptions(DefaultTestArrayForRunOptions,
                                           std::vector<std::string>{
                                               "-ffixed-point"}), );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportBlock,
+                        ExtendWithOptions(DefaultTestArrayForRunOptions,
+                                          std::vector<std::string>{
+                                              "-fblocks"}), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportType,
                         DefaultTestValuesForRunOptions, );
