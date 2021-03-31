@@ -2859,6 +2859,38 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
   }
 };
 
+template <typename OP>
+struct MustBeDeadConversion : public FIROpConversion<OP> {
+  explicit MustBeDeadConversion(mlir::MLIRContext *ctx,
+                                fir::LLVMTypeConverter &lowering)
+      : FIROpConversion<OP>(ctx, lowering) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(OP op, OperandTy operands,
+                  mlir::ConversionPatternRewriter &rewriter) const final {
+    if (!op->getUses().empty())
+      return mlir::emitError(op.getLoc(), "op must be dead");
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+struct ShapeOpConversion : public MustBeDeadConversion<fir::ShapeOp> {
+  using MustBeDeadConversion::MustBeDeadConversion;
+};
+
+struct ShapeShiftOpConversion : public MustBeDeadConversion<fir::ShapeShiftOp> {
+  using MustBeDeadConversion::MustBeDeadConversion;
+};
+
+struct ShiftOpConversion : public MustBeDeadConversion<fir::ShiftOp> {
+  using MustBeDeadConversion::MustBeDeadConversion;
+};
+
+struct SliceOpConversion : public MustBeDeadConversion<fir::SliceOp> {
+  using MustBeDeadConversion::MustBeDeadConversion;
+};
+
 /// Convert FIR dialect to LLVM dialect
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect.  An
@@ -2889,11 +2921,13 @@ public:
         InsertValueOpConversion, ModfOpConversion, LenParamIndexOpConversion,
         LoadOpConversion, MulcOpConversion, NegcOpConversion, NegfOpConversion,
         NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
-        SelectRankOpConversion, SelectTypeOpConversion, StoreOpConversion,
-        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
-        UnboxOpConversion, UnboxProcOpConversion, UndefOpConversion,
-        UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
-        XReboxOpConversion, ZeroOpConversion>(context, typeConverter);
+        SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+        ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+        StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+        UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
+        UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
+        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
+        context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
