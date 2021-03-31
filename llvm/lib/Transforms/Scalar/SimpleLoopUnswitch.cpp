@@ -1996,6 +1996,7 @@ static void unswitchNontrivialInvariants(
   int ClonedSucc = 0;
   if (!FullUnswitch) {
     Value *Cond = BI->getCondition();
+    (void)Cond;
     assert((match(Cond, m_LogicalAnd()) ^ match(Cond, m_LogicalOr())) &&
            "Only `or`, `and`, an `select` instructions can combine "
            "invariants being unswitched.");
