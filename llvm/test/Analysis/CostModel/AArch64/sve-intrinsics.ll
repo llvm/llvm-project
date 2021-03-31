@@ -105,8 +105,8 @@ declare double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double>)
 
 define void  @count_zeroes(<vscale x 4 x i32> %A) {
 ; CHECK-LABEL: 'count_zeroes'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   ret void
