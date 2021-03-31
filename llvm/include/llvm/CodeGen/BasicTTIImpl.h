@@ -1346,15 +1346,12 @@ public:
       return Cost;
     }
     }
-    // TODO: Handle the remaining intrinsic with scalable vector type
-    if (isa<ScalableVectorType>(RetTy))
-      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
     // Assume that we need to scalarize this intrinsic.
     // Compute the scalarization overhead based on Args for a vector
     // intrinsic.
     unsigned ScalarizationCost = std::numeric_limits<unsigned>::max();
-    if (RetVF.isVector()) {
+    if (RetVF.isVector() && !RetVF.isScalable()) {
       ScalarizationCost = 0;
       if (!RetTy->isVoidTy())
         ScalarizationCost +=
@@ -1399,6 +1396,12 @@ public:
     SmallVector<unsigned, 2> ISDs;
     switch (IID) {
     default: {
+      // Scalable vectors cannot be scalarized, so return Invalid.
+      if (isa<ScalableVectorType>(RetTy) || any_of(Tys, [](const Type *Ty) {
+            return isa<ScalableVectorType>(Ty);
+          }))
+        return InstructionCost::getInvalid();
+
       // Assume that we need to scalarize this intrinsic.
       InstructionCost ScalarizationCost = ScalarizationCostPassed;
       unsigned ScalarCalls = 1;
@@ -1810,6 +1813,12 @@ public:
     // this will emit a costly libcall, adding call overhead and spills. Make it
     // very expensive.
     if (auto *RetVTy = dyn_cast<VectorType>(RetTy)) {
+      // Scalable vectors cannot be scalarized, so return Invalid.
+      if (isa<ScalableVectorType>(RetTy) || any_of(Tys, [](const Type *Ty) {
+            return isa<ScalableVectorType>(Ty);
+          }))
+        return InstructionCost::getInvalid();
+
       unsigned ScalarizationCost = SkipScalarizationCost ?
         ScalarizationCostPassed : getScalarizationOverhead(RetVTy, true, false);
 
