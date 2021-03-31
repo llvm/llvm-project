@@ -3086,7 +3086,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportBitfields) {
 }
 
 struct ImportBlock : ASTImporterOptionSpecificTestBase {};
-const internal::VariadicDynCastAllOfMatcher<Decl, BlockDecl> blockDecl;
 TEST_P(ImportBlock, ImportBlocksAreUnsupported) {
   const auto *Code = R"(
     void test_block__capture_null() {
