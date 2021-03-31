@@ -474,3 +474,154 @@ exit:
   %cmp = icmp eq i8 %A, 0
   ret i1 %cmp
 }
+
+
+define i1 @test_lshr_exact(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_lshr_exact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 64, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = lshr exact i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 64, %entry ], [ %next, %loop ]
+  %next = lshr exact i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
+
+define i1 @test_lshr_may_wrap(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_lshr_may_wrap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 1, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = lshr i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 1, %entry ], [ %next, %loop ]
+  %next = lshr i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
+
+define i1 @test_lshr_zero_start(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_lshr_zero_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = lshr exact i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 0, %entry ], [ %next, %loop ]
+  %next = lshr exact i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
+
+define i1 @test_ashr_exact(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_ashr_exact(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 64, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = ashr exact i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 64, %entry ], [ %next, %loop ]
+  %next = ashr exact i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
+
+define i1 @test_ashr_may_wrap(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_ashr_may_wrap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 1, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = ashr i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 1, %entry ], [ %next, %loop ]
+  %next = ashr i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
+
+define i1 @test_ashr_zero_start(i8 %p, i8* %pq, i8 %n) {
+; CHECK-LABEL: @test_ashr_zero_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[NEXT]] = ashr exact i8 [[A]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[A]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+loop:
+  %A = phi i8 [ 0, %entry ], [ %next, %loop ]
+  %next = ashr exact i8 %A, 1
+  %cmp1 = icmp eq i8 %A, %n
+  br i1 %cmp1, label %exit, label %loop
+exit:
+  %cmp = icmp eq i8 %A, 0
+  ret i1 %cmp
+}
