@@ -1269,7 +1269,7 @@ class Base(unittest2.TestCase):
             return True
         return False
 
-    def getCPUInfo(self):
+    def isAArch64SVE(self):
         triple = self.dbg.GetSelectedPlatform().GetTriple()
 
         # TODO other platforms, please implement this function
@@ -1290,16 +1290,7 @@ class Base(unittest2.TestCase):
         except:
             return False
 
-        return cpuinfo
-
-    def isAArch64SVE(self):
-        return "sve" in self.getCPUInfo()
-
-    def isAArch64MTE(self):
-        return "mte" in self.getCPUInfo()
-
-    def isAArch64PAuth(self):
-        return "paca" in self.getCPUInfo()
+        return " sve " in cpuinfo
 
     def hasLinuxVmFlags(self):
         """ Check that the target machine has "VmFlags" lines in
