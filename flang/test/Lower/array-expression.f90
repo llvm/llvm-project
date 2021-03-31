@@ -128,6 +128,46 @@ subroutine test6(a,b,c,n,m)
   a(3:n:4) = b + c
 end subroutine test6
 
+! CHECK-LABEL: func @_QPtest6a
+! CHECK-SAME: %[[a:.*]]: !fir.ref<!fir.array<10x50xf32>>,
+! CHECK-SAME: %[[b:.*]]: !fir.ref<!fir.array<10xf32>>)
+subroutine test6a(a,b)
+  ! copy part of 1 row to b. a's projection has rank 1.
+  real :: a(10,50)
+  real :: b(10)
+  ! CHECK: %[[shape:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %{{.*}} = fir.array_load %[[b]](%[[shape]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
+  ! CHECK-DAG: %[[shape:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+  ! CHECK-DAG: %[[slice:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i64, index, index, i64, i64, i64) -> !fir.slice<2>
+  ! CHECK: %{{.*}} = fir.array_load %[[a]](%[[shape]]) [%[[slice]]] : (!fir.ref<!fir.array<10x50xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.array<10x50xf32>
+  ! CHECK: %{{.*}} = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10xf32>)
+  ! CHECK: %[[fetch:.*]] = fir.array_fetch %{{.*}}, %{{.*}}, %[[i]] : (!fir.array<10x50xf32>, index, index) -> f32
+  ! CHECK: %[[update:.*]] = fir.array_update %{{.*}}, %[[fetch]], %[[i]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
+  ! CHECK: fir.result %{{.*}} : !fir.array<10xf32>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[b]] : !fir.ref<!fir.array<10xf32>>
+  b = a(4,41:50)
+end subroutine test6a
+
+! CHECK-LABEL: func @_QPtest6b
+! CHECK-SAME: %[[a:.*]]: !fir.ref<!fir.array<10x50xf32>>,
+! CHECK-SAME: %[[b:.*]]: !fir.ref<!fir.array<10xf32>>)
+subroutine test6b(a,b)
+  ! copy b to columns 41 to 50 of row 4 of a
+  real :: a(10,50)
+  real :: b(10)
+  ! CHECK-DAG: %[[shape:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
+  ! CHECK-DAG: %[[slice:.*]] = fir.slice %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i64, index, index, i64, i64, i64) -> !fir.slice<2>
+  ! CHECK: %{{.*}} = fir.array_load %[[a]](%[[shape]]) [%[[slice]]] : (!fir.ref<!fir.array<10x50xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.array<10x50xf32>
+  ! CHECK: %[[shape:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+  ! CHECK: %{{.*}} = fir.array_load %[[b]](%[[shape]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
+  ! CHECK: %{{.*}} = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (!fir.array<10x50xf32>) {
+  ! CHECK: %[[fetch:.*]] = fir.array_fetch %{{.*}}, %[[i]] : (!fir.array<10xf32>, index) -> f32
+  ! CHECK: %[[update:.*]] = fir.array_update %{{.*}}, %[[fetch]], %{{.*}}, %[[i]] : (!fir.array<10x50xf32>, f32, index, index) -> !fir.array<10x50xf32>
+  ! CHECK: fir.result %{{.*}} : !fir.array<10x50xf32>
+  ! CHECK: fir.array_merge_store %{{.*}}, %{{.*}} to %[[a]] : !fir.ref<!fir.array<10x50xf32>>
+  a(4,41:50) = b
+end subroutine test6b
+
 ! This is NOT a conflict. `a` appears on both the lhs and rhs here, but there
 ! are no loop-carried dependences and no copy is needed.
 ! CHECK-LABEL: func @_QPtest7

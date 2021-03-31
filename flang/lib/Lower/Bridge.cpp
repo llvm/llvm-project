@@ -1556,14 +1556,8 @@ private:
       return;
     }
     localSymbols.pushScope();
-    auto dst =
-        createSomeArraySubspace(*this, assign.lhs, localSymbols, stmtCtx);
-    auto exv = createSomeNewArrayValue(
-        *this, dst,
-        Fortran::evaluate::GetShape(getFoldingContext(), assign.lhs),
-        assign.rhs, localSymbols, stmtCtx);
-    builder->create<fir::ArrayMergeStoreOp>(loc, dst, fir::getBase(exv),
-                                            dst.memref());
+    createSomeArrayAssignment(*this, assign.lhs, assign.rhs, localSymbols,
+                              stmtCtx);
     localSymbols.popScope();
   }
 

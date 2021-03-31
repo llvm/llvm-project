@@ -62,15 +62,11 @@ createSomeMutableBox(mlir::Location loc, AbstractConverter &converter,
                      const evaluate::Expr<evaluate::SomeType> &expr,
                      SymMap &symMap);
 
-/// Create and return a projection of a subspace of an array value. This is the
-/// lhs onto which a newly constructed array value can be merged.
-/// This implements copy-in, copy-out semantics. In case that require it,
-/// results will be buffered so that the rhs values are preserved and the lhs is
-/// updated only after all intermediate computation is concluded.
-fir::ArrayLoadOp
-createSomeArraySubspace(AbstractConverter &converter,
-                        const evaluate::Expr<evaluate::SomeType> &expr,
-                        SymMap &symMap, StatementContext &stmtCtx);
+/// Lower an array assignment expression.
+void createSomeArrayAssignment(AbstractConverter &converter,
+                               const evaluate::Expr<evaluate::SomeType> &lhs,
+                               const evaluate::Expr<evaluate::SomeType> &rhs,
+                               SymMap &symMap, StatementContext &stmtCtx);
 
 /// Create an array temporary.
 /// When lowering an array expression, it may be necessary to allocate temporary

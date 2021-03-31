@@ -104,7 +104,10 @@ enum class ConstituentSemantics {
               // is the i-th value in `[xs]` (15.5.2.3.p7 note 2)
   CopyInCopyOut, // refers to the merge of `[xs]` with another value `[ys]`,
                  // which is written into `a`.
-  RefOpaque      // refers to the address `a+i`, the i-th element of `a`
+  ProjectedCopyInCopyOut, // similar to CopyInCopyOut but the variable `v` may
+                          // itself be a transient projection (rather than a
+                          // whole array).
+  RefOpaque // refers to the address `a+i`, the i-th element of `a`
 };
 
 /// Convert parser's INTEGER relational operators to MLIR.  TODO: using
@@ -1885,9 +1888,20 @@ class ArrayExprLowering {
       indices.insert(indices.begin() + i, v);
     }
 
+    void setElement(mlir::Value ele) {
+      assert(!element);
+      element = ele;
+    }
+
+    mlir::Value getElement() const {
+      assert(element);
+      return element;
+    }
+
   private:
     mlir::Value inArg;
     mlir::Value outRes;
+    mlir::Value element;
     llvm::SmallVector<mlir::Value> indices;
   };
 
@@ -1897,6 +1911,28 @@ public:
   using CC = std::function<ExtValue(IterSpace)>; // current continuation
   using PC =
       std::function<IterationSpace(IterSpace)>; // projection continuation
+
+  static void lowerArrayAssignment(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &lhs,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs) {
+    ArrayExprLowering ael{converter, stmtCtx, symMap,
+                          ConstituentSemantics::CopyInCopyOut};
+    ael.lowerArrayAssignment(lhs, rhs);
+  }
+
+  void lowerArrayAssignment(
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &lhs,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs) {
+    auto loc = getLoc();
+    destShape = Fortran::evaluate::GetShape(converter.getFoldingContext(), lhs);
+    lowerArrayProjectedSubspace(lhs);
+    semant = ConstituentSemantics::RefTransparent;
+    auto exv = lowerArrayExpression(rhs);
+    builder.create<fir::ArrayMergeStoreOp>(loc, destination, fir::getBase(exv),
+                                           destination.memref());
+  }
 
   /// Entry point for when an array expression appears on the lhs of an
   /// assignment. In the default case, the rhs is fully evaluated prior to any
@@ -1922,6 +1958,15 @@ public:
           fir::emitFatalError(getLoc(), "array must be loaded");
         },
         exp.u);
+  }
+
+  /// Here the target subspace is not necessarily contiguous. The ArrayUpdate
+  /// continuation is implicitly returned in `ccDest` and the ArrayLoad in
+  /// `destination`.
+  void lowerArrayProjectedSubspace(
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &exp) {
+    PushSemantics(ConstituentSemantics::ProjectedCopyInCopyOut);
+    return std::visit([&](const auto &e) { ccDest = genarr(e); }, exp.u);
   }
 
   /// Entry point for when an array expression appears in a context where the
@@ -1978,9 +2023,13 @@ public:
           // Convert to array elemental type is needed for logical.
           auto eleTy = innerArg.getType().cast<fir::SequenceType>().getEleTy();
           auto element = builder.createConvert(loc, eleTy, fir::getBase(exv));
-          auto upd = builder.create<fir::ArrayUpdateOp>(
-              loc, innerArg.getType(), innerArg, element, iterSpace.iterVec());
-          builder.create<fir::ResultOp>(loc, upd.getResult());
+          iterSpace.setElement(element);
+          mlir::Value upd = ccDest.hasValue()
+                                ? fir::getBase(ccDest.getValue()(iterSpace))
+                                : builder.create<fir::ArrayUpdateOp>(
+                                      loc, innerArg.getType(), innerArg,
+                                      element, iterSpace.iterVec());
+          builder.create<fir::ResultOp>(loc, upd);
           builder.restoreInsertionPoint(insPt);
           return fir::substBase(exv, iterSpace.outerResult());
         },
@@ -2751,8 +2800,9 @@ public:
         return coor;
       };
     }
-    mlir::Value arrLd = builder.create<fir::ArrayLoadOp>(
+    auto arrLoad = builder.create<fir::ArrayLoadOp>(
         loc, arrTy, memref, shape, slice, /*lenParams=*/llvm::None);
+    auto arrLd = arrLoad.getResult();
     if (isCopyInCopyOut())
       return [=](IterSpace) -> ExtValue { return arrLd; };
     if (isValueAttribute())
@@ -2766,6 +2816,16 @@ public:
         builder.create<fir::StoreOp>(loc, base, temp);
         return arrayElementToExtendedValue(builder, loc, extMemref, temp);
       };
+    if (isProjectedCopyInCopyOut()) {
+      destination = arrLoad;
+      return [=](IterSpace iters) -> ExtValue {
+        auto innerArg = iters.innerArgument();
+        auto arrUpdate = builder.create<fir::ArrayUpdateOp>(
+            loc, innerArg.getType(), innerArg, iters.getElement(),
+            iters.iterVec());
+        return arrayElementToExtendedValue(builder, loc, extMemref, arrUpdate);
+      };
+    }
     return [=](IterSpace iters) -> ExtValue {
       auto arrFetch =
           builder.create<fir::ArrayFetchOp>(loc, eleTy, arrLd, iters.iterVec());
@@ -3059,6 +3119,9 @@ private:
   bool isCopyInCopyOut() {
     return semant == ConstituentSemantics::CopyInCopyOut;
   }
+  bool isProjectedCopyInCopyOut() {
+    return semant == ConstituentSemantics::ProjectedCopyInCopyOut;
+  }
 
   /// Array appears in a context where it must be boxed.
   bool isBoxValue() { return semant == ConstituentSemantics::BoxValue; }
@@ -3077,6 +3140,7 @@ private:
   Fortran::lower::FirOpBuilder &builder;
   Fortran::lower::StatementContext &stmtCtx;
   Fortran::lower::SymMap &symMap;
+  llvm::Optional<CC> ccDest;
   fir::ArrayLoadOp destination;
   std::optional<Fortran::evaluate::Shape> destShape;
   llvm::SmallVector<mlir::Value> sliceTriple;
@@ -3136,13 +3200,14 @@ fir::ExtendedValue Fortran::lower::createSomeExtendedAddress(
   return ScalarExprLowering{loc, converter, symMap, stmtCtx}.gen(expr);
 }
 
-fir::ArrayLoadOp Fortran::lower::createSomeArraySubspace(
+void Fortran::lower::createSomeArrayAssignment(
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &lhs,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
-  LLVM_DEBUG(expr.AsFortran(llvm::dbgs() << "onto array: ") << '\n');
-  return ArrayExprLowering::lowerArraySubspace(converter, symMap, stmtCtx,
-                                               expr);
+  LLVM_DEBUG(lhs.AsFortran(llvm::dbgs() << "onto array: ") << '\n';
+             rhs.AsFortran(llvm::dbgs() << "assign expression: ") << '\n';);
+  ArrayExprLowering::lowerArrayAssignment(converter, symMap, stmtCtx, lhs, rhs);
 }
 
 fir::AllocMemOp Fortran::lower::createSomeArrayTemp(
