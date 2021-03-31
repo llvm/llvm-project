@@ -897,9 +897,13 @@ def cuda_path_ignore_env : Flag<["--"], "cuda-path-ignore-env">, Group<i_Group>,
   HelpText<"Ignore environment variables to detect CUDA installation">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Group<i_Group>,
   HelpText<"Path to ptxas (used for compiling CUDA code)">;
+def fgpu_flush_denormals_to_zero : Flag<["-"], "fgpu-flush-denormals-to-zero">,
+  HelpText<"Flush denormal floating point values to zero in CUDA/HIP device mode.">;
+def fno_gpu_flush_denormals_to_zero : Flag<["-"], "fno-gpu-flush-denormals-to-zero">;
 def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">,
-  HelpText<"Flush denormal floating point values to zero in CUDA device mode.">;
-def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">;
+  Alias<fgpu_flush_denormals_to_zero>;
+def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">,
+  Alias<fno_gpu_flush_denormals_to_zero>;
 defm gpu_rdc : BoolFOption<"gpu-rdc",
   LangOpts<"GPURelocatableDeviceCode">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Generate relocatable device code, also known as separate compilation mode">,
