@@ -67,12 +67,12 @@ def SImm5Plus1AsmOperand : AsmOperandClass {
 }
 
 def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                           [{return isInt<5>(Imm - 1);}]> {
+  [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
   let ParserMatchClass = SImm5Plus1AsmOperand;
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
-      return isInt<5>(Imm - 1);
+      return (isInt<5>(Imm) && Imm != -16) || Imm == 16;
     return MCOp.isBareSymbolRef();
   }];
 }

@@ -3278,6 +3278,29 @@ defm PseudoVADD        : VPseudoBinaryV_VV_VX_VI;
 defm PseudoVSUB        : VPseudoBinaryV_VV_VX;
 defm PseudoVRSUB       : VPseudoBinaryV_VX_VI;
 
+foreach vti = AllIntegerVectors in {
+  // Match VSUB with a small immediate to vadd.vi by negating the immediate.
+  def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector vti.RegClass:$rs1),
+                                        (vti.Scalar simm5_plus1:$rs2),
+                                        (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                              (NegImm simm5_plus1:$rs2),
+                                                              GPR:$vl,
+                                                              vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (vti.Scalar simm5_plus1:$rs2),
+                                             (vti.Mask V0),
+                                             (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX#"_MASK")
+                                                      vti.RegClass:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      (NegImm simm5_plus1:$rs2),
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+}
+
 //===----------------------------------------------------------------------===//
 // 12.2. Vector Widening Integer Add/Subtract
 //===----------------------------------------------------------------------===//
