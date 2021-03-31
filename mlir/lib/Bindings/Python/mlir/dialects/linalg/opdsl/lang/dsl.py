@@ -61,11 +61,10 @@ class DefinedOpCallable:
       raise NotImplementedError(
           f"Emission of composite linalg ops not supported: {op_configs}")
 
-    # TODO: this file should probably not be called dsl.py but rather is a client
-    # of the dsl.py.
-    from .... import linalg as linalg_ops
-    emit_generic = (emit_generic or 
-      (not self.model.metadata.cpp_class_name in linalg_ops.__dict__.keys()))
+    ctx = ir.Context.current
+    linalgDialect = ctx.get_dialect_descriptor("linalg")
+    fully_qualified_name = 'linalg.' + self.op_name
+    emit_generic = (emit_generic or not ctx.is_registered_operation(fully_qualified_name))
 
     op_config = op_configs[0]
     if op_config.structured_op:

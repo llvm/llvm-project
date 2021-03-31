@@ -7,6 +7,9 @@ from typing import Dict, Sequence
 from mlir.ir import *
 from mlir.dialects import linalg
 from mlir.dialects import std
+# TODO: resolve name collision for Linalg functionality that is injected inside
+# the _mlir.dialects.linalg directly via pybind.
+from _mlir.dialects.linalg import fill_builtin_region
 
 from .scalar_expr import *
 from .config import *
@@ -15,7 +18,6 @@ __all__ = [
     "emit_generic_structured_op",
     "emit_named_structured_op",
 ]
-
 
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
                                  *ins: Value,
@@ -97,11 +99,18 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
   type_mapping, indexing_maps_attr, iterator_types_attr =   \
      prepare_common_structured_op(op_config, *ins, outs = outs)
 
-  if not op_class_name in linalg.__dict__.keys():
+  # If we get here, there must exist a builtin class `op_class_name`.
+  ctx = Context.current
+  fully_qualified_name = 'linalg.' + op_name
+  if (not ctx.is_registered_operation(fully_qualified_name) or
+      not op_class_name in linalg.__dict__.keys()):
     raise NotImplementedError(
         f"Unknown named op_name / op_class_name: {op_name} / {op_class_name}")
 
   named_op = getattr(linalg, op_class_name)(ins, outs, out_types)
+  linalgDialect = ctx.get_dialect_descriptor("linalg")
+  fill_builtin_region(linalgDialect, named_op.operation)
+
   if len(out_arg_defs) == 1:
     return named_op.result
   else:
