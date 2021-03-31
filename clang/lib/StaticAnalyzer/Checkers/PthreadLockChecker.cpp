@@ -339,16 +339,7 @@ void PthreadLockChecker::printState(raw_ostream &Out, ProgramStateRef State,
     }
   }
 
-  DestroyRetValTy DRV = State->get<DestroyRetVal>();
-  if (!DRV.isEmpty()) {
-    Out << Sep << "Mutexes in unresolved possibly destroyed state:" << NL;
-    for (auto I : DRV) {
-      I.first->dumpToStream(Out);
-      Out << ": ";
-      I.second->dumpToStream(Out);
-      Out << NL;
-    }
-  }
+  // TODO: Dump destroyed mutex symbols?
 }
 
 void PthreadLockChecker::AcquirePthreadLock(const CallEvent &Call,
