@@ -695,7 +695,7 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
 
   Shadow old(0);
 
-  // It release mode we manually unroll the loop,
+  // In release mode we manually unroll the loop,
   // because empirically gcc generates better code this way.
   // However, we can't afford unrolling in debug mode, because the function
   // consumes almost 4K of stack. Gtest gives only 4K of stack to death test
@@ -708,23 +708,11 @@ void MemoryAccessImpl1(ThreadState *thr, uptr addr,
   int idx = 0;
 #include "tsan_update_shadow_word_inl.h"
   idx = 1;
-  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
-  } else {
-#include "tsan_update_shadow_word_inl.h"
-  }
   idx = 2;
-  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
-  } else {
-#include "tsan_update_shadow_word_inl.h"
-  }
   idx = 3;
-  if (stored) {
 #include "tsan_update_shadow_word_inl.h"
-  } else {
-#include "tsan_update_shadow_word_inl.h"
-  }
 #endif
 
   // we did not find any races and had already stored
