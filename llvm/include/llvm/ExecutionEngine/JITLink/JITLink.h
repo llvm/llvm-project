@@ -158,7 +158,7 @@ private:
   }
 
   /// Create a defined addressable for the given content.
-  Block(Section &Parent, StringRef Content, JITTargetAddress Address,
+  Block(Section &Parent, ArrayRef<char> Content, JITTargetAddress Address,
         uint64_t Alignment, uint64_t AlignmentOffset)
       : Addressable(Address, true), Parent(Parent), Data(Content.data()),
         Size(Content.size()) {
@@ -194,15 +194,15 @@ public:
   size_t getSize() const { return Size; }
 
   /// Get the content for this block. Block must not be a zero-fill block.
-  StringRef getContent() const {
+  ArrayRef<char> getContent() const {
     assert(Data && "Section does not contain content");
-    return StringRef(Data, Size);
+    return ArrayRef<char>(Data, Size);
   }
 
   /// Set the content for this block.
   /// Caller is responsible for ensuring the underlying bytes are not
   /// deallocated while pointed to by this block.
-  void setContent(StringRef Content) {
+  void setContent(ArrayRef<char> Content) {
     Data = Content.data();
     Size = Content.size();
   }
@@ -500,8 +500,8 @@ public:
 
   /// Returns the content in the underlying block covered by this symbol.
   /// This method may only be called on defined non-zero-fill symbols.
-  StringRef getSymbolContent() const {
-    return getBlock().getContent().substr(Offset, Size);
+  ArrayRef<char> getSymbolContent() const {
+    return getBlock().getContent().slice(Offset, Size);
   }
 
   /// Get the linkage for this Symbol.
@@ -849,10 +849,10 @@ public:
   /// Allocate a copy of the given string using the LinkGraph's allocator.
   /// This can be useful when renaming symbols or adding new content to the
   /// graph.
-  StringRef allocateString(StringRef Source) {
+  ArrayRef<char> allocateString(ArrayRef<char> Source) {
     auto *AllocatedBuffer = Allocator.Allocate<char>(Source.size());
     llvm::copy(Source, AllocatedBuffer);
-    return StringRef(AllocatedBuffer, Source.size());
+    return ArrayRef<char>(AllocatedBuffer, Source.size());
   }
 
   /// Allocate a copy of the given string using the LinkGraph's allocator.
@@ -860,14 +860,14 @@ public:
   /// graph.
   ///
   /// Note: This Twine-based overload requires an extra string copy and an
-  /// extra heap allocation for large strings. The StringRef overload should
-  /// be preferred where possible.
-  StringRef allocateString(Twine Source) {
+  /// extra heap allocation for large strings. The ArrayRef<char> overload
+  /// should be preferred where possible.
+  ArrayRef<char> allocateString(Twine Source) {
     SmallString<256> TmpBuffer;
     auto SourceStr = Source.toStringRef(TmpBuffer);
     auto *AllocatedBuffer = Allocator.Allocate<char>(SourceStr.size());
     llvm::copy(SourceStr, AllocatedBuffer);
-    return StringRef(AllocatedBuffer, SourceStr.size());
+    return ArrayRef<char>(AllocatedBuffer, SourceStr.size());
   }
 
   /// Create a section with the given name, protection flags, and alignment.
@@ -883,7 +883,7 @@ public:
   }
 
   /// Create a content block.
-  Block &createContentBlock(Section &Parent, StringRef Content,
+  Block &createContentBlock(Section &Parent, ArrayRef<char> Content,
                             uint64_t Address, uint64_t Alignment,
                             uint64_t AlignmentOffset) {
     return createBlock(Parent, Content, Address, Alignment, AlignmentOffset);

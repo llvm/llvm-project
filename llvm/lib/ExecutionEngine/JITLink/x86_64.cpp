@@ -53,6 +53,12 @@ const char *getEdgeKindName(Edge::Kind K) {
   }
 }
 
+const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
+
+const char PointerJumpStubContent[6] = {
+    static_cast<char>(0xFF), 0x25, 0x00, 0x00, 0x00, 0x00};
+
 } // end namespace x86_64
 } // end namespace jitlink
 } // end namespace llvm

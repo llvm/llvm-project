@@ -21,7 +21,7 @@ static auto RWFlags =
 static const char BlockContentBytes[] = {0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
                                          0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B,
                                          0x1C, 0x1D, 0x1E, 0x1F, 0x00};
-static StringRef BlockContent(BlockContentBytes);
+ArrayRef<char> BlockContent(BlockContentBytes);
 
 TEST(LinkGraphTest, Construction) {
   // Check that LinkGraph construction works as expected.
@@ -232,10 +232,10 @@ TEST(LinkGraphTest, SplitBlock) {
 
   // Check that the block addresses and content matches what we would expect.
   EXPECT_EQ(B1.getAddress(), 0x1008U);
-  EXPECT_EQ(B1.getContent(), BlockContent.substr(8));
+  EXPECT_EQ(B1.getContent(), BlockContent.slice(8));
 
   EXPECT_EQ(B2.getAddress(), 0x1000U);
-  EXPECT_EQ(B2.getContent(), BlockContent.substr(0, 8));
+  EXPECT_EQ(B2.getContent(), BlockContent.slice(0, 8));
 
   // Check that symbols in B1 were transferred as expected:
   // We expect S1 and S2 to have been transferred to B2, and S3 and S4 to have

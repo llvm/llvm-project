@@ -471,14 +471,13 @@ private:
     return *StubsSection;
   }
 
-  StringRef getGOTEntryBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
-                     sizeof(NullGOTEntryContent));
+  ArrayRef<char> getGOTEntryBlockContent() {
+    return {reinterpret_cast<const char *>(NullGOTEntryContent),
+            sizeof(NullGOTEntryContent)};
   }
 
-  StringRef getStubBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(StubContent),
-                     sizeof(StubContent));
+  ArrayRef<char> getStubBlockContent() {
+    return {reinterpret_cast<const char *>(StubContent), sizeof(StubContent)};
   }
 
   static const uint8_t NullGOTEntryContent[8];
