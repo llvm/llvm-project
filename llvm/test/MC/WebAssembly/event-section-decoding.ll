@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
 
-; This is a regression test for an encoding bug that happens when an event's
+; This is a regression test for a decoding bug that happens when an event's
 ; sigindex is greater than 63, so we put 63 dummy functions with different
 ; signatures before the function that contains the 'throw' instruction to make
 ; the event's sigindex 64.
@@ -334,8 +334,8 @@ define i32 @test_throw(i8* %p) {
   ret i32 0
 }
 
-; Checks to see if the event index is correctly encoded in ULEB128. If it is
-; encoded with LEB128, 64 will not be correctly decoded. 64 is the smallest
+; Checks to see if the event index is correctly decoded in ULEB128. If it is
+; decoded with LEB128, 64 will not be correctly decoded. 64 is the smallest
 ; number with which its LEB128 and ULEB128 encodings are different, because its
 ; 7th least significant bit is not 0.
 ; CHECK:      - Type:            EVENT

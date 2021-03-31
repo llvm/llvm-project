@@ -898,6 +898,29 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
   }
 }
 
+std::string ToolChain::detectLibcxxVersion(StringRef IncludePath) const {
+  std::error_code EC;
+  int MaxVersion = 0;
+  std::string MaxVersionString;
+  SmallString<128> Path(IncludePath);
+  llvm::sys::path::append(Path, "c++");
+  for (llvm::vfs::directory_iterator LI = getVFS().dir_begin(Path, EC), LE;
+       !EC && LI != LE; LI = LI.increment(EC)) {
+    StringRef VersionText = llvm::sys::path::filename(LI->path());
+    int Version;
+    if (VersionText[0] == 'v' &&
+        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+      if (Version > MaxVersion) {
+        MaxVersion = Version;
+        MaxVersionString = std::string(VersionText);
+      }
+    }
+  }
+  if (!MaxVersion)
+    return "";
+  return MaxVersionString;
+}
+
 void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args) const {
   // Header search paths should be handled by each of the subclasses.
