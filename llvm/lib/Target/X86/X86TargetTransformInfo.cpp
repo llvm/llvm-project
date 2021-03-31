@@ -2912,10 +2912,11 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-int X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   if (ICA.isTypeBasedOnly())
-    return *getTypeBasedIntrinsicInstrCost(ICA, CostKind).getValue();
+    return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
   static const CostTblEntry AVX512CostTbl[] = {
     { ISD::ROTL,       MVT::v8i64,   1 },

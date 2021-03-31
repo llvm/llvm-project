@@ -170,8 +170,8 @@ public:
   InstructionCost
   getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                  TTI::TargetCostKind CostKind);
-  int getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                            TTI::TargetCostKind CostKind);
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
 
   int getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                  bool IsPairwiseForm,
