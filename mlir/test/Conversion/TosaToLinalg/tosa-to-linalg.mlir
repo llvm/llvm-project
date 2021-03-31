@@ -830,3 +830,46 @@ func @argmax(%arg0 : tensor<3x2xi32>, %arg1 : tensor<6xf32>) -> () {
 
   return
 }
+
+// -----
+
+// CHECK-LABEL: @table8
+func @table8(%arg0: tensor<6xi8>, %arg1: tensor<513xi8>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [6]
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%arg0 : tensor<6xi8>) outs(%[[INIT]] : tensor<6xi8>)
+  // CHECK: ^bb0(%[[ARG_IN:.+]]: i8, %[[ARG_INIT:.+]]: i8)
+  // CHECK:   %[[CAST:.+]] = index_cast %[[ARG_IN]]
+  // CHECK:   %[[EXTRACT:.+]] = tensor.extract %arg1[%[[CAST]]]
+  // CHECK:   linalg.yield %[[EXTRACT]]
+  %0 = "tosa.table"(%arg0, %arg1)  : (tensor<6xi8>, tensor<513xi8>)  -> (tensor<6xi8>)
+  return
+}
+
+// CHECK-LABEL: @table16
+func @table16(%arg0: tensor<6xi16>, %arg1: tensor<513xi16>) -> () {
+  // CHECK: %[[INIT:.+]] = linalg.init_tensor [6]
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]} ins(%arg0 : tensor<6xi16>) outs(%[[INIT]] : tensor<6xi32>)
+  // CHECK: ^bb0(%arg2: i16, %arg3: i32)
+  // CHECK: %[[EXT_IN:.+]] = sexti %arg2
+  // CHECK: %[[C32768:.+]] = constant 32768
+  // CHECK: %[[C7:.+]] = constant 7
+  // CHECK: %[[C1:.+]] = constant 1
+  // CHECK: %[[C127:.+]] = constant 127
+  // CHECK: %[[INADD:.+]] = addi %[[EXT_IN]], %[[C32768]]
+  // CHECK: %[[IDX:.+]] = shift_right_unsigned %[[INADD]], %[[C7]]
+  // CHECK: %[[FRACTION:.+]] = and %[[INADD]], %[[C127]]
+  // CHECK: %[[IDXPLUS1:.+]] = addi %[[IDX]], %[[C1]]
+  // CHECK: %[[IDX_CAST:.+]] = index_cast %[[IDX]]
+  // CHECK: %[[IDXPLUS1_CAST:.+]] = index_cast %[[IDXPLUS1]]
+  // CHECK: %[[BASE:.+]] = tensor.extract %arg1[%[[IDX_CAST]]]
+  // CHECK: %[[NEXT:.+]] = tensor.extract %arg1[%[[IDXPLUS1_CAST]]]
+  // CHECK: %[[BASE_EXT:.+]] = sexti %[[BASE]]
+  // CHECK: %[[NEXT_EXT:.+]] = sexti %[[NEXT]]
+  // CHECK: %[[BASE_MUL:.+]] = shift_left %[[BASE_EXT]], %[[C7]]
+  // CHECK: %[[DIFF:.+]] = subi %[[NEXT_EXT]], %[[BASE_EXT]]
+  // CHECK: %[[DIFF_MUL:.+]] = muli %[[DIFF]], %[[FRACTION]]
+  // CHECK: %[[RESULT:.+]] = addi %[[BASE_MUL]], %[[DIFF_MUL]]
+  // CHECK: linalg.yield %[[RESULT]]
+  %0 = "tosa.table"(%arg0, %arg1)  : (tensor<6xi16>, tensor<513xi16>)  -> (tensor<6xi32>)
+  return
+}
