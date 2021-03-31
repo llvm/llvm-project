@@ -193,12 +193,12 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
           ? createZeroFillBlock(B.getSection(), SplitIndex, B.getAddress(),
                                 B.getAlignment(), B.getAlignmentOffset())
           : createContentBlock(
-                B.getSection(), B.getContent().substr(0, SplitIndex),
+                B.getSection(), B.getContent().slice(0, SplitIndex),
                 B.getAddress(), B.getAlignment(), B.getAlignmentOffset());
 
   // Modify B to cover [ SplitIndex, B.size() ).
   B.setAddress(B.getAddress() + SplitIndex);
-  B.setContent(B.getContent().substr(SplitIndex));
+  B.setContent(B.getContent().slice(SplitIndex));
   B.setAlignmentOffset((B.getAlignmentOffset() + SplitIndex) %
                        B.getAlignment());
 
