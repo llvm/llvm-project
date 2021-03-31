@@ -34,6 +34,16 @@ class ArithLogicINM<string opstr, Operand Od, RegisterOperand RO,
   let EncodingPredicates = [HasNanoMips];
 }
 
+// Instructions with 1 register (dest) and 1 immediate operand.
+class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
+               InstrItinClass Itin = NoItinerary,
+               SDPatternOperator imm_type = null_frag,
+               SDPatternOperator OpNode = null_frag> :
+  InstSE<(outs RO:$rt), (ins Od:$imm), !strconcat(opstr, "\t$rt, $imm"),
+         [(set RO:$rt, (OpNode imm_type:$imm))], Itin, FrmI, opstr> {
+  let DecoderNamespace = "NanoMips";
+  let EncodingPredicates = [HasNanoMips];
+}
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -52,4 +62,10 @@ let hasDelaySlot = 0 in
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
+def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
 }
+
+def imm32_NM : IntImmLeaf<i32, [{
+    return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
+}]>;
+def : MipsPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>, ISA_NANOMIPS;
