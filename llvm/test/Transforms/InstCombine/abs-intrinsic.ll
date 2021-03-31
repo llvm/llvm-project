@@ -391,8 +391,7 @@ define i32 @demand_low_bits(i32 %x) {
 
 define i32 @srem_by_2_int_min_is_poison(i32 %x) {
 ; CHECK-LABEL: @srem_by_2_int_min_is_poison(
-; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = srem i32 %x, 2
@@ -404,7 +403,7 @@ define <3 x i82> @srem_by_2(<3 x i82> %x, <3 x i82>* %p) {
 ; CHECK-LABEL: @srem_by_2(
 ; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
 ; CHECK-NEXT:    store <3 x i82> [[S]], <3 x i82>* [[P:%.*]], align 64
-; CHECK-NEXT:    [[R:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[S]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = and <3 x i82> [[X]], <i82 1, i82 1, i82 1>
 ; CHECK-NEXT:    ret <3 x i82> [[R]]
 ;
   %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>
@@ -412,6 +411,8 @@ define <3 x i82> @srem_by_2(<3 x i82> %x, <3 x i82>* %p) {
   %r = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 false)
   ret <3 x i82> %r
 }
+
+; TODO: A more general transform could sink the srem and turn it into urem.
 
 define i32 @srem_by_3(i32 %x) {
 ; CHECK-LABEL: @srem_by_3(
