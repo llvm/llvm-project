@@ -3092,7 +3092,7 @@ llvm::Expected<TraceSP &> Target::GetTraceOrCreate() {
       return llvm::createStringError(
           llvm::inconvertibleErrorCode(),
           "Couldn't start tracing the process. %s",
-          llvm::toString(trace_type.takeError()).c_str());
+          llvm::toString(trace_sp.takeError()).c_str());
   }
   return m_trace_sp;
 }
