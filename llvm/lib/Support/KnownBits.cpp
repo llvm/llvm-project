@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 using namespace llvm;
@@ -600,4 +602,12 @@ KnownBits &KnownBits::operator^=(const KnownBits &RHS) {
   One = (Zero & RHS.One) | (One & RHS.Zero);
   Zero = std::move(Z);
   return *this;
+}
+
+void KnownBits::print(raw_ostream &OS) const {
+  OS << "{Zero=" << Zero << ", One=" << One << "}";
+}
+void KnownBits::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
 }
