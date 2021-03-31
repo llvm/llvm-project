@@ -388,3 +388,38 @@ define i32 @demand_low_bits(i32 %x) {
   %r = and i32 %a, 3
   ret i32 %r
 }
+
+define i32 @srem_by_2_int_min_is_poison(i32 %x) {
+; CHECK-LABEL: @srem_by_2_int_min_is_poison(
+; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 2
+  %r = call i32 @llvm.abs.i32(i32 %s, i1 true)
+  ret i32 %r
+}
+
+define <3 x i82> @srem_by_2(<3 x i82> %x, <3 x i82>* %p) {
+; CHECK-LABEL: @srem_by_2(
+; CHECK-NEXT:    [[S:%.*]] = srem <3 x i82> [[X:%.*]], <i82 2, i82 2, i82 2>
+; CHECK-NEXT:    store <3 x i82> [[S]], <3 x i82>* [[P:%.*]], align 64
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i82> @llvm.abs.v3i82(<3 x i82> [[S]], i1 false)
+; CHECK-NEXT:    ret <3 x i82> [[R]]
+;
+  %s = srem <3 x i82> %x, <i82 2, i82 2, i82 2>
+  store <3 x i82> %s, <3 x i82>* %p
+  %r = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 false)
+  ret <3 x i82> %r
+}
+
+define i32 @srem_by_3(i32 %x) {
+; CHECK-LABEL: @srem_by_3(
+; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.abs.i32(i32 [[S]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = srem i32 %x, 3
+  %r = call i32 @llvm.abs.i32(i32 %s, i1 true)
+  ret i32 %r
+}
