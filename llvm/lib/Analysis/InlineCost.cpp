@@ -761,9 +761,6 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
             CurrentSavings += InlineConstants::InstrCost;
           }
         }
-        // TODO: Consider other forms of savings like switch statements,
-        // indirect calls becoming direct, SROACostSavings, LoadEliminationCost,
-        // etc.
       }
 
       auto ProfileCount = CalleeBFI->getBlockProfileCount(&BB);
