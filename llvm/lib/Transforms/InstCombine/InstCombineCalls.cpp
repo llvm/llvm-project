@@ -839,6 +839,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return CastInst::Create(Instruction::ZExt, NarrowAbs, II->getType());
     }
 
+    // Match a complicated way to check if a number is odd/even:
+    // abs (srem X, 2) --> and X, 1
+    const APInt *C;
+    if (match(IIOperand, m_SRem(m_Value(X), m_APInt(C))) && *C == 2)
+      return BinaryOperator::CreateAnd(X, ConstantInt::get(II->getType(), 1));
+
     break;
   }
   case Intrinsic::umax:
