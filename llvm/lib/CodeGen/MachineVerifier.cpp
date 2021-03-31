@@ -1676,8 +1676,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   // Verify properties of various specific instruction types
   switch (MI->getOpcode()) {
   case TargetOpcode::COPY: {
-    if (foundErrors)
-      break;
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
     LLT DstTy = MRI->getType(DstOp.getReg());
