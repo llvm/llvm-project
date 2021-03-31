@@ -33,6 +33,17 @@
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
 #endif
 
+#ifndef NT_ARM_PAC_MASK
+#define NT_ARM_PAC_MASK 0x406 /* Pointer authentication code masks */
+#endif
+
+#ifndef NT_ARM_TAGGED_ADDR_CTRL
+#define NT_ARM_TAGGED_ADDR_CTRL 0x409 /* Tagged address control register */
+#endif
+
+#define HWCAP_PACA (1 << 30)
+#define HWCAP2_MTE (1 << 18)
+
 #define REG_CONTEXT_SIZE (GetGPRSize() + GetFPRSize())
 
 using namespace lldb;
@@ -62,6 +73,18 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
             .Success())
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
 
+    NativeProcessLinux &process = native_thread.GetProcess();
+
+    llvm::Optional<uint64_t> auxv_at_hwcap =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
+    if (auxv_at_hwcap && (*auxv_at_hwcap & HWCAP_PACA))
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
+
+    llvm::Optional<uint64_t> auxv_at_hwcap2 =
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
+    if (auxv_at_hwcap2 && (*auxv_at_hwcap2 & HWCAP2_MTE))
+      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_arm64>(
@@ -83,6 +106,9 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
+  ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
+
+  m_mte_ctrl_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -94,6 +120,8 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_fpu_is_valid = false;
   m_sve_buffer_is_valid = false;
   m_sve_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
 
   if (GetRegisterInfo().IsSVEEnabled())
     m_sve_state = SVEState::Unknown;
@@ -230,6 +258,22 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         src = (uint8_t *)GetSVEBuffer() + offset;
       }
     }
+  } else if (IsPAuth(reg)) {
+    error = ReadPAuthMask();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetPAuthOffset();
+    assert(offset < GetPACMaskSize());
+    src = (uint8_t *)GetPACMask() + offset;
+  } else if (IsMTE(reg)) {
+    error = ReadMTEControl();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
+    assert(offset < GetMTEControlSize());
+    src = (uint8_t *)GetMTEControl() + offset;
   } else
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
@@ -388,6 +432,17 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         return WriteAllSVE();
       }
     }
+  } else if (IsMTE(reg)) {
+    error = ReadMTEControl();
+    if (error.Fail())
+      return error;
+
+    offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
+    assert(offset < GetMTEControlSize());
+    dst = (uint8_t *)GetMTEControl() + offset;
+    ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
+
+    return WriteMTEControl();
   }
 
   return Status("Failed to write register value");
@@ -474,6 +529,14 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 
 bool NativeRegisterContextLinux_arm64::IsSVE(unsigned reg) const {
   return GetRegisterInfo().IsSVEReg(reg);
+}
+
+bool NativeRegisterContextLinux_arm64::IsPAuth(unsigned reg) const {
+  return GetRegisterInfo().IsPAuthReg(reg);
+}
+
+bool NativeRegisterContextLinux_arm64::IsMTE(unsigned reg) const {
+  return GetRegisterInfo().IsMTEReg(reg);
 }
 
 llvm::Error NativeRegisterContextLinux_arm64::ReadHardwareDebugInfo() {
@@ -617,6 +680,8 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_fpu_is_valid = false;
   m_sve_buffer_is_valid = false;
   m_sve_header_is_valid = false;
+  m_pac_mask_is_valid = false;
+  m_mte_ctrl_is_valid = false;
 
   // Update SVE registers in case there is change in configuration.
   ConfigureRegisterContext();
@@ -634,7 +699,26 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
 
   error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
 
-  m_sve_header_is_valid = true;
+  if (error.Success())
+    m_sve_header_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
+  Status error;
+
+  if (m_pac_mask_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetPACMask();
+  ioVec.iov_len = GetPACMaskSize();
+
+  error = ReadRegisterSet(&ioVec, GetPACMaskSize(), NT_ARM_PAC_MASK);
+
+  if (error.Success())
+    m_pac_mask_is_valid = true;
 
   return error;
 }
@@ -692,6 +776,40 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   m_fpu_is_valid = false;
 
   return WriteRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
+}
+
+Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
+  Status error;
+
+  if (m_mte_ctrl_is_valid)
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_len = GetMTEControlSize();
+
+  error = ReadRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
+
+  if (error.Success())
+    m_mte_ctrl_is_valid = true;
+
+  return error;
+}
+
+Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
+  Status error;
+
+  error = ReadMTEControl();
+  if (error.Fail())
+    return error;
+
+  struct iovec ioVec;
+  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_len = GetMTEControlSize();
+
+  m_mte_ctrl_is_valid = false;
+
+  return WriteRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
