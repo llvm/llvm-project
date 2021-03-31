@@ -540,10 +540,11 @@ public:
   template <typename OpTy>
   mlir::Value createBinaryOp(const fir::ExtendedValue &left,
                              const fir::ExtendedValue &right) {
-    auto *lhs = left.getUnboxed();
-    auto *rhs = right.getUnboxed();
-    assert(lhs && rhs && lhs->getType() == rhs->getType());
-    return builder.create<OpTy>(getLoc(), *lhs, *rhs);
+    assert(fir::isUnboxedValue(left) && fir::isUnboxedValue(right));
+    auto lhs = fir::getBase(left);
+    auto rhs = fir::getBase(right);
+    assert(lhs.getType() == rhs.getType() && "types must be the same");
+    return builder.create<OpTy>(getLoc(), lhs, rhs);
   }
 
   template <typename OpTy, typename A>
@@ -1529,11 +1530,11 @@ public:
         TODO(loc, "assumed type actual argument lowering");
 
       if (arg.passBy == PassBy::Value) {
-        auto *argVal = genval(*expr).getUnboxed();
-        if (!argVal)
+        auto argVal = genval(*expr);
+        if (!fir::isUnboxedValue(argVal))
           fir::emitFatalError(
               loc, "internal error: passing non trivial value by value");
-        caller.placeInput(arg, *argVal);
+        caller.placeInput(arg, fir::getBase(argVal));
         continue;
       }
 
