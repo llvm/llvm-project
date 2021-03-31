@@ -72,7 +72,7 @@ public:
       return failure();
 
     // Have it handled in vector->llvm conversion pass.
-    if (!xferOp.isMaskedDim(0))
+    if (xferOp.isDimInBounds(0))
       return failure();
 
     auto toLLVMTy = [&](Type t) {

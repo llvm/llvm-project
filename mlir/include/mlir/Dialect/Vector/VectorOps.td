@@ -1139,7 +1139,7 @@ def Vector_TransferReadOp :
     ]>,
     Arguments<(ins AnyShaped:$source, Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map, AnyType:$padding,
-               OptionalAttr<BoolArrayAttr>:$masked)>,
+               OptionalAttr<BoolArrayAttr>:$in_bounds)>,
     Results<(outs AnyVector:$vector)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
@@ -1166,15 +1166,14 @@ def Vector_TransferReadOp :
     The size of the slice is specified by the size of the vector, given as the
     return type.
 
-    An `ssa-value` of the same elemental type as the MemRef/Tensor is provided
-    as the last operand to specify padding in the case of out-of-bounds
-    accesses.
+    An SSA value `padding` of the same elemental type as the MemRef/Tensor is
+    provided to specify a fallback value in the case of out-of-bounds accesses.
 
     An optional boolean array attribute is provided to specify which dimensions
-    of the transfer need masking. When a dimension is specified as not requiring
-    masking, the `vector.transfer_read` may be lowered to simple loads. The
-    absence of this `masked` attribute signifies that all dimensions of the
-    transfer need to be masked.
+    of the transfer are guaranteed to be within bounds. The absence of this
+    `in_bounds` attribute signifies that any dimension of the transfer may be
+    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
+    all dimensions are specified to be within bounds.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1291,15 +1290,15 @@ def Vector_TransferReadOp :
     // Builder that sets padding to zero.
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, "AffineMap":$permutationMap,
-      CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>,
+      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
     // Builder that sets padding to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, "Value":$padding,
-      CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>,
+      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
     // Builder that sets permutation map (resp. padding) to
     // 'getMinorIdentityMap' (resp. zero).
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
-      "ValueRange":$indices, CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>
+      "ValueRange":$indices, CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
   ];
 
   let hasFolder = 1;
@@ -1314,7 +1313,7 @@ def Vector_TransferWriteOp :
     Arguments<(ins AnyVector:$vector, AnyShaped:$source,
                Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map,
-               OptionalAttr<BoolArrayAttr>:$masked)>,
+               OptionalAttr<BoolArrayAttr>:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
   let summary = "The vector.transfer_write op writes a supervector to memory.";
@@ -1343,10 +1342,10 @@ def Vector_TransferWriteOp :
     The size of the slice is specified by the size of the vector.
 
     An optional boolean array attribute is provided to specify which dimensions
-    of the transfer need masking. When a dimension is specified as not requiring
-    masking, the `vector.transfer_write` may be lowered to simple stores. The
-    absence of this `mask` attribute signifies that all dimensions of the
-    transfer need to be masked.
+    of the transfer are guaranteed to be within bounds. The absence of this
+    `in_bounds` attribute signifies that any dimension of the transfer may be
+    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store
+    if all dimensions are specified to be within bounds.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -1387,13 +1386,13 @@ def Vector_TransferWriteOp :
   let builders = [
     // Builder that sets permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      CArg<"ArrayRef<bool>", "{}">:$maybeMasked)>,
+      CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       "AffineMap":$permutationMap)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMapAttr":$permutationMap, "ArrayAttr":$masked)>,
+      "AffineMapAttr":$permutationMap, "ArrayAttr":$inBounds)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
-      "AffineMap":$permutationMap, "ArrayAttr":$masked)>,
+      "AffineMap":$permutationMap, "ArrayAttr":$inBounds)>,
   ];
 
   let hasFolder = 1;

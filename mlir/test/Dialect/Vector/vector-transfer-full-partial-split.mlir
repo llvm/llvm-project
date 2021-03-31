@@ -54,7 +54,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   // CHECK-SAME:     memref<?x8xf32>, index, index
   //      CHECK: }
   //      CHECK: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
-  // CHECK_SAME:   {masked = [false, false]} : memref<?x8xf32>, vector<4x8xf32>
+  // CHECK_SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
 
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
   //  LINALG-DAG: %[[c4:.*]] = constant 4 : index
@@ -88,7 +88,7 @@ func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: index) -
   // LINALG-SAME:     memref<?x8xf32>, index, index
   //      LINALG: }
   //      LINALG: %[[res:.*]] = vector.transfer_read %[[ifres]]#0[%[[ifres]]#1, %[[ifres]]#2], %cst
-  // LINALG_SAME:   {masked = [false, false]} : memref<?x8xf32>, vector<4x8xf32>
+  // LINALG_SAME:   {in_bounds = [true, true]} : memref<?x8xf32>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
 
   // LINALG: return %[[res]] : vector<4x8xf32>
@@ -142,7 +142,7 @@ func @split_vector_transfer_read_strided_2d(
   //      CHECK:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // CHECK-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
   //      CHECK: }
-  //      CHECK: %[[res:.*]] = vector.transfer_read {{.*}} {masked = [false, false]} :
+  //      CHECK: %[[res:.*]] = vector.transfer_read {{.*}} {in_bounds = [true, true]} :
   // CHECK-SAME:   memref<?x8xf32, #[[$map_2d_stride_1]]>, vector<4x8xf32>
 
   //  LINALG-DAG: %[[c0:.*]] = constant 0 : index
@@ -178,7 +178,7 @@ func @split_vector_transfer_read_strided_2d(
   //      LINALG:   scf.yield %[[yielded]], %[[c0]], %[[c0]] :
   // LINALG-SAME:     memref<?x8xf32, #[[$map_2d_stride_1]]>, index, index
   //      LINALG: }
-  //      LINALG: %[[res:.*]] = vector.transfer_read {{.*}} {masked = [false, false]} :
+  //      LINALG: %[[res:.*]] = vector.transfer_read {{.*}} {in_bounds = [true, true]} :
   // LINALG-SAME:   memref<?x8xf32, #[[$map_2d_stride_1]]>, vector<4x8xf32>
   %1 = vector.transfer_read %A[%i, %j], %f0 :
     memref<7x8xf32, offset:?, strides:[?, 1]>, vector<4x8xf32>
