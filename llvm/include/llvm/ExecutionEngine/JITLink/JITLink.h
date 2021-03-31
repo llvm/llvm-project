@@ -596,6 +596,11 @@ public:
   /// Returns the protection flags for this section.
   sys::Memory::ProtectionFlags getProtectionFlags() const { return Prot; }
 
+  /// Set the protection flags for this section.
+  void setProtectionFlags(sys::Memory::ProtectionFlags Prot) {
+    this->Prot = Prot;
+  }
+
   /// Returns the ordinal for this section.
   SectionOrdinal getOrdinal() const { return SecOrdinal; }
 
