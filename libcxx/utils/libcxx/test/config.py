@@ -209,8 +209,6 @@ class Configuration(object):
         flags = []
         compile_flags = []
         link_flags = _prefixed_env_list('LIB', '-L')
-        for path in _split_env_var('LIB'):
-            self.add_path(self.exec_env, path)
         return CXXCompiler(self, clang_path, flags=flags,
                            compile_flags=compile_flags,
                            link_flags=link_flags)

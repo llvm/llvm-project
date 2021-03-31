@@ -1752,7 +1752,12 @@ void mlir::python::populateIRCore(py::module &m) {
           },
           [](PyMlirContext &self, bool value) {
             mlirContextSetAllowUnregisteredDialects(self.get(), value);
-          });
+          })
+      .def("is_registered_operation",
+           [](PyMlirContext &self, std::string &name) {
+             return mlirContextIsRegisteredOperation(
+                 self.get(), MlirStringRef{name.data(), name.size()});
+           });
 
   //----------------------------------------------------------------------------
   // Mapping of PyDialectDescriptor

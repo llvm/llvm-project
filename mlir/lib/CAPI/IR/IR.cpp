@@ -60,6 +60,10 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
   return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
 }
 
+bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
+  return unwrap(context)->isOperationRegistered(unwrap(name));
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
