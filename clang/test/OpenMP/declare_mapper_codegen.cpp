@@ -500,7 +500,8 @@ void foo(int a){
 // CK0-DAG: [[PFPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPTRADDR_P:%.+]], align
 // CK0-DAG: [[SIZEFPADDR]] = load [1 x i64]*, [1 x i64]** [[FPPTRADDR_SIZE:%.+]], align
 // CK0-DAG: [[MPRFPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPTRADDR_MPR:%.+]], align
-// CK0-DAG: call void (i8*, ...) %1(i8* %2, {{.+}}[[FPPTRADDR_BP]], {{.+}}[[FPPTRADDR_P]], {{.+}}[[FPPTRADDR_SIZE]], {{.+}}[[FPPTRADDR_MPR]])
+// CK0-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %1 to void (i8*, [1 x i8*]**, [1 x i8*]**, [1 x i64]**, [1 x i8*]**)*
+// CK0-DAG: call void [[FN]](i8* %2, {{.+}}[[FPPTRADDR_BP]], {{.+}}[[FPPTRADDR_P]], {{.+}}[[FPPTRADDR_SIZE]], {{.+}}[[FPPTRADDR_MPR]])
 // CK0-DAG: call void [[KERNEL_2:@.+]](%class.C* [[KERNELARG:%.+]])
 // CK0-DAG: [[KERNELARG]] = load %class.C*, %class.C** [[KERNELARGGEP:%.+]], align
 // CK0-DAG: [[KERNELARGGEP]] = getelementptr inbounds [[ANON_T]], [[ANON_T]]* [[CTX:%.+]], i32 0, i32 0
@@ -531,7 +532,8 @@ void foo(int a){
 // CK0-DAG: [[PFPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPTRADDR_P:%.+]], align
 // CK0-DAG: [[SIZEFPADDR]] = load [1 x i64]*, [1 x i64]** [[FPPTRADDR_SIZE:%.+]], align
 // CK0-DAG: [[MPRFPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPTRADDR_MPR:%.+]], align
-// CK0-DAG: call void (i8*, ...) %1(i8* %2, {{.+}}[[FPPTRADDR_BP]], {{.+}}[[FPPTRADDR_P]], {{.+}}[[FPPTRADDR_SIZE]], {{.+}}[[FPPTRADDR_MPR]])
+// CK0-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %1 to void (i8*,
+// CK0-DAG: call void [[FN]](i8* %2, {{.+}}[[FPPTRADDR_BP]], {{.+}}[[FPPTRADDR_P]], {{.+}}[[FPPTRADDR_SIZE]], {{.+}}[[FPPTRADDR_MPR]])
 // CK0-DAG: call void [[KERNEL_2:@.+]](%class.C* [[KERNELARG:%.+]])
 // CK0-DAG: [[KERNELARG]] = load %class.C*, %class.C** [[KERNELARGGEP:%.+]], align
 // CK0-DAG: [[KERNELARGGEP]] = getelementptr inbounds [[ANON_T_0]], [[ANON_T_0]]* [[CTX:%.+]], i32 0, i32 0
@@ -562,7 +564,8 @@ void foo(int a){
 // CK0-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
 // CK0-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
 // CK0-DAG: [[MPRADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPMPRADDR:%[^,]+]], align
-// CK0-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
+// CK0-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %{{.+}} to void (i8*,
+// CK0-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
 // CK0: ret void
 // CK0: }
 
@@ -581,7 +584,8 @@ void foo(int a){
 // CK0-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
 // CK0-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
 // CK0-DAG: [[MPRADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPMPRADDR:%[^,]+]], align
-// CK0-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
+// CK0-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %{{.+}} to void (i8*,
+// CK0-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
 // CK0: }
 
 // CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_25]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_7]]* noalias %{{[^,]+}})
@@ -599,7 +603,8 @@ void foo(int a){
 // CK0-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
 // CK0-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
 // CK0-DAG: [[MPRADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPMPRADDR:%[^,]+]], align
-// CK0-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
+// CK0-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %{{.+}} to void (i8*,
+// CK0-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]], [1 x i8*]** [[FPMPRADDR]])
 // CK0: }
 
 // CK0: define internal {{.*}}i32 [[OMP_TASK_ENTRY_34]](i32 {{.*}}%{{[^,]+}}, [[KMP_TASK_T_WITH_PRIVATES_10]]* noalias %{{[^,]+}})
