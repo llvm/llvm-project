@@ -12,6 +12,7 @@ add_mlir_library(MLIRTestTransforms
   TestDataLayoutQuery.cpp
   TestDominance.cpp
   TestDynamicPipeline.cpp
+  TestComposeSubView.cpp
   TestLoopFusion.cpp
   TestGpuMemoryPromotion.cpp
   TestGpuParallelLoopMapping.cpp
