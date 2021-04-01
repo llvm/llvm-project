@@ -2106,7 +2106,9 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "x86_64-manbo-linux-gnu", "x86_64-linux-gnu",
       "x86_64-slackware-linux", "x86_64-unknown-linux",
       "x86_64-amazon-linux",    "x86_64-linux-android"};
-  static const char *const X32LibDirs[] = {"/libx32"};
+  static const char *const X32Triples[] = {"x86_64-linux-gnux32",
+                                           "x86_64-pc-linux-gnux32"};
+  static const char *const X32LibDirs[] = {"/libx32", "/lib"};
   static const char *const X86LibDirs[] = {"/lib32", "/lib"};
   static const char *const X86Triples[] = {
       "i586-linux-gnu",     "i686-linux-gnu",
@@ -2337,17 +2339,19 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     TripleAliases.append(begin(AVRTriples), end(AVRTriples));
     break;
   case llvm::Triple::x86_64:
-    LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
-    TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
-    // x32 is always available when x86_64 is available, so adding it as
-    // secondary arch with x86_64 triples
     if (TargetTriple.getEnvironment() == llvm::Triple::GNUX32) {
-      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      LibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      TripleAliases.append(begin(X32Triples), end(X32Triples));
+      BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
     } else {
-      BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
-      BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
+      LibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
+      TripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
+    BiarchLibDirs.append(begin(X86LibDirs), end(X86LibDirs));
+    BiarchTripleAliases.append(begin(X86Triples), end(X86Triples));
     break;
   case llvm::Triple::x86:
     LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
@@ -2357,6 +2361,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       TripleAliases.append(begin(X86Triples), end(X86Triples));
       BiarchLibDirs.append(begin(X86_64LibDirs), end(X86_64LibDirs));
       BiarchTripleAliases.append(begin(X86_64Triples), end(X86_64Triples));
+      BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
+      BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
     break;
   case llvm::Triple::m68k:
