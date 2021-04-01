@@ -834,8 +834,10 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_array_v
 
 // is_pointer
 
-// Before Clang 11, __is_pointer didn't work for Objective-C types.
-#if __has_keyword(__is_pointer) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1100)
+// Before Clang 11 / AppleClang 12.0.5, __is_pointer didn't work for Objective-C types.
+#if __has_keyword(__is_pointer) &&                                             \
+    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1100) &&               \
+    !(defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1205)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> { };
@@ -1131,7 +1133,9 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_arithmetic_v
 
 // Before Clang 10, __is_fundamental didn't work for nullptr_t.
 // In C++03 nullptr_t is library-provided but must still count as "fundamental."
-#if __has_keyword(__is_fundamental) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1000) && !defined(_LIBCPP_CXX03_LANG)
+#if __has_keyword(__is_fundamental) &&                                         \
+    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000) &&               \
+    !defined(_LIBCPP_CXX03_LANG)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
@@ -1416,7 +1420,8 @@ template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;
 // is_signed
 
 // Before Clang 10, __is_signed didn't work for floating-point types or enums.
-#if __has_keyword(__is_signed) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1000)
+#if __has_keyword(__is_signed) &&                                              \
+    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_signed : _BoolConstant<__is_signed(_Tp)> { };
@@ -1452,7 +1457,10 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_signed_v
 // is_unsigned
 
 // Before Clang 13, __is_unsigned returned true for enums with signed underlying type.
-#if __has_keyword(__is_unsigned) && !(defined(_LIBCPP_COMPILER_CLANG) && _LIBCPP_CLANG_VER < 1300)
+// No currently-released version of AppleClang contains the fixed intrinsic.
+#if __has_keyword(__is_unsigned) &&                                            \
+    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1300) &&               \
+    !defined(_LIBCPP_APPLE_CLANG_VER)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> { };

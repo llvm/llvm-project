@@ -183,11 +183,12 @@
 #define __has_include(...) 0
 #endif
 
-#if defined(__clang__)
-#  define _LIBCPP_COMPILER_CLANG
-#  ifndef __apple_build_version__
-#    define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
-#  endif
+#if defined(__apple_build_version__)
+#  define _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_APPLE_CLANG_VER (__apple_build_version__ / 10000)
+#elif defined(__clang__)
+#  define _LIBCPP_COMPILER_CLANG_BASED
+#  define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
 #elif defined(__GNUC__)
 #  define _LIBCPP_COMPILER_GCC
 #elif defined(_MSC_VER)
@@ -350,7 +351,7 @@
 #  define _LIBCPP_NO_CFI
 #endif
 
-#if __ISO_C_VISIBLE >= 2011 || __cplusplus >= 201103L
+#if (defined(__ISO_C_VISIBLE) && (__ISO_C_VISIBLE >= 2011)) || __cplusplus >= 201103L
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
@@ -404,7 +405,7 @@
 
 #ifndef _LIBCPP_CXX03_LANG
 # define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
-#elif defined(_LIBCPP_COMPILER_CLANG)
+#elif defined(_LIBCPP_COMPILER_CLANG_BASED)
 # define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #else
 # error "We don't know a correct way to implement alignof(T) in C++03 outside of Clang"
@@ -412,7 +413,7 @@
 
 #define _LIBCPP_PREFERRED_ALIGNOF(_Tp) __alignof(_Tp)
 
-#if defined(_LIBCPP_COMPILER_CLANG)
+#if defined(_LIBCPP_COMPILER_CLANG_BASED)
 
 #if defined(_LIBCPP_ALTERNATE_STRING_LAYOUT)
 #  error _LIBCPP_ALTERNATE_STRING_LAYOUT is deprecated, please use _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT instead
@@ -510,8 +511,8 @@ typedef __char32_t char32_t;
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
 
 // Literal operators ""d and ""y are supported starting with LLVM Clang 8 and AppleClang 10.0.1
-#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) || \
-    (defined(__apple_build_version__) && __apple_build_version__ < 10010000)
+#if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 800) ||                 \
+    (defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1001)
 #define _LIBCPP_HAS_NO_CXX20_CHRONO_LITERALS
 #endif
 
@@ -1028,8 +1029,8 @@ typedef unsigned int   char32_t;
 #endif
 
 // Macros to enter and leave a state where deprecation warnings are suppressed.
-#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) && \
-    (defined(_LIBCPP_COMPILER_CLANG) || defined(_LIBCPP_COMPILER_GCC))
+#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) &&                              \
+    (defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC))
 #  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
     _Pragma("GCC diagnostic push") \
     _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
@@ -1069,7 +1070,7 @@ typedef unsigned int   char32_t;
 // NODISCARD macros to the correct attribute.
 #if __has_cpp_attribute(nodiscard) || defined(_LIBCPP_COMPILER_MSVC)
 #  define _LIBCPP_NODISCARD_ATTRIBUTE [[nodiscard]]
-#elif defined(_LIBCPP_COMPILER_CLANG) && !defined(_LIBCPP_CXX03_LANG)
+#elif defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(_LIBCPP_CXX03_LANG)
 #  define _LIBCPP_NODISCARD_ATTRIBUTE [[clang::warn_unused_result]]
 #else
 // We can't use GCC's [[gnu::warn_unused_result]] and
@@ -1119,7 +1120,7 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Try to find out if RTTI is disabled.
-#if defined(_LIBCPP_COMPILER_CLANG) && !__has_feature(cxx_rtti)
+#if defined(_LIBCPP_COMPILER_CLANG_BASED) && !__has_feature(cxx_rtti)
 #  define _LIBCPP_NO_RTTI
 #elif defined(__GNUC__) && !defined(__GXX_RTTI)
 #  define _LIBCPP_NO_RTTI
