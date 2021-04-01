@@ -1290,6 +1290,15 @@ bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
   if (!I->isAtomic())
     return false;
 
+  if (auto *FI = dyn_cast<FenceInst>(I))
+    // All legal orderings for fence are stronger than monotonic.
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    // Unordered is not a legal ordering for cmpxchg.
+    return (AI->getSuccessOrdering() != AtomicOrdering::Monotonic ||
+            AI->getFailureOrdering() != AtomicOrdering::Monotonic);
+  }
+
   AtomicOrdering Ordering;
   switch (I->getOpcode()) {
   case Instruction::AtomicRMW:
@@ -1301,36 +1310,13 @@ bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
   case Instruction::Load:
     Ordering = cast<LoadInst>(I)->getOrdering();
     break;
-  case Instruction::Fence: {
-    auto *FI = cast<FenceInst>(I);
-    if (FI->getSyncScopeID() == SyncScope::SingleThread)
-      return false;
-    Ordering = FI->getOrdering();
-    break;
-  }
-  case Instruction::AtomicCmpXchg: {
-    AtomicOrdering Success = cast<AtomicCmpXchgInst>(I)->getSuccessOrdering();
-    AtomicOrdering Failure = cast<AtomicCmpXchgInst>(I)->getFailureOrdering();
-    // Only if both are relaxed, than it can be treated as relaxed.
-    // Otherwise it is non-relaxed.
-    if (Success != AtomicOrdering::Unordered &&
-        Success != AtomicOrdering::Monotonic)
-      return true;
-    if (Failure != AtomicOrdering::Unordered &&
-        Failure != AtomicOrdering::Monotonic)
-      return true;
-    return false;
-  }
   default:
     llvm_unreachable(
         "New atomic operations need to be known in the attributor.");
   }
 
-  // Relaxed.
-  if (Ordering == AtomicOrdering::Unordered ||
-      Ordering == AtomicOrdering::Monotonic)
-    return false;
-  return true;
+  return (Ordering != AtomicOrdering::Unordered &&
+          Ordering != AtomicOrdering::Monotonic);
 }
 
 /// Return true if this intrinsic is nosync.  This is only used for intrinsics
