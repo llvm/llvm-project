@@ -163,7 +163,7 @@ getReservedRegs(const MachineFunction &MF) const {
   };
 
   static const MCPhysReg ReservedGPR32NM[] = {
-    Mips::ZERO_NM, Mips::K0_NM, Mips::K1_NM, Mips::SP_NM
+    Mips::ZERO_NM, Mips::K0_NM, Mips::K1_NM, Mips::SP_NM, Mips::AT_NM
   };
 
   BitVector Reserved(getNumRegs());
