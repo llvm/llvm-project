@@ -871,7 +871,15 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
     BackendArgs.push_back("-limit-float-precision");
     BackendArgs.push_back(CodeGenOpts.LimitFloatPrecision.c_str());
   }
+  // Check for the default "clang" invocation that won't set any cl::opt values.
+  // Skip trying to parse the command line invocation to avoid the issues
+  // described below.
+  if (BackendArgs.size() == 1)
+    return;
   BackendArgs.push_back(nullptr);
+  // FIXME: The command line parser below is not thread-safe and shares a global
+  // state, so this call might crash or overwrite the options of another Clang
+  // instance in the same process.
   llvm::cl::ParseCommandLineOptions(BackendArgs.size() - 1,
                                     BackendArgs.data());
 }
