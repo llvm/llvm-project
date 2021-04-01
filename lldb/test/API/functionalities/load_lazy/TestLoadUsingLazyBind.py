@@ -21,25 +21,23 @@ class LoadUsingLazyBind(TestBase):
     @skipIfWindows # The Windows platform doesn't implement DoLoadImage.
     # Failing for unknown reasons on Linux, see
     # https://bugs.llvm.org/show_bug.cgi?id=49656.
-    @skipUnlessDarwin
     def test_load_using_lazy_bind(self):
         """Test that we load using RTLD_LAZY"""
 
         self.build()
         wd = os.path.realpath(self.getBuildDir())
 
-        ext = '.so'
-        if self.platformIsDarwin():
-            ext = '.dylib'
+        def make_lib_name(name):
+            return (self.platformContext.shlib_prefix + name + "." +
+                    self.platformContext.shlib_extension)
 
         def make_lib_path(name):
-            libpath = os.path.join(wd, name + ext)
+            libpath = os.path.join(wd, make_lib_name(name))
             self.assertTrue(os.path.exists(libpath))
             return libpath
 
-        libt1 = make_lib_path('libt1')
-        libt2_0 = make_lib_path('libt2_0')
-        libt2_1 = make_lib_path('libt2_1')
+        libt2_0 = make_lib_path('t2_0')
+        libt2_1 = make_lib_path('t2_1')
 
         # Overwrite t2_0 with t2_1 to delete the definition of `use`.
         shutil.copy(libt2_1, libt2_0)
@@ -47,11 +45,12 @@ class LoadUsingLazyBind(TestBase):
         # Launch a process and break
         (target, process, thread, _) = lldbutil.run_to_source_breakpoint(self,
                                                 "break here",
-                                                lldb.SBFileSpec("main.cpp"))
+                                                lldb.SBFileSpec("main.cpp"),
+                                                extra_images=["t1"])
 
         # Load libt1; should fail unless we use RTLD_LAZY
         error = lldb.SBError()
-        lib_spec = lldb.SBFileSpec('libt1' + ext)
+        lib_spec = lldb.SBFileSpec(make_lib_name('t1'))
         paths = lldb.SBStringList()
         paths.AppendString(wd)
         out_spec = lldb.SBFileSpec()
