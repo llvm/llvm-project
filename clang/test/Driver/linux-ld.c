@@ -9,9 +9,9 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
 // CHECK-LD-32-NOT: warning:
 // CHECK-LD-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-LD-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0"
-// CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
+// CHECK-LD-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0"
+// CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -25,9 +25,9 @@
 // CHECK-LD-64: "--eh-frame-hdr"
 // CHECK-LD-64: "-m" "elf_x86_64"
 // CHECK-LD-64: "-dynamic-linker"
-// CHECK-LD-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-LD-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-LD-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-LD-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-LD-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-64: "-L[[SYSROOT]]/lib"
 // CHECK-LD-64: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
@@ -62,8 +62,8 @@
 // CHECK-LD-RT: "-m" "elf_x86_64"
 // CHECK-LD-RT: "-dynamic-linker"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-x86_64.o"
-// CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-RT: libclang_rt.builtins-x86_64.a"
@@ -85,8 +85,8 @@
 // CHECK-LD-RT-I686: "-m" "elf_i386"
 // CHECK-LD-RT-I686: "-dynamic-linker"
 // CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}clang_rt.crtbegin-i386.o"
-// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0"
-// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/4.6.0/../../../../i686-unknown-linux/lib"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0"
+// CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib/gcc/i686-unknown-linux/10.2.0/../../../../i686-unknown-linux/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/lib"
 // CHECK-LD-RT-I686: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-RT-I686: libclang_rt.builtins-i386.a"
@@ -119,9 +119,9 @@
 // CHECK-LD-GCC: "--eh-frame-hdr"
 // CHECK-LD-GCC: "-m" "elf_x86_64"
 // CHECK-LD-GCC: "-dynamic-linker"
-// CHECK-LD-GCC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-LD-GCC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-GCC: "-L[[SYSROOT]]/lib"
 // CHECK-LD-GCC: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
@@ -139,9 +139,9 @@
 // CHECK-LD-64-STATIC-LIBGCC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC-LIBGCC: "-m" "elf_x86_64"
 // CHECK-LD-64-STATIC-LIBGCC: "-dynamic-linker"
-// CHECK-LD-64-STATIC-LIBGCC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-LD-64-STATIC-LIBGCC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/lib"
 // CHECK-LD-64-STATIC-LIBGCC: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-64-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
@@ -313,9 +313,9 @@
 // CHECK-LD-64-STATIC: "-m" "elf_x86_64"
 // CHECK-LD-64-STATIC-NOT: "-dynamic-linker"
 // CHECK-LD-64-STATIC: "-static"
-// CHECK-LD-64-STATIC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbeginT.o"
-// CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-LD-64-STATIC: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbeginT.o"
+// CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-LD-64-STATIC: "-L[[SYSROOT]]/lib"
 // CHECK-LD-64-STATIC: "-L[[SYSROOT]]/usr/lib"
 // CHECK-LD-64-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
@@ -334,13 +334,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-32 %s
 // CHECK-32-TO-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-32-TO-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib/../lib32"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../lib32"
+// CHECK-32-TO-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib32"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -350,13 +350,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-64 %s
 // CHECK-32-TO-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-32-TO-64: "{{.*}}/usr/lib/gcc/i386-unknown-linux/4.6.0/64{{/|\\\\}}crtbegin.o"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/64"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib/../lib64"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../lib64"
+// CHECK-32-TO-64: "{{.*}}/usr/lib/gcc/i386-unknown-linux/10.2.0/64{{/|\\\\}}crtbegin.o"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/64"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib64"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/4.6.0/../../../../i386-unknown-linux/lib"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
@@ -366,13 +366,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-64 %s
 // CHECK-64-TO-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-64-TO-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../lib64"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../lib64"
+// CHECK-64-TO-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib/../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
@@ -382,13 +382,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-32 %s
 // CHECK-64-TO-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-64-TO-32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32{{/|\\\\}}crtbegin.o"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../lib32"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../lib32"
+// CHECK-64-TO-32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32{{/|\\\\}}crtbegin.o"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib/../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -398,13 +398,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32 %s
 // CHECK-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32{{/|\\\\}}crtbegin.o"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../libx32"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../libx32"
+// CHECK-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32{{/|\\\\}}crtbegin.o"
+// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32"
+// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
+// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/lib/../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32: "-L[[SYSROOT]]/lib"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -414,13 +414,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-X32 %s
 // CHECK-64-TO-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-64-TO-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32{{/|\\\\}}crtbegin.o"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../libx32"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../libx32"
+// CHECK-64-TO-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32{{/|\\\\}}crtbegin.o"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -430,13 +430,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-32-TO-X32 %s
 // CHECK-32-TO-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-32-TO-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32{{/|\\\\}}crtbegin.o"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/x32"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../libx32"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../libx32"
+// CHECK-32-TO-X32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32{{/|\\\\}}crtbegin.o"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/x32"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -446,13 +446,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32-TO-64 %s
 // CHECK-X32-TO-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-X32-TO-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../lib64"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../lib64"
+// CHECK-X32-TO-64: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
@@ -462,13 +462,13 @@
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-X32-TO-32 %s
 // CHECK-X32-TO-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-X32-TO-32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32{{/|\\\\}}crtbegin.o"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib/../lib32"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../lib32"
+// CHECK-X32-TO-32: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32{{/|\\\\}}crtbegin.o"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/4.6.0/../../../../x86_64-unknown-linux/lib"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -478,8 +478,8 @@
 // RUN:     --sysroot=%S/Inputs/multilib_32bit_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-64-TO-32-SYSROOT %s
 // CHECK-64-TO-32-SYSROOT: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-64-TO-32-SYSROOT: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32{{/|\\\\}}crtbegin.o"
-// CHECK-64-TO-32-SYSROOT: "-L{{[^"]*}}/Inputs/multilib_64bit_linux_tree/usr/lib/gcc/x86_64-unknown-linux/4.6.0/32"
+// CHECK-64-TO-32-SYSROOT: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32{{/|\\\\}}crtbegin.o"
+// CHECK-64-TO-32-SYSROOT: "-L{{[^"]*}}/Inputs/multilib_64bit_linux_tree/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib/../lib32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib/../lib32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib"
@@ -494,7 +494,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-GCC-VERSION1 %s
 // CHECK-GCC-VERSION1: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-GCC-VERSION1: "{{.*}}/Inputs/basic_linux_tree/usr/lib/gcc/i386-unknown-linux/4.6.0{{/|\\\\}}crtbegin.o"
+// CHECK-GCC-VERSION1: "{{.*}}/Inputs/basic_linux_tree/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
 
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
@@ -1564,7 +1564,7 @@
 // RUN:        --gcc-toolchain="" \
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
-// CHECK-CRTFASTMATH: usr/lib/gcc/x86_64-unknown-linux/4.6.0{{/|\\\\}}crtfastmath.o
+// CHECK-CRTFASTMATH: usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtfastmath.o
 // CHECK-NOCRTFASTMATH-NOT: crtfastmath.o
 
 // Check that we link in gcrt1.o when compiling with -pg
