@@ -5624,8 +5624,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   if (auto *Store = dyn_cast<StoreInst>(V)) {
     if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
       return DL->getTypeSizeInBits(Trunc->getSrcTy());
-    else
-      return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
+    return DL->getTypeSizeInBits(Store->getValueOperand()->getType());
   }
 
   auto E = InstrElementSize.find(V);
