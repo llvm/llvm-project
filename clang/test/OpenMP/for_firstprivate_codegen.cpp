@@ -147,6 +147,7 @@ int main() {
   return 0;
 #elif defined(BLOCKS)
   // BLOCKS: [[G:@.+]] ={{.*}} global i{{[0-9]+}} 1212,
+  // BLOCKS: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
   // BLOCKS-LABEL: @main
   // BLOCKS: call void {{%.+}}(i8
   ^{
