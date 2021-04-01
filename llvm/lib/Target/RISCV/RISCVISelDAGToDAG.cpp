@@ -46,8 +46,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 
 static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
                          MVT XLenVT) {
-  RISCVMatInt::InstSeq Seq;
-  RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64, Seq);
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64);
 
   SDNode *Result = nullptr;
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);

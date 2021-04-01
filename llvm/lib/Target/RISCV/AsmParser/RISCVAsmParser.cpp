@@ -2201,8 +2201,7 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  RISCVMatInt::InstSeq Seq;
-  RISCVMatInt::generateInstSeq(Value, isRV64(), Seq);
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Value, isRV64());
 
   MCRegister SrcReg = RISCV::X0;
   for (RISCVMatInt::Inst &Inst : Seq) {

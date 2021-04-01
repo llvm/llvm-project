@@ -1209,8 +1209,7 @@ define i64 @vreduce_smin_nxv1i64(<vscale x 1 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, -1
-; CHECK-NEXT:    slli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vredmin.vs v25, v8, v25
@@ -1334,8 +1333,7 @@ define i64 @vreduce_smin_nxv2i64(<vscale x 2 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, -1
-; CHECK-NEXT:    slli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
@@ -1467,8 +1465,7 @@ define i64 @vreduce_smin_nxv4i64(<vscale x 4 x i64> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, zero, -1
-; CHECK-NEXT:    slli a0, a0, 63
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
