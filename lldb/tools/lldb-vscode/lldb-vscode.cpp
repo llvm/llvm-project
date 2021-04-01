@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -3112,6 +3113,10 @@ int main(int argc, char *argv[]) {
   // Initialize LLDB first before we do anything.
   lldb::SBDebugger::Initialize();
 
+  // Terminate the debugger before the C++ destructor chain kicks in.
+  auto terminate_debugger =
+      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+
   RegisterRequestCallbacks();
 
   int portno = -1;
@@ -3165,8 +3170,5 @@ int main(int argc, char *argv[]) {
     ++packet_idx;
   }
 
-  // We must terminate the debugger in a thread before the C++ destructor
-  // chain messes everything up.
-  lldb::SBDebugger::Terminate();
   return EXIT_SUCCESS;
 }
