@@ -50,7 +50,7 @@ public:
   TestingRegistry();
 };
 
-static llvm::Optional<TestingRegistry> g_registry;
+static std::unique_ptr<TestingRegistry> g_registry;
 static llvm::Optional<Serializer> g_serializer;
 static llvm::Optional<Deserializer> g_deserializer;
 
@@ -75,13 +75,13 @@ inline TestInstrumentationData GetTestInstrumentationData() {
 class TestInstrumentationDataRAII {
 public:
   TestInstrumentationDataRAII(llvm::raw_string_ostream &os) {
-    g_registry.emplace();
+    g_registry = std::make_unique<TestingRegistry>();
     g_serializer.emplace(os);
     g_deserializer.reset();
   }
 
   TestInstrumentationDataRAII(llvm::StringRef buffer) {
-    g_registry.emplace();
+    g_registry = std::make_unique<TestingRegistry>();
     g_serializer.reset();
     g_deserializer.emplace(buffer);
   }
