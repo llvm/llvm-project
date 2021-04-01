@@ -60,6 +60,7 @@ class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1On
 }
 
 class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 

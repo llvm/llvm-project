@@ -140,7 +140,13 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   let VOP3P = 1;
 }
 
+class VOP_Real<VOP_Pseudo ps> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bit IsSingle = ps.Pfl.IsSingle;
+}
+
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -797,3 +803,17 @@ include "VOP1Instructions.td"
 include "VOP2Instructions.td"
 include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
+
+
+class VOPInfoTable <string Format> : GenericTable {
+  let FilterClass = Format # "_Real";
+  let CppTypeName = "VOPInfo";
+  let Fields = ["Opcode", "IsSingle"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "get" # Format # "OpcodeHelper";
+}
+
+def VOP1InfoTable : VOPInfoTable<"VOP1">;
+def VOP2InfoTable : VOPInfoTable<"VOP2">;
+def VOP3InfoTable : VOPInfoTable<"VOP3">;
