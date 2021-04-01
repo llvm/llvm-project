@@ -682,9 +682,7 @@ PreservedAnalyses LoopFlattenPass::run(Function &F,
   if (!Flatten(DT, LI, SE, AC, TTI))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return PreservedAnalyses::none();
 }
 
 namespace {
