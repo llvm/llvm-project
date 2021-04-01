@@ -440,6 +440,8 @@ def : InstRW<[GenericWriteJump], (instrs JRC_NM)>;
 
 def : InstRW<[GenericWriteJump], (instrs PseudoReturnNM)>;
 
+def : InstRW<[GenericWriteJumpAndLink], (instrs BALC_NM)>;
+
 // COP0 Pipeline
 // =============
 

@@ -44,6 +44,20 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
   let DecoderNamespace = "NanoMips";
   let EncodingPredicates = [HasNanoMips];
 }
+
+class BranchNM<string opstr,
+               SDPatternOperator OpNode = null_frag,
+               SDPatternOperator imm_type = null_frag> :
+  InstSE<(outs), (ins calltarget:$addr), !strconcat(opstr, "\t$addr"),
+         [(OpNode imm_type:$addr)], NoItinerary, FrmI, opstr> {
+  let Namespace = "Mips";
+  let DecoderNamespace = "NanoMips";
+  let EncodingPredicates = [HasNanoMips];
+  let DecoderMethod = "DecodeJumpTarget";
+  let isBranch = 1;
+  let isCodeGenOnly = 1;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -62,6 +76,9 @@ let hasDelaySlot = 0 in
 let hasDelaySlot = 0 in
   def PseudoReturnNM : PseudoReturnBase<GPR32NMOpnd>, ISA_NANOMIPS;
 
+let Defs = [RA_NM] in
+  def BALC_NM : BranchNM<"balc", MipsJmpLink, tglobaladdr>, ISA_NANOMIPS;
+
 def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, ISA_NANOMIPS;
 }
 
@@ -69,3 +86,6 @@ def imm32_NM : IntImmLeaf<i32, [{
     return (uint32_t)Imm.getZExtValue() == (uint64_t)Imm.getZExtValue();
 }]>;
 def : MipsPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>, ISA_NANOMIPS;
+
+def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
+              (BALC_NM texternalsym:$dst)>, ISA_NANOMIPS;
