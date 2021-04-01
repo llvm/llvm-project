@@ -137,3 +137,14 @@ MlirAffineMap mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap,
                                           intptr_t numResults) {
   return wrap(unwrap(affineMap).getMinorSubMap(numResults));
 }
+
+void mlirAffineMapCompressUnusedSymbols(
+    MlirAffineMap *affineMaps, intptr_t size, void *result,
+    void (*populateResult)(void *res, intptr_t idx, MlirAffineMap m)) {
+  SmallVector<AffineMap> maps;
+  for (intptr_t idx = 0; idx < size; ++idx)
+    maps.push_back(unwrap(affineMaps[idx]));
+  intptr_t idx = 0;
+  for (auto m : mlir::compressUnusedSymbols(maps))
+    populateResult(result, idx++, wrap(m));
+}

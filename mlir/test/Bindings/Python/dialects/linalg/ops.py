@@ -94,6 +94,7 @@ def testNamedStructuredOpCustomForm():
         init_result = linalg.InitTensorOp([4, 8], f32)
         # First check the named form with custom format
         #      CHECK: linalg.matmul
+        #  CHECK-NOT: linalg.memoized_indexing_maps
         # CHECK-SAME:    ins(%{{.*}} : tensor<4x16xf32>, tensor<16x8xf32>)
         # CHECK-SAME:   outs(%{{.*}} : tensor<4x8xf32>)
         # CHECK-SAME:   -> tensor<4x8xf32>
@@ -118,7 +119,7 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    std.mulf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    std.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
-        # CHECK-NEXT:    {operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} : 
+        # CHECK-NEXT:    {linalg.memoized_indexing_maps{{.*}}operand_segment_sizes = dense<[2, 1]> : vector<2xi32>} : 
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 
