@@ -3279,6 +3279,30 @@ defm PseudoVSUB        : VPseudoBinaryV_VV_VX;
 defm PseudoVRSUB       : VPseudoBinaryV_VX_VI;
 
 foreach vti = AllIntegerVectors in {
+  // Match vrsub with 2 vector operands to vsub.vv by swapping operands. This
+  // Occurs when legalizing vrsub.vx intrinsics for i64 on RV32 since we need
+  // to use a more complex splat sequence. Add the pattern for all VTs for
+  // consistency.
+  def : Pat<(vti.Vector (int_riscv_vrsub (vti.Vector vti.RegClass:$rs2),
+                                         (vti.Vector vti.RegClass:$rs1),
+                                         (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSUB_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                              vti.RegClass:$rs2,
+                                                              GPR:$vl,
+                                                              vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vrsub_mask (vti.Vector vti.RegClass:$merge),
+                                              (vti.Vector vti.RegClass:$rs2),
+                                              (vti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask V0),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSUB_VV_"#vti.LMul.MX#"_MASK")
+                                                      vti.RegClass:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      vti.RegClass:$rs2,
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+
   // Match VSUB with a small immediate to vadd.vi by negating the immediate.
   def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector vti.RegClass:$rs1),
                                         (vti.Scalar simm5_plus1:$rs2),
