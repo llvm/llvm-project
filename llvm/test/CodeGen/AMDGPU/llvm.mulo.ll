@@ -62,12 +62,12 @@ define { i64, i1 } @umulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mul_hi_u32 v9, v1, v3
 ; GFX10-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v2
-; GFX10-NEXT:    v_add_co_u32_e64 v10, vcc_lo, v6, v5
+; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v6, v5
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v4, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v3, vcc_lo, v10, v8
+; GFX10-NEXT:    v_add_co_u32 v3, vcc_lo, v10, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v4, v7, vcc_lo
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v9, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v3, vcc_lo, v3, v1
+; GFX10-NEXT:    v_add_co_u32 v3, vcc_lo, v3, v1
 ; GFX10-NEXT:    v_add3_u32 v1, v6, v5, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v4, vcc_lo
 ; GFX10-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[3:4]
@@ -164,21 +164,21 @@ define { i64, i1 } @smulo_i64_s_s(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_mul_hi_u32 v7, v1, v2
 ; GFX10-NEXT:    v_mul_hi_i32 v9, v1, v3
 ; GFX10-NEXT:    v_mul_lo_u32 v11, v1, v3
-; GFX10-NEXT:    v_add_co_u32_e64 v10, vcc_lo, v5, v15
+; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v5, v15
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, 0, v6, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v10, vcc_lo, v10, v8
+; GFX10-NEXT:    v_add_co_u32 v10, vcc_lo, v10, v8
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, v6, v7, vcc_lo
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v9, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v11, vcc_lo, v6, v11
+; GFX10-NEXT:    v_add_co_u32 v11, vcc_lo, v6, v11
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v7, vcc_lo
-; GFX10-NEXT:    v_sub_co_u32_e64 v9, vcc_lo, v11, v2
+; GFX10-NEXT:    v_sub_co_u32 v9, vcc_lo, v11, v2
 ; GFX10-NEXT:    v_subrev_co_ci_u32_e32 v10, vcc_lo, 0, v7, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v1
 ; GFX10-NEXT:    v_add3_u32 v1, v5, v15, v8
 ; GFX10-NEXT:    v_cndmask_b32_e32 v6, v11, v9, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v7, v7, v10, vcc_lo
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v4, 31, v1
-; GFX10-NEXT:    v_sub_co_u32_e64 v8, vcc_lo, v6, v0
+; GFX10-NEXT:    v_sub_co_u32 v8, vcc_lo, v6, v0
 ; GFX10-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX10-NEXT:    v_subrev_co_ci_u32_e32 v9, vcc_lo, 0, v7, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v3
@@ -410,7 +410,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, s6, v1, vcc_lo
 ; GFX10-NEXT:    s_ashr_i32 s4, s1, 31
 ; GFX10-NEXT:    s_mov_b32 s5, s4
-; GFX10-NEXT:    v_sub_co_u32_e64 v2, vcc_lo, v0, s0
+; GFX10-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s0
 ; GFX10-NEXT:    s_mul_i32 s0, s0, s2
 ; GFX10-NEXT:    v_subrev_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_cmp_lt_i32_e64 vcc_lo, s3, 0

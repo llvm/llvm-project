@@ -34,7 +34,7 @@ define i8 @v_usubsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX10-NEXT:    s_movk_i32 s4, 0xff
 ; GFX10-NEXT:    v_and_b32_e32 v1, s4, v1
 ; GFX10-NEXT:    v_and_b32_e32 v0, s4, v0
-; GFX10-NEXT:    v_sub_nc_u16_e64 v0, v0, v1 clamp
+; GFX10-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call i8 @llvm.usub.sat.i8(i8 %lhs, i8 %rhs)
   ret i8 %result
@@ -67,7 +67,7 @@ define i16 @v_usubsat_i16(i16 %lhs, i16 %rhs) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_sub_nc_u16_e64 v0, v0, v1 clamp
+; GFX10-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %result = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %result
@@ -577,7 +577,7 @@ define i64 @v_usubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_sub_co_u32_e64 v2, vcc_lo, v0, v2
+; GFX10-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, v2
 ; GFX10-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_u64_e32 vcc_lo, v[2:3], v[0:1]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
