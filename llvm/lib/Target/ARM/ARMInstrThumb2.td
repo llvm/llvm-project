@@ -2849,6 +2849,12 @@ let Constraints = "$src = $Rd" in {
 defm t2ORN  : T2I_bin_irs<0b0011, "orn",
                           IIC_iBITi, IIC_iBITr, IIC_iBITsi,
                           BinOpFrag<(or node:$LHS, (not node:$RHS))>, 0, "">;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $imm",
+   (t2ORNri rGPR:$Rd, rGPR:$Rn, t2_so_imm:$imm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $Rm",
+   (t2ORNrr rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $ShiftedRm",
+   (t2ORNrs rGPR:$Rd, rGPR:$Rn, t2_so_reg:$ShiftedRm, pred:$p, cc_out:$s)>;
 
 /// T2I_un_irs - Defines a set of (op reg, {so_imm|r|so_reg}) patterns for a
 /// unary operation that produces a value. These are predicable and can be
