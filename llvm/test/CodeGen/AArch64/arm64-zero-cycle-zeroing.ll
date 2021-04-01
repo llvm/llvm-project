@@ -28,13 +28,13 @@ entry:
 ; NONE16: fmov d2, xzr
 ; NONE16: movi{{(.16b)?}} v3{{(.2d)?}}, #0
 ; ZEROFP-DAG: ldr h0,{{.*}}
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZEROFP-DAG: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
-; ZERO16: movi v{{[0-3]+}}.2d, #0
+; ZEROFP-DAG: movi d1, #0
+; ZEROFP-DAG: movi d2, #0
+; ZEROFP-DAG: movi v3.2d, #0
+; ZERO16: movi d0, #0
+; ZERO16: movi d1, #0
+; ZERO16: movi d2, #0
+; ZERO16: movi v3.2d, #0
   tail call void @bar(half 0.000000e+00, float 0.000000e+00, double 0.000000e+00, <2 x double> <double 0.000000e+00, double 0.000000e+00>) nounwind
   ret void
 }
@@ -65,8 +65,8 @@ define void @t4() nounwind ssp {
 ; ALL-LABEL: t4:
 ; NONEFP: fmov s{{[0-3]+}}, wzr
 ; NONEFP: fmov s{{[0-3]+}}, wzr
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
-; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP: movi d0, #0
+; ZEROFP: movi d1, #0
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
   ret void
 }
@@ -147,7 +147,7 @@ define float @tf32() {
 entry:
 ; ALL-LABEL: tf32:
 ; NONEFP: mov s0, wzr
-; ZEROFP: movi v0.2d, #0
+; ZEROFP: movi d0, #0
   ret float 0.0
 }
 
@@ -155,7 +155,7 @@ define double @td64() {
 entry:
 ; ALL-LABEL: td64:
 ; NONEFP: mov d0, xzr
-; ZEROFP: movi v0.2d, #0
+; ZEROFP: movi d0, #0
   ret double 0.0
 }
 
