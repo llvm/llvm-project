@@ -1282,8 +1282,7 @@ struct AANoSyncImpl : AANoSync {
   /// or monotonic ordering
   static bool isNonRelaxedAtomic(Instruction *I);
 
-  /// Helper function uset to check if intrinsic is volatile (memcpy, memmove,
-  /// memset).
+  /// Helper function specific for intrinsics which are potentially volatile
   static bool isNoSyncIntrinsic(Instruction *I);
 };
 
@@ -1334,21 +1333,12 @@ bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
   return true;
 }
 
-/// Checks if an intrinsic is nosync. Currently only checks mem* intrinsics.
-/// FIXME: We should ipmrove the handling of intrinsics.
+/// Return true if this intrinsic is nosync.  This is only used for intrinsics
+/// which would be nosync except that they have a volatile flag.  All other
+/// intrinsics are simply annotated with the nosync attribute in Intrinsics.td.
 bool AANoSyncImpl::isNoSyncIntrinsic(Instruction *I) {
-  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::memset:
-    case Intrinsic::memmove:
-    case Intrinsic::memcpy:
-      if (!cast<MemIntrinsic>(II)->isVolatile())
-        return true;
-      return false;
-    default:
-      return false;
-    }
-  }
+  if (auto *MI = dyn_cast<MemIntrinsic>(I))
+    return !MI->isVolatile();
   return false;
 }
 
@@ -1356,13 +1346,12 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
 
   auto CheckRWInstForNoSync = [&](Instruction &I) {
     /// We are looking for volatile instructions or Non-Relaxed atomics.
-    /// FIXME: We should improve the handling of intrinsics.
-
-    if (isa<IntrinsicInst>(&I) && isNoSyncIntrinsic(&I))
-      return true;
 
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
       if (CB->hasFnAttr(Attribute::NoSync))
+        return true;
+
+      if (isNoSyncIntrinsic(&I))
         return true;
 
       const auto &NoSyncAA = A.getAAFor<AANoSync>(
