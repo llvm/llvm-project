@@ -11,7 +11,7 @@ declare i64 @llvm.smin.i64(i64, i64)
 ; GFX6789: v_mov_b32_e32 [[B]], 0xffff8000
 ; GFX6789: v_mov_b32_e32 [[C:v[0-9]+]], 0x7fff
 ; GFX6789: v_med3_i32 [[A]], [[B]], [[A]], [[C]]
-; GFX10: v_cvt_pk_i16_i32_e64 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
+; GFX10: v_cvt_pk_i16_i32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
 ; GFX10: v_mov_b32_e32 [[B]], 0x7fff
 ; GFX10: v_med3_i32 [[A]], 0xffff8000, [[A]], [[B]]
 define i16 @v_clamp_i64_i16(i64 %in) #0 {
@@ -28,7 +28,7 @@ entry:
 ; GFX6789: v_mov_b32_e32 [[B]], 0xffff8000
 ; GFX6789: v_mov_b32_e32 [[C:v[0-9]+]], 0x7fff
 ; GFX6789: v_med3_i32 [[A]], [[B]], [[A]], [[C]]
-; GFX10: v_cvt_pk_i16_i32_e64 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
+; GFX10: v_cvt_pk_i16_i32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
 ; GFX10: v_mov_b32_e32 [[B]], 0x7fff
 ; GFX10: v_med3_i32 [[A]], 0xffff8000, [[A]], [[B]] 
 define i16 @v_clamp_i64_i16_reverse(i64 %in) #0 {
@@ -72,7 +72,7 @@ entry:
 ; GFX6789: v_mov_b32_e32 [[B]], 0xffffff01
 ; GFX6789: v_mov_b32_e32 [[C:v[0-9]+]], 0x100
 ; GFX6789: v_med3_i32 [[A]], [[B]], [[A]], [[C]]
-; GFX10: v_cvt_pk_i16_i32_e64 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
+; GFX10: v_cvt_pk_i16_i32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
 ; GFX10: v_mov_b32_e32 [[B]], 0x100
 ; GFX10: v_med3_i32 [[A]], 0xffffff01, [[A]], [[B]]
 define i16 @v_clamp_i64_i16_lower_than_short(i64 %in) #0 {
@@ -89,7 +89,7 @@ entry:
 ; GFX6789: v_mov_b32_e32 [[B]], 0xffffff01
 ; GFX6789: v_mov_b32_e32 [[C:v[0-9]+]], 0x100
 ; GFX6789: v_med3_i32 [[A]], [[B]], [[A]], [[C]]
-; GFX10: v_cvt_pk_i16_i32_e64 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
+; GFX10: v_cvt_pk_i16_i32 [[A:v[0-9]+]], [[A]], [[B:v[0-9]+]]
 ; GFX10: v_mov_b32_e32 [[B]], 0x100
 ; GFX10: v_med3_i32 [[A]], 0xffffff01, [[A]], [[B]]
 define i16 @v_clamp_i64_i16_lower_than_short_reverse(i64 %in) #0 {

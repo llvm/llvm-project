@@ -3,7 +3,7 @@
 
 ; GCN-LABEL: {{^}}mul_legacy
 ; GFX908: v_mul_legacy_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX90A: v_mul_legacy_f32_e64 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX90A: v_mul_legacy_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @mul_legacy(
     float addrspace(1)* %r,
     float addrspace(1)* %a,

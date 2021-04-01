@@ -452,7 +452,7 @@ define amdgpu_kernel void @v_ctlz_i8(i8 addrspace(1)* noalias %out, i8 addrspace
 ; GFX10-NEXT:    v_cmp_ne_u16_e32 vcc_lo, 0, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v1, 32, v2, vcc_lo
 ; GFX10-NEXT:    v_add_nc_u32_e32 v1, -16, v1
-; GFX10-NEXT:    v_add_nc_u16_e64 v1, v1, -8
+; GFX10-NEXT:    v_add_nc_u16 v1, v1, -8
 ; GFX10-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
   %val = load i8, i8 addrspace(1)* %valptr

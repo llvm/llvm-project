@@ -811,6 +811,7 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
       VOP3e_gfx10<op, !cast<VOP3_Pseudo>(opName#"_e64").Pfl> {
         VOP3_Pseudo ps = !cast<VOP3_Pseudo>(opName#"_e64");
         let AsmString = asmName # ps.AsmOperands;
+        let IsSingle = 1;
       }
   }
   multiclass VOP3be_Real_gfx10<bits<10> op> {

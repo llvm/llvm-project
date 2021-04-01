@@ -1136,14 +1136,18 @@ let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
   multiclass VOP3Only_Real_gfx10<bits<10> op> {
     def _e64_gfx10 :
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX10>,
-      VOP3e_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+      VOP3e_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+        let IsSingle = 1;
+      }
   }
 
   //===---------------------------- VOP3beOnly ----------------------------===//
   multiclass VOP3beOnly_Real_gfx10<bits<10> op> {
     def _e64_gfx10 :
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX10>,
-      VOP3be_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+      VOP3be_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+        let IsSingle = 1;
+      }
   }
 } // End AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10"
 
@@ -1191,7 +1195,10 @@ defm V_FMAAK_F16       : VOP2Only_Real_MADK_gfx10<0x038>;
 defm V_MAX_F16         : VOP2_Real_gfx10<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
+
+let IsSingle = 1 in {
 defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
+}
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
@@ -1684,7 +1691,9 @@ let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A" in {
 
 let SubtargetPredicate = isGFX90APlus in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
-  defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
+  let IsSingle = 1 in {
+    defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
+  }
 } // End SubtargetPredicate = isGFX90APlus
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {

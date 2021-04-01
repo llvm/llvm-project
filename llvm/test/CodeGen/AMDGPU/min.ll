@@ -180,7 +180,7 @@ define amdgpu_kernel void @v_test_imin_slt_i32(i32 addrspace(1)* %out, i32 addrs
 ; SI: v_min_i32_e32
 
 ; GFX8_9: v_min_i16_e32
-; GFX10:  v_min_i16_e64
+; GFX10:  v_min_i16
 
 ; EG: MIN_INT
 define amdgpu_kernel void @v_test_imin_slt_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %aptr, i16 addrspace(1)* %bptr) #0 {
@@ -354,7 +354,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32(i32 addrspace(1)* %out, i32 addrs
 ; GFX8_9_10: {{flat|global}}_load_ubyte
 ; GFX8_9_10: {{flat|global}}_load_ubyte
 ; GFX8_9:    v_min_u16_e32
-; GFX10:     v_min_u16_e64
+; GFX10:     v_min_u16
 
 ; EG: MIN_UINT
 define amdgpu_kernel void @v_test_umin_ult_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr) #0 {
