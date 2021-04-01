@@ -118,10 +118,12 @@ TEST(Numeric, Nint) {
   EXPECT_EQ(RTNAME(Nint4_4)(Real<4>{2.5}), 3);
   EXPECT_EQ(RTNAME(Nint8_4)(Real<8>{-2.5}), -3);
   EXPECT_EQ(RTNAME(Nint8_8)(Real<8>{0}), 0);
-  EXPECT_EQ(RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Int<4>>::min());
-  EXPECT_EQ(RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::quiet_NaN()),
-      std::numeric_limits<Int<4>>::min());
+  auto nintInf{RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::infinity())};
+  EXPECT_TRUE(nintInf == std::numeric_limits<Int<4>>::min() ||
+      nintInf == std::numeric_limits<Int<4>>::max());
+  auto nintNaN{RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::quiet_NaN())};
+  EXPECT_TRUE(nintNaN == std::numeric_limits<Int<4>>::min() ||
+      nintNaN == std::numeric_limits<Int<4>>::max());
 }
 
 TEST(Numeric, RRSpacing) {
