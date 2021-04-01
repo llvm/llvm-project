@@ -550,6 +550,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back("-plugin-opt=-debugger-tune=lldb");
     else if (A->getOption().matches(options::OPT_gsce))
       CmdArgs.push_back("-plugin-opt=-debugger-tune=sce");
+    else if (A->getOption().matches(options::OPT_gdbx))
+      CmdArgs.push_back("-plugin-opt=-debugger-tune=dbx");
     else
       CmdArgs.push_back("-plugin-opt=-debugger-tune=gdb");
   }
