@@ -13,8 +13,6 @@ add_subdirectory(Syntax)
 add_subdirectory(DependencyScanning)
 add_subdirectory(Transformer)
 
-find_package(Python3 COMPONENTS Interpreter)
-
 # Replace the last lib component of the current binary directory with include
 string(FIND ${CMAKE_CURRENT_BINARY_DIR} "/lib/" PATH_LIB_START REVERSE)
 if(PATH_LIB_START EQUAL -1)
