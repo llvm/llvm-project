@@ -3972,12 +3972,15 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   // Column info is included by default for everything except SCE and
   // CodeView. Clang doesn't track end columns, just starting columns, which,
   // in theory, is fine for CodeView (and PDB).  In practice, however, the
-  // Microsoft debuggers don't handle missing end columns well, so it's better
-  // not to include any column info.
+  // Microsoft debuggers don't handle missing end columns well, and the AIX
+  // debugger DBX also doesn't handle the columns well, so it's better not to
+  // include any column info.
   if (const Arg *A = Args.getLastArg(options::OPT_gcolumn_info))
     (void)checkDebugInfoOption(A, Args, D, TC);
   if (!Args.hasFlag(options::OPT_gcolumn_info, options::OPT_gno_column_info,
-                    !EmitCodeView && DebuggerTuning != llvm::DebuggerKind::SCE))
+                    !EmitCodeView &&
+                        (DebuggerTuning != llvm::DebuggerKind::SCE &&
+                         DebuggerTuning != llvm::DebuggerKind::DBX)))
     CmdArgs.push_back("-gno-column-info");
 
   // FIXME: Move backend command line options to the module.
