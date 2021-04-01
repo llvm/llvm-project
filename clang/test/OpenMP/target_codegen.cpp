@@ -404,7 +404,8 @@ int foo(int n) {
 // CHECK-DAG: [[BPRADDR]] = load [2 x i8*]*, [2 x i8*]** [[FPPTR_BPR:%.+]], align
 // CHECK-DAG: [[PRADDR]] = load [2 x i8*]*, [2 x i8*]** [[FPPTR_PR:%.+]], align
 // CHECK-DAG: [[SIZEADDR]] = load [2 x i64]*, [2 x i64]** [[FPPTR_SIZE:%.+]], align
-// CHECK-DAG: call void (i8*, ...) {{%[0-9]+}}(i8* {{%[^,]+}}, i[[SZ]]*** [[FPPTR_PLOCAL:%.+]], i32** [[FPPTR_GLOBAL:%.+]], [2 x i8*]** [[FPPTR_BPR]], [2 x i8*]** [[FPPTR_PR]], [2 x i64]** [[FPPTR_SIZE]])
+// CHECK-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%[0-9]+}} to void (i8*,
+// CHECK-DAG: call void [[FN]](i8* {{%[^,]+}}, i[[SZ]]*** [[FPPTR_PLOCAL:%.+]], i32** [[FPPTR_GLOBAL:%.+]], [2 x i8*]** [[FPPTR_BPR]], [2 x i8*]** [[FPPTR_PR]], [2 x i64]** [[FPPTR_SIZE]])
 // CHECK-DAG: [[PLOCALADDR:%.+]] = load i[[SZ]]**, i[[SZ]]*** [[FPPTR_PLOCAL]], align
 // CHECK-DAG: {{%.+}} = load i32*, i32** [[FPPTR_GLOBAL:%.+]], align
 // CHECK: [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
