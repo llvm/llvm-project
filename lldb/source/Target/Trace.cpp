@@ -141,8 +141,7 @@ static SymbolContext DumpSymbolContext(Stream &s, const SymbolContext &prev_sc,
     sc.DumpStopContext(&s, &target, address, /*show_fullpath*/ false,
                        /*show_module*/ true, /*show_inlined_frames*/ false,
                        /*show_function_arguments*/ true,
-                       /*show_function_name*/ true,
-                       /*show_inline_callsite_line_info*/ false);
+                       /*show_function_name*/ true);
   s.Printf("\n");
   return sc;
 }

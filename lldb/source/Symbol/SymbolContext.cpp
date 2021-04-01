@@ -71,8 +71,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                                     const Address &addr, bool show_fullpaths,
                                     bool show_module, bool show_inlined_frames,
                                     bool show_function_arguments,
-                                    bool show_function_name,
-                                    bool show_inline_callsite_line_info) const {
+                                    bool show_function_name) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -128,13 +127,14 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
           s->Printf(" + %" PRIu64, inlined_function_offset);
         }
       }
-      if (show_inline_callsite_line_info) {
-        const Declaration &call_site = inlined_block_info->GetCallSite();
-        if (call_site.IsValid()) {
-          s->PutCString(" at ");
-          call_site.DumpStopContext(s, show_fullpaths);
-        }
-      } else if (line_entry.IsValid()) {
+      // "line_entry" will always be valid as GetParentOfInlinedScope(...) will
+      // fill it in correctly with the calling file and line. Previous code
+      // was extracting the calling file and line from inlined_block_info and
+      // using it right away which is not correct. On the first call to this
+      // function "line_entry" will contain the actual line table entry. On
+      // susequent calls "line_entry" will contain the calling file and line
+      // from the previous inline info.
+      if (line_entry.IsValid()) {
         s->PutCString(" at ");
         line_entry.DumpStopContext(s, show_fullpaths);
       }
