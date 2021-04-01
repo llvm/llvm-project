@@ -82,4 +82,15 @@ subroutine components
   end type
   type(t2(3,3)) :: o1
   type(t2(2,2)) :: o2
+  type :: t3
+    real :: x
+  end type
+  type(t3), save, target :: o3
+  real, pointer :: p10 => o3%x
+  associate (a1 => o3, a2 => o3%x)
+    block
+      real, pointer :: p11 => a1
+      real, pointer :: p12 => a2
+    end block
+  end associate
 end subroutine
