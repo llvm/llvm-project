@@ -17,14 +17,17 @@
 
 namespace Fortran::runtime {
 
-Descriptor::Descriptor(const Descriptor &that) {
-  std::memcpy(this, &that, that.SizeInBytes());
-}
+Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 Descriptor::~Descriptor() {
   if (raw_.attribute != CFI_attribute_pointer) {
     Deallocate();
   }
+}
+
+Descriptor &Descriptor::operator=(const Descriptor &that) {
+  std::memcpy(this, &that, that.SizeInBytes());
+  return *this;
 }
 
 void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
@@ -224,10 +227,9 @@ bool Descriptor::SubscriptsForZeroBasedElementNumber(SubscriptValue *subscript,
   for (int j{raw_.rank - 1}; j >= 0; --j) {
     int k{permutation ? permutation[j] : j};
     const Dimension &dim{GetDimension(k)};
-    std::size_t quotient{j ? elementNumber / dimCoefficient[j] : 0};
-    subscript[k] =
-        dim.LowerBound() + elementNumber - dimCoefficient[j] * quotient;
-    elementNumber = quotient;
+    std::size_t quotient{elementNumber / dimCoefficient[j]};
+    subscript[k] = quotient + dim.LowerBound();
+    elementNumber -= quotient * dimCoefficient[j];
   }
   return true;
 }

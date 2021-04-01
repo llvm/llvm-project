@@ -129,20 +129,16 @@ struct NS(ConversionToDecimalResult)
 struct NS(ConversionToDecimalResult)
     ConvertDoubleToDecimal(char *, size_t, enum NS(DecimalConversionFlags),
         int digits, enum NS(FortranRounding), double);
-#if __x86_64__ && !defined(_MSC_VER)
 struct NS(ConversionToDecimalResult)
     ConvertLongDoubleToDecimal(char *, size_t, enum NS(DecimalConversionFlags),
         int digits, enum NS(FortranRounding), long double);
-#endif
 
 enum NS(ConversionResultFlags)
     ConvertDecimalToFloat(const char **, float *, enum NS(FortranRounding));
 enum NS(ConversionResultFlags)
     ConvertDecimalToDouble(const char **, double *, enum NS(FortranRounding));
-#if __x86_64__ && !defined(_MSC_VER)
 enum NS(ConversionResultFlags) ConvertDecimalToLongDouble(
     const char **, long double *, enum NS(FortranRounding));
-#endif
 #undef NS
 #ifdef __cplusplus
 } // extern "C"
