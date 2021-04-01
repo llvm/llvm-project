@@ -112,6 +112,10 @@ function check-cxx-benchmarks() {
     ${NINJA} -vC "${BUILD_DIR}" check-cxx-benchmarks
 }
 
+# Print the version of a few tools to aid diagnostics in some cases
+cmake --version
+${NINJA} --version
+
 case "${BUILDER}" in
 check-format)
     clean
