@@ -43587,9 +43587,9 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
           X86ISD::HSUB == N->getOpcode() || X86ISD::FHSUB == N->getOpcode()) &&
          "Unexpected horizontal add/sub opcode");
 
-  // For slow-hop targets, if we have a hop with a single op, see if we already
-  // have another user that we can reuse and shuffle the result.
   if (!shouldUseHorizontalOp(true, DAG, Subtarget)) {
+    // For slow-hop targets, if we have a hop with a single op, see if we already
+    // have another user that we can reuse and shuffle the result.
     MVT VT = N->getSimpleValueType(0);
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
@@ -43612,6 +43612,34 @@ static SDValue combineVectorHADDSUB(SDNode *N, SelectionDAG &DAG,
                                      DAG.getUNDEF(ShufVT), {2, 3, 2, 3}));
           }
         }
+      }
+    }
+
+    // HOP(HOP'(X,X),HOP'(Y,Y)) -> HOP(PERMUTE(HOP'(X,Y)),PERMUTE(HOP'(X,Y)).
+    if (LHS != RHS && LHS.getOpcode() == N->getOpcode() &&
+        LHS.getOpcode() == RHS.getOpcode() &&
+        LHS.getValueType() == RHS.getValueType()) {
+      SDValue LHS0 = LHS.getOperand(0);
+      SDValue RHS0 = LHS.getOperand(1);
+      SDValue LHS1 = RHS.getOperand(0);
+      SDValue RHS1 = RHS.getOperand(1);
+      if ((LHS0 == RHS0 || LHS0.isUndef() || RHS0.isUndef()) &&
+          (LHS1 == RHS1 || LHS1.isUndef() || RHS1.isUndef())) {
+        SDLoc DL(N);
+        SDValue Res = DAG.getNode(LHS.getOpcode(), DL, LHS.getValueType(),
+                                  LHS0.isUndef() ? RHS0 : LHS0,
+                                  LHS1.isUndef() ? RHS1 : LHS1);
+        MVT ShufVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+        Res = DAG.getBitcast(ShufVT, Res);
+        SDValue NewLHS =
+            DAG.getNode(X86ISD::PSHUFD, DL, ShufVT, Res,
+                        getV4X86ShuffleImm8ForMask({0, 1, 0, 1}, DL, DAG));
+        SDValue NewRHS =
+            DAG.getNode(X86ISD::PSHUFD, DL, ShufVT, Res,
+                        getV4X86ShuffleImm8ForMask({2, 3, 2, 3}, DL, DAG));
+        DAG.ReplaceAllUsesOfValueWith(LHS, DAG.getBitcast(VT, NewLHS));
+        DAG.ReplaceAllUsesOfValueWith(RHS, DAG.getBitcast(VT, NewRHS));
+        return SDValue(N, 0);
       }
     }
   }
