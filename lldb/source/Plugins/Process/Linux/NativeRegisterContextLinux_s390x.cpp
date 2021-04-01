@@ -110,7 +110,8 @@ CreateRegisterInfoInterface(const ArchSpec &target_arch) {
 NativeRegisterContextLinux_s390x::NativeRegisterContextLinux_s390x(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)) {
+          native_thread, CreateRegisterInfoInterface(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   // Set up data about ranges of valid registers.
   switch (target_arch.GetMachine()) {
   case llvm::Triple::systemz:
