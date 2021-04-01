@@ -108,24 +108,6 @@ namespace attributed_decl {
   }
 }
 
-// CHECK-1Z: NamespaceDecl {{.*}} attributed_case
-namespace attributed_case {
-void f(int n) {
-  switch (n) {
-  case 0:
-    n--;
-    // CHECK: AttributedStmt {{.*}} <line:[[@LINE+2]]:5, line:[[@LINE+4]]:35>
-    // CHECK: FallThroughAttr {{.*}} <line:[[@LINE+1]]:20>
-    __attribute__((fallthrough))
-    // CHECK: FallThroughAttr {{.*}} <line:[[@LINE+1]]:22>
-      __attribute__((fallthrough));
-  case 1:
-    n++;
-    break;
-  }
-}
-} // namespace attributed_case
-
 // CHECK: NamespaceDecl {{.*}} attributed_stmt
 namespace attributed_stmt {
   // In DO_PRAGMA and _Pragma cases, `LoopHintAttr` comes from <scratch space>
