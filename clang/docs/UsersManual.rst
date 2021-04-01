@@ -3210,9 +3210,9 @@ Clang currently supports C++ for OpenCL v1.0.
 For detailed information about this language refer to the C++ for OpenCL
 Programming Language Documentation available
 in `the latest build
-<https://github.com/KhronosGroup/Khronosdotorg/blob/master/api/opencl/assets/CXX_for_OpenCL.pdf>`_
+<https://www.khronos.org/opencl/assets/CXX_for_OpenCL.html>`_
 or in `the official release
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r1>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
 
 To enable the C++ for OpenCL mode, pass one of following command line options when
 compiling ``.cl`` file ``-cl-std=clc++``, ``-cl-std=CLC++``, ``-std=clc++`` or
