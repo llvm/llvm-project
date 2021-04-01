@@ -598,16 +598,19 @@ void LTOCodeGenerator::setCodeGenDebugOptions(ArrayRef<StringRef> Options) {
 }
 
 void LTOCodeGenerator::parseCodeGenDebugOptions() {
-  // if options were requested, set them
-  if (!CodegenOptions.empty()) {
+  if (!CodegenOptions.empty())
+    llvm::parseCommandLineOptions(CodegenOptions);
+}
+
+void llvm::parseCommandLineOptions(std::vector<std::string> &Options) {
+  if (!Options.empty()) {
     // ParseCommandLineOptions() expects argv[0] to be program name.
     std::vector<const char *> CodegenArgv(1, "libLLVMLTO");
-    for (std::string &Arg : CodegenOptions)
+    for (std::string &Arg : Options)
       CodegenArgv.push_back(Arg.c_str());
     cl::ParseCommandLineOptions(CodegenArgv.size(), CodegenArgv.data());
   }
 }
-
 
 void LTOCodeGenerator::DiagnosticHandler(const DiagnosticInfo &DI) {
   // Map the LLVM internal diagnostic severity to the LTO diagnostic severity.
