@@ -7,11 +7,28 @@ func @slice_depth1_loop_nest() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
     affine.store %cst, %0[%i0] : memref<100xf32>
   }
   affine.for %i1 = 0 to 5 {
     // expected-remark@-1 {{slice ( src loop: 0, dst loop: 1, depth: 1 : insert point: (1, 0) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
+    %1 = affine.load %0[%i1] : memref<100xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @forward_slice_slice_depth1_loop_nest() {
+func @forward_slice_slice_depth1_loop_nest() {
+  %0 = memref.alloc() : memref<100xf32>
+  %cst = constant 7.000000e+00 : f32
+  affine.for %i0 = 0 to 5 {
+    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
+    affine.store %cst, %0[%i0] : memref<100xf32>
+  }
+  affine.for %i1 = 0 to 16 {
+    // expected-remark@-1 {{Incorrect slice ( src loop: 0, dst loop: 1, depth: 1 : insert point: (1, 0) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] )}}
     %1 = affine.load %0[%i1] : memref<100xf32>
   }
   return
@@ -27,7 +44,7 @@ func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0 + 3), (d0) -> (d0 + 4)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0 + 3), (d0) -> (d0 + 4)] )}}
     %a0 = affine.apply affine_map<(d0) -> (d0 + 2)>(%i0)
     affine.store %cst, %0[%a0] : memref<100xf32>
   }
@@ -48,8 +65,8 @@ func @slice_depth2_loop_nest() {
   %0 = memref.alloc() : memref<100x100xf32>
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
-    // expected-remark@-2 {{slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
+    // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}
     affine.for %i1 = 0 to 16 {
       affine.store %cst, %0[%i0, %i1] : memref<100x100xf32>
     }
@@ -75,8 +92,8 @@ func @slice_depth2_loop_nest_two_loads() {
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
-    // expected-remark@-2 {{slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (0), (d0, d1) -> (8)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
+    // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (0), (d0, d1) -> (16)] )}}
     affine.for %i1 = 0 to 16 {
       affine.store %cst, %0[%i0, %i1] : memref<100x100xf32>
     }
@@ -103,7 +120,7 @@ func @slice_depth2_loop_nest_two_stores() {
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 2) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (8)] )}}
     affine.for %i1 = 0 to 16 {
       affine.store %cst, %0[%i0, %i1] : memref<100x100xf32>
     }
@@ -128,8 +145,8 @@ func @slice_loop_nest_with_smaller_outer_trip_count() {
   %c0 = constant 0 : index
   %cst = constant 7.000000e+00 : f32
   affine.for %i0 = 0 to 16 {
-    // expected-remark@-1 {{slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (10)] )}}
-    // expected-remark@-2 {{slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}
+    // expected-remark@-1 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 1 : insert point: (1, 1) loop bounds: [(d0) -> (d0), (d0) -> (d0 + 1)] [(d0) -> (0), (d0) -> (10)] )}}
+    // expected-remark@-2 {{Incorrect slice ( src loop: 1, dst loop: 0, depth: 2 : insert point: (2, 1) loop bounds: [(d0, d1) -> (d0), (d0, d1) -> (d0 + 1)] [(d0, d1) -> (d1), (d0, d1) -> (d1 + 1)] )}}
     affine.for %i1 = 0 to 16 {
       affine.store %cst, %0[%i0, %i1] : memref<100x100xf32>
     }
