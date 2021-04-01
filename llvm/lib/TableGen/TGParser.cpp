@@ -339,27 +339,38 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
   return resolve(SMC->Entries, TemplateArgs, false, &CurMC->Entries);
 }
 
-/// Add a record or foreach loop to the current context (global record keeper,
-/// current inner-most foreach loop, or multiclass).
+/// Add a record, foreach loop, or assertion to the current context.
 bool TGParser::addEntry(RecordsEntry E) {
-  assert(!E.Rec || !E.Loop);
+  assert((!!E.Rec + !!E.Loop + !!E.Assertion) == 1 &&
+         "RecordsEntry has invalid number of items");
 
+  // If we are parsing a loop, add it to the loop's entries.
   if (!Loops.empty()) {
     Loops.back()->Entries.push_back(std::move(E));
     return false;
   }
 
+  // If it is a loop, then resolve and perform the loop.
   if (E.Loop) {
     SubstStack Stack;
     return resolve(*E.Loop, Stack, CurMultiClass == nullptr,
                    CurMultiClass ? &CurMultiClass->Entries : nullptr);
   }
 
+  // If we are parsing a multiclass, add it to the multiclass's entries.
   if (CurMultiClass) {
     CurMultiClass->Entries.push_back(std::move(E));
     return false;
   }
 
+  // If it is an assertion, then it's a top-level one, so check it.
+  if (E.Assertion) {
+    CheckAssert(std::get<0>(*E.Assertion), std::get<1>(*E.Assertion), 
+                std::get<2>(*E.Assertion));
+    return false;
+  }
+
+  // It must be a record, so finish it off.
   return addDefOne(std::move(E.Rec));
 }
 
@@ -414,6 +425,24 @@ bool TGParser::resolve(const std::vector<RecordsEntry> &Source,
   for (auto &E : Source) {
     if (E.Loop) {
       Error = resolve(*E.Loop, Substs, Final, Dest);
+
+    } else if (E.Assertion) {
+      MapResolver R;
+      for (const auto &S : Substs)
+        R.set(S.first, S.second);
+      Init *Condition = std::get<1>(*E.Assertion)->resolveReferences(R);
+      Init *Message = std::get<2>(*E.Assertion)->resolveReferences(R);
+
+      if (Dest) {
+        std::unique_ptr<Record::AssertionTuple> Tuple =
+            std::make_unique<Record::AssertionTuple>(std::get<0>(*E.Assertion),
+                                                     std::move(Condition),
+                                                     std::move(Message));
+        Dest->push_back(std::move(Tuple));
+      } else {
+        CheckAssert(std::get<0>(*E.Assertion), Condition, Message);
+      }
+
     } else {
       auto Rec = std::make_unique<Record>(*E.Rec);
       if (Loc)
@@ -459,7 +488,7 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   }
 
   // Check the assertions.
-  Rec->checkAssertions();
+  Rec->checkRecordAssertions();
 
   // If ObjectBody has template arguments, it's an error.
   assert(Rec->getTemplateArgs().empty() && "How'd this get template args?");
@@ -2842,9 +2871,14 @@ bool TGParser::ApplyLetStack(Record *CurRec) {
   return false;
 }
 
+/// Apply the current let bindings to the RecordsEntry.
 bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
   if (Entry.Rec)
     return ApplyLetStack(Entry.Rec.get());
+
+  // Let bindings are not applied to assertions.
+  if (Entry.Assertion)
+    return false;
 
   for (auto &E : Entry.Loop->Entries) {
     if (ApplyLetStack(E))
@@ -2889,8 +2923,8 @@ bool TGParser::ParseObjectBody(Record *CurRec) {
   return ParseBody(CurRec);
 }
 
-/// ParseDef - Parse and return a top level or multiclass def, return the record
-/// corresponding to it.  This returns null on error.
+/// ParseDef - Parse and return a top level or multiclass record definition.
+/// Return false if okay, true if error.
 ///
 ///   DefInst ::= DEF ObjectName ObjectBody
 ///
@@ -3184,12 +3218,12 @@ bool TGParser::ParseAssert(MultiClass *CurMultiClass, Record *CurRec) {
   if (!consume(tgtok::semi))
     return TokError("expected ';'");
 
-  if (CurMultiClass) {
-    assert(false && "assert in multiclass not yet supported");
-  } else if (CurRec) {
+  if (CurRec) {
     CurRec->addAssertion(ConditionLoc, Condition, Message);
-  } else { // at top level
-    CheckAssert(ConditionLoc, Condition, Message);
+  } else {
+    std::unique_ptr<Record::AssertionTuple> Tuple =
+         std::make_unique<Record::AssertionTuple>(ConditionLoc, Condition, Message);
+    addEntry(std::move(Tuple));
   }
  
   return false;
@@ -3330,8 +3364,12 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
 ///  MultiClassObject ::= DefInst
 ///  MultiClassObject ::= MultiClassInst
 ///  MultiClassObject ::= DefMInst
+///  MultiClassObject ::= Defvar
+///  MultiClassObject ::= Foreach
+///  MultiClassObject ::= If
 ///  MultiClassObject ::= LETCommand '{' ObjectList '}'
 ///  MultiClassObject ::= LETCommand Object
+///  MultiClassObject ::= Assert
 ///
 bool TGParser::ParseMultiClass() {
   assert(Lex.getCode() == tgtok::MultiClass && "Unexpected token");
@@ -3396,9 +3434,8 @@ bool TGParser::ParseMultiClass() {
       default:
         return TokError("expected 'assert', 'def', 'defm', 'defvar', "
                         "'foreach', 'if', or 'let' in multiclass body");
-      case tgtok::Assert:
-        return TokError("an assert statement in a multiclass is not yet supported");
 
+      case tgtok::Assert:
       case tgtok::Def:
       case tgtok::Defm:
       case tgtok::Defvar:
@@ -3564,7 +3601,7 @@ bool TGParser::ParseObject(MultiClass *MC) {
   default:
     return TokError(
                "Expected assert, class, def, defm, defset, foreach, if, or let");
-  case tgtok::Assert:  return ParseAssert(MC, nullptr);
+  case tgtok::Assert:  return ParseAssert(MC);
   case tgtok::Def:     return ParseDef(MC);
   case tgtok::Defm:    return ParseDefm(MC);
   case tgtok::Defvar:  return ParseDefvar();
