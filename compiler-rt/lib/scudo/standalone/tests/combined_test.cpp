@@ -24,6 +24,11 @@ static bool Ready;
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 
+template <class Config> struct UseQuarantineSetter {
+  UseQuarantineSetter(bool Value) { UseQuarantine = Value; }
+  ~UseQuarantineSetter() { UseQuarantine = true; }
+};
+
 // Fuchsia complains that the function is not used.
 UNUSED static void disableDebuggerdMaybe() {
 #if SCUDO_ANDROID
@@ -80,6 +85,8 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
 };
 
 template <class Config> static void testAllocator() {
+  UseQuarantineSetter<Config> MUQ(
+      std::is_same<Config, scudo::AndroidConfig>::value);
   using AllocatorT = TestAllocator<Config>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
@@ -318,13 +325,11 @@ void testSEGV() {
 }
 
 TEST(ScudoCombinedTest, BasicCombined) {
-  UseQuarantine = false;
   testAllocator<scudo::AndroidSvelteConfig>();
 #if SCUDO_FUCHSIA
   testAllocator<scudo::FuchsiaConfig>();
 #else
   testAllocator<scudo::DefaultConfig>();
-  UseQuarantine = true;
   testAllocator<scudo::AndroidConfig>();
   testSEGV();
 #endif
@@ -369,13 +374,11 @@ template <class Config> static void testAllocatorThreaded() {
 }
 
 TEST(ScudoCombinedTest, ThreadedCombined) {
-  UseQuarantine = false;
   testAllocatorThreaded<scudo::AndroidSvelteConfig>();
 #if SCUDO_FUCHSIA
   testAllocatorThreaded<scudo::FuchsiaConfig>();
 #else
   testAllocatorThreaded<scudo::DefaultConfig>();
-  UseQuarantine = true;
   testAllocatorThreaded<scudo::AndroidConfig>();
 #endif
 }
