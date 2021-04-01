@@ -738,6 +738,12 @@ public:
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
 
+  /// Return true if the memory object referred to by V can by freed in the
+  /// scope for which the SSA value defining the allocation is statically
+  /// defined.  E.g.  deallocation after the static scope of a value does not
+  /// count, but a deallocation before that does.
+  bool canBeFreed() const;
+
   /// Returns the number of bytes known to be dereferenceable for the
   /// pointer value.
   ///

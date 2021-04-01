@@ -324,21 +324,19 @@ for.end:
 
 declare noalias i8* @my_alloc(i64) allocsize(0)
 
-; FIXME: While the result shown here is correct for the test case as written,
-; it would require context sensitive reasoning about frees which we don't
-; currently have to reach this result.  So, this is effectively demonstrating
-; a miscompile which needs investigated further.
+; We would need context sensitive reasoning about frees (which we don't
+; don't currently have) to hoist the load in this example.
 define i8 @test_hoist_allocsize() {
 ; CHECK-LABEL: @test_hoist_allocsize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_RAW:%.*]] = call nonnull i8* @my_alloc(i64 32)
 ; CHECK-NEXT:    call void @init(i8* [[A_RAW]])
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i8, i8* [[A_RAW]], i32 31
-; CHECK-NEXT:    [[RES:%.*]] = load i8, i8* [[ADDR]], align 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @unknown()
+; CHECK-NEXT:    [[RES:%.*]] = load i8, i8* [[ADDR]], align 1
 ; CHECK-NEXT:    call void @use(i8 [[RES]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 200
@@ -368,7 +366,7 @@ for.end:
   ret i8 %res
 }
 
-define i8 @test_hoist_allocsize_leak() {
+define i8 @test_hoist_allocsize_leak() nofree nosync {
 ; CHECK-LABEL: @test_hoist_allocsize_leak(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_RAW:%.*]] = call nonnull i8* @my_alloc(i64 32)
