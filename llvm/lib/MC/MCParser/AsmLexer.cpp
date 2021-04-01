@@ -143,10 +143,10 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
   return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
 }
 
-/// LexIdentifier: [a-zA-Z_.][a-zA-Z0-9_$.@?]*
-static bool IsIdentifierChar(char c, bool AllowAt) {
-  return isAlnum(c) || c == '_' || c == '$' || c == '.' ||
-         (c == '@' && AllowAt) || c == '?';
+/// LexIdentifier: [a-zA-Z_.][a-zA-Z0-9_$.@#?]*
+static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
+  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
+         (AllowAt && C == '@') || (AllowHash && C == '#');
 }
 
 AsmToken AsmLexer::LexIdentifier() {
@@ -156,12 +156,13 @@ AsmToken AsmLexer::LexIdentifier() {
     while (isDigit(*CurPtr))
       ++CurPtr;
 
-    if (!IsIdentifierChar(*CurPtr, AllowAtInIdentifier) ||
+    if (!isIdentifierChar(*CurPtr, AllowAtInIdentifier,
+                          AllowHashInIdentifier) ||
         *CurPtr == 'e' || *CurPtr == 'E')
       return LexFloatLiteral();
   }
 
-  while (IsIdentifierChar(*CurPtr, AllowAtInIdentifier))
+  while (isIdentifierChar(*CurPtr, AllowAtInIdentifier, AllowHashInIdentifier))
     ++CurPtr;
 
   // Handle . as a special case.
@@ -726,9 +727,10 @@ AsmToken AsmLexer::LexToken() {
   switch (CurChar) {
   default:
     if (MAI.doesAllowSymbolAtNameStart()) {
-      // Handle Microsoft-style identifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@?]*
+      // Handle Microsoft-style identifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
       if (!isDigit(CurChar) &&
-          IsIdentifierChar(CurChar, MAI.doesAllowAtInName()))
+          isIdentifierChar(CurChar, MAI.doesAllowAtInName(),
+                           AllowHashInIdentifier))
         return LexIdentifier();
     } else {
       // Handle identifier: [a-zA-Z_.][a-zA-Z0-9_$.@]*

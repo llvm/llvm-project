@@ -48,6 +48,7 @@ protected: // Can only create subclasses.
   const char *TokStart = nullptr;
   bool SkipSpace = true;
   bool AllowAtInIdentifier;
+  bool AllowHashInIdentifier = false;
   bool IsAtStartOfStatement = true;
   bool LexMasmHexFloats = false;
   bool LexMasmIntegers = false;
@@ -146,6 +147,8 @@ public:
 
   bool getAllowAtInIdentifier() { return AllowAtInIdentifier; }
   void setAllowAtInIdentifier(bool v) { AllowAtInIdentifier = v; }
+
+  void setAllowHashInIdentifier(bool V) { AllowHashInIdentifier = V; }
 
   void setCommentConsumer(AsmCommentConsumer *CommentConsumer) {
     this->CommentConsumer = CommentConsumer;
