@@ -184,47 +184,24 @@ class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProf
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
 
   let HasModifiers = !if(Features.IsMAI, 0, !or(Features.IsPacked, P.HasModifiers));
-
-  // FIXME: Hack to stop printing _e64
-  let Outs64 = (outs DstRC.RegClass:$vdst);
-  let Asm64 =
-    " " # !if(Features.HasOpSel,
-              getAsmVOP3OpSel<NumSrcArgs,
-                              HasIntClamp,
-                              P.HasOMod,
-                              HasSrc0FloatMods,
-                              HasSrc1FloatMods,
-                              HasSrc2FloatMods>.ret,
-              !if(Features.HasClamp,
-                  getAsm64<HasDst, NumSrcArgs, HasIntClamp,
-                           HasModifiers, HasOMod, DstVT>.ret,
-                  P.Asm64));
-  let NeedPatGen = P.NeedPatGen;
+  let IsSingle = 1;
 }
 
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let Asm64 = " $vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
+  let Asm64 = "$vdst, $sdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod";
+  let IsSingle = 1;
 }
 
-def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32> {
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
-}
-
-def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64> {
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VReg_64>;
-}
+def VOP3b_F32_I1_F32_F32_F32 : VOP3b_Profile<f32>;
+def VOP3b_F64_I1_F64_F64_F64 : VOP3b_Profile<f64>;
 
 def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   let HasClamp = 1;
-
-  // FIXME: Hack to stop printing _e64
-  let DstRC = RegisterOperand<VReg_64>;
+  let IsSingle = 1;
 
   let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
-  let Asm64 = " $vdst, $sdst, $src0, $src1, $src2$clamp";
+  let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 
 //===----------------------------------------------------------------------===//

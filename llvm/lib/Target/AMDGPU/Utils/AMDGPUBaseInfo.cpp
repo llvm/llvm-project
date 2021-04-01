@@ -178,12 +178,23 @@ struct SMInfo {
   bool IsBuffer;
 };
 
+struct VOPInfo {
+  uint16_t Opcode;
+  bool IsSingle;
+};
+
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
 #define GET_MUBUFInfoTable_IMPL
 #define GET_SMInfoTable_DECL
 #define GET_SMInfoTable_IMPL
+#define GET_VOP1InfoTable_DECL
+#define GET_VOP1InfoTable_IMPL
+#define GET_VOP2InfoTable_DECL
+#define GET_VOP2InfoTable_IMPL
+#define GET_VOP3InfoTable_DECL
+#define GET_VOP3InfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMTBUFBaseOpcode(unsigned Opc) {
@@ -249,6 +260,21 @@ bool getMUBUFHasSoffset(unsigned Opc) {
 bool getSMEMIsBuffer(unsigned Opc) {
   const SMInfo *Info = getSMEMOpcodeHelper(Opc);
   return Info ? Info->IsBuffer : false;
+}
+
+bool getVOP1IsSingle(unsigned Opc) {
+  const VOPInfo *Info = getVOP1OpcodeHelper(Opc);
+  return Info ? Info->IsSingle : false;
+}
+
+bool getVOP2IsSingle(unsigned Opc) {
+  const VOPInfo *Info = getVOP2OpcodeHelper(Opc);
+  return Info ? Info->IsSingle : false;
+}
+
+bool getVOP3IsSingle(unsigned Opc) {
+  const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
+  return Info ? Info->IsSingle : false;
 }
 
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
