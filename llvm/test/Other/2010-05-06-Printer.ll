@@ -10,10 +10,8 @@ define void @foo(){
   ret void
 }
 
-;ALL-NOT: IR Dump After {{.*}}; ModuleID =
 ;ALL: define void @tester()
 ;ALL: define void @foo()
-;ALL: ModuleID =
 
 ;FOO: IR Dump After
 ;FOO-NEXT: define void @foo()

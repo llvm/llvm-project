@@ -16,7 +16,7 @@ ret:
 }
 
 
-;; Issues with referring to a label that gets RAUW'd later.
+; Issues with referring to a label that gets RAUW'd later.
 define i32 @test2a() nounwind {
 entry:
         %target = bitcast i8* blockaddress(@test2b, %test_label) to i8*
