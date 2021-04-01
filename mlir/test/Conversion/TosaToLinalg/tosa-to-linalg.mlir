@@ -181,21 +181,32 @@ func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %18 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
+  // CHECK: negf
+  // CHECK: exp
+  // CHECK: addf
+  // CHECK: divf
+  %19 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+
+  // CHECK: linalg.generic
   // CHECK: fptosi
-  %19 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
+  %20 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: constant 0
   // CHECK: cmpf
-  %20 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
+  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: fptrunc
-  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
+  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
 
   // CHECK: linalg.generic
   // CHECK: yield
-  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+  %23 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+
+  // CHECK: linalg.generic
+  // CHECK: divf
+  %24 = "tosa.reciprocal"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   return
 }
