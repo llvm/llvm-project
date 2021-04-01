@@ -299,33 +299,17 @@ define <2 x i64> @vselect_v2i64(<2 x i1> %c, <2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %res
 }
 
-define <2 x i64> @vselect_cmp_v2i64(<2 x i64> %a, <2 x i64> %b,
+define <2 x i64> @vselect_cmp_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: vselect_cmp_v2i64:
 ; CHECK:         .functype vselect_cmp_v2i64 (v128, v128, v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    local.get 3
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64x2.extract_lane 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64x2.extract_lane 0
-; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i64x2.extract_lane 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64x2.extract_lane 1
-; CHECK-NEXT:    i64.lt_s
-; CHECK-NEXT:    i64.select
-; CHECK-NEXT:    i64x2.replace_lane 1
+; CHECK-NEXT:    i64x2.lt_s
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    # fallthrough-return
-                                    <2 x i64> %x, <2 x i64> %y) {
   %c = icmp slt <2 x i64> %a, %b
   %res = select <2 x i1> %c, <2 x i64> %x, <2 x i64> %y
   ret <2 x i64> %res

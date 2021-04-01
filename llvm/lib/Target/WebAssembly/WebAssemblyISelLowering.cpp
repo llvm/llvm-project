@@ -186,9 +186,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
-    // Expand operations not supported for i64x2 vectors
-    for (unsigned CC = 0; CC < ISD::SETCC_INVALID; ++CC)
-      setCondCodeAction(static_cast<ISD::CondCode>(CC), MVT::v2i64, Custom);
+    // Unsigned comparison operations are unavailable for i64x2 vectors.
+    for (auto CC : {ISD::SETUGT, ISD::SETUGE, ISD::SETULT, ISD::SETULE})
+      setCondCodeAction(CC, MVT::v2i64, Custom);
 
     // 64x2 conversions are not in the spec
     for (auto Op :
@@ -1779,11 +1779,8 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  // The legalizer does not know how to expand the comparison modes of i64x2
-  // vectors because no comparison modes are supported. We could solve this by
-  // expanding all i64x2 SETCC nodes, but that seems to expand f64x2 SETCC nodes
-  // (which return i64x2 results) as well. So instead we manually unroll i64x2
-  // comparisons here.
+  // The legalizer does not know how to expand the unsupported comparison modes
+  // of i64x2 vectors, so we manually unroll them here.
   assert(Op->getOperand(0)->getSimpleValueType(0) == MVT::v2i64);
   SmallVector<SDValue, 2> LHS, RHS;
   DAG.ExtractVectorElements(Op->getOperand(0), LHS);
