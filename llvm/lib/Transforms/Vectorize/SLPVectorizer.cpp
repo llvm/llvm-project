@@ -7601,22 +7601,11 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
                             BuildVectorInsts);
 }
 
-bool SLPVectorizerPass::vectorizeCmpInst(CmpInst *CI, BasicBlock *BB,
-                                         BoUpSLP &R) {
-  if (tryToVectorizePair(CI->getOperand(0), CI->getOperand(1), R))
-    return true;
-
-  bool OpsChanged = false;
-  for (int Idx = 0; Idx < 2; ++Idx) {
-    OpsChanged |=
-        vectorizeRootInstruction(nullptr, CI->getOperand(Idx), BB, R, TTI);
-  }
-  return OpsChanged;
-}
-
 bool SLPVectorizerPass::vectorizeSimpleInstructions(
-    SmallVectorImpl<Instruction *> &Instructions, BasicBlock *BB, BoUpSLP &R) {
+    SmallVectorImpl<Instruction *> &Instructions, BasicBlock *BB, BoUpSLP &R,
+    bool AtTerminator) {
   bool OpsChanged = false;
+  SmallVector<Instruction *, 4> PostponedCmps;
   for (auto *I : reverse(Instructions)) {
     if (R.isDeleted(I))
       continue;
@@ -7624,10 +7613,29 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(
       OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
     else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I))
       OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
-    else if (auto *CI = dyn_cast<CmpInst>(I))
-      OpsChanged |= vectorizeCmpInst(CI, BB, R);
+    else if (isa<CmpInst>(I))
+      PostponedCmps.push_back(I);
   }
-  Instructions.clear();
+  if (AtTerminator) {
+    // Try to find reductions first.
+    for (Instruction *I : PostponedCmps) {
+      if (R.isDeleted(I))
+        continue;
+      for (Value *Op : I->operands())
+        OpsChanged |= vectorizeRootInstruction(nullptr, Op, BB, R, TTI);
+    }
+    // Try to vectorize operands as vector bundles.
+    for (Instruction *I : PostponedCmps) {
+      if (R.isDeleted(I))
+        continue;
+      OpsChanged |= tryToVectorize(I, R);
+    }
+    Instructions.clear();
+  } else {
+    // Insert in reverse order since the PostponedCmps vector was filled in
+    // reverse order.
+    Instructions.assign(PostponedCmps.rbegin(), PostponedCmps.rend());
+  }
   return OpsChanged;
 }
 
@@ -7705,7 +7713,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     // We may go through BB multiple times so skip the one we have checked.
     if (!VisitedInstrs.insert(&*it).second) {
       if (it->use_empty() && KeyNodes.contains(&*it) &&
-          vectorizeSimpleInstructions(PostProcessInstructions, BB, R)) {
+          vectorizeSimpleInstructions(PostProcessInstructions, BB, R,
+                                      it->isTerminator())) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
         Changed = true;
@@ -7764,7 +7773,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       // Start vectorization of post-process list of instructions from the
       // top-tree instructions to try to vectorize as many instructions as
       // possible.
-      OpsChanged |= vectorizeSimpleInstructions(PostProcessInstructions, BB, R);
+      OpsChanged |= vectorizeSimpleInstructions(PostProcessInstructions, BB, R,
+                                                it->isTerminator());
       if (OpsChanged) {
         // We would like to start over since some instructions are deleted
         // and the iterator may become invalid value.
