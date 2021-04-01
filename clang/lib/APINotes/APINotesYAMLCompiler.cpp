@@ -664,7 +664,9 @@ struct Module {
 
   llvm::Optional<bool> SwiftInferImportAsMember = {llvm::None};
 
-  void dump() /*const*/;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() /*const*/;
+#endif
 };
 } // namespace
 
@@ -684,10 +686,12 @@ template <> struct MappingTraits<Module> {
 } // namespace yaml
 } // namespace llvm
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Module::dump() {
   llvm::yaml::Output OS(llvm::errs());
   OS << *this;
 }
+#endif
 
 namespace {
 bool parseAPINotes(StringRef YI, Module &M, llvm::SourceMgr::DiagHandlerTy Diag,
