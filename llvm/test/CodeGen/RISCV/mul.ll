@@ -398,10 +398,7 @@ define i32 @mulhsu(i32 %a, i32 %b) nounwind {
 ;
 ; RV32IM-LABEL: mulhsu:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    srai a2, a1, 31
-; RV32IM-NEXT:    mulhu a1, a0, a1
-; RV32IM-NEXT:    mul a0, a0, a2
-; RV32IM-NEXT:    add a0, a1, a0
+; RV32IM-NEXT:    mulhsu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: mulhsu:
@@ -1423,10 +1420,7 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64IM-LABEL: mulhsu_i64:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    srai a2, a1, 63
-; RV64IM-NEXT:    mulhu a1, a0, a1
-; RV64IM-NEXT:    mul a0, a0, a2
-; RV64IM-NEXT:    add a0, a1, a0
+; RV64IM-NEXT:    mulhsu a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = zext i64 %a to i128
   %2 = sext i64 %b to i128
