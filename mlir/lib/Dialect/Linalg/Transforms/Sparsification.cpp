@@ -614,18 +614,21 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
   }
 }
 
+/// Constructs vector type.
+static VectorType vectorType(CodeGen &codegen, Type etp) {
+  return VectorType::get(codegen.curVecLength, etp);
+}
+
 /// Constructs vector type from pointer.
 static VectorType vectorType(CodeGen &codegen, Value ptr) {
-  Type etp = ptr.getType().cast<MemRefType>().getElementType();
-  return VectorType::get(codegen.curVecLength, etp);
+  return vectorType(codegen, ptr.getType().cast<MemRefType>().getElementType());
 }
 
 /// Constructs vector iteration mask.
 static Value genVectorMask(CodeGen &codegen, PatternRewriter &rewriter,
                            Value iv, Value lo, Value hi, Value step) {
   Location loc = iv.getLoc();
-  VectorType mtp =
-      VectorType::get(codegen.curVecLength, rewriter.getIntegerType(1));
+  VectorType mtp = vectorType(codegen, rewriter.getIntegerType(1));
   // Special case if the vector length evenly divides the trip count (for
   // example, "for i = 0, 128, 16"). A constant all-true mask is generated
   // so that all subsequent masked memory operations are immediately folded
@@ -683,7 +686,7 @@ static void genVectorStore(CodeGen &codegen, PatternRewriter &rewriter,
 /// optimizations to hoist the invariant broadcast out of the vector loop.
 static Value genVectorInvariantValue(CodeGen &codegen,
                                      PatternRewriter &rewriter, Value val) {
-  VectorType vtp = VectorType::get(codegen.curVecLength, val.getType());
+  VectorType vtp = vectorType(codegen, val.getType());
   return rewriter.create<vector::BroadcastOp>(val.getLoc(), vtp, val);
 }
 
@@ -747,15 +750,47 @@ static void genTensorStore(Merger &merger, CodeGen &codegen,
     rewriter.create<memref::StoreOp>(loc, rhs, ptr, args);
 }
 
-/// Generates a pointer/index load from the sparse storage scheme.
+/// Generates a pointer/index load from the sparse storage scheme. Narrower
+/// data types need to be zero extended before casting the value into the
+/// index type used for looping and indexing.
 static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
                      Value ptr, Value s) {
-  if (codegen.curVecLength > 1)
-    return genVectorLoad(codegen, rewriter, ptr, {s});
+  // See https://llvm.org/docs/GetElementPtr.html for some background on
+  // the complications described below.
+  if (codegen.curVecLength > 1) {
+    // Since the index vector is used in a subsequent gather/scatter operations,
+    // which effectively defines an unsigned pointer + signed index, we must
+    // zero extend the vector to an index width. For 8-bit and 16-bit values,
+    // an 32-bit index width suffices. For 32-bit values, zero extending the
+    // elements into 64-bit loses some performance since the 32-bit indexed
+    // gather/scatter is more efficient than the 64-bit index variant (in
+    // the future, we could introduce a flag that states the negative space
+    // of 32-bit indices is unused). For 64-bit values, there is no good way
+    // to state that the indices are unsigned, with creates the potential of
+    // incorrect address calculations in the unlikely case we need such
+    // extremely large offsets.
+    Type etp = ptr.getType().cast<MemRefType>().getElementType();
+    Value vload = genVectorLoad(codegen, rewriter, ptr, {s});
+    if (etp.getIntOrFloatBitWidth() < 32)
+      vload = rewriter.create<ZeroExtendIOp>(
+          loc, vload, vectorType(codegen, rewriter.getIntegerType(32)));
+    else if (etp.getIntOrFloatBitWidth() < 64)
+      vload = rewriter.create<ZeroExtendIOp>(
+          loc, vload, vectorType(codegen, rewriter.getIntegerType(64)));
+    return vload;
+  }
+  // For the scalar case, we simply zero extend narrower indices into 64-bit
+  // values before casting to index without a performance penalty. Here too,
+  // however, indices that already are 64-bit, in theory, cannot express the
+  // full range as explained above.
   Value load = rewriter.create<memref::LoadOp>(loc, ptr, s);
-  return load.getType().isa<IndexType>()
-             ? load
-             : rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
+  if (!load.getType().isa<IndexType>()) {
+    if (load.getType().getIntOrFloatBitWidth() < 64)
+      load = rewriter.create<ZeroExtendIOp>(loc, load,
+                                            rewriter.getIntegerType(64));
+    load = rewriter.create<IndexCastOp>(loc, load, rewriter.getIndexType());
+  }
+  return load;
 }
 
 /// Generates an invariant value.
@@ -959,8 +994,10 @@ static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
     if (!merger.isSparseTensor(t) && !linkedSparse(op, t)) {
       auto map = op.getIndexingMap(t);
       unsigned r = map.getNumResults();
-      if (r && map.getDimPosition(r - 1) != idx)
-        return false;
+      for (unsigned i = 0; i < r; i++) {
+        if (map.getDimPosition(i) == idx && i != r - 1)
+          return false;
+      }
     }
   }
   return true;
