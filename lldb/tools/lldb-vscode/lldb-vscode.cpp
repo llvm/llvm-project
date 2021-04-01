@@ -3105,7 +3105,7 @@ int main(int argc, char *argv[]) {
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
   }
 
@@ -3118,7 +3118,7 @@ int main(int argc, char *argv[]) {
 
   if (input_args.hasArg(OPT_help)) {
     printHelp(T, llvm::sys::path::filename(argv[0]));
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   if (auto *arg = input_args.getLastArg(OPT_port)) {
@@ -3127,7 +3127,7 @@ int main(int argc, char *argv[]) {
     portno = strtol(optarg, &remainder, 0);
     if (remainder == optarg || *remainder != '\0') {
       fprintf(stderr, "'%s' is not a valid port number.\n", optarg);
-      exit(1);
+      return EXIT_FAILURE;
     }
   }
 
@@ -3144,7 +3144,7 @@ int main(int argc, char *argv[]) {
       g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
       g_vsc.output.descriptor = StreamDescriptor::from_socket(socket_fd, false);
     } else {
-      exit(1);
+      return EXIT_FAILURE;
     }
   } else {
     g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
@@ -3168,5 +3168,5 @@ int main(int argc, char *argv[]) {
   // We must terminate the debugger in a thread before the C++ destructor
   // chain messes everything up.
   lldb::SBDebugger::Terminate();
-  return 0;
+  return EXIT_SUCCESS;
 }
