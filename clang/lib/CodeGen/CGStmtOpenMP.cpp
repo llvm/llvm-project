@@ -4139,8 +4139,6 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
     llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> FirstprivatePtrs;
     if (!Data.PrivateVars.empty() || !Data.FirstprivateVars.empty() ||
         !Data.LastprivateVars.empty() || !Data.PrivateLocals.empty()) {
-      llvm::FunctionType *CopyFnTy = llvm::FunctionType::get(
-          CGF.Builder.getVoidTy(), {CGF.Builder.getInt8PtrTy()}, true);
       enum { PrivatesParam = 2, CopyFnParam = 3 };
       llvm::Value *CopyFn = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(CopyFnParam)));
@@ -4149,13 +4147,16 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       // Map privates.
       llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> PrivatePtrs;
       llvm::SmallVector<llvm::Value *, 16> CallArgs;
+      llvm::SmallVector<llvm::Type *, 4> ParamTypes;
       CallArgs.push_back(PrivatesPtr);
+      ParamTypes.push_back(PrivatesPtr->getType());
       for (const Expr *E : Data.PrivateVars) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
         Address PrivatePtr = CGF.CreateMemTemp(
             CGF.getContext().getPointerType(E->getType()), ".priv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
+        ParamTypes.push_back(PrivatePtr.getType());
       }
       for (const Expr *E : Data.FirstprivateVars) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
@@ -4165,6 +4166,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         FirstprivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
+        ParamTypes.push_back(PrivatePtr.getType());
       }
       for (const Expr *E : Data.LastprivateVars) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
@@ -4173,6 +4175,7 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
                               ".lastpriv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
+        ParamTypes.push_back(PrivatePtr.getType());
       }
       for (const VarDecl *VD : Data.PrivateLocals) {
         QualType Ty = VD->getType().getNonReferenceType();
@@ -4184,7 +4187,12 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
             CGF.getContext().getPointerType(Ty), ".local.ptr.addr");
         UntiedLocalVars.try_emplace(VD, PrivatePtr, Address::invalid());
         CallArgs.push_back(PrivatePtr.getPointer());
+        ParamTypes.push_back(PrivatePtr.getType());
       }
+      auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
+                                               ParamTypes, /*isVarArg=*/false);
+      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : LastprivateDstsOrigs) {
@@ -4432,8 +4440,6 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
     // Set proper addresses for generated private copies.
     OMPPrivateScope Scope(CGF);
     if (!Data.FirstprivateVars.empty()) {
-      llvm::FunctionType *CopyFnTy = llvm::FunctionType::get(
-          CGF.Builder.getVoidTy(), {CGF.Builder.getInt8PtrTy()}, true);
       enum { PrivatesParam = 2, CopyFnParam = 3 };
       llvm::Value *CopyFn = CGF.Builder.CreateLoad(
           CGF.GetAddrOfLocalVar(CS->getCapturedDecl()->getParam(CopyFnParam)));
@@ -4442,7 +4448,9 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
       // Map privates.
       llvm::SmallVector<std::pair<const VarDecl *, Address>, 16> PrivatePtrs;
       llvm::SmallVector<llvm::Value *, 16> CallArgs;
+      llvm::SmallVector<llvm::Type *, 4> ParamTypes;
       CallArgs.push_back(PrivatesPtr);
+      ParamTypes.push_back(PrivatesPtr->getType());
       for (const Expr *E : Data.FirstprivateVars) {
         const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
         Address PrivatePtr =
@@ -4450,7 +4458,12 @@ void CodeGenFunction::EmitOMPTargetTaskBasedDirective(
                               ".firstpriv.ptr.addr");
         PrivatePtrs.emplace_back(VD, PrivatePtr);
         CallArgs.push_back(PrivatePtr.getPointer());
+        ParamTypes.push_back(PrivatePtr.getType());
       }
+      auto *CopyFnTy = llvm::FunctionType::get(CGF.Builder.getVoidTy(),
+                                               ParamTypes, /*isVarArg=*/false);
+      CopyFn = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          CopyFn, CopyFnTy->getPointerTo());
       CGF.CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
           CGF, S.getBeginLoc(), {CopyFnTy, CopyFn}, CallArgs);
       for (const auto &Pair : PrivatePtrs) {
