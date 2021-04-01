@@ -185,9 +185,12 @@ int fallthrough_position(int n) {
       return 1;
       [[clang::fallthrough]];  // expected-warning{{fallthrough annotation in unreachable code}}
     case 222:
+      return 2;
+      __attribute__((fallthrough)); // expected-warning{{fallthrough annotation in unreachable code}}
+    case 223:
       n += 400;
-    case 223:          // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
-      ;
+    case 224: // expected-warning{{unannotated fall-through between switch labels}} expected-note{{insert '[[clang::fallthrough]];' to silence this warning}} expected-note{{insert 'break;' to avoid fall-through}}
+        ;
   }
 
   long p = static_cast<long>(n) * n;
