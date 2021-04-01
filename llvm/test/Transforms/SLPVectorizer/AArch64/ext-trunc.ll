@@ -15,19 +15,19 @@ define void @test1(<4 x i16> %a, <4 x i16> %b, i64* %p) {
 ; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[SUB0]], i32 0
 ; CHECK-NEXT:    [[S0:%.*]] = sext i32 [[E0]] to i64
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 [[S0]]
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]], align 4
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SUB0]], i32 1
 ; CHECK-NEXT:    [[S1:%.*]] = sext i32 [[E1]] to i64
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[S1]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]], align 4
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SUB0]], i32 2
 ; CHECK-NEXT:    [[S2:%.*]] = sext i32 [[E2]] to i64
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[S2]]
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 4
 ; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SUB0]], i32 3
 ; CHECK-NEXT:    [[S3:%.*]] = sext i32 [[E3]] to i64
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[S3]]
-; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, i64* [[GEP3]]
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, i64* [[GEP3]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[LOAD0]], i64 [[LOAD1]], i64 [[LOAD2]], i64 [[LOAD3]])
 ; CHECK-NEXT:    ret void
 ;
@@ -65,22 +65,22 @@ define void @test2(<4 x i16> %a, <4 x i16> %b, i64 %c0, i64 %c1, i64 %c2, i64 %c
 ; CHECK-NEXT:    [[S0:%.*]] = sext i32 [[E0]] to i64
 ; CHECK-NEXT:    [[A0:%.*]] = add i64 [[S0]], [[C0:%.*]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 [[A0]]
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]]
+; CHECK-NEXT:    [[LOAD0:%.*]] = load i64, i64* [[GEP0]], align 4
 ; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[SUB0]], i32 1
 ; CHECK-NEXT:    [[S1:%.*]] = sext i32 [[E1]] to i64
 ; CHECK-NEXT:    [[A1:%.*]] = add i64 [[S1]], [[C1:%.*]]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[A1]]
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]]
+; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]], align 4
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <4 x i32> [[SUB0]], i32 2
 ; CHECK-NEXT:    [[S2:%.*]] = sext i32 [[E2]] to i64
 ; CHECK-NEXT:    [[A2:%.*]] = add i64 [[S2]], [[C2:%.*]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[A2]]
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]]
+; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 4
 ; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x i32> [[SUB0]], i32 3
 ; CHECK-NEXT:    [[S3:%.*]] = sext i32 [[E3]] to i64
 ; CHECK-NEXT:    [[A3:%.*]] = add i64 [[S3]], [[C3:%.*]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 [[A3]]
-; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, i64* [[GEP3]]
+; CHECK-NEXT:    [[LOAD3:%.*]] = load i64, i64* [[GEP3]], align 4
 ; CHECK-NEXT:    call void @foo(i64 [[LOAD0]], i64 [[LOAD1]], i64 [[LOAD2]], i64 [[LOAD3]])
 ; CHECK-NEXT:    ret void
 ;
