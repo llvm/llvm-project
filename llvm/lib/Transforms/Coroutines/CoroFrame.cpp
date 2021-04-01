@@ -1480,6 +1480,24 @@ static void rewritePHIsForCleanupPad(BasicBlock *CleanupPadBB,
   }
 }
 
+static void cleanupSinglePredPHIs(Function &F) {
+  SmallVector<PHINode *, 32> Worklist;
+  for (auto &BB : F) {
+    for (auto &Phi : BB.phis()) {
+      if (Phi.getNumIncomingValues() == 1) {
+        Worklist.push_back(&Phi);
+      } else
+        break;
+    }
+  }
+  while (!Worklist.empty()) {
+    auto *Phi = Worklist.back();
+    Worklist.pop_back();
+    auto copy = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(copy);
+  }
+}
+
 static void rewritePHIs(BasicBlock &BB) {
   // For every incoming edge we will create a block holding all
   // incoming values in a single PHI nodes.
@@ -2268,6 +2286,10 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
       splitAround(Call, "MustTailCall.Before.CoroEnd");
     }
   }
+
+  // Later code makes structural assumptions about single predecessors phis e.g
+  // that they are not live accross a suspend point.
+  cleanupSinglePredPHIs(F);
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never has its definition separated from the PHI by the suspend point.
