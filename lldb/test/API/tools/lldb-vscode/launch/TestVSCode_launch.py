@@ -454,7 +454,6 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(oslist=["linux"])
     def test_progress_events(self):
         '''
             Tests the progress events to ensure we are receiving them.
@@ -486,6 +485,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Iterate over all progress events and save all start and end IDs, and
         # remember any shared libraries that got symbol table parsing progress
         # events.
+        # Sleep for 2 seconds to make sure progress_events gets populated
+        time.sleep(2)
         for progress_event in self.vscode.progress_events:
             event_type = progress_event['event']
             if event_type == 'progressStart':
