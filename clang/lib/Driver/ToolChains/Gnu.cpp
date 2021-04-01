@@ -2892,32 +2892,13 @@ void Generic_GCC::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   }
 }
 
-static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
-                                           StringRef base) {
-  std::error_code EC;
-  int MaxVersion = 0;
-  std::string MaxVersionString;
-  for (llvm::vfs::directory_iterator LI = vfs.dir_begin(base, EC), LE;
-       !EC && LI != LE; LI = LI.increment(EC)) {
-    StringRef VersionText = llvm::sys::path::filename(LI->path());
-    int Version;
-    if (VersionText[0] == 'v' &&
-        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
-      if (Version > MaxVersion) {
-        MaxVersion = Version;
-        MaxVersionString = std::string(VersionText);
-      }
-    }
-  }
-  return MaxVersion ? (base + "/" + MaxVersionString).str() : "";
-}
-
 void
 Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                    llvm::opt::ArgStringList &CC1Args) const {
   auto AddIncludePath = [&](std::string Path) {
-    std::string IncludePath = DetectLibcxxIncludePath(getVFS(), Path);
-    if (IncludePath.empty() || !getVFS().exists(IncludePath))
+    std::string Version = detectLibcxxVersion(Path);
+    std::string IncludePath = Path + "/c++/" + Version;
+    if (Version.empty() || !getVFS().exists(IncludePath))
       return false;
     addSystemInclude(DriverArgs, CC1Args, IncludePath);
     return true;
@@ -2925,15 +2906,15 @@ Generic_GCC::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   // Android never uses the libc++ headers installed alongside the toolchain,
   // which are generally incompatible with the NDK libraries anyway.
   if (!getTriple().isAndroid())
-    if (AddIncludePath(getDriver().Dir + "/../include/c++"))
+    if (AddIncludePath(getDriver().Dir + "/../include"))
       return;
   // If this is a development, non-installed, clang, libcxx will
   // not be found at ../include/c++ but it likely to be found at
   // one of the following two locations:
   std::string SysRoot = computeSysRoot();
-  if (AddIncludePath(SysRoot + "/usr/local/include/c++"))
+  if (AddIncludePath(SysRoot + "/usr/local/include"))
     return;
-  if (AddIncludePath(SysRoot + "/usr/include/c++"))
+  if (AddIncludePath(SysRoot + "/usr/include"))
     return;
 }
 

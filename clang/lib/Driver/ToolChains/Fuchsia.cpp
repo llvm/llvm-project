@@ -365,7 +365,9 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     SmallString<128> P(getDriver().Dir);
-    llvm::sys::path::append(P, "..", "include", "c++", "v1");
+    llvm::sys::path::append(P, "..", "include");
+    std::string Version = detectLibcxxVersion(P);
+    llvm::sys::path::append(P, "c++", Version);
     addSystemInclude(DriverArgs, CC1Args, P.str());
     break;
   }
