@@ -16,7 +16,6 @@ class TestAutoInstallMainExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfRemote
-    @expectedFailureAll(oslist=["windows"]) # process modules not loaded
     def test_target_auto_install_main_executable(self):
         if lldbgdbserverutils.get_lldb_server_exe() is None:
           self.skipTest("lldb-server not found")
