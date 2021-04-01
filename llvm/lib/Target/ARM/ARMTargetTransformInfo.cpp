@@ -2140,10 +2140,6 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   if (L->getHeader()->getParent()->hasOptSize())
     return;
 
-  // Only enable on Thumb-2 targets.
-  if (!ST->isThumb2())
-    return;
-
   SmallVector<BasicBlock*, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
   LLVM_DEBUG(dbgs() << "Loop has:\n"
