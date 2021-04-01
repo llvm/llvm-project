@@ -15,10 +15,11 @@ class TestAutoInstallMainExecutable(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    @llgs_test
     @skipIfRemote
     @expectedFailureAll(oslist=["windows"]) # process modules not loaded
     def test_target_auto_install_main_executable(self):
+        if lldbgdbserverutils.get_lldb_server_exe() is None:
+          self.skipTest("lldb-server not found")
         self.build()
 
         hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
@@ -69,23 +70,4 @@ class TestAutoInstallMainExecutable(TestBase):
                                         (dest.fullpath,
                                             self.getBuildArtifact("a.out")))
 
-        target = self.dbg.GetSelectedTarget()
-        breakpoint = target.BreakpointCreateByName("main")
-
-        launch_info = target.GetLaunchInfo()
-        error = lldb.SBError()
-        process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint")
-
-        frame = thread.GetFrameAtIndex(0)
-        self.assertEqual(frame.GetFunction().GetName(), "main")
-
-        self.expect("target variable build", substrs=['"device"'],
-                msg="Magic in the binary is wrong")
-
-        process.Continue()
+        self.expect("process launch", substrs=["exited with status = 74"])
