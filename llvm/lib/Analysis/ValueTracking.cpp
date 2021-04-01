@@ -2237,6 +2237,9 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   case Instruction::Shl:
     return !StartC->isNullValue() &&
            (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
+  case Instruction::AShr:
+  case Instruction::LShr:
+    return !StartC->isNullValue() && BO->isExact();
   default:
     return false;
   }
