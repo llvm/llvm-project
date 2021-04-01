@@ -467,7 +467,8 @@ option(CLANG_ENABLE_STATIC_ANALYZER
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
-option(CLANG_ROUND_TRIP_CC1_ARGS "Round-trip command line arguments in -cc1." OFF)
+option(CLANG_ROUND_TRIP_CC1_ARGS
+  "Round-trip command line arguments in -cc1." ${LLVM_ENABLE_ASSERTIONS})
 
 if(NOT CLANG_ENABLE_STATIC_ANALYZER AND CLANG_ENABLE_ARCMT)
   message(FATAL_ERROR "Cannot disable static analyzer while enabling ARCMT or Z3")
@@ -864,13 +865,24 @@ if (CLANG_ENABLE_BOOTSTRAP)
     set(CLANG_BOOTSTRAP_TARGETS check-llvm check-clang check-all)
   endif()
   foreach(target ${CLANG_BOOTSTRAP_TARGETS})
-    # exclude from main target
-    set_target_properties(${NEXT_CLANG_STAGE} PROPERTIES _EP_${target}_EXCLUDE_FROM_MAIN On)
+    # Install targets have side effects, so we always want to execute them.
+    # "install" is reserved by CMake and can't be used as a step name for
+    # ExternalProject_Add_Step, so we can match against "^install-" instead of
+    # "^install" to get a tighter match. CMake's installation scripts already
+    # skip up-to-date files, so there's no behavior change if you install to the
+    # same destination multiple times.
+    if(target MATCHES "^install-")
+      set(step_always ON)
+    else()
+      set(step_always OFF)
+    endif()
 
     ExternalProject_Add_Step(${NEXT_CLANG_STAGE} ${target}
       COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ${target}
       COMMENT "Performing ${target} for '${NEXT_CLANG_STAGE}'"
       DEPENDEES configure
+      ALWAYS ${step_always}
+      EXCLUDE_FROM_MAIN ON
       USES_TERMINAL 1
     )
 

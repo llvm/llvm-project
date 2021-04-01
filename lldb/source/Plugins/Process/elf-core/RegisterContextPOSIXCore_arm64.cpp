@@ -17,10 +17,29 @@
 
 using namespace lldb_private;
 
+std::unique_ptr<RegisterContextCorePOSIX_arm64>
+RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
+                                       const DataExtractor &gpregset,
+                                       llvm::ArrayRef<CoreNote> notes) {
+  DataExtractor sveregset =
+      getRegset(notes, arch.GetTriple(), AARCH64_SVE_Desc);
+
+  Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
+  if (sveregset.GetByteSize() > sizeof(sve::user_sve_header))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+  auto register_info_up =
+      std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
+  return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
+      new RegisterContextCorePOSIX_arm64(thread, std::move(register_info_up),
+                                         gpregset, sveregset, notes));
+}
+
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
     Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
-    const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
+    const DataExtractor &gpregset, const DataExtractor &sveregset,
+    llvm::ArrayRef<CoreNote> notes)
+    : RegisterContextPOSIX_arm64(thread, std::move(register_info)),
+      m_sveregset(sveregset) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);
@@ -28,10 +47,6 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   m_fpregset = getRegset(
       notes, m_register_info_up->GetTargetArchitecture().GetTriple(), FPR_Desc);
-
-  m_sveregset =
-      getRegset(notes, m_register_info_up->GetTargetArchitecture().GetTriple(),
-                AARCH64_SVE_Desc);
 
   ConfigureRegisterContext();
 }
@@ -70,15 +85,16 @@ void RegisterContextCorePOSIX_arm64::ConfigureRegisterContext() {
              sve::ptrace_regs_sve)
       m_sve_state = SVEState::Full;
 
-    if (sve::vl_valid(m_sve_vector_length))
-      m_register_info_up->ConfigureVectorRegisterInfos(
-          sve::vq_from_vl(m_sve_vector_length));
-    else {
+    if (!sve::vl_valid(m_sve_vector_length)) {
       m_sve_state = SVEState::Disabled;
       m_sve_vector_length = 0;
     }
   } else
     m_sve_state = SVEState::Disabled;
+
+  if (m_sve_state != SVEState::Disabled)
+    m_register_info_up->ConfigureVectorLength(
+        sve::vq_from_vl(m_sve_vector_length));
 }
 
 uint32_t RegisterContextCorePOSIX_arm64::CalculateSVEOffset(

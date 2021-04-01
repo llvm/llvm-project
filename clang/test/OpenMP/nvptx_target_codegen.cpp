@@ -394,6 +394,12 @@ int baz(int f, double &a) {
   return f;
 }
 
+extern void assert(int) throw() __attribute__((__noreturn__));
+void unreachable_call() {
+#pragma omp target
+    assert(0);
+}
+
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+static.+347}}_worker()
 // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,
 // CHECK-DAG: [[OMP_WORK_FN:%.+]] = alloca i8*,
@@ -631,6 +637,12 @@ int baz(int f, double &a) {
 // CHECK: br label
 // CHECK: [[RES:%.+]] = load i32, i32* [[RET]],
 // CHECK: ret i32 [[RES]]
+
+// CHECK: define {{.*}}void {{@__omp_offloading_.+unreachable_call.+l399}}()
+// CHECK: call void @{{.*}}assert{{.*}}(i32 0)
+// CHECK: unreachable
+// CHECK: call void @__kmpc_kernel_deinit(i16 1)
+// CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l331}}_worker()
 // CHECK-DAG: [[OMP_EXEC_STATUS:%.+]] = alloca i8,

@@ -240,5 +240,9 @@ private:
 
   lto::Config Config;
 };
+
+/// A convenience function that calls cl::ParseCommandLineOptions on the given
+/// set of options.
+void parseCommandLineOptions(std::vector<std::string> &Options);
 }
 #endif

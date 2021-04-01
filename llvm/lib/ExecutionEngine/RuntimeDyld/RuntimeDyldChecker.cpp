@@ -381,7 +381,9 @@ private:
     RemainingExpr = RemainingExpr.substr(1).ltrim();
 
     StringRef SectionName;
-    std::tie(SectionName, RemainingExpr) = parseSymbol(RemainingExpr);
+    size_t CloseParensIdx = RemainingExpr.find(')');
+    SectionName = RemainingExpr.substr(0, CloseParensIdx).rtrim();
+    RemainingExpr = RemainingExpr.substr(CloseParensIdx).ltrim();
 
     if (!RemainingExpr.startswith(")"))
       return std::make_pair(
@@ -794,7 +796,7 @@ StringRef RuntimeDyldCheckerImpl::getSymbolContent(StringRef Symbol) const {
     logAllUnhandledErrors(SymInfo.takeError(), errs(), "RTDyldChecker: ");
     return StringRef();
   }
-  return SymInfo->getContent();
+  return {SymInfo->getContent().data(), SymInfo->getContent().size()};
 }
 
 std::pair<uint64_t, std::string> RuntimeDyldCheckerImpl::getSectionAddr(

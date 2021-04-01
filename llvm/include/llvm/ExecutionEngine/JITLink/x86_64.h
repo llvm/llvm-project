@@ -336,6 +336,52 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   return Error::success();
 }
 
+/// x86-64 null pointer content.
+extern const char NullPointerContent[8];
+
+/// x86-64 pointer jump stub content.
+///
+/// Contains the instruction sequence for an indirect jump via an in-memory
+/// pointer:
+///   jmpq *ptr(%rip)
+extern const char PointerJumpStubContent[6];
+
+/// Creates a new pointer block in the given section and returns an anonymous
+/// symbol pointing to it.
+///
+/// If InitialTarget is given then an Pointer64 relocation will be added to the
+/// block pointing at InitialTarget.
+///
+/// The pointer block will have the following default values:
+///   alignment: 64-bit
+///   alignment-offset: 0
+///   address: highest allowable (~7U)
+inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
+                                      Symbol *InitialTarget = nullptr,
+                                      uint64_t InitialAddend = 0) {
+  auto &B =
+      G.createContentBlock(PointerSection, NullPointerContent, ~7ULL, 8, 0);
+  if (InitialTarget)
+    B.addEdge(Pointer64, 0, *InitialTarget, InitialAddend);
+  return G.addAnonymousSymbol(B, 0, 8, false, false);
+}
+
+/// Create a jump stub that jumps via the pointer at the given symbol, returns
+/// an anonymous symbol pointing to it.
+///
+/// The stub block will have the following default values:
+///   alignment: 8-bit
+///   alignment-offset: 0
+///   address: highest allowable: (~5U)
+inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
+                                              Section &StubSection,
+                                              Symbol &PointerSymbol) {
+  auto &B =
+      G.createContentBlock(StubSection, PointerJumpStubContent, ~5ULL, 1, 0);
+  B.addEdge(Delta32, 2, PointerSymbol, -4);
+  return G.addAnonymousSymbol(B, 0, 6, true, false);
+}
+
 } // namespace x86_64
 } // end namespace jitlink
 } // end namespace llvm

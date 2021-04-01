@@ -121,14 +121,14 @@ define <8 x i16> @trunc_ashr_v4i32_icmp_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ; X86-SSE-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    psrad $31, %xmm0
-; X86-SSE-NEXT:    pcmpgtd {{\.LCPI.*}}, %xmm1
+; X86-SSE-NEXT:    pcmpgtd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    packssdw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: trunc_ashr_v4i32_icmp_v4i32:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    vpsrad $31, %xmm0, %xmm0
-; X86-AVX-NEXT:    vpcmpgtd {{\.LCPI.*}}, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpcmpgtd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;

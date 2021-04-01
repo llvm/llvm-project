@@ -58,7 +58,7 @@ void parallel_atomic_ewc() {
       // CHECK: {{invoke|call}} void @_ZN2StD1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])
 #pragma omp atomic
       St().get() %= b;
-#pragma omp atomic
+#pragma omp atomic hint(6)
       s.field++;
       // CHECK: invoke void @_ZN2StC1Ev(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR:%.+]])
       // CHECK: [[SCALAR_ADDR:%.+]] = invoke nonnull align 4 dereferenceable(4) i32* @_ZN2St3getEv(%struct.St* {{[^,]*}} [[TEMP_ST_ADDR]])

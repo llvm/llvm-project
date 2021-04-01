@@ -149,8 +149,9 @@ public:
 
   /// Returns function which checks if the specified file was used to build this
   /// index or not. The function must only be called while the index is alive.
-  virtual llvm::unique_function<IndexContents(llvm::StringRef) const>
-  indexedFiles() const = 0;
+  using IndexedFiles =
+      llvm::unique_function<IndexContents(llvm::StringRef) const>;
+  virtual IndexedFiles indexedFiles() const = 0;
 
   /// Returns estimated size of index (in bytes).
   virtual size_t estimateMemoryUsage() const = 0;

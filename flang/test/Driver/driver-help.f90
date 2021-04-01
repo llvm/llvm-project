@@ -47,6 +47,8 @@
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -o <file>              Write output to <file>
+! HELP-NEXT: -pedantic              Warn on language extensions
+! HELP-NEXT: -std=<value>           Language standard to compile for
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
 ! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
@@ -96,6 +98,8 @@
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
+! HELP-FC1-NEXT: -pedantic              Warn on language extensions
+! HELP-FC1-NEXT: -std=<value>           Language standard to compile for
 ! HELP-FC1-NEXT: -test-io               Run the InputOuputTest action. Use for development and testing only.
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information

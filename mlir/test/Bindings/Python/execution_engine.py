@@ -97,3 +97,37 @@ func @add(%arg0: f32, %arg1: f32) -> f32 attributes { llvm.emit_c_interface } {
     log("{0} + {1} = {2}".format(arg0[0], arg1[0], res[0]))
 
 run(testInvokeFloatAdd)
+
+
+# Test callback
+# CHECK-LABEL: TEST: testBasicCallback
+def testBasicCallback():
+  # Define a callback function that takes a float and an integer and returns a float.
+  @ctypes.CFUNCTYPE(ctypes.c_float, ctypes.c_float, ctypes.c_int)
+  def callback(a, b):
+    return a/2 + b/2
+
+  with Context():
+    # The module just forwards to a runtime function known as "some_callback_into_python".
+    module = Module.parse(r"""
+func @add(%arg0: f32, %arg1: i32) -> f32 attributes { llvm.emit_c_interface } {
+  %resf = call @some_callback_into_python(%arg0, %arg1) : (f32, i32) -> (f32)
+  return %resf : f32
+}
+func private @some_callback_into_python(f32, i32) -> f32 attributes { llvm.emit_c_interface }
+    """)
+    execution_engine = ExecutionEngine(lowerToLLVM(module))
+    execution_engine.register_runtime("some_callback_into_python", callback)
+
+    # Prepare arguments: two input floats and one result.
+    # Arguments must be passed as pointers.
+    c_float_p = ctypes.c_float * 1
+    c_int_p = ctypes.c_int * 1
+    arg0 = c_float_p(42.)
+    arg1 = c_int_p(2)
+    res = c_float_p(-1.)
+    execution_engine.invoke("add", arg0, arg1, res)
+    # CHECK: 42.0 + 2 = 44.0
+    log("{0} + {1} = {2}".format(arg0[0], arg1[0], res[0]*2))
+
+run(testBasicCallback)

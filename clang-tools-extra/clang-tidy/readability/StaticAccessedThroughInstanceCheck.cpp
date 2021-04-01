@@ -39,8 +39,7 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStaticStorageClass()),
-                                      varDecl(hasStaticStorageDuration()))),
-                 unless(isInTemplateInstantiation()))
+                                      varDecl(hasStaticStorageDuration()))))
           .bind("memberExpression"),
       this);
 }

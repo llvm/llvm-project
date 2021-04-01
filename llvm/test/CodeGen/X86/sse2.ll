@@ -675,7 +675,7 @@ define <2 x i64> @test_insert_64_zext(<2 x i64> %i) {
 define <4 x i32> @PR19721(<4 x i32> %i) {
 ; X86-SSE-LABEL: PR19721:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-SSE-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; AVX-LABEL: PR19721:

@@ -129,8 +129,8 @@ define i32 @srli(i32 %a) nounwind {
   ret i32 %1
 }
 
-; FIXME: This should use srliw on RV64, but SimplifyDemandedBits breaks the
-; (and X, 0xffffffff) that type legalization inserts.
+; This makes sure SimplifyDemandedBits doesn't prevent us from matching SRLIW
+; on RV64.
 define i32 @srli_demandedbits(i32 %0) {
 ; RV32I-LABEL: srli_demandedbits:
 ; RV32I:       # %bb.0:
@@ -140,11 +140,7 @@ define i32 @srli_demandedbits(i32 %0) {
 ;
 ; RV64I-LABEL: srli_demandedbits:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, 1
-; RV64I-NEXT:    slli a1, a1, 32
-; RV64I-NEXT:    addi a1, a1, -16
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    srli a0, a0, 3
+; RV64I-NEXT:    srliw a0, a0, 3
 ; RV64I-NEXT:    ori a0, a0, 1
 ; RV64I-NEXT:    ret
   %2 = lshr i32 %0, 3

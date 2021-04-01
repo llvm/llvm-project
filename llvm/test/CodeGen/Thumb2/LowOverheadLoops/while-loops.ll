@@ -322,21 +322,20 @@ define void @callinpreheader(i32* noalias nocapture readonly %pAngle, i32* nocap
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
 ; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    subs r6, r2, #0
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    mov r4, r1
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    beq .LBB3_3
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    cbz r2, .LBB3_3
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.ph
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB3_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r1, [r5], #4
-; CHECK-NEXT:    subs r6, #1
 ; CHECK-NEXT:    add r0, r1
-; CHECK-NEXT:    cbz r6, .LBB3_3
-; CHECK-NEXT:    le .LBB3_2
+; CHECK-NEXT:    le lr, .LBB3_2
 ; CHECK-NEXT:  .LBB3_3: @ %for.cond.cleanup
 ; CHECK-NEXT:    str r0, [r4]
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

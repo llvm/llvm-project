@@ -2192,7 +2192,12 @@ static LogicalResult verifyPermutationMap(AffineMap permutationMap,
 static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
                                       VectorType vectorType,
                                       AffineMap permutationMap,
-                                      ArrayAttr optionalMasked) {
+                                      ArrayAttr inBounds) {
+  if (op->hasAttr("masked")) {
+    return op->emitOpError("masked attribute has been removed. "
+                           "Use in_bounds instead.");
+  }
+
   if (!shapedType.isa<MemRefType, RankedTensorType>())
     return op->emitOpError(
         "requires source to be a memref or ranked tensor type");
@@ -2239,11 +2244,10 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
     return op->emitOpError("requires a permutation_map with input dims of the "
                            "same rank as the source type");
 
-  if (optionalMasked) {
-    if (permutationMap.getNumResults() !=
-        static_cast<int64_t>(optionalMasked.size()))
-      return op->emitOpError("expects the optional masked attr of same rank as "
-                             "permutation_map results: ")
+  if (inBounds) {
+    if (permutationMap.getNumResults() != static_cast<int64_t>(inBounds.size()))
+      return op->emitOpError("expects the optional in_bounds attr of same rank "
+                             "as permutation_map results: ")
              << AffineMapAttr::get(permutationMap);
   }
 
@@ -2254,58 +2258,58 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, AffineMap permutationMap,
-                           ArrayRef<bool> maybeMasked) {
+                           ArrayRef<bool> inBounds) {
   Type elemType = source.getType().cast<ShapedType>().getElementType();
   Value padding = builder.create<ConstantOp>(result.location, elemType,
                                              builder.getZeroAttr(elemType));
-  if (maybeMasked.empty())
+  if (inBounds.empty())
     return build(builder, result, vectorType, source, indices, permutationMap,
                  padding, ArrayAttr());
-  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
+  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
   build(builder, result, vectorType, source, indices, permutationMap, padding,
-        maskedArrayAttr);
+        inBoundsArrayAttr);
 }
 
 /// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, Value padding,
-                           ArrayRef<bool> maybeMasked) {
+                           ArrayRef<bool> inBounds) {
   auto permMap = getTransferMinorIdentityMap(
       source.getType().cast<ShapedType>(), vectorType);
-  if (maybeMasked.empty())
+  if (inBounds.empty())
     return build(builder, result, vectorType, source, indices, permMap, padding,
                  ArrayAttr());
-  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
+  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
   build(builder, result, vectorType, source, indices, permMap, padding,
-        maskedArrayAttr);
+        inBoundsArrayAttr);
 }
 
 /// Builder that sets permutation map (resp. padding) to 'getMinorIdentityMap'
 /// (resp. zero).
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, ArrayRef<bool> maybeMasked) {
+                           ValueRange indices, ArrayRef<bool> inBounds) {
   auto permMap = getTransferMinorIdentityMap(
       source.getType().cast<ShapedType>(), vectorType);
-  build(builder, result, vectorType, source, indices, permMap, maybeMasked);
+  build(builder, result, vectorType, source, indices, permMap, inBounds);
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 2> elidedAttrs;
   if (op.permutation_map().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrName());
-  bool elideMasked = true;
-  if (auto maybeMasked = op.masked()) {
-    for (auto attr : *maybeMasked) {
-      if (!attr.template cast<BoolAttr>().getValue()) {
-        elideMasked = false;
+  bool elideInBounds = true;
+  if (auto inBounds = op.in_bounds()) {
+    for (auto attr : *inBounds) {
+      if (attr.template cast<BoolAttr>().getValue()) {
+        elideInBounds = false;
         break;
       }
     }
   }
-  if (elideMasked)
-    elidedAttrs.push_back(op.getMaskedAttrName());
+  if (elideInBounds)
+    elidedAttrs.push_back(op.getInBoundsAttrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
 
@@ -2366,7 +2370,7 @@ static LogicalResult verify(TransferReadOp op) {
 
   if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
                               permutationMap,
-                              op.masked() ? *op.masked() : ArrayAttr())))
+                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   if (auto sourceVectorElementType = sourceElementType.dyn_cast<VectorType>()) {
@@ -2438,23 +2442,23 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 }
 
 template <typename TransferOp>
-static LogicalResult foldTransferMaskAttribute(TransferOp op) {
+static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   AffineMap permutationMap = op.permutation_map();
   if (!permutationMap.isMinorIdentity())
     return failure();
   bool changed = false;
-  SmallVector<bool, 4> isMasked;
-  isMasked.reserve(op.getTransferRank());
+  SmallVector<bool, 4> newInBounds;
+  newInBounds.reserve(op.getTransferRank());
   op.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
-    // Already marked unmasked, nothing to see here.
-    if (!op.isMaskedDim(resultIdx)) {
-      isMasked.push_back(false);
+    // Already marked as in-bounds, nothing to see here.
+    if (op.isDimInBounds(resultIdx)) {
+      newInBounds.push_back(true);
       return;
     }
-    // Currently masked, check whether we can statically determine it is
+    // Currently out-of-bounds, check whether we can statically determine it is
     // inBounds.
     auto inBounds = isInBounds(op, resultIdx, indicesIdx);
-    isMasked.push_back(!inBounds);
+    newInBounds.push_back(inBounds);
     // We commit the pattern if it is "more inbounds".
     changed |= inBounds;
   });
@@ -2462,13 +2466,14 @@ static LogicalResult foldTransferMaskAttribute(TransferOp op) {
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(op.getContext());
-  op->setAttr(TransferOp::getMaskedAttrName(), b.getBoolArrayAttr(isMasked));
+  op->setAttr(TransferOp::getInBoundsAttrName(),
+              b.getBoolArrayAttr(newInBounds));
   return success();
 }
 
 OpFoldResult TransferReadOp::fold(ArrayRef<Attribute>) {
   /// transfer_read(memrefcast) -> transfer_read
-  if (succeeded(foldTransferMaskAttribute(*this)))
+  if (succeeded(foldTransferInBoundsAttribute(*this)))
     return getResult();
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
@@ -2496,40 +2501,40 @@ void TransferReadOp::getEffects(
 /// Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
-                            ArrayRef<bool> maybeMasked) {
+                            ArrayRef<bool> inBounds) {
   auto vectorType = vector.getType().cast<VectorType>();
   auto permMap = getTransferMinorIdentityMap(
       source.getType().cast<ShapedType>(), vectorType);
-  if (maybeMasked.empty())
+  if (inBounds.empty())
     return build(builder, result, vector, source, indices, permMap,
                  ArrayAttr());
-  ArrayAttr maskedArrayAttr = builder.getBoolArrayAttr(maybeMasked);
-  build(builder, result, vector, source, indices, permMap, maskedArrayAttr);
+  ArrayAttr inBoundsArrayAttr = builder.getBoolArrayAttr(inBounds);
+  build(builder, result, vector, source, indices, permMap, inBoundsArrayAttr);
 }
 
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
                             AffineMap permutationMap) {
   build(builder, result, vector, source, indices, permutationMap,
-        /*maybeMasked=*/ArrayAttr());
+        /*inBounds=*/ArrayAttr());
 }
 
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
                             AffineMapAttr permutationMap,
-                            /*optional*/ ArrayAttr masked) {
+                            /*optional*/ ArrayAttr inBounds) {
   Type resultType = source.getType().dyn_cast<RankedTensorType>();
   build(builder, result, resultType, vector, source, indices, permutationMap,
-        masked);
+        inBounds);
 }
 
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value source, ValueRange indices,
                             AffineMap permutationMap,
-                            /*optional*/ ArrayAttr masked) {
+                            /*optional*/ ArrayAttr inBounds) {
   Type resultType = source.getType().dyn_cast<RankedTensorType>();
   build(builder, result, resultType, vector, source, indices, permutationMap,
-        masked);
+        inBounds);
 }
 
 static ParseResult parseTransferWriteOp(OpAsmParser &parser,
@@ -2585,7 +2590,7 @@ static LogicalResult verify(TransferWriteOp op) {
 
   if (failed(verifyTransferOp(op.getOperation(), shapedType, vectorType,
                               permutationMap,
-                              op.masked() ? *op.masked() : ArrayAttr())))
+                              op.in_bounds() ? *op.in_bounds() : ArrayAttr())))
     return failure();
 
   return verifyPermutationMap(permutationMap,
@@ -2595,9 +2600,9 @@ static LogicalResult verify(TransferWriteOp op) {
 /// Fold:
 /// ```
 ///    %t1 = ...
-///    %v = vector.transfer_read %t0[%c0...], {masked = [false...]} :
+///    %v = vector.transfer_read %t0[%c0...], {in_bounds = [true...]} :
 ///      tensor<static_sizesxf32>, vector<static_sizesxf32>
-///    %t2 = vector.transfer_write %v, %t1[%c0...] {masked = [false...]} :
+///    %t2 = vector.transfer_write %v, %t1[%c0...] {in_bounds = [true...]} :
 ///      vector<static_sizesxf32>, tensor<static_sizesxf32>
 /// ```
 ///
@@ -2627,8 +2632,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   // Bail on mismatching ranks.
   if (read.getTransferRank() != write.getTransferRank())
     return failure();
-  // Bail on masked.
-  if (read.hasMaskedDim() || write.hasMaskedDim())
+  // Bail on potential out-of-bounds accesses.
+  if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
   // Tensor types must be the same.
   if (read.source().getType() != rankedTensorType)
@@ -2656,7 +2661,7 @@ LogicalResult TransferWriteOp::fold(ArrayRef<Attribute> operands,
                                     SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldReadInitWrite(*this, operands, results)))
     return success();
-  if (succeeded(foldTransferMaskAttribute(*this)))
+  if (succeeded(foldTransferInBoundsAttribute(*this)))
     return success();
   return foldMemRefCast(*this);
 }

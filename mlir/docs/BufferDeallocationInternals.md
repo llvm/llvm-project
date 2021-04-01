@@ -48,7 +48,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>) {
   partial_write(%0, %0)
   br ^bb3()
 ^bb3():
-  "linalg.copy"(%0, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%0, %arg1) : (memref<2xf32>, memref<2xf32>) -> ()
   return
 }
 ```
@@ -133,11 +133,11 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
 ^bb2:
-  %0 = alloc() : memref<2xf32>  // aliases: %1
+  %0 = memref.alloc() : memref<2xf32>  // aliases: %1
   use(%0)
   br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):  // %1 could be %0 or %arg1
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
   return
 }
 ```
@@ -149,7 +149,7 @@ of code:
 
 ```mlir
 func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
-  %0 = alloc() : memref<2xf32>  // moved to bb0
+  %0 = memref.alloc() : memref<2xf32>  // moved to bb0
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
   br ^bb3(%arg1 : memref<2xf32>)
@@ -157,7 +157,7 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
    use(%0)
    br ^bb3(%0 : memref<2xf32>)
 ^bb3(%1: memref<2xf32>):
-  "linalg.copy"(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%1, %arg2) : (memref<2xf32>, memref<2xf32>) -> ()
   return
 }
 ```
@@ -179,17 +179,17 @@ func @condBranchDynamicType(
 ^bb1:
   br ^bb3(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>   // cannot be moved upwards to the data
+  %1 = memref.alloc(%0) : memref<?xf32>   // cannot be moved upwards to the data
                                    // dependency to %0
   use(%1)
   br ^bb3(%1 : memref<?xf32>)
 ^bb3(%2: memref<?xf32>):
-  "linalg.copy"(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
+  test.copy(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
   return
 }
 ```
 
-## Introduction of Copies
+## Introduction of Clones
 
 In order to guarantee that all allocated buffers are freed properly, we have to
 pay attention to the control flow and all potential aliases a buffer allocation
@@ -200,10 +200,10 @@ allocations have already been placed:
 
 ```mlir
 func @branch(%arg0: i1) {
-  %0 = alloc() : memref<2xf32>  // aliases: %2
+  %0 = memref.alloc() : memref<2xf32>  // aliases: %2
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  %1 = alloc() : memref<2xf32>  // resides here for demonstration purposes
+  %1 = memref.alloc() : memref<2xf32>  // resides here for demonstration purposes
                                 // aliases: %2
   br ^bb3(%1 : memref<2xf32>)
 ^bb2:
@@ -232,88 +232,31 @@ result:
 
 ```mlir
 func @branch(%arg0: i1) {
-  %0 = alloc() : memref<2xf32>
+  %0 = memref.alloc() : memref<2xf32>
   cond_br %arg0, ^bb1, ^bb2
 ^bb1:
-  %1 = alloc() : memref<2xf32>
-  %3 = alloc() : memref<2xf32>  // temp copy for %1
-  "linalg.copy"(%1, %3) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %1 : memref<2xf32> // %1 can be safely freed here
+  %1 = memref.alloc() : memref<2xf32>
+  %3 = memref.clone %1 : (memref<2xf32>) -> (memref<2xf32>)
+  memref.dealloc %1 : memref<2xf32> // %1 can be safely freed here
   br ^bb3(%3 : memref<2xf32>)
 ^bb2:
   use(%0)
-  %4 = alloc() : memref<2xf32>  // temp copy for %0
-  "linalg.copy"(%0, %4) : (memref<2xf32>, memref<2xf32>) -> ()
+  %4 = memref.clone %0 : (memref<2xf32>) -> (memref<2xf32>)
   br ^bb3(%4 : memref<2xf32>)
 ^bb3(%2: memref<2xf32>):
   …
-  dealloc %2 : memref<2xf32> // free temp buffer %2
-  dealloc %0 : memref<2xf32> // %0 can be safely freed here
+  memref.dealloc %2 : memref<2xf32> // free temp buffer %2
+  memref.dealloc %0 : memref<2xf32> // %0 can be safely freed here
   return
 }
 ```
 
 Note that a temporary buffer for %2 was introduced to free all allocations
 properly. Note further that the unnecessary allocation of %3 can be easily
-removed using one of the post-pass transformations.
+removed using one of the post-pass transformations or the canonicalization
+pass.
 
-Reconsider the previously introduced sample demonstrating dynamically shaped
-types:
-
-```mlir
-func @condBranchDynamicType(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3: index)
-^bb1:
-  br ^bb3(%arg1 : memref<?xf32>)
-^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>  // aliases: %2
-  use(%1)
-  br ^bb3(%1 : memref<?xf32>)
-^bb3(%2: memref<?xf32>):
-  "linalg.copy"(%2, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  return
-}
-```
-
-In the presence of DSTs, we have to parameterize the allocations with
-additional dimension information of the source buffers, we want to copy from.
-BufferDeallocation automatically introduces all required operations to extract
-dimension specifications and wires them with the associated allocations:
-
-```mlir
-func @condBranchDynamicType(
-  %arg0: i1,
-  %arg1: memref<?xf32>,
-  %arg2: memref<?xf32>,
-  %arg3: index) {
-  cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
-^bb1:
-  %c0 = constant 0 : index
-  %0 = dim %arg1, %c0 : memref<?xf32>   // dimension operation to parameterize
-                                        // the following temp allocation
-  %1 = alloc(%0) : memref<?xf32>
-  "linalg.copy"(%arg1, %1) : (memref<?xf32>, memref<?xf32>) -> ()
-  br ^bb3(%1 : memref<?xf32>)
-^bb2(%2: index):
-  %3 = alloc(%2) : memref<?xf32>
-  use(%3)
-  %c0_0 = constant 0 : index
-  %4 = dim %3, %c0_0 : memref<?xf32>  // dimension operation to parameterize
-                                      // the following temp allocation
-  %5 = alloc(%4) : memref<?xf32>
-  "linalg.copy"(%3, %5) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %3 : memref<?xf32>  // %3 can be safely freed here
-  br ^bb3(%5 : memref<?xf32>)
-^bb3(%6: memref<?xf32>):
-  "linalg.copy"(%6, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %6 : memref<?xf32>  // %6 can be safely freed here
-  return
-}
-```
+The presented example also works with dynamically shaped types.
 
 BufferDeallocation performs a fix-point iteration taking all aliases of all
 tracked allocations into account. We initialize the general iteration process
@@ -335,7 +278,7 @@ func @condBranchDynamicTypeNested(
 ^bb1:
   br ^bb6(%arg1 : memref<?xf32>)
 ^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>   // cannot be moved upwards due to the data
+  %1 = memref.alloc(%0) : memref<?xf32>   // cannot be moved upwards due to the data
                                    // dependency to %0
                                    // aliases: %2, %3, %4
   use(%1)
@@ -349,7 +292,7 @@ func @condBranchDynamicTypeNested(
 ^bb6(%3: memref<?xf32>):  // crit. alias of %arg1 and %2 (in other words %1)
   br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):  // non-crit. alias of %3, since %3 dominates %4
-  "linalg.copy"(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
+  test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
   return
 }
 ```
@@ -366,13 +309,11 @@ func @condBranchDynamicTypeNested(
   %arg3: index) {
   cond_br %arg0, ^bb1, ^bb2(%arg3 : index)
 ^bb1:
-  %c0 = constant 0 : index
-  %d0 = dim %arg1, %c0 : memref<?xf32>
-  %5 = alloc(%d0) : memref<?xf32>  // temp buffer required due to alias %3
-  "linalg.copy"(%arg1, %5) : (memref<?xf32>, memref<?xf32>) -> ()
+  // temp buffer required due to alias %3
+  %5 = memref.clone %arg1 : (memref<?xf32>) -> (memref<?xf32>)
   br ^bb6(%5 : memref<?xf32>)
 ^bb2(%0: index):
-  %1 = alloc(%0) : memref<?xf32>
+  %1 = memref.alloc(%0) : memref<?xf32>
   use(%1)
   cond_br %arg0, ^bb3, ^bb4
 ^bb3:
@@ -380,17 +321,14 @@ func @condBranchDynamicTypeNested(
 ^bb4:
   br ^bb5(%1 : memref<?xf32>)
 ^bb5(%2: memref<?xf32>):
-  %c0_0 = constant 0 : index
-  %d1 = dim %2, %c0_0 : memref<?xf32>
-  %6 = alloc(%d1) : memref<?xf32>  // temp buffer required due to alias %3
-  "linalg.copy"(%1, %6) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %1 : memref<?xf32>
+  %6 = memref.clone %1 : (memref<?xf32>) -> (memref<?xf32>)
+  memref.dealloc %1 : memref<?xf32>
   br ^bb6(%6 : memref<?xf32>)
 ^bb6(%3: memref<?xf32>):
   br ^bb7(%3 : memref<?xf32>)
 ^bb7(%4: memref<?xf32>):
-  "linalg.copy"(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
-  dealloc %3 : memref<?xf32>  // free %3, since %4 is a non-crit. alias of %3
+  test.copy(%4, %arg2) : (memref<?xf32>, memref<?xf32>) -> ()
+  memref.dealloc %3 : memref<?xf32>  // free %3, since %4 is a non-crit. alias of %3
   return
 }
 ```
@@ -399,7 +337,7 @@ Since %3 is a critical alias, BufferDeallocation introduces an additional
 temporary copy in all predecessor blocks. %3 has an additional (non-critical)
 alias %4 that extends the live range until the end of bb7. Therefore, we can
 free %3 after its last use, while taking all aliases into account. Note that %4
- does not need to be freed, since we did not introduce a copy for it.
+does not need to be freed, since we did not introduce a copy for it.
 
 The actual introduction of buffer copies is done after the fix-point iteration
 has been terminated and all critical aliases have been detected. A critical
@@ -445,7 +383,7 @@ infer the high-level control flow:
 func @inner_region_control_flow(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
    then(%arg2 : memref<?x?xf32>) {  // aliases: %arg4, %1
     custom.region_if_yield %arg2 : memref<?x?xf32>
@@ -468,11 +406,11 @@ operation to determine the value of %2 at runtime which creates an alias:
 ```mlir
 func @nested_region_control_flow(%arg0 : index, %arg1 : index) -> memref<?x?xf32> {
   %0 = cmpi "eq", %arg0, %arg1 : index
-  %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %2 = scf.if %0 -> (memref<?x?xf32>) {
     scf.yield %1 : memref<?x?xf32>   // %2 will be an alias of %1
   } else {
-    %3 = alloc(%arg0, %arg1) : memref<?x?xf32>  // nested allocation in a div.
+    %3 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>  // nested allocation in a div.
                                                 // branch
     use(%3)
     scf.yield %1 : memref<?x?xf32>   // %2 will be an alias of %1
@@ -489,13 +427,13 @@ alias of %1 which does not need to be tracked.
 ```mlir
 func @nested_region_control_flow(%arg0: index, %arg1: index) -> memref<?x?xf32> {
     %0 = cmpi "eq", %arg0, %arg1 : index
-    %1 = alloc(%arg0, %arg0) : memref<?x?xf32>
+    %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
     %2 = scf.if %0 -> (memref<?x?xf32>) {
       scf.yield %1 : memref<?x?xf32>
     } else {
-      %3 = alloc(%arg0, %arg1) : memref<?x?xf32>
+      %3 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
       use(%3)
-      dealloc %3 : memref<?x?xf32>  // %3 can be safely freed here
+      memref.dealloc %3 : memref<?x?xf32>  // %3 can be safely freed here
       scf.yield %1 : memref<?x?xf32>
     }
     return %2 : memref<?x?xf32>
@@ -514,12 +452,12 @@ above that uses a nested allocation:
 func @inner_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
    then(%arg2 : memref<?x?xf32>) {  // aliases: %arg4, %1
     custom.region_if_yield %arg2 : memref<?x?xf32>
    } else(%arg3 : memref<?x?xf32>) {
-    %2 = alloc(%arg0, %arg1) : memref<?x?xf32>  // aliases: %arg4, %1
+    %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>  // aliases: %arg4, %1
     custom.region_if_yield %2 : memref<?x?xf32>
    } join(%arg4 : memref<?x?xf32>) {  // aliases: %1
     custom.region_if_yield %arg4 : memref<?x?xf32>
@@ -537,40 +475,22 @@ This causes BufferDeallocation to introduce additional copies:
 func @inner_region_control_flow_div(
   %arg0 : index,
   %arg1 : index) -> memref<?x?xf32> {
-  %0 = alloc(%arg0, %arg0) : memref<?x?xf32>
+  %0 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
   %1 = custom.region_if %0 : memref<?x?xf32> -> (memref<?x?xf32>)
    then(%arg2 : memref<?x?xf32>) {
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %2 = dim %arg2, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %3 = dim %arg2, %c1 : memref<?x?xf32>
-    %4 = alloc(%2, %3) : memref<?x?xf32>  // temp buffer required due to critic.
-                                          // alias %arg4
-    linalg.copy(%arg2, %4) : memref<?x?xf32>, memref<?x?xf32>
+    %4 = memref.clone %arg2 : (memref<?x?xf32>) -> (memref<?x?xf32>)
     custom.region_if_yield %4 : memref<?x?xf32>
    } else(%arg3 : memref<?x?xf32>) {
-    %2 = alloc(%arg0, %arg1) : memref<?x?xf32>
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %3 = dim %2, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %4 = dim %2, %c1 : memref<?x?xf32>
-    %5 = alloc(%3, %4) : memref<?x?xf32>  // temp buffer required due to critic.
-                                          // alias %arg4
-    linalg.copy(%2, %5) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %2 : memref<?x?xf32>
+    %2 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+    %5 = memref.clone %2 : (memref<?x?xf32>) -> (memref<?x?xf32>)
+    memref.dealloc %2 : memref<?x?xf32>
     custom.region_if_yield %5 : memref<?x?xf32>
    } join(%arg4: memref<?x?xf32>) {
-    %c0 = constant 0 : index  // determine dimension extents for temp allocation
-    %2 = dim %arg4, %c0 : memref<?x?xf32>
-    %c1 = constant 1 : index
-    %3 = dim %arg4, %c1 : memref<?x?xf32>
-    %4 = alloc(%2, %3) : memref<?x?xf32>  // this allocation will be removed by
-                                          // applying the copy removal pass
-    linalg.copy(%arg4, %4) : memref<?x?xf32>, memref<?x?xf32>
-    dealloc %arg4 : memref<?x?xf32>
+    %4 = memref.clone %arg4 : (memref<?x?xf32>) -> (memref<?x?xf32>)
+    memref.dealloc %arg4 : memref<?x?xf32>
     custom.region_if_yield %4 : memref<?x?xf32>
    }
-  dealloc %0 : memref<?x?xf32>  // %0 can be safely freed here
+  memref.dealloc %0 : memref<?x?xf32>  // %0 can be safely freed here
   return %1 : memref<?x?xf32>
 }
 ```
@@ -600,7 +520,7 @@ func @loop_nested_if(
     iter_args(%iterBuf = %buf) -> memref<2xf32> {
     %1 = cmpi "eq", %i, %ub : index
     %2 = scf.if %1 -> (memref<2xf32>) {
-      %3 = alloc() : memref<2xf32>  // makes %2 a critical alias due to a
+      %3 = memref.alloc() : memref<2xf32>  // makes %2 a critical alias due to a
                                     // divergent allocation
       use(%3)
       scf.yield %3 : memref<2xf32>
@@ -609,7 +529,7 @@ func @loop_nested_if(
     }
     scf.yield %2 : memref<2xf32>
   }
-  "linalg.copy"(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
+  test.copy(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
   return
 }
 ```
@@ -634,31 +554,27 @@ func @loop_nested_if(
   %step: index,
   %buf: memref<2xf32>,
   %res: memref<2xf32>) {
-  %4 = alloc() : memref<2xf32>
-  "linalg.copy"(%buf, %4) : (memref<2xf32>, memref<2xf32>) -> ()
+  %4 = memref.clone %buf : (memref<2xf32>) -> (memref<2xf32>)
   %0 = scf.for %i = %lb to %ub step %step
     iter_args(%iterBuf = %4) -> memref<2xf32> {
     %1 = cmpi "eq", %i, %ub : index
     %2 = scf.if %1 -> (memref<2xf32>) {
-      %3 = alloc() : memref<2xf32> // makes %2 a critical alias
+      %3 = memref.alloc() : memref<2xf32> // makes %2 a critical alias
       use(%3)
-      %5 = alloc() : memref<2xf32> // temp copy due to crit. alias %2
-      "linalg.copy"(%3, %5) : memref<2xf32>, memref<2xf32>
-      dealloc %3 : memref<2xf32>
+      %5 = memref.clone %3 : (memref<2xf32>) -> (memref<2xf32>)
+      memref.dealloc %3 : memref<2xf32>
       scf.yield %5 : memref<2xf32>
     } else {
-      %6 = alloc() : memref<2xf32> // temp copy due to crit. alias %2
-      "linalg.copy"(%iterBuf, %6) : memref<2xf32>, memref<2xf32>
+      %6 = memref.clone %iterBuf : (memref<2xf32>) -> (memref<2xf32>)
       scf.yield %6 : memref<2xf32>
     }
-    %7 = alloc() : memref<2xf32> // temp copy due to crit. alias %iterBuf
-    "linalg.copy"(%2, %7) : memref<2xf32>, memref<2xf32>
-    dealloc %2 : memref<2xf32>
-    dealloc %iterBuf : memref<2xf32> // free backedge iteration variable
+    %7 = memref.clone %2 : (memref<2xf32>) -> (memref<2xf32>)
+    memref.dealloc %2 : memref<2xf32>
+    memref.dealloc %iterBuf : memref<2xf32> // free backedge iteration variable
     scf.yield %7 : memref<2xf32>
   }
-  "linalg.copy"(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %0 : memref<2xf32> // free temp copy %0
+  test.copy(%0, %res) : (memref<2xf32>, memref<2xf32>) -> ()
+  memref.dealloc %0 : memref<2xf32> // free temp copy %0
   return
 }
 ```
@@ -684,46 +600,37 @@ deallocations.
 
 In order to limit the complexity of the BufferDeallocation transformation, some
 tiny code-polishing/optimization transformations are not applied on-the-fly
-during placement. Currently, there is only the CopyRemoval transformation to
-remove unnecessary copy and allocation operations.
+during placement. Currently, a canonicalization pattern is added to the clone
+operation to reduce the appearance of unnecessary clones.
 
 Note: further transformations might be added to the post-pass phase in the
 future.
 
-## CopyRemoval Pass
+## Clone Canonicalization
 
-A common pattern that arises during placement is the introduction of
-unnecessary temporary copies that are used instead of the original source
-buffer. For this reason, there is a post-pass transformation that removes these
-allocations and copies via `-copy-removal`. This pass, besides removing
-unnecessary copy operations, will also remove the dead allocations and their
-corresponding deallocation operations. The CopyRemoval pass can currently be
-applied to operations that implement the `CopyOpInterface` in any of these two
-situations which are
+During placement of clones it may happen, that unnecessary clones are inserted.
+If these clones appear with their corresponding dealloc operation within the
+same block, we can use the canonicalizer to remove these unnecessary operations.
+Note, that this step needs to take place after the insertion of clones and
+deallocs in the buffer deallocation step. The canonicalization inludes both,
+the newly created target value from the clone operation and the source
+operation.
 
-* reusing the source buffer of the copy operation.
-* reusing the target buffer of the copy operation.
+## Canonicalization of the Source Buffer of the Clone Operation
 
-## Reusing the Source Buffer of the Copy Operation
-
-In this case, the source of the copy operation can be used instead of target.
-The unused allocation and deallocation operations that are defined for this
-copy operation are also removed. Here is a working example generated by the
-BufferDeallocation pass that allocates a buffer with dynamic size. A deeper
+In this case, the source of the clone operation can be used instead of its
+target. The unused allocation and deallocation operations that are defined for
+this clone operation are also removed. Here is a working example generated by
+the BufferDeallocation pass that allocates a buffer with dynamic size. A deeper
 analysis of this sample reveals that the highlighted operations are redundant
 and can be removed.
 
 ```mlir
 func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-  %7 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %c0_0 = constant 0 : index
-  %8 = dim %7, %c0_0 : memref<?x?xf32>
-  %c1_1 = constant 1 : index
-  %9 = dim %7, %c1_1 : memref<?x?xf32>
-  %10 = alloc(%8, %9) : memref<?x?xf32>
-  linalg.copy(%7, %10) : memref<?x?xf32>, memref<?x?xf32>
-  dealloc %7 : memref<?x?xf32>
-  return %10 : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  %2 = memref.clone %1 : (memref<?x?xf32>) -> (memref<?x?xf32>)
+  memref.dealloc %1 : memref<?x?xf32>
+  return %2 : memref<?x?xf32>
 }
 ```
 
@@ -731,53 +638,39 @@ Will be transformed to:
 
 ```mlir
 func @dynamic_allocation(%arg0: index, %arg1: index) -> memref<?x?xf32> {
-  %7 = alloc(%arg0, %arg1) : memref<?x?xf32>
-  %c0_0 = constant 0 : index
-  %8 = dim %7, %c0_0 : memref<?x?xf32>
-  %c1_1 = constant 1 : index
-  %9 = dim %7, %c1_1 : memref<?x?xf32>
-  return %7 : memref<?x?xf32>
+  %1 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+  return %1 : memref<?x?xf32>
 }
 ```
 
-In this case, the additional copy %10 can be replaced with its original source
-buffer %7. This also applies to the associated dealloc operation of %7.
+In this case, the additional copy %2 can be replaced with its original source
+buffer %1. This also applies to the associated dealloc operation of %1.
 
-To limit the complexity of this transformation, it only removes copy operations
-when the following constraints are met:
+## Canonicalization of the Target Buffer of the Clone Operation
 
-* The copy operation, the defining operation for the target value, and the
-deallocation of the source value lie in the same block.
-* There are no users/aliases of the target value between the defining operation
-of the target value and its copy operation.
-* There are no users/aliases of the source value between its associated copy
-operation and the deallocation of the source value.
+In this case, the target buffer of the clone operation can be used instead of
+its source. The unused deallocation operation that is defined for this clone
+operation is also removed.
 
-## Reusing the Target Buffer of the Copy Operation
-
-In this case, the target buffer of the copy operation can be used instead of
-its source. The unused allocation and deallocation operations that are defined
-for this copy operation are also removed.
-
-Consider the following example where a generic linalg operation writes the
-result to %temp and then copies %temp to %result. However, these two operations
-can be merged into a single step. Copy removal removes the copy operation and
-%temp, and replaces the uses of %temp with %result:
+Consider the following example where a generic test operation writes the result
+to %temp and then copies %temp to %result. However, these two operations
+can be merged into a single step. Canonicalization removes the clone operation
+and %temp, and replaces the uses of %temp with %result:
 
 ```mlir
 func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
-  %temp = alloc() : memref<2xf32>
-  linalg.generic {
+  %temp = memref.alloc() : memref<2xf32>
+  test.generic {
     args_in = 1 : i64,
     args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]} %arg0, %temp {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
     %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
+    test.yield %tmp2 : f32
   }: memref<2xf32>, memref<2xf32>
-  "linalg.copy"(%temp, %result) : (memref<2xf32>, memref<2xf32>) -> ()
-  dealloc %temp : memref<2xf32>
+  %result = memref.clone %temp : (memref<2xf32>) -> (memref<2xf32>)
+  memref.dealloc %temp : memref<2xf32>
   return
 }
 ```
@@ -786,33 +679,24 @@ Will be transformed to:
 
 ```mlir
 func @reuseTarget(%arg0: memref<2xf32>, %result: memref<2xf32>){
-  linalg.generic {
+  test.generic {
     args_in = 1 : i64,
     args_out = 1 : i64,
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]} %arg0, %result {
   ^bb0(%gen2_arg0: f32, %gen2_arg1: f32):
     %tmp2 = exp %gen2_arg0 : f32
-    linalg.yield %tmp2 : f32
+    test.yield %tmp2 : f32
   }: memref<2xf32>, memref<2xf32>
   return
 }
 ```
 
-Like before, several constraints to use the transformation apply:
-
-* The copy operation, the defining operation of the source value, and the
-deallocation of the source value lie in the same block.
-* There are no users/aliases of the target value between the defining operation
-of the source value and the copy operation.
-* There are no users/aliases of the source value between the copy operation and
-the deallocation of the source value.
-
 ## Known Limitations
 
-BufferDeallocation introduces additional copies using allocations from the
-“memref” dialect (“memref.alloc”). Analogous, all deallocations use the
-“memref” dialect-free operation “memref.dealloc”. The actual copy process is
-realized using “linalg.copy”. Furthermore, buffers are essentially immutable
-after their creation in a block. Another limitations are known in the case
-using unstructered control flow.
+BufferDeallocation introduces additional clones from “memref” dialect
+(“memref.clone”). Analogous, all deallocations use the “memref” dialect-free
+operation “memref.dealloc”. The actual copy process is realized using
+“test.copy”. Furthermore, buffers are essentially immutable after their
+creation in a block. Another limitations are known in the case using
+unstructered control flow.

@@ -209,11 +209,16 @@ void DwarfCompileUnit::addLocationAttribute(
     const DIExpression *Expr = GE.Expr;
 
     // For compatibility with DWARF 3 and earlier,
-    // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) becomes
+    // DW_AT_location(DW_OP_constu, X, DW_OP_stack_value) or
+    // DW_AT_location(DW_OP_consts, X, DW_OP_stack_value) becomes
     // DW_AT_const_value(X).
     if (GlobalExprs.size() == 1 && Expr && Expr->isConstant()) {
       addToAccelTable = true;
-      addConstantValue(*VariableDIE, /*Unsigned=*/true, Expr->getElement(1));
+      addConstantValue(
+          *VariableDIE,
+          DIExpression::SignedOrUnsignedConstant::UnsignedConstant ==
+              *Expr->isConstant(),
+          Expr->getElement(1));
       break;
     }
 

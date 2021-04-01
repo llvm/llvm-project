@@ -538,6 +538,18 @@ namespace llvm {
         uint64_t SizeInBits, uint32_t AlignInBits, DINodeArray Elements,
         DIType *UnderlyingType, StringRef UniqueIdentifier = "", bool IsScoped = false);
 
+    /// Create debugging information entry for a set.
+    /// \param Scope          Scope in which this set is defined.
+    /// \param Name           Set name.
+    /// \param File           File where this set is defined.
+    /// \param LineNumber     Line number.
+    /// \param SizeInBits     Set size.
+    /// \param AlignInBits    Set alignment.
+    /// \param Ty             Base type of the set.
+    DIDerivedType *createSetType(DIScope *Scope, StringRef Name, DIFile *File,
+                                 unsigned LineNo, uint64_t SizeInBits,
+                                 uint32_t AlignInBits, DIType *Ty);
+
     /// Create subroutine type.
     /// \param ParameterTypes  An array of subroutine parameter types. This
     ///                        includes return type at 0th index.

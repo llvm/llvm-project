@@ -9,13 +9,13 @@ class TestStopOnSharedlibraryEvents(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @skipIfWindows
     @no_debug_info_test
     def test_stopping_breakpoints(self):
         self.do_test()
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @skipIfWindows
     @no_debug_info_test
     def test_auto_continue(self):
         def auto_continue(bkpt):
@@ -23,15 +23,15 @@ class TestStopOnSharedlibraryEvents(TestBase):
         self.do_test(auto_continue)
 
     @skipIfRemote
+    @skipIfWindows
     @no_debug_info_test
-    @skipUnlessDarwin
     def test_failing_condition(self):
         def condition(bkpt):
             bkpt.SetCondition("1 == 2")
         self.do_test(condition)
         
     @skipIfRemote
-    @skipUnlessDarwin
+    @skipIfWindows
     @no_debug_info_test
     def test_continue_callback(self):
         def bkpt_callback(bkpt):
@@ -43,7 +43,8 @@ class TestStopOnSharedlibraryEvents(TestBase):
         main_spec = lldb.SBFileSpec("main.cpp")
         # Launch and stop before the dlopen call.
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(self,
-                                                                  "// Set a breakpoint here", main_spec)
+                "// Set a breakpoint here", main_spec, extra_images=["load_a",
+                    "load_b"])
 
         # Now turn on shared library events, continue and make sure we stop for the event.
         self.runCmd("settings set target.process.stop-on-sharedlibrary-events 1")

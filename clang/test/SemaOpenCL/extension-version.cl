@@ -93,12 +93,12 @@
 // expected-warning@-2{{OpenCL extension 'cl_khr_fp64' is core feature or supported optional core feature - ignoring}}
 #endif
 
-//Core feature in CL 2.0
+//Core feature in CL 2.0, optional core feature in CL 3.0
 #ifndef cl_khr_3d_image_writes
 #error "Missing cl_khr_3d_image_writes define"
 #endif
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200) && defined TEST_CORE_FEATURES
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200 || __OPENCL_C_VERSION__ == 300) && defined TEST_CORE_FEATURES
 // expected-warning@-2{{OpenCL extension 'cl_khr_3d_image_writes' is core feature or supported optional core feature - ignoring}}
 #endif
 

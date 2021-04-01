@@ -30,13 +30,11 @@ func @condBranch(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+//      CHECK: %[[ALLOC0:.*]] = memref.clone
 // CHECK-NEXT: br ^bb3(%[[ALLOC0]]
-//      CHECK: %[[ALLOC1:.*]] = memref.alloc()
+//      CHECK: %[[ALLOC1:.*]] = memref.alloc
 // CHECK-NEXT: test.buffer_based
-//      CHECK: %[[ALLOC2:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC2]]
 //      CHECK: test.copy
@@ -77,16 +75,12 @@ func @condBranchDynamicType(
 }
 
 // CHECK-NEXT: cond_br
-//      CHECK: %[[DIM0:.*]] = memref.dim
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc(%[[DIM0]])
-// CHECK-NEXT: linalg.copy(%{{.*}}, %[[ALLOC0]])
+//      CHECK: %[[ALLOC0:.*]] = memref.clone
 // CHECK-NEXT: br ^bb3(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
-//      CHECK: %[[DIM1:.*]] = memref.dim %[[ALLOC1]]
-// CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc(%[[DIM1]])
-// CHECK-NEXT: linalg.copy(%[[ALLOC1]], %[[ALLOC2]])
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb3
 // CHECK-NEXT: ^bb3(%[[ALLOC3:.*]]:{{.*}})
@@ -142,12 +136,10 @@ func @condBranchDynamicTypeNested(
   return
 }
 
-// CHECK-NEXT: cond_br
-//      CHECK: ^bb1
-//      CHECK: %[[DIM0:.*]] = memref.dim
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc(%[[DIM0]])
-// CHECK-NEXT: linalg.copy(%{{.*}}, %[[ALLOC0]])
-// CHECK-NEXT: br ^bb6
+// CHECK-NEXT: cond_br{{.*}}
+// CHECK-NEXT: ^bb1
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: br ^bb6(%[[ALLOC0]]
 //      CHECK: ^bb2(%[[IDX:.*]]:{{.*}})
 // CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc(%[[IDX]])
 // CHECK-NEXT: test.buffer_based
@@ -157,9 +149,7 @@ func @condBranchDynamicTypeNested(
 //      CHECK: ^bb4:
 // CHECK-NEXT: br ^bb5(%[[ALLOC1]]{{.*}})
 // CHECK-NEXT: ^bb5(%[[ALLOC2:.*]]:{{.*}})
-//      CHECK: %[[DIM2:.*]] = memref.dim %[[ALLOC2]]
-// CHECK-NEXT: %[[ALLOC3:.*]] = memref.alloc(%[[DIM2]])
-// CHECK-NEXT: linalg.copy(%[[ALLOC2]], %[[ALLOC3]])
+// CHECK-NEXT: %[[ALLOC3:.*]] = memref.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 // CHECK-NEXT: br ^bb6(%[[ALLOC3]]{{.*}})
 // CHECK-NEXT: ^bb6(%[[ALLOC4:.*]]:{{.*}})
@@ -208,13 +198,11 @@ func @criticalEdge(%arg0: i1, %arg1: memref<2xf32>, %arg2: memref<2xf32>) {
   return
 }
 
-// CHECK-NEXT: %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
 // CHECK-NEXT: cond_br
 //      CHECK: %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-//      CHECK: %[[ALLOC2:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC1]]
 //      CHECK: test.copy
 // CHECK-NEXT: memref.dealloc
@@ -419,20 +407,17 @@ func @moving_alloc_and_inserting_missing_dealloc(
   return
 }
 
-// CHECK-NEXT: cond_br
-//      CHECK: ^bb1
-//      CHECK: ^bb1
+// CHECK-NEXT: cond_br{{.*}}
+// CHECK-NEXT: ^bb1
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-//      CHECK: %[[ALLOC1:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %[[ALLOC0]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC1]]
 // CHECK-NEXT: ^bb2
 // CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc()
 // CHECK-NEXT: test.buffer_based
-//      CHECK: %[[ALLOC3:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+// CHECK-NEXT: %[[ALLOC3:.*]] = memref.clone %[[ALLOC2]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC2]]
 // CHECK-NEXT: br ^bb3(%[[ALLOC3]]
 // CHECK-NEXT: ^bb3(%[[ALLOC4:.*]]:{{.*}})
@@ -545,8 +530,7 @@ func @nested_regions_and_cond_branch(
 }
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
-//      CHECK:   %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT:   linalg.copy(%[[ARG1]], %[[ALLOC0]])
+//      CHECK:   %[[ALLOC0:.*]] = memref.clone %[[ARG1]]
 //      CHECK: ^[[BB2]]:
 //      CHECK:   %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT:   test.region_buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC1]]
@@ -554,12 +538,11 @@ func @nested_regions_and_cond_branch(
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC2]]
 //      CHECK:     memref.dealloc %[[ALLOC2]]
 // CHECK-NEXT:     %{{.*}} = math.exp
-//      CHECK:   %[[ALLOC3:.*]] = memref.alloc()
-// CHECK-NEXT:   linalg.copy(%[[ALLOC1]], %[[ALLOC3]])
+//      CHECK:   %[[ALLOC3:.*]] = memref.clone %[[ALLOC1]]
 // CHECK-NEXT:   memref.dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  test.copy
-// CHECK-NEXT:  dealloc
+// CHECK-NEXT:  memref.dealloc
 
 // -----
 
@@ -641,12 +624,10 @@ func @nested_region_control_flow_div(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc(%arg0, %arg0)
 // CHECK-NEXT: %[[ALLOC1:.*]] = scf.if
-//      CHECK: %[[ALLOC2:.*]] = memref.alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC0]], %[[ALLOC2]])
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[ALLOC0]]
 //      CHECK: scf.yield %[[ALLOC2]]
 //      CHECK: %[[ALLOC3:.*]] = memref.alloc(%arg0, %arg1)
-//      CHECK: %[[ALLOC4:.*]] = memref.alloc
-// CHECK-NEXT: linalg.copy(%[[ALLOC3]], %[[ALLOC4]])
+// CHECK-NEXT: %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
 //      CHECK: memref.dealloc %[[ALLOC3]]
 //      CHECK: scf.yield %[[ALLOC4]]
 //      CHECK: memref.dealloc %[[ALLOC0]]
@@ -823,20 +804,18 @@ func @nestedRegionsAndCondBranchAlloca(
 //      CHECK: (%[[cond:.*]]: {{.*}}, %[[ARG1:.*]]: {{.*}}, %{{.*}}: {{.*}})
 // CHECK-NEXT:   cond_br %[[cond]], ^[[BB1:.*]], ^[[BB2:.*]]
 //      CHECK: ^[[BB1]]:
-//      CHECK: %[[ALLOC0:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy
+//      CHECK: %[[ALLOC0:.*]] = memref.clone
 //      CHECK: ^[[BB2]]:
 //      CHECK:   %[[ALLOC1:.*]] = memref.alloc()
 // CHECK-NEXT:   test.region_buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOC1]]
 //      CHECK:     %[[ALLOCA:.*]] = memref.alloca()
 // CHECK-NEXT:     test.buffer_based in(%[[ARG1]]{{.*}}out(%[[ALLOCA]]
 //      CHECK:     %{{.*}} = math.exp
-//      CHECK:  %[[ALLOC2:.*]] = memref.alloc()
-// CHECK-NEXT:  linalg.copy
+//      CHECK:  %[[ALLOC2:.*]] = memref.clone %[[ALLOC1]]
 // CHECK-NEXT:  memref.dealloc %[[ALLOC1]]
 //      CHECK:  ^[[BB3:.*]]({{.*}}):
 //      CHECK:  test.copy
-// CHECK-NEXT:  dealloc
+// CHECK-NEXT:  memref.dealloc
 
 // -----
 
@@ -888,15 +867,13 @@ func @loop_alloc(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc()
-//      CHECK: linalg.copy(%arg3, %[[ALLOC1]])
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
 //      CHECK: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK:    cmpi
 //      CHECK:    memref.dealloc %[[IALLOC]]
 //      CHECK:    %[[ALLOC3:.*]] = memref.alloc()
-//      CHECK:    %[[ALLOC4:.*]] = memref.alloc()
-//      CHECK:    linalg.copy(%[[ALLOC3]], %[[ALLOC4]])
+//      CHECK:    %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
 //      CHECK:    memref.dealloc %[[ALLOC3]]
 //      CHECK:    scf.yield %[[ALLOC4]]
 //      CHECK: }
@@ -974,25 +951,21 @@ func @loop_nested_if_alloc(
 }
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
-//      CHECK: %[[ALLOC1:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%arg3, %[[ALLOC1]])
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
 // CHECK-NEXT: %[[ALLOC2:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC:.*]] = %[[ALLOC1]]
 //      CHECK: memref.dealloc %[[IALLOC]]
 //      CHECK: %[[ALLOC3:.*]] = scf.if
 
 //      CHECK: %[[ALLOC4:.*]] = memref.alloc()
-// CHECK-NEXT: %[[ALLOC5:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC4]], %[[ALLOC5]])
+// CHECK-NEXT: %[[ALLOC5:.*]] = memref.clone %[[ALLOC4]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC4]]
 // CHECK-NEXT: scf.yield %[[ALLOC5]]
 
-//      CHECK: %[[ALLOC6:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC0]], %[[ALLOC6]])
+//      CHECK: %[[ALLOC6:.*]] = memref.clone %[[ALLOC0]]
 // CHECK-NEXT: scf.yield %[[ALLOC6]]
 
-//      CHECK: %[[ALLOC7:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC3:.*]], %[[ALLOC7]])
+//      CHECK: %[[ALLOC7:.*]] = memref.clone %[[ALLOC3]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
 // CHECK-NEXT: scf.yield %[[ALLOC7]]
 
@@ -1040,17 +1013,14 @@ func @loop_nested_alloc(
 
 //      CHECK: %[[ALLOC0:.*]] = memref.alloc()
 // CHECK-NEXT: memref.dealloc %[[ALLOC0]]
-// CHECK-NEXT: %[[ALLOC1:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%arg3, %[[ALLOC1]])
+// CHECK-NEXT: %[[ALLOC1:.*]] = memref.clone %arg3
 // CHECK-NEXT: %[[VAL_7:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC0:.*]] = %[[ALLOC1]])
-//      CHECK: %[[ALLOC2:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[IALLOC0]], %[[ALLOC2]])
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.clone %[[IALLOC0]]
 // CHECK-NEXT: memref.dealloc %[[IALLOC0]]
 // CHECK-NEXT: %[[ALLOC3:.*]] = scf.for {{.*}} iter_args
 // CHECK-SAME: (%[[IALLOC1:.*]] = %[[ALLOC2]])
-//      CHECK: %[[ALLOC5:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[IALLOC1]], %[[ALLOC5]])
+// CHECK-NEXT: %[[ALLOC5:.*]] = memref.clone %[[IALLOC1]]
 // CHECK-NEXT: memref.dealloc %[[IALLOC1]]
 
 //      CHECK: %[[ALLOC6:.*]] = scf.for {{.*}} iter_args
@@ -1060,28 +1030,23 @@ func @loop_nested_alloc(
 //      CHECK: %[[ALLOC9:.*]] = scf.if
 
 //      CHECK: %[[ALLOC11:.*]] = memref.alloc()
-// CHECK-NEXT: %[[ALLOC12:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC11]], %[[ALLOC12]])
+// CHECK-NEXT: %[[ALLOC12:.*]] = memref.clone %[[ALLOC11]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC11]]
 // CHECK-NEXT: scf.yield %[[ALLOC12]]
 
-//      CHECK: %[[ALLOC13:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[IALLOC2]], %[[ALLOC13]])
+//      CHECK: %[[ALLOC13:.*]] = memref.clone %[[IALLOC2]]
 // CHECK-NEXT: scf.yield %[[ALLOC13]]
 
 //      CHECK: memref.dealloc %[[IALLOC2]]
-// CHECK-NEXT: %[[ALLOC10:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC9]], %[[ALLOC10]])
+// CHECK-NEXT: %[[ALLOC10:.*]] = memref.clone %[[ALLOC9]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC9]]
 // CHECK-NEXT: scf.yield %[[ALLOC10]]
 
-//      CHECK: %[[ALLOC7:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC6]], %[[ALLOC7]])
+//      CHECK: %[[ALLOC7:.*]] = memref.clone %[[ALLOC6]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC6]]
 // CHECK-NEXT: scf.yield %[[ALLOC7]]
 
-//      CHECK: %[[ALLOC4:.*]] = memref.alloc()
-// CHECK-NEXT: linalg.copy(%[[ALLOC3]], %[[ALLOC4]])
+//      CHECK: %[[ALLOC4:.*]] = memref.clone %[[ALLOC3]]
 // CHECK-NEXT: memref.dealloc %[[ALLOC3]]
 // CHECK-NEXT: scf.yield %[[ALLOC4]]
 
@@ -1183,8 +1148,7 @@ func @assumingOp(
 // CHECK-NEXT:    shape.assuming_yield %[[ARG1]]
 //      CHECK: %[[ASSUMING_RESULT:.*]] = shape.assuming %[[ARG0]]
 // CHECK-NEXT:    %[[TMP_ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT:    %[[RETURNING_ALLOC:.*]] = memref.alloc()
-// CHECK-NEXT:    linalg.copy(%[[TMP_ALLOC]], %[[RETURNING_ALLOC]])
+// CHECK-NEXT:    %[[RETURNING_ALLOC:.*]] = memref.clone %[[TMP_ALLOC]]
 // CHECK-NEXT:    memref.dealloc %[[TMP_ALLOC]]
 // CHECK-NEXT:    shape.assuming_yield %[[RETURNING_ALLOC]]
 //      CHECK: test.copy(%[[ASSUMING_RESULT:.*]], %[[ARG2]])

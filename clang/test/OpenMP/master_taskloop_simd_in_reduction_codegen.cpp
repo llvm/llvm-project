@@ -64,7 +64,8 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:  }
 
 // CHECK:       define internal {{.*}} [[OMP_TASK]](
-// CHECK:       call void (i8*, ...) %{{[^(]+}}(i8* %{{.+}}, i8*** [[TD1_REF:%[^,]+]], i8*** [[TD2_REF:%[^,]+]])
+// CHECK:       [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CHECK:       call void [[FN]](i8* %{{.+}}, i8*** [[TD1_REF:%[^,]+]], i8*** [[TD2_REF:%[^,]+]])
 // CHECK-NEXT:  [[TD1_ADDR:%.+]] = load i8**, i8*** [[TD1_REF]],
 // CHECK-NEXT:  [[TD2_ADDR:%.+]] = load i8**, i8*** [[TD2_REF]],
 // CHECK-NEXT:  [[A_REF:%.+]] = getelementptr inbounds %

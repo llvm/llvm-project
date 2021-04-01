@@ -26,8 +26,9 @@ class NativeRegisterContextLinux_arm64
     : public NativeRegisterContextLinux,
       public NativeRegisterContextDBReg_arm64 {
 public:
-  NativeRegisterContextLinux_arm64(const ArchSpec &target_arch,
-                                   NativeThreadProtocol &native_thread);
+  NativeRegisterContextLinux_arm64(
+      const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
+      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up);
 
   uint32_t GetRegisterSetCount() const override;
 

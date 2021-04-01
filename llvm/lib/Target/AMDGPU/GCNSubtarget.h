@@ -707,6 +707,10 @@ public:
     return HasPkFmacF16Inst;
   }
 
+  bool hasAtomicFaddInsts() const {
+    return HasAtomicFaddRtnInsts || HasAtomicFaddNoRtnInsts;
+  }
+
   bool hasAtomicFaddRtnInsts() const {
     return HasAtomicFaddRtnInsts;
   }
@@ -824,6 +828,9 @@ public:
   bool hasLDSFPAtomics() const {
     return GFX8Insts;
   }
+
+  /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
+  bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
 
   bool hasDPP() const {
     return HasDPP;

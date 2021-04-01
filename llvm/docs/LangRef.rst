@@ -1119,7 +1119,7 @@ Currently, only the following parameter attributes are defined:
 
 .. _attr_inalloca:
 
-``inalloca``
+``inalloca(<ty>)``
 
     The ``inalloca`` argument attribute allows the caller to take the
     address of outgoing stack arguments. An ``inalloca`` argument must
@@ -1142,6 +1142,9 @@ Currently, only the following parameter attributes are defined:
     space after an argument allocation and before its call site, but it
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
+
+    The inalloca attribute requires a type argument, which must be the
+    same as the pointee type of the argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.

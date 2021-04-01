@@ -100,7 +100,7 @@ bool UnwindInfoSection::isNeeded() const {
   return (compactUnwindSection != nullptr);
 }
 
-SmallDenseMap<std::pair<InputSection *, uint64_t /* addend */>, macho::Symbol *>
+SmallDenseMap<std::pair<InputSection *, uint64_t /* addend */>, Symbol *>
     personalityTable;
 
 // Compact unwind relocations have different semantics, so we handle them in a
@@ -118,7 +118,7 @@ void macho::prepareCompactUnwind(InputSection *isec) {
         offsetof(struct CompactUnwindEntry64, personality))
       continue;
 
-    if (auto *s = r.referent.dyn_cast<lld::macho::Symbol *>()) {
+    if (auto *s = r.referent.dyn_cast<Symbol *>()) {
       if (auto *undefined = dyn_cast<Undefined>(s)) {
         treatUndefinedSymbol(*undefined);
         // treatUndefinedSymbol() can replace s with a DylibSymbol; re-check.
@@ -127,7 +127,7 @@ void macho::prepareCompactUnwind(InputSection *isec) {
       }
       if (auto *defined = dyn_cast<Defined>(s)) {
         // Check if we have created a synthetic symbol at the same address.
-        macho::Symbol *&personality =
+        Symbol *&personality =
             personalityTable[{defined->isec, defined->value}];
         if (personality == nullptr) {
           personality = defined;
@@ -146,7 +146,7 @@ void macho::prepareCompactUnwind(InputSection *isec) {
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
       // symbols for them in the GOT.
-      macho::Symbol *&s = personalityTable[{referentIsec, r.addend}];
+      Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
         s = make<Defined>("<internal>", nullptr, referentIsec, r.addend, false,
                           false, false);
@@ -181,7 +181,7 @@ static void relocateCompactUnwind(MergedOutputSection *compactUnwindSection,
 
     for (const Reloc &r : isec->relocs) {
       uint64_t referentVA = 0;
-      if (auto *referentSym = r.referent.dyn_cast<macho::Symbol *>()) {
+      if (auto *referentSym = r.referent.dyn_cast<Symbol *>()) {
         if (!isa<Undefined>(referentSym)) {
           assert(referentSym->isInGot());
           if (auto *defined = dyn_cast<Defined>(referentSym))

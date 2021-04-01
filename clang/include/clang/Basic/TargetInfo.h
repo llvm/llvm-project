@@ -155,12 +155,20 @@ protected:
   /// zero-length bitfield.
   unsigned UseZeroLengthBitfieldAlignment : 1;
 
+  /// Whether zero length bitfield alignment is respected if they are the
+  /// leading members.
+  unsigned UseLeadingZeroLengthBitfield : 1;
+
   ///  Whether explicit bit field alignment attributes are honored.
   unsigned UseExplicitBitFieldAlignment : 1;
 
   /// If non-zero, specifies a fixed alignment value for bitfields that follow
   /// zero length bitfield, regardless of the zero length bitfield type.
   unsigned ZeroLengthBitfieldBoundary;
+
+  /// If non-zero, specifies a maximum alignment to truncate alignment
+  /// specified in the aligned attribute of a static variable to this value.
+  unsigned MaxAlignedAttribute;
 };
 
 /// OpenCL type kinds.
@@ -768,11 +776,21 @@ public:
     return UseZeroLengthBitfieldAlignment;
   }
 
+  /// Check whether zero length bitfield alignment is respected if they are
+  /// leading members.
+  bool useLeadingZeroLengthBitfield() const {
+    return UseLeadingZeroLengthBitfield;
+  }
+
   /// Get the fixed alignment value in bits for a member that follows
   /// a zero length bitfield.
   unsigned getZeroLengthBitfieldBoundary() const {
     return ZeroLengthBitfieldBoundary;
   }
+
+  /// Get the maximum alignment in bits for a static variable with
+  /// aligned attribute.
+  unsigned getMaxAlignedAttribute() const { return MaxAlignedAttribute; }
 
   /// Check whether explicit bitfield alignment attributes should be
   //  honored, as in "__attribute__((aligned(2))) int b : 1;".

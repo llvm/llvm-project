@@ -1,4 +1,4 @@
-; RUN: %lli -force-interpreter=true %s
+; RUN: %lli -jit-kind=mcjit -force-interpreter=true %s
 
 define i32 @main() {
        %a = add i32 0, undef

@@ -157,16 +157,16 @@ public:
   std::string HostBits, HostMachine, HostSystem, HostRelease;
 
   /// The file to log CC_PRINT_PROC_STAT_FILE output to, if enabled.
-  const char *CCPrintStatReportFilename;
+  std::string CCPrintStatReportFilename;
 
   /// The file to log CC_PRINT_OPTIONS output to, if enabled.
-  const char *CCPrintOptionsFilename;
+  std::string CCPrintOptionsFilename;
 
   /// The file to log CC_PRINT_HEADERS output to, if enabled.
-  const char *CCPrintHeadersFilename;
+  std::string CCPrintHeadersFilename;
 
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
-  const char *CCLogDiagnosticsFilename;
+  std::string CCLogDiagnosticsFilename;
 
   /// A list of inputs and their types for the given arguments.
   typedef SmallVector<std::pair<types::ID, const llvm::opt::Arg *>, 16>

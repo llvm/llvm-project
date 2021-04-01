@@ -87,8 +87,6 @@ void ProcessTrace::RefreshStateAfterStop() {}
 
 Status ProcessTrace::DoDestroy() { return Status(); }
 
-bool ProcessTrace::IsAlive() { return true; }
-
 size_t ProcessTrace::ReadMemory(addr_t addr, void *buf, size_t size,
                                 Status &error) {
   // Don't allow the caching that lldb_private::Process::ReadMemory does since

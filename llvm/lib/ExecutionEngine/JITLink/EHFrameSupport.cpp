@@ -81,7 +81,9 @@ Error EHFrameSplitter::processBlock(LinkGraph &G, Block &B,
     return Error::success();
   }
 
-  BinaryStreamReader BlockReader(B.getContent(), G.getEndianness());
+  BinaryStreamReader BlockReader(
+      StringRef(B.getContent().data(), B.getContent().size()),
+      G.getEndianness());
 
   while (true) {
     uint64_t RecordStartOffset = BlockReader.getOffset();
@@ -203,7 +205,9 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
     }
 
   CIEInfosMap CIEInfos;
-  BinaryStreamReader BlockReader(B.getContent(), PC.G.getEndianness());
+  BinaryStreamReader BlockReader(
+      StringRef(B.getContent().data(), B.getContent().size()),
+      PC.G.getEndianness());
   while (!BlockReader.empty()) {
     size_t RecordStartOffset = BlockReader.getOffset();
 
@@ -267,8 +271,10 @@ Error EHFrameEdgeFixer::processCIE(ParseContext &PC, Block &B,
 
   LLVM_DEBUG(dbgs() << "      Record is CIE\n");
 
-  auto RecordContent = B.getContent().substr(RecordOffset, RecordLength);
-  BinaryStreamReader RecordReader(RecordContent, PC.G.getEndianness());
+  auto RecordContent = B.getContent().slice(RecordOffset, RecordLength);
+  BinaryStreamReader RecordReader(
+      StringRef(RecordContent.data(), RecordContent.size()),
+      PC.G.getEndianness());
 
   // Skip past the CIE delta field: we've already processed this far.
   RecordReader.setOffset(CIEDeltaFieldOffset + 4);
@@ -397,8 +403,10 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
 
   JITTargetAddress RecordAddress = B.getAddress() + RecordOffset;
 
-  auto RecordContent = B.getContent().substr(RecordOffset, RecordLength);
-  BinaryStreamReader RecordReader(RecordContent, PC.G.getEndianness());
+  auto RecordContent = B.getContent().slice(RecordOffset, RecordLength);
+  BinaryStreamReader RecordReader(
+      StringRef(RecordContent.data(), RecordContent.size()),
+      PC.G.getEndianness());
 
   // Skip past the CIE delta field: we've already read this far.
   RecordReader.setOffset(CIEDeltaFieldOffset + 4);
@@ -730,7 +738,7 @@ Expected<Symbol &> EHFrameEdgeFixer::getOrCreateSymbol(ParseContext &PC,
   return PC.G.addAnonymousSymbol(*B, Addr - B->getAddress(), 0, false, false);
 }
 
-char EHFrameNullTerminator::NullTerminatorBlockContent[] = {0, 0, 0, 0};
+char EHFrameNullTerminator::NullTerminatorBlockContent[4] = {0, 0, 0, 0};
 
 EHFrameNullTerminator::EHFrameNullTerminator(StringRef EHFrameSectionName)
     : EHFrameSectionName(EHFrameSectionName) {}
@@ -746,9 +754,8 @@ Error EHFrameNullTerminator::operator()(LinkGraph &G) {
            << EHFrameSectionName << "\n";
   });
 
-  auto &NullTerminatorBlock =
-      G.createContentBlock(*EHFrame, StringRef(NullTerminatorBlockContent, 4),
-                           0xfffffffffffffffc, 1, 0);
+  auto &NullTerminatorBlock = G.createContentBlock(
+      *EHFrame, NullTerminatorBlockContent, 0xfffffffffffffffc, 1, 0);
   G.addAnonymousSymbol(NullTerminatorBlock, 0, 4, false, true);
   return Error::success();
 }
@@ -774,7 +781,7 @@ createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameRangeFunction StoreRangeAddress) {
   const char *EHFrameSectionName = nullptr;
   if (TT.getObjectFormat() == Triple::MachO)
-    EHFrameSectionName = "__eh_frame";
+    EHFrameSectionName = "__TEXT,__eh_frame";
   else
     EHFrameSectionName = ".eh_frame";
 
@@ -791,8 +798,9 @@ createEHFrameRecorderPass(const Triple &TT,
       Size = R.getSize();
     }
     if (Addr == 0 && Size != 0)
-      return make_error<JITLinkError>("__eh_frame section can not have zero "
-                                      "address with non-zero size");
+      return make_error<JITLinkError>(
+          StringRef(EHFrameSectionName) +
+          " section can not have zero address with non-zero size");
     StoreFrameRange(Addr, Size);
     return Error::success();
   };

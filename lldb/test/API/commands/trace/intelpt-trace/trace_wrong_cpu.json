@@ -1,7 +1,7 @@
 {
   "trace": {
     "type": "intel-pt",
-    "pt_cpu": {
+    "cpuInfo": {
       "vendor": "intel",
       "family": 2123123,
       "model": 12123123,

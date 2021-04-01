@@ -38,8 +38,8 @@ func @conv_1d(%arg0: memref<?xf32>, %arg1: memref<?xf32>, %arg2: memref<?xf32>) 
 //       CHECK:       %[[v15:.*]] = affine.min #[[$map4]](%arg4)[%0]
 //       CHECK:       %[[v16:.*]] = subview %[[arg1]][%[[arg4]]] [%[[v15]]] [1]  : memref<?xf32> to memref<?xf32, #[[$map1]]>
 //       CHECK:       %[[v17:.*]] = subview %[[v6]][0] [%[[v13]]] [1]  : memref<3xf32> to memref<?xf32>
-//       CHECK:       %[[v19:.*]] = vector.transfer_read %[[v6]][%[[c0]]], %[[cst]] {masked = [false]} : memref<3xf32>, vector<3xf32>
-//       CHECK:       %[[v20:.*]] = vector.transfer_read %[[v7]][%[[c0]]], %[[cst]] {masked = [false]} : memref<3xf32>, vector<3xf32>
+//       CHECK:       %[[v19:.*]] = vector.transfer_read %[[v6]][%[[c0]]], %[[cst]] {in_bounds = [true]} : memref<3xf32>, vector<3xf32>
+//       CHECK:       %[[v20:.*]] = vector.transfer_read %[[v7]][%[[c0]]], %[[cst]] {in_bounds = [true]} : memref<3xf32>, vector<3xf32>
 //       CHECK:       %[[v21:.*]] = mulf %[[v19]], %[[v20]] : vector<3xf32>
 //       CHECK:       %[[v22:.*]] = vector.reduction "add", %[[v21]], %[[cst]] : vector<3xf32> into f32
 //       CHECK:       store %[[v22]], %[[v8]][%[[c0]]] : memref<1xf32>

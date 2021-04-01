@@ -10,7 +10,6 @@
 // CHECK-DEBIAN-MIPS: "{{.*}}/usr/lib/gcc/mips-linux-gnu/4.7{{/|\\\\}}crtbegin.o"
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.7"
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/mips-linux-gnu"
-// CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib/gcc/mips-linux-gnu/4.7/../../.."
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPS: "-L[[SYSROOT]]/usr/lib"
 
@@ -23,6 +22,5 @@
 // CHECK-DEBIAN-MIPSEL: "{{.*}}/usr/lib/gcc/mipsel-linux-gnu/4.7{{/|\\\\}}crtbegin.o"
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.7"
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/mipsel-linux-gnu"
-// CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.7/../../.."
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-MIPSEL: "-L[[SYSROOT]]/usr/lib"

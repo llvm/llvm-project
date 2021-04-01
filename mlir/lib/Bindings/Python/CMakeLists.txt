@@ -69,6 +69,7 @@ add_mlir_python_extension(MLIRCoreBindingsPythonExtension _mlir
   INSTALL_DIR
     python
   SOURCES
+    DialectLinalg.cpp
     MainModule.cpp
     IRAffine.cpp
     IRAttributes.cpp
@@ -118,3 +119,11 @@ endif()
 
 add_subdirectory(Transforms)
 add_subdirectory(Conversions)
+
+add_mlir_python_extension(MLIRLinalgPassesBindingsPythonExtension _mlirLinalgPasses
+  INSTALL_DIR
+    python
+  SOURCES
+    LinalgPasses.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRLinalgPassesBindingsPythonExtension)

@@ -3960,6 +3960,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wqm:
     case Intrinsic::amdgcn_softwqm:
     case Intrinsic::amdgcn_set_inactive:
+    case Intrinsic::amdgcn_permlane64:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_kernarg_segment_ptr:
     case Intrinsic::amdgcn_s_getpc:
@@ -4287,26 +4288,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
-    case Intrinsic::amdgcn_ds_gws_init:
-    case Intrinsic::amdgcn_ds_gws_barrier:
-    case Intrinsic::amdgcn_ds_gws_sema_br: {
-      OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
-
-      // This must be an SGPR, but accept a VGPR.
-      unsigned Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
-                                   AMDGPU::SGPRRegBankID);
-      OpdsMapping[2] = AMDGPU::getValueMapping(Bank, 32);
-      break;
-    }
-    case Intrinsic::amdgcn_ds_gws_sema_v:
-    case Intrinsic::amdgcn_ds_gws_sema_p:
-    case Intrinsic::amdgcn_ds_gws_sema_release_all: {
-      // This must be an SGPR, but accept a VGPR.
-      unsigned Bank = getRegBankID(MI.getOperand(1).getReg(), MRI,
-                                   AMDGPU::SGPRRegBankID);
-      OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
-      break;
-    }
     case Intrinsic::amdgcn_waterfall_begin: {
       unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
       unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
@@ -4341,6 +4322,26 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_ds_gws_init:
+    case Intrinsic::amdgcn_ds_gws_barrier:
+    case Intrinsic::amdgcn_ds_gws_sema_br: {
+      OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+
+      // This must be an SGPR, but accept a VGPR.
+      unsigned Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
+                                   AMDGPU::SGPRRegBankID);
+      OpdsMapping[2] = AMDGPU::getValueMapping(Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_ds_gws_sema_v:
+    case Intrinsic::amdgcn_ds_gws_sema_p:
+    case Intrinsic::amdgcn_ds_gws_sema_release_all: {
+      // This must be an SGPR, but accept a VGPR.
+      unsigned Bank = getRegBankID(MI.getOperand(1).getReg(), MRI,
+                                   AMDGPU::SGPRRegBankID);
+      OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
     case Intrinsic::amdgcn_lds_direct_load: {

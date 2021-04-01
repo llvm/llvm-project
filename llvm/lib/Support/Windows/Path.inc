@@ -623,6 +623,9 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   if (Mode == AccessMode::Write && (Attributes & FILE_ATTRIBUTE_READONLY))
     return errc::permission_denied;
 
+  if (Mode == AccessMode::Execute && (Attributes & FILE_ATTRIBUTE_DIRECTORY))
+    return errc::permission_denied;
+
   return std::error_code();
 }
 

@@ -31,7 +31,7 @@ template <class _Tp> struct as_pointer {
 // Check address space deduction in template parameter deduction.
 struct rep {
   // When there is no address space on a reference use __generic.
-  // CHECK: |-CXXConstructorDecl {{.*}} rep 'void (const __generic rep &__private) __generic'
+  // CHECK: |-CXXConstructorDecl {{.*}} rep 'void (const __generic rep &__private){{.*}} __generic'
   template<class U, class = typename as_pointer<U>::type>
   rep(U&& v) {}
 };
@@ -57,6 +57,6 @@ void bar() {
   rep_outer r;
   int i;
   // Preserve the address space of the type in forwarding reference.
-  // CHECK: CXXMethodDecl {{.*}} operator() 'void (__private int &__private) const __generic'
+  // CHECK: CXXMethodDecl {{.*}} operator() 'void (__private int &__private){{.*}} const __generic'
   foo4(i, [](auto&& x){;});
 }

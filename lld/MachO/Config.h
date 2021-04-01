@@ -50,6 +50,12 @@ enum class UndefinedSymbolTreatment {
   dynamic_lookup,
 };
 
+struct SegmentProtection {
+  llvm::StringRef name;
+  uint32_t maxProt;
+  uint32_t initProt;
+};
+
 class SymbolPatterns {
 public:
   // GlobPattern can also match literals,
@@ -81,11 +87,12 @@ struct Configuration {
   bool searchDylibsFirst = false;
   bool saveTemps = false;
   bool adhocCodesign = false;
+  bool emitFunctionStarts = false;
   bool timeTraceEnabled = false;
   uint32_t headerPad;
   uint32_t dylibCompatibilityVersion = 0;
   uint32_t dylibCurrentVersion = 0;
-  uint32_t timeTraceGranularity;
+  uint32_t timeTraceGranularity = 500;
   std::string progName;
   llvm::StringRef installName;
   llvm::StringRef mapFile;
@@ -103,6 +110,9 @@ struct Configuration {
   std::vector<llvm::StringRef> frameworkSearchPaths;
   std::vector<llvm::StringRef> runtimePaths;
   std::vector<Symbol *> explicitUndefineds;
+  // There are typically very few custom segmentProtections, so use a vector
+  // instead of a map.
+  std::vector<SegmentProtection> segmentProtections;
 
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   SectionRenameMap sectionRenameMap;

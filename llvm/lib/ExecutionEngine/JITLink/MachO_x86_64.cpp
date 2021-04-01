@@ -347,8 +347,6 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = *(const little32_t *)FixupContent - 4;
-          // -
-          //   (1 << (*MachORelocKind - MachOPCRel32Minus1));
           Kind = x86_64::Delta32;
           break;
         case MachOPCRel32Anon: {
@@ -418,8 +416,6 @@ class PerGraphGOTAndPLTStubsBuilder_MachO_x86_64
     : public PerGraphGOTAndPLTStubsBuilder<
           PerGraphGOTAndPLTStubsBuilder_MachO_x86_64> {
 public:
-  static const uint8_t NullGOTEntryContent[8];
-  static const uint8_t StubContent[6];
 
   using PerGraphGOTAndPLTStubsBuilder<
       PerGraphGOTAndPLTStubsBuilder_MachO_x86_64>::
@@ -432,10 +428,7 @@ public:
   }
 
   Symbol &createGOTEntry(Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(), getGOTEntryBlockContent(), 0, 8, 0);
-    GOTEntryBlock.addEdge(x86_64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+    return x86_64::createAnonymousPointer(G, getGOTSection(), &Target);
   }
 
   void fixGOTEdge(Edge &E, Symbol &GOTEntry) {
@@ -459,12 +452,8 @@ public:
   }
 
   Symbol &createPLTStub(Symbol &Target) {
-    auto &StubContentBlock =
-        G.createContentBlock(getStubsSection(), getStubBlockContent(), 0, 1, 0);
-    // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = getGOTEntry(Target);
-    StubContentBlock.addEdge(x86_64::Delta32, 2, GOTEntrySymbol, -4);
-    return G.addAnonymousSymbol(StubContentBlock, 0, 6, true, false);
+    return x86_64::createAnonymousPointerJumpStub(G, getStubsSection(),
+                                                  getGOTEntry(Target));
   }
 
   void fixPLTEdge(Edge &E, Symbol &Stub) {
@@ -495,25 +484,10 @@ private:
     return *StubsSection;
   }
 
-  StringRef getGOTEntryBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(NullGOTEntryContent),
-                     sizeof(NullGOTEntryContent));
-  }
-
-  StringRef getStubBlockContent() {
-    return StringRef(reinterpret_cast<const char *>(StubContent),
-                     sizeof(StubContent));
-  }
-
   Section *GOTSection = nullptr;
   Section *StubsSection = nullptr;
 };
 
-const uint8_t
-    PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::NullGOTEntryContent[8] = {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::StubContent[6] = {
-    0xFF, 0x25, 0x00, 0x00, 0x00, 0x00};
 } // namespace
 
 static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
@@ -559,11 +533,8 @@ static Error optimizeMachO_x86_64_GOTAndStubs(LinkGraph &G) {
         }
       } else if (E.getKind() == x86_64::BranchPCRel32ToPtrJumpStubRelaxable) {
         auto &StubBlock = E.getTarget().getBlock();
-        assert(
-            StubBlock.getSize() ==
-                sizeof(
-                    PerGraphGOTAndPLTStubsBuilder_MachO_x86_64::StubContent) &&
-            "Stub block should be stub sized");
+        assert(StubBlock.getSize() == sizeof(x86_64::PointerJumpStubContent) &&
+               "Stub block should be stub sized");
         assert(StubBlock.edges_size() == 1 &&
                "Stub block should only have one outgoing edge");
 
@@ -627,10 +598,11 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
     // Add eh-frame passses.
-    Config.PrePrunePasses.push_back(EHFrameSplitter("__eh_frame"));
+    StringRef EHFrameSectionName = "__TEXT,__eh_frame";
+    Config.PrePrunePasses.push_back(EHFrameSplitter(EHFrameSectionName));
     Config.PrePrunePasses.push_back(
-        EHFrameEdgeFixer("__eh_frame", G->getPointerSize(), x86_64::Delta64,
-                         x86_64::Delta32, x86_64::NegDelta32));
+        EHFrameEdgeFixer(EHFrameSectionName, G->getPointerSize(),
+                         x86_64::Delta64, x86_64::Delta32, x86_64::NegDelta32));
 
     // Add a mark-live pass.
     if (auto MarkLive = Ctx->getMarkLivePass(G->getTargetTriple()))

@@ -4,8 +4,6 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsls r0, r0, #3
-; CHECK-NEXT:    asrs r0, r0, #3
 ; CHECK-NEXT:    ldr r1, .LCPI0_0
 ; CHECK-NEXT:    muls r1, r0, r1
 ; CHECK-NEXT:    ldr r0, .LCPI0_1
@@ -22,11 +20,11 @@ define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.3:
 ; CHECK-NEXT:  .LCPI0_0:
-; CHECK-NEXT:    .long 3210379595 @ 0xbf5a814b
+; CHECK-NEXT:    .long 4208200280 @ 0xfad40a58
 ; CHECK-NEXT:  .LCPI0_1:
-; CHECK-NEXT:    .long 21691754 @ 0x14afd6a
+; CHECK-NEXT:    .long 21691752 @ 0x14afd68
 ; CHECK-NEXT:  .LCPI0_2:
-; CHECK-NEXT:    .long 43383509 @ 0x295fad5
+; CHECK-NEXT:    .long 43383512 @ 0x295fad8
   %srem = srem i29 %X, 99
   %cmp = icmp eq i29 %srem, 0
   ret i1 %cmp

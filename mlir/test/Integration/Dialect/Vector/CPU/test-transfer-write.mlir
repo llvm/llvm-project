@@ -3,11 +3,11 @@
 // RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @transfer_write16_unmasked_1d(%A : memref<?xf32>, %base: index) {
+func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
   %f = constant 16.0 : f32
   %v = splat %f : vector<16xf32>
   vector.transfer_write %v, %A[%base]
-    {permutation_map = affine_map<(d0) -> (d0)>, masked = [false]}
+    {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]}
     : vector<16xf32>, memref<?xf32>
   return
 }
@@ -54,9 +54,9 @@ func @entry() {
   vector.print %0 : vector<32xf32>
 
   // Overwrite with 16 values of 16 at base 3.
-  // Statically guaranteed to be unmasked. Exercises proper alignment.
+  // Statically guaranteed to be in-bounds. Exercises proper alignment.
   %c3 = constant 3: index
-  call @transfer_write16_unmasked_1d(%A, %c3) : (memref<?xf32>, index) -> ()
+  call @transfer_write16_inbounds_1d(%A, %c3) : (memref<?xf32>, index) -> ()
   %1 = call @transfer_read_1d(%A) : (memref<?xf32>) -> (vector<32xf32>)
   vector.print %1 : vector<32xf32>
 

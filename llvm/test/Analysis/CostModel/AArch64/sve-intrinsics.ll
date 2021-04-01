@@ -105,8 +105,8 @@ declare double @llvm.vector.reduce.fmax.nxv4f64(<vscale x 4 x double>)
 
 define void  @count_zeroes(<vscale x 4 x i32> %A) {
 ; CHECK-LABEL: 'count_zeroes'
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
-; CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
+; CHECK-NEXT: Cost Model: Found an estimated cost of 2 for instruction: %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   %ctlz = call <vscale x 4 x i32> @llvm.ctlz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   %cttz = call <vscale x 4 x i32> @llvm.cttz.nxv4i32(<vscale x 4 x i32> %A, i1 true)
   ret void
@@ -180,5 +180,39 @@ declare <vscale x 16 x i1> @llvm.experimental.vector.reverse.nxv16i1(<vscale x 1
 declare <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1>)
 declare <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1>)
+
+define void @unsupported_fp_ops(<vscale x 4 x float> %vec) {
+; CHECK-LABEL: 'unsupported_fp_ops'
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %sin = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %cos = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %pow = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %vec, <vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32(<vscale x 4 x float> %vec, i32 42)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %exp = call <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %exp2 = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log = call <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log2 = call <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> %vec)
+; CHECK-NEXT: Cost Model: Invalid cost for instruction: %log10 = call <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> %vec)
+
+  %sin = call <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float> %vec)
+  %cos = call <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float> %vec)
+  %pow = call <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float> %vec, <vscale x 4 x float> %vec)
+  %powi = call <vscale x 4 x float> @llvm.powi.nxv4f32(<vscale x 4 x float> %vec, i32 42)
+  %exp = call <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float> %vec)
+  %exp2 = call <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float> %vec)
+  %log = call <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float> %vec)
+  %log2 = call <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float> %vec)
+  %log10 = call <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float> %vec)
+  ret void
+}
+
+declare <vscale x 4 x float> @llvm.sin.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.cos.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.pow.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.powi.nxv4f32(<vscale x 4 x float>, i32)
+declare <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.exp2.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.log.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.log2.nxv4f32(<vscale x 4 x float>)
+declare <vscale x 4 x float> @llvm.log10.nxv4f32(<vscale x 4 x float>)
 
 attributes #0 = { "target-features"="+sve,+bf16" }

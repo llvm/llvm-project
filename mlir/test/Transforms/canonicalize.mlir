@@ -630,7 +630,7 @@ func @lowered_affine_floordiv() -> (index, index) {
 //
 // CHECK-LABEL: func @lowered_affine_ceildiv
 func @lowered_affine_ceildiv() -> (index, index) {
-// CHECK-DAG:  %c-1 = constant -1 : index
+// CHECK-NEXT:  %c-1 = constant -1 : index
   %c-43 = constant -43 : index
   %c42 = constant 42 : index
   %c0 = constant 0 : index
@@ -643,7 +643,7 @@ func @lowered_affine_ceildiv() -> (index, index) {
   %5 = subi %c0, %4 : index
   %6 = addi %4, %c1 : index
   %7 = select %0, %5, %6 : index
-// CHECK-DAG:  %c2 = constant 2 : index
+// CHECK-NEXT:  %c2 = constant 2 : index
   %c43 = constant 43 : index
   %c42_0 = constant 42 : index
   %c0_1 = constant 0 : index
@@ -1059,3 +1059,148 @@ func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
   return %2 : tensor<?x?x?xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @fold_trunci
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @fold_trunci(%arg0: i1) -> i1 attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : i1
+  %0 = zexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i1
+  return %1 : i1
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_trunci_vector
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
+func @fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi1> attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : vector<4xi1>
+  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = trunci %0 : vector<4xi8> to vector<4xi1>
+  return %1 : vector<4xi1>
+}
+
+// -----
+
+// TODO Canonicalize this into:
+//   zexti %arg0 : i1 to i2
+
+// CHECK-LABEL: func @do_not_fold_trunci
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @do_not_fold_trunci(%arg0: i1) -> i2 attributes {} {
+  // CHECK-NEXT: zexti %[[ARG0]] : i1 to i8
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : i8 to i2
+  // CHECK-NEXT: return %[[RES]] : i2
+  %0 = zexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i2
+  return %1 : i2
+}
+
+// -----
+
+// CHECK-LABEL: func @do_not_fold_trunci_vector
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: vector<4xi1>)
+func @do_not_fold_trunci_vector(%arg0: vector<4xi1>) -> vector<4xi2> attributes {} {
+  // CHECK-NEXT: zexti %[[ARG0]] : vector<4xi1> to vector<4xi8>
+  // CHECK-NEXT: %[[RES:[0-9a-z]*]] = trunci %{{.*}} : vector<4xi8> to vector<4xi2>
+  // CHECK-NEXT: return %[[RES]] : vector<4xi2>
+  %0 = zexti %arg0 : vector<4xi1> to vector<4xi8>
+  %1 = trunci %0 : vector<4xi8> to vector<4xi2>
+  return %1 : vector<4xi2>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_trunci_sexti
+// CHECK-SAME:    (%[[ARG0:[0-9a-z]*]]: i1)
+func @fold_trunci_sexti(%arg0: i1) -> i1 attributes {} {
+  // CHECK-NEXT: return %[[ARG0]] : i1
+  %0 = sexti %arg0 : i1 to i8
+  %1 = trunci %0 : i8 to i1
+  return %1 : i1
+}
+
+// CHECK-LABEL: func @simple_clone_elimination
+func @simple_clone_elimination() -> memref<5xf32> {
+  %ret = memref.alloc() : memref<5xf32>
+  %temp = memref.clone %ret : memref<5xf32> to memref<5xf32>
+  memref.dealloc %temp : memref<5xf32>
+  return %ret : memref<5xf32>
+}
+// CHECK-NEXT: %[[ret:.*]] = memref.alloc()
+// CHECK-NOT: %[[temp:.*]] = memref.clone
+// CHECK-NOT: memref.dealloc %[[temp]]
+// CHECK: return %[[ret]]
+
+// -----
+
+// CHECK-LABEL: func @clone_loop_alloc
+func @clone_loop_alloc(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<2xf32>, %arg4: memref<2xf32>) {
+  %0 = memref.alloc() : memref<2xf32>
+  memref.dealloc %0 : memref<2xf32>
+  %1 = memref.clone %arg3 : memref<2xf32> to memref<2xf32>
+  %2 = scf.for %arg5 = %arg0 to %arg1 step %arg2 iter_args(%arg6 = %1) -> (memref<2xf32>) {
+    %3 = cmpi eq, %arg5, %arg1 : index
+    memref.dealloc %arg6 : memref<2xf32>
+    %4 = memref.alloc() : memref<2xf32>
+    %5 = memref.clone %4 : memref<2xf32> to memref<2xf32>
+    memref.dealloc %4 : memref<2xf32>
+    %6 = memref.clone %5 : memref<2xf32> to memref<2xf32>
+    memref.dealloc %5 : memref<2xf32>
+    scf.yield %6 : memref<2xf32>
+  }
+  linalg.copy(%2, %arg4) : memref<2xf32>, memref<2xf32>
+  memref.dealloc %2 : memref<2xf32>
+  return
+}
+
+// CHECK-NEXT: %[[ALLOC0:.*]] = memref.clone
+// CHECK-NEXT: %[[ALLOC1:.*]] = scf.for
+// CHECK-NEXT: memref.dealloc
+// CHECK-NEXT: %[[ALLOC2:.*]] = memref.alloc
+// CHECK-NEXT: scf.yield %[[ALLOC2]]
+// CHECK: linalg.copy(%[[ALLOC1]]
+// CHECK-NEXT: memref.dealloc %[[ALLOC1]]
+
+// -----
+
+// CHECK-LABEL: func @clone_nested_region
+func @clone_nested_region(%arg0: index, %arg1: index) -> memref<?x?xf32> {
+  %0 = cmpi eq, %arg0, %arg1 : index
+  %1 = memref.alloc(%arg0, %arg0) : memref<?x?xf32>
+  %2 = scf.if %0 -> (memref<?x?xf32>) {
+    %3 = scf.if %0 -> (memref<?x?xf32>) {
+      %9 = memref.clone %1 : memref<?x?xf32> to memref<?x?xf32>
+      scf.yield %9 : memref<?x?xf32>
+    } else {
+      %7 = memref.alloc(%arg0, %arg1) : memref<?x?xf32>
+      %10 = memref.clone %7 : memref<?x?xf32> to memref<?x?xf32>
+      memref.dealloc %7 : memref<?x?xf32>
+      scf.yield %10 : memref<?x?xf32>
+    }
+    %6 = memref.clone %3 : memref<?x?xf32> to memref<?x?xf32>
+    memref.dealloc %3 : memref<?x?xf32>
+    scf.yield %6 : memref<?x?xf32>
+  } else {
+    %3 = memref.alloc(%arg1, %arg1) : memref<?x?xf32>
+    %6 = memref.clone %3 : memref<?x?xf32> to memref<?x?xf32>
+    memref.dealloc %3 : memref<?x?xf32>
+    scf.yield %6 : memref<?x?xf32>
+  }
+  memref.dealloc %1 : memref<?x?xf32>
+  return %2 : memref<?x?xf32>
+}
+
+//      CHECK: %[[ALLOC1:.*]] = memref.alloc
+// CHECK-NEXT: %[[ALLOC2:.*]] = scf.if
+// CHECK-NEXT: %[[ALLOC3_1:.*]] = scf.if
+// CHECK-NEXT: %[[ALLOC4_1:.*]] = memref.clone %[[ALLOC1]]
+// CHECK-NEXT: scf.yield %[[ALLOC4_1]]
+//      CHECK: %[[ALLOC4_2:.*]] = memref.alloc
+// CHECK-NEXT: scf.yield %[[ALLOC4_2]]
+//      CHECK: scf.yield %[[ALLOC3_1]]
+//      CHECK: %[[ALLOC3_2:.*]] = memref.alloc
+// CHECK-NEXT: scf.yield %[[ALLOC3_2]]
+//      CHECK: memref.dealloc %[[ALLOC1]]
+// CHECK-NEXT: return %[[ALLOC2]]

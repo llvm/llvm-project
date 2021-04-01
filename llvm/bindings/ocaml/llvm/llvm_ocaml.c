@@ -44,16 +44,28 @@ CAMLprim value ptr_to_option(void *Ptr) {
   CAMLreturn(Option);
 }
 
-CAMLprim value cstr_to_string(const unsigned char *Str, mlsize_t Len) {
+CAMLprim value cstr_to_string(const char *Str, mlsize_t Len) {
   CAMLparam0();
   CAMLlocal1(String);
   if (Str) {
     String = caml_alloc_string(Len);
-    memcpy(String_val(String), Str, Len);
+    memcpy((char *)String_val(String), Str, Len);
   } else {
     String = caml_alloc_string(0);
   }
   CAMLreturn(String);
+}
+
+CAMLprim value cstr_to_string_option(const char *CStr, mlsize_t Len) {
+  CAMLparam0();
+  CAMLlocal2(Option, String);
+  if (!CStr)
+    CAMLreturn(Val_int(0));
+  String = caml_alloc_string(Len);
+  memcpy((char *)String_val(String), CStr, Len);
+  Option = caml_alloc_small(1, 0);
+  Store_field(Option, 0, (value)String);
+  CAMLreturn(Option);
 }
 
 void llvm_raise(value Prototype, char *Message) {
@@ -87,7 +99,7 @@ CAMLprim value llvm_enable_pretty_stacktrace(value Unit) {
 }
 
 CAMLprim value llvm_parse_command_line_options(value Overview, value Args) {
-  char *COverview;
+  const char *COverview;
   if (Overview == Val_int(0)) {
     COverview = NULL;
   } else {
@@ -258,7 +270,7 @@ CAMLprim value llvm_get_string_attr_kind(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeKind(A, &Length);
   value Result = caml_alloc_string(Length);
-  memcpy(String_val(Result), String, Length);
+  memcpy((char *)String_val(Result), String, Length);
   return Result;
 }
 
@@ -267,7 +279,7 @@ CAMLprim value llvm_get_string_attr_value(LLVMAttributeRef A) {
   unsigned Length;
   const char *String = LLVMGetStringAttributeValue(A, &Length);
   value Result = caml_alloc_string(Length);
-  memcpy(String_val(Result), String, Length);
+  memcpy((char *)String_val(Result), String, Length);
   return Result;
 }
 
@@ -529,17 +541,13 @@ CAMLprim value llvm_struct_set_body(LLVMTypeRef Ty,
 }
 
 /* lltype -> string option */
-CAMLprim value llvm_struct_name(LLVMTypeRef Ty)
-{
-  CAMLparam0();
-  CAMLlocal1(result);
-  const char *C = LLVMGetStructName(Ty);
-  if (C) {
-    result = caml_alloc_small(1, 0);
-    Store_field(result, 0, caml_copy_string(C));
-    CAMLreturn(result);
-  }
-  CAMLreturn(Val_int(0));
+CAMLprim value llvm_struct_name(LLVMTypeRef Ty) {
+  const char *CStr = LLVMGetStructName(Ty);
+  size_t Len;
+  if (!CStr)
+    return Val_int(0);
+  Len = strlen(CStr);
+  return cstr_to_string_option(CStr, Len);
 }
 
 /* lltype -> lltype array */
@@ -877,19 +885,9 @@ CAMLprim LLVMValueRef llvm_mdnull(LLVMContextRef C) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_get_mdstring(LLVMValueRef V) {
-  CAMLparam0();
-  CAMLlocal2(Option, Str);
-  const char *S;
   unsigned Len;
-
-  if ((S = LLVMGetMDString(V, &Len))) {
-    Str = caml_alloc_string(Len);
-    memcpy(String_val(Str), S, Len);
-    Option = alloc(1,0);
-    Store_field(Option, 0, Str);
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  const char *CStr = LLVMGetMDString(V, &Len);
+  return cstr_to_string_option(CStr, Len);
 }
 
 CAMLprim value llvm_get_mdnode_operands(LLVMValueRef V) {
@@ -1045,22 +1043,12 @@ CAMLprim LLVMValueRef llvm_const_vector(value ElementVals) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_string_of_const(LLVMValueRef Const) {
-  const char *S;
   size_t Len;
-  CAMLparam0();
-  CAMLlocal2(Option, Str);
-
-  if(LLVMIsAConstantDataSequential(Const) && LLVMIsConstantString(Const)) {
-    S = LLVMGetAsString(Const, &Len);
-    Str = caml_alloc_string(Len);
-    memcpy(String_val(Str), S, Len);
-
-    Option = alloc(1, 0);
-    Field(Option, 0) = Str;
-    CAMLreturn(Option);
-  } else {
-    CAMLreturn(Val_int(0));
-  }
+  const char *CStr;
+  if (!LLVMIsAConstantDataSequential(Const) || !LLVMIsConstantString(Const))
+    return Val_int(0);
+  CStr = LLVMGetAsString(Const, &Len);
+  return cstr_to_string_option(CStr, Len);
 }
 
 /* llvalue -> int -> llvalue */
@@ -1349,14 +1337,7 @@ CAMLprim value llvm_delete_global(LLVMValueRef GlobalVar) {
 
 /* llvalue -> llvalue option */
 CAMLprim value llvm_global_initializer(LLVMValueRef GlobalVar) {
-  CAMLparam0();
-  LLVMValueRef Init;
-  if ((Init = LLVMGetInitializer(GlobalVar))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Init;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  return ptr_to_option(LLVMGetInitializer(GlobalVar));
 }
 
 /* llvalue -> llvalue -> unit */
@@ -2602,7 +2583,7 @@ CAMLprim LLVMMemoryBufferRef llvm_memorybuffer_of_string(value Name, value Strin
 /* llmemorybuffer -> string */
 CAMLprim value llvm_memorybuffer_as_string(LLVMMemoryBufferRef MemBuf) {
   value String = caml_alloc_string(LLVMGetBufferSize(MemBuf));
-  memcpy(String_val(String), LLVMGetBufferStart(MemBuf),
+  memcpy((char *)String_val(String), LLVMGetBufferStart(MemBuf),
          LLVMGetBufferSize(MemBuf));
 
   return String;

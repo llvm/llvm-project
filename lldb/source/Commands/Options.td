@@ -200,7 +200,7 @@ let Command = "breakpoint set" in {
   def breakpoint_set_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
     Groups<[1,9,12]>, Arg<"Boolean">,
     Desc<"Move breakpoints to nearest code. If not set the "
-    "target.move-to-nearest-codesetting is used.">;
+    "target.move-to-nearest-code setting is used.">;
   def breakpoint_set_file_colon_line : Option<"joint-specifier", "y">, Group<12>, Arg<"FileLineColumn">,
     Required, Completion<"SourceFile">,
     Desc<"A specifier in the form filename:line[:column] for setting file & line breakpoints.">;

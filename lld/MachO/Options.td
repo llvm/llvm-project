@@ -20,6 +20,9 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
     HelpText<"Use colors in diagnostics (default: auto)">,
     MetaVarName<"[auto,always,never]">,
     Group<grp_lld>;
+def threads_eq : Joined<["--"], "threads=">,
+    HelpText<"Number of threads. '1' disables multi-threading. By default all available hardware threads are used">,
+    Group<grp_lld>;
 def reproduce: Separate<["--"], "reproduce">,
     Group<grp_lld>;
 def reproduce_eq: Joined<["--"], "reproduce=">,
@@ -36,9 +39,9 @@ def no_lto_legacy_pass_manager : Flag<["--"], "no-lto-legacy-pass-manager">,
     HelpText<"Use the new pass manager in LLVM">,
     Group<grp_lld>;
 def time_trace: Flag<["--"], "time-trace">, HelpText<"Record time trace">;
-def time_trace_granularity: Flag<["--"], "time-trace-granularity">,
+def time_trace_granularity_eq: Joined<["--"], "time-trace-granularity=">,
     HelpText<"Minimum time granularity (in microseconds) traced by time profiler">;
-def time_trace_file_eq: Flag<["--"], "time-trace-file=">, HelpText<"Specify time trace output file">;
+def time_trace_file_eq: Joined<["--"], "time-trace-file=">, HelpText<"Specify time trace output file">;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -769,8 +772,7 @@ def stack_addr : Separate<["-"], "stack_addr">,
     Group<grp_rare>;
 def segprot : MultiArg<["-"], "segprot", 3>,
     MetaVarName<"<segment> <max> <init>">,
-    HelpText<"Specifies the <max> and <init> virtual memory protection of <segment> as r/w/x/-seg_addr_table path Specify hex base addresses and dylib install names on successive lines in <path>. This option is obsolete">,
-    Flags<[HelpHidden]>,
+    HelpText<"Specifies the <max> and <init> virtual memory protection of <segment> as r/w/x/-seg_addr_table path">,
     Group<grp_rare>;
 def segs_read_write_addr : Separate<["-"], "segs_read_write_addr">,
     MetaVarName<"<address>">,
@@ -863,8 +865,7 @@ def interposable_list : Separate<["-"], "interposable_list">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def no_function_starts : Flag<["-"], "no_function_starts">,
-    HelpText<"Do not creates a compressed table of function start addresses">,
-    Flags<[HelpHidden]>,
+    HelpText<"Do not create a table of function start addresses">,
     Group<grp_rare>;
 def no_objc_category_merging : Flag<["-"], "no_objc_category_merging">,
     HelpText<"Do not merge Objective-C categories into their classes">,

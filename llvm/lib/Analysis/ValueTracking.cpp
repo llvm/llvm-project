@@ -2213,6 +2213,38 @@ static bool rangeMetadataExcludesValue(const MDNode* Ranges, const APInt& Value)
   return true;
 }
 
+static bool isNonZeroRecurrence(const PHINode *PN) {
+  // Try and detect a recurrence that monotonically increases from a
+  // starting value, as these are common as induction variables.
+  BinaryOperator *BO = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  const APInt *StartC, *StepC;
+  if (!matchSimpleRecurrence(PN, BO, Start, Step) ||
+      !match(Start, m_APInt(StartC)))
+    return false;
+
+  switch (BO->getOpcode()) {
+  case Instruction::Add:
+    return match(Step, m_APInt(StepC)) &&
+           ((BO->hasNoUnsignedWrap() && !StartC->isNullValue() &&
+             !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StartC->isStrictlyPositive() &&
+             StepC->isNonNegative()));
+  case Instruction::Mul:
+    return !StartC->isNullValue() && match(Step, m_APInt(StepC)) &&
+           ((BO->hasNoUnsignedWrap() && !StepC->isNullValue()) ||
+            (BO->hasNoSignedWrap() && StepC->isStrictlyPositive()));
+  case Instruction::Shl:
+    return !StartC->isNullValue() &&
+           (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
+  case Instruction::AShr:
+  case Instruction::LShr:
+    return !StartC->isNullValue() && BO->isExact();
+  default:
+    return false;
+  }
+}
+
 /// Return true if the given value is known to be non-zero when defined. For
 /// vectors, return true if every demanded element is known to be non-zero when
 /// defined. For pointers, if the context instruction and dominator tree are
@@ -2454,22 +2486,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   }
   // PHI
   else if (const PHINode *PN = dyn_cast<PHINode>(V)) {
-    // Try and detect a recurrence that monotonically increases from a
-    // starting value, as these are common as induction variables.
-    BinaryOperator *BO = nullptr;
-    Value *Start = nullptr, *Step = nullptr;
-    const APInt *StartC, *StepC;
-    if (Q.IIQ.UseInstrInfo && matchSimpleRecurrence(PN, BO, Start, Step) &&
-        match(Start, m_APInt(StartC)) && match(Step, m_APInt(StepC))) {
-      if (BO->getOpcode() == Instruction::Add &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          StartC->isStrictlyPositive() && !StepC->isNegative())
-        return true;
-      if (BO->getOpcode() == Instruction::Mul &&
-          (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap()) &&
-          !StartC->isNullValue() && StepC->isStrictlyPositive())
-        return true;
-    }
+    if (Q.IIQ.UseInstrInfo && isNonZeroRecurrence(PN))
+      return true;
+
     // Check if all incoming values are non-zero using recursion.
     Query RecQ = Q;
     unsigned NewDepth = std::max(Depth, MaxAnalysisRecursionDepth - 1);
@@ -2548,6 +2567,49 @@ static bool isNonEqualMul(const Value *V1, const Value *V2, unsigned Depth,
   return false;
 }
 
+/// Return true if V2 == V1 << C, where V1 is known non-zero, C is not 0 and
+/// the shift is nuw or nsw.
+static bool isNonEqualShl(const Value *V1, const Value *V2, unsigned Depth,
+                          const Query &Q) {
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(V2)) {
+    const APInt *C;
+    return match(OBO, m_Shl(m_Specific(V1), m_APInt(C))) &&
+           (OBO->hasNoUnsignedWrap() || OBO->hasNoSignedWrap()) &&
+           !C->isNullValue() && isKnownNonZero(V1, Depth + 1, Q);
+  }
+  return false;
+}
+
+static bool isNonEqualPHIs(const PHINode *PN1, const PHINode *PN2,
+                           unsigned Depth, const Query &Q) {
+  // Check two PHIs are in same block.
+  if (PN1->getParent() != PN2->getParent())
+    return false;
+
+  SmallPtrSet<const BasicBlock *, 8> VisitedBBs;
+  bool UsedFullRecursion = false;
+  for (const BasicBlock *IncomBB : PN1->blocks()) {
+    if (!VisitedBBs.insert(IncomBB).second)
+      continue; // Don't reprocess blocks that we have dealt with already.
+    const Value *IV1 = PN1->getIncomingValueForBlock(IncomBB);
+    const Value *IV2 = PN2->getIncomingValueForBlock(IncomBB);
+    const APInt *C1, *C2;
+    if (match(IV1, m_APInt(C1)) && match(IV2, m_APInt(C2)) && *C1 != *C2)
+      continue;
+
+    // Only one pair of phi operands is allowed for full recursion.
+    if (UsedFullRecursion)
+      return false;
+
+    Query RecQ = Q;
+    RecQ.CxtI = IncomBB->getTerminator();
+    if (!isKnownNonEqual(IV1, IV2, Depth + 1, RecQ))
+      return false;
+    UsedFullRecursion = true;
+  }
+  return true;
+}
+
 /// Return true if it is known that V1 != V2.
 static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                             const Query &Q) {
@@ -2596,19 +2658,44 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
                                Depth + 1, Q);
       break;
     }
-    case Instruction::SExt:
-    case Instruction::ZExt:
-      if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
+    case Instruction::Shl: {
+      // Same as multiplies, with the difference that we don't need to check
+      // for a non-zero multiply. Shifts always multiply by non-zero.
+      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
+        break;
+
+      if (O1->getOperand(1) == O2->getOperand(1))
         return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
                                Depth + 1, Q);
       break;
+    }
+    case Instruction::SExt:
+    case Instruction::ZExt:
+      if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
+        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0), Depth + 1,
+                               Q);
+      break;
+    case Instruction::PHI:
+      const PHINode *PN1 = cast<PHINode>(V1);
+      const PHINode *PN2 = cast<PHINode>(V2);
+      // FIXME: This is missing a generalization to handle the case where one is
+      // a PHI and another one isn't.
+      if (isNonEqualPHIs(PN1, PN2, Depth, Q))
+        return true;
+      break;
     };
   }
-  
+
   if (isAddOfNonZero(V1, V2, Depth, Q) || isAddOfNonZero(V2, V1, Depth, Q))
     return true;
 
   if (isNonEqualMul(V1, V2, Depth, Q) || isNonEqualMul(V2, V1, Depth, Q))
+    return true;
+
+  if (isNonEqualShl(V1, V2, Depth, Q) || isNonEqualShl(V2, V1, Depth, Q))
     return true;
 
   if (V1->getType()->isIntOrIntVectorTy()) {
@@ -4803,6 +4890,12 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
       switch (II->getIntrinsicID()) {
       // TODO: Add more intrinsics.
       case Intrinsic::ctpop:
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::umul_with_overflow:
         return false;
       }
     }
@@ -5130,8 +5223,24 @@ bool llvm::propagatesPoison(const Operator *I) {
   case Instruction::Freeze:
   case Instruction::Select:
   case Instruction::PHI:
-  case Instruction::Call:
   case Instruction::Invoke:
+    return false;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      // TODO: Add more intrinsics.
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::umul_with_overflow:
+        // If an input is a vector containing a poison element, the
+        // two output vectors (calculated results, overflow bits)'
+        // corresponding lanes are poison.
+        return true;
+      }
+    }
     return false;
   case Instruction::ICmp:
   case Instruction::FCmp:

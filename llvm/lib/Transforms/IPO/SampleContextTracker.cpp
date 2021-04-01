@@ -183,7 +183,7 @@ SampleContextTracker::SampleContextTracker(
     SampleContext Context(FuncSample.first(), RawContext);
     LLVM_DEBUG(dbgs() << "Tracking Context for function: " << Context << "\n");
     if (!Context.isBaseContext())
-      FuncToCtxtProfileSet[Context.getNameWithoutContext()].insert(FSamples);
+      FuncToCtxtProfiles[Context.getNameWithoutContext()].push_back(FSamples);
     ContextTrieNode *NewNode = getOrCreateContextPath(Context, true);
     assert(!NewNode->getFunctionSamples() &&
            "New node can't have sample profile");
@@ -268,12 +268,12 @@ SampleContextTracker::getContextSamplesFor(const SampleContext &Context) {
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(const Function &Func) {
   StringRef CanonName = FunctionSamples::getCanonicalFnName(Func);
-  return FuncToCtxtProfileSet[CanonName];
+  return FuncToCtxtProfiles[CanonName];
 }
 
 SampleContextTracker::ContextSamplesTy &
 SampleContextTracker::getAllContextSamplesFor(StringRef Name) {
-  return FuncToCtxtProfileSet[Name];
+  return FuncToCtxtProfiles[Name];
 }
 
 FunctionSamples *SampleContextTracker::getBaseSamplesFor(const Function &Func,
@@ -297,7 +297,7 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(StringRef Name,
     // We have profile for function under different contexts,
     // create synthetic base profile and merge context profiles
     // into base profile.
-    for (auto *CSamples : FuncToCtxtProfileSet[Name]) {
+    for (auto *CSamples : FuncToCtxtProfiles[Name]) {
       SampleContext &Context = CSamples->getContext();
       ContextTrieNode *FromNode = getContextFor(Context);
       if (FromNode == Node)
@@ -327,6 +327,8 @@ void SampleContextTracker::markContextSamplesInlined(
                     << InlinedSamples->getContext() << "\n");
   InlinedSamples->getContext().setState(InlinedContext);
 }
+
+ContextTrieNode &SampleContextTracker::getRootContext() { return RootContext; }
 
 void SampleContextTracker::promoteMergeContextSamplesTree(
     const Instruction &Inst, StringRef CalleeName) {
@@ -490,6 +492,7 @@ SampleContextTracker::getOrCreateContextPath(const SampleContext &Context,
 }
 
 ContextTrieNode *SampleContextTracker::getTopLevelContextNode(StringRef FName) {
+  assert(!FName.empty() && "Top level node query must provide valid name");
   return RootContext.getChildContext(LineLocation(0, 0), FName);
 }
 
@@ -542,8 +545,11 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
   } else {
     // Destination node exists, merge samples for the context tree
     mergeContextNode(FromNode, *ToNode, ContextStrToRemove);
-    LLVM_DEBUG(dbgs() << "  Context promoted and merged to: "
-                      << ToNode->getFunctionSamples()->getContext() << "\n");
+    LLVM_DEBUG({
+      if (ToNode->getFunctionSamples())
+        dbgs() << "  Context promoted and merged to: "
+               << ToNode->getFunctionSamples()->getContext() << "\n";
+    });
 
     // Recursively promote and merge children
     for (auto &It : FromNode.getAllChildContext()) {
@@ -561,27 +567,5 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
     FromNodeParent.removeChildContext(OldCallSiteLoc, ToNode->getFuncName());
 
   return *ToNode;
-}
-
-// Replace call graph edges with dynamic call edges from the profile.
-void SampleContextTracker::addCallGraphEdges(CallGraph &CG,
-                                             StringMap<Function *> &SymbolMap) {
-  // Add profile call edges to the call graph.
-  std::queue<ContextTrieNode *> NodeQueue;
-  NodeQueue.push(&RootContext);
-  while (!NodeQueue.empty()) {
-    ContextTrieNode *Node = NodeQueue.front();
-    NodeQueue.pop();
-    Function *F = SymbolMap.lookup(Node->getFuncName());
-    for (auto &I : Node->getAllChildContext()) {
-      ContextTrieNode *ChildNode = &I.second;
-      NodeQueue.push(ChildNode);
-      if (F && !F->isDeclaration()) {
-        Function *Callee = SymbolMap.lookup(ChildNode->getFuncName());
-        if (Callee && !Callee->isDeclaration())
-          CG[F]->addCalledFunction(nullptr, CG[Callee]);
-      }
-    }
-  }
 }
 } // namespace llvm

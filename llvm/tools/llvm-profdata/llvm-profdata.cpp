@@ -251,7 +251,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRProfile = Reader->isIRLevelProfile();
   bool HasCSIRProfile = Reader->hasCSIRLevelProfile();
-  if (WC->Writer.setIsIRLevelProfile(IsIRProfile, HasCSIRProfile)) {
+  if (Error E = WC->Writer.setIsIRLevelProfile(IsIRProfile, HasCSIRProfile)) {
+    consumeError(std::move(E));
     WC->Errors.emplace_back(
         make_error<StringError>(
             "Merge IR generated profile with Clang generated profile.",

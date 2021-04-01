@@ -1627,12 +1627,17 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
     // Some such targets do honor it on zero-width bitfields.
     if (FieldSize == 0 &&
         Context.getTargetInfo().useZeroLengthBitfieldAlignment()) {
-      // The alignment to round up to is the max of the field's natural
-      // alignment and a target-specific fixed value (sometimes zero).
-      unsigned ZeroLengthBitfieldBoundary =
-        Context.getTargetInfo().getZeroLengthBitfieldBoundary();
-      FieldAlign = std::max(FieldAlign, ZeroLengthBitfieldBoundary);
-
+      // Some targets don't honor leading zero-width bitfield.
+      if (!IsUnion && FieldOffset == 0 &&
+          !Context.getTargetInfo().useLeadingZeroLengthBitfield())
+        FieldAlign = 1;
+      else {
+        // The alignment to round up to is the max of the field's natural
+        // alignment and a target-specific fixed value (sometimes zero).
+        unsigned ZeroLengthBitfieldBoundary =
+            Context.getTargetInfo().getZeroLengthBitfieldBoundary();
+        FieldAlign = std::max(FieldAlign, ZeroLengthBitfieldBoundary);
+      }
     // If that doesn't apply, just ignore the field alignment.
     } else {
       FieldAlign = 1;

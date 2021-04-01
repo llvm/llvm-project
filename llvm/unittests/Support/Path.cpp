@@ -1088,6 +1088,11 @@ TEST_F(FileSystemTest, DirectoryIteration) {
   ASSERT_NO_ERROR(fs::remove(Twine(TestDirectory) + "/reclevel"));
 }
 
+TEST_F(FileSystemTest, DirectoryNotExecutable) {
+  ASSERT_EQ(fs::access(TestDirectory, sys::fs::AccessMode::Execute),
+            errc::permission_denied);
+}
+
 #ifdef LLVM_ON_UNIX
 TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
   // Create a known hierarchy to recurse over.

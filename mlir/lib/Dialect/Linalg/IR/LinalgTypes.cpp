@@ -57,6 +57,38 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 
+/// Trait to check if T provides a `regionBuilder` method.
+template <typename T, typename... Args>
+using has_region_builder = decltype(T::regionBuilder);
+template <typename T>
+using detect_has_region_builder = llvm::is_detected<has_region_builder, T>;
+
+/// SFINAE helper for single C++ class without a `regionBuilder` method (e.g.
+/// an OpInterface).
+template <typename OpType, typename = std::enable_if_t<
+                               !detect_has_region_builder<OpType>::value>>
+void addNamedOpBuilderImpl(
+    llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
+  // Do nothing.
+}
+
+template <typename OpType,
+          typename = std::enable_if_t<detect_has_region_builder<OpType>::value>,
+          typename = void>
+void addNamedOpBuilderImpl(
+    llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
+  map.insert(std::make_pair(
+      OpType::getOperationName(),
+      static_cast<LinalgDialect::RegionBuilderFunType>(OpType::regionBuilder)));
+}
+
+template <typename... OpTypes>
+void addNamedOpBuilders(
+    llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
+  (void)std::initializer_list<int>{0,
+                                   (addNamedOpBuilderImpl<OpTypes>(map), 0)...};
+}
+
 void mlir::linalg::LinalgDialect::initialize() {
   addTypes<RangeType>();
   addOperations<
@@ -71,6 +103,12 @@ void mlir::linalg::LinalgDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgSparseOps.cpp.inc"
       >();
+
+  // Fill the Linalg-specific OpName to RegionBuilder map.
+  addNamedOpBuilders<
+#define GET_OP_LIST
+#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
+      >(namedStructuredOpRegionBuilders);
 
   addInterfaces<LinalgInlinerInterface>();
 }

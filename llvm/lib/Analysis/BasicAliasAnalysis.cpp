@@ -222,167 +222,159 @@ static bool isObjectSize(const Value *V, uint64_t Size, const DataLayout &DL,
 // GetElementPtr Instruction Decomposition and Analysis
 //===----------------------------------------------------------------------===//
 
+namespace {
+/// Represents zext(sext(V)).
+struct ExtendedValue {
+  const Value *V;
+  unsigned ZExtBits;
+  unsigned SExtBits;
+
+  explicit ExtendedValue(const Value *V, unsigned ZExtBits = 0,
+                         unsigned SExtBits = 0)
+      : V(V), ZExtBits(ZExtBits), SExtBits(SExtBits) {}
+
+  unsigned getBitWidth() const {
+    return V->getType()->getPrimitiveSizeInBits() + ZExtBits + SExtBits;
+  }
+
+  ExtendedValue withValue(const Value *NewV) const {
+    return ExtendedValue(NewV, ZExtBits, SExtBits);
+  }
+
+  ExtendedValue withZExtOfValue(const Value *NewV) const {
+    unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
+                        NewV->getType()->getPrimitiveSizeInBits();
+    // zext(sext(zext(NewV))) == zext(zext(zext(NewV)))
+    return ExtendedValue(NewV, ZExtBits + SExtBits + ExtendBy, 0);
+  }
+
+  ExtendedValue withSExtOfValue(const Value *NewV) const {
+    unsigned ExtendBy = V->getType()->getPrimitiveSizeInBits() -
+                        NewV->getType()->getPrimitiveSizeInBits();
+    // zext(sext(sext(NewV)))
+    return ExtendedValue(NewV, ZExtBits, SExtBits + ExtendBy);
+  }
+
+  APInt evaluateWith(APInt N) const {
+    assert(N.getBitWidth() == V->getType()->getPrimitiveSizeInBits() &&
+           "Incompatible bit width");
+    if (SExtBits) N = N.sext(N.getBitWidth() + SExtBits);
+    if (ZExtBits) N = N.zext(N.getBitWidth() + ZExtBits);
+    return N;
+  }
+
+  bool canDistributeOver(bool NUW, bool NSW) const {
+    // zext(x op<nuw> y) == zext(x) op<nuw> zext(y)
+    // sext(x op<nsw> y) == sext(x) op<nsw> sext(y)
+    return (!ZExtBits || NUW) && (!SExtBits || NSW);
+  }
+};
+
+/// Represents zext(sext(V)) * Scale + Offset.
+struct LinearExpression {
+  ExtendedValue Val;
+  APInt Scale;
+  APInt Offset;
+
+  LinearExpression(const ExtendedValue &Val, const APInt &Scale,
+                   const APInt &Offset)
+      : Val(Val), Scale(Scale), Offset(Offset) {}
+
+  LinearExpression(const ExtendedValue &Val) : Val(Val) {
+    unsigned BitWidth = Val.getBitWidth();
+    Scale = APInt(BitWidth, 1);
+    Offset = APInt(BitWidth, 0);
+  }
+};
+}
+
 /// Analyzes the specified value as a linear expression: "A*V + B", where A and
 /// B are constant integers.
-///
-/// Returns the scale and offset values as APInts and return V as a Value*, and
-/// return whether we looked through any sign or zero extends.  The incoming
-/// Value is known to have IntegerType, and it may already be sign or zero
-/// extended.
-///
-/// Note that this looks through extends, so the high bits may not be
-/// represented in the result.
-/*static*/ const Value *BasicAAResult::GetLinearExpression(
-    const Value *V, APInt &Scale, APInt &Offset, unsigned &ZExtBits,
-    unsigned &SExtBits, const DataLayout &DL, unsigned Depth,
-    AssumptionCache *AC, DominatorTree *DT, bool &NSW, bool &NUW) {
-  assert(V->getType()->isIntegerTy() && "Not an integer value");
-
+static LinearExpression GetLinearExpression(
+    const ExtendedValue &Val,  const DataLayout &DL, unsigned Depth,
+    AssumptionCache *AC, DominatorTree *DT) {
   // Limit our recursion depth.
-  if (Depth == 6) {
-    Scale = 1;
-    Offset = 0;
-    return V;
-  }
+  if (Depth == 6)
+    return Val;
 
-  if (const ConstantInt *Const = dyn_cast<ConstantInt>(V)) {
-    // If it's a constant, just convert it to an offset and remove the variable.
-    // If we've been called recursively, the Offset bit width will be greater
-    // than the constant's (the Offset's always as wide as the outermost call),
-    // so we'll zext here and process any extension in the isa<SExtInst> &
-    // isa<ZExtInst> cases below.
-    Offset += Const->getValue().zextOrSelf(Offset.getBitWidth());
-    assert(Scale == 0 && "Constant values don't have a scale");
-    return V;
-  }
+  if (const ConstantInt *Const = dyn_cast<ConstantInt>(Val.V))
+    return LinearExpression(Val, APInt(Val.getBitWidth(), 0),
+                            Val.evaluateWith(Const->getValue()));
 
-  if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(V)) {
+  if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(Val.V)) {
     if (ConstantInt *RHSC = dyn_cast<ConstantInt>(BOp->getOperand(1))) {
-      // If we've been called recursively, then Offset and Scale will be wider
-      // than the BOp operands. We'll always zext it here as we'll process sign
-      // extensions below (see the isa<SExtInst> / isa<ZExtInst> cases).
-      APInt RHS = RHSC->getValue().zextOrSelf(Offset.getBitWidth());
+      APInt RHS = Val.evaluateWith(RHSC->getValue());
+      // The only non-OBO case we deal with is or, and only limited to the
+      // case where it is both nuw and nsw.
+      bool NUW = true, NSW = true;
+      if (isa<OverflowingBinaryOperator>(BOp)) {
+        NUW &= BOp->hasNoUnsignedWrap();
+        NSW &= BOp->hasNoSignedWrap();
+      }
+      if (!Val.canDistributeOver(NUW, NSW))
+        return Val;
 
       switch (BOp->getOpcode()) {
       default:
         // We don't understand this instruction, so we can't decompose it any
         // further.
-        Scale = 1;
-        Offset = 0;
-        return V;
+        return Val;
       case Instruction::Or:
         // X|C == X+C if all the bits in C are unset in X.  Otherwise we can't
         // analyze it.
         if (!MaskedValueIsZero(BOp->getOperand(0), RHSC->getValue(), DL, 0, AC,
-                               BOp, DT)) {
-          Scale = 1;
-          Offset = 0;
-          return V;
-        }
-        LLVM_FALLTHROUGH;
-      case Instruction::Add:
-        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
-                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
-        Offset += RHS;
-        break;
-      case Instruction::Sub:
-        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
-                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
-        Offset -= RHS;
-        break;
-      case Instruction::Mul:
-        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
-                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
-        Offset *= RHS;
-        Scale *= RHS;
-        break;
-      case Instruction::Shl:
-        V = GetLinearExpression(BOp->getOperand(0), Scale, Offset, ZExtBits,
-                                SExtBits, DL, Depth + 1, AC, DT, NSW, NUW);
+                               BOp, DT))
+          return Val;
 
+        LLVM_FALLTHROUGH;
+      case Instruction::Add: {
+        LinearExpression E = GetLinearExpression(
+            Val.withValue(BOp->getOperand(0)), DL, Depth + 1, AC, DT);
+        E.Offset += RHS;
+        return E;
+      }
+      case Instruction::Sub: {
+        LinearExpression E = GetLinearExpression(
+            Val.withValue(BOp->getOperand(0)), DL, Depth + 1, AC, DT);
+        E.Offset -= RHS;
+        return E;
+      }
+      case Instruction::Mul: {
+        LinearExpression E = GetLinearExpression(
+            Val.withValue(BOp->getOperand(0)), DL, Depth + 1, AC, DT);
+        E.Offset *= RHS;
+        E.Scale *= RHS;
+        return E;
+      }
+      case Instruction::Shl:
         // We're trying to linearize an expression of the kind:
         //   shl i8 -128, 36
         // where the shift count exceeds the bitwidth of the type.
         // We can't decompose this further (the expression would return
         // a poison value).
-        if (Offset.getBitWidth() < RHS.getLimitedValue() ||
-            Scale.getBitWidth() < RHS.getLimitedValue()) {
-          Scale = 1;
-          Offset = 0;
-          return V;
-        }
+        if (RHS.getLimitedValue() > Val.getBitWidth())
+          return Val;
 
-        Offset <<= RHS.getLimitedValue();
-        Scale <<= RHS.getLimitedValue();
-        // the semantics of nsw and nuw for left shifts don't match those of
-        // multiplications, so we won't propagate them.
-        NSW = NUW = false;
-        return V;
+        LinearExpression E = GetLinearExpression(
+            Val.withValue(BOp->getOperand(0)), DL, Depth + 1, AC, DT);
+        E.Offset <<= RHS.getLimitedValue();
+        E.Scale <<= RHS.getLimitedValue();
+        return E;
       }
-
-      if (isa<OverflowingBinaryOperator>(BOp)) {
-        NUW &= BOp->hasNoUnsignedWrap();
-        NSW &= BOp->hasNoSignedWrap();
-      }
-      return V;
     }
   }
 
-  // Since GEP indices are sign extended anyway, we don't care about the high
-  // bits of a sign or zero extended value - just scales and offsets.  The
-  // extensions have to be consistent though.
-  if (isa<SExtInst>(V) || isa<ZExtInst>(V)) {
-    Value *CastOp = cast<CastInst>(V)->getOperand(0);
-    unsigned NewWidth = V->getType()->getPrimitiveSizeInBits();
-    unsigned SmallWidth = CastOp->getType()->getPrimitiveSizeInBits();
-    unsigned OldZExtBits = ZExtBits, OldSExtBits = SExtBits;
-    const Value *Result =
-        GetLinearExpression(CastOp, Scale, Offset, ZExtBits, SExtBits, DL,
-                            Depth + 1, AC, DT, NSW, NUW);
+  if (isa<ZExtInst>(Val.V))
+    return GetLinearExpression(
+        Val.withZExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
+        DL, Depth + 1, AC, DT);
 
-    // zext(zext(%x)) == zext(%x), and similarly for sext; we'll handle this
-    // by just incrementing the number of bits we've extended by.
-    unsigned ExtendedBy = NewWidth - SmallWidth;
+  if (isa<SExtInst>(Val.V))
+    return GetLinearExpression(
+        Val.withSExtOfValue(cast<CastInst>(Val.V)->getOperand(0)),
+        DL, Depth + 1, AC, DT);
 
-    if (isa<SExtInst>(V) && ZExtBits == 0) {
-      // sext(sext(%x, a), b) == sext(%x, a + b)
-
-      if (NSW) {
-        // We haven't sign-wrapped, so it's valid to decompose sext(%x + c)
-        // into sext(%x) + sext(c). We'll sext the Offset ourselves:
-        unsigned OldWidth = Offset.getBitWidth();
-        Offset = Offset.trunc(SmallWidth).sext(NewWidth).zextOrSelf(OldWidth);
-      } else {
-        // We may have signed-wrapped, so don't decompose sext(%x + c) into
-        // sext(%x) + sext(c)
-        Scale = 1;
-        Offset = 0;
-        Result = CastOp;
-        ZExtBits = OldZExtBits;
-        SExtBits = OldSExtBits;
-      }
-      SExtBits += ExtendedBy;
-    } else {
-      // sext(zext(%x, a), b) = zext(zext(%x, a), b) = zext(%x, a + b)
-
-      if (!NUW) {
-        // We may have unsigned-wrapped, so don't decompose zext(%x + c) into
-        // zext(%x) + zext(c)
-        Scale = 1;
-        Offset = 0;
-        Result = CastOp;
-        ZExtBits = OldZExtBits;
-        SExtBits = OldSExtBits;
-      }
-      ZExtBits += ExtendedBy;
-    }
-
-    return Result;
-  }
-
-  Scale = 1;
-  Offset = 0;
-  return V;
+  return Val;
 }
 
 /// To ensure a pointer offset fits in an integer of size PointerSize
@@ -532,20 +524,12 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
       APInt Scale(MaxPointerSize,
                   DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
-      unsigned ZExtBits = 0, SExtBits = 0;
-
       // If the integer type is smaller than the pointer size, it is implicitly
       // sign extended to pointer size.
       unsigned Width = Index->getType()->getIntegerBitWidth();
-      if (PointerSize > Width)
-        SExtBits += PointerSize - Width;
-
-      // Use GetLinearExpression to decompose the index into a C1*V+C2 form.
-      APInt IndexScale(Width, 0), IndexOffset(Width, 0);
-      bool NSW = true, NUW = true;
-      const Value *OrigIndex = Index;
-      Index = GetLinearExpression(Index, IndexScale, IndexOffset, ZExtBits,
-                                  SExtBits, DL, 0, AC, DT, NSW, NUW);
+      unsigned SExtBits = PointerSize > Width ? PointerSize - Width : 0;
+      LinearExpression LE = GetLinearExpression(
+          ExtendedValue(Index, 0, SExtBits), DL, 0, AC, DT);
 
       // The GEP index scale ("Scale") scales C1*V+C2, yielding (C1*V+C2)*Scale.
       // This gives us an aggregate computation of (C1*Scale)*V + C2*Scale.
@@ -558,19 +542,13 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       // (C1*Scale)*V+C2*Scale can also overflow. We should check for this
       // possibility.
       bool Overflow;
-      APInt ScaledOffset = IndexOffset.sextOrTrunc(MaxPointerSize)
+      APInt ScaledOffset = LE.Offset.sextOrTrunc(MaxPointerSize)
                            .smul_ov(Scale, Overflow);
       if (Overflow) {
-        Index = OrigIndex;
-        IndexScale = 1;
-        IndexOffset = 0;
-
-        ZExtBits = SExtBits = 0;
-        if (PointerSize > Width)
-          SExtBits += PointerSize - Width;
+        LE = LinearExpression(ExtendedValue(Index, 0, SExtBits));
       } else {
         Decomposed.Offset += ScaledOffset;
-        Scale *= IndexScale.sextOrTrunc(MaxPointerSize);
+        Scale *= LE.Scale.sextOrTrunc(MaxPointerSize);
       }
 
       // If we already had an occurrence of this index variable, merge this
@@ -578,9 +556,9 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       //   A[x][x] -> x*16 + x*4 -> x*20
       // This also ensures that 'x' only appears in the index list once.
       for (unsigned i = 0, e = Decomposed.VarIndices.size(); i != e; ++i) {
-        if (Decomposed.VarIndices[i].V == Index &&
-            Decomposed.VarIndices[i].ZExtBits == ZExtBits &&
-            Decomposed.VarIndices[i].SExtBits == SExtBits) {
+        if (Decomposed.VarIndices[i].V == LE.Val.V &&
+            Decomposed.VarIndices[i].ZExtBits == LE.Val.ZExtBits &&
+            Decomposed.VarIndices[i].SExtBits == LE.Val.SExtBits) {
           Scale += Decomposed.VarIndices[i].Scale;
           Decomposed.VarIndices.erase(Decomposed.VarIndices.begin() + i);
           break;
@@ -592,7 +570,8 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       Scale = adjustToPointerSize(Scale, PointerSize);
 
       if (!!Scale) {
-        VariableGEPIndex Entry = {Index, ZExtBits, SExtBits, Scale, CxtI};
+        VariableGEPIndex Entry = {LE.Val.V, LE.Val.ZExtBits, LE.Val.SExtBits,
+                                  Scale, CxtI};
         Decomposed.VarIndices.push_back(Entry);
       }
     }
@@ -682,11 +661,6 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->doesNotAccessMemory())
     // Can't do better than this.
     return FMRB_DoesNotAccessMemory;
-
-  // The assume intrinsic can have operand bundles, but still only accesses
-  // inaccessible memory in that case (to maintain control dependencies).
-  if (isIntrinsicCall(Call, Intrinsic::assume))
-    return FMRB_OnlyAccessesInaccessibleMem;
 
   FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
 
@@ -1038,6 +1012,20 @@ AliasResult BasicAAResult::aliasGEP(
     const GEPOperator *GEP1, LocationSize V1Size, const AAMDNodes &V1AAInfo,
     const Value *V2, LocationSize V2Size, const AAMDNodes &V2AAInfo,
     const Value *UnderlyingV1, const Value *UnderlyingV2, AAQueryInfo &AAQI) {
+  if (!V1Size.hasValue() && !V2Size.hasValue()) {
+    // TODO: This limitation exists for compile-time reasons. Relax it if we
+    // can avoid exponential pathological cases.
+    if (!isa<GEPOperator>(V2))
+      return MayAlias;
+
+    // If both accesses have unknown size, we can only check whether the base
+    // objects don't alias.
+    AliasResult BaseAlias = getBestAAResults().alias(
+        MemoryLocation::getBeforeOrAfter(UnderlyingV1),
+        MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
+    return BaseAlias == NoAlias ? NoAlias : MayAlias;
+  }
+
   DecomposedGEP DecompGEP1 = DecomposeGEPExpression(GEP1, DL, &AC, DT);
   DecomposedGEP DecompGEP2 = DecomposeGEPExpression(V2, DL, &AC, DT);
 
@@ -1069,11 +1057,6 @@ AliasResult BasicAAResult::aliasGEP(
         V1Size.hasValue() && DecompGEP1.Offset.sle(-V1Size.getValue()) &&
         isBaseOfObject(DecompGEP1.Base))
     return NoAlias;
-  } else {
-    // TODO: This limitation exists for compile-time reasons. Relax it if we
-    // can avoid exponential pathological cases.
-    if (!V1Size.hasValue() && !V2Size.hasValue())
-      return MayAlias;
   }
 
   // For GEPs with identical offsets, we can preserve the size and AAInfo
@@ -1742,28 +1725,20 @@ bool BasicAAResult::constantOffsetHeuristic(
   const VariableGEPIndex &Var0 = VarIndices[0], &Var1 = VarIndices[1];
 
   if (Var0.ZExtBits != Var1.ZExtBits || Var0.SExtBits != Var1.SExtBits ||
-      Var0.Scale != -Var1.Scale)
+      Var0.Scale != -Var1.Scale || Var0.V->getType() != Var1.V->getType())
     return false;
-
-  unsigned Width = Var1.V->getType()->getIntegerBitWidth();
 
   // We'll strip off the Extensions of Var0 and Var1 and do another round
   // of GetLinearExpression decomposition. In the example above, if Var0
   // is zext(%x + 1) we should get V1 == %x and V1Offset == 1.
 
-  APInt V0Scale(Width, 0), V0Offset(Width, 0), V1Scale(Width, 0),
-      V1Offset(Width, 0);
-  bool NSW = true, NUW = true;
-  unsigned V0ZExtBits = 0, V0SExtBits = 0, V1ZExtBits = 0, V1SExtBits = 0;
-  const Value *V0 = GetLinearExpression(Var0.V, V0Scale, V0Offset, V0ZExtBits,
-                                        V0SExtBits, DL, 0, AC, DT, NSW, NUW);
-  NSW = true;
-  NUW = true;
-  const Value *V1 = GetLinearExpression(Var1.V, V1Scale, V1Offset, V1ZExtBits,
-                                        V1SExtBits, DL, 0, AC, DT, NSW, NUW);
-
-  if (V0Scale != V1Scale || V0ZExtBits != V1ZExtBits ||
-      V0SExtBits != V1SExtBits || !isValueEqualInPotentialCycles(V0, V1))
+  LinearExpression E0 =
+      GetLinearExpression(ExtendedValue(Var0.V), DL, 0, AC, DT);
+  LinearExpression E1 =
+      GetLinearExpression(ExtendedValue(Var1.V), DL, 0, AC, DT);
+  if (E0.Scale != E1.Scale || E0.Val.ZExtBits != E1.Val.ZExtBits ||
+      E0.Val.SExtBits != E1.Val.SExtBits ||
+      !isValueEqualInPotentialCycles(E0.Val.V, E1.Val.V))
     return false;
 
   // We have a hit - Var0 and Var1 only differ by a constant offset!
@@ -1773,7 +1748,7 @@ bool BasicAAResult::constantOffsetHeuristic(
   // minimum difference between the two. The minimum distance may occur due to
   // wrapping; consider "add i3 %i, 5": if %i == 7 then 7 + 5 mod 8 == 4, and so
   // the minimum distance between %i and %i + 5 is 3.
-  APInt MinDiff = V0Offset - V1Offset, Wrapped = -MinDiff;
+  APInt MinDiff = E0.Offset - E1.Offset, Wrapped = -MinDiff;
   MinDiff = APIntOps::umin(MinDiff, Wrapped);
   APInt MinDiffBytes =
     MinDiff.zextOrTrunc(Var0.Scale.getBitWidth()) * Var0.Scale.abs();

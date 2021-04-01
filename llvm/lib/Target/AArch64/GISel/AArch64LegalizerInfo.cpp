@@ -682,7 +682,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_DYN_STACKALLOC).lower();
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
+  getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
+      .libcall();
 
   getActionDefinitionsBuilder(G_ABS).lowerIf(
       [=](const LegalityQuery &Query) { return Query.Types[0].isScalar(); });
@@ -690,17 +691,29 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_VECREDUCE_FADD)
       // We only have FADDP to do reduction-like operations. Lower the rest.
       .legalFor({{s32, v2s32}, {s64, v2s64}})
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 2)
       .lower();
 
   getActionDefinitionsBuilder(G_VECREDUCE_ADD)
       .legalFor(
           {{s8, v16s8}, {s16, v8s16}, {s32, v4s32}, {s32, v2s32}, {s64, v2s64}})
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
       .lower();
 
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
   getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+
+  getActionDefinitionsBuilder(G_ROTR)
+      .legalFor({{s32, s64}, {s64, s64}})
+      .customIf([=](const LegalityQuery &Q) {
+        return Q.Types[0].isScalar() && Q.Types[1].getScalarSizeInBits() < 64;
+      })
+      .lower();
+  getActionDefinitionsBuilder(G_ROTL).lower();
 
   getActionDefinitionsBuilder({G_SBFX, G_UBFX}).customFor({s32, s64});
 
@@ -733,9 +746,28 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_UBFX:
     return legalizeBitfieldExtract(MI, MRI, Helper);
+  case TargetOpcode::G_ROTR:
+    return legalizeRotate(MI, MRI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
+                                          MachineRegisterInfo &MRI,
+                                          LegalizerHelper &Helper) const {
+  // To allow for imported patterns to match, we ensure that the rotate amount
+  // is 64b with an extension.
+  Register AmtReg = MI.getOperand(2).getReg();
+  LLT AmtTy = MRI.getType(AmtReg);
+  (void)AmtTy;
+  assert(AmtTy.isScalar() && "Expected a scalar rotate");
+  assert(AmtTy.getSizeInBits() < 64 && "Expected this rotate to be legal");
+  auto NewAmt = Helper.MIRBuilder.buildSExt(LLT::scalar(64), AmtReg);
+  Helper.Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(NewAmt.getReg(0));
+  Helper.Observer.changedInstr(MI);
+  return true;
 }
 
 static void extractParts(Register Reg, MachineRegisterInfo &MRI,

@@ -158,6 +158,11 @@ if(LLVM_BUILD_EXAMPLES)
     Kaleidoscope-Ch7
     LLJITWithThinLTOSummaries
     )
+  if(CMAKE_HOST_UNIX)
+    list(APPEND LLVM_TEST_DEPENDS
+      LLJITWithRemoteDebugging
+      )
+  endif()
   if (NOT WIN32)
     list(APPEND LLVM_TEST_DEPENDS
       Bye

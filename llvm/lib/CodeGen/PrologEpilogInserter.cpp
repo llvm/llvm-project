@@ -877,10 +877,9 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
   // incoming stack pointer if a frame pointer is required and is closer
   // to the incoming rather than the final stack pointer.
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool EarlyScavengingSlots = (TFI.hasFP(MF) &&
-                               TFI.isFPCloseToIncomingSP() &&
+  bool EarlyScavengingSlots = (TFI.hasFP(MF) && TFI.isFPCloseToIncomingSP() &&
                                RegInfo->useFPForScavengingIndex(MF) &&
-                               !RegInfo->needsStackRealignment(MF));
+                               !RegInfo->hasStackRealignment(MF));
   if (RS && EarlyScavengingSlots) {
     SmallVector<int, 2> SFIs;
     RS->getScavengingFrameIndices(SFIs);
@@ -1063,7 +1062,7 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // value.
     Align StackAlign;
     if (MFI.adjustsStack() || MFI.hasVarSizedObjects() ||
-        (RegInfo->needsStackRealignment(MF) && MFI.getObjectIndexEnd() != 0))
+        (RegInfo->hasStackRealignment(MF) && MFI.getObjectIndexEnd() != 0))
       StackAlign = TFI.getStackAlign();
     else
       StackAlign = TFI.getTransientStackAlign();
@@ -1077,7 +1076,8 @@ void PEI::calculateFrameObjectOffsets(MachineFunction &MF) {
     // If we have increased the offset to fulfill the alignment constrants,
     // then the scavenging spill slots may become harder to reach from the
     // stack pointer, float them so they stay close.
-    if (OffsetBeforeAlignment != Offset && RS && !EarlyScavengingSlots) {
+    if (StackGrowsDown && OffsetBeforeAlignment != Offset && RS &&
+        !EarlyScavengingSlots) {
       SmallVector<int, 2> SFIs;
       RS->getScavengingFrameIndices(SFIs);
       LLVM_DEBUG(if (!SFIs.empty()) llvm::dbgs()

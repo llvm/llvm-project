@@ -301,8 +301,9 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
       JITTargetAddress SymStart = Sym->getAddress();
       JITTargetAddress SymSize = Sym->getSize();
       JITTargetAddress SymEnd = SymStart + SymSize;
-      const uint8_t *SymData =
-          IsZeroFill ? nullptr : Sym->getSymbolContent().bytes_begin();
+      const uint8_t *SymData = IsZeroFill ? nullptr
+                                          : reinterpret_cast<const uint8_t *>(
+                                                Sym->getSymbolContent().data());
 
       // Pad any space before the symbol starts.
       while (NextAddr != SymStart) {
@@ -669,6 +670,7 @@ LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
 #endif
 }
 
+#ifdef LLVM_ON_UNIX
 static Error createTCPSocketError(Twine Details) {
   return make_error<StringError>(
       formatv("Failed to connect TCP socket '{0}': {1}",
@@ -677,12 +679,6 @@ static Error createTCPSocketError(Twine Details) {
 }
 
 static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
-#ifndef LLVM_ON_UNIX
-  // FIXME: Add TCP support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
-                                     " not supported on non-unix platforms",
-                                 inconvertibleErrorCode());
-#else
   addrinfo *AI;
   addrinfo Hints{};
   Hints.ai_family = AF_INET;
@@ -717,8 +713,8 @@ static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
     return createTCPSocketError(std::strerror(errno));
 
   return SockFD;
-#endif
 }
+#endif
 
 Expected<std::unique_ptr<TargetProcessControl>>
 LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {
@@ -1214,7 +1210,7 @@ static Error loadObjects(Session &S) {
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = { StringRef(), Addr };
+    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
   }
 
   LLVM_DEBUG({

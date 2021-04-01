@@ -5,10 +5,11 @@ define i32 @test(i64 %arg) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $1, %rdi
-; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, %cl
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    jb .LBB0_2
+; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %no_overflow
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill

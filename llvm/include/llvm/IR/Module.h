@@ -229,7 +229,7 @@ public:
   /// Returns the number of non-debug IR instructions in the module.
   /// This is equivalent to the sum of the IR instruction counts of each
   /// function contained in the module.
-  unsigned getInstructionCount();
+  unsigned getInstructionCount() const;
 
   /// Get the module's original source file name. When compiling from
   /// bitcode, this is taken from a bitcode record where it was recorded.

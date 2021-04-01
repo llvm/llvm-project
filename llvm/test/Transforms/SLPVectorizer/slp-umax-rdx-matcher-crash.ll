@@ -46,9 +46,8 @@ define void @test2() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw <4 x i32> undef, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = icmp ult i32 [[TMP2]], 77
-; CHECK-NEXT:    [[OP_EXTRA1:%.*]] = select i1 [[OP_EXTRA]], i32 [[TMP2]], i32 77
-; CHECK-NEXT:    [[E:%.*]] = icmp ugt i32 [[OP_EXTRA1]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 77)
+; CHECK-NEXT:    [[E:%.*]] = icmp ugt i32 [[TMP3]], 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

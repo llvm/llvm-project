@@ -1203,34 +1203,26 @@ Status ProcessGDBRemote::DoAttachToProcessWithName(
   return error;
 }
 
-lldb::user_id_t ProcessGDBRemote::StartTrace(const TraceOptions &options,
-                                             Status &error) {
-  return m_gdb_comm.SendStartTracePacket(options, error);
+llvm::Expected<TraceSupportedResponse> ProcessGDBRemote::TraceSupported() {
+  return m_gdb_comm.SendTraceSupported();
 }
 
-Status ProcessGDBRemote::StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
-  return m_gdb_comm.SendStopTracePacket(uid, thread_id);
+llvm::Error ProcessGDBRemote::TraceStop(const TraceStopRequest &request) {
+  return m_gdb_comm.SendTraceStop(request);
 }
 
-Status ProcessGDBRemote::GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                                 llvm::MutableArrayRef<uint8_t> &buffer,
-                                 size_t offset) {
-  return m_gdb_comm.SendGetDataPacket(uid, thread_id, buffer, offset);
+llvm::Error ProcessGDBRemote::TraceStart(const llvm::json::Value &request) {
+  return m_gdb_comm.SendTraceStart(request);
 }
 
-Status ProcessGDBRemote::GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                                     llvm::MutableArrayRef<uint8_t> &buffer,
-                                     size_t offset) {
-  return m_gdb_comm.SendGetMetaDataPacket(uid, thread_id, buffer, offset);
+llvm::Expected<std::string>
+ProcessGDBRemote::TraceGetState(llvm::StringRef type) {
+  return m_gdb_comm.SendTraceGetState(type);
 }
 
-Status ProcessGDBRemote::GetTraceConfig(lldb::user_id_t uid,
-                                        TraceOptions &options) {
-  return m_gdb_comm.SendGetTraceConfigPacket(uid, options);
-}
-
-llvm::Expected<TraceTypeInfo> ProcessGDBRemote::GetSupportedTraceType() {
-  return m_gdb_comm.SendGetSupportedTraceType();
+llvm::Expected<std::vector<uint8_t>>
+ProcessGDBRemote::TraceGetBinaryData(const TraceGetBinaryDataRequest &request) {
+  return m_gdb_comm.SendTraceGetBinaryData(request);
 }
 
 void ProcessGDBRemote::DidExit() {
@@ -1906,6 +1898,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithExec(*thread_sp));
               handled = true;
+            } else if (reason == "processor trace") {
+              thread_sp->SetStopInfo(StopInfo::CreateStopReasonProcessorTrace(
+                  *thread_sp, description.c_str()));
             }
           } else if (!signo) {
             addr_t pc = thread_sp->GetRegisterContext()->GetPC();

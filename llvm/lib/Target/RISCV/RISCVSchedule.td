@@ -42,14 +42,11 @@ def WriteFALU16     : SchedWrite;    // FP 16-bit computation
 def WriteFALU32     : SchedWrite;    // FP 32-bit computation
 def WriteFALU64     : SchedWrite;    // FP 64-bit computation
 def WriteFMul16     : SchedWrite;    // 16-bit floating point multiply
-def WriteFMulAdd16  : SchedWrite;    // 16-bit floating point multiply add
-def WriteFMulSub16  : SchedWrite;    // 16-bit floating point multiply sub
+def WriteFMA16      : SchedWrite;    // 16-bit floating point fused multiply-add
 def WriteFMul32     : SchedWrite;    // 32-bit floating point multiply
-def WriteFMulAdd32  : SchedWrite;    // 32-bit floating point multiply add
-def WriteFMulSub32  : SchedWrite;    // 32-bit floating point multiply sub
+def WriteFMA32      : SchedWrite;    // 32-bit floating point fused multiply-add
 def WriteFMul64     : SchedWrite;    // 64-bit floating point multiply
-def WriteFMulAdd64  : SchedWrite;    // 64-bit floating point multiply add
-def WriteFMulSub64  : SchedWrite;    // 64-bit floating point multiply sub
+def WriteFMA64      : SchedWrite;    // 64-bit floating point fused multiply-add
 def WriteFDiv16     : SchedWrite;    // 16-bit floating point divide
 def WriteFDiv32     : SchedWrite;    // 32-bit floating point divide
 def WriteFDiv64     : SchedWrite;    // 64-bit floating point divide
@@ -137,14 +134,11 @@ def ReadFALU16      : SchedRead;    // FP 16-bit computation
 def ReadFALU32      : SchedRead;    // FP 32-bit computation
 def ReadFALU64      : SchedRead;    // FP 64-bit computation
 def ReadFMul16      : SchedRead;    // 16-bit floating point multiply
-def ReadFMulAdd16   : SchedRead;    // 16-bit floating point multiply add
-def ReadFMulSub16   : SchedRead;    // 16-bit floating point multiply sub
+def ReadFMA16       : SchedRead;    // 16-bit floating point fused multiply-add
 def ReadFMul32      : SchedRead;    // 32-bit floating point multiply
-def ReadFMulAdd32   : SchedRead;    // 32-bit floating point multiply add
-def ReadFMulSub32   : SchedRead;    // 32-bit floating point multiply sub
+def ReadFMA32       : SchedRead;    // 32-bit floating point fused multiply-add
 def ReadFMul64      : SchedRead;    // 64-bit floating point multiply
-def ReadFMulAdd64   : SchedRead;    // 64-bit floating point multiply add
-def ReadFMulSub64   : SchedRead;    // 64-bit floating point multiply sub
+def ReadFMA64       : SchedRead;    // 64-bit floating point fused multiply-add
 def ReadFDiv16      : SchedRead;    // 16-bit floating point divide
 def ReadFDiv32      : SchedRead;    // 32-bit floating point divide
 def ReadFDiv64      : SchedRead;    // 64-bit floating point divide
@@ -187,3 +181,52 @@ def ReadFCvtF64ToF16     : SchedRead;
 def ReadFClass16         : SchedRead;
 def ReadFClass32         : SchedRead;
 def ReadFClass64         : SchedRead;
+
+multiclass UnsupportedSchedZfh {
+let Unsupported = true in {
+def : WriteRes<WriteFALU16, []>;
+def : WriteRes<WriteFClass16, []>;
+def : WriteRes<WriteFCvtF16ToF64, []>;
+def : WriteRes<WriteFCvtF64ToF16, []>;
+def : WriteRes<WriteFCvtI64ToF16, []>;
+def : WriteRes<WriteFCvtF32ToF16, []>;
+def : WriteRes<WriteFCvtI32ToF16, []>;
+def : WriteRes<WriteFCvtF16ToI64, []>;
+def : WriteRes<WriteFCvtF16ToF32, []>;
+def : WriteRes<WriteFCvtF16ToI32, []>;
+def : WriteRes<WriteFDiv16, []>;
+def : WriteRes<WriteFCmp16, []>;
+def : WriteRes<WriteFLD16, []>;
+def : WriteRes<WriteFMA16, []>;
+def : WriteRes<WriteFMinMax16, []>;
+def : WriteRes<WriteFMul16, []>;
+def : WriteRes<WriteFMovI16ToF16, []>;
+def : WriteRes<WriteFMovF16ToI16, []>;
+def : WriteRes<WriteFSGNJ16, []>;
+def : WriteRes<WriteFST16, []>;
+def : WriteRes<WriteFSqrt16, []>;
+
+def : ReadAdvance<ReadFALU16, 0>;
+def : ReadAdvance<ReadFClass16, 0>;
+def : ReadAdvance<ReadFCvtF16ToF64, 0>;
+def : ReadAdvance<ReadFCvtF64ToF16, 0>;
+def : ReadAdvance<ReadFCvtI64ToF16, 0>;
+def : ReadAdvance<ReadFCvtF32ToF16, 0>;
+def : ReadAdvance<ReadFCvtI32ToF16, 0>;
+def : ReadAdvance<ReadFCvtF16ToI64, 0>;
+def : ReadAdvance<ReadFCvtF16ToF32, 0>;
+def : ReadAdvance<ReadFCvtF16ToI32, 0>;
+def : ReadAdvance<ReadFDiv16, 0>;
+def : ReadAdvance<ReadFCmp16, 0>;
+def : ReadAdvance<ReadFMA16, 0>;
+def : ReadAdvance<ReadFMinMax16, 0>;
+def : ReadAdvance<ReadFMul16, 0>;
+def : ReadAdvance<ReadFMovI16ToF16, 0>;
+def : ReadAdvance<ReadFMovF16ToI16, 0>;
+def : ReadAdvance<ReadFSGNJ16, 0>;
+def : ReadAdvance<ReadFSqrt16, 0>;
+} // Unsupported = true
+}
+
+// Include the scheduler resources for other instruction extensions.
+include "RISCVScheduleB.td"

@@ -192,7 +192,7 @@ external dibuild_create_namespace :
   lldibuilder ->
   parent_ref:Llvm.llmetadata ->
   name:string ->
-  bool:string ->
+  export_symbols:bool ->
   Llvm.llmetadata = "llvm_dibuild_create_namespace"
 
 external dibuild_create_function :
@@ -228,9 +228,6 @@ external dibuild_create_debug_location_helper :
   Llvm.llmetadata = "llvm_dibuild_create_debug_location"
 
 external llmetadata_null : unit -> Llvm.llmetadata = "llvm_metadata_null"
-(** [llmetadata_null ()] llmetadata is a wrapper around "llvm::Metadata *".
-    This function returns a nullptr valued llmetadata. For example,
-    it can be useful to pass NULL to LLVMInstructionSetDebugLoc. *)
 
 let dibuild_create_debug_location ?(inlined_at = llmetadata_null ()) llctx ~line
     ~column ~scope =
@@ -265,6 +262,10 @@ external dibuild_get_or_create_type_array :
   lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
   = "llvm_dibuild_get_or_create_type_array"
 
+external dibuild_get_or_create_array :
+  lldibuilder -> data:Llvm.llmetadata array -> Llvm.llmetadata
+  = "llvm_dibuild_get_or_create_array"
+
 external dibuild_create_subroutine_type :
   lldibuilder ->
   file:Llvm.llmetadata ->
@@ -287,7 +288,7 @@ external dibuild_create_enumeration_type :
   elements:Llvm.llmetadata array ->
   class_ty:Llvm.llmetadata ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_enumeration_type_native" "llvm_dibuild_create_enumeration_type_bytecode"
+  = "llvm_dibuild_create_enumeration_type_bytecode" "llvm_dibuild_create_enumeration_type_native"
 
 external dibuild_create_union_type :
   lldibuilder ->
@@ -302,7 +303,7 @@ external dibuild_create_union_type :
   run_time_language:int ->
   unique_id:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_union_type_native" "llvm_dibuild_create_union_type_bytecode"
+  = "llvm_dibuild_create_union_type_bytecode" "llvm_dibuild_create_union_type_native"
 
 external dibuild_create_array_type :
   lldibuilder ->
@@ -340,7 +341,7 @@ external dibuild_create_pointer_type :
   address_space:int ->
   name:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_pointer_type_native" "llvm_dibuild_create_pointer_type_bytecode"
+  = "llvm_dibuild_create_pointer_type_bytecode" "llvm_dibuild_create_pointer_type_native"
 
 external dibuild_create_struct_type :
   lldibuilder ->
@@ -353,11 +354,11 @@ external dibuild_create_struct_type :
   lldiflags ->
   derived_from:Llvm.llmetadata ->
   elements:Llvm.llmetadata array ->
-  run_time_lang:int ->
+  DWARFSourceLanguageKind.t ->
   vtable_holder:Llvm.llmetadata ->
   unique_id:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_struct_type_native" "llvm_dibuild_create_struct_type_bytecode"
+  = "llvm_dibuild_create_struct_type_bytecode" "llvm_dibuild_create_struct_type_native"
 
 external dibuild_create_member_type :
   lldibuilder ->
@@ -371,7 +372,7 @@ external dibuild_create_member_type :
   lldiflags ->
   ty:Llvm.llmetadata ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_member_type_native" "llvm_dibuild_create_member_type_bytecode"
+  = "llvm_dibuild_create_member_type_bytecode" "llvm_dibuild_create_member_type_native"
 
 external dibuild_create_static_member_type :
   lldibuilder ->
@@ -384,7 +385,7 @@ external dibuild_create_static_member_type :
   const_val:Llvm.llvalue ->
   align_in_bits:int ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_static_member_type_native" "llvm_dibuild_create_static_member_type_bytecode"
+  = "llvm_dibuild_create_static_member_type_bytecode" "llvm_dibuild_create_static_member_type_native"
 
 external dibuild_create_member_pointer_type :
   lldibuilder ->
@@ -394,7 +395,7 @@ external dibuild_create_member_pointer_type :
   align_in_bits:int ->
   lldiflags ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_member_pointer_type_native" "llvm_dibuild_create_member_pointer_type_bytecode"
+  = "llvm_dibuild_create_member_pointer_type_bytecode" "llvm_dibuild_create_member_pointer_type_native"
 
 external dibuild_create_object_pointer_type :
   lldibuilder -> Llvm.llmetadata -> Llvm.llmetadata
@@ -420,9 +421,9 @@ external dibuild_create_typedef :
   scope:Llvm.llmetadata ->
   align_in_bits:int ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_typedef_native" "llvm_dibuild_create_typedef_bytecode"
+  = "llvm_dibuild_create_typedef_bytecode" "llvm_dibuild_create_typedef_native"
 
-external dibuild_create_inheritance_native :
+external dibuild_create_inheritance :
   lldibuilder ->
   ty:Llvm.llmetadata ->
   base_ty:Llvm.llmetadata ->
@@ -430,7 +431,7 @@ external dibuild_create_inheritance_native :
   vb_ptr_offset:int ->
   lldiflags ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_inheritance_native" "llvm_dibuild_create_inheritance_bytecode"
+  = "llvm_dibuild_create_inheritance_bytecode" "llvm_dibuild_create_inheritance_native"
 
 external dibuild_create_forward_decl :
   lldibuilder ->
@@ -444,7 +445,7 @@ external dibuild_create_forward_decl :
   align_in_bits:int ->
   unique_identifier:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_forward_decl_native" "llvm_dibuild_create_forward_decl_bytecode"
+  = "llvm_dibuild_create_forward_decl_bytecode" "llvm_dibuild_create_forward_decl_native"
 
 external dibuild_create_replaceable_composite_type :
   lldibuilder ->
@@ -459,7 +460,7 @@ external dibuild_create_replaceable_composite_type :
   lldiflags ->
   unique_identifier:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_replaceable_composite_type_native" "llvm_dibuild_create_replaceable_composite_type_bytecode"
+  = "llvm_dibuild_create_replaceable_composite_type_bytecode" "llvm_dibuild_create_replaceable_composite_type_native"
 
 external dibuild_create_bit_field_member_type :
   lldibuilder ->
@@ -473,7 +474,7 @@ external dibuild_create_bit_field_member_type :
   lldiflags ->
   ty:Llvm.llmetadata ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_bit_field_member_type_native" "llvm_dibuild_create_bit_field_member_type_bytecode"
+  = "llvm_dibuild_create_bit_field_member_type_bytecode" "llvm_dibuild_create_bit_field_member_type_native"
 
 external dibuild_create_class_type :
   lldibuilder ->
@@ -491,7 +492,7 @@ external dibuild_create_class_type :
   template_params_node:Llvm.llmetadata ->
   unique_identifier:string ->
   Llvm.llmetadata
-  = "llvm_dibuild_create_class_type_native" "llvm_dibuild_create_class_type_bytecode"
+  = "llvm_dibuild_create_class_type_bytecode" "llvm_dibuild_create_class_type_native"
 
 external dibuild_create_artificial_type :
   lldibuilder -> ty:Llvm.llmetadata -> Llvm.llmetadata
@@ -532,6 +533,25 @@ let instr_set_debug_loc i mopt =
   match mopt with
   | None -> instr_set_debug_loc_helper i (llmetadata_null ())
   | Some m -> instr_set_debug_loc_helper i m
+
+external dibuild_create_constant_value_expression :
+  lldibuilder -> int -> Llvm.llmetadata
+  = "llvm_dibuild_create_constant_value_expression"
+
+external dibuild_create_global_variable_expression :
+  lldibuilder ->
+  scope:Llvm.llmetadata ->
+  name:string ->
+  linkage:string ->
+  file:Llvm.llmetadata ->
+  line:int ->
+  ty:Llvm.llmetadata ->
+  is_local_to_unit:bool ->
+  expr:Llvm.llmetadata ->
+  decl:Llvm.llmetadata ->
+  align_in_bits:int ->
+  Llvm.llmetadata
+  = "llvm_dibuild_create_global_variable_expression_bytecode" "llvm_dibuild_create_global_variable_expression_native"
 
 external di_global_variable_expression_get_variable :
   Llvm.llmetadata -> Llvm.llmetadata option

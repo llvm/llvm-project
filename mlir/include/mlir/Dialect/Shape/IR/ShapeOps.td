@@ -901,7 +901,7 @@ def Shape_CstrRequireOp : Shape_Op<"cstr_require", []> {
 
 def Shape_FunctionLibraryOp : Shape_Op<"function_library",
     [AffineScope, IsolatedFromAbove, NoRegionArguments, SymbolTable, Symbol,
-     SingleBlockImplicitTerminator<"ShapeFunctionLibraryTerminatorOp">]> {
+     NoTerminator, SingleBlock]> {
   let summary = "Represents shape functions and corresponding ops";
   let description = [{
     Represents a list of shape functions and the ops whose shape transfer
@@ -936,21 +936,6 @@ def Shape_FunctionLibraryOp : Shape_Op<"function_library",
 
   let printer = [{ ::print(p, *this); }];
   let parser = [{ return ::parse$cppClass(parser, result); }];
-}
-
-//===----------------------------------------------------------------------===//
-// ShapeFunctionLibraryTerminatorOp
-//===----------------------------------------------------------------------===//
-
-def ShapeFunctionLibraryTerminatorOp : Shape_Op<"fn_lib_terminator",
-    [Terminator, HasParent<"FunctionLibraryOp">]> {
-  let summary = "A pseudo op that marks the end of a shape function library";
-  let description = [{
-    `shape_fn_lib_terminator` is a special pseudo terminator operation for the
-    shape function library. It has no semantic meaning beyond keeping the body
-    well-formed.
-  }];
-  let assemblyFormat = "attr-dict";
 }
 
 #endif // SHAPE_OPS

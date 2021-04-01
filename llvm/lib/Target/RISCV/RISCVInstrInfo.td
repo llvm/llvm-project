@@ -157,20 +157,6 @@ def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
   let OperandNamespace = "RISCVOp";
 }
 
-// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
-def simm12_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
-  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]> {
-  let ParserMatchClass = SImmAsmOperand<12>;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeSImmOperand<12>";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;
-    return MCOp.isBareSymbolRef();
-  }];
-}
-
 // A 13-bit signed immediate where the least significant bit is zero.
 def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
@@ -295,8 +281,10 @@ def ixlenimm_li : Operand<XLenVT> {
 }
 
 // Standalone (codegen-only) immleaf patterns.
-def simm32     : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
-def simm32hi20 : ImmLeaf<XLenVT, [{return isShiftedInt<20, 12>(Imm);}]>;
+
+// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+def simm12_plus1 : ImmLeaf<XLenVT,
+  [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -317,6 +305,12 @@ def NegImm : SDNodeXForm<imm, [{
 // Return an immediate value minus 32.
 def ImmSub32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() - 32, SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Return an immediate value plus 32.
+def ImmPlus32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() + 32, SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -847,11 +841,6 @@ def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
 }]>;
 def zexti32 : ComplexPattern<i64, 1, "selectZExti32">;
 
-def SRLIWPat : PatFrag<(ops node:$A, node:$B),
-                       (srl (and node:$A, imm), node:$B), [{
-  return MatchSRLIW(N);
-}]>;
-
 // Check that it is a SLLIUW (Shift Logical Left Immediate Unsigned i32
 // on RV64). Also used to optimize the same sequence without SLLIUW.
 def SLLIUWPat : PatFrag<(ops node:$A, node:$B),
@@ -1146,6 +1135,11 @@ def : Pat<(i64 (shl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
 // shl/and can appear in the other order too.
 def : Pat<(i64 (SLLIUWPat GPR:$rs1, uimm5:$shamt)),
           (SRLI (SLLI GPR:$rs1, 32), (ImmSubFrom32 uimm5:$shamt))>;
+
+// If we're shifting a value left by 0-31 bits, and then masking to 32-bits,
+// use 2 shifts instead of 3.
+def : Pat<(i64 (and (shl GPR:$rs1, uimm5:$shamt), 0xffffffff)),
+          (SRLI (SLLI GPR:$rs1, (ImmPlus32 uimm5:$shamt)), 32)>;
 }
 
 let Predicates = [IsRV64] in {
@@ -1164,7 +1158,7 @@ def : Pat<(sext_inreg (sub GPR:$rs1, GPR:$rs2), i32),
           (SUBW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
           (SLLIW GPR:$rs1, uimm5:$shamt)>;
-def : Pat<(i64 (SRLIWPat GPR:$rs1, uimm5:$shamt)),
+def : Pat<(i64 (srl (and GPR:$rs1, 0xffffffff), uimm5:$shamt)),
           (SRLIW GPR:$rs1, uimm5:$shamt)>;
 def : Pat<(i64 (srl (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
           (SRLIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;

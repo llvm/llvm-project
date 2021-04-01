@@ -105,10 +105,7 @@ void BracesAroundStatementsCheck::storeOptions(
 }
 
 void BracesAroundStatementsCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      ifStmt(unless(allOf(isConstexpr(), isInTemplateInstantiation())))
-          .bind("if"),
-      this);
+  Finder->addMatcher(ifStmt().bind("if"), this);
   Finder->addMatcher(whileStmt().bind("while"), this);
   Finder->addMatcher(doStmt().bind("do"), this);
   Finder->addMatcher(forStmt().bind("for"), this);
