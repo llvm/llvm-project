@@ -261,6 +261,19 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
+  bool softPromoteHalfType() const override { return true; }
+
+  /// Return the register type for a given MVT, ensuring vectors are treated
+  /// as a series of gpr sized integers.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, ensuring vectors are
+  /// treated as a series of gpr sized integers.
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
+
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
   bool isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
