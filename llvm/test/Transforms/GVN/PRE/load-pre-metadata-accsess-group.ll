@@ -20,7 +20,7 @@ define dso_local void @test1(i32* nocapture readonly %aa, i32* nocapture %bb) lo
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.for.body_crit_edge:
-; CHECK-NEXT:    [[DOTPRE]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[DOTPRE]] = load i32, i32* [[IDX]], align 4, !llvm.access.group !0
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
@@ -68,7 +68,7 @@ define dso_local void @test2(i32* nocapture readonly %aa, i32* nocapture %bb) lo
 ; CHECK-NEXT:    store i32 [[MUL]], i32* [[AA]], align 4, !llvm.access.group !1
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY2_FOR_BODY2_CRIT_EDGE]], label [[FOR_END:%.*]]
 ; CHECK:       for.body2.for.body2_crit_edge:
-; CHECK-NEXT:    [[DOTPRE1]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[DOTPRE1]] = load i32, i32* [[IDX]], align 4, !llvm.access.group !1
 ; CHECK-NEXT:    br label [[FOR_BODY2]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END_FOR_BODY_CRIT_EDGE:%.*]], label [[END:%.*]]
