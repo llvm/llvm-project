@@ -5,26 +5,30 @@
 define i1 @test_urem_odd(i13 %X) nounwind {
 ; MIPSEL-LABEL: test_urem_odd:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 52428
-; MIPSEL-NEXT:    ori $1, $1, 52429
-; MIPSEL-NEXT:    andi $2, $4, 8191
-; MIPSEL-NEXT:    mul $1, $2, $1
-; MIPSEL-NEXT:    lui $2, 13107
-; MIPSEL-NEXT:    ori $2, $2, 13108
+; MIPSEL-NEXT:    addiu $1, $zero, 3277
+; MIPSEL-NEXT:    mul $1, $4, $1
+; MIPSEL-NEXT:    andi $1, $1, 8191
 ; MIPSEL-NEXT:    jr $ra
-; MIPSEL-NEXT:    sltu $2, $1, $2
+; MIPSEL-NEXT:    sltiu $2, $1, 1639
 ;
 ; MIPS64EL-LABEL: test_urem_odd:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 52428
-; MIPS64EL-NEXT:    ori $1, $1, 52429
-; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    andi $2, $2, 8191
-; MIPS64EL-NEXT:    mul $1, $2, $1
-; MIPS64EL-NEXT:    lui $2, 13107
-; MIPS64EL-NEXT:    ori $2, $2, 13108
+; MIPS64EL-NEXT:    sll $1, $4, 0
+; MIPS64EL-NEXT:    sll $2, $1, 1
+; MIPS64EL-NEXT:    addu $2, $2, $1
+; MIPS64EL-NEXT:    sll $3, $1, 4
+; MIPS64EL-NEXT:    subu $2, $3, $2
+; MIPS64EL-NEXT:    sll $3, $1, 6
+; MIPS64EL-NEXT:    subu $2, $2, $3
+; MIPS64EL-NEXT:    sll $3, $1, 8
+; MIPS64EL-NEXT:    addu $2, $3, $2
+; MIPS64EL-NEXT:    sll $3, $1, 10
+; MIPS64EL-NEXT:    subu $2, $2, $3
+; MIPS64EL-NEXT:    sll $1, $1, 12
+; MIPS64EL-NEXT:    addu $1, $1, $2
+; MIPS64EL-NEXT:    andi $1, $1, 8191
 ; MIPS64EL-NEXT:    jr $ra
-; MIPS64EL-NEXT:    sltu $2, $1, $2
+; MIPS64EL-NEXT:    sltiu $2, $1, 1639
   %urem = urem i13 %X, 5
   %cmp = icmp eq i13 %urem, 0
   ret i1 %cmp
@@ -33,40 +37,40 @@ define i1 @test_urem_odd(i13 %X) nounwind {
 define i1 @test_urem_even(i27 %X) nounwind {
 ; MIPSEL-LABEL: test_urem_even:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 2047
-; MIPSEL-NEXT:    ori $1, $1, 65535
-; MIPSEL-NEXT:    and $1, $4, $1
-; MIPSEL-NEXT:    srl $2, $1, 1
-; MIPSEL-NEXT:    lui $3, 37449
-; MIPSEL-NEXT:    ori $3, $3, 9363
-; MIPSEL-NEXT:    multu $2, $3
-; MIPSEL-NEXT:    mfhi $2
-; MIPSEL-NEXT:    srl $2, $2, 2
-; MIPSEL-NEXT:    sll $3, $2, 4
-; MIPSEL-NEXT:    sll $2, $2, 1
-; MIPSEL-NEXT:    subu $2, $2, $3
-; MIPSEL-NEXT:    addu $1, $1, $2
+; MIPSEL-NEXT:    lui $1, 1755
+; MIPSEL-NEXT:    ori $1, $1, 28087
+; MIPSEL-NEXT:    mul $1, $4, $1
+; MIPSEL-NEXT:    sll $2, $1, 26
+; MIPSEL-NEXT:    lui $3, 2047
+; MIPSEL-NEXT:    ori $4, $3, 65534
+; MIPSEL-NEXT:    and $1, $1, $4
+; MIPSEL-NEXT:    srl $1, $1, 1
+; MIPSEL-NEXT:    or $1, $1, $2
+; MIPSEL-NEXT:    ori $2, $3, 65535
+; MIPSEL-NEXT:    and $1, $1, $2
+; MIPSEL-NEXT:    lui $2, 146
+; MIPSEL-NEXT:    ori $2, $2, 18725
 ; MIPSEL-NEXT:    jr $ra
-; MIPSEL-NEXT:    sltiu $2, $1, 1
+; MIPSEL-NEXT:    sltu $2, $1, $2
 ;
 ; MIPS64EL-LABEL: test_urem_even:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 2047
-; MIPS64EL-NEXT:    ori $1, $1, 65535
+; MIPS64EL-NEXT:    lui $1, 1755
+; MIPS64EL-NEXT:    ori $1, $1, 28087
 ; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    and $1, $2, $1
-; MIPS64EL-NEXT:    srl $2, $1, 1
-; MIPS64EL-NEXT:    lui $3, 37449
-; MIPS64EL-NEXT:    ori $3, $3, 9363
-; MIPS64EL-NEXT:    multu $2, $3
-; MIPS64EL-NEXT:    mfhi $2
-; MIPS64EL-NEXT:    srl $2, $2, 2
-; MIPS64EL-NEXT:    sll $3, $2, 4
-; MIPS64EL-NEXT:    sll $2, $2, 1
-; MIPS64EL-NEXT:    subu $2, $2, $3
-; MIPS64EL-NEXT:    addu $1, $1, $2
+; MIPS64EL-NEXT:    mul $1, $2, $1
+; MIPS64EL-NEXT:    sll $2, $1, 26
+; MIPS64EL-NEXT:    lui $3, 2047
+; MIPS64EL-NEXT:    ori $4, $3, 65534
+; MIPS64EL-NEXT:    and $1, $1, $4
+; MIPS64EL-NEXT:    srl $1, $1, 1
+; MIPS64EL-NEXT:    or $1, $1, $2
+; MIPS64EL-NEXT:    ori $2, $3, 65535
+; MIPS64EL-NEXT:    lui $3, 146
+; MIPS64EL-NEXT:    and $1, $1, $2
+; MIPS64EL-NEXT:    ori $2, $3, 18725
 ; MIPS64EL-NEXT:    jr $ra
-; MIPS64EL-NEXT:    sltiu $2, $1, 1
+; MIPS64EL-NEXT:    sltu $2, $1, $2
   %urem = urem i27 %X, 14
   %cmp = icmp eq i27 %urem, 0
   ret i1 %cmp
@@ -75,24 +79,22 @@ define i1 @test_urem_even(i27 %X) nounwind {
 define i1 @test_urem_odd_setne(i4 %X) nounwind {
 ; MIPSEL-LABEL: test_urem_odd_setne:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 52428
-; MIPSEL-NEXT:    ori $1, $1, 52429
-; MIPSEL-NEXT:    andi $2, $4, 15
-; MIPSEL-NEXT:    mul $1, $2, $1
-; MIPSEL-NEXT:    lui $2, 13107
-; MIPSEL-NEXT:    ori $2, $2, 13107
+; MIPSEL-NEXT:    sll $1, $4, 1
+; MIPSEL-NEXT:    addu $1, $1, $4
+; MIPSEL-NEXT:    negu $1, $1
+; MIPSEL-NEXT:    andi $1, $1, 15
+; MIPSEL-NEXT:    addiu $2, $zero, 3
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    sltu $2, $2, $1
 ;
 ; MIPS64EL-LABEL: test_urem_odd_setne:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 52428
-; MIPS64EL-NEXT:    ori $1, $1, 52429
-; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    andi $2, $2, 15
-; MIPS64EL-NEXT:    mul $1, $2, $1
-; MIPS64EL-NEXT:    lui $2, 13107
-; MIPS64EL-NEXT:    ori $2, $2, 13107
+; MIPS64EL-NEXT:    sll $1, $4, 0
+; MIPS64EL-NEXT:    sll $2, $1, 1
+; MIPS64EL-NEXT:    addu $1, $2, $1
+; MIPS64EL-NEXT:    negu $1, $1
+; MIPS64EL-NEXT:    andi $1, $1, 15
+; MIPS64EL-NEXT:    addiu $2, $zero, 3
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    sltu $2, $2, $1
   %urem = urem i4 %X, 5
@@ -103,26 +105,34 @@ define i1 @test_urem_odd_setne(i4 %X) nounwind {
 define i1 @test_urem_negative_odd(i9 %X) nounwind {
 ; MIPSEL-LABEL: test_urem_negative_odd:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 43302
-; MIPSEL-NEXT:    ori $1, $1, 57651
-; MIPSEL-NEXT:    andi $2, $4, 511
-; MIPSEL-NEXT:    mul $1, $2, $1
-; MIPSEL-NEXT:    lui $2, 129
-; MIPSEL-NEXT:    ori $2, $2, 17191
+; MIPSEL-NEXT:    sll $1, $4, 1
+; MIPSEL-NEXT:    addu $1, $1, $4
+; MIPSEL-NEXT:    sll $2, $4, 4
+; MIPSEL-NEXT:    subu $1, $1, $2
+; MIPSEL-NEXT:    sll $2, $4, 6
+; MIPSEL-NEXT:    addu $1, $2, $1
+; MIPSEL-NEXT:    sll $2, $4, 8
+; MIPSEL-NEXT:    addu $1, $2, $1
+; MIPSEL-NEXT:    andi $1, $1, 511
+; MIPSEL-NEXT:    addiu $2, $zero, 1
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    sltu $2, $2, $1
 ;
 ; MIPS64EL-LABEL: test_urem_negative_odd:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 43302
-; MIPS64EL-NEXT:    ori $1, $1, 57651
-; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    andi $2, $2, 511
-; MIPS64EL-NEXT:    mul $1, $2, $1
-; MIPS64EL-NEXT:    lui $2, 129
-; MIPS64EL-NEXT:    ori $2, $2, 17191
+; MIPS64EL-NEXT:    sll $1, $4, 0
+; MIPS64EL-NEXT:    sll $2, $1, 1
+; MIPS64EL-NEXT:    addu $2, $2, $1
+; MIPS64EL-NEXT:    sll $3, $1, 4
+; MIPS64EL-NEXT:    subu $2, $2, $3
+; MIPS64EL-NEXT:    sll $3, $1, 6
+; MIPS64EL-NEXT:    addu $2, $3, $2
+; MIPS64EL-NEXT:    sll $1, $1, 8
+; MIPS64EL-NEXT:    addiu $3, $zero, 1
+; MIPS64EL-NEXT:    addu $1, $1, $2
+; MIPS64EL-NEXT:    andi $1, $1, 511
 ; MIPS64EL-NEXT:    jr $ra
-; MIPS64EL-NEXT:    sltu $2, $2, $1
+; MIPS64EL-NEXT:    sltu $2, $3, $1
   %urem = urem i9 %X, -5
   %cmp = icmp ne i9 %urem, 0
   ret i1 %cmp
@@ -142,37 +152,71 @@ define i1 @test_urem_oversized(i66 %X) nounwind {
 ; MIPSEL-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
 ; MIPSEL-NEXT:    move $7, $6
 ; MIPSEL-NEXT:    move $6, $5
-; MIPSEL-NEXT:    lui $1, 18838
-; MIPSEL-NEXT:    ori $1, $1, 722
-; MIPSEL-NEXT:    sw $1, 28($sp)
-; MIPSEL-NEXT:    sw $zero, 24($sp)
-; MIPSEL-NEXT:    sw $zero, 20($sp)
+; MIPSEL-NEXT:    move $5, $4
+; MIPSEL-NEXT:    lui $1, 12057
+; MIPSEL-NEXT:    ori $1, $1, 37186
+; MIPSEL-NEXT:    lui $2, 52741
+; MIPSEL-NEXT:    ori $2, $2, 40665
+; MIPSEL-NEXT:    sw $2, 28($sp)
+; MIPSEL-NEXT:    sw $1, 24($sp)
+; MIPSEL-NEXT:    addiu $1, $zero, 2
+; MIPSEL-NEXT:    sw $1, 20($sp)
 ; MIPSEL-NEXT:    sw $zero, 16($sp)
-; MIPSEL-NEXT:    andi $5, $4, 3
-; MIPSEL-NEXT:    jal __umodti3
+; MIPSEL-NEXT:    jal __multi3
 ; MIPSEL-NEXT:    addiu $4, $zero, 0
-; MIPSEL-NEXT:    or $1, $4, $2
-; MIPSEL-NEXT:    or $2, $5, $3
+; MIPSEL-NEXT:    sll $1, $4, 31
+; MIPSEL-NEXT:    srl $2, $5, 1
 ; MIPSEL-NEXT:    or $1, $2, $1
-; MIPSEL-NEXT:    sltiu $2, $1, 1
+; MIPSEL-NEXT:    lui $2, 60010
+; MIPSEL-NEXT:    ori $2, $2, 61135
+; MIPSEL-NEXT:    sltu $1, $1, $2
+; MIPSEL-NEXT:    srl $2, $4, 1
+; MIPSEL-NEXT:    andi $3, $3, 3
+; MIPSEL-NEXT:    sll $4, $3, 31
+; MIPSEL-NEXT:    or $4, $2, $4
+; MIPSEL-NEXT:    sltiu $2, $4, 13
+; MIPSEL-NEXT:    xori $4, $4, 13
+; MIPSEL-NEXT:    movz $2, $1, $4
+; MIPSEL-NEXT:    sll $1, $5, 1
+; MIPSEL-NEXT:    srl $3, $3, 1
+; MIPSEL-NEXT:    or $1, $3, $1
+; MIPSEL-NEXT:    andi $1, $1, 3
+; MIPSEL-NEXT:    movn $2, $zero, $1
 ; MIPSEL-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    addiu $sp, $sp, 40
 ;
 ; MIPS64EL-LABEL: test_urem_oversized:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    daddiu $sp, $sp, -16
-; MIPS64EL-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
-; MIPS64EL-NEXT:    andi $5, $5, 3
-; MIPS64EL-NEXT:    lui $1, 18838
-; MIPS64EL-NEXT:    ori $6, $1, 722
-; MIPS64EL-NEXT:    jal __umodti3
-; MIPS64EL-NEXT:    daddiu $7, $zero, 0
-; MIPS64EL-NEXT:    or $1, $2, $3
-; MIPS64EL-NEXT:    sltiu $2, $1, 1
-; MIPS64EL-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64EL-NEXT:    lui $1, 6029
+; MIPS64EL-NEXT:    daddiu $1, $1, -14175
+; MIPS64EL-NEXT:    dsll $1, $1, 16
+; MIPS64EL-NEXT:    daddiu $1, $1, 26371
+; MIPS64EL-NEXT:    dsll $1, $1, 17
+; MIPS64EL-NEXT:    daddiu $1, $1, -24871
+; MIPS64EL-NEXT:    dmult $5, $1
+; MIPS64EL-NEXT:    mflo $2
+; MIPS64EL-NEXT:    dmultu $4, $1
+; MIPS64EL-NEXT:    mflo $1
+; MIPS64EL-NEXT:    mfhi $3
+; MIPS64EL-NEXT:    lui $5, 14
+; MIPS64EL-NEXT:    daddiu $5, $5, -5525
+; MIPS64EL-NEXT:    dsll $5, $5, 16
+; MIPS64EL-NEXT:    daddiu $5, $5, -4401
+; MIPS64EL-NEXT:    dsll $4, $4, 1
+; MIPS64EL-NEXT:    daddu $3, $3, $4
+; MIPS64EL-NEXT:    daddu $2, $3, $2
+; MIPS64EL-NEXT:    andi $3, $2, 3
+; MIPS64EL-NEXT:    dsll $2, $3, 63
+; MIPS64EL-NEXT:    dsrl $4, $1, 1
+; MIPS64EL-NEXT:    or $2, $4, $2
+; MIPS64EL-NEXT:    sltu $2, $2, $5
+; MIPS64EL-NEXT:    dsrl $3, $3, 1
+; MIPS64EL-NEXT:    dsll $1, $1, 1
+; MIPS64EL-NEXT:    or $1, $3, $1
+; MIPS64EL-NEXT:    andi $1, $1, 3
 ; MIPS64EL-NEXT:    jr $ra
-; MIPS64EL-NEXT:    daddiu $sp, $sp, 16
+; MIPS64EL-NEXT:    movn $2, $zero, $1
   %urem = urem i66 %X, 1234567890
   %cmp = icmp eq i66 %urem, 0
   ret i1 %cmp

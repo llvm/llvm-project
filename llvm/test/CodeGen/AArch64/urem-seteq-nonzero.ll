@@ -195,15 +195,12 @@ define i1 @t32_6_5(i32 %X) nounwind {
 define i1 @t16_3_2(i16 %X) nounwind {
 ; CHECK-LABEL: t16_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    mov w9, #43691
-; CHECK-NEXT:    mul w8, w8, w9
-; CHECK-NEXT:    lsr w8, w8, #17
-; CHECK-NEXT:    add w8, w8, w8, lsl #1
-; CHECK-NEXT:    sub w8, w0, w8
-; CHECK-NEXT:    and w8, w8, #0xffff
-; CHECK-NEXT:    cmp w8, #2 // =2
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w8, #-21845
+; CHECK-NEXT:    mov w9, #-21846
+; CHECK-NEXT:    madd w8, w0, w8, w9
+; CHECK-NEXT:    mov w9, #21845
+; CHECK-NEXT:    cmp w9, w8, uxth
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %urem = urem i16 %X, 3
   %cmp = icmp eq i16 %urem, 2
@@ -213,15 +210,12 @@ define i1 @t16_3_2(i16 %X) nounwind {
 define i1 @t8_3_2(i8 %X) nounwind {
 ; CHECK-LABEL: t8_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    mov w9, #171
-; CHECK-NEXT:    mul w8, w8, w9
-; CHECK-NEXT:    lsr w8, w8, #9
-; CHECK-NEXT:    add w8, w8, w8, lsl #1
-; CHECK-NEXT:    sub w8, w0, w8
+; CHECK-NEXT:    mov w8, #-85
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    sub w8, w8, #86 // =86
 ; CHECK-NEXT:    and w8, w8, #0xff
-; CHECK-NEXT:    cmp w8, #2 // =2
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cmp w8, #85 // =85
+; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %urem = urem i8 %X, 3
   %cmp = icmp eq i8 %urem, 2
