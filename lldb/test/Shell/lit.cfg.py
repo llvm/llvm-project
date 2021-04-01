@@ -42,7 +42,6 @@ config.test_exec_root = os.path.join(config.lldb_obj_root, 'test', 'Shell')
 llvm_config.with_system_environment([
     'FREEBSD_LEGACY_PLUGIN',
     'HOME',
-    'LLDB_CAPTURE_REPRODUCER',
     'TEMP',
     'TMP',
     'XDG_CACHE_HOME',
