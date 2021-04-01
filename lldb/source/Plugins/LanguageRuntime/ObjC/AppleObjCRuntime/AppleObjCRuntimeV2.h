@@ -26,7 +26,6 @@ class AppleObjCRuntimeV2 : public AppleObjCRuntime {
 public:
   ~AppleObjCRuntimeV2() override = default;
 
-  // Static Functions
   static void Initialize();
 
   static void Terminate();
@@ -46,7 +45,6 @@ public:
     return runtime->isA(&ID);
   }
 
-  // These are generic runtime functions:
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
@@ -56,7 +54,6 @@ public:
   llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) override;
 
-  // PluginInterface protocol
   ConstString GetPluginName() override;
 
   uint32_t GetPluginVersion() override;
@@ -105,8 +102,8 @@ public:
 
 protected:
   lldb::BreakpointResolverSP
-  CreateExceptionResolver(const lldb::BreakpointSP &bkpt,
-                          bool catch_bp, bool throw_bp) override;
+  CreateExceptionResolver(const lldb::BreakpointSP &bkpt, bool catch_bp,
+                          bool throw_bp) override;
 
 private:
   class HashTableSignature {
@@ -296,6 +293,50 @@ private:
     }
   };
 
+  /// We can read the class info from the Objective-C runtime using
+  /// gdb_objc_realized_classes or objc_copyRealizedClassList. The latter is
+  /// preferred because it includes lazily named classes, but it's not always
+  /// available or safe to call.
+  ///
+  /// We potentially need both for the same process,
+  /// because we may need to use gdb_objc_realized_classes until dyld is
+  /// initialized and then switch over to objc_copyRealizedClassList for lazily
+  /// named classes.
+  class DynamicClassInfoExtractor {
+  public:
+    DynamicClassInfoExtractor(AppleObjCRuntimeV2 &runtime)
+        : m_runtime(runtime) {}
+
+    enum Helper { gdb_objc_realized_classes, objc_copyRealizedClassList };
+
+    /// Compute which helper to use. Prefer objc_copyRealizedClassList if it's
+    /// available and it's safe to call (i.e. dyld is fully initialized). Use
+    /// gdb_objc_realized_classes otherwise.
+    Helper ComputeHelper() const;
+
+    UtilityFunction *GetClassInfoUtilityFunction(ExecutionContext &exe_ctx,
+                                                 Helper helper);
+    lldb::addr_t &GetClassInfoArgs(Helper helper);
+    std::mutex &GetMutex() { return m_mutex; }
+
+  private:
+    std::unique_ptr<UtilityFunction>
+    GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx, std::string code,
+                                    std::string name);
+
+    /// The lifetime of this object is tied to that of the runtime.
+    AppleObjCRuntimeV2 &m_runtime;
+    std::mutex m_mutex;
+
+    /// Utility function to read class info using gdb_objc_realized_classes.
+    std::unique_ptr<UtilityFunction> m_get_class_info_code;
+    lldb::addr_t m_get_class_info_args = LLDB_INVALID_ADDRESS;
+
+    /// Utility function to read class info using objc_copyRealizedClassList.
+    std::unique_ptr<UtilityFunction> m_get_class_info2_code;
+    lldb::addr_t m_get_class_info2_args = LLDB_INVALID_ADDRESS;
+  };
+
   AppleObjCRuntimeV2(Process *process, const lldb::ModuleSP &objc_module_sp);
 
   ObjCISA GetPointerISA(ObjCISA isa);
@@ -303,6 +344,12 @@ private:
   lldb::addr_t GetISAHashTablePointer();
 
   bool UpdateISAToDescriptorMapFromMemory(RemoteNXMapTable &hash_table);
+
+  /// Update the generation count of realized classes. This is not an exact
+  /// count but rather a value that is incremented when new classes are realized
+  /// or destroyed. Unlike the count in gdb_objc_realized_classes, it will
+  /// change when lazily named classes get realized.
+  bool RealizedClassGenerationCountChanged();
 
   DescriptorMapUpdateResult
   UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
@@ -323,12 +370,21 @@ private:
 
   bool GetCFBooleanValuesIfNeeded();
 
+  bool HasSymbol(ConstString Name);
+
+  NonPointerISACache *GetNonPointerIsaCache() {
+    if (!m_non_pointer_isa_cache_up)
+      m_non_pointer_isa_cache_up.reset(
+          NonPointerISACache::CreateInstance(*this, m_objc_module_sp));
+    return m_non_pointer_isa_cache_up.get();
+  }
+
   friend class ClassDescriptorV2;
   friend class SwiftLanguageRuntime;
 
-  std::unique_ptr<UtilityFunction> m_get_class_info_code;
-  lldb::addr_t m_get_class_info_args;
-  std::mutex m_get_class_info_args_mutex;
+  lldb::ModuleSP m_objc_module_sp;
+
+  DynamicClassInfoExtractor m_class_info_extractor;
 
   std::unique_ptr<UtilityFunction> m_get_shared_cache_class_info_code;
   lldb::addr_t m_get_shared_cache_class_info_args;
@@ -339,12 +395,14 @@ private:
   lldb::addr_t m_isa_hash_table_ptr;
   HashTableSignature m_hash_signature;
   bool m_has_object_getClass;
+  bool m_has_objc_copyRealizedClassList;
   bool m_loaded_objc_opt;
   std::unique_ptr<NonPointerISACache> m_non_pointer_isa_cache_up;
   std::unique_ptr<TaggedPointerVendor> m_tagged_pointer_vendor_up;
   EncodingToTypeSP m_encoding_to_type_sp;
   bool m_noclasses_warning_emitted;
   llvm::Optional<std::pair<lldb::addr_t, lldb::addr_t>> m_CFBoolean_values;
+  uint64_t m_realized_class_generation_count;
 };
 
 } // namespace lldb_private

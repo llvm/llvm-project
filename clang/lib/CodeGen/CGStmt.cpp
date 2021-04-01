@@ -1149,10 +1149,25 @@ struct SaveRetExprRAII {
 /// codegen it as 'tail call ...; ret void;'.
 static void makeTailCallIfSwiftAsync(const CallExpr *CE, CGBuilderTy &Builder,
                                      const CGFunctionInfo *CurFnInfo) {
-  auto callee = CE->getDirectCallee();
-  if (!callee)
+  auto calleeQualType = CE->getCallee()->getType();
+  const FunctionType *calleeType = nullptr;
+  if (calleeQualType->isFunctionPointerType() ||
+      calleeQualType->isFunctionReferenceType() ||
+      calleeQualType->isBlockPointerType() ||
+      calleeQualType->isMemberFunctionPointerType()) {
+    calleeType = calleeQualType->getPointeeType()->castAs<FunctionType>();
+  } else if (auto *ty = dyn_cast<FunctionType>(calleeQualType)) {
+    calleeType = ty;
+  } else if (auto CMCE = dyn_cast<CXXMemberCallExpr>(CE)) {
+    if (auto methodDecl = CMCE->getMethodDecl()) {
+      // getMethodDecl() doesn't handle member pointers at the moment.
+      calleeType = methodDecl->getType()->castAs<FunctionType>();
+    } else {
+      return;
+    }
+  } else {
     return;
-  auto calleeType = callee->getFunctionType();
+  }
   if (calleeType->getCallConv() == CallingConv::CC_SwiftAsync
       && (CurFnInfo->getASTCallingConvention() ==
           CallingConv::CC_SwiftAsync)) {

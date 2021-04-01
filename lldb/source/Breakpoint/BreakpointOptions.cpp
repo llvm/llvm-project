@@ -453,8 +453,6 @@ bool BreakpointOptions::InvokeCallback(StoppointCallbackContext *context,
                                           : nullptr,
                       context, break_id, break_loc_id);
     } else if (IsCallbackSynchronous()) {
-      // If a synchronous callback is called at async time, it should not say
-      // to stop.
       return false;
     }
   }
