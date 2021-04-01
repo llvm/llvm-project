@@ -2214,7 +2214,7 @@ loop_exit:
 declare align 8 dereferenceable_or_null(8) i8* @my_alloc(i32) allocsize(0)
 declare align 8 dereferenceable_or_null(8) i8* @my_array_alloc(i32, i32) allocsize(0, 1)
 
-define i32 @test_allocsize(i64 %len, i1* %test_base) {
+define i32 @test_allocsize(i64 %len, i1* %test_base) nofree nosync {
 ; CHECK-LABEL: @test_allocsize(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCATION:%.*]] = call nonnull i8* @my_alloc(i32 16384)
@@ -2382,7 +2382,7 @@ loop_exit:
 }
 
 
-define i32 @test_allocsize_array(i64 %len, i1* %test_base) {
+define i32 @test_allocsize_array(i64 %len, i1* %test_base) nofree nosync {
 ; CHECK-LABEL: @test_allocsize_array(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCATION:%.*]] = call nonnull i8* @my_array_alloc(i32 4096, i32 4)
