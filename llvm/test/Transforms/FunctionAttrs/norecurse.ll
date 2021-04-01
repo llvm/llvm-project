@@ -2,7 +2,7 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-function-attrs' -S | FileCheck %s
 
 ; CHECK: Function Attrs
-; CHECK-SAME: norecurse nounwind readnone
+; CHECK-SAME: norecurse nosync nounwind readnone
 ; CHECK-NEXT: define i32 @leaf()
 define i32 @leaf() {
   ret i32 1
@@ -61,7 +61,7 @@ define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 
 ; CHECK: Function Attrs
-; CHECK-SAME: norecurse readnone
+; CHECK-SAME: norecurse nosync readnone
 ; FIXME: missing "norecurse"
 ; CHECK-NEXT: define internal i32 @called_by_norecurse()
 define internal i32 @called_by_norecurse() {
@@ -76,7 +76,7 @@ define void @m() norecurse {
 }
 
 ; CHECK: Function Attrs
-; CHECK-SAME: norecurse readnone
+; CHECK-SAME: norecurse nosync readnone
 ; FIXME: missing "norecurse"
 ; CHECK-NEXT: define internal i32 @called_by_norecurse_indirectly()
 define internal i32 @called_by_norecurse_indirectly() {
