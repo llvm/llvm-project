@@ -87,10 +87,20 @@ public:
 
     virtual bool IsValid() = 0;
 
+    /// There are two routines in the ObjC runtime that tagged pointer clients
+    /// can call to get the value from their tagged pointer, one that retrieves
+    /// it as an unsigned value and one a signed value.  These two
+    /// GetTaggedPointerInfo methods mirror those two ObjC runtime calls.
+    /// @{
     virtual bool GetTaggedPointerInfo(uint64_t *info_bits = nullptr,
                                       uint64_t *value_bits = nullptr,
                                       uint64_t *payload = nullptr) = 0;
 
+    virtual bool GetTaggedPointerInfoSigned(uint64_t *info_bits = nullptr,
+                                            int64_t *value_bits = nullptr,
+                                            uint64_t *payload = nullptr) = 0;
+    /// @}
+ 
     virtual uint64_t GetInstanceSize() = 0;
 
     // use to implement version-specific additional constraints on pointers

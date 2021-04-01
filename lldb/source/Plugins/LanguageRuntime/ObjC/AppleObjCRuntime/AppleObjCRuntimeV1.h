@@ -64,6 +64,12 @@ public:
       return false;
     }
 
+    bool GetTaggedPointerInfoSigned(uint64_t *info_bits = nullptr,
+                                    int64_t *value_bits = nullptr,
+                                    uint64_t *payload = nullptr) override {
+      return false;
+    }
+
     uint64_t GetInstanceSize() override { return m_instance_size; }
 
     ObjCISA GetISA() override { return m_isa; }
