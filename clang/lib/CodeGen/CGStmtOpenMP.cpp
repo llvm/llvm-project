@@ -5594,7 +5594,11 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_exclusive:
   case OMPC_uses_allocators:
   case OMPC_affinity:
-  default:
+  case OMPC_init:
+  case OMPC_inbranch:
+  case OMPC_notinbranch:
+  case OMPC_link:
+  case OMPC_use:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
@@ -5626,7 +5630,7 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
         C->getClauseKind() != OMPC_acq_rel &&
         C->getClauseKind() != OMPC_acquire &&
         C->getClauseKind() != OMPC_release &&
-        C->getClauseKind() != OMPC_relaxed) {
+        C->getClauseKind() != OMPC_relaxed && C->getClauseKind() != OMPC_hint) {
       Kind = C->getClauseKind();
       break;
     }
