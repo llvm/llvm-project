@@ -4,7 +4,7 @@
 
 ; Base case, empty function
 define void @test1() {
-; CHECK: Function Attrs: norecurse nounwind readnone willreturn
+; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
@@ -13,7 +13,7 @@ define void @test1() {
 
 ; Show the bottom up walk
 define void @test2() {
-; CHECK: Function Attrs: norecurse nounwind readnone willreturn
+; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    call void @test1()
 ; CHECK-NEXT:    ret void
@@ -36,7 +36,7 @@ define void @test3() convergent {
 }
 
 define i32 @test4(i32 %a, i32 %b) {
-; CHECK: Function Attrs: norecurse nounwind readnone willreturn
+; CHECK: Function Attrs: norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[A]]

@@ -79,6 +79,7 @@ STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
 STATISTIC(NumWillReturn, "Number of functions marked as willreturn");
+STATISTIC(NumNoSync, "Number of functions marked as nosync");
 
 static cl::opt<bool> EnableNonnullArgPropagation(
     "enable-nonnull-arg-prop", cl::init(true), cl::Hidden,
@@ -1472,6 +1473,28 @@ static bool addWillReturn(const SCCNodeSet &SCCNodes) {
   return Changed;
 }
 
+// Infer the nosync attribute.  For the moment, the inference is trivial
+// and relies on the readnone attribute already being infered.  This will
+// be replaced with a more robust implementation in the near future.
+static bool addNoSyncAttr(const SCCNodeSet &SCCNodes) {
+  bool Changed = false;
+
+  for (Function *F : SCCNodes) {
+    if (!F || F->hasNoSync())
+      continue;
+
+    // readnone + not convergent implies nosync
+    if (!F->doesNotAccessMemory() || F->isConvergent())
+      continue;
+
+    F->setNoSync();
+    NumNoSync++;
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
   Res.HasUnknownCall = false;
@@ -1526,6 +1549,8 @@ static bool deriveAttrsInPostOrder(ArrayRef<Function *> Functions,
     Changed |= inferAttrsFromFunctionBodies(Nodes.SCCNodes);
     Changed |= addNoRecurseAttrs(Nodes.SCCNodes);
   }
+
+  Changed |= addNoSyncAttr(Nodes.SCCNodes);
 
   return Changed;
 }
