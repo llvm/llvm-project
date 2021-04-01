@@ -29,6 +29,7 @@ class TestSwiftieFormatting(TestBase):
 
     @skipUnlessDarwin
     @swiftTest
+    @skipIf(bugnumber='rdar://76105456', oslist=['macosx'])
     def test_swiftie_formatting(self):
         """Test that data formatters honor Swift conventions"""
         self.build()
