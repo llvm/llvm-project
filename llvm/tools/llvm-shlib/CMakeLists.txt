@@ -33,6 +33,10 @@ if(LLVM_BUILD_LLVM_DYLIB)
   add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${INSTALL_WITH_TOOLCHAIN} ${SOURCES})
 
   list(REMOVE_DUPLICATES LIB_NAMES)
+
+  # Link against the object libraries instead of static libraries.
+  list(TRANSFORM LIB_NAMES PREPEND "obj.")
+
   if(("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux") OR (MINGW) OR (HAIKU)
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "GNU")
