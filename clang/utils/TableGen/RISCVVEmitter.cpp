@@ -1177,7 +1177,7 @@ bool RVVEmitter::emitExtDefStr(uint8_t Extents, raw_ostream &OS) {
   if (Extents == RISCVExtension::Basic)
     return false;
   OS << "#if ";
-  ListSeparator LS(" || ");
+  ListSeparator LS(" && ");
   if (Extents & RISCVExtension::F)
     OS << LS << "defined(__riscv_f)";
   if (Extents & RISCVExtension::D)
