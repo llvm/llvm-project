@@ -276,6 +276,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SMAX, XLenVT, Legal);
     setOperationAction(ISD::UMIN, XLenVT, Legal);
     setOperationAction(ISD::UMAX, XLenVT, Legal);
+
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::CTTZ, MVT::i32, Custom);
+      setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+      setOperationAction(ISD::CTLZ, MVT::i32, Custom);
+      setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+    }
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
@@ -483,6 +490,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
+      setOperationAction(ISD::STEP_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     }
 
@@ -1808,6 +1816,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return lowerEXTRACT_SUBVECTOR(Op, DAG);
+  case ISD::STEP_VECTOR:
+    return lowerSTEP_VECTOR(Op, DAG);
   case ISD::VECTOR_REVERSE:
     return lowerVECTOR_REVERSE(Op, DAG);
   case ISD::BUILD_VECTOR:
@@ -3254,6 +3264,17 @@ SDValue RISCVTargetLowering::lowerEXTRACT_SUBVECTOR(SDValue Op,
   return DAG.getBitcast(Op.getSimpleValueType(), Slidedown);
 }
 
+// Implement step_vector to the vid instruction.
+SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  assert(Op.getConstantOperandAPInt(0) == 1 && "Unexpected step value");
+  MVT VT = Op.getSimpleValueType();
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
+  return DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
+}
+
 // Implement vector_reverse using vrgather.vv with indices determined by
 // subtracting the id of each element from (VLMAX-1). This will convert
 // the indices like so:
@@ -3871,6 +3892,22 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOp(N, DAG));
     break;
+  case ISD::CTTZ:
+  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ:
+  case ISD::CTLZ_ZERO_UNDEF: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+
+    SDValue NewOp0 =
+        DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
+    bool IsCTZ =
+        N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+    unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
+    SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+    return;
+  }
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::UREM: {
@@ -4534,6 +4571,18 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::CLZW:
+  case RISCVISD::CTZW: {
+    // Only the lower 32 bits of the first operand are read
+    SDValue Op0 = N->getOperand(0);
+    APInt Mask = APInt::getLowBitsSet(Op0.getValueSizeInBits(), 32);
+    if (SimplifyDemandedBits(Op0, Mask, DCI)) {
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        DCI.AddToWorklist(N);
+      return SDValue(N, 0);
+    }
+    break;
+  }
   case RISCVISD::FSL:
   case RISCVISD::FSR: {
     // Only the lower log2(Bitwidth)+1 bits of the the shift amount are read.
@@ -4973,6 +5022,20 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known = KnownBits::udiv(Known.trunc(32), Known2.trunc(32));
     // Restore the original width by sign extending.
     Known = Known.sext(BitWidth);
+    break;
+  }
+  case RISCVISD::CTZW: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    unsigned PossibleTZ = Known2.trunc(32).countMaxTrailingZeros();
+    unsigned LowBits = Log2_32(PossibleTZ) + 1;
+    Known.Zero.setBitsFrom(LowBits);
+    break;
+  }
+  case RISCVISD::CLZW: {
+    KnownBits Known2 = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
+    unsigned PossibleLZ = Known2.trunc(32).countMaxLeadingZeros();
+    unsigned LowBits = Log2_32(PossibleLZ) + 1;
+    Known.Zero.setBitsFrom(LowBits);
     break;
   }
   case RISCVISD::READ_VLENB:
@@ -6729,6 +6792,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(REMUW)
   NODE_NAME_CASE(ROLW)
   NODE_NAME_CASE(RORW)
+  NODE_NAME_CASE(CLZW)
+  NODE_NAME_CASE(CTZW)
   NODE_NAME_CASE(FSLW)
   NODE_NAME_CASE(FSRW)
   NODE_NAME_CASE(FSL)

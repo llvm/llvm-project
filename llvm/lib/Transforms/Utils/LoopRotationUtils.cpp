@@ -46,6 +46,10 @@ using namespace llvm;
 
 STATISTIC(NumNotRotatedDueToHeaderSize,
           "Number of loops not rotated due to the header size");
+STATISTIC(NumInstrsHoisted,
+          "Number of instructions hoisted into loop preheader");
+STATISTIC(NumInstrsDuplicated,
+          "Number of instructions cloned into loop preheader");
 STATISTIC(NumRotated, "Number of loops rotated");
 
 static cl::opt<bool>
@@ -424,11 +428,13 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
           !Inst->mayWriteToMemory() && !Inst->isTerminator() &&
           !isa<DbgInfoIntrinsic>(Inst) && !isa<AllocaInst>(Inst)) {
         Inst->moveBefore(LoopEntryBranch);
+        ++NumInstrsHoisted;
         continue;
       }
 
       // Otherwise, create a duplicate of the instruction.
       Instruction *C = Inst->clone();
+      ++NumInstrsDuplicated;
 
       // Eagerly remap the operands of the instruction.
       RemapInstruction(C, ValueMap,

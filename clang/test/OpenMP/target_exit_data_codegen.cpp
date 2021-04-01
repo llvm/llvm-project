@@ -229,7 +229,8 @@ void foo(int arg) {
 // CK1-DAG: [[BPADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPBPADDR:%[^,]+]], align
 // CK1-DAG: [[PADDR]] = load [1 x i8*]*, [1 x i8*]** [[FPPADDR:%[^,]+]], align
 // CK1-DAG: [[SZADDR]] = load [1 x i64]*, [1 x i64]** [[FPSZADDR:%[^,]+]], align
-// CK1-DAG: call void (i8*, ...) %{{.+}}(i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]])
+// CK1-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* {{%.*}} to void (i8*,
+// CK1-DAG: call void [[FN]](i8* %{{[^,]+}}, [1 x i8*]** [[FPBPADDR]], [1 x i8*]** [[FPPADDR]], [1 x i64]** [[FPSZADDR]])
 // CK1:     ret i32 0
 // CK1:     }
 

@@ -17400,12 +17400,6 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_popcnt);
     return Builder.CreateCall(Callee, {Vec});
   }
-  case WebAssembly::BI__builtin_wasm_eq_i64x2: {
-    Value *LHS = EmitScalarExpr(E->getArg(0));
-    Value *RHS = EmitScalarExpr(E->getArg(1));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_eq);
-    return Builder.CreateCall(Callee, {LHS, RHS});
-  }
   case WebAssembly::BI__builtin_wasm_any_true_i8x16:
   case WebAssembly::BI__builtin_wasm_any_true_i16x8:
   case WebAssembly::BI__builtin_wasm_any_true_i32x4:

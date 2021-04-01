@@ -315,7 +315,8 @@ int main() {
 // CHECK: define internal i32 [[TASK_ENTRY6]](i32 %0, [[KMP_TASK_T]]{{.*}}* noalias %{{.+}})
 // UNTIEDRT: [[S1_ADDR_PTR:%.+]] = alloca %struct.S*,
 // UNTIEDRT: [[S2_ADDR_PTR_REF:%.+]] = alloca %struct.S**,
-// UNTIEDRT: call void (i8*, ...) %{{.+}}(i8* %{{.+}}, %struct.S** [[S1_ADDR_PTR]], %struct.S*** [[S2_ADDR_PTR_REF]])
+// UNTIEDRT: [[FN:%.+]] = bitcast void (i8*, ...)* %{{.*}} to void (i8*,
+// UNTIEDRT: call void [[FN]](i8* %{{.+}}, %struct.S** [[S1_ADDR_PTR]], %struct.S*** [[S2_ADDR_PTR_REF]])
 // UNTIEDRT-DAG: [[S1_ADDR:%.+]] = load %struct.S*, %struct.S** [[S1_ADDR_PTR]],
 // UNTIEDRT-DAG: [[S2_ADDR_PTR:%.+]] = load %struct.S**, %struct.S*** [[S2_ADDR_PTR_REF]],
 // UNTIEDRT-DAG: [[S2_ADDR:%.+]] = load %struct.S*, %struct.S** [[S2_ADDR_PTR]],

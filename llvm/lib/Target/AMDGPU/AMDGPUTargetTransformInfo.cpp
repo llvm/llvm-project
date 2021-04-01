@@ -727,8 +727,9 @@ static bool intrinsicHasPackedVectorBenefit(Intrinsic::ID ID) {
   }
 }
 
-int GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   if (ICA.getID() == Intrinsic::fabs)
     return 0;
 

@@ -344,6 +344,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setCondCodeAction(ISD::SETUGT, VT, Expand);
       setCondCodeAction(ISD::SETUEQ, VT, Expand);
       setCondCodeAction(ISD::SETUNE, VT, Expand);
+
+      setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FPOW, VT, Expand);
+      setOperationAction(ISD::FPOWI, VT, Expand);
+      setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction(ISD::FSINCOS, VT, Expand);
+      setOperationAction(ISD::FEXP, VT, Expand);
+      setOperationAction(ISD::FEXP2, VT, Expand);
+      setOperationAction(ISD::FLOG, VT, Expand);
+      setOperationAction(ISD::FLOG2, VT, Expand);
+      setOperationAction(ISD::FLOG10, VT, Expand);
     }
   }
 
@@ -9724,7 +9736,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   // Convert BUILD_VECTOR where all elements but the lowest are undef into
   // SCALAR_TO_VECTOR, except for when we have a single-element constant vector
   // as SimplifyDemandedBits will just turn that back into BUILD_VECTOR.
-  if (isOnlyLowElement && !(NumElts == 1 && isa<ConstantSDNode>(Value))) {
+  if (isOnlyLowElement && !(NumElts == 1 && isIntOrFPConstant(Value))) {
     LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                          "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Value);

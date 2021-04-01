@@ -579,8 +579,9 @@ foreach name = ["half_divide", "half_powr",
 foreach name = ["abs"] in {
   def : Builtin<name, [AI2UGenTypeN, AIGenTypeN], Attr.Const>;
 }
-foreach name = ["clz", "popcount"] in {
-  def : Builtin<name, [AIGenTypeN, AIGenTypeN], Attr.Const>;
+def : Builtin<"clz", [AIGenTypeN, AIGenTypeN], Attr.Const>;
+let MinVersion = CL12 in {
+  def : Builtin<"popcount", [AIGenTypeN, AIGenTypeN], Attr.Const>;
 }
 let MinVersion = CL20 in {
   foreach name = ["ctz"] in {

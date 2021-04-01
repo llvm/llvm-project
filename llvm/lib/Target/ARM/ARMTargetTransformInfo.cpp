@@ -900,7 +900,7 @@ int ARMTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
       if (Sel != I)
         return 0;
       IntrinsicCostAttributes CostAttrs(IID, ValTy, {ValTy, ValTy});
-      return getIntrinsicInstrCost(CostAttrs, CostKind);
+      return *getIntrinsicInstrCost(CostAttrs, CostKind).getValue();
     }
   }
 
@@ -1626,8 +1626,9 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
                                             CostKind);
 }
 
-int ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+ARMTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   switch (ICA.getID()) {
   case Intrinsic::get_active_lane_mask:
     // Currently we make a somewhat optimistic assumption that
@@ -2165,7 +2166,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Scan the loop: don't unroll loops with calls as this could prevent
   // inlining.
-  unsigned Cost = 0;
+  InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
       // Don't unroll vectorised loop. MVE does not benefit from it as much as

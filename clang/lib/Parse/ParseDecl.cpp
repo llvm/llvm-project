@@ -1607,7 +1607,30 @@ void Parser::DiagnoseProhibitedAttributes(
 }
 
 void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
-                                     unsigned DiagID) {
+                                     unsigned DiagID, bool DiagnoseEmptyAttrs) {
+
+  if (DiagnoseEmptyAttrs && Attrs.empty() && Attrs.Range.isValid()) {
+    // An attribute list has been parsed, but it was empty.
+    // This is the case for [[]].
+    const auto &LangOpts = getLangOpts();
+    auto &SM = PP.getSourceManager();
+    Token FirstLSquare;
+    Lexer::getRawToken(Attrs.Range.getBegin(), FirstLSquare, SM, LangOpts);
+
+    if (FirstLSquare.is(tok::l_square)) {
+      llvm::Optional<Token> SecondLSquare =
+          Lexer::findNextToken(FirstLSquare.getLocation(), SM, LangOpts);
+
+      if (SecondLSquare && SecondLSquare->is(tok::l_square)) {
+        // The attribute range starts with [[, but is empty. So this must
+        // be [[]], which we are supposed to diagnose because
+        // DiagnoseEmptyAttrs is true.
+        Diag(Attrs.Range.getBegin(), DiagID) << Attrs.Range;
+        return;
+      }
+    }
+  }
+
   for (const ParsedAttr &AL : Attrs) {
     if (!AL.isCXX11Attribute() && !AL.isC2xAttribute())
       continue;
@@ -4630,7 +4653,8 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
   // or opaque-enum-declaration anywhere.
   if (IsElaboratedTypeSpecifier && !getLangOpts().MicrosoftExt &&
       !getLangOpts().ObjC) {
-    ProhibitAttributes(attrs);
+    ProhibitCXX11Attributes(attrs, diag::err_attributes_not_allowed,
+                            /*DiagnoseEmptyAttrs=*/true);
     if (BaseType.isUsable())
       Diag(BaseRange.getBegin(), diag::ext_enum_base_in_type_specifier)
           << (AllowEnumSpecifier == AllowDefiningTypeSpec::Yes) << BaseRange;

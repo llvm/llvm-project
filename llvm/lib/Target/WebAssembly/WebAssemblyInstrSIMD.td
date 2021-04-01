@@ -650,32 +650,38 @@ multiclass SIMDConditionFP<string name, CondCode cond, bits<32> baseInst> {
 // Equality: eq
 let isCommutable = 1 in {
 defm EQ : SIMDConditionInt<"eq", SETEQ, 35>;
+defm EQ : SIMDCondition<I64x2, "eq", SETEQ, 214>;
 defm EQ : SIMDConditionFP<"eq", SETOEQ, 65>;
 } // isCommutable = 1
 
 // Non-equality: ne
 let isCommutable = 1 in {
 defm NE : SIMDConditionInt<"ne", SETNE, 36>;
+defm NE : SIMDCondition<I64x2, "ne", SETNE, 215>;
 defm NE : SIMDConditionFP<"ne", SETUNE, 66>;
 } // isCommutable = 1
 
 // Less than: lt_s / lt_u / lt
 defm LT_S : SIMDConditionInt<"lt_s", SETLT, 37>;
+defm LT_S : SIMDCondition<I64x2, "lt_s", SETLT, 216>;
 defm LT_U : SIMDConditionInt<"lt_u", SETULT, 38>;
 defm LT : SIMDConditionFP<"lt", SETOLT, 67>;
 
 // Greater than: gt_s / gt_u / gt
 defm GT_S : SIMDConditionInt<"gt_s", SETGT, 39>;
+defm GT_S : SIMDCondition<I64x2, "gt_s", SETGT, 217>;
 defm GT_U : SIMDConditionInt<"gt_u", SETUGT, 40>;
 defm GT : SIMDConditionFP<"gt", SETOGT, 68>;
 
 // Less than or equal: le_s / le_u / le
 defm LE_S : SIMDConditionInt<"le_s", SETLE, 41>;
+defm LE_S : SIMDCondition<I64x2, "le_s", SETLE, 218>;
 defm LE_U : SIMDConditionInt<"le_u", SETULE, 42>;
 defm LE : SIMDConditionFP<"le", SETOLE, 69>;
 
 // Greater than or equal: ge_s / ge_u / ge
 defm GE_S : SIMDConditionInt<"ge_s", SETGE, 43>;
+defm GE_S : SIMDCondition<I64x2, "ge_s", SETGE, 219>;
 defm GE_U : SIMDConditionInt<"ge_u", SETUGE, 44>;
 defm GE : SIMDConditionFP<"ge", SETOGE, 70>;
 
@@ -691,14 +697,6 @@ foreach nodes = [[seteq, EQ_F64x2], [setne, NE_F64x2], [setlt, LT_F64x2],
                  [setgt, GT_F64x2], [setle, LE_F64x2], [setge, GE_F64x2]] in
 def : Pat<(v2i64 (nodes[0] (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
           (nodes[1] $lhs, $rhs)>;
-
-// Prototype i64x2.eq
-defm EQ_v2i64 :
-  SIMD_I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs), (outs), (ins),
-         [(set (v2i64 V128:$dst),
-           (int_wasm_eq (v2i64 V128:$lhs), (v2i64 V128:$rhs)))],
-         "i64x2.eq\t$dst, $lhs, $rhs", "i64x2.eq", 192>;
-
 
 //===----------------------------------------------------------------------===//
 // Bitwise operations

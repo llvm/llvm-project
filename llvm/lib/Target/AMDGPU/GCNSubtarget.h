@@ -706,6 +706,10 @@ public:
     return HasPkFmacF16Inst;
   }
 
+  bool hasAtomicFaddInsts() const {
+    return HasAtomicFaddRtnInsts || HasAtomicFaddNoRtnInsts;
+  }
+
   bool hasAtomicFaddRtnInsts() const {
     return HasAtomicFaddRtnInsts;
   }

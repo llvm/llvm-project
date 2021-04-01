@@ -27,6 +27,7 @@ int main() {
 // Check that occupanices var is firstprivatized.
 // CHECK-DAG: atomicrmw add i32* [[FP_OCCUP:%.+]], i32 1 monotonic, align 4
 // CHECK-DAG: [[FP_OCCUP]] = load i32*, i32** [[FP_OCCUP_ADDR:%[^,]+]],
-// CHECK-DAG: call void (i8*, ...) %{{.+}}(i8* %{{.+}}, i32** [[FP_OCCUP_ADDR]])
+// CHECK-DAG: [[FN:%.+]] = bitcast void (i8*, ...)* %{{.*}} to void (i8*,
+// CHECK-DAG: call void [[FN]](i8* %{{.+}}, i32** [[FP_OCCUP_ADDR]])
 
 #endif

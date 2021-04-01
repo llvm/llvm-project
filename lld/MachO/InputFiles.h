@@ -47,9 +47,13 @@ enum class RefState : uint8_t;
 extern std::unique_ptr<llvm::TarWriter> tar;
 
 // If .subsections_via_symbols is set, each InputSection will be split along
-// symbol boundaries. The keys of a SubsectionMap represent the offsets of
-// each subsection from the start of the original pre-split InputSection.
-using SubsectionMap = std::map<uint32_t, InputSection *>;
+// symbol boundaries. The field offset represents the offset of the subsection
+// from the start of the original pre-split InputSection.
+struct SubsectionEntry {
+  uint64_t offset;
+  InputSection *isec;
+};
+using SubsectionMapping = std::vector<SubsectionEntry>;
 
 class InputFile {
 public:
@@ -68,7 +72,7 @@ public:
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<SubsectionMap> subsections;
+  std::vector<SubsectionMapping> subsections;
   // Provides an easy way to sort InputFiles deterministically.
   const int id;
 
@@ -105,7 +109,7 @@ private:
   void parseSymbols(ArrayRef<lld::structs::nlist_64> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   Symbol *parseNonSectionSymbol(const structs::nlist_64 &sym, StringRef name);
-  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMap &);
+  void parseRelocations(const llvm::MachO::section_64 &, SubsectionMapping &);
   void parseDebugInfo();
 };
 

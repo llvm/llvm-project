@@ -12,10 +12,10 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
   return
 }
 
-func @transfer_read_unmasked_4(%A : memref<?xf32>, %base: index) {
+func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
-      {permutation_map = affine_map<(d0) -> (d0)>, masked = [false]} :
+      {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} :
     memref<?xf32>, vector<4xf32>
   vector.print %f: vector<4xf32>
   return
@@ -53,9 +53,9 @@ func @entry() {
   // Read shifted by 0 and pad with -42:
   //   ( 0, 1, 2, 0, 0, -42, ..., -42)
   call @transfer_read_1d(%A, %c0) : (memref<?xf32>, index) -> ()
-  // Read unmasked 4 @ 1, guaranteed to not overflow.
+  // Read in-bounds 4 @ 1, guaranteed to not overflow.
   // Exercises proper alignment.
-  call @transfer_read_unmasked_4(%A, %c1) : (memref<?xf32>, index) -> ()
+  call @transfer_read_inbounds_4(%A, %c1) : (memref<?xf32>, index) -> ()
   return
 }
 

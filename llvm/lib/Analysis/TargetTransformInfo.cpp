@@ -219,10 +219,11 @@ unsigned TargetTransformInfo::getEstimatedNumberOfCaseClusters(
   return TTIImpl->getEstimatedNumberOfCaseClusters(SI, JTSize, PSI, BFI);
 }
 
-int TargetTransformInfo::getUserCost(const User *U,
-                                     ArrayRef<const Value *> Operands,
-                                     enum TargetCostKind CostKind) const {
-  int Cost = TTIImpl->getUserCost(U, Operands, CostKind);
+InstructionCost
+TargetTransformInfo::getUserCost(const User *U,
+                                 ArrayRef<const Value *> Operands,
+                                 enum TargetCostKind CostKind) const {
+  InstructionCost Cost = TTIImpl->getUserCost(U, Operands, CostKind);
   assert((CostKind == TTI::TCK_RecipThroughput || Cost >= 0) &&
          "TTI should not produce negative costs!");
   return Cost;
@@ -850,10 +851,10 @@ int TargetTransformInfo::getInterleavedMemoryOpCost(
   return Cost;
 }
 
-int
+InstructionCost
 TargetTransformInfo::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                            TTI::TargetCostKind CostKind) const {
-  int Cost = TTIImpl->getIntrinsicInstrCost(ICA, CostKind);
+  InstructionCost Cost = TTIImpl->getIntrinsicInstrCost(ICA, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1032,7 +1033,8 @@ bool TargetTransformInfo::supportsScalableVectors() const {
   return TTIImpl->supportsScalableVectors();
 }
 
-int TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
+InstructionCost
+TargetTransformInfo::getInstructionLatency(const Instruction *I) const {
   return TTIImpl->getInstructionLatency(I);
 }
 
@@ -1321,7 +1323,8 @@ TTI::matchVectorReduction(const ExtractElementInst *Root, unsigned &Opcode,
   return matchPairwiseReduction(Root, Opcode, Ty);
 }
 
-int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
+InstructionCost
+TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   switch (I->getOpcode()) {

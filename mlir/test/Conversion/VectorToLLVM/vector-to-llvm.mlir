@@ -1162,13 +1162,13 @@ func @transfer_read_1d_non_zero_addrspace(%A : memref<?xf32, 3>, %base: index) -
 
 // -----
 
-func @transfer_read_1d_not_masked(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
+func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
   %f7 = constant 7.0: f32
-  %f = vector.transfer_read %A[%base], %f7 {masked = [false]} :
+  %f = vector.transfer_read %A[%base], %f7 {in_bounds = [true]} :
     memref<?xf32>, vector<17xf32>
   return %f: vector<17xf32>
 }
-// CHECK-LABEL: func @transfer_read_1d_not_masked
+// CHECK-LABEL: func @transfer_read_1d_inbounds
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xf32>
 //
 // 1. Bitcast to vector form.
@@ -1184,7 +1184,7 @@ func @transfer_read_1d_not_masked(%A : memref<?xf32>, %base: index) -> vector<17
 
 func @transfer_read_1d_cast(%A : memref<?xi32>, %base: index) -> vector<12xi8> {
   %c0 = constant 0: i32
-  %v = vector.transfer_read %A[%base], %c0 {masked = [false]} :
+  %v = vector.transfer_read %A[%base], %c0 {in_bounds = [true]} :
     memref<?xi32>, vector<12xi8>
   return %v: vector<12xi8>
 }

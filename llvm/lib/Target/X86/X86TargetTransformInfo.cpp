@@ -2284,8 +2284,9 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
-int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
-  const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind) {
+InstructionCost
+X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                           TTI::TargetCostKind CostKind) {
 
   // Costs should match the codegen from:
   // BITREVERSE: llvm\test\CodeGen\X86\vector-bitreverse.ll
@@ -2911,8 +2912,9 @@ int X86TTIImpl::getTypeBasedIntrinsicInstrCost(
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-int X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                      TTI::TargetCostKind CostKind) {
+InstructionCost
+X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   if (ICA.isTypeBasedOnly())
     return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
 
