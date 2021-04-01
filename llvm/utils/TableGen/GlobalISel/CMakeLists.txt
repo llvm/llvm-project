@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenGlobalISel STATIC DISABLE_LLVM_LINK_LLVM_DYLIB
+add_llvm_library(LLVMTableGenGlobalISel OBJECT
                  CodeExpander.cpp
                  GIMatchDag.cpp
                  GIMatchDagEdge.cpp
