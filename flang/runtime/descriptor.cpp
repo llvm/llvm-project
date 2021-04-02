@@ -260,6 +260,17 @@ void Descriptor::Dump(FILE *f) const {
   }
 }
 
+DescriptorAddendum &DescriptorAddendum::operator=(
+    const DescriptorAddendum &that) {
+  derivedType_ = that.derivedType_;
+  flags_ = that.flags_;
+  auto lenParms{that.LenParameters()};
+  for (std::size_t j{0}; j < lenParms; ++j) {
+    len_[j] = that.len_[j];
+  }
+  return *this;
+}
+
 std::size_t DescriptorAddendum::SizeInBytes() const {
   return SizeInBytes(LenParameters());
 }
