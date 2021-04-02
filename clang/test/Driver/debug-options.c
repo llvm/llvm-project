@@ -110,6 +110,16 @@
 // RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
 
+// On the AIX, -g defaults to -gno-column-info.
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff -gcolumn-info 2>&1 \
+// RUN:             | FileCheck -check-prefix=CI %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff -gcolumn-info \
+// RUN:             2>&1 | FileCheck -check-prefix=CI %s
+
 // RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 //
