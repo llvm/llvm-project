@@ -285,6 +285,11 @@ public:
     return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
   }
 
+  /// Return true if LHS and RHS have no common bits set.
+  static bool haveNoCommonBitsSet(const KnownBits &LHS, const KnownBits &RHS) {
+    return (LHS.Zero | RHS.Zero).isAllOnesValue();
+  }
+
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
   static KnownBits computeForAddCarry(
       const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
