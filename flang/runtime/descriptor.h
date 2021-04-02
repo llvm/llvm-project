@@ -93,6 +93,7 @@ public:
   explicit DescriptorAddendum(
       const typeInfo::DerivedType *dt = nullptr, std::uint64_t flags = 0)
       : derivedType_{dt}, flags_{flags} {}
+  DescriptorAddendum &operator=(const DescriptorAddendum &);
 
   const typeInfo::DerivedType *derivedType() const { return derivedType_; }
   DescriptorAddendum &set_derivedType(const typeInfo::DerivedType *dt) {

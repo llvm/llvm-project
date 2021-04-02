@@ -8,6 +8,7 @@
 
 #include "../../runtime/reduction.h"
 #include "gtest/gtest.h"
+#include "tools.h"
 #include "../../runtime/allocatable.h"
 #include "../../runtime/cpp-type.h"
 #include "../../runtime/descriptor.h"
@@ -19,38 +20,6 @@
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
-
-template <typename A>
-static void StoreElement(void *p, const A &x, std::size_t bytes) {
-  std::memcpy(p, &x, bytes);
-}
-
-template <typename CHAR>
-static void StoreElement(
-    void *p, const std::basic_string<CHAR> &str, std::size_t bytes) {
-  ASSERT_LE(bytes, sizeof(CHAR) * str.size());
-  std::memcpy(p, str.data(), bytes);
-}
-
-template <TypeCategory CAT, int KIND, typename A>
-static OwningPtr<Descriptor> MakeArray(const std::vector<int> &shape,
-    const std::vector<A> &data, std::size_t elemLen = KIND) {
-  auto rank{static_cast<int>(shape.size())};
-  auto result{Descriptor::Create(TypeCode{CAT, KIND}, elemLen, nullptr, rank,
-      nullptr, CFI_attribute_allocatable)};
-  for (int j{0}; j < rank; ++j) {
-    result->GetDimension(j).SetBounds(1, shape[j]);
-  }
-  int stat{result->Allocate()};
-  EXPECT_EQ(stat, 0) << stat;
-  EXPECT_LE(data.size(), result->Elements());
-  char *p{result->OffsetElement<char>()};
-  for (const auto &x : data) {
-    StoreElement(p, x, elemLen);
-    p += elemLen;
-  }
-  return result;
-}
 
 TEST(Reductions, SumInt4) {
   auto array{MakeArray<TypeCategory::Integer, 4>(
