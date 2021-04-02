@@ -311,6 +311,14 @@ template <class Config> static void testAllocator() {
   EXPECT_NE(Stats.find("Stats: SizeClassAllocator"), std::string::npos);
   EXPECT_NE(Stats.find("Stats: MapAllocator"), std::string::npos);
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
+
+  bool UnlockRequired;
+  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  EXPECT_TRUE(!TSD->Cache.isEmpty());
+  TSD->Cache.drain();
+  EXPECT_TRUE(TSD->Cache.isEmpty());
+  if (UnlockRequired)
+    TSD->unlock();
 }
 
 // Test that multiple instantiations of the allocator have not messed up the
