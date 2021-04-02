@@ -18,10 +18,6 @@
 #include <thread>
 #include <vector>
 
-static std::mutex Mutex;
-static std::condition_variable Cv;
-static bool Ready;
-
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 
 template <class Config> struct UseQuarantineSetter {
@@ -349,35 +345,34 @@ TYPED_TEST(ScudoCombinedTest, BasicCombined) {
     TSD->unlock();
 }
 
-template <typename AllocatorT> static void stressAllocator(AllocatorT *A) {
-  {
-    std::unique_lock<std::mutex> Lock(Mutex);
-    while (!Ready)
-      Cv.wait(Lock);
-  }
-  std::vector<std::pair<void *, scudo::uptr>> V;
-  for (scudo::uptr I = 0; I < 256U; I++) {
-    const scudo::uptr Size = std::rand() % 4096U;
-    void *P = A->allocate(Size, Origin);
-    // A region could have ran out of memory, resulting in a null P.
-    if (P)
-      V.push_back(std::make_pair(P, Size));
-  }
-  while (!V.empty()) {
-    auto Pair = V.back();
-    A->deallocate(Pair.first, Origin, Pair.second);
-    V.pop_back();
-  }
-}
-
 TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
-  using Config = TypeParam;
-  Ready = false;
-  using AllocatorT = TestAllocator<Config>;
+  std::mutex Mutex;
+  std::condition_variable Cv;
+  bool Ready = false;
+  using AllocatorT = TestAllocator<TypeParam>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
-    Threads[I] = std::thread(stressAllocator<AllocatorT>, Allocator.get());
+    Threads[I] = std::thread([&]() {
+      {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        while (!Ready)
+          Cv.wait(Lock);
+      }
+      std::vector<std::pair<void *, scudo::uptr>> V;
+      for (scudo::uptr I = 0; I < 256U; I++) {
+        const scudo::uptr Size = std::rand() % 4096U;
+        void *P = Allocator->allocate(Size, Origin);
+        // A region could have ran out of memory, resulting in a null P.
+        if (P)
+          V.push_back(std::make_pair(P, Size));
+      }
+      while (!V.empty()) {
+        auto Pair = V.back();
+        Allocator->deallocate(Pair.first, Origin, Pair.second);
+        V.pop_back();
+      }
+    });
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     Ready = true;
