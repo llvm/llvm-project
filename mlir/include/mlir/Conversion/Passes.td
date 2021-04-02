@@ -67,6 +67,7 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
   }];
   let constructor = "mlir::createLowerAffinePass()";
   let dependentDialects = [
+    "memref::MemRefDialect",
     "scf::SCFDialect",
     "StandardOpsDialect",
     "vector::VectorDialect"
