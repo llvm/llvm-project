@@ -53,6 +53,19 @@ public:
     raw_.extent = upper >= lower ? upper - lower + 1 : 0;
     return *this;
   }
+  Dimension &SetLowerBound(SubscriptValue lower) {
+    raw_.lower_bound = lower;
+    return *this;
+  }
+  Dimension &SetUpperBound(SubscriptValue upper) {
+    auto lower{raw_.lower_bound};
+    raw_.extent = upper >= lower ? upper - lower + 1 : 0;
+    return *this;
+  }
+  Dimension &SetExtent(SubscriptValue extent) {
+    raw_.extent = extent;
+    return *this;
+  }
   Dimension &SetByteStride(SubscriptValue bytes) {
     raw_.sm = bytes;
     return *this;
@@ -137,8 +150,8 @@ public:
     raw_.f18Addendum = false;
   }
   Descriptor(const Descriptor &);
-
   ~Descriptor();
+  Descriptor &operator=(const Descriptor &);
 
   static constexpr std::size_t BytesFor(TypeCategory category, int kind) {
     return category == TypeCategory::Complex ? kind * 2 : kind;

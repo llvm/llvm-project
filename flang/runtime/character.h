@@ -18,6 +18,16 @@ namespace Fortran::runtime {
 
 class Descriptor;
 
+template <typename CHAR>
+int CharacterScalarCompare(
+    const CHAR *x, const CHAR *y, std::size_t xChars, std::size_t yChars);
+extern template int CharacterScalarCompare<char>(
+    const char *x, const char *y, std::size_t xChars, std::size_t yChars);
+extern template int CharacterScalarCompare<char16_t>(const char16_t *x,
+    const char16_t *y, std::size_t xChars, std::size_t yChars);
+extern template int CharacterScalarCompare<char32_t>(const char32_t *x,
+    const char32_t *y, std::size_t xChars, std::size_t yChars);
+
 extern "C" {
 
 // Appends the corresponding (or expanded) characters of 'operand'

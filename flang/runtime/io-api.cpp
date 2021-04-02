@@ -856,26 +856,6 @@ bool IONAME(SetFile)(Cookie cookie, const char *path, std::size_t chars) {
   return false;
 }
 
-template <typename INT>
-static bool SetInteger(INT &x, int kind, std::int64_t value) {
-  switch (kind) {
-  case 1:
-    reinterpret_cast<std::int8_t &>(x) = value;
-    return true;
-  case 2:
-    reinterpret_cast<std::int16_t &>(x) = value;
-    return true;
-  case 4:
-    reinterpret_cast<std::int32_t &>(x) = value;
-    return true;
-  case 8:
-    reinterpret_cast<std::int64_t &>(x) = value;
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool IONAME(GetNewUnit)(Cookie cookie, int &unit, int kind) {
   IoStatementState &io{*cookie};
   auto *open{io.get_if<OpenStatementState>()};
