@@ -110,6 +110,8 @@ int main() {
   return 0;
 #elif defined(BLOCKS)
   // BLOCKS: [[G:@.+]] = {{(dso_local )?}}global double
+  // BLOCKS: [[SVAR:@.+]] = internal global i{{[0-9]+}} 0,
+  // BLOCKS: [[SFVAR:@.+]] = internal global float 0.000000e+00,
   // BLOCKS-LABEL: @main
   // BLOCKS: call {{.*}}void {{%.+}}(i8
   ^{

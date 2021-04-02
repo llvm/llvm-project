@@ -103,6 +103,7 @@ int main() {
   return 0;
 #elif defined(BLOCKS)
   // BLOCKS: [[G:@.+]] ={{.*}} global double
+  // BLOCKS: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
   // BLOCKS-LABEL: @main
   // BLOCKS: call void {{%.+}}(i8
   ^{
@@ -117,7 +118,7 @@ int main() {
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
     // BLOCKS: store double 2.0{{.+}}, double*
     // BLOCKS-NOT: [[G]]{{[[^:word:]]}}
-    // BLOCKS-NOT: [[ISVAR]]{{[[^:word:]]}}
+    // BLOCKS-NOT: [[SIVAR]]{{[[^:word:]]}}
     // BLOCKS: store i{{[0-9]+}} 22, i{{[0-9]+}}*
     // BLOCKS-NOT: [[SIVAR]]{{[[^:word:]]}}
     // BLOCKS: ret
