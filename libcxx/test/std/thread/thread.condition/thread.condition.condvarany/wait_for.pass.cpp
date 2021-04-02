@@ -47,9 +47,12 @@ void f()
     test1 = 1;
     cv.notify_one();
     Clock::time_point t0 = Clock::now();
-    while (test2 == 0 &&
-           cv.wait_for(lk, milliseconds(250)) == std::cv_status::no_timeout)
-        ;
+    Clock::time_point wait_end = t0 + milliseconds(250);
+    Clock::duration d;
+    do {
+        d = wait_end - Clock::now();
+        if (d <= milliseconds(0)) break;
+    } while (test2 == 0 && cv.wait_for(lk, d) == std::cv_status::no_timeout);
     Clock::time_point t1 = Clock::now();
     if (runs == 0)
     {
