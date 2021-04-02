@@ -2278,14 +2278,26 @@ adds sp, #-4096
 @ RSB (register)
 @------------------------------------------------------------------------------
         rsb r4, r8
+        rsb.w r4, r8
         rsb r4, r9, r8
+        rsb.w r4, r9, r8
         rsb r1, r4, r8, asr #3
+        rsb.w r1, r4, r8, asr #3
         rsbs r2, r1, r7, lsl #1
+        rsbs.w r2, r1, r7, lsl #1
+        rsbs r0, r1, r2
+        rsbs.w r0, r1, r2
 
 @ CHECK: rsb	r4, r4, r8              @ encoding: [0xc4,0xeb,0x08,0x04]
+@ CHECK: rsb	r4, r4, r8              @ encoding: [0xc4,0xeb,0x08,0x04]
+@ CHECK: rsb	r4, r9, r8              @ encoding: [0xc9,0xeb,0x08,0x04]
 @ CHECK: rsb	r4, r9, r8              @ encoding: [0xc9,0xeb,0x08,0x04]
 @ CHECK: rsb	r1, r4, r8, asr #3      @ encoding: [0xc4,0xeb,0xe8,0x01]
+@ CHECK: rsb	r1, r4, r8, asr #3      @ encoding: [0xc4,0xeb,0xe8,0x01]
 @ CHECK: rsbs	r2, r1, r7, lsl #1      @ encoding: [0xd1,0xeb,0x47,0x02]
+@ CHECK: rsbs	r2, r1, r7, lsl #1      @ encoding: [0xd1,0xeb,0x47,0x02]
+@ CHECK: rsbs	r0, r1, r2              @ encoding: [0xd1,0xeb,0x02,0x00]
+@ CHECK: rsbs	r0, r1, r2              @ encoding: [0xd1,0xeb,0x02,0x00]
 
 
 @------------------------------------------------------------------------------
