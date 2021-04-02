@@ -145,12 +145,7 @@ target(tsan_target_type, "tsan") {
     ldflags = [
       "-lc++",
       "-lc++abi",
-
-      # tsan
-      # FIXME
-
-      # ubsan
-      "-Wl,-U,___ubsan_default_options",
+      "-lobjc",
 
       # sanitizer_common
       "-Wl,-U,___sanitizer_free_hook",
