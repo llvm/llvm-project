@@ -226,10 +226,11 @@ unsigned NumberOfCpuCores() {
   return N;
 }
 
-size_t SimpleFastHash(const uint8_t *Data, size_t Size) {
-  size_t Res = 0;
+uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial) {
+  uint64_t Res = Initial;
+  const uint8_t *Bytes = static_cast<const uint8_t *>(Data);
   for (size_t i = 0; i < Size; i++)
-    Res = Res * 11 + Data[i];
+    Res = Res * 11 + Bytes[i];
   return Res;
 }
 
