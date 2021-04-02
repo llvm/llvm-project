@@ -290,7 +290,8 @@ public:
   /// that is being generated needs to match one of the allowable clients or the
   /// linker refuses to link this library.
   ///
-  /// \param InstallName The name of the client that is allowed to link this library.
+  /// \param InstallName The name of the client that is allowed to link this
+  /// library.
   /// \param Target The target triple for which this applies.
   void addAllowableClient(StringRef InstallName, const Target &Target);
 
