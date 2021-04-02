@@ -92,7 +92,11 @@ inline CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
   using CppType = CppTypeFor<CAT, KIND>;
   DoTotalReduction<CppType>(x, dim, mask, accumulator, intrinsic, terminator);
   CppType result;
+#ifdef _MSC_VER // work around MSVC spurious error
+  accumulator.GetResult(&result);
+#else
   accumulator.template GetResult(&result);
+#endif
   return result;
 }
 
@@ -130,7 +134,11 @@ inline void ReduceDimToScalar(const Descriptor &x, int zeroBasedDim,
       break;
     }
   }
+#ifdef _MSC_VER // work around MSVC spurious error
+  accumulator.GetResult(result, zeroBasedDim);
+#else
   accumulator.template GetResult(result, zeroBasedDim);
+#endif
 }
 
 template <typename TYPE, typename ACCUMULATOR>
@@ -154,7 +162,11 @@ inline void ReduceDimMaskToScalar(const Descriptor &x, int zeroBasedDim,
       }
     }
   }
+#ifdef _MSC_VER // work around MSVC spurious error
+  accumulator.GetResult(result, zeroBasedDim);
+#else
   accumulator.template GetResult(result, zeroBasedDim);
+#endif
 }
 
 // Utility: establishes & allocates the result array for a partial
@@ -253,11 +265,13 @@ inline void TypedPartialNumericReduction(Descriptor &result,
           TypeCategory::Integer, 8>(
           result, x, dim, mask, terminator, intrinsic);
       return;
+#ifdef __SIZEOF_INT128__
     case 16:
       PartialReduction<INTEGER_ACCUM<CppTypeFor<TypeCategory::Integer, 16>>,
           TypeCategory::Integer, 16>(
           result, x, dim, mask, terminator, intrinsic);
       return;
+#endif
     }
     break;
   case TypeCategory::Real:
@@ -416,12 +430,14 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(SumInteger8)(const Descriptor &x,
   return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
       IntegerSumAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x}, "SUM");
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(SumInteger16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
       mask, IntegerSumAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
       "SUM");
 }
+#endif
 
 // TODO: real/complex(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(SumReal4)(const Descriptor &x,
@@ -549,6 +565,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(ProductInteger8)(
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
       "PRODUCT");
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
@@ -557,6 +574,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
       "PRODUCT");
 }
+#endif
 
 // TODO: real/complex(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ProductReal4)(const Descriptor &x,
@@ -725,10 +743,12 @@ static void DoMaxOrMinLocHelper(const char *intrinsic, Descriptor &result,
     accumulator.GetResult(
         result.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>());
     break;
+#ifdef __SIZEOF_INT128__
   case 16:
     accumulator.GetResult(
         result.OffsetElement<CppTypeFor<TypeCategory::Integer, 16>>());
     break;
+#endif
   default:
     terminator.Crash("%s: bad KIND=%d", intrinsic, kind);
   }
@@ -786,10 +806,12 @@ inline void TypedMaxOrMinLoc(const char *intrinsic, Descriptor &result,
       DoMaxOrMinLoc<TypeCategory::Integer, 8, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
       return;
+#ifdef __SIZEOF_INT128__
     case 16:
       DoMaxOrMinLoc<TypeCategory::Integer, 16, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, source, line, mask, back);
       return;
+#endif
     }
     break;
   case TypeCategory::Real:
@@ -875,10 +897,12 @@ static void DoPartialMaxOrMinLocDirection(const char *intrinsic,
     PartialReduction<ExtremumLocAccumulator<COMPARE<CppType, IS_MAX, BACK>>,
         TypeCategory::Integer, 8>(result, x, dim, mask, terminator, intrinsic);
     break;
+#ifdef __SIZEOF_INT128__
   case 16:
     PartialReduction<ExtremumLocAccumulator<COMPARE<CppType, IS_MAX, BACK>>,
         TypeCategory::Integer, 16>(result, x, dim, mask, terminator, intrinsic);
     break;
+#endif
   default:
     terminator.Crash("%s: bad KIND=%d", intrinsic, kind);
   }
@@ -925,10 +949,12 @@ inline void TypedPartialMaxOrMinLoc(const char *intrinsic, Descriptor &result,
       DoPartialMaxOrMinLoc<TypeCategory::Integer, 8, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, dim, mask, back, terminator);
       return;
+#ifdef __SIZEOF_INT128__
     case 16:
       DoPartialMaxOrMinLoc<TypeCategory::Integer, 16, IS_MAX, NumericCompare>(
           intrinsic, result, x, kind, dim, mask, back, terminator);
       return;
+#endif
     }
     break;
   case TypeCategory::Real:
@@ -1101,11 +1127,13 @@ inline void NumericMaxOrMin(Descriptor &result, const Descriptor &x, int dim,
           NumericExtremumAccumulator>(
           result, x, dim, mask, intrinsic, terminator);
       return;
+#ifdef __SIZEOF_INT128__
     case 16:
       DoMaxOrMin<TypeCategory::Integer, 16, IS_MAXVAL,
           NumericExtremumAccumulator>(
           result, x, dim, mask, intrinsic, terminator);
       return;
+#endif
     }
     break;
   case TypeCategory::Real:
@@ -1223,12 +1251,14 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(MaxvalInteger8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Integer, 8, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(MaxvalInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 16, true>(
       x, source, line, dim, mask, "MAXVAL");
 }
+#endif
 
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(MaxvalReal4)(const Descriptor &x,
@@ -1280,12 +1310,14 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(MinvalInteger8)(const Descriptor &x,
   return TotalNumericMaxOrMin<TypeCategory::Integer, 8, false>(
       x, source, line, dim, mask, "MINVAL");
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(MinvalInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 16, false>(
       x, source, line, dim, mask, "MINVAL");
 }
+#endif
 
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(MinvalReal4)(const Descriptor &x,
@@ -1513,9 +1545,11 @@ void RTNAME(CountDim)(Descriptor &result, const Descriptor &x, int dim,
   case 8:
     CountDimension<8>(result, x, dim, terminator);
     break;
+#ifdef __SIZEOF_INT128__
   case 16:
     CountDimension<16>(result, x, dim, terminator);
     break;
+#endif
   default:
     terminator.Crash("COUNT: bad KIND=%d", kind);
   }

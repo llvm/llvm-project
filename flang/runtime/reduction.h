@@ -51,8 +51,10 @@ std::int32_t RTNAME(SumInteger4)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 std::int64_t RTNAME(SumInteger8)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
 common::int128_t RTNAME(SumInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 
 // REAL/COMPLEX(2 & 3) return 32-bit float results for the caller to downconvert
 float RTNAME(SumReal2)(const Descriptor &, const char *source, int line,
@@ -100,9 +102,11 @@ std::int32_t RTNAME(ProductInteger4)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 std::int64_t RTNAME(ProductInteger8)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
 common::int128_t RTNAME(ProductInteger16)(const Descriptor &,
     const char *source, int line, int dim = 0,
     const Descriptor *mask = nullptr);
+#endif
 
 // REAL/COMPLEX(2 & 3) return 32-bit float results for the caller to downconvert
 float RTNAME(ProductReal2)(const Descriptor &, const char *source, int line,
@@ -166,8 +170,10 @@ std::int32_t RTNAME(MaxvalInteger4)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 std::int64_t RTNAME(MaxvalInteger8)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
 common::int128_t RTNAME(MaxvalInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 float RTNAME(MaxvalReal2)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 float RTNAME(MaxvalReal3)(const Descriptor &, const char *source, int line,
@@ -191,8 +197,10 @@ std::int32_t RTNAME(MinvalInteger4)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
 std::int64_t RTNAME(MivalInteger8)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#ifdef __SIZEOF_INT128__
 common::int128_t RTNAME(MivalInteger16)(const Descriptor &, const char *source,
     int line, int dim = 0, const Descriptor *mask = nullptr);
+#endif
 float RTNAME(MinvalReal2)(const Descriptor &, const char *source, int line,
     int dim = 0, const Descriptor *mask = nullptr);
 float RTNAME(MinvalReal3)(const Descriptor &, const char *source, int line,
