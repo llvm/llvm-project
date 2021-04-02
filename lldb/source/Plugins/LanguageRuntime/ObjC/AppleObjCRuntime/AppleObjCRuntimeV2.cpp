@@ -200,6 +200,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
 
     uint32_t count = 0;
     Class* realized_class_list = objc_copyRealizedClassList(&count);
+    DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
     for (uint32_t i=0; i<=count; ++i)
@@ -208,6 +209,8 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
+            if (name_ptr == NULL)
+                continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
             for (unsigned char c = *s; c; c = *++s)
