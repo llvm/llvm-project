@@ -2720,7 +2720,6 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
   SmallVector<SDValue, 8> Operands(Op->op_begin(), Op->op_end());
   SDValue &ScalarOp = Operands[SplatOp];
   MVT OpVT = ScalarOp.getSimpleValueType();
-  MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
   // If this isn't a scalar, or its type is XLenVT we're done.
@@ -2738,6 +2737,15 @@ static SDValue lowerVectorIntrinsicSplats(SDValue Op, SelectionDAG &DAG,
     ScalarOp = DAG.getNode(ExtOpc, DL, XLenVT, ScalarOp);
     return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
   }
+
+  // Use the previous operand to get the vXi64 VT. The result might be a mask
+  // VT for compares. Using the previous operand assumes that the previous
+  // operand will never have a smaller element size than a scalar operand and
+  // that a widening operation never uses SEW=64.
+  // NOTE: If this fails the below assert, we can probably just find the
+  // element count from any operand or result and use it to construct the VT.
+  assert(II->SplatOperand > 1 && "Unexpected splat operand!");
+  MVT VT = Op.getOperand(SplatOp - 1).getSimpleValueType();
 
   // The more complex case is when the scalar is larger than XLenVT.
   assert(XLenVT == MVT::i32 && OpVT == MVT::i64 &&
