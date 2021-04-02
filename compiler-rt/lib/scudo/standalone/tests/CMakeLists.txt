@@ -37,7 +37,9 @@ list(APPEND LINK_FLAGS -pthread)
 # Linking against libatomic is required with some compilers
 list(APPEND LINK_FLAGS -latomic)
 
-set(SCUDO_TEST_HEADERS)
+set(SCUDO_TEST_HEADERS
+  scudo_unit_test.h
+  )
 foreach (header ${SCUDO_HEADERS})
   list(APPEND SCUDO_TEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
 endforeach()
