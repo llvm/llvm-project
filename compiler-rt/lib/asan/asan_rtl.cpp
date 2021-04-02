@@ -490,6 +490,9 @@ static void AsanInitInternal() {
   if (flags()->start_deactivated)
     AsanDeactivate();
 
+  // interceptors
+  InitTlsSize();
+
   // Create main thread.
   AsanThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());
@@ -565,7 +568,7 @@ void UnpoisonStack(uptr bottom, uptr top, const char *type) {
         type, top, bottom, top - bottom, top - bottom);
     return;
   }
-  PoisonShadow(bottom, RoundUpTo(top - bottom, SHADOW_GRANULARITY), 0);
+  PoisonShadow(bottom, top - bottom, 0);
 }
 
 static void UnpoisonDefaultStack() {
