@@ -892,25 +892,22 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
   bool canBeSwiftDynamic = compiler_type.IsPossibleDynamicType(
       nullptr, check_cpp, check_objc);
 
-  if (canBeSwiftDynamic) {
-    do {
-      lldb::ProcessSP process_sp = valobj.GetProcessSP();
-      if (!process_sp)
-        break;
-      auto *runtime = SwiftLanguageRuntime::Get(process_sp);
-      if (runtime == nullptr)
-        break;
-      TypeAndOrName type_and_or_name;
-      Address address;
-      Value::ValueType value_type;
-      if (!runtime->GetDynamicTypeAndAddress(
-              valobj, use_dynamic, type_and_or_name, address, value_type))
-        break;
-      if (ConstString name = type_and_or_name.GetName())
-        result.push_back(name);
-    } while (false);
-  }
-
+  if (!canBeSwiftDynamic)
+    return result;
+  lldb::ProcessSP process_sp = valobj.GetProcessSP();
+  if (!process_sp)
+    return result;
+  auto *runtime = SwiftLanguageRuntime::Get(process_sp);
+  if (!runtime)
+    return result;
+  TypeAndOrName type_and_or_name;
+  Address address;
+  Value::ValueType value_type;
+  if (!runtime->GetDynamicTypeAndAddress(valobj, use_dynamic, type_and_or_name,
+                                         address, value_type))
+    return result;
+  if (ConstString name = type_and_or_name.GetName())
+    result.push_back(name);
   return result;
 }
 
