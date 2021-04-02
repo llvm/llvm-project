@@ -21,6 +21,11 @@
 TARGET_BUILTIN(__builtin_riscv_orc_b_32, "ZiZi", "nc", "experimental-zbb")
 TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "experimental-zbb")
 
+// Zbc extension
+TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "experimental-zbc")
+TARGET_BUILTIN(__builtin_riscv_clmulh, "LiLiLi", "nc", "experimental-zbc")
+TARGET_BUILTIN(__builtin_riscv_clmulr, "LiLiLi", "nc", "experimental-zbc")
+
 // Zbr extension
 TARGET_BUILTIN(__builtin_riscv_crc32_b, "LiLi", "nc", "experimental-zbr")
 TARGET_BUILTIN(__builtin_riscv_crc32_h, "LiLi", "nc", "experimental-zbr")

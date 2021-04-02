@@ -17884,6 +17884,20 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     IntrinsicTypes = {ResultType};
     break;
 
+  // Zbc
+  case RISCV::BI__builtin_riscv_clmul:
+    ID = Intrinsic::riscv_clmul;
+    IntrinsicTypes = {ResultType};
+    break;
+  case RISCV::BI__builtin_riscv_clmulh:
+    ID = Intrinsic::riscv_clmulh;
+    IntrinsicTypes = {ResultType};
+    break;
+  case RISCV::BI__builtin_riscv_clmulr:
+    ID = Intrinsic::riscv_clmulr;
+    IntrinsicTypes = {ResultType};
+    break;
+
   // Zbr
   case RISCV::BI__builtin_riscv_crc32_b:
     ID = Intrinsic::riscv_crc32_b;
