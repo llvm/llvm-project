@@ -49,7 +49,6 @@ config.environment['ASAN_OPTIONS'] = 'detect_container_overflow=0'
 llvm_config.with_system_environment([
     'FREEBSD_LEGACY_PLUGIN',
     'HOME',
-    'LLDB_CAPTURE_REPRODUCER',
     'TEMP',
     'TMP',
     'XDG_CACHE_HOME',
