@@ -52,8 +52,7 @@ template <typename Primary> static void testPrimary() {
   Str.output();
 }
 
-template <typename SizeClassMapT> struct TestConfig1 {
-  using SizeClassMap = SizeClassMapT;
+struct TestConfig1 {
   static const scudo::uptr PrimaryRegionSizeLog = 18U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
@@ -62,8 +61,7 @@ template <typename SizeClassMapT> struct TestConfig1 {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
-template <typename SizeClassMapT> struct TestConfig2 {
-  using SizeClassMap = SizeClassMapT;
+struct TestConfig2 {
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
@@ -72,8 +70,7 @@ template <typename SizeClassMapT> struct TestConfig2 {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
-template <typename SizeClassMapT> struct TestConfig3 {
-  using SizeClassMap = SizeClassMapT;
+struct TestConfig3 {
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
@@ -82,13 +79,43 @@ template <typename SizeClassMapT> struct TestConfig3 {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
 };
 
-TEST(ScudoPrimaryTest, BasicPrimary) {
-  using SizeClassMap = scudo::DefaultSizeClassMap;
+template <typename BaseConfig, typename SizeClassMapT>
+struct Config : public BaseConfig {
+  using SizeClassMap = SizeClassMapT;
+};
+
+template <typename BaseConfig, typename SizeClassMapT> struct MakeAllocator {
+  using Value = scudo::SizeClassAllocator64<Config<BaseConfig, SizeClassMapT>>;
+};
+
+template <typename SizeClassMapT>
+struct MakeAllocator<TestConfig1, SizeClassMapT> {
+  using Value = scudo::SizeClassAllocator32<Config<TestConfig1, SizeClassMapT>>;
+};
+
+namespace testing {
+namespace internal {
+#define SCUDO_DEFINE_GTEST_TYPE_NAME(TYPE)                                     \
+  template <> std::string GetTypeName<TYPE>() { return #TYPE; }
+SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig1)
+SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig2)
+SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig3)
+#undef SCUDO_DEFINE_GTEST_TYPE_NAME
+} // namespace internal
+} // namespace testing
+
+template <class BaseConfig> struct ScudoPrimaryTest : public ::testing::Test {};
+
+using ScudoPrimaryTestTypes = testing::Types<
 #if !SCUDO_FUCHSIA
-  testPrimary<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
+    TestConfig1,
 #endif
-  testPrimary<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testPrimary<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
+    TestConfig2, TestConfig3>;
+TYPED_TEST_CASE(ScudoPrimaryTest, ScudoPrimaryTestTypes);
+
+TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
+  using SizeClassMap = scudo::DefaultSizeClassMap;
+  testPrimary<typename MakeAllocator<TypeParam, SizeClassMap>::Value>();
 }
 
 struct SmallRegionsConfig {
@@ -178,13 +205,9 @@ template <typename Primary> static void testIteratePrimary() {
   Str.output();
 }
 
-TEST(ScudoPrimaryTest, PrimaryIterate) {
+TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   using SizeClassMap = scudo::DefaultSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testIteratePrimary<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testIteratePrimary<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testIteratePrimary<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
+  testIteratePrimary<typename MakeAllocator<TypeParam, SizeClassMap>::Value>();
 }
 
 static std::mutex Mutex;
@@ -239,13 +262,9 @@ template <typename Primary> static void testPrimaryThreaded() {
   Str.output();
 }
 
-TEST(ScudoPrimaryTest, PrimaryThreaded) {
+TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   using SizeClassMap = scudo::SvelteSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testPrimaryThreaded<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testPrimaryThreaded<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testPrimaryThreaded<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
+  testPrimaryThreaded<typename MakeAllocator<TypeParam, SizeClassMap>::Value>();
 }
 
 // Through a simple allocation that spans two pages, verify that releaseToOS
@@ -270,11 +289,7 @@ template <typename Primary> static void testReleaseToOS() {
   EXPECT_GT(Allocator->releaseToOS(), 0U);
 }
 
-TEST(ScudoPrimaryTest, ReleaseToOS) {
+TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   using SizeClassMap = scudo::DefaultSizeClassMap;
-#if !SCUDO_FUCHSIA
-  testReleaseToOS<scudo::SizeClassAllocator32<TestConfig1<SizeClassMap>>>();
-#endif
-  testReleaseToOS<scudo::SizeClassAllocator64<TestConfig2<SizeClassMap>>>();
-  testReleaseToOS<scudo::SizeClassAllocator64<TestConfig3<SizeClassMap>>>();
+  testReleaseToOS<typename MakeAllocator<TypeParam, SizeClassMap>::Value>();
 }
