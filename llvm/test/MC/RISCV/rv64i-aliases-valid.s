@@ -53,16 +53,16 @@ li x12, 4096
 # CHECK-EXPAND: lui a2, 1048575
 li x12, -4096
 # CHECK-EXPAND: lui a2, 1
-# CHECK-EXPAND: addiw a2, a2, 1
+# CHECK-EXPAND-NEXT: addiw a2, a2, 1
 li x12, 4097
 # CHECK-EXPAND: lui a2, 1048575
 # CHECK-EXPAND: addiw a2, a2, -1
 li x12, -4097
 # CHECK-EXPAND: lui a2, 524288
-# CHECK-EXPAND: addiw a2, a2, -1
+# CHECK-EXPAND-NEXT: addiw a2, a2, -1
 li x12, 2147483647
 # CHECK-EXPAND: lui a2, 524288
-# CHECK-EXPAND: addiw a2, a2, 1
+# CHECK-EXPAND-NEXT: addiw a2, a2, 1
 li x12, -2147483647
 # CHECK-EXPAND: lui a2, 524288
 li x12, -2147483648
@@ -70,78 +70,79 @@ li x12, -2147483648
 li x12, -0x80000000
 
 # CHECK-EXPAND: addi a2, zero, 1
-# CHECK-EXPAND: slli a2, a2, 31
+# CHECK-EXPAND-NEXT: slli a2, a2, 31
 li x12, 0x80000000
 # CHECK-EXPAND: addi a2, zero, -1
-# CHECK-EXPAND: srli a2, a2, 32
+# CHECK-EXPAND-NEXT: srli a2, a2, 32
 li x12, 0xFFFFFFFF
 
 # CHECK-EXPAND: addi t0, zero, 1
-# CHECK-EXPAND: slli t0, t0, 32
+# CHECK-EXPAND-NEXT: slli t0, t0, 32
 li t0, 0x100000000
 # CHECK-EXPAND: addi t1, zero, -1
-# CHECK-EXPAND: slli t1, t1, 63
+# CHECK-EXPAND-NEXT: slli t1, t1, 63
 li t1, 0x8000000000000000
 # CHECK-EXPAND: addi t1, zero, -1
-# CHECK-EXPAND: slli t1, t1, 63
+# CHECK-EXPAND-NEXT: slli t1, t1, 63
 li t1, -0x8000000000000000
 # CHECK-EXPAND: lui t2, 9321
-# CHECK-EXPAND: addiw t2, t2, -1329
-# CHECK-EXPAND: slli t2, t2, 35
+# CHECK-EXPAND-NEXT: addiw t2, t2, -1329
+# CHECK-EXPAND-NEXT: slli t2, t2, 35
 li t2, 0x1234567800000000
 # CHECK-EXPAND: addi t3, zero, 7
-# CHECK-EXPAND: slli t3, t3, 36
-# CHECK-EXPAND: addi t3, t3, 11
-# CHECK-EXPAND: slli t3, t3, 24
-# CHECK-EXPAND: addi t3, t3, 15
+# CHECK-EXPAND-NEXT: slli t3, t3, 36
+# CHECK-EXPAND-NEXT: addi t3, t3, 11
+# CHECK-EXPAND-NEXT: slli t3, t3, 24
+# CHECK-EXPAND-NEXT: addi t3, t3, 15
 li t3, 0x700000000B00000F
 # CHECK-EXPAND: lui t4, 583
-# CHECK-EXPAND: addiw t4, t4, -1875
-# CHECK-EXPAND: slli t4, t4, 14
-# CHECK-EXPAND: addi t4, t4, -947
-# CHECK-EXPAND: slli t4, t4, 12
-# CHECK-EXPAND: addi t4, t4, 1511
-# CHECK-EXPAND: slli t4, t4, 13
-# CHECK-EXPAND: addi t4, t4, -272
+# CHECK-EXPAND-NEXT: addiw t4, t4, -1875
+# CHECK-EXPAND-NEXT: slli t4, t4, 14
+# CHECK-EXPAND-NEXT: addi t4, t4, -947
+# CHECK-EXPAND-NEXT: slli t4, t4, 12
+# CHECK-EXPAND-NEXT: addi t4, t4, 1511
+# CHECK-EXPAND-NEXT: slli t4, t4, 13
+# CHECK-EXPAND-NEXT: addi t4, t4, -272
 li t4, 0x123456789abcdef0
 # CHECK-EXPAND: addi t5, zero, -1
 li t5, 0xFFFFFFFFFFFFFFFF
 # CHECK-EXPAND: lui t6, 64
-# CHECK-EXPAND: addiw t6, t6, 1
-# CHECK-EXPAND: slli t6, t6, 13
+# CHECK-EXPAND-NEXT: addiw t6, t6, 1
+# CHECK-EXPAND-NEXT: slli t6, t6, 13
 li t6, 0x80002000
 # CHECK-EXPAND: lui t0, 64
-# CHECK-EXPAND: addiw t0, t0, 1
-# CHECK-EXPAND: slli t0, t0, 14
+# CHECK-EXPAND-NEXT: addiw t0, t0, 1
+# CHECK-EXPAND-NEXT: slli t0, t0, 14
 li x5, 0x100004000
 # CHECK-EXPAND: lui t1, 1
-# CHECK-EXPAND: addiw t1, t1, 1
-# CHECK-EXPAND: slli t1, t1, 32
+# CHECK-EXPAND-NEXT: addiw t1, t1, 1
+# CHECK-EXPAND-NEXT: slli t1, t1, 32
 li x6, 0x100100000000
 # CHECK-EXPAND: lui t2, 983072
-# CHECK-EXPAND: srli t2, t2, 16
+# CHECK-EXPAND-NEXT: addiw t2, t2, -1
+# CHECK-EXPAND-NEXT: srli t2, t2, 16
 li x7, 0xFFFFFFFFF001
 # CHECK-EXPAND: lui s0, 65536
-# CHECK-EXPAND: addiw s0, s0, -1
-# CHECK-EXPAND: slli s0, s0, 12
-# CHECK-EXPAND: addi s0, s0, 1
+# CHECK-EXPAND-NEXT: addiw s0, s0, -1
+# CHECK-EXPAND-NEXT: slli s0, s0, 12
+# CHECK-EXPAND-NEXT: addi s0, s0, 1
 li x8, 0xFFFFFFF001
 # CHECK-EXPAND: lui s1, 1
-# CHECK-EXPAND: addiw s1, s1, 1
-# CHECK-EXPAND: slli s1, s1, 32
-# CHECK-EXPAND: addi s1, s1, -3
+# CHECK-EXPAND-NEXT: addiw s1, s1, 1
+# CHECK-EXPAND-NEXT: slli s1, s1, 32
+# CHECK-EXPAND-NEXT: addi s1, s1, -3
 li x9, 0x1000FFFFFFFD
 # CHECK-EXPAND: addi a0, zero, -1
-# CHECK-EXPAND: slli a0, a0, 36
-# CHECK-EXPAND: addi a0, a0, 1
-# CHECK-EXPAND: slli a0, a0, 25
-# CHECK-EXPAND: addi a0, a0, -1
+# CHECK-EXPAND-NEXT: slli a0, a0, 36
+# CHECK-EXPAND-NEXT: addi a0, a0, 1
+# CHECK-EXPAND-NEXT: slli a0, a0, 25
+# CHECK-EXPAND-NEXT: addi a0, a0, -1
 li x10, 0xE000000001FFFFFF
 # CHECK-EXPAND: addi a1, zero, -2047
-# CHECK-EXPAND: slli a1, a1, 27
-# CHECK-EXPAND: addi a1, a1, -1
-# CHECK-EXPAND: slli a1, a1, 12
-# CHECK-EXPAND: addi a1, a1, 2047
+# CHECK-EXPAND-NEXT: slli a1, a1, 27
+# CHECK-EXPAND-NEXT: addi a1, a1, -1
+# CHECK-EXPAND-NEXT: slli a1, a1, 12
+# CHECK-EXPAND-NEXT: addi a1, a1, 2047
 li x11, 0xFFFC007FFFFFF7FF
 
 # CHECK-EXPAND: addi a0, zero, 1110
