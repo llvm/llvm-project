@@ -35,6 +35,7 @@ struct FusionResult {
     FailBlockDependence,  // Fusion would violate another dependence in block.
     FailFusionDependence, // Fusion would reverse dependences between loops.
     FailComputationSlice, // Unable to compute src loop computation slice.
+    FailIncorrectSlice,   // Slice is computed, but it is incorrect.
   } value;
   FusionResult(ResultEnum v) : value(v) {}
 };
