@@ -143,14 +143,15 @@ define <4 x float> @fmul_fdiv_v4f32_const(<4 x float> %a) {
 ; SSE-NEXT:    ret <4 x float> [[TMP1]]
 ;
 ; SLM-LABEL: @fmul_fdiv_v4f32_const(
-; SLM-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; SLM-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; SLM-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; SLM-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 2
 ; SLM-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; SLM-NEXT:    [[AB0:%.*]] = fmul float [[A0]], 2.000000e+00
+; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> undef, <2 x i32> <i32 0, i32 1>
+; SLM-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], <float 2.000000e+00, float 1.000000e+00>
 ; SLM-NEXT:    [[AB3:%.*]] = fmul float [[A3]], 2.000000e+00
-; SLM-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[AB0]], i32 0
-; SLM-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[A1]], i32 1
+; SLM-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; SLM-NEXT:    [[R0:%.*]] = insertelement <4 x float> poison, float [[TMP3]], i32 0
+; SLM-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; SLM-NEXT:    [[R1:%.*]] = insertelement <4 x float> [[R0]], float [[TMP4]], i32 1
 ; SLM-NEXT:    [[R2:%.*]] = insertelement <4 x float> [[R1]], float [[A2]], i32 2
 ; SLM-NEXT:    [[R3:%.*]] = insertelement <4 x float> [[R2]], float [[AB3]], i32 3
 ; SLM-NEXT:    ret <4 x float> [[R3]]
