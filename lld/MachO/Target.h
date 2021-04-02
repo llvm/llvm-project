@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_TARGET_H
 #define LLD_MACHO_TARGET_H
 
+#include "MachOStructs.h"
 #include "Relocations.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
@@ -26,21 +27,20 @@ class Symbol;
 class DylibSymbol;
 class InputSection;
 
-enum : uint64_t {
-  // We are currently only supporting 64-bit targets since macOS and iOS are
-  // deprecating 32-bit apps.
-  WordSize = 8,
-  PageZeroSize = 1ull << 32, // XXX should be 4096 for 32-bit targets
-  MaxAlignmentPowerOf2 = 32,
-};
-
 class TargetInfo {
 public:
+  template <class LP> TargetInfo(LP) {
+    // Having these values available in TargetInfo allows us to access them
+    // without having to resort to templates.
+    pageZeroSize = LP::pageZeroSize;
+    wordSize = LP::wordSize;
+  }
+
   virtual ~TargetInfo() = default;
 
   // Validate the relocation structure and get its addend.
   virtual int64_t
-  getEmbeddedAddend(llvm::MemoryBufferRef, const llvm::MachO::section_64 &,
+  getEmbeddedAddend(llvm::MemoryBufferRef, uint64_t offset,
                     const llvm::MachO::relocation_info) const = 0;
   virtual void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                            uint64_t relocVA) const = 0;
@@ -70,13 +70,41 @@ public:
   uint32_t cpuType;
   uint32_t cpuSubtype;
 
+  size_t pageZeroSize;
   size_t stubSize;
   size_t stubHelperHeaderSize;
   size_t stubHelperEntrySize;
+  size_t wordSize;
 };
 
 TargetInfo *createX86_64TargetInfo();
 TargetInfo *createARM64TargetInfo();
+
+struct LP64 {
+  using mach_header = llvm::MachO::mach_header_64;
+  using nlist = structs::nlist_64;
+  using segment_command = llvm::MachO::segment_command_64;
+  using section = llvm::MachO::section_64;
+
+  static constexpr uint32_t magic = llvm::MachO::MH_MAGIC_64;
+  static constexpr uint32_t segmentLCType = llvm::MachO::LC_SEGMENT_64;
+
+  static constexpr size_t pageZeroSize = 1ull << 32;
+  static constexpr size_t wordSize = 8;
+};
+
+struct ILP32 {
+  using mach_header = llvm::MachO::mach_header;
+  using nlist = structs::nlist;
+  using segment_command = llvm::MachO::segment_command;
+  using section = llvm::MachO::section;
+
+  static constexpr uint32_t magic = llvm::MachO::MH_MAGIC;
+  static constexpr uint32_t segmentLCType = llvm::MachO::LC_SEGMENT;
+
+  static constexpr size_t pageZeroSize = 1ull << 12;
+  static constexpr size_t wordSize = 4;
+};
 
 extern TargetInfo *target;
 
