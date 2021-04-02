@@ -43,7 +43,14 @@ template <class Allocator> struct TSDRegistryExT {
     initLinkerInitialized(Instance); // Sets Initialized.
   }
 
-  void unmapTestOnly() {}
+  void unmapTestOnly() {
+    Allocator *Instance =
+        reinterpret_cast<Allocator *>(pthread_getspecific(PThreadKey));
+    if (!Instance)
+      return;
+    ThreadTSD.commitBack(Instance);
+    State = {};
+  }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance, bool MinimalInit) {
     if (LIKELY(State.InitState != ThreadState::NotInitialized))
