@@ -1547,8 +1547,14 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     }
 
     MCSymbol *Sym = getContext().getInlineAsmLabel(SymbolName);
-    if (!Sym)
+    if (!Sym) {
+      // Variables use case-insensitive symbol names; if this is a variable, we
+      // find the symbol using its canonical name.
+      auto VarIt = Variables.find(SymbolName.lower());
+      if (VarIt != Variables.end())
+        SymbolName = VarIt->second.Name;
       Sym = getContext().getOrCreateSymbol(SymbolName);
+    }
 
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
@@ -3268,7 +3274,7 @@ bool MasmParser::parseIdentifier(StringRef &Res) {
 ///    | name "textequ" text-list
 bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
                                       DirectiveKind DirKind) {
-  Variable &Var = Variables[Name];
+  Variable &Var = Variables[Name.lower()];
   if (Var.Name.empty()) {
     Var.Name = Name;
   } else if (!Var.Redefinable) {
@@ -3276,6 +3282,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   }
   Var.Redefinable = (DirKind != DK_EQU);
 
+  SMLoc StartLoc = Lexer.getLoc();
   if (DirKind == DK_EQU || DirKind == DK_TEXTEQU) {
     // "equ" and "textequ" both allow text expressions.
     std::string Value;
@@ -3301,7 +3308,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
 
   // Parse as expression assignment.
   const MCExpr *Expr;
-  SMLoc EndLoc, StartLoc = Lexer.getLoc();
+  SMLoc EndLoc;
   if (parseExpression(Expr, EndLoc))
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
   MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
@@ -3378,21 +3385,30 @@ bool MasmParser::parseTextItem(std::string &Data) {
   case AsmToken::LessGreater:
     return parseAngleBracketString(Data);
   case AsmToken::Identifier: {
+    // This must be a text macro; we need to expand it accordingly.
     StringRef ID;
     if (parseIdentifier(ID))
       return true;
     Data = ID.str();
 
-    auto it = Variables.find(ID);
-    if (it == Variables.end())
+    auto it = Variables.find(ID.lower());
+    if (it == Variables.end()) {
+      // Not a variable; since we haven't used the token, put it back for better
+      // error recovery.
+      getLexer().UnLex(AsmToken(AsmToken::Identifier, ID));
       return true;
+    }
 
     while (it != Variables.end()) {
       const Variable &Var = it->second;
-      if (!Var.IsText)
+      if (!Var.IsText) {
+        // Not a text macro; not usable in TextItem context. Since we haven't
+        // used the token, put it back for better error recovery.
+        getLexer().UnLex(AsmToken(AsmToken::Identifier, ID));
         return true;
+      }
       Data = Var.TextValue;
-      it = Variables.find(Data);
+      it = Variables.find(StringRef(Data).lower());
     }
     return false;
   }
@@ -5945,10 +5961,10 @@ bool MasmParser::parseDirectiveIfdef(SMLoc DirectiveLoc, bool expect_defined) {
           parseToken(AsmToken::EndOfStatement, "unexpected token in 'ifdef'"))
         return true;
 
-      if (Variables.find(Name) != Variables.end()) {
+      if (Variables.find(Name.lower()) != Variables.end()) {
         is_defined = true;
       } else {
-        MCSymbol *Sym = getContext().lookupSymbol(Name);
+        MCSymbol *Sym = getContext().lookupSymbol(Name.lower());
         is_defined = (Sym && !Sym->isUndefined(false));
       }
     }
@@ -6067,7 +6083,7 @@ bool MasmParser::parseDirectiveElseIfdef(SMLoc DirectiveLoc,
                      "unexpected token in 'elseifdef'"))
         return true;
 
-      if (Variables.find(Name) != Variables.end()) {
+      if (Variables.find(Name.lower()) != Variables.end()) {
         is_defined = true;
       } else {
         MCSymbol *Sym = getContext().lookupSymbol(Name);
@@ -6237,7 +6253,7 @@ bool MasmParser::parseDirectiveErrorIfdef(SMLoc DirectiveLoc,
     if (check(parseIdentifier(Name), "expected identifier after '.errdef'"))
       return true;
 
-    if (Variables.find(Name) != Variables.end()) {
+    if (Variables.find(Name.lower()) != Variables.end()) {
       IsDefined = true;
     } else {
       MCSymbol *Sym = getContext().lookupSymbol(Name);
