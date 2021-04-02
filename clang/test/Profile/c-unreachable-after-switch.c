@@ -11,5 +11,5 @@ void foo() {
     return;
   }
   // We shouldn't emit the unreachable counter. This used to crash in GlobalDCE.
-  // CHECK-NOT: store {{.*}} @[[SWC]], i64 0, i64 1}
+  // CHECK-NOT: store {{.*}} @[[C]], i64 0, i64 1}
 }
