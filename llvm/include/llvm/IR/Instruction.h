@@ -597,6 +597,9 @@ public:
   /// Return true if this atomic instruction stores to memory.
   bool hasAtomicStore() const;
 
+  /// Return true if this instruction has a volatile memory access.
+  bool isVolatile() const;
+
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
 
