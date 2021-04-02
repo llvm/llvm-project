@@ -20,11 +20,6 @@
 
 static constexpr scudo::Chunk::Origin Origin = scudo::Chunk::Origin::Malloc;
 
-template <class Config> struct UseQuarantineSetter {
-  UseQuarantineSetter(bool Value) { UseQuarantine = Value; }
-  ~UseQuarantineSetter() { UseQuarantine = true; }
-};
-
 // Fuchsia complains that the function is not used.
 UNUSED static void disableDebuggerdMaybe() {
 #if SCUDO_ANDROID
@@ -95,7 +90,16 @@ SCUDO_DEFINE_GTEST_TYPE_NAME(AndroidConfig)
 } // namespace internal
 } // namespace testing
 
-template <class T> struct ScudoCombinedTest : public ::testing::Test {};
+template <class Config> struct ScudoCombinedTest : public ::testing::Test {
+  ScudoCombinedTest() {
+    UseQuarantine = std::is_same<Config, scudo::AndroidConfig>::value;
+    Allocator = std::make_unique<AllocatorT>();
+  }
+  ~ScudoCombinedTest() { UseQuarantine = true; }
+
+  using AllocatorT = TestAllocator<Config>;
+  std::unique_ptr<AllocatorT> Allocator;
+};
 
 using ScudoCombinedTestTypes = testing::Types<scudo::AndroidSvelteConfig,
 #if SCUDO_FUCHSIA
@@ -108,12 +112,7 @@ using ScudoCombinedTestTypes = testing::Types<scudo::AndroidSvelteConfig,
 TYPED_TEST_CASE(ScudoCombinedTest, ScudoCombinedTestTypes);
 
 TYPED_TEST(ScudoCombinedTest, BasicCombined) {
-  using Config = TypeParam;
-  UseQuarantineSetter<Config> MUQ(
-      std::is_same<Config, scudo::AndroidConfig>::value);
-  using AllocatorT = TestAllocator<Config>;
-  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
-
+  auto *Allocator = this->Allocator.get();
   static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
   EXPECT_FALSE(
       Allocator->isOwned(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
@@ -143,7 +142,7 @@ TYPED_TEST(ScudoCombinedTest, BasicCombined) {
         EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
         EXPECT_LE(Size, Allocator->getUsableSize(P));
         memset(P, 0xaa, Size);
-        checkMemoryTaggingMaybe(Allocator.get(), P, Size, Align);
+        checkMemoryTaggingMaybe(Allocator, P, Size, Align);
         Allocator->deallocate(P, Origin, Size);
       }
     }
@@ -190,7 +189,8 @@ TYPED_TEST(ScudoCombinedTest, BasicCombined) {
       EXPECT_NE(P, nullptr);
       for (scudo::uptr I = 0; I < Size; I++) {
         unsigned char V = (reinterpret_cast<unsigned char *>(P))[I];
-        if (isPrimaryAllocation<AllocatorT>(Size, 1U << MinAlignLog) &&
+        if (isPrimaryAllocation<TestAllocator<TypeParam>>(Size,
+                                                          1U << MinAlignLog) &&
             !Allocator->useMemoryTaggingTestOnly())
           ASSERT_EQ(V, scudo::PatternFillByte);
         else
@@ -216,7 +216,7 @@ TYPED_TEST(ScudoCombinedTest, BasicCombined) {
   }
   EXPECT_TRUE(Found);
 
-  constexpr scudo::uptr MaxSize = Config::Primary::SizeClassMap::MaxSize;
+  constexpr scudo::uptr MaxSize = TypeParam::Primary::SizeClassMap::MaxSize;
 
   // Reallocate a large chunk all the way down to a byte, verifying that we
   // preserve the data in the process.
@@ -248,7 +248,7 @@ TYPED_TEST(ScudoCombinedTest, BasicCombined) {
     EXPECT_EQ(NewP, P);
     for (scudo::uptr I = 0; I < ReallocSize - 32; I++)
       EXPECT_EQ((reinterpret_cast<char *>(NewP))[I], Marker);
-    checkMemoryTaggingMaybe(Allocator.get(), NewP, NewSize, 0);
+    checkMemoryTaggingMaybe(Allocator, NewP, NewSize, 0);
   }
   Allocator->deallocate(P, Origin);
 
@@ -349,8 +349,7 @@ TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
   std::mutex Mutex;
   std::condition_variable Cv;
   bool Ready = false;
-  using AllocatorT = TestAllocator<TypeParam>;
-  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+  auto *Allocator = this->Allocator.get();
   std::thread Threads[32];
   for (scudo::uptr I = 0; I < ARRAY_SIZE(Threads); I++)
     Threads[I] = std::thread([&]() {
