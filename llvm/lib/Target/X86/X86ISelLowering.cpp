@@ -9227,7 +9227,7 @@ static SDValue LowerBUILD_VECTORvXi1(SDValue Op, SelectionDAG &DAG,
   return DstVec;
 }
 
-static bool isHorizOp(unsigned Opcode) {
+LLVM_ATTRIBUTE_UNUSED static bool isHorizOp(unsigned Opcode) {
   switch (Opcode) {
   case X86ISD::PACKSS:
   case X86ISD::PACKUS:
