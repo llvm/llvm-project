@@ -4332,7 +4332,10 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (Q.isUndefValue(Ops[0]))
     return UndefValue::get(GEPTy);
 
-  bool IsScalableVec = isa<ScalableVectorType>(SrcTy);
+  bool IsScalableVec =
+      isa<ScalableVectorType>(SrcTy) || any_of(Ops, [](const Value *V) {
+        return isa<ScalableVectorType>(V->getType());
+      });
 
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.
