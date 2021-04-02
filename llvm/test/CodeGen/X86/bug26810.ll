@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=x86 -regalloc=greedy -stop-after=greedy | FileCheck %s
+; RUN: llc -consider-local-interval-cost < %s -march=x86 -regalloc=greedy -stop-after=greedy | FileCheck %s
 ; Make sure bad eviction sequence doesnt occur
 
 ; Fix for bugzilla 26810.
