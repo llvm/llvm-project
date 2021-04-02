@@ -1348,6 +1348,8 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
   AttrBuilder FnAttrs = AL.getFnAttributes();
   FnAttrs.removeAttribute(Attribute::ReadNone);
   FnAttrs.removeAttribute(Attribute::ReadOnly);
+  FnAttrs.removeAttribute(Attribute::NoSync);
+  FnAttrs.removeAttribute(Attribute::NoFree);
   for (Attribute A : AL.getFnAttributes()) {
     if (isStatepointDirectiveAttr(A))
       FnAttrs.remove(A);
@@ -2587,6 +2589,8 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
                                   AH.getDereferenceableOrNullBytes(Index)));
   if (AH.getAttributes().hasAttribute(Index, Attribute::NoAlias))
     R.addAttribute(Attribute::NoAlias);
+  if (AH.getAttributes().hasAttribute(Index, Attribute::NoFree))
+    R.addAttribute(Attribute::NoFree);
 
   if (!R.empty())
     AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
@@ -2602,6 +2606,9 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
 
   if (isa<PointerType>(F.getReturnType()))
     RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
+
+  F.removeFnAttr(Attribute::NoSync);
+  F.removeFnAttr(Attribute::NoFree);
 }
 
 /// Certain metadata on instructions are invalid after running RS4GC.
