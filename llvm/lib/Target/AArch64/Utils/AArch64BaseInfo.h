@@ -676,7 +676,7 @@ enum ID : uint8_t {
   DA = 2,
   DB = 3
 };
-};
+} // namespace AArch64PACKey
 
 inline static StringRef AArch64PACKeyIDToString(AArch64PACKey::ID KeyID) {
   switch (KeyID) {

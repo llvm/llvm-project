@@ -345,7 +345,7 @@ static int printRecord(StringRef Filename, raw_ostream &OS) {
   });
 
   return false;
-};
+}
 
 //===----------------------------------------------------------------------===//
 // Print Store Records
@@ -521,7 +521,7 @@ static int printUnit(StringRef Filename, raw_ostream &OS) {
   OS << "INCLUDE END (" << NumIncludes << ")\n";
 
   return false;
-};
+}
 
 //===----------------------------------------------------------------------===//
 // Print Store Units
