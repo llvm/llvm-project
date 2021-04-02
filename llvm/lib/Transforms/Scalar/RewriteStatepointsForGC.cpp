@@ -1346,10 +1346,10 @@ static AttributeList legalizeCallAttributes(LLVMContext &Ctx,
 
   // Remove the readonly, readnone, and statepoint function attributes.
   AttrBuilder FnAttrs = AL.getFnAttributes();
-  FnAttrs.removeAttribute(Attribute::ReadNone);
-  FnAttrs.removeAttribute(Attribute::ReadOnly);
-  FnAttrs.removeAttribute(Attribute::NoSync);
-  FnAttrs.removeAttribute(Attribute::NoFree);
+  for (auto Attr : {Attribute::ReadNone, Attribute::ReadOnly,
+                    Attribute::NoSync, Attribute::NoFree})
+    FnAttrs.removeAttribute(Attr);
+
   for (Attribute A : AL.getFnAttributes()) {
     if (isStatepointDirectiveAttr(A))
       FnAttrs.remove(A);
@@ -2587,10 +2587,9 @@ static void RemoveNonValidAttrAtIndex(LLVMContext &Ctx, AttrHolder &AH,
   if (AH.getDereferenceableOrNullBytes(Index))
     R.addAttribute(Attribute::get(Ctx, Attribute::DereferenceableOrNull,
                                   AH.getDereferenceableOrNullBytes(Index)));
-  if (AH.getAttributes().hasAttribute(Index, Attribute::NoAlias))
-    R.addAttribute(Attribute::NoAlias);
-  if (AH.getAttributes().hasAttribute(Index, Attribute::NoFree))
-    R.addAttribute(Attribute::NoFree);
+  for (auto Attr : {Attribute::NoAlias, Attribute::NoFree})
+    if (AH.getAttributes().hasAttribute(Index, Attr))
+      R.addAttribute(Attr);
 
   if (!R.empty())
     AH.setAttributes(AH.getAttributes().removeAttributes(Ctx, Index, R));
@@ -2607,8 +2606,8 @@ static void stripNonValidAttributesFromPrototype(Function &F) {
   if (isa<PointerType>(F.getReturnType()))
     RemoveNonValidAttrAtIndex(Ctx, F, AttributeList::ReturnIndex);
 
-  F.removeFnAttr(Attribute::NoSync);
-  F.removeFnAttr(Attribute::NoFree);
+  for (auto Attr : {Attribute::NoSync, Attribute::NoFree})
+    F.removeFnAttr(Attr);
 }
 
 /// Certain metadata on instructions are invalid after running RS4GC.
