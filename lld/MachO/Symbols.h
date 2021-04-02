@@ -117,7 +117,6 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
-  InputFile *file;
   InputSection *isec;
   uint64_t value;
   uint64_t size;
