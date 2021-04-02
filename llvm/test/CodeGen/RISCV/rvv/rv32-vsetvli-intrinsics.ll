@@ -30,3 +30,36 @@ define void @test_vsetvlimax_e64m8() nounwind {
   call i32 @llvm.riscv.vsetvlimax.i32(i32 3, i32 3)
   ret void
 }
+
+declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i32(<vscale x 4 x i32>*, i32)
+
+; Check that we remove the redundant vsetvli when followed by another operation
+; FIXME: We don't
+define <vscale x 4 x i32> @redundant_vsetvli(i32 %avl, <vscale x 4 x i32>* %ptr) nounwind {
+; CHECK-LABEL: redundant_vsetvli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %vl = call i32 @llvm.riscv.vsetvli.i32(i32 %avl, i32 2, i32 1)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i32(<vscale x 4 x i32>* %ptr, i32 %vl)
+  ret <vscale x 4 x i32> %x
+}
+
+; Check that we remove the repeated/redundant vsetvli when followed by another
+; operation
+; FIXME: We don't
+define <vscale x 4 x i32> @repeated_vsetvli(i32 %avl, <vscale x 4 x i32>* %ptr) nounwind {
+; CHECK-LABEL: repeated_vsetvli:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    ret
+  %vl0 = call i32 @llvm.riscv.vsetvli.i32(i32 %avl, i32 2, i32 1)
+  %vl1 = call i32 @llvm.riscv.vsetvli.i32(i32 %vl0, i32 2, i32 1)
+  %x = call <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i32(<vscale x 4 x i32>* %ptr, i32 %vl1)
+  ret <vscale x 4 x i32> %x
+}
