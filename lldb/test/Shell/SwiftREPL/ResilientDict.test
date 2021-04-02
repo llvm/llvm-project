@@ -3,9 +3,6 @@
 
 // RUN: %lldb --repl < %s | FileCheck %s --check-prefix=DICT
 
-// rdar://76105456
-// XFAIL: *
-
 // The dictionary order isn't deterministic, so print the dictionary
 // once per element.
 
