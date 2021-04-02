@@ -17,6 +17,10 @@
 
 #include "clang/Basic/riscv_vector_builtins.inc"
 
+// Zbb extension
+TARGET_BUILTIN(__builtin_riscv_orc_b_32, "ZiZi", "nc", "experimental-zbb")
+TARGET_BUILTIN(__builtin_riscv_orc_b_64, "WiWi", "nc", "experimental-zbb")
+
 // Zbr extension
 TARGET_BUILTIN(__builtin_riscv_crc32_b, "LiLi", "nc", "experimental-zbr")
 TARGET_BUILTIN(__builtin_riscv_crc32_h, "LiLi", "nc", "experimental-zbr")

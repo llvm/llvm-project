@@ -198,6 +198,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
   }
 
+  if (Subtarget.hasStdExtZbb() && Subtarget.is64Bit())
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::ADD, MVT::i32, Custom);
     setOperationAction(ISD::SUB, MVT::i32, Custom);
@@ -4198,6 +4201,14 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::riscv_orc_b: {
+      SDValue Newop1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue Res = 
+          DAG.getNode(N->getOpcode(), DL, MVT::i64, N->getOperand(0), Newop1);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
       MVT XLenVT = Subtarget.getXLenVT();
