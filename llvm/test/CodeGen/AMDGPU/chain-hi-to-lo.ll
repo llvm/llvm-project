@@ -695,7 +695,7 @@ define <2 x i16> @chain_hi_to_lo_flat_other_dep(i16 addrspace(0)* %ptr) {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v0, 2
+; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v0, 2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ushort v2, v[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
