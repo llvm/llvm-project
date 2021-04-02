@@ -13,7 +13,7 @@
 TEST_F(AArch64GISelMITest, TestKnownBitsCst) {
   StringRef MIRString = "  %3:_(s8) = G_CONSTANT i8 1\n"
                         "  %4:_(s8) = COPY %3\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   unsigned CopyReg = Copies[Copies.size() - 1];
@@ -33,7 +33,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCst) {
 TEST_F(AArch64GISelMITest, TestKnownBitsCstWithClass) {
   StringRef MIRString = "  %10:gpr32 = MOVi32imm 1\n"
                         "  %4:_(s32) = COPY %10\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   unsigned CopyReg = Copies[Copies.size() - 1];
@@ -72,7 +72,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHI) {
                         "  bb.12:\n"
                         "  %13:_(s8) = PHI %10(s8), %bb.10, %12(s8), %bb.11\n"
                         "  %14:_(s8) = COPY %13\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg = Copies[Copies.size() - 1];
@@ -106,7 +106,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIToNonGenericReg) {
                         "  bb.12:\n"
                         "  %13:_(s8) = PHI %10, %bb.10, %12(s8), %bb.11\n"
                         "  %14:_(s8) = COPY %13\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg = Copies[Copies.size() - 1];
@@ -144,7 +144,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUnknownPHI) {
       "  bb.12:\n"
       "  %13:_(s64) = PHI %10(s64), %bb.10, %12(s64), %bb.11\n"
       "  %14:_(s64) = COPY %13\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg = Copies[Copies.size() - 1];
@@ -181,7 +181,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsCstPHIWithLoop) {
       "  %13:_(s8) = PHI %10(s8), %bb.10, %12(s8), %bb.11, %14(s8), %bb.12\n"
       "  %14:_(s8) = COPY %13\n"
       "  G_BR %bb.12\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg = Copies[Copies.size() - 1];
@@ -220,7 +220,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsDecreasingCstPHIWithLoop) {
                         "  %14:_(s8) = G_LSHR %13, %11\n"
                         "  %15:_(s8) = COPY %14\n"
                         "  G_BR %bb.12\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg = Copies[Copies.size() - 1];
@@ -248,7 +248,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsPtrToIntViceVersa) {
                         "  %4:_(p0) = G_INTTOPTR %3\n"
                         "  %5:_(s32) = G_PTRTOINT %4\n"
                         "  %6:_(s32) = COPY %5\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   unsigned CopyReg = Copies[Copies.size() - 1];
@@ -276,7 +276,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAND) {
    %copy_and:_(s8) = COPY %and
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -308,7 +308,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsOR) {
    %copy_or:_(s8) = COPY %or
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -340,7 +340,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsXOR) {
    %copy_xor:_(s8) = COPY %xor
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -363,7 +363,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsXORConstant) {
                         "  %4:_(s8) = G_CONSTANT i8 7\n"
                         "  %5:_(s8) = G_XOR %3, %4\n"
                         "  %6:_(s8) = COPY %5\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   unsigned CopyReg = Copies[Copies.size() - 1];
@@ -395,7 +395,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsASHR) {
    %copy_ashr1:_(s8) = COPY %ashr1
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -439,7 +439,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsLSHR) {
    %copy_lshr1:_(s8) = COPY %lshr1
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -476,7 +476,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSHL) {
    %copy_shl:_(s8) = COPY %shl
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -507,7 +507,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsADD) {
    %copy_add:_(s16) = COPY %add
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -540,7 +540,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSUB) {
    %copy_sub:_(s16) = COPY %sub
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -567,7 +567,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsMUL) {
    %copy_mul:_(s16) = COPY %mul
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -595,7 +595,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsICMP) {
    %copy_icmp:_(s32) = COPY %icmp
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -618,7 +618,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsFCMP) {
    %copy_fcmp:_(s32) = COPY %fcmp
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -650,7 +650,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSelect) {
    %copy_select:_(s8) = COPY %select
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -683,7 +683,7 @@ TEST_F(AArch64GISelMITest, TestKnownBits) {
                   "  %11:_(s32) = G_OR %9, %16\n"
                   "  %12:_(s32) = G_MUL %10, %11\n"
                   "  %13:_(s32) = COPY %12\n";
-  setUp(MIR);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIR);
   if (!TM)
     return;
   unsigned CopyReg = Copies[Copies.size() - 1];
@@ -699,7 +699,7 @@ TEST_F(AArch64GISelMITest, TestKnownBits) {
 }
 
 TEST_F(AArch64GISelMITest, TestSignBitIsZero) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -728,7 +728,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsConstant) {
 
                         "  %11:_(s8) = G_CONSTANT i8 -32\n"
                         "  %12:_(s8) = COPY %11\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyReg1 = Copies[Copies.size() - 5];
@@ -754,7 +754,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSext) {
                         "  %7:_(s8) = G_CONSTANT i8 -1\n"
                         "  %8:_(s32) = G_SEXT %7\n"
                         "  %9:_(s32) = COPY %8\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopySextLoad = Copies[Copies.size() - 2];
@@ -801,7 +801,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsSextInReg) {
    %copy_inreg31_sext:_(s32) = COPY %inreg31_sext
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -868,7 +868,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsAssertSext) {
    %copy_assert_sext31_sext:_(s32) = COPY %assert_sext31_sext
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -911,7 +911,7 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
                         "  %10:_(s32) = G_CONSTANT i32 7\n"
                         "  %11:_(s8) = G_TRUNC %10\n"
                         "  %12:_(s8) = COPY %11\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyTruncLoad = Copies[Copies.size() - 3];
@@ -940,7 +940,7 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
     "  %11:_(s32) = G_AMDGPU_BUFFER_LOAD_SSHORT %3, %4, %4, %4, 0, 0, 0 :: (load 2)\n"
     "  %12:_(s32) = COPY %11\n";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -970,7 +970,7 @@ TEST_F(AMDGPUGISelMITest, TestTargetKnownAlign) {
     "  %13:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.implicit.buffer.ptr)\n"
     "  %14:_(p4) = COPY %13\n";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1032,7 +1032,7 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
   %copy_or_pow2:_(s32) = COPY %or_pow2
 
 )MIR";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1077,7 +1077,7 @@ TEST_F(AArch64GISelMITest, TestMetadata) {
                         "  %cst:_(s32) = G_CONSTANT i32 1\n"
                         "  %and:_(s32) = G_AND %ext, %cst\n"
                         "  %copy:_(s32) = COPY %and(s32)\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1128,7 +1128,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsExt) {
                         "  %r2:_(s32) = COPY %zext\n"
                         "  %sext:_(s32) = G_SEXT %y(s16)\n"
                         "  %r3:_(s32) = COPY %sext\n";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   Register CopyRegAny = Copies[Copies.size() - 3];
@@ -1198,7 +1198,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSextInReg) {
    %copy_inreg4:_(s32) = COPY %inreg4
 
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   GISelKnownBits Info(*MF);
@@ -1269,7 +1269,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertSext) {
    %assert_sext4:_(s32) = G_ASSERT_SEXT %ten, 2
    %copy_assert_sext4:_(s32) = COPY %assert_sext4
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
   GISelKnownBits Info(*MF);
@@ -1314,7 +1314,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsMergeValues) {
    %merge:_(s64) = G_MERGE_VALUES %val0, %val1, %val2, %val3
    %mergecopy:_(s64) = COPY %merge
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1338,7 +1338,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUnmergeValues) {
    %part3:_(s16) = COPY %val3
 
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1365,7 +1365,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsBSwapBitReverse) {
    %copy_bswap:_(s32) = COPY %bswap
    %copy_bitreverse:_(s32) = COPY %bitreverse
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1414,7 +1414,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMAX) {
    %copy_umax1:_(s8) = COPY %umax1
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1452,7 +1452,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMax) {
    %umax:_(s64) = G_UMAX %zext, %const
    %copy_umax:_(s64) = COPY %umax
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1484,7 +1484,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsUMIN) {
    %copy_umin:_(s8) = COPY %umin
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1518,7 +1518,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSMAX) {
    %copy_smax:_(s8) = COPY %smax
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1553,7 +1553,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsSMIN) {
    %copy_smin:_(s8) = COPY %smin
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1582,7 +1582,7 @@ TEST_F(AArch64GISelMITest, TestInvalidQueries) {
    %biggerSized:_(s32) = G_SHL %src, %thirty3
    %copy2:_(s32) = COPY %biggerSized
 )";
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 
@@ -1624,7 +1624,7 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
    %copy_assert3:_(s64) = COPY %assert3
 )";
 
-  setUp(MIRString);
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString);
   if (!TM)
     return;
 

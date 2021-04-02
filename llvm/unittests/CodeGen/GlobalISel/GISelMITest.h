@@ -112,25 +112,27 @@ protected:
   virtual void getTargetTestModuleString(SmallString<512> &S,
                                          StringRef MIRFunc) const = 0;
 
-  void setUp(StringRef ExtraAssembly = "") {
-    TM = createTargetMachine();
-    if (!TM)
-      return;
+  LLVMTargetMachine *
+  createTargetMachineAndModule(StringRef ExtraAssembly = "") {
+    TheTM = createTargetMachine();
+    if (!TheTM)
+      return nullptr;
 
     SmallString<512> MIRString;
     getTargetTestModuleString(MIRString, ExtraAssembly);
 
-    ModuleMMIPair = createDummyModule(Context, *TM, MIRString, "func");
+    ModuleMMIPair = createDummyModule(Context, *TheTM, MIRString, "func");
     MF = getMFFromMMI(ModuleMMIPair.first.get(), ModuleMMIPair.second.get());
     collectCopies(Copies, MF);
     EntryMBB = &*MF->begin();
     B.setMF(*MF);
     MRI = &MF->getRegInfo();
     B.setInsertPt(*EntryMBB, EntryMBB->end());
+    return TheTM.get();
   }
 
   LLVMContext Context;
-  std::unique_ptr<LLVMTargetMachine> TM;
+  std::unique_ptr<LLVMTargetMachine> TheTM;
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
       ModuleMMIPair;

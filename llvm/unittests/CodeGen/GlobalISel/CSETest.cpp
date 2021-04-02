@@ -13,7 +13,7 @@
 namespace {
 
 TEST_F(AArch64GISelMITest, TestCSE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -109,7 +109,7 @@ TEST_F(AArch64GISelMITest, TestCSE) {
 }
 
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -139,7 +139,7 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
 }
 
 TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
