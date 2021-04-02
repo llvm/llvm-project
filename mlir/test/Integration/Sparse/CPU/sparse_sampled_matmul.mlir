@@ -66,7 +66,6 @@ module {
   func private @getTensorFilename(index) -> (!Filename)
   func private @newSparseTensor(!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
   func private @delSparseTensor(!SparseTensor) -> ()
-  func private @print_memref_f32(%ptr : tensor<*xf32>)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
@@ -86,8 +85,8 @@ module {
     %sparse = constant true
     memref.store %sparse, %annotations[%c0] : memref<?xi1>
     memref.store %sparse, %annotations[%c1] : memref<?xi1>
-    %i32 = constant 3 : index
-    %f32 = constant 1 : index
+    %i32 = constant 2 : index
+    %f32 = constant 2 : index
 
     // Setup memory for the dense matrices and initialize.
     %adata = memref.alloc(%c5, %c10) : memref<?x?xf32>

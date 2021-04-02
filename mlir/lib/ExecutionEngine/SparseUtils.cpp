@@ -113,12 +113,21 @@ private:
 class SparseTensorStorageBase {
 public:
   virtual uint64_t getDimSize(uint64_t) = 0;
+
+  // Overhead storage.
   virtual void getPointers(std::vector<uint64_t> **, uint64_t) { fatal("p64"); }
   virtual void getPointers(std::vector<uint32_t> **, uint64_t) { fatal("p32"); }
+  virtual void getPointers(std::vector<uint16_t> **, uint64_t) { fatal("p16"); }
+  virtual void getPointers(std::vector<uint8_t> **, uint64_t) { fatal("p8"); }
   virtual void getIndices(std::vector<uint64_t> **, uint64_t) { fatal("i64"); }
   virtual void getIndices(std::vector<uint32_t> **, uint64_t) { fatal("i32"); }
+  virtual void getIndices(std::vector<uint16_t> **, uint64_t) { fatal("i16"); }
+  virtual void getIndices(std::vector<uint8_t> **, uint64_t) { fatal("i8"); }
+
+  // Primary storage.
   virtual void getValues(std::vector<double> **) { fatal("valf64"); }
   virtual void getValues(std::vector<float> **) { fatal("valf32"); }
+
   virtual ~SparseTensorStorageBase() {}
 
 private:
@@ -464,6 +473,22 @@ struct MemRef1DU32 {
   uint64_t strides[1];
 };
 
+struct MemRef1DU16 {
+  const uint16_t *base;
+  const uint16_t *data;
+  uint64_t off;
+  uint64_t sizes[1];
+  uint64_t strides[1];
+};
+
+struct MemRef1DU8 {
+  const uint8_t *base;
+  const uint8_t *data;
+  uint64_t off;
+  uint64_t sizes[1];
+  uint64_t strides[1];
+};
+
 struct MemRef1DF64 {
   const double *base;
   const double *data;
@@ -480,40 +505,41 @@ struct MemRef1DF32 {
   uint64_t strides[1];
 };
 
-enum TypeEnum : uint64_t { kF64 = 0, kF32 = 1, kU64 = 2, kU32 = 3 };
+enum OverheadTypeEnum : uint64_t { kU64 = 1, kU32 = 2, kU16 = 3, kU8 = 4 };
+enum PrimaryTypeEnum : uint64_t { kF64 = 1, kF32 = 2 };
+
+#define CASE(p, i, v, P, I, V)                                                 \
+  if (ptrTp == (p) && indTp == (i) && valTp == (v))                            \
+  return newSparseTensor<P, I, V>(filename, sparsity, asize)
 
 void *newSparseTensor(char *filename, bool *abase, bool *adata, uint64_t aoff,
                       uint64_t asize, uint64_t astride, uint64_t ptrTp,
                       uint64_t indTp, uint64_t valTp) {
   assert(astride == 1);
   bool *sparsity = abase + aoff;
-  if (ptrTp == kU64 && indTp == kU64 && valTp == kF64)
-    return newSparseTensor<uint64_t, uint64_t, double>(filename, sparsity,
-                                                       asize);
-  if (ptrTp == kU64 && indTp == kU64 && valTp == kF32)
-    return newSparseTensor<uint64_t, uint64_t, float>(filename, sparsity,
-                                                      asize);
-  if (ptrTp == kU64 && indTp == kU32 && valTp == kF64)
-    return newSparseTensor<uint64_t, uint32_t, double>(filename, sparsity,
-                                                       asize);
-  if (ptrTp == kU64 && indTp == kU32 && valTp == kF32)
-    return newSparseTensor<uint64_t, uint32_t, float>(filename, sparsity,
-                                                      asize);
-  if (ptrTp == kU32 && indTp == kU64 && valTp == kF64)
-    return newSparseTensor<uint32_t, uint64_t, double>(filename, sparsity,
-                                                       asize);
-  if (ptrTp == kU32 && indTp == kU64 && valTp == kF32)
-    return newSparseTensor<uint32_t, uint64_t, float>(filename, sparsity,
-                                                      asize);
-  if (ptrTp == kU32 && indTp == kU32 && valTp == kF64)
-    return newSparseTensor<uint32_t, uint32_t, double>(filename, sparsity,
-                                                       asize);
-  if (ptrTp == kU32 && indTp == kU32 && valTp == kF32)
-    return newSparseTensor<uint32_t, uint32_t, float>(filename, sparsity,
-                                                      asize);
+
+  // The most common cases: 64-bit or 32-bit overhead, double/float values.
+  CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
+  CASE(kU64, kU64, kF32, uint64_t, uint64_t, float);
+  CASE(kU64, kU32, kF64, uint64_t, uint32_t, double);
+  CASE(kU64, kU32, kF32, uint64_t, uint32_t, float);
+  CASE(kU32, kU64, kF64, uint32_t, uint64_t, double);
+  CASE(kU32, kU64, kF32, uint32_t, uint64_t, float);
+  CASE(kU32, kU32, kF64, uint32_t, uint32_t, double);
+  CASE(kU32, kU32, kF32, uint32_t, uint32_t, float);
+
+  // Some special cases: low overhead storage, double/float values.
+  CASE(kU16, kU16, kF64, uint16_t, uint16_t, double);
+  CASE(kU8, kU8, kF64, uint8_t, uint8_t, double);
+  CASE(kU16, kU16, kF32, uint16_t, uint16_t, float);
+  CASE(kU8, kU8, kF32, uint8_t, uint8_t, float);
+
+  // Unsupported case (add above if needed).
   fputs("unsupported combination of types\n", stderr);
   exit(1);
 }
+
+#undef CASE
 
 uint64_t sparseDimSize(void *tensor, uint64_t d) {
   return static_cast<SparseTensorStorageBase *>(tensor)->getDimSize(d);
@@ -531,6 +557,18 @@ MemRef1DU32 sparsePointers32(void *tensor, uint64_t d) {
   return {v->data(), v->data(), 0, {v->size()}, {1}};
 }
 
+MemRef1DU16 sparsePointers16(void *tensor, uint64_t d) {
+  std::vector<uint16_t> *v;
+  static_cast<SparseTensorStorageBase *>(tensor)->getPointers(&v, d);
+  return {v->data(), v->data(), 0, {v->size()}, {1}};
+}
+
+MemRef1DU8 sparsePointers8(void *tensor, uint64_t d) {
+  std::vector<uint8_t> *v;
+  static_cast<SparseTensorStorageBase *>(tensor)->getPointers(&v, d);
+  return {v->data(), v->data(), 0, {v->size()}, {1}};
+}
+
 MemRef1DU64 sparseIndices64(void *tensor, uint64_t d) {
   std::vector<uint64_t> *v;
   static_cast<SparseTensorStorageBase *>(tensor)->getIndices(&v, d);
@@ -539,6 +577,18 @@ MemRef1DU64 sparseIndices64(void *tensor, uint64_t d) {
 
 MemRef1DU32 sparseIndices32(void *tensor, uint64_t d) {
   std::vector<uint32_t> *v;
+  static_cast<SparseTensorStorageBase *>(tensor)->getIndices(&v, d);
+  return {v->data(), v->data(), 0, {v->size()}, {1}};
+}
+
+MemRef1DU16 sparseIndices16(void *tensor, uint64_t d) {
+  std::vector<uint16_t> *v;
+  static_cast<SparseTensorStorageBase *>(tensor)->getIndices(&v, d);
+  return {v->data(), v->data(), 0, {v->size()}, {1}};
+}
+
+MemRef1DU8 sparseIndices8(void *tensor, uint64_t d) {
+  std::vector<uint8_t> *v;
   static_cast<SparseTensorStorageBase *>(tensor)->getIndices(&v, d);
   return {v->data(), v->data(), 0, {v->size()}, {1}};
 }
