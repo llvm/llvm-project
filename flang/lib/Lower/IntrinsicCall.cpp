@@ -170,6 +170,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
   /// is ignored because this is already reflected in the result type.
@@ -318,6 +319,9 @@ static constexpr IntrinsicHandler handlers[]{
              /*isElemental=*/true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
+    {"verify", &I::genVerify, {{ {"string", asAddr}, {"set", asAddr},
+                          {"back", asAddr}, {"kind", asValue} }},
+               /*isElemental=*/true},
 };
 
 /// To make fir output more readable for debug, one can outline all intrinsic
@@ -1679,6 +1683,53 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   }
   assert(result);
   return result;
+}
+
+// VERIFY 
+fir::ExtendedValue
+IntrinsicLibrary::genVerify(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 4);
+
+  // Handle required string argument
+  auto string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  auto set = builder.createBox(loc, args[1]);
+
+  // Handle optional argument, back
+  auto back = isAbsent(args[2])
+              ? builder.create<fir::AbsentOp>(
+              loc, fir::BoxType::get(builder.getNoneType()))
+              : builder.createBox(loc, args[2]); 
+
+  // Handle optional argument, kind
+  auto kind = isAbsent(args[3])
+              ? builder.createIntegerConstant(loc, resultType, 
+              builder.getKindMap().defaultIntegerKind()) :
+              fir::getBase(args[3]);
+  
+  // Create result descriptor    
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  Fortran::lower::genVerify(builder, loc, resultIrBox, string, set, back, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+
+  return res.match(
+        [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+            -> fir::ExtendedValue { 
+            addCleanUpForTemp(loc, box.getAddr());
+            return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for VERIFY");
+      });
 }
 
 // MIN and MAX
