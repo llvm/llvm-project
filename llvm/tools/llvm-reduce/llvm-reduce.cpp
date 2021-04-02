@@ -96,10 +96,10 @@ void writeOutput(Module *M, StringRef Message) {
   errs() << Message << OutputFilename << "\n";
 }
 
-int main(int argc, char **argv) {
-  InitLLVM X(argc, argv);
+int main(int Argc, char **Argv) {
+  InitLLVM X(Argc, Argv);
 
-  cl::ParseCommandLineOptions(argc, argv, "LLVM automatic testcase reducer.\n");
+  cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
 
   LLVMContext Context;
   std::unique_ptr<Module> OriginalProgram =

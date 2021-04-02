@@ -9,6 +9,7 @@ executable("llvm-reduce") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "DeltaManager.cpp",
     "TestRunner.cpp",
     "deltas/Delta.cpp",
     "deltas/ReduceAliases.cpp",
