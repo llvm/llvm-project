@@ -25,7 +25,7 @@ public:
 
 // Test G_ROTL/G_ROTR lowering.
 TEST_F(AArch64GISelMITest, LowerRotates) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -78,7 +78,7 @@ TEST_F(AArch64GISelMITest, LowerRotates) {
 
 // Test G_ROTL/G_ROTR non-pow2 lowering.
 TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -135,7 +135,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
 
 // Test vector G_ROTR lowering.
 TEST_F(AArch64GISelMITest, LowerRotatesVector) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -182,7 +182,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
 // Test CTTZ expansion when CTTZ_ZERO_UNDEF is legal or custom,
 // in which case it becomes CTTZ_ZERO_UNDEF with select.
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -214,7 +214,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
 
 // CTTZ expansion in terms of CTLZ
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -248,7 +248,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
 
 // CTLZ scalar narrowing
 TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -283,7 +283,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
 
 // CTTZ scalar narrowing
 TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -318,7 +318,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
 
 // CTTZ expansion in terms of CTPOP
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -351,7 +351,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
 
 // CTPOP widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -385,7 +385,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
 
 // Test a strange case where the result is wider than the source
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -420,7 +420,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
 
 // CTTZ_ZERO_UNDEF expansion in terms of CTTZ
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -447,7 +447,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -478,7 +478,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
 
 // CTLZ expansion in terms of CTLZ_ZERO_UNDEF if the latter is a libcall
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -509,7 +509,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
 
 // CTLZ expansion
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -550,7 +550,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
 
 // CTLZ widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -585,7 +585,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
 
 // CTLZ_ZERO_UNDEF widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -621,7 +621,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
 
 // CTPOP widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -654,7 +654,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
 
 // CTTZ_ZERO_UNDEF widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -688,7 +688,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
 
 // CTTZ widening.
 TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -722,7 +722,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
 }
 // UADDO widening.
 TEST_F(AArch64GISelMITest, WidenUADDO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -761,7 +761,7 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
 
 // USUBO widening.
 TEST_F(AArch64GISelMITest, WidenUSUBO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -800,7 +800,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
 
 // SADDO widening.
 TEST_F(AArch64GISelMITest, WidenSADDO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -839,7 +839,7 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
 
 // SSUBO widening.
 TEST_F(AArch64GISelMITest, WidenSSUBO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -877,7 +877,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
 }
 
 TEST_F(AArch64GISelMITest, WidenUADDE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -917,7 +917,7 @@ TEST_F(AArch64GISelMITest, WidenUADDE) {
 }
 
 TEST_F(AArch64GISelMITest, WidenUSUBE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -957,7 +957,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBE) {
 }
 
 TEST_F(AArch64GISelMITest, WidenSADDE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -997,7 +997,7 @@ TEST_F(AArch64GISelMITest, WidenSADDE) {
 }
 
 TEST_F(AArch64GISelMITest, WidenSSUBE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1037,7 +1037,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowUADDO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1074,7 +1074,7 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowUSUBO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1111,7 +1111,7 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSADDO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1148,7 +1148,7 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSSUBO) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1185,7 +1185,7 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowUADDE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1224,7 +1224,7 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowUSUBE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1263,7 +1263,7 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSADDE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1302,7 +1302,7 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSSUBE) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1341,7 +1341,7 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
 }
 
 TEST_F(AArch64GISelMITest, FewerElementsAnd) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1396,7 +1396,7 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
 }
 
 TEST_F(AArch64GISelMITest, MoreElementsAnd) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1439,7 +1439,7 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
 }
 
 TEST_F(AArch64GISelMITest, FewerElementsPhi) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1536,7 +1536,7 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
 
 // FNEG expansion in terms of XOR
 TEST_F(AArch64GISelMITest, LowerFNEG) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1584,7 +1584,7 @@ TEST_F(AArch64GISelMITest, LowerFNEG) {
 }
 
 TEST_F(AArch64GISelMITest, LowerMinMax) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1671,7 +1671,7 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
 }
 
 TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1720,7 +1720,7 @@ TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
 }
 
 TEST_F(AArch64GISelMITest, LowerMergeValues) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1825,7 +1825,7 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
 }
 
 TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1864,7 +1864,7 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
 }
 
 TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1897,7 +1897,7 @@ TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1930,7 +1930,7 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1964,7 +1964,7 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
 }
 
 TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -1996,7 +1996,7 @@ TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFPExt) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2035,7 +2035,7 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2077,7 +2077,7 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallSimple) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2100,7 +2100,7 @@ TEST_F(AArch64GISelMITest, LibcallSimple) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallSRem) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2157,7 +2157,7 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallURem) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2214,7 +2214,7 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2267,7 +2267,7 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFAdd) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2319,7 +2319,7 @@ TEST_F(AArch64GISelMITest, LibcallFAdd) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFSub) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2371,7 +2371,7 @@ TEST_F(AArch64GISelMITest, LibcallFSub) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFMul) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2423,7 +2423,7 @@ TEST_F(AArch64GISelMITest, LibcallFMul) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFDiv) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2475,7 +2475,7 @@ TEST_F(AArch64GISelMITest, LibcallFDiv) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFExp) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2522,7 +2522,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFExp2) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2569,7 +2569,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp2) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFRem) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2616,7 +2616,7 @@ TEST_F(AArch64GISelMITest, LibcallFRem) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFPow) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2663,7 +2663,7 @@ TEST_F(AArch64GISelMITest, LibcallFPow) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFMa) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2711,7 +2711,7 @@ TEST_F(AArch64GISelMITest, LibcallFMa) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFCeil) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2758,7 +2758,7 @@ TEST_F(AArch64GISelMITest, LibcallFCeil) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFFloor) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2805,7 +2805,7 @@ TEST_F(AArch64GISelMITest, LibcallFFloor) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFMinNum) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2855,7 +2855,7 @@ TEST_F(AArch64GISelMITest, LibcallFMinNum) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2905,7 +2905,7 @@ TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFSqrt) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2952,7 +2952,7 @@ TEST_F(AArch64GISelMITest, LibcallFSqrt) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFRint) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -2999,7 +2999,7 @@ TEST_F(AArch64GISelMITest, LibcallFRint) {
 }
 
 TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3049,7 +3049,7 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
 }
 
 TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3088,7 +3088,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
 }
 
 TEST_F(AArch64GISelMITest, LowerInsert) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3189,7 +3189,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
 
 // Test lowering of G_FFLOOR
 TEST_F(AArch64GISelMITest, LowerFFloor) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3221,7 +3221,7 @@ TEST_F(AArch64GISelMITest, LowerFFloor) {
 
 // Test lowering of G_BSWAP
 TEST_F(AArch64GISelMITest, LowerBSWAP) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3263,7 +3263,7 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
 
 // Test lowering of G_SDIVREM into G_SDIV and G_SREM
 TEST_F(AArch64GISelMITest, LowerSDIVREM) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3294,7 +3294,7 @@ TEST_F(AArch64GISelMITest, LowerSDIVREM) {
 
 // Test lowering of G_UDIVREM into G_UDIV and G_UREM
 TEST_F(AArch64GISelMITest, LowerUDIVREM) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3325,7 +3325,7 @@ TEST_F(AArch64GISelMITest, LowerUDIVREM) {
 
 // Test widening of G_UNMERGE_VALUES
 TEST_F(AArch64GISelMITest, WidenUnmerge) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3373,7 +3373,7 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
 }
 
 TEST_F(AArch64GISelMITest, BitcastLoad) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3407,7 +3407,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 }
 
 TEST_F(AArch64GISelMITest, BitcastStore) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3441,7 +3441,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
 }
 
 TEST_F(AArch64GISelMITest, BitcastSelect) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3488,7 +3488,7 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
 }
 
 TEST_F(AArch64GISelMITest, BitcastBitOps) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3540,7 +3540,7 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
 }
 
 TEST_F(AArch64GISelMITest, CreateLibcall) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3567,7 +3567,7 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 
 // Test narrowing of G_IMPLICIT_DEF
 TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3631,7 +3631,7 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
 
 // Test widening of G_FREEZE
 TEST_F(AArch64GISelMITest, WidenFreeze) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3681,7 +3681,7 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
 
 // Test narrowing of G_FREEZE
 TEST_F(AArch64GISelMITest, NarrowFreeze) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3769,7 +3769,7 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
 
 // Test fewer elements of G_FREEZE
 TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3822,7 +3822,7 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
 
 // Test more elements of G_FREEZE
 TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3858,7 +3858,7 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
 
 // Test fewer elements of G_INSERT_VECTOR_ELEMENT
 TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 
@@ -3942,7 +3942,7 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
 
 // Test widen scalar of G_UNMERGE_VALUES
 TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
-  setUp();
+  LLVMTargetMachine *TM = createTargetMachineAndModule();
   if (!TM)
     return;
 

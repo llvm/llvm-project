@@ -58,7 +58,7 @@ TEST_F(AArch64GISelMITest, BasicLegalizerTest) {
     %v:_(<2 x s8>) = G_LOAD %vptr:_(p0) :: (load 2, align 1)
     $h4 = COPY %v:_(<2 x s8>)
   )";
-  setUp(MIRString.rtrim(' '));
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString.rtrim(' '));
   if (!TM)
     return;
 
@@ -97,7 +97,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningTest) {
     %v0_ext:_(s16) = G_ANYEXT %v0:_(s8)
     $h4 = COPY %v0_ext:_(s16)
   )";
-  setUp(MIRString.rtrim(' '));
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString.rtrim(' '));
   if (!TM)
     return;
 
@@ -191,7 +191,7 @@ TEST_F(AArch64GISelMITest, UnorderedArtifactCombiningManyCopiesTest) {
     $w4 = COPY %v0_zext:_(s32)
     $w5 = COPY %v1_sext:_(s32)
   )";
-  setUp(MIRString.rtrim(' '));
+  LLVMTargetMachine *TM = createTargetMachineAndModule(MIRString.rtrim(' '));
   if (!TM)
     return;
 
