@@ -29,7 +29,7 @@ if(NOT ANDROID)
   endif()
   # Tests use C++ standard library headers.
   if (TARGET cxx-headers OR HAVE_LIBCXX)
-    set(SANITIZER_COMMON_LIT_TEST_DEPS cxx-headers)
+    list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS cxx-headers)
   endif()
 endif()
 
