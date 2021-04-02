@@ -109,9 +109,7 @@ public:
            (Flags == O.Flags);
   }
 
-  bool operator!=(const Symbol &O) const {
-    return !(*this == O);
-  }
+  bool operator!=(const Symbol &O) const { return !(*this == O); }
 
 private:
   StringRef Name;
