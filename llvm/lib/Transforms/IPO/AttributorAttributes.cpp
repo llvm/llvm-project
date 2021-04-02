@@ -1347,12 +1347,6 @@ bool AANoSyncImpl::isNonRelaxedAtomic(Instruction *I) {
 bool AANoSyncImpl::isNoSyncIntrinsic(Instruction *I) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
-    /// Element wise atomic memory intrinsics are can only be unordered,
-    /// therefore nosync.
-    case Intrinsic::memset_element_unordered_atomic:
-    case Intrinsic::memmove_element_unordered_atomic:
-    case Intrinsic::memcpy_element_unordered_atomic:
-      return true;
     case Intrinsic::memset:
     case Intrinsic::memmove:
     case Intrinsic::memcpy:
