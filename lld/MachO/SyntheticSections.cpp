@@ -65,8 +65,21 @@ void MachHeaderSection::addLoadCommand(LoadCommand *lc) {
   sizeOfCmds += lc->getSize();
 }
 
-uint64_t MachHeaderSection::getSize() const {
-  return sizeof(mach_header_64) + sizeOfCmds + config->headerPad;
+// This serves to hide (type-erase) the template parameter from
+// MachHeaderSection.
+template <class LP> class MachHeaderSectionImpl : public MachHeaderSection {
+public:
+  MachHeaderSectionImpl() = default;
+  uint64_t getSize() const override;
+  void writeTo(uint8_t *buf) const override;
+};
+
+template <class LP> MachHeaderSection *macho::makeMachHeaderSection() {
+  return make<MachHeaderSectionImpl<LP>>();
+}
+
+template <class LP> uint64_t MachHeaderSectionImpl<LP>::getSize() const {
+  return sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
 }
 
 static uint32_t cpuSubtype() {
@@ -81,9 +94,10 @@ static uint32_t cpuSubtype() {
   return subtype;
 }
 
-void MachHeaderSection::writeTo(uint8_t *buf) const {
-  auto *hdr = reinterpret_cast<mach_header_64 *>(buf);
-  hdr->magic = MH_MAGIC_64;
+template <class LP>
+void MachHeaderSectionImpl<LP>::writeTo(uint8_t *buf) const {
+  auto *hdr = reinterpret_cast<typename LP::mach_header *>(buf);
+  hdr->magic = LP::magic;
   hdr->cputype = target->cpuType;
   hdr->cpusubtype = cpuSubtype();
   hdr->filetype = config->outputType;
@@ -177,7 +191,7 @@ static void encodeRebase(const OutputSection *osec, uint64_t outSecOff,
   }
   ++lastRebase.consecutiveCount;
   // DO_REBASE causes dyld to both perform the binding and increment the offset
-  lastRebase.offset += WordSize;
+  lastRebase.offset += target->wordSize;
 }
 
 void RebaseSection::finalizeContents() {
@@ -208,7 +222,7 @@ void RebaseSection::writeTo(uint8_t *buf) const {
 NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
                                                      const char *name)
     : SyntheticSection(segname, name) {
-  align = WordSize;
+  align = target->wordSize;
   flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
@@ -235,14 +249,14 @@ void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
-    addNonLazyBindingEntries(sym, isec, sym->gotIndex * WordSize);
+    addNonLazyBindingEntries(sym, isec, sym->gotIndex * target->wordSize);
   }
 }
 
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   for (size_t i = 0, n = entries.size(); i < n; ++i)
     if (auto *defined = dyn_cast<Defined>(entries[i]))
-      write64le(&buf[i * WordSize], defined->getVA());
+      write64le(&buf[i * target->wordSize], defined->getVA());
 }
 
 BindingSection::BindingSection()
@@ -295,7 +309,7 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
      << static_cast<uint8_t>(BIND_OPCODE_SET_TYPE_IMM | BIND_TYPE_POINTER)
      << static_cast<uint8_t>(BIND_OPCODE_DO_BIND);
   // DO_BIND causes dyld to both perform the binding and increment the offset
-  lastBinding.offset += WordSize;
+  lastBinding.offset += target->wordSize;
 }
 
 // Non-weak bindings need to have their dylib ordinal encoded as well.
@@ -463,20 +477,20 @@ void StubHelperSection::setup() {
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
   segname = segment_names::data;
   name = "__data";
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(WordSize);
-  memset(arr, 0, WordSize);
-  data = {arr, WordSize};
-  align = WordSize;
+  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  memset(arr, 0, target->wordSize);
+  data = {arr, target->wordSize};
+  align = target->wordSize;
 }
 
 LazyPointerSection::LazyPointerSection()
     : SyntheticSection(segment_names::data, "__la_symbol_ptr") {
-  align = WordSize;
+  align = target->wordSize;
   flags = S_LAZY_SYMBOL_POINTERS;
 }
 
 uint64_t LazyPointerSection::getSize() const {
-  return in.stubs->getEntries().size() * WordSize;
+  return in.stubs->getEntries().size() * target->wordSize;
 }
 
 bool LazyPointerSection::isNeeded() const {
@@ -496,7 +510,7 @@ void LazyPointerSection::writeTo(uint8_t *buf) const {
     } else {
       write64le(buf + off, sym->getVA());
     }
-    off += WordSize;
+    off += target->wordSize;
   }
 }
 
@@ -517,7 +531,8 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
 void LazyBindingSection::addEntry(DylibSymbol *dysym) {
   if (entries.insert(dysym)) {
     dysym->stubsHelperIndex = entries.size() - 1;
-    in.rebase->addEntry(in.lazyPointers->isec, dysym->stubsIndex * WordSize);
+    in.rebase->addEntry(in.lazyPointers->isec,
+                        dysym->stubsIndex * target->wordSize);
   }
 }
 
@@ -533,7 +548,7 @@ uint32_t LazyBindingSection::encode(const DylibSymbol &sym) {
   os << static_cast<uint8_t>(BIND_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB |
                              dataSeg->index);
   uint64_t offset = in.lazyPointers->addr - dataSeg->firstSection()->addr +
-                    sym.stubsIndex * WordSize;
+                    sym.stubsIndex * target->wordSize;
   encodeULEB128(offset, os);
   encodeDylibOrdinal(ordinalForDylibSymbol(sym), os);
 
@@ -620,10 +635,6 @@ void FunctionStartsSection::writeTo(uint8_t *buf) const {
 SymtabSection::SymtabSection(StringTableSection &stringTableSection)
     : LinkEditSection(segment_names::linkEdit, section_names::symbolTable),
       stringTableSection(stringTableSection) {}
-
-uint64_t SymtabSection::getRawSize() const {
-  return getNumSymbols() * sizeof(structs::nlist_64);
-}
 
 void SymtabSection::emitBeginSourceStab(DWARFUnit *compileUnit) {
   StabsEntry stab(N_SO);
@@ -781,8 +792,21 @@ uint32_t SymtabSection::getNumSymbols() const {
          undefinedSymbols.size();
 }
 
-void SymtabSection::writeTo(uint8_t *buf) const {
-  auto *nList = reinterpret_cast<structs::nlist_64 *>(buf);
+// This serves to hide (type-erase) the template parameter from SymtabSection.
+template <class LP> class SymtabSectionImpl : public SymtabSection {
+public:
+  SymtabSectionImpl(StringTableSection &stringTableSection)
+      : SymtabSection(stringTableSection) {}
+  uint64_t getRawSize() const override;
+  void writeTo(uint8_t *buf) const override;
+};
+
+template <class LP> uint64_t SymtabSectionImpl<LP>::getRawSize() const {
+  return getNumSymbols() * sizeof(typename LP::nlist);
+}
+
+template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
+  auto *nList = reinterpret_cast<typename LP::nlist *>(buf);
   // Emit the stabs entries before the "real" symbols. We cannot emit them
   // after as that would render Symbol::symtabIndex inaccurate.
   for (const StabsEntry &entry : stabs) {
@@ -843,6 +867,12 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     }
     ++nList;
   }
+}
+
+template <class LP>
+SymtabSection *
+macho::makeSymtabSection(StringTableSection &stringTableSection) {
+  return make<SymtabSectionImpl<LP>>(stringTableSection);
 }
 
 IndirectSymtabSection::IndirectSymtabSection()
@@ -1050,3 +1080,8 @@ void macho::createSyntheticSymbols() {
   // so that's what's implemented here.
   addHeaderSymbol("___dso_handle");
 }
+
+template MachHeaderSection *macho::makeMachHeaderSection<LP64>();
+template MachHeaderSection *macho::makeMachHeaderSection<ILP32>();
+template SymtabSection *macho::makeSymtabSection<LP64>(StringTableSection &);
+template SymtabSection *macho::makeSymtabSection<ILP32>(StringTableSection &);
