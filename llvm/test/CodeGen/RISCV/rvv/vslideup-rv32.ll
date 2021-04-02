@@ -1186,6 +1186,243 @@ entry:
   ret <vscale x 8 x i32> %a
 }
 
+declare <vscale x 1 x i64> @llvm.riscv.vslideup.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  i32,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vslideup_vx_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i32 %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vx_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v9, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vslideup.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vslideup.mask.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  i32,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vslideup_mask_vx_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i32 %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vx_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vslideup.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 1 x i64> @intrinsic_vslideup_vi_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vi_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v9, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vslideup.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 9,
+    i32 %2)
+
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 1 x i64> @intrinsic_vslideup_mask_vi_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vi_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v9, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vslideup.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 9,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vslideup.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  i32,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vslideup_vx_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i32 %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vx_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vslideup.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vslideup.mask.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  i32,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vslideup_mask_vx_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i32 %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vx_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vslideup.mask.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 2 x i64> %a
+}
+
+define <vscale x 2 x i64> @intrinsic_vslideup_vi_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vi_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v10, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vslideup.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 9,
+    i32 %2)
+
+  ret <vscale x 2 x i64> %a
+}
+
+define <vscale x 2 x i64> @intrinsic_vslideup_mask_vi_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vi_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v10, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vslideup.mask.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 9,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vslideup.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  i32,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vslideup_vx_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i32 %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vx_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v12, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vslideup.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vslideup.mask.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  i32,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vslideup_mask_vx_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i32 %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vx_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vslideup.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vslideup.mask.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 4 x i64> %a
+}
+
+define <vscale x 4 x i64> @intrinsic_vslideup_vi_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_vi_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v12, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vslideup.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 9,
+    i32 %2)
+
+  ret <vscale x 4 x i64> %a
+}
+
+define <vscale x 4 x i64> @intrinsic_vslideup_mask_vi_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vslideup_mask_vi_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vslideup.vi v8, v12, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vslideup.mask.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 9,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
 declare <vscale x 1 x half> @llvm.riscv.vslideup.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
