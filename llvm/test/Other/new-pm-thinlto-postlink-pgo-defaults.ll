@@ -68,10 +68,10 @@
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA	
-; CHECK-O-NEXT: Running analysis: GlobalsAA	
-; CHECK-O-NEXT: Running analysis: CallGraphAnalysis	
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis	
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O-NEXT: Running analysis: GlobalsAA
+; CHECK-O-NEXT: Running analysis: CallGraphAnalysis
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
@@ -112,6 +112,7 @@
 ; CHECK-O-NEXT: Starting Loop pass manager run.
 ; CHECK-O-NEXT: Running pass: LoopInstSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass
