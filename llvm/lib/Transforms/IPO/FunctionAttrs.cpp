@@ -1267,6 +1267,9 @@ static bool InstrBreaksNoFree(Instruction &I, const SCCNodeSet &SCCNodes) {
   if (!CB)
     return false;
 
+  if (CB->hasFnAttr(Attribute::NoFree))
+    return false;
+
   Function *Callee = CB->getCalledFunction();
   if (!Callee)
     return true;
