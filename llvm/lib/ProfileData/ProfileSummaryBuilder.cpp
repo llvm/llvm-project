@@ -68,8 +68,12 @@ void SampleProfileSummaryBuilder::addRecord(
     if (FS.getHeadSamples() > MaxFunctionCount)
       MaxFunctionCount = FS.getHeadSamples();
   }
-  for (const auto &I : FS.getBodySamples())
-    addCount(I.second.getSamples());
+  for (const auto &I : FS.getBodySamples()) {
+    uint64_t Count = I.second.getSamples();
+    if (!sampleprof::FunctionSamples::ProfileIsProbeBased ||
+        (Count != sampleprof::FunctionSamples::InvalidProbeCount))
+      addCount(Count);
+  }
   for (const auto &I : FS.getCallsiteSamples())
     for (const auto &CS : I.second)
       addRecord(CS.second, true);
