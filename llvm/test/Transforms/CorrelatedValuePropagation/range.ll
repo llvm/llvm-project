@@ -938,8 +938,7 @@ define i1 @intrinsic_range(i16 %x) {
 ; CHECK-LABEL: @intrinsic_range(
 ; CHECK-NEXT:    [[CTLZ:%.*]] = call i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false), !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[CTLZ]] to i8
-; CHECK-NEXT:    [[RES:%.*]] = icmp ult i8 [[TRUNC]], 8
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ctlz = call i16 @llvm.ctlz.i16(i16 %x, i1 false), !range !{i16 0, i16 8}
   %trunc = trunc i16 %ctlz to i8
