@@ -284,10 +284,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling8_1)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -304,10 +306,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
@@ -325,10 +329,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #else
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
@@ -346,10 +352,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #endif
 
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(Exponent4_4)(
@@ -404,10 +412,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Floor8_1)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -424,10 +434,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Floor10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
@@ -445,10 +457,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #else
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Floor16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
@@ -466,10 +480,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Fraction4)(
@@ -512,11 +528,13 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModInteger8)(
     CppTypeFor<TypeCategory::Integer, 8> p) {
   return IntMod<false>(x, p);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModInteger16)(
     CppTypeFor<TypeCategory::Integer, 16> x,
     CppTypeFor<TypeCategory::Integer, 16> p) {
   return IntMod<false>(x, p);
 }
+#endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModReal4)(
     CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p) {
   return RealMod<false>(x, p);
@@ -559,11 +577,13 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(ModuloInteger8)(
     CppTypeFor<TypeCategory::Integer, 8> p) {
   return IntMod<true>(x, p);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ModuloInteger16)(
     CppTypeFor<TypeCategory::Integer, 16> x,
     CppTypeFor<TypeCategory::Integer, 16> p) {
   return IntMod<true>(x, p);
 }
+#endif
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ModuloReal4)(
     CppTypeFor<TypeCategory::Real, 4> x, CppTypeFor<TypeCategory::Real, 4> p) {
   return RealMod<true>(x, p);
@@ -622,10 +642,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint8_1)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 1>>(x);
@@ -642,10 +664,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint10_1)(
     CppTypeFor<TypeCategory::Real, 10> x) {
@@ -663,10 +687,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #else
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Nint16_1)(
     CppTypeFor<TypeCategory::Real, 16> x) {
@@ -684,10 +710,12 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
+#ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Anint<CppTypeFor<TypeCategory::Integer, 16>>(x);
 }
+#endif
 #endif
 
 CppTypeFor<TypeCategory::Real, 4> RTNAME(RRSpacing4)(
