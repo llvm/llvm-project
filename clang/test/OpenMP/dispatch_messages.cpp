@@ -28,6 +28,24 @@ void testit_one(int dnum) {
   // expected-error@+1 {{cannot contain more than one 'nowait' clause}}
   #pragma omp dispatch nowait device(dnum) nowait
   disp_call();
+
+  // expected-error@+1 {{expected '(' after 'novariants'}}
+  #pragma omp dispatch novariants
+  disp_call();
+
+  // expected-error@+3 {{expected expression}}
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp dispatch novariants (
+  disp_call();
+
+  // expected-error@+1 {{cannot contain more than one 'novariants' clause}}
+  #pragma omp dispatch novariants(dnum> 4) novariants(3)
+  disp_call();
+
+  // expected-error@+1 {{use of undeclared identifier 'x'}}
+  #pragma omp dispatch novariants(x)
+  disp_call();
 }
 
 void testit_two() {
