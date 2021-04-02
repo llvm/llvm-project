@@ -454,9 +454,10 @@ void StubHelperSection::setup() {
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);
-  dyldPrivate = make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0,
-                              /*isWeakDef=*/false,
-                              /*isExternal=*/false, /*isPrivateExtern=*/false);
+  dyldPrivate =
+      make<Defined>("__dyld_private", nullptr, in.imageLoaderCache, 0, 0,
+                    /*isWeakDef=*/false,
+                    /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
 ImageLoaderCacheSection::ImageLoaderCacheSection() {
@@ -663,9 +664,7 @@ void SymtabSection::emitObjectFileStab(ObjFile *file) {
 
 void SymtabSection::emitEndFunStab(Defined *defined) {
   StabsEntry stab(N_FUN);
-  // FIXME this should be the size of the symbol. Using the section size in
-  // lieu is only correct if .subsections_via_symbols is set.
-  stab.value = defined->isec->getSize();
+  stab.value = defined->size;
   stabs.emplace_back(std::move(stab));
 }
 

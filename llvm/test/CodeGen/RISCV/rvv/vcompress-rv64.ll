@@ -829,5 +829,6 @@ entry:
     <vscale x 1 x i8> %0,
     <vscale x 1 x i1> %1,
     i64 %2)
+
   ret <vscale x 1 x i8> %a
 }

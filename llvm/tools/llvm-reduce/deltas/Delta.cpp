@@ -24,7 +24,7 @@ using namespace llvm;
 
 void writeOutput(llvm::Module *M, llvm::StringRef Message);
 
-bool IsReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
+bool isReduced(Module &M, TestRunner &Test, SmallString<128> &CurrentFilepath) {
   // Write Module to tmp file
   int FD;
   std::error_code EC =
@@ -66,12 +66,12 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   bool SplitOne = false;
 
   for (auto &C : Chunks) {
-    if (C.end - C.begin == 0)
+    if (C.End - C.Begin == 0)
       NewChunks.push_back(C);
     else {
-      int Half = (C.begin + C.end) / 2;
-      NewChunks.push_back({C.begin, Half});
-      NewChunks.push_back({Half + 1, C.end});
+      int Half = (C.Begin + C.End) / 2;
+      NewChunks.push_back({C.Begin, Half});
+      NewChunks.push_back({Half + 1, C.End});
       SplitOne = true;
     }
   }
@@ -102,7 +102,7 @@ void llvm::runDeltaPass(
 
   if (Module *Program = Test.getProgram()) {
     SmallString<128> CurrentFilepath;
-    if (!IsReduced(*Program, Test, CurrentFilepath)) {
+    if (!isReduced(*Program, Test, CurrentFilepath)) {
       errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
       exit(1);
     }
@@ -152,7 +152,7 @@ void llvm::runDeltaPass(
         C.print();
 
       SmallString<128> CurrentFilepath;
-      if (!IsReduced(*Clone, Test, CurrentFilepath)) {
+      if (!isReduced(*Clone, Test, CurrentFilepath)) {
         // Program became non-reduced, so this chunk appears to be interesting.
         errs() << "\n";
         continue;

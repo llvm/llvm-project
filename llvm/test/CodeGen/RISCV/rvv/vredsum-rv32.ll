@@ -782,3 +782,187 @@ entry:
 
   ret <vscale x 2 x i32> %a
 }
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_vs_nxv1i64_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i64> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_vs_nxv1i64_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v9, v10
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    <vscale x 1 x i64> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_mask_vs_nxv1i64_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i64> %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_mask_vs_nxv1i64_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v9, v10, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    <vscale x 1 x i64> %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv2i64(
+  <vscale x 1 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 1 x i64>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_vs_nxv1i64_nxv2i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 2 x i64> %1, <vscale x 1 x i64> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_vs_nxv1i64_nxv2i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v10, v9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv2i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 2 x i64> %1,
+    <vscale x 1 x i64> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv2i64(
+  <vscale x 1 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_mask_vs_nxv1i64_nxv2i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 2 x i64> %1, <vscale x 1 x i64> %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_mask_vs_nxv1i64_nxv2i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v10, v9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv2i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 2 x i64> %1,
+    <vscale x 1 x i64> %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv4i64(
+  <vscale x 1 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 1 x i64>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_vs_nxv1i64_nxv4i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 4 x i64> %1, <vscale x 1 x i64> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_vs_nxv1i64_nxv4i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v12, v9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv4i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 4 x i64> %1,
+    <vscale x 1 x i64> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv4i64(
+  <vscale x 1 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_mask_vs_nxv1i64_nxv4i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 4 x i64> %1, <vscale x 1 x i64> %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_mask_vs_nxv1i64_nxv4i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v12, v9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv4i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 4 x i64> %1,
+    <vscale x 1 x i64> %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv8i64(
+  <vscale x 1 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 1 x i64>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_vs_nxv1i64_nxv8i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 8 x i64> %1, <vscale x 1 x i64> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_vs_nxv1i64_nxv8i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v16, v9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.nxv1i64.nxv8i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 8 x i64> %1,
+    <vscale x 1 x i64> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv8i64(
+  <vscale x 1 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vredsum_mask_vs_nxv1i64_nxv8i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 8 x i64> %1, <vscale x 1 x i64> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vredsum_mask_vs_nxv1i64_nxv8i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vredsum.vs v8, v16, v9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vredsum.mask.nxv1i64.nxv8i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 8 x i64> %1,
+    <vscale x 1 x i64> %2,
+    <vscale x 8 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}

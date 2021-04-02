@@ -415,6 +415,98 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
+declare <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vvm_nxv1i1_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vvm_nxv1i1_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vmadc.vvm v25, v8, v9, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i1> %a
+}
+
+declare <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i64.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i1> @intrinsic_vmadc.carry.in_vvm_nxv2i1_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vvm_nxv2i1_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vmadc.vvm v25, v8, v10, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i64.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i1> %a
+}
+
+declare <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i64.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i1> @intrinsic_vmadc.carry.in_vvm_nxv4i1_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vvm_nxv4i1_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vmadc.vvm v25, v8, v12, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i64.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+declare <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i64.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i1> @intrinsic_vmadc.carry.in_vvm_nxv8i1_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vvm_nxv8i1_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vmadc.vvm v25, v8, v16, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i64.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i1> %a
+}
+
 declare <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i8.i8(
   <vscale x 1 x i8>,
   i8,
@@ -829,6 +921,126 @@ entry:
   ret <vscale x 16 x i1> %a
 }
 
+declare <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i64.i64(
+  <vscale x 1 x i64>,
+  i64,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vxm_nxv1i1_nxv1i64_i64(<vscale x 1 x i64> %0, i64 %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vxm_nxv1i1_nxv1i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64,m1,ta,mu
+; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsll.vx v25, v25, a1
+; CHECK-NEXT:    vmv.v.x v26, a0
+; CHECK-NEXT:    vsll.vx v26, v26, a1
+; CHECK-NEXT:    vsrl.vx v26, v26, a1
+; CHECK-NEXT:    vor.vv v26, v26, v25
+; CHECK-NEXT:    vmadc.vvm v25, v8, v26, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i64.i64(
+    <vscale x 1 x i64> %0,
+    i64 %1,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i1> %a
+}
+
+declare <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i64.i64(
+  <vscale x 2 x i64>,
+  i64,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i1> @intrinsic_vmadc.carry.in_vxm_nxv2i1_nxv2i64_i64(<vscale x 2 x i64> %0, i64 %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vxm_nxv2i1_nxv2i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64,m2,ta,mu
+; CHECK-NEXT:    vmv.v.x v26, a1
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsll.vx v26, v26, a1
+; CHECK-NEXT:    vmv.v.x v28, a0
+; CHECK-NEXT:    vsll.vx v28, v28, a1
+; CHECK-NEXT:    vsrl.vx v28, v28, a1
+; CHECK-NEXT:    vor.vv v26, v28, v26
+; CHECK-NEXT:    vmadc.vvm v25, v8, v26, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i64.i64(
+    <vscale x 2 x i64> %0,
+    i64 %1,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i1> %a
+}
+
+declare <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i64.i64(
+  <vscale x 4 x i64>,
+  i64,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i1> @intrinsic_vmadc.carry.in_vxm_nxv4i1_nxv4i64_i64(<vscale x 4 x i64> %0, i64 %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vxm_nxv4i1_nxv4i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64,m4,ta,mu
+; CHECK-NEXT:    vmv.v.x v28, a1
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsll.vx v28, v28, a1
+; CHECK-NEXT:    vmv.v.x v12, a0
+; CHECK-NEXT:    vsll.vx v12, v12, a1
+; CHECK-NEXT:    vsrl.vx v12, v12, a1
+; CHECK-NEXT:    vor.vv v28, v12, v28
+; CHECK-NEXT:    vmadc.vvm v25, v8, v28, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i64.i64(
+    <vscale x 4 x i64> %0,
+    i64 %1,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i1> %a
+}
+
+declare <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i64.i64(
+  <vscale x 8 x i64>,
+  i64,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i1> @intrinsic_vmadc.carry.in_vxm_nxv8i1_nxv8i64_i64(<vscale x 8 x i64> %0, i64 %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vxm_nxv8i1_nxv8i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a2, a2, e64,m8,ta,mu
+; CHECK-NEXT:    vmv.v.x v16, a1
+; CHECK-NEXT:    addi a1, zero, 32
+; CHECK-NEXT:    vsll.vx v16, v16, a1
+; CHECK-NEXT:    vmv.v.x v24, a0
+; CHECK-NEXT:    vsll.vx v24, v24, a1
+; CHECK-NEXT:    vsrl.vx v24, v24, a1
+; CHECK-NEXT:    vor.vv v16, v24, v16
+; CHECK-NEXT:    vmadc.vvm v25, v8, v16, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i64.i64(
+    <vscale x 8 x i64> %0,
+    i64 %1,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i1> %a
+}
+
 define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i8_i8(<vscale x 1 x i8> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -1133,4 +1345,72 @@ entry:
     i32 %2)
 
   ret <vscale x 16 x i1> %a
+}
+
+define <vscale x 1 x i1> @intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i64_i64(<vscale x 1 x i64> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv1i1_nxv1i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vmadc.vim v25, v8, 9, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i1> @llvm.riscv.vmadc.carry.in.nxv1i64.i64(
+    <vscale x 1 x i64> %0,
+    i64 9,
+    <vscale x 1 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 1 x i1> %a
+}
+
+define <vscale x 2 x i1> @intrinsic_vmadc.carry.in_vim_nxv2i1_nxv2i64_i64(<vscale x 2 x i64> %0, <vscale x 2 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv2i1_nxv2i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vmadc.vim v25, v8, 9, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i1> @llvm.riscv.vmadc.carry.in.nxv2i64.i64(
+    <vscale x 2 x i64> %0,
+    i64 9,
+    <vscale x 2 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 2 x i1> %a
+}
+
+define <vscale x 4 x i1> @intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i64_i64(<vscale x 4 x i64> %0, <vscale x 4 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv4i1_nxv4i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vmadc.vim v25, v8, 9, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i1> @llvm.riscv.vmadc.carry.in.nxv4i64.i64(
+    <vscale x 4 x i64> %0,
+    i64 9,
+    <vscale x 4 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 4 x i1> %a
+}
+
+define <vscale x 8 x i1> @intrinsic_vmadc.carry.in_vim_nxv8i1_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vmadc.carry.in_vim_nxv8i1_nxv8i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vmadc.vim v25, v8, 9, v0
+; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i1> @llvm.riscv.vmadc.carry.in.nxv8i64.i64(
+    <vscale x 8 x i64> %0,
+    i64 9,
+    <vscale x 8 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 8 x i1> %a
 }

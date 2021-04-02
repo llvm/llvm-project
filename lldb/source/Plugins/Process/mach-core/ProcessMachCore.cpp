@@ -21,6 +21,7 @@
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -36,6 +37,7 @@
 
 #include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 
 #include <memory>
@@ -188,6 +190,59 @@ bool ProcessMachCore::GetDynamicLoaderAddress(lldb::addr_t addr) {
   return false;
 }
 
+// We have a hint about a binary -- a UUID, possibly a load address.
+// Try to load a file with that UUID into lldb, and if we have a load
+// address, set it correctly.  Else assume that the binary was loaded
+// with no slide.
+static bool load_standalone_binary(UUID uuid, addr_t addr, Target &target) {
+  if (uuid.IsValid()) {
+    ModuleSpec module_spec;
+    module_spec.GetUUID() = uuid;
+
+    // Look up UUID in global module cache before attempting
+    // dsymForUUID-like action.
+    ModuleSP module_sp;
+    Status error = ModuleList::GetSharedModule(module_spec, module_sp, nullptr,
+                                               nullptr, nullptr);
+
+    if (!module_sp.get()) {
+      // Force a a dsymForUUID lookup, if that tool is available.
+      if (!module_spec.GetSymbolFileSpec())
+        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+
+      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+        module_sp = std::make_shared<Module>(module_spec);
+      }
+    }
+
+    if (module_sp.get() && module_sp->GetObjectFile()) {
+      target.SetArchitecture(module_sp->GetObjectFile()->GetArchitecture());
+      target.GetImages().AppendIfNeeded(module_sp, false);
+
+      Address base_addr = module_sp->GetObjectFile()->GetBaseAddress();
+      addr_t slide = 0;
+      if (addr != LLDB_INVALID_ADDRESS && base_addr.IsValid()) {
+        addr_t file_load_addr = base_addr.GetFileAddress();
+        slide = addr - file_load_addr;
+      }
+      bool changed = false;
+      module_sp->SetLoadAddress(target, slide, true, changed);
+
+      ModuleList added_module;
+      added_module.Append(module_sp, false);
+      target.ModulesDidLoad(added_module);
+
+      // Flush info in the process (stack frames, etc).
+      ProcessSP process_sp(target.GetProcessSP());
+      if (process_sp)
+        process_sp->Flush();
+
+      return true;
+    }
+  }
+  return false;
+}
+
 // Process Control
 Status ProcessMachCore::DoLoadCore() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER |
@@ -285,124 +340,76 @@ Status ProcessMachCore::DoLoadCore() {
   ObjectFile::BinaryType type;
   if (core_objfile->GetCorefileMainBinaryInfo(objfile_binary_addr,
                                               objfile_binary_uuid, type)) {
+    if (log) {
+      log->Printf(
+          "ProcessMachCore::DoLoadCore: using binary hint from 'main bin spec' "
+          "LC_NOTE with UUID %s address 0x%" PRIx64 " and type %d",
+          objfile_binary_uuid.GetAsString().c_str(), objfile_binary_addr, type);
+    }
     if (objfile_binary_addr != LLDB_INVALID_ADDRESS) {
-      if (type == ObjectFile::eBinaryTypeUser)
+      if (type == ObjectFile::eBinaryTypeUser) {
         m_dyld_addr = objfile_binary_addr;
-      else
+        m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
+        found_main_binary_definitively = true;
+      }
+      if (type == ObjectFile::eBinaryTypeKernel) {
         m_mach_kernel_addr = objfile_binary_addr;
-      found_main_binary_definitively = true;
-      LLDB_LOGF(log,
-                "ProcessMachCore::DoLoadCore: using kernel address 0x%" PRIx64
-                " from LC_NOTE 'main bin spec' load command.",
-                m_mach_kernel_addr);
+        m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
+        found_main_binary_definitively = true;
+      }
+    }
+    if (!found_main_binary_definitively) {
+      // ObjectFile::eBinaryTypeStandalone, undeclared types
+      if (load_standalone_binary(objfile_binary_uuid, objfile_binary_addr,
+                                 GetTarget())) {
+        found_main_binary_definitively = true;
+        m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
+      }
     }
   }
 
   // This checks for the presence of an LC_IDENT string in a core file;
   // LC_IDENT is very obsolete and should not be used in new code, but if the
   // load command is present, let's use the contents.
-  std::string corefile_identifier = core_objfile->GetIdentifierString();
-  if (!found_main_binary_definitively &&
-      corefile_identifier.find("Darwin Kernel") != std::string::npos) {
-    UUID uuid;
-    addr_t addr = LLDB_INVALID_ADDRESS;
+  UUID ident_uuid;
+  addr_t ident_binary_addr = LLDB_INVALID_ADDRESS;
+  if (!found_main_binary_definitively) {
+    std::string corefile_identifier = core_objfile->GetIdentifierString();
+
+    // Search for UUID= and stext= strings in the identifier str.
     if (corefile_identifier.find("UUID=") != std::string::npos) {
       size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
       std::string uuid_str = corefile_identifier.substr(p, 36);
-      uuid.SetFromStringRef(uuid_str);
+      ident_uuid.SetFromStringRef(uuid_str);
+      if (log)
+        log->Printf("Got a UUID from LC_IDENT/kern ver str LC_NOTE: %s",
+                    ident_uuid.GetAsString().c_str());
     }
     if (corefile_identifier.find("stext=") != std::string::npos) {
       size_t p = corefile_identifier.find("stext=") + strlen("stext=");
       if (corefile_identifier[p] == '0' && corefile_identifier[p + 1] == 'x') {
-        errno = 0;
-        addr = ::strtoul(corefile_identifier.c_str() + p, nullptr, 16);
-        if (errno != 0 || addr == 0)
-          addr = LLDB_INVALID_ADDRESS;
+        ident_binary_addr =
+            ::strtoul(corefile_identifier.c_str() + p, nullptr, 16);
+        if (log)
+          log->Printf("Got a load address from LC_IDENT/kern ver str "
+                      "LC_NOTE: 0x%" PRIx64,
+                      ident_binary_addr);
       }
     }
-    if (uuid.IsValid() && addr != LLDB_INVALID_ADDRESS) {
-      m_mach_kernel_addr = addr;
+
+    // Search for a "Darwin Kernel" str indicating kernel; else treat as
+    // standalone
+    if (corefile_identifier.find("Darwin Kernel") != std::string::npos &&
+        ident_uuid.IsValid() && ident_binary_addr != LLDB_INVALID_ADDRESS) {
+      if (log)
+        log->Printf("ProcessMachCore::DoLoadCore: Found kernel binary via "
+                    "LC_IDENT/kern ver str LC_NOTE");
+      m_mach_kernel_addr = ident_binary_addr;
       found_main_binary_definitively = true;
-      LLDB_LOGF(
-          log,
-          "ProcessMachCore::DoLoadCore: Using the kernel address 0x%" PRIx64
-          " from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'",
-          addr, corefile_identifier.c_str());
-    }
-  }
-
-  // In the case where we have an LC_NOTE specifying a standalone
-  // binary with only a UUID (and no load address) (iBoot, EFI, etc),
-  // then let's try to force a load of the binary and set its
-  // load address to 0-offset.
-  //
-  // The two forms this can come in is either a
-  //   'kern ver str' LC_NOTE with "EFI UUID=...."
-  //   'main bin spec' LC_NOTE with UUID and no load address.
-
-  if (found_main_binary_definitively == false &&
-      (corefile_identifier.find("EFI ") != std::string::npos ||
-       (objfile_binary_uuid.IsValid() &&
-        objfile_binary_addr == LLDB_INVALID_ADDRESS))) {
-    UUID uuid;
-    if (objfile_binary_uuid.IsValid()) {
-      uuid = objfile_binary_uuid;
-      LLDB_LOGF(log,
-                "ProcessMachCore::DoLoadCore: Using the main bin spec "
-                "LC_NOTE with UUID %s and no load address",
-                uuid.GetAsString().c_str());
-    } else {
-      if (corefile_identifier.find("UUID=") != std::string::npos) {
-        size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
-        std::string uuid_str = corefile_identifier.substr(p, 36);
-        uuid.SetFromStringRef(uuid_str);
-        if (uuid.IsValid()) {
-          LLDB_LOGF(log,
-                    "ProcessMachCore::DoLoadCore: Using the EFI "
-                    "from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'",
-                    corefile_identifier.c_str());
-        }
-      }
-    }
-
-    if (uuid.IsValid()) {
-      ModuleSpec module_spec;
-      module_spec.GetUUID() = uuid;
-      module_spec.GetArchitecture() = GetTarget().GetArchitecture();
-
-      // Lookup UUID locally, before attempting dsymForUUID-like action
-      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-      module_spec.GetSymbolFileSpec() =
-          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
-      if (module_spec.GetSymbolFileSpec()) {
-        ModuleSpec executable_module_spec =
-            Symbols::LocateExecutableObjectFile(module_spec);
-        if (FileSystem::Instance().Exists(
-                executable_module_spec.GetFileSpec())) {
-          module_spec.GetFileSpec() = executable_module_spec.GetFileSpec();
-        }
-      }
-
-      // Force a a dsymForUUID lookup, if that tool is available.
-      if (!module_spec.GetSymbolFileSpec())
-        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
-
-      // If we found a binary, load it at offset 0 and set our
-      // dyld_plugin to be the static plugin.
-      if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
-        ModuleSP module_sp(new Module(module_spec));
-        if (module_sp.get() && module_sp->GetObjectFile()) {
-          GetTarget().GetImages().AppendIfNeeded(module_sp, true);
-          GetTarget().SetExecutableModule(module_sp, eLoadDependentsNo);
-          found_main_binary_definitively = true;
-          bool changed = true;
-          module_sp->SetLoadAddress(GetTarget(), 0, true, changed);
-          ModuleList added_module;
-          added_module.Append(module_sp, false);
-          GetTarget().ModulesDidLoad(added_module);
-          m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
-          found_main_binary_definitively = true;
-        }
+    } else if (ident_uuid.IsValid()) {
+      if (load_standalone_binary(ident_uuid, ident_binary_addr, GetTarget())) {
+        found_main_binary_definitively = true;
+        m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
     }
   }

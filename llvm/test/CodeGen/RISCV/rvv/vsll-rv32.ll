@@ -796,6 +796,183 @@ entry:
   ret <vscale x 16 x i32> %a
 }
 
+declare <vscale x 1 x i64> @llvm.riscv.vsll.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vsll_vv_nxv1i64_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vv_nxv1i64_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vsll.vv v8, v8, v9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 %2)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vsll.mask.nxv1i64.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vsll_mask_vv_nxv1i64_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i64> %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vv_nxv1i64_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vsll.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.mask.nxv1i64.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    <vscale x 1 x i64> %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vsll.nxv2i64.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vsll_vv_nxv2i64_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vv_nxv2i64_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vsll.vv v8, v8, v10
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.nxv2i64.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 %2)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vsll.mask.nxv2i64.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vsll_mask_vv_nxv2i64_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vv_nxv2i64_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vsll.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.mask.nxv2i64.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    <vscale x 2 x i64> %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vsll.nxv4i64.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vsll_vv_nxv4i64_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vv_nxv4i64_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vsll.vv v8, v8, v12
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.nxv4i64.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 %2)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vsll.mask.nxv4i64.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vsll_mask_vv_nxv4i64_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i64> %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vv_nxv4i64_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vsll.vv v8, v12, v16, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.mask.nxv4i64.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    <vscale x 4 x i64> %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vsll.nxv8i64.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vsll_vv_nxv8i64_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vv_nxv8i64_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vsll.vv v8, v8, v16
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.nxv8i64.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    i32 %2)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vsll.mask.nxv8i64.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vsll_mask_vv_nxv8i64_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i64> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vv_nxv8i64_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vl8re64.v v24, (a0)
+; CHECK-NEXT:    vsetvli a0, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vsll.vv v8, v16, v24, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.mask.nxv8i64.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    <vscale x 8 x i64> %2,
+    <vscale x 8 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 8 x i64> %a
+}
+
 declare <vscale x 1 x i8> @llvm.riscv.vsll.nxv1i8(
   <vscale x 1 x i8>,
   i32,
@@ -1588,6 +1765,182 @@ entry:
   ret <vscale x 16 x i32> %a
 }
 
+declare <vscale x 1 x i64> @llvm.riscv.vsll.nxv1i64(
+  <vscale x 1 x i64>,
+  i32,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vsll_vx_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vx_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.nxv1i64(
+    <vscale x 1 x i64> %0,
+    i32 %1,
+    i32 %2)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vsll.mask.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  i32,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vsll_mask_vx_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, i32 %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vx_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsll.vx v8, v9, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vsll.nxv2i64(
+  <vscale x 2 x i64>,
+  i32,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vsll_vx_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vx_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.nxv2i64(
+    <vscale x 2 x i64> %0,
+    i32 %1,
+    i32 %2)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vsll.mask.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  i32,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vsll_mask_vx_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, i32 %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vx_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsll.vx v8, v10, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.mask.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vsll.nxv4i64(
+  <vscale x 4 x i64>,
+  i32,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vsll_vx_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vx_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.nxv4i64(
+    <vscale x 4 x i64> %0,
+    i32 %1,
+    i32 %2)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vsll.mask.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  i32,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vsll_mask_vx_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, i32 %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vx_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsll.vx v8, v12, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.mask.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vsll.nxv8i64(
+  <vscale x 8 x i64>,
+  i32,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vsll_vx_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, i32 %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vx_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,ta,mu
+; CHECK-NEXT:    vsll.vx v8, v8, a0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.nxv8i64(
+    <vscale x 8 x i64> %0,
+    i32 %1,
+    i32 %2)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vsll.mask.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  i32,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vsll_mask_vx_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, i32 %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vx_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e64,m8,tu,mu
+; CHECK-NEXT:    vsll.vx v8, v16, a0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.mask.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    i32 %2,
+    <vscale x 8 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 8 x i64> %a
+}
+
 define <vscale x 1 x i8> @intrinsic_vsll_vi_nxv1i8_nxv1i8_i8(<vscale x 1 x i8> %0, i32 %1) nounwind {
 ; CHECK-LABEL: intrinsic_vsll_vi_nxv1i8_nxv1i8_i8:
 ; CHECK:       # %bb.0: # %entry
@@ -2162,4 +2515,132 @@ entry:
     i32 %3)
 
   ret <vscale x 16 x i32> %a
+}
+
+define <vscale x 1 x i64> @intrinsic_vsll_vi_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vi_nxv1i64_nxv1i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    vsll.vi v8, v8, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.nxv1i64(
+    <vscale x 1 x i64> %0,
+    i32 9,
+    i32 %1)
+
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 1 x i64> @intrinsic_vsll_mask_vi_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vi_nxv1i64_nxv1i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vsll.vi v8, v9, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vsll.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    i32 9,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 2 x i64> @intrinsic_vsll_vi_nxv2i64_nxv2i64_i64(<vscale x 2 x i64> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vi_nxv2i64_nxv2i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    vsll.vi v8, v8, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.nxv2i64(
+    <vscale x 2 x i64> %0,
+    i32 9,
+    i32 %1)
+
+  ret <vscale x 2 x i64> %a
+}
+
+define <vscale x 2 x i64> @intrinsic_vsll_mask_vi_nxv2i64_nxv2i64_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vi_nxv2i64_nxv2i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vsll.vi v8, v10, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vsll.mask.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    i32 9,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+define <vscale x 4 x i64> @intrinsic_vsll_vi_nxv4i64_nxv4i64_i64(<vscale x 4 x i64> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vi_nxv4i64_nxv4i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    vsll.vi v8, v8, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.nxv4i64(
+    <vscale x 4 x i64> %0,
+    i32 9,
+    i32 %1)
+
+  ret <vscale x 4 x i64> %a
+}
+
+define <vscale x 4 x i64> @intrinsic_vsll_mask_vi_nxv4i64_nxv4i64_i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vi_nxv4i64_nxv4i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vsll.vi v8, v12, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vsll.mask.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    i32 9,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
+define <vscale x 8 x i64> @intrinsic_vsll_vi_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_vsll_vi_nxv8i64_nxv8i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    vsll.vi v8, v8, 9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.nxv8i64(
+    <vscale x 8 x i64> %0,
+    i32 9,
+    i32 %1)
+
+  ret <vscale x 8 x i64> %a
+}
+
+define <vscale x 8 x i64> @intrinsic_vsll_mask_vi_nxv8i64_nxv8i64_i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vsll_mask_vi_nxv8i64_nxv8i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vsll.vi v8, v16, 9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vsll.mask.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    i32 9,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i64> %a
 }

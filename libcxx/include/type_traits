@@ -4505,6 +4505,9 @@ bool __libcpp_is_constant_evaluated() _NOEXCEPT { return false; }
 template <class _CharT>
 using _IsCharLikeType = _And<is_standard_layout<_CharT>, is_trivial<_CharT> >;
 
+template<class _Tp>
+using __make_const_lvalue_ref = const typename remove_reference<_Tp>::type&;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 14

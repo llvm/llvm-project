@@ -148,8 +148,8 @@ void macho::prepareCompactUnwind(InputSection *isec) {
       // symbols for them in the GOT.
       Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
-        s = make<Defined>("<internal>", nullptr, referentIsec, r.addend, false,
-                          false, false);
+        s = make<Defined>("<internal>", nullptr, referentIsec, r.addend, 0,
+                          false, false, false);
         in.got->addEntry(s);
       }
       r.referent = s;
