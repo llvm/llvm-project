@@ -72,9 +72,8 @@ li x12, -0x80000000
 # CHECK-EXPAND: addi a2, zero, 1
 # CHECK-EXPAND: slli a2, a2, 31
 li x12, 0x80000000
-# CHECK-EXPAND: addi a2, zero, 1
-# CHECK-EXPAND: slli a2, a2, 32
-# CHECK-EXPAND: addi a2, a2, -1
+# CHECK-EXPAND: addi a2, zero, -1
+# CHECK-EXPAND: srli a2, a2, 32
 li x12, 0xFFFFFFFF
 
 # CHECK-EXPAND: addi t0, zero, 1
@@ -119,11 +118,8 @@ li x5, 0x100004000
 # CHECK-EXPAND: addiw t1, t1, 1
 # CHECK-EXPAND: slli t1, t1, 32
 li x6, 0x100100000000
-# CHECK-EXPAND: addi t2, zero, 1
-# CHECK-EXPAND: slli t2, t2, 36
-# CHECK-EXPAND: addi t2, t2, -1
-# CHECK-EXPAND: slli t2, t2, 12
-# CHECK-EXPAND: addi t2, t2, 1
+# CHECK-EXPAND: lui t2, 983072
+# CHECK-EXPAND: srli t2, t2, 16
 li x7, 0xFFFFFFFFF001
 # CHECK-EXPAND: lui s0, 65536
 # CHECK-EXPAND: addiw s0, s0, -1
