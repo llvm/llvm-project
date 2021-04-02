@@ -332,7 +332,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
 
 static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                                     StringRef name, InputSection *isec,
-                                    uint64_t value) {
+                                    uint64_t value, uint64_t size) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols
   // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped
@@ -342,10 +342,11 @@ static macho::Symbol *createDefined(const structs::nlist_64 &sym,
 
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
-    return symtab->addDefined(name, isec->file, isec, value,
+    return symtab->addDefined(name, isec->file, isec, value, size,
                               sym.n_desc & N_WEAK_DEF, sym.n_type & N_PEXT);
   }
-  return make<Defined>(name, isec->file, isec, value, sym.n_desc & N_WEAK_DEF,
+  return make<Defined>(name, isec->file, isec, value, size,
+                       sym.n_desc & N_WEAK_DEF,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
@@ -381,10 +382,11 @@ static macho::Symbol *createAbsolute(const structs::nlist_64 &sym,
                                      InputFile *file, StringRef name) {
   if (sym.n_type & (N_EXT | N_PEXT)) {
     assert((sym.n_type & N_EXT) && "invalid input");
-    return symtab->addDefined(name, file, nullptr, sym.n_value,
+    return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
                               /*isWeakDef=*/false, sym.n_type & N_PEXT);
   }
-  return make<Defined>(name, file, nullptr, sym.n_value, /*isWeakDef=*/false,
+  return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
+                       /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false);
 }
 
@@ -477,16 +479,25 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
 
     uint64_t offset = sym.n_value - sec.addr;
 
+    auto it = llvm::upper_bound(
+        subsecMap, offset, [](int64_t value, SubsectionEntry subsectionEntry) {
+          return value < subsectionEntry.offset;
+        });
+    uint32_t size = it != subsecMap.end()
+                        ? it->offset - offset
+                        : subsecMap.front().isec->getSize() - offset;
+
     // If the input file does not use subsections-via-symbols, all symbols can
     // use the same subsection. Otherwise, we must split the sections along
     // symbol boundaries.
     if (!subsectionsViaSymbols) {
-      symbols[i] = createDefined(sym, name, subsecMap.front().isec, offset);
+      symbols[i] =
+          createDefined(sym, name, subsecMap.front().isec, offset, size);
       continue;
     }
 
-    InputSection *subsec = findContainingSubsection(subsecMap, &offset);
-    symbols[i] = createDefined(sym, name, subsec, offset);
+    InputSection *subsec = (--it)->isec;
+    symbols[i] = createDefined(sym, name, subsec, offset - it->offset, size);
   }
 
   if (!subsectionsViaSymbols)
@@ -864,7 +875,7 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   }
 
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
-                            objSym.isWeak(), isPrivateExtern);
+                            /*size=*/0, objSym.isWeak(), isPrivateExtern);
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)
