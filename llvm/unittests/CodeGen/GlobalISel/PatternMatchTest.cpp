@@ -31,7 +31,7 @@ using namespace MIPatternMatch;
 namespace {
 
 TEST_F(AArch64GISelMITest, MatchIntConstant) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
@@ -42,7 +42,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstant) {
 }
 
 TEST_F(AArch64GISelMITest, MatchBinaryOp) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
   LLT s32 = LLT::scalar(32);
@@ -156,7 +156,7 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
 }
 
 TEST_F(AArch64GISelMITest, MatchICmp) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -181,7 +181,7 @@ TEST_F(AArch64GISelMITest, MatchICmp) {
 }
 
 TEST_F(AArch64GISelMITest, MatchFCmp) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -206,7 +206,7 @@ TEST_F(AArch64GISelMITest, MatchFCmp) {
 }
 
 TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -268,7 +268,7 @@ TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
 }
 
 TEST_F(AArch64GISelMITest, MatchExtendsTrunc) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -315,7 +315,7 @@ TEST_F(AArch64GISelMITest, MatchExtendsTrunc) {
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificType) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -352,7 +352,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificType) {
 }
 
 TEST_F(AArch64GISelMITest, MatchCombinators) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -386,7 +386,7 @@ TEST_F(AArch64GISelMITest, MatchCombinators) {
 }
 
 TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -413,7 +413,7 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
 }
 
 TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -435,7 +435,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
 }
 
 TEST_F(AArch64GISelMITest, MatchZeroInt) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
   auto Zero = B.buildConstant(LLT::scalar(64), 0);
@@ -446,7 +446,7 @@ TEST_F(AArch64GISelMITest, MatchZeroInt) {
 }
 
 TEST_F(AArch64GISelMITest, MatchAllOnesInt) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
   auto AllOnes = B.buildConstant(LLT::scalar(64), -1);
@@ -457,7 +457,7 @@ TEST_F(AArch64GISelMITest, MatchAllOnesInt) {
 }
 
 TEST_F(AArch64GISelMITest, MatchNeg) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
@@ -489,7 +489,7 @@ TEST_F(AArch64GISelMITest, MatchNeg) {
 }
 
 TEST_F(AArch64GISelMITest, MatchNot) {
-  LLVMTargetMachine *TM = createTargetMachineAndModule();
+  setUp();
   if (!TM)
     return;
 
