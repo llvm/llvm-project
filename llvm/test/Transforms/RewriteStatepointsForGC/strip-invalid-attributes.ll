@@ -43,3 +43,15 @@ define noalias i8 addrspace(1)* @noalias_ret(i8 addrspace(1)* %arg) gc "statepoi
   ret i8 addrspace(1)* %arg
 }
 
+define i8 addrspace(1)* @nofree(i8 addrspace(1)* nofree %arg) nofree gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @nofree(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
+define i8 addrspace(1)* @nosync(i8 addrspace(1)* %arg) nosync gc "statepoint-example" {
+; CHECK: define i8 addrspace(1)* @nosync(i8 addrspace(1)* %arg) gc "statepoint-example" {
+  call void @f()
+  ret i8 addrspace(1)* %arg
+}
+
