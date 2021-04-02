@@ -44,6 +44,15 @@ fir::ExtendedValue fir::substBase(const fir::ExtendedValue &exv,
       [=](const auto &x) { return fir::ExtendedValue(x.clone(base)); });
 }
 
+llvm::ArrayRef<mlir::Value> fir::getTypeParams(const ExtendedValue &exv) {
+  // FIXME: We should be keeping track of the type parameters for a particular
+  // variable binding, but that seems to have been erased.
+  auto *ctx = fir::getBase(exv).getContext();
+  mlir::emitWarning(mlir::UnknownLoc::get(ctx),
+                    "TODO: extended value is missing type parameters");
+  return llvm::None;
+}
+
 bool fir::isArray(const fir::ExtendedValue &exv) {
   return exv.match(
       [](const fir::ArrayBoxValue &) { return true; },

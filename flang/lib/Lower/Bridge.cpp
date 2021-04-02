@@ -1568,6 +1568,49 @@ private:
            !Fortran::evaluate::HasVectorSubscript(expr);
   }
 
+  // Recursively assign members of a record type.
+  void genRecordAssignment(const fir::ExtendedValue &lhs,
+                           const fir::ExtendedValue &rhs,
+                           Fortran::lower::StatementContext &stmtCtx) {
+    auto loc = genLocation();
+    auto lhsTy = fir::dyn_cast_ptrEleTy(fir::getBase(lhs).getType())
+                     .dyn_cast<fir::RecordType>();
+    assert(lhsTy && "must be a record type");
+    auto fieldTy = fir::FieldType::get(lhsTy.getContext());
+    for (auto [fldName, fldType] : lhsTy.getTypeList()) {
+      if (fir::isa_char(fldType)) {
+        auto fldCharTy = fldType.cast<fir::CharacterType>();
+        if (!fldCharTy.hasConstantLen())
+          TODO(loc, "LEN type parameter not constant");
+        mlir::Value field = builder->create<fir::FieldIndexOp>(
+            loc, fieldTy, fldName, lhsTy, fir::getTypeParams(lhs));
+        auto fldRefTy = builder->getRefType(fldType);
+        auto lenVal = builder->createIntegerConstant(loc, builder->getI64Type(),
+                                                     fldCharTy.getLen());
+        mlir::Value from = builder->create<fir::CoordinateOp>(
+            loc, fldRefTy, fir::getBase(rhs), field);
+        fir::ExtendedValue fromPtr{fir::CharBoxValue{from, lenVal}};
+        mlir::Value to = builder->create<fir::CoordinateOp>(
+            loc, fldRefTy, fir::getBase(lhs), field);
+        fir::ExtendedValue toPtr{fir::CharBoxValue{to, lenVal}};
+        Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
+            toPtr, fromPtr);
+        continue;
+      }
+      if (!fir::isa_trivial(fldType))
+        TODO(toLocation(), "derived type assignment of non-trivial member");
+      mlir::Value field = builder->create<fir::FieldIndexOp>(
+          loc, fieldTy, fldName, lhsTy, fir::getTypeParams(lhs));
+      auto fldRefTy = builder->getRefType(fldType);
+      auto elePtr = builder->create<fir::CoordinateOp>(
+          loc, fldRefTy, fir::getBase(rhs), field);
+      auto loadVal = builder->create<fir::LoadOp>(loc, elePtr);
+      auto toPtr = builder->create<fir::CoordinateOp>(loc, fldRefTy,
+                                                      fir::getBase(lhs), field);
+      builder->create<fir::StoreOp>(loc, loadVal, toPtr);
+    }
+  }
+
   /// Shared for both assignments and pointer assignments.
   void genAssignment(const Fortran::evaluate::Assignment &assign) {
     Fortran::lower::StatementContext stmtCtx;
@@ -1632,8 +1675,12 @@ private:
                 return;
               }
               if (isDerivedCategory(lhsType->category())) {
-                // Fortran 2018 10.2.1.3 p12 and p13
-                TODO(toLocation(), "derived type assignment lowering");
+                // Fortran 2018 10.2.1.3 p13 and p14
+                // Recursively gen an assignment on each element pair.
+                auto lhs = genExprAddr(assign.lhs, stmtCtx);
+                auto rhs = genExprAddr(assign.rhs, stmtCtx);
+                genRecordAssignment(lhs, rhs, stmtCtx);
+                return;
               }
               llvm_unreachable("unknown category");
             },

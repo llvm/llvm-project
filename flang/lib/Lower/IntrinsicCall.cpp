@@ -314,9 +314,13 @@ static constexpr IntrinsicHandler handlers[]{
     {"modulo", &I::genModulo},
     {"nint", &I::genNint},
     {"present", &I::genPresent, {{{"a", asInquired}}}, /*isElemental=*/false},
-    {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr},
-                          {"back", asAddr}, {"kind", asValue} }},
-             /*isElemental=*/true},
+    {"scan",
+     &I::genScan,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"back", asAddr},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
     {"sign", &I::genSign},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
     {"verify", &I::genVerify, {{ {"string", asAddr}, {"set", asAddr},
@@ -1536,7 +1540,7 @@ IntrinsicLibrary::genPresent(mlir::Type,
                                           fir::getBase(args[0]));
 }
 
-// SCAN 
+// SCAN
 fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -1551,21 +1555,21 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle optional argument, back
   auto back = isAbsent(args[2])
-              ? builder.create<fir::AbsentOp>(
-              loc, fir::BoxType::get(builder.getNoneType()))
-              : builder.createBox(loc, args[2]); 
+                  ? builder.create<fir::AbsentOp>(
+                        loc, fir::BoxType::get(builder.getNoneType()))
+                  : builder.createBox(loc, args[2]);
 
   // Handle optional argument, kind
-  auto kind = isAbsent(args[3])
-              ? builder.createIntegerConstant(loc, resultType, 
-              builder.getKindMap().defaultIntegerKind()) :
-              fir::getBase(args[3]);
-  
-  // Create result descriptor    
+  auto kind = isAbsent(args[3]) ? builder.createIntegerConstant(
+                                      loc, resultType,
+                                      builder.getKindMap().defaultIntegerKind())
+                                : fir::getBase(args[3]);
+
+  // Create result descriptor
   auto resultMutableBox =
-       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+      Fortran::lower::createTempMutableBox(builder, loc, resultType);
   auto resultIrBox =
-       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
   Fortran::lower::genScan(builder, loc, resultIrBox, string, set, back, kind);
 
@@ -1573,10 +1577,10 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
   auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
 
   return res.match(
-        [&](const Fortran::lower::SymbolBox::Intrinsic &box)
-            -> fir::ExtendedValue { 
-            addCleanUpForTemp(loc, box.getAddr());
-            return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
+      [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+          -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, box.getAddr());
+        return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
       },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(loc, "unexpected result for SCAN");
@@ -1676,12 +1680,13 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
     }
   } else if (fir::isa_integer(type)) {
     result = builder.create<mlir::CmpIOp>(loc, integerPredicate, left, right);
-  } else if (type.isa<fir::CharacterType>()) {
+  } else if (fir::isa_char(type)) {
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
+    TODO(loc, "CHARACTER min and max");
   }
-  assert(result);
+  assert(result && "result must be defined");
   return result;
 }
 

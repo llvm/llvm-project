@@ -910,7 +910,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   if (auto record = eleTy.dyn_cast<fir::RecordType>())
     if (record.getNumLenParams() != 0)
       TODO(loc, "deferred length type parameters.");
-  if (eleTy.isa<fir::CharacterType>() && nonDeferredParams.empty()) {
+  if (fir::isa_char(eleTy) && nonDeferredParams.empty()) {
     auto lenVar = builder.allocateLocal(loc, builder.getCharacterLengthType(),
                                         name + ".len", /*shape=*/llvm::None,
                                         /*lenParams=*/llvm::None);

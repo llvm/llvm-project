@@ -224,7 +224,7 @@ public:
     return 0;
   }
   /// Is this a character entity ?
-  bool isCharacter() const { return getEleTy().isa<fir::CharacterType>(); };
+  bool isCharacter() const { return fir::isa_char(getEleTy()); };
   /// Is this a derived type entity ?
   bool isDerived() const { return getEleTy().isa<fir::RecordType>(); };
 
@@ -363,9 +363,6 @@ protected:
   MutableProperties mutableProperties;
 };
 
-/// Used for triple notation (array slices)
-using RangeBoxValue = std::tuple<mlir::Value, mlir::Value, mlir::Value>;
-
 class ExtendedValue;
 
 /// Get the base value of an extended value. Every type of extended value has a
@@ -385,6 +382,9 @@ ExtendedValue substBase(const ExtendedValue &exv, mlir::Value base);
 
 /// Is the extended value `exv` an array?
 bool isArray(const ExtendedValue &exv);
+
+/// Get the type parameters for `exv`.
+llvm::ArrayRef<mlir::Value> getTypeParams(const ExtendedValue &exv);
 
 /// An extended value is a box of values pertaining to a discrete entity. It is
 /// used in lowering to track all the runtime values related to an entity. For
@@ -412,7 +412,7 @@ public:
           type = refType.getEleTy();
         if (auto seqType = type.template dyn_cast<fir::SequenceType>())
           type = seqType.getEleTy();
-        if (type.template isa<fir::CharacterType>())
+        if (fir::isa_char(type))
           fir::emitFatalError(b->getLoc(),
                               "character buffer should be in CharBoxValue");
       }

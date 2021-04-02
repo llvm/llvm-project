@@ -1051,26 +1051,11 @@ public:
     return gen(ss);
   }
 
-  fir::RangeBoxValue genTriple(const Fortran::evaluate::Triplet &trip) {
-    mlir::Value lower;
-    if (auto lo = trip.lower())
-      lower = genunbox(*lo);
-    mlir::Value upper;
-    if (auto up = trip.upper())
-      upper = genunbox(*up);
-    return {lower, upper, genunbox(trip.stride())};
-  }
-
-  /// Special factoring to allow RangeBoxValue to be returned when generating
-  /// values.
-  std::variant<fir::ExtendedValue, fir::RangeBoxValue>
-  genComponent(const Fortran::evaluate::Subscript &subs) {
+  fir::ExtendedValue genComponent(const Fortran::evaluate::Subscript &subs) {
     if (auto *s = std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
             &subs.u))
-      return {genval(s->value())};
-    if (auto *s = std::get_if<Fortran::evaluate::Triplet>(&subs.u))
-      return {genTriple(*s)};
-    llvm_unreachable("unknown subscript case");
+      return genval(s->value());
+    fir::emitFatalError(getLoc(), "unhandled subscript case");
   }
 
   fir::ExtendedValue genval(const Fortran::evaluate::Subscript &subs) {
@@ -1116,9 +1101,8 @@ public:
       auto recTy = ty.cast<fir::RecordType>();
       const auto *sym = &field->GetLastSymbol();
       auto name = toStringRef(sym->name());
-      coorArgs.push_back(
-          builder.create<fir::FieldIndexOp>(loc, fldTy, name, recTy,
-                                            /*lenparams=*/mlir::ValueRange{}));
+      coorArgs.push_back(builder.create<fir::FieldIndexOp>(
+          loc, fldTy, name, recTy, fir::getTypeParams(obj)));
       ty = recTy.getType(name);
     }
     ty = builder.getRefType(ty);
@@ -1205,24 +1189,14 @@ public:
       unsigned dim = 0;
       for (auto [ext, sub] : llvm::zip(arr.getExtents(), aref.subscript())) {
         auto subVal = genComponent(sub);
-        if (auto *trip = std::get_if<fir::RangeBoxValue>(&subVal)) {
-          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
-        } else {
-          auto *v = std::get_if<fir::ExtendedValue>(&subVal);
-          assert(v);
-          if (auto *sval = v->getUnboxed()) {
-            auto val = builder.createConvert(loc, idxTy, *sval);
-            auto lb = builder.createConvert(loc, idxTy, getLB(arr, dim));
-            auto diff = builder.create<mlir::SubIOp>(loc, val, lb);
-            auto prod = builder.create<mlir::MulIOp>(loc, delta, diff);
-            total = builder.create<mlir::AddIOp>(loc, prod, total);
-            if (ext)
-              delta = builder.create<mlir::MulIOp>(loc, delta, ext);
-          } else {
-            fir::emitFatalError(loc,
-                                "vector subscript should be handled in genarr");
-          }
-        }
+        assert(fir::isUnboxedValue(subVal));
+        auto val = builder.createConvert(loc, idxTy, fir::getBase(subVal));
+        auto lb = builder.createConvert(loc, idxTy, getLB(arr, dim));
+        auto diff = builder.create<mlir::SubIOp>(loc, val, lb);
+        auto prod = builder.create<mlir::MulIOp>(loc, delta, diff);
+        total = builder.create<mlir::AddIOp>(loc, prod, total);
+        if (ext)
+          delta = builder.create<mlir::MulIOp>(loc, delta, ext);
         ++dim;
       }
       return builder.create<fir::CoordinateOp>(
@@ -1272,16 +1246,9 @@ public:
     // expression lowering. So no vector subscript or triplet is expected here.
     for (const auto &sub : aref.subscript()) {
       auto subVal = genComponent(sub);
-      if (auto *ev = std::get_if<fir::ExtendedValue>(&subVal)) {
-        if (auto *sval = ev->getUnboxed()) {
-          auto val = builder.createConvert(loc, idxTy, *sval);
-          arrayCoorArgs.push_back(val);
-        } else {
-          fir::emitFatalError(loc, "vector subscript in scalar expression");
-        }
-      } else {
-        fir::emitFatalError(loc, "triplet subscript in scalar expression");
-      }
+      assert(fir::isUnboxedValue(subVal));
+      arrayCoorArgs.push_back(
+          builder.createConvert(loc, idxTy, fir::getBase(subVal)));
     }
     auto shape = builder.createShape(loc, exv);
     llvm::SmallVector<mlir::Value> lengthParams;
@@ -1322,20 +1289,13 @@ public:
       llvm::SmallVector<mlir::Value> args;
       auto loc = getLoc();
       for (auto &subsc : aref.subscript()) {
-        auto subBox = genComponent(subsc);
-        if (auto *v = std::get_if<fir::ExtendedValue>(&subBox)) {
-          if (auto *val = v->getUnboxed()) {
-            auto ty = val->getType();
-            auto adj = getLBound(si, i++, ty);
-            assert(adj && "boxed value not handled");
-            args.push_back(builder.create<mlir::SubIOp>(loc, ty, *val, adj));
-          } else {
-            fir::emitFatalError(loc,
-                                "vector subscript should be handled in genarr");
-          }
-        } else {
-          fir::emitFatalError(loc, "triplet slice should be handled in genarr");
-        }
+        auto subVal = genComponent(subsc);
+        assert(fir::isUnboxedValue(subVal));
+        auto val = fir::getBase(subVal);
+        auto ty = val.getType();
+        auto adj = getLBound(si, i++, ty);
+        assert(adj && "boxed value not handled");
+        args.push_back(builder.create<mlir::SubIOp>(loc, ty, val, adj));
       }
 
       auto seqTy =
@@ -2873,9 +2833,13 @@ public:
                      buildComponentsPath(components, recTy, c.base());
                      auto loc = getLoc();
                      auto name = toStringRef(c.GetLastSymbol().name());
-                     components.push_back(
-                         builder.create<fir::FieldIndexOp>(loc, name, recTy));
-                     recTy = recTy.cast<fir::RecordType>().getType(name);
+                     auto eleTy = recTy.cast<fir::RecordType>().getType(name);
+                     auto fldTy =
+                         fir::FieldType::get(&converter.getMLIRContext());
+                     components.push_back(builder.create<fir::FieldIndexOp>(
+                         loc, fldTy, name, recTy,
+                         /*lenparams=*/mlir::ValueRange{}));
+                     recTy = eleTy;
                    },
                    [&](const Fortran::semantics::SymbolRef &y) {
                      // base symbol to be sliced

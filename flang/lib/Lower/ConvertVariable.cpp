@@ -192,7 +192,7 @@ genInitialDataTarget(Fortran::lower::AbstractConverter &converter,
     fir::emitFatalError(
         loc, "fir.box must be created with embox in global initializers");
   auto targetEleTy = unwrapElementType(box.getType());
-  if (!targetEleTy.isa<fir::CharacterType>())
+  if (!fir::isa_char(targetEleTy))
     return builder.create<fir::EmboxOp>(loc, boxType, op->getOperands(),
                                         op->getAttrs());
 
@@ -262,7 +262,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         TODO(loc, "Derived type / polymorphic global with init lowering");
       }
       auto symTy = converter.genType(var);
-      if (symTy.isa<fir::CharacterType>()) {
+      if (fir::isa_char(symTy)) {
         if (auto chLit = getCharacterLiteralCopy(details->init().value())) {
           auto init = builder.getStringAttr(std::get<std::string>(*chLit));
           global = builder.createGlobal(loc, symTy, globalName, linkage, init,

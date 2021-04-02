@@ -70,8 +70,7 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 /// Detect the precondition that the value `str` does not reside in memory. Such
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
 LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
-  return str.getType().isa<fir::SequenceType>() ||
-         str.getType().isa<fir::CharacterType>();
+  return str.getType().isa<fir::SequenceType>() || fir::isa_char(str.getType());
 }
 
 /// Unwrap integer constant from mlir::Value.
@@ -284,7 +283,7 @@ void Fortran::lower::CharacterExprHelper::createStoreCharAt(mlir::Value str,
 mlir::Value Fortran::lower::CharacterExprHelper::getCharBoxBuffer(
     const fir::CharBoxValue &box) {
   auto buff = box.getBuffer();
-  if (buff.getType().isa<fir::CharacterType>()) {
+  if (fir::isa_char(buff.getType())) {
     auto newBuff = builder.create<fir::AllocaOp>(loc, buff.getType());
     builder.create<fir::StoreOp>(loc, buff, newBuff);
     return newBuff;
@@ -558,7 +557,7 @@ Fortran::lower::CharacterExprHelper::createUnboxChar(mlir::Value boxChar) {
 bool Fortran::lower::CharacterExprHelper::isCharacterLiteral(mlir::Type type) {
   if (auto seqType = type.dyn_cast<fir::SequenceType>())
     return (seqType.getShape().size() == 1) &&
-           seqType.getEleTy().isa<fir::CharacterType>();
+           fir::isa_char(seqType.getEleTy());
   return false;
 }
 
@@ -573,7 +572,7 @@ bool Fortran::lower::CharacterExprHelper::isCharacterScalar(mlir::Type type) {
     type = pointedType;
   if (auto seqType = type.dyn_cast<fir::SequenceType>())
     return false;
-  return type.isa<fir::CharacterType>();
+  return fir::isa_char(type);
 }
 
 fir::KindTy
