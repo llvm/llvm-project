@@ -332,32 +332,6 @@ CheckForIncompatibleAttributes(Sema &S,
           << CategoryState.NumericAttr->getDiagnosticName(Policy);
     }
   }
-
-  // C++20 [dcl.attr.likelihood]p1 The attribute-token likely shall not appear
-  // in an attribute-specifier-seq that contains the attribute-token unlikely.
-  const LikelyAttr *Likely = nullptr;
-  const UnlikelyAttr *Unlikely = nullptr;
-  for (const auto *I : Attrs) {
-    if (const auto *Attr = dyn_cast<LikelyAttr>(I)) {
-      if (Unlikely) {
-        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
-            << Attr << Unlikely << Attr->getRange();
-        S.Diag(Unlikely->getLocation(), diag::note_conflicting_attribute)
-            << Unlikely->getRange();
-        return;
-      }
-      Likely = Attr;
-    } else if (const auto *Attr = dyn_cast<UnlikelyAttr>(I)) {
-      if (Likely) {
-        S.Diag(Attr->getLocation(), diag::err_attributes_are_not_compatible)
-            << Attr << Likely << Attr->getRange();
-        S.Diag(Likely->getLocation(), diag::note_conflicting_attribute)
-            << Likely->getRange();
-        return;
-      }
-      Unlikely = Attr;
-    }
-  }
 }
 
 static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
