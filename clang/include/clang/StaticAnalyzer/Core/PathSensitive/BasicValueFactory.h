@@ -139,6 +139,12 @@ public:
 
   /// Returns the type of the APSInt used to store values of the given QualType.
   APSIntType getAPSIntType(QualType T) const {
+    // For the purposes of the analysis and constraints, we treat atomics
+    // as their underlying types.
+    if (const AtomicType *AT = T->getAs<AtomicType>()) {
+      T = AT->getValueType();
+    }
+
     assert(T->isIntegralOrEnumerationType() || Loc::isLocType(T));
     return APSIntType(Ctx.getIntWidth(T),
                       !T->isSignedIntegerOrEnumerationType());
