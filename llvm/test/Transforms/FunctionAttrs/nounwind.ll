@@ -1,14 +1,14 @@
 ; RUN: opt < %s -function-attrs -S | FileCheck %s
 
 ; TEST 1
-; CHECK: Function Attrs: norecurse nounwind readnone
+; CHECK: Function Attrs: norecurse nosync nounwind readnone
 ; CHECK-NEXT: define i32 @foo1()
 define i32 @foo1() {
   ret i32 1
 }
 
 ; TEST 2
-; CHECK: Function Attrs: nounwind readnone
+; CHECK: Function Attrs: nosync nounwind readnone
 ; CHECK-NEXT: define i32 @scc1_foo()
 define i32 @scc1_foo() {
   %1 = call i32 @scc1_bar()
@@ -17,7 +17,7 @@ define i32 @scc1_foo() {
 
 
 ; TEST 3
-; CHECK: Function Attrs: nounwind readnone
+; CHECK: Function Attrs: nosync nounwind readnone
 ; CHECK-NEXT: define i32 @scc1_bar()
 define i32 @scc1_bar() {
   %1 = call i32 @scc1_foo()
