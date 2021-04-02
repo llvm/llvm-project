@@ -38,7 +38,8 @@ class Undefined;
 class SymbolTable {
 public:
   Defined *addDefined(StringRef name, InputFile *, InputSection *,
-                      uint32_t value, bool isWeakDef, bool isPrivateExtern);
+                      uint64_t value, uint64_t size, bool isWeakDef,
+                      bool isPrivateExtern);
 
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
