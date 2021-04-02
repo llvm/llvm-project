@@ -3458,7 +3458,8 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
                    ArrayRef<int> Mask, TargetTransformInfo &TTI) {
   unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
 
-  if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc || !NumOfParts)
+  if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc || !NumOfParts ||
+      VecTy->getNumElements() < NumOfParts)
     return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
 
   bool AllConsecutive = true;
