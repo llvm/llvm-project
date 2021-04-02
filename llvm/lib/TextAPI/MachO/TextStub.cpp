@@ -593,7 +593,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
     // platforms, specifically to filter out the i386 slice from
     // platform macCatalyst.
     TargetList synthesizeTargets(ArchitectureSet Architectures,
-                                          const PlatformSet &Platforms) {
+                                 const PlatformSet &Platforms) {
       TargetList Targets;
 
       for (auto Platform : Platforms) {
