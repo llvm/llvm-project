@@ -3428,7 +3428,7 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     // Convert features like "zbr" and "experimental-zbr" to "Zbr".
     I.consume_front("experimental-");
     std::string FeatureStr = I.str();
-    FeatureStr[0] = std::toupper(FeatureStr[0]);
+    FeatureStr[0] = toupper(FeatureStr[0]);
 
     // Error message
     FeatureMissing = true;
