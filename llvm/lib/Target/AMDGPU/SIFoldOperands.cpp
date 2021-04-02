@@ -1406,6 +1406,18 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
 
 static int getOModValue(unsigned Opc, int64_t Val) {
   switch (Opc) {
+  case AMDGPU::V_MUL_F64_e64: {
+    switch (Val) {
+    case 0x3fe0000000000000: // 0.5
+      return SIOutMods::DIV2;
+    case 0x4000000000000000: // 2.0
+      return SIOutMods::MUL2;
+    case 0x4010000000000000: // 4.0
+      return SIOutMods::MUL4;
+    default:
+      return SIOutMods::NONE;
+    }
+  }
   case AMDGPU::V_MUL_F32_e64: {
     switch (static_cast<uint32_t>(Val)) {
     case 0x3f000000: // 0.5
@@ -1442,11 +1454,13 @@ std::pair<const MachineOperand *, int>
 SIFoldOperands::isOMod(const MachineInstr &MI) const {
   unsigned Op = MI.getOpcode();
   switch (Op) {
+  case AMDGPU::V_MUL_F64_e64:
   case AMDGPU::V_MUL_F32_e64:
   case AMDGPU::V_MUL_F16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
-        (Op == AMDGPU::V_MUL_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
+        ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F16_e64) &&
+         MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
@@ -1472,11 +1486,13 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
 
     return std::make_pair(RegOp, OMod);
   }
+  case AMDGPU::V_ADD_F64_e64:
   case AMDGPU::V_ADD_F32_e64:
   case AMDGPU::V_ADD_F16_e64: {
     // If output denormals are enabled, omod is ignored.
     if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
-        (Op == AMDGPU::V_ADD_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
+        ((Op == AMDGPU::V_ADD_F64_e64 || Op == AMDGPU::V_ADD_F16_e64) &&
+         MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x
