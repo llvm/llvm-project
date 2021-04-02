@@ -4473,8 +4473,9 @@ bool MasmParser::parseDirectiveAlign() {
     return addErrorSuffix(" in align directive");
   // Ignore empty 'align' directives.
   if (getTok().is(AsmToken::EndOfStatement)) {
-    Warning(AlignmentLoc, "align directive with no operand is ignored");
-    return parseToken(AsmToken::EndOfStatement);
+    return Warning(AlignmentLoc,
+                   "align directive with no operand is ignored") &&
+           parseToken(AsmToken::EndOfStatement);
   }
   if (parseAbsoluteExpression(Alignment) ||
       parseToken(AsmToken::EndOfStatement))
