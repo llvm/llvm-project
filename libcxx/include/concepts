@@ -326,7 +326,7 @@ concept swappable = requires(_Tp& __a, _Tp& __b) { ranges::swap(__a, __b); };
 
 template<class _Tp, class _Up>
 concept swappable_with =
-  common_reference_with<_Tp&, _Up&> &&
+  common_reference_with<_Tp, _Up> &&
   requires(_Tp&& __t, _Up&& __u) {
     ranges::swap(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Tp>(__t));
     ranges::swap(_VSTD::forward<_Up>(__u), _VSTD::forward<_Up>(__u));
