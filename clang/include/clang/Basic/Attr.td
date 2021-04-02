@@ -2126,6 +2126,7 @@ def ObjCNonRuntimeProtocol : Attr {
   let Subjects = SubjectList<[ObjCProtocol], ErrorDiag>;
   let LangOpts = [ObjC];
   let Documentation = [ObjCNonRuntimeProtocolDocs];
+  let SimpleHandler = 1;
 }
 
 def ObjCRuntimeName : Attr {
@@ -2301,12 +2302,14 @@ def SwiftBridgedTypedef : InheritableAttr {
   let Spellings = [GNU<"swift_bridged_typedef">];
   let Subjects = SubjectList<[TypedefName], ErrorDiag>;
   let Documentation = [SwiftBridgedTypedefDocs];
+  let SimpleHandler = 1;
 }
 
 def SwiftObjCMembers : Attr {
   let Spellings = [GNU<"swift_objc_members">];
   let Subjects = SubjectList<[ObjCInterface], ErrorDiag>;
   let Documentation = [SwiftObjCMembersDocs];
+  let SimpleHandler = 1;
 }
 
 def SwiftError : InheritableAttr {
@@ -2338,6 +2341,7 @@ def SwiftNewType : InheritableAttr {
 def SwiftPrivate : InheritableAttr {
   let Spellings = [GNU<"swift_private">];
   let Documentation = [SwiftPrivateDocs];
+  let SimpleHandler = 1;
 }
 
 def NoDeref : TypeAttr {
@@ -3734,6 +3738,7 @@ def LoaderUninitialized : Attr {
   let Spellings = [Clang<"loader_uninitialized">];
   let Subjects = SubjectList<[GlobalVar]>;
   let Documentation = [LoaderUninitializedDocs];
+  let SimpleHandler = 1;
 }
 
 def ObjCExternallyRetained : InheritableAttr {
