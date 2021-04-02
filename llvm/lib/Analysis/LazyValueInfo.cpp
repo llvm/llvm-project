@@ -1000,8 +1000,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueIntrinsic(
     IntrinsicInst *II, BasicBlock *BB) {
   if (!ConstantRange::isIntrinsicSupported(II->getIntrinsicID())) {
     LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                      << "' - overdefined (unknown intrinsic).\n");
-    return ValueLatticeElement::getOverdefined();
+                      << "' - unknown intrinsic.\n");
+    return getFromRangeMetadata(II);
   }
 
   SmallVector<ConstantRange, 2> OpRanges;
