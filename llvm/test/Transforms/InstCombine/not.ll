@@ -408,9 +408,9 @@ define i1 @not_select_cmpf_extra_use(i1 %x, i32 %z, i32 %w, i1 %cond) {
 
 define i8 @not_or_neg(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg(
-; CHECK-NEXT:    [[S:%.*]] = sub i8 0, [[Y:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[S]], [[X:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[O]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[NOT:%.*]] = and i8 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i8 [[NOT]]
 ;
   %s = sub i8 0, %y
@@ -422,9 +422,9 @@ define i8 @not_or_neg(i8 %x, i8 %y)  {
 define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
 ; CHECK-LABEL: @not_or_neg_commute_vec(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <3 x i5> [[P:%.*]], <i5 1, i5 2, i5 3>
-; CHECK-NEXT:    [[S:%.*]] = sub <3 x i5> <i5 0, i5 0, i5 undef>, [[X:%.*]]
-; CHECK-NEXT:    [[O:%.*]] = or <3 x i5> [[Y]], [[S]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <3 x i5> [[O]], <i5 -1, i5 undef, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <3 x i5> [[X:%.*]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i5> [[Y]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[NOT:%.*]] = and <3 x i5> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
   %y = mul <3 x i5> %p, <i5 1, i5 2, i5 3> ; thwart complexity-based-canonicalization
@@ -433,6 +433,8 @@ define <3 x i5> @not_or_neg_commute_vec(<3 x i5> %x, <3 x i5> %p)  {
   %not = xor <3 x i5> %o, <i5 -1, i5 undef, i5 -1>
   ret <3 x i5> %not
 }
+
+; negative test
 
 define i8 @not_or_neg_use1(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg_use1(
@@ -448,6 +450,8 @@ define i8 @not_or_neg_use1(i8 %x, i8 %y)  {
   %not = xor i8 %o, -1
   ret i8 %not
 }
+
+; negative test
 
 define i8 @not_or_neg_use2(i8 %x, i8 %y)  {
 ; CHECK-LABEL: @not_or_neg_use2(
