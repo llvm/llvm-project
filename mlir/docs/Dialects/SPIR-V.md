@@ -932,9 +932,15 @@ The attribute has a few fields:
 *   Binding number for the corresponding resource variable.
 *   Storage class for the corresponding resource variable.
 
-The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] for
-consuming these attributes and create SPIR-V module complying with the
-interface.
+The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] that
+uses this information to lower the entry point function and its ABI consistent
+with the Vulkan validation rules. Specifically,
+
+*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
+    the argument with this variable. The SSA value used for replacement is
+    obtained using the `spv.mlir.addressof` operation.
+*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
+    `spv.module` for the entry function.
 
 ## Serialization and deserialization
 
@@ -1052,28 +1058,7 @@ is obtained from the layout specification of the memref. The storage class of
 the pointer type are derived from the memref's memory space with
 `SPIRVTypeConverter::getStorageClassForMemorySpace()`.
 
-### `SPIRVOpLowering`
-
-`mlir::SPIRVOpLowering` is a base class that can be used to define the patterns
-used for implementing the lowering. For now this only provides derived classes
-access to an instance of `mlir::SPIRVTypeLowering` class.
-
 ### Utility functions for lowering
-
-#### Setting shader interface
-
-The method `mlir::spirv::setABIAttrs` allows setting the [shader interface
-attributes](#shader-interface-abi) for a function that is to be an entry
-point function within the `spv.module` on lowering. A later pass
-`mlir::spirv::LowerABIAttributesPass` uses this information to lower the entry
-point function and its ABI consistent with the Vulkan validation
-rules. Specifically,
-
-*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
-    the argument with this variable. The SSA value used for replacement is
-    obtained using the `spv.mlir.addressof` operation.
-*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
-    `spv.module` for the entry function.
 
 #### Setting layout for shader interface variables
 
