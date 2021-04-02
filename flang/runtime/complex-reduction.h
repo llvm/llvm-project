@@ -16,6 +16,7 @@
 #define FORTRAN_RUNTIME_COMPLEX_REDUCTION_H_
 
 #include "entry-names.h"
+#include <complex.h>
 
 struct CppDescriptor; /* dummy type name for Fortran::runtime::Descriptor */
 
