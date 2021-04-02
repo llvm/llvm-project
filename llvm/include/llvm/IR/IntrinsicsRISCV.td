@@ -11,6 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V Bitmanip (Bit Manipulation) Extension
+// Zbr extension part
+
+let TargetPrefix = "riscv" in {
+
+    class BitMan_GPR_Intrinsics
+        : Intrinsic<[llvm_any_ty],
+                    [LLVMMatchType<0>],
+                    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+    def int_riscv_crc32_b : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_h : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_w : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_d : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_b : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_h : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_w : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_d : BitMan_GPR_Intrinsics;
+
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Atomics
 
 // Atomic Intrinsics have multiple versions for different access widths, which
@@ -65,30 +87,6 @@ let TargetPrefix = "riscv" in {
   // @llvm.riscv.masked.cmpxchg.{i32,i64}.<p>(...)
   defm int_riscv_masked_cmpxchg : MaskedAtomicRMWFiveArgIntrinsics;
 
-} // TargetPrefix = "riscv"
-
-//===----------------------------------------------------------------------===//
-// Bitmanip (Bit Manipulation) Extension
-
-let TargetPrefix = "riscv" in {
-
-  class BitManipGPRIntrinsics
-      : Intrinsic<[llvm_any_ty],
-                  [LLVMMatchType<0>],
-                  [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
-
-  // Zbb
-  def int_riscv_orc_b : BitManipGPRIntrinsics;
-
-  // Zbr
-  def int_riscv_crc32_b : BitManipGPRIntrinsics;
-  def int_riscv_crc32_h : BitManipGPRIntrinsics;
-  def int_riscv_crc32_w : BitManipGPRIntrinsics;
-  def int_riscv_crc32_d : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_b : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_h : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_w : BitManipGPRIntrinsics;
-  def int_riscv_crc32c_d : BitManipGPRIntrinsics;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
