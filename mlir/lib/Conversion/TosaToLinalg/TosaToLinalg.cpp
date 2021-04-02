@@ -514,6 +514,12 @@ static Attribute createInitialValueForReduceOp(Operation *op, Type elementTy,
     return rewriter.getIntegerAttr(
         elementTy, APInt::getSignedMinValue(elementTy.getIntOrFloatBitWidth()));
 
+  if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
+    return rewriter.getIntegerAttr(elementTy, APInt::getAllOnesValue(1));
+
+  if (isa<tosa::ReduceAnyOp>(op) && elementTy.isInteger(1))
+    return rewriter.getIntegerAttr(elementTy, APInt::getNullValue(1));
+
   if (isa<tosa::ArgMaxOp>(op) && elementTy.isa<FloatType>())
     return rewriter.getFloatAttr(
         elementTy, APFloat::getLargest(
@@ -573,6 +579,12 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
     return rewriter.create<mlir::SelectOp>(loc, predicate, args[0], args[1]);
   }
 
+  if (isa<tosa::ReduceAllOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::AndOp>(loc, args);
+
+  if (isa<tosa::ReduceAnyOp>(op) && elementTy.isInteger(1))
+    return rewriter.create<mlir::OrOp>(loc, args);
+
   return {};
 }
 
@@ -613,6 +625,8 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
                                       : getParallelIteratorTypeName());
     if (axis != i)
       dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
+    else
+      dstExprs.push_back(rewriter.getAffineConstantExpr(0));
   }
 
   bool didEncounterError = false;
@@ -1419,7 +1433,8 @@ void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
       PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
       PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
       PointwiseConverter<tosa::SigmoidOp>, IdentityNConverter<tosa::IdentityOp>,
-      IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceMinOp>,
+      IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceAllOp>,
+      ReduceConverter<tosa::ReduceAnyOp>, ReduceConverter<tosa::ReduceMinOp>,
       ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
       ReduceConverter<tosa::ReduceProdOp>, ArgMaxConverter, ConcatConverter,
       PadConverter, ReshapeConverter, RescaleConverter, ReverseConverter,
