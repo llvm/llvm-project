@@ -3,28 +3,28 @@
 ##  * Section headers are stripped but there is a DT_GNU_HASH dynamic tag.
 ##  * Section headers are stripped but there is a DT_HASH dynamic tag.
 
-## Test if llvm-elfabi reads DT_SYMTAB size through section headers by puting the wrong terminator in DT_GNU_HASH.
+## Test if llvm-ifs reads DT_SYMTAB size through section headers by puting the wrong terminator in DT_GNU_HASH.
 # RUN: yaml2obj %s -o %tfull -DGNUHASHVALUE="[0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00"
-# RUN: llvm-elfabi --input-format=ELF --output-format=IFS --output=- %tfull | FileCheck %s
+# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %tfull | FileCheck %s
 
-## Test if llvm-elfabi fails to read DT_SYMTAB size through section headers when the value of sh_entsize is invalid.
+## Test if llvm-ifs fails to read DT_SYMTAB size through section headers when the value of sh_entsize is invalid.
 # RUN: yaml2obj %s -o %tfull -DGNUHASHVALUE="[0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DENTSIZE="0x19"
-# RUN: not llvm-elfabi --input-format=ELF --output-format=IFS --output=- %tfull 2>&1 | FileCheck %s --check-prefix=BADENTSIZE
+# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=- %tfull 2>&1 | FileCheck %s --check-prefix=BADENTSIZE
 
-## Test if llvm-elfabi reads DT_SYMTAB size through DT_GNU_HASH.
+## Test if llvm-ifs reads DT_SYMTAB size through DT_GNU_HASH.
 # RUN: yaml2obj %s -o %tw.gnu.hash -DGNUHASHVALUE="[0x8, 0x9]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DNOHEADER="true"
-# RUN: llvm-elfabi --input-format=ELF --output-format=IFS --output=- %tw.gnu.hash | FileCheck %s
+# RUN: llvm-ifs --input-format=ELF --output-format=IFS --output=- %tw.gnu.hash | FileCheck %s
 
-## Test if llvm-elfabi fails to read DT_SYMTAB size through DT_GNU_HASH when there is no terminator.
+## Test if llvm-ifs fails to read DT_SYMTAB size through DT_GNU_HASH when there is no terminator.
 # RUN: yaml2obj %s -o %tw.gnu.hash -DGNUHASHVALUE="[0x8, 0xA]" -DTAG1="DT_GNU_HASH" -DVAL1="0xC00" -DNOHEADER="true"
-# RUN: not llvm-elfabi --input-format=ELF --output-format=IFS --output=- %tw.gnu.hash  2>&1 | FileCheck %s --check-prefix=NOTERMINATOR
+# RUN: not llvm-ifs --input-format=ELF --output-format=IFS --output=- %tw.gnu.hash  2>&1 | FileCheck %s --check-prefix=NOTERMINATOR
 
 # CHECK:      --- !ifs-v1
 # CHECK-NEXT: IfsVersion:      3.0
 # CHECK-NEXT: Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
 # CHECK-NEXT: Symbols:
-# CHECK-NEXT:   - { Name: foo, Type: Func, Undefined: true }
 # CHECK-NEXT:   - { Name: bar, Type: Object, Size: 0, Undefined: true }
+# CHECK-NEXT:   - { Name: foo, Type: Func, Undefined: true }
 # CHECK-NEXT: ...
 
 # BADENTSIZE: SHT_DYNSYM section has sh_size (72) % sh_entsize (25) that is not 0

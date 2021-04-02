@@ -18,14 +18,14 @@
 ///
 //===-----------------------------------------------------------------------===/
 
-#ifndef LLVM_TOOLS_ELFABI_ERRORCOLLECTOR_H
-#define LLVM_TOOLS_ELFABI_ERRORCOLLECTOR_H
+#ifndef LLVM_TOOLS_LLVM_IFS_ERRORCOLLECTOR_H
+#define LLVM_TOOLS_LLVM_IFS_ERRORCOLLECTOR_H
 
 #include "llvm/Support/Error.h"
 #include <vector>
 
 namespace llvm {
-namespace elfabi {
+namespace ifs {
 
 class ErrorCollector {
 public:
@@ -68,7 +68,7 @@ private:
   std::vector<std::string> Tags;
 };
 
-} // end namespace elfabi
+} // end namespace ifs
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_ELFABI_ERRORCOLLECTOR_H
+#endif // LLVM_TOOLS_LLVM_IFS_ERRORCOLLECTOR_H

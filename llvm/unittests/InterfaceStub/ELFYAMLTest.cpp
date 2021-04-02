@@ -17,7 +17,7 @@
 
 using namespace llvm;
 using namespace llvm::ELF;
-using namespace llvm::elfabi;
+using namespace llvm::ifs;
 
 void compareByLine(StringRef LHS, StringRef RHS) {
   StringRef Line1;

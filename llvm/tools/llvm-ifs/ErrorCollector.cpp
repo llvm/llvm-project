@@ -14,7 +14,7 @@
 #include <vector>
 
 using namespace llvm;
-using namespace llvm::elfabi;
+using namespace llvm::ifs;
 
 void ErrorCollector::escalateToFatal() { ErrorsAreFatal = true; }
 
