@@ -11,15 +11,6 @@
 #include "flang/Common/long-double.h"
 #include <complex.h>
 
-/* These are the C standard's names for _Complex constructors; not all C
- * compilers support them.
- */
-#if !defined(CMPLXF) && defined(__clang__)
-#define CMPLXF __builtin_complex
-#define CMPLX __builtin_complex
-#define CMPLXL __builtin_complex
-#endif
-
 struct CppComplexFloat {
   float r, i;
 };
@@ -29,6 +20,56 @@ struct CppComplexDouble {
 struct CppComplexLongDouble {
   long double r, i;
 };
+
+/* Not all environments define CMPLXF, CMPLX, CMPLXL. */
+
+#ifndef CMPLXF
+#if __clang_major__ >= 12
+#define CMPLXF __builtin_complex
+#else
+static float_Complex_t CMPLXF(float r, float i) {
+  union {
+    struct CppComplexFloat x;
+    float_Complex_t result;
+  } u;
+  u.x.r = r;
+  u.x.i = i;
+  return u.result;
+}
+#endif
+#endif
+
+#ifndef CMPLX
+#if __clang_major__ >= 12
+#define CMPLX __builtin_complex
+#else
+static double_Complex_t CMPLX(double r, double i) {
+  union {
+    struct CppComplexDouble x;
+    double_Complex_t result;
+  } u;
+  u.x.r = r;
+  u.x.i = i;
+  return u.result;
+}
+#endif
+#endif
+
+#ifndef CMPLXL
+#if __clang_major__ >= 12
+#define CMPLXL __builtin_complex
+#else
+static long_double_Complex_t CMPLXL(long double r, long double i) {
+  union {
+    struct CppComplexLongDouble x;
+    long_double_Complex_t result;
+  } u;
+  u.x.r = r;
+  u.x.i = i;
+  return u.result;
+}
+#endif
+#endif
 
 /* RTNAME(SumComplex4) calls RTNAME(CppSumComplex4) with the same arguments
  * and converts the members of its C++ complex result to C _Complex.
