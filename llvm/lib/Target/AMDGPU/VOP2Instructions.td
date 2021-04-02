@@ -81,6 +81,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
 }
 
 class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -268,10 +269,9 @@ class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
                         (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         (ins VCSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
   field bit HasExt = 0;
+  let IsSingle = 1;
 
-  // Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
-  field string Asm32 = " $vdst, $src0, $src1, $imm";
+  field string Asm32 = "$vdst, $src0, $src1, $imm";
 }
 
 def VOP_MADAK_F16 : VOP_MADAK <f16>;
@@ -281,10 +281,9 @@ class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
   field dag Ins32 = (ins VCSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1);
   field bit HasExt = 0;
+  let IsSingle = 1;
 
-  // Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
-  field string Asm32 = " $vdst, $src0, $imm, $src1";
+  field string Asm32 = "$vdst, $src0, $imm, $src1";
 }
 
 def VOP_MADMK_F16 : VOP_MADMK <f16>;
@@ -1406,10 +1405,7 @@ multiclass VOP2_Real_e64only_vi <bits<10> op> {
   def _e64_vi :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
     VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
-      // Hack to stop printing _e64
-      VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME#"_e64");
-      let OutOperandList = (outs VGPR_32:$vdst);
-      let AsmString = ps.Mnemonic # " " # ps.AsmOperands;
+      let IsSingle = 1;
     }
 }
 
