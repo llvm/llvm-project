@@ -162,8 +162,7 @@ static bool isDereferenceableAndAlignedPointer(
     Opts.RoundToAlign = false;
     Opts.NullIsUnknownSize = true;
     uint64_t ObjSize;
-    // TODO: Plumb through TLI so that malloc routines and such work.
-    if (getObjectSize(V, ObjSize, DL, nullptr, Opts)) {
+    if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
           isKnownNonZero(V, DL, 0, nullptr, CtxI, DT) && !V->canBeFreed()) {
