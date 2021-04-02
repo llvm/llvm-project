@@ -6902,6 +6902,12 @@ public:
     if (!isValidElementType(Ty) || Ty->isPointerTy())
       return false;
 
+    // Though the ultimate reduction may have multiple uses, its condition must
+    // have only single use.
+    if (auto *SI = dyn_cast<SelectInst>(B))
+      if (!SI->getCondition()->hasOneUse())
+        return false;
+
     ReductionRoot = B;
 
     // The opcode for leaf values that we perform a reduction on.
@@ -7165,16 +7171,6 @@ public:
         }
       }
 
-      // Update users. For a min/max reduction that ends with a compare and
-      // select, we also have to RAUW for the compare instruction feeding the
-      // reduction root. That's because the original compare may have extra uses
-      // besides the final select of the reduction.
-      if (auto *ScalarSelect = dyn_cast<SelectInst>(ReductionRoot)) {
-        if (auto *VecSelect = dyn_cast<SelectInst>(VectorizedTree)) {
-          Instruction *ScalarCmp = getCmpForMinMaxReduction(ScalarSelect);
-          ScalarCmp->replaceAllUsesWith(VecSelect->getCondition());
-        }
-      }
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
       // Mark all scalar reduction ops for deletion, they are replaced by the
