@@ -4106,7 +4106,7 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     }
   }
 
-  // In Microsoft mode, prefer an integral conversion to a
+  // In Microsoft mode (below 19.28), prefer an integral conversion to a
   // floating-to-integral conversion if the integral conversion
   // is between types of the same size.
   // For example:
@@ -4118,7 +4118,9 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
   // }
   // Here, MSVC will call f(int) instead of generating a compile error
   // as clang will do in standard mode.
-  if (S.getLangOpts().MSVCCompat && SCS1.Second == ICK_Integral_Conversion &&
+  if (S.getLangOpts().MSVCCompat &&
+      !S.getLangOpts().isCompatibleWithMSVC(LangOptions::MSVC2019_8) &&
+      SCS1.Second == ICK_Integral_Conversion &&
       SCS2.Second == ICK_Floating_Integral &&
       S.Context.getTypeSize(SCS1.getFromType()) ==
           S.Context.getTypeSize(SCS1.getToType(2)))
