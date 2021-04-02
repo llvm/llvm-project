@@ -12,6 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// Mips profiles and nodes
+//===----------------------------------------------------------------------===//
+
+def MipsFullAddr : SDNode<"MipsISD::FullAddr", SDTIntUnaryOp>;
+
+//===----------------------------------------------------------------------===//
 //
 // Instruction Descriptions
 //
@@ -89,3 +95,6 @@ def : MipsPat<(i32 imm32_NM:$imm), (Li_NM imm:$imm)>, ISA_NANOMIPS;
 
 def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
               (BALC_NM texternalsym:$dst)>, ISA_NANOMIPS;
+
+def : MipsPat<(MipsFullAddr tglobaladdr:$in),
+              (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
