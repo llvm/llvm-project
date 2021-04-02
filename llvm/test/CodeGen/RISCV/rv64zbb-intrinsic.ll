@@ -6,15 +6,17 @@
 
 declare i32 @llvm.riscv.orc.b.i32(i32)
 
-define i32 @orcb32(i32 %a) nounwind {
+define signext i32 @orcb32(i32 signext %a) nounwind {
 ; RV64IB-LABEL: orcb32:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    orc.b a0, a0
+; RV64IB-NEXT:    sext.w a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: orcb32:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    orc.b a0, a0
+; RV64IBB-NEXT:    sext.w a0, a0
 ; RV64IBB-NEXT:    ret
   %tmp = call i32 @llvm.riscv.orc.b.i32(i32 %a)
  ret i32 %tmp
