@@ -479,9 +479,12 @@ public:
   /// Apply a signature conversion to the entry block of the given region. This
   /// replaces the entry block with a new block containing the updated
   /// signature. The new entry block to the region is returned for convenience.
+  ///
+  /// If provided, `converter` will be used for any materializations.
   Block *
   applySignatureConversion(Region *region,
-                           TypeConverter::SignatureConversion &conversion);
+                           TypeConverter::SignatureConversion &conversion,
+                           TypeConverter *converter = nullptr);
 
   /// Convert the types of block arguments within the given region. This
   /// replaces each block with a new block containing the updated signature. The
