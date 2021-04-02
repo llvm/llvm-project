@@ -321,7 +321,7 @@ C++ for OpenCL Implementation Status
 
 Clang implements language version 1.0 published in `the official
 release of C++ for OpenCL Documentation
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r1>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
 
 Limited support of experimental C++ libraries is described in the :ref:`experimental features <opencl_experimenal>`.
 
