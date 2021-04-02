@@ -1206,6 +1206,10 @@ static bool checkCommonAttributeFeatures(Sema& S, const Ty *Node,
   // Check whether the attribute appertains to the given subject.
   if (!A.diagnoseAppertainsTo(S, Node))
     return true;
+  // Check whether the attribute is mutually exclusive with other attributes
+  // that have already been applied to the declaration.
+  if (!A.diagnoseMutualExclusion(S, Node))
+    return true;
   // Check whether the attribute exists in the target architecture.
   if (S.CheckAttrTarget(A))
     return true;
