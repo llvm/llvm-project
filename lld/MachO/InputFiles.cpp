@@ -480,7 +480,7 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     uint64_t offset = sym.n_value - sec.addr;
 
     auto it = llvm::upper_bound(
-        subsecMap, offset, [](int64_t value, SubsectionEntry subsectionEntry) {
+        subsecMap, offset, [](uint64_t value, SubsectionEntry subsectionEntry) {
           return value < subsectionEntry.offset;
         });
     uint32_t size = it != subsecMap.end()
