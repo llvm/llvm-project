@@ -375,8 +375,7 @@ define i64 @imm_right_shifted_lui_1() nounwind {
 ;
 ; RV64I-LABEL: imm_right_shifted_lui_1:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a0, 983072
-; RV64I-NEXT:    addiw a0, a0, -1
+; RV64I-NEXT:    lui a0, 983056
 ; RV64I-NEXT:    srli a0, a0, 16
 ; RV64I-NEXT:    ret
   ret i64 281474976706561 ; 0xFFFF_FFFF_F001
