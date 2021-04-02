@@ -114,6 +114,26 @@ define <vscale x 2 x i64> @sdot_i64(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b
   ret <vscale x 2 x i64> %out
 }
 
+define <vscale x 2 x i64> @test_sdot_i64_zero(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: test_sdot_i64_zero:
+; CHECK:         sdot z0.d, z1.h, z2.h
+; CHECK-NEXT:    ret
+entry:
+  %vdot1.i = call <vscale x 2 x i64> @llvm.aarch64.sve.sdot.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
+  %ret = add <vscale x 2 x i64> %vdot1.i, %a
+  ret <vscale x 2 x i64> %ret
+}
+
+define <vscale x 4 x i32> @test_sdot_i32_zero(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: test_sdot_i32_zero:
+; CHECK:         sdot z0.s, z1.b, z2.b
+; CHECK-NEXT:    ret
+entry:
+  %vdot1.i = call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
+  %ret = add <vscale x 4 x i32> %vdot1.i, %a
+  ret <vscale x 4 x i32> %ret
+}
+
 ; SDOT (Indexed)
 
 define <vscale x 4 x i32> @sdot_lane_i32(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
@@ -234,6 +254,26 @@ define <vscale x 2 x i64> @udot_i64(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b
                                                                 <vscale x 8 x i16> %b,
                                                                 <vscale x 8 x i16> %c)
   ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 2 x i64> @test_udot_i64_zero(<vscale x 2 x i64> %a, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c) {
+; CHECK-LABEL: test_udot_i64_zero:
+; CHECK:         udot z0.d, z1.h, z2.h
+; CHECK-NEXT:    ret
+entry:
+  %vdot1.i = call <vscale x 2 x i64> @llvm.aarch64.sve.udot.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 8 x i16> %b, <vscale x 8 x i16> %c)
+  %ret = add <vscale x 2 x i64> %vdot1.i, %a
+  ret <vscale x 2 x i64> %ret
+}
+
+define <vscale x 4 x i32> @test_udot_i32_zero(<vscale x 4 x i32> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: test_udot_i32_zero:
+; CHECK:         udot z0.s, z1.b, z2.b
+; CHECK-NEXT:    ret
+entry:
+  %vdot1.i = call <vscale x 4 x i32> @llvm.aarch64.sve.udot.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c)
+  %ret = add <vscale x 4 x i32> %vdot1.i, %a
+  ret <vscale x 4 x i32> %ret
 }
 
 ; UDOT (Indexed)
