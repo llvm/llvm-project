@@ -58,6 +58,12 @@ public:
   virtual llvm::Optional<MmapData> GetMmapData() { return llvm::None; }
 
 protected:
+  // NB: This constructor is here only because gcc<=6.5 requires a virtual base
+  // class initializer on abstract class (even though it is never used). It can
+  // be deleted once we move to gcc>=7.0.
+  NativeRegisterContextLinux(NativeThreadProtocol &thread)
+      : NativeRegisterContextRegisterInfo(thread, nullptr) {}
+
   lldb::ByteOrder GetByteOrder() const;
 
   virtual Status ReadRegisterRaw(uint32_t reg_index, RegisterValue &reg_value);
