@@ -894,10 +894,6 @@ def : Pat<(i64 (or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
           (PACKUW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
 
-let Predicates = [HasStdExtZbb] in {
-def : PatGpr<int_riscv_orc_b, ORCB>;
-} // Predicates = [HasStdExtZbb]
-
 let Predicates = [HasStdExtZbr] in {
 def : PatGpr<int_riscv_crc32_b, CRC32B>;
 def : PatGpr<int_riscv_crc32_h, CRC32H>;

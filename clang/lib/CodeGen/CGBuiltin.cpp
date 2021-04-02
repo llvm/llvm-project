@@ -17877,13 +17877,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
 
-  // Zbb
-  case RISCV::BI__builtin_riscv_orc_b_32:
-  case RISCV::BI__builtin_riscv_orc_b_64:
-    ID = Intrinsic::riscv_orc_b;
-    IntrinsicTypes = {ResultType};
-    break;
-
   // Zbr
   case RISCV::BI__builtin_riscv_crc32_b:
     ID = Intrinsic::riscv_crc32_b;
@@ -17917,8 +17910,10 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_crc32c_d;
     IntrinsicTypes = {ResultType};
     break;
-  default:
+  default: {
     llvm_unreachable("unexpected builtin ID");
+    return nullptr;
+  } // default
   }
 
   assert(ID != Intrinsic::not_intrinsic);
