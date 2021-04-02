@@ -3415,13 +3415,27 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          CallExpr *TheCall) {
   // CodeGenFunction can also detect this, but this gives a better error
   // message.
+  bool FeatureMissing = false;
+  SmallVector<StringRef> ReqFeatures;
   StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
-  if (Features.find("experimental-v") != StringRef::npos &&
-      !TI.hasFeature("experimental-v"))
-    return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
-           << TheCall->getSourceRange();
+  Features.split(ReqFeatures, ',');
 
-  return false;
+  // Check if each required feature is included
+  for (auto &I : ReqFeatures) {
+    if (TI.hasFeature(I))
+      continue;
+    // Make message like "experimental-zbr" to "Zbr"
+    I.consume_front("experimental-");
+    std::string FeatureStr = I.str();
+    FeatureStr[0] = std::toupper(FeatureStr[0]);
+
+    // Error message
+    FeatureMissing = true;
+    Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
+        << TheCall->getSourceRange() << StringRef(FeatureStr);
+  }
+
+  return FeatureMissing;
 }
 
 bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
