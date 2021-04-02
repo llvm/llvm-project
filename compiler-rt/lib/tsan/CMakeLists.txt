@@ -108,7 +108,8 @@ set(TSAN_HEADERS
   rtl/tsan_symbolize.h
   rtl/tsan_sync.h
   rtl/tsan_trace.h
-  rtl/tsan_update_shadow_word_inl.h)
+  rtl/tsan_update_shadow_word_inl.h
+  )
 
 set(TSAN_RUNTIME_LIBRARIES)
 add_compiler_rt_component(tsan)
@@ -126,7 +127,10 @@ if(APPLE)
     message(FATAL_ERROR "Building the TSan runtime requires at least macOS SDK 10.12 (or aligned SDK on other platforms)")
   endif()
 
-  add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S rtl/tsan_rtl_aarch64.S)
+  add_asm_sources(TSAN_ASM_SOURCES
+    rtl/tsan_rtl_amd64.S
+    rtl/tsan_rtl_aarch64.S
+    )
 
   set(TSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 
@@ -170,7 +174,9 @@ if(APPLE)
 else()
   foreach(arch ${TSAN_SUPPORTED_ARCH})
     if(arch STREQUAL "x86_64")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_amd64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
@@ -182,7 +188,9 @@ else()
         COMMENT "Checking TSan Go runtime..."
         VERBATIM)
     elseif(arch STREQUAL "aarch64")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_aarch64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_aarch64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
@@ -194,7 +202,9 @@ else()
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "powerpc64|powerpc64le")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_ppc64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_ppc64.S
+        )
       # Sanity check for Go runtime.
       set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
       add_custom_target(GotsanRuntimeCheck
@@ -206,7 +216,9 @@ else()
 	COMMENT "Checking TSan Go runtime..."
 	VERBATIM)
     elseif(arch MATCHES "mips64|mips64le")
-      add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_mips64.S)
+      add_asm_sources(TSAN_ASM_SOURCES
+        rtl/tsan_rtl_mips64.S
+        )
     else()
       set(TSAN_ASM_SOURCES)
     endif()
