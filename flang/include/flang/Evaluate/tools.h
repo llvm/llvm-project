@@ -730,7 +730,8 @@ common::IfNoLvalue<std::optional<Expr<SomeType>>, WRAPPED> TypedWrapper(
 
 // GetLastSymbol() returns the rightmost symbol in an object or procedure
 // designator (which has perhaps been wrapped in an Expr<>), or a null pointer
-// when none is found.
+// when none is found.  It will return an ASSOCIATE construct entity's symbol
+// rather than descending into its expression.
 struct GetLastSymbolHelper
     : public AnyTraverse<GetLastSymbolHelper, std::optional<const Symbol *>> {
   using Result = std::optional<const Symbol *>;

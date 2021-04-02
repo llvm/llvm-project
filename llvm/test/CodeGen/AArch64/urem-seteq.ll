@@ -78,14 +78,14 @@ define i32 @test_urem_odd_bit31(i32 %X) nounwind {
 define i16 @test_urem_even(i16 %X) nounwind {
 ; CHECK-LABEL: test_urem_even:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ubfx w8, w0, #1, #15
-; CHECK-NEXT:    mov w9, #18725
-; CHECK-NEXT:    mul w8, w8, w9
-; CHECK-NEXT:    lsr w8, w8, #17
-; CHECK-NEXT:    mov w9, #14
-; CHECK-NEXT:    msub w8, w8, w9, w0
-; CHECK-NEXT:    tst w8, #0xffff
-; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    mov w8, #28087
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    and w9, w8, #0xfffc
+; CHECK-NEXT:    lsr w9, w9, #1
+; CHECK-NEXT:    bfi w9, w8, #15, #17
+; CHECK-NEXT:    ubfx w8, w9, #1, #15
+; CHECK-NEXT:    cmp w8, #2340 // =2340
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %urem = urem i16 %X, 14
   %cmp = icmp ne i16 %urem, 0

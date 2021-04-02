@@ -5669,13 +5669,16 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (!matchSimpleRecurrence(P, BO, Start, Step))
     return CR;
 
-  // If we found a recurrence, we must be in a loop -- unless we're
-  // in unreachable code where dominance collapses.  Note that BO might
-  // be in some subloop of L, and that's completely okay.
-  auto *L = LI.getLoopFor(P->getParent());
-  if (!L)
+  if (!DT.isReachableFromEntry(P->getParent()) ||
+      !DT.isReachableFromEntry(BO->getParent()))
+    // If either is in unreachable code, dominance collapses and none of our
+    // expected post conditions about loops hold.
     return CR;
-  assert(L->getHeader() == P->getParent());
+
+  // If we found a recurrence in reachable code, we must be in a loop. Note
+  // that BO might be in some subloop of L, and that's completely okay.
+  auto *L = LI.getLoopFor(P->getParent());
+  assert(L && L->getHeader() == P->getParent());
   if (!L->contains(BO->getParent()))
     // NOTE: This bailout should be an assert instead.  However, asserting
     // the condition here exposes a case where LoopFusion is querying SCEV

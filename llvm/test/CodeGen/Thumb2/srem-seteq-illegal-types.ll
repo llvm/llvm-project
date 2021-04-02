@@ -4,15 +4,15 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r1, #64874
+; CHECK-NEXT:    movw r1, #24493
 ; CHECK-NEXT:    movw r2, #33099
-; CHECK-NEXT:    sbfx r0, r0, #0, #29
-; CHECK-NEXT:    movt r1, #330
-; CHECK-NEXT:    movt r2, #48986
-; CHECK-NEXT:    mla r1, r0, r2, r1
-; CHECK-NEXT:    movw r2, #64213
+; CHECK-NEXT:    movt r1, #41
+; CHECK-NEXT:    movt r2, #8026
+; CHECK-NEXT:    mla r0, r0, r2, r1
+; CHECK-NEXT:    movw r2, #48987
+; CHECK-NEXT:    movt r2, #82
+; CHECK-NEXT:    bic r1, r0, #-536870912
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    movt r2, #661
 ; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    it lo
 ; CHECK-NEXT:    movlo r0, #1

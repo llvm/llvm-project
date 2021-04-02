@@ -105,10 +105,11 @@ namespace llvm {
   /// in DwarfDebug; if a given feature has a more specific command-line option,
   /// that option should take precedence over the tuning.
   enum class DebuggerKind {
-    Default,  // No specific tuning requested.
-    GDB,      // Tune debug info for gdb.
-    LLDB,     // Tune debug info for lldb.
-    SCE       // Tune debug info for SCE targets (e.g. PS4).
+    Default, ///< No specific tuning requested.
+    GDB,     ///< Tune debug info for gdb.
+    LLDB,    ///< Tune debug info for lldb.
+    SCE,     ///< Tune debug info for SCE targets (e.g. PS4).
+    DBX      ///< Tune debug info for dbx.
   };
 
   /// Enable abort calls when global instruction selection fails to lower/select

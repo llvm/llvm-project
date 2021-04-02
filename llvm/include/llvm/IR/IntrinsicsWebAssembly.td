@@ -294,13 +294,6 @@ def int_wasm_extadd_pairwise_unsigned :
             [LLVMSubdivide2VectorType<0>],
             [IntrNoMem, IntrSpeculatable]>;
 
-// TODO: Remove this intrinsic and the associated builtin if i64x2.eq gets
-// merged to the proposal.
-def int_wasm_eq :
-  Intrinsic<[llvm_v2i64_ty],
-            [llvm_v2i64_ty, llvm_v2i64_ty],
-            [IntrNoMem, IntrSpeculatable]>;
-
 // TODO: Remove these if possible if they are merged to the spec.
 def int_wasm_convert_low_signed :
   Intrinsic<[llvm_v2f64_ty], [llvm_v4i32_ty],

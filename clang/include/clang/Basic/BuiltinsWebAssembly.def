@@ -215,7 +215,5 @@ TARGET_BUILTIN(__builtin_wasm_store16_lane, "vs*V8sIi", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_store32_lane, "vi*V4iIi", "n", "simd128")
 TARGET_BUILTIN(__builtin_wasm_store64_lane, "vLLi*V2LLiIi", "n", "simd128")
 
-TARGET_BUILTIN(__builtin_wasm_eq_i64x2, "V2LLiV2LLiV2LLi", "nc", "simd128")
-
 #undef BUILTIN
 #undef TARGET_BUILTIN

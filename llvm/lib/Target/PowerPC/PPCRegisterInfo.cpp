@@ -403,22 +403,20 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
   assert(Register::isPhysicalRegister(PhysReg));
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (!TM.isPPC64())
-    return false;
 
-  if (!Subtarget.isSVR4ABI())
+  if (!Subtarget.is64BitELFABI() && !Subtarget.isAIXABI())
     return false;
-  if (PhysReg == PPC::X2)
-    // X2 is guaranteed to be preserved within a function if it is reserved.
+  if (PhysReg == Subtarget.getTOCPointerRegister())
+    // X2/R2 is guaranteed to be preserved within a function if it is reserved.
     // The reason it's reserved is that it's the TOC pointer (and the function
     // uses the TOC). In functions where it isn't reserved (i.e. leaf functions
     // with no TOC access), we can't claim that it is preserved.
-    return (getReservedRegs(MF).test(PPC::X2));
-  if (StackPtrConst && (PhysReg == PPC::X1) && !MFI.hasVarSizedObjects()
-      && !MFI.hasOpaqueSPAdjustment())
+    return (getReservedRegs(MF).test(PhysReg));
+  if (StackPtrConst && PhysReg == Subtarget.getStackPointerRegister() &&
+      !MFI.hasVarSizedObjects() && !MFI.hasOpaqueSPAdjustment())
     // The value of the stack pointer does not change within a function after
     // the prologue and before the epilogue if there are no dynamic allocations
-    // and no inline asm which clobbers X1.
+    // and no inline asm which clobbers X1/R1.
     return true;
   return false;
 }

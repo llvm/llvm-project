@@ -653,17 +653,23 @@ main:
     # CHECK: i64x2.mul # encoding: [0xfd,0xd5,0x01]
     i64x2.mul
 
-    # TODO: i64x2.eq # encoding: [0xfd,0xd6,0x01]
+    # CHECK: i64x2.eq # encoding: [0xfd,0xd6,0x01]
+    i64x2.eq
 
-    # TODO: i64x2.ne # encoding: [0xfd,0xd7,0x01]
+    # CHECK: i64x2.ne # encoding: [0xfd,0xd7,0x01]
+    i64x2.ne
 
-    # TODO: i64x2.lt_s # encoding: [0xfd,0xd8,0x01]
+    # CHECK: i64x2.lt_s # encoding: [0xfd,0xd8,0x01]
+    i64x2.lt_s
 
-    # TODO: i64x2.gt_s # encoding: [0xfd,0xd9,0x01]
+    # CHECK: i64x2.gt_s # encoding: [0xfd,0xd9,0x01]
+    i64x2.gt_s
 
-    # TODO: i64x2.le_s # encoding: [0xfd,0xda,0x01]
+    # CHECK: i64x2.le_s # encoding: [0xfd,0xda,0x01]
+    i64x2.le_s
 
-    # TODO: i64x2.ge_s # encoding: [0xfd,0xdb,0x01]
+    # CHECK: i64x2.ge_s # encoding: [0xfd,0xdb,0x01]
+    i64x2.ge_s
 
     # CHECK: i64x2.extmul_low_i32x4_s # encoding: [0xfd,0xdc,0x01]
     i64x2.extmul_low_i32x4_s

@@ -33,6 +33,9 @@
 //   subtrees of interior nodes, and the visitor's Combine() to merge their
 //   results together.
 // - Overloads of operator() in each visitor handle the cases of interest.
+//
+// The default handler for semantics::Symbol will descend into the associated
+// expression of an ASSOCIATE (or related) construct entity.
 
 #include "expression.h"
 #include "flang/Semantics/symbol.h"
@@ -102,7 +105,15 @@ public:
       return visitor_.Default();
     }
   }
-  Result operator()(const Symbol &) const { return visitor_.Default(); }
+  Result operator()(const Symbol &symbol) const {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (const auto *assoc{
+            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      return visitor_(assoc->expr());
+    } else {
+      return visitor_.Default();
+    }
+  }
   Result operator()(const StaticDataObject &) const {
     return visitor_.Default();
   }

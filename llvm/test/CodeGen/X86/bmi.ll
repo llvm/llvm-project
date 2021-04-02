@@ -539,11 +539,12 @@ define i32 @blsi32_z2(i32 %a, i32 %b, i32 %c) nounwind {
   ret i32 %t3
 }
 
+; Inspired by PR48768, but using cmovcc instead of setcc. There should be
+; no test instruction.
 define i32 @blsi32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsi32_sle:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovlel %eax, %ecx
@@ -554,7 +555,6 @@ define i32 @blsi32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    blsil %edi, %ecx
-; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    cmovgl %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 0, %a
@@ -685,7 +685,6 @@ define i64 @blsi64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    blsiq %rdi, %rcx
-; X64-NEXT:    testq %rcx, %rcx
 ; X64-NEXT:    cmovgq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 0, %a
@@ -776,7 +775,6 @@ define i32 @blsmsk32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsmsk32_sle:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsmskl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovlel %eax, %ecx
@@ -787,7 +785,6 @@ define i32 @blsmsk32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    blsmskl %edi, %ecx
-; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    cmovgl %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 %a, 1
@@ -918,7 +915,6 @@ define i64 @blsmsk64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    blsmskq %rdi, %rcx
-; X64-NEXT:    testq %rcx, %rcx
 ; X64-NEXT:    cmovgq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 %a, 1
@@ -1009,7 +1005,6 @@ define i32 @blsr32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X86-LABEL: blsr32_sle:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovlel %eax, %ecx
@@ -1020,7 +1015,6 @@ define i32 @blsr32_sle(i32 %a, i32 %b, i32 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    blsrl %edi, %ecx
-; X64-NEXT:    testl %ecx, %ecx
 ; X64-NEXT:    cmovgl %edx, %eax
 ; X64-NEXT:    retq
   %t0 = sub i32 %a, 1
@@ -1151,7 +1145,6 @@ define i64 @blsr64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    blsrq %rdi, %rcx
-; X64-NEXT:    testq %rcx, %rcx
 ; X64-NEXT:    cmovgq %rdx, %rax
 ; X64-NEXT:    retq
   %t0 = sub i64 %a, 1

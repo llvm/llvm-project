@@ -805,9 +805,16 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
 }
 
 TEST(ValueTracking, propagatesPoison) {
-  std::string AsmHead = "declare i32 @g(i32)\n"
-                        "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
-                        "i1 %cond, i8* %p) {\n";
+  std::string AsmHead =
+      "declare i32 @g(i32)\n"
+      "declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
+      "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
+      "i1 %cond, i8* %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (propagates poison?, IR instruction)
   SmallVector<std::pair<bool, std::string>, 32> Data = {
@@ -826,7 +833,13 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "urem i32 %x, %y"},
       {true, "sdiv exact i32 %x, %y"},
       {true, "srem i32 %x, %y"},
-      {false, "call i32 @g(i32 %x)"}};
+      {false, "call i32 @g(i32 %x)"},
+      {true, "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
+      {true, "call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %x, i32 %y)"},
+      {true, "call {i32, i1} @llvm.smul.with.overflow.i32(i32 %x, i32 %y)"},
+      {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)"},
+      {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
+      {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
@@ -992,6 +1005,12 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
   std::string AsmHead =
       "@s = external dso_local global i32, align 1\n"
       "declare i32 @g(i32)\n"
+      "declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.smul.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
       "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, i8* %p) {\n";
   std::string AsmTail = "  ret void\n}";
@@ -1053,7 +1072,19 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{true, false},
        "ashr <4 x i32> %vx, select (i1 icmp sgt (i32 ptrtoint (i32* @s to "
        "i32), i32 1), <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 "
-       "2, i32 3>)"}};
+       "2, i32 3>)"},
+      {{false, false},
+       "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false},
+       "call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false},
+       "call {i32, i1} @llvm.smul.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false},
+       "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false},
+       "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
+      {{false, false},
+       "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)

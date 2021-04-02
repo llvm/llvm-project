@@ -17,6 +17,8 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def riscv_clzw : SDNode<"RISCVISD::CLZW", SDTIntUnaryOp>;
+def riscv_ctzw : SDNode<"RISCVISD::CTZW", SDTIntUnaryOp>;
 def riscv_rolw : SDNode<"RISCVISD::ROLW", SDTIntShiftOp>;
 def riscv_rorw : SDNode<"RISCVISD::RORW", SDTIntShiftOp>;
 def riscv_fslw : SDNode<"RISCVISD::FSLW", SDTIntShiftDOp>;
@@ -877,14 +879,8 @@ def : Pat<(i64 (riscv_fslw GPR:$rs3, GPR:$rs1, uimm5:$shamt)),
 } // Predicates = [HasStdExtZbt, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV64] in {
-def : Pat<(i64 (add (ctlz (and GPR:$rs1, 0xFFFFFFFF)), -32)),
-          (CLZW GPR:$rs1)>;
-// computeKnownBits can't figure out that the and mask on the add result is
-// unnecessary so we need to pattern match it away.
-def : Pat<(i64 (and (add (ctlz (and GPR:$rs1, 0xFFFFFFFF)), -32), 0xFFFFFFFF)),
-          (CLZW GPR:$rs1)>;
-def : Pat<(i64 (cttz (or GPR:$rs1, 0x100000000))),
-          (CTZW GPR:$rs1)>;
+def : Pat<(i64 (riscv_clzw GPR:$rs1)), (CLZW GPR:$rs1)>;
+def : Pat<(i64 (riscv_ctzw GPR:$rs1)), (CTZW GPR:$rs1)>;
 def : Pat<(i64 (ctpop (and GPR:$rs1, 0xFFFFFFFF))), (CPOPW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 

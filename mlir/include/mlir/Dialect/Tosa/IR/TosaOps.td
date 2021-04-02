@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the operation set for the TOSA dialect.
+// This file defines the operation set for the TOSA dialect as defined in
+// the TOSA specfication (https://developer.mlplatform.org/w/tosa/). 
 //
 //===----------------------------------------------------------------------===//
 
@@ -1517,30 +1518,6 @@ def Tosa_RescaleOp: Tosa_Op<"rescale", [NoSideEffect]> {
   );
 }
 
-def Tosa_ApplyScaleOp: Tosa_Op<"apply_scale", [NoSideEffect] # ElementwiseMappable.traits> {
-  let summary = "Rescale scalar operator for Tosa tensor operators";
-
-  let description = [{
-    Applies rescaling for fixed point values. This behavior is replicated in
-    multiple quantized operations (mul, convolution, rescale, matmul, pooling).
-
-    The commonplace implementation is to use i64 operations to avoid integer
-    overflow with target specific implementations can use native operations to
-    avoid wider than necessary types.
-  }];
-
-  let arguments = (ins
-    Tosa_Int32Like:$value,
-    Tosa_Int32Like:$multiplier,
-    Tosa_Int8Like:$shift,
-    BoolAttr:$double_round
-  );
-
-  let results = (outs
-    Tosa_Int32:$output
-  );
-}
-
 //===----------------------------------------------------------------------===//
 // TOSA Spec Section 2.13
 // Operator Class: Data Node Ops.
@@ -1727,23 +1704,6 @@ def Tosa_WhileOp : Tosa_Op<"while_loop", [
   );
 }
 
-//===----------------------------------------------------------------------===//
-// Operator: yield
-//===----------------------------------------------------------------------===//
-def Tosa_YieldOp : Tosa_Op<"yield", [
-       Terminator,
-       NoSideEffect]> {
-  let summary = "yield operator";
-
-  let description = [{
-    return operation within the conditional and body of
-    structured control flow. Operation takes variadic operands
-    but produces no results of its own.
-  }];
-
-  let arguments = (ins
-    Variadic<Tosa_Tensor>:$inputs
-  );
-}
+include "mlir/Dialect/Tosa/IR/TosaUtilOps.td"
 
 #endif // TOSA_OPS

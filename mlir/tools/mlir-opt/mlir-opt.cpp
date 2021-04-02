@@ -72,6 +72,7 @@ void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
 void registerTestExpandTanhPass();
+void registerTestComposeSubView();
 void registerTestGpuParallelLoopMappingPass();
 void registerTestIRVisitorsPass();
 void registerTestInterfaces();
@@ -148,6 +149,7 @@ void registerTestPasses() {
   test::registerTestDominancePass();
   test::registerTestDynamicPipelinePass();
   test::registerTestExpandTanhPass();
+  test::registerTestComposeSubView();
   test::registerTestGpuParallelLoopMappingPass();
   test::registerTestIRVisitorsPass();
   test::registerTestInterfaces();

@@ -670,6 +670,7 @@ LLVMJITLinkRemoteTargetProcessControl::LaunchExecutor() {
 #endif
 }
 
+#ifdef LLVM_ON_UNIX
 static Error createTCPSocketError(Twine Details) {
   return make_error<StringError>(
       formatv("Failed to connect TCP socket '{0}': {1}",
@@ -678,12 +679,6 @@ static Error createTCPSocketError(Twine Details) {
 }
 
 static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
-#ifndef LLVM_ON_UNIX
-  // FIXME: Add TCP support for Windows.
-  return make_error<StringError>("-" + OutOfProcessExecutorConnect.ArgStr +
-                                     " not supported on non-unix platforms",
-                                 inconvertibleErrorCode());
-#else
   addrinfo *AI;
   addrinfo Hints{};
   Hints.ai_family = AF_INET;
@@ -718,8 +713,8 @@ static Expected<int> connectTCPSocket(std::string Host, std::string PortStr) {
     return createTCPSocketError(std::strerror(errno));
 
   return SockFD;
-#endif
 }
+#endif
 
 Expected<std::unique_ptr<TargetProcessControl>>
 LLVMJITLinkRemoteTargetProcessControl::ConnectToExecutor() {

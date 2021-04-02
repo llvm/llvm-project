@@ -27,6 +27,10 @@ if(NOT ANDROID)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)
     endif()
   endif()
+  # Tests use C++ standard library headers.
+  if (TARGET cxx-headers OR HAVE_LIBCXX)
+    set(SANITIZER_COMMON_LIT_TEST_DEPS cxx-headers)
+  endif()
 endif()
 
 function(compiler_rt_test_runtime runtime)

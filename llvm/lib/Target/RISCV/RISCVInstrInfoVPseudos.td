@@ -3278,6 +3278,53 @@ defm PseudoVADD        : VPseudoBinaryV_VV_VX_VI;
 defm PseudoVSUB        : VPseudoBinaryV_VV_VX;
 defm PseudoVRSUB       : VPseudoBinaryV_VX_VI;
 
+foreach vti = AllIntegerVectors in {
+  // Match vrsub with 2 vector operands to vsub.vv by swapping operands. This
+  // Occurs when legalizing vrsub.vx intrinsics for i64 on RV32 since we need
+  // to use a more complex splat sequence. Add the pattern for all VTs for
+  // consistency.
+  def : Pat<(vti.Vector (int_riscv_vrsub (vti.Vector vti.RegClass:$rs2),
+                                         (vti.Vector vti.RegClass:$rs1),
+                                         (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSUB_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                              vti.RegClass:$rs2,
+                                                              GPR:$vl,
+                                                              vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vrsub_mask (vti.Vector vti.RegClass:$merge),
+                                              (vti.Vector vti.RegClass:$rs2),
+                                              (vti.Vector vti.RegClass:$rs1),
+                                              (vti.Mask V0),
+                                              (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSUB_VV_"#vti.LMul.MX#"_MASK")
+                                                      vti.RegClass:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      vti.RegClass:$rs2,
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+
+  // Match VSUB with a small immediate to vadd.vi by negating the immediate.
+  def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector vti.RegClass:$rs1),
+                                        (vti.Scalar simm5_plus1:$rs2),
+                                        (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                              (NegImm simm5_plus1:$rs2),
+                                                              GPR:$vl,
+                                                              vti.SEW)>;
+  def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (vti.Scalar simm5_plus1:$rs2),
+                                             (vti.Mask V0),
+                                             (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX#"_MASK")
+                                                      vti.RegClass:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      (NegImm simm5_plus1:$rs2),
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+}
+
 //===----------------------------------------------------------------------===//
 // 12.2. Vector Widening Integer Add/Subtract
 //===----------------------------------------------------------------------===//
@@ -3868,13 +3915,60 @@ defm "" : VPatBinaryM_VV_VX_VI<"int_riscv_vmsle", "PseudoVMSLE", AllIntegerVecto
 defm "" : VPatBinaryM_VX_VI<"int_riscv_vmsgtu", "PseudoVMSGTU", AllIntegerVectors>;
 defm "" : VPatBinaryM_VX_VI<"int_riscv_vmsgt", "PseudoVMSGT", AllIntegerVectors>;
 
+// Match vmsgt with 2 vector operands to vmslt with the operands swapped.
+// Occurs when legalizing vmsgt(u).vx intrinsics for i64 on RV32 since we need
+// to use a more complex splat sequence. Add the pattern for all VTs for
+// consistency.
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Mask (int_riscv_vmsgt (vti.Vector vti.RegClass:$rs2),
+                                       (vti.Vector vti.RegClass:$rs1),
+                                       (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMSLT_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                               vti.RegClass:$rs2,
+                                                               GPR:$vl,
+                                                               vti.SEW)>;
+  def : Pat<(vti.Mask (int_riscv_vmsgt_mask (vti.Mask VR:$merge),
+                                            (vti.Vector vti.RegClass:$rs2),
+                                            (vti.Vector vti.RegClass:$rs1),
+                                            (vti.Mask V0),
+                                            (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMSLT_VV_"#vti.LMul.MX#"_MASK")
+                                                      VR:$merge,
+                                                      vti.RegClass:$rs1,
+                                                      vti.RegClass:$rs2,
+                                                      (vti.Mask V0),
+                                                      GPR:$vl,
+                                                      vti.SEW)>;
+
+  def : Pat<(vti.Mask (int_riscv_vmsgtu (vti.Vector vti.RegClass:$rs2),
+                                        (vti.Vector vti.RegClass:$rs1),
+                                        (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMSLTU_VV_"#vti.LMul.MX) vti.RegClass:$rs1,
+                                                                vti.RegClass:$rs2,
+                                                                GPR:$vl,
+                                                                vti.SEW)>;
+  def : Pat<(vti.Mask (int_riscv_vmsgtu_mask (vti.Mask VR:$merge),
+                                             (vti.Vector vti.RegClass:$rs2),
+                                             (vti.Vector vti.RegClass:$rs1),
+                                             (vti.Mask V0),
+                                             (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVMSLTU_VV_"#vti.LMul.MX#"_MASK")
+                                                       VR:$merge,
+                                                       vti.RegClass:$rs1,
+                                                       vti.RegClass:$rs2,
+                                                       (vti.Mask V0),
+                                                       GPR:$vl,
+                                                       vti.SEW)>;
+}
+
 // Match vmslt(u).vx intrinsics to vmsle(u).vi if the scalar is -15 to 16. This
 // avoids the user needing to know that there is no vmslt(u).vi instruction.
 // This is limited to vmslt(u).vx as there is no vmsge().vx intrinsic or
 // instruction.
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Mask (int_riscv_vmslt (vti.Vector vti.RegClass:$rs1),
-                                       (vti.Scalar simm5_plus1:$rs2), (XLenVT (VLOp GPR:$vl)))),
+                                       (vti.Scalar simm5_plus1:$rs2),
+                                       (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMSLE_VI_"#vti.LMul.MX) vti.RegClass:$rs1,
                                                                (DecImm simm5_plus1:$rs2),
                                                                GPR:$vl,

@@ -396,6 +396,9 @@ public:
   KnownBits reverseBits() {
     return KnownBits(Zero.reverseBits(), One.reverseBits());
   }
+
+  void print(raw_ostream &OS) const;
+  void dump() const;
 };
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {

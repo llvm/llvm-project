@@ -44,7 +44,7 @@ class VOP3_VOP3PInst<string OpName, VOPProfile P, bit UseTiedOutput = 0,
   let Constraints = !if(UseTiedOutput, "$vdst = $vdst_in", "");
   let DisableEncoding = !if(UseTiedOutput, "$vdst_in", "");
   let AsmOperands =
-    " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$op_sel$op_sel_hi$clamp";
+    "$vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$op_sel$op_sel_hi$clamp";
 }
 
 let isCommutable = 1 in {
@@ -377,7 +377,7 @@ class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC
   let HasIntClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-  let Asm64 = " $vdst, $src0, $src1, $src2$cbsz$abid$blgp";
+  let Asm64 = "$vdst, $src0, $src1, $src2$cbsz$abid$blgp";
   let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, cbsz:$cbsz, abid:$abid, blgp:$blgp);
 }
 

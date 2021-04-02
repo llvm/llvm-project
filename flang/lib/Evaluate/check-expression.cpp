@@ -39,7 +39,7 @@ public:
     return semantics::IsKindTypeParameter(inq.parameter());
   }
   bool operator()(const semantics::Symbol &symbol) const {
-    const auto &ultimate{symbol.GetUltimate()};
+    const auto &ultimate{GetAssociationRoot(symbol)};
     return IsNamedConstant(ultimate) || IsImpliedDoIndex(ultimate) ||
         IsInitialProcedureTarget(ultimate);
   }
@@ -180,21 +180,19 @@ public:
     return false;
   }
   bool operator()(const semantics::Symbol &symbol) {
+    // This function checks only base symbols, not components.
     const Symbol &ultimate{symbol.GetUltimate()};
-    if (IsAllocatable(ultimate)) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
-      }
-      return false;
-    } else if (ultimate.Corank() > 0) {
-      if (messages_) {
-        messages_->Say(
-            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
-            ultimate.name());
-        emittedMessage_ = true;
+    if (const auto *assoc{
+            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      if (const auto &expr{assoc->expr()}) {
+        if (IsVariable(*expr)) {
+          return (*this)(*expr);
+        } else if (messages_) {
+          messages_->Say(
+              "An initial data target may not be an associated expression ('%s')"_err_en_US,
+              ultimate.name());
+          emittedMessage_ = true;
+        }
       }
       return false;
     } else if (!ultimate.attrs().test(semantics::Attr::TARGET)) {
@@ -213,8 +211,9 @@ public:
         emittedMessage_ = true;
       }
       return false;
+    } else {
+      return CheckVarOrComponent(ultimate);
     }
-    return true;
   }
   bool operator()(const StaticDataObject &) const { return false; }
   bool operator()(const TypeParamInquiry &) const { return false; }
@@ -233,6 +232,9 @@ public:
         x.u);
   }
   bool operator()(const CoarrayRef &) const { return false; }
+  bool operator()(const Component &x) {
+    return CheckVarOrComponent(x.GetLastSymbol()) && (*this)(x.base());
+  }
   bool operator()(const Substring &x) const {
     return IsConstantExpr(x.lower()) && IsConstantExpr(x.upper()) &&
         (*this)(x.parent());
@@ -258,6 +260,28 @@ public:
   bool operator()(const Relational<SomeType> &) const { return false; }
 
 private:
+  bool CheckVarOrComponent(const semantics::Symbol &symbol) {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (IsAllocatable(ultimate)) {
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to an ALLOCATABLE '%s'"_err_en_US,
+            ultimate.name());
+        emittedMessage_ = true;
+      }
+      return false;
+    } else if (ultimate.Corank() > 0) {
+      if (messages_) {
+        messages_->Say(
+            "An initial data target may not be a reference to a coarray '%s'"_err_en_US,
+            ultimate.name());
+        emittedMessage_ = true;
+      }
+      return false;
+    }
+    return true;
+  }
+
   parser::ContextualMessages *messages_;
   bool emittedMessage_{false};
 };
@@ -440,8 +464,11 @@ public:
 
   Result operator()(const semantics::Symbol &symbol) const {
     const auto &ultimate{symbol.GetUltimate()};
-    if (semantics::IsNamedConstant(ultimate) || ultimate.owner().IsModule() ||
-        ultimate.owner().IsSubmodule()) {
+    if (const auto *assoc{
+            ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
+      return (*this)(assoc->expr());
+    } else if (semantics::IsNamedConstant(ultimate) ||
+        ultimate.owner().IsModule() || ultimate.owner().IsSubmodule()) {
       return std::nullopt;
     } else if (scope_.IsDerivedType() &&
         IsVariableName(ultimate)) { // C750, C754
@@ -584,16 +611,19 @@ public:
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
-    if (symbol.attrs().test(semantics::Attr::CONTIGUOUS) ||
-        symbol.Rank() == 0) {
+    const auto &ultimate{symbol.GetUltimate()};
+    if (ultimate.attrs().test(semantics::Attr::CONTIGUOUS) ||
+        ultimate.Rank() == 0) {
       return true;
-    } else if (semantics::IsPointer(symbol)) {
+    } else if (semantics::IsPointer(ultimate)) {
       return false;
     } else if (const auto *details{
-                   symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+                   ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
       // N.B. ALLOCATABLEs are deferred shape, not assumed, and
       // are obviously contiguous.
       return !details->IsAssumedShape() && !details->IsAssumedRank();
+    } else if (auto assoc{Base::operator()(ultimate)}) {
+      return assoc;
     } else {
       return false;
     }

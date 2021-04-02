@@ -252,11 +252,6 @@ if 'FREEBSD_LEGACY_PLUGIN' in os.environ:
   config.environment['FREEBSD_LEGACY_PLUGIN'] = os.environ[
       'FREEBSD_LEGACY_PLUGIN']
 
-# Propagate LLDB_CAPTURE_REPRODUCER
-if 'LLDB_CAPTURE_REPRODUCER' in os.environ:
-  config.environment['LLDB_CAPTURE_REPRODUCER'] = os.environ[
-      'LLDB_CAPTURE_REPRODUCER']
-
 # Propagate XDG_CACHE_HOME
 if 'XDG_CACHE_HOME' in os.environ:
   config.environment['XDG_CACHE_HOME'] = os.environ['XDG_CACHE_HOME']

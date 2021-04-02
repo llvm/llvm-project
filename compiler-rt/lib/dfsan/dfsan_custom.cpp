@@ -1573,6 +1573,7 @@ int __dfsw_sigemptyset(sigset_t *set, dfsan_label set_label,
                        dfsan_label *ret_label) {
   int ret = sigemptyset(set);
   dfsan_set_label(0, set, sizeof(sigset_t));
+  *ret_label = 0;
   return ret;
 }
 

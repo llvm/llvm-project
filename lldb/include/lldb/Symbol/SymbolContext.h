@@ -150,8 +150,8 @@ public:
   bool DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
                        const Address &so_addr, bool show_fullpaths,
                        bool show_module, bool show_inlined_frames,
-                       bool show_function_arguments, bool show_function_name,
-                       bool show_inline_callsite_line_info = true) const;
+                       bool show_function_arguments,
+                       bool show_function_name) const;
 
   /// Get the address range contained within a symbol context.
   ///

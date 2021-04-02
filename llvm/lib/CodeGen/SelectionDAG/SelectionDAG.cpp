@@ -5150,9 +5150,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   assert(VT.getVectorNumElements() == Outputs.size() &&
          "Vector size mismatch!");
 
-  // We may have a vector type but a scalar result. Create a splat.
-  Outputs.resize(VT.getVectorNumElements(), Outputs.back());
-
   // Build a big vector out of the scalar elements we generated.
   return getBuildVector(VT, SDLoc(), Outputs);
 }

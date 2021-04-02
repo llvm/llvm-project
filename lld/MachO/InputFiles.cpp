@@ -194,11 +194,14 @@ void ObjFile::parseSections(ArrayRef<section_64> sections) {
 // any subsection splitting has occurred). It will be updated to represent the
 // same location as an offset relative to the start of the containing
 // subsection.
-static InputSection *findContainingSubsection(SubsectionMap &map,
-                                              uint32_t *offset) {
-  auto it = std::prev(map.upper_bound(*offset));
-  *offset -= it->first;
-  return it->second;
+static InputSection *findContainingSubsection(SubsectionMapping &map,
+                                              uint64_t *offset) {
+  auto it = std::prev(llvm::upper_bound(
+      map, *offset, [](uint64_t value, SubsectionEntry subsectionEntry) {
+        return value < subsectionEntry.offset;
+      }));
+  *offset -= it->offset;
+  return it->isec;
 }
 
 static bool validateRelocationInfo(InputFile *file, const section_64 &sec,
@@ -233,7 +236,7 @@ static bool validateRelocationInfo(InputFile *file, const section_64 &sec,
 }
 
 void ObjFile::parseRelocations(const section_64 &sec,
-                               SubsectionMap &subsecMap) {
+                               SubsectionMapping &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<relocation_info> relInfos(
       reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
@@ -288,9 +291,10 @@ void ObjFile::parseRelocations(const section_64 &sec,
       r.referent = symbols[relInfo.r_symbolnum];
       r.addend = totalAddend;
     } else {
-      SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
+      SubsectionMapping &referentSubsecMap =
+          subsections[relInfo.r_symbolnum - 1];
       const section_64 &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
-      uint32_t referentOffset;
+      uint64_t referentOffset;
       if (relInfo.r_pcrel) {
         // The implicit addend for pcrel section relocations is the pcrel offset
         // in terms of the addresses in the input file. Here we adjust it so
@@ -328,7 +332,7 @@ void ObjFile::parseRelocations(const section_64 &sec,
 
 static macho::Symbol *createDefined(const structs::nlist_64 &sym,
                                     StringRef name, InputSection *isec,
-                                    uint32_t value) {
+                                    uint64_t value) {
   // Symbol scope is determined by sym.n_type & (N_EXT | N_PEXT):
   // N_EXT: Global symbols
   // N_EXT | N_PEXT: Linkage unit (think: dylib) scoped
@@ -410,11 +414,51 @@ macho::Symbol *ObjFile::parseNonSectionSymbol(const structs::nlist_64 &sym,
 
 void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
                            const char *strtab, bool subsectionsViaSymbols) {
-  // resize(), not reserve(), because we are going to create N_ALT_ENTRY symbols
-  // out-of-sequence.
-  symbols.resize(nList.size());
-  std::vector<size_t> altEntrySymIdxs;
+  // Precompute the boundaries of symbols within a section.
+  // If subsectionsViaSymbols is True then the corresponding subsections will be
+  // created, otherwise these boundaries are used for the calculation of symbols
+  // sizes only.
 
+  for (const structs::nlist_64 &sym : nList) {
+    if ((sym.n_type & N_TYPE) == N_SECT && !(sym.n_desc & N_ALT_ENTRY) &&
+        !subsections[sym.n_sect - 1].empty()) {
+      SubsectionMapping &subsectionMapping = subsections[sym.n_sect - 1];
+      subsectionMapping.push_back(
+          {sym.n_value - sectionHeaders[sym.n_sect - 1].addr,
+           subsectionMapping.front().isec});
+    }
+  }
+
+  for (SubsectionMapping &subsectionMap : subsections) {
+    if (subsectionMap.empty())
+      continue;
+    llvm::sort(subsectionMap,
+               [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
+                 return lhs.offset < rhs.offset;
+               });
+    subsectionMap.erase(
+        std::unique(subsectionMap.begin(), subsectionMap.end(),
+                    [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
+                      return lhs.offset == rhs.offset;
+                    }),
+        subsectionMap.end());
+    if (!subsectionsViaSymbols)
+      continue;
+    for (size_t i = 0; i < subsectionMap.size(); ++i) {
+      uint32_t offset = subsectionMap[i].offset;
+      InputSection *&isec = subsectionMap[i].isec;
+      uint32_t end = i + 1 < subsectionMap.size() ? subsectionMap[i + 1].offset
+                                                  : isec->data.size();
+      isec = make<InputSection>(*isec);
+      isec->data = isec->data.slice(offset, end - offset);
+      // TODO: ld64 appears to preserve the original alignment as well as each
+      // subsection's offset from the last aligned address. We should consider
+      // emulating that behavior.
+      isec->align = MinAlign(isec->align, offset);
+    }
+  }
+
+  symbols.resize(nList.size());
   for (size_t i = 0, n = nList.size(); i < n; ++i) {
     const structs::nlist_64 &sym = nList[i];
     StringRef name = strtab + sym.n_strx;
@@ -425,7 +469,7 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     }
 
     const section_64 &sec = sectionHeaders[sym.n_sect - 1];
-    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
+    SubsectionMapping &subsecMap = subsections[sym.n_sect - 1];
 
     // parseSections() may have chosen not to parse this section.
     if (subsecMap.empty())
@@ -437,55 +481,18 @@ void ObjFile::parseSymbols(ArrayRef<structs::nlist_64> nList,
     // use the same subsection. Otherwise, we must split the sections along
     // symbol boundaries.
     if (!subsectionsViaSymbols) {
-      symbols[i] = createDefined(sym, name, subsecMap[0], offset);
+      symbols[i] = createDefined(sym, name, subsecMap.front().isec, offset);
       continue;
     }
 
-    // nList entries aren't necessarily arranged in address order. Therefore,
-    // we can't create alt-entry symbols at this point because a later symbol
-    // may split its section, which may affect which subsection the alt-entry
-    // symbol is assigned to. So we need to handle them in a second pass below.
-    if (sym.n_desc & N_ALT_ENTRY) {
-      altEntrySymIdxs.push_back(i);
-      continue;
-    }
-
-    // Find the subsection corresponding to the greatest section offset that is
-    // <= that of the current symbol. The subsection that we find either needs
-    // to be used directly or split in two.
-    uint32_t firstSize = offset;
-    InputSection *firstIsec = findContainingSubsection(subsecMap, &firstSize);
-
-    if (firstSize == 0) {
-      // Alias of an existing symbol, or the first symbol in the section. These
-      // are handled by reusing the existing section.
-      symbols[i] = createDefined(sym, name, firstIsec, 0);
-      continue;
-    }
-
-    // We saw a symbol definition at a new offset. Split the section into two
-    // subsections. The new symbol uses the second subsection.
-    auto *secondIsec = make<InputSection>(*firstIsec);
-    secondIsec->data = firstIsec->data.slice(firstSize);
-    firstIsec->data = firstIsec->data.slice(0, firstSize);
-    // TODO: ld64 appears to preserve the original alignment as well as each
-    // subsection's offset from the last aligned address. We should consider
-    // emulating that behavior.
-    secondIsec->align = MinAlign(firstIsec->align, offset);
-
-    subsecMap[offset] = secondIsec;
-    // By construction, the symbol will be at offset zero in the new section.
-    symbols[i] = createDefined(sym, name, secondIsec, 0);
+    InputSection *subsec = findContainingSubsection(subsecMap, &offset);
+    symbols[i] = createDefined(sym, name, subsec, offset);
   }
 
-  for (size_t idx : altEntrySymIdxs) {
-    const structs::nlist_64 &sym = nList[idx];
-    StringRef name = strtab + sym.n_strx;
-    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
-    uint32_t off = sym.n_value - sectionHeaders[sym.n_sect - 1].addr;
-    InputSection *subsec = findContainingSubsection(subsecMap, &off);
-    symbols[idx] = createDefined(sym, name, subsec, off);
-  }
+  if (!subsectionsViaSymbols)
+    for (SubsectionMapping &subsectionMap : subsections)
+      if (!subsectionMap.empty())
+        subsectionMap = {subsectionMap.front()};
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,

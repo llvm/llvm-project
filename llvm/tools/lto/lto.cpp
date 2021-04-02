@@ -63,8 +63,12 @@ static std::string sLastErrorString;
 // *** Not thread safe ***
 static bool initialized = false;
 
-// Holds the command-line option parsing state of the LTO module.
-static bool parsedOptions = false;
+// Represent the state of parsing command line debug options.
+static enum class OptParsingState {
+  NotParsed, // Initial state.
+  Early,     // After lto_set_debug_options is called.
+  Done       // After maybeParseOptions is called.
+} optionParsingState = OptParsingState::NotParsed;
 
 static LLVMContext *LTOContext = nullptr;
 
@@ -418,10 +422,11 @@ void lto_codegen_add_must_preserve_symbol(lto_code_gen_t cg,
 }
 
 static void maybeParseOptions(lto_code_gen_t cg) {
-  if (!parsedOptions) {
+  if (optionParsingState != OptParsingState::Done) {
+    // Parse options if any were set by the lto_codegen_debug_options* function.
     unwrap(cg)->parseCodeGenDebugOptions();
     lto_add_attrs(cg);
-    parsedOptions = true;
+    optionParsingState = OptParsingState::Done;
   }
 }
 
@@ -460,7 +465,22 @@ bool lto_codegen_compile_to_file(lto_code_gen_t cg, const char **name) {
   return !unwrap(cg)->compile_to_file(name);
 }
 
+void lto_set_debug_options(const char *const *options, int number) {
+  assert(optionParsingState == OptParsingState::NotParsed &&
+         "option processing already happened");
+  // Need to put each suboption in a null-terminated string before passing to
+  // parseCommandLineOptions().
+  std::vector<std::string> Options;
+  for (int i = 0; i < number; ++i)
+    Options.push_back(options[i]);
+
+  llvm::parseCommandLineOptions(Options);
+  optionParsingState = OptParsingState::Early;
+}
+
 void lto_codegen_debug_options(lto_code_gen_t cg, const char *opt) {
+  assert(optionParsingState != OptParsingState::Early &&
+         "early option processing already happened");
   SmallVector<StringRef, 4> Options;
   for (std::pair<StringRef, StringRef> o = getToken(opt); !o.first.empty();
        o = getToken(o.second))
@@ -471,6 +491,8 @@ void lto_codegen_debug_options(lto_code_gen_t cg, const char *opt) {
 
 void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
+  assert(optionParsingState != OptParsingState::Early &&
+         "early option processing already happened");
   SmallVector<StringRef, 4> Options;
   for (int i = 0; i < number; ++i)
     Options.push_back(options[i]);

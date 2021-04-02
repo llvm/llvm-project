@@ -383,3 +383,255 @@ loop:
 exit:
   ret void
 }
+
+; Corner case where phi is not in a loop because it is in unreachable
+; code (which loopinfo ignores, but simple recurrence matching does not).
+define void @unreachable_phi() {
+; CHECK-LABEL: 'unreachable_phi'
+; CHECK-NEXT:  Classifying expressions for: @unreachable_phi
+; CHECK-NEXT:    %p_58.addr.1 = phi i32 [ undef, %unreachable1 ], [ %sub2629, %unreachable2 ]
+; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:    %sub2629 = sub i32 %p_58.addr.1, 1
+; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @unreachable_phi
+;
+entry:
+  ret void
+
+unreachable1:
+  br label %unreachable_nonloop
+unreachable2:
+  br label %unreachable_nonloop
+unreachable_nonloop:
+  %p_58.addr.1 = phi i32 [ undef, %unreachable1 ], [ %sub2629, %unreachable2 ]
+  %sub2629 = sub i32 %p_58.addr.1, 1
+  unreachable
+}
+
+; Corner case where phi is not in loop header because binop is in unreachable
+; code (which loopinfo ignores, but simple recurrence matching does not).
+define void @unreachable_binop() {
+; CHECK-LABEL: 'unreachable_binop'
+; CHECK-NEXT:  Classifying expressions for: @unreachable_binop
+; CHECK-NEXT:    %p_58.addr.1 = phi i32 [ undef, %header ], [ %sub2629, %unreachable ]
+; CHECK-NEXT:    --> %p_58.addr.1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %header: Variant }
+; CHECK-NEXT:    %sub2629 = sub i32 %p_58.addr.1, 1
+; CHECK-NEXT:    --> undef U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @unreachable_binop
+; CHECK-NEXT:  Loop %header: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %header: Unpredictable predicated backedge-taken count.
+;
+entry:
+  br label %header
+
+header:
+  br label %for.cond2295
+
+for.cond2295:
+  %p_58.addr.1 = phi i32 [ undef, %header ], [ %sub2629, %unreachable ]
+  br i1 undef, label %if.then2321, label %header
+
+if.then2321:
+  ret void
+
+unreachable:
+  %sub2629 = sub i32 %p_58.addr.1, 1
+  br label %for.cond2295
+}
+
+; Next batch of tests show where we can get tighter ranges on ashr/lshr
+; by using the trip count information on the loop.
+
+define void @test_ashr_tc_positive() {
+; CHECK-LABEL: 'test_ashr_tc_positive'
+; CHECK-NEXT:  Classifying expressions for: @test_ashr_tc_positive
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr = phi i64 [ 1023, %entry ], [ %iv.ashr.next, %loop ]
+; CHECK-NEXT:    --> %iv.ashr U: [0,1024) S: [0,1024) Exits: 63 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr.next = ashr i64 %iv.ashr, 1
+; CHECK-NEXT:    --> %iv.ashr.next U: [0,512) S: [0,512) Exits: 31 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_ashr_tc_positive
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.ashr = phi i64 [1023, %entry], [%iv.ashr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.ashr.next = ashr i64 %iv.ashr, 1
+  %cmp = icmp eq i64 %iv, 4
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @test_ashr_tc_negative() {
+; CHECK-LABEL: 'test_ashr_tc_negative'
+; CHECK-NEXT:  Classifying expressions for: @test_ashr_tc_negative
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr = phi i8 [ -128, %entry ], [ %iv.ashr.next, %loop ]
+; CHECK-NEXT:    --> %iv.ashr U: [-128,0) S: [-128,0) Exits: -8 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr.next = ashr i8 %iv.ashr, 1
+; CHECK-NEXT:    --> %iv.ashr.next U: [-64,0) S: [-64,0) Exits: -4 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_ashr_tc_negative
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.ashr = phi i8 [128, %entry], [%iv.ashr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.ashr.next = ashr i8 %iv.ashr, 1
+  %cmp = icmp eq i64 %iv, 4
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @test_ashr_tc_either(i1 %a) {
+; CHECK-LABEL: 'test_ashr_tc_either'
+; CHECK-NEXT:  Classifying expressions for: @test_ashr_tc_either
+; CHECK-NEXT:    %start = sext i1 %a to i8
+; CHECK-NEXT:    --> (sext i1 %a to i8) U: [-1,1) S: [-1,1)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,61) S: [0,61) Exits: 60 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr = phi i8 [ %start, %entry ], [ %iv.ashr.next, %loop ]
+; CHECK-NEXT:    --> %iv.ashr U: [-16,16) S: [-16,16) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,62) S: [1,62) Exits: 61 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.ashr.next = ashr i8 %iv.ashr, 1
+; CHECK-NEXT:    --> %iv.ashr.next U: [-16,16) S: [-16,16) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_ashr_tc_either
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 60
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 60
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 60
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 61
+;
+entry:
+  %start = sext i1 %a to i8
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.ashr = phi i8 [%start, %entry], [%iv.ashr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.ashr.next = ashr i8 %iv.ashr, 1
+  %cmp = icmp eq i64 %iv, 60
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+
+define void @test_lshr_tc_positive() {
+; CHECK-LABEL: 'test_lshr_tc_positive'
+; CHECK-NEXT:  Classifying expressions for: @test_lshr_tc_positive
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr = phi i64 [ 1023, %entry ], [ %iv.lshr.next, %loop ]
+; CHECK-NEXT:    --> %iv.lshr U: [0,1024) S: [0,1024) Exits: 63 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr.next = lshr i64 %iv.lshr, 1
+; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [0,512) S: [0,512) Exits: 31 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_tc_positive
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.lshr = phi i64 [1023, %entry], [%iv.lshr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.lshr.next = lshr i64 %iv.lshr, 1
+  %cmp = icmp eq i64 %iv, 4
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @test_lshr_tc_negative() {
+; CHECK-LABEL: 'test_lshr_tc_negative'
+; CHECK-NEXT:  Classifying expressions for: @test_lshr_tc_negative
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr = phi i8 [ -1, %entry ], [ %iv.lshr.next, %loop ]
+; CHECK-NEXT:    --> %iv.lshr U: [-1,-128) S: [-1,-128) Exits: 15 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr.next = lshr i8 %iv.lshr, 1
+; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [0,-128) S: [0,-128) Exits: 7 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_tc_negative
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.lshr = phi i8 [-1, %entry], [%iv.lshr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.lshr.next = lshr i8 %iv.lshr, 1
+  %cmp = icmp eq i64 %iv, 4
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @test_lshr_tc_either(i1 %a) {
+; CHECK-LABEL: 'test_lshr_tc_either'
+; CHECK-NEXT:  Classifying expressions for: @test_lshr_tc_either
+; CHECK-NEXT:    %start = sext i1 %a to i8
+; CHECK-NEXT:    --> (sext i1 %a to i8) U: [-1,1) S: [-1,1)
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,5) S: [0,5) Exits: 4 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr = phi i8 [ %start, %entry ], [ %iv.lshr.next, %loop ]
+; CHECK-NEXT:    --> %iv.lshr U: [-1,-128) S: [-1,-128) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,6) S: [1,6) Exits: 5 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.lshr.next = lshr i8 %iv.lshr, 1
+; CHECK-NEXT:    --> (%iv.lshr /u 2) U: [0,-128) S: [0,-128) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:  Determining loop execution counts for: @test_lshr_tc_either
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 4
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 4
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 5
+;
+entry:
+  %start = sext i1 %a to i8
+  br label %loop
+loop:
+  %iv = phi i64 [0, %entry], [%iv.next, %loop]
+  %iv.lshr = phi i8 [%start, %entry], [%iv.lshr.next, %loop]
+  %iv.next = add i64 %iv, 1
+  %iv.lshr.next = lshr i8 %iv.lshr, 1
+  %cmp = icmp eq i64 %iv, 4
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}

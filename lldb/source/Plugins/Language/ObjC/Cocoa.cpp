@@ -351,7 +351,7 @@ static void NSNumber_FormatInt(ValueObject &valobj, Stream &stream, int value,
 }
 
 static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
-                                uint64_t value, lldb::LanguageType lang) {
+                                int64_t value, lldb::LanguageType lang) {
   static ConstString g_TypeHint("NSNumber:long");
 
   std::string prefix, suffix;
@@ -456,9 +456,15 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
     return NSDecimalNumberSummaryProvider(valobj, stream, options);
 
   if (class_name == "NSNumber" || class_name == "__NSCFNumber") {
-    uint64_t value = 0;
+    int64_t value = 0;
     uint64_t i_bits = 0;
-    if (descriptor->GetTaggedPointerInfo(&i_bits, &value)) {
+    if (descriptor->GetTaggedPointerInfoSigned(&i_bits, &value)) {
+      // Check for "preserved" numbers.  We still don't support them yet.
+      if (i_bits & 0x8) {
+        lldbassert(!static_cast<bool>("We should handle preserved numbers!"));
+        return false;
+      }
+
       switch (i_bits) {
       case 0:
         NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());

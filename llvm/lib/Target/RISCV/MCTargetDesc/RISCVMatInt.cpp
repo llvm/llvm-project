@@ -10,11 +10,11 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MathExtras.h"
+using namespace llvm;
 
-namespace llvm {
-
-namespace RISCVMatInt {
-void generateInstSeq(int64_t Val, bool IsRV64, InstSeq &Res) {
+// Recursively generate a sequence for materializing an integer.
+static void generateInstSeqImpl(int64_t Val, bool IsRV64,
+                                RISCVMatInt::InstSeq &Res) {
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -27,11 +27,11 @@ void generateInstSeq(int64_t Val, bool IsRV64, InstSeq &Res) {
     int64_t Lo12 = SignExtend64<12>(Val);
 
     if (Hi20)
-      Res.push_back(Inst(RISCV::LUI, Hi20));
+      Res.push_back(RISCVMatInt::Inst(RISCV::LUI, Hi20));
 
     if (Lo12 || Hi20 == 0) {
       unsigned AddiOpc = (IsRV64 && Hi20) ? RISCV::ADDIW : RISCV::ADDI;
-      Res.push_back(Inst(AddiOpc, Lo12));
+      Res.push_back(RISCVMatInt::Inst(AddiOpc, Lo12));
     }
     return;
   }
@@ -66,11 +66,40 @@ void generateInstSeq(int64_t Val, bool IsRV64, InstSeq &Res) {
   int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
   Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
 
-  generateInstSeq(Hi52, IsRV64, Res);
+  generateInstSeqImpl(Hi52, IsRV64, Res);
 
-  Res.push_back(Inst(RISCV::SLLI, ShiftAmount));
+  Res.push_back(RISCVMatInt::Inst(RISCV::SLLI, ShiftAmount));
   if (Lo12)
-    Res.push_back(Inst(RISCV::ADDI, Lo12));
+    Res.push_back(RISCVMatInt::Inst(RISCV::ADDI, Lo12));
+}
+
+namespace llvm {
+namespace RISCVMatInt {
+InstSeq generateInstSeq(int64_t Val, bool IsRV64) {
+  RISCVMatInt::InstSeq Res;
+  generateInstSeqImpl(Val, IsRV64, Res);
+
+  // If the constant is positive we might be able to generate a shifted constant
+  // with no leading zeros and use a final SRLI to restore them.
+  if (Val > 0 && Res.size() > 2) {
+    assert(IsRV64 && "Expected RV32 to only need 2 instructions");
+    unsigned ShiftAmount = countLeadingZeros((uint64_t)Val);
+    Val <<= ShiftAmount;
+    // Fill in the bits that will be shifted out with 1s. An example where this
+    // helps is trailing one masks with 32 or more ones. This will generate
+    // ADDI -1 and an SRLI.
+    Val |= maskTrailingOnes<uint64_t>(ShiftAmount);
+
+    RISCVMatInt::InstSeq TmpSeq;
+    generateInstSeqImpl(Val, IsRV64, TmpSeq);
+    TmpSeq.push_back(RISCVMatInt::Inst(RISCV::SRLI, ShiftAmount));
+
+    // Keep the new sequence if it is an improvement.
+    if (TmpSeq.size() < Res.size())
+      Res = TmpSeq;
+  }
+
+  return Res;
 }
 
 int getIntMatCost(const APInt &Val, unsigned Size, bool IsRV64) {
@@ -81,8 +110,7 @@ int getIntMatCost(const APInt &Val, unsigned Size, bool IsRV64) {
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
-    InstSeq MatSeq;
-    generateInstSeq(Chunk.getSExtValue(), IsRV64, MatSeq);
+    InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), IsRV64);
     Cost += MatSeq.size();
   }
   return std::max(1, Cost);

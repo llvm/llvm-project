@@ -538,6 +538,23 @@ void mlir::python::populateIRAffine(py::module &m) {
              printAccum.parts.append(")");
              return printAccum.join();
            })
+      .def_static("compress_unused_symbols",
+                  [](py::list affineMaps, DefaultingPyMlirContext context) {
+                    SmallVector<MlirAffineMap> maps;
+                    pyListToVector<PyAffineMap, MlirAffineMap>(
+                        affineMaps, maps, "attempting to create an AffineMap");
+                    std::vector<MlirAffineMap> compressed(affineMaps.size());
+                    auto populate = [](void *result, intptr_t idx,
+                                       MlirAffineMap m) {
+                      static_cast<MlirAffineMap *>(result)[idx] = (m);
+                    };
+                    mlirAffineMapCompressUnusedSymbols(
+                        maps.data(), maps.size(), compressed.data(), populate);
+                    std::vector<PyAffineMap> res;
+                    for (auto m : compressed)
+                      res.push_back(PyAffineMap(context->getRef(), m));
+                    return res;
+                  })
       .def_property_readonly(
           "context",
           [](PyAffineMap &self) { return self.getContext().getObject(); },

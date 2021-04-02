@@ -10,22 +10,19 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; X86-LABEL: test_srem_odd:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    sarl $3, %eax
-; X86-NEXT:    imull $-1084587701, %eax, %eax # imm = 0xBF5A814B
-; X86-NEXT:    addl $21691754, %eax # imm = 0x14AFD6A
-; X86-NEXT:    cmpl $43383509, %eax # imm = 0x295FAD5
+; X86-NEXT:    imull $526025035, {{[0-9]+}}(%esp), %eax # imm = 0x1F5A814B
+; X86-NEXT:    addl $2711469, %eax # imm = 0x295FAD
+; X86-NEXT:    andl $536870911, %eax # imm = 0x1FFFFFFF
+; X86-NEXT:    cmpl $5422939, %eax # imm = 0x52BF5B
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_srem_odd:
 ; X64:       # %bb.0:
-; X64-NEXT:    shll $3, %edi
-; X64-NEXT:    sarl $3, %edi
-; X64-NEXT:    imull $-1084587701, %edi, %eax # imm = 0xBF5A814B
-; X64-NEXT:    addl $21691754, %eax # imm = 0x14AFD6A
-; X64-NEXT:    cmpl $43383509, %eax # imm = 0x295FAD5
+; X64-NEXT:    imull $526025035, %edi, %eax # imm = 0x1F5A814B
+; X64-NEXT:    addl $2711469, %eax # imm = 0x295FAD
+; X64-NEXT:    andl $536870911, %eax # imm = 0x1FFFFFFF
+; X64-NEXT:    cmpl $5422939, %eax # imm = 0x52BF5B
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %srem = srem i29 %X, 99

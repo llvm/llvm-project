@@ -553,6 +553,8 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
     MachineBasicBlock::iterator MBBI, const DebugLoc &DL, uint64_t Offset,
     uint64_t AlignOffset) const {
 
+  const bool NeedsDwarfCFI = needsDwarfCFI(MF);
+  const bool HasFP = hasFP(MF);
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const X86TargetLowering &TLI = *STI.getTargetLowering();
   const unsigned Opc = getSUBriOpcode(Uses64BitFramePtr, Offset);
@@ -570,6 +572,11 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
                            .addReg(StackPtr)
                            .addImm(StackProbeSize - AlignOffset)
                            .setMIFlag(MachineInstr::FrameSetup);
+    if (!HasFP && NeedsDwarfCFI) {
+      BuildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createAdjustCfaOffset(
+                   nullptr, StackProbeSize - AlignOffset));
+    }
     MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
 
     addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
@@ -591,7 +598,11 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
                            .setMIFlag(MachineInstr::FrameSetup);
     MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
 
-
+    if (!HasFP && NeedsDwarfCFI) {
+      BuildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::createAdjustCfaOffset(nullptr, StackProbeSize));
+    }
     addRegOffset(BuildMI(MBB, MBBI, DL, TII.get(MovMIOpc))
                      .setMIFlag(MachineInstr::FrameSetup),
                  StackPtr, false, 0)
@@ -607,6 +618,8 @@ void X86FrameLowering::emitStackProbeInlineGenericBlock(
                          .addReg(StackPtr)
                          .addImm(ChunkSize)
                          .setMIFlag(MachineInstr::FrameSetup);
+  // No need to adjust Dwarf CFA offset here, the last position of the stack has
+  // been defined
   MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
 }
 
@@ -1200,6 +1213,13 @@ bool X86FrameLowering::has128ByteRedZone(const MachineFunction& MF) const {
   return Is64Bit && !IsWin64CC && !Fn.hasFnAttribute(Attribute::NoRedZone);
 }
 
+bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
+  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+}
+
+bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
+  return !isWin64Prologue(MF) && MF.needsFrameMoves();
+}
 
 /// emitPrologue - Push callee-saved registers onto the stack, which
 /// automatically adjust the stack pointer. Adjust the stack pointer to allocate
@@ -1305,13 +1325,13 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
       MF.hasEHFunclets() && Personality == EHPersonality::CoreCLR;
   bool IsClrFunclet = IsFunclet && FnHasClrFunclet;
   bool HasFP = hasFP(MF);
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool IsWin64Prologue = isWin64Prologue(MF);
   bool NeedsWin64CFI = IsWin64Prologue && Fn.needsUnwindTableEntry();
   // FIXME: Emit FPO data for EH funclets.
   bool NeedsWinFPO =
       !IsFunclet && STI.isTargetWin32() && MMI.getModule()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
-  bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
+  bool NeedsDwarfCFI = needsDwarfCFI(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32()

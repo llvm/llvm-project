@@ -650,12 +650,6 @@ i8x16 popcnt(i8x16 x) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i64x2 eq_i64x2(i64x2 x, i64x2 y) {
-  return __builtin_wasm_eq_i64x2(x, y);
-  // WEBASSEMBLY: call <2 x i64> @llvm.wasm.eq(<2 x i64> %x, <2 x i64> %y)
-  // WEBASSEMBLY-NEXT: ret
-}
-
 int any_true_i8x16(i8x16 x) {
   return __builtin_wasm_any_true_i8x16(x);
   // WEBASSEMBLY: call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> %x)

@@ -2237,6 +2237,9 @@ static bool isNonZeroRecurrence(const PHINode *PN) {
   case Instruction::Shl:
     return !StartC->isNullValue() &&
            (BO->hasNoUnsignedWrap() || BO->hasNoSignedWrap());
+  case Instruction::AShr:
+  case Instruction::LShr:
+    return !StartC->isNullValue() && BO->isExact();
   default:
     return false;
   }
@@ -4887,6 +4890,12 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly) {
       switch (II->getIntrinsicID()) {
       // TODO: Add more intrinsics.
       case Intrinsic::ctpop:
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::umul_with_overflow:
         return false;
       }
     }
@@ -5214,8 +5223,24 @@ bool llvm::propagatesPoison(const Operator *I) {
   case Instruction::Freeze:
   case Instruction::Select:
   case Instruction::PHI:
-  case Instruction::Call:
   case Instruction::Invoke:
+    return false;
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      // TODO: Add more intrinsics.
+      case Intrinsic::sadd_with_overflow:
+      case Intrinsic::ssub_with_overflow:
+      case Intrinsic::smul_with_overflow:
+      case Intrinsic::uadd_with_overflow:
+      case Intrinsic::usub_with_overflow:
+      case Intrinsic::umul_with_overflow:
+        // If an input is a vector containing a poison element, the
+        // two output vectors (calculated results, overflow bits)'
+        // corresponding lanes are poison.
+        return true;
+      }
+    }
     return false;
   case Instruction::ICmp:
   case Instruction::FCmp:

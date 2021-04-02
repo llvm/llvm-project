@@ -18,6 +18,8 @@
 // RUN:             | FileCheck -check-prefix=G_STANDALONE -check-prefix=G_LLDB %s
 // RUN: %clang -### -c -gsce %s -target x86_64-linux-gnu 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_SCE %s
+// RUN: %clang -### -c -gdbx %s -target x86_64-linux-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
 
 // Android.
 // Android should always generate DWARF4.
@@ -101,6 +103,12 @@
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
+
+// On the AIX, -g defaults to -gdbx and limited debug info.
+// RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
+// RUN: %clang -### -c -g %s -target powerpc64-ibm-aix-xcoff 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_LIMITED -check-prefix=G_DBX %s
 
 // RUN: %clang -### -c -gdwarf-2 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
@@ -294,6 +302,7 @@
 // G_GDB:  "-debugger-tuning=gdb"
 // G_LLDB: "-debugger-tuning=lldb"
 // G_SCE:  "-debugger-tuning=sce"
+// G_DBX:  "-debugger-tuning=dbx"
 //
 // G_NOTUNING: "-cc1"
 // G_NOTUNING-NOT: "-debugger-tuning="

@@ -61,7 +61,7 @@ define amdgpu_kernel void @mul_shr_i32(i32 addrspace(1)* %out, i32 addrspace(1)*
 ; NOSDWA: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 ; GFX89: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX10: v_mul_lo_u16_e64 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX10: v_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; SDWA-NOT: v_mul_u32_u24_sdwa
 
 define amdgpu_kernel void @mul_i16(i16 addrspace(1)* %out, i16 addrspace(1)* %ina, i16 addrspace(1)* %inb) #0 {
@@ -268,7 +268,7 @@ entry:
 ; NOSDWA: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; NOSDWA-NOT: v_mul_u32_u24_sdwa
 ; GFX89: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
-; GFX10: v_mul_lo_u16_e64 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX10: v_mul_lo_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; SDWA-NOT: v_mul_u32_u24_sdwa
 
 define amdgpu_kernel void @mul_i8(i8 addrspace(1)* %out, i8 addrspace(1)* %ina, i8 addrspace(1)* %inb) #0 {
@@ -296,12 +296,12 @@ entry:
 ; GFX9-DAG: v_mul_lo_u16_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
 ; GFX9-DAG: v_mul_lo_u16_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
 
 ; GFX9: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 
-; GFX10: v_lshlrev_b16_e64 v{{[0-9]+}}, 8, v
+; GFX10: v_lshlrev_b16 v{{[0-9]+}}, 8, v
 ; GFX10: v_or_b32_sdwa v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 define amdgpu_kernel void @mul_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> addrspace(1)* %ina, <2 x i8> addrspace(1)* %inb) #0 {
 entry:
@@ -331,10 +331,10 @@ entry:
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
 
 define amdgpu_kernel void @mul_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %ina, <4 x i8> addrspace(1)* %inb) #0 {
 entry:
@@ -370,14 +370,14 @@ entry:
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 ; GFX9-DAG: v_mul_lo_u16_sdwa
 
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
-; GFX10-DAG: v_mul_lo_u16_e64
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
+; GFX10-DAG: v_mul_lo_u16
 
 define amdgpu_kernel void @mul_v8i8(<8 x i8> addrspace(1)* %out, <8 x i8> addrspace(1)* %ina, <8 x i8> addrspace(1)* %inb) #0 {
 entry:

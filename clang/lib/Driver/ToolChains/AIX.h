@@ -77,6 +77,10 @@ public:
   // Set default DWARF version to 3 for now as latest AIX OS supports version 3.
   unsigned GetDefaultDwarfVersion() const override { return 3; }
 
+  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
+    return llvm::DebuggerKind::DBX;
+  }
+
 protected:
   Tool *buildAssembler() const override;
   Tool *buildLinker() const override;

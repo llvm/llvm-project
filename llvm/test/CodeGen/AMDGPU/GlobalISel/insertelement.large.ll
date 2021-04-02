@@ -83,13 +83,13 @@ define amdgpu_kernel void @v_insert_v64i32_37(<64 x i32> addrspace(1)* %ptr.in, 
 ; GFX10-NEXT:    global_load_dwordx4 v[40:43], v70, s[0:1] offset:32
 ; GFX10-NEXT:    global_load_dwordx4 v[44:47], v70, s[0:1] offset:48
 ; GFX10-NEXT:    global_load_dwordx4 v[48:51], v70, s[0:1] offset:64
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v5, v70
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v5, v70
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v6, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v64, vcc_lo, v0, 64
+; GFX10-NEXT:    v_add_co_u32 v64, vcc_lo, v0, 64
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v65, vcc_lo, 0, v5, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v66, vcc_lo, v0, v1
+; GFX10-NEXT:    v_add_co_u32 v66, vcc_lo, v0, v1
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v67, vcc_lo, v5, v2, vcc_lo
-; GFX10-NEXT:    v_add_co_u32_e64 v68, vcc_lo, v0, v3
+; GFX10-NEXT:    v_add_co_u32 v68, vcc_lo, v0, v3
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v69, vcc_lo, v5, v4, vcc_lo
 ; GFX10-NEXT:    s_clause 0xa
 ; GFX10-NEXT:    global_load_dwordx4 v[52:55], v[64:65], off offset:16

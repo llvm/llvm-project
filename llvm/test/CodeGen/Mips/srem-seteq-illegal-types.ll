@@ -5,32 +5,34 @@
 define i1 @test_srem_odd(i29 %X) nounwind {
 ; MIPSEL-LABEL: test_srem_odd:
 ; MIPSEL:       # %bb.0:
-; MIPSEL-NEXT:    lui $1, 48986
+; MIPSEL-NEXT:    lui $1, 8026
 ; MIPSEL-NEXT:    ori $1, $1, 33099
-; MIPSEL-NEXT:    sll $2, $4, 3
-; MIPSEL-NEXT:    sra $2, $2, 3
-; MIPSEL-NEXT:    mul $1, $2, $1
-; MIPSEL-NEXT:    lui $2, 330
-; MIPSEL-NEXT:    ori $2, $2, 64874
+; MIPSEL-NEXT:    mul $1, $4, $1
+; MIPSEL-NEXT:    lui $2, 41
+; MIPSEL-NEXT:    ori $2, $2, 24493
 ; MIPSEL-NEXT:    addu $1, $1, $2
-; MIPSEL-NEXT:    lui $2, 661
-; MIPSEL-NEXT:    ori $2, $2, 64213
+; MIPSEL-NEXT:    lui $2, 8191
+; MIPSEL-NEXT:    ori $2, $2, 65535
+; MIPSEL-NEXT:    and $1, $1, $2
+; MIPSEL-NEXT:    lui $2, 82
+; MIPSEL-NEXT:    ori $2, $2, 48987
 ; MIPSEL-NEXT:    jr $ra
 ; MIPSEL-NEXT:    sltu $2, $1, $2
 ;
 ; MIPS64EL-LABEL: test_srem_odd:
 ; MIPS64EL:       # %bb.0:
-; MIPS64EL-NEXT:    lui $1, 48986
+; MIPS64EL-NEXT:    lui $1, 8026
 ; MIPS64EL-NEXT:    ori $1, $1, 33099
 ; MIPS64EL-NEXT:    sll $2, $4, 0
-; MIPS64EL-NEXT:    sll $2, $2, 3
-; MIPS64EL-NEXT:    sra $2, $2, 3
 ; MIPS64EL-NEXT:    mul $1, $2, $1
-; MIPS64EL-NEXT:    lui $2, 330
-; MIPS64EL-NEXT:    ori $2, $2, 64874
+; MIPS64EL-NEXT:    lui $2, 41
+; MIPS64EL-NEXT:    ori $2, $2, 24493
 ; MIPS64EL-NEXT:    addu $1, $1, $2
-; MIPS64EL-NEXT:    lui $2, 661
-; MIPS64EL-NEXT:    ori $2, $2, 64213
+; MIPS64EL-NEXT:    lui $2, 8191
+; MIPS64EL-NEXT:    ori $2, $2, 65535
+; MIPS64EL-NEXT:    and $1, $1, $2
+; MIPS64EL-NEXT:    lui $2, 82
+; MIPS64EL-NEXT:    ori $2, $2, 48987
 ; MIPS64EL-NEXT:    jr $ra
 ; MIPS64EL-NEXT:    sltu $2, $1, $2
   %srem = srem i29 %X, 99

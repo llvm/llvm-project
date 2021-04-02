@@ -398,6 +398,15 @@ LLVM_READONLY
 bool getSMEMIsBuffer(unsigned Opc);
 
 LLVM_READONLY
+bool getVOP1IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP2IsSingle(unsigned Opc);
+
+LLVM_READONLY
+bool getVOP3IsSingle(unsigned Opc);
+
+LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
                                                   uint8_t NumFormat,

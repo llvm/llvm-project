@@ -194,6 +194,11 @@ def TypeIndex : Operand<i32>;
 
 } // OperandNamespace = "WebAssembly"
 
+// TODO: Find more places to use this.
+def bool_node : PatLeaf<(i32 I32:$cond), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() == 31;
+}]>;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Register to Stack instruction mapping
 //===----------------------------------------------------------------------===//

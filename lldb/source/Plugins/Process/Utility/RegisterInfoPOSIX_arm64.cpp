@@ -77,6 +77,8 @@ enum {
   k_num_gpr_registers = gpr_w28 - gpr_x0 + 1,
   k_num_fpr_registers = fpu_fpcr - fpu_v0 + 1,
   k_num_sve_registers = sve_ffr - sve_vg + 1,
+  k_num_mte_register = 1,
+  k_num_pauth_register = 2,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
 };
@@ -175,6 +177,12 @@ static const lldb_private::RegisterSet g_reg_sets_arm64[k_num_register_sets] = {
     {"Scalable Vector Extension Registers", "sve", k_num_sve_registers,
      g_sve_regnums_arm64}};
 
+static const lldb_private::RegisterSet g_reg_set_pauth_arm64 = {
+    "Pointer Authentication Registers", "pauth", k_num_pauth_register, NULL};
+
+static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
+    "MTE Control Register", "mte", k_num_mte_register, NULL};
+
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
@@ -208,6 +216,12 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
           llvm::makeArrayRef(m_register_set_p, m_register_set_count);
       llvm::copy(reg_infos_ref, std::back_inserter(m_dynamic_reg_infos));
       llvm::copy(reg_sets_ref, std::back_inserter(m_dynamic_reg_sets));
+
+      if (m_opt_regsets.AllSet(eRegsetMaskPAuth))
+        AddRegSetPAuth();
+
+      if (m_opt_regsets.AllSet(eRegsetMaskMTE))
+        AddRegSetMTE();
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -257,6 +271,39 @@ RegisterInfoPOSIX_arm64::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &m_register_set_p[set_index];
   return nullptr;
+}
+
+void RegisterInfoPOSIX_arm64::AddRegSetPAuth() {
+  uint32_t pa_regnum = m_dynamic_reg_infos.size();
+  for (uint32_t i = 0; i < k_num_pauth_register; i++) {
+    pauth_regnum_collection.push_back(pa_regnum + i);
+    m_dynamic_reg_infos.push_back(g_register_infos_pauth[i]);
+    m_dynamic_reg_infos[pa_regnum + i].byte_offset =
+        m_dynamic_reg_infos[pa_regnum + i - 1].byte_offset +
+        m_dynamic_reg_infos[pa_regnum + i - 1].byte_size;
+    m_dynamic_reg_infos[pa_regnum + i].kinds[lldb::eRegisterKindLLDB] =
+        pa_regnum + i;
+  }
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(pa_regnum, m_dynamic_reg_infos.size());
+  m_dynamic_reg_sets.push_back(g_reg_set_pauth_arm64);
+  m_dynamic_reg_sets.back().registers = pauth_regnum_collection.data();
+}
+
+void RegisterInfoPOSIX_arm64::AddRegSetMTE() {
+  uint32_t mte_regnum = m_dynamic_reg_infos.size();
+  m_mte_regnum_collection.push_back(mte_regnum);
+  m_dynamic_reg_infos.push_back(g_register_infos_mte[0]);
+  m_dynamic_reg_infos[mte_regnum].byte_offset =
+      m_dynamic_reg_infos[mte_regnum - 1].byte_offset +
+      m_dynamic_reg_infos[mte_regnum - 1].byte_size;
+  m_dynamic_reg_infos[mte_regnum].kinds[lldb::eRegisterKindLLDB] = mte_regnum;
+
+  m_per_regset_regnum_range[m_register_set_count] =
+      std::make_pair(mte_regnum, mte_regnum + 1);
+  m_dynamic_reg_sets.push_back(g_reg_set_mte_arm64);
+  m_dynamic_reg_sets.back().registers = m_mte_regnum_collection.data();
 }
 
 uint32_t RegisterInfoPOSIX_arm64::ConfigureVectorLength(uint32_t sve_vq) {
@@ -342,6 +389,18 @@ bool RegisterInfoPOSIX_arm64::IsSVERegVG(unsigned reg) const {
   return sve_vg == reg;
 }
 
+bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
+  return std::find(pauth_regnum_collection.begin(),
+                   pauth_regnum_collection.end(),
+                   reg) != pauth_regnum_collection.end();
+}
+
+bool RegisterInfoPOSIX_arm64::IsMTEReg(unsigned reg) const {
+  return std::find(m_mte_regnum_collection.begin(),
+                   m_mte_regnum_collection.end(),
+                   reg) != m_mte_regnum_collection.end();
+}
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
@@ -351,3 +410,11 @@ uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPSR() const { return fpu_fpsr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEVG() const { return sve_vg; }
+
+uint32_t RegisterInfoPOSIX_arm64::GetPAuthOffset() const {
+  return m_register_info_p[pauth_regnum_collection[0]].byte_offset;
+}
+
+uint32_t RegisterInfoPOSIX_arm64::GetMTEOffset() const {
+  return m_register_info_p[m_mte_regnum_collection[0]].byte_offset;
+}

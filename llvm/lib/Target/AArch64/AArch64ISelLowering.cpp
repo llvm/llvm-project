@@ -1448,6 +1448,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::MUL, VT, Custom);
   setOperationAction(ISD::OR, VT, Custom);
   setOperationAction(ISD::SDIV, VT, Custom);
+  setOperationAction(ISD::SELECT, VT, Custom);
   setOperationAction(ISD::SETCC, VT, Custom);
   setOperationAction(ISD::SHL, VT, Custom);
   setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
@@ -5138,11 +5139,11 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
 
-  // If this function uses the C calling convention but has an SVE signature,
-  // then it preserves more registers and should assume the SVE_VectorCall CC.
+  // Functions using the C or Fast calling convention that have an SVE signature
+  // preserve more registers and should assume the SVE_VectorCall CC.
   // The check for matching callee-saved regs will determine whether it is
   // eligible for TCO.
-  if (CallerCC == CallingConv::C &&
+  if ((CallerCC == CallingConv::C || CallerCC == CallingConv::Fast) &&
       AArch64RegisterInfo::hasSVEArgsOrReturn(&MF))
     CallerCC = CallingConv::AArch64_SVE_VectorCall;
 
@@ -5335,7 +5336,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
-  if (CallConv == CallingConv::C) {
+  if (CallConv == CallingConv::C || CallConv == CallingConv::Fast) {
     bool CalleeOutSVE = any_of(Outs, [](ISD::OutputArg &Out){
       return Out.VT.isScalableVector();
     });
@@ -7022,6 +7023,17 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
     SDValue TruncCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, CCVal);
     MVT PredVT = MVT::getVectorVT(MVT::i1, Ty.getVectorElementCount());
     SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, TruncCC);
+    return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
+  }
+
+  if (useSVEForFixedLengthVectorVT(Ty)) {
+    // FIXME: Ideally this would be the same as above using i1 types, however
+    // for the moment we can't deal with fixed i1 vector types properly, so
+    // instead extend the predicate to a result type sized integer vector.
+    MVT SplatValVT = MVT::getIntegerVT(Ty.getScalarSizeInBits());
+    MVT PredVT = MVT::getVectorVT(SplatValVT, Ty.getVectorElementCount());
+    SDValue SplatVal = DAG.getSExtOrTrunc(CCVal, DL, SplatValVT);
+    SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, SplatVal);
     return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
   }
 
