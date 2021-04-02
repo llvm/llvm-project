@@ -729,6 +729,7 @@ CHECK_SIMPLE_CLAUSE(UseDeviceAddr, OMPC_use_device_addr)
 CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
 CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
 CHECK_SIMPLE_CLAUSE(Use, OMPC_use)
+CHECK_SIMPLE_CLAUSE(Novariants, OMPC_novariants)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Allocator, OMPC_allocator)
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)

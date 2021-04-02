@@ -278,6 +278,10 @@ def OMPC_Use : Clause<"use"> {
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
 }
+def OMPC_Novariants : Clause<"novariants"> {
+  let clangClass = "OMPNovariantsClause";
+  let flangClass = "ScalarLogicalExpr";
+}
 def OMPC_Detach : Clause<"detach"> {
   let clangClass = "OMPDetachClause";
 }
@@ -1662,7 +1666,8 @@ def OMP_dispatch : Directive<"dispatch"> {
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_NoWait>,
-    VersionedClause<OMPC_Depend>
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Novariants>
   ];
 }
 def OMP_Unknown : Directive<"unknown"> {

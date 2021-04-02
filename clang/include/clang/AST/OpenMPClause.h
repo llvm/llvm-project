@@ -7649,6 +7649,77 @@ public:
   }
 };
 
+/// This represents 'novariants' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp dispatch novariants(a > 5)
+/// \endcode
+/// In this example directive '#pragma omp dispatch' has simple 'novariants'
+/// clause with condition 'a > 5'.
+class OMPNovariantsClause final : public OMPClause,
+                                  public OMPClauseWithPreInit {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'if' clause.
+  Stmt *Condition = nullptr;
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build 'novariants' clause with condition \a Cond.
+  ///
+  /// \param Cond Condition of the clause.
+  /// \param HelperCond Helper condition for the construct.
+  /// \param CaptureRegion Innermost OpenMP region where expressions in this
+  /// clause must be captured.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPNovariantsClause(Expr *Cond, Stmt *HelperCond,
+                      OpenMPDirectiveKind CaptureRegion,
+                      SourceLocation StartLoc, SourceLocation LParenLoc,
+                      SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_novariants, StartLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Condition(Cond) {
+    setPreInitStmt(HelperCond, CaptureRegion);
+  }
+
+  /// Build an empty clause.
+  OMPNovariantsClause()
+      : OMPClause(llvm::omp::OMPC_novariants, SourceLocation(),
+                  SourceLocation()),
+        OMPClauseWithPreInit(this) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() { return child_range(&Condition, &Condition + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Condition, &Condition + 1);
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    auto Children = const_cast<OMPNovariantsClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_novariants;
+  }
+};
+
 /// This represents 'detach' clause in the '#pragma omp task' directive.
 ///
 /// \code
