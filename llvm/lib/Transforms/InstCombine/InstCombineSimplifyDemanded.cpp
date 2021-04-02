@@ -927,7 +927,7 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
     unsigned BitWidth = DemandedMask.getBitWidth();
     if (match(I,
               m_AShr(m_Shl(m_Value(X), m_APInt(ShiftLC)), m_APInt(ShiftRC))) &&
-        ShiftLC == ShiftRC &&
+        ShiftLC == ShiftRC && ShiftLC->ult(BitWidth) &&
         DemandedMask.isSubsetOf(APInt::getLowBitsSet(
             BitWidth, BitWidth - ShiftRC->getZExtValue()))) {
       return X;
