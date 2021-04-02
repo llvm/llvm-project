@@ -47,6 +47,93 @@ define i32 @maxi8(i32) {
   ret i32 %23
 }
 
+define i32 @maxi8_store_in(i32) {
+; SSE-LABEL: @maxi8_store_in(
+; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
+; SSE-NEXT:    store i32 0, i32* @var, align 8
+; SSE-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
+; SSE-NEXT:    ret i32 [[TMP3]]
+;
+; AVX-LABEL: @maxi8_store_in(
+; AVX-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr to <4 x i32>*), align 16
+; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
+; AVX-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 4), align 16
+; AVX-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
+; AVX-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP3]], i32 [[TMP4]]
+; AVX-NEXT:    store i32 0, i32* @var, align 8
+; AVX-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 5), align 4
+; AVX-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; AVX-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP6]], i32 [[TMP7]]
+; AVX-NEXT:    [[TMP10:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
+; AVX-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
+; AVX-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
+; AVX-NEXT:    [[TMP13:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
+; AVX-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP12]], [[TMP13]]
+; AVX-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP12]], i32 [[TMP13]]
+; AVX-NEXT:    ret i32 [[TMP15]]
+;
+; AVX2-LABEL: @maxi8_store_in(
+; AVX2-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr to <4 x i32>*), align 16
+; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
+; AVX2-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 4), align 16
+; AVX2-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
+; AVX2-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP3]], i32 [[TMP4]]
+; AVX2-NEXT:    store i32 0, i32* @var, align 8
+; AVX2-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 5), align 4
+; AVX2-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; AVX2-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP6]], i32 [[TMP7]]
+; AVX2-NEXT:    [[TMP10:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
+; AVX2-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
+; AVX2-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
+; AVX2-NEXT:    [[TMP13:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
+; AVX2-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP12]], [[TMP13]]
+; AVX2-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP12]], i32 [[TMP13]]
+; AVX2-NEXT:    ret i32 [[TMP15]]
+;
+; THRESH-LABEL: @maxi8_store_in(
+; THRESH-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([32 x i32]* @arr to <4 x i32>*), align 16
+; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP2]])
+; THRESH-NEXT:    [[TMP4:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 4), align 16
+; THRESH-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[TMP3]], [[TMP4]]
+; THRESH-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], i32 [[TMP3]], i32 [[TMP4]]
+; THRESH-NEXT:    store i32 0, i32* @var, align 8
+; THRESH-NEXT:    [[TMP7:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 5), align 4
+; THRESH-NEXT:    [[TMP8:%.*]] = icmp sgt i32 [[TMP6]], [[TMP7]]
+; THRESH-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 [[TMP6]], i32 [[TMP7]]
+; THRESH-NEXT:    [[TMP10:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
+; THRESH-NEXT:    [[TMP11:%.*]] = icmp sgt i32 [[TMP9]], [[TMP10]]
+; THRESH-NEXT:    [[TMP12:%.*]] = select i1 [[TMP11]], i32 [[TMP9]], i32 [[TMP10]]
+; THRESH-NEXT:    [[TMP13:%.*]] = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
+; THRESH-NEXT:    [[TMP14:%.*]] = icmp sgt i32 [[TMP12]], [[TMP13]]
+; THRESH-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP12]], i32 [[TMP13]]
+; THRESH-NEXT:    ret i32 [[TMP15]]
+;
+  %2 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 0), align 16
+  %3 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 1), align 4
+  %4 = icmp sgt i32 %2, %3
+  %5 = select i1 %4, i32 %2, i32 %3
+  %6 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 2), align 8
+  %7 = icmp sgt i32 %5, %6
+  %8 = select i1 %7, i32 %5, i32 %6
+  %9 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 3), align 4
+  %10 = icmp sgt i32 %8, %9
+  %11 = select i1 %10, i32 %8, i32 %9
+  %12 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 4), align 16
+  %13 = icmp sgt i32 %11, %12
+  %14 = select i1 %13, i32 %11, i32 %12
+  store i32 0, i32* @var, align 8
+  %15 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 5), align 4
+  %16 = icmp sgt i32 %14, %15
+  %17 = select i1 %16, i32 %14, i32 %15
+  %18 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 6), align 8
+  %19 = icmp sgt i32 %17, %18
+  %20 = select i1 %19, i32 %17, i32 %18
+  %21 = load i32, i32* getelementptr inbounds ([32 x i32], [32 x i32]* @arr, i64 0, i64 7), align 4
+  %22 = icmp sgt i32 %20, %21
+  %23 = select i1 %22, i32 %20, i32 %21
+  ret i32 %23
+}
+
 define i32 @maxi16(i32) {
 ; CHECK-LABEL: @maxi16(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([32 x i32]* @arr to <16 x i32>*), align 16
