@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -Wmicrosoft -verify -fms-compatibility -fexceptions -fcxx-exceptions -fms-compatibility-version=19.28
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -Wmicrosoft -verify -fms-compatibility -fexceptions -fcxx-exceptions -fms-compatibility-version=19.27
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -Wmicrosoft -verify -fms-compatibility -fexceptions -fcxx-exceptions -fms-compatibility-version=19.00
 // RUN: %clang_cc1 %s -triple i686-pc-win32 -fsyntax-only -std=c++11 -Wmicrosoft -verify -fms-compatibility -fexceptions -fcxx-exceptions -fms-compatibility-version=18.00
 
@@ -28,12 +30,20 @@ namespace ms_conversion_rules {
 
 void f(float a);
 void f(int a);
+#if _MSC_VER >= 1928
+// expected-note@-3 2 {{candidate function}}
+// expected-note@-3 2 {{candidate function}}
+#endif
 
 void test()
 {
     long a = 0;
     f((long)0);
-	f(a);
+    f(a);
+#if _MSC_VER >= 1928
+// expected-error@-3 {{call to 'f' is ambiguous}}
+// expected-error@-3 {{call to 'f' is ambiguous}}
+#endif
 }
 
 }
