@@ -204,7 +204,7 @@ foreach(f ${files})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
-add_custom_target(generate-cxx-headers DEPENDS ${_all_includes})
+add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
 add_dependencies(cxx-headers generate-cxx-headers ${LIBCXX_CXX_ABI_HEADER_TARGET})
