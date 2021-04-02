@@ -75,9 +75,17 @@ static bool isRedundantVSETVLI(MachineInstr &MI, MachineInstr *PrevVSETVLI) {
 
   assert(MI.getOpcode() == RISCV::PseudoVSETVLI);
   Register AVLReg = MI.getOperand(1).getReg();
+  Register PrevOutVL = PrevVSETVLI->getOperand(0).getReg();
 
   // If this VSETVLI isn't changing VL, it is redundant.
   if (AVLReg == RISCV::X0 && MI.getOperand(0).getReg() == RISCV::X0)
+    return true;
+
+  // If the previous VSET{I}VLI's output (which isn't X0) is fed into this
+  // VSETVLI, this one isn't changing VL so is redundant.
+  // Only perform this on virtual registers to avoid the complexity of having
+  // to work out if the physical register was clobbered somewhere in between.
+  if (AVLReg.isVirtual() && AVLReg == PrevOutVL)
     return true;
 
   // If the previous opcode isn't vsetvli we can't do any more comparison.
@@ -94,7 +102,6 @@ static bool isRedundantVSETVLI(MachineInstr &MI, MachineInstr *PrevVSETVLI) {
     // This instruction is setting VL to VLMAX, this is redundant if the
     // previous VSETVLI was also setting VL to VLMAX. But it is not redundant
     // if they were setting it to any other value or leaving VL unchanged.
-    Register PrevOutVL = PrevVSETVLI->getOperand(0).getReg();
     return PrevOutVL != RISCV::X0;
   }
 
