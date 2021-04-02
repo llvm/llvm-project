@@ -255,12 +255,12 @@ struct multiple_overloads {
 static_assert(std::regular_invocable<multiple_overloads&>);
 static_assert(std::regular_invocable<multiple_overloads&, short>);
 static_assert(std::regular_invocable<multiple_overloads&, int>);
-static_assert(!std::regular_invocable<multiple_overloads&, long>);
+static_assert(!std::regular_invocable<multiple_overloads&, long long>);
 static_assert(std::regular_invocable<multiple_overloads&, double>);
 static_assert(std::regular_invocable<multiple_overloads&, float>);
 static_assert(std::regular_invocable<multiple_overloads&, short&>);
 static_assert(std::regular_invocable<multiple_overloads&, int&>);
-static_assert(!std::regular_invocable<multiple_overloads&, long&>);
+static_assert(!std::regular_invocable<multiple_overloads&, long long&>);
 static_assert(std::regular_invocable<multiple_overloads&, float&>);
 static_assert(std::regular_invocable<multiple_overloads&, double&>);
 } // namespace function_objects
