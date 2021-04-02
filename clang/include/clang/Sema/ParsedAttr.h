@@ -86,6 +86,18 @@ struct ParsedAttrInfo {
                                     const Stmt *St) const {
     return true;
   }
+  /// Check if the given attribute is mutually exclusive with other attributes
+  /// already applied to the given declaration.
+  virtual bool diagMutualExclusion(Sema &S, const ParsedAttr &A,
+                                   const Decl *D) const {
+    return true;
+  }
+  /// Check if the given attribute is mutually exclusive with other attributes
+  /// already applied to the given statement.
+  virtual bool diagMutualExclusion(Sema &S, const ParsedAttr &A,
+                                   const Stmt *St) const {
+    return true;
+  }
   /// Check if this attribute is allowed by the language we are compiling, and
   /// issue a diagnostic if not.
   virtual bool diagLangOpts(Sema &S, const ParsedAttr &Attr) const {
@@ -599,6 +611,8 @@ public:
   bool hasVariadicArg() const;
   bool diagnoseAppertainsTo(class Sema &S, const Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Stmt *St) const;
+  bool diagnoseMutualExclusion(class Sema &S, const Decl *D) const;
+  bool diagnoseMutualExclusion(class Sema &S, const Stmt *St) const;
   bool appliesToDecl(const Decl *D, attr::SubjectMatchRule MatchRule) const;
   void getMatchRules(const LangOptions &LangOpts,
                      SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>>
