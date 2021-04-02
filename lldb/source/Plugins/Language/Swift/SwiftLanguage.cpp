@@ -889,26 +889,16 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
 
   const bool check_cpp = false;
   const bool check_objc = false;
-  bool canBeSwiftDynamic =
-      compiler_type.IsPossibleDynamicType(nullptr, check_cpp, check_objc);
-  // Foundation (but really any library) may create new
-  // Objective-C classes at runtime and LLDB's ObjC runtime
-  // implementation doesn't yet get notified about this. As a
-  // workaround we try to interpret ObjC id pointers as Swift
-  // classes to make them available.
-  bool canBeObjCSwiftType = (compiler_type.GetCanonicalType().GetTypeClass() ==
-                             eTypeClassObjCObjectPointer);
+  bool canBeSwiftDynamic = compiler_type.IsPossibleDynamicType(
+      nullptr, check_cpp, check_objc);
 
-  if (!canBeSwiftDynamic && !canBeObjCSwiftType)
+  if (!canBeSwiftDynamic)
     return result;
   lldb::ProcessSP process_sp = valobj.GetProcessSP();
   if (!process_sp)
     return result;
   auto *runtime = SwiftLanguageRuntime::Get(process_sp);
   if (!runtime)
-    return result;
-  // If this condition fires, we're most likely in pure Objective-C program.
-  if (canBeObjCSwiftType && !runtime->IsSwiftRuntimeInitialized())
     return result;
   TypeAndOrName type_and_or_name;
   Address address;

@@ -67,17 +67,7 @@ let d_objc2 = NSArray(object: [1: 2] as [NSNumber: NSNumber] as NSDictionary)
 let d_objc3 = NSArray(object: [1: 2] as [Int: Int] as NSDictionary)
 // DICT-LABEL: d_objc3: NSArray = 1 element {
 // DICT-NEXT:    [0] = 1 key/value pair {
-//
-//               Allowing for both multi-line and single-line
-//               formatting, depending on CoreFoundation
-//               implementation:
-//
-// DICT-NOT: }
-// DICT:           [0] =
-// DICT-NOT: }
-// DICT:                 key = 1
-// DICT-NOT: }
-// DICT:                 value = 2
+// DICT-NEXT:      [0] = (key = 1, value = 2)
 // DICT-NEXT:    }
 // DICT-NEXT:  }
 
