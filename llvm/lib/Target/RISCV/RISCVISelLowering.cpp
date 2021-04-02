@@ -219,20 +219,23 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV, XLenVT, Expand);
     setOperationAction(ISD::SREM, XLenVT, Expand);
     setOperationAction(ISD::UREM, XLenVT, Expand);
-  }
+  } else {
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::MUL, MVT::i32, Custom);
+      setOperationAction(ISD::MUL, MVT::i128, Custom);
 
-  if (Subtarget.is64Bit() && Subtarget.hasStdExtM()) {
-    setOperationAction(ISD::MUL, MVT::i32, Custom);
-
-    setOperationAction(ISD::SDIV, MVT::i8, Custom);
-    setOperationAction(ISD::UDIV, MVT::i8, Custom);
-    setOperationAction(ISD::UREM, MVT::i8, Custom);
-    setOperationAction(ISD::SDIV, MVT::i16, Custom);
-    setOperationAction(ISD::UDIV, MVT::i16, Custom);
-    setOperationAction(ISD::UREM, MVT::i16, Custom);
-    setOperationAction(ISD::SDIV, MVT::i32, Custom);
-    setOperationAction(ISD::UDIV, MVT::i32, Custom);
-    setOperationAction(ISD::UREM, MVT::i32, Custom);
+      setOperationAction(ISD::SDIV, MVT::i8, Custom);
+      setOperationAction(ISD::UDIV, MVT::i8, Custom);
+      setOperationAction(ISD::UREM, MVT::i8, Custom);
+      setOperationAction(ISD::SDIV, MVT::i16, Custom);
+      setOperationAction(ISD::UDIV, MVT::i16, Custom);
+      setOperationAction(ISD::UREM, MVT::i16, Custom);
+      setOperationAction(ISD::SDIV, MVT::i32, Custom);
+      setOperationAction(ISD::UDIV, MVT::i32, Custom);
+      setOperationAction(ISD::UREM, MVT::i32, Custom);
+    } else {
+      setOperationAction(ISD::MUL, MVT::i64, Custom);
+    }
   }
 
   setOperationAction(ISD::SDIVREM, XLenVT, Expand);
@@ -3868,9 +3871,47 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(RCW.getValue(2));
     break;
   }
+  case ISD::MUL: {
+    unsigned Size = N->getSimpleValueType(0).getSizeInBits();
+    unsigned XLen = Subtarget.getXLen();
+    // This multiply needs to be expanded, try to use MULHSU+MUL if possible.
+    if (Size > XLen) {
+      assert(Size == (XLen * 2) && "Unexpected custom legalisation");
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+      APInt HighMask = APInt::getHighBitsSet(Size, XLen);
+
+      bool LHSIsU = DAG.MaskedValueIsZero(LHS, HighMask);
+      bool RHSIsU = DAG.MaskedValueIsZero(RHS, HighMask);
+      // We need exactly one side to be unsigned.
+      if (LHSIsU == RHSIsU)
+        return;
+
+      auto MakeMULPair = [&](SDValue S, SDValue U) {
+        MVT XLenVT = Subtarget.getXLenVT();
+        S = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, S);
+        U = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, U);
+        SDValue Lo = DAG.getNode(ISD::MUL, DL, XLenVT, S, U);
+        SDValue Hi = DAG.getNode(RISCVISD::MULHSU, DL, XLenVT, S, U);
+        return DAG.getNode(ISD::BUILD_PAIR, DL, N->getValueType(0), Lo, Hi);
+      };
+
+      bool LHSIsS = DAG.ComputeNumSignBits(LHS) > XLen;
+      bool RHSIsS = DAG.ComputeNumSignBits(RHS) > XLen;
+
+      // The other operand should be signed, but still prefer MULH when
+      // possible.
+      if (RHSIsU && LHSIsS && !RHSIsS)
+        Results.push_back(MakeMULPair(LHS, RHS));
+      else if (LHSIsU && RHSIsS && !LHSIsS)
+        Results.push_back(MakeMULPair(RHS, LHS));
+
+      return;
+    }
+    LLVM_FALLTHROUGH;
+  }
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MUL:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() == ISD::Constant)
@@ -6784,6 +6825,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BuildPairF64)
   NODE_NAME_CASE(SplitF64)
   NODE_NAME_CASE(TAIL)
+  NODE_NAME_CASE(MULHSU)
   NODE_NAME_CASE(SLLW)
   NODE_NAME_CASE(SRAW)
   NODE_NAME_CASE(SRLW)
