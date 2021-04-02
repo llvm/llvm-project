@@ -24,11 +24,12 @@
 
 #include <thread>
 #include <chrono>
+
+#include "test_macros.h"
+
 #if TEST_STD_VER >= 20
 # include <memory>
 #endif
-
-#include "test_macros.h"
 
 template <class A, bool Integral>
 struct test_atomic
