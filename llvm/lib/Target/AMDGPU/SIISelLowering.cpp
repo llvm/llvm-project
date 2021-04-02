@@ -5835,7 +5835,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
                                  ArrayRef<EVT> ResultTypes,
                                  bool IsTexFail, bool Unpacked, bool IsD16,
                                  int DMaskPop, int NumVDataDwords,
-                                 const SDLoc &DL, LLVMContext &Context) {
+                                 const SDLoc &DL) {
   // Determine the required return type. This is the same regardless of IsTexFail flag
   EVT ReqRetVT = ResultTypes[0];
   int ReqRetNumElts = ReqRetVT.isVector() ? ReqRetVT.getVectorNumElements() : 1;
@@ -6279,15 +6279,13 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     SmallVector<SDValue, 1> Elt;
     DAG.ExtractVectorElements(SDValue(NewNode, 0), Elt, 0, 1);
     return DAG.getMergeValues({Elt[0], SDValue(NewNode, 1)}, DL);
-  } else if (!BaseOpcode->Store) {
-    return constructRetValue(DAG, NewNode,
-                             OrigResultTypes, IsTexFail,
-                             Subtarget->hasUnpackedD16VMem(), IsD16,
-                             DMaskLanes, NumVDataDwords, DL,
-                             *DAG.getContext());
   }
-
-  return SDValue(NewNode, 0);
+  if (BaseOpcode->Store)
+    return SDValue(NewNode, 0);
+  return constructRetValue(DAG, NewNode,
+                           OrigResultTypes, IsTexFail,
+                           Subtarget->hasUnpackedD16VMem(), IsD16,
+                           DMaskLanes, NumVDataDwords, DL);
 }
 
 SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
