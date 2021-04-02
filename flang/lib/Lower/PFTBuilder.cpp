@@ -1211,6 +1211,15 @@ struct SymbolDependenceDepth {
       vars[0].emplace_back(std::move(st));
     }
   }
+
+  // Compute the offset of the last byte that resides in the symbol.
+  inline static std::size_t offsetWidth(const Fortran::semantics::Symbol &sym) {
+    auto width = sym.offset();
+    if (auto size = sym.size())
+      width += size - 1;
+    return width;
+  }
+
   // Analyze the equivalence sets. This analysis need not be performed when the
   // scope has no equivalence sets.
   void analyzeAliases(const semantics::Scope &scope, bool isDeclaration) {
@@ -1231,7 +1240,7 @@ struct SymbolDependenceDepth {
       if (skipSymbol(sym))
         continue;
       LLVM_DEBUG(llvm::dbgs() << "symbol: " << sym << '\n');
-      intervals.merge(sym.offset(), sym.offset() + sym.size() - 1);
+      intervals.merge(sym.offset(), offsetWidth(sym));
     }
 
     // 2. Compute alias sets. Adds each entity to a set for the interval it
