@@ -65,16 +65,9 @@ struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
   ~TestAllocator() { this->unmapTestOnly(); }
 };
 
-namespace testing {
-namespace internal {
-#define SCUDO_DEFINE_GTEST_TYPE_NAME(TYPE)                                     \
-  template <> std::string GetTypeName<TYPE>() { return #TYPE; }
 SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig1)
 SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig2)
 SCUDO_DEFINE_GTEST_TYPE_NAME(TestConfig3)
-#undef SCUDO_DEFINE_GTEST_TYPE_NAME
-} // namespace internal
-} // namespace testing
 
 template <class BaseConfig> struct ScudoPrimaryTest : public ::testing::Test {};
 

@@ -32,3 +32,8 @@
 #endif
 
 extern bool UseQuarantine;
+
+#define SCUDO_DEFINE_GTEST_TYPE_NAME(TYPE)                                     \
+  template <> std::string testing::internal::GetTypeName<TYPE>() {             \
+    return #TYPE;                                                              \
+  }
