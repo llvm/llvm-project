@@ -898,6 +898,12 @@ let Predicates = [HasStdExtZbb] in {
 def : PatGpr<int_riscv_orc_b, ORCB>;
 } // Predicates = [HasStdExtZbb]
 
+let Predicates = [HasStdExtZbc] in {
+def : PatGprGpr<int_riscv_clmul, CLMUL>;
+def : PatGprGpr<int_riscv_clmulh, CLMULH>;
+def : PatGprGpr<int_riscv_clmulr, CLMULR>;
+} // Predicates = [HasStdExtZbc]
+
 let Predicates = [HasStdExtZbr] in {
 def : PatGpr<int_riscv_crc32_b, CRC32B>;
 def : PatGpr<int_riscv_crc32_h, CRC32H>;
