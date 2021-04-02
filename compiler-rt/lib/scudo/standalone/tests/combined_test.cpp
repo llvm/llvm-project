@@ -76,20 +76,13 @@ template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   ~TestAllocator() { this->unmapTestOnly(); }
 };
 
-namespace testing {
-namespace internal {
-#define SCUDO_DEFINE_GTEST_TYPE_NAME(TYPE)                                     \
-  template <> std::string GetTypeName<scudo::TYPE>() { return #TYPE; }
-SCUDO_DEFINE_GTEST_TYPE_NAME(AndroidSvelteConfig)
+SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::AndroidSvelteConfig)
 #if SCUDO_FUCHSIA
-SCUDO_DEFINE_GTEST_TYPE_NAME(FuchsiaConfig)
+SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::FuchsiaConfig)
 #else
-SCUDO_DEFINE_GTEST_TYPE_NAME(DefaultConfig)
-SCUDO_DEFINE_GTEST_TYPE_NAME(AndroidConfig)
+SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::DefaultConfig)
+SCUDO_DEFINE_GTEST_TYPE_NAME(scudo::AndroidConfig)
 #endif
-#undef SCUDO_DEFINE_GTEST_TYPE_NAME
-} // namespace internal
-} // namespace testing
 
 template <class Config> struct ScudoCombinedTest : public ::testing::Test {
   ScudoCombinedTest() {
