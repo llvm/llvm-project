@@ -3,9 +3,6 @@ group("lib") {
     "//compiler-rt/lib/asan",
     "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/profile",
+    "//compiler-rt/lib/tsan" ,
   ]
-  if (target_os == "linux") {
-    # FIXME: Make work on macOS.
-    deps += [ "//compiler-rt/lib/tsan" ]
-  }
 }
