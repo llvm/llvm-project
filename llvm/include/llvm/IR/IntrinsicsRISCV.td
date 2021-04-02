@@ -11,6 +11,28 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// RISC-V Bitmanip (Bit Manipulation) Extension
+// Zbr extension part
+
+let TargetPrefix = "riscv" in {
+
+    class BitMan_GPR_Intrinsics
+        : Intrinsic<[llvm_any_ty],
+                    [LLVMMatchType<0>],
+                    [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
+    def int_riscv_crc32_b : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_h : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_w : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32_d : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_b : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_h : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_w : BitMan_GPR_Intrinsics;
+    def int_riscv_crc32c_d : BitMan_GPR_Intrinsics;
+
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
 // Atomics
 
 // Atomic Intrinsics have multiple versions for different access widths, which
