@@ -1,22 +1,28 @@
-xxx-tblgen - Target Description to C++ Code
-===========================================
+tblgen Family - Description to C++ Code
+=======================================
 
 .. program:: tblgen
 
 SYNOPSIS
 --------
 
-:program:`xxx-tblgen` [*options*] [*filename*]
+:program:`clang-tblgen` [*options*] [*filename*]
+
+:program:`lldb-tblgen` [*options*] [*filename*]
+
+:program:`llvm-tblgen` [*options*] [*filename*]
+
+:program:`mlir-tblgen` [*options*] [*filename*]
 
 DESCRIPTION
 -----------
 
-:program:`xxx-tblgen` is a family of programs that translates target
+:program:`*-tblgen` is a family of programs that translates target
 description (``.td``) files into C++ code and other output formats. Most
 users of LLVM will not need to use this program. It is used only for
-writing parts of the compiler or LLVM target backends.
+writing parts of the compiler, debugger, and LLVM target backends.
 
-The details of the input and output of :program:`xxx-tblgen` is beyond the
+The details of the input and output of :program:`*-tblgen` is beyond the
 scope of this short introduction; please see the :doc:`TableGen Overview
 <../TableGen/index>` for an introduction and for references to additional
 TableGen documents.
@@ -70,7 +76,7 @@ General Options
 .. option:: -o filename
 
  Specify the output file name.  If ``filename`` is ``-``, then
- :program:`xxx-tblgen` sends its output to standard output.
+ :program:`*-tblgen` sends its output to standard output.
 
 .. option:: -print-records
 
@@ -97,217 +103,6 @@ General Options
 
   Write the output file only if it is new or has changed.
 
-llvm-tblgen Options
-~~~~~~~~~~~~~~~~~~~
-
-.. option:: -gen-asm-matcher
-
- Generate assembly instruction matcher.
-
-.. option:: -match-prefix=prefix
-
-  Make -gen-asm-matcher match only instructions with the given *prefix*.
-
-.. option:: -gen-asm-parser
-
- Generate assembly instruction parser.
-
-.. option:: -asmparsernum=n
-
- Make -gen-asm-parser emit assembly parser number *n*.
-
-.. option:: -gen-asm-writer
-
- Generate assembly writer.
-
-.. option:: -asmwriternum=n
-
- Make -gen-asm-writer emit assembly writer number *n*.
-
-.. option:: -gen-attrs
-
-  Generate attributes.
-
-.. option:: -gen-automata
-
-  Generate generic automata.
-
-.. option:: -gen-callingconv
-
-  Generate calling convention descriptions.
-
-.. option:: -gen-compress-inst-emitter
-
-  Generate RISC-V compressed instructions.
-
-.. option:: -gen-ctags
-
-  Generate ctags-compatible index.
-
-.. option:: -gen-dag-isel
-
- Generate a DAG (directed acyclic graph) instruction selector.
-
-.. option:: -instrument-coverage
-
-  Make -gen-dag-isel generate tables to help identify the patterns matched.
-
-.. option:: -omit-comments
-
-  Make -gen-dag-isel omit comments. The default is false.
-
-.. option:: -gen-dfa-packetizer
-
- Generate DFA Packetizer for VLIW targets.
-
-.. option:: -gen-directive-decl
-
-  Generate directive related declaration code (header file).
-
-.. option:: -gen-directive-gen
-
-  Generate directive related implementation code part.
-
-.. option:: -gen-directive-impl
-
-  Generate directive related implementation code.
-
-.. option:: -gen-disassembler
-
-  Generate disassembler.
-
-.. option:: -gen-emitter
-
- Generate machine code emitter.
-
-.. option:: -gen-exegesis
-
-  Generate llvm-exegesis tables.
-
-.. option:: -gen-fast-isel
-
-  Generate a "fast" instruction selector.
-
-.. option:: -gen-global-isel
-
-  Generate GlobalISel selector.
-
-.. option:: -gisel-coverage-file=filename
-
-  Specify the file from which to retrieve coverage information.
-
-.. option:: -instrument-gisel-coverage
-
-  Make -gen-global-isel generate coverage instrumentation.
-
-.. option:: -optimize-match-table
-
-  Make -gen-global-isel generate an optimized version of the match table.
-
-.. option:: -warn-on-skipped-patterns
-
-  Make -gen-global-isel explain why a pattern was skipped for inclusion.
-
-.. option:: -gen-global-isel-combiner
-
-  Generate GlobalISel combiner.
-
-.. option:: -combiners=list
-
-  Make -gen-global-isel-combiner emit the specified combiners.
-
-.. option:: -gicombiner-show-expansions
-
-  Make -gen-global-isel-combiner use C++ comments to indicate occurrences
-  of code expansion.
-
-.. option:: -gicombiner-stop-after-build
-
-  Make -gen-global-isel-combiner stop processing after building the match tree.
-
-.. option:: -gicombiner-stop-after-parse
-
-  Make -gen-global-isel-combiner stop processing after parsing rules
-  and dump state.
-
-.. option:: -gen-instr-info
-
- Generate instruction descriptions.
-
-.. option:: -gen-instr-docs
-
- Generate instruction documentation.
-
-.. option:: -gen-intrinsic-enums
-
- Generate intrinsic enums.
-
-.. option:: -intrinsic-prefix=prefix
-
-  Make -gen-intrinsic-enums generate intrinsics with this target *prefix*.
-
-.. option:: -gen-intrinsic-impl
-
- Generate intrinsic information.
-
-.. option:: -gen-opt-parser-defs
-
-  Generate options definitions.
-
-.. option:: -gen-opt-rst
-
-  Generate option RST.
-
-.. option:: -gen-pseudo-lowering
-
- Generate pseudo instruction lowering.
-
-.. option:: -gen-register-bank
-
-  Generate register bank descriptions.
-
-.. option:: -gen-register-info
-
-  Generate registers and register classes info.
-
-.. option:: -register-info-debug
-
-  Make -gen-register-info dump register information for debugging.
-
-.. option:: -gen-searchable-tables
-
-  Generate generic searchable tables. See :doc:`TableGen BackEnds <../TableGen/BackEnds>`
-  for a detailed description.
-
-.. option:: -gen-subtarget
-
- Generate subtarget enumerations.
-
-.. option:: -gen-x86-EVEX2VEX-tables
-
-  Generate X86 EVEX to VEX compress tables.
-
-.. option:: -gen-x86-fold-tables
-
-  Generate X86 fold tables.
-
-.. option:: -long-string-literals
-
-  When emitting large string tables, prefer string literals over
-  comma-separated char literals. This can be a readability and
-  compile-time performance win, but upsets some compilers.
-
-.. option:: -print-enums
-
- Print enumeration values for a class.
-
-.. option:: -class=classname
-
- Make -print-enums print the enumeration list for the specified class.
-
-.. option:: -print-sets
-
- Print expanded sets for testing DAG exprs.
 
 clang-tblgen Options
 ~~~~~~~~~~~~~~~~~~~~
@@ -575,6 +370,234 @@ clang-tblgen Options
   testing purposes.
 
 
+lldb-tblgen Options
+~~~~~~~~~~~~~~~~~~~
+
+.. option:: gen-lldb-option-defs
+
+  Generate lldb OptionDefinition values.
+
+.. option:: gen-lldb-property-defs
+
+  Generate lldb PropertyDefinition values.
+
+.. option:: gen-lldb-property-enum-defs
+
+  Generate lldb PropertyDefinition enum values.
+
+
+llvm-tblgen Options
+~~~~~~~~~~~~~~~~~~~
+
+.. option:: -gen-asm-matcher
+
+ Generate assembly instruction matcher.
+
+.. option:: -match-prefix=prefix
+
+  Make -gen-asm-matcher match only instructions with the given *prefix*.
+
+.. option:: -gen-asm-parser
+
+ Generate assembly instruction parser.
+
+.. option:: -asmparsernum=n
+
+ Make -gen-asm-parser emit assembly parser number *n*.
+
+.. option:: -gen-asm-writer
+
+ Generate assembly writer.
+
+.. option:: -asmwriternum=n
+
+ Make -gen-asm-writer emit assembly writer number *n*.
+
+.. option:: -gen-attrs
+
+  Generate attributes.
+
+.. option:: -gen-automata
+
+  Generate generic automata.
+
+.. option:: -gen-callingconv
+
+  Generate calling convention descriptions.
+
+.. option:: -gen-compress-inst-emitter
+
+  Generate RISC-V compressed instructions.
+
+.. option:: -gen-ctags
+
+  Generate ctags-compatible index.
+
+.. option:: -gen-dag-isel
+
+ Generate a DAG (directed acyclic graph) instruction selector.
+
+.. option:: -instrument-coverage
+
+  Make -gen-dag-isel generate tables to help identify the patterns matched.
+
+.. option:: -omit-comments
+
+  Make -gen-dag-isel omit comments. The default is false.
+
+.. option:: -gen-dfa-packetizer
+
+ Generate DFA Packetizer for VLIW targets.
+
+.. option:: -gen-directive-decl
+
+  Generate directive related declaration code (header file).
+
+.. option:: -gen-directive-gen
+
+  Generate directive related implementation code part.
+
+.. option:: -gen-directive-impl
+
+  Generate directive related implementation code.
+
+.. option:: -gen-disassembler
+
+  Generate disassembler.
+
+.. option:: -gen-emitter
+
+ Generate machine code emitter.
+
+.. option:: -gen-exegesis
+
+  Generate llvm-exegesis tables.
+
+.. option:: -gen-fast-isel
+
+  Generate a "fast" instruction selector.
+
+.. option:: -gen-global-isel
+
+  Generate GlobalISel selector.
+
+.. option:: -gisel-coverage-file=filename
+
+  Specify the file from which to retrieve coverage information.
+
+.. option:: -instrument-gisel-coverage
+
+  Make -gen-global-isel generate coverage instrumentation.
+
+.. option:: -optimize-match-table
+
+  Make -gen-global-isel generate an optimized version of the match table.
+
+.. option:: -warn-on-skipped-patterns
+
+  Make -gen-global-isel explain why a pattern was skipped for inclusion.
+
+.. option:: -gen-global-isel-combiner
+
+  Generate GlobalISel combiner.
+
+.. option:: -combiners=list
+
+  Make -gen-global-isel-combiner emit the specified combiners.
+
+.. option:: -gicombiner-show-expansions
+
+  Make -gen-global-isel-combiner use C++ comments to indicate occurrences
+  of code expansion.
+
+.. option:: -gicombiner-stop-after-build
+
+  Make -gen-global-isel-combiner stop processing after building the match tree.
+
+.. option:: -gicombiner-stop-after-parse
+
+  Make -gen-global-isel-combiner stop processing after parsing rules
+  and dump state.
+
+.. option:: -gen-instr-info
+
+ Generate instruction descriptions.
+
+.. option:: -gen-instr-docs
+
+ Generate instruction documentation.
+
+.. option:: -gen-intrinsic-enums
+
+ Generate intrinsic enums.
+
+.. option:: -intrinsic-prefix=prefix
+
+  Make -gen-intrinsic-enums generate intrinsics with this target *prefix*.
+
+.. option:: -gen-intrinsic-impl
+
+ Generate intrinsic information.
+
+.. option:: -gen-opt-parser-defs
+
+  Generate options definitions.
+
+.. option:: -gen-opt-rst
+
+  Generate option RST.
+
+.. option:: -gen-pseudo-lowering
+
+ Generate pseudo instruction lowering.
+
+.. option:: -gen-register-bank
+
+  Generate register bank descriptions.
+
+.. option:: -gen-register-info
+
+  Generate registers and register classes info.
+
+.. option:: -register-info-debug
+
+  Make -gen-register-info dump register information for debugging.
+
+.. option:: -gen-searchable-tables
+
+  Generate generic searchable tables. See :doc:`TableGen BackEnds <../TableGen/BackEnds>`
+  for a detailed description.
+
+.. option:: -gen-subtarget
+
+ Generate subtarget enumerations.
+
+.. option:: -gen-x86-EVEX2VEX-tables
+
+  Generate X86 EVEX to VEX compress tables.
+
+.. option:: -gen-x86-fold-tables
+
+  Generate X86 fold tables.
+
+.. option:: -long-string-literals
+
+  When emitting large string tables, prefer string literals over
+  comma-separated char literals. This can be a readability and
+  compile-time performance win, but upsets some compilers.
+
+.. option:: -print-enums
+
+ Print enumeration values for a class.
+
+.. option:: -class=classname
+
+ Make -print-enums print the enumeration list for the specified class.
+
+.. option:: -print-sets
+
+ Print expanded sets for testing DAG exprs.
+
 
 mlir-tblgen Options
 ~~~~~~~~~~~~~~~~~~~
@@ -718,5 +741,5 @@ mlir-tblgen Options
 EXIT STATUS
 -----------
 
-If :program:`xxx-tblgen` succeeds, it will exit with 0.  Otherwise, if an error
+If :program:`*-tblgen` succeeds, it will exit with 0.  Otherwise, if an error
 occurs, it will exit with a non-zero value.
