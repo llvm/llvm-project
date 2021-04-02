@@ -403,7 +403,7 @@ void UnwindInfoSection::writeTo(uint8_t *buf) const {
 
   // Personalities
   for (const uint32_t &personality : personalities)
-    *i32p++ = in.got->addr + (personality - 1) * WordSize;
+    *i32p++ = in.got->addr + (personality - 1) * target->wordSize;
 
   // Level-1 index
   uint32_t lsdaOffset =

@@ -25,9 +25,9 @@ public:
   virtual void writeTo(uint8_t *buf) const = 0;
 };
 
-void writeResult();
+template <class LP> void writeResult();
 
-void createSyntheticSections();
+template <class LP> void createSyntheticSections();
 
 // Add bindings for symbols that need weak or non-lazy bindings.
 void addNonLazyBindingEntries(const Symbol *, const InputSection *,
