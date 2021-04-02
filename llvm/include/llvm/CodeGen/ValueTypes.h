@@ -299,19 +299,16 @@ namespace llvm {
 
     /// Given a vector type, return the number of elements it contains.
     unsigned getVectorNumElements() const {
-#ifdef STRICT_FIXED_SIZE_VECTORS
-      assert(isFixedLengthVector() && "Invalid vector type!");
-#else
       assert(isVector() && "Invalid vector type!");
+
       if (isScalableVector())
-        WithColor::warning()
-            << "Possible incorrect use of EVT::getVectorNumElements() for "
-               "scalable vector. Scalable flag may be dropped, use "
-               "EVT::getVectorElementCount() instead\n";
-#endif
-      if (isSimple())
-        return V.getVectorNumElements();
-      return getExtendedVectorNumElements();
+        llvm::reportInvalidSizeRequest(
+            "Possible incorrect use of EVT::getVectorNumElements() for "
+            "scalable vector. Scalable flag may be dropped, use "
+            "EVT::getVectorElementCount() instead");
+
+      return isSimple() ? V.getVectorNumElements()
+                        : getExtendedVectorNumElements();
     }
 
     // Given a (possibly scalable) vector type, return the ElementCount
