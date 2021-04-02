@@ -94,8 +94,6 @@ protected:
     Str.reset(TheTarget->createNullStreamer(*Ctx));
 
     Parser.reset(createMCAsmParser(SrcMgr, *Ctx, *Str, *MUPMAI));
-    // Lex initially to get the string.
-    Parser->getLexer().Lex();
   }
 
   void lexAndCheckTokens(StringRef AsmStr,
@@ -116,6 +114,9 @@ TEST_F(SystemZAsmLexerTest, CheckDontRestrictCommentStringToStartOfStatement) {
   // Setup.
   setupCallToAsmParser(AsmStr);
 
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
   SmallVector<AsmToken::TokenKind> ExpectedTokens(
       {AsmToken::Identifier, AsmToken::EndOfStatement});
   lexAndCheckTokens(AsmStr /* "jne #-4" */, ExpectedTokens);
@@ -128,6 +129,9 @@ TEST_F(SystemZAsmLexerTest, CheckRestrictCommentStringToStartOfStatement) {
   // Setup.
   MUPMAI->setRestrictCommentStringToStartOfStatement(true);
   setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
 
   // When we are restricting the comment string to only the start of the
   // statement, The sequence of tokens we are expecting are: Identifier - "jne"
@@ -148,8 +152,65 @@ TEST_F(SystemZAsmLexerTest, CheckHLASMComment) {
   MUPMAI->setCommentString("*");
   setupCallToAsmParser(AsmStr);
 
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
   SmallVector<AsmToken::TokenKind> ExpectedTokens(
       {AsmToken::EndOfStatement, AsmToken::Eof});
   lexAndCheckTokens(AsmStr /* "* lhi 1,10" */, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckHashDefault) {
+  StringRef AsmStr = "lh#123";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // "lh" -> Identifier
+  // "#123" -> EndOfStatement (Lexed as a comment since CommentString is "#")
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+// Test if "#" is accepted as an Identifier
+TEST_F(SystemZAsmLexerTest, CheckAllowHashInIdentifier) {
+  StringRef AsmStr = "lh#123";
+
+  // Setup.
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // "lh123" -> Identifier
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckAllowHashInIdentifier2) {
+  StringRef AsmStr = "lh#12*3";
+
+  // Setup.
+  MUPMAI->setCommentString("*");
+  MUPMAI->setRestrictCommentStringToStartOfStatement(true);
+  setupCallToAsmParser(AsmStr);
+  Parser->getLexer().setAllowHashInIdentifier(true);
+
+  // Lex initially to get the string.
+  Parser->getLexer().Lex();
+
+  // "lh#12" -> Identifier
+  // "*" -> Star
+  // "3" -> Integer
+  SmallVector<AsmToken::TokenKind> ExpectedTokens(
+      {AsmToken::Identifier, AsmToken::Star, AsmToken::Integer,
+       AsmToken::EndOfStatement, AsmToken::Eof});
+  lexAndCheckTokens(AsmStr, ExpectedTokens);
 }
 } // end anonymous namespace
