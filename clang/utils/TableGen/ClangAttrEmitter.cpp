@@ -3677,7 +3677,7 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
   if (!DeclAttrs.empty()) {
     // Generate the ParsedAttrInfo subclass logic for declarations.
     OS << "  bool diagMutualExclusion(Sema &S, const ParsedAttr &AL, "
-       << "const Decl *D) const {\n";
+       << "const Decl *D) const override {\n";
     for (const std::string &A : DeclAttrs) {
       OS << "    if (const auto *A = D->getAttr<" << A << ">()) {\n";
       OS << "      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)"
@@ -3714,7 +3714,7 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
   if (!StmtAttrs.empty()) {
     // Generate the ParsedAttrInfo subclass logic for statements.
     OS << "  bool diagMutualExclusion(Sema &S, const ParsedAttr &AL, "
-       << "const Stmt *St) const {\n";
+       << "const Stmt *St) const override {\n";
     OS << "    if (const auto *AS = dyn_cast<AttributedStmt>(St)) {\n";
     OS << "      const ArrayRef<const Attr *> &Attrs = AS->getAttrs();\n";
     for (const std::string &A : StmtAttrs) {
