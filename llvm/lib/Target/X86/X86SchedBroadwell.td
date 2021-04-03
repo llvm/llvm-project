@@ -582,6 +582,7 @@ def : WriteRes<WriteSystem,     [BWPort0156]> { let Latency = 100; } // def Writ
 defm : BWWriteResPair<WriteFShuffle256, [BWPort5], 3, [1], 1, 6>; // Fp 256-bit width vector shuffles.
 defm : BWWriteResPair<WriteFVarShuffle256, [BWPort5], 3, [1], 1, 6>; // Fp 256-bit width vector variable shuffles.
 defm : BWWriteResPair<WriteShuffle256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width vector shuffles.
+defm : BWWriteResPair<WriteVPMOV256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width packed vector width-changing move.
 defm : BWWriteResPair<WriteVarShuffle256, [BWPort5], 3, [1], 1, 6>;  // 256-bit width vector variable shuffles.
 
 // Old microcoded instructions that nobody use.
