@@ -1059,3 +1059,40 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
   %tmp1 = call i64 @llvm.cttz.i64(i64 %o, i1 false)
   ret i64 %tmp1
 }
+
+; FIXME: Failed to merge the XOR(TRUNC(XOR(BSR(X),31)),31).
+define i8 @PR47603(i32 %0) {
+; X86-LABEL: PR47603:
+; X86:       # %bb.0:
+; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:    xorb $31, %al
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR47603:
+; X64:       # %bb.0:
+; X64-NEXT:    bsrl %edi, %eax
+; X64-NEXT:    xorl $31, %eax
+; X64-NEXT:    xorb $31, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X86-CLZ-LABEL: PR47603:
+; X86-CLZ:       # %bb.0:
+; X86-CLZ-NEXT:    lzcntl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    xorb $31, %al
+; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X86-CLZ-NEXT:    retl
+;
+; X64-CLZ-LABEL: PR47603:
+; X64-CLZ:       # %bb.0:
+; X64-CLZ-NEXT:    lzcntl %edi, %eax
+; X64-CLZ-NEXT:    xorb $31, %al
+; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
+; X64-CLZ-NEXT:    retq
+  %2 = call i32 @llvm.ctlz.i32(i32 %0, i1 true)
+  %3 = xor i32 %2, 31
+  %4 = trunc i32 %3 to i8
+  ret i8 %4
+}
