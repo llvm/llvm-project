@@ -1529,8 +1529,7 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
   // Check the cache before climbing up use-def chains. This also terminates
   // otherwise infinitely recursive queries.
-  AAQueryInfo::LocPair Locs(MemoryLocation(V1, V1Size),
-                            MemoryLocation(V2, V2Size));
+  AAQueryInfo::LocPair Locs({V1, V1Size}, {V2, V2Size});
   if (V1 > V2)
     std::swap(Locs.first, Locs.second);
   const auto &Pair = AAQI.AliasCache.try_emplace(
