@@ -294,7 +294,7 @@ struct OperandsSignature {
     for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
       OS << LS;
       if (Operands[i].isReg()) {
-        OS << "unsigned Op" << i << ", bool Op" << i << "IsKill";
+        OS << "unsigned Op" << i;
       } else if (Operands[i].isImm()) {
         OS << "uint64_t imm" << i;
       } else if (Operands[i].isFP()) {
@@ -316,7 +316,7 @@ struct OperandsSignature {
 
       OS << LS;
       if (Operands[i].isReg()) {
-        OS << "Op" << i << ", Op" << i << "IsKill";
+        OS << "Op" << i;
       } else if (Operands[i].isImm()) {
         OS << "imm" << i;
       } else if (Operands[i].isFP()) {
@@ -332,7 +332,7 @@ struct OperandsSignature {
     for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
       OS << LS;
       if (Operands[i].isReg()) {
-        OS << "Op" << i << ", Op" << i << "IsKill";
+        OS << "Op" << i;
       } else if (Operands[i].isImm()) {
         OS << "imm" << i;
       } else if (Operands[i].isFP()) {
@@ -673,7 +673,7 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
       OS << ");\n";
     } else {
       OS << "extractsubreg(" << RetVTName
-         << ", Op0, Op0IsKill, " << Memo.SubRegNo << ");\n";
+         << ", Op0, " << Memo.SubRegNo << ");\n";
     }
 
     if (!PredicateCheck.empty()) {
