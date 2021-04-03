@@ -70,11 +70,11 @@ public:
   uint32_t cpuType;
   uint32_t cpuSubtype;
 
-  size_t pageZeroSize;
-  size_t stubSize;
-  size_t stubHelperHeaderSize;
-  size_t stubHelperEntrySize;
-  size_t wordSize;
+  uint64_t pageZeroSize;
+  uint64_t stubSize;
+  uint64_t stubHelperHeaderSize;
+  uint64_t stubHelperEntrySize;
+  uint64_t wordSize;
 };
 
 TargetInfo *createX86_64TargetInfo();
@@ -89,8 +89,8 @@ struct LP64 {
   static constexpr uint32_t magic = llvm::MachO::MH_MAGIC_64;
   static constexpr uint32_t segmentLCType = llvm::MachO::LC_SEGMENT_64;
 
-  static constexpr size_t pageZeroSize = 1ull << 32;
-  static constexpr size_t wordSize = 8;
+  static constexpr uint64_t pageZeroSize = 1ull << 32;
+  static constexpr uint64_t wordSize = 8;
 };
 
 struct ILP32 {
@@ -102,8 +102,8 @@ struct ILP32 {
   static constexpr uint32_t magic = llvm::MachO::MH_MAGIC;
   static constexpr uint32_t segmentLCType = llvm::MachO::LC_SEGMENT;
 
-  static constexpr size_t pageZeroSize = 1ull << 12;
-  static constexpr size_t wordSize = 4;
+  static constexpr uint64_t pageZeroSize = 1ull << 12;
+  static constexpr uint64_t wordSize = 4;
 };
 
 extern TargetInfo *target;
