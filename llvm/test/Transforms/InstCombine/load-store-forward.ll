@@ -30,6 +30,18 @@ define i32 @vec_store_load_first(i32* %p) {
   ret i32 %load
 }
 
+define i17 @vec_store_load_first_odd_size(i17* %p) {
+; CHECK-LABEL: @vec_store_load_first_odd_size(
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i17* [[P:%.*]] to <2 x i17>*
+; CHECK-NEXT:    store <2 x i17> <i17 1, i17 2>, <2 x i17>* [[P2]], align 8
+; CHECK-NEXT:    ret i17 1
+;
+  %p2 = bitcast i17* %p to <2 x i17>*
+  store <2 x i17> <i17 1, i17 2>, <2 x i17>* %p2
+  %load = load i17, i17* %p
+  ret i17 %load
+}
+
 define i32 @vec_store_load_first_constexpr(i32* %p) {
 ; CHECK-LABEL: @vec_store_load_first_constexpr(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
