@@ -588,8 +588,8 @@ IslAstUserPayload *IslAstInfo::getNodePayload(const isl::ast_node &Node) {
   return Payload;
 }
 
-bool IslAstInfo::isInnermost(__isl_keep isl_ast_node *Node) {
-  IslAstUserPayload *Payload = getNodePayload(isl::manage_copy(Node));
+bool IslAstInfo::isInnermost(const isl::ast_node &Node) {
+  IslAstUserPayload *Payload = getNodePayload(Node);
   return Payload && Payload->IsInnermost;
 }
 
@@ -626,7 +626,7 @@ bool IslAstInfo::isExecutedInParallel(__isl_keep isl_ast_node *Node) {
   //       executed. This can possibly require run-time checks, which again
   //       raises the question of both run-time check overhead and code size
   //       costs.
-  if (!PollyParallelForce && isInnermost(Node))
+  if (!PollyParallelForce && isInnermost(isl::manage_copy(Node)))
     return false;
 
   return isOutermostParallel(isl::manage_copy(Node)) &&
