@@ -1060,21 +1060,17 @@ define i64 @cttz_i64_zero_test_knownneverzero(i64 %n) {
   ret i64 %tmp1
 }
 
-; FIXME: Failed to merge the XOR(TRUNC(XOR(BSR(X),31)),31).
+; Ensure we fold away the XOR(TRUNC(XOR(BSR(X),31)),31).
 define i8 @PR47603(i32 %0) {
 ; X86-LABEL: PR47603:
 ; X86:       # %bb.0:
 ; X86-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl $31, %eax
-; X86-NEXT:    xorb $31, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR47603:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bsrl %edi, %eax
-; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:    xorb $31, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
