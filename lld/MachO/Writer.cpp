@@ -175,12 +175,12 @@ template <class LP> class LCSegment : public LoadCommand {
 public:
   LCSegment(StringRef name, OutputSegment *seg) : name(name), seg(seg) {}
 
-  uint32_t getSize() const {
+  uint32_t getSize() const override {
     return sizeof(typename LP::segment_command) +
            seg->numNonHiddenSections() * sizeof(typename LP::section);
   }
 
-  void writeTo(uint8_t *buf) const {
+  void writeTo(uint8_t *buf) const override {
     using SegmentCommand = typename LP::segment_command;
     using Section = typename LP::section;
 
