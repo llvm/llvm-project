@@ -4944,7 +4944,7 @@ multiclass SS41I_pmovx_rm_all<bits<8> opc, string OpcodeStr,
                                      VEX, VEX_WIG;
   let Predicates = [HasAVX2, prd] in
     defm V#NAME#Y : SS41I_pmovx_rrrm<opc, !strconcat("v", OpcodeStr), MemYOp,
-                                     VR256, VR128, WriteShuffle256>,
+                                     VR256, VR128, WriteVPMOV256>,
                                      VEX, VEX_L, VEX_WIG;
 }
 

@@ -582,6 +582,7 @@ def : WriteRes<WriteSystem,     [SKLPort0156]> { let Latency = 100; } // def Wri
 defm : SKLWriteResPair<WriteFShuffle256, [SKLPort5], 3, [1], 1, 7>; // Fp 256-bit width vector shuffles.
 defm : SKLWriteResPair<WriteFVarShuffle256, [SKLPort5], 3, [1], 1, 7>; // Fp 256-bit width vector variable shuffles.
 defm : SKLWriteResPair<WriteShuffle256, [SKLPort5], 3, [1], 1, 7>;  // 256-bit width vector shuffles.
+defm : SKLWriteResPair<WriteVPMOV256, [SKLPort5], 3, [1], 1, 7>;  // 256-bit width packed vector width-changing move.
 defm : SKLWriteResPair<WriteVarShuffle256, [SKLPort5], 3, [1], 1, 7>;  // 256-bit width vector variable shuffles.
 
 // Old microcoded instructions that nobody use.
