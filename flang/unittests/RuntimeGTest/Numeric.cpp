@@ -44,20 +44,12 @@ TEST(Numeric, Ceiling) {
   EXPECT_EQ(RTNAME(Ceiling4_4)(Real<4>{3.7}), 4);
   EXPECT_EQ(RTNAME(Ceiling8_8)(Real<8>{-3.7}), -3);
   EXPECT_EQ(RTNAME(Ceiling4_1)(Real<4>{0}), 0);
-  EXPECT_EQ(RTNAME(Ceiling4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Int<4>>::min());
-  EXPECT_EQ(RTNAME(Ceiling4_4)(std::numeric_limits<Real<4>>::quiet_NaN()),
-      std::numeric_limits<Int<4>>::min());
 }
 
 TEST(Numeric, Floor) {
   EXPECT_EQ(RTNAME(Floor4_4)(Real<4>{3.7}), 3);
   EXPECT_EQ(RTNAME(Floor8_8)(Real<8>{-3.7}), -4);
   EXPECT_EQ(RTNAME(Floor4_1)(Real<4>{0}), 0);
-  EXPECT_EQ(RTNAME(Floor4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Int<4>>::min());
-  EXPECT_EQ(RTNAME(Floor4_4)(std::numeric_limits<Real<4>>::quiet_NaN()),
-      std::numeric_limits<Int<4>>::min());
 }
 
 TEST(Numeric, Exponent) {
@@ -118,10 +110,6 @@ TEST(Numeric, Nint) {
   EXPECT_EQ(RTNAME(Nint4_4)(Real<4>{2.5}), 3);
   EXPECT_EQ(RTNAME(Nint8_4)(Real<8>{-2.5}), -3);
   EXPECT_EQ(RTNAME(Nint8_8)(Real<8>{0}), 0);
-  EXPECT_EQ(RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::infinity()),
-      std::numeric_limits<Int<4>>::min());
-  EXPECT_EQ(RTNAME(Nint4_4)(std::numeric_limits<Real<4>>::quiet_NaN()),
-      std::numeric_limits<Int<4>>::min());
 }
 
 TEST(Numeric, RRSpacing) {

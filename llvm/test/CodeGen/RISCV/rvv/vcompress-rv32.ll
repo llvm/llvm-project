@@ -397,6 +397,94 @@ entry:
   ret <vscale x 16 x i32> %a
 }
 
+declare <vscale x 1 x i64> @llvm.riscv.vcompress.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i64>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vcompress_vm_nxv1i64_nxv1i64(<vscale x 1 x i64> %0, <vscale x 1 x i64> %1, <vscale x 1 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vcompress_vm_nxv1i64_nxv1i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vcompress.vm v8, v9, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vcompress.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i64> %1,
+    <vscale x 1 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vcompress.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i64>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vcompress_vm_nxv2i64_nxv2i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vcompress_vm_nxv2i64_nxv2i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vcompress.vm v8, v10, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vcompress.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i64> %1,
+    <vscale x 2 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vcompress.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i64>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vcompress_vm_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vcompress_vm_nxv4i64_nxv4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vcompress.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i64> %1,
+    <vscale x 4 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vcompress.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i64>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vcompress_vm_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i1> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vcompress_vm_nxv8i64_nxv8i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    vcompress.vm v8, v16, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vcompress.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i64> %1,
+    <vscale x 8 x i1> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i64> %a
+}
+
 declare <vscale x 1 x half> @llvm.riscv.vcompress.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,

@@ -720,3 +720,163 @@ entry:
 
   ret <vscale x 16 x i32> %a
 }
+
+declare <vscale x 1 x i64> @llvm.riscv.viota.nxv1i64(
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_viota_m_nxv1i64_nxv1i1(<vscale x 1 x i1> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_viota_m_nxv1i64_nxv1i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.viota.nxv1i64(
+    <vscale x 1 x i1> %0,
+    i32 %1)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.viota.mask.nxv1i64(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i1>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_viota_mask_m_nxv1i64_nxv1i1(<vscale x 1 x i64> %0, <vscale x 1 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_viota_mask_m_nxv1i64_nxv1i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m1,tu,mu
+; CHECK-NEXT:    viota.m v8, v0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.viota.mask.nxv1i64(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i1> %1,
+    <vscale x 1 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.viota.nxv2i64(
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_viota_m_nxv2i64_nxv2i1(<vscale x 2 x i1> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_viota_m_nxv2i64_nxv2i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,ta,mu
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.viota.nxv2i64(
+    <vscale x 2 x i1> %0,
+    i32 %1)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.viota.mask.nxv2i64(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i1>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_viota_mask_m_nxv2i64_nxv2i1(<vscale x 2 x i64> %0, <vscale x 2 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_viota_mask_m_nxv2i64_nxv2i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m2,tu,mu
+; CHECK-NEXT:    viota.m v8, v0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.viota.mask.nxv2i64(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i1> %1,
+    <vscale x 2 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.viota.nxv4i64(
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_viota_m_nxv4i64_nxv4i1(<vscale x 4 x i1> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_viota_m_nxv4i64_nxv4i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,ta,mu
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.viota.nxv4i64(
+    <vscale x 4 x i1> %0,
+    i32 %1)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.viota.mask.nxv4i64(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i1>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_viota_mask_m_nxv4i64_nxv4i1(<vscale x 4 x i64> %0, <vscale x 4 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_viota_mask_m_nxv4i64_nxv4i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m4,tu,mu
+; CHECK-NEXT:    viota.m v8, v0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.viota.mask.nxv4i64(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i1> %1,
+    <vscale x 4 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.viota.nxv8i64(
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_viota_m_nxv8i64_nxv8i1(<vscale x 8 x i1> %0, i32 %1) nounwind {
+; CHECK-LABEL: intrinsic_viota_m_nxv8i64_nxv8i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,ta,mu
+; CHECK-NEXT:    viota.m v8, v0
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.viota.nxv8i64(
+    <vscale x 8 x i1> %0,
+    i32 %1)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.viota.mask.nxv8i64(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i1>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_viota_mask_m_nxv8i64_nxv8i1(<vscale x 8 x i64> %0, <vscale x 8 x i1> %1, i32 %2) nounwind {
+; CHECK-LABEL: intrinsic_viota_mask_m_nxv8i64_nxv8i1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e64,m8,tu,mu
+; CHECK-NEXT:    viota.m v8, v0, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.viota.mask.nxv8i64(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i1> %1,
+    <vscale x 8 x i1> %1,
+    i32 %2)
+
+  ret <vscale x 8 x i64> %a
+}

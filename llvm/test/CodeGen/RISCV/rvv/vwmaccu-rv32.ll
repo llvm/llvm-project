@@ -507,6 +507,190 @@ entry:
   ret <vscale x 16 x i32> %a
 }
 
+declare <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i32>,
+  <vscale x 1 x i32>,
+  i32);
+
+define <vscale x 1 x i64>  @intrinsic_vwmaccu_vv_nxv1i64_nxv1i32_nxv1i32(<vscale x 1 x i64> %0, <vscale x 1 x i32> %1, <vscale x 1 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vv_nxv1i64_nxv1i32_nxv1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v9, v10
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.nxv1i32(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i32> %1,
+    <vscale x 1 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(
+  <vscale x 1 x i64>,
+  <vscale x 1 x i32>,
+  <vscale x 1 x i32>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64>  @intrinsic_vwmaccu_mask_vv_nxv1i64_nxv1i32_nxv1i32(<vscale x 1 x i64> %0, <vscale x 1 x i32> %1, <vscale x 1 x i32> %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vv_nxv1i64_nxv1i32_nxv1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,mf2,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.nxv1i32(
+    <vscale x 1 x i64> %0,
+    <vscale x 1 x i32> %1,
+    <vscale x 1 x i32> %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vwmaccu.nxv2i64.nxv2i32(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i32>,
+  <vscale x 2 x i32>,
+  i32);
+
+define <vscale x 2 x i64>  @intrinsic_vwmaccu_vv_nxv2i64_nxv2i32_nxv2i32(<vscale x 2 x i64> %0, <vscale x 2 x i32> %1, <vscale x 2 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vv_nxv2i64_nxv2i32_nxv2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m1,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v10, v11
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vwmaccu.nxv2i64.nxv2i32(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i32> %1,
+    <vscale x 2 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vwmaccu.mask.nxv2i64.nxv2i32(
+  <vscale x 2 x i64>,
+  <vscale x 2 x i32>,
+  <vscale x 2 x i32>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64>  @intrinsic_vwmaccu_mask_vv_nxv2i64_nxv2i32_nxv2i32(<vscale x 2 x i64> %0, <vscale x 2 x i32> %1, <vscale x 2 x i32> %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vv_nxv2i64_nxv2i32_nxv2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m1,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v10, v11, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vwmaccu.mask.nxv2i64.nxv2i32(
+    <vscale x 2 x i64> %0,
+    <vscale x 2 x i32> %1,
+    <vscale x 2 x i32> %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vwmaccu.nxv4i64.nxv4i32(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
+  i32);
+
+define <vscale x 4 x i64>  @intrinsic_vwmaccu_vv_nxv4i64_nxv4i32_nxv4i32(<vscale x 4 x i64> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vv_nxv4i64_nxv4i32_nxv4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v12, v14
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vwmaccu.nxv4i64.nxv4i32(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i32> %1,
+    <vscale x 4 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vwmaccu.mask.nxv4i64.nxv4i32(
+  <vscale x 4 x i64>,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64>  @intrinsic_vwmaccu_mask_vv_nxv4i64_nxv4i32_nxv4i32(<vscale x 4 x i64> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vv_nxv4i64_nxv4i32_nxv4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m2,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v12, v14, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vwmaccu.mask.nxv4i64.nxv4i32(
+    <vscale x 4 x i64> %0,
+    <vscale x 4 x i32> %1,
+    <vscale x 4 x i32> %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vwmaccu.nxv8i64.nxv8i32(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i32>,
+  <vscale x 8 x i32>,
+  i32);
+
+define <vscale x 8 x i64>  @intrinsic_vwmaccu_vv_nxv8i64_nxv8i32_nxv8i32(<vscale x 8 x i64> %0, <vscale x 8 x i32> %1, <vscale x 8 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vv_nxv8i64_nxv8i32_nxv8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m4,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v16, v20
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vwmaccu.nxv8i64.nxv8i32(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i32> %1,
+    <vscale x 8 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vwmaccu.mask.nxv8i64.nxv8i32(
+  <vscale x 8 x i64>,
+  <vscale x 8 x i32>,
+  <vscale x 8 x i32>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64>  @intrinsic_vwmaccu_mask_vv_nxv8i64_nxv8i32_nxv8i32(<vscale x 8 x i64> %0, <vscale x 8 x i32> %1, <vscale x 8 x i32> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vv_nxv8i64_nxv8i32_nxv8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a0, a0, e32,m4,tu,mu
+; CHECK-NEXT:    vwmaccu.vv v8, v16, v20, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vwmaccu.mask.nxv8i64.nxv8i32(
+    <vscale x 8 x i64> %0,
+    <vscale x 8 x i32> %1,
+    <vscale x 8 x i32> %2,
+    <vscale x 8 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 8 x i64> %a
+}
+
 declare <vscale x 1 x i16> @llvm.riscv.vwmaccu.nxv1i16.i8(
   <vscale x 1 x i16>,
   i8,
@@ -1011,4 +1195,188 @@ entry:
     i32 %4)
 
   ret <vscale x 16 x i32> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.i32(
+  <vscale x 1 x i64>,
+  i32,
+  <vscale x 1 x i32>,
+  i32);
+
+define <vscale x 1 x i64>  @intrinsic_vwmaccu_vx_nxv1i64_i32_nxv1i32(<vscale x 1 x i64> %0, i32 %1, <vscale x 1 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vx_nxv1i64_i32_nxv1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v9
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.nxv1i64.i32(
+    <vscale x 1 x i64> %0,
+    i32 %1,
+    <vscale x 1 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.i32(
+  <vscale x 1 x i64>,
+  i32,
+  <vscale x 1 x i32>,
+  <vscale x 1 x i1>,
+  i32);
+
+define <vscale x 1 x i64> @intrinsic_vwmaccu_mask_vx_nxv1i64_i32_nxv1i32(<vscale x 1 x i64> %0, i32 %1, <vscale x 1 x i32> %2, <vscale x 1 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vx_nxv1i64_i32_nxv1i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v9, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 1 x i64> @llvm.riscv.vwmaccu.mask.nxv1i64.i32(
+    <vscale x 1 x i64> %0,
+    i32 %1,
+    <vscale x 1 x i32> %2,
+    <vscale x 1 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 1 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vwmaccu.nxv2i64.i32(
+  <vscale x 2 x i64>,
+  i32,
+  <vscale x 2 x i32>,
+  i32);
+
+define <vscale x 2 x i64>  @intrinsic_vwmaccu_vx_nxv2i64_i32_nxv2i32(<vscale x 2 x i64> %0, i32 %1, <vscale x 2 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vx_nxv2i64_i32_nxv2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v10
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vwmaccu.nxv2i64.i32(
+    <vscale x 2 x i64> %0,
+    i32 %1,
+    <vscale x 2 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 2 x i64> @llvm.riscv.vwmaccu.mask.nxv2i64.i32(
+  <vscale x 2 x i64>,
+  i32,
+  <vscale x 2 x i32>,
+  <vscale x 2 x i1>,
+  i32);
+
+define <vscale x 2 x i64> @intrinsic_vwmaccu_mask_vx_nxv2i64_i32_nxv2i32(<vscale x 2 x i64> %0, i32 %1, <vscale x 2 x i32> %2, <vscale x 2 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vx_nxv2i64_i32_nxv2i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v10, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 2 x i64> @llvm.riscv.vwmaccu.mask.nxv2i64.i32(
+    <vscale x 2 x i64> %0,
+    i32 %1,
+    <vscale x 2 x i32> %2,
+    <vscale x 2 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 2 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vwmaccu.nxv4i64.i32(
+  <vscale x 4 x i64>,
+  i32,
+  <vscale x 4 x i32>,
+  i32);
+
+define <vscale x 4 x i64>  @intrinsic_vwmaccu_vx_nxv4i64_i32_nxv4i32(<vscale x 4 x i64> %0, i32 %1, <vscale x 4 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vx_nxv4i64_i32_nxv4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v12
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vwmaccu.nxv4i64.i32(
+    <vscale x 4 x i64> %0,
+    i32 %1,
+    <vscale x 4 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 4 x i64> @llvm.riscv.vwmaccu.mask.nxv4i64.i32(
+  <vscale x 4 x i64>,
+  i32,
+  <vscale x 4 x i32>,
+  <vscale x 4 x i1>,
+  i32);
+
+define <vscale x 4 x i64> @intrinsic_vwmaccu_mask_vx_nxv4i64_i32_nxv4i32(<vscale x 4 x i64> %0, i32 %1, <vscale x 4 x i32> %2, <vscale x 4 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vx_nxv4i64_i32_nxv4i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v12, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 4 x i64> @llvm.riscv.vwmaccu.mask.nxv4i64.i32(
+    <vscale x 4 x i64> %0,
+    i32 %1,
+    <vscale x 4 x i32> %2,
+    <vscale x 4 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 4 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vwmaccu.nxv8i64.i32(
+  <vscale x 8 x i64>,
+  i32,
+  <vscale x 8 x i32>,
+  i32);
+
+define <vscale x 8 x i64>  @intrinsic_vwmaccu_vx_nxv8i64_i32_nxv8i32(<vscale x 8 x i64> %0, i32 %1, <vscale x 8 x i32> %2, i32 %3) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_vx_nxv8i64_i32_nxv8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v16
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vwmaccu.nxv8i64.i32(
+    <vscale x 8 x i64> %0,
+    i32 %1,
+    <vscale x 8 x i32> %2,
+    i32 %3)
+
+  ret <vscale x 8 x i64> %a
+}
+
+declare <vscale x 8 x i64> @llvm.riscv.vwmaccu.mask.nxv8i64.i32(
+  <vscale x 8 x i64>,
+  i32,
+  <vscale x 8 x i32>,
+  <vscale x 8 x i1>,
+  i32);
+
+define <vscale x 8 x i64> @intrinsic_vwmaccu_mask_vx_nxv8i64_i32_nxv8i32(<vscale x 8 x i64> %0, i32 %1, <vscale x 8 x i32> %2, <vscale x 8 x i1> %3, i32 %4) nounwind {
+; CHECK-LABEL: intrinsic_vwmaccu_mask_vx_nxv8i64_i32_nxv8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vwmaccu.vx v8, a0, v16, v0.t
+; CHECK-NEXT:    jalr zero, 0(ra)
+entry:
+  %a = call <vscale x 8 x i64> @llvm.riscv.vwmaccu.mask.nxv8i64.i32(
+    <vscale x 8 x i64> %0,
+    i32 %1,
+    <vscale x 8 x i32> %2,
+    <vscale x 8 x i1> %3,
+    i32 %4)
+
+  ret <vscale x 8 x i64> %a
 }
