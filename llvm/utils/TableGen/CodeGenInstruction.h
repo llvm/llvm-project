@@ -182,7 +182,7 @@ template <typename T> class ArrayRef;
     /// where $foo is a whole operand and $foo.bar refers to a suboperand.
     /// This aborts if the name is invalid.  If AllowWholeOp is true, references
     /// to operands with suboperands are allowed, otherwise not.
-    std::pair<unsigned,unsigned> ParseOperandName(const std::string &Op,
+    std::pair<unsigned,unsigned> ParseOperandName(StringRef Op,
                                                   bool AllowWholeOp = true);
 
     /// getFlattenedOperandNumber - Flatten a operand/suboperand pair into a
@@ -211,7 +211,7 @@ template <typename T> class ArrayRef;
       return false;
     }
 
-    void ProcessDisableEncoding(std::string Value);
+    void ProcessDisableEncoding(StringRef Value);
   };
 
 
