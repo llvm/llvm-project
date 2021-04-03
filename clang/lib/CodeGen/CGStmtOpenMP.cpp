@@ -5613,6 +5613,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_link:
   case OMPC_use:
   case OMPC_novariants:
+  case OMPC_nocontext:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }
