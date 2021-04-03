@@ -266,13 +266,13 @@ void hostfunc(void) { kernelfunc<<<1, 1>>>(1, 1, 1); }
 // CUDANOGLOBALS-NOT: @{{.*}} = private constant{{.*}}
 // HIPNOGLOBALS-NOT: @{{.*}} = internal constant{{.*}}
 // NOGLOBALS-NOT: define internal void @__{{.*}}_register_globals
-// NOGLOBALS-NOT: define internal void @__[[PREFIX:cuda|hip]]_module_ctor
-// NOGLOBALS-NOT: call{{.*}}[[PREFIX]]RegisterFatBinary{{.*}}__[[PREFIX]]_fatbin_wrapper
-// NOGLOBALS-NOT: call void @__[[PREFIX]]_register_globals
-// NOGLOBALS-NOT: define internal void @__[[PREFIX]]_module_dtor
-// NOGLOBALS-NOT: call void @__[[PREFIX]]UnregisterFatBinary
+// NOGLOBALS-NOT: define internal void @__{{cuda|hip}}_module_ctor
+// NOGLOBALS-NOT: call{{.*}}{{cuda|hip}}RegisterFatBinary{{.*}}__{{cuda|hip}}_fatbin_wrapper
+// NOGLOBALS-NOT: call void @__{{cuda|hip}}_register_globals
+// NOGLOBALS-NOT: define internal void @__{{cuda|hip}}_module_dtor
+// NOGLOBALS-NOT: call void @__{{cuda|hip}}UnregisterFatBinary
 
 // There should be no constructors/destructors if we have no GPU binary.
-// NOGPUBIN-NOT: define internal void @__[[PREFIX]]_register_globals
-// NOGPUBIN-NOT: define internal void @__[[PREFIX]]_module_ctor
-// NOGPUBIN-NOT: define internal void @__[[PREFIX]]_module_dtor
+// NOGPUBIN-NOT: define internal void @__{{cuda|hip}}_register_globals
+// NOGPUBIN-NOT: define internal void @__{{cuda|hip}}_module_ctor
+// NOGPUBIN-NOT: define internal void @__{{cuda|hip}}_module_dtor
