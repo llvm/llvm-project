@@ -931,7 +931,9 @@ public:
       bool isIsolatedFromAbove, StringRef opName, OperationParser &parser)
       : nameLoc(nameLoc), resultIDs(resultIDs), parseAssembly(parseAssembly),
         isIsolatedFromAbove(isIsolatedFromAbove), opName(opName),
-        parser(parser) {}
+        parser(parser) {
+    (void)isIsolatedFromAbove; // Only used in assert, silence unused warning.
+  }
 
   /// Parse an instance of the operation described by 'opDefinition' into the
   /// provided operation state.
