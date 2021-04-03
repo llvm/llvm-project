@@ -113,11 +113,7 @@
 ; CHECK-NEXT:         Lazy Block Frequency Analysis
 ; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Rotate Loops
-; CHECK-NEXT:         Lazy Branch Probability Analysis
-; CHECK-NEXT:         Lazy Block Frequency Analysis
-; CHECK-NEXT:         Loop Pass Manager
 ; CHECK-NEXT:           Loop Invariant Code Motion
 ; CHECK-NEXT:           Unswitch loops
 ; CHECK-NEXT:         Simplify the CFG
