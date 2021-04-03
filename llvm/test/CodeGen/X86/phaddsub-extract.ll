@@ -1863,6 +1863,63 @@ define i32 @partial_reduction_sub_v16i32(<16 x i32> %x) {
   ret i32 %r
 }
 
+; https://bugs.chromium.org/p/chromium/issues/detail?id=1195353
+define <2 x i64> @negative_extract_v16i16_v8i16(<4 x i64> %a0) {
+; SSE3-LABEL: negative_extract_v16i16_v8i16:
+; SSE3:       # %bb.0:
+; SSE3-NEXT:    paddw %xmm1, %xmm0
+; SSE3-NEXT:    retq
+;
+; AVX1-SLOW-LABEL: negative_extract_v16i16_v8i16:
+; AVX1-SLOW:       # %bb.0:
+; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-SLOW-NEXT:    vzeroupper
+; AVX1-SLOW-NEXT:    retq
+;
+; AVX1-FAST-LABEL: negative_extract_v16i16_v8i16:
+; AVX1-FAST:       # %bb.0:
+; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vzeroupper
+; AVX1-FAST-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: negative_extract_v16i16_v8i16:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vzeroupper
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: negative_extract_v16i16_v8i16:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vzeroupper
+; AVX2-FAST-NEXT:    retq
+;
+; AVX512-SLOW-LABEL: negative_extract_v16i16_v8i16:
+; AVX512-SLOW:       # %bb.0:
+; AVX512-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-SLOW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX512-SLOW-NEXT:    vzeroupper
+; AVX512-SLOW-NEXT:    retq
+;
+; AVX512-FAST-LABEL: negative_extract_v16i16_v8i16:
+; AVX512-FAST:       # %bb.0:
+; AVX512-FAST-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX512-FAST-NEXT:    vzeroupper
+; AVX512-FAST-NEXT:    retq
+  %s = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %b = bitcast <4 x i64> %a0 to <16 x i16>
+  %c = bitcast <4 x i64> %s to <16 x i16>
+  %d = add <16 x i16> %b, %c
+  %e = bitcast <16 x i16> %d to <4 x i64>
+  %f = shufflevector <4 x i64> %e, <4 x i64> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %f
+}
+
 ; PR42023 - https://bugs.llvm.org/show_bug.cgi?id=42023
 
 define i16 @hadd16_8(<8 x i16> %x223) {
