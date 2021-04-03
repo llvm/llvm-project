@@ -46958,9 +46958,10 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+
   // If this is SSE1 only convert to FXOR to avoid scalarization.
-  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() &&
-      N->getValueType(0) == MVT::v4i32) {
+  if (Subtarget.hasSSE1() && !Subtarget.hasSSE2() && VT == MVT::v4i32) {
     return DAG.getBitcast(
         MVT::v4i32, DAG.getNode(X86ISD::FXOR, SDLoc(N), MVT::v4f32,
                                 DAG.getBitcast(MVT::v4f32, N->getOperand(0)),
@@ -46981,6 +46982,20 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
     return RV;
+
+  // Fold xor(truncate(xor(x,c1)),c2) -> xor(truncate(x),xor(truncate(c1),c2))
+  // TODO: Under what circumstances could this be performed in DAGCombine?
+  if (N->getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      N->getOperand(0).getOperand(0).getOpcode() == N->getOpcode() &&
+      isa<ConstantSDNode>(N->getOperand(1)) &&
+      isa<ConstantSDNode>(N->getOperand(0).getOperand(0).getOperand(1))) {
+    SDLoc DL(N);
+    SDValue TruncateSrc = N->getOperand(0).getOperand(0);
+    SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, VT, TruncateSrc.getOperand(0));
+    SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, VT, TruncateSrc.getOperand(1));
+    return DAG.getNode(ISD::XOR, DL, VT, LHS,
+                       DAG.getNode(ISD::XOR, DL, VT, RHS, N->getOperand(1)));
+  }
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, Subtarget))
     return FPLogic;
