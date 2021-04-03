@@ -22,12 +22,24 @@ define i32 @vec_store_load_first(i32* %p) {
 ; CHECK-LABEL: @vec_store_load_first(
 ; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
-; CHECK-NEXT:    ret i32 [[LOAD]]
+; CHECK-NEXT:    ret i32 1
 ;
   %p2 = bitcast i32* %p to <2 x i32>*
   store <2 x i32> <i32 1, i32 2>, <2 x i32>* %p2
   %load = load i32, i32* %p
+  ret i32 %load
+}
+
+define i32 @vec_store_load_first_constexpr(i32* %p) {
+; CHECK-LABEL: @vec_store_load_first_constexpr(
+; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> bitcast (i64 ptrtoint (i32 (i32*)* @vec_store_load_first to i64) to <2 x i32>), <2 x i32>* [[P2]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    ret i32 [[LOAD]]
+;
+  %p2 = bitcast i32* %p to <2 x i32>*
+  store <2 x i32> bitcast (i64 ptrtoint (i32 (i32*)* @vec_store_load_first to i64) to <2 x i32>), <2 x i32>* %p2, align 8
+  %load = load i32, i32* %p, align 4
   ret i32 %load
 }
 
