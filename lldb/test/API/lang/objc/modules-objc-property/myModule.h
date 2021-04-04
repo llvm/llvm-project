@@ -1,7 +1,7 @@
 #ifndef MYMODULE
 #define MYMODULE
 
-@import Foundation;
+@import ObjectiveC;
 
 @interface MyClass : NSObject
 - (int) propConflict;
