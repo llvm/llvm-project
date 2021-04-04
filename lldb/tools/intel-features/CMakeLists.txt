@@ -30,4 +30,4 @@ add_lldb_library(lldbIntelFeatures SHARED
   )
 
 install(TARGETS lldbIntelFeatures
-  LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}")

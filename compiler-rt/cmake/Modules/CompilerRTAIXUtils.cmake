@@ -62,7 +62,7 @@ macro(archive_aix_libatomic name libname)
     # setting _install_rpath on AIX for reference.
     if(LLVM_LIBRARY_OUTPUT_INTDIR AND CMAKE_INSTALL_PREFIX)
       set(output_dir "${LLVM_LIBRARY_OUTPUT_INTDIR}")
-      set(install_dir "${CMAKE_INSTALL_PREFIX}/lib${LLVM_LIBDIR_SUFFIX}")
+      set(install_dir "${CMAKE_INSTALL_LIBDIR}")
     else()
       get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
       get_compiler_rt_install_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} install_dir)

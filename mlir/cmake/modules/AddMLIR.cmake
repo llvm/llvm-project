@@ -533,13 +533,13 @@ function(add_mlir_library_install name)
   install(TARGETS ${name}
     COMPONENT ${name}
     ${export_to_mlirtargets}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
     # Note that CMake will create a directory like:
     #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
     # and put object files there.
-    OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    OBJECTS DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   )
 
   if (NOT LLVM_ENABLE_IDE)

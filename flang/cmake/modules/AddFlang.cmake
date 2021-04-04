@@ -71,8 +71,8 @@ macro(add_flang_library name)
       install(TARGETS ${name}
         COMPONENT ${name}
         ${export_to_flangtargets}
-        LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-        ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+        LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+        ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
         RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
       if (NOT LLVM_ENABLE_IDE)
