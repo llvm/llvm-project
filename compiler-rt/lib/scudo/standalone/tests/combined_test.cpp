@@ -286,22 +286,27 @@ TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
   // Allocates a bunch of chunks, then iterate over all the chunks, ensuring
   // they are the ones we allocated. This requires the allocator to not have any
   // other allocated chunk at this point (eg: won't work with the Quarantine).
-  std::vector<void *> V;
-  for (scudo::uptr I = 0; I < 64U; I++)
-    V.push_back(Allocator->allocate(
-        rand() % (TypeParam::Primary::SizeClassMap::MaxSize / 2U), Origin));
-  Allocator->disable();
-  Allocator->iterateOverChunks(
-      0U, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
-      [](uintptr_t Base, size_t Size, void *Arg) {
-        std::vector<void *> *V = reinterpret_cast<std::vector<void *> *>(Arg);
-        void *P = reinterpret_cast<void *>(Base);
-        EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
-      },
-      reinterpret_cast<void *>(&V));
-  Allocator->enable();
-  for (auto P : V)
-    Allocator->deallocate(P, Origin);
+  // FIXME: Make it work with UseQuarantine and tagging enabled. Internals of
+  // iterateOverChunks reads header by tagged and non-tagger pointers so one of
+  // them will fail.
+  if (!UseQuarantine) {
+    std::vector<void *> V;
+    for (scudo::uptr I = 0; I < 64U; I++)
+      V.push_back(Allocator->allocate(
+          rand() % (TypeParam::Primary::SizeClassMap::MaxSize / 2U), Origin));
+    Allocator->disable();
+    Allocator->iterateOverChunks(
+        0U, static_cast<scudo::uptr>(SCUDO_MMAP_RANGE_SIZE - 1),
+        [](uintptr_t Base, size_t Size, void *Arg) {
+          std::vector<void *> *V = reinterpret_cast<std::vector<void *> *>(Arg);
+          void *P = reinterpret_cast<void *>(Base);
+          EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
+        },
+        reinterpret_cast<void *>(&V));
+    Allocator->enable();
+    for (auto P : V)
+      Allocator->deallocate(P, Origin);
+  }
 }
 
 TYPED_TEST(ScudoCombinedTest, UseAfterFree) {
