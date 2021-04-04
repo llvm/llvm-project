@@ -79,14 +79,3 @@ Compiler-RT specific options
 
   Path where Compiler-RT data should be installed. If a relative
   path, relative to ``COMPILER_RT_INSTALL_PATH``.
-
-.. _LLVM-specific variables:
-
-LLVM-specific options
----------------------
-
-.. option:: LLVM_LIBDIR_SUFFIX:STRING
-
-  Extra suffix to append to the directory where libraries are to be
-  installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
-  to install libraries to ``/usr/lib64``.

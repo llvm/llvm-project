@@ -45,7 +45,7 @@ if (LLVM_TREE_AVAILABLE)
   # Setup the paths where compiler-rt runtimes and headers should be stored.
   set(COMPILER_RT_OUTPUT_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/clang/${CLANG_VERSION})
   set(COMPILER_RT_EXEC_OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  set(COMPILER_RT_INSTALL_PATH lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
+  set(COMPILER_RT_INSTALL_PATH "${CMAKE_INSTALL_LIBDIR}/clang/${CLANG_VERSION}")
   option(COMPILER_RT_INCLUDE_TESTS "Generate and build compiler-rt unit tests."
          ${LLVM_INCLUDE_TESTS})
   option(COMPILER_RT_ENABLE_WERROR "Fail and stop if warning is triggered"
@@ -97,25 +97,30 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
     string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
   endif()
 endif()
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)
-  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  # Don't use "${CMAKE_INSTALL_LIBDIR}", because the intended use-case is that
+  # "${COMPILER_RT_INSTALL_PATH}" is already non-trival and probably includes
+  # "${CMAKE_INSTALL_LIBDIR}".
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib")
+else()
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_LIBDIR}/${COMPILER_RT_OS_DIR}")
 endif()
+set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
+  "Path where built compiler-rt libraries should be installed.")
+
 extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
 set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
   "Path where built compiler-rt executables should be installed.")
+
 extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt headers should be installed.")
+
 extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
 set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt data files should be installed.")
