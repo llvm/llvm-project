@@ -372,14 +372,14 @@ template<typename T> struct TemplateStruct {};
 class FriendClassesWithAttributes {
   // We allow GNU-style attributes here
   template <class _Tp, class _Alloc> friend class __attribute__((__type_visibility__("default"))) vector;
-  template <class _Tp, class _Alloc> friend class __declspec(code_seg("whatever")) vector2;
+  template <class _Tp, class _Alloc> friend class __declspec(code_seg("foo,whatever")) vector2;
   // But not C++11 ones
   template <class _Tp, class _Alloc> friend class[[]] vector3;                                         // expected-error {{an attribute list cannot appear here}}
   template <class _Tp, class _Alloc> friend class [[clang::__type_visibility__(("default"))]] vector4; // expected-error {{an attribute list cannot appear here}}
 
   // Also allowed
   friend struct __attribute__((__type_visibility__("default"))) TemplateStruct<FriendClassesWithAttributes>;
-  friend struct __declspec(code_seg("whatever")) TemplateStruct<FriendClassesWithAttributes>;
+  friend struct __declspec(code_seg("foo,whatever")) TemplateStruct<FriendClassesWithAttributes>;
   friend struct[[]] TemplateStruct<FriendClassesWithAttributes>;                                       // expected-error {{an attribute list cannot appear here}}
   friend struct [[clang::__type_visibility__("default")]] TemplateStruct<FriendClassesWithAttributes>; // expected-error {{an attribute list cannot appear here}}
 };
