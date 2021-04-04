@@ -93,10 +93,10 @@ define i1 @will_overflow(i64 %arg, i64 %arg1) {
 ; INSTCOMBINEONLY:       bb2:
 ; INSTCOMBINEONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
 ; INSTCOMBINEONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
-; INSTCOMBINEONLY-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINEONLY-NEXT:    [[PHI_BO:%.*]] = xor i1 [[UMUL_OV]], true
 ; INSTCOMBINEONLY-NEXT:    br label [[BB5]]
 ; INSTCOMBINEONLY:       bb5:
-; INSTCOMBINEONLY-NEXT:    [[T6:%.*]] = phi i1 [ true, [[BB:%.*]] ], [ [[PHITMP]], [[BB2]] ]
+; INSTCOMBINEONLY-NEXT:    [[T6:%.*]] = phi i1 [ true, [[BB:%.*]] ], [ [[PHI_BO]], [[BB2]] ]
 ; INSTCOMBINEONLY-NEXT:    ret i1 [[T6]]
 ;
 ; INSTCOMBINESIMPLIFYCFGONLY-LABEL: @will_overflow(
@@ -104,16 +104,16 @@ define i1 @will_overflow(i64 %arg, i64 %arg1) {
 ; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T0:%.*]] = icmp eq i64 [[ARG:%.*]], 0
 ; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG]], i64 [[ARG1:%.*]])
 ; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
-; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
-; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 true, i1 [[PHITMP]]
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[PHI_BO:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    [[T6:%.*]] = select i1 [[T0]], i1 true, i1 [[PHI_BO]]
 ; INSTCOMBINESIMPLIFYCFGONLY-NEXT:    ret i1 [[T6]]
 ;
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-LABEL: @will_overflow(
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:  bb:
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[ARG:%.*]], i64 [[ARG1:%.*]])
 ; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[UMUL_OV:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
-; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[PHITMP:%.*]] = xor i1 [[UMUL_OV]], true
-; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[PHITMP]]
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    [[PHI_BO:%.*]] = xor i1 [[UMUL_OV]], true
+; INSTCOMBINESIMPLIFYCFGINSTCOMBINE-NEXT:    ret i1 [[PHI_BO]]
 ;
 bb:
   %t0 = icmp eq i64 %arg, 0
