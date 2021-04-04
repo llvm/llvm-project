@@ -8,8 +8,6 @@
 
 // test set_new_handler
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 #include <new>
 #include <cassert>
 
