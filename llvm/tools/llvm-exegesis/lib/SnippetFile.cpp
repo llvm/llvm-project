@@ -133,6 +133,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   MCObjectFileInfo ObjectFileInfo;
   const TargetMachine &TM = State.getTargetMachine();
   MCContext Context(TM.getMCAsmInfo(), TM.getMCRegisterInfo(), &ObjectFileInfo);
+  Context.initInlineSourceManager();
   ObjectFileInfo.InitMCObjectFileInfo(TM.getTargetTriple(), /*PIC*/ false,
                                       Context);
   BenchmarkCodeStreamer Streamer(&Context, TM.getMCRegisterInfo(), &Result);
