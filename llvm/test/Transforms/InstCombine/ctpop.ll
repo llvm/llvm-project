@@ -46,7 +46,7 @@ define i1 @test3(i32 %arg) {
 ; Negative test for when we know nothing
 define i1 @test4(i8 %arg) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range ![[$RANGE:[0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call i8 @llvm.ctpop.i8(i8 [[ARG:%.*]]), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[CNT]], 2
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
@@ -94,4 +94,26 @@ define i1 @test6(i1 %arg) {
   ret i1 %cnt
 }
 
-; CHECK: ![[$RANGE]] = !{i8 0, i8 9}
+define i8 @mask_one_bit(i8 %x) {
+; CHECK-LABEL: @mask_one_bit(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 16
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ctpop.i8(i8 [[A]]), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = and i8 %x, 16
+  %r = call i8 @llvm.ctpop.i8(i8 %a)
+  ret i8 %r
+}
+
+define <2 x i32> @mask_one_bit_splat(<2 x i32> %x, <2 x i32>* %p) {
+; CHECK-LABEL: @mask_one_bit_splat(
+; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[X:%.*]], <i32 2048, i32 2048>
+; CHECK-NEXT:    store <2 x i32> [[A]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = and <2 x i32> %x, <i32 2048, i32 2048>
+  store <2 x i32> %a, <2 x i32>* %p
+  %r = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+  ret <2 x i32> %r
+}
