@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+include(GNUInstallDirs)
+
 set(FLANG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR AND NOT MSVC_IDE)
@@ -226,7 +228,10 @@ include_directories(BEFORE
   ${FLANG_SOURCE_DIR}/include)
 
 # Add Flang-centric modules to cmake path.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+list(INSERT CMAKE_MODULE_PATH 0
+  "${FLANG_SOURCE_DIR}/cmake/modules"
+  "${FLANG_SOURCE_DIR}/../cmake/Modules"
+  )
 include(AddFlang)
 
 if (NOT DEFAULT_SYSROOT)
@@ -444,7 +449,7 @@ endif()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/flang
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers
     FILES_MATCHING
     PATTERN "*.def"
@@ -456,7 +461,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
     PATTERN "CMakeFiles" EXCLUDE)
     
   install(DIRECTORY ${FLANG_INCLUDE_DIR}/flang
-    DESTINATION include
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
     COMPONENT flang-headers
     FILES_MATCHING
     PATTERN "*.inc"

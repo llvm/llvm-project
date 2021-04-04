@@ -1,3 +1,5 @@
+include(ExtendPath)
+
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
@@ -41,7 +43,7 @@ endforeach(p)
 set(FLANG_CONFIG_CMAKE_DIR "\${FLANG_INSTALL_PREFIX}/${FLANG_INSTALL_PACKAGE_DIR}")
 set(FLANG_CONFIG_LLVM_CMAKE_DIR "\${FLANG_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(Flang FLANG_CONFIG_INCLUDE_EXPORTS)
-set(FLANG_CONFIG_INCLUDE_DIRS "\${FLANG_INSTALL_PREFIX}/include")
+extend_path(FLANG_CONFIG_INCLUDE_DIRS "\${FLANG_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/FlangConfig.cmake.in
