@@ -17,14 +17,19 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def riscv_clzw : SDNode<"RISCVISD::CLZW", SDTIntUnaryOp>;
-def riscv_ctzw : SDNode<"RISCVISD::CTZW", SDTIntUnaryOp>;
-def riscv_rolw : SDNode<"RISCVISD::ROLW", SDTIntShiftOp>;
-def riscv_rorw : SDNode<"RISCVISD::RORW", SDTIntShiftOp>;
-def riscv_fslw : SDNode<"RISCVISD::FSLW", SDTIntShiftDOp>;
-def riscv_fsrw : SDNode<"RISCVISD::FSRW", SDTIntShiftDOp>;
-def riscv_fsl  : SDNode<"RISCVISD::FSL",  SDTIntShiftDOp>;
-def riscv_fsr  : SDNode<"RISCVISD::FSR",  SDTIntShiftDOp>;
+def riscv_clzw   : SDNode<"RISCVISD::CLZW",   SDTIntUnaryOp>;
+def riscv_ctzw   : SDNode<"RISCVISD::CTZW",   SDTIntUnaryOp>;
+def riscv_rolw   : SDNode<"RISCVISD::ROLW",   SDTIntShiftOp>;
+def riscv_rorw   : SDNode<"RISCVISD::RORW",   SDTIntShiftOp>;
+def riscv_fslw   : SDNode<"RISCVISD::FSLW",   SDTIntShiftDOp>;
+def riscv_fsrw   : SDNode<"RISCVISD::FSRW",   SDTIntShiftDOp>;
+def riscv_fsl    : SDNode<"RISCVISD::FSL",    SDTIntShiftDOp>;
+def riscv_fsr    : SDNode<"RISCVISD::FSR",    SDTIntShiftDOp>;
+def riscv_grevi  : SDNode<"RISCVISD::GREVI",  SDTIntBinOp>;
+def riscv_greviw : SDNode<"RISCVISD::GREVIW", SDTIntBinOp>;
+def riscv_gorci  : SDNode<"RISCVISD::GORCI",  SDTIntBinOp>;
+def riscv_gorciw : SDNode<"RISCVISD::GORCIW", SDTIntBinOp>;
+def riscv_shfli  : SDNode<"RISCVISD::SHFLI",  SDTIntBinOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -690,21 +695,16 @@ def : Pat<(rotr GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, uimmlog2xlen:$shamt)>;
 def : Pat<(rotl GPR:$rs1, uimmlog2xlen:$shamt),
           (RORI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-}
 
-def riscv_grevi    : SDNode<"RISCVISD::GREVI", SDTIntBinOp, []>;
-def riscv_greviw   : SDNode<"RISCVISD::GREVIW", SDTIntBinOp, []>;
-def riscv_gorci    : SDNode<"RISCVISD::GORCI", SDTIntBinOp, []>;
-def riscv_gorciw   : SDNode<"RISCVISD::GORCIW", SDTIntBinOp, []>;
-def riscv_shfli    : SDNode<"RISCVISD::SHFLI", SDTIntBinOp, []>;
+// We treat orc.b as a separate instruction, so match it directly. We also
+// lower the Zbb orc.b intrinsic to this.
+def : Pat<(riscv_gorci GPR:$rs1, 7), (ORCB GPR:$rs1)>;
+}
 
 let Predicates = [HasStdExtZbp] in {
 def : Pat<(riscv_shfli GPR:$rs1, timm:$shamt), (SHFLI GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_grevi GPR:$rs1, timm:$shamt), (GREVI GPR:$rs1, timm:$shamt)>;
 def : Pat<(riscv_gorci GPR:$rs1, timm:$shamt), (GORCI GPR:$rs1, timm:$shamt)>;
-
-// We treat orc.b as a separate instruction, so match it directly.
-def : Pat<(riscv_gorci GPR:$rs1, 7), (ORCB GPR:$rs1)>;
 } // Predicates = [HasStdExtZbp]
 
 let Predicates = [HasStdExtZbp, IsRV32] in {
@@ -893,10 +893,6 @@ def : Pat<(i64 (or (and (assertsexti32 GPR:$rs2), 0xFFFFFFFFFFFF0000),
                    (srl (and GPR:$rs1, 0xFFFFFFFF), (i64 16)))),
           (PACKUW GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasStdExtZbp, IsRV64]
-
-let Predicates = [HasStdExtZbb] in {
-def : PatGpr<int_riscv_orc_b, ORCB>;
-} // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbc] in {
 def : PatGprGpr<int_riscv_clmul, CLMUL>;
