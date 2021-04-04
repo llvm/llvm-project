@@ -468,7 +468,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_logical(i32 %k, i32 %c
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -506,7 +506,7 @@ define i1 @foo1_or_signbit_lshr_without_shifting_signbit_logical(i32 %k, i32 %c1
 ; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp slt i32 [[T3]], 0
-; CHECK-NEXT:    [[OR:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 [[T4]], i1 false
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -535,13 +535,15 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32
   ret i1 %or
 }
 
+; %t2 can be poison where as %t0 isn't; merging these two is unsafe.
 define i1 @foo1_and_signbit_lshr_without_shifting_signbit_both_sides_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_both_sides_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[K:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = icmp sgt i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[K]], [[C2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], [[T2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp sgt i32 [[T2]], -1
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T1]], i1 true, i1 [[T3]]
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 %k, %c1
   %t1 = icmp sgt i32 %t0, -1
@@ -567,13 +569,15 @@ define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32 
   ret i1 %or
 }
 
+; %t2 can be poison where as %t0 isn't; merging these two is unsafe.
 define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_logical(i32 %k, i32 %c1, i32 %c2) {
 ; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit_both_sides_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[K:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = icmp slt i32 [[T0]], 0
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[K]], [[C2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], [[T2]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp slt i32 [[T2]], 0
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T1]], i1 [[T3]], i1 false
+; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 %k, %c1
   %t1 = icmp slt i32 %t0, 0
@@ -886,7 +890,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl1_logical
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -929,7 +933,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_and_logical(
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -972,7 +976,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp1_logical
 ; CHECK-NEXT:    store i1 [[T2]], i1* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -1015,7 +1019,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl2_logical
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    store i32 [[T3]], i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -1058,7 +1062,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp2_logical
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
 ; CHECK-NEXT:    store i1 [[T4]], i1* [[P:%.*]], align 1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 1, %c1
@@ -1100,7 +1104,7 @@ define i1 @foo1_and_signbit_lshr_without_shifting_signbit_not_pwr2_logical(i32 %
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
 ; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[T2]], i1 true, i1 [[T4]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %t0 = shl i32 3, %c1
