@@ -226,9 +226,9 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // Peek through an optional zext of the shift amount.
     match(MaskShAmt, m_ZExtOrSelf(m_Value(MaskShAmt)));
 
-    // We have two shift amounts from two different shifts. The types of those
-    // shift amounts may not match. If that's the case let's bailout now.
-    if (MaskShAmt->getType() != ShiftShAmt->getType())
+    // Verify that it would be safe to try to add those two shift amounts.
+    if (!canTryToConstantAddTwoShiftAmounts(OuterShift, ShiftShAmt, Masked,
+                                            MaskShAmt))
       return nullptr;
 
     // Can we simplify (MaskShAmt+ShiftShAmt) ?
@@ -258,9 +258,9 @@ dropRedundantMaskingOfLeftShiftInput(BinaryOperator *OuterShift,
     // Peek through an optional zext of the shift amount.
     match(MaskShAmt, m_ZExtOrSelf(m_Value(MaskShAmt)));
 
-    // We have two shift amounts from two different shifts. The types of those
-    // shift amounts may not match. If that's the case let's bailout now.
-    if (MaskShAmt->getType() != ShiftShAmt->getType())
+    // Verify that it would be safe to try to add those two shift amounts.
+    if (!canTryToConstantAddTwoShiftAmounts(OuterShift, ShiftShAmt, Masked,
+                                            MaskShAmt))
       return nullptr;
 
     // Can we simplify (ShiftShAmt-MaskShAmt) ?
