@@ -6,21 +6,8 @@
 define i1 @ule(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ule(
 ; CHECK-NEXT:  start:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[A]], [[B]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], [[B]]
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP3]] to i64
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP2]], i64 -1, i64 [[ZEXT]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP1]], i64 0, i64 [[SEL1]]
-; CHECK-NEXT:    switch i64 [[SEL2]], label [[EXIT:%.*]] [
-; CHECK-NEXT:    i64 -1, label [[BB:%.*]]
-; CHECK-NEXT:    i64 0, label [[BB]]
-; CHECK-NEXT:    ]
-; CHECK:       bb:
-; CHECK-NEXT:    br label [[EXIT]]
-; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, [[BB]] ], [ false, [[START:%.*]] ]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ule i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[DOTNOT]]
 ;
 start:
   %cmp1 = icmp eq i32 %a, %b

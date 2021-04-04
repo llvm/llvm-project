@@ -5287,11 +5287,9 @@ InitializeUniqueCases(SwitchInst *SI, PHINode *&PHI, BasicBlock *&CommonDest,
 static Value *ConvertTwoCaseSwitch(const SwitchCaseResultVectorTy &ResultVector,
                                    Constant *DefaultResult, Value *Condition,
                                    IRBuilder<> &Builder) {
-  assert(ResultVector.size() == 2 &&
-         "We should have exactly two unique results at this point");
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
-  if (ResultVector[0].second.size() == 1 &&
+  if (ResultVector.size() == 2 && ResultVector[0].second.size() == 1 &&
       ResultVector[1].second.size() == 1) {
     ConstantInt *const FirstCase = ResultVector[0].second[0];
     ConstantInt *const SecondCase = ResultVector[1].second[0];
@@ -5308,6 +5306,17 @@ static Value *ConvertTwoCaseSwitch(const SwitchCaseResultVectorTy &ResultVector,
         Builder.CreateICmpEQ(Condition, FirstCase, "switch.selectcmp");
     return Builder.CreateSelect(ValueCompare, ResultVector[0].first,
                                 SelectValue, "switch.select");
+  }
+
+  // Handle the degenerate case where two cases have the same value.
+  if (ResultVector.size() == 1 && ResultVector[0].second.size() == 2 &&
+      DefaultResult) {
+    Value *Cmp1 = Builder.CreateICmpEQ(
+        Condition, ResultVector[0].second[0], "switch.selectcmp.case1");
+    Value *Cmp2 = Builder.CreateICmpEQ(
+        Condition, ResultVector[0].second[1], "switch.selectcmp.case2");
+    Value *Cmp = Builder.CreateOr(Cmp1, Cmp2, "switch.selectcmp");
+    return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
   }
 
   return nullptr;
@@ -5334,13 +5343,14 @@ static void RemoveSwitchAfterSelectConversion(SwitchInst *SI, PHINode *PHI,
     PHI->removeIncomingValue(SelectBB);
   PHI->addIncoming(SelectValue, SelectBB);
 
+  SmallPtrSet<BasicBlock *, 4> RemovedSuccessors;
   for (unsigned i = 0, e = SI->getNumSuccessors(); i < e; ++i) {
     BasicBlock *Succ = SI->getSuccessor(i);
 
     if (Succ == DestBB)
       continue;
     Succ->removePredecessor(SelectBB);
-    if (DTU)
+    if (DTU && RemovedSuccessors.insert(Succ).second)
       Updates.push_back({DominatorTree::Delete, SelectBB, Succ});
   }
   SI->eraseFromParent();
@@ -5361,10 +5371,8 @@ static bool switchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   SwitchCaseResultVectorTy UniqueResults;
   // Collect all the cases that will deliver the same value from the switch.
   if (!InitializeUniqueCases(SI, PHI, CommonDest, UniqueResults, DefaultResult,
-                             DL, TTI, 2, 1))
-    return false;
-  // Selects choose between maximum two values.
-  if (UniqueResults.size() != 2)
+                             DL, TTI, /*MaxUniqueResults*/2,
+                             /*MaxCasesPerResult*/2))
     return false;
   assert(PHI != nullptr && "PHI for value select not found");
 

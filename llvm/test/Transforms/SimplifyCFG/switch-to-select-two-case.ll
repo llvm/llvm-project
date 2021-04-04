@@ -44,15 +44,11 @@ return:
 define i32 @same_value(i32 %a) {
 ; CHECK-LABEL: @same_value(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[A:%.*]], label [[SW_EPILOG:%.*]] [
-; CHECK-NEXT:    i32 10, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 20, label [[RETURN]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.epilog:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       return:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 4, [[SW_EPILOG]] ], [ 10, [[ENTRY:%.*]] ], [ 10, [[ENTRY]] ]
-; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE1:%.*]] = icmp eq i32 [[A:%.*]], 10
+; CHECK-NEXT:    [[SWITCH_SELECTCMP_CASE2:%.*]] = icmp eq i32 [[A]], 20
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = or i1 [[SWITCH_SELECTCMP_CASE1]], [[SWITCH_SELECTCMP_CASE2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[SWITCH_SELECTCMP]], i32 10, i32 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   switch i32 %a, label %sw.epilog [
