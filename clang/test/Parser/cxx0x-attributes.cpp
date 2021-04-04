@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions %s
+// RUN: %clang_cc1 -fcxx-exceptions -fdeclspec -fexceptions -fsyntax-only -verify -std=c++11 -Wc++14-compat -Wc++14-extensions -Wc++17-extensions %s
 
 // Need std::initializer_list
 namespace std {
@@ -367,6 +367,22 @@ int fallthru(int n) {
   }
   return n;
 }
+
+template<typename T> struct TemplateStruct {};
+class FriendClassesWithAttributes {
+  // We allow GNU-style attributes here
+  template <class _Tp, class _Alloc> friend class __attribute__((__type_visibility__("default"))) vector;
+  template <class _Tp, class _Alloc> friend class __declspec(code_seg("whatever")) vector2;
+  // But not C++11 ones
+  template <class _Tp, class _Alloc> friend class[[]] vector3;                                         // expected-error {{an attribute list cannot appear here}}
+  template <class _Tp, class _Alloc> friend class [[clang::__type_visibility__(("default"))]] vector4; // expected-error {{an attribute list cannot appear here}}
+
+  // Also allowed
+  friend struct __attribute__((__type_visibility__("default"))) TemplateStruct<FriendClassesWithAttributes>;
+  friend struct __declspec(code_seg("whatever")) TemplateStruct<FriendClassesWithAttributes>;
+  friend struct[[]] TemplateStruct<FriendClassesWithAttributes>;                                       // expected-error {{an attribute list cannot appear here}}
+  friend struct [[clang::__type_visibility__("default")]] TemplateStruct<FriendClassesWithAttributes>; // expected-error {{an attribute list cannot appear here}}
+};
 
 #define attr_name bitand
 #define attr_name_2(x) x
