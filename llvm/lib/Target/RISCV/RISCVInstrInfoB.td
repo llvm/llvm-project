@@ -758,11 +758,11 @@ def : Pat<(riscv_fsl GPR:$rs1, GPR:$rs3, GPR:$rs2),
 def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, GPR:$rs2),
           (FSR GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 
-def : Pat<(riscv_fsr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(fshr GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, uimmlog2xlen:$shamt)>;
 // We can use FSRI for fshl by immediate if we subtract the immediate from
 // XLen and swap the operands.
-def : Pat<(riscv_fsl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
+def : Pat<(fshl GPR:$rs3, GPR:$rs1, uimmlog2xlen:$shamt),
           (FSRI GPR:$rs1, GPR:$rs3, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
 } // Predicates = [HasStdExtZbt]
 
