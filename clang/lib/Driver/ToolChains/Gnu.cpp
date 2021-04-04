@@ -2983,9 +2983,13 @@ Generic_GCC::addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
           TripleStr, Multilib.includeSuffix(), DriverArgs, CC1Args))
     return true;
   // Detect Debian g++-multiarch-incdir.diff.
+  StringRef DebianMultiarch =
+      GCCInstallation.getTriple().getArch() == llvm::Triple::x86
+          ? "i386-linux-gnu"
+          : TripleStr;
   if (addLibStdCXXIncludePaths(LibDir.str() + "/../include/c++/" + Version.Text,
-                               TripleStr, Multilib.includeSuffix(), DriverArgs,
-                               CC1Args, /*Debian=*/true))
+                               DebianMultiarch, Multilib.includeSuffix(),
+                               DriverArgs, CC1Args, /*Debian=*/true))
     return true;
 
   // Otherwise, fall back on a bunch of options which don't use multiarch
