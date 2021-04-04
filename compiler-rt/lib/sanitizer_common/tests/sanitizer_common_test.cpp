@@ -210,12 +210,10 @@ static void *WorkerThread(void *arg) {
 }
 
 TEST(SanitizerCommon, ThreadStackTlsMain) {
-  InitTlsSize();
   TestThreadInfo(true);
 }
 
 TEST(SanitizerCommon, ThreadStackTlsWorker) {
-  InitTlsSize();
   pthread_t t;
   PTHREAD_CREATE(&t, 0, WorkerThread, 0);
   PTHREAD_JOIN(t, 0);
