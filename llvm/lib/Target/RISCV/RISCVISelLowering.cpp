@@ -2810,6 +2810,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getRegister(RISCV::X4, PtrVT);
   }
+  case Intrinsic::riscv_orc_b:
+    // Lower to the GORCI encoding for orc.b.
+    return DAG.getNode(RISCVISD::GORCI, DL, XLenVT, Op.getOperand(1),
+                       DAG.getTargetConstant(7, DL, XLenVT));
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -4204,10 +4208,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
     case Intrinsic::riscv_orc_b: {
-      SDValue Newop1 =
+      // Lower to the GORCI encoding for orc.b with the operand extended.
+      SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Res = 
-          DAG.getNode(N->getOpcode(), DL, MVT::i64, N->getOperand(0), Newop1);
+      SDValue Res = DAG.getNode(RISCVISD::GORCI, DL, MVT::i64, NewOp,
+                                DAG.getTargetConstant(7, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
