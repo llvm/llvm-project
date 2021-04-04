@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STEAMBUF
-#define _LIBCPP_STEAMBUF
+#ifndef _LIBCPP_STREAMBUF
+#define _LIBCPP_STREAMBUF
 
 /*
     streambuf synopsis
@@ -495,4 +495,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif  // _LIBCPP_STEAMBUF
+#endif  // _LIBCPP_STREAMBUF
