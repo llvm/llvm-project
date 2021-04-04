@@ -12,9 +12,8 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu3.cpp \
 // RUN:   -o %t/B_X1.pcm -verify
 
-// Not expected to work yet.
-//  %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu4.cpp \
-//   -fmodule-file=%t/B.pcm  -o %t/B_X2.pcm
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu4.cpp \
+// RUN:-fmodule-file=%t/B.pcm  -o %t/B_X2.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/std10-1-ex2-tu5.cpp \
 // RUN:  -fmodule-file=%t/B.pcm  -o %t/b_tu5.o
@@ -22,9 +21,8 @@
 // RUN: %clang_cc1 -std=c++20 -S %t/std10-1-ex2-tu6.cpp \
 // RUN:  -fmodule-file=%t/B.pcm  -o %t/b_tu6.s -verify
 
-// Not expected to work yet.
-//  %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu7.cpp \
-//   -fmodule-file=%t/B_X2.pcm  -o %t/B_X3.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std10-1-ex2-tu7.cpp \
+// RUN: -fmodule-file=%t/B_X2.pcm  -o %t/B_X3.pcm -verify
 
 //--- std10-1-ex2-tu1.cpp
 module B:Y;
