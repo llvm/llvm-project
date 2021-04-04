@@ -126,4 +126,4 @@ void fun5() {
 // CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HCKERN]]{{.*}}@[[CKERN]]
 // CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HNSKERN]]{{.*}}@[[NSKERN]]
 // CHECK: call{{.*}}@__hipRegisterFunction{{.*}}@[[HTKERN]]{{.*}}@[[TKERN]]
-// CHECK-NOT: call{{.*}}@__hipRegisterFunction{{.*}}@[[HDKERN]]{{.*}}@[[DKERN]]
+// CHECK-NOT: call{{.*}}@__hipRegisterFunction{{.*}}@[[HDKERN]]{{.*}}@{{[0-9]*}}
