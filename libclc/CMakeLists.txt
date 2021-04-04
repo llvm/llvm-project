@@ -183,8 +183,8 @@ endif()
 
 # pkg-config file
 configure_file( libclc.pc.in libclc.pc @ONLY )
-install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION ${CMAKE_INSTALL_DATADIR}/pkgconfig )
-install( DIRECTORY generic/include/clc DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
+install( FILES ${CMAKE_CURRENT_BINARY_DIR}/libclc.pc DESTINATION "${CMAKE_INSTALL_DATADIR}/pkgconfig" )
+install( DIRECTORY generic/include/clc DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}" )
 
 if( ENABLE_RUNTIME_SUBNORMAL )
 	add_library( subnormal_use_default STATIC
@@ -192,7 +192,7 @@ if( ENABLE_RUNTIME_SUBNORMAL )
 	add_library( subnormal_disable STATIC
 		generic/lib/subnormal_disable.ll )
 	install( TARGETS subnormal_use_default subnormal_disable ARCHIVE
-		DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+		DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
 endif()
 
 find_package( Python3 REQUIRED COMPONENTS Interpreter )
@@ -343,7 +343,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 			add_custom_target( "prepare-${spv_suffix}" ALL
 			                   DEPENDS "${spv_suffix}" )
 			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
-				 DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+				 DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
 		else()
 
 			# Add prepare target
@@ -366,7 +366,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 					PROPERTIES ENVIRONMENT "LLVM_CONFIG=${LLVM_CONFIG}" )
 			endif()
 
-			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
 			foreach( a ${${d}_aliases} )
 				set( alias_suffix "${a}-${t}.bc" )
 				add_custom_target( ${alias_suffix} ALL
@@ -374,7 +374,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 						   create_symlink ${obj_suffix}
 						   ${alias_suffix}
 				                   DEPENDS "prepare-${obj_suffix}" )
-				install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION ${CMAKE_INSTALL_DATADIR}/clc )
+				install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
 			endforeach( a )
 		endif()
 	endforeach( d )

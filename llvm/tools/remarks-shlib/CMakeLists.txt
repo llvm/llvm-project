@@ -19,7 +19,7 @@ if(LLVM_ENABLE_PIC)
   endif()
   
   install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/Remarks.h
-    DESTINATION include/llvm-c
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-c"
     COMPONENT Remarks)
 
   if (APPLE)
