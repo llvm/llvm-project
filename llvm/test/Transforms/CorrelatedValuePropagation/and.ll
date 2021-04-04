@@ -129,8 +129,7 @@ define i32 @min_and(i32 %a) {
 ; CHECK-LABEL: @min_and(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 127
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 127
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SEL]], 127
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ult i32 %a, 127
   %sel = select i1 %cmp, i32 %a, i32 127
@@ -142,8 +141,7 @@ define i32 @min_and_comm(i32 %a) {
 ; CHECK-LABEL: @min_and_comm(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], 127
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 127, i32 [[A]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SEL]], 127
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp uge i32 %a, 127
   %sel = select i1 %cmp, i32 127, i32 %a
