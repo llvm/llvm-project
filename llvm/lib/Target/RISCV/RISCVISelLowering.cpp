@@ -732,6 +732,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       }
+
+      // Custom-legalize bitcasts from fixed-length vectors to scalar types.
+      setOperationAction(ISD::BITCAST, MVT::i8, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f32, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     }
   }
 
@@ -1540,29 +1549,43 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRL_PARTS:
     return lowerShiftRightParts(Op, DAG, false);
   case ISD::BITCAST: {
+    SDLoc DL(Op);
+    EVT VT = Op.getValueType();
     SDValue Op0 = Op.getOperand(0);
-    // We can handle fixed length vector bitcasts with a simple replacement
-    // in isel.
-    if (Op.getValueType().isFixedLengthVector()) {
-      if (Op0.getValueType().isFixedLengthVector())
+    EVT Op0VT = Op0.getValueType();
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (VT.isFixedLengthVector()) {
+      // We can handle fixed length vector bitcasts with a simple replacement
+      // in isel.
+      if (Op0VT.isFixedLengthVector())
         return Op;
+      // When bitcasting from scalar to fixed-length vector, insert the scalar
+      // into a one-element vector of the result type, and perform a vector
+      // bitcast.
+      if (!Op0VT.isVector()) {
+        auto BVT = EVT::getVectorVT(*DAG.getContext(), Op0VT, 1);
+        return DAG.getBitcast(VT, DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, BVT,
+                                              DAG.getUNDEF(BVT), Op0,
+                                              DAG.getConstant(0, DL, XLenVT)));
+      }
       return SDValue();
     }
-    assert(((Subtarget.is64Bit() && Subtarget.hasStdExtF()) ||
-            Subtarget.hasStdExtZfh()) &&
-           "Unexpected custom legalisation");
-    SDLoc DL(Op);
-    if (Op.getValueType() == MVT::f16 && Subtarget.hasStdExtZfh()) {
-      if (Op0.getValueType() != MVT::i16)
-        return SDValue();
-      SDValue NewOp0 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Op0);
+    // Custom-legalize bitcasts from fixed-length vector types to scalar types
+    // thus: bitcast the vector to a one-element vector type whose element type
+    // is the same as the result type, and extract the first element.
+    if (!VT.isVector() && Op0VT.isFixedLengthVector()) {
+      LLVMContext &Context = *DAG.getContext();
+      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
+                         DAG.getConstant(0, DL, XLenVT));
+    }
+    if (VT == MVT::f16 && Op0VT == MVT::i16 && Subtarget.hasStdExtZfh()) {
+      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
       return FPConv;
-    } else if (Op.getValueType() == MVT::f32 && Subtarget.is64Bit() &&
-               Subtarget.hasStdExtF()) {
-      if (Op0.getValueType() != MVT::i32)
-        return SDValue();
+    }
+    if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
+        Subtarget.hasStdExtF()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
@@ -4092,24 +4115,27 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::BITCAST: {
-    assert(((N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             Subtarget.hasStdExtF()) ||
-            (N->getValueType(0) == MVT::i16 && Subtarget.hasStdExtZfh())) &&
-           "Unexpected custom legalisation");
+    EVT VT = N->getValueType(0);
     SDValue Op0 = N->getOperand(0);
-    if (N->getValueType(0) == MVT::i16 && Subtarget.hasStdExtZfh()) {
-      if (Op0.getValueType() != MVT::f16)
-        return;
-      SDValue FPConv =
-          DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, Subtarget.getXLenVT(), Op0);
+    EVT Op0VT = Op0.getValueType();
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (VT == MVT::i16 && Op0VT == MVT::f16 && Subtarget.hasStdExtZfh()) {
+      SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
-    } else if (N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
                Subtarget.hasStdExtF()) {
-      if (Op0.getValueType() != MVT::f32)
-        return;
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
+    } else if (!VT.isVector() && Op0VT.isFixedLengthVector()) {
+      // Custom-legalize bitcasts from fixed-length vector types to illegal
+      // scalar types in order to improve codegen. Bitcast the vector to a
+      // one-element vector type whose element type is the same as the result
+      // type, and extract the first element.
+      LLVMContext &Context = *DAG.getContext();
+      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
+                                    DAG.getConstant(0, DL, XLenVT)));
     }
     break;
   }
