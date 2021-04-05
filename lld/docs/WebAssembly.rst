@@ -152,7 +152,8 @@ the ``WASM_SYMBOL_EXPORTED`` flag are exported by default.  In LLVM the
 in turn can be set using ``__attribute__((export_name))`` clang attribute.
 
 In addition, symbols can be exported via the linker command line using
-``--export``.
+``--export`` (which will error if the symbol is not found) or
+``--export-if-defined`` (which will not).
 
 Finally, just like with native ELF linker the ``--export-dynamic`` flag can be
 used to export symbols in the executable which are marked as

@@ -73,6 +73,7 @@ struct Configuration {
 
   llvm::StringSet<> allowUndefinedSymbols;
   llvm::StringSet<> exportedSymbols;
+  std::vector<llvm::StringRef> requiredExports;
   std::vector<llvm::StringRef> searchPaths;
   llvm::CachePruningPolicy thinLTOCachePolicy;
   llvm::Optional<std::vector<std::string>> features;
