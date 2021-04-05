@@ -31,5 +31,6 @@ M68kELFMCAsmInfo::M68kELFMCAsmInfo(const Triple &T) {
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
+  UseMotorolaIntegers = true;
   CommentString = ";";
 }

@@ -53,6 +53,7 @@ protected: // Can only create subclasses.
   bool LexMasmHexFloats = false;
   bool LexMasmIntegers = false;
   bool LexMasmStrings = false;
+  bool LexMotorolaIntegers = false;
   bool UseMasmDefaultRadix = false;
   unsigned DefaultRadix = 10;
   AsmCommentConsumer *CommentConsumer = nullptr;
@@ -171,6 +172,10 @@ public:
   /// Set whether to lex masm-style string literals, such as 'Can''t find file'
   /// and "This ""value"" not found".
   void setLexMasmStrings(bool V) { LexMasmStrings = V; }
+
+  /// Set whether to lex Motorola-style integer literals, such as $deadbeef or
+  /// %01010110.
+  void setLexMotorolaIntegers(bool V) { LexMotorolaIntegers = V; }
 };
 
 } // end namespace llvm
