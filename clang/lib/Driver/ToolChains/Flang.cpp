@@ -44,7 +44,7 @@ void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
-                   options::OPT_std_EQ});
+                   options::OPT_std_EQ, options::OPT_W_Joined});
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
