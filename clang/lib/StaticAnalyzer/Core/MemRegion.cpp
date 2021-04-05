@@ -28,6 +28,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -729,13 +730,6 @@ SourceRange MemRegion::sourceRange() const {
 // MemRegionManager methods.
 //===----------------------------------------------------------------------===//
 
-static DefinedOrUnknownSVal getTypeSize(QualType Ty, ASTContext &Ctx,
-                                          SValBuilder &SVB) {
-  CharUnits Size = Ctx.getTypeSizeInChars(Ty);
-  QualType SizeTy = SVB.getArrayIndexType();
-  return SVB.makeIntVal(Size.getQuantity(), SizeTy);
-}
-
 DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
                                                      SValBuilder &SVB) const {
   const auto *SR = cast<SubRegion>(MR);
@@ -766,7 +760,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
     if (Ty->isIncompleteType())
       return UnknownVal();
 
-    return getTypeSize(Ty, Ctx, SVB);
+    return getElementSize(Ty, SVB);
   }
   case MemRegion::FieldRegionKind: {
     // Force callers to deal with bitfields explicitly.
@@ -774,7 +768,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       return UnknownVal();
 
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
-    DefinedOrUnknownSVal Size = getTypeSize(Ty, Ctx, SVB);
+    DefinedOrUnknownSVal Size = getElementSize(Ty, SVB);
 
     // A zero-length array at the end of a struct often stands for dynamically
     // allocated extra memory.
