@@ -54,8 +54,8 @@ LLVMExecutionEngineRef llvm_ee_create(value OptRecordOpt, LLVMModuleRef M) {
     Options.MCJMM = NULL;
   }
 
-  if (LLVMCreateMCJITCompilerForModule(&MCJIT, M, &Options,
-                                      sizeof(Options), &Error))
+  if (LLVMCreateMCJITCompilerForModule(&MCJIT, M, &Options, sizeof(Options),
+                                       &Error))
     llvm_raise(*caml_named_value("Llvm_executionengine.Error"), Error);
   return MCJIT;
 }
@@ -99,7 +99,7 @@ extern value llvm_alloc_data_layout(LLVMTargetDataRef TargetData);
 value llvm_ee_get_data_layout(LLVMExecutionEngineRef EE) {
   value DataLayout;
   LLVMTargetDataRef OrigDataLayout;
-  char* TargetDataCStr;
+  char *TargetDataCStr;
 
   OrigDataLayout = LLVMGetExecutionEngineTargetData(EE);
   TargetDataCStr = LLVMCopyStringRepOfTargetData(OrigDataLayout);
@@ -111,17 +111,16 @@ value llvm_ee_get_data_layout(LLVMExecutionEngineRef EE) {
 
 /* Llvm.llvalue -> int64 -> llexecutionengine -> unit */
 value llvm_ee_add_global_mapping(LLVMValueRef Global, value Ptr,
-                                          LLVMExecutionEngineRef EE) {
-  LLVMAddGlobalMapping(EE, Global, (void*) (Int64_val(Ptr)));
+                                 LLVMExecutionEngineRef EE) {
+  LLVMAddGlobalMapping(EE, Global, (void *)(Int64_val(Ptr)));
   return Val_unit;
 }
 
-value llvm_ee_get_global_value_address(value Name,
-						LLVMExecutionEngineRef EE) {
-  return caml_copy_int64((int64_t) LLVMGetGlobalValueAddress(EE, String_val(Name)));
+value llvm_ee_get_global_value_address(value Name, LLVMExecutionEngineRef EE) {
+  return caml_copy_int64(
+      (int64_t)LLVMGetGlobalValueAddress(EE, String_val(Name)));
 }
 
-value llvm_ee_get_function_address(value Name,
-					    LLVMExecutionEngineRef EE) {
-  return caml_copy_int64((int64_t) LLVMGetFunctionAddress(EE, String_val(Name)));
+value llvm_ee_get_function_address(value Name, LLVMExecutionEngineRef EE) {
+  return caml_copy_int64((int64_t)LLVMGetFunctionAddress(EE, String_val(Name)));
 }
