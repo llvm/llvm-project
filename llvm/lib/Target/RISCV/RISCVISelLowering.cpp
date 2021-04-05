@@ -2657,14 +2657,16 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue ValInVec;
 
   if (IsLegalInsert) {
+    unsigned Opc =
+        VecVT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL : RISCVISD::VMV_S_X_VL;
     if (isNullConstant(Idx)) {
-      Vec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Vec, Val, VL);
+      Vec = DAG.getNode(Opc, DL, ContainerVT, Vec, Val, VL);
       if (!VecVT.isFixedLengthVector())
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
-    ValInVec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT,
-                           DAG.getUNDEF(ContainerVT), Val, VL);
+    ValInVec =
+        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Val, VL);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
     // value at element 0, by using two vslide1up instructions in sequence on
@@ -2909,7 +2911,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     if (Scalar.getValueType().bitsLE(XLenVT)) {
       Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Scalar);
-      return DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, Op.getValueType(),
+      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, Op.getValueType(),
                          Op.getOperand(1), Scalar, Op.getOperand(3));
     }
 
@@ -6965,7 +6967,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
-  NODE_NAME_CASE(VMV_S_XF_VL)
+  NODE_NAME_CASE(VMV_S_X_VL)
+  NODE_NAME_CASE(VFMV_S_F_VL)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)

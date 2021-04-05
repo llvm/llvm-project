@@ -54,8 +54,15 @@ def riscv_vfmv_v_f_vl : SDNode<"RISCVISD::VFMV_V_F_VL",
                                SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisFP<0>,
                                                     SDTCisEltOfVec<1, 0>,
                                                     SDTCisVT<2, XLenVT>]>>;
-def riscv_vmv_s_xf_vl : SDNode<"RISCVISD::VMV_S_XF_VL",
+def riscv_vmv_s_x_vl : SDNode<"RISCVISD::VMV_S_X_VL",
+                              SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                   SDTCisInt<0>,
+                                                   SDTCisVT<2, XLenVT>,
+                                                   SDTCisVT<3, XLenVT>]>>;
+def riscv_vfmv_s_f_vl : SDNode<"RISCVISD::VFMV_S_F_VL",
                                SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>,
+                                                    SDTCisFP<0>,
+                                                    SDTCisEltOfVec<2, 0>,
                                                     SDTCisVT<3, XLenVT>]>>;
 
 def riscv_vle_vl : SDNode<"RISCVISD::VLE_VL", SDT_RISCVVLE_VL,
@@ -1029,9 +1036,9 @@ let Predicates = [HasStdExtV] in {
 // 17.1. Integer Scalar Move Instructions
 // 17.4. Vector Register Gather Instruction
 foreach vti = AllIntegerVectors in {
-  def : Pat<(vti.Vector (riscv_vmv_s_xf_vl (vti.Vector vti.RegClass:$merge),
-                                           (XLenVT vti.ScalarRegClass:$rs1),
-                                           (XLenVT (VLOp GPR:$vl)))),
+  def : Pat<(vti.Vector (riscv_vmv_s_x_vl (vti.Vector vti.RegClass:$merge),
+                                          (XLenVT vti.ScalarRegClass:$rs1),
+                                          (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVMV_S_X_"#vti.LMul.MX)
                 vti.RegClass:$merge,
                 (vti.Scalar vti.ScalarRegClass:$rs1), GPR:$vl, vti.SEW)>;
@@ -1075,7 +1082,7 @@ let Predicates = [HasStdExtV, HasStdExtF] in {
 
 // 17.2. Floating-Point Scalar Move Instructions
 foreach vti = AllFloatVectors in {
-  def : Pat<(vti.Vector (riscv_vmv_s_xf_vl (vti.Vector vti.RegClass:$merge),
+  def : Pat<(vti.Vector (riscv_vfmv_s_f_vl (vti.Vector vti.RegClass:$merge),
                                            vti.ScalarRegClass:$rs1,
                                            (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVFMV_S_"#vti.ScalarSuffix#"_"#vti.LMul.MX)
