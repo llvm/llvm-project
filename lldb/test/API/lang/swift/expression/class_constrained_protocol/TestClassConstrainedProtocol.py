@@ -21,13 +21,13 @@ class TestClassConstrainedProtocol(TestBase):
     def test_extension_weak_self(self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here for weak self", needs_dynamic=True)
+        self.do_self_test("Break here for weak self", needs_dynamic=False)
 
     @swiftTest
     def test_extension_self (self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
-        self.do_self_test("Break here in class protocol", needs_dynamic=True)
+        self.do_self_test("Break here in class protocol", needs_dynamic=False)
 
     @swiftTest
     def test_method_weak_self(self):
