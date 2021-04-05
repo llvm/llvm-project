@@ -285,21 +285,10 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     return;
   }
 
-  // VLASizeChecker is responsible for defining the extent of the array being
-  // declared. We do this by multiplying the array length by the element size,
-  // then matching that with the array region's extent symbol.
-
+  // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    // Assume that the array's size matches the region size.
-    const LocationContext *LC = C.getLocationContext();
-    DefinedOrUnknownSVal DynSize =
-        getDynamicSize(State, State->getRegion(VD, LC), SVB);
-
-    DefinedOrUnknownSVal SizeIsKnown = SVB.evalEQ(State, DynSize, *ArraySizeNL);
-    State = State->assume(SizeIsKnown, true);
-
-    // Assume should not fail at this point.
-    assert(State);
+    State = setDynamicSize(State, State->getRegion(VD, C.getLocationContext()),
+                           ArraySize.castAs<DefinedOrUnknownSVal>(), SVB);
   }
 
   // Remember our assumptions!

@@ -19,32 +19,43 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 
+REGISTER_MAP_WITH_PROGRAMSTATE(DynamicSizeMap, const clang::ento::MemRegion *,
+                               clang::ento::DefinedOrUnknownSVal)
+
 namespace clang {
 namespace ento {
 
 DefinedOrUnknownSVal getDynamicSize(ProgramStateRef State, const MemRegion *MR,
                                     SValBuilder &SVB) {
+  MR = MR->StripCasts();
+
+  if (const DefinedOrUnknownSVal *Size = State->get<DynamicSizeMap>(MR))
+    return *Size;
+
   return MR->getMemRegionManager().getStaticSize(MR, SVB);
+}
+
+DefinedOrUnknownSVal getElementSize(QualType Ty, SValBuilder &SVB) {
+  return SVB.makeIntVal(SVB.getContext().getTypeSizeInChars(Ty).getQuantity(),
+                        SVB.getArrayIndexType());
 }
 
 DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
                                             const MemRegion *MR,
                                             SValBuilder &SVB,
                                             QualType ElementTy) {
-  MemRegionManager &MemMgr = MR->getMemRegionManager();
-  ASTContext &Ctx = MemMgr.getContext();
+  MR = MR->StripCasts();
 
   DefinedOrUnknownSVal Size = getDynamicSize(State, MR, SVB);
-  SVal ElementSizeV = SVB.makeIntVal(
-      Ctx.getTypeSizeInChars(ElementTy).getQuantity(), SVB.getArrayIndexType());
+  SVal ElementSize = getElementSize(ElementTy, SVB);
 
-  SVal DivisionV =
-      SVB.evalBinOp(State, BO_Div, Size, ElementSizeV, SVB.getArrayIndexType());
+  SVal ElementCount =
+      SVB.evalBinOp(State, BO_Div, Size, ElementSize, SVB.getArrayIndexType());
 
-  return DivisionV.castAs<DefinedOrUnknownSVal>();
+  return ElementCount.castAs<DefinedOrUnknownSVal>();
 }
 
-SVal getDynamicSizeWithOffset(ProgramStateRef State, const SVal &BufV) {
+SVal getDynamicSizeWithOffset(ProgramStateRef State, SVal BufV) {
   SValBuilder &SvalBuilder = State->getStateManager().getSValBuilder();
   const MemRegion *MRegion = BufV.getAsRegion();
   if (!MRegion)
@@ -65,6 +76,16 @@ SVal getDynamicSizeWithOffset(ProgramStateRef State, const SVal &BufV) {
   return SvalBuilder.evalBinOp(State, BinaryOperator::Opcode::BO_Sub,
                                ExtentInBytes, OffsetInBytes,
                                SvalBuilder.getArrayIndexType());
+}
+
+ProgramStateRef setDynamicSize(ProgramStateRef State, const MemRegion *MR,
+                               DefinedOrUnknownSVal Size, SValBuilder &SVB) {
+  MR = MR->StripCasts();
+
+  if (Size.isUnknown())
+    return State;
+
+  return State->set<DynamicSizeMap>(MR->StripCasts(), Size);
 }
 
 } // namespace ento

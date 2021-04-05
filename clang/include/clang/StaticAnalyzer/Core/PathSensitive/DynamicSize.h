@@ -22,15 +22,21 @@
 namespace clang {
 namespace ento {
 
-/// Get the stored dynamic size for the region \p MR.
+/// \returns The stored dynamic size for the region \p MR.
 DefinedOrUnknownSVal getDynamicSize(ProgramStateRef State, const MemRegion *MR,
                                     SValBuilder &SVB);
 
-/// Get the stored element count of the region \p MR.
+/// \returns The element size of the type \p Ty.
+DefinedOrUnknownSVal getElementSize(QualType Ty, SValBuilder &SVB);
+
+/// \returns The stored element count of the region \p MR.
 DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
                                             const MemRegion *MR,
-                                            SValBuilder &SVB,
-                                            QualType ElementTy);
+                                            SValBuilder &SVB, QualType Ty);
+
+/// Set the dynamic size \p Size of the region \p MR.
+ProgramStateRef setDynamicSize(ProgramStateRef State, const MemRegion *MR,
+                               DefinedOrUnknownSVal Size, SValBuilder &SVB);
 
 /// Get the dynamic size for a symbolic value that represents a buffer. If
 /// there is an offsetting to the underlying buffer we consider that too.
@@ -45,7 +51,7 @@ DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
 ///
 ///   char *bufptr;
 ///   (bufptr) // size is unknown
-SVal getDynamicSizeWithOffset(ProgramStateRef State, const SVal &BufV);
+SVal getDynamicSizeWithOffset(ProgramStateRef State, SVal BufV);
 
 } // namespace ento
 } // namespace clang
