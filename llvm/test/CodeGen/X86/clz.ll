@@ -1105,8 +1105,6 @@ define i32 @PR47603_zext(i32 %a0, [32 x i8]* %a1) {
 ; X64-LABEL: PR47603_zext:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bsrl %edi, %eax
-; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:    xorq $31, %rax
 ; X64-NEXT:    movsbl (%rsi,%rax), %eax
 ; X64-NEXT:    retq
 ;
