@@ -1017,17 +1017,25 @@ define i32 @select_neutral_sub_lhs(i32 %x, i32 %y) {
 
 define i32 @select_ctpop_zero(i32 %x) {
 ; CHECK-LABEL: @select_ctpop_zero(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP0]]
+; CHECK-NEXT:    [[T1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[T1]]
 ;
-entry:
-  %0 = icmp eq i32 %x, 0
-  %1 = call i32 @llvm.ctpop.i32(i32 %x)
-  %sel = select i1 %0, i32 0, i32 %1
+  %t0 = icmp eq i32 %x, 0
+  %t1 = call i32 @llvm.ctpop.i32(i32 %x)
+  %sel = select i1 %t0, i32 0, i32 %t1
   ret i32 %sel
 }
 declare i32 @llvm.ctpop.i32(i32)
+
+define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @vec_select_no_equivalence(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %x10 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  %cond = icmp eq <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> %x10, <2 x i32> zeroinitializer
+  ret <2 x i32> %s
+}
 
 ; TODO: these can be optimized more
 
