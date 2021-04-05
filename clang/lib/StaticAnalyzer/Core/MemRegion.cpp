@@ -28,7 +28,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -760,7 +760,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
     if (Ty->isIncompleteType())
       return UnknownVal();
 
-    return getElementSize(Ty, SVB);
+    return getElementExtent(Ty, SVB);
   }
   case MemRegion::FieldRegionKind: {
     // Force callers to deal with bitfields explicitly.
@@ -768,7 +768,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       return UnknownVal();
 
     QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
-    DefinedOrUnknownSVal Size = getElementSize(Ty, SVB);
+    DefinedOrUnknownSVal Size = getElementExtent(Ty, SVB);
 
     // A zero-length array at the end of a struct often stands for dynamically
     // allocated extra memory.
