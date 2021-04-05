@@ -350,6 +350,26 @@ static void parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 }
 
+/// Parses all diagnostics related arguments and populates the variables
+/// options accordingly.
+static void parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
+    clang::DiagnosticsEngine &diags) {
+  // -Werror option
+  // TODO: Currently throws a Diagnostic for anything other than -W<error>,
+  // this has to change when other -W<opt>'s are supported.
+  if (args.hasArg(clang::driver::options::OPT_W_Joined)) {
+    if (args.getLastArgValue(clang::driver::options::OPT_W_Joined)
+            .equals("error")) {
+      res.SetWarnAsErr(true);
+    } else {
+      const unsigned diagID =
+          diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+              "Only `-Werror` is supported currently.");
+      diags.Report(diagID);
+    }
+  }
+}
+
 /// Parses all Dialect related arguments and populates the variables
 /// options accordingly.
 static void parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
@@ -445,6 +465,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   parseSemaArgs(res, args, diags);
   // Parse dialect arguments
   parseDialectArgs(res, args, diags);
+  // Parse diagnostic arguments
+  parseDiagArgs(res, args, diags);
 
   return success;
 }
@@ -574,5 +596,6 @@ void CompilerInvocation::setSemanticsOpts(
 
   semanticsContext_->set_moduleDirectory(moduleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
-      .set_warnOnNonstandardUsage(enableConformanceChecks());
+      .set_warnOnNonstandardUsage(enableConformanceChecks())
+      .set_warningsAreErrors(warnAsErr());
 }
