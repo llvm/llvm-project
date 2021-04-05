@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 #include <iomanip>
 #include <sstream>
 

@@ -1,4 +1,4 @@
-//===- llvm/TextAPI/MachO/Platform.cpp - Platform ---------------*- C++ -*-===//
+//===- llvm/TextAPI/Platform.cpp - Platform ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TextAPI/Platform.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/TextAPI/MachO/Platform.h"
 
 namespace llvm {
 namespace MachO {

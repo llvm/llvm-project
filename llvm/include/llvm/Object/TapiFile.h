@@ -18,7 +18,7 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
+#include "llvm/TextAPI/InterfaceFile.h"
 
 namespace llvm {
 namespace object {
