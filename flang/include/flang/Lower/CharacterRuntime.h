@@ -60,7 +60,7 @@ void genTrim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
 
 /// Generate call to verify runtime.
 /// This calls the descriptor based runtime call implementation of the scan or
-/// verify intrinsicis.
+/// verify intrinsics.
 void genScanVerify(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value resultBox, mlir::Value stringBox,
                mlir::Value setBox, mlir::Value backBox, mlir::Value kind,
