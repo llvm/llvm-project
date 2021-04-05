@@ -1029,7 +1029,10 @@ declare i32 @llvm.ctpop.i32(i32)
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(
-; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[X10]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> [[S]]
 ;
   %x10 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
   %cond = icmp eq <2 x i32> %x, zeroinitializer
