@@ -4211,7 +4211,10 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       // Lower to the GORCI encoding for orc.b with the operand extended.
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
-      SDValue Res = DAG.getNode(RISCVISD::GORCI, DL, MVT::i64, NewOp,
+      // If Zbp is enabled, use GORCIW which will sign extend the result.
+      unsigned Opc =
+          Subtarget.hasStdExtZbp() ? RISCVISD::GORCIW : RISCVISD::GORCI;
+      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp,
                                 DAG.getTargetConstant(7, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
