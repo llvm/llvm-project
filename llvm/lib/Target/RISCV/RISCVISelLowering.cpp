@@ -440,6 +440,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+
+      // Expand all extending loads to types larger than this, and truncating
+      // stores from types larger than this.
+      for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
+        setTruncStoreAction(OtherVT, VT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+      }
     }
 
     for (MVT VT : IntVecVTs) {
@@ -498,6 +507,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::STEP_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+
+      for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
+        setTruncStoreAction(VT, OtherVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+      }
     }
 
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
@@ -545,17 +561,32 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     };
 
+    // Sets common extload/truncstore actions on RVV floating-point vector
+    // types.
+    const auto SetCommonVFPExtLoadTruncStoreActions =
+        [&](MVT VT, ArrayRef<MVT::SimpleValueType> SmallerVTs) {
+          for (auto SmallVT : SmallerVTs) {
+            setTruncStoreAction(VT, SmallVT, Expand);
+            setLoadExtAction(ISD::EXTLOAD, VT, SmallVT, Expand);
+          }
+        };
+
     if (Subtarget.hasStdExtZfh())
       for (MVT VT : F16VecVTs)
         SetCommonVFPActions(VT);
 
-    if (Subtarget.hasStdExtF())
-      for (MVT VT : F32VecVTs)
+    for (MVT VT : F32VecVTs) {
+      if (Subtarget.hasStdExtF())
         SetCommonVFPActions(VT);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+    }
 
-    if (Subtarget.hasStdExtD())
-      for (MVT VT : F64VecVTs)
+    for (MVT VT : F64VecVTs) {
+      if (Subtarget.hasStdExtD())
         SetCommonVFPActions(VT);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
+    }
 
     if (Subtarget.useRVVForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -565,8 +596,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // By default everything must be expanded.
         for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
           setOperationAction(Op, VT, Expand);
-        for (MVT OtherVT : MVT::fixedlen_vector_valuetypes())
+        for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
           setTruncStoreAction(VT, OtherVT, Expand);
+          setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+          setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+          setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+        }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
