@@ -509,10 +509,6 @@ private:
                                       ProgramStateRef State,
                                       AllocationFamily Family);
 
-  LLVM_NODISCARD
-  static ProgramStateRef addExtentSize(CheckerContext &C, const CXXNewExpr *NE,
-                                       ProgramStateRef State, SVal Target);
-
   // Check if this malloc() for special flags. At present that means M_ZERO or
   // __GFP_ZERO (in which case, treat it like calloc).
   LLVM_NODISCARD
@@ -1424,7 +1420,6 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
   // existing binding.
   SVal Target = Call.getObjectUnderConstruction();
   State = MallocUpdateRefState(C, NE, State, Family, Target);
-  State = addExtentSize(C, NE, State, Target);
   State = ProcessZeroAllocCheck(Call, 0, State, Target);
   return State;
 }
@@ -1437,52 +1432,6 @@ void MallocChecker::checkNewAllocator(const CXXAllocatorCall &Call,
         (Call.getOriginExpr()->isArray() ? AF_CXXNewArray : AF_CXXNew));
     C.addTransition(State);
   }
-}
-
-// Sets the extent value of the MemRegion allocated by
-// new expression NE to its size in Bytes.
-//
-ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
-                                             const CXXNewExpr *NE,
-                                             ProgramStateRef State,
-                                             SVal Target) {
-  if (!State)
-    return nullptr;
-  SValBuilder &svalBuilder = C.getSValBuilder();
-  SVal ElementCount;
-  const SubRegion *Region;
-  if (NE->isArray()) {
-    const Expr *SizeExpr = *NE->getArraySize();
-    ElementCount = C.getSVal(SizeExpr);
-    // Store the extent size for the (symbolic)region
-    // containing the elements.
-    Region = Target.getAsRegion()
-                 ->castAs<SubRegion>()
-                 ->StripCasts()
-                 ->castAs<SubRegion>();
-  } else {
-    ElementCount = svalBuilder.makeIntVal(1, true);
-    Region = Target.getAsRegion()->castAs<SubRegion>();
-  }
-
-  // Set the region's extent equal to the Size in Bytes.
-  QualType ElementType = NE->getAllocatedType();
-  ASTContext &AstContext = C.getASTContext();
-  CharUnits TypeSize = AstContext.getTypeSizeInChars(ElementType);
-
-  if (ElementCount.getAs<NonLoc>()) {
-    DefinedOrUnknownSVal DynSize = getDynamicSize(State, Region, svalBuilder);
-
-    // size in Bytes = ElementCount*TypeSize
-    SVal SizeInBytes = svalBuilder.evalBinOpNN(
-        State, BO_Mul, ElementCount.castAs<NonLoc>(),
-        svalBuilder.makeArrayIndex(TypeSize.getQuantity()),
-        svalBuilder.getArrayIndexType());
-    DefinedOrUnknownSVal DynSizeMatchesSize = svalBuilder.evalEQ(
-        State, DynSize, SizeInBytes.castAs<DefinedOrUnknownSVal>());
-    State = State->assume(DynSizeMatchesSize, true);
-  }
-  return State;
 }
 
 static bool isKnownDeallocObjCMethodName(const ObjCMethodCall &Call) {
@@ -1588,21 +1537,9 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   // Fill the region with the initialization value.
   State = State->bindDefaultInitial(RetVal, Init, LCtx);
 
-  // Set the region's extent equal to the Size parameter.
-  const SymbolicRegion *R =
-      dyn_cast_or_null<SymbolicRegion>(RetVal.getAsRegion());
-  if (!R)
-    return nullptr;
-  if (Optional<DefinedOrUnknownSVal> DefinedSize =
-          Size.getAs<DefinedOrUnknownSVal>()) {
-    DefinedOrUnknownSVal DynSize = getDynamicSize(State, R, svalBuilder);
-
-    DefinedOrUnknownSVal DynSizeMatchesSize =
-        svalBuilder.evalEQ(State, DynSize, *DefinedSize);
-
-    State = State->assume(DynSizeMatchesSize, true);
-    assert(State);
-  }
+  // Set the region's extent.
+  State = setDynamicSize(State, RetVal.getAsRegion(),
+                         Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
 
   return MallocUpdateRefState(C, CE, State, Family);
 }
