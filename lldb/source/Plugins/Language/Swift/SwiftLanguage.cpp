@@ -884,6 +884,15 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
   if (use_dynamic == lldb::eNoDynamicValues)
     return result;
 
+  // There is no point in attempting to format Clang types here, since
+  // FormatManager will try to format all Swift types also as
+  // Objective-C types and vice versa.  Due to the incomplete
+  // ClangImporter implementation for C++, continuing here for
+  // Objective-C++ types can actually lead to crashes that can be
+  // avoided by just formatting those types as Objective-C types.
+  if (valobj.GetObjectRuntimeLanguage() == eLanguageTypeObjC)
+    return result;
+
   SwiftASTContextLock scratch_ctx_lock(&valobj.GetExecutionContextRef());
   CompilerType compiler_type(valobj.GetCompilerType());
 
