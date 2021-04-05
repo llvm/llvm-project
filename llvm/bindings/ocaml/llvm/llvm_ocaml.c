@@ -24,8 +24,16 @@
 #include "caml/memory.h"
 #include "caml/fail.h"
 #include "caml/callback.h"
-
 #include "llvm_ocaml.h"
+
+#if OCAML_VERSION < 41200
+value caml_alloc_some(value v) {
+  CAMLparam1(v);
+  value Some = caml_alloc_small(1, 0);
+  Field(Some, 0) = v;
+  CAMLreturn(Some);
+}
+#endif
 
 value llvm_string_of_message(char* Message) {
   value String = caml_copy_string(Message);
@@ -35,13 +43,9 @@ value llvm_string_of_message(char* Message) {
 }
 
 CAMLprim value ptr_to_option(void *Ptr) {
-  CAMLparam0();
-  CAMLlocal1(Option);
   if (!Ptr)
-    CAMLreturn(Val_int(0));
-  Option = caml_alloc_small(1, 0);
-  Store_field(Option, 0, (value)Ptr);
-  CAMLreturn(Option);
+    return Val_none;
+  return caml_alloc_some((value)Ptr);
 }
 
 CAMLprim value cstr_to_string(const char *Str, mlsize_t Len) {
@@ -58,14 +62,12 @@ CAMLprim value cstr_to_string(const char *Str, mlsize_t Len) {
 
 CAMLprim value cstr_to_string_option(const char *CStr, mlsize_t Len) {
   CAMLparam0();
-  CAMLlocal2(Option, String);
+  CAMLlocal1(String);
   if (!CStr)
-    CAMLreturn(Val_int(0));
+    CAMLreturn(Val_none);
   String = caml_alloc_string(Len);
   memcpy((char *)String_val(String), CStr, Len);
-  Option = caml_alloc_small(1, 0);
-  Store_field(Option, 0, (value)String);
-  CAMLreturn(Option);
+  return caml_alloc_some(String);
 }
 
 void llvm_raise(value Prototype, char *Message) {
@@ -712,7 +714,7 @@ CAMLprim value llvm_classify_value(LLVMValueRef Val) {
   }
   if (LLVMIsAInstruction(Val)) {
     result = caml_alloc_small(1, 0);
-    Store_field(result, 0, Val_int(LLVMGetInstructionOpcode(Val)));
+    Field(result, 0) = Val_int(LLVMGetInstructionOpcode(Val));
     CAMLreturn(result);
   }
   if (LLVMIsAGlobalValue(Val)) {
