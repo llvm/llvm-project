@@ -46983,16 +46983,18 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (SDValue RV = foldXorTruncShiftIntoCmp(N, DAG))
     return RV;
 
+  // Fold xor(zext(xor(x,c1)),c2) -> xor(zext(x),xor(zext(c1),c2))
   // Fold xor(truncate(xor(x,c1)),c2) -> xor(truncate(x),xor(truncate(c1),c2))
   // TODO: Under what circumstances could this be performed in DAGCombine?
-  if (N->getOperand(0).getOpcode() == ISD::TRUNCATE &&
+  if ((N->getOperand(0).getOpcode() == ISD::TRUNCATE ||
+       N->getOperand(0).getOpcode() == ISD::ZERO_EXTEND) &&
       N->getOperand(0).getOperand(0).getOpcode() == N->getOpcode() &&
       isa<ConstantSDNode>(N->getOperand(1)) &&
       isa<ConstantSDNode>(N->getOperand(0).getOperand(0).getOperand(1))) {
     SDLoc DL(N);
-    SDValue TruncateSrc = N->getOperand(0).getOperand(0);
-    SDValue LHS = DAG.getNode(ISD::TRUNCATE, DL, VT, TruncateSrc.getOperand(0));
-    SDValue RHS = DAG.getNode(ISD::TRUNCATE, DL, VT, TruncateSrc.getOperand(1));
+    SDValue TruncExtSrc = N->getOperand(0).getOperand(0);
+    SDValue LHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(0), DL, VT);
+    SDValue RHS = DAG.getZExtOrTrunc(TruncExtSrc.getOperand(1), DL, VT);
     return DAG.getNode(ISD::XOR, DL, VT, LHS,
                        DAG.getNode(ISD::XOR, DL, VT, RHS, N->getOperand(1)));
   }
