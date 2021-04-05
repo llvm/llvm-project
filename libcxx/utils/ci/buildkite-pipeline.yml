@@ -329,8 +329,19 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "Windows"
-    command: "bash libcxx/utils/ci/run-buildbot generic-win"
+  - label: "Windows (DLL)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-dll"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
+  - label: "Windows (Static)"
+    command: "bash libcxx/utils/ci/run-buildbot windows-static"
     artifact_paths:
       - "**/test-results.xml"
     agents:
