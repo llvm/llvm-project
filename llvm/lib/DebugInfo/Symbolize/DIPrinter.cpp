@@ -30,9 +30,18 @@
 namespace llvm {
 namespace symbolize {
 
+void PlainPrinterBase::printHeader(uint64_t Address) {
+  if (Config.PrintAddress) {
+    OS << "0x";
+    OS.write_hex(Address);
+    StringRef Delimiter = Config.Pretty ? ": " : "\n";
+    OS << Delimiter;
+  }
+}
+
 // Prints source code around in the FileName the Line.
-void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
-  if (PrintSourceContext <= 0)
+void PlainPrinterBase::printContext(StringRef FileName, int64_t Line) {
+  if (Config.SourceContextLines <= 0)
     return;
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
@@ -42,8 +51,8 @@ void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
 
   std::unique_ptr<MemoryBuffer> Buf = std::move(BufOrErr.get());
   int64_t FirstLine =
-      std::max(static_cast<int64_t>(1), Line - PrintSourceContext / 2);
-  int64_t LastLine = FirstLine + PrintSourceContext;
+      std::max(static_cast<int64_t>(1), Line - Config.SourceContextLines / 2);
+  int64_t LastLine = FirstLine + Config.SourceContextLines;
   size_t MaxLineNumberWidth = std::ceil(std::log10(LastLine));
 
   for (line_iterator I = line_iterator(*Buf, false);
@@ -60,97 +69,145 @@ void DIPrinter::printContext(const std::string &FileName, int64_t Line) {
   }
 }
 
-void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
-  if (PrintFunctionNames) {
-    std::string FunctionName = Info.FunctionName;
+void PlainPrinterBase::printFunctionName(StringRef FunctionName, bool Inlined) {
+  if (Config.PrintFunctions) {
     if (FunctionName == DILineInfo::BadString)
       FunctionName = DILineInfo::Addr2LineBadString;
-
-    StringRef Delimiter = PrintPretty ? " at " : "\n";
-    StringRef Prefix = (PrintPretty && Inlined) ? " (inlined by) " : "";
+    StringRef Delimiter = Config.Pretty ? " at " : "\n";
+    StringRef Prefix = (Config.Pretty && Inlined) ? " (inlined by) " : "";
     OS << Prefix << FunctionName << Delimiter;
   }
-  std::string Filename = Info.FileName;
+}
+
+void LLVMPrinter::printSimpleLocation(StringRef Filename,
+                                      const DILineInfo &Info) {
+  OS << Filename << ':' << Info.Line << ':' << Info.Column << '\n';
+  printContext(Filename, Info.Line);
+}
+
+void GNUPrinter::printSimpleLocation(StringRef Filename,
+                                     const DILineInfo &Info) {
+  OS << Filename << ':' << Info.Line;
+  if (Info.Discriminator)
+    OS << " (discriminator " << Info.Discriminator << ')';
+  OS << '\n';
+  printContext(Filename, Info.Line);
+}
+
+void PlainPrinterBase::printVerbose(StringRef Filename,
+                                    const DILineInfo &Info) {
+  OS << "  Filename: " << Filename << '\n';
+  if (Info.StartLine) {
+    OS << "  Function start filename: " << Info.StartFileName << '\n';
+    OS << "  Function start line: " << Info.StartLine << '\n';
+  }
+  OS << "  Line: " << Info.Line << '\n';
+  OS << "  Column: " << Info.Column << '\n';
+  if (Info.Discriminator)
+    OS << "  Discriminator: " << Info.Discriminator << '\n';
+}
+
+void LLVMPrinter::printFooter() { OS << '\n'; }
+
+void PlainPrinterBase::print(const DILineInfo &Info, bool Inlined) {
+  printFunctionName(Info.FunctionName, Inlined);
+  StringRef Filename = Info.FileName;
   if (Filename == DILineInfo::BadString)
     Filename = DILineInfo::Addr2LineBadString;
-  if (!Verbose) {
-    OS << Filename << ":" << Info.Line;
-    if (Style == OutputStyle::LLVM)
-      OS << ":" << Info.Column;
-    else if (Style == OutputStyle::GNU && Info.Discriminator != 0)
-      OS << " (discriminator " << Info.Discriminator << ")";
-    OS << "\n";
-    printContext(Filename, Info.Line);
-    return;
-  }
-  OS << "  Filename: " << Filename << "\n";
-  if (Info.StartLine) {
-    OS << "  Function start filename: " << Info.StartFileName << "\n";
-    OS << "  Function start line: " << Info.StartLine << "\n";
-  }
-  OS << "  Line: " << Info.Line << "\n";
-  OS << "  Column: " << Info.Column << "\n";
-  if (Info.Discriminator)
-    OS << "  Discriminator: " << Info.Discriminator << "\n";
+  if (Config.Verbose)
+    printVerbose(Filename, Info);
+  else
+    printSimpleLocation(Filename, Info);
 }
 
-DIPrinter &DIPrinter::operator<<(const DILineInfo &Info) {
+void PlainPrinterBase::print(const Request &Request, const DILineInfo &Info) {
+  printHeader(Request.Address);
   print(Info, false);
-  return *this;
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DIInliningInfo &Info) {
+void PlainPrinterBase::print(const Request &Request,
+                             const DIInliningInfo &Info) {
+  printHeader(Request.Address);
   uint32_t FramesNum = Info.getNumberOfFrames();
-  if (FramesNum == 0) {
+  if (FramesNum == 0)
     print(DILineInfo(), false);
-    return *this;
-  }
-  for (uint32_t i = 0; i < FramesNum; i++)
-    print(Info.getFrame(i), i > 0);
-  return *this;
+  else
+    for (uint32_t I = 0; I < FramesNum; ++I)
+      print(Info.getFrame(I), I > 0);
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
-  std::string Name = Global.Name;
+void PlainPrinterBase::print(const Request &Request, const DIGlobal &Global) {
+  printHeader(Request.Address);
+  StringRef Name = Global.Name;
   if (Name == DILineInfo::BadString)
     Name = DILineInfo::Addr2LineBadString;
   OS << Name << "\n";
   OS << Global.Start << " " << Global.Size << "\n";
-  return *this;
+  printFooter();
 }
 
-DIPrinter &DIPrinter::operator<<(const DILocal &Local) {
-  if (Local.FunctionName.empty())
-    OS << "??\n";
+void PlainPrinterBase::print(const Request &Request,
+                             const std::vector<DILocal> &Locals) {
+  printHeader(Request.Address);
+  if (Locals.empty())
+    OS << DILineInfo::Addr2LineBadString << '\n';
   else
-    OS << Local.FunctionName << '\n';
+    for (const DILocal &L : Locals) {
+      if (L.FunctionName.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.FunctionName;
+      OS << '\n';
 
-  if (Local.Name.empty())
-    OS << "??\n";
-  else
-    OS << Local.Name << '\n';
+      if (L.Name.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.Name;
+      OS << '\n';
 
-  if (Local.DeclFile.empty())
-    OS << "??";
-  else
-    OS << Local.DeclFile;
-  OS << ':' << Local.DeclLine << '\n';
+      if (L.DeclFile.empty())
+        OS << DILineInfo::Addr2LineBadString;
+      else
+        OS << L.DeclFile;
 
-  if (Local.FrameOffset)
-    OS << *Local.FrameOffset << ' ';
-  else
-    OS << "?? ";
+      OS << ':' << L.DeclLine << '\n';
 
-  if (Local.Size)
-    OS << *Local.Size << ' ';
-  else
-    OS << "?? ";
+      if (L.FrameOffset)
+        OS << *L.FrameOffset;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << ' ';
 
-  if (Local.TagOffset)
-    OS << *Local.TagOffset << '\n';
-  else
-    OS << "??\n";
-  return *this;
+      if (L.Size)
+        OS << *L.Size;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << ' ';
+
+      if (L.TagOffset)
+        OS << *L.TagOffset;
+      else
+        OS << DILineInfo::Addr2LineBadString;
+      OS << '\n';
+    }
+  printFooter();
+}
+
+void PlainPrinterBase::printInvalidCommand(const Request &Request,
+                                           const ErrorInfoBase &ErrorInfo) {
+  OS << ErrorInfo.message() << '\n';
+}
+
+bool PlainPrinterBase::printError(const Request &Request,
+                                  const ErrorInfoBase &ErrorInfo,
+                                  StringRef ErrorBanner) {
+  ES << ErrorBanner;
+  ErrorInfo.log(ES);
+  ES << '\n';
+  // Print an empty struct too.
+  return true;
 }
 
 } // end namespace symbolize
