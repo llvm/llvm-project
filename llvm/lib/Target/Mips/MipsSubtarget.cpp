@@ -152,7 +152,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   if (NoABICalls && TM.isPositionIndependent())
     report_fatal_error("position-independent code requires '-mabicalls'");
 
-  if (isABI_N64() && !TM.isPositionIndependent() && !hasSym32())
+  if ((isABI_N64() && !TM.isPositionIndependent() && !hasSym32()) || isABI_P32())
     NoABICalls = true;
 
   // Set UseSmallSection.
