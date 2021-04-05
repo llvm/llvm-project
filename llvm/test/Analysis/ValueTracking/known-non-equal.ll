@@ -591,7 +591,7 @@ exit:
 define i1 @recurrence_sub_neq(i8 %A) {
 ; CHECK-LABEL: @recurrence_sub_neq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B:%.*]] = sub i8 [[A:%.*]], 1
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -607,7 +607,7 @@ define i1 @recurrence_sub_neq(i8 %A) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
-  %B = sub i8 %A, 1
+  %B = add i8 %A, 1
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
@@ -641,7 +641,7 @@ define i1 @recurrence_sub_eq(i8 %A) {
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
-  %B = sub i8 %A, 0
+  %B = add i8 %A, 0
   br label %loop
 loop:
   %iv = phi i64 [0, %entry], [%iv.next, %loop]
@@ -693,14 +693,20 @@ exit:
 define i1 @recurrence_mul_neq(i8 %A) {
 ; CHECK-LABEL: @recurrence_mul_neq(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[A:%.*]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = mul nuw i8 [[A_IV]], 2
+; CHECK-NEXT:    [[B_IV_NEXT]] = mul nuw i8 [[B_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
   %B = add i8 %A, 1
@@ -710,8 +716,8 @@ loop:
   %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
   %B.iv = phi i8 [%B, %entry], [%B.iv.next, %loop]
   %iv.next = add i64 %iv, 1
-  %A.iv.next = mul nuw i8 %A.iv, 1
-  %B.iv.next = mul nuw i8 %B.iv, 1
+  %A.iv.next = mul nuw i8 %A.iv, 2
+  %B.iv.next = mul nuw i8 %B.iv, 2
   %cmp = icmp ne i64 %iv.next, 10
   br i1 %cmp, label %loop, label %exit
 exit:
@@ -725,11 +731,16 @@ define i1 @recurrence_mul_eq(i8 %A) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[A]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = mul nuw i8 [[A_IV]], 2
+; CHECK-NEXT:    [[B_IV_NEXT]] = mul nuw i8 [[B_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
   %B = add i8 %A, 0
@@ -739,8 +750,8 @@ loop:
   %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
   %B.iv = phi i8 [%B, %entry], [%B.iv.next, %loop]
   %iv.next = add i64 %iv, 1
-  %A.iv.next = mul nuw i8 %A.iv, 1
-  %B.iv.next = mul nuw i8 %B.iv, 1
+  %A.iv.next = mul nuw i8 %A.iv, 2
+  %B.iv.next = mul nuw i8 %B.iv, 2
   %cmp = icmp ne i64 %iv.next, 10
   br i1 %cmp, label %loop, label %exit
 exit:
@@ -754,11 +765,15 @@ define i1 @recurrence_mul_unknown(i8 %A, i8 %B) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = mul nuw i8 [[A_IV]], 2
+; CHECK-NEXT:    [[B_IV_NEXT]] = mul nuw i8 [[B_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -768,8 +783,8 @@ loop:
   %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
   %B.iv = phi i8 [%B, %entry], [%B.iv.next, %loop]
   %iv.next = add i64 %iv, 1
-  %A.iv.next = mul nuw i8 %A.iv, 1
-  %B.iv.next = mul nuw i8 %B.iv, 1
+  %A.iv.next = mul nuw i8 %A.iv, 2
+  %B.iv.next = mul nuw i8 %B.iv, 2
   %cmp = icmp ne i64 %iv.next, 10
   br i1 %cmp, label %loop, label %exit
 exit:
@@ -783,11 +798,15 @@ define i1 @recurrence_mul_noflags(i8 %A, i8 %B) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = phi i8 [ [[A:%.*]], [[ENTRY]] ], [ [[A_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_IV:%.*]] = phi i8 [ [[B:%.*]], [[ENTRY]] ], [ [[B_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[A_IV_NEXT]] = mul i8 [[A_IV]], 2
+; CHECK-NEXT:    [[B_IV_NEXT]] = mul i8 [[B_IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i8 [[A_IV]], [[B_IV]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:
@@ -797,8 +816,8 @@ loop:
   %A.iv = phi i8 [%A, %entry], [%A.iv.next, %loop]
   %B.iv = phi i8 [%B, %entry], [%B.iv.next, %loop]
   %iv.next = add i64 %iv, 1
-  %A.iv.next = mul i8 %A.iv, 1
-  %B.iv.next = mul i8 %B.iv, 1
+  %A.iv.next = mul i8 %A.iv, 2
+  %B.iv.next = mul i8 %B.iv, 2
   %cmp = icmp ne i64 %iv.next, 10
   br i1 %cmp, label %loop, label %exit
 exit:
