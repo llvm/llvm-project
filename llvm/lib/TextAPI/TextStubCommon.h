@@ -15,10 +15,10 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/YAMLTraits.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/ArchitectureSet.h"
-#include "llvm/TextAPI/MachO/InterfaceFile.h"
-#include "llvm/TextAPI/MachO/PackedVersion.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/PackedVersion.h"
 
 using UUID = std::pair<llvm::MachO::Target, std::string>;
 

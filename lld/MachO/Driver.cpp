@@ -43,7 +43,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/TextAPI/MachO/PackedVersion.h"
+#include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
 

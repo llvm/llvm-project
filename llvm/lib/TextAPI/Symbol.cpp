@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/TextAPI/MachO/Symbol.h"
+#include "llvm/TextAPI/Symbol.h"
 #include <string>
 
 namespace llvm {

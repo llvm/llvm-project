@@ -1,4 +1,4 @@
-//===- llvm/TextAPI/MachO/ArchitectureSet.h - ArchitectureSet ---*- C++ -*-===//
+//===- llvm/TextAPI/ArchitectureSet.h - ArchitectureSet ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 #ifndef LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
 #define LLVM_TEXTAPI_MACHO_ARCHITECTURESET_H
 
-#include "llvm/TextAPI/MachO/Architecture.h"
+#include "llvm/TextAPI/Architecture.h"
 #include <cstddef>
 #include <iterator>
 #include <limits>
