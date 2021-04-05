@@ -51,22 +51,22 @@ int other();
 void test_one()
 {
   int aaa, bbb, var;
-  //PRINT: #pragma omp dispatch depend(in : var) nowait novariants(aaa > 5)
+  //PRINT: #pragma omp dispatch depend(in : var) nowait novariants(aaa > 5) nocontext(bbb > 5)
   //DUMP: OMPDispatchDirective
   //DUMP: OMPDependClause
   //DUMP: OMPNowaitClause
   //DUMP: OMPNovariantsClause
-  #pragma omp dispatch depend(in:var) nowait novariants(aaa > 5)
+  #pragma omp dispatch depend(in:var) nowait novariants(aaa > 5) nocontext(bbb > 5)
   foo(aaa, &bbb);
 
   int *dp = get_device_ptr();
   int dev = get_device();
-  //PRINT: #pragma omp dispatch device(dev) is_device_ptr(dp) novariants(dev > 10)
+  //PRINT: #pragma omp dispatch device(dev) is_device_ptr(dp) novariants(dev > 10) nocontext(dev > 5)
   //DUMP: OMPDispatchDirective
   //DUMP: OMPDeviceClause
   //DUMP: OMPIs_device_ptrClause
   //DUMP: OMPNovariantsClause
-  #pragma omp dispatch device(dev) is_device_ptr(dp) novariants(dev > 10)
+  #pragma omp dispatch device(dev) is_device_ptr(dp) novariants(dev > 10) nocontext(dev > 5)
   foo(aaa, dp);
 
   //PRINT: #pragma omp dispatch

@@ -46,6 +46,24 @@ void testit_one(int dnum) {
   // expected-error@+1 {{use of undeclared identifier 'x'}}
   #pragma omp dispatch novariants(x)
   disp_call();
+  
+  // expected-error@+1 {{expected '(' after 'nocontext'}}
+  #pragma omp dispatch nocontext
+  disp_call();
+
+  // expected-error@+3 {{expected expression}}
+  // expected-error@+2 {{expected ')'}}
+  // expected-note@+1 {{to match this '('}}
+  #pragma omp dispatch nocontext (
+  disp_call();
+
+  // expected-error@+1 {{cannot contain more than one 'nocontext' clause}}
+  #pragma omp dispatch nocontext(dnum> 4) nocontext(3)
+  disp_call();
+
+  // expected-error@+1 {{use of undeclared identifier 'x'}}
+  #pragma omp dispatch nocontext(x)
+  disp_call();
 }
 
 void testit_two() {
