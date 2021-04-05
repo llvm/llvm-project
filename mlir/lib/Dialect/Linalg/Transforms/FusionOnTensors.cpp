@@ -26,8 +26,8 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 /// Implementation of fusion of generic ops and indexed_generic ops.
-static bool areTensorOpsFusable(LinalgOp producer, LinalgOp consumer,
-                                unsigned consumerIdx) {
+static bool areElementwiseOpsFusable(LinalgOp producer, LinalgOp consumer,
+                                     unsigned consumerIdx) {
   // Producer and consumer must have tensor semantics.
   if (!producer.hasTensorSemantics() || !consumer.hasTensorSemantics())
     return false;
@@ -91,11 +91,11 @@ static void getIndexingMapOfProducerOperandsInFusedOp(
 
 /// Generate the region of the fused tensor operation. The region of the fused
 /// op must be empty.
-static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
-                                        Operation *fusedOp, LinalgOp producer,
-                                        LinalgOp consumer,
-                                        AffineMap consumerToProducerLoopsMap,
-                                        unsigned consumerIdx, unsigned nloops) {
+static void
+generateFusedElementwiseOpRegion(PatternRewriter &rewriter, Operation *fusedOp,
+                                 LinalgOp producer, LinalgOp consumer,
+                                 AffineMap consumerToProducerLoopsMap,
+                                 unsigned consumerIdx, unsigned nloops) {
   // Build the region of the fused op.
   Block &producerBlock = producer->getRegion(0).front();
   Block &consumerBlock = consumer->getRegion(0).front();
@@ -208,11 +208,11 @@ static void generateFusedTensorOpRegion(PatternRewriter &rewriter,
 }
 
 static Optional<SmallVector<Value, 1>>
-fuseTensorOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
-                  PatternRewriter &rewriter) {
+fuseElementwiseOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
+                       PatternRewriter &rewriter) {
   LinalgOp consumer = cast<LinalgOp>(consumerOpOperand.getOwner());
   unsigned consumerIdx = consumerOpOperand.getOperandNumber();
-  if (!areTensorOpsFusable(producer, consumer, consumerIdx))
+  if (!areElementwiseOpsFusable(producer, consumer, consumerIdx))
     return llvm::None;
 
   unsigned numFusedOperands =
@@ -291,9 +291,9 @@ fuseTensorOpsImpl(LinalgOp producer, OpOperand &consumerOpOperand,
   AffineMap consumerToProducerLoopsMap =
       invProducerResultIndexMap.compose(consumerResultIndexMap);
 
-  generateFusedTensorOpRegion(rewriter, fusedOp.getOperation(), producer,
-                              consumer, consumerToProducerLoopsMap, consumerIdx,
-                              consumer.getNumLoops());
+  generateFusedElementwiseOpRegion(rewriter, fusedOp.getOperation(), producer,
+                                   consumer, consumerToProducerLoopsMap,
+                                   consumerIdx, consumer.getNumLoops());
   return SmallVector<Value, 1>(fusedOp->getResults());
 }
 
@@ -1102,9 +1102,8 @@ struct FoldSplatConstants : public OpRewritePattern<LinalgOpTy> {
 };
 } // namespace
 
-Optional<SmallVector<Value, 1>>
-mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
-                            OpOperand &consumerOpOperand) {
+static Optional<SmallVector<Value, 1>>
+fuseElementwiseOps(PatternRewriter &rewriter, OpOperand &consumerOpOperand) {
   Operation *producer = consumerOpOperand.get().getDefiningOp();
   if (!producer || producer->getNumResults() != 1)
     return llvm::None;
@@ -1114,14 +1113,14 @@ mlir::linalg::fuseTensorOps(PatternRewriter &rewriter,
       !isa<GenericOp, IndexedGenericOp>(producer))
     return llvm::None;
 
-  return fuseTensorOpsImpl(cast<LinalgOp>(producer), consumerOpOperand,
-                           rewriter);
+  return fuseElementwiseOpsImpl(cast<LinalgOp>(producer), consumerOpOperand,
+                                rewriter);
 }
 
 namespace {
 /// Patterns to fuse a generic op, with the producer of its operands.
 template <typename LinalgOpTy>
-struct FuseTensorOps : public OpRewritePattern<LinalgOpTy> {
+struct FuseElementwiseOps : public OpRewritePattern<LinalgOpTy> {
   using OpRewritePattern<LinalgOpTy>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(LinalgOpTy op,
@@ -1133,7 +1132,7 @@ struct FuseTensorOps : public OpRewritePattern<LinalgOpTy> {
       if (!producerOp || !producerOp.hasTensorSemantics())
         continue;
       Optional<SmallVector<Value, 1>> fusedOpResults =
-          fuseTensorOps(rewriter, opOperand);
+          fuseElementwiseOps(rewriter, opOperand);
       if (fusedOpResults) {
         rewriter.replaceOp(op, *fusedOpResults);
         return success();
@@ -1149,8 +1148,7 @@ struct FusionOfTensorOpsPass
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    populateLinalgTensorOpsFusionPatterns(patterns,
-                                          allowFoldingUnitDimReshapes);
+    populateElementwiseOpsFusionPatterns(patterns, allowFoldingUnitDimReshapes);
     (void)applyPatternsAndFoldGreedily(op->getRegions(), std::move(patterns));
   }
 };
@@ -1170,7 +1168,7 @@ struct FoldReshapeOpsByLinearizationPass
 
 } // namespace
 
-void mlir::populateFoldReshapeOpsByLinearizationPatterns(
+void mlir::linalg::populateFoldReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<FoldProducerReshapeOpByLinearization<GenericOp, false>,
                FoldProducerReshapeOpByLinearization<IndexedGenericOp, false>,
@@ -1178,7 +1176,7 @@ void mlir::populateFoldReshapeOpsByLinearizationPatterns(
       patterns.getContext());
 }
 
-void mlir::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
+void mlir::linalg::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns) {
   patterns.add<FoldProducerReshapeOpByLinearization<GenericOp, true>,
                FoldProducerReshapeOpByLinearization<IndexedGenericOp, true>,
@@ -1186,7 +1184,7 @@ void mlir::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
       patterns.getContext());
 }
 
-void mlir::populateFoldReshapeOpsByExpansionPatterns(
+void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
     RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes) {
   patterns.add<FoldReshapeWithGenericOpByExpansion>(patterns.getContext());
   patterns.add<FoldWithProducerReshapeOpByExpansion<GenericOp>,
@@ -1194,11 +1192,11 @@ void mlir::populateFoldReshapeOpsByExpansionPatterns(
       patterns.getContext(), allowFoldingUnitDimReshapes);
 }
 
-void mlir::populateLinalgTensorOpsFusionPatterns(
+void mlir::linalg::populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes) {
   auto *context = patterns.getContext();
   patterns
-      .add<FuseTensorOps<GenericOp>, FuseTensorOps<IndexedGenericOp>,
+      .add<FuseElementwiseOps<GenericOp>, FuseElementwiseOps<IndexedGenericOp>,
            FoldSplatConstants<GenericOp>, FoldSplatConstants<IndexedGenericOp>>(
           context);
   populateFoldReshapeOpsByExpansionPatterns(patterns,
