@@ -51,6 +51,7 @@
 ! HELP-NEXT: -std=<value>           Language standard to compile for
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
+! HELP-NEXT: -W<warning>            Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
 !-------------------------------------------------------------
@@ -103,6 +104,7 @@
 ! HELP-FC1-NEXT: -test-io               Run the InputOuputTest action. Use for development and testing only.
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information
+! HELP-FC1-NEXT: -W<warning>            Enable the specified warning
 
 !---------------
 ! EXPECTED ERROR

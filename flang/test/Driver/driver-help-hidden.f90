@@ -51,6 +51,7 @@
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
 ! CHECK-NEXT: -U <macro>             Undefine macro <macro>
 ! CHECK-NEXT: --version Print version information
+! CHECK-NEXT: -W<warning>            Enable the specified warning
 ! CHECK-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
 !-------------------------------------------------------------
