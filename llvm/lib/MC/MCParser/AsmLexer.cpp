@@ -33,6 +33,7 @@ using namespace llvm;
 
 AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
   AllowAtInIdentifier = !StringRef(MAI.getCommentString()).startswith("@");
+  LexMotorolaIntegers = MAI.shouldUseMotorolaIntegers();
 }
 
 AsmLexer::~AsmLexer() = default;
@@ -422,6 +423,32 @@ AsmToken AsmLexer::LexDigit() {
     return intToken(Result, Value);
   }
 
+  // Motorola hex integers: $[0-9a-fA-F]+
+  if (LexMotorolaIntegers && CurPtr[-1] == '$') {
+    const char *NumStart = CurPtr;
+    while (isHexDigit(CurPtr[0]))
+      ++CurPtr;
+
+    APInt Result(128, 0);
+    if (StringRef(NumStart, CurPtr - NumStart).getAsInteger(16, Result))
+      return ReturnError(TokStart, "invalid hexadecimal number");
+
+    return intToken(StringRef(TokStart, CurPtr - TokStart), Result);
+  }
+
+  // Motorola binary integers: %[01]+
+  if (LexMotorolaIntegers && CurPtr[-1] == '%') {
+    const char *NumStart = CurPtr;
+    while (*CurPtr == '0' || *CurPtr == '1')
+      ++CurPtr;
+
+    APInt Result(128, 0);
+    if (StringRef(NumStart, CurPtr - NumStart).getAsInteger(2, Result))
+      return ReturnError(TokStart, "invalid binary number");
+
+    return intToken(StringRef(TokStart, CurPtr - TokStart), Result);
+  }
+
   // Decimal integer: [1-9][0-9]*
   if (CurPtr[-1] != '0' || CurPtr[0] == '.') {
     unsigned Radix = doHexLookAhead(CurPtr, 10, LexMasmIntegers);
@@ -780,7 +807,12 @@ AsmToken AsmLexer::LexToken() {
   case '}': return AsmToken(AsmToken::RCurly, StringRef(TokStart, 1));
   case '*': return AsmToken(AsmToken::Star, StringRef(TokStart, 1));
   case ',': return AsmToken(AsmToken::Comma, StringRef(TokStart, 1));
-  case '$': return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
+  case '$':
+    if (LexMotorolaIntegers && isHexDigit(*CurPtr)) {
+      return LexDigit();
+    }
+
+    return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
   case '@': return AsmToken(AsmToken::At, StringRef(TokStart, 1));
   case '\\': return AsmToken(AsmToken::BackSlash, StringRef(TokStart, 1));
   case '=':
@@ -815,6 +847,10 @@ AsmToken AsmLexer::LexToken() {
     }
     return AsmToken(AsmToken::Exclaim, StringRef(TokStart, 1));
   case '%':
+    if (LexMotorolaIntegers && (*CurPtr == '0' || *CurPtr == '1')) {
+      return LexDigit();
+    }
+
     if (MAI.hasMipsExpressions()) {
       AsmToken::TokenKind Operator;
       unsigned OperatorLength;
