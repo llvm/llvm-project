@@ -35,6 +35,14 @@ value caml_alloc_some(value v) {
 }
 #endif
 
+value caml_alloc_tuple_uninit(mlsize_t wosize) {
+  if (wosize <= Max_young_wosize) {
+    return caml_alloc_small(wosize, 0);
+  } else {
+    return caml_alloc_shr(wosize, 0);
+  }
+}
+
 value llvm_string_of_message(char* Message) {
   value String = caml_copy_string(Message);
   LLVMDisposeMessage(Message);
@@ -508,8 +516,8 @@ CAMLprim value llvm_is_var_arg(LLVMTypeRef FunTy) {
 
 /* lltype -> lltype array */
 CAMLprim value llvm_param_types(LLVMTypeRef FunTy) {
-  value Tys = alloc(LLVMCountParamTypes(FunTy), 0);
-  LLVMGetParamTypes(FunTy, (LLVMTypeRef *) Tys);
+  value Tys = caml_alloc_tuple_uninit(LLVMCountParamTypes(FunTy));
+  LLVMGetParamTypes(FunTy, (LLVMTypeRef *)Op_val(Tys));
   return Tys;
 }
 
@@ -554,8 +562,8 @@ CAMLprim value llvm_struct_name(LLVMTypeRef Ty) {
 
 /* lltype -> lltype array */
 CAMLprim value llvm_struct_element_types(LLVMTypeRef StructTy) {
-  value Tys = alloc(LLVMCountStructElementTypes(StructTy), 0);
-  LLVMGetStructElementTypes(StructTy, (LLVMTypeRef *) Tys);
+  value Tys = caml_alloc_tuple_uninit(LLVMCountStructElementTypes(StructTy));
+  LLVMGetStructElementTypes(StructTy, (LLVMTypeRef *)Op_val(Tys));
   return Tys;
 }
 
@@ -578,16 +586,16 @@ CAMLprim value llvm_is_literal(LLVMTypeRef StructTy) {
 
 /* lltype -> lltype array */
 CAMLprim value llvm_subtypes(LLVMTypeRef Ty) {
-    CAMLparam0();
-    CAMLlocal1(Arr);
+  CAMLparam0();
+  CAMLlocal1(Arr);
 
-    unsigned Size = LLVMGetNumContainedTypes(Ty);
+  unsigned Size = LLVMGetNumContainedTypes(Ty);
 
-    Arr = caml_alloc(Size, 0);
+  Arr = caml_alloc_tuple_uninit(Size);
 
-    LLVMGetSubtypes(Ty, (LLVMTypeRef *) Arr);
+  LLVMGetSubtypes(Ty, (LLVMTypeRef *)Op_val(Arr));
 
-    CAMLreturn(Arr);
+  CAMLreturn(Arr);
 }
 
 /* lltype -> int -> lltype */
@@ -799,7 +807,7 @@ CAMLprim value llvm_indices(LLVMValueRef Instr) {
   CAMLlocal1(indices);
   unsigned n = LLVMGetNumIndices(Instr);
   const unsigned *Indices = LLVMGetIndices(Instr);
-  indices = caml_alloc(n, 0);
+  indices = caml_alloc_tuple_uninit(n);
   for (unsigned i = 0; i < n; i++) {
     Op_val(indices)[i] = Val_int(Indices[i]);
   }
@@ -898,18 +906,19 @@ CAMLprim value llvm_get_mdnode_operands(LLVMValueRef V) {
   unsigned int n;
 
   n = LLVMGetMDNodeNumOperands(V);
-  Operands = alloc(n, 0);
-  LLVMGetMDNodeOperands(V, (LLVMValueRef *)  Operands);
+  Operands = caml_alloc_tuple_uninit(n);
+  LLVMGetMDNodeOperands(V, (LLVMValueRef *)Op_val(Operands));
   CAMLreturn(Operands);
 }
 
 /* llmodule -> string -> llvalue array */
-CAMLprim value llvm_get_namedmd(LLVMModuleRef M, value Name)
-{
+CAMLprim value llvm_get_namedmd(LLVMModuleRef M, value Name) {
   CAMLparam1(Name);
   CAMLlocal1(Nodes);
-  Nodes = alloc(LLVMGetNamedMetadataNumOperands(M, String_val(Name)), 0);
-  LLVMGetNamedMetadataOperands(M, String_val(Name), (LLVMValueRef *) Nodes);
+  Nodes = caml_alloc_tuple_uninit(
+      LLVMGetNamedMetadataNumOperands(M, String_val(Name)));
+  LLVMGetNamedMetadataOperands(M, String_val(Name),
+                               (LLVMValueRef *)Op_val(Nodes));
   CAMLreturn(Nodes);
 }
 
@@ -1219,10 +1228,9 @@ CAMLprim value llvm_global_copy_all_metadata(LLVMValueRef Global) {
       LLVMGlobalCopyAllMetadata(Global, &NumEntries);
   Array = caml_alloc_tuple(NumEntries);
   for (int i = 0; i < NumEntries; i++) {
-    Pair = caml_alloc_tuple(2);
-    Store_field(Pair, 0, Val_int(LLVMValueMetadataEntriesGetKind(Entries, i)));
-    Store_field(Pair, 1,
-                (value)LLVMValueMetadataEntriesGetMetadata(Entries, i));
+    Pair = caml_alloc_small(2, 0);
+    Field(Pair, 0) = Val_int(LLVMValueMetadataEntriesGetKind(Entries, i));
+    Field(Pair, 1) = (value)LLVMValueMetadataEntriesGetMetadata(Entries, i);
     Store_field(Array, i, Pair);
   }
   LLVMDisposeValueMetadataEntries(Entries);
@@ -1501,7 +1509,7 @@ CAMLprim value llvm_add_function_attr(LLVMValueRef F, LLVMAttributeRef A,
 /* llvalue -> int -> llattribute array */
 CAMLprim value llvm_function_attrs(LLVMValueRef F, value Index) {
   unsigned Length = LLVMGetAttributeCountAtIndex(F, Int_val(Index));
-  value Array = caml_alloc(Length, 0);
+  value Array = caml_alloc_tuple_uninit(Length);
   LLVMGetAttributesAtIndex(F, Int_val(Index),
                            (LLVMAttributeRef *) Op_val(Array));
   return Array;
@@ -1533,8 +1541,8 @@ CAMLprim LLVMValueRef llvm_param(LLVMValueRef Fn, value Index) {
 
 /* llvalue -> llvalue */
 CAMLprim value llvm_params(LLVMValueRef Fn) {
-  value Params = alloc(LLVMCountParams(Fn), 0);
-  LLVMGetParams(Fn, (LLVMValueRef *) Op_val(Params));
+  value Params = caml_alloc_tuple_uninit(LLVMCountParams(Fn));
+  LLVMGetParams(Fn, (LLVMValueRef *)Op_val(Params));
   return Params;
 }
 
@@ -1558,8 +1566,8 @@ CAMLprim value llvm_block_terminator(LLVMBasicBlockRef Block)
 
 /* llvalue -> llbasicblock array */
 CAMLprim value llvm_basic_blocks(LLVMValueRef Fn) {
-  value MLArray = alloc(LLVMCountBasicBlocks(Fn), 0);
-  LLVMGetBasicBlocks(Fn, (LLVMBasicBlockRef *) Op_val(MLArray));
+  value MLArray = caml_alloc_tuple_uninit(LLVMCountBasicBlocks(Fn));
+  LLVMGetBasicBlocks(Fn, (LLVMBasicBlockRef *)Op_val(MLArray));
   return MLArray;
 }
 
@@ -1674,7 +1682,7 @@ CAMLprim value llvm_add_call_site_attr(LLVMValueRef F, LLVMAttributeRef A,
 /* llvalue -> int -> llattribute array */
 CAMLprim value llvm_call_site_attrs(LLVMValueRef F, value Index) {
   unsigned Count = LLVMGetCallSiteAttributeCount(F, Int_val(Index));
-  value Array = caml_alloc(Count, 0);
+  value Array = caml_alloc_tuple_uninit(Count);
   LLVMGetCallSiteAttributes(F, Int_val(Index),
                             (LLVMAttributeRef *)Op_val(Array));
   return Array;
@@ -1784,14 +1792,14 @@ CAMLprim value llvm_incoming(LLVMValueRef PhiNode) {
 
   /* Build a tuple list of them. */
   Tl = Val_int(0);
-  for (I = LLVMCountIncoming(PhiNode); I != 0; ) {
-    Hd = alloc(2, 0);
-    Store_field(Hd, 0, (value) LLVMGetIncomingValue(PhiNode, --I));
-    Store_field(Hd, 1, (value) LLVMGetIncomingBlock(PhiNode, I));
+  for (I = LLVMCountIncoming(PhiNode); I != 0;) {
+    Hd = caml_alloc_small(2, 0);
+    Field(Hd, 0) = (value)LLVMGetIncomingValue(PhiNode, --I);
+    Field(Hd, 1) = (value)LLVMGetIncomingBlock(PhiNode, I);
 
-    Tmp = alloc(2, 0);
-    Store_field(Tmp, 0, Hd);
-    Store_field(Tmp, 1, Tl);
+    Tmp = caml_alloc_small(2, 0);
+    Field(Tmp, 0) = Hd;
+    Field(Tmp, 1) = Tl;
     Tl = Tmp;
   }
 
