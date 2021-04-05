@@ -351,7 +351,7 @@ static void NSNumber_FormatInt(ValueObject &valobj, Stream &stream, int value,
 }
 
 static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
-                                uint64_t value, lldb::LanguageType lang) {
+                                int64_t value, lldb::LanguageType lang) {
   static ConstString g_TypeHint("NSNumber:long");
 
   std::string prefix, suffix;
@@ -426,6 +426,8 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   if (!process_sp)
     return false;
 
+  Log * log 
+      = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS);
   ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
   if (!runtime)
@@ -456,9 +458,17 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
     return NSDecimalNumberSummaryProvider(valobj, stream, options);
 
   if (class_name == "NSNumber" || class_name == "__NSCFNumber") {
-    uint64_t value = 0;
+    int64_t value = 0;
     uint64_t i_bits = 0;
-    if (descriptor->GetTaggedPointerInfo(&i_bits, &value)) {
+    if (descriptor->GetTaggedPointerInfoSigned(&i_bits, &value)) {
+      // Check for "preserved" numbers.  We still don't support them yet.
+      if (i_bits & 0x8) {
+        if (log) 
+          log->Printf("Unsupported (preserved) NSNumber tagged pointer 0x%"
+              PRIu64, valobj_addr);
+        return false;
+      }
+
       switch (i_bits) {
       case 0:
         NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());
@@ -512,7 +522,9 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
         bool is_preserved_number = cfinfoa & 0x8;
         if (is_preserved_number) {
-          lldbassert(!static_cast<bool>("We should handle preserved numbers!"));
+        if (log) 
+          log->Printf("Unsupported preserved NSNumber tagged pointer 0x%" 
+              PRIu64, valobj_addr);
           return false;
         }
 
