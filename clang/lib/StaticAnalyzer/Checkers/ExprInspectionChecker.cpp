@@ -14,7 +14,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -276,7 +276,7 @@ void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
     return;
 
   ProgramStateRef State = C.getState();
-  DefinedOrUnknownSVal Size = getDynamicSize(State, MR, C.getSValBuilder());
+  DefinedOrUnknownSVal Size = getDynamicExtent(State, MR, C.getSValBuilder());
 
   State = State->BindExpr(CE, C.getLocationContext(), Size);
   C.addTransition(State);
@@ -289,7 +289,7 @@ void ExprInspectionChecker::analyzerDumpExtent(const CallExpr *CE,
     return;
 
   DefinedOrUnknownSVal Size =
-      getDynamicSize(C.getState(), MR, C.getSValBuilder());
+      getDynamicExtent(C.getState(), MR, C.getSValBuilder());
 
   SmallString<64> Msg;
   llvm::raw_svector_ostream Out(Msg);

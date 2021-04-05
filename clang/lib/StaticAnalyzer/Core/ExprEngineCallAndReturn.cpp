@@ -18,7 +18,7 @@
 #include "clang/Analysis/ConstructionContext.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -703,14 +703,14 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
         ElementCount = svalBuilder.makeIntVal(1, /*IsUnsigned=*/true);
       }
 
-      SVal ElementSize = getElementSize(CNE->getAllocatedType(), svalBuilder);
+      SVal ElementSize = getElementExtent(CNE->getAllocatedType(), svalBuilder);
 
       SVal Size =
           svalBuilder.evalBinOp(State, BO_Mul, ElementCount, ElementSize,
                                 svalBuilder.getArrayIndexType());
 
-      State = setDynamicSize(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
-                             svalBuilder);
+      State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
+                               svalBuilder);
     } else {
       R = svalBuilder.conjureSymbolVal(nullptr, E, LCtx, ResultTy, Count);
     }
