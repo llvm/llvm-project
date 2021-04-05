@@ -20,6 +20,17 @@
 
 #include "caml/alloc.h"
 #include "caml/custom.h"
+#include "caml/version.h"
+
+#if OCAML_VERSION < 41200
+/* operations on OCaml option values, defined by OCaml 4.12 */
+#define Val_none Val_int(0)
+#define Some_val(v) Field(v, 0)
+#define Tag_some 0
+#define Is_none(v) ((v) == Val_none)
+#define Is_some(v) Is_block(v)
+value caml_alloc_some(value);
+#endif
 
 /* Convert a C pointer to an OCaml option */
 CAMLprim value ptr_to_option(void *Ptr);
