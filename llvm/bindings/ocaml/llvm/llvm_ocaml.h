@@ -33,9 +33,9 @@ value caml_alloc_some(value);
 #endif
 
 /* Convert a C pointer to an OCaml option */
-CAMLprim value ptr_to_option(void *Ptr);
+value ptr_to_option(void *Ptr);
 
 /* Convert a C string into an OCaml string */
-CAMLprim value cstr_to_string(const char *Str, mlsize_t Len);
+value cstr_to_string(const char *Str, mlsize_t Len);
 
 #endif // LLVM_LLVM_OCAML_H

@@ -22,7 +22,7 @@
 #include "caml/custom.h"
 
 /* unit -> unit */
-CAMLprim value llvm_initialize_all(value Unit) {
+value llvm_initialize_all(value Unit) {
   LLVMInitializeAllTargetInfos();
   LLVMInitializeAllTargets();
   LLVMInitializeAllTargetMCs();

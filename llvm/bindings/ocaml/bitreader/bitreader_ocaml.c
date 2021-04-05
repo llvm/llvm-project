@@ -22,7 +22,7 @@
 void llvm_raise(value Prototype, char *Message);
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-CAMLprim LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
+LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
   LLVMModuleRef M;
 
   if (LLVMGetBitcodeModuleInContext2(C, MemBuf, &M))
@@ -32,7 +32,7 @@ CAMLprim LLVMModuleRef llvm_get_module(LLVMContextRef C, LLVMMemoryBufferRef Mem
 }
 
 /* Llvm.llcontext -> Llvm.llmemorybuffer -> Llvm.llmodule */
-CAMLprim LLVMModuleRef llvm_parse_bitcode(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
+LLVMModuleRef llvm_parse_bitcode(LLVMContextRef C, LLVMMemoryBufferRef MemBuf) {
   LLVMModuleRef M;
 
   if (LLVMParseBitcodeInContext2(C, MemBuf, &M))

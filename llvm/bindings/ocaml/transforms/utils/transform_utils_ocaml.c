@@ -26,6 +26,6 @@
  */
 
 /* llmodule -> llmodule */
-CAMLprim LLVMModuleRef llvm_clone_module(LLVMModuleRef M) {
+LLVMModuleRef llvm_clone_module(LLVMModuleRef M) {
   return LLVMCloneModule(M);
 }

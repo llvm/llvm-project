@@ -44,31 +44,31 @@ static value alloc_pmbuilder(LLVMPassManagerBuilderRef Ref) {
 }
 
 /* t -> unit */
-CAMLprim value llvm_pmbuilder_create(value Unit) {
+value llvm_pmbuilder_create(value Unit) {
   return alloc_pmbuilder(LLVMPassManagerBuilderCreate());
 }
 
 /* int -> t -> unit */
-CAMLprim value llvm_pmbuilder_set_opt_level(value OptLevel, value PMB) {
+value llvm_pmbuilder_set_opt_level(value OptLevel, value PMB) {
   LLVMPassManagerBuilderSetOptLevel(PMBuilder_val(PMB), Int_val(OptLevel));
   return Val_unit;
 }
 
 /* int -> t -> unit */
-CAMLprim value llvm_pmbuilder_set_size_level(value SizeLevel, value PMB) {
+value llvm_pmbuilder_set_size_level(value SizeLevel, value PMB) {
   LLVMPassManagerBuilderSetSizeLevel(PMBuilder_val(PMB), Int_val(SizeLevel));
   return Val_unit;
 }
 
 /* int -> t -> unit */
-CAMLprim value llvm_pmbuilder_use_inliner_with_threshold(
+value llvm_pmbuilder_use_inliner_with_threshold(
                       value Threshold, value PMB) {
   LLVMPassManagerBuilderSetOptLevel(PMBuilder_val(PMB), Int_val(Threshold));
   return Val_unit;
 }
 
 /* bool -> t -> unit */
-CAMLprim value llvm_pmbuilder_set_disable_unit_at_a_time(
+value llvm_pmbuilder_set_disable_unit_at_a_time(
                       value DisableUnitAtATime, value PMB) {
   LLVMPassManagerBuilderSetDisableUnitAtATime(
                       PMBuilder_val(PMB), Bool_val(DisableUnitAtATime));
@@ -76,7 +76,7 @@ CAMLprim value llvm_pmbuilder_set_disable_unit_at_a_time(
 }
 
 /* bool -> t -> unit */
-CAMLprim value llvm_pmbuilder_set_disable_unroll_loops(
+value llvm_pmbuilder_set_disable_unroll_loops(
                       value DisableUnroll, value PMB) {
   LLVMPassManagerBuilderSetDisableUnrollLoops(
                       PMBuilder_val(PMB), Bool_val(DisableUnroll));
@@ -84,7 +84,7 @@ CAMLprim value llvm_pmbuilder_set_disable_unroll_loops(
 }
 
 /* [ `Function ] Llvm.PassManager.t -> t -> unit */
-CAMLprim value llvm_pmbuilder_populate_function_pass_manager(
+value llvm_pmbuilder_populate_function_pass_manager(
                       LLVMPassManagerRef PM, value PMB) {
   LLVMPassManagerBuilderPopulateFunctionPassManager(
                       PMBuilder_val(PMB), PM);
@@ -92,7 +92,7 @@ CAMLprim value llvm_pmbuilder_populate_function_pass_manager(
 }
 
 /* [ `Module ] Llvm.PassManager.t -> t -> unit */
-CAMLprim value llvm_pmbuilder_populate_module_pass_manager(
+value llvm_pmbuilder_populate_module_pass_manager(
                       LLVMPassManagerRef PM, value PMB) {
   LLVMPassManagerBuilderPopulateModulePassManager(
                       PMBuilder_val(PMB), PM);
@@ -101,7 +101,7 @@ CAMLprim value llvm_pmbuilder_populate_module_pass_manager(
 
 /* [ `Module ] Llvm.PassManager.t ->
    internalize:bool -> run_inliner:bool -> t -> unit */
-CAMLprim value llvm_pmbuilder_populate_lto_pass_manager(
+value llvm_pmbuilder_populate_lto_pass_manager(
                       LLVMPassManagerRef PM, value Internalize, value RunInliner,
                       value PMB) {
   LLVMPassManagerBuilderPopulateLTOPassManager(
