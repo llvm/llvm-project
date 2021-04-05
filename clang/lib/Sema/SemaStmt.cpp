@@ -555,12 +555,22 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   return LS;
 }
 
-StmtResult Sema::ActOnAttributedStmt(SourceLocation AttrLoc,
-                                     ArrayRef<const Attr*> Attrs,
+StmtResult Sema::BuildAttributedStmt(SourceLocation AttrsLoc,
+                                     ArrayRef<const Attr *> Attrs,
                                      Stmt *SubStmt) {
-  // Fill in the declaration and return it.
-  AttributedStmt *LS = AttributedStmt::Create(Context, AttrLoc, Attrs, SubStmt);
-  return LS;
+  return AttributedStmt::Create(Context, AttrsLoc, Attrs, SubStmt);
+}
+
+StmtResult Sema::ActOnAttributedStmt(const ParsedAttributesWithRange &Attrs,
+                                     Stmt *SubStmt) {
+  SmallVector<const Attr *, 1> SemanticAttrs;
+  ProcessStmtAttributes(SubStmt, Attrs, SemanticAttrs);
+  if (!SemanticAttrs.empty())
+    return BuildAttributedStmt(Attrs.Range.getBegin(), SemanticAttrs, SubStmt);
+  // If none of the attributes applied, that's fine, we can recover by
+  // returning the substatement directly instead of making an AttributedStmt
+  // with no attributes on it.
+  return SubStmt;
 }
 
 namespace {
