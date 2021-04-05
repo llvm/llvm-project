@@ -120,7 +120,7 @@ CAMLprim value llvm_parse_command_line_options(value Overview, value Args) {
 }
 
 static value alloc_variant(int tag, void *Value) {
-  value Iter = alloc_small(1, tag);
+  value Iter = caml_alloc_small(1, tag);
   Field(Iter, 0) = Val_op(Value);
   return Iter;
 }
@@ -190,7 +190,7 @@ static void llvm_remove_diagnostic_handler(LLVMContextRef C) {
 /* llcontext -> (Diagnostic.t -> unit) option -> unit */
 CAMLprim value llvm_set_diagnostic_handler(LLVMContextRef C, value Handler) {
   llvm_remove_diagnostic_handler(C);
-  if (Handler == Val_int(0)) {
+  if (Handler == Val_none) {
     LLVMContextSetDiagnosticHandler(C, NULL, NULL);
   } else {
     value *DiagnosticContext = malloc(sizeof(value));
@@ -555,7 +555,7 @@ CAMLprim value llvm_struct_name(LLVMTypeRef Ty) {
   const char *CStr = LLVMGetStructName(Ty);
   size_t Len;
   if (!CStr)
-    return Val_int(0);
+    return Val_none;
   Len = strlen(CStr);
   return cstr_to_string_option(CStr, Len);
 }
@@ -651,16 +651,10 @@ CAMLprim LLVMTypeRef llvm_x86_mmx_type(LLVMContextRef Context) {
   return LLVMX86MMXTypeInContext(Context);
 }
 
-CAMLprim value llvm_type_by_name(LLVMModuleRef M, value Name)
-{
+CAMLprim value llvm_type_by_name(LLVMModuleRef M, value Name) {
   CAMLparam1(Name);
   LLVMTypeRef Ty = LLVMGetTypeByName(M, String_val(Name));
-  if (Ty) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Ty;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  CAMLreturn(ptr_to_option(Ty));
 }
 
 /*===-- VALUES ------------------------------------------------------------===*/
@@ -852,13 +846,7 @@ CAMLprim value llvm_has_metadata(LLVMValueRef Val) {
 /* llvalue -> int -> llvalue option */
 CAMLprim value llvm_metadata(LLVMValueRef Val, value MDKindID) {
   CAMLparam1(MDKindID);
-  LLVMValueRef MD;
-  if ((MD = LLVMGetMetadata(Val, Int_val(MDKindID)))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) MD;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  CAMLreturn(ptr_to_option(LLVMGetMetadata(Val, Int_val(MDKindID))));
 }
 
 /* llvalue -> int -> llvalue -> unit */
@@ -953,16 +941,11 @@ CAMLprim LLVMValueRef llvm_const_of_int64(LLVMTypeRef IntTy, value N,
 }
 
 /* llvalue -> Int64.t */
-CAMLprim value llvm_int64_of_const(LLVMValueRef Const)
-{
-  CAMLparam0();
-  if (LLVMIsAConstantInt(Const) &&
-      LLVMGetIntTypeWidth(LLVMTypeOf(Const)) <= 64) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = caml_copy_int64(LLVMConstIntGetSExtValue(Const));
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+CAMLprim value llvm_int64_of_const(LLVMValueRef Const) {
+  if (!(LLVMIsAConstantInt(Const)) ||
+      !(LLVMGetIntTypeWidth(LLVMTypeOf(Const)) <= 64))
+    return Val_none;
+  return caml_alloc_some(caml_copy_int64(LLVMConstIntGetSExtValue(Const)));
 }
 
 /* lltype -> string -> int -> llvalue */
@@ -977,26 +960,19 @@ CAMLprim LLVMValueRef llvm_const_float(LLVMTypeRef RealTy, value N) {
   return LLVMConstReal(RealTy, Double_val(N));
 }
 
-
 /* llvalue -> float */
-CAMLprim value llvm_float_of_const(LLVMValueRef Const)
-{
-  CAMLparam0();
-  CAMLlocal1(Option);
+CAMLprim value llvm_float_of_const(LLVMValueRef Const) {
   LLVMBool LosesInfo;
   double Result;
 
-  if (LLVMIsAConstantFP(Const)) {
-    Result = LLVMConstRealGetDouble(Const, &LosesInfo);
-    if (LosesInfo)
-        CAMLreturn(Val_int(0));
+  if (!LLVMIsAConstantFP(Const))
+    return Val_none;
 
-    Option = alloc(1, 0);
-    Field(Option, 0) = caml_copy_double(Result);
-    CAMLreturn(Option);
-  }
+  Result = LLVMConstRealGetDouble(Const, &LosesInfo);
+  if (LosesInfo)
+    return Val_none;
 
-  CAMLreturn(Val_int(0));
+  return caml_alloc_some(caml_copy_double(Result));
 }
 
 /* lltype -> string -> llvalue */
@@ -1057,7 +1033,7 @@ CAMLprim value llvm_string_of_const(LLVMValueRef Const) {
   size_t Len;
   const char *CStr;
   if (!LLVMIsAConstantDataSequential(Const) || !LLVMIsConstantString(Const))
-    return Val_int(0);
+    return Val_none;
   CStr = LLVMGetAsString(Const, &Len);
   return cstr_to_string_option(CStr, Len);
 }
@@ -1241,26 +1217,12 @@ CAMLprim value llvm_global_copy_all_metadata(LLVMValueRef Global) {
 
 /* llvalue -> lluse option */
 CAMLprim value llvm_use_begin(LLVMValueRef Val) {
-  CAMLparam0();
-  LLVMUseRef First;
-  if ((First = LLVMGetFirstUse(Val))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) First;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  return ptr_to_option(LLVMGetFirstUse(Val));
 }
 
 /* lluse -> lluse option */
 CAMLprim value llvm_use_succ(LLVMUseRef U) {
-  CAMLparam0();
-  LLVMUseRef Next;
-  if ((Next = LLVMGetNextUse(U))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Next;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  return ptr_to_option(LLVMGetNextUse(U));
 }
 
 /* lluse -> llvalue */
@@ -1308,13 +1270,7 @@ CAMLprim LLVMValueRef llvm_declare_qualified_global(LLVMTypeRef Ty, value Name,
 /* string -> llmodule -> llvalue option */
 CAMLprim value llvm_lookup_global(value Name, LLVMModuleRef M) {
   CAMLparam1(Name);
-  LLVMValueRef GlobalVar;
-  if ((GlobalVar = LLVMGetNamedGlobal(M, String_val(Name)))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) GlobalVar;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  CAMLreturn(ptr_to_option(LLVMGetNamedGlobal(M, String_val(Name))));
 }
 
 /* string -> llvalue -> llmodule -> llvalue */
@@ -1437,13 +1393,7 @@ CAMLprim LLVMValueRef llvm_declare_function(value Name, LLVMTypeRef Ty,
 /* string -> llmodule -> llvalue option */
 CAMLprim value llvm_lookup_function(value Name, LLVMModuleRef M) {
   CAMLparam1(Name);
-  LLVMValueRef Fn;
-  if ((Fn = LLVMGetNamedFunction(M, String_val(Name)))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Fn;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  CAMLreturn(ptr_to_option(LLVMGetNamedFunction(M, String_val(Name))));
 }
 
 /* string -> lltype -> llmodule -> llvalue */
@@ -1478,24 +1428,17 @@ CAMLprim value llvm_set_function_call_conv(value Id, LLVMValueRef Fn) {
 
 /* llvalue -> string option */
 CAMLprim value llvm_gc(LLVMValueRef Fn) {
-  const char *GC;
-  CAMLparam0();
-  CAMLlocal2(Name, Option);
+  const char *GC = LLVMGetGC(Fn);
 
-  if ((GC = LLVMGetGC(Fn))) {
-    Name = caml_copy_string(GC);
+  if (!GC)
+    return Val_none;
 
-    Option = alloc(1, 0);
-    Field(Option, 0) = Name;
-    CAMLreturn(Option);
-  } else {
-    CAMLreturn(Val_int(0));
-  }
+  return caml_alloc_some(caml_copy_string(GC));
 }
 
 /* string option -> llvalue -> unit */
 CAMLprim value llvm_set_gc(value GC, LLVMValueRef Fn) {
-  LLVMSetGC(Fn, GC == Val_int(0)? 0 : String_val(Field(GC, 0)));
+  LLVMSetGC(Fn, GC == Val_none ? 0 : String_val(Field(GC, 0)));
   return Val_unit;
 }
 
@@ -1552,16 +1495,8 @@ DEFINE_ITERATORS(
   block, BasicBlock, LLVMValueRef, LLVMBasicBlockRef, LLVMGetBasicBlockParent)
 
 /* llbasicblock -> llvalue option */
-CAMLprim value llvm_block_terminator(LLVMBasicBlockRef Block)
-{
-  CAMLparam0();
-  LLVMValueRef Term = LLVMGetBasicBlockTerminator(Block);
-  if (Term) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) Term;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+CAMLprim value llvm_block_terminator(LLVMBasicBlockRef Block) {
+  return ptr_to_option(LLVMGetBasicBlockTerminator(Block));
 }
 
 /* llvalue -> llbasicblock array */
@@ -1629,26 +1564,18 @@ CAMLprim value llvm_instr_get_opcode(LLVMValueRef Inst) {
 
 /* llvalue -> ICmp.t option */
 CAMLprim value llvm_instr_icmp_predicate(LLVMValueRef Val) {
-  CAMLparam0();
   int x = LLVMGetICmpPredicate(Val);
-  if (x) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = Val_int(x - LLVMIntEQ);
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  if (!x)
+    return Val_none;
+  return caml_alloc_some(Val_int(x - LLVMIntEQ));
 }
 
 /* llvalue -> FCmp.t option */
 CAMLprim value llvm_instr_fcmp_predicate(LLVMValueRef Val) {
-  CAMLparam0();
   int x = LLVMGetFCmpPredicate(Val);
-  if (x) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = Val_int(x - LLVMRealPredicateFalse);
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  if (!x)
+    return Val_none;
+  return caml_alloc_some(Val_int(x - LLVMRealPredicateFalse));
 }
 
 /* llvalue -> llvalue */
@@ -1883,14 +1810,7 @@ CAMLprim value llvm_clear_current_debug_location(value B) {
 
 /* llbuilder -> llvalue option */
 CAMLprim value llvm_current_debug_location(value B) {
-  CAMLparam0();
-  LLVMValueRef L;
-  if ((L = LLVMGetCurrentDebugLocation(Builder_val(B)))) {
-    value Option = alloc(1, 0);
-    Field(Option, 0) = (value) L;
-    CAMLreturn(Option);
-  }
-  CAMLreturn(Val_int(0));
+  return ptr_to_option(LLVMGetCurrentDebugLocation(Builder_val(B)));
 }
 
 /* llbuilder -> llvalue -> unit */
