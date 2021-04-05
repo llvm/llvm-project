@@ -1,4 +1,4 @@
-//===- llvm/TextAPI/MachO/Architecture.h - Architecture ---------*- C++ -*-===//
+//===- llvm/TextAPI/Architecture.h - Architecture ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +26,7 @@ namespace MachO {
 /// Defines the architecture slices that are supported by Text-based Stub files.
 enum Architecture : uint8_t {
 #define ARCHINFO(Arch, Type, SubType, NumBits) AK_##Arch,
-#include "llvm/TextAPI/MachO/Architecture.def"
+#include "llvm/TextAPI/Architecture.def"
 #undef ARCHINFO
   AK_unknown, // this has to go last.
 };

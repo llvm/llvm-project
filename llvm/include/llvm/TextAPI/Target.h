@@ -11,9 +11,9 @@
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/ArchitectureSet.h"
-#include "llvm/TextAPI/MachO/Platform.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/Platform.h"
 
 namespace llvm {
 namespace MachO {

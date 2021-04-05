@@ -1,4 +1,4 @@
-//===- tapi/Core/Target.cpp - Target ----------------------------*- C++ -*-===//
+//===- Target.cpp -----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TextAPI/Target.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TextAPI/MachO/Target.h"
 
 namespace llvm {
 namespace MachO {

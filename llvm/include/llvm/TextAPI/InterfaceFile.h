@@ -1,4 +1,4 @@
-//===- llvm/TextAPI/MachO/IntefaceFile.h - TAPI Interface File --*- C++ -*-===//
+//===- llvm/TextAPI/InterfaceFile.h - TAPI Interface File -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,12 +23,12 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
-#include "llvm/TextAPI/MachO/Architecture.h"
-#include "llvm/TextAPI/MachO/ArchitectureSet.h"
-#include "llvm/TextAPI/MachO/PackedVersion.h"
-#include "llvm/TextAPI/MachO/Platform.h"
-#include "llvm/TextAPI/MachO/Symbol.h"
-#include "llvm/TextAPI/MachO/Target.h"
+#include "llvm/TextAPI/Architecture.h"
+#include "llvm/TextAPI/ArchitectureSet.h"
+#include "llvm/TextAPI/PackedVersion.h"
+#include "llvm/TextAPI/Platform.h"
+#include "llvm/TextAPI/Symbol.h"
+#include "llvm/TextAPI/Target.h"
 
 namespace llvm {
 namespace MachO {
