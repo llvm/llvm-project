@@ -2537,6 +2537,66 @@ bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
   return isKnownNonZero(V, DemandedElts, Depth, Q);
 }
 
+/// If the pair of operators are the same invertible function of a single
+/// operand return the index of that operand.  Otherwise, return None.  An
+/// invertible function is one that is 1-to-1 and maps every input value
+/// to exactly one output value.  This is equivalent to saying that O1
+/// and O2 are equal exactly when the specified pair of operands are equal,
+/// (except that O1 and O2 may be poison more often.)
+static Optional<unsigned> getInvertibleOperand(const Operator *O1,
+                                               const Operator *O2) {
+  if (O1->getOpcode() != O2->getOpcode())
+    return None;
+
+  switch (O1->getOpcode()) {
+  default:
+    break;
+  case Instruction::Add:
+  case Instruction::Sub:
+    if (O1->getOperand(0) == O2->getOperand(0))
+      return 1;
+    if (O1->getOperand(1) == O2->getOperand(1))
+      return 0;
+    break;
+  case Instruction::Mul: {
+    // invertible if A * B == (A * B) mod 2^N where A, and B are integers
+    // and N is the bitwdith.  The nsw case is non-obvious, but proven by
+    // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
+    auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+    auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+    if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+        (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
+      break;
+
+    // Assume operand order has been canonicalized
+    if (O1->getOperand(1) == O2->getOperand(1) &&
+        isa<ConstantInt>(O1->getOperand(1)) &&
+        !cast<ConstantInt>(O1->getOperand(1))->isZero())
+      return 0;
+    break;
+  }
+  case Instruction::Shl: {
+    // Same as multiplies, with the difference that we don't need to check
+    // for a non-zero multiply. Shifts always multiply by non-zero.
+    auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
+    auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+    if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
+        (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
+      break;
+
+    if (O1->getOperand(1) == O2->getOperand(1))
+      return 0;
+    break;
+  }
+  case Instruction::SExt:
+  case Instruction::ZExt:
+    if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
+      return 0;
+    break;
+  }
+  return None;
+}
+
 /// Return true if V2 == V1 + X, where X is known non-zero.
 static bool isAddOfNonZero(const Value *V1, const Value *V2, unsigned Depth,
                            const Query &Q) {
@@ -2628,64 +2688,17 @@ static bool isKnownNonEqual(const Value *V1, const Value *V2, unsigned Depth,
   auto *O1 = dyn_cast<Operator>(V1);
   auto *O2 = dyn_cast<Operator>(V2);
   if (O1 && O2 && O1->getOpcode() == O2->getOpcode()) {
-    switch (O1->getOpcode()) {
-    default: break;
-    case Instruction::Add:
-    case Instruction::Sub:
-      // Assume operand order has been canonicalized
-      if (O1->getOperand(0) == O2->getOperand(0))
-        return isKnownNonEqual(O1->getOperand(1), O2->getOperand(1),
-                               Depth + 1, Q);
-      if (O1->getOperand(1) == O2->getOperand(1))
-        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
-                               Depth + 1, Q);
-      break;
-    case Instruction::Mul: {
-      // invertible if A * B == (A * B) mod 2^N where A, and B are integers
-      // and N is the bitwdith.  The nsw case is non-obvious, but proven by
-      // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
-      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
-      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
-      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
-          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
-        break;
-
-      // Assume operand order has been canonicalized
-      if (O1->getOperand(1) == O2->getOperand(1) &&
-          isa<ConstantInt>(O1->getOperand(1)) &&
-          !cast<ConstantInt>(O1->getOperand(1))->isZero())
-        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
-                               Depth + 1, Q);
-      break;
+    if (Optional<unsigned> Opt = getInvertibleOperand(O1, O2)) {
+      unsigned Idx = *Opt;
+      return isKnownNonEqual(O1->getOperand(Idx), O2->getOperand(Idx),
+                             Depth + 1, Q);
     }
-    case Instruction::Shl: {
-      // Same as multiplies, with the difference that we don't need to check
-      // for a non-zero multiply. Shifts always multiply by non-zero.
-      auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
-      auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
-      if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
-          (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
-        break;
-
-      if (O1->getOperand(1) == O2->getOperand(1))
-        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0),
-                               Depth + 1, Q);
-      break;
-    }
-    case Instruction::SExt:
-    case Instruction::ZExt:
-      if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
-        return isKnownNonEqual(O1->getOperand(0), O2->getOperand(0), Depth + 1,
-                               Q);
-      break;
-    case Instruction::PHI:
-      const PHINode *PN1 = cast<PHINode>(V1);
+    if (const PHINode *PN1 = dyn_cast<PHINode>(V1)) {
       const PHINode *PN2 = cast<PHINode>(V2);
       // FIXME: This is missing a generalization to handle the case where one is
       // a PHI and another one isn't.
       if (isNonEqualPHIs(PN1, PN2, Depth, Q))
         return true;
-      break;
     };
   }
 
