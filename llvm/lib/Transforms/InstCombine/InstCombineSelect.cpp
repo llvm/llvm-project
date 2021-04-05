@@ -1095,7 +1095,10 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
 Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                                                           ICmpInst &Cmp) {
-  if (!Cmp.isEquality())
+  // Value equivalence substitution requires an all-or-nothing replacement.
+  // It does not make sense for a vector compare where each lane is chosen
+  // independently.
+  if (!Cmp.isEquality() || Cmp.getType()->isVectorTy())
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
