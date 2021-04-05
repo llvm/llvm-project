@@ -157,15 +157,19 @@ void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
   builder.create<fir::CallOp>(loc, trimFunc, args);
 }
 
-/// generate call to Scan runtime library routine. 
-/// TODO: Add specialized kind versions.
+/// Generate call to scan or verify runtime routine.
+/// This calls the descriptor based runtime call implementation of the scan
+/// or verify intrinsic.
 void
-Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
-                             mlir::Location loc, mlir::Value resultBox,
-                             mlir::Value stringBox, mlir::Value setBox,
-                             mlir::Value backBox, mlir::Value kind) {
-  auto scanFunc = getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
-  auto fTy = scanFunc.getType();
+Fortran::lower::genScanVerify(Fortran::lower::FirOpBuilder &builder,
+                              mlir::Location loc, mlir::Value resultBox,
+                              mlir::Value stringBox, mlir::Value setBox,
+                              mlir::Value backBox, mlir::Value kind, 
+                              bool isScan) {
+
+  auto func = isScan ? getRuntimeFunc<mkRTKey(Scan)>(loc, builder)
+                     : getRuntimeFunc<mkRTKey(Verify)>(loc, builder);
+  auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
        Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
@@ -180,31 +184,43 @@ Fortran::lower::genScan(Fortran::lower::FirOpBuilder &builder,
     builder.createConvert(loc, fTy.getInput(6), sourceLine) 
   };
    
-  builder.create<fir::CallOp>(loc, scanFunc, args);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
-/// generate call to Verify runtime library routine. 
-/// TODO: Add specialized kind versions.
-void
-Fortran::lower::genVerify(Fortran::lower::FirOpBuilder &builder,
-                          mlir::Location loc, mlir::Value resultBox,
-                          mlir::Value stringBox, mlir::Value setBox,
-                          mlir::Value backBox, mlir::Value kind) {
-  auto verifyFunc = getRuntimeFunc<mkRTKey(Verify)>(loc, builder);
-  auto fTy = verifyFunc.getType();
-  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
-  auto sourceLine =
-       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(6));
-
+/// Generate call to scan or verify runtime routine that is specialized on 
+/// \param kind.
+/// The \param kind represents the kind of the elements in the strings.
+mlir::Value
+Fortran::lower::genScanVerifyKind(Fortran::lower::FirOpBuilder &builder,
+                                  mlir::Location loc, int kind, 
+                                  mlir::Value stringBase,
+                                  mlir::Value stringLen, mlir::Value setBase,
+                                  mlir::Value setLen, mlir::Value back,
+                                  bool isScan) {
+  mlir::FuncOp func;
+  switch (kind) {
+  case 1:
+    func = isScan ? getRuntimeFunc<mkRTKey(Scan1)>(loc, builder) 
+                  : getRuntimeFunc<mkRTKey(Verify1)>(loc, builder);
+    break;
+  case 2:
+    func = isScan ? getRuntimeFunc<mkRTKey(Scan2)>(loc, builder)
+                  : getRuntimeFunc<mkRTKey(Verify2)>(loc, builder);
+    break;
+  case 4:
+    func = isScan ? getRuntimeFunc<mkRTKey(Scan4)>(loc, builder)
+                  : getRuntimeFunc<mkRTKey(Verify4)>(loc, builder);
+    break;
+  default:
+    fir::emitFatalError(
+        loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
+  }
+  auto fTy = func.getType();
   llvm::SmallVector<mlir::Value> args = {
-    builder.createConvert(loc, fTy.getInput(0), resultBox),
-    builder.createConvert(loc, fTy.getInput(1), stringBox),
-    builder.createConvert(loc, fTy.getInput(2), setBox),
-    builder.createConvert(loc, fTy.getInput(3), backBox),
-    builder.createConvert(loc, fTy.getInput(4), kind),
-    builder.createConvert(loc, fTy.getInput(5), sourceFile),
-    builder.createConvert(loc, fTy.getInput(6), sourceLine) 
-  };
-   
-  builder.create<fir::CallOp>(loc, verifyFunc, args);
+      builder.createConvert(loc, fTy.getInput(0), stringBase),
+      builder.createConvert(loc, fTy.getInput(1), stringLen),
+      builder.createConvert(loc, fTy.getInput(2), setBase),
+      builder.createConvert(loc, fTy.getInput(3), setLen),
+      builder.createConvert(loc, fTy.getInput(4), back)};
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }

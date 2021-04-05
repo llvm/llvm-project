@@ -280,7 +280,7 @@ argument to a function called `genTrim` that implements the actual lowering of T
 Pass by value is the default argument passing scheme. If all arguments are passed by value, then you do not need to specify any arguments in this table. If at least one argument is not passed by value, then it is good practice to specify all the arguments. For example, consider the genScan entry:
 ```c++
 {"scan", &I::genScan, {{ {"string", asAddr}, {"set", asAddr}, 
-                         {"back", asAddr}, {"kind", asValue} }}, 
+                         {"back", asValue}, {"kind", asValue} }}, 
                          /*isElemental=*/true}
 ```
 

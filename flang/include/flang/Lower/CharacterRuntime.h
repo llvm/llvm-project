@@ -51,13 +51,6 @@ void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value substringBox, mlir::Value backOpt,
                         mlir::Value kind);
 
-/// Generate call to scan runtime.
-/// This calls the descriptor based runtime call implementation of the scan
-/// intrinsic.
-void genScan(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
-             mlir::Value resultBox, mlir::Value stringBox,
-             mlir::Value setBox, mlir::Value backBox, mlir::Value kind);
-
 /// Generate call to trim runtime.
 ///   \p resultBox must be an unallocated allocatable used for the temporary
 ///   result. \p stringBox must be a fir.box describing trim string argument.
@@ -66,11 +59,20 @@ void genTrim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value stringBox);
 
 /// Generate call to verify runtime.
-/// This calls the descriptor based runtime call implementation of the verify
-/// intrinsic.
-void genVerify(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+/// This calls the descriptor based runtime call implementation of the scan or
+/// verify intrinsicis.
+void genScanVerify(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value resultBox, mlir::Value stringBox,
-               mlir::Value setBox, mlir::Value backBox, mlir::Value kind);
+               mlir::Value setBox, mlir::Value backBox, mlir::Value kind,
+               bool isScan);
+
+/// Generate call to the scan or verify runtime routine that is specialized on 
+/// \param kind.
+/// The \param kind represents the kind of the elements in the strings.
+mlir::Value genScanVerifyKind(Fortran::lower::FirOpBuilder &builder,
+                         mlir::Location loc, int kind, mlir::Value stringBase,
+                         mlir::Value stringLen, mlir::Value setBase,
+                         mlir::Value setLen, mlir::Value back, bool isScan);
 
 } // namespace lower
 } // namespace Fortran
