@@ -400,8 +400,8 @@ HIPToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     // If --hip-device-lib is not set, add the default bitcode libraries.
     // TODO: There are way too many flags that change this. Do we need to check
     // them all?
-    bool DAZ = DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                                  options::OPT_fno_cuda_flush_denormals_to_zero,
+    bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                                  options::OPT_fno_gpu_flush_denormals_to_zero,
                                   getDefaultDenormsAreZeroForTarget(Kind));
     // TODO: Check standard C++ flags?
     bool FiniteOnly = false;
