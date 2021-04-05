@@ -1137,7 +1137,7 @@ def SDTRVVSlide : SDTypeProfile<1, 5, [
   SDTCVecEltisVT<4, i1>, SDTCisSameNumEltsAs<0, 4>, SDTCisVT<5, XLenVT>
 ]>;
 def SDTRVVSlide1 : SDTypeProfile<1, 4, [
-  SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisVT<2, XLenVT>,
+  SDTCisVec<0>, SDTCisSameAs<1, 0>, SDTCisInt<0>, SDTCisVT<2, XLenVT>,
   SDTCVecEltisVT<3, i1>, SDTCisSameNumEltsAs<0, 3>, SDTCisVT<4, XLenVT>
 ]>;
 
