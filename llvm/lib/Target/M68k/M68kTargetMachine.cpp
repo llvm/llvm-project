@@ -28,7 +28,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "m68k"
 
-extern "C" void LLVMInitializeM68kTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
 }
 
