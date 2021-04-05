@@ -16,7 +16,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 
 using namespace clang;
 using namespace ento;
@@ -92,8 +92,8 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     if (Size.isUndef())
       return true; // Return true to model purity.
 
-    state = setDynamicSize(state, R, Size.castAs<DefinedOrUnknownSVal>(),
-                           C.getSValBuilder());
+    state = setDynamicExtent(state, R, Size.castAs<DefinedOrUnknownSVal>(),
+                             C.getSValBuilder());
 
     C.addTransition(state->BindExpr(CE, LCtx, loc::MemRegionVal(R)));
     return true;

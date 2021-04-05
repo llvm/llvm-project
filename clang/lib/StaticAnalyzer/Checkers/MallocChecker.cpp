@@ -63,7 +63,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
@@ -1538,8 +1538,8 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   State = State->bindDefaultInitial(RetVal, Init, LCtx);
 
   // Set the region's extent.
-  State = setDynamicSize(State, RetVal.getAsRegion(),
-                         Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
+  State = setDynamicExtent(State, RetVal.getAsRegion(),
+                           Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
 
   return MallocUpdateRefState(C, CE, State, Family);
 }

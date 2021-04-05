@@ -20,7 +20,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -287,8 +287,9 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    State = setDynamicSize(State, State->getRegion(VD, C.getLocationContext()),
-                           ArraySize.castAs<DefinedOrUnknownSVal>(), SVB);
+    State =
+        setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
+                         ArraySize.castAs<DefinedOrUnknownSVal>(), SVB);
   }
 
   // Remember our assumptions!
