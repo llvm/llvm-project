@@ -299,6 +299,19 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "Windows"
+    # TODO: The CI runner doesn't have bash in the path currently. Once it
+    # has that, remove the absolute path and just call 'bash' here.
+    command: "\"\\Program Files\\Git\\usr\\bin\\bash\" libcxx/utils/ci/run-buildbot generic-win"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "windows"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   # All jobs defined before this `wait` will run whenever a CI job is started.
   # Jobs defined after the `wait` will run only if all the jobs above succeeded.
   # We use this to reduce the load on testers that have more constrained resources
