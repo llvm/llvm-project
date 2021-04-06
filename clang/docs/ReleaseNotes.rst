@@ -82,31 +82,6 @@ New Compiler Flags
   in that case. The option's behaviour mirrors GCC, the helpers are implemented
   both in compiler-rt and libgcc.
 
-- -fpch-codegen and -fpch-debuginfo generate shared code and/or debuginfo
-  for contents of a precompiled header in a separate object file. This object
-  file needs to be linked in, but its contents do not need to be generated
-  for other objects using the precompiled header. This should usually save
-  compile time. If not using clang-cl, the separate object file needs to
-  be created explicitly from the precompiled header.
-  Example of use:
-
-  .. code-block:: console
-
-    $ clang++ -x c++-header header.h -o header.pch -fpch-codegen -fpch-debuginfo
-    $ clang++ -c header.pch -o shared.o
-    $ clang++ -c source.cpp -o source.o -include-pch header.pch
-    $ clang++ -o binary source.o shared.o
-
-  - Using -fpch-instantiate-templates when generating the precompiled header
-    usually increases the amount of code/debuginfo that can be shared.
-  - In some cases, especially when building with optimizations enabled, using
-    -fpch-codegen may generate so much code in the shared object that compiling
-    it may be a net loss in build time.
-  - Since headers may bring in private symbols of other libraries, it may be
-    sometimes necessary to discard unused symbols (such as by adding
-    -Wl,--gc-sections on ELF platforms to the linking command, and possibly
-    adding -fdata-sections -ffunction-sections to the command generating
-    the shared object).
 - New option ``-fbinutils-version=`` specifies the targeted binutils version.
   For example, ``-fbinutils-version=2.35`` means compatibility with GNU as/ld
   before 2.35 is not needed: new features can be used and there is no need to
