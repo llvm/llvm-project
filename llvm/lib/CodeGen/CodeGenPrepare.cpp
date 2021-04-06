@@ -626,12 +626,10 @@ bool CodeGenPrepare::eliminateAssumptions(Function &F) {
     CurInstIterator = BB.begin();
     while (CurInstIterator != BB.end()) {
       Instruction *I = &*(CurInstIterator++);
-      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-        if (II->getIntrinsicID() != Intrinsic::assume)
-          continue;
+      if (auto *Assume = dyn_cast<AssumeInst>(I)) {
         MadeChange = true;
-        Value *Operand = II->getOperand(0);
-        II->eraseFromParent();
+        Value *Operand = Assume->getOperand(0);
+        Assume->eraseFromParent();
 
         resetIteratorIfInvalidatedWhileCalling(&BB, [&]() {
           RecursivelyDeleteTriviallyDeadInstructions(Operand, TLInfo, nullptr);

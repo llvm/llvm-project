@@ -107,9 +107,7 @@ MutableArrayRef<uint8_t> User::getDescriptor() {
 }
 
 bool User::isDroppable() const {
-  if (const auto *Intr = dyn_cast<IntrinsicInst>(this))
-    return Intr->getIntrinsicID() == Intrinsic::assume;
-  return false;
+  return isa<AssumeInst>(this);
 }
 
 //===----------------------------------------------------------------------===//

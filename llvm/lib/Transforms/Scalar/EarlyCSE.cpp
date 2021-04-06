@@ -1219,9 +1219,8 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // they're marked as such to ensure preservation of control dependencies),
     // and this pass will not bother with its removal. However, we should mark
     // its condition as true for all dominated blocks.
-    if (match(&Inst, m_Intrinsic<Intrinsic::assume>())) {
-      auto *CondI =
-          dyn_cast<Instruction>(cast<CallInst>(Inst).getArgOperand(0));
+    if (auto *Assume = dyn_cast<AssumeInst>(&Inst)) {
+      auto *CondI = dyn_cast<Instruction>(Assume->getArgOperand(0));
       if (CondI && SimpleValue::canHandle(CondI)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE considering assumption: " << Inst
                           << '\n');
