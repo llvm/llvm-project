@@ -2,13 +2,14 @@
 
 ; CHECK: Call graph node <<null function>><<{{.*}}>>  #uses=0
 ; CHECK:   CS<None> calls function 'dead_fork_call'
+; CHECK:   CS<None> calls function '.omp_outlined..0'
 ; CHECK:   CS<None> calls function '__kmpc_fork_call'
 ; CHECK:   CS<None> calls function 'live_fork_call'
 ; CHECK:   CS<None> calls function '.omp_outlined..1'
 ; CHECK:   CS<None> calls function 'd'
 ;
-; CHECK: Call graph node for function: '.omp_outlined..0'<<{{.*}}>>  #uses=0
-;
+; CHECK: Call graph node for function: '.omp_outlined..0'<<{{.*}}>>  #uses=1
+; 
 ; CHECK: Call graph node for function: '.omp_outlined..1'<<{{.*}}>>  #uses=3
 ; CHECK:   CS<{{.*}}> calls function 'd'
 ;
