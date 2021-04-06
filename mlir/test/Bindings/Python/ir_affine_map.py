@@ -106,7 +106,7 @@ def testAffineMapDerive():
     map5 = AffineMap.get_identity(5)
 
     # CHECK: (d0, d1, d2, d3, d4) -> (d1, d2, d3)
-    map123 = map5.get_submap([1,2,3])
+    map123 = map5.get_submap([1, 2, 3])
     print(map123)
 
     # CHECK: (d0, d1, d2, d3, d4) -> (d0, d1)
@@ -176,3 +176,34 @@ def testAffineMapExprs():
     assert list(map3.results) == [d2, d0, d1]
 
 run(testAffineMapExprs)
+
+# CHECK-LABEL: TEST: testCompressUnusedSymbols
+def testCompressUnusedSymbols():
+  with Context() as ctx:
+    d0, d1, d2 = (
+      AffineDimExpr.get(0), 
+      AffineDimExpr.get(1), 
+      AffineDimExpr.get(2))
+    s0, s1, s2 = (
+      AffineSymbolExpr.get(0), 
+      AffineSymbolExpr.get(1), 
+      AffineSymbolExpr.get(2))
+    maps = [
+        AffineMap.get(3, 3, [d2, d0, d1]),
+        AffineMap.get(3, 3, [d2, d0 + s2, d1]),
+        AffineMap.get(3, 3, [d1, d2, d0])]
+
+    compressed_maps = AffineMap.compress_unused_symbols(maps, ctx)
+
+    #      CHECK: AffineMap((d0, d1, d2)[s0, s1, s2] -> (d2, d0, d1))
+    # CHECK-SAME: AffineMap((d0, d1, d2)[s0, s1, s2] -> (d2, d0 + s2, d1))
+    # CHECK-SAME: AffineMap((d0, d1, d2)[s0, s1, s2] -> (d1, d2, d0))
+    print(maps)
+
+    #      CHECK: AffineMap((d0, d1, d2)[s0] -> (d2, d0, d1))
+    # CHECK-SAME: AffineMap((d0, d1, d2)[s0] -> (d2, d0 + s0, d1))
+    # CHECK-SAME: AffineMap((d0, d1, d2)[s0] -> (d1, d2, d0))
+    print(compressed_maps)
+
+
+run(testCompressUnusedSymbols)
