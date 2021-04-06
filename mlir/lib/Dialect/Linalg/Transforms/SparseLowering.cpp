@@ -132,6 +132,12 @@ public:
       name = "sparseValuesF64";
     else if (eltType.isF32())
       name = "sparseValuesF32";
+    else if (eltType.isInteger(32))
+      name = "sparseValuesI32";
+    else if (eltType.isInteger(16))
+      name = "sparseValuesI16";
+    else if (eltType.isInteger(8))
+      name = "sparseValuesI8";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(
