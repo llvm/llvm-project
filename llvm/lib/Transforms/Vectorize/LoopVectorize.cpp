@@ -4697,7 +4697,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
         }
       } else {
         Constant *IdenC = RecurrenceDescriptor::getRecurrenceIdentity(
-            RK, VecTy->getScalarType());
+            RK, VecTy->getScalarType(), RdxDesc->getFastMathFlags());
         Iden = IdenC;
 
         if (!ScalarPHI) {
@@ -9207,7 +9207,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       Value *NewCond = State.get(Cond, Part);
       VectorType *VecTy = cast<VectorType>(NewVecOp->getType());
       Constant *Iden = RecurrenceDescriptor::getRecurrenceIdentity(
-          Kind, VecTy->getElementType());
+          Kind, VecTy->getElementType(), RdxDesc->getFastMathFlags());
       Constant *IdenVec =
           ConstantVector::getSplat(VecTy->getElementCount(), Iden);
       Value *Select = State.Builder.CreateSelect(NewCond, NewVecOp, IdenVec);
