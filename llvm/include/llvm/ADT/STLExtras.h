@@ -79,13 +79,6 @@ template <typename T> struct make_const_ref {
       typename std::add_const<T>::type>::type;
 };
 
-/// Utilities for detecting if a given trait holds for some set of arguments
-/// 'Args'. For example, the given trait could be used to detect if a given type
-/// has a copy assignment operator:
-///   template<class T>
-///   using has_copy_assign_t = decltype(std::declval<T&>()
-///                                                 = std::declval<const T&>());
-///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
 namespace detail {
 template <typename...> using void_t = void;
 template <class, template <class...> class Op, class... Args> struct detector {
@@ -97,16 +90,23 @@ struct detector<void_t<Op<Args...>>, Op, Args...> {
 };
 } // end namespace detail
 
+/// Detects if a given trait holds for some set of arguments 'Args'.
+/// For example, the given trait could be used to detect if a given type
+/// has a copy assignment operator:
+///   template<class T>
+///   using has_copy_assign_t = decltype(std::declval<T&>()
+///                                                 = std::declval<const T&>());
+///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
-/// Check if a Callable type can be invoked with the given set of arg types.
 namespace detail {
 template <typename Callable, typename... Args>
 using is_invocable =
     decltype(std::declval<Callable &>()(std::declval<Args>()...));
 } // namespace detail
 
+/// Check if a Callable type can be invoked with the given set of arg types.
 template <typename Callable, typename... Args>
 using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
 
