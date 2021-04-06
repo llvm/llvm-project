@@ -356,8 +356,9 @@ static void addFramework(StringRef name, bool isWeak) {
   error("framework not found for -framework " + name);
 }
 
-// Parses LC_LINKER_OPTION contents, which can add additional command line flags.
-void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
+// Parses LC_LINKER_OPTION contents, which can add additional command line
+// flags.
+void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   SmallVector<const char *, 4> argv;
   size_t offset = 0;
   for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
@@ -847,7 +848,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   errorHandler().logName = args::getFilenameWithoutExe(argsArr[0]);
   stderrOS.enable_colors(stderrOS.has_colors());
   // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
-
 
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));

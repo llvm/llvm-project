@@ -46,7 +46,7 @@ enum {
 #undef OPTION
 };
 
-void parseLCLinkerOption(InputFile*, unsigned argc, StringRef data);
+void parseLCLinkerOption(InputFile *, unsigned argc, StringRef data);
 
 std::string createResponseFile(const llvm::opt::InputArgList &args);
 
