@@ -522,9 +522,9 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
 
         bool is_preserved_number = cfinfoa & 0x8;
         if (is_preserved_number) {
-        if (log) 
-          log->Printf("Unsupported preserved NSNumber tagged pointer 0x%" 
-              PRIu64, valobj_addr);
+          if (log)
+            log->Printf("Unsupported preserved NSNumber tagged pointer 0x%"
+                PRIu64, valobj_addr);
           return false;
         }
 
