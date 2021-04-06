@@ -309,20 +309,18 @@ define i1 @andn_cmp_i8(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
-; FIXME: PR48768 - 'andn' clears the overflow flag, so we don't need a separate 'test'.
+; PR48768 - 'andn' clears the overflow flag, so we don't need a separate 'test'.
 define i1 @andn_cmp_i32_overflow(i32 %x, i32 %y) {
 ; X86-LABEL: andn_cmp_i32_overflow:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setle %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: andn_cmp_i32_overflow:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andnl %edi, %esi, %eax
-; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    retq
   %noty = xor i32 %y, -1
