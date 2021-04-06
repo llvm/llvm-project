@@ -25,3 +25,17 @@ __device__ long double ffp3(long double *p) {
   // CHECK: atomicrmw fsub double* {{.*}} monotonic
   return __atomic_fetch_sub(p, 1.0L, memory_order_relaxed);
 }
+
+__device__ double ffp4(double *p, float f) {
+  // CHECK-LABEL: @_Z4ffp4Pdf
+  // CHECK: fpext float {{.*}} to double
+  // CHECK: atomicrmw fsub double* {{.*}} monotonic
+  return __atomic_fetch_sub(p, f, memory_order_relaxed);
+}
+
+__device__ double ffp5(double *p, int i) {
+  // CHECK-LABEL: @_Z4ffp5Pdi
+  // CHECK: sitofp i32 {{.*}} to double
+  // CHECK: atomicrmw fsub double* {{.*}} monotonic
+  return __atomic_fetch_sub(p, i, memory_order_relaxed);
+}

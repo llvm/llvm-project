@@ -372,18 +372,6 @@ public:
   uint64_t getPointerAlignV(unsigned AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
-
-  bool
-  isFPAtomicFetchAddSubSupported(const llvm::fltSemantics &FS) const override {
-    switch (llvm::APFloat::SemanticsToEnum(FS)) {
-    case llvm::APFloat::S_IEEEsingle:
-      return MaxAtomicInlineWidth >= 32;
-    case llvm::APFloat::S_IEEEdouble:
-      return MaxAtomicInlineWidth >= 64;
-    default:
-      return false;
-    }
-  }
 };
 
 // X86-32 generic target

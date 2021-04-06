@@ -407,17 +407,6 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasExtIntType() const override { return true; }
-
-  bool
-  isFPAtomicFetchAddSubSupported(const llvm::fltSemantics &FS) const override {
-    switch (llvm::APFloat::SemanticsToEnum(FS)) {
-    case llvm::APFloat::S_IEEEsingle:
-    case llvm::APFloat::S_IEEEdouble:
-      return true;
-    default:
-      return false;
-    }
-  }
 };
 } // namespace targets
 } // namespace clang

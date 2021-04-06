@@ -1532,12 +1532,6 @@ public:
   /// Whether target allows debuginfo types for decl only variables.
   virtual bool allowDebugInfoForExternalVar() const { return false; }
 
-  /// Whether floating point atomic fetch add/sub is supported.
-  virtual bool
-  isFPAtomicFetchAddSubSupported(const llvm::fltSemantics &FS) const {
-    return false;
-  }
-
 protected:
   /// Copy type and layout related info.
   void copyAuxTarget(const TargetInfo *Aux);

@@ -1,4 +1,9 @@
-// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding -fsyntax-only -triple=i686-linux-gnu -std=c11
+// RUN: %clang_cc1 %s -verify=expected,fp80,noi128 -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=i686-linux-gnu -std=c11
+// RUN: %clang_cc1 %s -verify=expected,noi128 -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=i686-linux-android -std=c11
+// RUN: %clang_cc1 %s -verify -fgnuc-version=4.2.1 -ffreestanding \
+// RUN:   -fsyntax-only -triple=powerpc64-linux-gnu -std=c11
 
 // Basic parsing/Sema tests for __c11_atomic_*
 
@@ -51,7 +56,7 @@ _Static_assert(atomic_is_lock_free((atomic_char*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_short*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_int*)0), "");
 _Static_assert(atomic_is_lock_free((atomic_long*)0), "");
-// expected-error@+1 {{__int128 is not supported on this target}}
+// noi128-error@+1 {{__int128 is not supported on this target}}
 _Static_assert(atomic_is_lock_free((_Atomic(__int128)*)0), ""); // expected-error {{not an integral constant expression}}
 _Static_assert(atomic_is_lock_free(0 + (atomic_char*)0), "");
 
@@ -169,7 +174,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_fetch_add(p, 1, memory_order_seq_cst);
   __c11_atomic_fetch_add(f, 1.0f, memory_order_seq_cst);
   __c11_atomic_fetch_add(d, 1.0, memory_order_seq_cst);
-  __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // expected-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
+  __c11_atomic_fetch_add(ld, 1.0, memory_order_seq_cst); // fp80-error {{must be a pointer to atomic integer, pointer or supported floating point type}}
 
   __atomic_fetch_add(i, 3, memory_order_seq_cst); // expected-error {{pointer to integer, pointer or supported floating point type}}
   __atomic_fetch_sub(I, 3, memory_order_seq_cst);

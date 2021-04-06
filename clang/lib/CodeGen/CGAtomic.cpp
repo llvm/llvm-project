@@ -825,10 +825,10 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   bool Oversized = getContext().toBits(TInfo.Width) > MaxInlineWidthInBits;
   bool Misaligned = (Ptr.getAlignment() % TInfo.Width) != 0;
   bool UseLibcall = Misaligned | Oversized;
-  CharUnits MaxInlineWidth =
-      getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
   bool ShouldCastToIntPtrTy = true;
 
+  CharUnits MaxInlineWidth =
+      getContext().toCharUnitsFromBits(MaxInlineWidthInBits);
   DiagnosticsEngine &Diags = CGM.getDiags();
 
   if (Misaligned) {

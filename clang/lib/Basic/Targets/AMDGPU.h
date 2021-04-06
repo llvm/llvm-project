@@ -399,17 +399,6 @@ public:
   void setAuxTarget(const TargetInfo *Aux) override;
 
   bool hasExtIntType() const override { return true; }
-  bool
-  isFPAtomicFetchAddSubSupported(const llvm::fltSemantics &FS) const override {
-    switch (llvm::APFloat::SemanticsToEnum(FS)) {
-    case llvm::APFloat::S_IEEEsingle:
-    case llvm::APFloat::S_IEEEdouble:
-      return true;
-    default:
-      return false;
-    }
-  }
-
   // Record offload arch features since they are needed for defining the
   // pre-defined macros.
   bool handleTargetFeatures(std::vector<std::string> &Features,
