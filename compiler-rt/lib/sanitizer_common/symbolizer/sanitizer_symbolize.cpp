@@ -28,7 +28,7 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   Config.Pretty = false;
   Config.Verbose = false;
   Config.PrintFunctions = true;
-  Config.PrintAddress = true;
+  Config.PrintAddress = false;
   Config.SourceContextLines = 0;
   return Config;
 }
