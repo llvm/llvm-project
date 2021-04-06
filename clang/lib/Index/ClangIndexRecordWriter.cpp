@@ -82,7 +82,9 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     for (auto &Rel : Occur.Relations)
       Related.push_back(writer::SymbolRelation{Rel.RelatedSymbol, Rel.Roles});
 
-    Impl.addOccurrence(Occur.Dcl, Occur.Roles, Line, Col, Related);
+    // FIXME: handle macro occurrence
+    if (auto *D = Occur.DeclOrMacro.dyn_cast<const Decl *>())
+      Impl.addOccurrence(D, Occur.Roles, Line, Col, Related);
   }
 
   PrintingPolicy Policy(Ctx.getLangOpts());
