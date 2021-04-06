@@ -252,26 +252,14 @@ struct multiple_overloads {
   struct B { B(int); };
   struct AB : A, B {};
   struct O {};
-  struct DA : A {};
-  struct DB : B {};
-  void operator()(A) {};
-  void operator()(B) {};
+  void operator()(A) const;
+  void operator()(B) const;
 };
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::A>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::B>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DA>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DB>);
-static_assert(std::regular_invocable<multiple_overloads&, int>);
-static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::AB>);
-static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::O>);
-
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::A&>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::B&>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DA&>);
-static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DB&>);
-static_assert(std::regular_invocable<multiple_overloads&, int&>);
-static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::AB&>);
-static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::O&>);
+static_assert(std::regular_invocable<multiple_overloads, multiple_overloads::A>);
+static_assert(std::regular_invocable<multiple_overloads, multiple_overloads::B>);
+static_assert(std::regular_invocable<multiple_overloads, int>);
+static_assert(!std::regular_invocable<multiple_overloads, multiple_overloads::AB>);
+static_assert(!std::regular_invocable<multiple_overloads, multiple_overloads::O>);
 } // namespace function_objects
 
 namespace pointer_to_member_functions {
