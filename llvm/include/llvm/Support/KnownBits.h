@@ -299,7 +299,7 @@ public:
                                     KnownBits RHS);
 
   /// Compute known bits resulting from multiplying LHS and RHS.
-  static KnownBits computeForMul(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits from sign-extended multiply-hi.
   static KnownBits mulhs(const KnownBits &LHS, const KnownBits &RHS);
