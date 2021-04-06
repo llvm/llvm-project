@@ -375,14 +375,15 @@ static MDNode *findOptionalNodeOperand(MDNode *LoopMD, StringRef Name) {
       findMetadataOperand(LoopMD, Name).getValueOr(nullptr));
 }
 
-/// Is this node of type band?
-static bool isBand(const isl::schedule_node &Node) {
-  return isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band;
-}
-
 /// Is this node of type mark?
 static bool isMark(const isl::schedule_node &Node) {
   return isl_schedule_node_get_type(Node.get()) == isl_schedule_node_mark;
+}
+
+#ifndef NDEBUG
+/// Is this node of type band?
+static bool isBand(const isl::schedule_node &Node) {
+  return isl_schedule_node_get_type(Node.get()) == isl_schedule_node_band;
 }
 
 /// Is this node a band of a single dimension (i.e. could represent a loop)?
@@ -390,6 +391,7 @@ static bool isBandWithSingleLoop(const isl::schedule_node &Node) {
 
   return isBand(Node) && isl_schedule_node_band_n_member(Node.get()) == 1;
 }
+#endif
 
 /// Create an isl::id representing the output loop after a transformation.
 static isl::id createGeneratedLoopAttr(isl::ctx Ctx, MDNode *FollowupLoopMD) {

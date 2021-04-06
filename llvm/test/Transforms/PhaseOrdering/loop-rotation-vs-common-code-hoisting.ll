@@ -76,18 +76,20 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATED_LATER_OLDPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[WIDTH:%.*]], 1
 ; ROTATED_LATER_OLDPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATED_LATER_OLDPM:       for.cond.preheader:
+; ROTATED_LATER_OLDPM-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
+; ROTATED_LATER_OLDPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; ROTATED_LATER_OLDPM:       for.body.preheader:
 ; ROTATED_LATER_OLDPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
-; ROTATED_LATER_OLDPM-NEXT:    [[EXITCOND_NOT3:%.*]] = icmp eq i32 [[TMP0]], 0
-; ROTATED_LATER_OLDPM-NEXT:    br i1 [[EXITCOND_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY:%.*]]
+; ROTATED_LATER_OLDPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATED_LATER_OLDPM:       for.cond.cleanup:
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f2()
 ; ROTATED_LATER_OLDPM-NEXT:    br label [[RETURN]]
 ; ROTATED_LATER_OLDPM:       for.body:
-; ROTATED_LATER_OLDPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_COND_PREHEADER]] ]
+; ROTATED_LATER_OLDPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_OLDPM-NEXT:    tail call void @f1()
-; ROTATED_LATER_OLDPM-NEXT:    [[INC]] = add nuw i32 [[I_04]], 1
+; ROTATED_LATER_OLDPM-NEXT:    [[INC]] = add nuw nsw i32 [[I_04]], 1
 ; ROTATED_LATER_OLDPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
 ; ROTATED_LATER_OLDPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATED_LATER_OLDPM:       return:
@@ -98,24 +100,24 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATED_LATER_NEWPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[WIDTH:%.*]], 1
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[FOR_COND_PREHEADER:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.preheader:
+; ROTATED_LATER_NEWPM-NEXT:    [[CMP13_NOT:%.*]] = icmp eq i32 [[WIDTH]], 1
+; ROTATED_LATER_NEWPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
+; ROTATED_LATER_NEWPM:       for.body.preheader:
 ; ROTATED_LATER_NEWPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
-; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT3:%.*]] = icmp eq i32 [[TMP0]], 0
-; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT3]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND_PREHEADER_FOR_BODY_CRIT_EDGE:%.*]]
-; ROTATED_LATER_NEWPM:       for.cond.preheader.for.body_crit_edge:
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw i32 0, 1
+; ROTATED_LATER_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 0, 1
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.cleanup:
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f2()
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[RETURN]]
 ; ROTATED_LATER_NEWPM:       for.body:
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_COND_PREHEADER_FOR_BODY_CRIT_EDGE]] ]
+; ROTATED_LATER_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_BODY_PREHEADER]] ]
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f1()
 ; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_PHI]], [[TMP0]]
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
 ; ROTATED_LATER_NEWPM:       for.body.for.body_crit_edge:
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_0]] = add nuw i32 [[INC_PHI]], 1
+; ROTATED_LATER_NEWPM-NEXT:    [[INC_0]] = add nuw nsw i32 [[INC_PHI]], 1
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[FOR_BODY]]
 ; ROTATED_LATER_NEWPM:       return:
 ; ROTATED_LATER_NEWPM-NEXT:    ret void

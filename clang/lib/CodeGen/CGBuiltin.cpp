@@ -17875,6 +17875,70 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   // Required for overloaded intrinsics.
   llvm::SmallVector<llvm::Type *, 2> IntrinsicTypes;
   switch (BuiltinID) {
+  default: llvm_unreachable("unexpected builtin ID");
+  case RISCV::BI__builtin_riscv_orc_b_32:
+  case RISCV::BI__builtin_riscv_orc_b_64:
+  case RISCV::BI__builtin_riscv_clmul:
+  case RISCV::BI__builtin_riscv_clmulh:
+  case RISCV::BI__builtin_riscv_clmulr:
+  case RISCV::BI__builtin_riscv_crc32_b:
+  case RISCV::BI__builtin_riscv_crc32_h:
+  case RISCV::BI__builtin_riscv_crc32_w:
+  case RISCV::BI__builtin_riscv_crc32_d:
+  case RISCV::BI__builtin_riscv_crc32c_b:
+  case RISCV::BI__builtin_riscv_crc32c_h:
+  case RISCV::BI__builtin_riscv_crc32c_w:
+  case RISCV::BI__builtin_riscv_crc32c_d: {
+    switch (BuiltinID) {
+    default: llvm_unreachable("unexpected builtin ID");
+    // Zbb
+    case RISCV::BI__builtin_riscv_orc_b_32:
+    case RISCV::BI__builtin_riscv_orc_b_64:
+      ID = Intrinsic::riscv_orc_b;
+      break;
+
+    // Zbc
+    case RISCV::BI__builtin_riscv_clmul:
+      ID = Intrinsic::riscv_clmul;
+      break;
+    case RISCV::BI__builtin_riscv_clmulh:
+      ID = Intrinsic::riscv_clmulh;
+      break;
+    case RISCV::BI__builtin_riscv_clmulr:
+      ID = Intrinsic::riscv_clmulr;
+      break;
+
+    // Zbr
+    case RISCV::BI__builtin_riscv_crc32_b:
+      ID = Intrinsic::riscv_crc32_b;
+      break;
+    case RISCV::BI__builtin_riscv_crc32_h:
+      ID = Intrinsic::riscv_crc32_h;
+      break;
+    case RISCV::BI__builtin_riscv_crc32_w:
+      ID = Intrinsic::riscv_crc32_w;
+      break;
+    case RISCV::BI__builtin_riscv_crc32_d:
+      ID = Intrinsic::riscv_crc32_d;
+      break;
+    case RISCV::BI__builtin_riscv_crc32c_b:
+      ID = Intrinsic::riscv_crc32c_b;
+      break;
+    case RISCV::BI__builtin_riscv_crc32c_h:
+      ID = Intrinsic::riscv_crc32c_h;
+      break;
+    case RISCV::BI__builtin_riscv_crc32c_w:
+      ID = Intrinsic::riscv_crc32c_w;
+      break;
+    case RISCV::BI__builtin_riscv_crc32c_d:
+      ID = Intrinsic::riscv_crc32c_d;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType};
+    break;
+  }
+  // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
   }
 

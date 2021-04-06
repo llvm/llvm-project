@@ -103,13 +103,15 @@ def OMPC_CopyPrivate : Clause<"copyprivate"> {
 def OMP_PROC_BIND_master : ClauseVal<"master",2,1> {}
 def OMP_PROC_BIND_close : ClauseVal<"close",3,1> {}
 def OMP_PROC_BIND_spread : ClauseVal<"spread",4,1> {}
-def OMP_PROC_BIND_default : ClauseVal<"default",5,0> {}
-def OMP_PROC_BIND_unknown : ClauseVal<"unknown",6,0> { let isDefault = true; }
+def OMP_PROC_BIND_primary : ClauseVal<"primary",5,1> {}
+def OMP_PROC_BIND_default : ClauseVal<"default",6,0> {}
+def OMP_PROC_BIND_unknown : ClauseVal<"unknown",7,0> { let isDefault = true; }
 def OMPC_ProcBind : Clause<"proc_bind"> {
   let clangClass = "OMPProcBindClause";
   let flangClass = "OmpProcBindClause";
   let enumClauseValue = "ProcBindKind";
   let allowedClauseValues = [
+    OMP_PROC_BIND_primary,
     OMP_PROC_BIND_master,
     OMP_PROC_BIND_close,
     OMP_PROC_BIND_spread,
@@ -275,6 +277,14 @@ def OMPC_Use : Clause<"use"> {
 }
 def OMPC_Destroy : Clause<"destroy"> {
   let clangClass = "OMPDestroyClause";
+}
+def OMPC_Novariants : Clause<"novariants"> {
+  let clangClass = "OMPNovariantsClause";
+  let flangClass = "ScalarLogicalExpr";
+}
+def OMPC_Nocontext : Clause<"nocontext"> {
+  let clangClass = "OMPNocontextClause";
+  let flangClass = "ScalarLogicalExpr";
 }
 def OMPC_Detach : Clause<"detach"> {
   let clangClass = "OMPDetachClause";
@@ -1660,7 +1670,9 @@ def OMP_dispatch : Directive<"dispatch"> {
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_IsDevicePtr>,
     VersionedClause<OMPC_NoWait>,
-    VersionedClause<OMPC_Depend>
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_Novariants>,
+    VersionedClause<OMPC_Nocontext>
   ];
 }
 def OMP_Unknown : Directive<"unknown"> {

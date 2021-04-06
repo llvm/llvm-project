@@ -40,6 +40,8 @@ enum NodeType : unsigned {
   BuildPairF64,
   SplitF64,
   TAIL,
+  // Multiply high for signedxunsigned.
+  MULHSU,
   // RV64I shifts, directly matching the semantics of the named RISC-V
   // instructions.
   SLLW,
@@ -105,9 +107,10 @@ enum NodeType : unsigned {
   // VMV_X_S matches the semantics of vmv.x.s. The result is always XLenVT sign
   // extended from the vector element size.
   VMV_X_S,
-  // VMV_S_XF_VL matches the semantics of vmv.s.x/vmv.s.f, depending on the
-  // types of its operands. It carries a VL operand.
-  VMV_S_XF_VL,
+  // VMV_S_X_VL matches the semantics of vmv.s.x. It carries a VL operand.
+  VMV_S_X_VL,
+  // VFMV_S_F_VL matches the semantics of vfmv.s.f. It carries a VL operand.
+  VFMV_S_F_VL,
   // Splats an i64 scalar to a vector type (with element type i64) where the
   // scalar is a sign-extended i32.
   SPLAT_VECTOR_I64,
@@ -258,6 +261,19 @@ public:
   bool isCheapToSpeculateCtlz() const override;
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+
+  bool softPromoteHalfType() const override { return true; }
+
+  /// Return the register type for a given MVT, ensuring vectors are treated
+  /// as a series of gpr sized integers.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, ensuring vectors are
+  /// treated as a series of gpr sized integers.
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.

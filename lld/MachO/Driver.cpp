@@ -43,7 +43,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/TextAPI/MachO/PackedVersion.h"
+#include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
 
@@ -531,6 +531,7 @@ static void replaceCommonSymbols() {
     inputSections.push_back(isec);
 
     replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
+                           /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern);
   }
@@ -1103,7 +1104,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             "\n>>> referenced from option -exported_symbol(s_list)");
     }
 
-    createSyntheticSections();
+    if (target->wordSize == 8)
+      createSyntheticSections<LP64>();
+    else
+      createSyntheticSections<ILP32>();
+
     createSyntheticSymbols();
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
@@ -1126,7 +1131,10 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     }
 
     // Write to an output file.
-    writeResult();
+    if (target->wordSize == 8)
+      writeResult<LP64>();
+    else
+      writeResult<ILP32>();
 
     depTracker->write(getLLDVersion(), inputFiles, config->outputFile);
   }

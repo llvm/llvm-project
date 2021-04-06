@@ -763,9 +763,8 @@ llvm::DenormalMode CudaToolChain::getDefaultDenormalModeForType(
     const llvm::fltSemantics *FPType) const {
   if (JA.getOffloadingDeviceKind() == Action::OFK_Cuda) {
     if (FPType && FPType == &llvm::APFloat::IEEEsingle() &&
-        DriverArgs.hasFlag(options::OPT_fcuda_flush_denormals_to_zero,
-                           options::OPT_fno_cuda_flush_denormals_to_zero,
-                           false))
+        DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                           options::OPT_fno_gpu_flush_denormals_to_zero, false))
       return llvm::DenormalMode::getPreserveSign();
   }
 

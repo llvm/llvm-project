@@ -4149,10 +4149,12 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                               TrueVal, FalseVal))
     return V;
 
-  // If we have an equality comparison, then we know the value in one of the
-  // arms of the select. See if substituting this value into the arm and
+  // If we have a scalar equality comparison, then we know the value in one of
+  // the arms of the select. See if substituting this value into the arm and
   // simplifying the result yields the same value as the other arm.
-  if (Pred == ICmpInst::ICMP_EQ) {
+  // Note that the equivalence/replacement opportunity does not hold for vectors
+  // because each element of a vector select is chosen independently.
+  if (Pred == ICmpInst::ICMP_EQ && !CondVal->getType()->isVectorTy()) {
     if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                                /* AllowRefinement */ false, MaxRecurse) ==
             TrueVal ||
@@ -4332,7 +4334,10 @@ static Value *SimplifyGEPInst(Type *SrcTy, ArrayRef<Value *> Ops,
   if (Q.isUndefValue(Ops[0]))
     return UndefValue::get(GEPTy);
 
-  bool IsScalableVec = isa<ScalableVectorType>(SrcTy);
+  bool IsScalableVec =
+      isa<ScalableVectorType>(SrcTy) || any_of(Ops, [](const Value *V) {
+        return isa<ScalableVectorType>(V->getType());
+      });
 
   if (Ops.size() == 2) {
     // getelementptr P, 0 -> P.

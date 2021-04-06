@@ -283,4 +283,4 @@ v_pk_add_u16 v5, v1, 123456.0
 // FIXME: v_pk_fmac_f16 cannot be promoted to VOP3 so '_e32' suffix is not valid
 v_pk_fmac_f16 v5, 0x12345678, v2
 // NOGFX9: error: instruction not supported on this GPU
-// GFX10: v_pk_fmac_f16_e32 v5, 0x12345678, v2 ; encoding: [0xff,0x04,0x0a,0x78,0x78,0x56,0x34,0x12]
+// GFX10: v_pk_fmac_f16 v5, 0x12345678, v2 ; encoding: [0xff,0x04,0x0a,0x78,0x78,0x56,0x34,0x12]

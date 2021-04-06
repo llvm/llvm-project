@@ -551,10 +551,12 @@ define i32 @select_xor_icmp_bad_6(i32 %x, i32 %y, i32 %z) {
   ret i32 %C
 }
 
+; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+
 define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @select_xor_icmp_vec_bad(
 ; CHECK-NEXT:    [[A:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 5, i8 3>
-; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[Z:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[A]], <2 x i8> [[B]], <2 x i8> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[C]]
 ;
@@ -562,6 +564,21 @@ define <2 x i8> @select_xor_icmp_vec_bad(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) 
   %B = xor <2 x i8>  %x, %z
   %C = select <2 x i1>  %A, <2 x i8>  %B, <2 x i8>  %y
   ret <2 x i8>  %C
+}
+
+; Value equivalence substitution is all-or-nothing, so needs a scalar compare.
+
+define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x) {
+; CHECK-LABEL: @vec_select_no_equivalence(
+; CHECK-NEXT:    [[X10:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[S:%.*]] = select <2 x i1> [[COND]], <2 x i32> [[X10]], <2 x i32> [[X]]
+; CHECK-NEXT:    ret <2 x i32> [[S]]
+;
+  %x10 = shufflevector <2 x i32> %x, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  %cond = icmp eq <2 x i32> %x, zeroinitializer
+  %s = select <2 x i1> %cond, <2 x i32> %x10, <2 x i32> %x
+  ret <2 x i32> %s
 }
 
 ; Folding this would only be legal if we sanitized undef to 0.

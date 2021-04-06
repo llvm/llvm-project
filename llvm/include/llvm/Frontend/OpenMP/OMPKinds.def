@@ -967,6 +967,7 @@ __OMP_DEFAULT_KIND(unknown)
 __OMP_PROC_BIND_KIND(master, 2)
 __OMP_PROC_BIND_KIND(close, 3)
 __OMP_PROC_BIND_KIND(spread, 4)
+__OMP_PROC_BIND_KIND(primary, 5)
 __OMP_PROC_BIND_KIND(default, 6)
 __OMP_PROC_BIND_KIND(unknown, 7)
 

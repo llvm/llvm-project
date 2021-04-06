@@ -11977,6 +11977,12 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_destroy:
     C = new (Context) OMPDestroyClause();
     break;
+  case llvm::omp::OMPC_novariants:
+    C = new (Context) OMPNovariantsClause();
+    break;
+  case llvm::omp::OMPC_nocontext:
+    C = new (Context) OMPNocontextClause();
+    break;
   case llvm::omp::OMPC_detach:
     C = new (Context) OMPDetachClause();
     break;
@@ -12160,6 +12166,18 @@ void OMPClauseReader::VisitOMPDestroyClause(OMPDestroyClause *C) {
   C->setInteropVar(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
   C->setVarLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPNovariantsClause(OMPNovariantsClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPNocontextClause(OMPNocontextClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPUnifiedAddressClause(OMPUnifiedAddressClause *) {}

@@ -275,9 +275,14 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
+  LoopAnalysisManager LAM(DebugPM);
+  FunctionAnalysisManager FAM(DebugPM);
+  CGSCCAnalysisManager CGAM(DebugPM);
+  ModuleAnalysisManager MAM(DebugPM);
+
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(DebugPM, VerifyEachPass);
-  SI.registerCallbacks(PIC);
+  SI.registerCallbacks(PIC, &FAM);
   DebugifyEachInstrumentation Debugify;
   if (DebugifyEach)
     Debugify.registerCallbacks(PIC);
@@ -372,11 +377,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
       }
     }
   }
-
-  LoopAnalysisManager LAM(DebugPM);
-  FunctionAnalysisManager FAM(DebugPM);
-  CGSCCAnalysisManager CGAM(DebugPM);
-  ModuleAnalysisManager MAM(DebugPM);
 
   // Register the AA manager first so that our version is the one used.
   FAM.registerPass([&] { return std::move(AA); });

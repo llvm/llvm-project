@@ -45,7 +45,7 @@ define i32 @s_add_co_select_user() {
 ; GFX10-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_add_co_u32_e64 v0, s5, s4, s4
+; GFX10-NEXT:    v_add_co_u32 v0, s5, s4, s4
 ; GFX10-NEXT:    s_cmpk_lg_u32 s5, 0x0
 ; GFX10-NEXT:    s_addc_u32 s5, s4, 0
 ; GFX10-NEXT:    s_cselect_b32 s6, 1, 0

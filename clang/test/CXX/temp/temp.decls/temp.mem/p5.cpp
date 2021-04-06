@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-struct A { 
+struct A {
   template <class T> operator T*();
-}; 
+};
 
 template <class T> A::operator T*() { return 0; }
 template <> A::operator char*(){ return 0; } // specialization
 template A::operator void*(); // explicit instantiation
 
-int main() { 
+int main() {
   A a;
-  int *ip; 
+  int *ip;
   ip = a.operator int*();
 }
 
@@ -33,7 +33,7 @@ namespace PR5742 {
 class Foo {
  public:
   template <typename T> operator T();
-  
+
   template <typename T>
   T As() {
     return this->operator T();
@@ -43,7 +43,7 @@ class Foo {
   T As2() {
     return operator T();
   }
-  
+
   int AsInt() {
     return this->operator int();
   }
@@ -58,9 +58,9 @@ struct X0 {
     T x = 1; // expected-note{{variable 'x' declared const here}}
     x = 17; // expected-error{{cannot assign to variable 'x' with const-qualified type 'const int'}}
   }
-  
+
   template<typename T> operator T*() const; // expected-note{{explicit instantiation refers here}}
-  
+
   template<typename T> operator const T*() const {
     T x = T();
     return x; // expected-error{{cannot initialize return object of type 'const char *' with an lvalue of type 'char'}} \

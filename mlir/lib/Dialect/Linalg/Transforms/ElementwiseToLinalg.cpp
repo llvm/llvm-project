@@ -10,6 +10,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
@@ -115,7 +116,7 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
 };
 } // namespace
 
-void mlir::populateElementwiseToLinalgConversionPatterns(
+void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<ConvertAnyElementwiseMappableOpOnRankedTensors>(
       patterns.getContext());
@@ -131,7 +132,7 @@ class ConvertElementwiseToLinalgPass
     ConversionTarget target(*context);
     RewritePatternSet patterns(context);
 
-    populateElementwiseToLinalgConversionPatterns(patterns);
+    mlir::linalg::populateElementwiseToLinalgConversionPatterns(patterns);
     target.markUnknownOpDynamicallyLegal([](Operation *op) {
       return !isElementwiseMappableOpOnRankedTensors(op);
     });

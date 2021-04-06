@@ -26,9 +26,9 @@ using namespace llvm;
 /// Replaces BB Terminator with one that only contains Chunk BBs
 static void replaceBranchTerminator(BasicBlock &BB,
                                     std::set<BasicBlock *> BBsToKeep) {
-  auto Term = BB.getTerminator();
+  auto *Term = BB.getTerminator();
   std::vector<BasicBlock *> ChunkSucessors;
-  for (auto Succ : successors(&BB))
+  for (auto *Succ : successors(&BB))
     if (BBsToKeep.count(Succ))
       ChunkSucessors.push_back(Succ);
 
@@ -38,7 +38,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
 
   bool IsBranch = isa<BranchInst>(Term) || isa<InvokeInst>(Term);
   Value *Address = nullptr;
-  if (auto IndBI = dyn_cast<IndirectBrInst>(Term))
+  if (auto *IndBI = dyn_cast<IndirectBrInst>(Term))
     Address = IndBI->getAddress();
 
   Term->replaceAllUsesWith(UndefValue::get(Term->getType()));
@@ -56,9 +56,9 @@ static void replaceBranchTerminator(BasicBlock &BB,
     BranchInst::Create(ChunkSucessors[0], &BB);
 
   if (Address) {
-    auto NewIndBI =
+    auto *NewIndBI =
         IndirectBrInst::Create(Address, ChunkSucessors.size(), &BB);
-    for (auto Dest : ChunkSucessors)
+    for (auto *Dest : ChunkSucessors)
       NewIndBI->addDestination(Dest);
   }
 }

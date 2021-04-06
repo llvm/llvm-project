@@ -783,8 +783,7 @@ define i64 @sbclri_i64_63(i64 %a) nounwind {
 ; RV64I-LABEL: sbclri_i64_63:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a1, zero, -1
-; RV64I-NEXT:    slli a1, a1, 63
-; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    srli a1, a1, 1
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;

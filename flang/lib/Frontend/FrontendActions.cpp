@@ -64,7 +64,9 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     const unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not scan %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -97,7 +99,9 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     const unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not scan %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -109,7 +113,9 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -264,7 +270,9 @@ void DebugMeasureParseTreeAction::ExecuteAction() {
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();

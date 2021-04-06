@@ -3854,7 +3854,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: December 04, 2020 17:5
      - `2`
      - `1`
      - :part:`66%`
-   * - llvm/include/llvm/TextAPI/MachO
+   * - llvm/include/llvm/TextAPI
      - `9`
      - `8`
      - `1`
@@ -4749,7 +4749,7 @@ tree in terms of conformance to :doc:`ClangFormat` as of: December 04, 2020 17:5
      - `3`
      - `0`
      - :good:`100%`
-   * - llvm/lib/TextAPI/MachO
+   * - llvm/lib/TextAPI
      - `11`
      - `8`
      - `3`

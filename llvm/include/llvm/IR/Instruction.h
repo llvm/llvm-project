@@ -597,6 +597,9 @@ public:
   /// Return true if this atomic instruction stores to memory.
   bool hasAtomicStore() const;
 
+  /// Return true if this instruction has a volatile memory access.
+  bool isVolatile() const;
+
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
 
@@ -653,6 +656,10 @@ public:
   /// Return true if the instruction is a llvm.lifetime.start or
   /// llvm.lifetime.end marker.
   bool isLifetimeStartOrEnd() const;
+
+  /// Return true if the instruction is a llvm.launder.invariant.group or
+  /// llvm.strip.invariant.group.
+  bool isLaunderOrStripInvariantGroup() const;
 
   /// Return true if the instruction is a DbgInfoIntrinsic or PseudoProbeInst.
   bool isDebugOrPseudoInst() const;

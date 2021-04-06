@@ -17,7 +17,7 @@ define i8 @flat_inst_valu_offset_1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, v0, 1
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 1
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -39,7 +39,7 @@ define i8 @flat_inst_valu_offset_11bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x7ff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -61,7 +61,7 @@ define i8 @flat_inst_valu_offset_12bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -85,7 +85,7 @@ define i8 @flat_inst_valu_offset_13bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1fff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -109,7 +109,7 @@ define i8 @flat_inst_valu_offset_neg_11bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfffff800, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -133,7 +133,7 @@ define i8 @flat_inst_valu_offset_neg_12bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfffff000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -157,7 +157,7 @@ define i8 @flat_inst_valu_offset_neg_13bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xffffe000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -179,7 +179,7 @@ define i8 @flat_inst_valu_offset_2x_11bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -203,7 +203,7 @@ define i8 @flat_inst_valu_offset_2x_12bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1fff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -227,7 +227,7 @@ define i8 @flat_inst_valu_offset_2x_13bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x3fff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x3fff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -251,7 +251,7 @@ define i8 @flat_inst_valu_offset_2x_neg_11bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfffff000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfffff000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -275,7 +275,7 @@ define i8 @flat_inst_valu_offset_2x_neg_12bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xffffe000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffe000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -299,7 +299,7 @@ define i8 @flat_inst_valu_offset_2x_neg_13bit_max(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xffffc000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xffffc000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -324,7 +324,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x7ff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -349,7 +349,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x800, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -374,7 +374,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -399,7 +399,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -424,7 +424,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1fff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -449,7 +449,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x2000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 2, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -475,7 +475,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x7ff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x7ff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -501,7 +501,7 @@ define i8 @flat_inst_valu_offset_64bit_11bit_neg_high_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x800, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -527,7 +527,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0xfff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0xfff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -553,7 +553,7 @@ define i8 @flat_inst_valu_offset_64bit_12bit_neg_high_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -579,7 +579,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split0(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x1fff, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x1fff, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -605,7 +605,7 @@ define i8 @flat_inst_valu_offset_64bit_13bit_neg_high_split1(i8* %p) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    v_add_co_u32_e64 v0, vcc_lo, 0x2000, v0
+; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0x80000000, v1, vcc_lo
 ; GFX10-NEXT:    flat_load_ubyte v0, v[0:1]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

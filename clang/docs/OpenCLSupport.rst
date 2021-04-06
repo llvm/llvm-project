@@ -321,7 +321,7 @@ C++ for OpenCL Implementation Status
 
 Clang implements language version 1.0 published in `the official
 release of C++ for OpenCL Documentation
-<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r1>`_.
+<https://github.com/KhronosGroup/OpenCL-Docs/releases/tag/cxxforopencl-v1.0-r2>`_.
 
 Limited support of experimental C++ libraries is described in the :ref:`experimental features <opencl_experimenal>`.
 
@@ -398,6 +398,8 @@ Feel free to contact us on `cfe-dev
 <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
 <https://bugs.llvm.org/>`__.
 
+.. _opencl_experimenal_cxxlibs:
+
 C++ libraries for OpenCL
 ------------------------
 
@@ -441,4 +443,5 @@ The possible clang invocation to compile the example is as follows:
      $ clang -cl-std=clc++  -I<path to libcxx checkout or installation>/include test.cl
 
 Note that `type_traits` is a header only library and therefore no extra
-linking step against the standard libraries is required.
+linking step against the standard libraries is required. See full example
+in `Compiler Explorer <https://godbolt.org/z/5WbnTfb65>`_.

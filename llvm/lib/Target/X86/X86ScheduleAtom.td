@@ -429,6 +429,7 @@ defm : X86WriteResPairUnsupported<WriteVarBlend>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : X86WriteResPairUnsupported<WriteShuffle256>;
+defm : X86WriteResPairUnsupported<WriteVPMOV256>;
 defm : X86WriteResPairUnsupported<WriteVarShuffle256>;
 defm : X86WriteResPairUnsupported<WriteVarVecShift>;
 defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;

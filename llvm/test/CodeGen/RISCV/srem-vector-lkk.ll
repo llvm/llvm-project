@@ -169,14 +169,13 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) nounwind {
 ; RV64IM-NEXT:    addi a5, zero, 95
 ; RV64IM-NEXT:    mul a2, a2, a5
 ; RV64IM-NEXT:    sub a1, a1, a2
-; RV64IM-NEXT:    lui a2, 248
+; RV64IM-NEXT:    lui a2, 777976
 ; RV64IM-NEXT:    addiw a2, a2, -1057
 ; RV64IM-NEXT:    slli a2, a2, 15
 ; RV64IM-NEXT:    addi a2, a2, -1057
-; RV64IM-NEXT:    slli a2, a2, 15
-; RV64IM-NEXT:    addi a2, a2, -1057
-; RV64IM-NEXT:    slli a2, a2, 13
-; RV64IM-NEXT:    addi a2, a2, -265
+; RV64IM-NEXT:    slli a2, a2, 14
+; RV64IM-NEXT:    addi a2, a2, -529
+; RV64IM-NEXT:    srli a2, a2, 1
 ; RV64IM-NEXT:    mulh a2, a4, a2
 ; RV64IM-NEXT:    sub a2, a2, a4
 ; RV64IM-NEXT:    srli a5, a2, 63

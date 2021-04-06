@@ -1124,7 +1124,10 @@ static Instruction *canonicalizeAbsNabs(SelectInst &Sel, ICmpInst &Cmp,
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
 Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                                                           ICmpInst &Cmp) {
-  if (!Cmp.isEquality())
+  // Value equivalence substitution requires an all-or-nothing replacement.
+  // It does not make sense for a vector compare where each lane is chosen
+  // independently.
+  if (!Cmp.isEquality() || Cmp.getType()->isVectorTy())
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
@@ -2618,13 +2621,32 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (SelType->isIntOrIntVectorTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
-    if (match(TrueVal, m_One()) &&
-        (EnableUnsafeSelectTransform || impliesPoison(FalseVal, CondVal))) {
+    auto IsSafeToConvert = [&](Value *OtherVal) {
+      if (impliesPoison(OtherVal, CondVal))
+        return true;
+
+      if (!EnableUnsafeSelectTransform)
+        return false;
+
+      // We block this transformation if OtherVal or its operand can create
+      // poison. See PR49688
+      if (auto *Op = dyn_cast<Operator>(OtherVal)) {
+        if (canCreatePoison(Op))
+          return false;
+        if (propagatesPoison(Op) &&
+            llvm::any_of(Op->operand_values(), [](Value *V) {
+              return isa<Operator>(V) ? canCreatePoison(cast<Operator>(V))
+                                      : false;
+            }))
+          return false;
+      }
+      return true;
+    };
+    if (match(TrueVal, m_One()) && IsSafeToConvert(FalseVal)) {
       // Change: A = select B, true, C --> A = or B, C
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
-    if (match(FalseVal, m_Zero()) &&
-        (EnableUnsafeSelectTransform || impliesPoison(TrueVal, CondVal))) {
+    if (match(FalseVal, m_Zero()) && IsSafeToConvert(TrueVal)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
     }

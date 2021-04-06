@@ -362,22 +362,30 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
-                                    const MCSubtargetInfo &STI, raw_ostream &O) {
+                                    const MCSubtargetInfo &STI,
+                                    raw_ostream &O) {
+  auto Opcode = MI->getOpcode();
+  auto Flags = MII.get(Opcode).TSFlags;
+
   if (OpNo == 0) {
-    if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3)
-      O << "_e64 ";
-    else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::DPP)
-      O << "_dpp ";
-    else if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::SDWA)
-      O << "_sdwa ";
-    else
-      O << "_e32 ";
+    if (Flags & SIInstrFlags::VOP3) {
+      if (!getVOP3IsSingle(Opcode))
+        O << "_e64";
+    } else if (Flags & SIInstrFlags::DPP) {
+      O << "_dpp";
+    } else if (Flags & SIInstrFlags::SDWA) {
+      O << "_sdwa";
+    } else if (((Flags & SIInstrFlags::VOP1) && !getVOP1IsSingle(Opcode)) ||
+               ((Flags & SIInstrFlags::VOP2) && !getVOP2IsSingle(Opcode))) {
+      O << "_e32";
+    }
+    O << " ";
   }
 
   printOperand(MI, OpNo, STI, O);
 
   // Print default vcc/vcc_lo operand.
-  switch (MI->getOpcode()) {
+  switch (Opcode) {
   default: break;
 
   case AMDGPU::V_ADD_CO_CI_U32_e32_gfx10:

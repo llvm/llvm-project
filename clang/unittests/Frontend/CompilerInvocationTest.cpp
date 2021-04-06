@@ -877,4 +877,15 @@ TEST_F(CommandLineTest, RoundTrip) {
             ShowIncludesDestination::Stdout);
   ASSERT_TRUE(Invocation.getDependencyOutputOpts().ShowHeaderIncludes);
 }
+
+TEST_F(CommandLineTest, PluginArgsRoundTripDeterminism) {
+  const char *Args[] = {
+      "-plugin-arg-blink-gc-plugin", "no-members-in-stack-allocated",
+      "-plugin-arg-find-bad-constructs", "checked-ptr-as-trivial-member",
+      "-plugin-arg-find-bad-constructs", "check-ipc",
+      // Enable round-trip to ensure '-plugin-arg' generation is deterministic.
+      "-round-trip-args"};
+
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(Invocation, Args, *Diags));
+}
 } // anonymous namespace

@@ -10,6 +10,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 
 #include "DynamicLoaderStatic.h"
@@ -105,6 +106,15 @@ void DynamicLoaderStatic::LoadAllImagesAtFileAddresses() {
             // the file...
             SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
             if (section_sp) {
+              // If this section already has a load address set in the target,
+              // don't re-set it to the file address.  Something may have
+              // set it to a more correct value already.
+              if (m_process->GetTarget()
+                      .GetSectionLoadList()
+                      .GetSectionLoadAddress(section_sp) !=
+                  LLDB_INVALID_ADDRESS) {
+                continue;
+              }
               if (m_process->GetTarget().SetSectionLoadAddress(
                       section_sp, section_sp->GetFileAddress()))
                 changed = true;

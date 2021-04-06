@@ -53,7 +53,7 @@ class LinkEditSection : public SyntheticSection {
 public:
   LinkEditSection(const char *segname, const char *name)
       : SyntheticSection(segname, name) {
-    align = WordSize; // mimic ld64
+    align = target->wordSize;
   }
 
   // Sections in __LINKEDIT are special: their offsets are recorded in the
@@ -77,16 +77,16 @@ public:
 // The header of the Mach-O file, which must have a file offset of zero.
 class MachHeaderSection : public SyntheticSection {
 public:
-  MachHeaderSection();
   void addLoadCommand(LoadCommand *);
   bool isHidden() const override { return true; }
-  uint64_t getSize() const override;
-  void writeTo(uint8_t *buf) const override;
 
-private:
+protected:
+  MachHeaderSection();
   std::vector<LoadCommand *> loadCommands;
   uint32_t sizeOfCmds = 0;
 };
+
+template <class LP> MachHeaderSection *makeMachHeaderSection();
 
 // A hidden section that exists solely for the purpose of creating the
 // __PAGEZERO segment, which is used to catch null pointer dereferences.
@@ -94,7 +94,7 @@ class PageZeroSection : public SyntheticSection {
 public:
   PageZeroSection();
   bool isHidden() const override { return true; }
-  uint64_t getSize() const override { return PageZeroSize; }
+  uint64_t getSize() const override { return target->pageZeroSize; }
   uint64_t getFileSize() const override { return 0; }
   void writeTo(uint8_t *buf) const override {}
 };
@@ -111,7 +111,9 @@ public:
 
   bool isNeeded() const override { return !entries.empty(); }
 
-  uint64_t getSize() const override { return entries.size() * WordSize; }
+  uint64_t getSize() const override {
+    return entries.size() * target->wordSize;
+  }
 
   void writeTo(uint8_t *buf) const override;
 
@@ -309,7 +311,7 @@ public:
 class ImageLoaderCacheSection : public InputSection {
 public:
   ImageLoaderCacheSection();
-  uint64_t getSize() const override { return WordSize; }
+  uint64_t getSize() const override { return target->wordSize; }
 };
 
 // Note that this section may also be targeted by non-lazy bindings. In
@@ -406,7 +408,6 @@ struct StabsEntry {
 // range (start index and total number) of those symbols in the symbol table.
 class SymtabSection : public LinkEditSection {
 public:
-  SymtabSection(StringTableSection &);
   void finalizeContents();
   uint32_t getNumSymbols() const;
   uint32_t getNumLocalSymbols() const {
@@ -414,8 +415,6 @@ public:
   }
   uint32_t getNumExternalSymbols() const { return externalSymbols.size(); }
   uint32_t getNumUndefinedSymbols() const { return undefinedSymbols.size(); }
-  uint64_t getRawSize() const override;
-  void writeTo(uint8_t *buf) const override;
 
 private:
   void emitBeginSourceStab(llvm::DWARFUnit *compileUnit);
@@ -423,6 +422,9 @@ private:
   void emitObjectFileStab(ObjFile *);
   void emitEndFunStab(Defined *);
   void emitStabs();
+
+protected:
+  SymtabSection(StringTableSection &);
 
   StringTableSection &stringTableSection;
   // STABS symbols are always local symbols, but we represent them with special
@@ -432,6 +434,8 @@ private:
   std::vector<SymtabEntry> externalSymbols;
   std::vector<SymtabEntry> undefinedSymbols;
 };
+
+template <class LP> SymtabSection *makeSymtabSection(StringTableSection &);
 
 // The indirect symbol table is a list of 32-bit integers that serve as indices
 // into the (actual) symbol table. The indirect symbol table is a

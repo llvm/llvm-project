@@ -74,14 +74,28 @@ static cl::list<std::string> ClInputAddresses(cl::Positional,
                                               cl::desc("<input addresses>..."),
                                               cl::ZeroOrMore);
 
-template<typename T>
-static bool error(Expected<T> &ResOrErr) {
-  if (ResOrErr)
-    return false;
-  logAllUnhandledErrors(ResOrErr.takeError(), errs(),
-                        "LLVMSymbolizer: error reading file: ");
-  return true;
+template <typename T>
+static void print(const Request &Request, Expected<T> &ResOrErr,
+                  DIPrinter &Printer) {
+  if (ResOrErr) {
+    // No error, print the result.
+    Printer.print(Request, *ResOrErr);
+    return;
+  }
+
+  // Handle the error.
+  bool PrintEmpty = true;
+  handleAllErrors(std::move(ResOrErr.takeError()),
+                  [&](const ErrorInfoBase &EI) {
+                    PrintEmpty = Printer.printError(
+                        Request, EI, "LLVMSymbolizer: error reading file: ");
+                  });
+
+  if (PrintEmpty)
+    Printer.print(Request, T());
 }
+
+enum class OutputStyle { LLVM, GNU };
 
 enum class Command {
   Code,
@@ -136,7 +150,7 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
 }
 
 static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
-                           bool IsAddr2Line, DIPrinter::OutputStyle OutputStyle,
+                           bool IsAddr2Line, OutputStyle OutputStyle,
                            StringRef InputString, LLVMSymbolizer &Symbolizer,
                            DIPrinter &Printer) {
   Command Cmd;
@@ -144,56 +158,46 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
   uint64_t Offset = 0;
   if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
                     StringRef(InputString), Cmd, ModuleName, Offset)) {
-    outs() << InputString << "\n";
+    Printer.printInvalidCommand(
+        {ModuleName, Offset},
+        StringError(InputString,
+                    std::make_error_code(std::errc::invalid_argument)));
     return;
   }
 
-  if (Args.hasArg(OPT_addresses)) {
-    outs() << "0x";
-    outs().write_hex(Offset);
-    StringRef Delimiter = Args.hasArg(OPT_pretty_print) ? ": " : "\n";
-    outs() << Delimiter;
-  }
-  Offset -= AdjustVMA;
+  uint64_t AdjustedOffset = Offset - AdjustVMA;
   if (Cmd == Command::Data) {
-    auto ResOrErr = Symbolizer.symbolizeData(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());
+    Expected<DIGlobal> ResOrErr = Symbolizer.symbolizeData(
+        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    print({ModuleName, Offset}, ResOrErr, Printer);
   } else if (Cmd == Command::Frame) {
-    auto ResOrErr = Symbolizer.symbolizeFrame(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    if (!error(ResOrErr)) {
-      for (DILocal Local : *ResOrErr)
-        Printer << Local;
-      if (ResOrErr->empty())
-        outs() << "??\n";
-    }
+    Expected<std::vector<DILocal>> ResOrErr = Symbolizer.symbolizeFrame(
+        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    print({ModuleName, Offset}, ResOrErr, Printer);
   } else if (Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line)) {
-    auto ResOrErr = Symbolizer.symbolizeInlinedCode(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    Printer << (error(ResOrErr) ? DIInliningInfo() : ResOrErr.get());
-  } else if (OutputStyle == DIPrinter::OutputStyle::GNU) {
+    Expected<DIInliningInfo> ResOrErr = Symbolizer.symbolizeInlinedCode(
+        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    print({ModuleName, Offset}, ResOrErr, Printer);
+  } else if (OutputStyle == OutputStyle::GNU) {
     // With PrintFunctions == FunctionNameKind::LinkageName (default)
     // and UseSymbolTable == true (also default), Symbolizer.symbolizeCode()
     // may override the name of an inlined function with the name of the topmost
     // caller function in the inlining chain. This contradicts the existing
     // behavior of addr2line. Symbolizer.symbolizeInlinedCode() overrides only
     // the topmost function, which suits our needs better.
-    auto ResOrErr = Symbolizer.symbolizeInlinedCode(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    if (!ResOrErr || ResOrErr->getNumberOfFrames() == 0) {
-      error(ResOrErr);
-      Printer << DILineInfo();
-    } else {
-      Printer << ResOrErr->getFrame(0);
-    }
+    Expected<DIInliningInfo> ResOrErr = Symbolizer.symbolizeInlinedCode(
+        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    Expected<DILineInfo> Res0OrErr =
+        !ResOrErr
+            ? Expected<DILineInfo>(ResOrErr.takeError())
+            : ((ResOrErr->getNumberOfFrames() == 0) ? DILineInfo()
+                                                    : ResOrErr->getFrame(0));
+    print({ModuleName, Offset}, Res0OrErr, Printer);
   } else {
-    auto ResOrErr = Symbolizer.symbolizeCode(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    Printer << (error(ResOrErr) ? DILineInfo() : ResOrErr.get());
+    Expected<DILineInfo> ResOrErr = Symbolizer.symbolizeCode(
+        ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
+    print({ModuleName, Offset}, ResOrErr, Printer);
   }
-  if (OutputStyle == DIPrinter::OutputStyle::LLVM)
-    outs() << "\n";
 }
 
 static void printHelp(StringRef ToolName, const SymbolizerOptTable &Tbl,
@@ -273,7 +277,7 @@ int main(int argc, char **argv) {
 
   LLVMSymbolizer::Options Opts;
   uint64_t AdjustVMA;
-  unsigned SourceContextLines;
+  PrinterConfig Config;
   parseIntArg(Args, OPT_adjust_vma_EQ, AdjustVMA);
   if (const opt::Arg *A = Args.getLastArg(OPT_basenames, OPT_relativenames)) {
     Opts.PathStyle =
@@ -290,7 +294,8 @@ int main(int argc, char **argv) {
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
   Opts.PrintFunctions = decideHowToPrintFunctions(Args, IsAddr2Line);
-  parseIntArg(Args, OPT_print_source_context_lines_EQ, SourceContextLines);
+  parseIntArg(Args, OPT_print_source_context_lines_EQ,
+              Config.SourceContextLines);
   Opts.RelativeAddresses = Args.hasArg(OPT_relative_address);
   Opts.UntagAddresses =
       Args.hasFlag(OPT_untag_addresses, OPT_no_untag_addresses, !IsAddr2Line);
@@ -302,6 +307,10 @@ int main(int argc, char **argv) {
   }
 #endif
   Opts.UseSymbolTable = true;
+  Config.PrintAddress = Args.hasArg(OPT_addresses);
+  Config.PrintFunctions = Opts.PrintFunctions != FunctionNameKind::None;
+  Config.Pretty = Args.hasArg(OPT_pretty_print);
+  Config.Verbose = Args.hasArg(OPT_verbose);
 
   for (const opt::Arg *A : Args.filtered(OPT_dsym_hint_EQ)) {
     StringRef Hint(A->getValue());
@@ -313,18 +322,18 @@ int main(int argc, char **argv) {
     }
   }
 
-  auto OutputStyle =
-      IsAddr2Line ? DIPrinter::OutputStyle::GNU : DIPrinter::OutputStyle::LLVM;
+  auto OutputStyle = IsAddr2Line ? OutputStyle::GNU : OutputStyle::LLVM;
   if (const opt::Arg *A = Args.getLastArg(OPT_output_style_EQ)) {
-    OutputStyle = strcmp(A->getValue(), "GNU") == 0
-                      ? DIPrinter::OutputStyle::GNU
-                      : DIPrinter::OutputStyle::LLVM;
+    OutputStyle = strcmp(A->getValue(), "GNU") == 0 ? OutputStyle::GNU
+                                                    : OutputStyle::LLVM;
   }
 
   LLVMSymbolizer Symbolizer(Opts);
-  DIPrinter Printer(outs(), Opts.PrintFunctions != FunctionNameKind::None,
-                    Args.hasArg(OPT_pretty_print), SourceContextLines,
-                    Args.hasArg(OPT_verbose), OutputStyle);
+  std::unique_ptr<DIPrinter> Printer;
+  if (OutputStyle == OutputStyle::GNU)
+    Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);
+  else
+    Printer = std::make_unique<LLVMPrinter>(outs(), errs(), Config);
 
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {
@@ -337,13 +346,13 @@ int main(int argc, char **argv) {
       llvm::erase_if(StrippedInputString,
                      [](char c) { return c == '\r' || c == '\n'; });
       symbolizeInput(Args, AdjustVMA, IsAddr2Line, OutputStyle,
-                     StrippedInputString, Symbolizer, Printer);
+                     StrippedInputString, Symbolizer, *Printer);
       outs().flush();
     }
   } else {
     for (StringRef Address : InputAddresses)
       symbolizeInput(Args, AdjustVMA, IsAddr2Line, OutputStyle, Address,
-                     Symbolizer, Printer);
+                     Symbolizer, *Printer);
   }
 
   return 0;

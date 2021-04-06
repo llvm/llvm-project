@@ -23,6 +23,16 @@ static llvm::symbolize::LLVMSymbolizer *getDefaultSymbolizer() {
   return DefaultSymbolizer;
 }
 
+static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
+  llvm::symbolize::PrinterConfig Config;
+  Config.Pretty = false;
+  Config.Verbose = false;
+  Config.PrintFunctions = true;
+  Config.PrintAddress = true;
+  Config.SourceContextLines = 0;
+  return Config;
+}
+
 namespace __sanitizer {
 int internal_snprintf(char *buffer, unsigned long length, const char *format,
                       ...);
@@ -38,19 +48,24 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
   std::string Result;
   {
     llvm::raw_string_ostream OS(Result);
-    llvm::symbolize::DIPrinter Printer(OS);
+    llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
+    llvm::symbolize::Request Request{ModuleName, ModuleOffset};
+    auto Printer =
+        std::make_unique<llvm::symbolize::LLVMPrinter>(OS, OS, Config);
+
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.
     if (SymbolizeInlineFrames) {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeInlinedCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer << (ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
+      Printer->print(Request,
+                     ResOrErr ? ResOrErr.get() : llvm::DIInliningInfo());
     } else {
       auto ResOrErr = getDefaultSymbolizer()->symbolizeCode(
           ModuleName,
           {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-      Printer << (ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
+      Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DILineInfo());
     }
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
@@ -61,14 +76,18 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
                                 char *Buffer, int MaxLength) {
   std::string Result;
   {
+    llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
     llvm::raw_string_ostream OS(Result);
-    llvm::symbolize::DIPrinter Printer(OS);
+    llvm::symbolize::Request Request{ModuleName, ModuleOffset};
+    auto Printer =
+        std::make_unique<llvm::symbolize::LLVMPrinter>(OS, OS, Config);
+
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.
     auto ResOrErr = getDefaultSymbolizer()->symbolizeData(
         ModuleName,
         {ModuleOffset, llvm::object::SectionedAddress::UndefSection});
-    Printer << (ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
+    Printer->print(Request, ResOrErr ? ResOrErr.get() : llvm::DIGlobal());
   }
   return __sanitizer::internal_snprintf(Buffer, MaxLength, "%s",
                                         Result.c_str()) < MaxLength;

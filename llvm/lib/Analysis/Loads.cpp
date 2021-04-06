@@ -162,19 +162,10 @@ static bool isDereferenceableAndAlignedPointer(
     Opts.RoundToAlign = false;
     Opts.NullIsUnknownSize = true;
     uint64_t ObjSize;
-    // TODO: Plumb through TLI so that malloc routines and such working.
-    if (getObjectSize(V, ObjSize, DL, nullptr, Opts)) {
+    if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-          isKnownNonZero(V, DL, 0, nullptr, CtxI, DT) &&
-          // TODO: We're currently inconsistent about whether deref(N) is a
-          // global fact or a point in time fact.  Once D61652 eventually
-          // lands, this check will be restricted to the point in time
-          // variant. For that variant, we need to prove that object hasn't
-          // been conditionally freed before ontext instruction - if it has, we
-          // might be hoisting over the inverse conditional and creating a
-          // dynamic use after free. 
-          !PointerMayBeCapturedBefore(V, true, true, CtxI, DT, true)) {
+          isKnownNonZero(V, DL, 0, nullptr, CtxI, DT) && !V->canBeFreed()) {
         // As we recursed through GEPs to get here, we've incrementally
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
@@ -504,12 +495,15 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (!AreEquivalentAddressValues(StorePtr, Ptr))
       return nullptr;
 
+    if (IsLoadCSE)
+      *IsLoadCSE = false;
+
     Value *Val = SI->getValueOperand();
-    if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL)) {
-      if (IsLoadCSE)
-        *IsLoadCSE = false;
+    if (CastInst::isBitOrNoopPointerCastable(Val->getType(), AccessTy, DL))
       return Val;
-    }
+
+    if (auto *C = dyn_cast<Constant>(Val))
+      return ConstantFoldLoadThroughBitcast(C, AccessTy, DL);
   }
 
   return nullptr;

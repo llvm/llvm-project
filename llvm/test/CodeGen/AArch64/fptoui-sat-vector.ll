@@ -345,7 +345,7 @@ define <1 x i32> @test_unsigned_v1f64_v1i32(<1 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v1f64_v1i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -361,7 +361,7 @@ define <2 x i32> @test_unsigned_v2f64_v2i32(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -383,7 +383,7 @@ define <3 x i32> @test_unsigned_v3f64_v3i32(<3 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v3f64_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d3, xzr
+; CHECK-NEXT:    movi d3, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d3
 ; CHECK-NEXT:    fmov d4, x8
@@ -411,7 +411,7 @@ define <4 x i32> @test_unsigned_v4f64_v4i32(<4 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v4f64_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d2, xzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    mov d3, v0.d[1]
 ; CHECK-NEXT:    mov d4, v1.d[1]
@@ -441,7 +441,7 @@ define <5 x i32> @test_unsigned_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v5f64_v5i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d5, xzr
+; CHECK-NEXT:    movi d5, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d5
 ; CHECK-NEXT:    fmov d6, x8
@@ -468,7 +468,7 @@ define <6 x i32> @test_unsigned_v6f64_v6i32(<6 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v6f64_v6i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d6, xzr
+; CHECK-NEXT:    movi d6, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d6
 ; CHECK-NEXT:    fmov d7, x8
@@ -1132,7 +1132,7 @@ define <2 x i1> @test_unsigned_v2f32_v2i1(<2 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v2f32_v2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fmov s2, #1.00000000
 ; CHECK-NEXT:    mov s3, v0.s[1]
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
@@ -1153,7 +1153,7 @@ define <2 x i8> @test_unsigned_v2f32_v2i8(<2 x float> %f) {
 ; CHECK-LABEL: test_unsigned_v2f32_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    mov w8, #1132396544
 ; CHECK-NEXT:    mov s2, v0.s[1]
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
@@ -1176,7 +1176,7 @@ define <2 x i13> @test_unsigned_v2f32_v2i13(<2 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #63488
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #17919, lsl #16
 ; CHECK-NEXT:    mov s2, v0.s[1]
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
@@ -1199,7 +1199,7 @@ define <2 x i16> @test_unsigned_v2f32_v2i16(<2 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65280
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
 ; CHECK-NEXT:    mov s2, v0.s[1]
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
@@ -1222,7 +1222,7 @@ define <2 x i19> @test_unsigned_v2f32_v2i19(<2 x float> %f) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65504
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18687, lsl #16
 ; CHECK-NEXT:    mov s2, v0.s[1]
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
@@ -1433,7 +1433,7 @@ declare <2 x i128> @llvm.fptoui.sat.v2f64.v2i128(<2 x double>)
 define <2 x i1> @test_unsigned_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fmov d2, #1.00000000
 ; CHECK-NEXT:    mov d3, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1454,7 +1454,7 @@ define <2 x i8> @test_unsigned_v2f64_v2i8(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #246290604621824
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16495, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1476,7 +1476,7 @@ define <2 x i13> @test_unsigned_v2f64_v2i13(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i13:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #280375465082880
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16575, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1498,7 +1498,7 @@ define <2 x i16> @test_unsigned_v2f64_v2i16(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281337537757184
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16623, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1520,7 +1520,7 @@ define <2 x i19> @test_unsigned_v2f64_v2i19(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i19:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281457796841472
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16671, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1542,7 +1542,7 @@ define <2 x i32> @test_unsigned_v2f64_v2i32_duplicate(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i32_duplicate:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1564,7 +1564,7 @@ define <2 x i50> @test_unsigned_v2f64_v2i50(<2 x double> %f) {
 ; CHECK-LABEL: test_unsigned_v2f64_v2i50:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-8
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #17167, lsl #48
 ; CHECK-NEXT:    mov d2, v0.d[1]
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
@@ -1726,7 +1726,7 @@ define <4 x i1> @test_unsigned_v4f16_v4i1(<4 x half> %f) {
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    fcvt s3, h3
 ; CHECK-NEXT:    fcvt s4, h4
 ; CHECK-NEXT:    fcvt s0, h0
@@ -1761,7 +1761,7 @@ define <4 x i8> @test_unsigned_v4f16_v4i8(<4 x half> %f) {
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    mov w8, #1132396544
 ; CHECK-NEXT:    fcvt s3, h3
 ; CHECK-NEXT:    fcvt s4, h4
@@ -1798,7 +1798,7 @@ define <4 x i13> @test_unsigned_v4f16_v4i13(<4 x half> %f) {
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    movk w8, #17919, lsl #16
 ; CHECK-NEXT:    fcvt s3, h3
 ; CHECK-NEXT:    fcvt s4, h4
@@ -1835,7 +1835,7 @@ define <4 x i16> @test_unsigned_v4f16_v4i16(<4 x half> %f) {
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
 ; CHECK-NEXT:    fcvt s3, h3
 ; CHECK-NEXT:    fcvt s4, h4
@@ -1872,7 +1872,7 @@ define <4 x i19> @test_unsigned_v4f16_v4i19(<4 x half> %f) {
 ; CHECK-NEXT:    mov h3, v0.h[1]
 ; CHECK-NEXT:    mov h4, v0.h[2]
 ; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    fmov s2, wzr
+; CHECK-NEXT:    movi d2, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18687, lsl #16
 ; CHECK-NEXT:    fcvt s3, h3
 ; CHECK-NEXT:    fcvt s4, h4

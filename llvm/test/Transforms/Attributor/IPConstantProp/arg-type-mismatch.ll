@@ -23,10 +23,14 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 ; IS__TUNIT____-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    ret i16 [[P2]]
 ;
-; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC____-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC____-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
-; IS__CGSCC____-NEXT:    ret i16 [[P2]]
+; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_OPM-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) {
+; IS__CGSCC_OPM-NEXT:    ret i16 [[P2]]
+;
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
+; IS__CGSCC_NPM-SAME: (i16 [[P1:%.*]], i16 returned [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC_NPM-NEXT:    ret i16 [[P2]]
 ;
   ret i16 %p2
 }
@@ -35,5 +39,5 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 ;.
 ; IS__TUNIT____: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ;.
-; IS__CGSCC____: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.

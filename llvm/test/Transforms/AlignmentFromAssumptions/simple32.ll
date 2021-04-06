@@ -23,13 +23,13 @@ define i32 @foo2(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 24) ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 -2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
   call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i64 24)]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 2
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 -2
   %0 = load i32, i32* %arrayidx, align 4
   ret i32 %0
 
@@ -40,8 +40,26 @@ define i32 @foo2a(i32* nocapture %a) nounwind uwtable readonly {
 ; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 28) ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 -1
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 32
+; CHECK-NEXT:    ret i32 [[TMP0]]
+;
+entry:
+  call void @llvm.assume(i1 true) ["align"(i32* %a, i64 32, i64 28)]
+  %arrayidx = getelementptr inbounds i32, i32* %a, i64 1
+  %0 = load i32, i32* %arrayidx, align 4
+  ret i32 %0
+
+}
+
+; TODO: this can be 8-bytes aligned
+define i32 @foo2b(i32* nocapture %a) nounwind uwtable readonly {
+; CHECK-LABEL: define {{[^@]+}}@foo2b
+; CHECK-SAME: (i32* nocapture [[A:%.*]]) #0
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32, i64 28) ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 -1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

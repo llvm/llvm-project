@@ -76,6 +76,10 @@ public:
       name = "sparsePointers64";
     else if (eltType.isInteger(32))
       name = "sparsePointers32";
+    else if (eltType.isInteger(16))
+      name = "sparsePointers16";
+    else if (eltType.isInteger(8))
+      name = "sparsePointers8";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(
@@ -100,6 +104,10 @@ public:
       name = "sparseIndices64";
     else if (eltType.isInteger(32))
       name = "sparseIndices32";
+    else if (eltType.isInteger(16))
+      name = "sparseIndices16";
+    else if (eltType.isInteger(8))
+      name = "sparseIndices8";
     else
       return failure();
     rewriter.replaceOpWithNewOp<CallOp>(

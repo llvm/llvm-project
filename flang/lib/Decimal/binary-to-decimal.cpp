@@ -350,12 +350,19 @@ ConversionToDecimalResult ConvertDoubleToDecimal(char *buffer, std::size_t size,
       rounding, Fortran::decimal::BinaryFloatingPointNumber<53>(x));
 }
 
-#if __x86_64__ && !defined(_MSC_VER)
+#if LONG_DOUBLE == 80
 ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
     std::size_t size, enum DecimalConversionFlags flags, int digits,
     enum FortranRounding rounding, long double x) {
   return Fortran::decimal::ConvertToDecimal(buffer, size, flags, digits,
       rounding, Fortran::decimal::BinaryFloatingPointNumber<64>(x));
+}
+#elif LONG_DOUBLE == 128
+ConversionToDecimalResult ConvertLongDoubleToDecimal(char *buffer,
+    std::size_t size, enum DecimalConversionFlags flags, int digits,
+    enum FortranRounding rounding, long double x) {
+  return Fortran::decimal::ConvertToDecimal(buffer, size, flags, digits,
+      rounding, Fortran::decimal::BinaryFloatingPointNumber<113>(x));
 }
 #endif
 }

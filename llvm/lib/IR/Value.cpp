@@ -728,27 +728,24 @@ Value::stripInBoundsOffsets(function_ref<void(const Value *)> Func) const {
   return stripPointerCastsAndOffsets<PSK_InBounds>(this, Func);
 }
 
-// Return true if the memory object referred to by V can by freed in the scope
-// for which the SSA value defining the allocation is statically defined.  E.g.
-// deallocation after the static scope of a value does not count.
-static bool canBeFreed(const Value *V) {
-  assert(V->getType()->isPointerTy());
+bool Value::canBeFreed() const {
+  assert(getType()->isPointerTy());
 
   // Cases that can simply never be deallocated
   // *) Constants aren't allocated per se, thus not deallocated either.
-  if (isa<Constant>(V))
+  if (isa<Constant>(this))
     return false;
 
   // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
   // lifetime is guaranteed to be longer than the callee's lifetime.
-  if (auto *A = dyn_cast<Argument>(V))
+  if (auto *A = dyn_cast<Argument>(this))
     if (A->hasPointeeInMemoryValueAttr())
       return false;
 
   const Function *F = nullptr;
-  if (auto *I = dyn_cast<Instruction>(V))
+  if (auto *I = dyn_cast<Instruction>(this))
     F = I->getFunction();
-  if (auto *A = dyn_cast<Argument>(V))
+  if (auto *A = dyn_cast<Argument>(this))
     F = A->getParent();
 
   if (!F)
@@ -774,7 +771,7 @@ static bool canBeFreed(const Value *V) {
   if (GCName != StatepointExampleName)
     return true;
 
-  auto *PT = cast<PointerType>(V->getType());
+  auto *PT = cast<PointerType>(this->getType());
   if (PT->getAddressSpace() != 1)
     // For the sake of this example GC, we arbitrarily pick addrspace(1) as our
     // GC managed heap.  This must match the same check in
@@ -791,7 +788,6 @@ static bool canBeFreed(const Value *V) {
   return false;
 }
 
-
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
                                                bool &CanBeNull,
                                                bool &CanBeFreed) const {
@@ -799,7 +795,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
 
   uint64_t DerefBytes = 0;
   CanBeNull = false;
-  CanBeFreed = UseDerefAtPointSemantics && canBeFreed(this);
+  CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
     if (DerefBytes == 0) {

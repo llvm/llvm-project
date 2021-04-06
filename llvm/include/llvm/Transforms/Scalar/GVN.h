@@ -314,17 +314,17 @@ private:
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.  Returns true if an value is known to be
   /// available and populates Res.  Returns false otherwise.
-  bool AnalyzeLoadAvailability(LoadInst *LI, MemDepResult DepInfo,
+  bool AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
                                Value *Address, gvn::AvailableValue &Res);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-  void AnalyzeLoadAvailability(LoadInst *LI, LoadDepVect &Deps,
+  void AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
 
-  bool PerformLoadPRE(LoadInst *LI, AvailValInBlkVect &ValuesPerBlock,
+  bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
   // Other helper routines

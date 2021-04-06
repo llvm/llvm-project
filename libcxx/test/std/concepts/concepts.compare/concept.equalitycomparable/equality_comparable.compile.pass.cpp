@@ -112,14 +112,23 @@ static_assert(std::equality_comparable<cxx20_friend_eq>);
 static_assert(std::equality_comparable<member_three_way_comparable>);
 static_assert(std::equality_comparable<friend_three_way_comparable>);
 static_assert(std::equality_comparable<explicit_operators>);
-static_assert(std::equality_comparable<eq_neq_different_return_types>);
+static_assert(std::equality_comparable<different_return_types>);
 static_assert(std::equality_comparable<one_member_one_friend>);
 static_assert(std::equality_comparable<equality_comparable_with_ec1>);
 
 static_assert(!std::equality_comparable<no_eq>);
 static_assert(!std::equality_comparable<no_neq>);
+static_assert(std::equality_comparable<no_lt>);
+static_assert(std::equality_comparable<no_gt>);
+static_assert(std::equality_comparable<no_le>);
+static_assert(std::equality_comparable<no_ge>);
+
 static_assert(!std::equality_comparable<wrong_return_type_eq>);
 static_assert(!std::equality_comparable<wrong_return_type_ne>);
+static_assert(std::equality_comparable<wrong_return_type_lt>);
+static_assert(std::equality_comparable<wrong_return_type_gt>);
+static_assert(std::equality_comparable<wrong_return_type_le>);
+static_assert(std::equality_comparable<wrong_return_type_ge>);
 static_assert(!std::equality_comparable<wrong_return_type>);
 static_assert(
     !std::equality_comparable<cxx20_member_eq_operator_with_deleted_ne>);
@@ -134,9 +143,13 @@ static_assert(
 static_assert(
     !std::equality_comparable<friend_three_way_comparable_with_deleted_ne>);
 
-static_assert(!std::equality_comparable<returns_explicit_bool>);
+static_assert(!std::equality_comparable<eq_returns_explicit_bool>);
+static_assert(!std::equality_comparable<ne_returns_explicit_bool>);
+static_assert(std::equality_comparable<lt_returns_explicit_bool>);
+static_assert(std::equality_comparable<gt_returns_explicit_bool>);
+static_assert(std::equality_comparable<le_returns_explicit_bool>);
+static_assert(std::equality_comparable<ge_returns_explicit_bool>);
 static_assert(std::equality_comparable<returns_true_type>);
-static_assert(std::equality_comparable<returns_false_type>);
 static_assert(std::equality_comparable<returns_int_ptr>);
 } // namespace types_fit_for_purpose
 

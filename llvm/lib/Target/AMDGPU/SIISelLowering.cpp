@@ -5836,7 +5836,7 @@ static SDValue constructRetValue(SelectionDAG &DAG,
                                  ArrayRef<EVT> ResultTypes,
                                  bool IsTexFail, bool Unpacked, bool IsD16,
                                  int DMaskPop, int NumVDataDwords,
-                                 const SDLoc &DL, LLVMContext &Context) {
+                                 const SDLoc &DL) {
   // Determine the required return type. This is the same regardless of IsTexFail flag
   EVT ReqRetVT = ResultTypes[0];
   int ReqRetNumElts = ReqRetVT.isVector() ? ReqRetVT.getVectorNumElements() : 1;
@@ -6282,15 +6282,13 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     SmallVector<SDValue, 1> Elt;
     DAG.ExtractVectorElements(SDValue(NewNode, 0), Elt, 0, 1);
     return DAG.getMergeValues({Elt[0], SDValue(NewNode, 1)}, DL);
-  } else if (!BaseOpcode->Store) {
-    return constructRetValue(DAG, NewNode,
-                             OrigResultTypes, IsTexFail,
-                             Subtarget->hasUnpackedD16VMem(), IsD16,
-                             DMaskLanes, NumVDataDwords, DL,
-                             *DAG.getContext());
   }
-
-  return SDValue(NewNode, 0);
+  if (BaseOpcode->Store)
+    return SDValue(NewNode, 0);
+  return constructRetValue(DAG, NewNode,
+                           OrigResultTypes, IsTexFail,
+                           Subtarget->hasUnpackedD16VMem(), IsD16,
+                           DMaskLanes, NumVDataDwords, DL);
 }
 
 SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
@@ -11214,6 +11212,95 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   return Node;
 }
 
+// Any MIMG instructions that use tfe or lwe require an initialization of the
+// result register that will be written in the case of a memory access failure.
+// The required code is also added to tie this init code to the result of the
+// img instruction.
+void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  MachineBasicBlock &MBB = *MI.getParent();
+
+  MachineOperand *TFE = TII->getNamedOperand(MI, AMDGPU::OpName::tfe);
+  MachineOperand *LWE = TII->getNamedOperand(MI, AMDGPU::OpName::lwe);
+  MachineOperand *D16 = TII->getNamedOperand(MI, AMDGPU::OpName::d16);
+
+  if (!TFE && !LWE) // intersect_ray
+    return;
+
+  unsigned TFEVal = TFE ? TFE->getImm() : 0;
+  unsigned LWEVal = LWE->getImm();
+  unsigned D16Val = D16 ? D16->getImm() : 0;
+
+  if (!TFEVal && !LWEVal)
+    return;
+
+  // At least one of TFE or LWE are non-zero
+  // We have to insert a suitable initialization of the result value and
+  // tie this to the dest of the image instruction.
+
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  int DstIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdata);
+
+  // Calculate which dword we have to initialize to 0.
+  MachineOperand *MO_Dmask = TII->getNamedOperand(MI, AMDGPU::OpName::dmask);
+
+  // check that dmask operand is found.
+  assert(MO_Dmask && "Expected dmask operand in instruction");
+
+  unsigned dmask = MO_Dmask->getImm();
+  // Determine the number of active lanes taking into account the
+  // Gather4 special case
+  unsigned ActiveLanes = TII->isGather4(MI) ? 4 : countPopulation(dmask);
+
+  bool Packed = !Subtarget->hasUnpackedD16VMem();
+
+  unsigned InitIdx =
+      D16Val && Packed ? ((ActiveLanes + 1) >> 1) + 1 : ActiveLanes + 1;
+
+  // Abandon attempt if the dst size isn't large enough
+  // - this is in fact an error but this is picked up elsewhere and
+  // reported correctly.
+  uint32_t DstSize = TRI.getRegSizeInBits(*TII->getOpRegClass(MI, DstIdx)) / 32;
+  if (DstSize < InitIdx)
+    return;
+
+  // Create a register for the intialization value.
+  Register PrevDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+  unsigned NewDst = 0; // Final initialized value will be in here
+
+  // If PRTStrictNull feature is enabled (the default) then initialize
+  // all the result registers to 0, otherwise just the error indication
+  // register (VGPRn+1)
+  unsigned SizeLeft = Subtarget->usePRTStrictNull() ? InitIdx : 1;
+  unsigned CurrIdx = Subtarget->usePRTStrictNull() ? 0 : (InitIdx - 1);
+
+  BuildMI(MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), PrevDst);
+  for (; SizeLeft; SizeLeft--, CurrIdx++) {
+    NewDst = MRI.createVirtualRegister(TII->getOpRegClass(MI, DstIdx));
+    // Initialize dword
+    Register SubReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), SubReg)
+      .addImm(0);
+    // Insert into the super-reg
+    BuildMI(MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), NewDst)
+      .addReg(PrevDst)
+      .addReg(SubReg)
+      .addImm(SIRegisterInfo::getSubRegFromChannel(CurrIdx));
+
+    PrevDst = NewDst;
+  }
+
+  // Add as an implicit operand
+  MI.addOperand(MachineOperand::CreateReg(NewDst, false, true));
+
+  // Tie the just added implicit operand to the dst
+  MI.tieOperands(DstIdx, MI.getNumOperands() - 1);
+}
+
 /// Assign the register class depending on the number of
 /// bits set in the writemask
 void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
@@ -11297,6 +11384,9 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     }
     return;
   }
+
+  if (TII->isMIMG(MI) && !MI.mayStore())
+    AddIMGInit(MI);
 }
 
 static SDValue buildSMovImm32(SelectionDAG &DAG, const SDLoc &DL,

@@ -223,7 +223,8 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
       case SYM_WRITE:
         {
           //%tape.%d = load i8 *%head.%d
-          LoadInst *tape_0 = builder->CreateLoad(curhead, tapereg);
+          LoadInst *tape_0 =
+              builder->CreateLoad(IntegerType::getInt8Ty(C), curhead, tapereg);
 
           //%tape.%d = sext i8 %tape.%d to i32
           Value *tape_1 = builder->
@@ -275,7 +276,8 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
       case SYM_CHANGE:
         {
           //%tape.%d = load i8 *%head.%d
-          LoadInst *tape_0 = builder->CreateLoad(curhead, tapereg);
+          LoadInst *tape_0 =
+              builder->CreateLoad(IntegerType::getInt8Ty(C), curhead, tapereg);
 
           //%tape.%d = add i8 %tape.%d, %d
           Value *tape_1 = builder->

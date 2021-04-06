@@ -58,7 +58,6 @@ module {
   func private @getTensorFilename(index) -> (!Filename)
   func private @newSparseTensor(!Filename, memref<?xi1>, index, index, index) -> (!SparseTensor)
   func private @delSparseTensor(!SparseTensor) -> ()
-  func private @print_memref_f64(%ptr : tensor<*xf64>)
 
   //
   // Main driver that reads matrix from file and calls the sparse kernel.
@@ -76,8 +75,8 @@ module {
     %sparse = constant true
     memref.store %sparse, %annotations[%c0] : memref<?xi1>
     memref.store %sparse, %annotations[%c1] : memref<?xi1>
-    %i64 = constant 2 : index
-    %f64 = constant 0 : index
+    %i64 = constant 1 : index
+    %f64 = constant 1 : index
 
     // Setup memory for a single reduction scalar,
     // initialized to zero.
