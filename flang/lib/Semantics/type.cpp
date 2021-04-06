@@ -205,8 +205,7 @@ private:
   }
   void InstantiateComponent(const Symbol &);
   const DeclTypeSpec *InstantiateType(const Symbol &);
-  const DeclTypeSpec &InstantiateIntrinsicType(
-      SourceName, const DeclTypeSpec &);
+  const DeclTypeSpec &InstantiateIntrinsicType(const DeclTypeSpec &);
   DerivedTypeSpec CreateDerivedTypeSpec(const DerivedTypeSpec &, bool);
 
   SemanticsContext &context_;
@@ -365,7 +364,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
         CreateDerivedTypeSpec(*spec, symbol.test(Symbol::Flag::ParentComp)),
         context_, type->category());
   } else if (type->AsIntrinsic()) {
-    return &InstantiateIntrinsicType(symbol.name(), *type);
+    return &InstantiateIntrinsicType(*type);
   } else if (type->category() == DeclTypeSpec::ClassStar) {
     return type;
   } else {
@@ -375,7 +374,7 @@ const DeclTypeSpec *InstantiateHelper::InstantiateType(const Symbol &symbol) {
 
 // Apply type parameter values to an intrinsic type spec.
 const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
-    SourceName symbolName, const DeclTypeSpec &spec) {
+    const DeclTypeSpec &spec) {
   const IntrinsicTypeSpec &intrinsic{DEREF(spec.AsIntrinsic())};
   if (evaluate::ToInt64(intrinsic.kind())) {
     return spec; // KIND is already a known constant
@@ -388,7 +387,7 @@ const DeclTypeSpec &InstantiateHelper::InstantiateIntrinsicType(
     if (evaluate::IsValidKindOfIntrinsicType(intrinsic.category(), *value)) {
       kind = *value;
     } else {
-      foldingContext().messages().Say(symbolName,
+      foldingContext().messages().Say(
           "KIND parameter value (%jd) of intrinsic type %s "
           "did not resolve to a supported value"_err_en_US,
           *value,
