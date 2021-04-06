@@ -485,6 +485,104 @@ define i1 @shl_shl_may_be_equal(i8 %A, i8 %B, i8 %shift) {
   ret i1 %cmp
 }
 
+define i1 @ashr_ashr_exact(i8 %B, i8 %shift) {
+; CHECK-LABEL: @ashr_ashr_exact(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = ashr exact i8 %A, %shift
+  %B.op = ashr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @ashr_ashr_discard_bits(i8 %B, i8 %shift) {
+; CHECK-LABEL: @ashr_ashr_discard_bits(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = ashr i8 [[A]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = ashr exact i8 [[B]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = ashr i8 %A, %shift
+  %B.op = ashr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @ashr_ashr_may_be_equal(i8 %A, i8 %B, i8 %shift) {
+; CHECK-LABEL: @ashr_ashr_may_be_equal(
+; CHECK-NEXT:    [[A_OP:%.*]] = ashr exact i8 [[A:%.*]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = ashr exact i8 [[B:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A.op = ashr exact i8 %A, %shift
+  %B.op = ashr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @lshr_lshr_exact(i8 %B, i8 %shift) {
+; CHECK-LABEL: @lshr_lshr_exact(
+; CHECK-NEXT:    ret i1 false
+;
+  %A = add i8 %B, 1
+  %A.op = lshr exact i8 %A, %shift
+  %B.op = lshr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @lshr_lshr_discard_bits(i8 %B, i8 %shift) {
+; CHECK-LABEL: @lshr_lshr_discard_bits(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[B:%.*]], 1
+; CHECK-NEXT:    [[A_OP:%.*]] = lshr i8 [[A]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = lshr exact i8 [[B]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A = add i8 %B, 1
+  %A.op = lshr i8 %A, %shift
+  %B.op = lshr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
+define i1 @lshr_lshr_may_be_equal(i8 %A, i8 %B, i8 %shift) {
+; CHECK-LABEL: @lshr_lshr_may_be_equal(
+; CHECK-NEXT:    [[A_OP:%.*]] = lshr exact i8 [[A:%.*]], [[SHIFT:%.*]]
+; CHECK-NEXT:    [[B_OP:%.*]] = lshr exact i8 [[B:%.*]], [[SHIFT]]
+; CHECK-NEXT:    [[A_OP2:%.*]] = mul nuw i8 [[A_OP]], 3
+; CHECK-NEXT:    [[B_OP2:%.*]] = mul nuw i8 [[B_OP]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A_OP2]], [[B_OP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %A.op = lshr exact i8 %A, %shift
+  %B.op = lshr exact i8 %B, %shift
+  %A.op2 = mul nuw i8 %A.op, 3
+  %B.op2 = mul nuw i8 %B.op, 3
+  %cmp = icmp eq i8 %A.op2, %B.op2
+  ret i1 %cmp
+}
+
 define i1 @recurrence_add_neq(i8 %A) {
 ; CHECK-LABEL: @recurrence_add_neq(
 ; CHECK-NEXT:  entry:
