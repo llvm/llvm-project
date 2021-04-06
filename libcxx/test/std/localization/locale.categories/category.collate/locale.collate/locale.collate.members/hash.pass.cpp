@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// https://llvm.org/PR41018
+// XFAIL: windows-dll
+
 // <locale>
 
 // template <class charT> class collate;
@@ -13,8 +16,6 @@
 // long hash(const charT* low, const charT* high) const;
 
 //   This test is not portable
-
-// XFAIL: LIBCXX-WINDOWS-FIXME
 
 #include <locale>
 #include <string>
