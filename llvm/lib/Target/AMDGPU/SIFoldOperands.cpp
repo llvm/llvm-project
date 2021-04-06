@@ -555,9 +555,7 @@ static bool tryToFoldACImm(const SIInstrInfo *TII,
   if (!UseReg.isVirtual())
     return false;
 
-  if (llvm::any_of(FoldList, [UseMI](const FoldCandidate &FC) {
-        return FC.UseMI == UseMI;
-      }))
+  if (isUseMIInFoldList(FoldList, UseMI))
     return false;
 
   MachineRegisterInfo &MRI = UseMI->getParent()->getParent()->getRegInfo();
