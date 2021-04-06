@@ -200,22 +200,56 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 // Basic classes with automatic codegen.
 //===----------------------------------------------------------------------===//
 
-class RVVBinBuiltin<string suffix, string prototype, string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IntrinsicTypes = [-1, 1];
-}
-
-multiclass RVVBinBuiltinSet<string intrinsic_name, string type_range,
-                            list<list<string>> suffixes_prototypes> {
-  let IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask" in {
+multiclass RVVBuiltinSet<string intrinsic_name, string type_range,
+                         list<list<string>> suffixes_prototypes,
+                         list<int> intrinsic_types> {
+  let IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask",
+      IntrinsicTypes = intrinsic_types in {
     foreach s_p = suffixes_prototypes in {
       let Name = NAME # "_" # s_p[0] in {
         defvar suffix = s_p[1];
         defvar prototype = s_p[2];
-        def : RVVBinBuiltin<suffix, prototype, type_range>;
+        def : RVVBuiltin<suffix, prototype, type_range>;
       }
     }
   }
+}
+
+// IntrinsicTypes is output, op1 [-1, 1]
+multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
+                               list<list<string>> suffixes_prototypes> {
+  defm "" : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1]>;
+}
+
+multiclass RVVSignedBinBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                [["vv", "v", "vvv"],
+                                 ["vx", "v", "vve"]]>;
+}
+
+multiclass RVVUnsignedBinBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                [["vv", "Uv", "UvUvUv"],
+                                 ["vx", "Uv", "UvUvUe"]]>;
+}
+
+multiclass RVVIntBinBuiltinSet {
+  defm "" : RVVSignedBinBuiltinSet;
+  defm "" : RVVUnsignedBinBuiltinSet;
+}
+
+multiclass RVVIntTerBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                [["vv", "v", "vvvv"],
+                                 ["vx", "v", "vvev"],
+                                 ["vv", "Uv", "UvUvUvUv"],
+                                 ["vx", "Uv", "UvUvUeUv"]]>;
+}
+
+multiclass RVVFloatingBinBuiltinSet {
+  defm "" : RVVOutOp1BuiltinSet<NAME, "fd",
+                                [["vv", "v", "vvv"],
+                                 ["vf", "v", "vve"]]>;
 }
 
 defvar TypeList = ["c","s","i","l","f","d"];
@@ -387,14 +421,85 @@ defm : RVVIndexedLoad<"vloxei">;
 
 // 12. Vector Integer Arithmetic Instructions
 // 12.1. Vector Single-Width Integer Add and Subtract
-defm vadd : RVVBinBuiltinSet<"vadd", "csil",
-                             [["vv", "v", "vvv"],
-                              ["vx", "v", "vve"],
-                              ["vv", "Uv", "UvUvUv"],
-                              ["vx", "Uv", "UvUvUe"]]>;
+defm vadd : RVVIntBinBuiltinSet;
+defm vsub : RVVIntBinBuiltinSet;
+defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
+                                 [["vx", "v", "vve"],
+                                  ["vx", "Uv", "UvUvUe"]]>;
+
+// 12.2. Vector Widening Integer Add/Subtract
+// TODO
+
+// 12.3. Vector Integer Extension
+// TODO
+
+// 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
+// TODO
+
+// 12.5. Vector Bitwise Logical Instructions
+defm vand : RVVIntBinBuiltinSet;
+defm vxor : RVVIntBinBuiltinSet;
+defm vor : RVVIntBinBuiltinSet;
+
+// 12.6. Vector Single-Width Bit Shift Instructions
+defm vsll : RVVOutOp1BuiltinSet<"vsll", "csil",
+                                [["vv", "v", "vvUv"],
+                                 ["vx", "v", "vvz"],
+                                 ["vv", "Uv", "UvUvUv"],
+                                 ["vx", "Uv", "UvUvz"]]>;
+defm vsrl : RVVOutOp1BuiltinSet<"vsrl", "csil",
+                                [["vv", "Uv", "UvUvUv"],
+                                 ["vx", "Uv", "UvUvz"]]>;
+defm vsra : RVVOutOp1BuiltinSet<"vsra", "csil",
+                                [["vv", "v", "vvUv"],
+                                 ["vx", "v", "vvz"]]>;
+
+// 12.7. Vector Narrowing Integer Right Shift Instructions
+// TODO
+
+// 12.8. Vector Integer Comparison Instructions
+// TODO
+
+// 12.9. Vector Integer Min/Max Instructions
+defm vminu : RVVUnsignedBinBuiltinSet;
+defm vmin : RVVSignedBinBuiltinSet;
+defm vmaxu : RVVUnsignedBinBuiltinSet;
+defm vmax : RVVSignedBinBuiltinSet;
+
+// 12.10. Vector Single-Width Integer Multiply Instructions
+defm vmul : RVVIntBinBuiltinSet;
+defm vmulh : RVVSignedBinBuiltinSet;
+defm vmulhu : RVVUnsignedBinBuiltinSet;
+defm vmulhsu : RVVOutOp1BuiltinSet<"vmulhsu", "csil",
+                                   [["vv", "v", "vvUv"],
+                                    ["vx", "v", "vvUe"]]>;
+
+// 12.11. Vector Integer Divide Instructions
+defm vdivu : RVVUnsignedBinBuiltinSet;
+defm vdiv : RVVSignedBinBuiltinSet;
+defm vremu : RVVUnsignedBinBuiltinSet;
+defm vrem : RVVSignedBinBuiltinSet;
+
+// 12.12. Vector Widening Integer Multiply Instructions
+// TODO
+
+// 12.13. Vector Single-Width Integer Multiply-Add Instructions
+let HasMaskedOffOperand = false in {
+  defm vmacc : RVVIntTerBuiltinSet;
+  defm vnmsac : RVVIntTerBuiltinSet;
+  defm vmadd : RVVIntTerBuiltinSet;
+  defm vnmsub : RVVIntTerBuiltinSet;
+}
+
+// 12.14. Vector Widening Integer Multiply-Add Instructions
+// TODO
+
+// 12.15. Vector Integer Merge Instructions
+// TODO
+
+// 12.16. Vector Integer Move Instructions
+// TODO
 
 // 14. Vector Floating-Point Instructions
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm vfadd : RVVBinBuiltinSet<"vfadd", "fd",
-                              [["vv", "v", "vvv"],
-                               ["vf", "v", "vve"]]>;
+defm vfadd : RVVFloatingBinBuiltinSet;
