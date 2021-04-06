@@ -1070,7 +1070,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   };
 
   PIC.registerBeforeNonSkippedPassCallback(
-      [this, &FAM, checkCFG](StringRef P, Any IR) {
+      [this, &FAM](StringRef P, Any IR) {
         assert(&PassStack.emplace_back(P));
         if (!any_isa<const Function *>(IR))
           return;
