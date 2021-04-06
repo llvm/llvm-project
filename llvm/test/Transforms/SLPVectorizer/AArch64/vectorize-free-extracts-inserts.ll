@@ -12,20 +12,17 @@ define void @noop_extracts_first_2_lanes(<2 x double>* %ptr.1, <4 x double>* %pt
 ; CHECK-LABEL: @noop_extracts_first_2_lanes(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, <2 x double>* [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    [[V1_LANE_0:%.*]] = extractelement <2 x double> [[V_1]], i32 0
+; CHECK-NEXT:    [[V1_LANE_1:%.*]] = extractelement <2 x double> [[V_1]], i32 1
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[V2_LANE_3:%.*]] = extractelement <4 x double> [[V_2]], i32 3
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V2_LANE_3]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[V_1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <2 x double> undef, double [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
-; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <2 x double> [[A_INS_0]], double [[TMP4]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    call void @use(double [[TMP5]])
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[V_1]], i32 1
-; CHECK-NEXT:    call void @use(double [[TMP6]])
+; CHECK-NEXT:    [[A_LANE_0:%.*]] = fmul double [[V1_LANE_0]], [[V2_LANE_2]]
+; CHECK-NEXT:    [[A_LANE_1:%.*]] = fmul double [[V1_LANE_1]], [[V2_LANE_3]]
+; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <2 x double> undef, double [[A_LANE_0]], i32 0
+; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <2 x double> [[A_INS_0]], double [[A_LANE_1]], i32 1
+; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
+; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    store <2 x double> [[A_INS_1]], <2 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -230,22 +227,19 @@ define void @noop_extracts_existing_vector_4_lanes(<9 x double>* %ptr.1, <4 x do
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[V1_LANE_2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[V1_LANE_3]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[V1_LANE_0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[V1_LANE_1]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[V2_LANE_0]], i32 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP3]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x double> [[TMP6]], i32 0
-; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <9 x double> undef, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <9 x double> [[A_INS_0]], double [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x double> [[TMP6]], i32 2
-; CHECK-NEXT:    [[A_INS_2:%.*]] = insertelement <9 x double> [[A_INS_1]], double [[TMP9]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x double> [[TMP6]], i32 3
-; CHECK-NEXT:    [[A_INS_3:%.*]] = insertelement <9 x double> [[A_INS_2]], double [[TMP10]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_3]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[A_LANE_2:%.*]] = fmul double [[V1_LANE_0]], [[V2_LANE_2]]
+; CHECK-NEXT:    [[A_LANE_3:%.*]] = fmul double [[V1_LANE_1]], [[V2_LANE_0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <9 x double> undef, double [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <9 x double> [[A_INS_0]], double [[TMP6]], i32 1
+; CHECK-NEXT:    [[A_INS_2:%.*]] = insertelement <9 x double> [[A_INS_1]], double [[A_LANE_2]], i32 2
+; CHECK-NEXT:    [[A_INS_3:%.*]] = insertelement <9 x double> [[A_INS_2]], double [[A_LANE_3]], i32 3
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
@@ -294,17 +288,12 @@ define void @extracts_jumbled_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[A_LANE_0:%.*]] = fmul double [[V1_LANE_0]], [[V2_LANE_2]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_2]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2_LANE_2]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[A_LANE_1:%.*]] = fmul double [[V1_LANE_2]], [[V2_LANE_1]]
+; CHECK-NEXT:    [[A_LANE_2:%.*]] = fmul double [[V1_LANE_1]], [[V2_LANE_2]]
 ; CHECK-NEXT:    [[A_LANE_3:%.*]] = fmul double [[V1_LANE_3]], [[V2_LANE_0]]
 ; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <9 x double> undef, double [[A_LANE_0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <9 x double> [[A_INS_0]], double [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
-; CHECK-NEXT:    [[A_INS_2:%.*]] = insertelement <9 x double> [[A_INS_1]], double [[TMP6]], i32 2
+; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <9 x double> [[A_INS_0]], double [[A_LANE_1]], i32 1
+; CHECK-NEXT:    [[A_INS_2:%.*]] = insertelement <9 x double> [[A_INS_1]], double [[A_LANE_2]], i32 2
 ; CHECK-NEXT:    [[A_INS_3:%.*]] = insertelement <9 x double> [[A_INS_2]], double [[A_LANE_3]], i32 3
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
