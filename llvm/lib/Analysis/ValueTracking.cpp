@@ -462,7 +462,7 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
     }
   }
 
-  Known = KnownBits::computeForMul(Known, Known2);
+  Known = KnownBits::mul(Known, Known2);
 
   // Only make use of no-wrap flags if we failed to compute the sign bit
   // directly.  This matters if the multiplication always overflows, in
@@ -1350,7 +1350,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         ScalingFactor =
             KnownBits::makeConstant(APInt(IndexBitWidth, TypeSizeInBytes));
       }
-      IndexBits = KnownBits::computeForMul(IndexBits, ScalingFactor);
+      IndexBits = KnownBits::mul(IndexBits, ScalingFactor);
 
       // If the offsets have a different width from the pointer, according
       // to the language reference we need to sign-extend or truncate them

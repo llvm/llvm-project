@@ -2991,7 +2991,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::MUL: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForMul(Known, Known2);
+    Known = KnownBits::mul(Known, Known2);
     break;
   }
   case ISD::MULHU: {
@@ -3011,7 +3011,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op.getResNo() == 0)
-      Known = KnownBits::computeForMul(Known, Known2);
+      Known = KnownBits::mul(Known, Known2);
     else
       Known = KnownBits::mulhu(Known, Known2);
     break;
@@ -3021,7 +3021,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op.getResNo() == 0)
-      Known = KnownBits::computeForMul(Known, Known2);
+      Known = KnownBits::mul(Known, Known2);
     else
       Known = KnownBits::mulhs(Known, Known2);
     break;

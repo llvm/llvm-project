@@ -230,7 +230,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
 
       // The following are conservatively correct, but not guaranteed to be
       // precise.
-      KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
+      KnownBits ComputedMul = KnownBits::mul(Known1, Known2);
       EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
       EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
 
