@@ -1,14 +1,14 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-zcz                    | FileCheck %s -check-prefixes=ALL,NONEGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-zcz-gp,+no-zcz-fp      | FileCheck %s -check-prefixes=ALL,NONEGP,NONEFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz                    | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz -mattr=+fullfp16   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZERO16
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-gp                 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-fp                 | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-gp,+no-zcz-fp      | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu                                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone                  | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
 ; RUN: llc < %s -mtriple=arm64-linux-gnu   -mcpu=apple-a10                | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 ; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONE16
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m3                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo                     | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
-; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
+; UN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 
 declare void @bar(half, float, double, <2 x double>)
 declare void @bari(i32, i32)

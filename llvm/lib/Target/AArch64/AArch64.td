@@ -147,12 +147,12 @@ def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
                                         "Has zero-cycle zeroing instructions for generic registers">;
 
-def FeatureZCZeroingFP : SubtargetFeature<"zcz-fp", "HasZeroCycleZeroingFP", "true",
-                                        "Has zero-cycle zeroing instructions for FP registers">;
+def FeatureNoZCZeroingFP : SubtargetFeature<"no-zcz-fp", "HasZeroCycleZeroingFP", "false",
+                                        "Has no zero-cycle zeroing instructions for FP registers">;
 
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                         "Has zero-cycle zeroing instructions",
-                                        [FeatureZCZeroingGP, FeatureZCZeroingFP]>;
+                                        [FeatureZCZeroingGP]>;
 
 /// ... but the floating-point version doesn't quite work in rare cases on older
 /// CPUs.
@@ -915,8 +915,7 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeatureLSLFast,
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
-                                     FeaturePredictableSelectIsExpensive,
-                                     FeatureZCZeroingFP]>;
+                                     FeaturePredictableSelectIsExpensive]>;
 
 def ProcExynosM4 : SubtargetFeature<"exynosm4", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M4 processors",
