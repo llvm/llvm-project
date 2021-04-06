@@ -19,6 +19,7 @@ add_mlir_library(MLIRTestTransforms
   TestGpuRewrite.cpp
   TestInlining.cpp
   TestLinalgCodegenStrategy.cpp
+  TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
   TestLinalgHoisting.cpp
   TestLinalgTransforms.cpp
