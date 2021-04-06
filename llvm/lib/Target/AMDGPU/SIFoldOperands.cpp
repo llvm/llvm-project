@@ -625,22 +625,17 @@ void SIFoldOperands::foldOperand(
     Register RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
-    MachineRegisterInfo::use_nodbg_iterator Next;
-    for (MachineRegisterInfo::use_nodbg_iterator
-           RSUse = MRI->use_nodbg_begin(RegSeqDstReg), RSE = MRI->use_nodbg_end();
-         RSUse != RSE; RSUse = Next) {
-      Next = std::next(RSUse);
-
-      MachineInstr *RSUseMI = RSUse->getParent();
+    for (auto &RSUse : make_early_inc_range(MRI->use_nodbg_operands(RegSeqDstReg))) {
+      MachineInstr *RSUseMI = RSUse.getParent();
 
       if (tryToFoldACImm(TII, UseMI->getOperand(0), RSUseMI,
-                         RSUse.getOperandNo(), FoldList))
+                         RSUseMI->getOperandNo(&RSUse), FoldList))
         continue;
 
-      if (RSUse->getSubReg() != RegSeqDstSubReg)
+      if (RSUse.getSubReg() != RegSeqDstSubReg)
         continue;
 
-      foldOperand(OpToFold, RSUseMI, RSUse.getOperandNo(), FoldList,
+      foldOperand(OpToFold, RSUseMI, RSUseMI->getOperandNo(&RSUse), FoldList,
                   CopiesToReplace);
     }
 
@@ -700,17 +695,13 @@ void SIFoldOperands::foldOperand(
     const TargetRegisterClass *DestRC = TRI->getRegClassForReg(*MRI, DestReg);
     if (!DestReg.isPhysical()) {
       if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
-        MachineRegisterInfo::use_nodbg_iterator NextUse;
         SmallVector<FoldCandidate, 4> CopyUses;
-        for (MachineRegisterInfo::use_nodbg_iterator Use = MRI->use_nodbg_begin(DestReg),
-               E = MRI->use_nodbg_end();
-             Use != E; Use = NextUse) {
-          NextUse = std::next(Use);
+        for (auto &Use : make_early_inc_range(MRI->use_nodbg_operands(DestReg))) {
           // There's no point trying to fold into an implicit operand.
-          if (Use->isImplicit())
+          if (Use.isImplicit())
             continue;
 
-          FoldCandidate FC = FoldCandidate(Use->getParent(), Use.getOperandNo(),
+          FoldCandidate FC = FoldCandidate(Use.getParent(), Use.getParent()->getOperandNo(&Use),
                                            &UseMI->getOperand(1));
           CopyUses.push_back(FC);
         }
@@ -1207,62 +1198,62 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     MachineOperand *NonInlineUse = nullptr;
     int NonInlineUseOpNo = -1;
 
-    MachineRegisterInfo::use_nodbg_iterator NextUse;
-    for (MachineRegisterInfo::use_nodbg_iterator
-           Use = MRI->use_nodbg_begin(Dst.getReg()), E = MRI->use_nodbg_end();
-         Use != E; Use = NextUse) {
-      NextUse = std::next(Use);
-      MachineInstr *UseMI = Use->getParent();
-      unsigned OpNo = Use.getOperandNo();
+    bool Again;
+    do {
+      Again = false;
+      for (auto &Use : make_early_inc_range(MRI->use_nodbg_operands(Dst.getReg()))) {
+        MachineInstr *UseMI = Use.getParent();
+        unsigned OpNo = UseMI->getOperandNo(&Use);
 
-      // Folding the immediate may reveal operations that can be constant
-      // folded or replaced with a copy. This can happen for example after
-      // frame indices are lowered to constants or from splitting 64-bit
-      // constants.
-      //
-      // We may also encounter cases where one or both operands are
-      // immediates materialized into a register, which would ordinarily not
-      // be folded due to multiple uses or operand constraints.
+        // Folding the immediate may reveal operations that can be constant
+        // folded or replaced with a copy. This can happen for example after
+        // frame indices are lowered to constants or from splitting 64-bit
+        // constants.
+        //
+        // We may also encounter cases where one or both operands are
+        // immediates materialized into a register, which would ordinarily not
+        // be folded due to multiple uses or operand constraints.
 
-      if (OpToFold.isImm() && tryConstantFoldOp(*MRI, TII, UseMI, &OpToFold)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI << '\n');
+        if (OpToFold.isImm() && tryConstantFoldOp(*MRI, TII, UseMI, &OpToFold)) {
+          LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI << '\n');
 
-        // Some constant folding cases change the same immediate's use to a new
-        // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
-        // again. The same constant folded instruction could also have a second
-        // use operand.
-        NextUse = MRI->use_nodbg_begin(Dst.getReg());
-        FoldList.clear();
-        continue;
-      }
+          // Some constant folding cases change the same immediate's use to a new
+          // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
+          // again. The same constant folded instruction could also have a second
+          // use operand.
+          FoldList.clear();
+          Again = true;
+          break;
+        }
 
-      // Try to fold any inline immediate uses, and then only fold other
-      // constants if they have one use.
-      //
-      // The legality of the inline immediate must be checked based on the use
-      // operand, not the defining instruction, because 32-bit instructions
-      // with 32-bit inline immediate sources may be used to materialize
-      // constants used in 16-bit operands.
-      //
-      // e.g. it is unsafe to fold:
-      //  s_mov_b32 s0, 1.0    // materializes 0x3f800000
-      //  v_add_f16 v0, v1, s0 // 1.0 f16 inline immediate sees 0x00003c00
+        // Try to fold any inline immediate uses, and then only fold other
+        // constants if they have one use.
+        //
+        // The legality of the inline immediate must be checked based on the use
+        // operand, not the defining instruction, because 32-bit instructions
+        // with 32-bit inline immediate sources may be used to materialize
+        // constants used in 16-bit operands.
+        //
+        // e.g. it is unsafe to fold:
+        //  s_mov_b32 s0, 1.0    // materializes 0x3f800000
+        //  v_add_f16 v0, v1, s0 // 1.0 f16 inline immediate sees 0x00003c00
 
-      // Folding immediates with more than one use will increase program size.
-      // FIXME: This will also reduce register usage, which may be better
-      // in some cases. A better heuristic is needed.
-      if (isInlineConstantIfFolded(TII, *UseMI, OpNo, OpToFold)) {
-        foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
-      } else if (frameIndexMayFold(TII, *UseMI, OpNo, OpToFold)) {
-        foldOperand(OpToFold, UseMI, OpNo, FoldList,
-                    CopiesToReplace);
-      } else {
-        if (++NumLiteralUses == 1) {
-          NonInlineUse = &*Use;
-          NonInlineUseOpNo = OpNo;
+        // Folding immediates with more than one use will increase program size.
+        // FIXME: This will also reduce register usage, which may be better
+        // in some cases. A better heuristic is needed.
+        if (isInlineConstantIfFolded(TII, *UseMI, OpNo, OpToFold)) {
+          foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
+        } else if (frameIndexMayFold(TII, *UseMI, OpNo, OpToFold)) {
+          foldOperand(OpToFold, UseMI, OpNo, FoldList,
+                      CopiesToReplace);
+        } else {
+          if (++NumLiteralUses == 1) {
+            NonInlineUse = &Use;
+            NonInlineUseOpNo = OpNo;
+          }
         }
       }
-    }
+    } while (Again);
 
     if (NumLiteralUses == 1) {
       MachineInstr *UseMI = NonInlineUse->getParent();
@@ -1270,16 +1261,13 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
     }
   } else {
     // Folding register.
-    SmallVector <MachineRegisterInfo::use_nodbg_iterator, 4> UsesToProcess;
-    for (MachineRegisterInfo::use_nodbg_iterator
-           Use = MRI->use_nodbg_begin(Dst.getReg()), E = MRI->use_nodbg_end();
-         Use != E; ++Use) {
-      UsesToProcess.push_back(Use);
-    }
+    SmallVector <MachineOperand *, 4> UsesToProcess;
+    for (auto &Use : MRI->use_nodbg_operands(Dst.getReg()))
+      UsesToProcess.push_back(&Use);
     for (auto U : UsesToProcess) {
       MachineInstr *UseMI = U->getParent();
 
-      foldOperand(OpToFold, UseMI, U.getOperandNo(),
+      foldOperand(OpToFold, UseMI, UseMI->getOperandNo(U),
         FoldList, CopiesToReplace);
     }
   }
@@ -1748,13 +1736,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
-    MachineBasicBlock::iterator I, Next;
-
     MachineOperand *CurrentKnownM0Val = nullptr;
-    for (I = MBB->begin(); I != MBB->end(); I = Next) {
-      Next = std::next(I);
-      MachineInstr &MI = *I;
-
+    for (auto &MI : make_early_inc_range(*MBB)) {
       tryFoldCndMask(TII, &MI);
 
       if (MI.isRegSequence() && tryFoldRegSequence(MI))
