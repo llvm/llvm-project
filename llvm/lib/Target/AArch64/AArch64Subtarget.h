@@ -196,8 +196,13 @@ protected:
   // HasZeroCycleZeroing - Has zero-cycle zeroing instructions.
   bool HasZeroCycleZeroing = false;
   bool HasZeroCycleZeroingGP = false;
-  bool HasZeroCycleZeroingFP = false;
   bool HasZeroCycleZeroingFPWorkaround = false;
+
+  // It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
+  // as movi is more efficient across all cores. Newer cores can eliminate
+  // fmovs early and there is no difference with movi, but this not true for
+  // all implementations.
+  bool HasZeroCycleZeroingFP = true;
 
   // StrictAlign - Disallow unaligned memory accesses.
   bool StrictAlign = false;

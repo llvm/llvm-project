@@ -19,7 +19,7 @@ declare i128 @llvm.fptoui.sat.i128.f32(float)
 define i1 @test_unsigned_i1_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i1_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fminnm s0, s0, s1
@@ -33,7 +33,7 @@ define i1 @test_unsigned_i1_f32(float %f) nounwind {
 define i8 @test_unsigned_i8_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i8_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    mov w8, #1132396544
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -48,7 +48,7 @@ define i13 @test_unsigned_i13_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i13_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #63488
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #17919, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -63,7 +63,7 @@ define i16 @test_unsigned_i16_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i16_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65280
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -78,7 +78,7 @@ define i19 @test_unsigned_i19_f32(float %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i19_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65504
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18687, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -198,7 +198,7 @@ declare i128 @llvm.fptoui.sat.i128.f64(double)
 define i1 @test_unsigned_i1_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i1_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, #1.00000000
 ; CHECK-NEXT:    fminnm d0, d0, d1
@@ -213,7 +213,7 @@ define i8 @test_unsigned_i8_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i8_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #246290604621824
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16495, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -228,7 +228,7 @@ define i13 @test_unsigned_i13_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i13_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #280375465082880
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16575, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -243,7 +243,7 @@ define i16 @test_unsigned_i16_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i16_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281337537757184
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16623, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -258,7 +258,7 @@ define i19 @test_unsigned_i19_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i19_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281457796841472
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16671, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -273,7 +273,7 @@ define i32 @test_unsigned_i32_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i32_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #281474974613504
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #16879, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -288,7 +288,7 @@ define i50 @test_unsigned_i50_f64(double %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i50_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-8
-; CHECK-NEXT:    fmov d1, xzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk x8, #17167, lsl #48
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -378,7 +378,7 @@ define i1 @test_unsigned_i1_f16(half %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i1_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, #1.00000000
 ; CHECK-NEXT:    fminnm s0, s0, s1
@@ -393,7 +393,7 @@ define i8 @test_unsigned_i8_f16(half %f) nounwind {
 ; CHECK-LABEL: test_unsigned_i8_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    mov w8, #1132396544
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -409,7 +409,7 @@ define i13 @test_unsigned_i13_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #63488
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #17919, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -425,7 +425,7 @@ define i16 @test_unsigned_i16_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65280
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18303, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
@@ -441,7 +441,7 @@ define i19 @test_unsigned_i19_f16(half %f) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #65504
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    movk w8, #18687, lsl #16
 ; CHECK-NEXT:    fmaxnm s0, s0, s1
 ; CHECK-NEXT:    fmov s1, w8
