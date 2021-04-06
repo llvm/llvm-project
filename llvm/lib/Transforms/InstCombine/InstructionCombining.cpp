@@ -3982,8 +3982,8 @@ static bool combineInstructionsOverFunction(
       F.getContext(), TargetFolder(DL),
       IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
         Worklist.add(I);
-        if (match(I, m_Intrinsic<Intrinsic::assume>()))
-          AC.registerAssumption(cast<AssumeInst>(I));
+        if (auto *Assume = dyn_cast<AssumeInst>(I))
+          AC.registerAssumption(Assume);
       }));
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered

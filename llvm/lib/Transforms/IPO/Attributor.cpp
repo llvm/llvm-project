@@ -1910,9 +1910,8 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // Calls are interesting on their own, additionally:
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
-      if (IntrinsicInst *Assume = dyn_cast<IntrinsicInst>(&I)) {
-        if (Assume->getIntrinsicID() == Intrinsic::assume)
-          fillMapFromAssume(*Assume, KnowledgeMap);
+      if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
+        fillMapFromAssume(*Assume, KnowledgeMap);
       } else if (cast<CallInst>(I).isMustTailCall()) {
         FI.ContainsMustTailCall = true;
         if (const Function *Callee = cast<CallInst>(I).getCalledFunction())

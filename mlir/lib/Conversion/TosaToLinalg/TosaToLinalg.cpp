@@ -1407,37 +1407,178 @@ public:
   }
 };
 
+// Lowerings the TableOp to a series of gathers and numerica operations. This
+// includes interpolation between the high/low values. For the I8 varient, this
+// simplifies to a single gather operation.
+class TableConverter : public OpRewritePattern<tosa::TableOp> {
+public:
+  using OpRewritePattern<tosa::TableOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TableOp op,
+                                PatternRewriter &rewriter) const final {
+    auto loc = op.getLoc();
+    Value input = op.input();
+    Value table = op.table();
+    auto inputTy = input.getType().cast<ShapedType>();
+    auto tableTy = table.getType().cast<ShapedType>();
+    auto resultTy = op.getType().cast<ShapedType>();
+
+    if (!inputTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "require input type to have static shape");
+
+    auto inputElementTy = inputTy.getElementType();
+    auto tableElementTy = tableTy.getElementType();
+    auto resultElementTy = resultTy.getElementType();
+
+    auto initTensor =
+        rewriter
+            .create<linalg::InitTensorOp>(loc, ArrayRef<Value>{},
+                                          resultTy.getShape(), resultElementTy)
+            .result();
+
+    SmallVector<AffineMap, 2> affineMaps = {
+        rewriter.getMultiDimIdentityMap(resultTy.getRank()),
+        rewriter.getMultiDimIdentityMap(resultTy.getRank())};
+
+    auto genericOp = rewriter.create<linalg::GenericOp>(
+        loc, resultTy, ValueRange({input}), ValueRange{initTensor}, affineMaps,
+        getNParallelLoopsAttrs(resultTy.getRank()));
+    rewriter.replaceOp(op, genericOp.getResult(0));
+
+    {
+      OpBuilder::InsertionGuard regionGuard(rewriter);
+      Block *block =
+          rewriter.createBlock(&genericOp.region(), genericOp.region().end(),
+                               TypeRange({inputElementTy, resultElementTy}));
+
+      auto inputValue = block->getArgument(0);
+      rewriter.setInsertionPointToStart(block);
+      if (inputElementTy.isInteger(8) && tableElementTy.isInteger(8) &&
+          resultElementTy.isInteger(8)) {
+        Value index = rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(),
+                                                   inputValue);
+        Value extract =
+            rewriter.create<tensor::ExtractOp>(loc, table, ValueRange{index});
+        rewriter.create<linalg::YieldOp>(loc, extract);
+        return success();
+      }
+
+      if (inputElementTy.isInteger(16) && tableElementTy.isInteger(16) &&
+          resultElementTy.isInteger(32)) {
+        Value extend = rewriter.create<SignExtendIOp>(
+            loc, rewriter.getI32Type(), inputValue);
+
+        auto offset =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(32768));
+        auto seven =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(7));
+        auto one =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(1));
+        auto b1111111 =
+            rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(127));
+
+        // Compute the index and fractional part from the input value:
+        // value = value + 32768
+        // index = value >> 7;
+        // fraction = 0x01111111 & value
+        auto extendAdd = rewriter.create<AddIOp>(loc, extend, offset);
+        Value index =
+            rewriter.create<UnsignedShiftRightOp>(loc, extendAdd, seven);
+        Value fraction = rewriter.create<mlir::AndOp>(loc, extendAdd, b1111111);
+
+        // Extract the base and next values from the table.
+        // base = (int32_t) table[index];
+        // next = (int32_t) table[index + 1];
+        Value indexPlusOne = rewriter.create<AddIOp>(loc, index, one);
+
+        index =
+            rewriter.create<IndexCastOp>(loc, rewriter.getIndexType(), index);
+        indexPlusOne = rewriter.create<IndexCastOp>(
+            loc, rewriter.getIndexType(), indexPlusOne);
+
+        Value base =
+            rewriter.create<tensor::ExtractOp>(loc, table, ValueRange{index});
+        Value next = rewriter.create<tensor::ExtractOp>(
+            loc, table, ValueRange{indexPlusOne});
+
+        base = rewriter.create<SignExtendIOp>(loc, rewriter.getI32Type(), base);
+        next = rewriter.create<SignExtendIOp>(loc, rewriter.getI32Type(), next);
+
+        // Use the fractional part to interpolate between the input values:
+        // result = (base << 7) + (next - base) * fraction
+        Value baseScaled = rewriter.create<ShiftLeftOp>(loc, base, seven);
+        Value diff = rewriter.create<SubIOp>(loc, next, base);
+        Value diffScaled = rewriter.create<MulIOp>(loc, diff, fraction);
+        Value result = rewriter.create<AddIOp>(loc, baseScaled, diffScaled);
+
+        rewriter.create<linalg::YieldOp>(loc, result);
+
+        return success();
+      }
+    }
+
+    return rewriter.notifyMatchFailure(
+        op, "unable to create body for tosa.table op");
+  }
+};
+
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgOnTensorsConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<
-      PointwiseConverter<tosa::AddOp>, PointwiseConverter<tosa::SubOp>,
-      PointwiseConverter<tosa::MulOp>, PointwiseConverter<tosa::ReciprocalOp>,
-      PointwiseConverter<tosa::NegateOp>, PointwiseConverter<tosa::PowOp>,
-      PointwiseConverter<tosa::RsqrtOp>, PointwiseConverter<tosa::LogOp>,
-      PointwiseConverter<tosa::ExpOp>, PointwiseConverter<tosa::AbsOp>,
-      PointwiseConverter<tosa::TanhOp>, PointwiseConverter<tosa::BitwiseAndOp>,
+      // clang-format off
+      PointwiseConverter<tosa::AddOp>,
+      PointwiseConverter<tosa::SubOp>,
+      PointwiseConverter<tosa::MulOp>,
+      PointwiseConverter<tosa::NegateOp>,
+      PointwiseConverter<tosa::PowOp>,
+      PointwiseConverter<tosa::ReciprocalOp>,
+      PointwiseConverter<tosa::RsqrtOp>,
+      PointwiseConverter<tosa::LogOp>,
+      PointwiseConverter<tosa::ExpOp>,
+      PointwiseConverter<tosa::AbsOp>,
+      PointwiseConverter<tosa::TanhOp>,
+      PointwiseConverter<tosa::BitwiseAndOp>,
       PointwiseConverter<tosa::BitwiseOrOp>,
       PointwiseConverter<tosa::BitwiseNotOp>,
       PointwiseConverter<tosa::BitwiseXorOp>,
       PointwiseConverter<tosa::LogicalAndOp>,
       PointwiseConverter<tosa::LogicalNotOp>,
       PointwiseConverter<tosa::LogicalOrOp>,
-      PointwiseConverter<tosa::LogicalXorOp>, PointwiseConverter<tosa::CastOp>,
+      PointwiseConverter<tosa::LogicalXorOp>,
+      PointwiseConverter<tosa::CastOp>,
       PointwiseConverter<tosa::LogicalLeftShiftOp>,
       PointwiseConverter<tosa::LogicalRightShiftOp>,
-      PointwiseConverter<tosa::SelectOp>, PointwiseConverter<tosa::GreaterOp>,
+      PointwiseConverter<tosa::SelectOp>,
+      PointwiseConverter<tosa::GreaterOp>,
       PointwiseConverter<tosa::GreaterEqualOp>,
-      PointwiseConverter<tosa::MaximumOp>, PointwiseConverter<tosa::MinimumOp>,
-      PointwiseConverter<tosa::CeilOp>, PointwiseConverter<tosa::FloorOp>,
-      PointwiseConverter<tosa::ClampOp>, PointwiseConverter<tosa::ReluNOp>,
-      PointwiseConverter<tosa::SigmoidOp>, IdentityNConverter<tosa::IdentityOp>,
-      IdentityNConverter<tosa::IdentityNOp>, ReduceConverter<tosa::ReduceAllOp>,
-      ReduceConverter<tosa::ReduceAnyOp>, ReduceConverter<tosa::ReduceMinOp>,
-      ReduceConverter<tosa::ReduceMaxOp>, ReduceConverter<tosa::ReduceSumOp>,
-      ReduceConverter<tosa::ReduceProdOp>, ArgMaxConverter, ConcatConverter,
-      PadConverter, ReshapeConverter, RescaleConverter, ReverseConverter,
-      TileConverter, TransposeConverter, MatMulConverter,
+      PointwiseConverter<tosa::MaximumOp>,
+      PointwiseConverter<tosa::MinimumOp>,
+      PointwiseConverter<tosa::CeilOp>,
+      PointwiseConverter<tosa::FloorOp>,
+      PointwiseConverter<tosa::ClampOp>,
+      PointwiseConverter<tosa::ReluNOp>,
+      PointwiseConverter<tosa::SigmoidOp>,
+      IdentityNConverter<tosa::IdentityOp>,
+      IdentityNConverter<tosa::IdentityNOp>,
+      ReduceConverter<tosa::ReduceAllOp>,
+      ReduceConverter<tosa::ReduceAnyOp>,
+      ReduceConverter<tosa::ReduceMinOp>,
+      ReduceConverter<tosa::ReduceMaxOp>,
+      ReduceConverter<tosa::ReduceSumOp>,
+      ReduceConverter<tosa::ReduceProdOp>,
+      ArgMaxConverter,
+      ConcatConverter,
+      PadConverter,
+      ReshapeConverter,
+      RescaleConverter,
+      ReverseConverter,
+      TableConverter,
+      TileConverter,
+      TransposeConverter,
+      MatMulConverter,
       FullyConnectedConverter>(patterns->getContext());
+      // clang-format on
 }

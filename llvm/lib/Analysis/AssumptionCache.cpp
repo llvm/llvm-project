@@ -202,9 +202,9 @@ void AssumptionCache::scanFunction() {
   // Go through all instructions in all blocks, add all calls to @llvm.assume
   // to this cache.
   for (BasicBlock &B : F)
-    for (Instruction &II : B)
-      if (match(&II, m_Intrinsic<Intrinsic::assume>()))
-        AssumeHandles.push_back({&II, ExprResultIdx});
+    for (Instruction &I : B)
+      if (isa<AssumeInst>(&I))
+        AssumeHandles.push_back({&I, ExprResultIdx});
 
   // Mark the scan as complete.
   Scanned = true;
