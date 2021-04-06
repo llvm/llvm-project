@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
@@ -958,18 +959,6 @@ void PreservedCFGCheckerInstrumentation::CFG::printDiff(raw_ostream &out,
                                                         const CFG &Before,
                                                         const CFG &After) {
   assert(!After.isPoisoned());
-
-  // Print function name.
-  const CFG *FuncGraph = nullptr;
-  if (!After.Graph.empty())
-    FuncGraph = &After;
-  else if (!Before.isPoisoned() && !Before.Graph.empty())
-    FuncGraph = &Before;
-
-  if (FuncGraph)
-    out << "In function @"
-        << FuncGraph->Graph.begin()->first->getParent()->getName() << "\n";
-
   if (Before.isPoisoned()) {
     out << "Some blocks were deleted\n";
     return;
@@ -1025,46 +1014,96 @@ void PreservedCFGCheckerInstrumentation::CFG::printDiff(raw_ostream &out,
   }
 }
 
+// PreservedCFGCheckerInstrumentation uses PreservedCFGCheckerAnalysis to check
+// passes, that reported they kept CFG analyses up-to-date, did not actually
+// change CFG. This check is done as follows. Before every functional pass in
+// BeforeNonSkippedPassCallback a CFG snapshot (an instance of
+// PreservedCFGCheckerInstrumentation::CFG) is requested from
+// FunctionAnalysisManager as a result of PreservedCFGCheckerAnalysis. When the
+// functional pass finishes and reports that CFGAnalyses or AllAnalyses are
+// up-to-date then the cached result of PreservedCFGCheckerAnalysis (if
+// available) is checked to be equal to a freshly created CFG snapshot.
+struct PreservedCFGCheckerAnalysis
+    : public AnalysisInfoMixin<PreservedCFGCheckerAnalysis> {
+  friend AnalysisInfoMixin<PreservedCFGCheckerAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  /// Provide the result type for this analysis pass.
+  using Result = PreservedCFGCheckerInstrumentation::CFG;
+
+  /// Run the analysis pass over a function and produce CFG.
+  Result run(Function &F, FunctionAnalysisManager &FAM) {
+    return Result(&F, /* TrackBBLifetime */ true);
+  }
+};
+
+AnalysisKey PreservedCFGCheckerAnalysis::Key;
+
+bool PreservedCFGCheckerInstrumentation::CFG::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<PreservedCFGCheckerAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 void PreservedCFGCheckerInstrumentation::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager &FAM) {
   if (!VerifyPreservedCFG)
     return;
 
-  PIC.registerBeforeNonSkippedPassCallback([this](StringRef P, Any IR) {
-    if (any_isa<const Function *>(IR))
-      GraphStackBefore.emplace_back(P, CFG(any_cast<const Function *>(IR)));
-    else
-      GraphStackBefore.emplace_back(P, None);
-  });
+  FAM.registerPass([&] { return PreservedCFGCheckerAnalysis(); });
+
+  auto checkCFG = [](StringRef Pass, StringRef FuncName, const CFG &GraphBefore,
+                     const CFG &GraphAfter) {
+    if (GraphAfter == GraphBefore)
+      return;
+
+    dbgs() << "Error: " << Pass
+           << " does not invalidate CFG analyses but CFG changes detected in "
+              "function @"
+           << FuncName << ":\n";
+    CFG::printDiff(dbgs(), GraphBefore, GraphAfter);
+    report_fatal_error(Twine("CFG unexpectedly changed by ", Pass));
+  };
+
+  PIC.registerBeforeNonSkippedPassCallback(
+      [this, &FAM, checkCFG](StringRef P, Any IR) {
+        assert(&PassStack.emplace_back(P));
+        if (!any_isa<const Function *>(IR))
+          return;
+
+        const auto *F = any_cast<const Function *>(IR);
+        // Make sure a fresh CFG snapshot is available before the pass.
+        FAM.getResult<PreservedCFGCheckerAnalysis>(*const_cast<Function *>(F));
+      });
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
-        auto Before = GraphStackBefore.pop_back_val();
-        assert(Before.first == P &&
+        assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
-        (void)Before;
       });
 
-  PIC.registerAfterPassCallback([this](StringRef P, Any IR,
-                                       const PreservedAnalyses &PassPA) {
-    auto Before = GraphStackBefore.pop_back_val();
-    assert(Before.first == P && "Before and After callbacks must correspond");
-    auto &GraphBefore = Before.second;
+  PIC.registerAfterPassCallback([this, &FAM,
+                                 checkCFG](StringRef P, Any IR,
+                                           const PreservedAnalyses &PassPA) {
+    assert(PassStack.pop_back_val() == P &&
+           "Before and After callbacks must correspond");
 
-    if (!PassPA.allAnalysesInSetPreserved<CFGAnalyses>())
+    if (!any_isa<const Function *>(IR))
       return;
 
-    if (any_isa<const Function *>(IR)) {
-      assert(GraphBefore && "Must be built in BeforePassCallback");
-      CFG GraphAfter(any_cast<const Function *>(IR), false /* NeedsGuard */);
-      if (GraphAfter == *GraphBefore)
-        return;
+    if (!PassPA.allAnalysesInSetPreserved<CFGAnalyses>() &&
+        !PassPA.allAnalysesInSetPreserved<AllAnalysesOn<Function>>())
+      return;
 
-      dbgs() << "Error: " << P
-             << " reported it preserved CFG, but changes detected:\n";
-      CFG::printDiff(dbgs(), *GraphBefore, GraphAfter);
-      report_fatal_error(Twine("Preserved CFG changed by ", P));
-    }
+    const auto *F = any_cast<const Function *>(IR);
+    if (auto *GraphBefore = FAM.getCachedResult<PreservedCFGCheckerAnalysis>(
+            *const_cast<Function *>(F)))
+      checkCFG(P, F->getName(), *GraphBefore,
+               CFG(F, /* TrackBBLifetime */ false));
   });
 }
 
@@ -1169,13 +1208,14 @@ StandardInstrumentations::StandardInstrumentations(bool DebugLogging,
       Verify(DebugLogging), VerifyEach(VerifyEach) {}
 
 void StandardInstrumentations::registerCallbacks(
-    PassInstrumentationCallbacks &PIC) {
+    PassInstrumentationCallbacks &PIC, FunctionAnalysisManager *FAM) {
   PrintIR.registerCallbacks(PIC);
   PrintPass.registerCallbacks(PIC);
   TimePasses.registerCallbacks(PIC);
   OptNone.registerCallbacks(PIC);
   OptBisect.registerCallbacks(PIC);
-  PreservedCFGChecker.registerCallbacks(PIC);
+  if (FAM)
+    PreservedCFGChecker.registerCallbacks(PIC, *FAM);
   PrintChangedIR.registerCallbacks(PIC);
   PseudoProbeVerification.registerCallbacks(PIC);
   if (VerifyEach)
