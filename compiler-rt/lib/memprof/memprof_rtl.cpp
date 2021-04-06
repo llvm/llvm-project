@@ -214,6 +214,9 @@ static void MemprofInitInternal() {
 
   InitializeCoverage(common_flags()->coverage, common_flags()->coverage_dir);
 
+  // interceptors
+  InitTlsSize();
+
   // Create main thread.
   MemprofThread *main_thread = CreateMainThread();
   CHECK_EQ(0, main_thread->tid());

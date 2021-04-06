@@ -655,11 +655,8 @@ TSAN_INTERCEPTOR(void*, malloc, uptr size) {
   return p;
 }
 
-// In glibc<2.25, dynamic TLS blocks are allocated by __libc_memalign. Intercept
-// __libc_memalign so that (1) we can detect races (2) free will not be called
-// on libc internally allocated blocks.
 TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
-  SCOPED_INTERCEPTOR_RAW(__libc_memalign, align, sz);
+  SCOPED_TSAN_INTERCEPTOR(__libc_memalign, align, sz);
   return user_memalign(thr, pc, align, sz);
 }
 
