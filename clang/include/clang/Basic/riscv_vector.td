@@ -215,6 +215,13 @@ multiclass RVVBuiltinSet<string intrinsic_name, string type_range,
   }
 }
 
+// IntrinsicTypes is output, op0, op1 [-1, 0, 1]
+multiclass RVVOutOp0Op1BuiltinSet<string intrinsic_name, string type_range,
+                                  list<list<string>> suffixes_prototypes> {
+  defm NAME : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes,
+                            [-1, 0, 1]>;
+}
+
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
                                list<list<string>> suffixes_prototypes> {
@@ -455,7 +462,14 @@ defm vsra : RVVOutOp1BuiltinSet<"vsra", "csil",
                                  ["vx", "v", "vvz"]]>;
 
 // 12.7. Vector Narrowing Integer Right Shift Instructions
-// TODO
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+defm vnsrl : RVVOutOp0Op1BuiltinSet<"vnsrl", "csi",
+                                    [["wv", "Uv", "UvUwUv"],
+                                     ["wx", "Uv", "UvUwz"]]>;
+defm vnsra : RVVOutOp0Op1BuiltinSet<"vnsra", "csi",
+                                    [["wv", "v", "vwUv"],
+                                     ["wx", "v", "vwz"]]>;
+}
 
 // 12.8. Vector Integer Comparison Instructions
 // TODO
@@ -481,7 +495,17 @@ defm vremu : RVVUnsignedBinBuiltinSet;
 defm vrem : RVVSignedBinBuiltinSet;
 
 // 12.12. Vector Widening Integer Multiply Instructions
-// TODO
+let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+defm vwmul : RVVOutOp0Op1BuiltinSet<"vwmul", "csi",
+                                    [["vv", "w", "wvv"],
+                                     ["vx", "w", "wve"]]>;
+defm vwmulu : RVVOutOp0Op1BuiltinSet<"vwmulu", "csi",
+                                     [["vv", "Uw", "UwUvUv"],
+                                      ["vx", "Uw", "UwUvUe"]]>;
+defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
+                                      [["vv", "w", "wvUv"],
+                                       ["vx", "w", "wvUe"]]>;
+}
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
 let HasMaskedOffOperand = false in {
