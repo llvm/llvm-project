@@ -1072,6 +1072,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
   PIC.registerBeforeNonSkippedPassCallback(
       [this, &FAM](StringRef P, Any IR) {
         assert(&PassStack.emplace_back(P));
+        (void)this;
         if (!any_isa<const Function *>(IR))
           return;
 
@@ -1084,6 +1085,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
+        (void)this;
       });
 
   PIC.registerAfterPassCallback([this, &FAM,
@@ -1091,6 +1093,7 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
                                            const PreservedAnalyses &PassPA) {
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
+    (void)this;
 
     if (!any_isa<const Function *>(IR))
       return;
