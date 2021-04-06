@@ -3697,6 +3697,11 @@ static void GenerateMutualExclusionsChecks(const Record &Attr,
     }
   }
 
+  // If there are any decl or stmt attributes, silence -Woverloaded-virtual
+  // warnings for them both.
+  if (!DeclAttrs.empty() || !StmtAttrs.empty())
+    OS << "  using ParsedAttrInfo::diagMutualExclusion;\n\n";
+
   // If we discovered any decl or stmt attributes to test for, generate the
   // predicates for them now.
   if (!DeclAttrs.empty()) {
