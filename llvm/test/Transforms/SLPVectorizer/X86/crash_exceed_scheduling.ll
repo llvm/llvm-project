@@ -34,9 +34,9 @@ define void @exceed(double %0, double %1) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP14]], undef
 ; CHECK-NEXT:    switch i32 undef, label [[BB1:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]

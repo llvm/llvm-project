@@ -37,7 +37,7 @@ define void @lookahead_basic(double* %array) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x double> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[IDX0]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP10]], <2 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    ret void
@@ -175,7 +175,7 @@ define void @lookahead_alt2(double* %array) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP11]], <2 x double> [[TMP12]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP13]], [[TMP10]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <2 x double> [[TMP10]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = bitcast double* [[IDX0]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP14]], <2 x double>* [[TMP15]], align 8
 ; CHECK-NEXT:    ret void
@@ -237,28 +237,29 @@ define void @lookahead_external_uses(double* %A, double *%B, double *%C, double 
 ; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds double, double* [[B]], i64 2
 ; CHECK-NEXT:    [[IDXA2:%.*]] = getelementptr inbounds double, double* [[A]], i64 2
 ; CHECK-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
-; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[IDXA0]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load double, double* [[IDXB0]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load double, double* [[IDXC0]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load double, double* [[IDXD0]], align 8
-; CHECK-NEXT:    [[A1:%.*]] = load double, double* [[IDXA1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXA0]] to <2 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[B2:%.*]] = load double, double* [[IDXB2]], align 8
 ; CHECK-NEXT:    [[A2:%.*]] = load double, double* [[IDXA2]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXB0]] to <2 x double>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[A1]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> poison, double [[D0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[B2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[A2]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x double> [[TMP8]], [[TMP1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[B1:%.*]] = load double, double* [[IDXB1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A2]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[D0]], i32 0
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[B1]], i32 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fsub fast <2 x double> [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP9]]
 ; CHECK-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds double, double* [[S:%.*]], i64 0
 ; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[S]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[IDXS0]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP10]], <2 x double>* [[TMP11]], align 8
-; CHECK-NEXT:    store double [[A1]], double* [[EXT1:%.*]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP1]], i32 1
+; CHECK-NEXT:    store double [[TMP12]], double* [[EXT1:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -607,7 +608,7 @@ define void @ChecksExtractScores_different_vectors(double* %storeArray, double* 
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[EXTRA0]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[EXTRB1]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[SHUFFLE]], [[TMP8]]
 ; CHECK-NEXT:    [[SIDX0:%.*]] = getelementptr inbounds double, double* [[STOREARRAY:%.*]], i64 0
 ; CHECK-NEXT:    [[SIDX1:%.*]] = getelementptr inbounds double, double* [[STOREARRAY]], i64 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[SIDX0]] to <2 x double>*

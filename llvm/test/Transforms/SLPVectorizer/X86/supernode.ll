@@ -23,7 +23,7 @@ define void @test_supernode_add(double* %Aarray, double* %Barray, double *%Carra
 ; ENABLED-NEXT:    [[C1:%.*]] = load double, double* [[IDXC1]], align 8
 ; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[C1]], i32 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP1]]
+; ENABLED-NEXT:    [[TMP4:%.*]] = fadd fast <2 x double> [[TMP1]], [[TMP3]]
 ; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[C0]], i32 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[A1]], i32 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP6]]

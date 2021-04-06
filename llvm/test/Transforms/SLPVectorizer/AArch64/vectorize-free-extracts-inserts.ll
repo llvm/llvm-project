@@ -282,19 +282,21 @@ define void @extracts_jumbled_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2
 ; CHECK-NEXT:    [[V2_LANE_0:%.*]] = extractelement <4 x double> [[V_2]], i32 0
 ; CHECK-NEXT:    [[V2_LANE_1:%.*]] = extractelement <4 x double> [[V_2]], i32 1
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
-; CHECK-NEXT:    [[A_LANE_0:%.*]] = fmul double [[V1_LANE_0]], [[V2_LANE_2]]
-; CHECK-NEXT:    [[A_LANE_1:%.*]] = fmul double [[V1_LANE_2]], [[V2_LANE_1]]
-; CHECK-NEXT:    [[A_LANE_2:%.*]] = fmul double [[V1_LANE_1]], [[V2_LANE_2]]
-; CHECK-NEXT:    [[A_LANE_3:%.*]] = fmul double [[V1_LANE_3]], [[V2_LANE_0]]
-; CHECK-NEXT:    [[A_INS_0:%.*]] = insertelement <9 x double> undef, double [[A_LANE_0]], i32 0
-; CHECK-NEXT:    [[A_INS_1:%.*]] = insertelement <9 x double> [[A_INS_0]], double [[A_LANE_1]], i32 1
-; CHECK-NEXT:    [[A_INS_2:%.*]] = insertelement <9 x double> [[A_INS_1]], double [[A_LANE_2]], i32 2
-; CHECK-NEXT:    [[A_INS_3:%.*]] = insertelement <9 x double> [[A_INS_2]], double [[A_LANE_3]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[V1_LANE_0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[V1_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[V1_LANE_1]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[V1_LANE_3]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[V2_LANE_2]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[V2_LANE_1]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[V2_LANE_2]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[V2_LANE_0]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <9 x double> [[A_INS_3]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[TMP9]], <9 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
