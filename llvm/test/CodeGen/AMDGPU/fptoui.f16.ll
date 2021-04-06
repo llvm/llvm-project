@@ -132,7 +132,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}fptoui_f16_to_i1:
-; SI: v_cvt_f32_f16_e32 v{{[0-9+]}}, s{{[0-9]+}}
+; SI: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; SI: v_cmp_eq_f32_e32 vcc, 1.0, v{{[0-9]+}}
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ; VI: v_cmp_eq_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{[0-9]+}}
