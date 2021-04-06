@@ -194,14 +194,14 @@ define i32 @uge_f32(float %x, float %y) {
 ; CHECK-NEXT: f32.lt  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @olt_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp olt float %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -214,14 +214,14 @@ if.end:
 ; CHECK-NEXT: f32.le  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ole_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp ole float %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -234,14 +234,14 @@ if.end:
 ; CHECK-NEXT: f32.le  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ugt_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp ugt float %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -254,14 +254,14 @@ if.end:
 ; CHECK-NEXT: f32.gt  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ogt_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp ogt float %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -274,14 +274,14 @@ if.end:
 ; CHECK-NEXT: f32.ge  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ult_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp ult float %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -294,14 +294,14 @@ if.end:
 ; CHECK-NEXT: f32.ge  	$push[[NUM0:[0-9]+]]=, $pop[[L4]], $pop[[L3]]
 ; CHECK-NEXT: i32.eqz 	$push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ule_f32_branch(float %a, float %b) {
 entry:
   %cmp = fcmp ult float %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -381,4 +381,4 @@ exit:
 declare void @foo1()
 declare void @foo2()
 declare void @foo3()
-declare void @_Z5call1v()
+declare void @call1()
