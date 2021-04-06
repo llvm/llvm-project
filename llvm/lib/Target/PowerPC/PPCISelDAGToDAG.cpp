@@ -1059,9 +1059,10 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
   InstCnt = 1;
 
   // The pli instruction can materialize up to 34 bits directly.
-  // It is defined in the TD file and so we just return the constant.
+  // If a constant fits within 34-bits, emit the pli instruction here directly.
   if (isInt<34>(Imm))
-    return cast<ConstantSDNode>(CurDAG->getConstant(Imm, dl, MVT::i64));
+    return CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
+                                  CurDAG->getTargetConstant(Imm, dl, MVT::i64));
 
   // Require at least two instructions.
   InstCnt = 2;
@@ -4874,11 +4875,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
-      SDNode *ResNode = selectI64Imm(CurDAG, N);
-      if (!isa<ConstantSDNode>(ResNode)) {
-        ReplaceNode(N, ResNode);
-        return;
-      }
+      ReplaceNode(N, selectI64Imm(CurDAG, N));
+      return;
     }
     break;
 
