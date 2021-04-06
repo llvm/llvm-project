@@ -163,7 +163,6 @@ Fortran::lower::genScanDescriptor(Fortran::lower::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Value resultBox,
                                   mlir::Value stringBox, mlir::Value setBox,
                                   mlir::Value backBox, mlir::Value kind) {
-
   auto func = getRuntimeFunc<mkRTKey(Scan)>(loc, builder);
   genCharacterSearch(func, builder, loc, resultBox, stringBox, setBox, backBox,
                      kind);
@@ -211,7 +210,6 @@ Fortran::lower::genVerifyDescriptor(Fortran::lower::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value resultBox,
                                     mlir::Value stringBox, mlir::Value setBox,
                                     mlir::Value backBox, mlir::Value kind) {
-
   auto func = getRuntimeFunc<mkRTKey(Verify)>(loc, builder);
   genCharacterSearch(func, builder, loc, resultBox, stringBox, 
                                      setBox, backBox, kind);
