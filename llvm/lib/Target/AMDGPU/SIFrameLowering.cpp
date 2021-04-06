@@ -1118,7 +1118,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   // turn on all lanes before doing the spill to memory.
   Register ScratchExecCopy;
 
-  emitPrologueEntryCFI(MBB, MBBI, DL);
+  // FIXME: Switch to using MF.needsFrameMoves() later
+  const bool needsFrameMoves = true;
+
+  if (needsFrameMoves)
+    emitPrologueEntryCFI(MBB, MBBI, DL);
 
   Optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
   Optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
@@ -1137,11 +1141,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     buildPrologSpill(ST, LiveRegs, MBB, MBBI, TII, Reg.VGPR,
                      FuncInfo->getScratchRSrcReg(), StackPtrReg, FI, DwordOff);
 
-    // We spill the entire VGPR, so we can get away with just cfi_offset
-    buildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createOffset(
-                 nullptr, MCRI->getDwarfRegNum(Reg.VGPR, false),
-                 MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+    if (needsFrameMoves)
+      // We spill the entire VGPR, so we can get away with just cfi_offset
+      buildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createOffset(
+                   nullptr, MCRI->getDwarfRegNum(Reg.VGPR, false),
+                   MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
   }
 
   if (TRI.isCFISavedRegsSpillEnabled()) {
@@ -1169,10 +1174,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     buildPrologSpill(ST, LiveRegs, MBB, MBBI, TII, TmpVGPR,
                      FuncInfo->getScratchRSrcReg(), StackPtrReg, FramePtrFI,
 		     DwordOff);
-    buildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createOffset(
-                 nullptr, MCRI->getDwarfRegNum(FramePtrReg, false),
-                 MFI.getObjectOffset(FramePtrFI) * ST.getWavefrontSize()));
+    if (needsFrameMoves)
+      buildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createOffset(
+                   nullptr, MCRI->getDwarfRegNum(FramePtrReg, false),
+                   MFI.getObjectOffset(FramePtrFI) * ST.getWavefrontSize()));
   }
 
   if (BPSaveIndex && spilledToMemory(MF, *BPSaveIndex)) {
@@ -1194,10 +1200,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     buildPrologSpill(ST, LiveRegs, MBB, MBBI, TII, TmpVGPR,
                      FuncInfo->getScratchRSrcReg(), StackPtrReg, BasePtrFI,
                      DwordOff);
-    buildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createOffset(
-                 nullptr, MCRI->getDwarfRegNum(BasePtrReg, false),
-                 MFI.getObjectOffset(BasePtrFI) * ST.getWavefrontSize()));
+    if (needsFrameMoves)
+      buildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createOffset(
+                   nullptr, MCRI->getDwarfRegNum(BasePtrReg, false),
+                   MFI.getObjectOffset(BasePtrFI) * ST.getWavefrontSize()));
   }
 
   if (ScratchExecCopy) {
@@ -1231,8 +1238,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm(Spill[0].Lane)
         .addReg(Spill[0].VGPR, RegState::Undef);
 
-    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, FramePtrReg, Spill[0].VGPR,
-                               Spill[0].Lane);
+    if (needsFrameMoves)
+      buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, FramePtrReg, Spill[0].VGPR,
+                                 Spill[0].Lane);
   }
 
   // In this case, spill the BP to a reserved VGPR.
@@ -1250,8 +1258,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         .addReg(BasePtrReg)
         .addImm(Spill[0].Lane)
         .addReg(Spill[0].VGPR, RegState::Undef);
-    buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, BasePtrReg, Spill[0].VGPR,
-                               Spill[0].Lane);
+    if (needsFrameMoves)
+      buildCFIForSGPRToVGPRSpill(MBB, MBBI, DL, BasePtrReg, Spill[0].VGPR,
+                                 Spill[0].Lane);
   }
 
   // Emit the copy if we need an FP, and are using a free SGPR to save it.
@@ -1260,11 +1269,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
             FuncInfo->SGPRForFPSaveRestoreCopy)
         .addReg(FramePtrReg)
         .setMIFlag(MachineInstr::FrameSetup);
-    buildCFI(
-        MBB, MBBI, DL,
-        MCCFIInstruction::createRegister(
-            nullptr, MCRI->getDwarfRegNum(FramePtrReg, false),
-            MCRI->getDwarfRegNum(FuncInfo->SGPRForFPSaveRestoreCopy, false)));
+    if (needsFrameMoves)
+      buildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::createRegister(
+              nullptr, MCRI->getDwarfRegNum(FramePtrReg, false),
+              MCRI->getDwarfRegNum(FuncInfo->SGPRForFPSaveRestoreCopy, false)));
   }
 
   // Emit the copy if we need a BP, and are using a free SGPR to save it.
@@ -1273,11 +1283,12 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
             FuncInfo->SGPRForBPSaveRestoreCopy)
         .addReg(BasePtrReg)
         .setMIFlag(MachineInstr::FrameSetup);
-    buildCFI(
-        MBB, MBBI, DL,
-        MCCFIInstruction::createRegister(
-            nullptr, MCRI->getDwarfRegNum(BasePtrReg, false),
-            MCRI->getDwarfRegNum(FuncInfo->SGPRForBPSaveRestoreCopy, false)));
+    if (needsFrameMoves)
+      buildCFI(
+          MBB, MBBI, DL,
+          MCCFIInstruction::createRegister(
+              nullptr, MCRI->getDwarfRegNum(BasePtrReg, false),
+              MCRI->getDwarfRegNum(FuncInfo->SGPRForBPSaveRestoreCopy, false)));
   }
 
   // If a copy has been emitted for FP and/or BP, Make the SGPRs
@@ -1340,9 +1351,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (HasFP) {
-    buildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createDefCfaRegister(
-                 nullptr, MCRI->getDwarfRegNum(FramePtrReg, false)));
+    if (needsFrameMoves)
+      buildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createDefCfaRegister(
+                   nullptr, MCRI->getDwarfRegNum(FramePtrReg, false)));
   }
 
   if (HasFP && RoundedSize != 0) {
@@ -1444,10 +1456,14 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  if (hasFP(MF))
-    buildCFI(MBB, MBBI, DL,
-             MCCFIInstruction::createDefCfaRegister(
-                 nullptr, MCRI->getDwarfRegNum(StackPtrReg, false)));
+  // FIXME: Switch to using MF.needsFrameMoves() later
+  const bool needsFrameMoves = true;
+  if (hasFP(MF)) {
+    if (needsFrameMoves)
+      buildCFI(MBB, MBBI, DL,
+               MCCFIInstruction::createDefCfaRegister(
+                   nullptr, MCRI->getDwarfRegNum(StackPtrReg, false)));
+  }
 
   if (BPSaveIndex) {
     const int BasePtrFI = *BPSaveIndex;
