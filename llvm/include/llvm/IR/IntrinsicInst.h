@@ -1149,6 +1149,74 @@ public:
   }
 };
 
+// Defined in Statepoint.h -- NOT a subclass of IntrinsicInst
+class GCStatepointInst;
+
+/// Common base class for representing values projected from a statepoint.
+/// Currently, the only projections available are gc.result and gc.relocate.
+class GCProjectionInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate ||
+      I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  /// Return true if this relocate is tied to the invoke statepoint.
+  /// This includes relocates which are on the unwinding path.
+  bool isTiedToInvoke() const {
+    const Value *Token = getArgOperand(0);
+
+    return isa<LandingPadInst>(Token) || isa<InvokeInst>(Token);
+  }
+
+  /// The statepoint with which this gc.relocate is associated.
+  const GCStatepointInst *getStatepoint() const;
+};
+
+/// Represents calls to the gc.relocate intrinsic.
+class GCRelocateInst : public GCProjectionInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_relocate;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  /// The index into the associate statepoint's argument list
+  /// which contains the base pointer of the pointer whose
+  /// relocation this gc.relocate describes.
+  unsigned getBasePtrIndex() const {
+    return cast<ConstantInt>(getArgOperand(1))->getZExtValue();
+  }
+
+  /// The index into the associate statepoint's argument list which
+  /// contains the pointer whose relocation this gc.relocate describes.
+  unsigned getDerivedPtrIndex() const {
+    return cast<ConstantInt>(getArgOperand(2))->getZExtValue();
+  }
+
+  Value *getBasePtr() const;
+  Value *getDerivedPtr() const;
+};
+
+/// Represents calls to the gc.result intrinsic.
+class GCResultInst : public GCProjectionInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::experimental_gc_result;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H
