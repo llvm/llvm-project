@@ -113,13 +113,12 @@ jobs:
         for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
-          tar -czf $lib-${{ matrix.ref }}.abi.tar.gz $lib-${{ matrix.ref }}.abi
         done
     - name: Upload ABI file
       uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.name }}
-        path: "*${{ matrix.ref }}.abi.tar.gz"
+        path: "*${{ matrix.ref }}.abi"
 
   abi-compare:
     runs-on: ubuntu-latest
@@ -141,7 +140,7 @@ jobs:
       - name: Compare ABI
         run: |
           for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
-            abi-compliance-checker -lib $lib -old build-baseline/$lib*.abi.tar.gz -new build-latest/$lib*.abi.tar.gz
+            abi-compliance-checker -lib $lib -old build-baseline/$lib*.abi -new build-latest/$lib*.abi
           done
       - name: Upload ABI Comparison
         if: always()
