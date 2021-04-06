@@ -12,6 +12,7 @@
 // module.
 //
 //===----------------------------------------------------------------------===//
+#include "../../runtime/character.h"
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "RTBuilder.h"
@@ -171,7 +172,6 @@ struct IntrinsicLibrary {
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genScanVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>, bool isScan);
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that
   /// is ignored because this is already reflected in the result type.
@@ -1550,7 +1550,86 @@ fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
 
-  return IntrinsicLibrary::genScanVerify(resultType, args, true);
+  assert(args.size() == 4);
+
+  if (isAbsent(args[3])) {
+    // Kind not specified, so call scan/verify runtime routine that is 
+    // specialized on the kind of characters in string.
+
+    // Handle required string base arg
+    auto stringBase = fir::getBase(args[0]);
+
+    // Handle required set string base arg
+    auto setBase = fir::getBase(args[1]);
+
+    // Handle kind argument; it is the kind of character in this case
+    auto kind =
+      Fortran::lower::CharacterExprHelper{builder, loc}.getCharacterKind(  
+          stringBase.getType());
+
+    // Get string length argument
+    auto stringLen = fir::getLen(args[0]);   
+
+    // Get set string length argument
+    auto setLen = fir::getLen(args[1]);
+
+    // Handle optional back argument
+    auto back = isAbsent(args[2])
+                ? builder.createIntegerConstant(loc, builder.getI1Type(), 0) 
+                : fir::getBase(args[2]);
+
+    return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genScan(builder, loc, kind, stringBase, 
+                                stringLen, setBase, setLen, back));
+  }
+  // else use the runtime descriptor version of scan/verify
+ 
+
+  // Handle optional argument, back
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    auto logTy = fir::LogicalType::get(
+      builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    auto temp = builder.createTemporary(loc, logTy);
+    auto castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  auto back = fir::isUnboxedValue(args[2])
+              ? makeRefThenEmbox(*args[2].getUnboxed())
+              : builder.create<fir::AbsentOp>(
+                loc, fir::BoxType::get(builder.getI1Type()));
+
+  // Handle required string argument
+  auto string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  auto set = builder.createBox(loc, args[1]);
+
+  // Handle kind argument
+  auto kind = fir::getBase(args[3]);
+  
+  // Create result descriptor    
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  Fortran::lower::genScanDescriptor(builder, loc, resultIrBox, string, set, 
+                                    back, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+
+  return res.match(
+        [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+            -> fir::ExtendedValue { 
+            addCleanUpForTemp(loc, box.getAddr());
+            return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for SCAN");
+      });
 }
 
 // SIGN
@@ -1656,19 +1735,11 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
   return result;
 }
 
-// VERIFY 
+
+// VERIFY
 fir::ExtendedValue
 IntrinsicLibrary::genVerify(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
-
-  return IntrinsicLibrary::genScanVerify(resultType, args, false);
-}
-
-// Process Scan/Verify intrinsic
-fir::ExtendedValue
-IntrinsicLibrary::genScanVerify(mlir::Type resultType,
-                                llvm::ArrayRef<fir::ExtendedValue> args,
-                                bool isScan) {
 
   assert(args.size() == 4);
 
@@ -1700,9 +1771,8 @@ IntrinsicLibrary::genScanVerify(mlir::Type resultType,
 
     return builder.createConvert(
         loc, resultType,
-        Fortran::lower::genScanVerifyKind(builder, loc, kind, stringBase, 
-                                          stringLen, setBase, setLen, back,
-                                          isScan));
+        Fortran::lower::genVerify(builder, loc, kind, stringBase, 
+                                  stringLen, setBase, setLen, back));
   }
   // else use the runtime descriptor version of scan/verify
  
@@ -1736,8 +1806,8 @@ IntrinsicLibrary::genScanVerify(mlir::Type resultType,
   auto resultIrBox =
        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
-  Fortran::lower::genScanVerify(builder, loc, resultIrBox, string, set, back, 
-                                kind, isScan);
+  Fortran::lower::genVerifyDescriptor(builder, loc, resultIrBox, string, set, 
+                                      back, kind);
 
   // Handle cleanup of allocatable result descriptor and return
   auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
@@ -1749,7 +1819,7 @@ IntrinsicLibrary::genScanVerify(mlir::Type resultType,
             return builder.create<fir::LoadOp>(loc, resultType, box.getAddr());
       },
       [&](const auto &) -> fir::ExtendedValue {
-        fir::emitFatalError(loc, "unexpected result for SCAN/VERIFY");
+        fir::emitFatalError(loc, "unexpected result for VERIFY");
       });
 }
 

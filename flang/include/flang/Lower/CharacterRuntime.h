@@ -58,21 +58,39 @@ void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
 void genTrim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
              mlir::Value resultBox, mlir::Value stringBox);
 
-/// Generate call to verify runtime.
-/// This calls the descriptor based runtime call implementation of the scan or
-/// verify intrinsics.
-void genScanVerify(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
-               mlir::Value resultBox, mlir::Value stringBox,
-               mlir::Value setBox, mlir::Value backBox, mlir::Value kind,
-               bool isScan);
+/// Generate call to scan runtime.
+/// This calls the descriptor based runtime call implementation of the scan
+/// intrinsics.
+void genScanDescriptor(Fortran::lower::FirOpBuilder &builder, 
+                       mlir::Location loc,
+                       mlir::Value resultBox, mlir::Value stringBox,
+                       mlir::Value setBox, mlir::Value backBox, 
+                       mlir::Value kind);
 
-/// Generate call to the scan or verify runtime routine that is specialized on 
+/// Generate call to the scan runtime routine that is specialized on 
 /// \param kind.
 /// The \param kind represents the kind of the elements in the strings.
-mlir::Value genScanVerifyKind(Fortran::lower::FirOpBuilder &builder,
-                         mlir::Location loc, int kind, mlir::Value stringBase,
-                         mlir::Value stringLen, mlir::Value setBase,
-                         mlir::Value setLen, mlir::Value back, bool isScan);
+mlir::Value genScan(Fortran::lower::FirOpBuilder &builder,
+                    mlir::Location loc, int kind, mlir::Value stringBase,
+                    mlir::Value stringLen, mlir::Value setBase,
+                    mlir::Value setLen, mlir::Value back);
+
+/// Generate call to verify runtime.
+/// This calls the descriptor based runtime call implementation of the scan
+/// intrinsics.
+void genVerifyDescriptor(Fortran::lower::FirOpBuilder &builder, 
+                         mlir::Location loc,
+                         mlir::Value resultBox, mlir::Value stringBox,
+                         mlir::Value setBox, mlir::Value backBox, 
+                       mlir::Value kind);
+
+/// Generate call to the verify runtime routine that is specialized on 
+/// \param kind.
+/// The \param kind represents the kind of the elements in the strings.
+mlir::Value genVerify(Fortran::lower::FirOpBuilder &builder,
+                      mlir::Location loc, int kind, mlir::Value stringBase,
+                      mlir::Value stringLen, mlir::Value setBase,
+                      mlir::Value setLen, mlir::Value back);
 
 } // namespace lower
 } // namespace Fortran
