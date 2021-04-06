@@ -1070,6 +1070,17 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
   return createSimpleTargetReduction(B, TTI, Src, Desc.getRecurrenceKind());
 }
 
+Value *llvm::createOrderedReduction(IRBuilderBase &B,
+                                    RecurrenceDescriptor &Desc, Value *Src,
+                                    Value *Start) {
+  auto Kind = Desc.getRecurrenceKind();
+  assert(Kind == RecurKind::FAdd && "Unexpected reduction kind");
+  assert(Src->getType()->isVectorTy() && "Expected a vector type");
+  assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
+
+  return B.CreateFAddReduce(Start, Src);
+}
+
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue) {
   auto *VecOp = dyn_cast<Instruction>(I);
   if (!VecOp)
