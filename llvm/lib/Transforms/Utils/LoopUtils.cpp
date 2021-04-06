@@ -1073,8 +1073,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
 Value *llvm::createOrderedReduction(IRBuilderBase &B,
                                     RecurrenceDescriptor &Desc, Value *Src,
                                     Value *Start) {
-  auto Kind = Desc.getRecurrenceKind();
-  assert(Kind == RecurKind::FAdd && "Unexpected reduction kind");
+  assert(Desc.getRecurrenceKind() == RecurKind::FAdd &&
+         "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
