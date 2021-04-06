@@ -681,13 +681,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     // Remap all instructions in the most recent iteration
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
-    for (BasicBlock *NewBlock : NewBlocks) {
-      for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&I))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            AC->registerAssumption(II);
-      }
-    }
+    for (BasicBlock *NewBlock : NewBlocks)
+      for (Instruction &I : *NewBlock)
+        if (auto *II = dyn_cast<AssumeInst>(&I))
+          AC->registerAssumption(II);
 
     {
       // Identify what other metadata depends on the cloned version. After

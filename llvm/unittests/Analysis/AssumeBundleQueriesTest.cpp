@@ -542,7 +542,7 @@ TEST(AssumeQueryAPI, AssumptionCache) {
   ASSERT_EQ(AR.size(), 1u);
   ASSERT_EQ(AR[0].Assume, &*Second);
   ASSERT_EQ(AR[0].Index, AssumptionCache::ExprResultIdx);
-  AC.unregisterAssumption(cast<CallInst>(&*Second));
+  AC.unregisterAssumption(cast<AssumeInst>(&*Second));
   AR = AC.assumptionsFor(F->getArg(1));
   ASSERT_EQ(AR.size(), 0u);
   AR = AC.assumptionsFor(F->getArg(0));
