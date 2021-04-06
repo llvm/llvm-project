@@ -678,22 +678,28 @@ inline fs::path GetWindowsInaccessibleDir() {
   const fs::path dir("C:\\System Volume Information");
   std::error_code ec;
   const fs::path root("C:\\");
-  fs::directory_iterator it(root, ec);
-  if (ec)
-    return fs::path();
-  const fs::directory_iterator endIt{};
-  while (it != endIt) {
-    const fs::directory_entry &ent = *it;
-    if (ent == dir) {
-      // Basic sanity checks on the directory_entry
-      if (!ent.exists())
-        return fs::path();
-      if (!ent.is_directory())
-        return fs::path();
-      return ent;
+  for (const auto &ent : fs::directory_iterator(root, ec)) {
+    if (ent != dir)
+      continue;
+    // Basic sanity checks on the directory_entry
+    if (!ent.exists() || !ent.is_directory()) {
+      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                      "but doesn't behave as expected, skipping tests "
+                      "regarding it\n", dir.string().c_str());
+      return fs::path();
     }
-    ++it;
+    // Check that it indeed is inaccessible as expected
+    (void)fs::exists(ent, ec);
+    if (!ec) {
+      fprintf(stderr, "The expected inaccessible directory \"%s\" was found "
+                      "but seems to be accessible, skipping tests "
+                      "regarding it\n", dir.string().c_str());
+      return fs::path();
+    }
+    return ent;
   }
+  fprintf(stderr, "No inaccessible directory \"%s\" found, skipping tests "
+                  "regarding it\n", dir.string().c_str());
   return fs::path();
 }
 
