@@ -1791,9 +1791,8 @@ bool LowerTypeTestsModule::lower() {
       auto *CI = cast<CallInst>((*UI++).getUser());
       // Find and erase llvm.assume intrinsics for this llvm.type.test call.
       for (auto CIU = CI->use_begin(), CIUE = CI->use_end(); CIU != CIUE;)
-        if (auto *II = dyn_cast<IntrinsicInst>((*CIU++).getUser()))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            II->eraseFromParent();
+        if (auto *Assume = dyn_cast<AssumeInst>((*CIU++).getUser()))
+          Assume->eraseFromParent();
       CI->eraseFromParent();
     }
 
@@ -2062,9 +2061,8 @@ bool LowerTypeTestsModule::lower() {
       // with the DropTypeTests flag set.
       bool OnlyAssumeUses = !CI->use_empty();
       for (const Use &CIU : CI->uses()) {
-        if (auto *II = dyn_cast<IntrinsicInst>(CIU.getUser()))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            continue;
+        if (isa<AssumeInst>(CIU.getUser()))
+          continue;
         OnlyAssumeUses = false;
         break;
       }
