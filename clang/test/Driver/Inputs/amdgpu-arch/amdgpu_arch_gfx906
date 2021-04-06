@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+echo "gfx906"
+return 0
