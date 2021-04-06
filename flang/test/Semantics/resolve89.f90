@@ -107,7 +107,7 @@ subroutine s1()
       type localDerivedType
         ! OK because the specification inquiry is a constant
         integer, dimension(localDerived%kindParam) :: goodField
-        ! OK because the value of lenParam is constant in this context
+        !ERROR: Invalid specification expression: non-constant reference to a type parameter inquiry not allowed for derived type components or type parameter values
         integer, dimension(derivedArg%lenParam) :: badField
       end type localDerivedType
 
