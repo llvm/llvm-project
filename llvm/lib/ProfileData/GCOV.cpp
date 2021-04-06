@@ -866,7 +866,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
     Optional<raw_fd_ostream> os;
     if (!options.UseStdout) {
       std::error_code ec;
-      os.emplace(gcovName, ec, sys::fs::OF_Text);
+      os.emplace(gcovName, ec, sys::fs::OF_TextWithCRLF);
       if (ec) {
         errs() << ec.message() << '\n';
         continue;
@@ -881,7 +881,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
     // (PR GCC/82702). We create just one file.
     std::string outputPath(sys::path::filename(filename));
     std::error_code ec;
-    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_Text);
+    raw_fd_ostream os(outputPath + ".gcov", ec, sys::fs::OF_TextWithCRLF);
     if (ec) {
       errs() << ec.message() << '\n';
       return;

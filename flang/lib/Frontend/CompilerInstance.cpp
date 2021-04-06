@@ -112,7 +112,7 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::CreateOutputFile(
   if (!os) {
     osFile = outputFilePath;
     os.reset(new llvm::raw_fd_ostream(osFile, error,
-        (binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text)));
+        (binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_TextWithCRLF)));
     if (error)
       return nullptr;
   }

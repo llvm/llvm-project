@@ -85,8 +85,9 @@ Error Config::addSaveTemps(std::string OutputFileName,
   ShouldDiscardValueNames = false;
 
   std::error_code EC;
-  ResolutionFile = std::make_unique<raw_fd_ostream>(
-      OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
+  ResolutionFile =
+      std::make_unique<raw_fd_ostream>(OutputFileName + "resolution.txt", EC,
+                                       sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC) {
     ResolutionFile.reset();
     return errorCodeToError(EC);
