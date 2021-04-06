@@ -1124,7 +1124,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       TimeTraceScope timeScope("Gathering input sections");
       // Gather all InputSections into one vector.
       for (const InputFile *file : inputFiles) {
-        for (const SubsectionMapping &map : file->subsections)
+        for (const SubsectionMap &map : file->subsections)
           for (const SubsectionEntry &subsectionEntry : map)
             inputSections.push_back(subsectionEntry.isec);
       }
