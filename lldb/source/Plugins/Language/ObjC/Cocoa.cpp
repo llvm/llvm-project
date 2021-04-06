@@ -367,10 +367,10 @@ static void NSNumber_FormatLong(ValueObject &valobj, Stream &stream,
 }
 
 static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
-                                 const llvm::APInt &value,
-                                 lldb::LanguageType lang) {
+                                  const llvm::APInt &value,
+                                  lldb::LanguageType lang) {
   static ConstString g_TypeHint("NSNumber:int128_t");
-  
+
   std::string prefix, suffix;
   if (Language *language = Language::FindPlugin(lang)) {
     if (!language->GetFormatterPrefixSuffix(valobj, g_TypeHint, prefix,
@@ -379,7 +379,7 @@ static void NSNumber_FormatInt128(ValueObject &valobj, Stream &stream,
       suffix.clear();
     }
   }
-  
+
   stream.PutCString(prefix.c_str());
   const int radix = 10;
   const bool isSigned = true;
@@ -426,8 +426,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
   if (!process_sp)
     return false;
 
-  Log * log 
-      = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS);
+  Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS);
   ObjCLanguageRuntime *runtime = ObjCLanguageRuntime::Get(*process_sp);
 
   if (!runtime)
@@ -463,9 +462,10 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
     if (descriptor->GetTaggedPointerInfoSigned(&i_bits, &value)) {
       // Check for "preserved" numbers.  We still don't support them yet.
       if (i_bits & 0x8) {
-        if (log) 
-          log->Printf("Unsupported (preserved) NSNumber tagged pointer 0x%"
-              PRIu64, valobj_addr);
+        if (log)
+          log->Printf(
+              "Unsupported (preserved) NSNumber tagged pointer 0x%" PRIu64,
+              valobj_addr);
         return false;
       }
 
@@ -508,51 +508,66 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         f64 = 0x5,
         sint128 = 0x6
       };
-      
+
       uint64_t data_location = valobj_addr + 2 * ptr_size;
       TypeCodes type_code;
-      
+
       if (new_format) {
-        uint64_t cfinfoa =
-            process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size,
-                                                      ptr_size, 0, error);
-        
+        uint64_t cfinfoa = process_sp->ReadUnsignedIntegerFromMemory(
+            valobj_addr + ptr_size, ptr_size, 0, error);
+
         if (error.Fail())
           return false;
 
         bool is_preserved_number = cfinfoa & 0x8;
         if (is_preserved_number) {
           if (log)
-            log->Printf("Unsupported preserved NSNumber tagged pointer 0x%"
-                PRIu64, valobj_addr);
+            log->Printf(
+                "Unsupported preserved NSNumber tagged pointer 0x%" PRIu64,
+                valobj_addr);
           return false;
         }
 
         type_code = static_cast<TypeCodes>(cfinfoa & 0x7);
       } else {
-        uint8_t data_type =
-        process_sp->ReadUnsignedIntegerFromMemory(valobj_addr + ptr_size, 1,
-                                                  0, error) & 0x1F;
-        
+        uint8_t data_type = process_sp->ReadUnsignedIntegerFromMemory(
+                                valobj_addr + ptr_size, 1, 0, error) &
+                            0x1F;
+
         if (error.Fail())
           return false;
-        
+
         switch (data_type) {
-          case 1: type_code = TypeCodes::sint8; break;
-          case 2: type_code = TypeCodes::sint16; break;
-          case 3: type_code = TypeCodes::sint32; break;
-          case 17: data_location += 8; LLVM_FALLTHROUGH;
-          case 4: type_code = TypeCodes::sint64; break;
-          case 5: type_code = TypeCodes::f32; break;
-          case 6: type_code = TypeCodes::f64; break;
-          default: return false;
+        case 1:
+          type_code = TypeCodes::sint8;
+          break;
+        case 2:
+          type_code = TypeCodes::sint16;
+          break;
+        case 3:
+          type_code = TypeCodes::sint32;
+          break;
+        case 17:
+          data_location += 8;
+          LLVM_FALLTHROUGH;
+        case 4:
+          type_code = TypeCodes::sint64;
+          break;
+        case 5:
+          type_code = TypeCodes::f32;
+          break;
+        case 6:
+          type_code = TypeCodes::f64;
+          break;
+        default:
+          return false;
         }
       }
-      
+
       uint64_t value = 0;
       bool success = false;
       switch (type_code) {
-        case TypeCodes::sint8:
+      case TypeCodes::sint8:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 1, 0,
                                                           error);
         if (error.Fail())
@@ -560,7 +575,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         NSNumber_FormatChar(valobj, stream, (char)value, options.GetLanguage());
         success = true;
         break;
-        case TypeCodes::sint16:
+      case TypeCodes::sint16:
         value = process_sp->ReadUnsignedIntegerFromMemory(data_location, 2, 0,
                                                           error);
         if (error.Fail())
@@ -585,8 +600,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         NSNumber_FormatLong(valobj, stream, value, options.GetLanguage());
         success = true;
         break;
-      case TypeCodes::f32:
-      {
+      case TypeCodes::f32: {
         uint32_t flt_as_int = process_sp->ReadUnsignedIntegerFromMemory(
             data_location, 4, 0, error);
         if (error.Fail())
@@ -597,8 +611,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
         success = true;
         break;
       }
-      case TypeCodes::f64:
-      {
+      case TypeCodes::f64: {
         uint64_t dbl_as_lng = process_sp->ReadUnsignedIntegerFromMemory(
             data_location, 8, 0, error);
         if (error.Fail())
@@ -612,16 +625,17 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
       case TypeCodes::sint128: // internally, this is the same
       {
         uint64_t words[2];
-        words[1] = process_sp->ReadUnsignedIntegerFromMemory(
-            data_location, 8, 0, error);
+        words[1] = process_sp->ReadUnsignedIntegerFromMemory(data_location, 8,
+                                                             0, error);
         if (error.Fail())
           return false;
-        words[0] = process_sp->ReadUnsignedIntegerFromMemory(
-            data_location + 8, 8, 0, error);
+        words[0] = process_sp->ReadUnsignedIntegerFromMemory(data_location + 8,
+                                                             8, 0, error);
         if (error.Fail())
           return false;
         llvm::APInt i128_value(128, words);
-        NSNumber_FormatInt128(valobj, stream, i128_value, options.GetLanguage());
+        NSNumber_FormatInt128(valobj, stream, i128_value,
+                              options.GetLanguage());
         success = true;
         break;
       }
