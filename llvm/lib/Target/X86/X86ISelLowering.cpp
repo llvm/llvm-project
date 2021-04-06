@@ -37139,6 +37139,8 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
       break;
     LLVM_FALLTHROUGH;
   }
+  case X86ISD::MOVSD:
+  case X86ISD::MOVSS:
   case X86ISD::BLENDI:
   case X86ISD::SHUFP:
   case X86ISD::UNPCKH:
