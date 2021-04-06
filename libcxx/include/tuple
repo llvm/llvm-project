@@ -151,6 +151,7 @@ template <class... Types>
 
 #include <__config>
 #include <__tuple>
+#include <compare>
 #include <cstddef>
 #include <type_traits>
 #include <__functional_base>

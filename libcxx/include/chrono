@@ -825,6 +825,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 #include <__config>
 #include <__availability>
+#include <compare>
 #include <ctime>
 #include <type_traits>
 #include <ratio>
