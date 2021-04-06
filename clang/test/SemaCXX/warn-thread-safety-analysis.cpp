@@ -2595,6 +2595,7 @@ void Foo::test2() {
   if (c) {            // test join point -- held/not held during release
     rlock.Release();
   }
+  // No warning on join point because the lock will be released by the scope object anyway.
 }
 
 void Foo::test3() {
@@ -2615,7 +2616,7 @@ void Foo::test5() {
   if (c) {
     rlock.Release();
   }
-  // no warning on join point for managed lock.
+  // No warning on join point because the lock will be released by the scope object anyway.
   rlock.Release();  // expected-warning {{releasing mutex 'mu_' that was not held}}
 }
 
@@ -2659,6 +2660,7 @@ public:
 
 Mutex mu;
 int x GUARDED_BY(mu);
+bool b;
 
 void print(int);
 
@@ -2738,6 +2740,23 @@ void doubleLock2() {
   scope.Unlock();
   scope.Lock(); // expected-note{{mutex acquired here}}
   scope.Lock(); // expected-warning {{acquiring mutex 'mu' that is already held}}
+}
+
+void lockJoin() {
+  RelockableMutexLock scope(&mu, DeferTraits{});
+  if (b)
+    scope.Lock();
+  // No warning on join point because the lock will be released by the scope object anyway.
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
+}
+
+void unlockJoin() {
+  RelockableMutexLock scope(&mu, DeferTraits{});
+  scope.Lock();
+  if (b)
+    scope.Unlock();
+  // No warning on join point because the lock will be released by the scope object anyway.
+  x = 2; // expected-warning {{writing variable 'x' requires holding mutex 'mu' exclusively}}
 }
 
 void directUnlock() {
@@ -2871,10 +2890,9 @@ void manual() EXCLUSIVE_LOCKS_REQUIRED(mu) {
 
 void join() EXCLUSIVE_LOCKS_REQUIRED(mu) {
   MutexUnlock scope(&mu);
-  if (c) {
-    scope.Lock(); // expected-note{{mutex acquired here}}
-  }
-  // expected-warning@+1{{mutex 'mu' is not held on every path through here}}
+  if (c)
+    scope.Lock();
+  // No warning on join point because the lock will be released by the scope object anyway.
   scope.Lock();
 }
 
