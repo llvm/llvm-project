@@ -485,7 +485,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       nextIsec->data = isec->data.slice(symbolOffset);
       isec->data = isec->data.slice(0, symbolOffset);
 
-      // By construction, the symbol will be at offset zero in the new section.
+      // By construction, the symbol will be at offset zero in the new
+      // subsection.
       symbols[symIndex] =
           createDefined(sym, name, nextIsec, /*value=*/0, symbolSize);
       // TODO: ld64 appears to preserve the original alignment as well as each
