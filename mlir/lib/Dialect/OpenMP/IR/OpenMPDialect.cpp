@@ -253,6 +253,7 @@ static void printLinearClause(OpAsmPrinter &p, OperandRange linearVars,
 /// sched-wo-chunk ::=  `auto` | `runtime`
 static ParseResult
 parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
+                    SmallVectorImpl<SmallString<12>> &modifiers,
                     Optional<OpAsmParser::OperandType> &chunkSize) {
   if (parser.parseLParen())
     return failure();
@@ -276,6 +277,14 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
     return parser.emitError(parser.getNameLoc()) << " expected schedule kind";
   }
 
+  // If there is a comma, we have one or more modifiers..
+  if (succeeded(parser.parseOptionalComma())) {
+    StringRef mod;
+    if (parser.parseKeyword(&mod))
+      return failure();
+    modifiers.push_back(mod);
+  }
+
   if (parser.parseRParen())
     return failure();
 
@@ -284,11 +293,14 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
 
 /// Print schedule clause
 static void printScheduleClause(OpAsmPrinter &p, StringRef &sched,
+                                llvm::Optional<StringRef> modifier,
                                 Value scheduleChunkVar) {
   std::string schedLower = sched.lower();
   p << "(" << schedLower;
   if (scheduleChunkVar)
     p << " = " << scheduleChunkVar;
+  if (modifier && modifier.getValue() != "none")
+    p << ", " << modifier;
   p << ") ";
 }
 
@@ -551,6 +563,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
   SmallVector<OpAsmParser::OperandType> linearSteps;
 
   SmallString<8> schedule;
+  SmallVector<SmallString<12>> modifiers;
   Optional<OpAsmParser::OperandType> scheduleChunkSize;
 
   // Compute the position of clauses in operand segments
@@ -670,7 +683,7 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
       clauseSegments[pos[linearClause] + 1] = linearSteps.size();
     } else if (clauseKeyword == "schedule") {
       if (checkAllowed(scheduleClause) ||
-          parseScheduleClause(parser, schedule, scheduleChunkSize))
+          parseScheduleClause(parser, schedule, modifiers, scheduleChunkSize))
         return failure();
       if (scheduleChunkSize) {
         clauseSegments[pos[scheduleClause]] = 1;
@@ -797,6 +810,10 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
     schedule[0] = llvm::toUpper(schedule[0]);
     auto attr = parser.getBuilder().getStringAttr(schedule);
     result.addAttribute("schedule_val", attr);
+    if (modifiers.size() > 0) {
+      auto mod = parser.getBuilder().getStringAttr(modifiers[0]);
+      result.addAttribute("schedule_modifier", mod);
+    }
     if (scheduleChunkSize) {
       auto chunkSizeType = parser.getBuilder().getI32Type();
       parser.resolveOperand(*scheduleChunkSize, chunkSizeType, result.operands);
@@ -916,7 +933,8 @@ static void printWsLoopOp(OpAsmPrinter &p, WsLoopOp op) {
 
   if (auto sched = op.schedule_val()) {
     p << "schedule";
-    printScheduleClause(p, sched.getValue(), op.schedule_chunk_var());
+    printScheduleClause(p, sched.getValue(), op.schedule_modifier(),
+                        op.schedule_chunk_var());
   }
 
   if (auto collapse = op.collapse_val())

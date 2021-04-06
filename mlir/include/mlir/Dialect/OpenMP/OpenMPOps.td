@@ -136,6 +136,18 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
   let assemblyFormat = "attr-dict";
 }
 
+def OMP_SCHEDULE_MOD_None : StrEnumAttrCase<"none", 0>;
+def OMP_SCHEDULE_MOD_Monotonic : StrEnumAttrCase<"monotonic", 1>;
+def OMP_SCHEDULE_MOD_Nonmonotonic : StrEnumAttrCase<"nonmonotonic", 2>;
+
+def ScheduleModifier : StrEnumAttr<"ScheduleModifier", "OpenMP Schedule Modifier",
+                                         [OMP_SCHEDULE_MOD_None,
+                                          OMP_SCHEDULE_MOD_Monotonic,
+                                          OMP_SCHEDULE_MOD_Nonmonotonic]>
+{
+    let cppNamespace = "::mlir::omp";
+}
+
 //===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
@@ -214,6 +226,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKind>:$schedule_val,
              Optional<AnyType>:$schedule_chunk_var,
+             OptionalAttr<ScheduleModifier>:$schedule_modifier,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$collapse_val,
              UnitAttr:$nowait,
              Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
