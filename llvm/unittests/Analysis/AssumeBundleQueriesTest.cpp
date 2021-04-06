@@ -41,8 +41,8 @@ static void RunTest(
   }
 }
 
-bool hasMatchesExactlyAttributes(IntrinsicInst *Assume, Value *WasOn,
-                                    StringRef AttrToMatch) {
+bool hasMatchesExactlyAttributes(AssumeInst *Assume, Value *WasOn,
+                                 StringRef AttrToMatch) {
   Regex Reg(AttrToMatch);
   SmallVector<StringRef, 1> Matches;
   for (StringRef Attr : {
@@ -57,7 +57,7 @@ bool hasMatchesExactlyAttributes(IntrinsicInst *Assume, Value *WasOn,
   return true;
 }
 
-bool hasTheRightValue(IntrinsicInst *Assume, Value *WasOn,
+bool hasTheRightValue(AssumeInst *Assume, Value *WasOn,
                       Attribute::AttrKind Kind, unsigned Value) {
   uint64_t ArgVal = 0;
   if (!hasAttributeInAssume(*Assume, WasOn, Kind, &ArgVal))
@@ -84,7 +84,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
       "8 noalias %P1, i32* align 8 noundef %P2)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(0),
                                        "(nonnull|align|dereferenceable)"));
@@ -106,7 +106,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "dereferenceable(4) "
       "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, I->getOperand(0),
                                        "(nonnull|align|dereferenceable)"));
@@ -126,7 +126,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
   Tests.push_back(std::make_pair(
       "call void @func_many(i32* align 8 noundef %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(
             Assume, nullptr,
@@ -135,7 +135,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       }));
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {
-        IntrinsicInst *Assume = cast<IntrinsicInst>(I);
+        auto *Assume = cast<AssumeInst>(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(Assume, nullptr, ""));
       }));
   Tests.push_back(std::make_pair(
@@ -145,7 +145,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "dereferenceable(4) "
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         ASSERT_TRUE(hasMatchesExactlyAttributes(
             Assume, I->getOperand(0),
@@ -181,7 +181,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "dereferenceable(4) "
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         I->getOperand(1)->dropDroppableUses();
         I->getOperand(2)->dropDroppableUses();
@@ -204,7 +204,7 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
       "8 noalias %P1, i32* %P1)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
         Value *New = I->getFunction()->getArg(3);
         Value *Old = I->getOperand(0);
@@ -236,7 +236,7 @@ static bool FindExactlyAttributes(RetainedKnowledgeMap &Map, Value *WasOn,
   return true;
 }
 
-static bool MapHasRightValue(RetainedKnowledgeMap &Map, IntrinsicInst *II,
+static bool MapHasRightValue(RetainedKnowledgeMap &Map, AssumeInst *II,
                              RetainedKnowledgeKey Key, MinMax MM) {
   auto LookupIt = Map.find(Key);
   return (LookupIt != Map.end()) && (LookupIt->second[II].Min == MM.Min) &&
@@ -260,7 +260,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
       "8 noalias %P1, i32* align 8 dereferenceable(8) %P2)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
 
         RetainedKnowledgeMap Map;
@@ -285,7 +285,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "dereferenceable(4) "
       "%P, i32* nonnull align 16 dereferenceable(12) %P)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
 
         RetainedKnowledgeMap Map;
@@ -308,7 +308,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
   Tests.push_back(std::make_pair(
       "call void @func_many(i32* align 8 %P1) cold\n", [](Instruction *I) {
         ShouldPreserveAllAttributes.setValue(true);
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
 
         RetainedKnowledgeMap Map;
@@ -321,7 +321,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {
         RetainedKnowledgeMap Map;
-        fillMapFromAssume(*cast<IntrinsicInst>(I), Map);
+        fillMapFromAssume(*cast<AssumeInst>(I), Map);
 
         ASSERT_TRUE(FindExactlyAttributes(Map, nullptr, ""));
         ASSERT_TRUE(Map.empty());
@@ -333,7 +333,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "dereferenceable(4) "
       "%P2, i32* nonnull align 16 dereferenceable(12) %P3)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
 
         RetainedKnowledgeMap Map;
@@ -370,7 +370,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       "call void @func(i32* nonnull align 4 dereferenceable(16) %P, i32* align "
       "8 noalias %P1, i32* %P2)\n",
       [](Instruction *I) {
-        IntrinsicInst *Assume = buildAssumeFromInst(I);
+        auto *Assume = buildAssumeFromInst(I);
         Assume->insertBefore(I);
 
         RetainedKnowledgeMap Map;
@@ -393,7 +393,7 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
       [](Instruction *I) {
         // Don't crash but don't learn from undef.
         RetainedKnowledgeMap Map;
-        fillMapFromAssume(*cast<IntrinsicInst>(I), Map);
+        fillMapFromAssume(*cast<AssumeInst>(I), Map);
 
         ASSERT_TRUE(Map.empty());
       }));
@@ -463,7 +463,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
     OpBundle.push_back(OperandBundleDef{ss.str().c_str(), std::move(Args)});
   }
 
-  auto *Assume = cast<IntrinsicInst>(IntrinsicInst::Create(
+  auto *Assume = cast<AssumeInst>(CallInst::Create(
       FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
   Assume->insertBefore(&F->begin()->front());
   RetainedKnowledgeMap Map;
@@ -578,21 +578,21 @@ TEST(AssumeQueryAPI, Alignment) {
 
   Function *F = Mod->getFunction("test");
   BasicBlock::iterator Start = F->begin()->begin();
-  IntrinsicInst *II;
+  AssumeInst *II;
   RetainedKnowledge RK;
-  II = cast<IntrinsicInst>(&*Start);
+  II = cast<AssumeInst>(&*Start);
   RK = getKnowledgeFromBundle(*II, II->bundle_op_info_begin()[0]);
   ASSERT_EQ(RK.AttrKind, Attribute::Alignment);
   ASSERT_EQ(RK.WasOn, F->getArg(0));
   ASSERT_EQ(RK.ArgValue, 1u);
   Start++;
-  II = cast<IntrinsicInst>(&*Start);
+  II = cast<AssumeInst>(&*Start);
   RK = getKnowledgeFromBundle(*II, II->bundle_op_info_begin()[0]);
   ASSERT_EQ(RK.AttrKind, Attribute::Alignment);
   ASSERT_EQ(RK.WasOn, F->getArg(1));
   ASSERT_EQ(RK.ArgValue, 1u);
   Start++;
-  II = cast<IntrinsicInst>(&*Start);
+  II = cast<AssumeInst>(&*Start);
   RK = getKnowledgeFromBundle(*II, II->bundle_op_info_begin()[0]);
   ASSERT_EQ(RK.AttrKind, Attribute::Alignment);
   ASSERT_EQ(RK.WasOn, F->getArg(2));
