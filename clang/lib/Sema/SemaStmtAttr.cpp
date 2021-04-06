@@ -413,19 +413,13 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   }
 }
 
-StmtResult Sema::ProcessStmtAttributes(Stmt *S,
-                                       const ParsedAttributesView &AttrList,
-                                       SourceRange Range) {
-  SmallVector<const Attr*, 8> Attrs;
-  for (const ParsedAttr &AL : AttrList) {
-    if (Attr *a = ProcessStmtAttribute(*this, S, AL, Range))
-      Attrs.push_back(a);
+void Sema::ProcessStmtAttributes(Stmt *S,
+                                 const ParsedAttributesWithRange &InAttrs,
+                                 SmallVectorImpl<const Attr *> &OutAttrs) {
+  for (const ParsedAttr &AL : InAttrs) {
+    if (const Attr *A = ProcessStmtAttribute(*this, S, AL, InAttrs.Range))
+      OutAttrs.push_back(A);
   }
 
-  CheckForIncompatibleAttributes(*this, Attrs);
-
-  if (Attrs.empty())
-    return S;
-
-  return ActOnAttributedStmt(Range.getBegin(), Attrs, S);
+  CheckForIncompatibleAttributes(*this, OutAttrs);
 }
