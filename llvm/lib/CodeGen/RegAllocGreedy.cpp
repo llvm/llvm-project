@@ -552,13 +552,7 @@ private:
                                     unsigned &FoldedSpills);
 
   /// Report the number of spills and reloads for each loop.
-  void reportNumberOfSplillsReloads() {
-    for (MachineLoop *L : *Loops) {
-      unsigned Reloads, FoldedReloads, Spills, FoldedSpills;
-      reportNumberOfSplillsReloads(L, Reloads, FoldedReloads, Spills,
-                                   FoldedSpills);
-    }
-  }
+  void reportNumberOfSplillsReloads();
 };
 
 } // end anonymous namespace
@@ -3180,6 +3174,16 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
       R << "generated in loop";
       return R;
     });
+  }
+}
+
+void RAGreedy::reportNumberOfSplillsReloads() {
+  if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
+    return;
+  for (MachineLoop *L : *Loops) {
+    unsigned Reloads, FoldedReloads, Spills, FoldedSpills;
+    reportNumberOfSplillsReloads(L, Reloads, FoldedReloads, Spills,
+                                 FoldedSpills);
   }
 }
 
