@@ -8832,7 +8832,7 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
                                           bool IsZExtReturn) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
-      LangPTy->getAs<PointerType>()->getPointeeType());
+      LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is returned may be different from the
   // eventual type loaded from memory.
@@ -8857,7 +8857,7 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
                                            unsigned BuiltinID) {
   QualType LangPTy = E->getArg(1)->getType();
   llvm::Type *MemEltTy = CGM.getTypes().ConvertType(
-      LangPTy->getAs<PointerType>()->getPointeeType());
+      LangPTy->castAs<PointerType>()->getPointeeType());
 
   // The vector type that is stored may be different from the
   // eventual type stored to memory.
