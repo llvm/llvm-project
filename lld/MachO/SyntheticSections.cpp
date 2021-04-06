@@ -764,7 +764,7 @@ void SymtabSection::finalizeContents() {
 
   // __dyld_private is a local symbol too. It's linker-created and doesn't
   // exist in any object file.
-  if (Defined* dyldPrivate = in.stubHelper->dyldPrivate)
+  if (Defined *dyldPrivate = in.stubHelper->dyldPrivate)
     addSymbol(localSymbols, dyldPrivate);
 
   for (Symbol *sym : symtab->getSymbols()) {
