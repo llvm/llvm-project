@@ -109,9 +109,6 @@ struct SimpleValue {
 
   static bool canHandle(Instruction *Inst) {
     // This can only handle non-void readnone functions.
-    if (isa<GCRelocateInst>(Inst))
-      // Migration assistant for PR49607, to be removed once complete
-      return true;
     if (CallInst *CI = dyn_cast<CallInst>(Inst))
       return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy();
     return isa<CastInst>(Inst) || isa<UnaryOperator>(Inst) ||

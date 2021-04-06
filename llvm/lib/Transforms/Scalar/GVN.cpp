@@ -397,9 +397,7 @@ void GVN::ValueTable::add(Value *V, uint32_t num) {
 }
 
 uint32_t GVN::ValueTable::lookupOrAddCall(CallInst *C) {
-  // The gc.relocate specific check is to simplify migration under PR49607, and
-  // is to be removed once complete.
-  if (AA->doesNotAccessMemory(C) || isa<GCRelocateInst>(C)) {
+  if (AA->doesNotAccessMemory(C)) {
     Expression exp = createExpr(C);
     uint32_t e = assignExpNewValueNum(exp).first;
     valueNumbering[C] = e;
