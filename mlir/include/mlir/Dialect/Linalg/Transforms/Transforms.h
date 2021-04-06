@@ -23,6 +23,7 @@ class FrozenRewritePatternSet;
 
 namespace linalg {
 
+struct LinalgElementwiseFusionOptions;
 struct LinalgFusionOptions;
 struct LinalgTilingOptions;
 
@@ -69,9 +70,40 @@ void populateLinalgBufferizePatterns(BufferizeTypeConverter &converter,
 /// tensors.
 void populateFoldUnitExtentDimsPatterns(RewritePatternSet &patterns);
 
+using ControlElementwiseOpsFusionFn =
+    std::function<bool(const OpResult &producer, const OpOperand &consumer)>;
+
+/// Options that control fusion of elementwise operations.
+struct LinalgElementwiseFusionOptions {
+  /// Enable fusion of reshapes that are introducing unit-dimensions into the
+  /// shape with elementwise operations. By default this is disabled.
+  bool allowFoldingUnitDimReshapes = false;
+
+  LinalgElementwiseFusionOptions &setAllowFoldingUnitDimReshapes(bool val) {
+    allowFoldingUnitDimReshapes = val;
+    return *this;
+  }
+
+  /// Function that allows the caller to control when to stop fusion. Once a
+  /// producer is deemed fusable with the consumer (structurally), this callback
+  /// can be used to abort the fusion based on non-structural constraints. This
+  /// is the hook for cost models to control the amount of fusion done.
+  ControlElementwiseOpsFusionFn controlElementwiseOpsFusionFn =
+      [](const OpResult & /*producer */, const OpOperand & /*consumer */) {
+        return true;
+      };
+
+  LinalgElementwiseFusionOptions &
+  setControlElementwiseOpsFusionFn(ControlElementwiseOpsFusionFn fun) {
+    controlElementwiseOpsFusionFn = std::move(fun);
+    return *this;
+  }
+};
+
 /// Patterns for fusing linalg operation on tensors.
 void populateElementwiseOpsFusionPatterns(
-    RewritePatternSet &patterns, bool allowFoldingUnitDimReshapes = false);
+    RewritePatternSet &patterns,
+    LinalgElementwiseFusionOptions options = LinalgElementwiseFusionOptions());
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
 /// and permute the loop nest according to `interchangeVector`
