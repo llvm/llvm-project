@@ -7,7 +7,7 @@
 
 // On glibc, this requires the range returned by GetTLS to include
 // specific_1stblock and specific in `struct pthread`.
-// UNSUPPORTED: arm-linux, armhf-linux
+// UNSUPPORTED: arm-linux, armhf-linux, aarch64
 
 // TSD on NetBSD does not use TLS
 // UNSUPPORTED: netbsd
