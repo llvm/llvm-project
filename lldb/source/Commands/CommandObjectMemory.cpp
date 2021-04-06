@@ -767,10 +767,11 @@ protected:
     std::string path = outfile_spec.GetPath();
     if (outfile_spec) {
 
-      auto open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
+      File::OpenOptions open_options =
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate;
       const bool append = m_outfile_options.GetAppend().GetCurrentValue();
-      if (append)
-        open_options |= File::eOpenOptionAppend;
+      open_options |=
+          append ? File::eOpenOptionAppend : File::eOpenOptionTruncate;
 
       auto outfile = FileSystem::Instance().Open(outfile_spec, open_options);
 
