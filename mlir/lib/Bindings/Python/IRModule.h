@@ -454,6 +454,14 @@ public:
   /// no parent.
   PyOperationRef getParentOperation();
 
+  /// Gets a capsule wrapping the void* within the MlirOperation.
+  pybind11::object getCapsule();
+
+  /// Creates a PyOperation from the MlirOperation wrapped by a capsule.
+  /// Ownership of the underlying MlirOperation is taken by calling this
+  /// function.
+  static pybind11::object createFromCapsule(pybind11::object capsule);
+
   /// Creates an operation. See corresponding python docstring.
   static pybind11::object
   create(std::string name, llvm::Optional<std::vector<PyType *>> results,
