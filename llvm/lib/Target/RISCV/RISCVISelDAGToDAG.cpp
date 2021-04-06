@@ -924,21 +924,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       MVT XLenVT = Subtarget->getXLenVT();
       SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
 
+      SDValue Chain = Node->getOperand(0);
+      SDValue Glue;
+
       unsigned CurOp = 2;
-      SmallVector<SDValue, 7> Operands;
+      SmallVector<SDValue, 8> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
       SDValue Base;
       SelectBaseAddr(Node->getOperand(CurOp++), Base);
       Operands.push_back(Base); // Base pointer.
       Operands.push_back(Node->getOperand(CurOp++)); // Index.
       MVT IndexVT = Operands.back()->getSimpleValueType(0);
-      if (IsMasked)
-        Operands.push_back(Node->getOperand(CurOp++)); // Mask.
+      if (IsMasked) {
+        // Mask needs to be copied to V0.
+        SDValue Mask = Node->getOperand(CurOp++);
+        Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
+        Glue = Chain.getValue(1);
+        Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
+      }
       SDValue VL;
       selectVLOp(Node->getOperand(CurOp++), VL);
       Operands.push_back(VL);
       Operands.push_back(SEW);
       Operands.push_back(Node->getOperand(0)); // Chain.
+      if (Glue)
+        Operands.push_back(Glue);
 
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
@@ -975,21 +985,31 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       unsigned SEWImm = (IntNo == Intrinsic::riscv_vse1) ? 8 : ScalarSize;
       SDValue SEW = CurDAG->getTargetConstant(SEWImm, DL, XLenVT);
 
+      SDValue Chain = Node->getOperand(0);
+      SDValue Glue;
+
       unsigned CurOp = 2;
-      SmallVector<SDValue, 7> Operands;
+      SmallVector<SDValue, 8> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
       SDValue Base;
       SelectBaseAddr(Node->getOperand(CurOp++), Base);
       Operands.push_back(Base); // Base pointer.
       if (IsStrided)
         Operands.push_back(Node->getOperand(CurOp++)); // Stride.
-      if (IsMasked)
-        Operands.push_back(Node->getOperand(CurOp++)); // Mask.
+      if (IsMasked) {
+        // Mask needs to be copied to V0.
+        SDValue Mask = Node->getOperand(CurOp++);
+        Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
+        Glue = Chain.getValue(1);
+        Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
+      }
       SDValue VL;
       selectVLOp(Node->getOperand(CurOp++), VL);
       Operands.push_back(VL);
       Operands.push_back(SEW);
       Operands.push_back(Node->getOperand(0)); // Chain.
+      if (Glue)
+        Operands.push_back(Glue);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VSEPseudo *P = RISCV::getVSEPseudo(
