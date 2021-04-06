@@ -209,6 +209,57 @@ macro(detect_target_arch)
   endif()
 endmacro()
 
+function(get_compiler_rt_root_source_dir ROOT_DIR_VAR)
+  # Compute the path to the root of the Compiler-RT source tree
+  # regardless of how the project was configured.
+  #
+  # This function is useful because using `${CMAKE_SOURCE_DIR}`
+  # is error prone due to the numerous ways Compiler-RT can be
+  # configured.
+  #
+  # `ROOT_DIR_VAR` - the name of the variable to write the result to.
+  #
+  # TODO(dliew): When CMake min version is 3.17 or newer use
+  # `CMAKE_CURRENT_FUNCTION_LIST_DIR` instead.
+  if ("${ROOT_DIR_VAR}" STREQUAL "")
+    message(FATAL_ERROR "ROOT_DIR_VAR cannot be empty")
+  endif()
+
+  # Compiler-rt supports different source root paths.
+  # Handle each case here.
+  set(PATH_TO_COMPILER_RT_SOURCE_ROOT "")
+  if (DEFINED CompilerRTBuiltins_SOURCE_DIR)
+    # Compiler-RT Builtins standalone build.
+    # `llvm-project/compiler-rt/lib/builtins`
+    set(PATH_TO_COMPILER_RT_SOURCE_ROOT "${CompilerRTBuiltins_SOURCE_DIR}/../../")
+  elseif(DEFINED CompilerRT_SOURCE_DIR)
+    # Compiler-RT standalone build.
+    # `llvm-project/compiler-rt`
+    set(PATH_TO_COMPILER_RT_SOURCE_ROOT "${CompilerRT_SOURCE_DIR}")
+  elseif (EXISTS "${CMAKE_SOURCE_DIR}/../compiler-rt")
+    # In tree build with LLVM as the root project.
+    # See `llvm-project/projects/`.
+    # Assumes monorepo layout.
+    set(PATH_TO_COMPILER_RT_SOURCE_ROOT "${CMAKE_SOURCE_DIR}/../compiler-rt")
+  else()
+    message(FATAL_ERROR "Unhandled Compiler-RT source root configuration.")
+  endif()
+
+  get_filename_component(ROOT_DIR "${PATH_TO_COMPILER_RT_SOURCE_ROOT}" ABSOLUTE)
+  if (NOT EXISTS "${ROOT_DIR}")
+    message(FATAL_ERROR "Path \"${ROOT_DIR}\" doesn't exist")
+  endif()
+
+  # Sanity check: Make sure we can locate the current source file via the
+  # computed path.
+  set(PATH_TO_CURRENT_FILE "${ROOT_DIR}/cmake/Modules/CompilerRTUtils.cmake")
+  if (NOT EXISTS "${PATH_TO_CURRENT_FILE}")
+    message(FATAL_ERROR "Could not find \"${PATH_TO_CURRENT_FILE}\"")
+  endif()
+
+  set("${ROOT_DIR_VAR}" "${ROOT_DIR}" PARENT_SCOPE)
+endfunction()
+
 macro(load_llvm_config)
   if (NOT LLVM_CONFIG_PATH)
     find_program(LLVM_CONFIG_PATH "llvm-config"
@@ -219,6 +270,19 @@ macro(load_llvm_config)
                       "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config.")
     endif()
   endif()
+
+  # Compute path to LLVM sources assuming the monorepo layout.
+  # We don't set `LLVM_MAIN_SRC_DIR` directly to avoid overriding a user provided
+  # CMake cache value.
+  get_compiler_rt_root_source_dir(COMPILER_RT_ROOT_SRC_PATH)
+  get_filename_component(LLVM_MAIN_SRC_DIR_DEFAULT "${COMPILER_RT_ROOT_SRC_PATH}/../llvm" ABSOLUTE)
+  if (NOT EXISTS "${LLVM_MAIN_SRC_DIR_DEFAULT}")
+    # TODO(dliew): Remove this legacy fallback path.
+    message(WARNING
+      "LLVM source tree not found at \"${LLVM_MAIN_SRC_DIR_DEFAULT}\". "
+      "You are not using the monorepo layout. This configuration is DEPRECATED.")
+  endif()
+
   if (LLVM_CONFIG_PATH)
     execute_process(
       COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root" "--includedir"
@@ -236,9 +300,19 @@ macro(load_llvm_config)
 
     set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
     set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-    set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
     set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
     set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Paths to LLVM headers")
+
+    if (NOT EXISTS "${LLVM_MAIN_SRC_DIR_DEFAULT}")
+      # TODO(dliew): Remove this legacy fallback path.
+      message(WARNING
+        "Consulting llvm-config for the LLVM source path "
+        "as a fallback. This behavior will be removed in the future.")
+      # We don't set `LLVM_MAIN_SRC_DIR` directly to avoid overriding a user
+      # provided CMake cache value.
+      set(LLVM_MAIN_SRC_DIR_DEFAULT "${MAIN_SRC_DIR}")
+      message(STATUS "Using LLVM source path (${LLVM_MAIN_SRC_DIR_DEFAULT}) from llvm-config")
+    endif()
 
     # Detect if we have the LLVMXRay and TestingSupport library installed and
     # available from llvm-config.
@@ -304,6 +378,20 @@ macro(load_llvm_config)
 
     set(LLVM_LIBRARY_OUTPUT_INTDIR
       ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  endif()
+
+  # Finally set the cache variable now that `llvm-config` has also had a chance
+  # to set `LLVM_MAIN_SRC_DIR_DEFAULT`.
+  set(LLVM_MAIN_SRC_DIR "${LLVM_MAIN_SRC_DIR_DEFAULT}" CACHE PATH "Path to LLVM source tree")
+  message(STATUS "LLVM_MAIN_SRC_DIR: \"${LLVM_MAIN_SRC_DIR}\"")
+  if (NOT EXISTS "${LLVM_MAIN_SRC_DIR}")
+    # TODO(dliew): Make this a hard error
+    message(WARNING "LLVM_MAIN_SRC_DIR (${LLVM_MAIN_SRC_DIR}) does not exist. "
+                    "You can override the inferred path by adding "
+                    "`-DLLVM_MAIN_SRC_DIR=<path_to_llvm_src>` to your CMake invocation "
+                    "where `<path_to_llvm_src>` is the path to the `llvm` directory in "
+                    "the `llvm-project` repo. "
+                    "This will be treated as error in the future.")
   endif()
 endmacro()
 
