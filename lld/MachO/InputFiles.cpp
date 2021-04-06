@@ -198,8 +198,8 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
 static InputSection *findContainingSubsection(SubsectionMap &map,
                                               uint64_t *offset) {
   auto it = std::prev(llvm::upper_bound(
-      map, *offset, [](uint64_t value, SubsectionEntry subsectionEntry) {
-        return value < subsectionEntry.offset;
+      map, *offset, [](uint64_t value, SubsectionEntry subsecEntry) {
+        return value < subsecEntry.offset;
       }));
   *offset -= it->offset;
   return it->isec;
@@ -423,96 +423,79 @@ template <class LP>
 void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
                            ArrayRef<typename LP::nlist> nList,
                            const char *strtab, bool subsectionsViaSymbols) {
-  using Section = typename LP::section;
   using NList = typename LP::nlist;
 
-  // Precompute the boundaries of symbols within a section.
-  // If subsectionsViaSymbols is True then the corresponding subsections will be
-  // created, otherwise these boundaries are used for the calculation of symbols
-  // sizes only.
-  for (const NList &sym : nList) {
-    if ((sym.n_type & N_TYPE) == N_SECT && !(sym.n_desc & N_ALT_ENTRY) &&
-        !subsections[sym.n_sect - 1].empty()) {
-      SubsectionMap &subsecMapping = subsections[sym.n_sect - 1];
-      subsecMapping.push_back(
-          {sym.n_value - sectionHeaders[sym.n_sect - 1].addr,
-           subsecMapping.front().isec});
+  // Groups indices of the symbols by the sections that contain them.
+  std::vector<std::vector<uint32_t>> symbolsBySection(subsections.size());
+  symbols.resize(nList.size());
+  for (uint32_t i = 0; i < nList.size(); ++i) {
+    const NList &sym = nList[i];
+    StringRef name = strtab + sym.n_strx;
+    if ((sym.n_type & N_TYPE) == N_SECT) {
+      SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
+      // parseSections() may have chosen not to parse this section.
+      if (subsecMap.empty())
+        continue;
+      symbolsBySection[sym.n_sect - 1].push_back(i);
+    } else {
+      symbols[i] = parseNonSectionSymbol(sym, name);
     }
   }
 
-  for (SubsectionMap &subsecMap : subsections) {
+  // Calculate symbol sizes and create subsections by splitting the sections
+  // along symbol boundaries.
+  for (size_t i = 0; i < subsections.size(); ++i) {
+    SubsectionMap &subsecMap = subsections[i];
     if (subsecMap.empty())
       continue;
-    llvm::sort(subsecMap,
-               [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
-                 return lhs.offset < rhs.offset;
-               });
-    subsecMap.erase(
-        std::unique(subsecMap.begin(), subsecMap.end(),
-                    [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
-                      return lhs.offset == rhs.offset;
-                    }),
-        subsecMap.end());
-    if (!subsectionsViaSymbols)
-      continue;
-    for (size_t i = 0; i < subsecMap.size(); ++i) {
-      uint32_t offset = subsecMap[i].offset;
-      InputSection *&isec = subsecMap[i].isec;
-      uint32_t end = i + 1 < subsecMap.size() ? subsecMap[i + 1].offset
-                                              : isec->data.size();
-      isec = make<InputSection>(*isec);
-      isec->data = isec->data.slice(offset, end - offset);
+
+    std::vector<uint32_t> &symbolIndices = symbolsBySection[i];
+    llvm::sort(symbolIndices, [&](uint32_t lhs, uint32_t rhs) {
+      return nList[lhs].n_value < nList[rhs].n_value;
+    });
+    uint64_t sectionAddr = sectionHeaders[i].addr;
+
+    // We populate subsecMap by repeatedly splitting the last (highest address)
+    // subsection.
+    SubsectionEntry subsecEntry = subsecMap.back();
+    for (size_t j = 0; j < symbolIndices.size(); ++j) {
+      uint32_t symIndex = symbolIndices[j];
+      const NList &sym = nList[symIndex];
+      StringRef name = strtab + sym.n_strx;
+      InputSection *isec = subsecEntry.isec;
+
+      uint64_t subsecAddr = sectionAddr + subsecEntry.offset;
+      uint64_t symbolOffset = sym.n_value - subsecAddr;
+      uint64_t symbolSize =
+          j + 1 < symbolIndices.size()
+              ? nList[symbolIndices[j + 1]].n_value - sym.n_value
+              : isec->data.size() - symbolOffset;
+      // There are 3 cases where we do not need to create a new subsection:
+      //   1. If the input file does not use subsections-via-symbols.
+      //   2. Multiple symbols at the same address only induce one subsection.
+      //   3. Alternative entry points do not induce new subsections.
+      if (!subsectionsViaSymbols || symbolOffset == 0 ||
+          sym.n_desc & N_ALT_ENTRY) {
+        symbols[symIndex] =
+            createDefined(sym, name, isec, symbolOffset, symbolSize);
+        continue;
+      }
+
+      auto *nextIsec = make<InputSection>(*isec);
+      nextIsec->data = isec->data.slice(symbolOffset);
+      isec->data = isec->data.slice(0, symbolOffset);
+
+      // By construction, the symbol will be at offset zero in the new section.
+      symbols[symIndex] =
+          createDefined(sym, name, nextIsec, /*value=*/0, symbolSize);
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
-      isec->align = MinAlign(isec->align, offset);
+      nextIsec->align = MinAlign(isec->align, sym.n_value);
+      subsecMap.push_back({sym.n_value - sectionAddr, nextIsec});
+      subsecEntry = subsecMap.back();
     }
   }
-
-  symbols.resize(nList.size());
-  for (size_t i = 0, n = nList.size(); i < n; ++i) {
-    const NList &sym = nList[i];
-    StringRef name = strtab + sym.n_strx;
-
-    if ((sym.n_type & N_TYPE) != N_SECT) {
-      symbols[i] = parseNonSectionSymbol(sym, name);
-      continue;
-    }
-
-    const Section &sec = sectionHeaders[sym.n_sect - 1];
-    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
-
-    // parseSections() may have chosen not to parse this section.
-    if (subsecMap.empty())
-      continue;
-
-    uint64_t offset = sym.n_value - sec.addr;
-
-    auto it = llvm::upper_bound(
-        subsecMap, offset, [](uint64_t value, SubsectionEntry subsectionEntry) {
-          return value < subsectionEntry.offset;
-        });
-    uint32_t size = it != subsecMap.end()
-                        ? it->offset - offset
-                        : subsecMap.front().isec->getSize() - offset;
-
-    // If the input file does not use subsections-via-symbols, all symbols can
-    // use the same subsection. Otherwise, we must split the sections along
-    // symbol boundaries.
-    if (!subsectionsViaSymbols) {
-      symbols[i] =
-          createDefined(sym, name, subsecMap.front().isec, offset, size);
-      continue;
-    }
-
-    InputSection *subsec = (--it)->isec;
-    symbols[i] = createDefined(sym, name, subsec, offset - it->offset, size);
-  }
-
-  if (!subsectionsViaSymbols)
-    for (SubsectionMap &subsecMap : subsections)
-      if (!subsecMap.empty())
-        subsecMap = {subsecMap.front()};
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,

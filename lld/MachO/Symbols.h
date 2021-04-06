@@ -118,7 +118,10 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
   InputSection *isec;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
   uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
 
   bool overridesWeakDef : 1;

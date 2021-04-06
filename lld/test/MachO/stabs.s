@@ -42,25 +42,41 @@
 # CHECK-NEXT:  [[#%x, STATIC:]] - 0[[#MORE_DATA_ID + 1]] 0000 STSYM _static_var
 # CHECK-NEXT:  [[#%x, MAIN:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _main
 # CHECK-NEXT:  0000000000000006 - 00                     0000   FUN
-# CHECK-NEXT:  [[#%x, FUN:]]    - 0[[#MORE_TEXT_ID + 1]] 0000   FUN _fun
+# CHECK-NEXT:  [[#%x, BAR:]]    - 0[[#TEXT_ID + 1]]      0000   FUN _bar
+# CHECK-NEXT:  0000000000000000 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, BAR2:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _bar2
 # CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, BAZ:]]    - 0[[#TEXT_ID + 1]]      0000   FUN _baz
+# CHECK-NEXT:  0000000000000000 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, BAZ2:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _baz
+# CHECK-NEXT:  0000000000000002 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, QUX:]]    - 0[[#TEXT_ID + 1]]      0000   FUN _qux
+# CHECK-NEXT:  0000000000000003 - 00                     0000   FUN
+# CHECK-NEXT:  [[#%x, QUUX:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _quux
+# CHECK-NEXT:  0000000000000004 - 00                     0000   FUN
 # CHECK-NEXT:  [[#%x, GLOB:]]   - 0[[#DATA_ID + 1]]      0000  GSYM _global_var
 # CHECK-NEXT:  [[#%x, ZERO:]]   - 0[[#COMM_ID + 1]]      0000  GSYM _zero
+# CHECK-NEXT:  [[#%x, FUN:]]    - 0[[#MORE_TEXT_ID + 1]] 0000   FUN _fun
+# CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
 # CHECK-NEXT:  0000000000000000 - 01                     0000    SO
 # CHECK-NEXT:  0000000000000000 - 00                     0000    SO /foo.cpp
 # CHECK-NEXT:  0000000000000020 - 03                     0001   OSO [[FOO_PATH]]
 # CHECK-NEXT:  [[#%x, FOO:]]    - 0[[#TEXT_ID + 1]]      0000   FUN _foo
 # CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
 # CHECK-NEXT:  0000000000000000 - 01                     0000    SO
-# CHECK-NEXT:  [[#STATIC]]      s _static_var
-# CHECK-NEXT:  [[#MAIN]]        T _main
-# CHECK-NEXT:  {{[0-9af]+}}     A _abs
-# CHECK-NEXT:  [[#FUN]]         S _fun
-# CHECK-NEXT:  [[#GLOB]]        D _global_var
-# CHECK-NEXT:  [[#ZERO]]        S _zero
-# CHECK-NEXT:  [[#FOO]]         T _foo
-# CHECK-NEXT:  {{[0-9af]+}}     T _no_debug
-# CHECK-NEXT:  {{0+}}           A __mh_execute_header
+# CHECK-DAG:   [[#STATIC]]      s _static_var
+# CHECK-DAG:   [[#MAIN]]        T _main
+# CHECK-DAG:   {{[0-9af]+}}     A _abs
+# CHECK-DAG:   [[#BAR]]         T _bar
+# CHECK-DAG:   [[#BAR2]]        T _bar2
+# CHECK-DAG:   [[#BAZ]]         T _baz
+# CHECK-DAG:   [[#BAZ2]]        T _baz2
+# CHECK-DAG:   [[#FUN]]         S _fun
+# CHECK-DAG:   [[#GLOB]]        D _global_var
+# CHECK-DAG:   [[#ZERO]]        S _zero
+# CHECK-DAG:   [[#FOO]]         T _foo
+# CHECK-DAG:   {{[0-9af]+}}     T _no_debug
+# CHECK-DAG:   {{0+}}           A __mh_execute_header
 # CHECK-EMPTY:
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections
@@ -90,12 +106,29 @@ _static_var:
 .zerofill __DATA,__common,_zero,4,2
 
 .text
-.globl  _main
+.globl  _main, _bar, _bar2, _baz, _baz2, _qux, _quux
+.alt_entry _baz
+.alt_entry _qux
+
+_bar:
+_bar2:
+  .space 1
+
+_baz:
+_baz2:
+  .space 2
+
 _main:
 Lfunc_begin0:
   callq _foo
   retq
 Lfunc_end0:
+
+_qux:
+  .space 3
+
+_quux:
+  .space 4
 
 .section  __DWARF,__debug_str,regular,debug
   .asciz  "test.cpp"             ## string offset=0
