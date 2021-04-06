@@ -12,7 +12,6 @@
 // module.
 //
 //===----------------------------------------------------------------------===//
-#include "../../runtime/character.h"
 
 #include "flang/Lower/IntrinsicCall.h"
 #include "RTBuilder.h"
