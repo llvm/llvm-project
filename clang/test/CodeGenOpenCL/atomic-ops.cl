@@ -1,11 +1,16 @@
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -O0 -o - -triple=amdgcn-amd-amdhsa-amdgizcl | opt -instnamer -S | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-llvm -O0 -o - -triple=amdgcn-amd-amdhsa \
+// RUN:   | opt -instnamer -S | FileCheck %s
 
 // Also test serialization of atomic operations here, to avoid duplicating the test.
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-pch -O0 -o %t -triple=amdgcn-amd-amdhsa-amdgizcl
-// RUN: %clang_cc1 %s -cl-std=CL2.0 -include-pch %t -O0 -triple=amdgcn-amd-amdhsa-amdgizcl -emit-llvm -o - | opt -instnamer -S | FileCheck %s
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -emit-pch -O0 -o %t -triple=amdgcn-amd-amdhsa
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -include-pch %t -O0 -triple=amdgcn-amd-amdhsa \
+// RUN:   -emit-llvm -o - | opt -instnamer -S | FileCheck %s
 
 #ifndef ALREADY_INCLUDED
 #define ALREADY_INCLUDED
+
+#pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
 
 typedef __INTPTR_TYPE__ intptr_t;
 typedef int int8 __attribute__((ext_vector_type(8)));
@@ -183,6 +188,18 @@ float ff3(atomic_float *d) {
   // CHECK-LABEL: @ff3
   // CHECK: atomicrmw xchg i32* {{.*}} syncscope("workgroup") seq_cst, align 4
   return __opencl_atomic_exchange(d, 2, memory_order_seq_cst, memory_scope_work_group);
+}
+
+float ff4(global atomic_float *d, float a) {
+  // CHECK-LABEL: @ff4
+  // CHECK: atomicrmw fadd float addrspace(1)* {{.*}} syncscope("workgroup-one-as") monotonic
+  return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
+}
+
+float ff5(global atomic_double *d, double a) {
+  // CHECK-LABEL: @ff5
+  // CHECK: atomicrmw fadd double addrspace(1)* {{.*}} syncscope("workgroup-one-as") monotonic
+  return __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
 }
 
 // CHECK-LABEL: @atomic_init_foo
