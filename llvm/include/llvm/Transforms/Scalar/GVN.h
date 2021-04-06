@@ -35,6 +35,7 @@
 namespace llvm {
 
 class AAResults;
+class AssumeInst;
 class AssumptionCache;
 class BasicBlock;
 class BranchInst;
@@ -309,7 +310,7 @@ private:
   // Helper functions of redundant load elimination
   bool processLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
-  bool processAssumeIntrinsic(IntrinsicInst *II);
+  bool processAssumeIntrinsic(AssumeInst *II);
 
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.  Returns true if an value is known to be
