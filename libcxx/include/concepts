@@ -135,7 +135,7 @@ namespace std {
 */
 
 #include <__config>
-#include <functional>
+#include <__functional_base>
 #include <type_traits>
 #include <utility>
 #include <version>
