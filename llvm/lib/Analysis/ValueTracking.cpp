@@ -2588,6 +2588,17 @@ static Optional<unsigned> getInvertibleOperand(const Operator *Op1,
       return 0;
     break;
   }
+  case Instruction::AShr:
+  case Instruction::LShr: {
+    auto *PEO1 = cast<PossiblyExactOperator>(Op1);
+    auto *PEO2 = cast<PossiblyExactOperator>(Op2);
+    if (!PEO1->isExact() || !PEO2->isExact())
+      break;
+
+    if (Op1->getOperand(1) == Op2->getOperand(1))
+      return 0;
+    break;
+  }
   case Instruction::SExt:
   case Instruction::ZExt:
     if (Op1->getOperand(0)->getType() == Op2->getOperand(0)->getType())
