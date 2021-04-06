@@ -761,7 +761,8 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
 
 /// This function returns the identity element (or neutral element) for
 /// the operation K.
-Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp) {
+Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
+                                                      FastMathFlags FMF) {
   switch (K) {
   case RecurKind::Xor:
   case RecurKind::Add:
@@ -779,7 +780,14 @@ Constant *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp) {
     return ConstantFP::get(Tp, 1.0L);
   case RecurKind::FAdd:
     // Adding zero to a number does not change it.
-    return ConstantFP::get(Tp, 0.0L);
+    // FIXME: Ideally we should not need to check FMF for FAdd and should always
+    // use -0.0. However, this will currently result in mixed vectors of 0.0/-0.0.
+    // Instead, we should ensure that 1) the FMF from FAdd are propagated to the PHI
+    // nodes where possible, and 2) PHIs with the nsz flag + -0.0 use 0.0. This would
+    // mean we can then remove the check for noSignedZeros() below (see D98963).
+    if (FMF.noSignedZeros())
+      return ConstantFP::get(Tp, 0.0L);
+    return ConstantFP::get(Tp, -0.0L);
   case RecurKind::UMin:
     return ConstantInt::get(Tp, -1);
   case RecurKind::UMax:
