@@ -2264,8 +2264,8 @@ void Clang::DumpCompilationDatabase(Compilation &C, StringRef Filename,
 
   if (!CompilationDatabase) {
     std::error_code EC;
-    auto File = std::make_unique<llvm::raw_fd_ostream>(Filename, EC,
-                                                        llvm::sys::fs::OF_Text);
+    auto File = std::make_unique<llvm::raw_fd_ostream>(
+        Filename, EC, llvm::sys::fs::OF_TextWithCRLF);
     if (EC) {
       D.Diag(clang::diag::err_drv_compilationdatabase) << Filename
                                                        << EC.message();

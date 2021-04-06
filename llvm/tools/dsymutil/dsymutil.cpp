@@ -312,7 +312,7 @@ static Error createPlistFile(StringRef Bin, StringRef BundleRoot,
   SmallString<128> InfoPlist(BundleRoot);
   sys::path::append(InfoPlist, "Contents/Info.plist");
   std::error_code EC;
-  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_Text);
+  raw_fd_ostream PL(InfoPlist, EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         "cannot create Plist: " + toString(errorCodeToError(EC)), EC);

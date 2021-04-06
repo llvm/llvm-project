@@ -456,7 +456,7 @@ static CommandRegistration Unused(&GraphDiff, []() -> Error {
   auto &GDR = *GDROrErr;
 
   std::error_code EC;
-  raw_fd_ostream OS(GraphDiffOutput, EC, sys::fs::OpenFlags::OF_Text);
+  raw_fd_ostream OS(GraphDiffOutput, EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + GraphDiffOutput + "' for writing.", EC);

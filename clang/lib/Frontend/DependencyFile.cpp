@@ -307,7 +307,7 @@ void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
   }
 
   std::error_code EC;
-  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC) {
     Diags.Report(diag::err_fe_error_opening) << OutputFile << EC.message();
     return;

@@ -324,7 +324,7 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 
   std::error_code EC;
   auto Out = std::make_unique<raw_fd_ostream>(
-      Path, EC, (Binary ? sys::fs::OF_None : sys::fs::OF_Text));
+      Path, EC, (Binary ? sys::fs::OF_None : sys::fs::OF_TextWithCRLF));
   if (EC) {
     Diags.Report(diag::err_fe_unable_to_open_output) << Path << EC.message();
     return nullptr;

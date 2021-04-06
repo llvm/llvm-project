@@ -660,7 +660,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 
   // Open the file.
   std::error_code EC;
-  llvm::raw_fd_ostream o(OutputFile, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream o(OutputFile, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC) {
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;

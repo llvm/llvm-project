@@ -106,7 +106,7 @@ Expected<std::unique_ptr<ToolOutputFile>> llvm::setupLLVMOptimizationRemarks(
     return make_error<LLVMRemarkSetupFormatError>(std::move(E));
 
   std::error_code EC;
-  auto Flags = *Format == remarks::Format::YAML ? sys::fs::OF_Text
+  auto Flags = *Format == remarks::Format::YAML ? sys::fs::OF_TextWithCRLF
                                                 : sys::fs::OF_None;
   auto RemarksFile =
       std::make_unique<ToolOutputFile>(RemarksFilename, EC, Flags);
