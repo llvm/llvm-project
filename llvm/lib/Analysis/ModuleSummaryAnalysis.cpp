@@ -176,11 +176,7 @@ static void addIntrinsicToSummary(
     // Intrinsics that are assumed are relevant only to the devirtualization
     // pass, not the type test lowering pass.
     bool HasNonAssumeUses = llvm::any_of(CI->uses(), [](const Use &CIU) {
-      auto *AssumeCI = dyn_cast<CallInst>(CIU.getUser());
-      if (!AssumeCI)
-        return true;
-      Function *F = AssumeCI->getCalledFunction();
-      return !F || F->getIntrinsicID() != Intrinsic::assume;
+      return !isa<AssumeInst>(CIU.getUser());
     });
     if (HasNonAssumeUses)
       TypeTests.insert(Guid);
