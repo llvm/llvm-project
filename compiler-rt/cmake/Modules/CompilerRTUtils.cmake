@@ -283,6 +283,7 @@ macro(load_llvm_config)
       "You are not using the monorepo layout. This configuration is DEPRECATED.")
   endif()
 
+  set(FOUND_LLVM_CMAKE_PATH FALSE)
   if (LLVM_CONFIG_PATH)
     execute_process(
       COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root" "--includedir"
@@ -372,9 +373,15 @@ macro(load_llvm_config)
       set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
     endif()
 
-    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-    # Get some LLVM variables from LLVMConfig.
-    include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+    if (EXISTS "${LLVM_CMAKE_PATH}")
+      list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+      # Get some LLVM variables from LLVMConfig.
+      include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+      set(FOUND_LLVM_CMAKE_PATH TRUE)
+    else()
+      set(FOUND_LLVM_CMAKE_PATH FALSE)
+      message(WARNING "LLVM CMake path (${LLVM_CMAKE_PATH}) reported by llvm-config does not exist")
+    endif()
 
     set(LLVM_LIBRARY_OUTPUT_INTDIR
       ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
@@ -393,6 +400,15 @@ macro(load_llvm_config)
                     "the `llvm-project` repo. "
                     "This will be treated as error in the future.")
   endif()
+
+  if (NOT FOUND_LLVM_CMAKE_PATH)
+    # This configuration tries to configure without the prescence of `LLVMConfig.cmake`. It is
+    # intended for testing purposes (generating the lit test suites) and will likely not support
+    # a build of the runtimes in compiler-rt.
+    include(CompilerRTMockLLVMCMakeConfig)
+    compiler_rt_mock_llvm_cmake_config()
+  endif()
+
 endmacro()
 
 macro(construct_compiler_rt_default_triple)
