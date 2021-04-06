@@ -658,43 +658,24 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
 // Substitute a bare type parameter reference with its value if it has one now
 Expr<TypeParamInquiry::Result> FoldOperation(
     FoldingContext &context, TypeParamInquiry &&inquiry) {
-  std::optional<NamedEntity> base{inquiry.base()};
-  parser::CharBlock parameterName{inquiry.parameter().name()};
-  if (base) {
-    // Handling "designator%typeParam".  Get the value of the type parameter
-    // from the instantiation of the base
-    if (const semantics::DeclTypeSpec *
-        declType{base->GetLastSymbol().GetType()}) {
-      const semantics::DerivedTypeSpec dType{declType->derivedTypeSpec()};
-      if (const semantics::ParamValue *
-          paramValue{dType.FindParameter(parameterName)}) {
-        const semantics::MaybeIntExpr &paramExpr{paramValue->GetExplicit()};
-        if (paramExpr && IsConstantExpr(*paramExpr)) {
-          Expr<SomeInteger> intExpr{*paramExpr};
-          return Fold(context,
-              ConvertToType<TypeParamInquiry::Result>(std::move(intExpr)));
-        }
-      }
-    }
-  } else {
+  if (!inquiry.base()) {
     // A "bare" type parameter: replace with its value, if that's now known.
     if (const auto *pdt{context.pdtInstance()}) {
       if (const semantics::Scope * scope{context.pdtInstance()->scope()}) {
-        auto iter{scope->find(parameterName)};
+        auto iter{scope->find(inquiry.parameter().name())};
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};
           const auto *details{symbol.detailsIf<semantics::TypeParamDetails>()};
-          if (details) {
-            const semantics::MaybeIntExpr &initExpr{details->init()};
-            if (initExpr && IsConstantExpr(*initExpr)) {
-              Expr<SomeInteger> expr{*initExpr};
-              return Fold(context,
-                  ConvertToType<TypeParamInquiry::Result>(std::move(expr)));
-            }
+          if (details && details->init() &&
+              (details->attr() == common::TypeParamAttr::Kind ||
+                  IsConstantExpr(*details->init()))) {
+            Expr<SomeInteger> expr{*details->init()};
+            return Fold(context,
+                ConvertToType<TypeParamInquiry::Result>(std::move(expr)));
           }
         }
       }
-      if (const auto *value{pdt->FindParameter(parameterName)}) {
+      if (const auto *value{pdt->FindParameter(inquiry.parameter().name())}) {
         if (value->isExplicit()) {
           return Fold(context,
               AsExpr(ConvertToType<TypeParamInquiry::Result>(
