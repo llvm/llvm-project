@@ -2466,6 +2466,8 @@ bool GVN::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
   Instr->setName(Instr->getName() + ".pre");
   Instr->setDebugLoc(Instr->getDebugLoc());
 
+  ICF->insertInstructionTo(Instr, Pred);
+
   unsigned Num = VN.lookupOrAdd(Instr);
   VN.add(Instr, Num);
 
