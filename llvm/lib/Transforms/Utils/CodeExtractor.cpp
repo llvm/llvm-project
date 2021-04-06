@@ -1593,10 +1593,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC) {
       Instruction *I = &*It;
       ++It;
 
-      if (match(I, m_Intrinsic<Intrinsic::assume>())) {
+      if (auto *AI = dyn_cast<AssumeInst>(I)) {
         if (AC)
-          AC->unregisterAssumption(cast<CallInst>(I));
-        I->eraseFromParent();
+          AC->unregisterAssumption(AI);
+        AI->eraseFromParent();
       }
     }
   }

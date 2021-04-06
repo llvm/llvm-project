@@ -53,7 +53,7 @@ struct SubsectionEntry {
   uint64_t offset;
   InputSection *isec;
 };
-using SubsectionMapping = std::vector<SubsectionEntry>;
+using SubsectionMap = std::vector<SubsectionEntry>;
 
 class InputFile {
 public:
@@ -72,7 +72,7 @@ public:
   MemoryBufferRef mb;
 
   std::vector<Symbol *> symbols;
-  std::vector<SubsectionMapping> subsections;
+  std::vector<SubsectionMap> subsections;
   // Provides an easy way to sort InputFiles deterministically.
   const int id;
 
@@ -114,7 +114,7 @@ private:
   Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
   template <class Section>
   void parseRelocations(ArrayRef<Section> sectionHeaders, const Section &,
-                        SubsectionMapping &);
+                        SubsectionMap &);
   void parseDebugInfo();
 };
 

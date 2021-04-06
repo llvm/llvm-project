@@ -118,7 +118,10 @@ public:
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
   InputSection *isec;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
   uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
   uint64_t size;
 
   bool overridesWeakDef : 1;
@@ -239,7 +242,7 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-T *replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");

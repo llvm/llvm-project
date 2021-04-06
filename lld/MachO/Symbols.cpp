@@ -21,9 +21,7 @@ static std::string demangle(StringRef symName) {
   return std::string(symName);
 }
 
-std::string lld::toString(const Symbol &sym) {
-  return demangle(sym.getName());
-}
+std::string lld::toString(const Symbol &sym) { return demangle(sym.getName()); }
 
 std::string lld::toMachOString(const object::Archive::Symbol &b) {
   return demangle(b.getName());

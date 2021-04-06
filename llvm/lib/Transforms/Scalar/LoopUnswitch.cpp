@@ -1436,9 +1436,8 @@ void LoopUnswitch::unswitchNontrivialCondition(
     for (Instruction &I : *NewBlocks[NBI]) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::assume)
-          AC->registerAssumption(II);
+      if (auto *II = dyn_cast<AssumeInst>(&I))
+        AC->registerAssumption(II);
     }
   }
 

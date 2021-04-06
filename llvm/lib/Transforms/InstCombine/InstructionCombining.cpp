@@ -3983,7 +3983,7 @@ static bool combineInstructionsOverFunction(
       IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
         Worklist.add(I);
         if (match(I, m_Intrinsic<Intrinsic::assume>()))
-          AC.registerAssumption(cast<CallInst>(I));
+          AC.registerAssumption(cast<AssumeInst>(I));
       }));
 
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
