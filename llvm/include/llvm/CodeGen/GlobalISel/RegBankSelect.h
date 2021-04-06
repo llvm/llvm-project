@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file describes the interface of the MachineFunctionPass
+/// \file
+/// This file describes the interface of the MachineFunctionPass
 /// responsible for assigning the generic virtual registers to register bank.
-
+///
 /// By default, the reg bank selector relies on local decisions to
 /// assign the register bank. In other words, it looks at one instruction
 /// at a time to decide where the operand of that instruction should live.

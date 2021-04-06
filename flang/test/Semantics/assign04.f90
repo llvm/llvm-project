@@ -8,7 +8,7 @@ subroutine s1
   type(t(1, 2)) :: x
   !ERROR: Assignment to constant 'x%k' is not allowed
   x%k = 4
-  !ERROR: Left-hand side of assignment is not modifiable
+  !ERROR: Assignment to constant 'x%l' is not allowed
   x%l = 3
 end
 

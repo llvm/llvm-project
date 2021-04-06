@@ -129,6 +129,7 @@ namespace llvm {
       v32f16         =  74,   //   32 x f16
       v64f16         =  75,   //   64 x f16
       v128f16        =  76,   //  128 x f16
+
       v2bf16         =  77,   //    2 x bf16
       v3bf16         =  78,   //    3 x bf16
       v4bf16         =  79,   //    4 x bf16
@@ -137,6 +138,7 @@ namespace llvm {
       v32bf16        =  82,   //   32 x bf16
       v64bf16        =  83,   //   64 x bf16
       v128bf16       =  84,   //  128 x bf16
+
       v1f32          =  85,   //    1 x f32
       v2f32          =  86,   //    2 x f32
       v3f32          =  87,   //    3 x f32
@@ -151,6 +153,7 @@ namespace llvm {
       v512f32        =  96,   //  512 x f32
       v1024f32       =  97,   // 1024 x f32
       v2048f32       =  98,   // 2048 x f32
+
       v1f64          =  99,   //    1 x f64
       v2f64          = 100,   //    2 x f64
       v4f64          = 101,   //    4 x f64
@@ -213,15 +216,18 @@ namespace llvm {
       nxv8f16        = 143,  // n x  8 x f16
       nxv16f16       = 144,  // n x 16 x f16
       nxv32f16       = 145,  // n x 32 x f16
+
       nxv1bf16       = 146,  // n x  1 x bf16
       nxv2bf16       = 147,  // n x  2 x bf16
       nxv4bf16       = 148,  // n x  4 x bf16
       nxv8bf16       = 149,  // n x  8 x bf16
+
       nxv1f32        = 150,  // n x  1 x f32
       nxv2f32        = 151,  // n x  2 x f32
       nxv4f32        = 152,  // n x  4 x f32
       nxv8f32        = 153,  // n x  8 x f32
       nxv16f32       = 154,  // n x 16 x f32
+
       nxv1f64        = 155,  // n x  1 x f64
       nxv2f64        = 156,  // n x  2 x f64
       nxv4f64        = 157,  // n x  4 x f64

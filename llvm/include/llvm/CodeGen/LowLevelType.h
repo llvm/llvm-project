@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Implement a low-level type suitable for MachineInstr level instruction
 /// selection.
 ///
 /// This provides the CodeGen aspects of LowLevelType, such as Type conversion.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_LOWLEVELTYPE_H
