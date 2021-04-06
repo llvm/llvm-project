@@ -2540,9 +2540,9 @@ bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
 /// If the pair of operators are the same invertible function of a single
 /// operand return the index of that operand.  Otherwise, return None.  An
 /// invertible function is one that is 1-to-1 and maps every input value
-/// to exactly one output value.  This is equivalent to saying that O1
-/// and O2 are equal exactly when the specified pair of operands are equal,
-/// (except that O1 and O2 may be poison more often.)
+/// to exactly one output value.  This is equivalent to saying that Op1
+/// and Op2 are equal exactly when the specified pair of operands are equal,
+/// (except that Op1 and Op2 may be poison more often.)
 static Optional<unsigned> getInvertibleOperand(const Operator *Op1,
                                                const Operator *Op2) {
   if (Op1->getOpcode() != Op2->getOpcode())
