@@ -896,7 +896,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*desc=*/[{
         Return the indexing maps within the current operation.
       }],
-      /*retTy=*/"SmallVector<AffineMap, 4>",
+      /*retTy=*/"SmallVector<AffineMap>",
       /*methodName=*/"getIndexingMaps",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -933,6 +933,20 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the input indexing maps.
+      }],
+      /*retTy=*/"SmallVector<AffineMap>",
+      /*methodName=*/"getInputIndexingMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto maps = $_op.getIndexingMaps();
+        return SmallVector<AffineMap>{maps.begin(),
+                                      maps.begin() + $_op.getNumInputs()};
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the output indexing map at index `i`.
       }],
       /*retTy=*/"AffineMap",
@@ -942,6 +956,20 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         assert(i < $_op.getNumOutputs());
         return getIndexingMaps()[i + $_op.getNumInputs()];
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the output indexing maps.
+      }],
+      /*retTy=*/"SmallVector<AffineMap>",
+      /*methodName=*/"getOutputIndexingMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto maps = $_op.getIndexingMaps();
+        return SmallVector<AffineMap>{maps.begin() + $_op.getNumInputs(),
+                                      maps.begin() + $_op.getNumShapedOperands()};
       }]
     >,
     InterfaceMethod<
