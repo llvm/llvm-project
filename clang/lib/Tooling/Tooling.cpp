@@ -334,6 +334,10 @@ bool ToolInvocation::run() {
   DiagnosticsEngine Diagnostics(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
       DiagConsumer ? DiagConsumer : &DiagnosticPrinter, false);
+  // Although `Diagnostics` are used only for command-line parsing, the custom
+  // `DiagConsumer` might expect a `SourceManager` to be present.
+  SourceManager SrcMgr(Diagnostics, *Files);
+  Diagnostics.setSourceManager(&SrcMgr);
 
   const std::unique_ptr<driver::Driver> Driver(
       newDriver(&Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
