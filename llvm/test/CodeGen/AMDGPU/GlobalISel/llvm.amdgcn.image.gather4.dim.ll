@@ -49,6 +49,68 @@ main_body:
   ret <4 x float> %v
 }
 
+define amdgpu_ps <4 x float> @gather4_2d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
+; GFX6-LABEL: gather4_2d_tfe:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    s_mov_b32 s0, s2
+; GFX6-NEXT:    s_mov_b32 s1, s3
+; GFX6-NEXT:    s_mov_b32 s2, s4
+; GFX6-NEXT:    s_mov_b32 s3, s5
+; GFX6-NEXT:    s_mov_b32 s4, s6
+; GFX6-NEXT:    s_mov_b32 s5, s7
+; GFX6-NEXT:    s_mov_b32 s6, s8
+; GFX6-NEXT:    s_mov_b32 s7, s9
+; GFX6-NEXT:    s_mov_b32 s8, s10
+; GFX6-NEXT:    s_mov_b32 s9, s11
+; GFX6-NEXT:    s_mov_b64 s[14:15], exec
+; GFX6-NEXT:    s_mov_b32 s10, s12
+; GFX6-NEXT:    s_mov_b32 s11, s13
+; GFX6-NEXT:    s_wqm_b64 exec, exec
+; GFX6-NEXT:    v_mov_b32_e32 v5, v0
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0
+; GFX6-NEXT:    v_mov_b32_e32 v6, v1
+; GFX6-NEXT:    v_mov_b32_e32 v1, v0
+; GFX6-NEXT:    v_mov_b32_e32 v2, v0
+; GFX6-NEXT:    v_mov_b32_e32 v3, v0
+; GFX6-NEXT:    v_mov_b32_e32 v4, v0
+; GFX6-NEXT:    s_and_b64 exec, exec, s[14:15]
+; GFX6-NEXT:    image_gather4 v[0:4], v[5:6], s[0:7], s[8:11] dmask:0x1 tfe
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX10NSA-LABEL: gather4_2d_tfe:
+; GFX10NSA:       ; %bb.0: ; %main_body
+; GFX10NSA-NEXT:    s_mov_b32 s28, exec_lo
+; GFX10NSA-NEXT:    s_mov_b32 s0, s2
+; GFX10NSA-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10NSA-NEXT:    v_mov_b32_e32 v5, v0
+; GFX10NSA-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10NSA-NEXT:    v_mov_b32_e32 v6, v1
+; GFX10NSA-NEXT:    s_mov_b32 s1, s3
+; GFX10NSA-NEXT:    s_mov_b32 s2, s4
+; GFX10NSA-NEXT:    s_mov_b32 s3, s5
+; GFX10NSA-NEXT:    s_mov_b32 s4, s6
+; GFX10NSA-NEXT:    s_mov_b32 s5, s7
+; GFX10NSA-NEXT:    s_mov_b32 s6, s8
+; GFX10NSA-NEXT:    s_mov_b32 s7, s9
+; GFX10NSA-NEXT:    s_mov_b32 s8, s10
+; GFX10NSA-NEXT:    s_mov_b32 s9, s11
+; GFX10NSA-NEXT:    s_mov_b32 s10, s12
+; GFX10NSA-NEXT:    s_mov_b32 s11, s13
+; GFX10NSA-NEXT:    v_mov_b32_e32 v1, v0
+; GFX10NSA-NEXT:    v_mov_b32_e32 v2, v0
+; GFX10NSA-NEXT:    v_mov_b32_e32 v3, v0
+; GFX10NSA-NEXT:    v_mov_b32_e32 v4, v0
+; GFX10NSA-NEXT:    s_and_b32 exec_lo, exec_lo, s28
+; GFX10NSA-NEXT:    image_gather4 v[0:4], v[5:6], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe
+; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
+; GFX10NSA-NEXT:    ; return to shader part epilog
+main_body:
+  %v = call { <4 x float>, i32 } @llvm.amdgcn.image.gather4.2d.sl_v4f32i32s.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)
+  %r = extractvalue { <4 x float>, i32 } %v, 0
+  ret <4 x float> %r
+}
+
 define amdgpu_ps <4 x float> @gather4_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %face) {
 ; GFX6-LABEL: gather4_cube:
 ; GFX6:       ; %bb.0: ; %main_body
@@ -778,6 +840,7 @@ main_body:
 }
 
 declare <4 x float> @llvm.amdgcn.image.gather4.2d.v4f32.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
+declare { <4 x float>, i32 } @llvm.amdgcn.image.gather4.2d.sl_v4f32i32s.f32(i32 immarg, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.cube.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.2darray.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0
 declare <4 x float> @llvm.amdgcn.image.gather4.c.2d.v4f32.f32(i32 immarg, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #0

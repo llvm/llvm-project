@@ -851,7 +851,7 @@ multiclass MIMG_Gather <mimgopc op, AMDGPUSampleVariant sample, bit wqm = 0,
   }
 
   let BaseOpcode = !cast<MIMGBaseOpcode>(NAME), WQM = wqm,
-      Gather4 = 1, hasPostISelHook = 0 in {
+      Gather4 = 1 in {
     let VDataDwords = 2 in
     defm _V2 : MIMG_Sampler_Src_Helper<op, asm, sample, VReg_64>; /* for packed D16 only */
     let VDataDwords = 4 in
