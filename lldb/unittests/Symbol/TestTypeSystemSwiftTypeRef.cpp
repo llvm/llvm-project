@@ -138,6 +138,18 @@ TEST_F(TestTypeSystemSwiftTypeRef, Function) {
     ASSERT_EQ(impl_void_void.GetNumberOfFunctionArguments(), 0UL);
   }
   {
+    NodePointer n = b.GlobalType(
+        b.Node(Node::Kind::NoEscapeFunctionType,
+               b.Node(Node::Kind::ArgumentTuple,
+                      b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple))),
+               b.Node(Node::Kind::ReturnType,
+                      b.Node(Node::Kind::Type, b.Node(Node::Kind::Tuple)))));
+    CompilerType ne_void_void = GetCompilerType(b.Mangle(n));
+    ASSERT_TRUE(ne_void_void.IsFunctionType());
+    ASSERT_TRUE(ne_void_void.IsFunctionPointerType());
+    ASSERT_EQ(ne_void_void.GetNumberOfFunctionArguments(), 0UL);
+  }
+  {
     NodePointer n = b.GlobalType(b.Node(
         Node::Kind::ImplFunctionType, b.Node(Node::Kind::ImplEscaping),
         b.Node(Node::Kind::ImplConvention, "@callee_guaranteed"),
