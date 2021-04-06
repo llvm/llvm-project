@@ -34,3 +34,18 @@ class SubCls1 : public Cls {
   // CHECK-NOT: [[@LINE+1]]:3 | class/C++ | SubCls1 |
   SubCls1 *f;
 };
+
+// FIXME: this decl gets reported after the macro definitions, immediately
+// before the next declaration. Add a dummy declaration so that the checks work.
+void reset_parser();
+
+// CHECK: [[@LINE+1]]:9 | macro/C | SYSTEM_MACRO | c:@macro@SYSTEM_MACRO | Def
+#define SYSTEM_MACRO 1
+// CHECK: [[@LINE+1]]:8 | macro/C | SYSTEM_MACRO | c:@macro@SYSTEM_MACRO | Undef
+#undef SYSTEM_MACRO
+// CHECK: [[@LINE+1]]:9 | macro/C | SYSTEM_MACRO | c:@macro@SYSTEM_MACRO | Def
+#define SYSTEM_MACRO int fromSystemMacro = 1
+
+// CHECK-NOT: [[@LINE+2]]:1 | macro/C
+// CHECK: [[@LINE+1]]:1 | variable/C | fromSystemMacro
+SYSTEM_MACRO;

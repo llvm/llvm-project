@@ -41,7 +41,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -109,9 +108,6 @@ struct SimpleValue {
 
   static bool canHandle(Instruction *Inst) {
     // This can only handle non-void readnone functions.
-    if (isa<GCRelocateInst>(Inst))
-      // Migration assistant for PR49607, to be removed once complete
-      return true;
     if (CallInst *CI = dyn_cast<CallInst>(Inst))
       return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy();
     return isa<CastInst>(Inst) || isa<UnaryOperator>(Inst) ||

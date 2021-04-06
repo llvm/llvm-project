@@ -241,7 +241,7 @@ std::error_code FileCollector::writeMapping(StringRef MappingFile) {
   VFSWriter.setUseExternalNames(false);
 
   std::error_code EC;
-  raw_fd_ostream os(MappingFile, EC, sys::fs::OF_Text);
+  raw_fd_ostream os(MappingFile, EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     return EC;
 

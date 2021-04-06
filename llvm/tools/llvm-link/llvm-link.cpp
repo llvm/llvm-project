@@ -468,7 +468,8 @@ int main(int argc, char **argv) {
 
   std::error_code EC;
   ToolOutputFile Out(OutputFilename, EC,
-                     OutputAssembly ? sys::fs::OF_Text : sys::fs::OF_None);
+                     OutputAssembly ? sys::fs::OF_TextWithCRLF
+                                    : sys::fs::OF_None);
   if (EC) {
     WithColor::error() << EC.message() << '\n';
     return 1;

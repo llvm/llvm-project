@@ -499,7 +499,7 @@ public:
 
       if (opts::Inplace) {
         std::error_code EC;
-        llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::OF_Text);
+        llvm::raw_fd_ostream OS(File, EC, llvm::sys::fs::OF_TextWithCRLF);
         if (EC) {
           llvm::errs() << EC.message() << "\n";
           return true;

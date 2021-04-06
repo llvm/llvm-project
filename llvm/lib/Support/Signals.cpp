@@ -43,6 +43,11 @@ static cl::opt<bool, true>
     DisableSymbolication("disable-symbolication",
                          cl::desc("Disable symbolizing crash backtraces."),
                          cl::location(DisableSymbolicationFlag), cl::Hidden);
+static std::string CrashDiagnosticsDirectory;
+static cl::opt<std::string, true>
+    CrashDiagnosticsDir("crash-diagnostics-dir", cl::value_desc("directory"),
+                        cl::desc("Directory for crash diagnostic files."),
+                        cl::location(CrashDiagnosticsDirectory), cl::Hidden);
 
 constexpr char DisableSymbolizationEnv[] = "LLVM_DISABLE_SYMBOLIZATION";
 constexpr char LLVMSymbolizerPathEnv[] = "LLVM_SYMBOLIZER_PATH";

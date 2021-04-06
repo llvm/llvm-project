@@ -48,7 +48,21 @@ public:
   /// \param Relations the set of symbols related to this occurrence.
   void addDeclOccurence(SymbolRoleSet Roles, unsigned Offset, const Decl *D,
                         ArrayRef<SymbolRelation> Relations);
-  void print(llvm::raw_ostream &OS) const;
+
+  /// Adds an occurrence of the given macro at the supplied \c Offset.
+  ///
+  /// \param Roles the roles the occurrence fulfills in this position.
+  /// \param Offset the offset in the file of this occurrence.
+  /// \param Name the name of the macro.
+  /// \param MI the canonical declaration this is an occurrence of.
+  void addMacroOccurence(SymbolRoleSet Roles, unsigned Offset,
+                         const IdentifierInfo *Name, const MacroInfo *MI);
+
+  /// Remove any macro occurrences for header guards. When preprocessing, this
+  /// will only be accurate after HandleEndOfFile.
+  void removeHeaderGuardMacros();
+
+  void print(llvm::raw_ostream &OS, SourceManager &SM) const;
 };
 
 } // end namespace index

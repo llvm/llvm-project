@@ -452,8 +452,9 @@ int main(int argc, char **argv) {
     FeaturesStr = Features.getString();
   }
 
-  sys::fs::OpenFlags Flags = (FileType == OFT_AssemblyFile) ? sys::fs::OF_Text
-                                                            : sys::fs::OF_None;
+  sys::fs::OpenFlags Flags = (FileType == OFT_AssemblyFile)
+                                 ? sys::fs::OF_TextWithCRLF
+                                 : sys::fs::OF_None;
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename, Flags);
   if (!Out)
     return 1;

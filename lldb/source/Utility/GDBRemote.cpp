@@ -104,7 +104,7 @@ void GDBRemoteProvider::Keep() {
 
   FileSpec file = GetRoot().CopyByAppendingPathComponent(Info::file);
   std::error_code ec;
-  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
   if (ec)
     return;
   yaml::Output yout(os);
@@ -150,8 +150,8 @@ llvm::raw_ostream *GDBRemoteProvider::GetHistoryStream() {
   FileSpec history_file = GetRoot().CopyByAppendingPathComponent(Info::file);
 
   std::error_code EC;
-  m_stream_up = std::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
-                                                 sys::fs::OpenFlags::OF_Text);
+  m_stream_up = std::make_unique<raw_fd_ostream>(
+      history_file.GetPath(), EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   return m_stream_up.get();
 }
 

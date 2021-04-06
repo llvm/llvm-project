@@ -248,21 +248,30 @@ static_assert(
     !std::regular_invocable<rvalue_cv_function_object const volatile&, int*>);
 
 struct multiple_overloads {
-  bool operator()();
-  void operator()(int);
-  int operator()(double);
+  struct A {};
+  struct B { B(int); };
+  struct AB : A, B {};
+  struct O {};
+  struct DA : A {};
+  struct DB : B {};
+  void operator()(A) {};
+  void operator()(B) {};
 };
-static_assert(std::regular_invocable<multiple_overloads&>);
-static_assert(std::regular_invocable<multiple_overloads&, short>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::A>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::B>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DA>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DB>);
 static_assert(std::regular_invocable<multiple_overloads&, int>);
-static_assert(!std::regular_invocable<multiple_overloads&, long long>);
-static_assert(std::regular_invocable<multiple_overloads&, double>);
-static_assert(std::regular_invocable<multiple_overloads&, float>);
-static_assert(std::regular_invocable<multiple_overloads&, short&>);
+static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::AB>);
+static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::O>);
+
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::A&>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::B&>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DA&>);
+static_assert(std::regular_invocable<multiple_overloads&, multiple_overloads::DB&>);
 static_assert(std::regular_invocable<multiple_overloads&, int&>);
-static_assert(!std::regular_invocable<multiple_overloads&, long long&>);
-static_assert(std::regular_invocable<multiple_overloads&, float&>);
-static_assert(std::regular_invocable<multiple_overloads&, double&>);
+static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::AB&>);
+static_assert(!std::regular_invocable<multiple_overloads&, multiple_overloads::O&>);
 } // namespace function_objects
 
 namespace pointer_to_member_functions {

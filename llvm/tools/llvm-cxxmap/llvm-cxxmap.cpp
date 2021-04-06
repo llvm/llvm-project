@@ -145,7 +145,7 @@ int main(int argc, const char *argv[]) {
     exitWithErrorCode(RemappingBufOrError.getError(), RemappingFile);
 
   std::error_code EC;
-  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_Text);
+  raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 

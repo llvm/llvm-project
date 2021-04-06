@@ -515,7 +515,8 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
 
   // VI supports 20-bit unsigned offsets while GFX9+ supports 21-bit signed.
   // Offset value is corrected accordingly when offset is encoded/decoded.
-  let Inst{52-32} = !if(ps.has_offset, offset{20-0}, ?);
+  let Inst{38-32} = !if(ps.has_offset, offset{6-0}, ?);
+  let Inst{52-39} = !if(ps.has_offset, !if(imm, offset{20-7}, ?), ?);
 }
 
 multiclass SM_Real_Loads_vi<bits<8> op, string ps,

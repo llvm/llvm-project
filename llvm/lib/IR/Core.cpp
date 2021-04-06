@@ -412,7 +412,7 @@ void LLVMDumpModule(LLVMModuleRef M) {
 LLVMBool LLVMPrintModuleToFile(LLVMModuleRef M, const char *Filename,
                                char **ErrorMessage) {
   std::error_code EC;
-  raw_fd_ostream dest(Filename, EC, sys::fs::OF_Text);
+  raw_fd_ostream dest(Filename, EC, sys::fs::OF_TextWithCRLF);
   if (EC) {
     *ErrorMessage = strdup(EC.message().c_str());
     return true;

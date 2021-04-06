@@ -628,7 +628,7 @@ int main(int argc, char **argv) {
   }
 
   std::error_code EC;
-  ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_Text);
+  ToolOutputFile OutputFile(OutputFilename, EC, sys::fs::OF_TextWithCRLF);
   error("Unable to open output file" + OutputFilename, EC);
   // Don't remove output file if we exit with an error.
   OutputFile.keep();

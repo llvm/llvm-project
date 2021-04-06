@@ -605,21 +605,21 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   SmallVector<WeakTrackingVH, 4> DeadInsts;
   WideIVs.push_back( {FI.InnerInductionPHI, MaxLegalType, false });
   WideIVs.push_back( {FI.OuterInductionPHI, MaxLegalType, false });
-  unsigned ElimExt;
-  unsigned Widened;
+  unsigned ElimExt = 0;
+  unsigned Widened = 0;
 
-  for (unsigned i = 0; i < WideIVs.size(); i++) {
-    PHINode *WidePhi = createWideIV(WideIVs[i], LI, SE, Rewriter, DT, DeadInsts,
+  for (const auto &WideIV : WideIVs) {
+    PHINode *WidePhi = createWideIV(WideIV, LI, SE, Rewriter, DT, DeadInsts,
                                     ElimExt, Widened, true /* HasGuards */,
                                     true /* UsePostIncrementRanges */);
     if (!WidePhi)
       return false;
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());
-    LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIVs[i].NarrowIV->dump());
-    RecursivelyDeleteDeadPHINode(WideIVs[i].NarrowIV);
+    LLVM_DEBUG(dbgs() << "Deleting old phi: "; WideIV.NarrowIV->dump());
+    RecursivelyDeleteDeadPHINode(WideIV.NarrowIV);
   }
   // After widening, rediscover all the loop components.
-  assert(Widened && "Widenend IV expected");
+  assert(Widened && "Widened IV expected");
   FI.Widened = true;
   return CanFlattenLoopPair(FI, DT, LI, SE, AC, TTI);
 }

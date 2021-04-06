@@ -51,6 +51,32 @@ public:
                                    MacroNameTok.getLocation(),
                                    *MD.getMacroInfo());
   }
+
+  void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
+               SourceRange Range) override {
+    if (!MD.getMacroInfo()) // Ignore nonexistent macro.
+      return;
+    // Note: this is defined(M), not #define M
+    IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                   MacroNameTok.getLocation(),
+                                   *MD.getMacroInfo());
+  }
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) override {
+    if (!MD.getMacroInfo()) // Ignore non-existent macro.
+      return;
+    IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                   MacroNameTok.getLocation(),
+                                   *MD.getMacroInfo());
+  }
+  void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
+              const MacroDefinition &MD) override {
+    if (!MD.getMacroInfo()) // Ignore nonexistent macro.
+      return;
+    IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                   MacroNameTok.getLocation(),
+                                   *MD.getMacroInfo());
+  }
 };
 
 class IndexASTConsumer final : public ASTConsumer {
@@ -162,23 +188,54 @@ static void indexTranslationUnit(ASTUnit &Unit, IndexingContext &IndexCtx) {
   Unit.visitLocalTopLevelDecls(&IndexCtx, topLevelDeclVisitor);
 }
 
-static void indexPreprocessorMacros(const Preprocessor &PP,
-                                    IndexDataConsumer &DataConsumer) {
-  for (const auto &M : PP.macros())
-    if (MacroDirective *MD = M.second.getLatest()) {
-      auto *MI = MD->getMacroInfo();
-      // When using modules, it may happen that we find #undef of a macro that
-      // was defined in another module. In such case, MI may be nullptr, since
-      // we only look for macro definitions in the current TU. In that case,
-      // there is nothing to index.
-      if (!MI)
-        continue;
+static void indexPreprocessorMacro(const IdentifierInfo *II,
+                                   const MacroInfo *MI,
+                                   MacroDirective::Kind DirectiveKind,
+                                   SourceLocation Loc,
+                                   IndexDataConsumer &DataConsumer) {
+  // When using modules, it may happen that we find #undef of a macro that
+  // was defined in another module. In such case, MI may be nullptr, since
+  // we only look for macro definitions in the current TU. In that case,
+  // there is nothing to index.
+  if (!MI)
+    return;
 
-      DataConsumer.handleMacroOccurrence(
-          M.first, MD->getMacroInfo(),
-          static_cast<unsigned>(index::SymbolRole::Definition),
-          MD->getLocation());
+  // Skip implicit visibility change.
+  if (DirectiveKind == MacroDirective::MD_Visibility)
+    return;
+
+  auto Role = DirectiveKind == MacroDirective::MD_Define
+                  ? SymbolRole::Definition
+                  : SymbolRole::Undefinition;
+  DataConsumer.handleMacroOccurrence(II, MI, static_cast<unsigned>(Role), Loc);
+}
+
+static void indexPreprocessorMacros(Preprocessor &PP,
+                                    IndexDataConsumer &DataConsumer) {
+  for (const auto &M : PP.macros()) {
+    for (auto *MD = M.second.getLatest(); MD; MD = MD->getPrevious()) {
+      indexPreprocessorMacro(M.first, MD->getMacroInfo(), MD->getKind(),
+                             MD->getLocation(), DataConsumer);
     }
+  }
+}
+
+static void indexPreprocessorModuleMacros(Preprocessor &PP,
+                                          serialization::ModuleFile &Mod,
+                                          IndexDataConsumer &DataConsumer) {
+  for (const auto &M : PP.macros()) {
+    if (M.second.getLatest() == nullptr) {
+      for (auto *MM : PP.getLeafModuleMacros(M.first)) {
+        auto *OwningMod = MM->getOwningModule();
+        if (OwningMod && OwningMod->getASTFile() == Mod.File) {
+          if (auto *MI = MM->getMacroInfo()) {
+            indexPreprocessorMacro(M.first, MI, MacroDirective::MD_Define,
+                                   MI->getDefinitionLoc(), DataConsumer);
+          }
+        }
+      }
+    }
+  }
 }
 
 void index::indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
@@ -225,8 +282,9 @@ void index::indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
   IndexCtx.setASTContext(Ctx);
   DataConsumer.initialize(Ctx);
 
-  if (Opts.IndexMacrosInPreprocessor)
-    indexPreprocessorMacros(Reader.getPreprocessor(), DataConsumer);
+  if (Opts.IndexMacrosInPreprocessor) {
+    indexPreprocessorModuleMacros(Reader.getPreprocessor(), Mod, DataConsumer);
+  }
 
   for (const Decl *D : Reader.getModuleFileLevelDecls(Mod)) {
     IndexCtx.indexTopLevelDecl(D);

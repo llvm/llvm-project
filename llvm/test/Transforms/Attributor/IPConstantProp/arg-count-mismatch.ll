@@ -36,15 +36,10 @@
 ; FIXME we should recognize this as UB and make it an unreachable.
 
 define dso_local i16 @foo(i16 %a) {
-; IS__TUNIT____-LABEL: define {{[^@]+}}@foo
-; IS__TUNIT____-SAME: (i16 [[A:%.*]]) {
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i16 @bar()
-; IS__TUNIT____-NEXT:    ret i16 [[CALL]]
-;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@foo
-; IS__CGSCC_OPM-SAME: (i16 [[A:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
-; IS__CGSCC_OPM-NEXT:    ret i16 [[CALL]]
+; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@foo
+; NOT_CGSCC_NPM-SAME: (i16 [[A:%.*]]) {
+; NOT_CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i16 @bar()
+; NOT_CGSCC_NPM-NEXT:    ret i16 [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@foo
@@ -61,8 +56,9 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 ; IS__TUNIT____-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    ret i16 0
 ;
+; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_OPM-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) {
+; IS__CGSCC_OPM-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:    ret i16 0
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -90,16 +86,11 @@ define internal i16 @bar2(i16 %p1, i16 %p2) {
 ; IS__TUNIT____-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
 ; IS__TUNIT____-NEXT:    ret i16 [[A]]
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@bar2
-; IS__CGSCC_OPM-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
-; IS__CGSCC_OPM-NEXT:    ret i16 [[A]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar2
-; IS__CGSCC_NPM-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
-; IS__CGSCC_NPM-NEXT:    ret i16 [[A]]
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@bar2
+; IS__CGSCC____-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-NEXT:    [[A:%.*]] = add i16 [[P1]], [[P2]]
+; IS__CGSCC____-NEXT:    ret i16 [[A]]
 ;
   %a = add i16 %p1, %p2
   ret i16 %a
@@ -112,17 +103,11 @@ define internal i16 @bar2(i16 %p1, i16 %p2) {
 ; been provided),
 
 define dso_local i16 @vararg_tests(i16 %a) {
-; NOT_CGSCC_OPM-LABEL: define {{[^@]+}}@vararg_tests
-; NOT_CGSCC_OPM-SAME: (i16 [[A:%.*]]) {
-; NOT_CGSCC_OPM-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 noundef 7)
-; NOT_CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
-; NOT_CGSCC_OPM-NEXT:    ret i16 [[ADD]]
-;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vararg_tests
-; IS__CGSCC_OPM-SAME: (i16 [[A:%.*]]) {
-; IS__CGSCC_OPM-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 7)
-; IS__CGSCC_OPM-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
-; IS__CGSCC_OPM-NEXT:    ret i16 [[ADD]]
+; CHECK-LABEL: define {{[^@]+}}@vararg_tests
+; CHECK-SAME: (i16 [[A:%.*]]) {
+; CHECK-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 noundef 7)
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
+; CHECK-NEXT:    ret i16 [[ADD]]
 ;
   %call1 = call i16 (i16, ...) @vararg_prop(i16 7, i16 8, i16 %a)
   %call2 = call i16 bitcast (i16 (i16, i16, ...) * @vararg_no_prop to i16 (i16) *) (i16 7)
@@ -133,7 +118,7 @@ define dso_local i16 @vararg_tests(i16 %a) {
 define internal i16 @vararg_prop(i16 %p1, ...) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@vararg_prop
-; IS__CGSCC____-SAME: (i16 returned [[P1:%.*]], ...) #[[ATTR0:[0-9]+]] {
+; IS__CGSCC____-SAME: (i16 returned [[P1:%.*]], ...) #[[ATTR0]] {
 ; IS__CGSCC____-NEXT:    ret i16 7
 ;
   ret i16 %p1
@@ -145,14 +130,10 @@ define internal i16 @vararg_no_prop(i16 %p1, i16 %p2, ...) {
 ; IS__TUNIT____-SAME: (i16 returned [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR0]] {
 ; IS__TUNIT____-NEXT:    ret i16 7
 ;
-; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@vararg_no_prop
-; IS__CGSCC_OPM-SAME: (i16 [[P1:%.*]], i16 [[P2:%.*]], ...) {
-; IS__CGSCC_OPM-NEXT:    ret i16 [[P1]]
-;
-; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
-; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@vararg_no_prop
-; IS__CGSCC_NPM-SAME: (i16 returned [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR0]] {
-; IS__CGSCC_NPM-NEXT:    ret i16 7
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; IS__CGSCC____-LABEL: define {{[^@]+}}@vararg_no_prop
+; IS__CGSCC____-SAME: (i16 returned [[P1:%.*]], i16 [[P2:%.*]], ...) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    ret i16 7
 ;
   ret i16 %p1
 }
