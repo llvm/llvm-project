@@ -501,13 +501,20 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
                             const Twine &BBName) {
   unsigned SuccNum = GetSuccessorNumber(BB, Succ);
 
-  // If this is a critical edge, let SplitCriticalEdge do it.
   Instruction *LatchTerm = BB->getTerminator();
-  if (SplitCriticalEdge(
-          LatchTerm, SuccNum,
-          CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA(),
-          BBName))
-    return LatchTerm->getSuccessor(SuccNum);
+
+  CriticalEdgeSplittingOptions Options =
+      CriticalEdgeSplittingOptions(DT, LI, MSSAU).setPreserveLCSSA();
+
+  if ((isCriticalEdge(LatchTerm, SuccNum, Options.MergeIdenticalEdges))) {
+    // If it is a critical edge, and the succesor is an exception block, handle
+    // the split edge logic in this specific function
+    if (Succ->isEHPad())
+      return ehAwareSplitEdge(BB, Succ, nullptr, nullptr, Options, BBName);
+
+    // If this is a critical edge, let SplitKnownCriticalEdge do it.
+    return SplitKnownCriticalEdge(LatchTerm, SuccNum, Options, BBName);
+  }
 
   // If the edge isn't critical, then BB has a single successor or Succ has a
   // single pred.  Split the block.
@@ -525,6 +532,218 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
   assert(BB->getTerminator()->getNumSuccessors() == 1 &&
          "Should have a single succ!");
   return SplitBlock(BB, BB->getTerminator(), DT, LI, MSSAU, BBName);
+}
+
+void llvm::setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
+  if (auto *II = dyn_cast<InvokeInst>(TI))
+    II->setUnwindDest(Succ);
+  else if (auto *CS = dyn_cast<CatchSwitchInst>(TI))
+    CS->setUnwindDest(Succ);
+  else if (auto *CR = dyn_cast<CleanupReturnInst>(TI))
+    CR->setUnwindDest(Succ);
+  else
+    llvm_unreachable("unexpected terminator instruction");
+}
+
+void llvm::updatePhiNodes(BasicBlock *DestBB, BasicBlock *OldPred,
+                          BasicBlock *NewPred, PHINode *Until) {
+  int BBIdx = 0;
+  for (PHINode &PN : DestBB->phis()) {
+    // We manually update the LandingPadReplacement PHINode and it is the last
+    // PHI Node. So, if we find it, we are done.
+    if (Until == &PN)
+      break;
+
+    // Reuse the previous value of BBIdx if it lines up.  In cases where we
+    // have multiple phi nodes with *lots* of predecessors, this is a speed
+    // win because we don't have to scan the PHI looking for TIBB.  This
+    // happens because the BB list of PHI nodes are usually in the same
+    // order.
+    if (PN.getIncomingBlock(BBIdx) != OldPred)
+      BBIdx = PN.getBasicBlockIndex(OldPred);
+
+    assert(BBIdx != -1 && "Invalid PHI Index!");
+    PN.setIncomingBlock(BBIdx, NewPred);
+  }
+}
+
+BasicBlock *llvm::ehAwareSplitEdge(BasicBlock *BB, BasicBlock *Succ,
+                                   LandingPadInst *OriginalPad,
+                                   PHINode *LandingPadReplacement,
+                                   const CriticalEdgeSplittingOptions &Options,
+                                   const Twine &BBName) {
+
+  auto *PadInst = Succ->getFirstNonPHI();
+  if (!LandingPadReplacement && !PadInst->isEHPad())
+    return SplitEdge(BB, Succ, Options.DT, Options.LI, Options.MSSAU, BBName);
+
+  auto *LI = Options.LI;
+  SmallVector<BasicBlock *, 4> LoopPreds;
+  // Check if extra modifications will be required to preserve loop-simplify
+  // form after splitting. If it would require splitting blocks with IndirectBr
+  // terminators, bail out if preserving loop-simplify form is requested.
+  if (Options.PreserveLoopSimplify && LI) {
+    if (Loop *BBLoop = LI->getLoopFor(BB)) {
+
+      // The only way that we can break LoopSimplify form by splitting a
+      // critical edge is when there exists some edge from BBLoop to Succ *and*
+      // the only edge into Succ from outside of BBLoop is that of NewBB after
+      // the split. If the first isn't true, then LoopSimplify still holds,
+      // NewBB is the new exit block and it has no non-loop predecessors. If the
+      // second isn't true, then Succ was not in LoopSimplify form prior to
+      // the split as it had a non-loop predecessor. In both of these cases,
+      // the predecessor must be directly in BBLoop, not in a subloop, or again
+      // LoopSimplify doesn't hold.
+      for (BasicBlock *P : predecessors(Succ)) {
+        if (P == BB)
+          continue; // The new block is known.
+        if (LI->getLoopFor(P) != BBLoop) {
+          // Loop is not in LoopSimplify form, no need to re simplify after
+          // splitting edge.
+          LoopPreds.clear();
+          break;
+        }
+        LoopPreds.push_back(P);
+      }
+      // Loop-simplify form can be preserved, if we can split all in-loop
+      // predecessors.
+      if (any_of(LoopPreds, [](BasicBlock *Pred) {
+            return isa<IndirectBrInst>(Pred->getTerminator());
+          })) {
+        return nullptr;
+      }
+    }
+  }
+
+  auto *NewBB =
+      BasicBlock::Create(BB->getContext(), BBName, BB->getParent(), Succ);
+  setUnwindEdgeTo(BB->getTerminator(), NewBB);
+  updatePhiNodes(Succ, BB, NewBB, LandingPadReplacement);
+
+  if (LandingPadReplacement) {
+    auto *NewLP = OriginalPad->clone();
+    auto *Terminator = BranchInst::Create(Succ, NewBB);
+    NewLP->insertBefore(Terminator);
+    LandingPadReplacement->addIncoming(NewLP, NewBB);
+  } else {
+    Value *ParentPad = nullptr;
+    if (auto *FuncletPad = dyn_cast<FuncletPadInst>(PadInst))
+      ParentPad = FuncletPad->getParentPad();
+    else if (auto *CatchSwitch = dyn_cast<CatchSwitchInst>(PadInst))
+      ParentPad = CatchSwitch->getParentPad();
+    else if (auto *CleanupPad = dyn_cast<CleanupPadInst>(PadInst))
+      ParentPad = CleanupPad->getParentPad();
+    else if (auto *LandingPad = dyn_cast<LandingPadInst>(PadInst))
+      ParentPad = LandingPad->getParent();
+    else
+      llvm_unreachable("handling for other EHPads not implemented yet");
+
+    auto *NewCleanupPad = CleanupPadInst::Create(ParentPad, {}, BBName, NewBB);
+    CleanupReturnInst::Create(NewCleanupPad, Succ, NewBB);
+  }
+
+  auto *DT = Options.DT;
+  auto *MSSAU = Options.MSSAU;
+  if (!DT && !LI)
+    return NewBB;
+
+  if (DT) {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    SmallVector<DominatorTree::UpdateType, 3> Updates;
+
+    Updates.push_back({DominatorTree::Insert, BB, NewBB});
+    Updates.push_back({DominatorTree::Insert, NewBB, Succ});
+    Updates.push_back({DominatorTree::Delete, BB, Succ});
+
+    DTU.applyUpdates(Updates);
+    DTU.flush();
+
+    if (MSSAU) {
+      MSSAU->applyUpdates(Updates, *DT);
+      if (VerifyMemorySSA)
+        MSSAU->getMemorySSA()->verifyMemorySSA();
+    }
+  }
+
+  if (LI) {
+    if (Loop *BBLoop = LI->getLoopFor(BB)) {
+      // If one or the other blocks were not in a loop, the new block is not
+      // either, and thus LI doesn't need to be updated.
+      if (Loop *SuccLoop = LI->getLoopFor(Succ)) {
+        if (BBLoop == SuccLoop) {
+          // Both in the same loop, the NewBB joins loop.
+          SuccLoop->addBasicBlockToLoop(NewBB, *LI);
+        } else if (BBLoop->contains(SuccLoop)) {
+          // Edge from an outer loop to an inner loop.  Add to the outer loop.
+          BBLoop->addBasicBlockToLoop(NewBB, *LI);
+        } else if (SuccLoop->contains(BBLoop)) {
+          // Edge from an inner loop to an outer loop.  Add to the outer loop.
+          SuccLoop->addBasicBlockToLoop(NewBB, *LI);
+        } else {
+          // Edge from two loops with no containment relation.  Because these
+          // are natural loops, we know that the destination block must be the
+          // header of its loop (adding a branch into a loop elsewhere would
+          // create an irreducible loop).
+          assert(SuccLoop->getHeader() == Succ &&
+                 "Should not create irreducible loops!");
+          if (Loop *P = SuccLoop->getParentLoop())
+            P->addBasicBlockToLoop(NewBB, *LI);
+        }
+      }
+
+      // If BB is in a loop and Succ is outside of that loop, we may need to
+      // update LoopSimplify form and LCSSA form.
+      if (!BBLoop->contains(Succ)) {
+        assert(!BBLoop->contains(NewBB) &&
+               "Split point for loop exit is contained in loop!");
+
+        // Update LCSSA form in the newly created exit block.
+        if (Options.PreserveLCSSA) {
+          createPHIsForSplitLoopExit(BB, NewBB, Succ);
+        }
+
+        if (!LoopPreds.empty()) {
+          BasicBlock *NewExitBB = SplitBlockPredecessors(
+              Succ, LoopPreds, "split", DT, LI, MSSAU, Options.PreserveLCSSA);
+          if (Options.PreserveLCSSA)
+            createPHIsForSplitLoopExit(LoopPreds, NewExitBB, Succ);
+        }
+      }
+    }
+  }
+
+  return NewBB;
+}
+
+void llvm::createPHIsForSplitLoopExit(ArrayRef<BasicBlock *> Preds,
+                                      BasicBlock *SplitBB, BasicBlock *DestBB) {
+  // SplitBB shouldn't have anything non-trivial in it yet.
+  assert((SplitBB->getFirstNonPHI() == SplitBB->getTerminator() ||
+          SplitBB->isLandingPad()) &&
+         "SplitBB has non-PHI nodes!");
+
+  // For each PHI in the destination block.
+  for (PHINode &PN : DestBB->phis()) {
+    int Idx = PN.getBasicBlockIndex(SplitBB);
+    assert(Idx >= 0 && "Invalid Block Index");
+    Value *V = PN.getIncomingValue(Idx);
+
+    // If the input is a PHI which already satisfies LCSSA, don't create
+    // a new one.
+    if (const PHINode *VP = dyn_cast<PHINode>(V))
+      if (VP->getParent() == SplitBB)
+        continue;
+
+    // Otherwise a new PHI is needed. Create one and populate it.
+    PHINode *NewPN = PHINode::Create(
+        PN.getType(), Preds.size(), "split",
+        SplitBB->isLandingPad() ? &SplitBB->front() : SplitBB->getTerminator());
+    for (BasicBlock *BB : Preds)
+      NewPN->addIncoming(V, BB);
+
+    // Update the original PHI.
+    PN.setIncomingValue(Idx, NewPN);
+  }
 }
 
 unsigned
