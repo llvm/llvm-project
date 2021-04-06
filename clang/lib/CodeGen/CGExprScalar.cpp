@@ -1729,7 +1729,7 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   llvm::MatrixBuilder<CGBuilderTy> MB(Builder);
   return MB.CreateExtractElement(
       Matrix, RowIdx, ColumnIdx,
-      E->getBase()->getType()->getAs<ConstantMatrixType>()->getNumRows());
+      E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
 }
 
 static int getMaskElt(llvm::ShuffleVectorInst *SVI, unsigned Idx,
