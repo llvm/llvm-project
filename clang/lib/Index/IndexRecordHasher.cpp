@@ -157,7 +157,10 @@ public:
 hash_code IndexRecordHasher::hashRecord(const FileIndexRecord &Record) {
   hash_code Hash = INITIAL_HASH;
   for (auto &Info : Record.getDeclOccurrencesSortedByOffset()) {
-    COMBINE_HASH(Info.Roles, Info.Offset, hash(Info.Dcl));
+    COMBINE_HASH(Info.Roles, Info.Offset);
+    if (auto *D = Info.DeclOrMacro.dyn_cast<const Decl *>()) {
+      COMBINE_HASH(hash(D));
+    }
     for (auto &Rel : Info.Relations) {
       COMBINE_HASH(hash(Rel.RelatedSymbol));
     }
