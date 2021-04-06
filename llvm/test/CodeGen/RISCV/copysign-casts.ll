@@ -133,7 +133,7 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.d fs0, fa0
 ; RV32IFD-NEXT:    fmv.x.w a0, fa1
-; RV32IFD-NEXT:    call __gnu_h2f_ieee@plt
+; RV32IFD-NEXT:    call __extendhfsf2@plt
 ; RV32IFD-NEXT:    fcvt.d.s ft0, fa0
 ; RV32IFD-NEXT:    fsgnj.d fa0, fs0, ft0
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -148,7 +148,7 @@ define double @fold_promote_d_h(double %a, half %b) nounwind {
 ; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.d fs0, fa0
 ; RV64IFD-NEXT:    fmv.x.w a0, fa1
-; RV64IFD-NEXT:    call __gnu_h2f_ieee@plt
+; RV64IFD-NEXT:    call __extendhfsf2@plt
 ; RV64IFD-NEXT:    fcvt.d.s ft0, fa0
 ; RV64IFD-NEXT:    fsgnj.d fa0, fs0, ft0
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -211,7 +211,7 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV32IF-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    fmv.s fs0, fa0
 ; RV32IF-NEXT:    fmv.x.w a0, fa1
-; RV32IF-NEXT:    call __gnu_h2f_ieee@plt
+; RV32IF-NEXT:    call __extendhfsf2@plt
 ; RV32IF-NEXT:    fsgnj.s fa0, fs0, fa0
 ; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IF-NEXT:    flw fs0, 8(sp) # 4-byte Folded Reload
@@ -225,7 +225,7 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV32IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV32IFD-NEXT:    fmv.s fs0, fa0
 ; RV32IFD-NEXT:    fmv.x.w a0, fa1
-; RV32IFD-NEXT:    call __gnu_h2f_ieee@plt
+; RV32IFD-NEXT:    call __extendhfsf2@plt
 ; RV32IFD-NEXT:    fsgnj.s fa0, fs0, fa0
 ; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
@@ -239,7 +239,7 @@ define float @fold_promote_f_h(float %a, half %b) nounwind {
 ; RV64IFD-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
 ; RV64IFD-NEXT:    fmv.s fs0, fa0
 ; RV64IFD-NEXT:    fmv.x.w a0, fa1
-; RV64IFD-NEXT:    call __gnu_h2f_ieee@plt
+; RV64IFD-NEXT:    call __extendhfsf2@plt
 ; RV64IFD-NEXT:    fsgnj.s fa0, fs0, fa0
 ; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IFD-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload

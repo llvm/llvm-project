@@ -18,7 +18,7 @@ define float @test_fpextend_float(half* %p) nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lhu a0, 0(a0)
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
@@ -33,7 +33,7 @@ define double @test_fpextend_double(half* %p) nounwind {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lhu a0, 0(a0)
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fcvt.d.s fa0, fa0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -50,7 +50,7 @@ define void @test_fptrunc_float(float %f, half* %p) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    call __gnu_f2h_ieee@plt
+; CHECK-NEXT:    call __truncsfhf2@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -90,12 +90,12 @@ define void @test_fadd(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    lhu s1, 0(a0)
 ; CHECK-NEXT:    lhu a0, 0(a1)
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs0, fa0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fadd.s fa0, fa0, fs0
-; CHECK-NEXT:    call __gnu_f2h_ieee@plt
+; CHECK-NEXT:    call __truncsfhf2@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -121,12 +121,12 @@ define void @test_fmul(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    lhu s1, 0(a0)
 ; CHECK-NEXT:    lhu a0, 0(a1)
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.s fs0, fa0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmul.s fa0, fa0, fs0
-; CHECK-NEXT:    call __gnu_f2h_ieee@plt
+; CHECK-NEXT:    call __truncsfhf2@plt
 ; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload

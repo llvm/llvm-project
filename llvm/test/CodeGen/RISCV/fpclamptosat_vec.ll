@@ -316,20 +316,20 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 16(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.l.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 524288
@@ -423,20 +423,20 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 8(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.lu.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.lu.s a0, ft0, rtz
 ; CHECK-NEXT:    li a1, -1
@@ -508,20 +508,20 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 16(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.l.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    li a1, -1
@@ -923,32 +923,32 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 48(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s7
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.l.s s7, ft0, rtz
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 8
@@ -1108,32 +1108,32 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 8(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s7
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.lu.s s7, ft0, rtz
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.lu.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 16
@@ -1249,32 +1249,32 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 48(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s7
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.l.s s7, ft0, rtz
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 16
@@ -1835,12 +1835,12 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    li a0, -1
@@ -1925,12 +1925,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixunssfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixunssfti@plt
 ; CHECK-NEXT:    beqz a1, .LBB25_2
 ; CHECK-NEXT:  # %bb.1: # %entry
@@ -1970,12 +1970,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    bgtz a1, .LBB26_7
@@ -2345,20 +2345,20 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 16(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.l.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 524288
@@ -2450,20 +2450,20 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 8(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.lu.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.lu.s a0, ft0, rtz
 ; CHECK-NEXT:    li a1, -1
@@ -2534,20 +2534,20 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 16(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s3
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s4
 ; CHECK-NEXT:    fcvt.l.s s3, ft0, rtz
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    li a1, -1
@@ -2937,32 +2937,32 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 48(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s7
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.l.s s7, ft0, rtz
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 8
@@ -3120,25 +3120,25 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 8(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s6, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s6
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
@@ -3148,7 +3148,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    fcvt.lu.s a0, ft0, rtz
 ; CHECK-NEXT:    sext.w s6, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.lu.s a0, ft0, rtz
 ; CHECK-NEXT:    sext.w a0, a0
@@ -3268,32 +3268,32 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NEXT:    lhu a1, 48(a1)
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s8, a0
 ; CHECK-NEXT:    mv a0, s7
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s7, a0
 ; CHECK-NEXT:    mv a0, s5
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s5, a0
 ; CHECK-NEXT:    mv a0, s4
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s4, a0
 ; CHECK-NEXT:    mv a0, s3
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s3, a0
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    mv s1, a0
 ; CHECK-NEXT:    fmv.w.x ft0, s7
 ; CHECK-NEXT:    fsw ft0, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fmv.w.x ft0, s8
 ; CHECK-NEXT:    fcvt.l.s s7, ft0, rtz
 ; CHECK-NEXT:    mv a0, s6
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    fmv.w.x ft0, a0
 ; CHECK-NEXT:    fcvt.l.s a0, ft0, rtz
 ; CHECK-NEXT:    lui a1, 16
@@ -3966,12 +3966,12 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    li a0, -1
@@ -4084,12 +4084,12 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a0
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixunssfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixunssfti@plt
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a3, a1
@@ -4142,12 +4142,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
 ; CHECK-NEXT:    mv s2, a1
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    mv s1, a1
 ; CHECK-NEXT:    mv a0, s2
-; CHECK-NEXT:    call __gnu_h2f_ieee@plt
+; CHECK-NEXT:    call __extendhfsf2@plt
 ; CHECK-NEXT:    call __fixsfti@plt
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    li a5, 1

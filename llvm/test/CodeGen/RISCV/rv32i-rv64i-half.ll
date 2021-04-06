@@ -21,20 +21,20 @@ define half @half_test(half %a, half %b) nounwind {
 ; RV32I-NEXT:    lui a1, 16
 ; RV32I-NEXT:    addi s2, a1, -1
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __gnu_h2f_ieee@plt
+; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    mv s1, a0
 ; RV32I-NEXT:    and a0, s0, s2
-; RV32I-NEXT:    call __gnu_h2f_ieee@plt
+; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __addsf3@plt
-; RV32I-NEXT:    call __gnu_f2h_ieee@plt
+; RV32I-NEXT:    call __truncsfhf2@plt
 ; RV32I-NEXT:    and a0, a0, s2
-; RV32I-NEXT:    call __gnu_h2f_ieee@plt
+; RV32I-NEXT:    call __extendhfsf2@plt
 ; RV32I-NEXT:    mv a1, s0
 ; RV32I-NEXT:    call __divsf3@plt
-; RV32I-NEXT:    call __gnu_f2h_ieee@plt
+; RV32I-NEXT:    call __truncsfhf2@plt
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -53,20 +53,20 @@ define half @half_test(half %a, half %b) nounwind {
 ; RV64I-NEXT:    lui a1, 16
 ; RV64I-NEXT:    addiw s2, a1, -1
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __gnu_h2f_ieee@plt
+; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    and a0, s0, s2
-; RV64I-NEXT:    call __gnu_h2f_ieee@plt
+; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __addsf3@plt
-; RV64I-NEXT:    call __gnu_f2h_ieee@plt
+; RV64I-NEXT:    call __truncsfhf2@plt
 ; RV64I-NEXT:    and a0, a0, s2
-; RV64I-NEXT:    call __gnu_h2f_ieee@plt
+; RV64I-NEXT:    call __extendhfsf2@plt
 ; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call __divsf3@plt
-; RV64I-NEXT:    call __gnu_f2h_ieee@plt
+; RV64I-NEXT:    call __truncsfhf2@plt
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
