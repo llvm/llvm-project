@@ -32,7 +32,8 @@ class AbstractRecorder {
 protected:
   AbstractRecorder(const FileSpec &filename, std::error_code &ec)
       : m_filename(filename.GetFilename().GetStringRef()),
-        m_os(filename.GetPath(), ec, llvm::sys::fs::OF_Text), m_record(true) {}
+        m_os(filename.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF),
+        m_record(true) {}
 
 public:
   const FileSpec &GetFilename() { return m_filename; }
@@ -168,7 +169,7 @@ public:
   void Keep() override {
     FileSpec file = this->GetRoot().CopyByAppendingPathComponent(T::Info::file);
     std::error_code ec;
-    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
     if (ec)
       return;
     os << m_directory << "\n";
@@ -290,7 +291,7 @@ public:
 
     FileSpec file = this->GetRoot().CopyByAppendingPathComponent(V::Info::file);
     std::error_code ec;
-    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_Text);
+    llvm::raw_fd_ostream os(file.GetPath(), ec, llvm::sys::fs::OF_TextWithCRLF);
     if (ec)
       return;
     llvm::yaml::Output yout(os);

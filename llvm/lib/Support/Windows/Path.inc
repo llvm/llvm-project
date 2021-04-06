@@ -1083,8 +1083,10 @@ static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
   if (Flags & OF_Append)
     CrtOpenFlags |= _O_APPEND;
 
-  if (Flags & OF_Text)
+  if (Flags & OF_CRLF) {
+    assert(Flags & OF_Text && "Flags set OF_CRLF without OF_Text");
     CrtOpenFlags |= _O_TEXT;
+  }
 
   ResultFD = -1;
   if (!H)
