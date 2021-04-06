@@ -647,8 +647,10 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   for (auto I : State->get<LockMap>()) {
     // Stop tracking dead mutex regions as well.
-    if (!SymReaper.isLiveRegion(I.first))
+    if (!SymReaper.isLiveRegion(I.first)) {
       State = State->remove<LockMap>(I.first);
+      State = State->remove<DestroyRetVal>(I.first);
+    }
   }
 
   // TODO: We probably need to clean up the lock stack as well.
