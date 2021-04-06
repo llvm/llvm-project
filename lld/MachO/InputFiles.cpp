@@ -195,7 +195,7 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
 // any subsection splitting has occurred). It will be updated to represent the
 // same location as an offset relative to the start of the containing
 // subsection.
-static InputSection *findContainingSubsection(SubsectionMapping &map,
+static InputSection *findContainingSubsection(SubsectionMap &map,
                                               uint64_t *offset) {
   auto it = std::prev(llvm::upper_bound(
       map, *offset, [](uint64_t value, SubsectionEntry subsectionEntry) {
@@ -239,8 +239,7 @@ static bool validateRelocationInfo(InputFile *file, const Section &sec,
 
 template <class Section>
 void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
-                               const Section &sec,
-                               SubsectionMapping &subsecMap) {
+                               const Section &sec, SubsectionMap &subsecMap) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   ArrayRef<relocation_info> relInfos(
       reinterpret_cast<const relocation_info *>(buf + sec.reloff), sec.nreloc);
@@ -295,8 +294,7 @@ void ObjFile::parseRelocations(ArrayRef<Section> sectionHeaders,
       r.referent = symbols[relInfo.r_symbolnum];
       r.addend = totalAddend;
     } else {
-      SubsectionMapping &referentSubsecMap =
-          subsections[relInfo.r_symbolnum - 1];
+      SubsectionMap &referentSubsecMap = subsections[relInfo.r_symbolnum - 1];
       const Section &referentSec = sectionHeaders[relInfo.r_symbolnum - 1];
       uint64_t referentOffset;
       if (relInfo.r_pcrel) {
@@ -435,33 +433,33 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   for (const NList &sym : nList) {
     if ((sym.n_type & N_TYPE) == N_SECT && !(sym.n_desc & N_ALT_ENTRY) &&
         !subsections[sym.n_sect - 1].empty()) {
-      SubsectionMapping &subsectionMapping = subsections[sym.n_sect - 1];
-      subsectionMapping.push_back(
+      SubsectionMap &subsecMapping = subsections[sym.n_sect - 1];
+      subsecMapping.push_back(
           {sym.n_value - sectionHeaders[sym.n_sect - 1].addr,
-           subsectionMapping.front().isec});
+           subsecMapping.front().isec});
     }
   }
 
-  for (SubsectionMapping &subsectionMap : subsections) {
-    if (subsectionMap.empty())
+  for (SubsectionMap &subsecMap : subsections) {
+    if (subsecMap.empty())
       continue;
-    llvm::sort(subsectionMap,
+    llvm::sort(subsecMap,
                [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
                  return lhs.offset < rhs.offset;
                });
-    subsectionMap.erase(
-        std::unique(subsectionMap.begin(), subsectionMap.end(),
+    subsecMap.erase(
+        std::unique(subsecMap.begin(), subsecMap.end(),
                     [](const SubsectionEntry &lhs, const SubsectionEntry &rhs) {
                       return lhs.offset == rhs.offset;
                     }),
-        subsectionMap.end());
+        subsecMap.end());
     if (!subsectionsViaSymbols)
       continue;
-    for (size_t i = 0; i < subsectionMap.size(); ++i) {
-      uint32_t offset = subsectionMap[i].offset;
-      InputSection *&isec = subsectionMap[i].isec;
-      uint32_t end = i + 1 < subsectionMap.size() ? subsectionMap[i + 1].offset
-                                                  : isec->data.size();
+    for (size_t i = 0; i < subsecMap.size(); ++i) {
+      uint32_t offset = subsecMap[i].offset;
+      InputSection *&isec = subsecMap[i].isec;
+      uint32_t end = i + 1 < subsecMap.size() ? subsecMap[i + 1].offset
+                                              : isec->data.size();
       isec = make<InputSection>(*isec);
       isec->data = isec->data.slice(offset, end - offset);
       // TODO: ld64 appears to preserve the original alignment as well as each
@@ -482,7 +480,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     }
 
     const Section &sec = sectionHeaders[sym.n_sect - 1];
-    SubsectionMapping &subsecMap = subsections[sym.n_sect - 1];
+    SubsectionMap &subsecMap = subsections[sym.n_sect - 1];
 
     // parseSections() may have chosen not to parse this section.
     if (subsecMap.empty())
@@ -512,9 +510,9 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
   }
 
   if (!subsectionsViaSymbols)
-    for (SubsectionMapping &subsectionMap : subsections)
-      if (!subsectionMap.empty())
-        subsectionMap = {subsectionMap.front()};
+    for (SubsectionMap &subsecMap : subsections)
+      if (!subsecMap.empty())
+        subsecMap = {subsecMap.front()};
 }
 
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
