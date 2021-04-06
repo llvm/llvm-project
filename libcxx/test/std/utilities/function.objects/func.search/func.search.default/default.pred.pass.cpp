@@ -10,8 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // default searcher
 // template<class _ForwardIterator, class _BinaryPredicate = equal_to<>>
 // class default_searcher {
