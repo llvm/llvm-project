@@ -3022,9 +3022,8 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr, VPValue *Def,
   State.set(Def, Cloned, Instance);
 
   // If we just cloned a new assumption, add it the assumption cache.
-  if (auto *II = dyn_cast<IntrinsicInst>(Cloned))
-    if (II->getIntrinsicID() == Intrinsic::assume)
-      AC->registerAssumption(II);
+  if (auto *II = dyn_cast<AssumeInst>(Cloned))
+    AC->registerAssumption(II);
 
   // End if-block.
   if (IfPredicateInstr)

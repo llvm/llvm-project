@@ -306,7 +306,7 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
   LoadNotNull->insertAfter(LI);
   CallInst *CI = CallInst::Create(AssumeIntrinsic, {LoadNotNull});
   CI->insertAfter(LoadNotNull);
-  AC->registerAssumption(CI);
+  AC->registerAssumption(cast<AssumeInst>(CI));
 }
 
 static void removeIntrinsicUsers(AllocaInst *AI) {
