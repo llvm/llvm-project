@@ -1637,14 +1637,6 @@ bool Function::hasAddressTaken(const User **PutOffender,
         continue;
     }
 
-    if (isa<BitCastOperator>(FU) && isa<ConstantExpr>(FU) &&
-        llvm::all_of(FU->uses(), [](const Use &U) {
-          if (const CallBase *CB = dyn_cast<CallBase>(U.getUser()))
-            return CB->isCallee(&U);
-          return false;
-        }))
-      continue;
-
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
       if (IgnoreAssumeLikeCalls) {

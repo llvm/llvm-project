@@ -2131,26 +2131,13 @@ processGlobal(GlobalValue &GV,
   return processInternalGlobal(GVar, GS, GetTLI, LookupDomTree) || Changed;
 }
 
-static void SetCallBaseFastCallingConv(Use &U) {
-  CallBase *CB = dyn_cast<CallBase>(U.getUser());
-  if (!CB || !CB->isCallee(&U))
-    return;
-  CB->setCallingConv(CallingConv::Fast);
-}
-
 /// Walk all of the direct calls of the specified function, changing them to
 /// FastCC.
 static void ChangeCalleesToFastCall(Function *F) {
-  for (Use &U : F->uses()) {
-    User *FU = U.getUser();
-    if (isa<BlockAddress>(FU))
+  for (User *U : F->users()) {
+    if (isa<BlockAddress>(U))
       continue;
-    if (isa<BitCastOperator>(FU) && isa<ConstantExpr>(FU)) {
-      for (Use &BU : FU->uses())
-        SetCallBaseFastCallingConv(BU);
-      continue;
-    }
-    SetCallBaseFastCallingConv(U);
+    cast<CallBase>(U)->setCallingConv(CallingConv::Fast);
   }
 }
 
@@ -2162,25 +2149,13 @@ static AttributeList StripAttr(LLVMContext &C, AttributeList Attrs,
   return Attrs;
 }
 
-static void SetCallBaseAttributes(Use &U, Function *F, Attribute::AttrKind A) {
-  CallBase *CB = dyn_cast<CallBase>(U.getUser());
-  if (!CB || !CB->isCallee(&U))
-    return;
-  CB->setAttributes(StripAttr(F->getContext(), CB->getAttributes(), A));
-}
-
 static void RemoveAttribute(Function *F, Attribute::AttrKind A) {
   F->setAttributes(StripAttr(F->getContext(), F->getAttributes(), A));
-  for (Use &U : F->uses()) {
-    User *FU = U.getUser();
-    if (isa<BlockAddress>(FU))
+  for (User *U : F->users()) {
+    if (isa<BlockAddress>(U))
       continue;
-    if (isa<BitCastOperator>(FU) && isa<ConstantExpr>(FU)) {
-      for (Use &BU : FU->uses())
-        SetCallBaseAttributes(BU, F, A);
-      continue;
-    }
-    SetCallBaseAttributes(U, F, A);
+    CallBase *CB = cast<CallBase>(U);
+    CB->setAttributes(StripAttr(F->getContext(), CB->getAttributes(), A));
   }
 }
 
