@@ -810,7 +810,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}test_wqm2:
 ; GFX1032: s_wqm_b32 exec_lo, exec_lo
-; GFX1032: s_and_b32 exec_lo, exec_lo, s{{[0-9+]}}
+; GFX1032: s_and_b32 exec_lo, exec_lo, s{{[0-9]+}}
 ; GFX1064: s_wqm_b64 exec, exec{{$}}
 ; GFX1064: s_and_b64 exec, exec, s[{{[0-9:]+}}]
 define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
