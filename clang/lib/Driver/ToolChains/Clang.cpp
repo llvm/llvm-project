@@ -5260,6 +5260,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
     Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
     Args.AddLastArg(CmdArgs, options::OPT_index_unit_output_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_macros);
 
     // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
     // invocation so that the index action knows what the out file is.

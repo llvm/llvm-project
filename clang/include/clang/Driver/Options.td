@@ -603,6 +603,9 @@ def index_record_codegen_name : Flag<["-"], "index-record-codegen-name">, Flags<
 def index_unit_output_path : Separate<["-"], "index-unit-output-path">, MetaVarName<"<path>">, Flags<[CC1Option]>,
   HelpText<"Use <path> as the output path for this compilation unit in the index unit file">,
   MarshallingInfoString<FrontendOpts<"IndexUnitOutputPath">>;
+def index_ignore_macros : Flag<["-"], "index-ignore-macros">, Flags<[CC1Option]>,
+  HelpText<"Ignore macros during indexing">,
+  MarshallingInfoFlag<FrontendOpts<"IndexIgnoreMacros">>;
 
 // Make sure all other -ccc- options are rejected.
 def ccc_ : Joined<["-"], "ccc-">, Group<internal_Group>, Flags<[Unsupported]>;

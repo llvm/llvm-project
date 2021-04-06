@@ -302,6 +302,7 @@ public:
 
   unsigned IndexIgnoreSystemSymbols : 1;
   unsigned IndexRecordCodegenName : 1;
+  unsigned IndexIgnoreMacros : 1;
 
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
