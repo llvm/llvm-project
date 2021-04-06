@@ -2543,54 +2543,54 @@ bool isKnownNonZero(const Value* V, unsigned Depth, const Query& Q) {
 /// to exactly one output value.  This is equivalent to saying that O1
 /// and O2 are equal exactly when the specified pair of operands are equal,
 /// (except that O1 and O2 may be poison more often.)
-static Optional<unsigned> getInvertibleOperand(const Operator *O1,
-                                               const Operator *O2) {
-  if (O1->getOpcode() != O2->getOpcode())
+static Optional<unsigned> getInvertibleOperand(const Operator *Op1,
+                                               const Operator *Op2) {
+  if (Op1->getOpcode() != Op2->getOpcode())
     return None;
 
-  switch (O1->getOpcode()) {
+  switch (Op1->getOpcode()) {
   default:
     break;
   case Instruction::Add:
   case Instruction::Sub:
-    if (O1->getOperand(0) == O2->getOperand(0))
+    if (Op1->getOperand(0) == Op2->getOperand(0))
       return 1;
-    if (O1->getOperand(1) == O2->getOperand(1))
+    if (Op1->getOperand(1) == Op2->getOperand(1))
       return 0;
     break;
   case Instruction::Mul: {
     // invertible if A * B == (A * B) mod 2^N where A, and B are integers
     // and N is the bitwdith.  The nsw case is non-obvious, but proven by
     // alive2: https://alive2.llvm.org/ce/z/Z6D5qK
-    auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
-    auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+    auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
+    auto *OBO2 = cast<OverflowingBinaryOperator>(Op2);
     if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
         (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
       break;
 
     // Assume operand order has been canonicalized
-    if (O1->getOperand(1) == O2->getOperand(1) &&
-        isa<ConstantInt>(O1->getOperand(1)) &&
-        !cast<ConstantInt>(O1->getOperand(1))->isZero())
+    if (Op1->getOperand(1) == Op2->getOperand(1) &&
+        isa<ConstantInt>(Op1->getOperand(1)) &&
+        !cast<ConstantInt>(Op1->getOperand(1))->isZero())
       return 0;
     break;
   }
   case Instruction::Shl: {
     // Same as multiplies, with the difference that we don't need to check
     // for a non-zero multiply. Shifts always multiply by non-zero.
-    auto *OBO1 = cast<OverflowingBinaryOperator>(O1);
-    auto *OBO2 = cast<OverflowingBinaryOperator>(O2);
+    auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
+    auto *OBO2 = cast<OverflowingBinaryOperator>(Op2);
     if ((!OBO1->hasNoUnsignedWrap() || !OBO2->hasNoUnsignedWrap()) &&
         (!OBO1->hasNoSignedWrap() || !OBO2->hasNoSignedWrap()))
       break;
 
-    if (O1->getOperand(1) == O2->getOperand(1))
+    if (Op1->getOperand(1) == Op2->getOperand(1))
       return 0;
     break;
   }
   case Instruction::SExt:
   case Instruction::ZExt:
-    if (O1->getOperand(0)->getType() == O2->getOperand(0)->getType())
+    if (Op1->getOperand(0)->getType() == Op2->getOperand(0)->getType())
       return 0;
     break;
   }
