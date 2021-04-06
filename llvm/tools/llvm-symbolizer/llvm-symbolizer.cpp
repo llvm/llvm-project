@@ -150,7 +150,7 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
 }
 
 static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
-                           bool IsAddr2Line, OutputStyle OutputStyle,
+                           bool IsAddr2Line, OutputStyle Style,
                            StringRef InputString, LLVMSymbolizer &Symbolizer,
                            DIPrinter &Printer) {
   Command Cmd;
@@ -178,7 +178,7 @@ static void symbolizeInput(const opt::InputArgList &Args, uint64_t AdjustVMA,
     Expected<DIInliningInfo> ResOrErr = Symbolizer.symbolizeInlinedCode(
         ModuleName, {AdjustedOffset, object::SectionedAddress::UndefSection});
     print({ModuleName, Offset}, ResOrErr, Printer);
-  } else if (OutputStyle == OutputStyle::GNU) {
+  } else if (Style == OutputStyle::GNU) {
     // With PrintFunctions == FunctionNameKind::LinkageName (default)
     // and UseSymbolTable == true (also default), Symbolizer.symbolizeCode()
     // may override the name of an inlined function with the name of the topmost
@@ -322,15 +322,15 @@ int main(int argc, char **argv) {
     }
   }
 
-  auto OutputStyle = IsAddr2Line ? OutputStyle::GNU : OutputStyle::LLVM;
+  auto Style = IsAddr2Line ? OutputStyle::GNU : OutputStyle::LLVM;
   if (const opt::Arg *A = Args.getLastArg(OPT_output_style_EQ)) {
-    OutputStyle = strcmp(A->getValue(), "GNU") == 0 ? OutputStyle::GNU
-                                                    : OutputStyle::LLVM;
+    Style = strcmp(A->getValue(), "GNU") == 0 ? OutputStyle::GNU
+                                              : OutputStyle::LLVM;
   }
 
   LLVMSymbolizer Symbolizer(Opts);
   std::unique_ptr<DIPrinter> Printer;
-  if (OutputStyle == OutputStyle::GNU)
+  if (Style == OutputStyle::GNU)
     Printer = std::make_unique<GNUPrinter>(outs(), errs(), Config);
   else
     Printer = std::make_unique<LLVMPrinter>(outs(), errs(), Config);
@@ -345,14 +345,14 @@ int main(int argc, char **argv) {
       std::string StrippedInputString(InputString);
       llvm::erase_if(StrippedInputString,
                      [](char c) { return c == '\r' || c == '\n'; });
-      symbolizeInput(Args, AdjustVMA, IsAddr2Line, OutputStyle,
-                     StrippedInputString, Symbolizer, *Printer);
+      symbolizeInput(Args, AdjustVMA, IsAddr2Line, Style, StrippedInputString,
+                     Symbolizer, *Printer);
       outs().flush();
     }
   } else {
     for (StringRef Address : InputAddresses)
-      symbolizeInput(Args, AdjustVMA, IsAddr2Line, OutputStyle, Address,
-                     Symbolizer, *Printer);
+      symbolizeInput(Args, AdjustVMA, IsAddr2Line, Style, Address, Symbolizer,
+                     *Printer);
   }
 
   return 0;
