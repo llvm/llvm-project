@@ -4129,7 +4129,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
-    } else if (!VT.isVector() && Op0VT.isFixedLengthVector()) {
+    } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
+               isTypeLegal(Op0VT)) {
       // Custom-legalize bitcasts from fixed-length vector types to illegal
       // scalar types in order to improve codegen. Bitcast the vector to a
       // one-element vector type whose element type is the same as the result
