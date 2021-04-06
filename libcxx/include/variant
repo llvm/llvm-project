@@ -203,6 +203,7 @@ namespace std {
 #include <__availability>
 #include <__tuple>
 #include <array>
+#include <compare>
 #include <exception>
 #include <functional>
 #include <initializer_list>

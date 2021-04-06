@@ -234,6 +234,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <chrono>
+#include <compare>
 #include <iterator>
 #include <iosfwd>
 #include <memory>

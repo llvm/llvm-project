@@ -182,6 +182,7 @@ namespace std {
 #include <__string>
 #include <iosfwd>
 #include <algorithm>
+#include <compare>
 #include <iterator>
 #include <limits>
 #include <stdexcept>

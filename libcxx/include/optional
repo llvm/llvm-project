@@ -150,6 +150,7 @@ template<class T>
 #include <__availability>
 #include <__debug>
 #include <__functional_base>
+#include <compare>
 #include <functional>
 #include <initializer_list>
 #include <new>
