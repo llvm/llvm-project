@@ -1113,9 +1113,8 @@ static BasicBlock *buildClonedLoopBlocks(
     for (Instruction &I : *ClonedBB) {
       RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::assume)
-          AC.registerAssumption(II);
+      if (auto *II = dyn_cast<AssumeInst>(&I))
+        AC.registerAssumption(II);
     }
 
   // Update any PHI nodes in the cloned successors of the skipped blocks to not

@@ -297,7 +297,7 @@ void llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
   if (IntrinsicInst *Intr = Builder.build()) {
     Intr->insertBefore(I);
     if (AC)
-      AC->registerAssumption(Intr);
+      AC->registerAssumption(cast<AssumeInst>(Intr));
   }
 }
 
@@ -499,7 +499,7 @@ struct AssumeSimplify {
       return;
     MadeChange = true;
     MergedAssume->insertBefore(InsertPt);
-    AC.registerAssumption(MergedAssume);
+    AC.registerAssumption(cast<AssumeInst>(MergedAssume));
   }
 
   /// Merge assume when they are in the same BasicBlock and for all instruction
