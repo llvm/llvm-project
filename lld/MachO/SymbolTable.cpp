@@ -159,7 +159,7 @@ Symbol *SymbolTable::addLazy(StringRef name, ArchiveFile *file,
 }
 
 Defined *SymbolTable::addSynthetic(StringRef name, InputSection *isec,
-                                   uint32_t value, bool isPrivateExtern,
+                                   uint64_t value, bool isPrivateExtern,
                                    bool includeInSymtab) {
   Defined *s = addDefined(name, nullptr, isec, value, /*size=*/0,
                           /*isWeakDef=*/false, isPrivateExtern);
