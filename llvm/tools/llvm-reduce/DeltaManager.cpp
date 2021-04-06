@@ -25,6 +25,7 @@
 #include "deltas/ReduceGlobalVars.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceMetadata.h"
+#include "deltas/ReduceModuleInlineAsm.h"
 #include "deltas/ReduceOperandBundles.h"
 #include "deltas/ReduceSpecialGlobals.h"
 
@@ -45,6 +46,7 @@ void runDeltaPasses(TestRunner &Tester) {
   reduceInstructionsDeltaPass(Tester);
   reduceOperandBundesDeltaPass(Tester);
   reduceAttributesDeltaPass(Tester);
+  reduceModuleInlineAsmDeltaPass(Tester);
   // TODO: Implement the remaining Delta Passes
 }
 } // namespace llvm
