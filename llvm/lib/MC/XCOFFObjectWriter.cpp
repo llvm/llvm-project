@@ -178,15 +178,19 @@ class XCOFFObjectWriter : public MCObjectWriter {
   CsectGroup FuncDSCsects;
   CsectGroup TOCCsects;
   CsectGroup BSSCsects;
+  CsectGroup TDataCsects;
+  CsectGroup TBSSCsects;
 
   // The Predefined sections.
   Section Text;
   Section Data;
   Section BSS;
+  Section TData;
+  Section TBSS;
 
   // All the XCOFF sections, in the order they will appear in the section header
   // table.
-  std::array<Section *const, 3> Sections{{&Text, &Data, &BSS}};
+  std::array<Section *const, 5> Sections{{&Text, &Data, &BSS, &TData, &TBSS}};
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
@@ -250,7 +254,11 @@ XCOFFObjectWriter::XCOFFObjectWriter(
       Data(".data", XCOFF::STYP_DATA, /* IsVirtual */ false,
            CsectGroups{&DataCsects, &FuncDSCsects, &TOCCsects}),
       BSS(".bss", XCOFF::STYP_BSS, /* IsVirtual */ true,
-          CsectGroups{&BSSCsects}) {}
+          CsectGroups{&BSSCsects}),
+      TData(".tdata", XCOFF::STYP_TDATA, /* IsVirtual */ false,
+            CsectGroups{&TDataCsects}),
+      TBSS(".tbss", XCOFF::STYP_TBSS, /* IsVirtual */ true,
+           CsectGroups{&TBSSCsects}) {}
 
 void XCOFFObjectWriter::reset() {
   // Clear the mappings we created.
@@ -297,6 +305,16 @@ CsectGroup &XCOFFObjectWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
            "Mapping invalid csect. CSECT with bss storage class must be "
            "common type.");
     return BSSCsects;
+  case XCOFF::XMC_TL:
+    assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
+           "Mapping invalid csect. CSECT with tdata storage class must be "
+           "an initialized csect.");
+    return TDataCsects;
+  case XCOFF::XMC_UL:
+    assert(XCOFF::XTY_CM == MCSec->getCSectType() &&
+           "Mapping invalid csect. CSECT with tbss storage class must be "
+           "an uninitialized csect.");
+    return TBSSCsects;
   case XCOFF::XMC_TC0:
     assert(XCOFF::XTY_SD == MCSec->getCSectType() &&
            "Only an initialized csect can contain TOC-base.");
@@ -493,9 +511,11 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
 
     // There could be a gap (without corresponding zero padding) between
     // sections.
-    assert(CurrentAddressLocation <= Section->Address &&
+    assert(((CurrentAddressLocation <= Section->Address) ||
+            (Section->Flags == XCOFF::STYP_TDATA) ||
+            (Section->Flags == XCOFF::STYP_TBSS)) &&
            "CurrentAddressLocation should be less than or equal to section "
-           "address.");
+           "address if the section is not TData or TBSS.");
 
     CurrentAddressLocation = Section->Address;
 
@@ -828,6 +848,7 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   uint32_t Address = 0;
   // Section indices are 1-based in XCOFF.
   int32_t SectionIndex = 1;
+  bool HasTDataSection = false;
 
   for (auto *Section : Sections) {
     const bool IsEmpty =
@@ -842,6 +863,16 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     SectionCount++;
 
     bool SectionAddressSet = false;
+    // Reset the starting address to 0 for TData section.
+    if (Section->Flags == XCOFF::STYP_TDATA) {
+      Address = 0;
+      HasTDataSection = true;
+    }
+    // Reset the starting address to 0 for TBSS section if the object file does
+    // not contain TData Section.
+    if ((Section->Flags == XCOFF::STYP_TBSS) && !HasTDataSection)
+      Address = 0;
+
     for (auto *Group : Section->Groups) {
       if (Group->empty())
         continue;
