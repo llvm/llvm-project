@@ -537,13 +537,5 @@ bool IndexingContext::shouldIndexMacroOccurrence(bool IsRef,
 
   SourceManager &SM = Ctx->getSourceManager();
   FileID FID = SM.getFileID(SM.getFileLoc(Loc));
-  if (FID.isInvalid())
-    return false;
-
-  bool Invalid = false;
-  const SrcMgr::SLocEntry &SEntry = SM.getSLocEntry(FID, &Invalid);
-  if (Invalid || !SEntry.isFile())
-    return false;
-
-  return SEntry.getFile().getFileCharacteristic() == SrcMgr::C_User;
+  return !isSystemFile(FID);
 }

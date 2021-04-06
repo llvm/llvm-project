@@ -19,6 +19,8 @@
 namespace clang {
   class ASTContext;
   class Decl;
+  class IdentifierInfo;
+  class MacroInfo;
 
 namespace index {
   class FileIndexRecord;
@@ -31,7 +33,7 @@ class ClangIndexRecordWriter {
 
   std::unique_ptr<ASTNameGenerator> ASTNameGen;
   llvm::BumpPtrAllocator Allocator;
-  llvm::DenseMap<const Decl *, StringRef> USRByDecl;
+  llvm::DenseMap<const void *, StringRef> USRByDecl;
   IndexRecordHasher Hasher;
 
 public:
@@ -44,9 +46,11 @@ public:
   bool writeRecord(StringRef Filename, const FileIndexRecord &Record,
                    std::string &Error, std::string *RecordFile = nullptr);
   StringRef getUSR(const Decl *D);
+  StringRef getUSR(const IdentifierInfo *Name, const MacroInfo *MI);
 
 private:
   StringRef getUSRNonCached(const Decl *D);
+  StringRef getUSRNonCached(const IdentifierInfo *Name, const MacroInfo *MI);
 };
 
 } // end namespace index

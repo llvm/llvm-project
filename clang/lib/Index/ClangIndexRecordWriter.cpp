@@ -28,9 +28,32 @@ StringRef ClangIndexRecordWriter::getUSR(const Decl *D) {
   return Insert.first->second;
 }
 
+StringRef ClangIndexRecordWriter::getUSR(const IdentifierInfo *Name,
+                                         const MacroInfo *MI) {
+  assert(Name && MI);
+  auto Insert = USRByDecl.insert(std::make_pair(MI, StringRef()));
+  if (Insert.second) {
+    Insert.first->second = getUSRNonCached(Name, MI);
+  }
+  return Insert.first->second;
+}
+
 StringRef ClangIndexRecordWriter::getUSRNonCached(const Decl *D) {
   SmallString<256> Buf;
   bool Ignore = generateUSRForDecl(D, Buf);
+  if (Ignore)
+    return StringRef();
+  StringRef USR = Buf.str();
+  char *Ptr = Allocator.Allocate<char>(USR.size());
+  std::copy(USR.begin(), USR.end(), Ptr);
+  return StringRef(Ptr, USR.size());
+}
+
+StringRef ClangIndexRecordWriter::getUSRNonCached(const IdentifierInfo *Name,
+                                                  const MacroInfo *MI) {
+  SmallString<256> Buf;
+  bool Ignore = generateUSRForMacro(Name->getName(), MI->getDefinitionLoc(),
+                                    Ctx.getSourceManager(), Buf);
   if (Ignore)
     return StringRef();
   StringRef USR = Buf.str();
@@ -74,6 +97,8 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     return std::make_pair(LineNo, ColNo);
   };
 
+  llvm::DenseMap<const MacroInfo *, const IdentifierInfo *> MacroNames;
+
   for (auto &Occur : IdxRecord.getDeclOccurrencesSortedByOffset()) {
     unsigned Line, Col;
     std::tie(Line, Col) = getLineCol(Occur.Offset);
@@ -81,10 +106,11 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     Related.reserve(Occur.Relations.size());
     for (auto &Rel : Occur.Relations)
       Related.push_back(writer::SymbolRelation{Rel.RelatedSymbol, Rel.Roles});
+    if (Occur.MacroName)
+      MacroNames[Occur.DeclOrMacro.get<const MacroInfo *>()] = Occur.MacroName;
 
-    // FIXME: handle macro occurrence
-    if (auto *D = Occur.DeclOrMacro.dyn_cast<const Decl *>())
-      Impl.addOccurrence(D, Occur.Roles, Line, Col, Related);
+    Impl.addOccurrence(Occur.DeclOrMacro.getOpaqueValue(), Occur.Roles, Line,
+                       Col, Related);
   }
 
   PrintingPolicy Policy(Ctx.getLangOpts());
@@ -92,31 +118,42 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
 
   auto Result = Impl.endRecord(Error,
       [&](writer::OpaqueDecl OD, SmallVectorImpl<char> &Scratch) {
-    const Decl *D = static_cast<const Decl *>(OD);
-    auto Info = getSymbolInfo(D);
-
     writer::Symbol Sym;
-    Sym.SymInfo = Info;
+    auto DeclOrMacro =
+        llvm::PointerUnion<const Decl *, const MacroInfo *>::getFromOpaqueValue(
+            const_cast<void *>(OD));
+    if (auto *MI = DeclOrMacro.dyn_cast<const MacroInfo *>()) {
+      auto *II = MacroNames[MI];
+      assert(II);
+      Sym.SymInfo = getSymbolInfoForMacro(*MI);
+      Sym.Name = II->getName();
+      Sym.USR = getUSR(II, MI);
+      assert(!Sym.USR.empty() && "Recorded macro without USR!");
+    } else {
+      const Decl *D = DeclOrMacro.get<const Decl *>();
+      Sym.SymInfo = getSymbolInfo(D);
 
-    auto *ND = dyn_cast<NamedDecl>(D);
-    if (ND) {
-      llvm::raw_svector_ostream OS(Scratch);
-      DeclarationName DeclName = ND->getDeclName();
-      if (!DeclName.isEmpty())
-        DeclName.print(OS, Policy);
+      auto *ND = dyn_cast<NamedDecl>(D);
+      if (ND) {
+        llvm::raw_svector_ostream OS(Scratch);
+        DeclarationName DeclName = ND->getDeclName();
+        if (!DeclName.isEmpty())
+          DeclName.print(OS, Policy);
+      }
+      unsigned NameLen = Scratch.size();
+      Sym.Name = StringRef(Scratch.data(), NameLen);
+
+      Sym.USR = getUSR(D);
+      assert(!Sym.USR.empty() && "Recorded decl without USR!");
+
+      if (ASTNameGen && ND) {
+        llvm::raw_svector_ostream OS(Scratch);
+        ASTNameGen->writeName(ND, OS);
+      }
+      unsigned CGNameLen = Scratch.size() - NameLen;
+      Sym.CodeGenName = StringRef(Scratch.data() + NameLen, CGNameLen);
     }
-    unsigned NameLen = Scratch.size();
-    Sym.Name = StringRef(Scratch.data(), NameLen);
 
-    Sym.USR = getUSR(D);
-    assert(!Sym.USR.empty() && "Recorded decl without USR!");
-
-    if (ASTNameGen && ND) {
-      llvm::raw_svector_ostream OS(Scratch);
-      ASTNameGen->writeName(ND, OS);
-    }
-    unsigned CGNameLen = Scratch.size() - NameLen;
-    Sym.CodeGenName = StringRef(Scratch.data() + NameLen, CGNameLen);
     return Sym;
   });
 

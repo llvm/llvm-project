@@ -26,6 +26,8 @@ using namespace llvm;
 
 static hash_code computeHash(const TemplateArgument &Arg,
                              IndexRecordHasher &Hasher);
+static hash_code hashLoc(const SourceManager &SM, SourceLocation Loc,
+                         bool IncludeOffset);
 
 namespace {
 class DeclHashVisitor : public ConstDeclVisitor<DeclHashVisitor, hash_code> {
@@ -53,7 +55,8 @@ public:
 
       hash_code Hash = VisitDeclContext(D->getDeclContext());
       if (D->isEmbeddedInDeclarator() && !D->isFreeStanding()) {
-        COMBINE_HASH(hashLoc(D->getLocation(), /*IncludeOffset=*/true));
+        COMBINE_HASH(hashLoc(Hasher.getASTContext().getSourceManager(),
+                             D->getLocation(), /*IncludeOffset=*/true));
       } else
         COMBINE_HASH('a');
       return Hash;
@@ -127,30 +130,6 @@ public:
     else
       return 0;
   }
-
-  hash_code hashLoc(SourceLocation Loc, bool IncludeOffset) {
-    if (Loc.isInvalid()) {
-      return 0;
-    }
-    hash_code Hash = INITIAL_HASH;
-    const SourceManager &SM = Hasher.getASTContext().getSourceManager();
-    Loc = SM.getFileLoc(Loc);
-    const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
-    const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
-    if (FE) {
-      COMBINE_HASH(llvm::sys::path::filename(FE->getName()));
-    } else {
-      // This case really isn't interesting.
-      return 0;
-    }
-    if (IncludeOffset) {
-      // Use the offest into the FileID to represent the location.  Using
-      // a line/column can cause us to look back at the original source file,
-      // which is expensive.
-      COMBINE_HASH(Decomposed.second);
-    }
-    return Hash;
-  }
 };
 }
 
@@ -160,12 +139,20 @@ hash_code IndexRecordHasher::hashRecord(const FileIndexRecord &Record) {
     COMBINE_HASH(Info.Roles, Info.Offset);
     if (auto *D = Info.DeclOrMacro.dyn_cast<const Decl *>()) {
       COMBINE_HASH(hash(D));
+    } else {
+      COMBINE_HASH(
+          hash(Info.MacroName, Info.DeclOrMacro.get<const MacroInfo *>()));
     }
     for (auto &Rel : Info.Relations) {
       COMBINE_HASH(hash(Rel.RelatedSymbol));
     }
   }
   return Hash;
+}
+
+hash_code IndexRecordHasher::hash(const IdentifierInfo *Name,
+                                  const MacroInfo *MI) {
+  return tryCache(MI, MacroDef{Name, MI});
 }
 
 hash_code IndexRecordHasher::hash(const Decl *D) {
@@ -302,6 +289,18 @@ hash_code IndexRecordHasher::hashImpl(const Decl *D) {
 
 static hash_code computeHash(const IdentifierInfo *II) {
   return hash_value(II->getName());
+}
+
+hash_code IndexRecordHasher::hashImpl(MacroDef MD) {
+  hash_code Hash = INITIAL_HASH;
+  COMBINE_HASH(StringRef("@macro@"), computeHash(MD.Name));
+  auto &SM = getASTContext().getSourceManager();
+  auto Loc = MD.MI->getDefinitionLoc();
+  // Only hash the location if it's not in a system header, to match how
+  // USR generation behaves.
+  if (Loc.isValid() && !SM.isInSystemHeader(Loc))
+    COMBINE_HASH(hashLoc(SM, Loc, /*IncludeOffset=*/true));
+  return Hash;
 }
 
 static hash_code computeHash(Selector Sel) {
@@ -484,5 +483,29 @@ hash_code IndexRecordHasher::hashImpl(const NestedNameSpecifier *NNS) {
     break;
   }
 
+  return Hash;
+}
+
+static hash_code hashLoc(const SourceManager &SM, SourceLocation Loc,
+                         bool IncludeOffset) {
+  if (Loc.isInvalid()) {
+    return 0;
+  }
+  hash_code Hash = INITIAL_HASH;
+  Loc = SM.getFileLoc(Loc);
+  const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
+  const FileEntry *FE = SM.getFileEntryForID(Decomposed.first);
+  if (FE) {
+    COMBINE_HASH(llvm::sys::path::filename(FE->getName()));
+  } else {
+    // This case really isn't interesting.
+    return 0;
+  }
+  if (IncludeOffset) {
+    // Use the offest into the FileID to represent the location.  Using
+    // a line/column can cause us to look back at the original source file,
+    // which is expensive.
+    COMBINE_HASH(Decomposed.second);
+  }
   return Hash;
 }

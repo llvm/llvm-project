@@ -330,25 +330,25 @@ private:
   bool handleDeclOccurrence(const Decl *D, SymbolRoleSet Roles,
                             ArrayRef<SymbolRelation> Relations,
                             SourceLocation Loc, ASTNodeInfo ASTNode) override {
-    SourceManager &SM = PP->getSourceManager();
-    Loc = SM.getFileLoc(Loc);
-    if (Loc.isInvalid())
-      return true;
-
     FileID FID;
     unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
-
-    if (FID.isInvalid())
-      return true;
-
-    // Ignore the predefines buffer.
-    const FileEntry *FE = PP->getSourceManager().getFileEntryForID(FID);
-    if (!FE)
+    if (!getFileIDAndOffset(Loc, FID, Offset))
       return true;
 
     FileIndexRecord &Rec = getFileIndexRecord(FID);
     Rec.addDeclOccurence(Roles, Offset, D, Relations);
+    return true;
+  }
+
+  bool handleMacroOccurrence(const IdentifierInfo *Name, const MacroInfo *MI,
+                             SymbolRoleSet Roles, SourceLocation Loc) override {
+    FileID FID;
+    unsigned Offset;
+    if (!getFileIDAndOffset(Loc, FID, Offset))
+      return true;
+
+    FileIndexRecord &Rec = getFileIndexRecord(FID);
+    Rec.addMacroOccurence(Roles, Offset, Name, MI);
     return true;
   }
 
@@ -358,6 +358,38 @@ private:
       Entry.reset(new FileIndexRecord(FID, IndexCtx->isSystemFile(FID)));
     }
     return *Entry;
+  }
+
+  bool getFileIDAndOffset(SourceLocation Loc, FileID &FID, unsigned &Offset) {
+    SourceManager &SM = PP->getSourceManager();
+    Loc = SM.getFileLoc(Loc);
+    if (Loc.isInvalid())
+      return false;
+
+    std::tie(FID, Offset) = SM.getDecomposedLoc(Loc);
+
+    if (FID.isInvalid())
+      return false;
+
+    // Ignore the predefines buffer.
+    const FileEntry *FE = PP->getSourceManager().getFileEntryForID(FID);
+    return FE != nullptr;
+  }
+
+public:
+  void finish() override {
+    if (IndexCtx->getIndexOpts().IndexMacros) {
+      SmallVector<FileID, 8> ToRemove;
+      for (auto &pair : RecordByFile) {
+        pair.second->removeHeaderGuardMacros();
+        // Remove now-empty records.
+        if (pair.second->getDeclOccurrencesSortedByOffset().empty())
+          ToRemove.push_back(pair.first);
+      }
+      for (auto FID : ToRemove) {
+        RecordByFile.erase(FID);
+      }
+    }
   }
 };
 
@@ -588,6 +620,9 @@ protected:
     DepCollector.setSysrootPath(IndexCtx->getSysrootPath());
     DepCollector.attachToPreprocessor(PP);
 
+    if (IndexCtx->getIndexOpts().IndexMacros)
+      PP.addPPCallbacks(std::make_unique<IndexPPCallbacks>(IndexCtx));
+
     return std::make_unique<IndexRecordASTConsumer>(CI.getPreprocessorPtr(),
                                                IndexCtx);
   }
@@ -683,6 +718,8 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
     }
     ~DiagClientBeginEndRAII() { CI.getDiagnosticClient().EndSourceFile(); }
   } diagClientBeginEndRAII(CI);
+
+  Recorder.finish();
 
   SourceManager &SM = CI.getSourceManager();
   DiagnosticsEngine &Diag = CI.getDiagnostics();
@@ -897,6 +934,9 @@ static void indexModule(serialization::ModuleFile &Mod,
   for (const Decl *D : CI.getASTReader()->getModuleFileLevelDecls(Mod)) {
     IndexCtx.indexTopLevelDecl(D);
   }
+  if (IndexOpts.IndexMacrosInPreprocessor) {
+    indexPreprocessorModuleMacros(CI.getPreprocessor(), Mod, Recorder);
+  }
   Recorder.finish();
 
   ModuleFileIndexDependencyCollector DepCollector(Mod, RecordOpts);
@@ -951,6 +991,8 @@ getIndexOptionsFromFrontendOptions(const FrontendOptions &FEOpts) {
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::None;
   }
+  IndexOpts.IndexMacros = !FEOpts.IndexIgnoreMacros;
+  IndexOpts.IndexMacrosInPreprocessor = !FEOpts.IndexIgnoreMacros;
   RecordOpts.RecordSymbolCodeGenName = FEOpts.IndexRecordCodegenName;
   return {IndexOpts, RecordOpts};
 }
