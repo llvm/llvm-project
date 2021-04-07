@@ -4,12 +4,7 @@
 ;  for (int i = N-1; i >= 0; --i)
 ;    a[i] = b[i] + 1.0;
 
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -S < %s 2>%t | FileCheck %s
-
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -S < %s | FileCheck %s
 
 define void @vector_reverse_f64(i64 %N, double* %a, double* %b) #0{
 ; CHECK-LABEL: @vector_reverse_f64
