@@ -1,11 +1,8 @@
-; RUN: llc -mtriple=aarch64-- < %s 2>&1 | FileCheck --allow-empty %s
+; RUN: llc -mtriple=aarch64-- < %s
 
-; This regression test is defending against a TypeSize warning 'assumption that TypeSize is not
-; scalable'. This warning appeared in DAGCombiner::visitLIFETIME_END when visiting a LIFETIME_END
+; This regression test is defending against using the wrong interface for TypeSize.
+; This issue appeared in DAGCombiner::visitLIFETIME_END when visiting a LIFETIME_END
 ; node linked to a scalable store.
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; CHECK-NOT: warning:
 
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)

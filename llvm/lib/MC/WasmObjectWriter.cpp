@@ -536,11 +536,11 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
     // We require the function table to have already been defined.
     auto TableName = "__indirect_function_table";
     MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(TableName));
-    if (!Sym || !Sym->isFunctionTable()) {
-      Ctx.reportError(
-          Fixup.getLoc(),
-          "symbol '__indirect_function_table' is not a function table");
+    if (!Sym) {
+      report_fatal_error("missing indirect function table symbol");
     } else {
+      if (!Sym->isFunctionTable())
+        report_fatal_error("__indirect_function_table symbol has wrong type");
       // Ensure that __indirect_function_table reaches the output.
       Sym->setNoStrip();
       Asm.registerSymbol(*Sym);
