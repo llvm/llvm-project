@@ -153,6 +153,11 @@ std::vector<EditLineStringType> SplitLines(const EditLineStringType &input) {
     result.push_back(input.substr(start, end - start));
     start = end + 1;
   }
+  // Treat an empty history session as a single command of zero-length instead
+  // of returning an empty vector.
+  if (result.empty()) {
+    result.emplace_back();
+  }
   return result;
 }
 
