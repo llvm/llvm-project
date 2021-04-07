@@ -12,11 +12,28 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) {
   return
 }
 
+func @transfer_read_mask_1d(%A : memref<?xf32>, %base: index) {
+  %fm42 = constant -42.0: f32
+  %m = constant dense<[0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]> : vector<13xi1>
+  %f = vector.transfer_read %A[%base], %fm42, %m : memref<?xf32>, vector<13xf32>
+  vector.print %f: vector<13xf32>
+  return
+}
+
 func @transfer_read_inbounds_4(%A : memref<?xf32>, %base: index) {
   %fm42 = constant -42.0: f32
   %f = vector.transfer_read %A[%base], %fm42
       {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]} :
     memref<?xf32>, vector<4xf32>
+  vector.print %f: vector<4xf32>
+  return
+}
+
+func @transfer_read_mask_inbounds_4(%A : memref<?xf32>, %base: index) {
+  %fm42 = constant -42.0: f32
+  %m = constant dense<[0, 1, 0, 1]> : vector<4xi1>
+  %f = vector.transfer_read %A[%base], %fm42, %m {in_bounds = [true]}
+      : memref<?xf32>, vector<4xf32>
   vector.print %f: vector<4xf32>
   return
 }
@@ -47,6 +64,8 @@ func @entry() {
   // Read shifted by 2 and pad with -42:
   //   ( 2, 3, 4, -42, ..., -42)
   call @transfer_read_1d(%A, %c2) : (memref<?xf32>, index) -> ()
+  // Read with mask and out-of-bounds access.
+  call @transfer_read_mask_1d(%A, %c2) : (memref<?xf32>, index) -> ()
   // Write into memory shifted by 3
   //   memory contains [[ 0, 1, 2, 0, 0, xxx garbage xxx ]]
   call @transfer_write_1d(%A, %c3) : (memref<?xf32>, index) -> ()
@@ -56,9 +75,13 @@ func @entry() {
   // Read in-bounds 4 @ 1, guaranteed to not overflow.
   // Exercises proper alignment.
   call @transfer_read_inbounds_4(%A, %c1) : (memref<?xf32>, index) -> ()
+  // Read in-bounds with mask.
+  call @transfer_read_mask_inbounds_4(%A, %c1) : (memref<?xf32>, index) -> ()
   return
 }
 
 // CHECK: ( 2, 3, 4, -42, -42, -42, -42, -42, -42, -42, -42, -42, -42 )
+// CHECK: ( -42, -42, 4, -42, -42, -42, -42, -42, -42, -42, -42, -42, -42 )
 // CHECK: ( 0, 1, 2, 0, 0, -42, -42, -42, -42, -42, -42, -42, -42 )
 // CHECK: ( 1, 2, 0, 0 )
+// CHECK: ( -42, 2, -42, 0 )

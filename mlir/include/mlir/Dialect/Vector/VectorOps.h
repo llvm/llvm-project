@@ -88,6 +88,10 @@ void populateVectorSlicesLoweringPatterns(RewritePatternSet &patterns);
 /// `vector.store` and `vector.broadcast`.
 void populateVectorTransferLoweringPatterns(RewritePatternSet &patterns);
 
+/// These patterns materialize masks for various vector ops such as transfers.
+void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
+                                               bool enableIndexOptimizations);
+
 /// An attribute that specifies the combining function for `vector.contract`,
 /// and `vector.reduction`.
 class CombiningKindAttr

@@ -538,6 +538,8 @@ LogicalResult VectorTransferRewriter<TransferReadOp>::matchAndRewrite(
   using namespace mlir::edsc::op;
 
   TransferReadOp transfer = cast<TransferReadOp>(op);
+  if (transfer.mask())
+    return failure();
   auto memRefType = transfer.getShapedType().dyn_cast<MemRefType>();
   if (!memRefType)
     return failure();
@@ -624,6 +626,8 @@ LogicalResult VectorTransferRewriter<TransferWriteOp>::matchAndRewrite(
   using namespace edsc::op;
 
   TransferWriteOp transfer = cast<TransferWriteOp>(op);
+  if (transfer.mask())
+    return failure();
   auto memRefType = transfer.getShapedType().template dyn_cast<MemRefType>();
   if (!memRefType)
     return failure();
