@@ -13,10 +13,10 @@ __atomic_work_item_fence(cl_mem_fence_flags flags, memory_order order, memory_sc
         case memory_scope_sub_group:
             switch (order) {
             case memory_order_relaxed: break;
-            case memory_order_acquire: __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "subgroup"); break;
-            case memory_order_release: __builtin_amdgcn_fence(__ATOMIC_RELEASE, "subgroup"); break;
-            case memory_order_acq_rel: __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "subgroup"); break;
-            case memory_order_seq_cst: __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "subgroup"); break;
+            case memory_order_acquire: __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "wavefront"); break;
+            case memory_order_release: __builtin_amdgcn_fence(__ATOMIC_RELEASE, "wavefront"); break;
+            case memory_order_acq_rel: __builtin_amdgcn_fence(__ATOMIC_ACQ_REL, "wavefront"); break;
+            case memory_order_seq_cst: __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "wavefront"); break;
             }
             break;
         case memory_scope_work_group:
