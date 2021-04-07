@@ -404,8 +404,8 @@ unsigned AArch64FastISel::materializeFP(const ConstantFP *CFP, MVT VT) {
     return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
   }
 
-  // For the MachO large code model materialize the FP constant in code.
-  if (Subtarget->isTargetMachO() && TM.getCodeModel() == CodeModel::Large) {
+  // For the large code model materialize the FP constant in code.
+  if (TM.getCodeModel() == CodeModel::Large) {
     unsigned Opc1 = Is64Bit ? AArch64::MOVi64imm : AArch64::MOVi32imm;
     const TargetRegisterClass *RC = Is64Bit ?
         &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
