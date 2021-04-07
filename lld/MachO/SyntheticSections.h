@@ -379,9 +379,12 @@ public:
   uint64_t getRawSize() const override { return size; }
   void writeTo(uint8_t *buf) const override;
 
+  static constexpr size_t emptyStringIndex = 1;
+
 private:
   // ld64 emits string tables which start with a space and a zero byte. We
   // match its behavior here since some tools depend on it.
+  // Consequently, the empty string will be at index 1, not zero.
   std::vector<StringRef> strings{" "};
   size_t size = 2;
 };
@@ -393,7 +396,7 @@ struct SymtabEntry {
 
 struct StabsEntry {
   uint8_t type = 0;
-  uint32_t strx = 0;
+  uint32_t strx = StringTableSection::emptyStringIndex;
   uint8_t sect = 0;
   uint16_t desc = 0;
   uint64_t value = 0;
