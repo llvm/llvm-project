@@ -189,11 +189,16 @@ void TokenBuffer::indexExpandedTokens() {
     return;
   ExpandedTokIndex.reserve(ExpandedTokens.size());
   // Index ExpandedTokens for faster lookups by SourceLocation.
-  for (size_t I = 0, E = ExpandedTokens.size(); I != E; ++I)
-    ExpandedTokIndex[ExpandedTokens[I].location()] = I;
+  for (size_t I = 0, E = ExpandedTokens.size(); I != E; ++I) {
+    SourceLocation Loc = ExpandedTokens[I].location();
+    if (Loc.isValid())
+      ExpandedTokIndex[Loc] = I;
+  }
 }
 
 llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
+  if (R.isInvalid())
+    return {};
   if (!ExpandedTokIndex.empty()) {
     // Quick lookup if `R` is a token range.
     // This is a huge win since majority of the users use ranges provided by an
@@ -201,9 +206,12 @@ llvm::ArrayRef<syntax::Token> TokenBuffer::expandedTokens(SourceRange R) const {
     const auto B = ExpandedTokIndex.find(R.getBegin());
     const auto E = ExpandedTokIndex.find(R.getEnd());
     if (B != ExpandedTokIndex.end() && E != ExpandedTokIndex.end()) {
+      const Token *L = ExpandedTokens.data() + B->getSecond();
       // Add 1 to End to make a half-open range.
-      return {ExpandedTokens.data() + B->getSecond(),
-              ExpandedTokens.data() + E->getSecond() + 1};
+      const Token *R = ExpandedTokens.data() + E->getSecond() + 1;
+      if (L > R)
+        return {};
+      return {L, R};
     }
   }
   // Slow case. Use `isBeforeInTranslationUnit` to binary search for the
