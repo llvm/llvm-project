@@ -416,6 +416,8 @@ def Shape_MaxOp : Shape_Op<"max", [Commutative, NoSideEffect]> {
   let assemblyFormat = [{
     $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
+
+  let hasFolder = 1;
 }
 
 def Shape_MinOp : Shape_Op<"min", [Commutative, NoSideEffect]> {
@@ -433,6 +435,8 @@ def Shape_MinOp : Shape_Op<"min", [Commutative, NoSideEffect]> {
   let assemblyFormat = [{
     $lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs) `->` type($result)
   }];
+
+  let hasFolder = 1;
 }
 
 def Shape_MulOp : Shape_Op<"mul", [Commutative, NoSideEffect]> {
