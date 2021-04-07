@@ -63,6 +63,15 @@ createSomeMutableBox(mlir::Location loc, AbstractConverter &converter,
                      SymMap &symMap);
 
 /// Lower an array assignment expression.
+///
+/// 1. Evaluate the lhs to determine the rank and how to form the ArrayLoad
+/// (e.g., if there is a slicing op).
+/// 2. Scan the rhs, creating the ArrayLoads and evaluate the scalar subparts to
+/// be added to the map.
+/// 3. Create the loop nest and evaluate the elemental expression, threading the
+/// results.
+/// 4. Copy the resulting array back with ArrayMergeStore to the lhs as
+/// determined per step 1.
 void createSomeArrayAssignment(AbstractConverter &converter,
                                const evaluate::Expr<evaluate::SomeType> &lhs,
                                const evaluate::Expr<evaluate::SomeType> &rhs,

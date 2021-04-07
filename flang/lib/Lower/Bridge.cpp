@@ -1532,29 +1532,9 @@ private:
                                            localSymbols, stmtCtx);
   }
 
-  /// Array assignment.
-  /// 1. Evaluate the lhs to determine the rank and how to form the ArrayLoad
-  /// (e.g., if there is a slicing op).
-  /// 2. Scan the rhs, creating the ArrayLoads and evaluate the scalar subparts
-  /// to be added to the map.
-  /// 3. Create the loop nest and evaluate the elemental expression, threading
-  /// the results.
-  /// 4. Copy the resulting array back with ArrayMergeStore to the lhs as
-  /// determined per step 1.
   void genArrayAssignment(const Fortran::evaluate::Assignment &assign,
                           const Fortran::semantics::Symbol *sym,
                           Fortran::lower::StatementContext &stmtCtx) {
-    auto loc = toLocation();
-    if (Fortran::evaluate::IsConstantExpr(assign.rhs) &&
-        (assign.lhs.Rank() == assign.rhs.Rank())) {
-      // TODO: Constants get expanded out as inline array values. Probably want
-      // to reconsider that based on context. For an initializer, that's fine,
-      // but inlining large arrays in a function is not.
-      auto rhs = fir::getBase(genInitializerExprValue(assign.rhs, stmtCtx));
-      auto lhsCoorExv = genExprAddr(assign.lhs, stmtCtx);
-      builder->create<fir::StoreOp>(loc, rhs, fir::getBase(lhsCoorExv));
-      return;
-    }
     localSymbols.pushScope();
     createSomeArrayAssignment(*this, assign.lhs, assign.rhs, localSymbols,
                               stmtCtx);

@@ -2454,12 +2454,21 @@ public:
     TODO(getLoc(), "set length");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
+
   template <typename A>
   CC genarr(const Fortran::evaluate::Constant<A> &x) {
-    TODO(getLoc(), "array constructor");
-    return [](IterSpace iters) -> ExtValue {
-      return mlir::Value{}; /* FIXME */
-    };
+    // TODO: Constants get expanded out as inline array values. We want to
+    // reconsider that an outline array constants in expressions.
+    auto loc = getLoc();
+    LLVM_DEBUG(mlir::emitWarning(loc, "array constant should be outlined"));
+    auto exv = Fortran::lower::createSomeInitializerExpression(
+        loc, converter, toEvExpr(x), symMap, stmtCtx);
+    auto val = fir::getBase(exv);
+    mlir::Value mem = builder.create<fir::AllocMemOp>(loc, val.getType());
+    stmtCtx.attachCleanup([=]() { builder.create<fir::FreeMemOp>(loc, mem); });
+    builder.create<fir::StoreOp>(loc, val, mem);
+    auto lambda = genarr(fir::substBase(exv, mem));
+    return [=](IterSpace iters) { return lambda(iters); };
   }
 
   // A vector subscript expression may be wrapped with a cast to INTEGER*8.
@@ -2693,12 +2702,14 @@ public:
   }
   CC genarr(const Fortran::evaluate::NamedEntity &entity) {
     if (entity.IsSymbol())
-      return genarr(entity.GetFirstSymbol());
+      return genarr(Fortran::semantics::SymbolRef{entity.GetFirstSymbol()});
     return genarr(entity.GetComponent());
   }
   CC genarr(const Fortran::semantics::SymbolRef &sym) {
+    return genarr(asScalarRef(sym));
+  }
+  CC genarr(const ExtValue &extMemref) {
     auto loc = getLoc();
-    auto extMemref = asScalarRef(sym);
     auto memref = fir::getBase(extMemref);
     auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(memref.getType());
     assert(arrTy.isa<fir::SequenceType>());
@@ -2815,45 +2826,54 @@ public:
   /// Example: <code>array%baz%qux%waldo</code>
   CC genarr(const Fortran::evaluate::Component &x) {
     llvm::SmallVector<mlir::Value> components;
-    const auto &sym = x.GetFirstSymbol();
-    auto recTy = converter.genType(sym);
-    buildComponentsPath(components, recTy, x.base());
-    auto lambda = genPathSlice(sym, components);
+    auto pair = buildComponentsPath(components, x);
+    auto lambda = genPathSlice(pair.first, components);
     return [=](IterSpace iters) { return lambda(iters); };
   }
 
   /// The `Ev::Component` structure is tailmost down to head, so the expression
   /// <code>a%b%c</code> will be presented as <code>(component (dataref
   /// (component (dataref (symbol 'a)) (symbol 'b))) (symbol 'c))</code>.
-  void buildComponentsPath(llvm::SmallVectorImpl<mlir::Value> &components,
-                           mlir::Type &recTy,
-                           const Fortran::evaluate::DataRef &dr) {
-    std::visit(Fortran::common::visitors{
-                   [&](const Fortran::evaluate::Component &c) {
-                     buildComponentsPath(components, recTy, c.base());
-                     auto loc = getLoc();
-                     auto name = toStringRef(c.GetLastSymbol().name());
-                     auto eleTy = recTy.cast<fir::RecordType>().getType(name);
-                     auto fldTy =
-                         fir::FieldType::get(&converter.getMLIRContext());
-                     components.push_back(builder.create<fir::FieldIndexOp>(
-                         loc, fldTy, name, recTy,
-                         /*lenparams=*/mlir::ValueRange{}));
-                     recTy = eleTy;
-                   },
-                   [&](const Fortran::semantics::SymbolRef &y) {
-                     // base symbol to be sliced
-                     assert(dr.Rank() > 0);
-                   },
-                   [&](const Fortran::evaluate::ArrayRef &r) {
-                     // Must be scalar per C919 and C925
-                     TODO(getLoc(), "field name and array arguments");
-                   },
-                   [&](const Fortran::evaluate::CoarrayRef &r) {
-                     // Must be scalar per C919 and C925
-                     TODO(getLoc(), "field name and coarray arguments");
-                   }},
-               dr.u);
+  std::pair<ExtValue, mlir::Type>
+  buildComponentsPath(llvm::SmallVectorImpl<mlir::Value> &components,
+                      const Fortran::evaluate::Component &x) {
+    using RT = std::pair<ExtValue, mlir::Type>;
+    auto dr = x.base();
+    if (dr.Rank() == 0) {
+      auto exv = asScalarRef(x);
+      return RT{exv, fir::getBase(exv).getType()};
+    }
+    return std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::Component &c) {
+              auto [exv, refTy] = buildComponentsPath(components, c);
+              auto ty = fir::dyn_cast_ptrEleTy(refTy);
+              assert(ty.isa<fir::SequenceType>());
+              auto arrTy = ty.cast<fir::SequenceType>();
+              auto name = toStringRef(x.GetLastSymbol().name());
+              auto recTy = arrTy.getEleTy();
+              auto eleTy = recTy.cast<fir::RecordType>().getType(name);
+              auto fldTy = fir::FieldType::get(eleTy.getContext());
+              components.push_back(builder.create<fir::FieldIndexOp>(
+                  getLoc(), fldTy, name, recTy, fir::getTypeParams(exv)));
+              return RT{exv, builder.getRefType(fir::SequenceType::get(
+                                 arrTy.getShape(), eleTy))};
+            },
+            [&](const Fortran::semantics::SymbolRef &y) {
+              auto exv = asScalarRef(y);
+              return RT{exv, fir::getBase(exv).getType()};
+            },
+            [&](const Fortran::evaluate::ArrayRef &r) {
+              // Must be scalar per C919 and C925
+              auto exv = asScalarRef(r);
+              return RT{exv, fir::getBase(exv).getType()};
+            },
+            [&](const Fortran::evaluate::CoarrayRef &r) {
+              // Must be scalar per C919 and C925
+              auto exv = asScalarRef(r);
+              return RT{exv, fir::getBase(exv).getType()};
+            }},
+        dr.u);
   }
 
   /// Example: <code>array%RE</code>
