@@ -1188,3 +1188,23 @@ func @casted_extent_tensor(%arg : tensor<*xf32>) -> tensor<3xindex> {
   %1 = tensor.cast %0 : tensor<?xindex> to tensor<3xindex>
   return %1 : tensor<3xindex>
 }
+
+// ----
+
+// CHECK-LABEL: max_same_arg
+// CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape)
+func @max_same_arg(%a: !shape.shape) -> !shape.shape {
+  %1 = shape.max %a, %a : !shape.shape, !shape.shape -> !shape.shape
+  // CHECK: return %[[SHAPE]]
+  return %1 : !shape.shape
+}
+
+// ----
+
+// CHECK-LABEL: min_same_arg
+// CHECK-SAME: (%[[SHAPE:.*]]: !shape.shape)
+func @min_same_arg(%a: !shape.shape) -> !shape.shape {
+  %1 = shape.min %a, %a : !shape.shape, !shape.shape -> !shape.shape
+  // CHECK: return %[[SHAPE]]
+  return %1 : !shape.shape
+}
