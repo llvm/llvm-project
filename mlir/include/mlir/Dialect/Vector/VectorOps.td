@@ -1135,10 +1135,12 @@ def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      AttrSizedOperandSegments
     ]>,
     Arguments<(ins AnyShaped:$source, Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map, AnyType:$padding,
+               Optional<VectorOf<[I1]>>:$mask,
                OptionalAttr<BoolArrayAttr>:$in_bounds)>,
     Results<(outs AnyVector:$vector)> {
 
@@ -1167,13 +1169,19 @@ def Vector_TransferReadOp :
     return type.
 
     An SSA value `padding` of the same elemental type as the MemRef/Tensor is
-    provided to specify a fallback value in the case of out-of-bounds accesses.
+    provided to specify a fallback value in the case of out-of-bounds accesses
+    and/or masking.
+
+    An optional SSA value `mask` of the same shape as the vector type may be
+    specified to mask out elements. Such elements will be replaces with
+    `padding`. Elements whose corresponding mask element is `0` are masked out.
 
     An optional boolean array attribute is provided to specify which dimensions
     of the transfer are guaranteed to be within bounds. The absence of this
     `in_bounds` attribute signifies that any dimension of the transfer may be
     out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
-    all dimensions are specified to be within bounds.
+    all dimensions are specified to be within bounds and no `mask` was
+    specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1299,6 +1307,14 @@ def Vector_TransferReadOp :
     // 'getMinorIdentityMap' (resp. zero).
     OpBuilder<(ins "VectorType":$vector, "Value":$source,
       "ValueRange":$indices, CArg<"ArrayRef<bool>", "{}">:$inBounds)>,
+    // Builder that does not set mask.
+    OpBuilder<(ins "Type":$vector, "Value":$source,
+      "ValueRange":$indices, "AffineMapAttr":$permutationMap, "Value":$padding,
+      "ArrayAttr":$inBounds)>,
+    // Builder that does not set mask.
+    OpBuilder<(ins "Type":$vector, "Value":$source,
+      "ValueRange":$indices, "AffineMap":$permutationMap, "Value":$padding,
+      "ArrayAttr":$inBounds)>
   ];
 
   let hasFolder = 1;
@@ -1308,11 +1324,13 @@ def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
-      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      AttrSizedOperandSegments
   ]>,
     Arguments<(ins AnyVector:$vector, AnyShaped:$source,
                Variadic<Index>:$indices,
                AffineMapAttr:$permutation_map,
+               Optional<VectorOf<[I1]>>:$mask,
                OptionalAttr<BoolArrayAttr>:$in_bounds)>,
     Results<(outs Optional<AnyRankedTensor>:$result)> {
 
@@ -1341,11 +1359,16 @@ def Vector_TransferWriteOp :
 
     The size of the slice is specified by the size of the vector.
 
+    An optional SSA value `mask` of the same shape as the vector type may be
+    specified to mask out elements. Elements whose corresponding mask element
+    is `0` are masked out.
+
     An optional boolean array attribute is provided to specify which dimensions
     of the transfer are guaranteed to be within bounds. The absence of this
     `in_bounds` attribute signifies that any dimension of the transfer may be
     out-of-bounds. A `vector.transfer_write` can be lowered to a simple store
-    if all dimensions are specified to be within bounds.
+    if all dimensions are specified to be within bounds and no `mask` was
+    specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
@@ -1391,6 +1414,8 @@ def Vector_TransferWriteOp :
       "AffineMap":$permutationMap)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       "AffineMapAttr":$permutationMap, "ArrayAttr":$inBounds)>,
+    OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
+      "AffineMap":$permutationMap, "Value":$mask, "ArrayAttr":$inBounds)>,
     OpBuilder<(ins "Value":$vector, "Value":$source, "ValueRange":$indices,
       "AffineMap":$permutationMap, "ArrayAttr":$inBounds)>,
   ];
