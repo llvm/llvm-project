@@ -194,6 +194,11 @@ public:
   /// Instrument the parse to get a more verbose log
   unsigned instrumentedParse_ : 1;
 
+  /// Enable Provenance to character-stream mapping. Allows e.g. IDEs to find
+  /// symbols based on source-code location. This is not needed in regular
+  /// compilation.
+  unsigned needProvenanceRangeToCharBlockMappings_ : 1;
+
   /// The input files and their types.
   std::vector<FrontendInputFile> inputs_;
 
@@ -217,7 +222,9 @@ public:
   Fortran::parser::Encoding encoding_{Fortran::parser::Encoding::UTF_8};
 
 public:
-  FrontendOptions() : showHelp_(false), showVersion_(false) {}
+  FrontendOptions()
+      : showHelp_(false), showVersion_(false), instrumentedParse_(false),
+        needProvenanceRangeToCharBlockMappings_(false) {}
 
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.
