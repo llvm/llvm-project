@@ -2242,6 +2242,23 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     auto CC = cast<CondCodeSDNode>(CondV.getOperand(2));
     ISD::CondCode CCVal = CC->get();
 
+    // Special case for a select of 2 constants that have a diffence of 1.
+    // Normally this is done by DAGCombine, but if the select is introduced by
+    // type legalization or op legalization, we miss it. Restricting to SETLT
+    // case for now because that is what signed saturating add/sub need.
+    // FIXME: We don't need the condition to be SETLT or even a SETCC,
+    // but we would probably want to swap the true/false values if the condition
+    // is SETGE/SETLE to avoid an XORI.
+    if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
+        CCVal == ISD::SETLT) {
+      const APInt &TrueVal = cast<ConstantSDNode>(TrueV)->getAPIntValue();
+      const APInt &FalseVal = cast<ConstantSDNode>(FalseV)->getAPIntValue();
+      if (TrueVal - 1 == FalseVal)
+        return DAG.getNode(ISD::ADD, DL, Op.getValueType(), CondV, FalseV);
+      if (TrueVal + 1 == FalseVal)
+        return DAG.getNode(ISD::SUB, DL, Op.getValueType(), FalseV, CondV);
+    }
+
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
     SDValue TargetCC = DAG.getConstant(CCVal, DL, XLenVT);
