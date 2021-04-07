@@ -51,7 +51,7 @@ public:
   void scanSymbols();
   template <class LP> void createOutputSections();
   template <class LP> void createLoadCommands();
-  void finalizeAddressses();
+  void finalizeAddresses();
   void finalizeLinkEditSegment();
   void assignAddresses(OutputSegment *);
 
@@ -852,7 +852,7 @@ template <class LP> void Writer::createOutputSections() {
   linkEditSegment = getOrCreateOutputSegment(segment_names::linkEdit);
 }
 
-void Writer::finalizeAddressses() {
+void Writer::finalizeAddresses() {
   TimeTraceScope timeScope("Finalize addresses");
   // Ensure that segments (and the sections they contain) are allocated
   // addresses in ascending order, which dyld requires.
@@ -870,16 +870,14 @@ void Writer::finalizeAddressses() {
 void Writer::finalizeLinkEditSegment() {
   TimeTraceScope timeScope("Finalize __LINKEDIT segment");
   // Fill __LINKEDIT contents.
-  in.rebase->finalizeContents();
-  in.binding->finalizeContents();
-  in.weakBinding->finalizeContents();
-  in.lazyBinding->finalizeContents();
-  in.exports->finalizeContents();
-  symtabSection->finalizeContents();
-  indirectSymtabSection->finalizeContents();
-
-  if (functionStartsSection)
-    functionStartsSection->finalizeContents();
+  std::vector<LinkEditSection *> linkEditSections{
+      in.rebase,  in.binding,    in.weakBinding,        in.lazyBinding,
+      in.exports, symtabSection, indirectSymtabSection, functionStartsSection,
+  };
+  parallelForEach(linkEditSections, [](LinkEditSection *osec) {
+    if (osec)
+      osec->finalizeContents();
+  });
 
   // Now that __LINKEDIT is filled out, do a proper calculation of its
   // addresses and offsets.
@@ -972,7 +970,7 @@ template <class LP> void Writer::run() {
   // No more sections nor segments are created beyond this point.
   sortSegmentsAndSections();
   createLoadCommands<LP>();
-  finalizeAddressses();
+  finalizeAddresses();
   finalizeLinkEditSegment();
   writeMapFile();
   writeOutputFile();
