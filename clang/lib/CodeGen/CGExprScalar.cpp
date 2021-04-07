@@ -348,6 +348,9 @@ public:
           EmitImplicitIntegerSignChangeChecks(
               SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
   };
+  Value *EmitScalarCast(Value *Src, QualType SrcType, QualType DstType,
+                        llvm::Type *SrcTy, llvm::Type *DstTy,
+                        ScalarConversionOpts Opts);
   Value *
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
                        SourceLocation Loc,
@@ -1191,6 +1194,35 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
                 {Src, Dst});
 }
 
+Value *ScalarExprEmitter::EmitScalarCast(Value *Src, QualType SrcType,
+                                         QualType DstType, llvm::Type *SrcTy,
+                                         llvm::Type *DstTy,
+                                         ScalarConversionOpts Opts) {
+  if (isa<llvm::IntegerType>(SrcTy)) {
+    bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
+    if (SrcType->isBooleanType() && Opts.TreatBooleanAsSigned) {
+      InputSigned = true;
+    }
+
+    if (isa<llvm::IntegerType>(DstTy))
+      return Builder.CreateIntCast(Src, DstTy, InputSigned, "conv");
+    if (InputSigned)
+      return Builder.CreateSIToFP(Src, DstTy, "conv");
+    return Builder.CreateUIToFP(Src, DstTy, "conv");
+  }
+
+  if (isa<llvm::IntegerType>(DstTy)) {
+    assert(SrcTy->isFloatingPointTy() && "Unknown real conversion");
+    if (DstType->isSignedIntegerOrEnumerationType())
+      return Builder.CreateFPToSI(Src, DstTy, "conv");
+    return Builder.CreateFPToUI(Src, DstTy, "conv");
+  }
+
+  if (DstTy->getTypeID() < SrcTy->getTypeID())
+    return Builder.CreateFPTrunc(Src, DstTy, "conv");
+  return Builder.CreateFPExt(Src, DstTy, "conv");
+}
+
 /// Emit a conversion from the specified type to the specified destination type,
 /// both of which are LLVM scalar types.
 Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
@@ -1384,31 +1416,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     DstTy = CGF.FloatTy;
   }
 
-  if (isa<llvm::IntegerType>(SrcTy)) {
-    bool InputSigned = SrcType->isSignedIntegerOrEnumerationType();
-    if (SrcType->isBooleanType() && Opts.TreatBooleanAsSigned) {
-      InputSigned = true;
-    }
-    if (isa<llvm::IntegerType>(DstTy))
-      Res = Builder.CreateIntCast(Src, DstTy, InputSigned, "conv");
-    else if (InputSigned)
-      Res = Builder.CreateSIToFP(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateUIToFP(Src, DstTy, "conv");
-  } else if (isa<llvm::IntegerType>(DstTy)) {
-    assert(SrcTy->isFloatingPointTy() && "Unknown real conversion");
-    if (DstType->isSignedIntegerOrEnumerationType())
-      Res = Builder.CreateFPToSI(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateFPToUI(Src, DstTy, "conv");
-  } else {
-    assert(SrcTy->isFloatingPointTy() && DstTy->isFloatingPointTy() &&
-           "Unknown real conversion");
-    if (DstTy->getTypeID() < SrcTy->getTypeID())
-      Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
-    else
-      Res = Builder.CreateFPExt(Src, DstTy, "conv");
-  }
+  Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
   if (DstTy != ResTy) {
     if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
