@@ -38,20 +38,18 @@ define i32 @bzhi32_load(i32* %x, i32 %y)   {
   ret i32 %tmp
 }
 
-; FIXME: PR48768 - 'bzhi' clears the overflow flag, so we don't need a separate 'test'.
+; PR48768 - 'bzhi' clears the overflow flag, so we don't need a separate 'test'.
 define i1 @bzhi32_overflow(i32 %x, i32 %y) {
 ; X86-LABEL: bzhi32_overflow:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bzhil %eax, {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setle %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: bzhi32_overflow:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bzhil %esi, %edi, %eax
-; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setle %al
 ; X64-NEXT:    retq
   %tmp = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %x, i32 %y)
