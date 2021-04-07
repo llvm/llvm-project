@@ -7495,6 +7495,9 @@ static bool tryToVectorizeHorReductionOrInstOperands(
   // horizontal reduction.
   // Interrupt the process if the Root instruction itself was vectorized or all
   // sub-trees not higher that RecursionMaxDepth were analyzed/vectorized.
+  // Skip the analysis of CmpInsts.Compiler implements postanalysis of the
+  // CmpInsts so we can skip extra attempts in
+  // tryToVectorizeHorReductionOrInstOperands and save compile time.
   SmallVector<std::pair<Instruction *, unsigned>, 8> Stack(1, {Root, 0});
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
@@ -7531,7 +7534,8 @@ static bool tryToVectorizeHorReductionOrInstOperands(
     // Set P to nullptr to avoid re-analysis of phi node in
     // matchAssociativeReduction function unless this is the root node.
     P = nullptr;
-    if (Vectorize(Inst, R)) {
+    // Do not try to vectorize CmpInst operands, this is done separately.
+    if (!isa<CmpInst>(Inst) && Vectorize(Inst, R)) {
       Res = true;
       continue;
     }
@@ -7543,7 +7547,10 @@ static bool tryToVectorizeHorReductionOrInstOperands(
       for (auto *Op : Inst->operand_values())
         if (VisitedInstrs.insert(Op).second)
           if (auto *I = dyn_cast<Instruction>(Op))
-            if (!isa<PHINode>(I) && !R.isDeleted(I) && I->getParent() == BB)
+            // Do not try to vectorize CmpInst operands,  this is done
+            // separately.
+            if (!isa<PHINode>(I) && !isa<CmpInst>(I) && !R.isDeleted(I) &&
+                I->getParent() == BB)
               Stack.emplace_back(I, Level);
   }
   return Res;
