@@ -94,6 +94,9 @@ static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
 
   if (opts.programAction_ == DebugDumpParsingLog)
     opts.instrumentedParse_ = true;
+
+  if (opts.programAction_ == DebugDumpProvenance)
+    opts.needProvenanceRangeToCharBlockMappings_ = true;
 }
 
 static InputKind ParseFrontendArgs(FrontendOptions &opts,
@@ -583,6 +586,9 @@ void CompilerInvocation::setFortranOpts() {
 
   if (frontendOptions.instrumentedParse_)
     fortranOptions.instrumentedParse = true;
+
+  if (frontendOptions.needProvenanceRangeToCharBlockMappings_)
+    fortranOptions.needProvenanceRangeToCharBlockMappings = true;
 
   if (enableConformanceChecks()) {
     fortranOptions.features.WarnOnAllNonstandard();
