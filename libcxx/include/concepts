@@ -67,9 +67,9 @@ namespace std {
   template<class T, class... Args>
     concept constructible_from = see below;
 
-  // [concept.defaultconstructible], concept default_constructible
+  // [concept.default.init], concept default_initializable
   template<class T>
-    concept default_constructible = see below;
+    concept default_initializable = see below;
 
   // [concept.moveconstructible], concept move_constructible
   template<class T>
@@ -78,11 +78,6 @@ namespace std {
   // [concept.copyconstructible], concept copy_constructible
   template<class T>
     concept copy_constructible = see below;
-
-  // [concepts.compare], comparison concepts
-  // [concept.boolean], concept boolean
-  template<class B>
-    concept boolean = see below;
 
   // [concept.equalitycomparable], concept equality_comparable
   template<class T>

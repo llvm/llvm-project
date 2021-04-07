@@ -2654,13 +2654,15 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     auto *One = ConstantInt::getTrue(SelType);
     auto *Zero = ConstantInt::getFalse(SelType);
 
+    // We match the "full" 0 or 1 constant here to avoid a potential infinite
+    // loop with vectors that may have undefined/poison elements.
     // select a, false, b -> select !a, b, false
-    if (match(TrueVal, m_Zero())) {
+    if (match(TrueVal, m_Specific(Zero))) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return SelectInst::Create(NotCond, FalseVal, Zero);
     }
     // select a, b, true -> select !a, true, b
-    if (match(FalseVal, m_One())) {
+    if (match(FalseVal, m_Specific(One))) {
       Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
       return SelectInst::Create(NotCond, One, TrueVal);
     }

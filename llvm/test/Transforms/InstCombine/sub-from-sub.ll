@@ -202,3 +202,14 @@ define i32 @constantexpr2(i32 %x, i8* %y) unnamed_addr {
   %r = sub i32 ptrtoint (i8* @g1 to i32), %i0
   ret i32 %r
 }
+
+define i64 @pr49870(i64 %x) {
+; CHECK-LABEL: @pr49870(
+; CHECK-NEXT:    [[I0:%.*]] = xor i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = add i64 [[I0]], ptrtoint (i8* @g0 to i64)
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %i0 = xor i64 %x, -1
+  %r = add i64 %i0, ptrtoint (i8* @g0 to i64)
+  ret i64 %r
+}

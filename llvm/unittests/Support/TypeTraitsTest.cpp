@@ -110,7 +110,7 @@ TEST(Triviality, ADT) {
   TrivialityTester<llvm::SmallString<8>, false, false>();
 
   TrivialityTester<std::function<int()>, false, false>();
-#if !defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
+#if !defined(__FreeBSD__)
   TrivialityTester<std::pair<int, bool>, true, true>();
 #endif
   TrivialityTester<llvm::unique_function<int()>, false, false>();

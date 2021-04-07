@@ -837,11 +837,19 @@ static void genReductionEnd(Merger &merger, CodeGen &codegen,
   assert(codegen.curVecLength == 1);
   codegen.redVal = merger.exp(codegen.redExp).val = Value(); // end chain
   unsigned lhs = op.getNumShapedOperands() - 1;
-  if (red.getType().isa<VectorType>()) {
+  if (auto vtp = red.getType().dyn_cast<VectorType>()) {
     // TODO: assumes + reductions for now
+    StringAttr kind = rewriter.getStringAttr("add");
     Value ld = genTensorLoad(merger, codegen, rewriter, op, codegen.redExp);
-    red = rewriter.create<vector::ReductionOp>(
-        op.getLoc(), ld.getType(), rewriter.getStringAttr("add"), red, ld);
+    // Integer reductions don't accept an accumulator.
+    if (vtp.getElementType().isa<IntegerType>()) {
+      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
+                                                 kind, red, ValueRange{});
+      red = rewriter.create<AddIOp>(op.getLoc(), red, ld);
+    } else {
+      red = rewriter.create<vector::ReductionOp>(op.getLoc(), ld.getType(),
+                                                 kind, red, ld);
+    }
   }
   genTensorStore(merger, codegen, rewriter, op, lhs, red);
 }
