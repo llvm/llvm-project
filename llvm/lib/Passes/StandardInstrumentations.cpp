@@ -41,7 +41,7 @@ cl::opt<bool> PreservedCFGCheckerInstrumentation::VerifyPreservedCFG(
 #ifdef NDEBUG
     cl::init(false));
 #else
-    cl::init(false));
+    cl::init(true));
 #endif
 
 // FIXME: Change `-debug-pass-manager` from boolean to enum type. Similar to

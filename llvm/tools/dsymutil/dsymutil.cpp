@@ -200,11 +200,13 @@ static Expected<AccelTableKind> getAccelTableKind(opt::InputArgList &Args) {
       return AccelTableKind::Apple;
     if (S == "Dwarf")
       return AccelTableKind::Dwarf;
+    if (S == "Pub")
+      return AccelTableKind::Pub;
     if (S == "Default")
       return AccelTableKind::Default;
     return make_error<StringError>(
         "invalid accelerator type specified: '" + S +
-            "'. Support values are 'Apple', 'Dwarf' and 'Default'.",
+            "'. Support values are 'Apple', 'Dwarf', 'Pub' and 'Default'.",
         inconvertibleErrorCode());
   }
   return AccelTableKind::Default;
@@ -222,7 +224,6 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   Options.PaperTrailWarnings = Args.hasArg(OPT_papertrail);
   Options.Verify = Args.hasArg(OPT_verify);
 
-  Options.LinkOpts.Minimize = Args.hasArg(OPT_minimize);
   Options.LinkOpts.NoODR = Args.hasArg(OPT_no_odr);
   Options.LinkOpts.NoOutput = Args.hasArg(OPT_no_output);
   Options.LinkOpts.NoTimestamp = Args.hasArg(OPT_no_swiftmodule_timestamp);
