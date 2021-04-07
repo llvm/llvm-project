@@ -441,6 +441,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
 
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+
       // Expand all extending loads to types larger than this, and truncating
       // stores from types larger than this.
       for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
@@ -621,6 +625,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(ISD::BITCAST, VT, Custom);
 
+        setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+        setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
+
         // Operations below are different for between masks and other vectors.
         if (VT.getVectorElementType() == MVT::i1) {
           setOperationAction(ISD::AND, VT, Custom);
@@ -673,9 +681,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // Custom-lower reduction operations to set up the corresponding custom
         // nodes' operands.
         setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-        setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
         setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
         setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
         setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -1893,9 +1898,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_SMAX:
   case ISD::VECREDUCE_UMIN:
   case ISD::VECREDUCE_SMIN:
+    return lowerVECREDUCE(Op, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:
+    if (Op.getOperand(0).getValueType().getVectorElementType() == MVT::i1)
+      return lowerVectorMaskVECREDUCE(Op, DAG);
     return lowerVECREDUCE(Op, DAG);
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_SEQ_FADD:
@@ -3071,6 +3079,52 @@ static unsigned getRVVReductionOp(unsigned ISDOpcode) {
     return RISCVISD::VECREDUCE_OR_VL;
   case ISD::VECREDUCE_XOR:
     return RISCVISD::VECREDUCE_XOR_VL;
+  }
+}
+
+SDValue RISCVTargetLowering::lowerVectorMaskVECREDUCE(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Vec = Op.getOperand(0);
+  MVT VecVT = Vec.getSimpleValueType();
+  assert((Op.getOpcode() == ISD::VECREDUCE_AND ||
+          Op.getOpcode() == ISD::VECREDUCE_OR ||
+          Op.getOpcode() == ISD::VECREDUCE_XOR) &&
+         "Unexpected reduction lowering");
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  assert(Op.getValueType() == XLenVT &&
+         "Expected reduction output to be legalized to XLenVT");
+
+  MVT ContainerVT = VecVT;
+  if (VecVT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VecVT);
+    Vec = convertToScalableVector(ContainerVT, Vec, DAG, Subtarget);
+  }
+
+  SDValue Mask, VL;
+  std::tie(Mask, VL) = getDefaultVLOps(VecVT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Unhandled reduction");
+  case ISD::VECREDUCE_AND:
+    // vpopc ~x == 0
+    Vec = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Vec, Mask, VL);
+    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    return DAG.getSetCC(DL, XLenVT, Vec, Zero, ISD::SETEQ);
+  case ISD::VECREDUCE_OR:
+    // vpopc x != 0
+    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    return DAG.getSetCC(DL, XLenVT, Vec, Zero, ISD::SETNE);
+  case ISD::VECREDUCE_XOR: {
+    // ((vpopc x) & 1) != 0
+    SDValue One = DAG.getConstant(1, DL, XLenVT);
+    Vec = DAG.getNode(RISCVISD::VPOPC_VL, DL, XLenVT, Vec, Mask, VL);
+    Vec = DAG.getNode(ISD::AND, DL, XLenVT, Vec, One);
+    return DAG.getSetCC(DL, XLenVT, Vec, Zero, ISD::SETNE);
+  }
   }
 }
 
@@ -7119,6 +7173,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VRGATHEREI16_VV_VL)
   NODE_NAME_CASE(VSEXT_VL)
   NODE_NAME_CASE(VZEXT_VL)
+  NODE_NAME_CASE(VPOPC_VL)
   NODE_NAME_CASE(VLE_VL)
   NODE_NAME_CASE(VSE_VL)
   NODE_NAME_CASE(READ_CSR)
