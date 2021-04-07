@@ -11,7 +11,7 @@
 
 ; RUN: sed -e "s,SRC_COMPDIR,./Inputs,g" %p/Inputs/source-interleave.ll > %t-relative-path.ll
 ; RUN: llc -o %t-relative-path.o -filetype=obj -mtriple=x86_64-pc-linux %t-relative-path.ll
-; RUN: llvm-objdump --prefix myprefix --source %t-relative-path.o 2>&1 | \
+; RUN: mkdir -p %t0 && cd %t0 && llvm-objdump --prefix myprefix --source %t-relative-path.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BROKEN-PREFIX -DFILE=%t-relative-path.o -DPREFIX=. -DCOMPDIR=/Inputs
 ; CHECK-BROKEN-PREFIX: warning: '[[FILE]]': failed to find source [[PREFIX]][[COMPDIR]]{{[/\\]}}source-interleave-x86_64.c
 

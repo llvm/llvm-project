@@ -1252,12 +1252,21 @@ unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
   return PLoc.getColumn();
 }
 
-#ifdef __SSE2__
-#include <emmintrin.h>
-#endif
+// Check if mutli-byte word x has bytes between m and n, included. This may also
+// catch bytes equal to n + 1.
+// The returned value holds a 0x80 at each byte position that holds a match.
+// see http://graphics.stanford.edu/~seander/bithacks.html#HasBetweenInWord
+template <class T>
+static constexpr inline T likelyhasbetween(T x, unsigned char m,
+                                           unsigned char n) {
+  return ((x - ~0UL / 255 * (n + 1)) & ~x &
+          (x & ~0UL / 255 * 127) + ~0UL / 255 * (127 - (m - 1))) &
+         ~0UL / 255 * 128;
+}
 
 LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
                                          llvm::BumpPtrAllocator &Alloc) {
+
   // Find the file offsets of all of the *physical* source lines.  This does
   // not look at trigraphs, escaped newlines, or anything else tricky.
   SmallVector<unsigned, 256> LineOffsets;
@@ -1268,18 +1277,51 @@ LineOffsetMapping LineOffsetMapping::get(llvm::MemoryBufferRef Buffer,
   const unsigned char *Buf = (const unsigned char *)Buffer.getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer.getBufferEnd();
   const std::size_t BufLen = End - Buf;
+
   unsigned I = 0;
-  while (I < BufLen) {
-    // Use a fast check to catch both newlines
-    if (LLVM_UNLIKELY(Buf[I] <= std::max('\n', '\r'))) {
-      if (Buf[I] == '\n') {
-        LineOffsets.push_back(I + 1);
-      } else if (Buf[I] == '\r') {
-        // If this is \r\n, skip both characters.
-        if (I + 1 < BufLen && Buf[I + 1] == '\n')
-          ++I;
-        LineOffsets.push_back(I + 1);
+  uint64_t Word;
+
+  // scan sizeof(Word) bytes at a time for new lines.
+  // This is much faster than scanning each byte independently.
+  if (BufLen > sizeof(Word)) {
+    do {
+      memcpy(&Word, Buf + I, sizeof(Word));
+      // no new line => jump over sizeof(Word) bytes.
+      auto Mask = likelyhasbetween(Word, '\n', '\r');
+      if (!Mask) {
+        I += sizeof(Word);
+        continue;
       }
+
+      // At that point, Mask contains 0x80 set at each byte that holds a value
+      // in [\n, \r + 1 [
+
+      // Scan for the next newline - it's very likely there's one.
+      unsigned N =
+          llvm::countTrailingZeros(Mask) - 7; // -7 because 0x80 is the marker
+      Word >>= N;
+      I += N / 8 + 1;
+      unsigned char Byte = Word;
+      if (Byte == '\n') {
+        LineOffsets.push_back(I);
+      } else if (Byte == '\r') {
+        // If this is \r\n, skip both characters.
+        if (Buf[I] == '\n')
+          ++I;
+        LineOffsets.push_back(I);
+      }
+    } while (I < BufLen - sizeof(Word) - 1);
+  }
+
+  // Handle tail using a regular check.
+  while (I < BufLen) {
+    if (Buf[I] == '\n') {
+      LineOffsets.push_back(I + 1);
+    } else if (Buf[I] == '\r') {
+      // If this is \r\n, skip both characters.
+      if (I + 1 < BufLen && Buf[I + 1] == '\n')
+        ++I;
+      LineOffsets.push_back(I + 1);
     }
     ++I;
   }
