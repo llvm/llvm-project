@@ -131,6 +131,20 @@ which provides the desired output:
    (C) c = {0x03 0x00 0x00 0x00}
    (D) d = 4
 
+Note, that qualifiers such as const and volatile will be stripped when matching types for example:
+
+::
+
+   (lldb) frame var x y z
+   (int) x = 1
+   (const int) y = 2
+   (volatile int) z = 4
+   (lldb) type format add -f hex int
+   (lldb) frame var x y z
+   (int) x = 0x00000001
+   (const int) y = 0x00000002
+   (volatile int) z = 0x00000004
+
 Two additional options that you will want to look at are --skip-pointers (-p)
 and --skip-references (-r). These two options prevent LLDB from applying a
 format for type T to values of type T* and T& respectively.
