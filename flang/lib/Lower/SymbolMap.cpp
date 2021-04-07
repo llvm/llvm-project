@@ -12,6 +12,9 @@
 
 #include "SymbolMap.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "flang-lower-symbol-map"
 
 mlir::Value fir::getBase(const fir::ExtendedValue &exv) {
   return exv.match([](const fir::UnboxedValue &x) { return x; },
@@ -48,8 +51,9 @@ llvm::ArrayRef<mlir::Value> fir::getTypeParams(const ExtendedValue &exv) {
   // FIXME: We should be keeping track of the type parameters for a particular
   // variable binding, but that seems to have been erased.
   auto *ctx = fir::getBase(exv).getContext();
-  mlir::emitWarning(mlir::UnknownLoc::get(ctx),
-                    "TODO: extended value is missing type parameters");
+  LLVM_DEBUG(
+      mlir::emitWarning(mlir::UnknownLoc::get(ctx),
+                        "TODO: extended value is missing type parameters"));
   return llvm::None;
 }
 
