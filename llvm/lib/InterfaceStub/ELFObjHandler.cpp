@@ -7,7 +7,7 @@
 //===-----------------------------------------------------------------------===/
 
 #include "llvm/InterfaceStub/ELFObjHandler.h"
-#include "llvm/InterfaceStub/ELFStub.h"
+#include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -180,7 +180,7 @@ public:
   ELFStubBuilder(const ELFStubBuilder &) = delete;
   ELFStubBuilder(ELFStubBuilder &&) = default;
 
-  explicit ELFStubBuilder(const ELFStub &Stub) {
+  explicit ELFStubBuilder(const IFSStub &Stub) {
     DynSym.Name = ".dynsym";
     DynSym.Align = sizeof(Elf_Addr);
     DynStr.Name = ".dynstr";
@@ -191,7 +191,7 @@ public:
     ShStrTab.Align = 1;
 
     // Populate string tables.
-    for (const ELFSymbol &Sym : Stub.Symbols)
+    for (const IFSSymbol &Sym : Stub.Symbols)
       DynStr.Content.add(Sym.Name);
     for (const std::string &Lib : Stub.NeededLibs)
       DynStr.Content.add(Lib);
@@ -213,14 +213,14 @@ public:
     DynStr.Size = DynStr.Content.getSize();
 
     // Populate dynamic symbol table.
-    for (const ELFSymbol &Sym : Stub.Symbols) {
+    for (const IFSSymbol &Sym : Stub.Symbols) {
       uint8_t Bind = Sym.Weak ? STB_WEAK : STB_GLOBAL;
       // For non-undefined symbols, value of the shndx is not relevant at link
       // time as long as it is not SHN_UNDEF. Set shndx to 1, which
       // points to ".dynsym".
       uint16_t Shndx = Sym.Undefined ? SHN_UNDEF : 1;
       DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Sym.Size, Bind,
-                         (uint8_t)Sym.Type, 0, Shndx);
+                         convertIFSSymbolTypeToELF(Sym.Type), 0, Shndx);
     }
     DynSym.Size = DynSym.Content.getSize();
 
@@ -444,37 +444,15 @@ static Error populateDynamic(DynamicEntries &Dyn,
   return Error::success();
 }
 
-/// This function extracts symbol type from a symbol's st_info member and
-/// maps it to an ELFSymbolType enum.
-/// Currently, STT_NOTYPE, STT_OBJECT, STT_FUNC, and STT_TLS are supported.
-/// Other symbol types are mapped to ELFSymbolType::Unknown.
-///
-/// @param Info Binary symbol st_info to extract symbol type from.
-static ELFSymbolType convertInfoToType(uint8_t Info) {
-  Info = Info & 0xf;
-  switch (Info) {
-  case ELF::STT_NOTYPE:
-    return ELFSymbolType::NoType;
-  case ELF::STT_OBJECT:
-    return ELFSymbolType::Object;
-  case ELF::STT_FUNC:
-    return ELFSymbolType::Func;
-  case ELF::STT_TLS:
-    return ELFSymbolType::TLS;
-  default:
-    return ELFSymbolType::Unknown;
-  }
-}
-
-/// This function creates an ELFSymbol and populates all members using
+/// This function creates an IFSSymbol and populates all members using
 /// information from a binary ELFT::Sym.
 ///
-/// @param SymName The desired name of the ELFSymbol.
+/// @param SymName The desired name of the IFSSymbol.
 /// @param RawSym ELFT::Sym to extract symbol information from.
 template <class ELFT>
-static ELFSymbol createELFSym(StringRef SymName,
+static IFSSymbol createELFSym(StringRef SymName,
                               const typename ELFT::Sym &RawSym) {
-  ELFSymbol TargetSym{std::string(SymName)};
+  IFSSymbol TargetSym{std::string(SymName)};
   uint8_t Binding = RawSym.getBinding();
   if (Binding == STB_WEAK)
     TargetSym.Weak = true;
@@ -482,9 +460,9 @@ static ELFSymbol createELFSym(StringRef SymName,
     TargetSym.Weak = false;
 
   TargetSym.Undefined = RawSym.isUndefined();
-  TargetSym.Type = convertInfoToType(RawSym.st_info);
+  TargetSym.Type = convertELFSymbolTypeToIFS(RawSym.st_info);
 
-  if (TargetSym.Type == ELFSymbolType::Func) {
+  if (TargetSym.Type == IFSSymbolType::Func) {
     TargetSym.Size = 0;
   } else {
     TargetSym.Size = RawSym.st_size;
@@ -492,14 +470,14 @@ static ELFSymbol createELFSym(StringRef SymName,
   return TargetSym;
 }
 
-/// This function populates an ELFStub with symbols using information read
+/// This function populates an IFSStub with symbols using information read
 /// from an ELF binary.
 ///
-/// @param TargetStub ELFStub to add symbols to.
+/// @param TargetStub IFSStub to add symbols to.
 /// @param DynSym Range of dynamic symbols to add to TargetStub.
 /// @param DynStr StringRef to the dynamic string table.
 template <class ELFT>
-static Error populateSymbols(ELFStub &TargetStub,
+static Error populateSymbols(IFSStub &TargetStub,
                              const typename ELFT::SymRange DynSym,
                              StringRef DynStr) {
   // Skips the first symbol since it's the NULL symbol.
@@ -512,28 +490,28 @@ static Error populateSymbols(ELFStub &TargetStub,
     uint8_t Visibility = RawSym.getVisibility();
     if (!(Visibility == STV_DEFAULT || Visibility == STV_PROTECTED))
       continue;
-    // Create an ELFSymbol and populate it with information from the symbol
+    // Create an IFSSymbol and populate it with information from the symbol
     // table entry.
     Expected<StringRef> SymName = terminatedSubstr(DynStr, RawSym.st_name);
     if (!SymName)
       return SymName.takeError();
-    ELFSymbol Sym = createELFSym<ELFT>(*SymName, RawSym);
+    IFSSymbol Sym = createELFSym<ELFT>(*SymName, RawSym);
     TargetStub.Symbols.push_back(std::move(Sym));
     // TODO: Populate symbol warning.
   }
   return Error::success();
 }
 
-/// Returns a new ELFStub with all members populated from an ELFObjectFile.
+/// Returns a new IFSStub with all members populated from an ELFObjectFile.
 /// @param ElfObj Source ELFObjectFile.
 template <class ELFT>
-static Expected<std::unique_ptr<ELFStub>>
+static Expected<std::unique_ptr<IFSStub>>
 buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   using Elf_Dyn_Range = typename ELFT::DynRange;
   using Elf_Phdr_Range = typename ELFT::PhdrRange;
   using Elf_Sym_Range = typename ELFT::SymRange;
   using Elf_Sym = typename ELFT::Sym;
-  std::unique_ptr<ELFStub> DestStub = std::make_unique<ELFStub>();
+  std::unique_ptr<IFSStub> DestStub = std::make_unique<IFSStub>();
   const ELFFile<ELFT> &ElfFile = ElfObj.getELFFile();
   // Fetch .dynamic table.
   Expected<Elf_Dyn_Range> DynTable = ElfFile.dynamicEntries();
@@ -562,11 +540,11 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
                    DynEnt.StrSize);
 
   // Populate Arch from ELF header.
-  DestStub->Target.Arch = static_cast<ELFArch>(ElfFile.getHeader().e_machine);
+  DestStub->Target.Arch = static_cast<IFSArch>(ElfFile.getHeader().e_machine);
   DestStub->Target.BitWidth =
-      (ELFBitWidthType)ElfFile.getHeader().e_ident[EI_CLASS];
+      convertELFBitWidthToIFS(ElfFile.getHeader().e_ident[EI_CLASS]);
   DestStub->Target.Endianness =
-      (ELFEndiannessType)ElfFile.getHeader().e_ident[EI_DATA];
+      convertELFEndiannessToIFS(ElfFile.getHeader().e_ident[EI_DATA]);
   DestStub->Target.ObjectFormat = "ELF";
 
   // Populate SoName from .dynamic entries and dynamic string table.
@@ -615,9 +593,9 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
 /// the file.
 ///
 /// @param FilePath File path for writing the ELF binary.
-/// @param Stub Source ELFStub to generate a binary ELF stub from.
+/// @param Stub Source InterFace Stub to generate a binary ELF stub from.
 template <class ELFT>
-static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub,
+static Error writeELFBinaryToFile(StringRef FilePath, const IFSStub &Stub,
                                   bool WriteIfChanged) {
   ELFStubBuilder<ELFT> Builder{Stub};
   // Write Stub to memory first.
@@ -651,7 +629,7 @@ static Error writeELFBinaryToFile(StringRef FilePath, const ELFStub &Stub,
   return FileBuf->commit();
 }
 
-Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
+Expected<std::unique_ptr<IFSStub>> readELFFile(MemoryBufferRef Buf) {
   Expected<std::unique_ptr<Binary>> BinOrErr = createBinary(Buf);
   if (!BinOrErr) {
     return BinOrErr.takeError();
@@ -672,19 +650,19 @@ Expected<std::unique_ptr<ELFStub>> readELFFile(MemoryBufferRef Buf) {
 
 // This function wraps the ELFT writeELFBinaryToFile() so writeBinaryStub()
 // can be called without having to use ELFType templates directly.
-Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
+Error writeBinaryStub(StringRef FilePath, const IFSStub &Stub,
                       bool WriteIfChanged) {
   assert(Stub.Target.Arch);
   assert(Stub.Target.BitWidth);
   assert(Stub.Target.Endianness);
-  if (Stub.Target.BitWidth == ELFBitWidthType::ELF32) {
-    if (Stub.Target.Endianness == ELFEndiannessType::Little) {
+  if (Stub.Target.BitWidth == IFSBitWidthType::IFS32) {
+    if (Stub.Target.Endianness == IFSEndiannessType::Little) {
       return writeELFBinaryToFile<ELF32LE>(FilePath, Stub, WriteIfChanged);
     } else {
       return writeELFBinaryToFile<ELF32BE>(FilePath, Stub, WriteIfChanged);
     }
   } else {
-    if (Stub.Target.Endianness == ELFEndiannessType::Little) {
+    if (Stub.Target.Endianness == IFSEndiannessType::Little) {
       return writeELFBinaryToFile<ELF64LE>(FilePath, Stub, WriteIfChanged);
     } else {
       return writeELFBinaryToFile<ELF64BE>(FilePath, Stub, WriteIfChanged);
@@ -693,5 +671,5 @@ Error writeBinaryStub(StringRef FilePath, const ELFStub &Stub,
   llvm_unreachable("invalid binary output target");
 }
 
-} // end namespace elfabi
+} // namespace elfabi
 } // end namespace llvm
