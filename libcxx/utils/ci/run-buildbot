@@ -455,6 +455,49 @@ armv7-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
+generic-win)
+    clean
+    # TODO: The CI runner doesn't have bash in the path currently, and it's
+    # needed for running tests. Once it's available out of the box, remove this.
+    export PATH="$PATH:/c/Program Files/Git/usr/bin"
+
+    # TODO: Clang-cl in MSVC configurations don't have access to compiler_rt
+    # builtins helpers for int128 division. See
+    # https://reviews.llvm.org/D91139#2429595 for a comment about longterm
+    # intent for handling the issue. In the meantime, define
+    # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
+    # when building tests) to allow enabling filesystem for running tests,
+    # even if it uses a non-permanent ABI.
+
+    # TODO: The CI runner currently uses Clang 11, which doesn't implicitly
+    # link in oldnames.lib (which is needed for some tests) when compiling
+    # with the plain "clang" driver, as the tests do (as opposed to using
+    # the "clang-cl" driver for compiling). When the CI runner runs
+    # Clang 12, the "-loldnames" option can be dropped.
+
+    # TODO: Currently, building with the experimental library breaks running
+    # tests (the test linking look for the c++experimental library with the
+    # wrong name, and the statically linked c++experimental can't be linked
+    # correctly when libc++ visibility attributes indicate dllimport linkage
+    # anyway), thus just disable the experimental library. Remove this
+    # setting when cmake and the test driver does the right thing automatically.
+
+    echo "--- Generating CMake"
+    cmake -S "${MONOREPO_ROOT}/libcxx" \
+          -B "${BUILD_DIR}" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_C_COMPILER=clang-cl \
+          -DCMAKE_CXX_COMPILER=clang-cl \
+          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml" \
+          -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO \
+          -DLIBCXX_ENABLE_FILESYSTEM=YES \
+          -DCMAKE_CXX_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
+          -DLIBCXX_TEST_COMPILER_FLAGS="-D_LIBCPP_HAS_NO_INT128" \
+          -DLIBCXX_TEST_LINKER_FLAGS="-loldnames"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
 *)
     echo "${BUILDER} is not a known configuration"
     exit 1

@@ -96,6 +96,10 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
     return static_cast<const OMPFinalClause *>(C);
   case OMPC_priority:
     return static_cast<const OMPPriorityClause *>(C);
+  case OMPC_novariants:
+    return static_cast<const OMPNovariantsClause *>(C);
+  case OMPC_nocontext:
+    return static_cast<const OMPNocontextClause *>(C);
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_safelen:
@@ -244,6 +248,8 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_nontemporal:
   case OMPC_order:
   case OMPC_destroy:
+  case OMPC_novariants:
+  case OMPC_nocontext:
   case OMPC_detach:
   case OMPC_inclusive:
   case OMPC_exclusive:
@@ -298,6 +304,18 @@ OMPClause::child_range OMPPriorityClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
   return child_range(&Priority, &Priority + 1);
+}
+
+OMPClause::child_range OMPNovariantsClause::used_children() {
+  if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
+    return child_range(C, C + 1);
+  return child_range(&Condition, &Condition + 1);
+}
+
+OMPClause::child_range OMPNocontextClause::used_children() {
+  if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
+    return child_range(C, C + 1);
+  return child_range(&Condition, &Condition + 1);
 }
 
 OMPOrderedClause *OMPOrderedClause::Create(const ASTContext &C, Expr *Num,
@@ -1812,6 +1830,24 @@ void OMPClausePrinter::VisitOMPDestroyClause(OMPDestroyClause *Node) {
   if (Expr *E = Node->getInteropVar()) {
     OS << "(";
     E->printPretty(OS, nullptr, Policy);
+    OS << ")";
+  }
+}
+
+void OMPClausePrinter::VisitOMPNovariantsClause(OMPNovariantsClause *Node) {
+  OS << "novariants";
+  if (Expr *E = Node->getCondition()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
+void OMPClausePrinter::VisitOMPNocontextClause(OMPNocontextClause *Node) {
+  OS << "nocontext";
+  if (Expr *E = Node->getCondition()) {
+    OS << "(";
+    E->printPretty(OS, nullptr, Policy, 0);
     OS << ")";
   }
 }

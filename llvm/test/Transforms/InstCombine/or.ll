@@ -4,8 +4,8 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n32:64"
 declare void @use(i32)
 
+; Should be eliminated
 define i32 @test12(i32 %A) {
-        ; Should be eliminated
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[C:%.*]] = and i32 [[A:%.*]], 8
 ; CHECK-NEXT:    ret i32 [[C]]
@@ -1265,6 +1265,20 @@ end:
   %t5 = phi i1 [ 0, %entry ], [ %sel, %true ]
   %conv8 = zext i1 %t5 to i32
   ret i32 %conv8
+}
+
+; (~x & y) | ~(x | y) --> ~x
+define i32 @PR38929(i32 %0, i32 %1) {
+; CHECK-LABEL: @PR38929(
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP0:%.*]], -1
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %3 = xor i32 %0, -1
+  %4 = and i32 %3, %1
+  %5 = or i32 %1, %0
+  %6 = xor i32 %5, -1
+  %7 = or i32 %4, %6
+  ret i32 %7
 }
 
 define i32 @test1(i32 %x, i32 %y) {

@@ -19,6 +19,7 @@ class LoadUsingLazyBind(TestBase):
 
     @skipIfRemote
     @skipIfWindows # The Windows platform doesn't implement DoLoadImage.
+    @skipIf(oslist=["linux"], archs=["arm"]) # Fails on arm/linux
     # Failing for unknown reasons on Linux, see
     # https://bugs.llvm.org/show_bug.cgi?id=49656.
     def test_load_using_lazy_bind(self):

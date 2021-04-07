@@ -265,6 +265,8 @@ void __hwasan_init() {
   hwasan_init_is_running = 1;
   SanitizerToolName = "HWAddressSanitizer";
 
+  InitTlsSize();
+
   CacheBinaryName();
   InitializeFlags();
 

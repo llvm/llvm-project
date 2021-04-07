@@ -1103,7 +1103,7 @@ namespace dr384 { // dr384: yes
 }
 
 namespace dr385 { // dr385: yes
-  struct A { protected: void f(); }; 
+  struct A { protected: void f(); };
   struct B : A { using A::f; };
   struct C : A { void g(B b) { b.f(); } };
   void h(B b) { b.f(); }

@@ -474,32 +474,31 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
 
 MCInst TargetInstrInfo::getNop() const { llvm_unreachable("Not implemented"); }
 
+std::pair<unsigned, unsigned>
+TargetInstrInfo::getPatchpointUnfoldableRange(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::STACKMAP:
+    // StackMapLiveValues are foldable
+    return std::make_pair(0, StackMapOpers(&MI).getVarIdx());
+  case TargetOpcode::PATCHPOINT:
+    // For PatchPoint, the call args are not foldable (even if reported in the
+    // stackmap e.g. via anyregcc).
+    return std::make_pair(0, PatchPointOpers(&MI).getVarIdx());
+  case TargetOpcode::STATEPOINT:
+    // For statepoints, fold deopt and gc arguments, but not call arguments.
+    return std::make_pair(MI.getNumDefs(), StatepointOpers(&MI).getVarIdx());
+  default:
+    llvm_unreachable("unexpected stackmap opcode");
+  }
+}
+
 static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
                                     ArrayRef<unsigned> Ops, int FrameIndex,
                                     const TargetInstrInfo &TII) {
   unsigned StartIdx = 0;
   unsigned NumDefs = 0;
-  switch (MI.getOpcode()) {
-  case TargetOpcode::STACKMAP: {
-    // StackMapLiveValues are foldable
-    StartIdx = StackMapOpers(&MI).getVarIdx();
-    break;
-  }
-  case TargetOpcode::PATCHPOINT: {
-    // For PatchPoint, the call args are not foldable (even if reported in the
-    // stackmap e.g. via anyregcc).
-    StartIdx = PatchPointOpers(&MI).getVarIdx();
-    break;
-  }
-  case TargetOpcode::STATEPOINT: {
-    // For statepoints, fold deopt and gc arguments, but not call arguments.
-    StartIdx = StatepointOpers(&MI).getVarIdx();
-    NumDefs = MI.getNumDefs();
-    break;
-  }
-  default:
-    llvm_unreachable("unexpected stackmap opcode");
-  }
+  // getPatchpointUnfoldableRange throws guarantee if MI is not a patchpoint.
+  std::tie(NumDefs, StartIdx) = TII.getPatchpointUnfoldableRange(MI);
 
   unsigned DefToFoldIdx = MI.getNumOperands();
 

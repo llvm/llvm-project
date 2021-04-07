@@ -1049,30 +1049,30 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 // CHECK-LABEL: func @transfer_read_1d
 //  CHECK-SAME: %[[BASE:[a-zA-Z0-9]*]]: index) -> vector<17xf32>
 //       CHECK: %[[c7:.*]] = constant 7.0
-//
-// 1. Bitcast to vector form.
-//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
-//  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-//       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
-//  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
 //       CHECK: %[[C0:.*]] = constant 0 : index
 //       CHECK: %[[DIM:.*]] = memref.dim %{{.*}}, %[[C0]] : memref<?xf32>
 //
-// 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+// 1. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex:.*]] = constant dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
 //  CHECK-SAME: vector<17xi32>
 //
-// 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+// 2. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
 //       CHECK: %[[otrunc:.*]] = index_cast %[[BASE]] : index to i32
 //       CHECK: %[[offsetVec:.*]] = splat %[[otrunc]] : vector<17xi32>
 //       CHECK: %[[offsetVec2:.*]] = addi %[[offsetVec]], %[[linearIndex]] : vector<17xi32>
 //
-// 4. Let dim the memref dimension, compute the vector comparison mask:
+// 3. Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
 //       CHECK: %[[dtrunc:.*]] = index_cast %[[DIM]] : index to i32
 //       CHECK: %[[dimVec:.*]] = splat %[[dtrunc]] : vector<17xi32>
 //       CHECK: %[[mask:.*]] = cmpi slt, %[[offsetVec2]], %[[dimVec]] : vector<17xi32>
+//
+// 4. Bitcast to vector form.
+//       CHECK: %[[gep:.*]] = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+//       CHECK: %[[vecPtr:.*]] = llvm.bitcast %[[gep]] :
+//  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
 //
 // 5. Rewrite as a masked read.
 //       CHECK: %[[PASS_THROUGH:.*]] = splat %[[c7]] : vector<17xf32>
@@ -1081,25 +1081,25 @@ func @transfer_read_1d(%A : memref<?xf32>, %base: index) -> vector<17xf32> {
 //  CHECK-SAME: (!llvm.ptr<vector<17xf32>>, vector<17xi1>, vector<17xf32>) -> vector<17xf32>
 
 //
-// 1. Bitcast to vector form.
-//       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
-//  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
-//       CHECK: %[[vecPtr_b:.*]] = llvm.bitcast %[[gep_b]] :
-//  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
-//
-// 2. Create a vector with linear indices [ 0 .. vector_length - 1 ].
+// 1. Create a vector with linear indices [ 0 .. vector_length - 1 ].
 //       CHECK: %[[linearIndex_b:.*]] = constant dense
 //  CHECK-SAME: <[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]> :
 //  CHECK-SAME: vector<17xi32>
 //
-// 3. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+// 2. Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
 //       CHECK: splat %{{.*}} : vector<17xi32>
 //       CHECK: addi
 //
-// 4. Let dim the memref dimension, compute the vector comparison mask:
+// 3. Let dim the memref dimension, compute the vector comparison mask:
 //    [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
 //       CHECK: splat %{{.*}} : vector<17xi32>
 //       CHECK: %[[mask_b:.*]] = cmpi slt, {{.*}} : vector<17xi32>
+//
+// 4. Bitcast to vector form.
+//       CHECK: %[[gep_b:.*]] = llvm.getelementptr {{.*}} :
+//  CHECK-SAME: (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+//       CHECK: %[[vecPtr_b:.*]] = llvm.bitcast %[[gep_b]] :
+//  CHECK-SAME: !llvm.ptr<f32> to !llvm.ptr<vector<17xf32>>
 //
 // 5. Rewrite as a masked write.
 //       CHECK: llvm.intr.masked.store %[[loaded]], %[[vecPtr_b]], %[[mask_b]]
@@ -1179,6 +1179,21 @@ func @transfer_read_1d_inbounds(%A : memref<?xf32>, %base: index) -> vector<17xf
 //
 // 2. Rewrite as a load.
 //       CHECK: %[[loaded:.*]] = llvm.load %[[vecPtr]] {alignment = 4 : i64} : !llvm.ptr<vector<17xf32>>
+
+// -----
+
+// CHECK-LABEL: func @transfer_read_1d_mask
+// CHECK: %[[mask1:.*]] = constant dense<[false, false, true, false, true]>
+// CHECK: %[[cmpi:.*]] = cmpi slt
+// CHECK: %[[mask2:.*]] = and %[[cmpi]], %[[mask1]]
+// CHECK: %[[r:.*]] = llvm.intr.masked.load %{{.*}}, %[[mask2]]
+// CHECK: return %[[r]]
+func @transfer_read_1d_mask(%A : memref<?xf32>, %base : index) -> vector<5xf32> {
+  %m = constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
+  %f7 = constant 7.0: f32
+  %f = vector.transfer_read %A[%base], %f7, %m : memref<?xf32>, vector<5xf32>
+  return %f: vector<5xf32>
+}
 
 // -----
 

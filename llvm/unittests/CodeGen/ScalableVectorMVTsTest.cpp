@@ -180,7 +180,8 @@ TEST(ScalableVectorMVTsTest, SizeQueries) {
   // Check convenience size scaling methods.
   EXPECT_EQ(v2i32.getSizeInBits() * 2, v4i32.getSizeInBits());
   EXPECT_EQ(2 * nxv2i32.getSizeInBits(), nxv4i32.getSizeInBits());
-  EXPECT_EQ(nxv2f64.getSizeInBits() / 2, nxv2i32.getSizeInBits());
+  EXPECT_EQ(nxv2f64.getSizeInBits().divideCoefficientBy(2),
+            nxv2i32.getSizeInBits());
 }
 
 } // end anonymous namespace

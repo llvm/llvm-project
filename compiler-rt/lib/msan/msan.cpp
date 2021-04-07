@@ -436,6 +436,7 @@ void __msan_init() {
 
   InitializeInterceptors();
   CheckASLR();
+  InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 

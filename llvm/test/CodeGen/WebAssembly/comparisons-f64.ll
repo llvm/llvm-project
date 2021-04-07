@@ -193,14 +193,14 @@ define i32 @uge_f64(double %x, double %y) {
 ; CHECK-NEXT: f64.lt  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @olt_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp olt double %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -213,14 +213,14 @@ if.end:
 ; CHECK-NEXT: f64.le  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ole_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp ole double %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -233,14 +233,14 @@ if.end:
 ; CHECK-NEXT: f64.le  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ugt_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp ugt double %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -253,14 +253,14 @@ if.end:
 ; CHECK-NEXT: f64.gt  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ogt_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp ogt double %a, %b
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -273,14 +273,14 @@ if.end:
 ; CHECK-NEXT: f64.ge  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ult_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp ult double %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -293,14 +293,14 @@ if.end:
 ; CHECK-NEXT: f64.gt  	$push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
 ; CHECK-NEXT: i32.eqz   $push[[NUM3:[0-9]+]]=, $pop[[NUM0]]
 ; CHECK-NEXT: br_if   	0, $pop[[NUM3]]
-; CHECK-NEXT: call	_Z5call1v
+; CHECK-NEXT: call	call1
 define void @ule_f64_branch(double %a, double %b) {
 entry:
   %cmp = fcmp ule double %a, %b
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:
-  tail call void @_Z5call1v()
+  tail call void @call1()
   br label %if.end
 
 if.end:
@@ -380,4 +380,4 @@ exit:
 declare void @foo1()
 declare void @foo2()
 declare void @foo3()
-declare void @_Z5call1v()
+declare void @call1()

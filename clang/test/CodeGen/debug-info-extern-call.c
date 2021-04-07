@@ -21,8 +21,7 @@
 // RUN: %clang -g -O2 -target x86_64-none-linux-gnu -gsce -S -emit-llvm %s -o - \
 // RUN:   | FileCheck %s -check-prefix=NO-DECLS-FOR-EXTERN
 
-// DECLS-FOR-EXTERN-NOT: !DICompileUnit({{.*}}retainedTypes: ![[RETTYPES:[0-9]+]]
-// DECLS-FOR-EXTERN-NOT: ![[RETTYPES]] = !{
+// DECLS-FOR-EXTERN-NOT: !DICompileUnit({{.*}}retainedTypes: !{{[0-9]+}}
 // DECLS-FOR-EXTERN: !DISubprogram(name: "fn1"
 // DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "memcmp"
 // DECLS-FOR-EXTERN-NOT: !DISubprogram(name: "__some_reserved_name"

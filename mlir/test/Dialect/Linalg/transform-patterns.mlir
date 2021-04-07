@@ -310,15 +310,15 @@ func @promote_first_subview_matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?
 // CHECK:         %[[a0:.*]] = memref.alloc({{%.*}}) : memref<?xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK-NOT:     %[[a1:.*]] = memref.alloc({{%.*}}) : memref<?xi8>
-// CHECK-NOT:     %[[v1:.*]] = memref.view %[[a1]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK-NOT:     %[[l0:.*]] = memref.subview %[[v1]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK-NOT:     %[[a2:.*]] = memref.alloc({{%.*}}) : memref<?xi8>
-// CHECK-NOT:     %[[v2:.*]] = memref.view %[[a2]][{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
-// CHECK-NOT:     %[[l0:.*]] = memref.subview %[[v2]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
+// CHECK-NOT:     %{{.*}} = memref.alloc({{%.*}}) : memref<?xi8>
+// CHECK-NOT:     %{{.*}} = memref.view %{{.*}}[{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK-NOT:     %{{.*}} = memref.subview %{{.*}}[0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
+// CHECK-NOT:     %{{.*}} = memref.alloc({{%.*}}) : memref<?xi8>
+// CHECK-NOT:     %{{.*}} = memref.view %{{.*}}[{{.*}}][{{%.*}}, {{%.*}}] : memref<?xi8> to memref<?x?xf32>
+// CHECK-NOT:     %{{.*}} = memref.subview %{{.*}}[0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
 // CHECK:         linalg.copy(%[[s0]], %[[l0]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK-NOT:     linalg.copy(%[[s1]], %[[l1]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
-// CHECK-NOT:     linalg.copy(%[[s2]], %[[l2]]) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
+// CHECK-NOT:     linalg.copy(%[[s1]], %{{.*}}) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>
+// CHECK-NOT:     linalg.copy(%[[s2]], %{{.*}}) : memref<?x?xf32, #map{{.*}}>, memref<?x?xf32, #map{{.*}}>^
 // CHECK:         linalg.matmul
 // CHECK-SAME:           ins(%[[v0]], %[[s1]] : memref<?x?xf32>, memref<?x?xf32, #[[$STRIDED_2D]]>)
 // CHECK-SAME:          outs(%[[s2]] : memref<?x?xf32, #[[$STRIDED_2D]]>)

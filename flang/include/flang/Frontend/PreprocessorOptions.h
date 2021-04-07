@@ -19,6 +19,16 @@
 
 namespace Fortran::frontend {
 
+/// Communicates whether to include/exclude predefined and command
+/// line preprocessor macros
+enum class PPMacrosFlag : uint8_t {
+  /// Use the file extension to decide
+  Unknown,
+
+  Include,
+  Exclude
+};
+
 /// This class is used for passing the various options used
 /// in preprocessor initialization to the parser options.
 class PreprocessorOptions {
@@ -31,6 +41,8 @@ public:
   std::vector<std::string> searchDirectoriesFromDashI;
   // Search directories specified by the user with -fintrinsic-modules-path
   std::vector<std::string> searchDirectoriesFromIntrModPath;
+
+  PPMacrosFlag macrosFlag_ = PPMacrosFlag::Unknown;
 
 public:
   PreprocessorOptions() {}

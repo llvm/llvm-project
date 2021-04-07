@@ -24,7 +24,7 @@
 // Test explicit flag, opposite of target default.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
-// RUN:   -fcuda-flush-denormals-to-zero \
+// RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
@@ -33,7 +33,7 @@
 // Test explicit flag, opposite of target default.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
-// RUN:   -fno-cuda-flush-denormals-to-zero \
+// RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
@@ -42,7 +42,7 @@
 // Test explicit flag, same as target default.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
-// RUN:   -fno-cuda-flush-denormals-to-zero \
+// RUN:   -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
@@ -51,7 +51,7 @@
 // Test explicit flag, same as target default.
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
-// RUN:   -fcuda-flush-denormals-to-zero \
+// RUN:   -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
@@ -60,7 +60,7 @@
 // Test last flag wins, not flushing
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
-// RUN:   -fcuda-flush-denormals-to-zero -fno-cuda-flush-denormals-to-zero \
+// RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
@@ -68,7 +68,7 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
-// RUN:   -fcuda-flush-denormals-to-zero -fno-cuda-flush-denormals-to-zero \
+// RUN:   -fgpu-flush-denormals-to-zero -fno-gpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,NOFLUSHD
@@ -76,7 +76,7 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
-// RUN:   -fno-cuda-flush-denormals-to-zero -fcuda-flush-denormals-to-zero \
+// RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm   \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD
@@ -84,7 +84,7 @@
 
 // RUN: %clang -### -target x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 \
-// RUN:   -fno-cuda-flush-denormals-to-zero -fcuda-flush-denormals-to-zero \
+// RUN:   -fno-gpu-flush-denormals-to-zero -fgpu-flush-denormals-to-zero \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FLUSHD

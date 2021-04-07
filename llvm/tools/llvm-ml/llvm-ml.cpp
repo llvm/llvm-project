@@ -231,6 +231,7 @@ int main(int Argc, char **Argv) {
 
   MCTargetOptions MCOptions;
   MCOptions.AssemblyLanguage = "masm";
+  MCOptions.MCFatalWarnings = InputArgs.hasArg(OPT_fatal_warnings);
 
   Triple TheTriple = GetTriple(ProgName, InputArgs);
   std::string Error;

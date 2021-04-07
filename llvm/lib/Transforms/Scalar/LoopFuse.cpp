@@ -99,6 +99,8 @@ STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block with "
 STATISTIC(NonEmptyGuardBlock, "Candidate has a non-empty guard block with "
                               "instructions that cannot be moved");
 STATISTIC(NotRotated, "Candidate is not rotated");
+STATISTIC(OnlySecondCandidateIsGuarded,
+          "The second candidate is guarded while the first one is not");
 
 enum FusionDependenceAnalysisChoice {
   FUSION_DEPENDENCE_ANALYSIS_SCEV,
@@ -888,6 +890,14 @@ private:
             LLVM_DEBUG(dbgs()
                        << "Fusion candidates are not adjacent. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1, NonAdjacent);
+            continue;
+          }
+
+          if (!FC0->GuardBranch && FC1->GuardBranch) {
+            LLVM_DEBUG(dbgs() << "The second candidate is guarded while the "
+                                 "first one is not. Not fusing.\n");
+            reportLoopFusion<OptimizationRemarkMissed>(
+                *FC0, *FC1, OnlySecondCandidateIsGuarded);
             continue;
           }
 

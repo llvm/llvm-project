@@ -9,7 +9,6 @@
 
 #include "complex-reduction.h"
 #include "flang/Common/long-double.h"
-#include <complex.h>
 
 struct CppComplexFloat {
   float r, i;

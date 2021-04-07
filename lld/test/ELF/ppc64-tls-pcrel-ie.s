@@ -42,8 +42,8 @@ y:
 
 #--- asm
 # IE-RELOC: Relocation section '.rela.dyn' at offset 0x10090 contains 2 entries:
-# IE-RELOC: 00000000010040d8  0000000100000049 R_PPC64_TPREL64        0000000000000000 x + 0
-# IE-RELOC: 00000000010040e0  0000000200000049 R_PPC64_TPREL64        0000000000000000 y + 0
+# IE-RELOC: 00000000010040e0  0000000100000049 R_PPC64_TPREL64        0000000000000000 x + 0
+# IE-RELOC: 00000000010040e8  0000000200000049 R_PPC64_TPREL64        0000000000000000 y + 0
 
 # IE-SYM:   Symbol table '.dynsym' contains 3 entries:
 # IE-SYM:   1: 0000000000000000     0 TLS     GLOBAL DEFAULT   UND x
@@ -61,7 +61,7 @@ y:
 # LE-GOT: could not find section '.got'
 
 # IE-LABEL: <IEAddr>:
-# IE-NEXT:    pld 3, 12504(0), 1
+# IE-NEXT:    pld 3, 12512(0), 1
 # IE-NEXT:    add 3, 3, 13
 # IE-NEXT:    blr
 # LE-LABEL: <IEAddr>:
@@ -75,7 +75,7 @@ IEAddr:
 	blr
 
 # IE-LABEL: <IEAddrCopy>:
-# IE-NEXT:    pld 3, 12488(0), 1
+# IE-NEXT:    pld 3, 12496(0), 1
 # IE-NEXT:    add 4, 3, 13
 # IE-NEXT:    blr
 # LE-LABEL: <IEAddrCopy>:
@@ -89,7 +89,7 @@ IEAddrCopy:
 	blr
 
 # IE-LABEL: <IEVal>:
-# IE-NEXT:    pld 3, 8408(0), 1
+# IE-NEXT:    pld 3, 8416(0), 1
 # IE-NEXT:    lwzx 3, 3, 13
 # IE-NEXT:    blr
 # LE-LABEL: <IEVal>:
@@ -103,8 +103,8 @@ IEVal:
 	blr
 
 # IE-LABEL: <IETwoVal>:
-# IE-NEXT:    pld 3, 4312(0), 1
-# IE-NEXT:    pld 4, 4312(0), 1
+# IE-NEXT:    pld 3, 4320(0), 1
+# IE-NEXT:    pld 4, 4320(0), 1
 # IE-NEXT:    lwzx 3, 3, 13
 # IE-NEXT:    lwzx 4, 4, 13
 # IE-NEXT:    blr
@@ -123,7 +123,7 @@ IETwoVal:
 	blr
 
 # IE-LABEL: <IEIncrementVal>:
-# IE-NEXT:    pld 4, 224(0), 1
+# IE-NEXT:    pld 4, 232(0), 1
 # IE-NEXT:    lwzx 3, 4, 13
 # IE-NEXT:    stwx 3, 4, 13
 # IE-NEXT:    blr

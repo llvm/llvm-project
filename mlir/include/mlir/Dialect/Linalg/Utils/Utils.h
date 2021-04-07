@@ -136,11 +136,6 @@ Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                           OpResult producerOpResult,
                                           OpOperand &consumerOpOperand);
 
-/// Fuse linalg operation on tensors, with the producer of the operand at
-/// position `consumerIdx` of the consumer.
-Optional<SmallVector<Value, 1>> fuseTensorOps(PatternRewriter &rewriter,
-                                              OpOperand &consumerOpOperand);
-
 //===----------------------------------------------------------------------===//
 // Distribution utilities
 //===----------------------------------------------------------------------===//

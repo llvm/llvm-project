@@ -244,8 +244,8 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
   if (OutputFilename == "")
     OutputFilename = "-";
   std::error_code EC;
-  auto Out =
-      std::make_unique<ToolOutputFile>(OutputFilename, EC, sys::fs::OF_Text);
+  auto Out = std::make_unique<ToolOutputFile>(OutputFilename, EC,
+                                              sys::fs::OF_TextWithCRLF);
   if (!EC)
     return std::move(Out);
   return EC;

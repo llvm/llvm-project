@@ -485,8 +485,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
         # Iterate over all progress events and save all start and end IDs, and
         # remember any shared libraries that got symbol table parsing progress
         # events.
-        # Sleep for 2 seconds to make sure progress_events gets populated
-        time.sleep(2)
+        # Sleep for 5 seconds to make sure progress_events gets populated
+        time.sleep(5)
         for progress_event in self.vscode.progress_events:
             event_type = progress_event['event']
             if event_type == 'progressStart':

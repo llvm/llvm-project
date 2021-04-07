@@ -21,7 +21,7 @@ Target &getTheM68kTarget() {
 }
 } // namespace llvm
 
-extern "C" void LLVMInitializeM68kTargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTargetInfo() {
   RegisterTarget<Triple::m68k, /*HasJIT=*/true> X(
       getTheM68kTarget(), "m68k", "Motorola 68000 family", "M68k");
 }

@@ -243,7 +243,7 @@ int main(int argc, char *argv[]) {
     outs() << "Running: main(";
     int Pos = 0;
     for (const std::string &Arg : InputArgv)
-      outs() << (Pos++ == 0 ? "" : ", ") << Arg;
+      outs() << (Pos++ == 0 ? "" : ", ") << "\"" << Arg << "\"";
     outs() << ")\n";
 
     // Execute the code in the remote target process and dump the result. With

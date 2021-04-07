@@ -4,11 +4,19 @@
 // RUN: %clang_cc1 -std=c++17 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
 // RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
 
-// Make sure -ffinite-loops overrides -std=c++98 for loops.
+// Check -ffinite-loops option in combination with various standard versions.
 // RUN: %clang_cc1 -std=c++98 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c++11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++14 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++17 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++20 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
 
-// Make sure -fno-finite-loops overrides -std=c++11
+// Check -fno-finite-loops option in combination with various standard versions.
+// RUN: %clang_cc1 -std=c++98 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
 // RUN: %clang_cc1 -std=c++11 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
+// RUN: %clang_cc1 -std=c++14 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
+// RUN: %clang_cc1 -std=c++17 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
+// RUN: %clang_cc1 -std=c++20 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
 
 int a = 0;
 int b = 0;

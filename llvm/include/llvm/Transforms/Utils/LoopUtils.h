@@ -389,6 +389,11 @@ Value *createSimpleTargetReduction(IRBuilderBase &B,
 Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
                              RecurrenceDescriptor &Desc, Value *Src);
 
+/// Create an ordered reduction intrinsic using the given recurrence
+/// descriptor \p Desc.
+Value *createOrderedReduction(IRBuilderBase &B, RecurrenceDescriptor &Desc,
+                              Value *Src, Value *Start);
+
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).
 /// If OpValue is non-null, we only consider operations similar to OpValue

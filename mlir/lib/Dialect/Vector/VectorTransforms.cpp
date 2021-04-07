@@ -596,6 +596,8 @@ static Value unrollTransferReadOp(vector::TransferReadOp readOp,
                                   OpBuilder &builder) {
   if (!isIdentitySuffix(readOp.permutation_map()))
     return nullptr;
+  if (readOp.mask())
+    return nullptr;
   auto sourceVectorType = readOp.getVectorType();
   SmallVector<int64_t, 4> strides(targetShape.size(), 1);
 
@@ -640,6 +642,8 @@ mlir::vector::unrollTransferWriteOp(OpBuilder &builder, Operation *op,
                                     SmallVector<Value, 1> &result) {
   auto writeOp = cast<vector::TransferWriteOp>(op);
   if (!isIdentitySuffix(writeOp.permutation_map()))
+    return failure();
+  if (writeOp.mask())
     return failure();
   VectorType sourceVectorType = writeOp.getVectorType();
   SmallVector<int64_t, 4> strides(targetShape.size(), 1);
@@ -722,6 +726,9 @@ public:
     if (ignoreFilter && ignoreFilter(readOp))
       return failure();
 
+    if (readOp.mask())
+      return failure();
+
     // TODO: Support splitting TransferReadOp with non-identity permutation
     // maps. Repurpose code from MaterializeVectors transformation.
     if (!isIdentitySuffix(readOp.permutation_map()))
@@ -766,6 +773,9 @@ public:
   LogicalResult matchAndRewrite(vector::TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     if (ignoreFilter && ignoreFilter(writeOp))
+      return failure();
+
+    if (writeOp.mask())
       return failure();
 
     // TODO: Support splitting TransferWriteOp with non-identity permutation
@@ -2546,6 +2556,9 @@ LogicalResult mlir::vector::splitFullAndPartialTransfer(
          "Expected splitFullAndPartialTransferPrecondition to hold");
   auto xferReadOp = dyn_cast<vector::TransferReadOp>(xferOp.getOperation());
 
+  if (xferReadOp.mask())
+    return failure();
+
   // TODO: add support for write case.
   if (!xferReadOp)
     return failure();
@@ -2677,6 +2690,8 @@ struct TransferReadExtractPattern
         dyn_cast<vector::ExtractMapOp>(*read.getResult().getUsers().begin());
     if (!extract)
       return failure();
+    if (read.mask())
+      return failure();
     edsc::ScopedContext scope(rewriter, read.getLoc());
     using mlir::edsc::op::operator+;
     using mlir::edsc::op::operator*;
@@ -2712,6 +2727,8 @@ struct TransferWriteInsertPattern
     auto insert = write.vector().getDefiningOp<vector::InsertMapOp>();
     if (!insert)
       return failure();
+    if (write.mask())
+      return failure();
     edsc::ScopedContext scope(rewriter, write.getLoc());
     using mlir::edsc::op::operator+;
     using mlir::edsc::op::operator*;
@@ -2742,6 +2759,7 @@ struct TransferWriteInsertPattern
 /// - If the memref's element type is a vector type then it coincides with the
 ///   result type.
 /// - The permutation map doesn't perform permutation (broadcasting is allowed).
+/// - The op has no mask.
 struct TransferReadToVectorLoadLowering
     : public OpRewritePattern<vector::TransferReadOp> {
   TransferReadToVectorLoadLowering(MLIRContext *context)
@@ -2780,7 +2798,8 @@ struct TransferReadToVectorLoadLowering
     //       MaskedLoadOp.
     if (read.hasOutOfBoundsDim())
       return failure();
-
+    if (read.mask())
+      return failure();
     Operation *loadOp;
     if (!broadcastedDims.empty() &&
         unbroadcastedVectorType.getNumElements() == 1) {
@@ -2815,6 +2834,7 @@ struct TransferReadToVectorLoadLowering
 ///   type of the written value.
 /// - The permutation map is the minor identity map (neither permutation nor
 ///   broadcasting is allowed).
+/// - The op has no mask.
 struct TransferWriteToVectorStoreLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
   TransferWriteToVectorStoreLowering(MLIRContext *context)
@@ -2839,6 +2859,8 @@ struct TransferWriteToVectorStoreLowering
     // TODO: When out-of-bounds masking is required, we can create a
     //       MaskedStoreOp.
     if (write.hasOutOfBoundsDim())
+      return failure();
+    if (write.mask())
       return failure();
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
         write, write.vector(), write.source(), write.indices());
@@ -2880,6 +2902,8 @@ struct TransferReadPermutationLowering
         map.getPermutationMap(permutation, op.getContext());
     if (permutationMap.isIdentity())
       return failure();
+    if (op.mask())
+      return failure();
     // Caluclate the map of the new read by applying the inverse permutation.
     permutationMap = inversePermutation(permutationMap);
     AffineMap newMap = permutationMap.compose(map);
@@ -2914,6 +2938,8 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp op,
                                 PatternRewriter &rewriter) const override {
+    if (op.mask())
+      return failure();
     AffineMap map = op.permutation_map();
     unsigned numLeadingBroadcast = 0;
     for (auto expr : map.getResults()) {
@@ -3062,6 +3088,9 @@ struct CastAwayTransferReadLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferReadOp read,
                                 PatternRewriter &rewriter) const override {
+    if (read.mask())
+      return failure();
+
     auto shapedType = read.source().getType().cast<ShapedType>();
     if (shapedType.getElementType() != read.getVectorType().getElementType())
       return failure();
@@ -3102,6 +3131,9 @@ struct CastAwayTransferWriteLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp write,
                                 PatternRewriter &rewriter) const override {
+    if (write.mask())
+      return failure();
+
     auto shapedType = write.source().getType().dyn_cast<ShapedType>();
     if (shapedType.getElementType() != write.getVectorType().getElementType())
       return failure();
@@ -3370,6 +3402,151 @@ struct BubbleUpBitCastForStridedSliceInsert
     return success();
   }
 };
+
+static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
+                                   Type targetType, Value value) {
+  if (targetType == value.getType())
+    return value;
+
+  bool targetIsIndex = targetType.isIndex();
+  bool valueIsIndex = value.getType().isIndex();
+  if (targetIsIndex ^ valueIsIndex)
+    return rewriter.create<IndexCastOp>(loc, targetType, value);
+
+  auto targetIntegerType = targetType.dyn_cast<IntegerType>();
+  auto valueIntegerType = value.getType().dyn_cast<IntegerType>();
+  assert(targetIntegerType && valueIntegerType &&
+         "unexpected cast between types other than integers and index");
+  assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
+
+  if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
+    return rewriter.create<SignExtendIOp>(loc, targetIntegerType, value);
+  return rewriter.create<TruncateIOp>(loc, targetIntegerType, value);
+}
+
+// Helper that returns a vector comparison that constructs a mask:
+//     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
+//
+// NOTE: The LLVM::GetActiveLaneMaskOp intrinsic would provide an alternative,
+//       much more compact, IR for this operation, but LLVM eventually
+//       generates more elaborate instructions for this intrinsic since it
+//       is very conservative on the boundary conditions.
+static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
+                                   bool enableIndexOptimizations, int64_t dim,
+                                   Value b, Value *off = nullptr) {
+  auto loc = op->getLoc();
+  // If we can assume all indices fit in 32-bit, we perform the vector
+  // comparison in 32-bit to get a higher degree of SIMD parallelism.
+  // Otherwise we perform the vector comparison using 64-bit indices.
+  Value indices;
+  Type idxType;
+  if (enableIndexOptimizations) {
+    indices = rewriter.create<ConstantOp>(
+        loc, rewriter.getI32VectorAttr(
+                 llvm::to_vector<4>(llvm::seq<int32_t>(0, dim))));
+    idxType = rewriter.getI32Type();
+  } else {
+    indices = rewriter.create<ConstantOp>(
+        loc, rewriter.getI64VectorAttr(
+                 llvm::to_vector<4>(llvm::seq<int64_t>(0, dim))));
+    idxType = rewriter.getI64Type();
+  }
+  // Add in an offset if requested.
+  if (off) {
+    Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
+    Value ov = rewriter.create<SplatOp>(loc, indices.getType(), o);
+    indices = rewriter.create<AddIOp>(loc, ov, indices);
+  }
+  // Construct the vector comparison.
+  Value bound = createCastToIndexLike(rewriter, loc, idxType, b);
+  Value bounds = rewriter.create<SplatOp>(loc, indices.getType(), bound);
+  return rewriter.create<CmpIOp>(loc, CmpIPredicate::slt, indices, bounds);
+}
+
+template <typename ConcreteOp>
+struct MaterializeTransferMask : public OpRewritePattern<ConcreteOp> {
+public:
+  explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt)
+      : mlir::OpRewritePattern<ConcreteOp>(context),
+        enableIndexOptimizations(enableIndexOpt) {}
+
+  LogicalResult matchAndRewrite(ConcreteOp xferOp,
+                                PatternRewriter &rewriter) const override {
+    if (!xferOp.hasOutOfBoundsDim())
+      return failure();
+
+    if (xferOp.getVectorType().getRank() > 1 ||
+        llvm::size(xferOp.indices()) == 0)
+      return failure();
+
+    Location loc = xferOp->getLoc();
+    VectorType vtp = xferOp.getVectorType();
+
+    // * Create a vector with linear indices [ 0 .. vector_length - 1 ].
+    // * Create offsetVector = [ offset + 0 .. offset + vector_length - 1 ].
+    // * Let dim the memref dimension, compute the vector comparison mask
+    //   (in-bounds mask):
+    //   [ offset + 0 .. offset + vector_length - 1 ] < [ dim .. dim ]
+    //
+    // TODO: when the leaf transfer rank is k > 1, we need the last `k`
+    //       dimensions here.
+    unsigned vecWidth = vtp.getNumElements();
+    unsigned lastIndex = llvm::size(xferOp.indices()) - 1;
+    Value off = xferOp.indices()[lastIndex];
+    Value dim = rewriter.create<memref::DimOp>(loc, xferOp.source(), lastIndex);
+    Value mask = buildVectorComparison(
+        rewriter, xferOp, enableIndexOptimizations, vecWidth, dim, &off);
+
+    if (xferOp.mask()) {
+      // Intersect the in-bounds with the mask specified as an op parameter.
+      mask = rewriter.create<AndOp>(loc, mask, xferOp.mask());
+    }
+
+    rewriter.updateRootInPlace(xferOp, [&]() {
+      xferOp.maskMutable().assign(mask);
+      xferOp.in_boundsAttr(rewriter.getBoolArrayAttr({true}));
+    });
+
+    return success();
+  }
+
+private:
+  const bool enableIndexOptimizations;
+};
+
+/// Conversion pattern for a vector.create_mask (1-D only).
+class VectorCreateMaskOpConversion
+    : public OpRewritePattern<vector::CreateMaskOp> {
+public:
+  explicit VectorCreateMaskOpConversion(MLIRContext *context,
+                                        bool enableIndexOpt)
+      : mlir::OpRewritePattern<vector::CreateMaskOp>(context),
+        enableIndexOptimizations(enableIndexOpt) {}
+
+  LogicalResult matchAndRewrite(vector::CreateMaskOp op,
+                                PatternRewriter &rewriter) const override {
+    auto dstType = op.getType();
+    int64_t rank = dstType.getRank();
+    if (rank == 1) {
+      rewriter.replaceOp(
+          op, buildVectorComparison(rewriter, op, enableIndexOptimizations,
+                                    dstType.getDimSize(0), op.getOperand(0)));
+      return success();
+    }
+    return failure();
+  }
+
+private:
+  const bool enableIndexOptimizations;
+};
+
+void mlir::vector::populateVectorMaskMaterializationPatterns(
+    RewritePatternSet &patterns, bool enableIndexOptimizations) {
+  patterns.add<VectorCreateMaskOpConversion,
+               MaterializeTransferMask<vector::TransferReadOp>,
+               MaterializeTransferMask<vector::TransferWriteOp>>(
+      patterns.getContext(), enableIndexOptimizations);
+}
 
 // TODO: Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO: Add this as DRR pattern.

@@ -36,16 +36,6 @@
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
-# CHECK-NEXT:     Name: _external
-# CHECK-NEXT:     Extern
-# CHECK-NEXT:     Type: Section (0xE)
-# CHECK-NEXT:     Section: __data
-# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
-# CHECK-NEXT:     Flags [ (0x0)
-# CHECK-NEXT:     ]
-# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
-# CHECK-NEXT:   }
-# CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: _external_weak
 # CHECK-NEXT:     Extern
 # CHECK-NEXT:     Type: Section (0xE)
@@ -53,6 +43,16 @@
 # CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
 # CHECK-NEXT:     Flags [ (0x80)
 # CHECK-NEXT:       WeakDef (0x80)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: _external
+# CHECK-NEXT:     Extern
+# CHECK-NEXT:     Type: Section (0xE)
+# CHECK-NEXT:     Section: __data
+# CHECK-NEXT:     RefType: UndefinedNonLazy (0x0)
+# CHECK-NEXT:     Flags [ (0x0)
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Value: 0x1{{[0-9a-f]*}}
 # CHECK-NEXT:   }

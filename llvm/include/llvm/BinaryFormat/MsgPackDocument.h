@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
+/// \file
 /// This file declares a class that exposes a simple in-memory representation
 /// of a document of MsgPack objects, that can be read from MsgPack, written to
 /// MsgPack, and inspected and modified in memory. This is intended to be a

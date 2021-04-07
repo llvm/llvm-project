@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file contains support for writing accelerator tables.
-//
+/// \file
+/// This file contains support for writing accelerator tables.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CODEGEN_ACCELTABLE_H
@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <vector>
 
+/// \file
 /// The DWARF and Apple accelerator tables are an indirect hash table optimized
 /// for null lookup rather than access to known data. The Apple accelerator
 /// tables are a precursor of the newer DWARF v5 accelerator tables. Both

@@ -1,4 +1,4 @@
-! RUN: not %f18 -Mstandard %s 2>&1 | FileCheck %s
+! RUN: not %flang_fc1 -pedantic %s 2>&1 | FileCheck %s
 ! Test extension: allow forward references to dummy arguments
 ! from specification expressions in scopes with IMPLICIT NONE(TYPE),
 ! as long as those symbols are eventually typed later with the
@@ -20,7 +20,7 @@ subroutine foo2(a, n2)
 end
 
 !CHECK: Dummy argument 'n3' was used without being explicitly typed
-!CHECK-NOT: error:
+!CHECK-NOT: error: Dummy argument 'n3'
 subroutine foo3(a, n3)
   implicit none
   real a(n3)

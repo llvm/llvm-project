@@ -608,7 +608,7 @@ Instruction *InstCombinerImpl::narrowFunnelShift(TruncInst &Trunc) {
     Y = Builder.CreateTrunc(ShVal1, DestTy);
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Trunc.getModule(), IID, DestTy);
-  return IntrinsicInst::Create(F, {X, Y, NarrowShAmt});
+  return CallInst::Create(F, {X, Y, NarrowShAmt});
 }
 
 /// Try to narrow the width of math or bitwise logic instructions by pulling a
@@ -2702,7 +2702,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       Function *Bswap =
           Intrinsic::getDeclaration(CI.getModule(), Intrinsic::bswap, DestTy);
       Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
-      return IntrinsicInst::Create(Bswap, { ScalarX });
+      return CallInst::Create(Bswap, { ScalarX });
     }
   }
 

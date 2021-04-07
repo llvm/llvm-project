@@ -14912,9 +14912,9 @@ void Sema::DefineImplicitLambdaToFunctionPointerConversion(
   SynthesizedFunctionScope Scope(*this, Conv);
   assert(!Conv->getReturnType()->isUndeducedType());
 
-  QualType ConvRT = Conv->getType()->getAs<FunctionType>()->getReturnType();
+  QualType ConvRT = Conv->getType()->castAs<FunctionType>()->getReturnType();
   CallingConv CC =
-      ConvRT->getPointeeType()->getAs<FunctionType>()->getCallConv();
+      ConvRT->getPointeeType()->castAs<FunctionType>()->getCallConv();
 
   CXXRecordDecl *Lambda = Conv->getParent();
   FunctionDecl *CallOp = Lambda->getLambdaCallOperator();

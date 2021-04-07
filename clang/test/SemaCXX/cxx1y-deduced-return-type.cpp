@@ -377,7 +377,7 @@ namespace MemberTemplatesWithDeduction {
       return 5;
     }
     template<class T> operator T() { return T{}; }
-    operator auto() { return &static_foo<int>; } 
+    operator auto() { return &static_foo<int>; }
   };
   struct N : M {
     using M::foo;
@@ -385,7 +385,7 @@ namespace MemberTemplatesWithDeduction {
     using M::static_foo;
     using M::operator auto;
   };
-  
+
   template <class T> int test() {
     int i = T{}.foo(3);
     T m = T{}.foo(M{});
@@ -400,7 +400,7 @@ namespace MemberTemplatesWithDeduction {
   }
   int Minst = test<M>();
   int Ninst = test<N>();
-  
+
 }
 }
 
@@ -451,11 +451,11 @@ namespace CurrentInstantiation {
     auto f(); // expected-note {{here}}
     int g() { return f(); } // expected-error {{cannot be used before it is defined}}
  #else
-    auto f(); 
-    int g() { return f(); } 
+    auto f();
+    int g() { return f(); }
  #endif
   };
- #ifndef DELAYED_TEMPLATE_PARSING 
+ #ifndef DELAYED_TEMPLATE_PARSING
   template int U<int>::g(); // expected-note {{in instantiation of}}
  #else
   template int U<int>::g();

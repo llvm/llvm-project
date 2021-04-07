@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===-----------------------------------------------------------------------===/
-///
+/// \file
 /// This supports reading and writing of elf dynamic shared objects.
 ///
 //===-----------------------------------------------------------------------===/

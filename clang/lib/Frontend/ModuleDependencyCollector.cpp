@@ -148,7 +148,7 @@ void ModuleDependencyCollector::writeFileMap() {
   std::error_code EC;
   SmallString<256> YAMLPath = VFSDir;
   llvm::sys::path::append(YAMLPath, "vfs.yaml");
-  llvm::raw_fd_ostream OS(YAMLPath, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(YAMLPath, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC) {
     HasErrors = true;
     return;

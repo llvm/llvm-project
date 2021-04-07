@@ -62,4 +62,4 @@ Options
 
 .. option:: CheckImplicitCasts
 
-   If `true`, enables detection of implicit casts. Default is `true`.
+   If `true`, enables detection of implicit casts. Default is `false`.

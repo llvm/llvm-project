@@ -515,3 +515,17 @@ define <4 x i32> @demorgan_plus_and_to_xor_vec(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %not
 }
 
+; (a ^ b) | ~(a | b) --> ~(a & b)
+
+define i32 @PR45984(i32 %0, i32 %1) {
+; CHECK-LABEL: @PR45984(
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i32 [[TMP3]], -1
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+  %3 = xor i32 %1, %0
+  %4 = or i32 %1, %0
+  %5 = xor i32 %4, -1
+  %6 = or i32 %3, %5
+  ret i32 %6
+}

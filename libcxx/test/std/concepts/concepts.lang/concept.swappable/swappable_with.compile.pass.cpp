@@ -15,6 +15,7 @@
 #include <concepts>
 
 #include <array>
+#include <cassert>
 #include <deque>
 #include <forward_list>
 #include <list>
@@ -555,7 +556,7 @@ struct swappable_with_rvalue_ref_to_volatile_s3 {
   friend void swap(swappable_with_rvalue_ref_to_volatile_s3 volatile&&,
                    s3 volatile&&);
 
-  operator s3 volatile &() volatile;
+  operator s3 volatile &&() volatile;
 };
 static_assert(
     std::swappable_with<swappable_with_rvalue_ref_to_volatile_s3 volatile&&,
@@ -578,7 +579,7 @@ struct swappable_with_rvalue_ref_to_cv_s3 {
   friend void swap(swappable_with_rvalue_ref_to_cv_s3 const volatile&&,
                    s3 const volatile&&);
 
-  operator s3 const volatile &() const volatile;
+  operator s3 const volatile &&() const volatile;
 };
 static_assert(
     std::swappable_with<swappable_with_rvalue_ref_to_cv_s3 const volatile&&,
@@ -644,4 +645,42 @@ static_assert(
 static_assert(!check_swappable_with<HasANonMovable, HasANonMovable>());
 } // namespace types_with_purpose
 
-int main(int, char**) { return 0; }
+namespace LWG3175 {
+// Example taken directly from [concept.swappable]
+template <class T, std::swappable_with<T> U>
+constexpr void value_swap(T&& t, U&& u) {
+  std::ranges::swap(std::forward<T>(t), std::forward<U>(u));
+}
+
+template <std::swappable T>
+constexpr void lv_swap(T& t1, T& t2) {
+  std::ranges::swap(t1, t2);
+}
+
+namespace N {
+struct A {
+  int m;
+};
+struct Proxy {
+  A* a;
+  constexpr Proxy(A& a_) : a{&a_} {}
+  friend constexpr void swap(Proxy x, Proxy y) {
+    std::ranges::swap(*x.a, *y.a);
+  }
+};
+constexpr Proxy proxy(A& a) { return Proxy{a}; }
+} // namespace N
+
+[[nodiscard]] constexpr bool CheckRegression() {
+  int i = 1, j = 2;
+  lv_swap(i, j);
+  assert(i == 2 && j == 1);
+
+  N::A a1 = {5}, a2 = {-5};
+  value_swap(a1, proxy(a2));
+  assert(a1.m == -5 && a2.m == 5);
+  return true;
+}
+
+static_assert(CheckRegression());
+} // namespace LWG3175

@@ -347,10 +347,9 @@ define i32 @caller_half_on_stack() nounwind {
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    addi sp, sp, -16
 ; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    lui a0, 256
-; RV64IF-NEXT:    addiw a0, a0, -11
-; RV64IF-NEXT:    slli a0, a0, 12
-; RV64IF-NEXT:    addi t0, a0, -1792
+; RV64IF-NEXT:    addi a0, zero, -183
+; RV64IF-NEXT:    slli a0, a0, 40
+; RV64IF-NEXT:    srli t0, a0, 32
 ; RV64IF-NEXT:    addi a0, zero, 1
 ; RV64IF-NEXT:    addi a1, zero, 2
 ; RV64IF-NEXT:    addi a2, zero, 3

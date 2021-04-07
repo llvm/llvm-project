@@ -49,6 +49,55 @@
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/lib"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
+/// Test native GCC installation on Debian i386.
+// RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree \
+// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
+// DEBIAN_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
+// DEBIAN_I686:      "-internal-isystem"
+// DEBIAN_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
+/// Debian specific - the path component after 'include' is i386-linux-gnu even
+/// though the installation is i686-linux-gnu.
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/i386-linux-gnu/c++/10"
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10/backward"
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+/// This resolves to /usr/i686-linux-gnu/include. Because it does not exist,
+/// having it does no harm albeit not ideal.
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../i686-linux-gnu/include"
+// DEBIAN_I686:      "-internal-externc-isystem"
+// DEBIAN_I686-SAME: {{^}} "[[SYSROOT]]/usr/include/i386-linux-gnu"
+// DEBIAN_I686:      "-L
+// DEBIAN_I686-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/10"
+// DEBIAN_I686-SAME: {{^}} "-L[[SYSROOT]]/lib/i386-linux-gnu"
+// DEBIAN_I686-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/i386-linux-gnu"
+// DEBIAN_I686-SAME: {{^}} "-L[[SYSROOT]]/lib"
+// DEBIAN_I686-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
+
+/// Test -m64 on Debian i386.
+// RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree -m64 \
+// RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
+// DEBIAN_I686_M64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
+// DEBIAN_I686_M64:      "-internal-isystem"
+// DEBIAN_I686_M64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
+/// Debian specific - the path component after 'include' is i386-linux-gnu even
+/// though the installation is i686-linux-gnu.
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/i386-linux-gnu/c++/10/64"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10/backward"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../i686-linux-gnu/include"
+// DEBIAN_I686_M64:      "-internal-externc-isystem"
+// DEBIAN_I686_M64-SAME: {{^}} "[[SYSROOT]]/usr/include/x86_64-linux-gnu"
+// DEBIAN_I686_M64:      "-L
+// DEBIAN_I686_M64-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/10/64"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/i686-linux-gnu/10/../../../../lib64"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib/x86_64-linux-gnu"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib/../lib64"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/x86_64-linux-gnu"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../lib64"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/lib"
+// DEBIAN_I686_M64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
+
 /// Test a cross compiler.
 // RUN: %clang -### %s --target=aarch64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64

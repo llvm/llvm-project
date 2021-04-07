@@ -71,6 +71,8 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool debugModuleDir_ = false;
 
+  bool warnAsErr_ = false;
+
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds_;
 
@@ -97,6 +99,9 @@ public:
 
   bool &debugModuleDir() { return debugModuleDir_; }
   const bool &debugModuleDir() const { return debugModuleDir_; }
+
+  bool &warnAsErr() { return warnAsErr_; }
+  const bool &warnAsErr() const { return warnAsErr_; }
 
   bool &enableConformanceChecks() { return EnableConformanceChecks_; }
   const bool &enableConformanceChecks() const {
@@ -126,6 +131,8 @@ public:
 
   void SetDebugModuleDir(bool flag) { debugModuleDir_ = flag; }
 
+  void SetWarnAsErr(bool flag) { warnAsErr_ = flag; }
+
   /// Set the Fortran options to predifined defaults. These defaults are
   /// consistend with f18/f18.cpp.
   // TODO: We should map frontendOpts_ to parserOpts_ instead. For that, we
@@ -135,6 +142,10 @@ public:
 
   /// Set the default predefinitions.
   void setDefaultPredefinitions();
+
+  /// Collect the macro definitions from preprocessorOpts_ and prepare them for
+  /// the parser (i.e. copy into parserOpts_)
+  void collectMacroDefinitions();
 
   /// Set the Fortran options to user-specified values.
   /// These values are found in the preprocessor options.

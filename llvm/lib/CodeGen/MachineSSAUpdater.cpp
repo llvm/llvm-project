@@ -234,10 +234,10 @@ void MachineSSAUpdater::RewriteUse(MachineOperand &U) {
   U.setReg(NewVR);
 }
 
-/// SSAUpdaterTraits<MachineSSAUpdater> - Traits for the SSAUpdaterImpl
-/// template, specialized for MachineSSAUpdater.
 namespace llvm {
 
+/// SSAUpdaterTraits<MachineSSAUpdater> - Traits for the SSAUpdaterImpl
+/// template, specialized for MachineSSAUpdater.
 template<>
 class SSAUpdaterTraits<MachineSSAUpdater> {
 public:

@@ -1129,8 +1129,8 @@ func @simple_clone_elimination() -> memref<5xf32> {
   return %ret : memref<5xf32>
 }
 // CHECK-NEXT: %[[ret:.*]] = memref.alloc()
-// CHECK-NOT: %[[temp:.*]] = memref.clone
-// CHECK-NOT: memref.dealloc %[[temp]]
+// CHECK-NOT: %{{.*}} = memref.clone
+// CHECK-NOT: memref.dealloc %{{.*}}
 // CHECK: return %[[ret]]
 
 // -----

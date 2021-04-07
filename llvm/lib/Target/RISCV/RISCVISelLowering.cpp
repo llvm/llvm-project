@@ -198,6 +198,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
   }
 
+  if (Subtarget.hasStdExtZbb() && Subtarget.is64Bit())
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i32, Custom);
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::ADD, MVT::i32, Custom);
     setOperationAction(ISD::SUB, MVT::i32, Custom);
@@ -437,6 +440,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
 
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
+
+      // Expand all extending loads to types larger than this, and truncating
+      // stores from types larger than this.
+      for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
+        setTruncStoreAction(OtherVT, VT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+      }
     }
 
     for (MVT VT : IntVecVTs) {
@@ -495,6 +507,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
       setOperationAction(ISD::STEP_VECTOR, VT, Custom);
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
+
+      for (MVT OtherVT : MVT::integer_scalable_vector_valuetypes()) {
+        setTruncStoreAction(VT, OtherVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+      }
     }
 
     // Expand various CCs to best match the RVV ISA, which natively supports UNE
@@ -542,17 +561,32 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_REVERSE, VT, Custom);
     };
 
+    // Sets common extload/truncstore actions on RVV floating-point vector
+    // types.
+    const auto SetCommonVFPExtLoadTruncStoreActions =
+        [&](MVT VT, ArrayRef<MVT::SimpleValueType> SmallerVTs) {
+          for (auto SmallVT : SmallerVTs) {
+            setTruncStoreAction(VT, SmallVT, Expand);
+            setLoadExtAction(ISD::EXTLOAD, VT, SmallVT, Expand);
+          }
+        };
+
     if (Subtarget.hasStdExtZfh())
       for (MVT VT : F16VecVTs)
         SetCommonVFPActions(VT);
 
-    if (Subtarget.hasStdExtF())
-      for (MVT VT : F32VecVTs)
+    for (MVT VT : F32VecVTs) {
+      if (Subtarget.hasStdExtF())
         SetCommonVFPActions(VT);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+    }
 
-    if (Subtarget.hasStdExtD())
-      for (MVT VT : F64VecVTs)
+    for (MVT VT : F64VecVTs) {
+      if (Subtarget.hasStdExtD())
         SetCommonVFPActions(VT);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F16VecVTs);
+      SetCommonVFPExtLoadTruncStoreActions(VT, F32VecVTs);
+    }
 
     if (Subtarget.useRVVForFixedLengthVectors()) {
       for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
@@ -562,8 +596,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // By default everything must be expanded.
         for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
           setOperationAction(Op, VT, Expand);
-        for (MVT OtherVT : MVT::fixedlen_vector_valuetypes())
+        for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
           setTruncStoreAction(VT, OtherVT, Expand);
+          setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
+          setLoadExtAction(ISD::SEXTLOAD, OtherVT, VT, Expand);
+          setLoadExtAction(ISD::ZEXTLOAD, OtherVT, VT, Expand);
+        }
 
         // We use EXTRACT_SUBVECTOR as a "cast" from scalable to fixed.
         setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
@@ -694,6 +732,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
       }
+
+      // Custom-legalize bitcasts from fixed-length vectors to scalar types.
+      setOperationAction(ISD::BITCAST, MVT::i8, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+      setOperationAction(ISD::BITCAST, MVT::i64, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f16, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f32, Custom);
+      setOperationAction(ISD::BITCAST, MVT::f64, Custom);
     }
   }
 
@@ -1502,29 +1549,43 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SRL_PARTS:
     return lowerShiftRightParts(Op, DAG, false);
   case ISD::BITCAST: {
+    SDLoc DL(Op);
+    EVT VT = Op.getValueType();
     SDValue Op0 = Op.getOperand(0);
-    // We can handle fixed length vector bitcasts with a simple replacement
-    // in isel.
-    if (Op.getValueType().isFixedLengthVector()) {
-      if (Op0.getValueType().isFixedLengthVector())
+    EVT Op0VT = Op0.getValueType();
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (VT.isFixedLengthVector()) {
+      // We can handle fixed length vector bitcasts with a simple replacement
+      // in isel.
+      if (Op0VT.isFixedLengthVector())
         return Op;
+      // When bitcasting from scalar to fixed-length vector, insert the scalar
+      // into a one-element vector of the result type, and perform a vector
+      // bitcast.
+      if (!Op0VT.isVector()) {
+        auto BVT = EVT::getVectorVT(*DAG.getContext(), Op0VT, 1);
+        return DAG.getBitcast(VT, DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, BVT,
+                                              DAG.getUNDEF(BVT), Op0,
+                                              DAG.getConstant(0, DL, XLenVT)));
+      }
       return SDValue();
     }
-    assert(((Subtarget.is64Bit() && Subtarget.hasStdExtF()) ||
-            Subtarget.hasStdExtZfh()) &&
-           "Unexpected custom legalisation");
-    SDLoc DL(Op);
-    if (Op.getValueType() == MVT::f16 && Subtarget.hasStdExtZfh()) {
-      if (Op0.getValueType() != MVT::i16)
-        return SDValue();
-      SDValue NewOp0 =
-          DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getXLenVT(), Op0);
+    // Custom-legalize bitcasts from fixed-length vector types to scalar types
+    // thus: bitcast the vector to a one-element vector type whose element type
+    // is the same as the result type, and extract the first element.
+    if (!VT.isVector() && Op0VT.isFixedLengthVector()) {
+      LLVMContext &Context = *DAG.getContext();
+      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
+                         DAG.getConstant(0, DL, XLenVT));
+    }
+    if (VT == MVT::f16 && Op0VT == MVT::i16 && Subtarget.hasStdExtZfh()) {
+      SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Op0);
       SDValue FPConv = DAG.getNode(RISCVISD::FMV_H_X, DL, MVT::f16, NewOp0);
       return FPConv;
-    } else if (Op.getValueType() == MVT::f32 && Subtarget.is64Bit() &&
-               Subtarget.hasStdExtF()) {
-      if (Op0.getValueType() != MVT::i32)
-        return SDValue();
+    }
+    if (VT == MVT::f32 && Op0VT == MVT::i32 && Subtarget.is64Bit() &&
+        Subtarget.hasStdExtF()) {
       SDValue NewOp0 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, Op0);
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, NewOp0);
@@ -1555,6 +1616,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     assert(VT == Subtarget.getXLenVT() && "Unexpected custom legalization");
     SDLoc DL(Op);
+    if (Op.getOperand(2).getOpcode() == ISD::Constant)
+      return Op;
     // FSL/FSR take a log2(XLen)+1 bit shift amount but XLenVT FSHL/FSHR only
     // use log(XLen) bits. Mask the shift amount accordingly.
     unsigned ShAmtWidth = Subtarget.getXLen() - 1;
@@ -2594,14 +2657,16 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue ValInVec;
 
   if (IsLegalInsert) {
+    unsigned Opc =
+        VecVT.isFloatingPoint() ? RISCVISD::VFMV_S_F_VL : RISCVISD::VMV_S_X_VL;
     if (isNullConstant(Idx)) {
-      Vec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT, Vec, Val, VL);
+      Vec = DAG.getNode(Opc, DL, ContainerVT, Vec, Val, VL);
       if (!VecVT.isFixedLengthVector())
         return Vec;
       return convertFromScalableVector(VecVT, Vec, DAG, Subtarget);
     }
-    ValInVec = DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, ContainerVT,
-                           DAG.getUNDEF(ContainerVT), Val, VL);
+    ValInVec =
+        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Val, VL);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
     // value at element 0, by using two vslide1up instructions in sequence on
@@ -2805,6 +2870,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getRegister(RISCV::X4, PtrVT);
   }
+  case Intrinsic::riscv_orc_b:
+    // Lower to the GORCI encoding for orc.b.
+    return DAG.getNode(RISCVISD::GORCI, DL, XLenVT, Op.getOperand(1),
+                       DAG.getTargetConstant(7, DL, XLenVT));
   case Intrinsic::riscv_vmv_x_s:
     assert(Op.getValueType() == XLenVT && "Unexpected VT!");
     return DAG.getNode(RISCVISD::VMV_X_S, DL, Op.getValueType(),
@@ -2842,7 +2911,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     if (Scalar.getValueType().bitsLE(XLenVT)) {
       Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Scalar);
-      return DAG.getNode(RISCVISD::VMV_S_XF_VL, DL, Op.getValueType(),
+      return DAG.getNode(RISCVISD::VMV_S_X_VL, DL, Op.getValueType(),
                          Op.getOperand(1), Scalar, Op.getOperand(3));
     }
 
@@ -4048,24 +4117,29 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   }
   case ISD::BITCAST: {
-    assert(((N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-             Subtarget.hasStdExtF()) ||
-            (N->getValueType(0) == MVT::i16 && Subtarget.hasStdExtZfh())) &&
-           "Unexpected custom legalisation");
+    EVT VT = N->getValueType(0);
+    assert(VT.isInteger() && !VT.isVector() && "Unexpected VT!");
     SDValue Op0 = N->getOperand(0);
-    if (N->getValueType(0) == MVT::i16 && Subtarget.hasStdExtZfh()) {
-      if (Op0.getValueType() != MVT::f16)
-        return;
-      SDValue FPConv =
-          DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, Subtarget.getXLenVT(), Op0);
+    EVT Op0VT = Op0.getValueType();
+    MVT XLenVT = Subtarget.getXLenVT();
+    if (VT == MVT::i16 && Op0VT == MVT::f16 && Subtarget.hasStdExtZfh()) {
+      SDValue FPConv = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FPConv));
-    } else if (N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+    } else if (VT == MVT::i32 && Op0VT == MVT::f32 && Subtarget.is64Bit() &&
                Subtarget.hasStdExtF()) {
-      if (Op0.getValueType() != MVT::f32)
-        return;
       SDValue FPConv =
           DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Op0);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPConv));
+    } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
+               isTypeLegal(Op0VT)) {
+      // Custom-legalize bitcasts from fixed-length vector types to illegal
+      // scalar types in order to improve codegen. Bitcast the vector to a
+      // one-element vector type whose element type is the same as the result
+      // type, and extract the first element.
+      LLVMContext &Context = *DAG.getContext();
+      SDValue BVec = DAG.getBitcast(EVT::getVectorVT(Context, VT, 1), Op0);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, BVec,
+                                    DAG.getConstant(0, DL, XLenVT)));
     }
     break;
   }
@@ -4198,6 +4272,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     default:
       llvm_unreachable(
           "Don't know how to custom type legalize this intrinsic!");
+    case Intrinsic::riscv_orc_b: {
+      // Lower to the GORCI encoding for orc.b with the operand extended.
+      SDValue NewOp =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      // If Zbp is enabled, use GORCIW which will sign extend the result.
+      unsigned Opc =
+          Subtarget.hasStdExtZbp() ? RISCVISD::GORCIW : RISCVISD::GORCI;
+      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp,
+                                DAG.getTargetConstant(7, DL, MVT::i64));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
     case Intrinsic::riscv_vmv_x_s: {
       EVT VT = N->getValueType(0);
       MVT XLenVT = Subtarget.getXLenVT();
@@ -6883,7 +6969,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VMV_V_X_VL)
   NODE_NAME_CASE(VFMV_V_F_VL)
   NODE_NAME_CASE(VMV_X_S)
-  NODE_NAME_CASE(VMV_S_XF_VL)
+  NODE_NAME_CASE(VMV_S_X_VL)
+  NODE_NAME_CASE(VFMV_S_F_VL)
   NODE_NAME_CASE(SPLAT_VECTOR_I64)
   NODE_NAME_CASE(READ_VLENB)
   NODE_NAME_CASE(TRUNCATE_VECTOR_VL)

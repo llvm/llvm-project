@@ -36,7 +36,7 @@ L0 m0;
 int test1 = 0;
 int test2 = 0;
 
-int runs = 0;
+bool expect_timeout = false;
 
 void f()
 {
@@ -54,7 +54,7 @@ void f()
         if (d <= milliseconds(0)) break;
     } while (test2 == 0 && cv.wait_for(lk, d) == std::cv_status::no_timeout);
     Clock::time_point t1 = Clock::now();
-    if (runs == 0)
+    if (!expect_timeout)
     {
         assert(t1 - t0 < milliseconds(250));
         assert(test2 != 0);
@@ -64,7 +64,6 @@ void f()
         assert(t1 - t0 - milliseconds(250) < milliseconds(50));
         assert(test2 == 0);
     }
-    ++runs;
 }
 
 int main(int, char**)
@@ -83,6 +82,7 @@ int main(int, char**)
     }
     test1 = 0;
     test2 = 0;
+    expect_timeout = true;
     {
         L1 lk(m0);
         std::thread t = support::make_test_thread(f);

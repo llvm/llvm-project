@@ -545,6 +545,11 @@ typedef struct {
 #define as_half16(x) __builtin_astype((x), half16)
 #endif // cl_khr_fp16
 
+#define as_size_t(x) __builtin_astype((x), size_t)
+#define as_ptrdiff_t(x) __builtin_astype((x), ptrdiff_t)
+#define as_intptr_t(x) __builtin_astype((x), intptr_t)
+#define as_uintptr_t(x) __builtin_astype((x), uintptr_t)
+
 // OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
 
 #define __kernel_exec(X, typen) __kernel \

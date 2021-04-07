@@ -365,8 +365,8 @@ define i8 @umin_zext_constant_big(i5 %x) {
 
 ; negative test
 
-define i8 @umin_zext_constanti_uses(i5 %x) {
-; CHECK-LABEL: @umin_zext_constanti_uses(
+define i8 @umin_zext_constant_uses(i5 %x) {
+; CHECK-LABEL: @umin_zext_constant_uses(
 ; CHECK-NEXT:    [[E:%.*]] = zext i5 [[X:%.*]] to i8
 ; CHECK-NEXT:    call void @use(i8 [[E]])
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[E]], i8 7)
@@ -518,4 +518,76 @@ define i8 @umin_of_not_and_const_uses(i8 %x) {
   call void @use(i8 %notx)
   %m = call i8 @llvm.umin.i8(i8 -45, i8 %notx)
   ret i8 %m
+}
+
+define i8 @not_smax_of_nots(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_smax_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %m = call i8 @llvm.smax.i8(i8 %notx, i8 %noty)
+  %notm = xor i8 %m, -1
+  ret i8 %notm
+}
+
+define i8 @not_smin_of_nots(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_smin_of_nots(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTY]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTX]], i8 [[NOTY]])
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %noty = xor i8 %y, -1
+  call void @use(i8 %noty)
+  %m = call i8 @llvm.smin.i8(i8 %notx, i8 %noty)
+  call void @use(i8 %m)
+  %notm = xor i8 %m, -1
+  ret i8 %notm
+}
+
+define i8 @not_umax_of_not(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_umax_of_not(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTX]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %m = call i8 @llvm.umax.i8(i8 %notx, i8 %y)
+  %notm = xor i8 %m, -1
+  ret i8 %notm
+}
+
+define i8 @not_umin_of_not(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_umin_of_not(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 [[Y:%.*]])
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %m = call i8 @llvm.umin.i8(i8 %notx, i8 %y)
+  call void @use(i8 %m)
+  %notm = xor i8 %m, -1
+  ret i8 %notm
 }

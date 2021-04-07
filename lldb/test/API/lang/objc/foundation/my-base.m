@@ -1,4 +1,4 @@
-#import <Foundation/Foundation.h>
+#import <objc/NSObject.h>
 #import "my-base.h"
 @implementation MyBase
 #if __OBJC2__

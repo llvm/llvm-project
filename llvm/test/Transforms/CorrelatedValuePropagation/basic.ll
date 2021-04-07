@@ -524,6 +524,64 @@ out:
   ret i1 false
 }
 
+define i1 @umin_lhs_overdefined_rhs_const(i32 %a) {
+; CHECK-LABEL: @umin_lhs_overdefined_rhs_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 42
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp ult i32 %a, 42
+  %sel = select i1 %cmp, i32 %a, i32 42
+  %cmp2 = icmp ule i32 %sel, 42
+  ret i1 %cmp2
+}
+
+define i1 @umin_rhs_overdefined_lhs_const(i32 %a) {
+; CHECK-LABEL: @umin_rhs_overdefined_lhs_const(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], 42
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 42, i32 [[A]]
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = icmp uge i32 %a, 42
+  %sel = select i1 %cmp, i32 42, i32 %a
+  %cmp2 = icmp ule i32 %sel, 42
+  ret i1 %cmp2
+}
+
+define i1 @umin_lhs_overdefined_rhs_range(i32 %a, i32 %b) {
+; CHECK-LABEL: @umin_lhs_overdefined_rhs_range(
+; CHECK-NEXT:    [[ASSUME:%.*]] = icmp ult i32 [[B:%.*]], 42
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %assume = icmp ult i32 %b, 42
+  call void @llvm.assume(i1 %assume)
+  %cmp = icmp ult i32 %a, %b
+  %sel = select i1 %cmp, i32 %a, i32 %b
+  %cmp2 = icmp ult i32 %sel, 42
+  ret i1 %cmp2
+}
+
+define i1 @umin_rhs_overdefined_lhs_range(i32 %a, i32 %b) {
+; CHECK-LABEL: @umin_rhs_overdefined_lhs_range(
+; CHECK-NEXT:    [[ASSUME:%.*]] = icmp ult i32 [[B:%.*]], 42
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[A:%.*]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[A]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[SEL]], 42
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %assume = icmp ult i32 %b, 42
+  call void @llvm.assume(i1 %assume)
+  %cmp = icmp uge i32 %a, %b
+  %sel = select i1 %cmp, i32 %b, i32 %a
+  %cmp2 = icmp ult i32 %sel, 42
+  ret i1 %cmp2
+}
+
 define i1 @clamp_low1(i32 %a) {
 ; CHECK-LABEL: @clamp_low1(
 ; CHECK-NEXT:  entry:

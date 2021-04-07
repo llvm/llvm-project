@@ -135,7 +135,7 @@ namespace std {
 */
 
 #include <__config>
-#include <functional>
+#include <__functional_base>
 #include <type_traits>
 #include <utility>
 #include <version>
@@ -326,7 +326,7 @@ concept swappable = requires(_Tp& __a, _Tp& __b) { ranges::swap(__a, __b); };
 
 template<class _Tp, class _Up>
 concept swappable_with =
-  common_reference_with<_Tp&, _Up&> &&
+  common_reference_with<_Tp, _Up> &&
   requires(_Tp&& __t, _Up&& __u) {
     ranges::swap(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Tp>(__t));
     ranges::swap(_VSTD::forward<_Up>(__u), _VSTD::forward<_Up>(__u));
@@ -426,7 +426,25 @@ concept invocable = requires(_Fn&& __fn, _Args&&... __args) {
 template<class _Fn, class... _Args>
 concept regular_invocable = invocable<_Fn, _Args...>;
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
+// [concept.predicate]
+template<class _Fn, class... _Args>
+concept predicate =
+  regular_invocable<_Fn, _Args...> && __boolean_testable<invoke_result_t<_Fn, _Args...>>;
+
+// [concept.relation]
+template<class _Rp, class _Tp, class _Up>
+concept relation =
+  predicate<_Rp, _Tp, _Tp> && predicate<_Rp, _Up, _Up> &&
+  predicate<_Rp, _Tp, _Up> && predicate<_Rp, _Up, _Tp>;
+
+// [concept.equiv]
+template<class _Rp, class _Tp, class _Up>
+concept equivalence_relation = relation<_Rp, _Tp, _Up>;
+
+// [concept.strictweakorder]
+template<class _Rp, class _Tp, class _Up>
+concept strict_weak_order = relation<_Rp, _Tp, _Up>;
+#endif //_LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CONCEPTS)
 
 _LIBCPP_END_NAMESPACE_STD
 

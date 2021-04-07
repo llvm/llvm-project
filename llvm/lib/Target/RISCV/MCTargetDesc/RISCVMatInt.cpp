@@ -97,6 +97,16 @@ InstSeq generateInstSeq(int64_t Val, bool IsRV64) {
     // Keep the new sequence if it is an improvement.
     if (TmpSeq.size() < Res.size())
       Res = TmpSeq;
+
+    // Some cases can benefit from filling the lower bits with zeros instead.
+    Val &= maskTrailingZeros<uint64_t>(ShiftAmount);
+    TmpSeq.clear();
+    generateInstSeqImpl(Val, IsRV64, TmpSeq);
+    TmpSeq.push_back(RISCVMatInt::Inst(RISCV::SRLI, ShiftAmount));
+
+    // Keep the new sequence if it is an improvement.
+    if (TmpSeq.size() < Res.size())
+      Res = TmpSeq;
   }
 
   return Res;

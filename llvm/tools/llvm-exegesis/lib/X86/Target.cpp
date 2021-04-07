@@ -194,8 +194,9 @@ static const char *isInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
     return "unsupported opcode: pseudo instruction";
-  if (OpcodeName.startswith("POP") || OpcodeName.startswith("PUSH") ||
-      OpcodeName.startswith("ADJCALLSTACK") || OpcodeName.startswith("LEAVE"))
+  if ((OpcodeName.startswith("POP") && !OpcodeName.startswith("POPCNT")) ||
+      OpcodeName.startswith("PUSH") || OpcodeName.startswith("ADJCALLSTACK") ||
+      OpcodeName.startswith("LEAVE"))
     return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
   switch (Instr.Description.Opcode) {
   case X86::LFS16rm:

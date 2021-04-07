@@ -73,10 +73,13 @@ define i1 @PR41069_commute(i1 %z, float %c, float %d) {
   ret i1 %r
 }
 
+; TODO: this should be fixed using freeze
 define i1 @PR41069_commute_logical(i1 %z, float %c, float %d) {
 ; CHECK-LABEL: @PR41069_commute_logical(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ninf ord float [[D:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[Z:%.*]]
+; CHECK-NEXT:    [[ORD1:%.*]] = fcmp ninf ord float [[C:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD1]], [[Z:%.*]]
+; CHECK-NEXT:    [[ORD2:%.*]] = fcmp reassoc ninf ord float [[D:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ORD2]], i1 [[AND]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %ord1 = fcmp ninf ord float %c, 0.0

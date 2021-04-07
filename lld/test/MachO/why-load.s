@@ -12,7 +12,7 @@
 # The first line checks that we never demangle symbols in -why_load output.
 # RUN: %lld %t/main.o %t/lib.a -o /dev/null -why_load -demangle | \
 # RUN:     FileCheck %s --check-prefix=WHY
-# RUN: %lld %t/main.o -force_load %t/lib.a -o /dev/null -why_load | \
+# RUN: %lld %t/main.o -force_load %t/lib.a -o /dev/null -whyload | \
 # RUN:     FileCheck %s --check-prefix=WHYFORCE
 # RUN: %lld %t/main.o %t/lib.a -o /dev/null -all_load -why_load | \
 # RUN:     FileCheck %s --check-prefix=WHYALL

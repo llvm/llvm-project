@@ -1274,7 +1274,7 @@ class Base(unittest2.TestCase):
 
         # TODO other platforms, please implement this function
         if not re.match(".*-.*-linux", triple):
-            return False
+            return ""
 
         # Need to do something different for non-Linux/Android targets
         cpuinfo_path = self.getBuildArtifact("cpuinfo")
@@ -1284,11 +1284,10 @@ class Base(unittest2.TestCase):
             cpuinfo_path = "/proc/cpuinfo"
 
         try:
-            f = open(cpuinfo_path, 'r')
-            cpuinfo = f.read()
-            f.close()
+            with open(cpuinfo_path, 'r') as f:
+                cpuinfo = f.read()
         except:
-            return False
+            return ""
 
         return cpuinfo
 
