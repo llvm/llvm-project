@@ -112,9 +112,9 @@ public:
 
 } // end anonymous namespace
 
-/// Provide DenseMapInfo for MemOpKey.
 namespace llvm {
 
+/// Provide DenseMapInfo for MemOpKey.
 template <> struct DenseMapInfo<MemOpKey> {
   using PtrInfo = DenseMapInfo<const MachineOperand *>;
 

@@ -5,9 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Tracks DebugLocs between checkpoints and verifies that they are transferred.
-//
+///
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CODEGEN_GLOBALISEL_LOSTDEBUGLOCOBSERVER_H
 #define LLVM_CODEGEN_GLOBALISEL_LOSTDEBUGLOCOBSERVER_H

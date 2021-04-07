@@ -32,7 +32,7 @@ class raw_ostream;
 
 } // End llvm namespace
 
-/// List of target independent CodeGen pass IDs.
+// List of target independent CodeGen pass IDs.
 namespace llvm {
   FunctionPass *createAtomicExpandPass();
 
@@ -86,7 +86,7 @@ namespace llvm {
   /// MachineDominators - This pass is a machine dominators analysis pass.
   extern char &MachineDominatorsID;
 
-/// MachineDominanaceFrontier - This pass is a machine dominators analysis pass.
+  /// MachineDominanaceFrontier - This pass is a machine dominators analysis.
   extern char &MachineDominanceFrontierID;
 
   /// MachineRegionInfo - This pass computes SESE regions for machine functions.
