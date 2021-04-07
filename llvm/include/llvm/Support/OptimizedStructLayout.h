@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
+/// \file
 /// This file provides an interface for laying out a sequence of fields
 /// as a struct in a way that attempts to minimizes the total space
 /// requirements of the struct while still satisfying the layout
@@ -22,7 +23,7 @@
 ///
 /// - First, it does not guarantee that the result is minimal in size.
 ///   There is no known efficient algoorithm to achieve minimality for
-///   unrestricted inputs.  Nonetheless, this algorithm 
+///   unrestricted inputs.  Nonetheless, this algorithm
 ///
 /// - Second, there are other ways that a struct layout could be optimized
 ///   besides space usage, such as locality.  This layout may have a mixed

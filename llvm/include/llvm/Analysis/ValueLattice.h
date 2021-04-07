@@ -17,13 +17,13 @@
 //                               ValueLatticeElement
 //===----------------------------------------------------------------------===//
 
+namespace llvm {
+
 /// This class represents lattice values for constants.
 ///
 /// FIXME: This is basically just for bringup, this can be made a lot more rich
 /// in the future.
 ///
-
-namespace llvm {
 class ValueLatticeElement {
   enum ValueLatticeElementTy {
     /// This Value has no known value yet.  As a result, this implies the
