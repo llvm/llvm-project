@@ -194,7 +194,7 @@
 "`3050 <https://wg21.link/LWG3050>`__","Conversion specification problem in ``chrono::duration``\  constructor","Prague","",""
 "`3141 <https://wg21.link/LWG3141>`__","``CopyConstructible``\  doesn't preserve source values","Prague","",""
 "`3150 <https://wg21.link/LWG3150>`__","``UniformRandomBitGenerator``\  should validate ``min``\  and ``max``\ ","Prague","",""
-"`3175 <https://wg21.link/LWG3175>`__","The ``CommonReference``\  requirement of concept ``SwappableWith``\  is not satisfied in the example","Prague","",""
+"`3175 <https://wg21.link/LWG3175>`__","The ``CommonReference``\  requirement of concept ``SwappableWith``\  is not satisfied in the example","Prague","|Complete|","13.0"
 "`3194 <https://wg21.link/LWG3194>`__","``ConvertibleTo``\  prose does not match code","Prague","",""
 "`3200 <https://wg21.link/LWG3200>`__","``midpoint``\  should not constrain ``T``\  is complete","Prague","|Nothing To Do|",""
 "`3201 <https://wg21.link/LWG3201>`__","``lerp``\  should be marked as ``noexcept``\ ","Prague","|Complete|",""

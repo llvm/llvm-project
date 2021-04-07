@@ -1011,11 +1011,16 @@ private:
     return llvm::None;
   }
 
+  /// Return true if the specified selector represents init method.
+  static bool isInitMethod(Selector MethodSelector) {
+    return MethodSelector.getMethodFamily() == OMF_init;
+  }
+
   /// Return true if the specified selector piece matches conventions.
   static bool isConventionalSelectorPiece(Selector MethodSelector,
                                           unsigned PieceIndex,
                                           QualType PieceType) {
-    if (!isConventional(PieceType)) {
+    if (!isConventional(PieceType) || isInitMethod(MethodSelector)) {
       return false;
     }
 

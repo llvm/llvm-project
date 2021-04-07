@@ -83,5 +83,31 @@ entry:
   ret i16 %2
 }
 
+define signext i32 @vecop_uses2([4 x i32]* %a, [4 x i32]* %b, [4 x i32]* %c) {
+; CHECK-LABEL: vecop_uses2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    lxvd2x 1, 0, 4
+; CHECK-NEXT:    xxswapd 34, 0
+; CHECK-NEXT:    xxswapd 35, 1
+; CHECK-NEXT:    xxsldwi 0, 34, 34, 3
+; CHECK-NEXT:    vmuluwm 2, 3, 2
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    xxswapd 0, 34
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    stxvd2x 0, 0, 5
+; CHECK-NEXT:    blr
+entry:
+  %0 = bitcast [4 x i32]* %a to <4 x i32>*
+  %1 = load <4 x i32>, <4 x i32>* %0, align 4
+  %2 = bitcast [4 x i32]* %b to <4 x i32>*
+  %3 = load <4 x i32>, <4 x i32>* %2, align 4
+  %4 = mul <4 x i32> %3, %1
+  %5 = bitcast [4 x i32]* %c to <4 x i32>*
+  store <4 x i32> %4, <4 x i32>* %5, align 4
+  %6 = extractelement <4 x i32> %1, i32 3
+  ret i32 %6
+}
+
 declare <16 x i8> @llvm.ppc.altivec.vavgsb(<16 x i8>, <16 x i8>)
 declare i16 @llvm.vector.reduce.smin.v16i16(<16 x i16>)
