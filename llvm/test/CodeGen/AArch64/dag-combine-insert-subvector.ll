@@ -1,12 +1,9 @@
-; RUN: llc < %s -o /dev/null 2>&1 | FileCheck --allow-empty %s
+; RUN: llc < %s -o /dev/null
 
-; This regression test is defending against a ElementCount warning 'Possible incorrect use of
-; EVT::getVectorNumElements() for scalable vector'. This warning appeared in
-; DAGCombiner::visitINSERT_SUBVECTOR because of the use of getVectorNumElements() on scalable
-; types.
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; CHECK-NOT: warning:
+; This regression test is defending against a use of the wrong interface
+; (EVT::getVectorNumElements()) for a scalable vector. This issue
+; appeared in DAGCombiner::visitINSERT_SUBVECTOR because of the use of
+; getVectorNumElements() on scalable types.
 
 target triple = "aarch64-unknown-linux-gnu"
 attributes #0 = {"target-features"="+sve"}

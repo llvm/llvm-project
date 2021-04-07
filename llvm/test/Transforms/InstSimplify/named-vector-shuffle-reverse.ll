@@ -1,9 +1,4 @@
-; RUN: opt  -instsimplify -S < %s 2>%t | FileCheck %s
-
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt  -instsimplify -S < %s | FileCheck %s
 
 ; Test back to back reverse shuffles are eliminated.
 define <vscale x 4 x i32> @shuffle_b2b_reverse(<vscale x 4 x i32> %a) {

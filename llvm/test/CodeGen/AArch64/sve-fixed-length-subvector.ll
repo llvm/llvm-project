@@ -13,10 +13,7 @@
 ; RUN: llc -aarch64-sve-vector-bits-min=1664 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
 ; RUN: llc -aarch64-sve-vector-bits-min=1792 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
 ; RUN: llc -aarch64-sve-vector-bits-min=1920 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024
-; RUN: llc -aarch64-sve-vector-bits-min=2048 -aarch64-enable-atomic-cfg-tidy=false < %s 2>%t | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; WARN-NOT: warning
+; RUN: llc -aarch64-sve-vector-bits-min=2048 -aarch64-enable-atomic-cfg-tidy=false < %s | FileCheck %s -check-prefixes=CHECK,VBITS_GE_512,VBITS_GE_1024,VBITS_GE_2048
 
 ; Test we can code generater patterns of the form:
 ;   fixed_length_vector = ISD::EXTRACT_SUBVECTOR scalable_vector, 0

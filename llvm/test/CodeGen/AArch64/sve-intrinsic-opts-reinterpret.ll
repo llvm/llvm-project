@@ -1,8 +1,4 @@
-; RUN: opt -S -aarch64-sve-intrinsic-opts -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t | FileCheck --check-prefix OPT %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -S -aarch64-sve-intrinsic-opts -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck --check-prefix OPT %s
 
 define <vscale x 8 x i1> @reinterpret_test_h(<vscale x 8 x i1> %a) {
 ; OPT-LABEL: @reinterpret_test_h(
