@@ -15,6 +15,7 @@
 
 #include "clang-c/Dependencies.h"
 
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
@@ -218,7 +219,17 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v0(
     for (int i = 2; i < argc; ++i)
       Compilation.push_back(argv[i]);
   else {
-    return nullptr; // TODO: Run the driver to get -cc1 args.
+    // Run the driver to get -cc1 args.
+    ArrayRef<const char *> CArgs = llvm::makeArrayRef(argv, argv+argc);
+    IntrusiveRefCntPtr<DiagnosticsEngine>
+    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
+    auto CI = createInvocationFromCommandLine(CArgs, Diags, /*VFS=*/nullptr,
+      /*ShouldRecoverOnErrors=*/false, &Compilation);
+    if (!CI) {
+      if (error)
+        *error = cxstring::createRef("failed creating 'cc1' arguments");
+      return nullptr;
+    }
   }
 
   if (Worker->getFormat() == ScanningOutputFormat::Full)
