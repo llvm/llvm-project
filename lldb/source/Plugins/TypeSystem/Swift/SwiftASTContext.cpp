@@ -3329,19 +3329,26 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
              moduleCachePath.c_str());
 
   // Compute the prebuilt module cache path to use:
-  // <resource-dir>/<platform>/prebuilt-modules
+  // <resource-dir>/<platform>/prebuilt-modules/<version>
   llvm::Triple triple(GetTriple());
-  llvm::SmallString<128> prebuiltModuleCachePath(GetResourceDir(triple));
-  StringRef platform;
-  if (swift::tripleIsMacCatalystEnvironment(triple)) {
-    // The prebuilt cache for macCatalyst is the same as the one for macOS,
-    // not iOS or a separate location of its own.
-    platform = "macosx";
-  } else {
-    platform = swift::getPlatformNameForTriple(triple);
+  llvm::Optional<llvm::VersionTuple> sdk_version =
+      m_ast_context_ap->LangOpts.SDKVersion;
+  if (!sdk_version) {
+    auto SDKInfoOrErr = clang::driver::parseDarwinSDKInfo(
+        *llvm::vfs::getRealFileSystem(),
+        m_ast_context_ap->SearchPathOpts.SDKPath);
+    if (SDKInfoOrErr) {
+      if (auto SDKInfo = *SDKInfoOrErr)
+        sdk_version = swift::getTargetSDKVersion(*SDKInfo, triple);
+    } else
+      llvm::consumeError(SDKInfoOrErr.takeError());
   }
-  llvm::sys::path::append(prebuiltModuleCachePath, platform,
-                          "prebuilt-modules");
+  std::string prebuiltModuleCachePath =
+      swift::CompilerInvocation::computePrebuiltCachePath(
+          GetResourceDir(triple), triple, sdk_version);
+  if (sdk_version)
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "SDK version: %s",
+               sdk_version->getAsString().c_str());
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt Swift module cache path: %s",
              prebuiltModuleCachePath.c_str());
 
