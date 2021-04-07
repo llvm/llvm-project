@@ -19,6 +19,7 @@
 ! CHECK-EMPTY:
 ! CHECK-NEXT:OPTIONS:
 ! CHECK-NEXT: -###      Print (but do not run) the commands to run for this compilation
+! CHECK-NEXT: -cpp      Enable predefined and command line preprocessor macros
 ! CHECK-NEXT: -c        Only run preprocess, compile, and assemble steps
 ! CHECK-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! CHECK-NEXT: -E        Only run the preprocessor
@@ -46,6 +47,7 @@
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
+! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -pedantic              Warn on language extensions
 ! CHECK-NEXT: -std=<value>           Language standard to compile for

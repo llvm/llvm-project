@@ -1,16 +1,14 @@
 ! Check that the driver correctly defines macros with the compiler version
 
-! REQUIRES: new-flang-driver
-
 !--------------------------
 ! FLANG DRIVER (flang-new)
 !--------------------------
-! RUN: %flang-new -E %s  2>&1 | FileCheck %s --ignore-case
+! RUN: %flang_fc1 -E %s  2>&1 | FileCheck %s --ignore-case
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang-new -fc1)
 !-----------------------------------------
-! RUN: %flang-new -fc1 -E %s  2>&1 | FileCheck %s --ignore-case
+! RUN: %flang_fc1 -E %s  2>&1 | FileCheck %s --ignore-case
 
 !-----------------
 ! EXPECTED OUTPUT

@@ -42,7 +42,7 @@ static LogicalResult replaceTransferOpWithMubuf(
     LLVMTypeConverter &typeConverter, Location loc, TransferWriteOp xferOp,
     Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
     Value &glc, Value &slc) {
-  auto adaptor = TransferWriteOpAdaptor(operands);
+  auto adaptor = TransferWriteOpAdaptor(operands, xferOp->getAttrDictionary());
   rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.vector(),
                                                    dwordConfig, vindex,
                                                    offsetSizeInBytes, glc, slc);
@@ -62,7 +62,7 @@ public:
   LogicalResult
   matchAndRewrite(ConcreteOp xferOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    typename ConcreteOp::Adaptor adaptor(operands);
+    typename ConcreteOp::Adaptor adaptor(operands, xferOp->getAttrDictionary());
 
     if (xferOp.getVectorType().getRank() > 1 ||
         llvm::size(xferOp.indices()) == 0)

@@ -37,7 +37,8 @@ void Flang::AddFortranDialectOptions(const ArgList &Args,
 
 void Flang::AddPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U, options::OPT_I});
+  Args.AddAllArgs(CmdArgs, {options::OPT_D, options::OPT_U, options::OPT_I,
+                            options::OPT_cpp, options::OPT_nocpp});
 }
 
 void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
