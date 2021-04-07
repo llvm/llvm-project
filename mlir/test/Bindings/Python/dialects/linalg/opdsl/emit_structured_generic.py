@@ -37,9 +37,9 @@ with Context() as ctx, Location.unknown():
     # Note that these all have the same indexing maps. We verify the first and
     # then do more permutation tests on casting and body generation
     # behavior.
-    # CHECK: #[[$MAPA:.+]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
-    # CHECK: #[[$MAPB:.+]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2, d1)>
-    # CHECK: #[[$MAPC:.+]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d1)>
+    # CHECK: #[[$MAPA:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+    # CHECK: #[[$MAPB:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+    # CHECK: #[[$MAPC:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 
     # CHECK-LABEL: func @test_matmul_mono
     # CHECK-SAME:  %[[A:.+]]: tensor<4x16xf32>

@@ -11,7 +11,6 @@ CHECK: -dump-debug-map
 CHECK: -flat
 CHECK: -gen-reproducer
 CHECK: -help
-CHECK: -minimize
 CHECK: -no-odr
 CHECK: -no-output
 CHECK: -no-swiftmodule-timestamp

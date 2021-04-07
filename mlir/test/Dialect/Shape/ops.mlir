@@ -115,7 +115,7 @@ func @test_constraints() {
 }
 
 func @eq_on_extent_tensors(%lhs : tensor<?xindex>,
-                                      %rhs : tensor<?xindex>) {
+                           %rhs : tensor<?xindex>) {
   %w0 = shape.cstr_eq %lhs, %rhs : tensor<?xindex>, tensor<?xindex>
   return
 }
@@ -182,7 +182,6 @@ func @rank_on_extent_tensor(%shape : tensor<?xindex>) -> index {
   %rank = shape.rank %shape : tensor<?xindex> -> index
   return %rank : index
 }
-
 
 func @shape_eq_on_shapes(%a : !shape.shape, %b : !shape.shape) -> i1 {
   %result = shape.shape_eq %a, %b : !shape.shape, !shape.shape
@@ -288,4 +287,36 @@ func @is_broadcastable_on_shapes(%a : !shape.shape,
   %result = shape.is_broadcastable %a, %b
       : !shape.shape, !shape.shape
   return %result : i1
+}
+
+func @shape_upper_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
+  %0 = shape.const_shape [4, 57, 92] : !shape.shape
+  %1 = shape.max %a, %0 : !shape.shape, !shape.shape -> !shape.shape
+  %2 = shape.join %0, %1, error="exceeded element-wise upper bound" :
+    !shape.shape, !shape.shape -> !shape.shape
+  return %2 : !shape.shape
+}
+
+func @shape_lower_bounded_by_constant(%a: !shape.shape) -> !shape.shape {
+  %0 = shape.const_shape [4, 57, 92] : !shape.shape
+  %1 = shape.min %a, %0 : !shape.shape, !shape.shape -> !shape.shape
+  %2 = shape.join %0, %1, error="lower bound element-wise exceeded" :
+    !shape.shape, !shape.shape -> !shape.shape
+  return %2 : !shape.shape
+}
+
+func @size_upper_bounded_by_constant(%a: !shape.size) -> !shape.size {
+  %0 = shape.const_size 5
+  %1 = shape.max %a, %0 : !shape.size, !shape.size -> !shape.size
+  %2 = shape.join %0, %1, error="exceeded element-wise upper bound" :
+    !shape.size, !shape.size -> !shape.size
+  return %2 : !shape.size
+}
+
+func @size_lower_bounded_by_constant(%a: !shape.size) -> !shape.size {
+  %0 = shape.const_size 9
+  %1 = shape.min %a, %0 : !shape.size, !shape.size -> !shape.size
+  %2 = shape.join %0, %1, error="lower bound element-wise exceeded" :
+    !shape.size, !shape.size -> !shape.size
+  return %2 : !shape.size
 }

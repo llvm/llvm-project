@@ -54,7 +54,7 @@ struct MemMemTable {
   void Add(const uint8_t *Data, size_t Size) {
     if (Size <= 2) return;
     Size = std::min(Size, Word::GetMaxSize());
-    size_t Idx = SimpleFastHash(Data, Size) % kSize;
+    auto Idx = SimpleFastHash(Data, Size) % kSize;
     MemMemWords[Idx].Set(Data, Size);
   }
   const Word &Get(size_t Idx) {

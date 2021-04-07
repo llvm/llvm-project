@@ -222,21 +222,18 @@ static_assert(!std::invocable<rvalue_cv_function_object volatile&, int*>);
 static_assert(!std::invocable<rvalue_cv_function_object const volatile&, int*>);
 
 struct multiple_overloads {
-  bool operator()();
-  void operator()(int);
-  int operator()(double);
+  struct A {};
+  struct B { B(int); };
+  struct AB : A, B {};
+  struct O {};
+  void operator()(A) const;
+  void operator()(B) const;
 };
-static_assert(std::invocable<multiple_overloads&>);
-static_assert(std::invocable<multiple_overloads&, short>);
-static_assert(std::invocable<multiple_overloads&, int>);
-static_assert(!std::invocable<multiple_overloads&, long>);
-static_assert(std::invocable<multiple_overloads&, double>);
-static_assert(std::invocable<multiple_overloads&, float>);
-static_assert(std::invocable<multiple_overloads&, short&>);
-static_assert(std::invocable<multiple_overloads&, int&>);
-static_assert(!std::invocable<multiple_overloads&, long&>);
-static_assert(std::invocable<multiple_overloads&, float&>);
-static_assert(std::invocable<multiple_overloads&, double&>);
+static_assert(std::invocable<multiple_overloads, multiple_overloads::A>);
+static_assert(std::invocable<multiple_overloads, multiple_overloads::B>);
+static_assert(std::invocable<multiple_overloads, int>);
+static_assert(!std::invocable<multiple_overloads, multiple_overloads::AB>);
+static_assert(!std::invocable<multiple_overloads, multiple_overloads::O>);
 } // namespace function_objects
 
 namespace pointer_to_member_functions {

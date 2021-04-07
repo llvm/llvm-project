@@ -194,7 +194,7 @@ void RewriteMacrosAction::ExecuteAction() {
 void RewriteTestAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
   std::unique_ptr<raw_ostream> OS =
-      CI.createDefaultOutputFile(/*Binary=*/true, getCurrentFileOrBufferName());
+      CI.createDefaultOutputFile(/*Binary=*/false, getCurrentFileOrBufferName());
   if (!OS) return;
 
   DoRewriteTest(CI.getPreprocessor(), OS.get());
@@ -270,7 +270,7 @@ public:
 bool RewriteIncludesAction::BeginSourceFileAction(CompilerInstance &CI) {
   if (!OutputStream) {
     OutputStream =
-        CI.createDefaultOutputFile(/*Binary=*/false, getCurrentFileOrBufferName());
+        CI.createDefaultOutputFile(/*Binary=*/true, getCurrentFileOrBufferName());
     if (!OutputStream)
       return false;
   }

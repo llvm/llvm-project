@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <filesystem>
 
 // bool exists(file_status s) noexcept
@@ -91,7 +89,8 @@ TEST_CASE(test_exists_fails)
     // reading directories; test using a special inaccessible directory
     // instead.
     const path p = GetWindowsInaccessibleDir();
-    TEST_REQUIRE(!p.empty());
+    if (p.empty())
+        TEST_UNSUPPORTED();
 #else
     scoped_test_env env;
     const path dir = env.create_dir("dir");

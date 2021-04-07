@@ -576,3 +576,8 @@
 
 // RUN: %clang -### -S -fno-temp-file %s 2>&1 | FileCheck -check-prefix=CHECK-NO-TEMP-FILE %s
 // CHECK-NO-TEMP-FILE: "-fno-temp-file"
+
+// RUN: %clang -### -xobjective-c -fobjc-disable-direct-methods-for-testing %s 2>&1 | FileCheck -check-prefix=CHECK_DISABLE_DIRECT %s
+// RUN: %clang -### -xobjective-c %s 2>&1 | FileCheck -check-prefix=CHECK_NO_DISABLE_DIRECT %s
+// CHECK_DISABLE_DIRECT: -fobjc-disable-direct-methods-for-testing
+// CHECK_NO_DISABLE_DIRECT-NOT: -fobjc-disable-direct-methods-for-testing

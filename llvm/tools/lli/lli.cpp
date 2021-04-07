@@ -791,7 +791,8 @@ static std::function<void(Module &)> createDebugDumper() {
   case DumpKind::DumpModsToDisk:
     return [](Module &M) {
       std::error_code EC;
-      raw_fd_ostream Out(M.getModuleIdentifier() + ".ll", EC, sys::fs::OF_Text);
+      raw_fd_ostream Out(M.getModuleIdentifier() + ".ll", EC,
+                         sys::fs::OF_TextWithCRLF);
       if (EC) {
         errs() << "Couldn't open " << M.getModuleIdentifier()
                << " for dumping.\nError:" << EC.message() << "\n";

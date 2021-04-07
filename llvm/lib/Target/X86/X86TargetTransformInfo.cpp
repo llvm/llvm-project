@@ -3408,6 +3408,16 @@ int X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   auto *ValVTy = cast<FixedVectorType>(ValTy);
 
+  // Special case: vXi8 mul reductions are performed as vXi16.
+  if (ISD == ISD::MUL && MTy.getScalarType() == MVT::i8) {
+    auto *WideSclTy = IntegerType::get(ValVTy->getContext(), 16);
+    auto *WideVecTy = FixedVectorType::get(WideSclTy, ValVTy->getNumElements());
+    return getCastInstrCost(Instruction::ZExt, WideVecTy, ValTy,
+                            TargetTransformInfo::CastContextHint::None,
+                            CostKind) +
+           getArithmeticReductionCost(Opcode, WideVecTy, IsPairwise, CostKind);
+  }
+
   unsigned ArithmeticCost = 0;
   if (LT.first != 1 && MTy.isVector() &&
       MTy.getVectorNumElements() < ValVTy->getNumElements()) {

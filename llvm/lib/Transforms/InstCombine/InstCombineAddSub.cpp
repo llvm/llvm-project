@@ -1726,12 +1726,13 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (Instruction *R = factorizeMathWithShlOps(I, Builder))
     return R;
 
-  if (Constant *C = dyn_cast<Constant>(Op0)) {
+  Constant *C;
+  if (match(Op0, m_ImmConstant(C))) {
     Value *X;
     Constant *C2;
 
     // C-(X+C2) --> (C-C2)-X
-    if (match(Op1, m_Add(m_Value(X), m_Constant(C2))))
+    if (match(Op1, m_Add(m_Value(X), m_ImmConstant(C2))))
       return BinaryOperator::CreateSub(ConstantExpr::getSub(C, C2), X);
   }
 
@@ -1799,6 +1800,12 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *XZ = Builder.CreateAdd(X, Z);
     Value *YW = Builder.CreateAdd(Y, Op1);
     return BinaryOperator::CreateSub(XZ, YW);
+  }
+
+  // ((X - Y) - Op1)  -->  X - (Y + Op1)
+  if (match(Op0, m_OneUse(m_Sub(m_Value(X), m_Value(Y))))) {
+    Value *Add = Builder.CreateAdd(Y, Op1);
+    return BinaryOperator::CreateSub(X, Add);
   }
 
   auto m_AddRdx = [](Value *&Vec) {

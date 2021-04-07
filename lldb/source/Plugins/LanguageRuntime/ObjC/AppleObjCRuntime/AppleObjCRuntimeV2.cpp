@@ -200,6 +200,7 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
 
     uint32_t count = 0;
     Class* realized_class_list = objc_copyRealizedClassList(&count);
+    DEBUG_PRINTF ("count = %u\n", count);
 
     uint32_t idx = 0;
     for (uint32_t i=0; i<=count; ++i)
@@ -208,6 +209,8 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
+            if (name_ptr == NULL)
+                continue;
             const char *s = name_ptr;
             uint32_t h = 5381;
             for (unsigned char c = *s; c; c = *++s)
@@ -451,30 +454,33 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
     error.SetErrorString("no process");
     return default_value;
   }
+
   if (!module_sp) {
     error.SetErrorString("no module");
     return default_value;
   }
+
   if (!byte_size)
     byte_size = process->GetAddressByteSize();
   const Symbol *symbol =
       module_sp->FindFirstSymbolWithNameAndType(name, lldb::eSymbolTypeData);
-  if (symbol && symbol->ValueIsAddress()) {
-    lldb::addr_t symbol_load_addr =
-        symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
-    if (symbol_load_addr != LLDB_INVALID_ADDRESS) {
-      if (read_value)
-        return process->ReadUnsignedIntegerFromMemory(
-            symbol_load_addr, byte_size, default_value, error);
-      return symbol_load_addr;
-    } else {
-      error.SetErrorString("symbol address invalid");
-      return default_value;
-    }
-  } else {
+
+  if (!symbol || !symbol->ValueIsAddress()) {
     error.SetErrorString("no symbol");
     return default_value;
   }
+
+  lldb::addr_t symbol_load_addr =
+      symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
+  if (symbol_load_addr == LLDB_INVALID_ADDRESS) {
+    error.SetErrorString("symbol address invalid");
+    return default_value;
+  }
+
+  if (read_value)
+    return process->ReadUnsignedIntegerFromMemory(symbol_load_addr, byte_size,
+                                                  default_value, error);
+  return symbol_load_addr;
 }
 
 static void RegisterObjCExceptionRecognizer(Process *process);
@@ -568,8 +574,8 @@ LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
         ObjCRuntimeVersions::eAppleObjC_V2)
       return new AppleObjCRuntimeV2(process, objc_module_sp);
     return nullptr;
-  } else
-    return nullptr;
+  }
+  return nullptr;
 }
 
 static constexpr OptionDefinition g_objc_classtable_dump_options[] = {
@@ -2457,7 +2463,6 @@ ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
-  uint64_t data_payload;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
@@ -2485,12 +2490,15 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     m_cache[slot] = actual_class_descriptor_sp;
   }
 
-  data_payload =
+  uint64_t data_payload =
       (((uint64_t)unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
-
-  return ClassDescriptorSP(
-      new ClassDescriptorV2Tagged(actual_class_descriptor_sp, data_payload));
+  int64_t data_payload_signed =
+      ((int64_t)((int64_t)unobfuscated
+                 << m_objc_debug_taggedpointer_payload_lshift) >>
+       m_objc_debug_taggedpointer_payload_rshift);
+  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
+      actual_class_descriptor_sp, data_payload, data_payload_signed));
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended(
@@ -2542,7 +2550,6 @@ ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
-  uint64_t data_payload;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
@@ -2573,12 +2580,16 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     m_ext_cache[slot] = actual_class_descriptor_sp;
   }
 
-  data_payload = (((uint64_t)unobfuscated
-                   << m_objc_debug_taggedpointer_ext_payload_lshift) >>
-                  m_objc_debug_taggedpointer_ext_payload_rshift);
+  uint64_t data_payload = (((uint64_t)unobfuscated
+                            << m_objc_debug_taggedpointer_ext_payload_lshift) >>
+                           m_objc_debug_taggedpointer_ext_payload_rshift);
+  int64_t data_payload_signed =
+      ((int64_t)((int64_t)unobfuscated
+                 << m_objc_debug_taggedpointer_ext_payload_lshift) >>
+       m_objc_debug_taggedpointer_ext_payload_rshift);
 
-  return ClassDescriptorSP(
-      new ClassDescriptorV2Tagged(actual_class_descriptor_sp, data_payload));
+  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
+      actual_class_descriptor_sp, data_payload, data_payload_signed));
 }
 
 AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(

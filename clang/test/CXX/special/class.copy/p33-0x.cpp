@@ -22,7 +22,7 @@ void throw_move_only(X x) {
   throw x;
   throw x2;
 }
-  
+
 namespace PR10142 {
   struct X {
     X();

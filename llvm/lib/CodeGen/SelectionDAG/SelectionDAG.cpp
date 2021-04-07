@@ -145,6 +145,9 @@ bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
     if (auto *Op0 = dyn_cast<ConstantSDNode>(N->getOperand(0))) {
       SplatVal = Op0->getAPIntValue().truncOrSelf(EltSize);
       return true;
+    } else if (auto *Op0 = dyn_cast<ConstantFPSDNode>(N->getOperand(0))) {
+      SplatVal = Op0->getValueAPF().bitcastToAPInt().truncOrSelf(EltSize);
+      return true;
     }
   }
 
@@ -2988,7 +2991,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::MUL: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known = KnownBits::computeForMul(Known, Known2);
+    Known = KnownBits::mul(Known, Known2);
     break;
   }
   case ISD::MULHU: {
@@ -3008,7 +3011,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op.getResNo() == 0)
-      Known = KnownBits::computeForMul(Known, Known2);
+      Known = KnownBits::mul(Known, Known2);
     else
       Known = KnownBits::mulhu(Known, Known2);
     break;
@@ -3018,7 +3021,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Op.getResNo() == 0)
-      Known = KnownBits::computeForMul(Known, Known2);
+      Known = KnownBits::mul(Known, Known2);
     else
       Known = KnownBits::mulhs(Known, Known2);
     break;
@@ -4348,7 +4351,8 @@ bool SelectionDAG::isEqualTo(SDValue A, SDValue B) const {
 bool SelectionDAG::haveNoCommonBitsSet(SDValue A, SDValue B) const {
   assert(A.getValueType() == B.getValueType() &&
          "Values must have the same type");
-  return (computeKnownBits(A).Zero | computeKnownBits(B).Zero).isAllOnesValue();
+  return KnownBits::haveNoCommonBitsSet(computeKnownBits(A),
+                                        computeKnownBits(B));
 }
 
 static SDValue FoldSTEP_VECTOR(const SDLoc &DL, EVT VT, SDValue Step,
@@ -4847,8 +4851,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     assert(VT.isVector() && "This DAG node is restricted to vector types.");
     assert(Operand.getValueType().bitsLE(VT) &&
            "The input must be the same size or smaller than the result.");
-    assert(VT.getVectorNumElements() <
-             Operand.getValueType().getVectorNumElements() &&
+    assert(VT.getVectorMinNumElements() <
+               Operand.getValueType().getVectorMinNumElements() &&
            "The destination vector type must have fewer lanes than the input.");
     break;
   case ISD::ABS:

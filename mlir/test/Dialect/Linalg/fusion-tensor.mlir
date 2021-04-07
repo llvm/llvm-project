@@ -616,3 +616,39 @@ func @sigmoid_dynamic_dim(%0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   } -> tensor<?x1xf32>
   return %2 : tensor<?x1xf32>
 }
+
+// -----
+
+func private @compute1(%a: f64) -> f64
+func private @compute2(%a: f64, %b: i32) -> i32
+
+// CHECK-LABEL: func @generic_index_op2(
+func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> tensor<1x8xi32> {
+  %0 = linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  outs(%arg0 : tensor<1x8xf64>) {
+  ^bb0(%a: f64):
+    %r = call @compute1(%a) : (f64) -> f64
+    linalg.yield %r : f64
+  } -> tensor<1x8xf64>
+
+  // CHECK-NEXT:   %[[R:.*]] = linalg.generic
+  //      CHECK:     bb0(%[[BBA:[0-9a-z]*]]: f64, %[[BBB:[0-9a-z]*]]: i32):
+  // CHECK-NEXT:       %[[A:.*]] = call @compute1(%[[BBA]]) : (f64) -> f64
+  // CHECK-NEXT:       %[[B:.*]] = call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
+  // CHECK-NEXT:       linalg.yield %[[B]] : i32
+  // CHECK-NEXT:   } -> tensor<1x8xi32>
+  %1 = linalg.generic {
+    indexing_maps = [affine_map<(i, j) -> (i, j)>, affine_map<(i, j) -> (i, j)>],
+    iterator_types = ["parallel", "parallel"]}
+  ins(%0 : tensor<1x8xf64>)
+  outs(%arg1 : tensor<1x8xi32>) {
+  ^bb0(%a: f64, %b: i32):
+    %r = call @compute2(%a, %b) : (f64, i32) -> i32
+    linalg.yield %r : i32
+  } -> tensor<1x8xi32>
+
+  // CHECK-NEXT:   return %[[R]] : tensor<1x8xi32>
+  return %1 : tensor<1x8xi32>
+}

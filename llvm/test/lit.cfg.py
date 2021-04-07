@@ -177,7 +177,8 @@ tools.extend([
     ToolSubst('Kaleidoscope-Ch6', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch7', unresolved='ignore'),
     ToolSubst('Kaleidoscope-Ch8', unresolved='ignore'),
-    ToolSubst('LLJITWithThinLTOSummaries', unresolved='ignore')])
+    ToolSubst('LLJITWithThinLTOSummaries', unresolved='ignore'),
+    ToolSubst('LLJITWithRemoteDebugging', unresolved='ignore')])
 
 llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 

@@ -1,4 +1,4 @@
-@import Foundation;
+@import ObjectiveC;
 @import myModule;
 
 int main() {

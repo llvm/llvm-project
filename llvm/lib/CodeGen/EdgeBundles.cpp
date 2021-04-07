@@ -68,9 +68,9 @@ bool EdgeBundles::runOnMachineFunction(MachineFunction &mf) {
   return false;
 }
 
-/// Specialize WriteGraph, the standard implementation won't work.
 namespace llvm {
 
+/// Specialize WriteGraph, the standard implementation won't work.
 template<>
 raw_ostream &WriteGraph<>(raw_ostream &O, const EdgeBundles &G,
                           bool ShortNames,

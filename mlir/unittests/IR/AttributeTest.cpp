@@ -150,6 +150,7 @@ TEST(DenseSplatTest, BF16Splat) {
 
 TEST(DenseSplatTest, StringSplat) {
   MLIRContext context;
+  context.allowUnregisteredDialects();
   Type stringType =
       OpaqueType::get(Identifier::get("test", &context), "string");
   StringRef value = "test-string";
@@ -158,6 +159,7 @@ TEST(DenseSplatTest, StringSplat) {
 
 TEST(DenseSplatTest, StringAttrSplat) {
   MLIRContext context;
+  context.allowUnregisteredDialects();
   Type stringType =
       OpaqueType::get(Identifier::get("test", &context), "string");
   Attribute stringAttr = StringAttr::get("test-string", stringType);

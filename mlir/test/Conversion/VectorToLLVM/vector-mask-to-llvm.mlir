@@ -3,20 +3,19 @@
 
 // CMP32-LABEL: @genbool_var_1d(
 // CMP32-SAME: %[[ARG:.*]]: index)
-// CMP32: %[[A:.*]] = llvm.mlir.cast %[[ARG]] : index to i64
 // CMP32: %[[T0:.*]] = constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : vector<11xi32>
-// CMP32: %[[T1:.*]] = trunci %[[A]] : i64 to i32
+// CMP32: %[[T1:.*]] = index_cast %[[ARG]] : index to i32
 // CMP32: %[[T2:.*]] = splat %[[T1]] : vector<11xi32>
 // CMP32: %[[T3:.*]] = cmpi slt, %[[T0]], %[[T2]] : vector<11xi32>
 // CMP32: return %[[T3]] : vector<11xi1>
 
 // CMP64-LABEL: @genbool_var_1d(
 // CMP64-SAME: %[[ARG:.*]]: index)
-// CMP64: %[[A:.*]] = llvm.mlir.cast %[[ARG]] : index to i64
 // CMP64: %[[T0:.*]] = constant dense<[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]> : vector<11xi64>
-// CMP64: %[[T1:.*]] = splat %[[A]] : vector<11xi64>
-// CMP64: %[[T2:.*]] = cmpi slt, %[[T0]], %[[T1]] : vector<11xi64>
-// CMP64: return %[[T2]] : vector<11xi1>
+// CMP64: %[[T1:.*]] = index_cast %[[ARG]] : index to i64
+// CMP64: %[[T2:.*]] = splat %[[T1]] : vector<11xi64>
+// CMP64: %[[T3:.*]] = cmpi slt, %[[T0]], %[[T2]] : vector<11xi64>
+// CMP64: return %[[T3]] : vector<11xi1>
 
 func @genbool_var_1d(%arg0: index) -> vector<11xi1> {
   %0 = vector.create_mask %arg0 : vector<11xi1>

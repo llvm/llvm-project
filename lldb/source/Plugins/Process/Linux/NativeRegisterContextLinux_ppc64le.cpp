@@ -128,7 +128,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 NativeRegisterContextLinux_ppc64le::NativeRegisterContextLinux_ppc64le(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)) {
+          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)),
+      NativeRegisterContextLinux(native_thread) {
   if (target_arch.GetMachine() != llvm::Triple::ppc64le) {
     llvm_unreachable("Unhandled target architecture.");
   }

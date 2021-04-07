@@ -5544,7 +5544,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
 
     BaseExpr = LHSExp;
     IndexExpr = RHSExp;
-    ResultType = LHSTy->getAs<PointerType>()->getPointeeType();
+    ResultType = LHSTy->castAs<PointerType>()->getPointeeType();
   } else if (RHSTy->isArrayType()) {
     // Same as previous, except for 123[f().a] case
     Diag(RHSExp->getBeginLoc(), diag::ext_subscript_non_lvalue)
@@ -5555,7 +5555,7 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
 
     BaseExpr = RHSExp;
     IndexExpr = LHSExp;
-    ResultType = RHSTy->getAs<PointerType>()->getPointeeType();
+    ResultType = RHSTy->castAs<PointerType>()->getPointeeType();
   } else {
     return ExprError(Diag(LLoc, diag::err_typecheck_subscript_value)
        << LHSExp->getSourceRange() << RHSExp->getSourceRange());

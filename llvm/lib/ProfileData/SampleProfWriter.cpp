@@ -728,7 +728,7 @@ SampleProfileWriter::create(StringRef Filename, SampleProfileFormat Format) {
       Format == SPF_Compact_Binary)
     OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_None));
   else
-    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_Text));
+    OS.reset(new raw_fd_ostream(Filename, EC, sys::fs::OF_TextWithCRLF));
   if (EC)
     return EC;
 

@@ -318,6 +318,7 @@ void InitializePlatform() {
   }
 
   CheckAndProtect();
+  InitTlsSize();
 #endif  // !SANITIZER_GO
 }
 

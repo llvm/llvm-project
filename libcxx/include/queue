@@ -179,6 +179,7 @@ template <class T, class Container, class Compare>
 */
 
 #include <__config>
+#include <compare>
 #include <deque>
 #include <vector>
 #include <functional>

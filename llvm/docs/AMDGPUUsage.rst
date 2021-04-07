@@ -340,13 +340,10 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - xnack             flat          - *pal-amdhsa*  - Radeon Instinct MI60
                                                                         scratch       - *pal-amdpal*  - Radeon VII
                                                                                                       - Radeon Pro VII
-     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                         - *rocm-amdhsa* *TBA*
+     ``gfx908``                  ``amdgcn``   dGPU  - sramecc                         - *rocm-amdhsa* - Radeon Instinct MI100 Accelerator
                                                     - xnack           - Absolute
-                                                                        flat                          .. TODO::
+                                                                        flat
                                                                         scratch
-                                                                                                        Add product
-                                                                                                        names.
-
      ``gfx909``                  ``amdgcn``   APU   - xnack           - Absolute      - *pal-amdpal*  *TBA*
                                                                         flat
                                                                         scratch                       .. TODO::
@@ -381,33 +378,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5700 XT
                                                     - xnack             scratch       - *pal-amdpal*  - Radeon Pro 5600 XT
                                                                                                       - Radeon Pro 5600M
-     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                          - *rocm-amdhsa* *TBA*
+     ``gfx1011``                 ``amdgcn``   dGPU  - cumode                          - *rocm-amdhsa* - Radeon Pro V520
                                                     - wavefrontsize64 - Absolute      - *pal-amdhsa*
                                                     - xnack             flat          - *pal-amdpal*
-                                                                        scratch                       .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
-
+                                                                        scratch
      ``gfx1012``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5500 XT
                                                     - xnack             scratch       - *pal-amdpal*
      **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* *TBA*
+     ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
+                                                    - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 6800 XT
+                                                                        scratch       - *pal-amdpal*  - Radeon RX 6900 XT
+     ``gfx1031``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6700 XT
                                                     - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*  .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
-
-     ``gfx1031``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*
-                                                                        scratch       - *pal-amdpal*  .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
-
+                                                                        scratch       - *pal-amdpal*
      ``gfx1032``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* *TBA*
                                                     - wavefrontsize64   flat          - *pal-amdhsa*
                                                                         scratch       - *pal-amdpal*  .. TODO::

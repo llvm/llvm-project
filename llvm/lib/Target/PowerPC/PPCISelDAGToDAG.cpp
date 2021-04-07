@@ -1059,9 +1059,10 @@ static SDNode *selectI64ImmDirectPrefix(SelectionDAG *CurDAG, const SDLoc &dl,
   InstCnt = 1;
 
   // The pli instruction can materialize up to 34 bits directly.
-  // It is defined in the TD file and so we just return the constant.
+  // If a constant fits within 34-bits, emit the pli instruction here directly.
   if (isInt<34>(Imm))
-    return cast<ConstantSDNode>(CurDAG->getConstant(Imm, dl, MVT::i64));
+    return CurDAG->getMachineNode(PPC::PLI8, dl, MVT::i64,
+                                  CurDAG->getTargetConstant(Imm, dl, MVT::i64));
 
   // Require at least two instructions.
   InstCnt = 2;
@@ -4874,11 +4875,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
-      SDNode *ResNode = selectI64Imm(CurDAG, N);
-      if (!isa<ConstantSDNode>(ResNode)) {
-        ReplaceNode(N, ResNode);
-        return;
-      }
+      ReplaceNode(N, selectI64Imm(CurDAG, N));
+      return;
     }
     break;
 
@@ -6905,19 +6903,22 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   // TODO: Can we put this a common method for DAG?
   auto SkipRCCopy = [](SDValue V) {
     while (V->isMachineOpcode() &&
-           V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS)
+           V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
+      // All values in the chain should have single use.
+      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+        return SDValue();
       V = V->getOperand(0);
-    return V;
+    }
+    return V.hasOneUse() ? V : SDValue();
   };
 
   SDValue VecOp = SkipRCCopy(N->getOperand(0));
-  if (!isLaneInsensitive(VecOp) || !VecOp.hasOneUse())
+  if (!VecOp || !isLaneInsensitive(VecOp))
     return;
 
   SDValue LHS = SkipRCCopy(VecOp.getOperand(0)),
           RHS = SkipRCCopy(VecOp.getOperand(1));
-  if (!LHS.hasOneUse() || !RHS.hasOneUse() || !isVSXSwap(LHS) ||
-      !isVSXSwap(RHS))
+  if (!LHS || !RHS || !isVSXSwap(LHS) || !isVSXSwap(RHS))
     return;
 
   // These swaps may still have chain-uses here, count on dead code elimination

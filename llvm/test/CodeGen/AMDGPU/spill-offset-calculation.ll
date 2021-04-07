@@ -81,7 +81,7 @@ entry:
   ; MUBUF:   s_add_u32 s32, s32, 0x40000
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Spill
   ; MUBUF:   s_sub_u32 s32, s32, 0x40000
-  ; FLATSCR: s_add_u32 [[SOFF:s[0-9+]]], s32, 0x1000
+  ; FLATSCR: s_add_u32 [[SOFF:s[0-9]+]], s32, 0x1000
   ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] ; 4-byte Folded Spill
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
 
@@ -100,7 +100,7 @@ entry:
   ; MUBUF:   s_add_u32 s32, s32, 0x40000
   ; MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Reload
   ; MUBUF:   s_sub_u32 s32, s32, 0x40000
-  ; FLATSCR: s_add_u32 [[SOFF:s[0-9+]]], s32, 0x1000
+  ; FLATSCR: s_add_u32 [[SOFF:s[0-9]+]], s32, 0x1000
   ; FLATSCR: scratch_load_dword v{{[0-9]+}}, off, [[SOFF]] ; 4-byte Folded Reload
 
    ; Force %a to spill with no free SGPRs

@@ -390,25 +390,28 @@ define <1 x i64> @test3(<1 x i64>* %a, <1 x i64>* %b, i32 %count) nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    testl %ecx, %ecx
 ; X32-NEXT:    je .LBB3_1
 ; X32-NEXT:  # %bb.2: # %bb26.preheader
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    xorl %ebx, %ebx
 ; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB3_3: # %bb26
 ; X32-NEXT:    # =>This Inner Loop Header: Depth=1
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl (%edi,%ebx,8), %ebp
+; X32-NEXT:    movl %ecx, %esi
 ; X32-NEXT:    movl 4(%edi,%ebx,8), %ecx
-; X32-NEXT:    addl (%esi,%ebx,8), %ebp
-; X32-NEXT:    adcl 4(%esi,%ebx,8), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    addl (%edi,%ebx,8), %ebp
+; X32-NEXT:    adcl 4(%edi,%ebx,8), %ecx
 ; X32-NEXT:    addl %ebp, %eax
 ; X32-NEXT:    adcl %ecx, %edx
+; X32-NEXT:    movl %esi, %ecx
 ; X32-NEXT:    incl %ebx
-; X32-NEXT:    cmpl {{[0-9]+}}(%esp), %ebx
+; X32-NEXT:    cmpl %esi, %ebx
 ; X32-NEXT:    jb .LBB3_3
 ; X32-NEXT:    jmp .LBB3_4
 ; X32-NEXT:  .LBB3_1:

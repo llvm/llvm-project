@@ -8188,6 +8188,9 @@ def err_atomic_op_needs_non_const_pointer : Error<
 def err_atomic_op_needs_trivial_copy : Error<
   "address argument to atomic operation must be a pointer to a "
   "trivially-copyable type (%0 invalid)">;
+def err_atomic_op_needs_atomic_int_ptr_or_fp : Error<
+  "address argument to atomic operation must be a pointer to %select{|atomic }0"
+  "integer, pointer or supported floating point type (%1 invalid)">;
 def err_atomic_op_needs_atomic_int_or_ptr : Error<
   "address argument to atomic operation must be a pointer to %select{|atomic }0"
   "integer or pointer (%1 invalid)">;
@@ -11185,7 +11188,7 @@ def warn_tcb_enforcement_violation : Warning<
   "calling %0 is a violation of trusted computing base '%1'">,
   InGroup<DiagGroup<"tcb-enforcement">>;
 
-// RISC-V V-extension
-def err_riscvv_builtin_requires_v : Error<
-   "builtin requires 'V' extension support to be enabled">;
+// RISC-V builtin required extension warning
+def err_riscv_builtin_requires_extension : Error<
+  "builtin requires '%0' extension support to be enabled">;
 } // end of sema component.

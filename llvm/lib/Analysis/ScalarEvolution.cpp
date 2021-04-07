@@ -5664,15 +5664,16 @@ getRangeForUnknownRecurrence(const SCEVUnknown *U) {
   if (!P)
     return CR;
 
+  // Make sure that no Phi input comes from an unreachable block. Otherwise,
+  // even the values that are not available in these blocks may come from them,
+  // and this leads to false-positive recurrence test.
+  for (auto *Pred : predecessors(P->getParent()))
+    if (!DT.isReachableFromEntry(Pred))
+      return CR;
+
   BinaryOperator *BO;
   Value *Start, *Step;
   if (!matchSimpleRecurrence(P, BO, Start, Step))
-    return CR;
-
-  if (!DT.isReachableFromEntry(P->getParent()) ||
-      !DT.isReachableFromEntry(BO->getParent()))
-    // If either is in unreachable code, dominance collapses and none of our
-    // expected post conditions about loops hold.
     return CR;
 
   // If we found a recurrence in reachable code, we must be in a loop. Note

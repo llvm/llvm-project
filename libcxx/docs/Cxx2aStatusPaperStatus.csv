@@ -76,7 +76,7 @@
 "`P1209R0 <https://wg21.link/P1209R0>`__","LWG","Adopt Consistent Container Erasure from Library Fundamentals 2 for C++20","San Diego","|Complete|","8.0"
 "`P1210R0 <https://wg21.link/P1210R0>`__","LWG","Completing the Rebase of Library Fundamentals, Version 3, Working Draft","San Diego","* *",""
 "`P1236R1 <https://wg21.link/P1236R1>`__","CWG","Alternative Wording for P0907R4 Signed Integers are Two's Complement","San Diego","* *",""
-"`P1248R1 <https://wg21.link/P1248R1>`__","LWG","Remove CommonReference requirement from StrictWeakOrdering (a.k.a Fixing Relations)","San Diego","* *",""
+"`P1248R1 <https://wg21.link/P1248R1>`__","LWG","Remove CommonReference requirement from StrictWeakOrdering (a.k.a Fixing Relations)","San Diego","|Complete|","13.0"
 "`P1285R0 <https://wg21.link/P1285R0>`__","LWG","Improving Completeness Requirements for Type Traits","San Diego","* *",""
 "`P1353R0 <https://wg21.link/P1353R0>`__","CWG","Missing feature test macros","San Diego","* *",""
 "","","","","",""

@@ -14,8 +14,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCESPECIALGLOBALS_H
+#define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCESPECIALGLOBALS_H
+
 #include "Delta.h"
 
 namespace llvm {
 void reduceSpecialGlobalsDeltaPass(TestRunner &Test);
 } // namespace llvm
+
+#endif

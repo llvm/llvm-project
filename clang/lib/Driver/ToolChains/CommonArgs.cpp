@@ -550,6 +550,8 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
       CmdArgs.push_back("-plugin-opt=-debugger-tune=lldb");
     else if (A->getOption().matches(options::OPT_gsce))
       CmdArgs.push_back("-plugin-opt=-debugger-tune=sce");
+    else if (A->getOption().matches(options::OPT_gdbx))
+      CmdArgs.push_back("-plugin-opt=-debugger-tune=dbx");
     else
       CmdArgs.push_back("-plugin-opt=-debugger-tune=gdb");
   }
@@ -1575,7 +1577,7 @@ unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
     const Driver &D, const llvm::opt::ArgList &Args, bool Diagnose) {
   const unsigned MinCodeObjVer = 2;
   const unsigned MaxCodeObjVer = 4;
-  unsigned CodeObjVer = 3;
+  unsigned CodeObjVer = 4;
 
   // Emit warnings for legacy options even if they are overridden.
   if (Diagnose) {

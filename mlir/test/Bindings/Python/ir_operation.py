@@ -601,3 +601,16 @@ def testOperationName():
     print(op.operation.name)
 
 run(testOperationName)
+
+# CHECK-LABEL: TEST: testCapsuleConversions
+def testCapsuleConversions():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    m = Operation.create("custom.op1").operation
+    m_capsule = m._CAPIPtr
+    assert '"mlir.ir.Operation._CAPIPtr"' in repr(m_capsule)
+    m2 = Operation._CAPICreate(m_capsule)
+    assert m2 is m
+
+run(testCapsuleConversions)

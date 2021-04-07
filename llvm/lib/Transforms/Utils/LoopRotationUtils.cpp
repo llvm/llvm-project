@@ -467,9 +467,8 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
         C->setName(Inst->getName());
         C->insertBefore(LoopEntryBranch);
 
-        if (auto *II = dyn_cast<IntrinsicInst>(C))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            AC->registerAssumption(II);
+        if (auto *II = dyn_cast<AssumeInst>(C))
+          AC->registerAssumption(II);
         // MemorySSA cares whether the cloned instruction was inserted or not, and
         // not whether it can be remapped to a simplified value.
         if (MSSAU)

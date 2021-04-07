@@ -606,7 +606,7 @@ define i1 @oneuse_shl_ashr_logical(i32 %arg) {
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
 ; CHECK-NEXT:    [[T5:%.*]] = icmp eq i32 [[T4]], [[ARG]]
 ; CHECK-NEXT:    call void @use1(i1 [[T5]])
-; CHECK-NEXT:    [[T6:%.*]] = and i1 [[T2]], [[T5]]
+; CHECK-NEXT:    [[T6:%.*]] = select i1 [[T2]], i1 [[T5]], i1 false
 ; CHECK-NEXT:    ret i1 [[T6]]
 ;
   %t1 = trunc i32 %arg to i8

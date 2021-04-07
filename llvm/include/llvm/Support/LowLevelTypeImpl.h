@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Implement a low-level type suitable for MachineInstr level instruction
 /// selection.
 ///
@@ -20,7 +20,7 @@
 /// Other information required for correct selection is expected to be carried
 /// by the opcode, or non-type flags. For example the distinction between G_ADD
 /// and G_FADD for int/float or fast-math flags.
-//
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_SUPPORT_LOWLEVELTYPEIMPL_H

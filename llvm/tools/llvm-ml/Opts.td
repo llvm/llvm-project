@@ -31,6 +31,8 @@ def bitness : LLVMJoined<"m">, Values<"32,64">,
               HelpText<"Target platform (x86 or x86-64)">;
 def as_lex : LLVMFlag<"as-lex">,
              HelpText<"Lex tokens from a .asm file without assembling">;
+def fatal_warnings : LLVMFlag<"fatal-warnings">,
+                     HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
                HelpText<"Emit a file with the given type">;
 def output_att_asm : LLVMFlag<"output-att-asm">,
@@ -68,6 +70,7 @@ def safeseh : MLFlag<"safeseh">,
 def assembly_file : MLJoinedOrSeparate<"Ta">,
                     HelpText<"Assemble source file with name not ending with "
                              "the .asm extension">;
+def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
 def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
                  Alias<filetype>, AliasArgs<["null"]>;
 
@@ -102,7 +105,6 @@ def listing_title : UnsupportedSeparate<"St">, HelpText<"">;
 def listing_false_conditionals : UnsupportedFlag<"Sx">, HelpText<"">;
 def extra_warnings : UnsupportedFlag<"w">, HelpText<"">;
 def warning_level : UnsupportedJoined<"W">, HelpText<"">;
-def error_on_warning : UnsupportedFlag<"WX">, HelpText<"">;
 def ignore_include_envvar : UnsupportedFlag<"X">, HelpText<"">;
 def line_number_info : UnsupportedFlag<"Zd">, HelpText<"">;
 def export_all_symbols : UnsupportedFlag<"Zf">, HelpText<"">;

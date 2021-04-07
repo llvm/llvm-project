@@ -1,26 +1,26 @@
 ; Validate ThinLTO postlink pipeline when we have Sample PGO
 ;
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<O1>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,%llvmcheckext
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,%llvmcheckext
-; RUN: opt -disable-verify -debug-pass-manager -passes-ep-pipeline-start='no-op-module' \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -passes-ep-pipeline-start='no-op-module' \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O3,CHECK-O23SZ,%llvmcheckext
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<Os>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Os,CHECK-O23SZ,%llvmcheckext
-; RUN: opt -disable-verify -debug-pass-manager \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<Oz>' -S %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-Oz,CHECK-O23SZ,%llvmcheckext
-; RUN: opt -disable-verify -debug-pass-manager -new-pm-debug-info-for-profiling \
+; RUN: opt -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -new-pm-debug-info-for-profiling \
 ; RUN:     -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-thinlto-samplepgo-defaults.prof' \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23SZ,%llvmcheckext
@@ -78,9 +78,9 @@
 ; CHECK-O-NEXT: Running pass: ModuleInlinerWrapperPass
 ; CHECK-O-NEXT: Running analysis: InlineAdvisorAnalysis
 ; CHECK-O-NEXT: Starting {{.*}}Module pass manager run.
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA	
-; CHECK-O-NEXT: Running analysis: GlobalsAA	
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis	
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O-NEXT: Running analysis: GlobalsAA
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
@@ -121,6 +121,7 @@
 ; CHECK-O-NEXT: Starting Loop pass manager run.
 ; CHECK-O-NEXT: Running pass: LoopInstSimplifyPass
 ; CHECK-O-NEXT: Running pass: LoopSimplifyCFGPass
+; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: LoopRotatePass
 ; CHECK-O-NEXT: Running pass: LICM
 ; CHECK-O-NEXT: Running pass: SimpleLoopUnswitchPass

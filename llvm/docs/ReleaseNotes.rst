@@ -116,6 +116,13 @@ Changes to the Go bindings
 --------------------------
 
 
+Changes to the FastISel infrastructure
+--------------------------------------
+
+* FastISel no longer tracks killed registers, and instead leaves this to the
+  register allocator. This means that ``hasTrivialKill()`` is removed, as well
+  as the ``OpNIsKill`` parameters to the ``fastEmit_*()`` family of functions.
+
 Changes to the DAG infrastructure
 ---------------------------------
 

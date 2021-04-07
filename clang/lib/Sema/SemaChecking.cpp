@@ -91,6 +91,7 @@
 #include <algorithm>
 #include <bitset>
 #include <cassert>
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -3415,13 +3416,27 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
                                          CallExpr *TheCall) {
   // CodeGenFunction can also detect this, but this gives a better error
   // message.
+  bool FeatureMissing = false;
+  SmallVector<StringRef> ReqFeatures;
   StringRef Features = Context.BuiltinInfo.getRequiredFeatures(BuiltinID);
-  if (Features.find("experimental-v") != StringRef::npos &&
-      !TI.hasFeature("experimental-v"))
-    return Diag(TheCall->getBeginLoc(), diag::err_riscvv_builtin_requires_v)
-           << TheCall->getSourceRange();
+  Features.split(ReqFeatures, ',');
 
-  return false;
+  // Check if each required feature is included
+  for (auto &I : ReqFeatures) {
+    if (TI.hasFeature(I))
+      continue;
+    // Convert features like "zbr" and "experimental-zbr" to "Zbr".
+    I.consume_front("experimental-");
+    std::string FeatureStr = I.str();
+    FeatureStr[0] = std::toupper(FeatureStr[0]);
+
+    // Error message
+    FeatureMissing = true;
+    Diag(TheCall->getBeginLoc(), diag::err_riscv_builtin_requires_extension)
+        << TheCall->getSourceRange() << StringRef(FeatureStr);
+  }
+
+  return FeatureMissing;
 }
 
 bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
@@ -4916,7 +4931,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__atomic_sub_fetch:
     IsAddSub = true;
-    LLVM_FALLTHROUGH;
+    Form = Arithmetic;
+    break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__c11_atomic_fetch_xor:
@@ -4931,6 +4947,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__atomic_nand_fetch:
+    Form = Arithmetic;
+    break;
   case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__opencl_atomic_fetch_min:
@@ -5023,10 +5041,24 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   // For an arithmetic operation, the implied arithmetic must be well-formed.
   if (Form == Arithmetic) {
-    // gcc does not enforce these rules for GNU atomics, but we do so for sanity.
-    if (IsAddSub && !ValType->isIntegerType()
-        && !ValType->isPointerType()) {
-      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_or_ptr)
+    // gcc does not enforce these rules for GNU atomics, but we do so for
+    // sanity.
+    auto IsAllowedValueType = [&](QualType ValType) {
+      if (ValType->isIntegerType())
+        return true;
+      if (ValType->isPointerType())
+        return true;
+      if (!ValType->isFloatingType())
+        return false;
+      // LLVM Parser does not allow atomicrmw with x86_fp80 type.
+      if (ValType->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+          &Context.getTargetInfo().getLongDoubleFormat() ==
+              &llvm::APFloat::x87DoubleExtended())
+        return false;
+      return true;
+    };
+    if (IsAddSub && !IsAllowedValueType(ValType)) {
+      Diag(ExprRange.getBegin(), diag::err_atomic_op_needs_atomic_int_ptr_or_fp)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
     }
@@ -5153,7 +5185,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // passed by address. For the rest, GNU uses by-address and C11 uses
         // by-value.
         assert(Form != Load);
-        if (Form == Init || (Form == Arithmetic && ValType->isIntegerType()))
+        if (Form == Arithmetic && ValType->isPointerType())
+          Ty = Context.getPointerDiffType();
+        else if (Form == Init || Form == Arithmetic)
           Ty = ValType;
         else if (Form == Copy || Form == Xchg) {
           if (IsPassedByAddress) {
@@ -5162,9 +5196,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                                  ExprRange.getBegin());
           }
           Ty = ByValType;
-        } else if (Form == Arithmetic)
-          Ty = Context.getPointerDiffType();
-        else {
+        } else {
           Expr *ValArg = APIOrderedArgs[i];
           // The value pointer is always dereferenced, a nullptr is undefined.
           CheckNonNullArgument(*this, ValArg, ExprRange.getBegin());

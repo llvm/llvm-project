@@ -70,6 +70,7 @@ bool fromJSON(const llvm::json::Value &E, URIForFile &R, llvm::json::Path P) {
   if (auto S = E.getAsString()) {
     auto Parsed = URI::parse(*S);
     if (!Parsed) {
+      consumeError(Parsed.takeError());
       P.report("failed to parse URI");
       return false;
     }

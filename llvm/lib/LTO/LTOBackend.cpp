@@ -85,8 +85,9 @@ Error Config::addSaveTemps(std::string OutputFileName,
   ShouldDiscardValueNames = false;
 
   std::error_code EC;
-  ResolutionFile = std::make_unique<raw_fd_ostream>(
-      OutputFileName + "resolution.txt", EC, sys::fs::OpenFlags::OF_Text);
+  ResolutionFile =
+      std::make_unique<raw_fd_ostream>(OutputFileName + "resolution.txt", EC,
+                                       sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC) {
     ResolutionFile.reset();
     return errorCodeToError(EC);
@@ -220,17 +221,17 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                         PGOOptions::IRUse, PGOOptions::CSIRUse);
   }
 
-  PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Conf.DebugPassManager);
-  SI.registerCallbacks(PIC);
-  PassBuilder PB(Conf.DebugPassManager, TM, Conf.PTO, PGOOpt, &PIC);
-
-  RegisterPassPlugins(Conf.PassPlugins, PB);
-
   LoopAnalysisManager LAM(Conf.DebugPassManager);
   FunctionAnalysisManager FAM(Conf.DebugPassManager);
   CGSCCAnalysisManager CGAM(Conf.DebugPassManager);
   ModuleAnalysisManager MAM(Conf.DebugPassManager);
+
+  PassInstrumentationCallbacks PIC;
+  StandardInstrumentations SI(Conf.DebugPassManager);
+  SI.registerCallbacks(PIC, &FAM);
+  PassBuilder PB(Conf.DebugPassManager, TM, Conf.PTO, PGOOpt, &PIC);
+
+  RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(Triple(TM->getTargetTriple())));

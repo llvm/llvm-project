@@ -381,7 +381,7 @@ static CommandRegistration Unused(&Convert, []() -> Error {
   raw_fd_ostream OS(ConvertOutput, EC,
                     ConvertOutputFormat == ConvertFormats::BINARY
                         ? sys::fs::OpenFlags::OF_None
-                        : sys::fs::OpenFlags::OF_Text);
+                        : sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + ConvertOutput + "' for writing.", EC);

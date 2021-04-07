@@ -297,6 +297,19 @@ ExprInspection checks
       return n;
     }
 
+- ``clang_analyzer_dumpExtent(a single argument of any type)``
+- ``clang_analyzer_dumpElementCount(a single argument of any type)``
+
+  Dumps out the extent and the element count of the argument.
+
+  Example usage::
+
+    void array() {
+      int a[] = {1, 3};
+      clang_analyzer_dumpExtent(a);       // expected-warning {{8 S64b}}
+      clang_analyzer_dumpElementCount(a); // expected-warning {{2 S64b}}
+    }
+
 Statistics
 ==========
 

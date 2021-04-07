@@ -305,9 +305,9 @@ define i32 @nabs_canonical_8(i32 %a) {
 define i32 @nabs_canonical_9(i32 %a, i32 %b) {
 ; CHECK-LABEL: @nabs_canonical_9(
 ; CHECK-NEXT:    [[T1:%.*]] = sub i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = sub i32 [[B]], [[A]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[T1]], i1 false)
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[T2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[B]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %t1 = sub i32 %a, %b

@@ -42,7 +42,7 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
 // TILE-25n0:     %[[OUT:.*]] = addf %[[IN]], %[[NEW_I_FLOAT]] : f32
 
 // TILE-0n25-LABEL: func @indexed_generic_vector
-// TILE-0n25-NOT: scf.for %[[J:.*]] = {{.*}} step %[[C25]]
+// TILE-0n25-NOT: scf.for %[[J:.*]] = {{.*}} step %
 // TILE-0n25: linalg.indexed_generic
 
 #combined_indices_trait = {

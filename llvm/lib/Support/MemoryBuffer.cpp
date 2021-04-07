@@ -259,7 +259,7 @@ static ErrorOr<std::unique_ptr<MB>>
 getFileAux(const Twine &Filename, uint64_t MapSize, uint64_t Offset,
            bool IsText, bool RequiresNullTerminator, bool IsVolatile) {
   Expected<sys::fs::file_t> FDOrErr = sys::fs::openNativeFileForRead(
-      Filename, IsText ? sys::fs::OF_Text : sys::fs::OF_None);
+      Filename, IsText ? sys::fs::OF_TextWithCRLF : sys::fs::OF_None);
   if (!FDOrErr)
     return errorToErrorCode(FDOrErr.takeError());
   sys::fs::file_t FD = *FDOrErr;

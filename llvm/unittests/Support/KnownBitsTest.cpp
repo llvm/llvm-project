@@ -230,7 +230,7 @@ TEST(KnownBitsTest, BinaryExhaustive) {
 
       // The following are conservatively correct, but not guaranteed to be
       // precise.
-      KnownBits ComputedMul = KnownBits::computeForMul(Known1, Known2);
+      KnownBits ComputedMul = KnownBits::mul(Known1, Known2);
       EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
       EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
 
@@ -461,6 +461,22 @@ TEST(KnownBitsTest, SExtInReg) {
       EXPECT_EQ(CommonZero, KnownSExtInReg.Zero);
     });
   }
+}
+
+TEST(KnownBitsTest, CommonBitsSet) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      bool HasCommonBitsSet = false;
+      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+          HasCommonBitsSet |= N1.intersects(N2);
+        });
+      });
+      EXPECT_EQ(!HasCommonBitsSet,
+                KnownBits::haveNoCommonBitsSet(Known1, Known2));
+    });
+  });
 }
 
 } // end anonymous namespace

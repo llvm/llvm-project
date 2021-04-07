@@ -87,16 +87,16 @@ define void @test_fadd(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    mv s0, a1
-; CHECK-NEXT:    mv s1, a0
-; CHECK-NEXT:    lhu a0, 0(a0)
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    lhu s1, 0(a0)
+; CHECK-NEXT:    lhu a0, 0(a1)
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
 ; CHECK-NEXT:    fmv.s fs0, fa0
-; CHECK-NEXT:    lhu a0, 0(s0)
+; CHECK-NEXT:    mv a0, s1
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
-; CHECK-NEXT:    fadd.s fa0, fs0, fa0
+; CHECK-NEXT:    fadd.s fa0, fa0, fs0
 ; CHECK-NEXT:    call __gnu_f2h_ieee@plt
-; CHECK-NEXT:    sh a0, 0(s1)
+; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
@@ -118,16 +118,16 @@ define void @test_fmul(half* %p, half* %q) nounwind {
 ; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    fsd fs0, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    mv s0, a1
-; CHECK-NEXT:    mv s1, a0
-; CHECK-NEXT:    lhu a0, 0(a0)
+; CHECK-NEXT:    mv s0, a0
+; CHECK-NEXT:    lhu s1, 0(a0)
+; CHECK-NEXT:    lhu a0, 0(a1)
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
 ; CHECK-NEXT:    fmv.s fs0, fa0
-; CHECK-NEXT:    lhu a0, 0(s0)
+; CHECK-NEXT:    mv a0, s1
 ; CHECK-NEXT:    call __gnu_h2f_ieee@plt
-; CHECK-NEXT:    fmul.s fa0, fs0, fa0
+; CHECK-NEXT:    fmul.s fa0, fa0, fs0
 ; CHECK-NEXT:    call __gnu_f2h_ieee@plt
-; CHECK-NEXT:    sh a0, 0(s1)
+; CHECK-NEXT:    sh a0, 0(s0)
 ; CHECK-NEXT:    fld fs0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload

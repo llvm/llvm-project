@@ -6,13 +6,13 @@
 ; GCN: define amdgpu_kernel void @caller(float addrspace(1)* nocapture %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
-; UNSAFE: attributes #0 = { norecurse nounwind readnone willreturn "unsafe-fp-math"="true" }
+; UNSAFE: attributes #0 = { norecurse nosync nounwind readnone willreturn "unsafe-fp-math"="true" }
 ; UNSAFE: attributes #1 = { nofree norecurse nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="true" }
 
-; NOINFS: attributes #0 = { norecurse nounwind readnone willreturn "no-infs-fp-math"="true" }
+; NOINFS: attributes #0 = { norecurse nosync nounwind readnone willreturn "no-infs-fp-math"="true" }
 ; NOINFS: attributes #1 = { nofree norecurse nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "unsafe-fp-math"="false" }
 
-; NONANS: attributes #0 = { norecurse nounwind readnone willreturn "no-nans-fp-math"="true" }
+; NONANS: attributes #0 = { norecurse nosync nounwind readnone willreturn "no-nans-fp-math"="true" }
 ; NONANS: attributes #1 = { nofree norecurse nounwind willreturn "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "unsafe-fp-math"="false" }
 
 define float @foo(float %x) #0 {

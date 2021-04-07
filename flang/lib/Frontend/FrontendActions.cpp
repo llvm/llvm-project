@@ -10,6 +10,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
@@ -45,26 +46,16 @@ bool reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
 
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
-
   std::string currentInputPath{GetCurrentFileOrBufferName()};
-
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
 
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
-    // Switch between fixed and free form format based on the input file
-    // extension.
-    //
-    // Ideally we should have all Fortran options set before entering this
-    // method (i.e. before processing any specific input files). However, we
-    // can't decide between fixed and free form based on the file extension
-    // earlier than this.
-    parserOptions.isFixedForm = currentInput().IsFixedForm();
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     const unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not scan %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -78,26 +69,15 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
 
 bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
-
   std::string currentInputPath{GetCurrentFileOrBufferName()};
-
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
-
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
-    // Switch between fixed and free form format based on the input file
-    // extension.
-    //
-    // Ideally we should have all Fortran options set before entering this
-    // method (i.e. before processing any specific input files). However, we
-    // can't decide between fixed and free form based on the file extension
-    // earlier than this.
-    parserOptions.isFixedForm = currentInput().IsFixedForm();
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     const unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not scan %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -109,7 +89,9 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
@@ -264,7 +246,9 @@ void DebugMeasureParseTreeAction::ExecuteAction() {
   // Parse. In case of failure, report and return.
   ci.parsing().Parse(llvm::outs());
 
-  if (ci.parsing().messages().AnyFatalError()) {
+  if (!ci.parsing().messages().empty() &&
+      (ci.invocation().warnAsErr() ||
+          ci.parsing().messages().AnyFatalError())) {
     unsigned diagID = ci.diagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();

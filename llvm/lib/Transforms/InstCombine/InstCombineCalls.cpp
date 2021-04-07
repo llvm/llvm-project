@@ -522,18 +522,24 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
     return CallInst::Create(F, {X, IC.Builder.getFalse()});
   }
 
+  KnownBits Known(BitWidth);
+  IC.computeKnownBits(Op0, Known, 0, &II);
+
+  // If all bits are zero except for exactly one fixed bit, then the result
+  // must be 0 or 1, and we can get that answer by shifting to LSB:
+  // ctpop (X & 32) --> (X & 32) >> 5
+  if ((~Known.Zero).isPowerOf2())
+    return BinaryOperator::CreateLShr(
+        Op0, ConstantInt::get(Ty, (~Known.Zero).exactLogBase2()));
+
   // FIXME: Try to simplify vectors of integers.
   auto *IT = dyn_cast<IntegerType>(Ty);
   if (!IT)
     return nullptr;
 
-  KnownBits Known(BitWidth);
-  IC.computeKnownBits(Op0, Known, 0, &II);
-
+  // Add range metadata since known bits can't completely reflect what we know.
   unsigned MinCount = Known.countMinPopulation();
   unsigned MaxCount = Known.countMaxPopulation();
-
-  // Add range metadata since known bits can't completely reflect what we know.
   if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
     Metadata *LowAndHigh[] = {
         ConstantAsMetadata::get(ConstantInt::get(IT, MinCount)),
@@ -1551,8 +1557,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     /// argument and remove the assume if it becomes useless.
     /// always returns nullptr for use as a return values.
     auto RemoveConditionFromAssume = [&](Instruction *Assume) -> Instruction * {
-      assert(isa<IntrinsicInst>(Assume));
-      if (isAssumeWithEmptyBundle(*cast<IntrinsicInst>(II)))
+      assert(isa<AssumeInst>(Assume));
+      if (isAssumeWithEmptyBundle(*cast<AssumeInst>(II)))
         return eraseInstFromFunction(CI);
       replaceUse(II->getOperandUse(0), ConstantInt::getTrue(II->getContext()));
       return nullptr;
@@ -1609,7 +1615,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (EnableKnowledgeRetention &&
         match(IIOperand, m_Cmp(Pred, m_Value(A), m_Zero())) &&
         Pred == CmpInst::ICMP_NE && A->getType()->isPointerTy()) {
-      if (IntrinsicInst *Replacement = buildAssumeFromKnowledge(
+      if (auto *Replacement = buildAssumeFromKnowledge(
               {RetainedKnowledge{Attribute::NonNull, 0, A}}, Next, &AC, &DT)) {
 
         Replacement->insertBefore(Next);
@@ -1641,7 +1647,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// the offset.
           RetainedKnowledge RK{Attribute::Alignment,
                                (unsigned)MinAlign(Offset, AlignMask + 1), A};
-          if (IntrinsicInst *Replacement =
+          if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 
             Replacement->insertAfter(II);
@@ -1656,13 +1662,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (EnableKnowledgeRetention && II->hasOperandBundles()) {
       for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
         auto &BOI = II->bundle_op_info_begin()[Idx];
-        RetainedKnowledge RK = llvm::getKnowledgeFromBundle(*II, BOI);
+        RetainedKnowledge RK =
+          llvm::getKnowledgeFromBundle(cast<AssumeInst>(*II), BOI);
         if (BOI.End - BOI.Begin > 2)
           continue; // Prevent reducing knowledge in an align with offset since
                     // extracting a RetainedKnowledge form them looses offset
                     // information
-        RetainedKnowledge CanonRK = llvm::simplifyRetainedKnowledge(
-            II, RK, &getAssumptionCache(), &getDominatorTree());
+        RetainedKnowledge CanonRK =
+          llvm::simplifyRetainedKnowledge(cast<AssumeInst>(II), RK,
+                                          &getAssumptionCache(),
+                                          &getDominatorTree());
         if (CanonRK == RK)
           continue;
         if (!CanonRK) {
@@ -1688,12 +1697,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, 0, II);
-    if (Known.isAllOnes() && isAssumeWithEmptyBundle(*II))
+    if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
       return eraseInstFromFunction(*II);
 
     // Update the cache of affected values for this assumption (we might be
     // here because we just simplified the condition).
-    AC.updateAffectedValues(II);
+    AC.updateAffectedValues(cast<AssumeInst>(II));
     break;
   }
   case Intrinsic::experimental_guard: {

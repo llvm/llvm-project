@@ -17,8 +17,6 @@
 // UNSUPPORTED: with_system_cxx_lib=macosx10.10
 // UNSUPPORTED: with_system_cxx_lib=macosx10.9
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // <chrono>
 
 // file_clock

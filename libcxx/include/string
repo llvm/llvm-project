@@ -514,6 +514,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 */
 
 #include <__config>
+#include <compare>
 #include <string_view>
 #include <iosfwd>
 #include <cstring>

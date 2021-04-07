@@ -303,6 +303,29 @@ entry:
   ret i64 1129219040652020412
 }
 
+; Producing `pli` when the constant fits within 34-bits and the constant
+; is being produced in other transformations (such as complex bit permutations).
+define i64 @t_34Bits_Complex(i64 %a, i64 %b) {
+; CHECK-LABEL: t_34Bits_Complex:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    rotldi r4, r4, 30
+; CHECK-NEXT:    rldimi r3, r4, 34, 31
+; CHECK-NEXT:    pli r4, -268435457
+; CHECK-NEXT:    and r3, r3, r4
+; CHECK-NEXT:    blr
+;
+; CHECK32-LABEL: t_34Bits_Complex:
+; CHECK32:       # %bb.0: # %entry
+; CHECK32-NEXT:    rlwinm r4, r6, 0, 4, 2
+; CHECK32-NEXT:    rlwimi r3, r5, 0, 31, 29
+; CHECK32-NEXT:    blr
+entry:
+  %and = and i64 %a, 8589934592
+  %and1 = and i64 %b, -8858370049
+  %or = or i64 %and1, %and
+  ret i64 %or
+}
+
 ; The load immediates resulting from phi-nodes are needed to test whether
 ; li/lis is preferred to pli by the instruction selector.
 define dso_local void @t_phiNode() {

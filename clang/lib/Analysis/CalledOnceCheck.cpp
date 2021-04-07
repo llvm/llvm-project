@@ -983,9 +983,9 @@ private:
       return false;
     }
 
-    QualType BlockType = Ty->getAs<BlockPointerType>()->getPointeeType();
+    QualType BlockType = Ty->castAs<BlockPointerType>()->getPointeeType();
     // Completion handlers should have a block type with void return type.
-    return BlockType->getAs<FunctionType>()->getReturnType()->isVoidType();
+    return BlockType->castAs<FunctionType>()->getReturnType()->isVoidType();
   }
 
   /// Return true if the only parameter of the function is conventional.
@@ -1011,11 +1011,16 @@ private:
     return llvm::None;
   }
 
+  /// Return true if the specified selector represents init method.
+  static bool isInitMethod(Selector MethodSelector) {
+    return MethodSelector.getMethodFamily() == OMF_init;
+  }
+
   /// Return true if the specified selector piece matches conventions.
   static bool isConventionalSelectorPiece(Selector MethodSelector,
                                           unsigned PieceIndex,
                                           QualType PieceType) {
-    if (!isConventional(PieceType)) {
+    if (!isConventional(PieceType) || isInitMethod(MethodSelector)) {
       return false;
     }
 

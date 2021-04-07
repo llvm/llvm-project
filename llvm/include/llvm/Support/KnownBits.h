@@ -285,6 +285,11 @@ public:
     return KnownBits(LHS.Zero & RHS.Zero, LHS.One & RHS.One);
   }
 
+  /// Return true if LHS and RHS have no common bits set.
+  static bool haveNoCommonBitsSet(const KnownBits &LHS, const KnownBits &RHS) {
+    return (LHS.Zero | RHS.Zero).isAllOnesValue();
+  }
+
   /// Compute known bits resulting from adding LHS, RHS and a 1-bit Carry.
   static KnownBits computeForAddCarry(
       const KnownBits &LHS, const KnownBits &RHS, const KnownBits &Carry);
@@ -294,7 +299,7 @@ public:
                                     KnownBits RHS);
 
   /// Compute known bits resulting from multiplying LHS and RHS.
-  static KnownBits computeForMul(const KnownBits &LHS, const KnownBits &RHS);
+  static KnownBits mul(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Compute known bits from sign-extended multiply-hi.
   static KnownBits mulhs(const KnownBits &LHS, const KnownBits &RHS);

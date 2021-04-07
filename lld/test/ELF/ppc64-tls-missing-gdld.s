@@ -24,36 +24,36 @@
 ## .got+16: DTPMOD/DTPREL for _TLS_MODULE_BASE_ is 1 and 0, respectively.
 ## .got+32: TPOFFSET for x = st_value-0x7000
 # HEX:      section '.got':
-# HEX-NEXT: [[#%x,IGNORE:]] 01000000 00000000 0080ffff ffffffff
-# HEX-NEXT: [[#%x,IGNORE:]] 01000000 00000000 00000000 00000000
-# HEX-NEXT: [[#%x,IGNORE:]] 0090ffff ffffffff
+# HEX-NEXT: [[#%x,IGNORE:]] 50820210 00000000 01000000 00000000
+# HEX-NEXT: [[#%x,IGNORE:]] 0080ffff ffffffff 01000000 00000000
+# HEX-NEXT: [[#%x,IGNORE:]] 00000000 00000000 0090ffff ffffffff
 
 ## .TOC.-32768 = (.got+0x8000)-32768 = .got
 # DIS-LABEL: <GeneralDynamic>:
 # DIS-NEXT:    addis 3, 2, 0
-# DIS-NEXT:    addi 3, 3, -32768
+# DIS-NEXT:    addi 3, 3, -32760
 # DIS-NEXT:    bl [[#%x,TGA:]]
 # DIS-LABEL: <GeneralDynamic_NOTOC>:
 # DIS-NEXT:    addis 3, 2, 0
-# DIS-NEXT:    addi 3, 3, -32768
+# DIS-NEXT:    addi 3, 3, -32760
 # DIS-NEXT:    bl [[#TGA]]
 
 ## LocalDynamic references _TLS_MODULE_BASE_.
 ## .TOC.-32752 = (.got+0x8000)-32752 = .got+16
 # DIS-LABEL: <LocalDynamic>:
 # DIS-NEXT:    addis 3, 2, 0
-# DIS-NEXT:    addi 3, 3, -32752
+# DIS-NEXT:    addi 3, 3, -32744
 # DIS-NEXT:    bl [[#TGA]]
 # DIS-LABEL: <LocalDynamic_NOTOC>:
 # DIS-NEXT:    addis 3, 2, 0
-# DIS-NEXT:    addi 3, 3, -32752
+# DIS-NEXT:    addi 3, 3, -32744
 # DIS-NEXT:    bl [[#TGA]]
 
 ## Technically we don't have to disable IE to LE relaxation,
 ## but disabling it for implementation simplicity does not hurt.
 # DIS-LABEL: <InitialExec>:
 # DIS-NEXT:    addis 3, 2, 0
-# DIS-NEXT:    ld 3, -32736(3)
+# DIS-NEXT:    ld 3, -32728(3)
 # DIS-NEXT:    add 3, 3, 13
 
 #--- a.s

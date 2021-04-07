@@ -555,6 +555,7 @@ set(armv7s_SOURCES ${arm_SOURCES})
 set(armv7k_SOURCES ${arm_SOURCES})
 set(arm64_SOURCES ${aarch64_SOURCES})
 set(arm64e_SOURCES ${aarch64_SOURCES})
+set(arm64_32_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})

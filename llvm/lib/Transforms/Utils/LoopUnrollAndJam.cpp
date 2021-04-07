@@ -432,9 +432,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks) {
       for (Instruction &I : *NewBlock) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&I))
-          if (II->getIntrinsicID() == Intrinsic::assume)
-            AC->registerAssumption(II);
+        if (auto *II = dyn_cast<AssumeInst>(&I))
+          AC->registerAssumption(II);
       }
     }
 

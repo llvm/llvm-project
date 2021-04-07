@@ -407,7 +407,6 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    sd s1, 24(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s2, 16(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s3, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s4, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    lbu a0, 4(a0)
 ; RV64-NEXT:    lwu a1, 0(s0)
@@ -430,8 +429,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    call __muldi3@plt
 ; RV64-NEXT:    addi a0, a0, -1638
 ; RV64-NEXT:    andi a0, a0, 2047
-; RV64-NEXT:    addi s4, zero, 1
-; RV64-NEXT:    sltu s1, s4, a0
+; RV64-NEXT:    addi a1, zero, 1
+; RV64-NEXT:    sltu s1, a1, a0
 ; RV64-NEXT:    addi a1, zero, 1463
 ; RV64-NEXT:    mv a0, s2
 ; RV64-NEXT:    call __muldi3@plt
@@ -448,12 +447,11 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64-NEXT:    slli a1, s1, 22
 ; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(s0)
-; RV64-NEXT:    slli a1, s4, 33
-; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    addi a1, zero, -1
+; RV64-NEXT:    srli a1, a1, 31
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    sb a0, 4(s0)
-; RV64-NEXT:    ld s4, 0(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s2, 16(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload
@@ -531,12 +529,12 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64M-NEXT:    andi a3, a3, 2047
 ; RV64M-NEXT:    addi a4, zero, 1
 ; RV64M-NEXT:    sltu a3, a4, a3
-; RV64M-NEXT:    addi a5, zero, 1463
-; RV64M-NEXT:    mul a2, a2, a5
+; RV64M-NEXT:    addi a4, zero, 1463
+; RV64M-NEXT:    mul a2, a2, a4
 ; RV64M-NEXT:    addi a2, a2, -1463
 ; RV64M-NEXT:    andi a2, a2, 2047
-; RV64M-NEXT:    addi a5, zero, 292
-; RV64M-NEXT:    sltu a2, a5, a2
+; RV64M-NEXT:    addi a4, zero, 292
+; RV64M-NEXT:    sltu a2, a4, a2
 ; RV64M-NEXT:    neg a1, a1
 ; RV64M-NEXT:    neg a2, a2
 ; RV64M-NEXT:    andi a1, a1, 2047
@@ -546,8 +544,8 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64M-NEXT:    slli a2, a3, 22
 ; RV64M-NEXT:    sub a1, a1, a2
 ; RV64M-NEXT:    sw a1, 0(a0)
-; RV64M-NEXT:    slli a2, a4, 33
-; RV64M-NEXT:    addi a2, a2, -1
+; RV64M-NEXT:    addi a2, zero, -1
+; RV64M-NEXT:    srli a2, a2, 31
 ; RV64M-NEXT:    and a1, a1, a2
 ; RV64M-NEXT:    srli a1, a1, 32
 ; RV64M-NEXT:    sb a1, 4(a0)
@@ -649,9 +647,9 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    addi a2, zero, 1
 ; RV64MV-NEXT:    vmv1r.v v28, v27
 ; RV64MV-NEXT:    vmv.s.x v28, a2
-; RV64MV-NEXT:    lui a3, %hi(.LCPI4_1)
-; RV64MV-NEXT:    addi a3, a3, %lo(.LCPI4_1)
-; RV64MV-NEXT:    vle16.v v29, (a3)
+; RV64MV-NEXT:    lui a2, %hi(.LCPI4_1)
+; RV64MV-NEXT:    addi a2, a2, %lo(.LCPI4_1)
+; RV64MV-NEXT:    vle16.v v29, (a2)
 ; RV64MV-NEXT:    vsrl.vv v25, v25, v28
 ; RV64MV-NEXT:    vor.vv v25, v25, v26
 ; RV64MV-NEXT:    vand.vx v25, v25, a1
@@ -659,19 +657,19 @@ define void @test_urem_vec(<3 x i11>* %X) nounwind {
 ; RV64MV-NEXT:    vmerge.vim v25, v27, -1, v0
 ; RV64MV-NEXT:    vmv.x.s a1, v25
 ; RV64MV-NEXT:    andi a1, a1, 2047
-; RV64MV-NEXT:    vsetivli a3, 1, e16,m1,ta,mu
+; RV64MV-NEXT:    vsetivli a2, 1, e16,m1,ta,mu
 ; RV64MV-NEXT:    vslidedown.vi v26, v25, 1
-; RV64MV-NEXT:    vmv.x.s a3, v26
-; RV64MV-NEXT:    andi a3, a3, 2047
-; RV64MV-NEXT:    slli a3, a3, 11
-; RV64MV-NEXT:    or a1, a1, a3
+; RV64MV-NEXT:    vmv.x.s a2, v26
+; RV64MV-NEXT:    andi a2, a2, 2047
+; RV64MV-NEXT:    slli a2, a2, 11
+; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    vslidedown.vi v25, v25, 2
-; RV64MV-NEXT:    vmv.x.s a3, v25
-; RV64MV-NEXT:    slli a3, a3, 22
-; RV64MV-NEXT:    or a1, a1, a3
+; RV64MV-NEXT:    vmv.x.s a2, v25
+; RV64MV-NEXT:    slli a2, a2, 22
+; RV64MV-NEXT:    or a1, a1, a2
 ; RV64MV-NEXT:    sw a1, 0(a0)
-; RV64MV-NEXT:    slli a2, a2, 33
-; RV64MV-NEXT:    addi a2, a2, -1
+; RV64MV-NEXT:    addi a2, zero, -1
+; RV64MV-NEXT:    srli a2, a2, 31
 ; RV64MV-NEXT:    and a1, a1, a2
 ; RV64MV-NEXT:    srli a1, a1, 32
 ; RV64MV-NEXT:    sb a1, 4(a0)

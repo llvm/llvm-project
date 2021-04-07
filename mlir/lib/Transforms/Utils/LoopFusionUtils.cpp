@@ -347,11 +347,17 @@ FusionResult mlir::canFuseLoops(AffineForOp srcForOp, AffineForOp dstForOp,
 
   // Compute union of computation slices computed between all pairs of ops
   // from 'forOpA' and 'forOpB'.
-  if (failed(mlir::computeSliceUnion(strategyOpsA, opsB, dstLoopDepth,
-                                     numCommonLoops, isSrcForOpBeforeDstForOp,
-                                     srcSlice))) {
+  SliceComputationResult sliceComputationResult =
+      mlir::computeSliceUnion(strategyOpsA, opsB, dstLoopDepth, numCommonLoops,
+                              isSrcForOpBeforeDstForOp, srcSlice);
+  if (sliceComputationResult.value == SliceComputationResult::GenericFailure) {
     LLVM_DEBUG(llvm::dbgs() << "computeSliceUnion failed\n");
     return FusionResult::FailPrecondition;
+  }
+  if (sliceComputationResult.value ==
+      SliceComputationResult::IncorrectSliceFailure) {
+    LLVM_DEBUG(llvm::dbgs() << "Incorrect slice computation\n");
+    return FusionResult::FailIncorrectSlice;
   }
 
   return FusionResult::Success;
@@ -400,7 +406,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
     auto *parentForOp = forOp->getParentOp();
     if (!llvm::isa<FuncOp>(parentForOp)) {
       if (!isa<AffineForOp>(parentForOp)) {
-        LLVM_DEBUG(llvm::dbgs() << "Expected parent AffineForOp");
+        LLVM_DEBUG(llvm::dbgs() << "Expected parent AffineForOp\n");
         return WalkResult::interrupt();
       }
       // Add mapping to 'forOp' from its parent AffineForOp.
@@ -421,7 +427,7 @@ bool mlir::getLoopNestStats(AffineForOp forOpRoot, LoopNestStats *stats) {
     Optional<uint64_t> maybeConstTripCount = getConstantTripCount(forOp);
     if (!maybeConstTripCount.hasValue()) {
       // Currently only constant trip count loop nests are supported.
-      LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported");
+      LLVM_DEBUG(llvm::dbgs() << "Non-constant trip count unsupported\n");
       return WalkResult::interrupt();
     }
 
@@ -519,7 +525,11 @@ static bool buildSliceTripCountMap(
     auto *op = forOp.getOperation();
     AffineMap lbMap = slice.lbs[i];
     AffineMap ubMap = slice.ubs[i];
-    if (lbMap == AffineMap() || ubMap == AffineMap()) {
+    // If lower or upper bound maps are null or provide no results, it implies
+    // that source loop was not at all sliced, and the entire loop will be a
+    // part of the slice.
+    if (!lbMap || lbMap.getNumResults() == 0 || !ubMap ||
+        ubMap.getNumResults() == 0) {
       // The iteration of src loop IV 'i' was not sliced. Use full loop bounds.
       if (forOp.hasConstantLowerBound() && forOp.hasConstantUpperBound()) {
         (*tripCountMap)[op] =

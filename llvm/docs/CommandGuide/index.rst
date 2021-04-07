@@ -72,6 +72,10 @@ Developer Tools
 
    FileCheck
    tblgen
+   clang-tblgen
+   lldb-tblgen
+   llvm-tblgen
+   mlir-tblgen
    lit
    llvm-exegesis
    llvm-locstats
