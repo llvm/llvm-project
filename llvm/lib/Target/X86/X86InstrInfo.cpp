@@ -4010,21 +4010,6 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::ADD16rr:   case X86::ADD8rr:   case X86::ADD64rm:
   case X86::ADD32rm:   case X86::ADD16rm:  case X86::ADD8rm:
   case X86::INC64r:    case X86::INC32r:   case X86::INC16r: case X86::INC8r:
-  case X86::AND64ri32: case X86::AND64ri8: case X86::AND32ri:
-  case X86::AND32ri8:  case X86::AND16ri:  case X86::AND16ri8:
-  case X86::AND8ri:    case X86::AND64rr:  case X86::AND32rr:
-  case X86::AND16rr:   case X86::AND8rr:   case X86::AND64rm:
-  case X86::AND32rm:   case X86::AND16rm:  case X86::AND8rm:
-  case X86::XOR64ri32: case X86::XOR64ri8: case X86::XOR32ri:
-  case X86::XOR32ri8:  case X86::XOR16ri:  case X86::XOR16ri8:
-  case X86::XOR8ri:    case X86::XOR64rr:  case X86::XOR32rr:
-  case X86::XOR16rr:   case X86::XOR8rr:   case X86::XOR64rm:
-  case X86::XOR32rm:   case X86::XOR16rm:  case X86::XOR8rm:
-  case X86::OR64ri32:  case X86::OR64ri8:  case X86::OR32ri:
-  case X86::OR32ri8:   case X86::OR16ri:   case X86::OR16ri8:
-  case X86::OR8ri:     case X86::OR64rr:   case X86::OR32rr:
-  case X86::OR16rr:    case X86::OR8rr:    case X86::OR64rm:
-  case X86::OR32rm:    case X86::OR16rm:   case X86::OR8rm:
   case X86::ADC64ri32: case X86::ADC64ri8: case X86::ADC32ri:
   case X86::ADC32ri8:  case X86::ADC16ri:  case X86::ADC16ri8:
   case X86::ADC8ri:    case X86::ADC64rr:  case X86::ADC32rr:
@@ -4049,6 +4034,21 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::TZCNT32rr: case X86::TZCNT32rm:
   case X86::TZCNT64rr: case X86::TZCNT64rm:
     return true;
+  case X86::AND64ri32:   case X86::AND64ri8:  case X86::AND32ri:
+  case X86::AND32ri8:    case X86::AND16ri:   case X86::AND16ri8:
+  case X86::AND8ri:      case X86::AND64rr:   case X86::AND32rr:
+  case X86::AND16rr:     case X86::AND8rr:    case X86::AND64rm:
+  case X86::AND32rm:     case X86::AND16rm:   case X86::AND8rm:
+  case X86::XOR64ri32:   case X86::XOR64ri8:  case X86::XOR32ri:
+  case X86::XOR32ri8:    case X86::XOR16ri:   case X86::XOR16ri8:
+  case X86::XOR8ri:      case X86::XOR64rr:   case X86::XOR32rr:
+  case X86::XOR16rr:     case X86::XOR8rr:    case X86::XOR64rm:
+  case X86::XOR32rm:     case X86::XOR16rm:   case X86::XOR8rm:
+  case X86::OR64ri32:    case X86::OR64ri8:   case X86::OR32ri:
+  case X86::OR32ri8:     case X86::OR16ri:    case X86::OR16ri8:
+  case X86::OR8ri:       case X86::OR64rr:    case X86::OR32rr:
+  case X86::OR16rr:      case X86::OR8rr:     case X86::OR64rm:
+  case X86::OR32rm:      case X86::OR16rm:    case X86::OR8rm:
   case X86::ANDN32rr:    case X86::ANDN32rm:
   case X86::ANDN64rr:    case X86::ANDN64rm:
   case X86::BLSI32rr:    case X86::BLSI32rm:
