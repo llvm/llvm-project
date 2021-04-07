@@ -56,6 +56,9 @@ void test_one()
   //DUMP: OMPDependClause
   //DUMP: OMPNowaitClause
   //DUMP: OMPNovariantsClause
+  //DUMP: DeclRefExpr {{.*}} 'bool' lvalue OMPCapturedExpr
+  //DUMP: OMPNocontextClause
+  //DUMP: DeclRefExpr {{.*}} 'bool' lvalue OMPCapturedExpr
   #pragma omp dispatch depend(in:var) nowait novariants(aaa > 5) nocontext(bbb > 5)
   foo(aaa, &bbb);
 
@@ -66,6 +69,9 @@ void test_one()
   //DUMP: OMPDeviceClause
   //DUMP: OMPIs_device_ptrClause
   //DUMP: OMPNovariantsClause
+  //DUMP: DeclRefExpr {{.*}} 'bool' lvalue OMPCapturedExpr
+  //DUMP: OMPNocontextClause
+  //DUMP: DeclRefExpr {{.*}} 'bool' lvalue OMPCapturedExpr
   #pragma omp dispatch device(dev) is_device_ptr(dp) novariants(dev > 10) nocontext(dev > 5)
   foo(aaa, dp);
 
