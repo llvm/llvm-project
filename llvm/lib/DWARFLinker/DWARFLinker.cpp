@@ -1901,12 +1901,7 @@ void DWARFLinker::patchFrameInfoForObject(const DWARFFile &File,
     auto IteratorInserted = EmittedCIEs.insert(
         std::make_pair(CIEData, TheDwarfEmitter->getFrameSectionSize()));
     // If there is no CIE yet for this ID, emit it.
-    if (IteratorInserted.second ||
-        // FIXME: dsymutil-classic only caches the last used CIE for
-        // reuse. Mimic that behavior for now. Just removing that
-        // second half of the condition and the LastCIEOffset variable
-        // makes the code DTRT.
-        LastCIEOffset != IteratorInserted.first->getValue()) {
+    if (IteratorInserted.second) {
       LastCIEOffset = TheDwarfEmitter->getFrameSectionSize();
       IteratorInserted.first->getValue() = LastCIEOffset;
       TheDwarfEmitter->emitCIE(CIEData);
