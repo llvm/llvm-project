@@ -126,29 +126,20 @@ def CC_NanoMipsP32 : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
+  // Pass arguments in A0_NM...A7_NM.
+  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM]>>,
+
   // Integer values get stored in stack slots that are 4 bytes in
   // size and 4-byte aligned.
-  CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
-
-  // Integer values get stored in stack slots that are 8 bytes in
-  // size and 8-byte aligned.
-  CCIfType<[f64], CCAssignToStack<8, 8>>
+  CCIfType<[i32], CCAssignToStack<4, 4>>,
 ]>;
 
-// Only the return rules are defined here for O32. The rules for argument
-// passing are defined in MipsISelLowering.cpp.
 def RetCC_NanoMipsP32 : CallingConv<[
   // Promote i1/i8/i16 return values to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
 
-  // i32 are returned in registers V0, V1, A0, A1, unless the original return
-  // type was a vector of floats.
-  CCIfOrigArgWasNotVectorFloat<CCIfType<[i32],
-                                        CCAssignToReg<[A0_NM, A1_NM]>>>,
-]>;
-
-def CC_NanoMipsP32_FixedArg : CallingConv<[
-  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM]>>,
+  // i32 are returned in registers A0_NM, A1_NM.
+  CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM]>>,
 ]>;
 
 //===----------------------------------------------------------------------===//
@@ -323,7 +314,7 @@ def CC_Mips_FastCC : CallingConv<[
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FastCC>>,
-  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_MipsO32_FastCC>>,
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32>>,
   CCDelegateTo<CC_MipsN_FastCC>
 ]>;
 
@@ -376,7 +367,7 @@ def CC_Mips_FixedArg : CallingConv<[
   CCIfCC<"CallingConv::Fast", CCDelegateTo<CC_Mips_FastCC>>,
 
   CCIfSubtarget<"isABI_O32()", CCDelegateTo<CC_MipsO32_FP>>,
-  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32_FixedArg>>,
+  CCIfSubtarget<"isABI_P32()", CCDelegateTo<CC_NanoMipsP32>>,
   CCDelegateTo<CC_MipsN>
 ]>;
 
