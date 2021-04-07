@@ -174,7 +174,8 @@ define i8 @t12_c1_c2_exrause(i8 %x, i8 %z) {
 @g1 = external global i8, align 1
 define i32 @constantexpr0(i32 %x, i8* %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr0(
-; CHECK-NEXT:    [[R:%.*]] = sub i32 sub (i32 0, i32 ptrtoint (i8* @g0 to i32)), [[X:%.*]]
+; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (i8* @g0 to i32)
+; CHECK-NEXT:    [[R:%.*]] = sub i32 0, [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %i0 = add i32 %x, ptrtoint (i8* @g0 to i32)
@@ -183,7 +184,8 @@ define i32 @constantexpr0(i32 %x, i8* %y) unnamed_addr {
 }
 define i32 @constantexpr1(i32 %x, i8* %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr1(
-; CHECK-NEXT:    [[R:%.*]] = sub i32 sub (i32 ptrtoint (i8* @g1 to i32), i32 42), [[X:%.*]]
+; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (i8* @g1 to i32), [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %i0 = add i32 %x, 42
@@ -192,7 +194,8 @@ define i32 @constantexpr1(i32 %x, i8* %y) unnamed_addr {
 }
 define i32 @constantexpr2(i32 %x, i8* %y) unnamed_addr {
 ; CHECK-LABEL: @constantexpr2(
-; CHECK-NEXT:    [[R:%.*]] = sub i32 sub (i32 ptrtoint (i8* @g1 to i32), i32 ptrtoint (i8* @g0 to i32)), [[X:%.*]]
+; CHECK-NEXT:    [[I0:%.*]] = add i32 [[X:%.*]], ptrtoint (i8* @g0 to i32)
+; CHECK-NEXT:    [[R:%.*]] = sub i32 ptrtoint (i8* @g1 to i32), [[I0]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %i0 = add i32 %x, ptrtoint (i8* @g0 to i32)
