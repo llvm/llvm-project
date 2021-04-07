@@ -1794,6 +1794,9 @@ void DWARFLinker::emitAcceleratorEntriesForUnit(CompileUnit &Unit) {
   case AccelTableKind::Dwarf:
     emitDwarfAcceleratorEntriesForUnit(Unit);
     break;
+  case AccelTableKind::Pub:
+    emitPubAcceleratorEntriesForUnit(Unit);
+    break;
   case AccelTableKind::Default:
     llvm_unreachable("The default must be updated to a concrete value.");
     break;
@@ -1807,13 +1810,11 @@ void DWARFLinker::emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit) {
                             Namespace.Die->getOffset() + Unit.getStartOffset());
 
   /// Add names.
-  TheDwarfEmitter->emitPubNamesForUnit(Unit);
   for (const auto &Pubname : Unit.getPubnames())
     AppleNames.addName(Pubname.Name,
                        Pubname.Die->getOffset() + Unit.getStartOffset());
 
   /// Add types.
-  TheDwarfEmitter->emitPubTypesForUnit(Unit);
   for (const auto &Pubtype : Unit.getPubtypes())
     AppleTypes.addName(
         Pubtype.Name, Pubtype.Die->getOffset() + Unit.getStartOffset(),
@@ -1837,6 +1838,11 @@ void DWARFLinker::emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit) {
   for (const auto &Pubtype : Unit.getPubtypes())
     DebugNames.addName(Pubtype.Name, Pubtype.Die->getOffset(),
                        Pubtype.Die->getTag(), Unit.getUniqueID());
+}
+
+void DWARFLinker::emitPubAcceleratorEntriesForUnit(CompileUnit &Unit) {
+  TheDwarfEmitter->emitPubNamesForUnit(Unit);
+  TheDwarfEmitter->emitPubTypesForUnit(Unit);
 }
 
 /// Read the frame info stored in the object, and emit the
@@ -2544,6 +2550,9 @@ bool DWARFLinker::link() {
         break;
       case AccelTableKind::Dwarf:
         TheDwarfEmitter->emitDebugNames(DebugNames);
+        break;
+      case AccelTableKind::Pub:
+        // Already emitted by emitPubAcceleratorEntriesForUnit.
         break;
       case AccelTableKind::Default:
         llvm_unreachable("Default should have already been resolved.");
