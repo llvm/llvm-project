@@ -10,6 +10,7 @@
 #include "flang/Common/default-kinds.h"
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
@@ -45,21 +46,9 @@ bool reportFatalSemanticErrors(const Fortran::semantics::Semantics &semantics,
 
 bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
-
   std::string currentInputPath{GetCurrentFileOrBufferName()};
-
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
 
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
-    // Switch between fixed and free form format based on the input file
-    // extension.
-    //
-    // Ideally we should have all Fortran options set before entering this
-    // method (i.e. before processing any specific input files). However, we
-    // can't decide between fixed and free form based on the file extension
-    // earlier than this.
-    parserOptions.isFixedForm = currentInput().IsFixedForm();
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);
@@ -80,21 +69,8 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
 
 bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
-
   std::string currentInputPath{GetCurrentFileOrBufferName()};
-
   Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
-
-  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
-    // Switch between fixed and free form format based on the input file
-    // extension.
-    //
-    // Ideally we should have all Fortran options set before entering this
-    // method (i.e. before processing any specific input files). However, we
-    // can't decide between fixed and free form based on the file extension
-    // earlier than this.
-    parserOptions.isFixedForm = currentInput().IsFixedForm();
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);

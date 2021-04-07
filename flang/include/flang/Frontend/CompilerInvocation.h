@@ -143,6 +143,10 @@ public:
   /// Set the default predefinitions.
   void setDefaultPredefinitions();
 
+  /// Collect the macro definitions from preprocessorOpts_ and prepare them for
+  /// the parser (i.e. copy into parserOpts_)
+  void collectMacroDefinitions();
+
   /// Set the Fortran options to user-specified values.
   /// These values are found in the preprocessor options.
   void setFortranOpts();
