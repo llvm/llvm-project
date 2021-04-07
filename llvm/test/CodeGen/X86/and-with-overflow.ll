@@ -119,7 +119,6 @@ define i32 @and_i32_ri(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    andl $-17, %ecx
-; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    jle .LBB4_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
@@ -130,7 +129,6 @@ define i32 @and_i32_ri(i32 %0, i32 %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    andl $-17, %eax
-; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    cmovlel %edi, %eax
 ; X64-NEXT:    retq
   %3 = and i32 %0, -17
@@ -145,7 +143,6 @@ define i32 @and_i32_rr(i32 %0, i32 %1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andl %eax, %ecx
-; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    jle .LBB5_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
@@ -156,7 +153,6 @@ define i32 @and_i32_rr(i32 %0, i32 %1) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    andl %edi, %eax
-; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    cmovlel %edi, %eax
 ; X64-NEXT:    retq
   %3 = and i32 %1, %0
@@ -187,7 +183,6 @@ define i64 @and_i64_ri(i64 %0, i64 %1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    andq $-17, %rax
-; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    cmovleq %rdi, %rax
 ; X64-NEXT:    retq
   %3 = and i64 %0, -17
@@ -223,7 +218,6 @@ define i64 @and_i64_rr(i64 %0, i64 %1) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    andq %rdi, %rax
-; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    cmovleq %rdi, %rax
 ; X64-NEXT:    retq
   %3 = and i64 %1, %0
