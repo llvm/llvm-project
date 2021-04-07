@@ -13,6 +13,7 @@
 @protocol NSObject
 @end
 @interface NSObject <NSObject>
+- (instancetype)init;
 - (id)copy;
 - (id)class;
 - autorelease;
@@ -1233,6 +1234,15 @@ static inline void DefferedCallback(DeferredBlock *inBlock) { (*inBlock)(); }
 
   // We still can warn about double call even in this case.
   handler(); // expected-warning{{completion handler is called twice}}
+}
+
+- (void)initWithAdditions:(int)cond
+           withCompletion:(void (^)(void))handler {
+  self = [self init];
+  if (self) {
+    escape(handler);
+  }
+  // no-warning
 }
 
 @end
