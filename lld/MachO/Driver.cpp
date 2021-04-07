@@ -1033,7 +1033,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->progName = argsArr[0];
 
-  config->timeTraceEnabled = args.hasArg(OPT_time_trace);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace) ||
+                             args.hasArg(OPT_time_trace_granularity_eq) ||
+                             args.hasArg(OPT_time_trace_file_eq);
   config->timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity_eq, 500);
 
