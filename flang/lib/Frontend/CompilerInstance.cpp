@@ -142,7 +142,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &act) {
 
   // Set some sane defaults for the frontend.
   invoc.SetDefaultFortranOpts();
-  invoc.setDefaultPredefinitions();
   // Update the fortran options based on user-based input.
   invoc.setFortranOpts();
   // Set the encoding to read all input files in based on user input.
