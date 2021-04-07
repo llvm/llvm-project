@@ -337,7 +337,7 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
     if (Fold.UseMI == MI && Fold.UseOpNo == OpNo)
       return;
   LLVM_DEBUG(dbgs() << "Append " << (Commuted ? "commuted" : "normal")
-                    << " operand " << OpNo << "\n  " << *MI << '\n');
+                    << " operand " << OpNo << "\n  " << *MI);
   FoldList.push_back(FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
 }
 
@@ -737,8 +737,7 @@ void SIFoldOperands::foldOperand(
     if (UseMI->isCopy() && OpToFold.isReg() &&
         UseMI->getOperand(0).getReg().isVirtual() &&
         !UseMI->getOperand(1).getSubReg()) {
-      LLVM_DEBUG(dbgs() << "Folding " << OpToFold
-                        << "\n into " << *UseMI << '\n');
+      LLVM_DEBUG(dbgs() << "Folding " << OpToFold << "\n into " << *UseMI);
       unsigned Size = TII->getOpSize(*UseMI, 1);
       Register UseReg = OpToFold.getReg();
       UseMI->getOperand(1).setReg(UseReg);
@@ -822,7 +821,7 @@ void SIFoldOperands::foldOperand(
 
           B.addImm(Defs[I].second);
         }
-        LLVM_DEBUG(dbgs() << "Folded " << *UseMI << '\n');
+        LLVM_DEBUG(dbgs() << "Folded " << *UseMI);
         return;
       }
 
@@ -1173,7 +1172,7 @@ static bool tryFoldCndMask(const SIInstrInfo *TII,
       if (Src0ModIdx != -1)
         MI->RemoveOperand(Src0ModIdx);
       mutateCopyOp(*MI, NewDesc);
-      LLVM_DEBUG(dbgs() << *MI << '\n');
+      LLVM_DEBUG(dbgs() << *MI);
       return true;
     }
   }
@@ -1213,7 +1212,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
         // be folded due to multiple uses or operand constraints.
 
         if (OpToFold.isImm() && tryConstantFoldOp(*MRI, TII, UseMI, &OpToFold)) {
-          LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI << '\n');
+          LLVM_DEBUG(dbgs() << "Constant folded " << *UseMI);
 
           // Some constant folding cases change the same immediate's use to a new
           // instruction, e.g. and x, 0 -> 0. Make sure we re-visit the user
@@ -1298,7 +1297,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       }
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
-                        << *Fold.UseMI << '\n');
+                        << *Fold.UseMI);
       if (tryFoldCndMask(TII, Fold.UseMI))
         Folded.insert(Fold.UseMI);
     } else if (Fold.isCommuted()) {
@@ -1367,8 +1366,7 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
   if (!DefClamp)
     return false;
 
-  LLVM_DEBUG(dbgs() << "Folding clamp " << *DefClamp << " into " << *Def
-                    << '\n');
+  LLVM_DEBUG(dbgs() << "Folding clamp " << *DefClamp << " into " << *Def);
 
   // Clamp is applied after omod, so it is OK if omod is set.
   DefClamp->setImm(1);
@@ -1507,7 +1505,7 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   if (TII->hasModifiersSet(*Def, AMDGPU::OpName::clamp))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def << '\n');
+  LLVM_DEBUG(dbgs() << "Folding omod " << MI << " into " << *Def);
 
   DefOMod->setImm(OMod);
   MRI->replaceRegWith(MI.getOperand(0).getReg(), Def->getOperand(0).getReg());
@@ -1595,7 +1593,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "Folded " << *RS << " into " << *UseMI << '\n');
+  LLVM_DEBUG(dbgs() << "Folded " << *RS << " into " << *UseMI);
 
   return true;
 }
@@ -1644,7 +1642,7 @@ bool SIFoldOperands::tryFoldLCSSAPhi(MachineInstr &PHI) {
     .addReg(NewReg, RegState::Kill);
   Copy->eraseFromParent(); // We know this copy had a single use.
 
-  LLVM_DEBUG(dbgs() << "Folded " << PHI << '\n');
+  LLVM_DEBUG(dbgs() << "Folded " << PHI);
 
   return true;
 }
@@ -1698,7 +1696,7 @@ bool SIFoldOperands::tryFoldLoad(MachineInstr &MI) {
     MRI->setRegClass(Reg, TRI->getEquivalentAGPRClass(MRI->getRegClass(Reg)));
   }
 
-  LLVM_DEBUG(dbgs() << "Folded " << MI << '\n');
+  LLVM_DEBUG(dbgs() << "Folded " << MI);
 
   return true;
 }
