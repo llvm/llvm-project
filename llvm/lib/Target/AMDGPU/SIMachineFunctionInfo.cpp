@@ -321,7 +321,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
         SpillFI = FrameInfo.CreateSpillStackObject(4, Align(4));
       }
 
-      SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, SpillFI));
+      SpillVGPRs.push_back(SGPRSpillVGPR(LaneVGPR, SpillFI));
 
       // Add this register as live-in to all blocks to avoid machine verifer
       // complaining about use of an undefined physical register.
@@ -347,7 +347,7 @@ bool SIMachineFunctionInfo::reserveVGPRforSGPRSpills(MachineFunction &MF) {
       MF.getRegInfo(), &AMDGPU::VGPR_32RegClass, MF, true);
   if (LaneVGPR == Register())
     return false;
-  SpillVGPRs.push_back(SGPRSpillVGPRCSR(LaneVGPR, None));
+  SpillVGPRs.push_back(SGPRSpillVGPR(LaneVGPR, None));
   FuncInfo->VGPRReservedForSGPRSpill = LaneVGPR;
   return true;
 }
