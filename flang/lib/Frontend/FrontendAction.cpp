@@ -67,6 +67,25 @@ bool FrontendAction::BeginSourceFile(
     return false;
   }
 
+  auto &invoc = ci.invocation();
+
+  // Include command-line and predefined preprocessor macros. Use either:
+  //  * `-cpp/-nocpp`, or
+  //  * the file extension (if the user didn't express any preference)
+  // to decide whether to include them or not.
+  if ((invoc.preprocessorOpts().macrosFlag_ == PPMacrosFlag::Include) ||
+      (invoc.preprocessorOpts().macrosFlag_ == PPMacrosFlag::Unknown &&
+          currentInput().MustBePreprocessed())) {
+    invoc.setDefaultPredefinitions();
+    invoc.collectMacroDefinitions();
+  }
+
+  // Decide between fixed and free form (if the user didn't express any
+  // preference, use the file extension to decide)
+  if (invoc.frontendOpts().fortranForm_ == FortranForm::Unknown) {
+    invoc.fortranOpts().isFixedForm = currentInput().IsFixedForm();
+  }
+
   if (!BeginSourceFileAction(ci)) {
     BeginSourceFileCleanUp(*this, ci);
     return false;
