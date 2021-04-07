@@ -591,3 +591,18 @@ define i8 @not_umin_of_not(i8 %x, i8 %y) {
   %notm = xor i8 %m, -1
   ret i8 %notm
 }
+
+define i8 @not_umin_of_not_constant_op(i8 %x) {
+; CHECK-LABEL: @not_umin_of_not_constant_op(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 42)
+; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
+; CHECK-NEXT:    ret i8 [[NOTM]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %m = call i8 @llvm.umin.i8(i8 %notx, i8 42)
+  %notm = xor i8 %m, -1
+  ret i8 %notm
+}
