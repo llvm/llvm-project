@@ -6903,19 +6903,22 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   // TODO: Can we put this a common method for DAG?
   auto SkipRCCopy = [](SDValue V) {
     while (V->isMachineOpcode() &&
-           V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS)
+           V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
+      // All values in the chain should have single use.
+      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+        return SDValue();
       V = V->getOperand(0);
-    return V;
+    }
+    return V.hasOneUse() ? V : SDValue();
   };
 
   SDValue VecOp = SkipRCCopy(N->getOperand(0));
-  if (!isLaneInsensitive(VecOp) || !VecOp.hasOneUse())
+  if (!VecOp || !isLaneInsensitive(VecOp))
     return;
 
   SDValue LHS = SkipRCCopy(VecOp.getOperand(0)),
           RHS = SkipRCCopy(VecOp.getOperand(1));
-  if (!LHS.hasOneUse() || !RHS.hasOneUse() || !isVSXSwap(LHS) ||
-      !isVSXSwap(RHS))
+  if (!LHS || !RHS || !isVSXSwap(LHS) || !isVSXSwap(RHS))
     return;
 
   // These swaps may still have chain-uses here, count on dead code elimination
