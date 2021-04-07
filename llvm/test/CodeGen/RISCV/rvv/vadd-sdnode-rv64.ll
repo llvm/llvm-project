@@ -37,6 +37,21 @@ define <vscale x 1 x i8> @vadd_vx_nxv1i8_1(<vscale x 1 x i8> %va) {
   ret <vscale x 1 x i8> %vc
 }
 
+; Test constant adds to see if we can optimize them away for scalable vectors.
+define <vscale x 1 x i8> @vadd_ii_nxv1i8_1() {
+; CHECK-LABEL: vadd_ii_nxv1i8_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vmv.v.i v8, 5
+; CHECK-NEXT:    ret
+  %heada = insertelement <vscale x 1 x i8> undef, i8 2, i32 0
+  %splata = shufflevector <vscale x 1 x i8> %heada, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
+  %headb = insertelement <vscale x 1 x i8> undef, i8 3, i32 0
+  %splatb = shufflevector <vscale x 1 x i8> %headb, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
+  %vc = add <vscale x 1 x i8> %splata, %splatb
+  ret <vscale x 1 x i8> %vc
+}
+
 define <vscale x 2 x i8> @vadd_vx_nxv2i8(<vscale x 2 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vadd_vx_nxv2i8:
 ; CHECK:       # %bb.0:

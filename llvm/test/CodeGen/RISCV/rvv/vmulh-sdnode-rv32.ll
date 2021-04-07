@@ -11,13 +11,9 @@ define <vscale x 4 x i1> @srem_eq_fold_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    vmul.vx v25, v8, a0
 ; CHECK-NEXT:    addi a0, zero, 42
 ; CHECK-NEXT:    vadd.vx v25, v25, a0
-; CHECK-NEXT:    vmv.v.i v26, 1
-; CHECK-NEXT:    vrsub.vi v27, v26, 0
-; CHECK-NEXT:    vand.vi v27, v27, 7
-; CHECK-NEXT:    vsll.vv v27, v25, v27
-; CHECK-NEXT:    vand.vi v26, v26, 7
-; CHECK-NEXT:    vsrl.vv v25, v25, v26
-; CHECK-NEXT:    vor.vv v25, v25, v27
+; CHECK-NEXT:    vsll.vi v26, v25, 7
+; CHECK-NEXT:    vsrl.vi v25, v25, 1
+; CHECK-NEXT:    vor.vv v25, v25, v26
 ; CHECK-NEXT:    vmsleu.vx v0, v25, a0
 ; CHECK-NEXT:    ret
   %head_six = insertelement <vscale x 4 x i8> undef, i8 6, i32 0
