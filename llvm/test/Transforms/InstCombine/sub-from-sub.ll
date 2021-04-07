@@ -8,8 +8,8 @@ declare void @use8(i8)
 ; Basic test
 define i8 @t0(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[I0:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[I0]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %i0 = sub i8 %x, %y
@@ -20,8 +20,8 @@ define i8 @t0(i8 %x, i8 %y, i8 %z) {
 ; No flags are propagated
 define i8 @t1_flags(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @t1_flags(
-; CHECK-NEXT:    [[O0:%.*]] = sub nuw nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i8 [[O0]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %o0 = sub nuw nsw i8 %x, %y
@@ -47,8 +47,8 @@ define i8 @n2(i8 %x, i8 %y, i8 %z) {
 
 define i8 @t3_c0(i8 %y, i8 %z) {
 ; CHECK-LABEL: @t3_c0(
-; CHECK-NEXT:    [[I0:%.*]] = sub i8 42, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[I0]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sub i8 42, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %i0 = sub i8 42, %y
