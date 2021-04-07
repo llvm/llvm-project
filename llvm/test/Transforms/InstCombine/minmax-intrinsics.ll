@@ -526,9 +526,8 @@ define i8 @not_smax_of_nots(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTY]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[NOTX]], i8 [[NOTY]])
-; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
-; CHECK-NEXT:    ret i8 [[NOTM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %notx = xor i8 %x, -1
   call void @use(i8 %notx)
@@ -547,8 +546,8 @@ define i8 @not_smin_of_nots(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @use(i8 [[NOTY]])
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smin.i8(i8 [[NOTX]], i8 [[NOTY]])
 ; CHECK-NEXT:    call void @use(i8 [[M]])
-; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
-; CHECK-NEXT:    ret i8 [[NOTM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %notx = xor i8 %x, -1
   call void @use(i8 %notx)
@@ -564,9 +563,9 @@ define i8 @not_umax_of_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_umax_of_not(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[NOTX]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
-; CHECK-NEXT:    ret i8 [[NOTM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umin.i8(i8 [[X]], i8 [[TMP1]])
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %notx = xor i8 %x, -1
   call void @use(i8 %notx)
@@ -574,6 +573,8 @@ define i8 @not_umax_of_not(i8 %x, i8 %y) {
   %notm = xor i8 %m, -1
   ret i8 %notm
 }
+
+; Negative test - this would require an extra instruction.
 
 define i8 @not_umin_of_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_umin_of_not(
@@ -596,9 +597,8 @@ define i8 @not_umin_of_not_constant_op(i8 %x) {
 ; CHECK-LABEL: @not_umin_of_not_constant_op(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 42)
-; CHECK-NEXT:    [[NOTM:%.*]] = xor i8 [[M]], -1
-; CHECK-NEXT:    ret i8 [[NOTM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X]], i8 -43)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %notx = xor i8 %x, -1
   call void @use(i8 %notx)
