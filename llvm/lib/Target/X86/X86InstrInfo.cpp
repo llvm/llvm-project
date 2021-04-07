@@ -4039,8 +4039,6 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::SAR8r1:    case X86::SAR16r1:  case X86::SAR32r1:case X86::SAR64r1:
   case X86::SHR8r1:    case X86::SHR16r1:  case X86::SHR32r1:case X86::SHR64r1:
   case X86::SHL8r1:    case X86::SHL16r1:  case X86::SHL32r1:case X86::SHL64r1:
-  case X86::BZHI32rr:  case X86::BZHI32rm:
-  case X86::BZHI64rr:  case X86::BZHI64rm:
   case X86::LZCNT16rr: case X86::LZCNT16rm:
   case X86::LZCNT32rr: case X86::LZCNT32rm:
   case X86::LZCNT64rr: case X86::LZCNT64rm:
@@ -4073,6 +4071,8 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   case X86::BLSFILL64rr: case X86::BLSFILL64rm:
   case X86::BLSIC32rr:   case X86::BLSIC32rm:
   case X86::BLSIC64rr:   case X86::BLSIC64rm:
+  case X86::BZHI32rr:    case X86::BZHI32rm:
+  case X86::BZHI64rr:    case X86::BZHI64rm:
   case X86::T1MSKC32rr:  case X86::T1MSKC32rm:
   case X86::T1MSKC64rr:  case X86::T1MSKC64rm:
   case X86::TZMSK32rr:   case X86::TZMSK32rm:
