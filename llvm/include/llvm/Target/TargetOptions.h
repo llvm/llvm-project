@@ -332,7 +332,7 @@ namespace llvm {
     unsigned XRayOmitFunctionIndex : 1;
 
     /// Stack protector guard offset to use.
-    unsigned StackProtectorGuardOffset : 32;
+    unsigned StackProtectorGuardOffset = -1U;
 
     /// Stack protector guard mode to use, e.g. tls, global.
     StackProtectorGuards StackProtectorGuard =
