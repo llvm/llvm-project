@@ -304,6 +304,7 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new MipsTargetInfo(Triple, Opts);
     }
 
+
   case llvm::Triple::m68k:
     switch (os) {
     case llvm::Triple::Linux:
@@ -312,6 +313,14 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new NetBSDTargetInfo<M68kTargetInfo>(Triple, Opts);
     default:
       return new M68kTargetInfo(Triple, Opts);
+    }
+
+  case llvm::Triple::nanomips:
+    switch (os) {
+    case llvm::Triple::Linux:
+      return new LinuxTargetInfo<MipsTargetInfo>(Triple, Opts);
+    default:
+      return new MipsTargetInfo(Triple, Opts);
     }
 
   case llvm::Triple::le32:

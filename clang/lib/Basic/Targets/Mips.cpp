@@ -47,7 +47,7 @@ static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mips1"},  {"mips2"},    {"mips3"},    {"mips4"},    {"mips5"},
     {"mips32"}, {"mips32r2"}, {"mips32r3"}, {"mips32r5"}, {"mips32r6"},
     {"mips64"}, {"mips64r2"}, {"mips64r3"}, {"mips64r5"}, {"mips64r6"},
-    {"octeon"}, {"octeon+"}, {"p5600"}};
+    {"octeon"}, {"octeon+"}, {"p5600"}, {"nanomips"}};
 
 bool MipsTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::find(ValidCPUNames, Name) != std::end(ValidCPUNames);
@@ -64,7 +64,7 @@ unsigned MipsTargetInfo::getISARev() const {
              .Cases("mips32r2", "mips64r2", "octeon", "octeon+", 2)
              .Cases("mips32r3", "mips64r3", 3)
              .Cases("mips32r5", "mips64r5", 5)
-             .Cases("mips32r6", "mips64r6", 6)
+             .Cases("mips32r6", "mips64r6", "nanomips", 6)
              .Default(0);
 }
 
@@ -83,7 +83,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.GNUMode)
     Builder.defineMacro("mips");
 
-  if (ABI == "o32") {
+  if (ABI == "p32") {
+    Builder.defineMacro("__mips", "32");
+    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_NANOMIPS");
+  } else if (ABI == "o32") {
     Builder.defineMacro("__mips", "32");
     Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
   } else {
@@ -110,6 +113,10 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__mips_n64");
     Builder.defineMacro("_ABI64", "3");
     Builder.defineMacro("_MIPS_SIM", "_ABI64");
+  } else if (ABI == "p32") {
+    Builder.defineMacro("__mips_p64");
+    Builder.defineMacro("_ABIP32", "4");
+    Builder.defineMacro("_MIPS_SIM", "_ABIP32");
   } else
     llvm_unreachable("Invalid ABI.");
 
@@ -155,6 +162,9 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (IsMicromips)
     Builder.defineMacro("__mips_micromips", Twine(1));
+
+  if (IsNanoMips)
+    Builder.defineMacro("__nanomips__", Twine(1));
 
   if (IsNan2008)
     Builder.defineMacro("__mips_nan2008", Twine(1));
@@ -292,6 +302,12 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
       getISARev() < 2) && ABI == "o32") {
     Diags.Report(diag::err_mips_fp64_req) << "-mfp64";
     return false;
+  }
+
+  // P32 ABI is only supported on NanoMIPS
+  if (getTriple().isNanoMips() != (ABI == "p32")) {
+    Diags.Report(diag::err_target_unsupported_abi_for_triple)
+      << ABI << getTriple().str();
   }
 
   return true;
