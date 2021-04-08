@@ -1,5 +1,6 @@
 # REQUIRES: native && dbregs-set
 # UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
 # RUN: %clangxx_host -g %p/Inputs/fork.cpp -DTEST_FORK=vfork -o %t
 # RUN: %lldb -b -s %s %t | FileCheck %s
 process launch -s

@@ -25,6 +25,7 @@ class SignpostEmitterImpl;
 /// Manages the emission of signposts into the recording method supported by
 /// the OS.
 class SignpostEmitter {
+  /// Not using std::unique_ptr since some hosts need a definition.
   SignpostEmitterImpl *Impl;
 
 public:
