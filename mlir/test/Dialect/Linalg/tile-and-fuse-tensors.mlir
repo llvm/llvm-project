@@ -143,10 +143,6 @@ func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3
 
 // -----
 
-#bound4_map = affine_map<(d0)[s0] -> (4, -d0 + s0)>
-#bound8_map = affine_map<(d0)[s0] -> (8, -d0 + s0)>
-#bound16_map = affine_map<(d0)[s0] -> (16, -d0 + s0)>
-
 func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?xf32>, %elementwise: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32> {
   %cst = constant 0.0 : f32
   %c0 = constant 0 : index
@@ -170,14 +166,14 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
     ins(%input, %filter : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
     outs(%fill : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
-  %for0 = scf.for %iv0 = %c0 to %oh step %c8 iter_args(%arg0 = %fill) -> tensor<?x?x?x?xf32> {
-    %for1 = scf.for %iv1 = %c0 to %ow step %c16 iter_args(%arg1 = %arg0) -> tensor<?x?x?x?xf32> {
-      %for2 = scf.for %iv2 = %c0 to %oc step %c4 iter_args(%arg2 = %arg1) -> tensor<?x?x?x?xf32> {
+  %for0 = scf.for %iv0 = %c0 to %n step %c8 iter_args(%arg0 = %fill) -> tensor<?x?x?x?xf32> {
+    %for1 = scf.for %iv1 = %c0 to %oh step %c16 iter_args(%arg1 = %arg0) -> tensor<?x?x?x?xf32> {
+      %for2 = scf.for %iv2 = %c0 to %ow step %c4 iter_args(%arg2 = %arg1) -> tensor<?x?x?x?xf32> {
         %for3 = scf.for %iv3 = %c0 to %oc step %c2 iter_args(%arg3 = %arg2) -> tensor<?x?x?x?xf32> {
-          %n_size = affine.min #bound8_map(%iv0)[%n]
-          %oh_size = affine.min #bound16_map(%iv1)[%oh]
-          %ow_size = affine.min #bound4_map(%iv2)[%ow]
-          %oc_size = affine.min #bound4_map(%iv2)[%oc]
+          %n_size = affine.min affine_map<(d0)[s0] -> (8, -d0 + s0)>(%iv0)[%n]
+          %oh_size = affine.min affine_map<(d0)[s0] -> (16, -d0 + s0)>(%iv1)[%oh]
+          %ow_size = affine.min affine_map<(d0)[s0] -> (4, -d0 + s0)>(%iv2)[%ow]
+          %oc_size = affine.min affine_map<(d0)[s0] -> (2, -d0 + s0)>(%iv2)[%oc]
           %0 = subtensor %conv[%iv0, %iv1, %iv2, %iv3][%n_size, %oh_size, %ow_size, %oc_size][1, 1, 1, 1] : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
           %1 = subtensor %elementwise[%iv0, %iv1, %iv2, %iv3][%n_size, %oh_size, %ow_size, %oc_size][1, 1, 1, 1] : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
           %2 = subtensor %arg3[%iv0, %iv1, %iv2, %iv3][%n_size, %oh_size, %ow_size, %oc_size][1, 1, 1, 1] : tensor<?x?x?x?xf32> to tensor<?x?x?x?xf32>
@@ -217,9 +213,10 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 // CHECK: #[[INPUT_BOUND:.+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * 2 + s0 - 2, d1 * -2 + s1)>
 // CHECK: #[[BOUND16_MAP_2:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
 // CHECK: #[[BOUND4_MAP:.+]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
+// CHECK: #[[BOUND2_MAP:.+]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
 // CHECK: #[[BOUND4_MAP_2:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 4)>
-// CHECK: #[[BOUND4_MAP_3:.+]] = affine_map<(d0, d1)[s0, s1] -> (-d0 + s0, 4, -d1 + s1)>
-// CHECK: #[[BOUND4_MAP_4:.+]] = affine_map<(d0, d1)[s0] -> (-d0 + s0, 4, -d1 + s0)>
+// CHECK: #[[BOUND2_MAP_2:.+]] = affine_map<(d0, d1)[s0, s1] -> (-d0 + s0, 2, -d1 + s1)>
+// CHECK: #[[BOUND2_MAP_3:.+]] = affine_map<(d0, d1)[s0] -> (-d0 + s0, 2, -d1 + s0)>
 
 //      CHECK: func @conv_tensors_dynamic
 // CHECK-SAME: (%[[INPUT]]: tensor<?x?x?x?xf32>, %[[FILTER]]: tensor<?x?x?x?xf32>, %[[ELEM]]: tensor<?x?x?x?xf32>)
@@ -246,18 +243,18 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 //  CHECK-DAG:   %[[FILTER_IC:.+]] = memref.dim %[[FILTER]], %[[C2]] : tensor<?x?x?x?xf32>
 //  CHECK-DAG:   %[[FILTER_OC:.+]] = memref.dim %[[FILTER]], %[[C3]] : tensor<?x?x?x?xf32>
 
-//      CHECK:   scf.for %[[IV0:.+]] = %{{.+}} to %[[ELEM_OH]] step %{{.+}} iter_args(%{{.+}} = %[[FILL]])
+//      CHECK:   scf.for %[[IV0:.+]] = %{{.+}} to %[[ELEM_N]] step %{{.+}} iter_args(%{{.+}} = %[[FILL]])
 // CHECK-NEXT:     %[[SIZE_ELEM_N:.+]] = affine.min #[[BOUND8_MAP]](%[[IV0]])[%[[ELEM_N]]]
 // CHECK-NEXT:     %[[SIZE_INPUT_N:.+]] = affine.min #[[BOUND8_MAP_2]](%[[IV0]])[%[[INPUT_N]], %[[ELEM_N]]]
 // CHECK-NEXT:     %[[SIZE_ELEM_N_2:.+]] = affine.min #[[BOUND8_MAP_3]](%[[IV0]])[%[[ELEM_N]]]
-// CHECK-NEXT:     scf.for %[[IV1:.+]] = %{{.+}} to %[[ELEM_OW]]
+// CHECK-NEXT:     scf.for %[[IV1:.+]] = %{{.+}} to %[[ELEM_OH]]
 // CHECK-NEXT:       %[[SIZE_ELEM_OH:.+]] = affine.min #[[BOUND16_MAP]](%[[IV1]])[%[[ELEM_OH]]]
 // CHECK-NEXT:       %[[OFFSET_OH:.+]] = affine.apply #[[X2_MAP]](%[[IV1]])
 // CHECK-NEXT:       %[[SIZE_INPUT_H:.+]] = affine.min #[[INPUT_BOUND]](%[[SIZE_ELEM_OH]], %[[IV1]])[%[[FILTER_H]], %[[INPUT_H]]]
 // CHECK-NEXT:       %[[SIZE_ELEM_OH_2:.+]] = affine.min #[[BOUND16_MAP_2]](%[[IV1]])[%[[ELEM_OH]]]
-// CHECK-NEXT:       scf.for %[[IV2:.+]] = %{{.+}} to %[[ELEM_OC]]
+// CHECK-NEXT:       scf.for %[[IV2:.+]] = %{{.+}} to %[[ELEM_OW]]
 // CHECK-NEXT:         %[[SIZE_ELEM_OW:.+]] = affine.min #[[BOUND4_MAP]](%[[IV2]])[%[[ELEM_OW]]]
-// CHECK-NEXT:         %[[SIZE_ELEM_OC:.+]] = affine.min #[[BOUND4_MAP]](%[[IV2]])[%[[ELEM_OC]]]
+// CHECK-NEXT:         %[[SIZE_ELEM_OC:.+]] = affine.min #[[BOUND2_MAP]](%[[IV2]])[%[[ELEM_OC]]]
 // CHECK-NEXT:         %[[OFFSET_OW:.+]] = affine.apply #[[X2_MAP]](%[[IV2]])
 // CHECK-NEXT:         %[[SIZE_INPUT_W:.+]] = affine.min #[[INPUT_BOUND]](%[[SIZE_ELEM_OW]], %[[IV2]])[%[[FILTER_W]], %[[INPUT_W]]]
 // CHECK-NEXT:         %[[ST_INPUT:.+]] = subtensor %[[INPUT]][%[[IV0]], %[[OFFSET_OH]], %[[OFFSET_OW]], 0]
@@ -268,10 +265,10 @@ func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?x?x?x
 // CHECK-SAME:                 [%[[SIZE_ELEM_N]], %[[SIZE_ELEM_OH]], %[[SIZE_ELEM_OW]], %[[SIZE_ELEM_OC]]]
 // CHECK-NEXT:           %[[ST_ARG:.+]] = subtensor %[[ARG]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 // CHECK-SAME:                 [%[[SIZE_ELEM_N]], %[[SIZE_ELEM_OH]], %[[SIZE_ELEM_OW]], %[[SIZE_ELEM_OC]]]
-// CHECK-NEXT:           %[[SIZE_ELEM_OC_2:.+]] = affine.min #[[BOUND4_MAP_3]](%[[IV3]], %[[IV2]])[%[[FILTER_OC]], %[[ELEM_OC]]]
+// CHECK-NEXT:           %[[SIZE_ELEM_OC_2:.+]] = affine.min #[[BOUND2_MAP_2]](%[[IV3]], %[[IV2]])[%[[FILTER_OC]], %[[ELEM_OC]]]
 // CHECK-NEXT:           %[[ST_FILTER:.+]] = subtensor %[[FILTER]][0, 0, 0, %[[IV3]]]
 // CHECK-SAME:                 [%[[FILTER_H]], %[[FILTER_W]], %[[FILTER_IC]], %[[SIZE_ELEM_OC_2]]]
-// CHECK-NEXT:           %[[SIZE_ELEM_OC_3:.+]] = affine.min #[[BOUND4_MAP_4]](%[[IV3]], %[[IV2]])[%[[ELEM_OC]]]
+// CHECK-NEXT:           %[[SIZE_ELEM_OC_3:.+]] = affine.min #[[BOUND2_MAP_3]](%[[IV3]], %[[IV2]])[%[[ELEM_OC]]]
 // CHECK-NEXT:           %[[ST_FILL:.+]] = subtensor %[[FILL]][%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
 // CHECK-SAME:                 [%[[SIZE_ELEM_N_2]], %[[SIZE_ELEM_OH_2]], %[[SIZE_ELEM_OW_2]], %[[SIZE_ELEM_OC_3]]]
 // CHECK-NEXT:           %[[ST_CONV:.+]] = linalg.conv_2d_input_nhwc_filter_hwcf
