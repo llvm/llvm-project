@@ -27,6 +27,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/linux/Host.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/DataExtractor.h"
 
@@ -53,7 +54,8 @@ class ProcessLaunchInfo;
 }
 
 static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
-                          ProcessState &State, ::pid_t &TracerPid) {
+                          ProcessState &State, ::pid_t &TracerPid,
+                          ::pid_t &Tgid) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
   auto BufferOrError = getProcFile(Pid, "status");
@@ -107,6 +109,9 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
     } else if (Line.consume_front("TracerPid:")) {
       Line = Line.ltrim();
       Line.consumeInteger(10, TracerPid);
+    } else if (Line.consume_front("Tgid:")) {
+      Line = Line.ltrim();
+      Line.consumeInteger(10, Tgid);
     }
   }
   return true;
@@ -204,6 +209,7 @@ static void GetProcessEnviron(::pid_t pid, ProcessInstanceInfo &process_info) {
 static bool GetProcessAndStatInfo(::pid_t pid,
                                   ProcessInstanceInfo &process_info,
                                   ProcessState &State, ::pid_t &tracerpid) {
+  ::pid_t tgid;
   tracerpid = 0;
   process_info.Clear();
 
@@ -214,7 +220,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   GetProcessEnviron(pid, process_info);
 
   // Get User and Group IDs and get tracer pid.
-  if (!GetStatusInfo(pid, process_info, State, tracerpid))
+  if (!GetStatusInfo(pid, process_info, State, tracerpid, tgid))
     return false;
 
   return true;
@@ -307,4 +313,15 @@ Environment Host::GetEnvironment() { return Environment(environ); }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
   return Status("unimplemented");
+}
+
+llvm::Optional<lldb::pid_t> lldb_private::getPIDForTID(lldb::pid_t tid) {
+  ::pid_t tracerpid, tgid = LLDB_INVALID_PROCESS_ID;
+  ProcessInstanceInfo process_info;
+  ProcessState state;
+
+  if (!GetStatusInfo(tid, process_info, state, tracerpid, tgid) ||
+      tgid == LLDB_INVALID_PROCESS_ID)
+    return llvm::None;
+  return tgid;
 }

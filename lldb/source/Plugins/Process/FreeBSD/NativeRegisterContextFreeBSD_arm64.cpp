@@ -285,4 +285,19 @@ NativeRegisterContextFreeBSD_arm64::WriteHardwareDebugRegs(DREGType) {
 #endif
 }
 
+llvm::Error NativeRegisterContextFreeBSD_arm64::ClearDBRegs() {
+#ifdef LLDB_HAS_FREEBSD_WATCHPOINT
+  if (llvm::Error error = ReadHardwareDebugInfo())
+    return error;
+
+  for (uint32_t i = 0; i < m_max_hbp_supported; i++)
+    m_hbp_regs[i].control = 0;
+  for (uint32_t i = 0; i < m_max_hwp_supported; i++)
+    m_hwp_regs[i].control = 0;
+  return WriteHardwareDebugRegs(eDREGTypeWATCH);
+#else
+  return llvm::error::success();
+#endif
+}
+
 #endif // defined (__aarch64__)

@@ -58,6 +58,8 @@ public:
   llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) override;
 
+  llvm::Error ClearDBRegs() override;
+
 private:
   // Due to alignment, FreeBSD reg/fpreg are a few bytes larger than
   // LLDB's GPR/FPU structs.  However, all fields have matching offsets
