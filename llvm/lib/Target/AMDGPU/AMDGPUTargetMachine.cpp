@@ -1201,7 +1201,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 bool GCNPassConfig::addPreRewrite() {
   if (EnableRegReassign) {
     addPass(&GCNNSAReassignID);
-    addPass(&GCNRegBankReassignID);
+    addPass(createGCNRegBankReassignPass(AMDGPU::RM_BOTH));
   }
   return true;
 }
