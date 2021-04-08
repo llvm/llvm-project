@@ -21,6 +21,10 @@
 
 namespace mlir {
 
+//===----------------------------------------------------------------------===//
+// Type Converter
+//===----------------------------------------------------------------------===//
+
 /// Type conversion from builtin types to SPIR-V types for shader interface.
 ///
 /// Non-32-bit scalar types require special hardware support that may not exist
@@ -63,24 +67,22 @@ private:
   spirv::TargetEnv targetEnv;
 };
 
-/// Appends to a pattern list additional patterns for translating the builtin
-/// `func` op to the SPIR-V dialect. These patterns do not handle shader
-/// interface/ABI; they convert function parameters to be of SPIR-V allowed
-/// types.
-void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                        RewritePatternSet &patterns);
+//===----------------------------------------------------------------------===//
+// Conversion Target
+//===----------------------------------------------------------------------===//
 
-namespace spirv {
-class AccessChainOp;
-class FuncOp;
-
+// The default SPIR-V conversion target.
+//
+// It takes a SPIR-V target environment and controls operation legality based on
+// the their availability in the target environment.
 class SPIRVConversionTarget : public ConversionTarget {
 public:
   /// Creates a SPIR-V conversion target for the given target environment.
-  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetAttr);
+  static std::unique_ptr<SPIRVConversionTarget>
+  get(spirv::TargetEnvAttr targetAttr);
 
 private:
-  explicit SPIRVConversionTarget(TargetEnvAttr targetAttr);
+  explicit SPIRVConversionTarget(spirv::TargetEnvAttr targetAttr);
 
   // Be explicit that instance of this class cannot be copied or moved: there
   // are lambdas capturing fields of the instance.
@@ -93,15 +95,36 @@ private:
   /// environment.
   bool isLegalOp(Operation *op);
 
-  TargetEnv targetEnv;
+  spirv::TargetEnv targetEnv;
 };
+
+//===----------------------------------------------------------------------===//
+// Patterns and Utility Functions
+//===----------------------------------------------------------------------===//
+
+/// Appends to a pattern list additional patterns for translating the builtin
+/// `func` op to the SPIR-V dialect. These patterns do not handle shader
+/// interface/ABI; they convert function parameters to be of SPIR-V allowed
+/// types.
+void populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+                                        RewritePatternSet &patterns);
+
+namespace spirv {
+class AccessChainOp;
 
 /// Returns the value for the given `builtin` variable. This function gets or
 /// inserts the global variable associated for the builtin within the nearest
-/// enclosing op that has a symbol table. Returns null Value if such an
-/// enclosing op cannot be found.
+/// symbol table enclosing `op`. Returns null Value on error.
 Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
                               OpBuilder &builder);
+
+/// Gets the value at the given `offset` of the push constant storage with a
+/// total of `elementCount` 32-bit integers. A global variable will be created
+/// in the nearest symbol table enclosing `op` for the push constant storage if
+/// not existing. Load ops will be created via the given `builder` to load
+/// values from the push constant. Returns null Value on error.
+Value getPushConstantValue(Operation *op, unsigned elementCount,
+                           unsigned offset, OpBuilder &builder);
 
 /// Generates IR to perform index linearization with the given `indices` and
 /// their corresponding `strides`, adding an initial `offset`.
@@ -118,11 +141,6 @@ spirv::AccessChainOp getElementPtr(SPIRVTypeConverter &typeConverter,
                                    ValueRange indices, Location loc,
                                    OpBuilder &builder);
 
-/// Sets the InterfaceVarABIAttr and EntryPointABIAttr for a function and its
-/// arguments.
-LogicalResult setABIAttrs(spirv::FuncOp funcOp,
-                          EntryPointABIAttr entryPointInfo,
-                          ArrayRef<InterfaceVarABIAttr> argABIInfo);
 } // namespace spirv
 } // namespace mlir
 

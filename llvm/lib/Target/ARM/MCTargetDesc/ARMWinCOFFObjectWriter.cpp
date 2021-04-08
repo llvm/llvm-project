@@ -26,9 +26,8 @@ namespace {
 
 class ARMWinCOFFObjectWriter : public MCWinCOFFObjectTargetWriter {
 public:
-  ARMWinCOFFObjectWriter(bool Is64Bit)
+  ARMWinCOFFObjectWriter()
     : MCWinCOFFObjectTargetWriter(COFF::IMAGE_FILE_MACHINE_ARMNT) {
-    assert(!Is64Bit && "AArch64 support not yet implemented");
   }
 
   ~ARMWinCOFFObjectWriter() override = default;
@@ -47,9 +46,6 @@ unsigned ARMWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
-  assert(getMachine() == COFF::IMAGE_FILE_MACHINE_ARMNT &&
-         "AArch64 support not yet implemented");
-
   MCSymbolRefExpr::VariantKind Modifier =
     Target.isAbsolute() ? MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();
 
@@ -91,8 +87,8 @@ bool ARMWinCOFFObjectWriter::recordRelocation(const MCFixup &Fixup) const {
 namespace llvm {
 
 std::unique_ptr<MCObjectTargetWriter>
-createARMWinCOFFObjectWriter(bool Is64Bit) {
-  return std::make_unique<ARMWinCOFFObjectWriter>(Is64Bit);
+createARMWinCOFFObjectWriter() {
+  return std::make_unique<ARMWinCOFFObjectWriter>();
 }
 
 } // end namespace llvm

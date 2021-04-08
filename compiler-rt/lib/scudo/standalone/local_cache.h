@@ -101,12 +101,22 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     Stats.add(StatFree, ClassSize);
   }
 
+  bool isEmpty() const {
+    for (uptr I = 0; I < NumClasses; ++I)
+      if (PerClassArray[I].Count)
+        return false;
+    return true;
+  }
+
   void drain() {
-    for (uptr I = 0; I < NumClasses; I++) {
+    // Drain BatchClassId (0) the last as createBatch can refill it.
+    for (uptr I = NumClasses; I;) {
+      --I;
       PerClass *C = &PerClassArray[I];
       while (C->Count > 0)
         drain(C, I);
     }
+    DCHECK(isEmpty());
   }
 
   TransferBatch *createBatch(uptr ClassId, void *B) {

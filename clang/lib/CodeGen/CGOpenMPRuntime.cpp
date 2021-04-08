@@ -9267,7 +9267,6 @@ emitMappingInformation(CodeGenFunction &CGF, llvm::OpenMPIRBuilder &OMPBuilder,
     SrcLocStr = OMPBuilder.getOrCreateSrcLocStr(FileName, ExprName.c_str(),
                                                 Line, Column);
   }
-
   return SrcLocStr;
 }
 
@@ -9745,12 +9744,15 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   llvm::Value *MapType = MapperCGF.EmitLoadOfScalar(
       MapperCGF.GetAddrOfLocalVar(&TypeArg), /*Volatile=*/false,
       C.getPointerType(Int64Ty), Loc);
+  llvm::Value *MapName = MapperCGF.EmitLoadOfScalar(
+      MapperCGF.GetAddrOfLocalVar(&NameArg),
+      /*Volatile=*/false, C.getPointerType(C.VoidPtrTy), Loc);
 
   // Emit array initiation if this is an array section and \p MapType indicates
   // that memory allocation is required.
   llvm::BasicBlock *HeadBB = MapperCGF.createBasicBlock("omp.arraymap.head");
   emitUDMapperArrayInitOrDel(MapperCGF, Handle, BaseIn, BeginIn, Size, MapType,
-                             ElementSize, HeadBB, /*IsInit=*/true);
+                             MapName, ElementSize, HeadBB, /*IsInit=*/true);
 
   // Emit a for loop to iterate through SizeArg of elements and map all of them.
 
@@ -9907,7 +9909,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   // Emit array deletion if this is an array section and \p MapType indicates
   // that deletion is required.
   emitUDMapperArrayInitOrDel(MapperCGF, Handle, BaseIn, BeginIn, Size, MapType,
-                             ElementSize, DoneBB, /*IsInit=*/false);
+                             MapName, ElementSize, DoneBB, /*IsInit=*/false);
 
   // Emit the function exit block.
   MapperCGF.EmitBlock(DoneBB, /*IsFinished=*/true);
@@ -9928,7 +9930,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
 void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
     CodeGenFunction &MapperCGF, llvm::Value *Handle, llvm::Value *Base,
     llvm::Value *Begin, llvm::Value *Size, llvm::Value *MapType,
-    CharUnits ElementSize, llvm::BasicBlock *ExitBB, bool IsInit) {
+    llvm::Value *MapName, CharUnits ElementSize, llvm::BasicBlock *ExitBB,
+    bool IsInit) {
   StringRef Prefix = IsInit ? ".init" : ".del";
 
   // Evaluate if this is an array section.
@@ -9974,12 +9977,11 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
                                    MappableExprsHandler::OMP_MAP_FROM |
                                    MappableExprsHandler::OMP_MAP_MEMBER_OF)));
-  llvm::Value *MapNameArg = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
 
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.
   llvm::Value *OffloadingArgs[] = {Handle,    Base,       Begin,
-                                   ArraySize, MapTypeArg, MapNameArg};
+                                   ArraySize, MapTypeArg, MapName};
   MapperCGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                             OMPRTL___tgt_push_mapper_component),

@@ -56,7 +56,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 
 using namespace clang;
 using namespace clang::ento;
@@ -314,7 +314,7 @@ class StdLibraryFunctionsChecker
       }();
 
       // The dynamic size of the buffer argument, got from the analyzer engine.
-      SVal BufDynSize = getDynamicSizeWithOffset(State, BufV);
+      SVal BufDynSize = getDynamicExtentWithOffset(State, BufV);
 
       SVal Feasible = SvalBuilder.evalBinOp(State, Op, SizeV, BufDynSize,
                                             SvalBuilder.getContext().BoolTy);

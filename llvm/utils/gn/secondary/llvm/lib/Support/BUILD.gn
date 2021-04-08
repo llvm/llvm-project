@@ -135,6 +135,7 @@ static_library("Support") {
     "TrigramIndex.cpp",
     "Triple.cpp",
     "Twine.cpp",
+    "TypeSize.cpp",
     "Unicode.cpp",
     "UnicodeCaseFold.cpp",
     "VersionTuple.cpp",

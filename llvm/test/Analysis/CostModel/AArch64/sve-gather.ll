@@ -1,11 +1,6 @@
 ; Check getIntrinsicInstrCost in BasicTTIImpl.h for masked gather
 
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s 2>%t | FileCheck %s
-
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
 define <vscale x 4 x i32> @masked_gather_nxv4i32(<vscale x 4 x i32*> %ld, <vscale x 4 x i1> %masks, <vscale x 4 x i32> %passthru) {
 ; CHECK-LABEL: 'masked_gather_nxv4i32'

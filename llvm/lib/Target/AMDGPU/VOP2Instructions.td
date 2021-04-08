@@ -81,6 +81,7 @@ class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suf
 }
 
 class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemonic> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -297,10 +298,9 @@ class VOP_MADAK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
                         (ins VCSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         (ins VCSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm));
   field bit HasExt = 0;
+  let IsSingle = 1;
 
-  // Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
-  field string Asm32 = " $vdst, $src0, $src1, $imm";
+  field string Asm32 = "$vdst, $src0, $src1, $imm";
 }
 
 def VOP_MADAK_F16 : VOP_MADAK <f16>;
@@ -310,10 +310,9 @@ class VOP_MADMK <ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
   field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
   field dag Ins32 = (ins VCSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1);
   field bit HasExt = 0;
+  let IsSingle = 1;
 
-  // Hack to stop printing _e64
-  let DstRC = RegisterOperand<VGPR_32>;
-  field string Asm32 = " $vdst, $src0, $imm, $src1";
+  field string Asm32 = "$vdst, $src0, $imm, $src1";
 }
 
 def VOP_MADMK_F16 : VOP_MADMK <f16>;
@@ -1464,14 +1463,18 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   multiclass VOP3Only_Real_gfx10<bits<10> op> {
     def _e64_gfx10 :
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX10>,
-      VOP3e_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+      VOP3e_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+        let IsSingle = 1;
+      }
   }
 
   //===---------------------------- VOP3beOnly ----------------------------===//
   multiclass VOP3beOnly_Real_gfx10<bits<10> op> {
     def _e64_gfx10 :
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX10>,
-      VOP3be_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl>;
+      VOP3be_gfx10<op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
+        let IsSingle = 1;
+      }
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
@@ -1531,7 +1534,9 @@ defm V_MAX_F16         : VOP2_Real_gfx10_gfx11<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10_gfx11<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10_gfx11<0x03b>;
 // TODO-GFX11 gfx10 should have had dpp for v_pk_fmac_f16 but it didnt'
-defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
+let IsSingle = 1 in {
+  defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
+}
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
@@ -1748,10 +1753,7 @@ multiclass VOP2_Real_e64only_vi <bits<10> op> {
   def _e64_vi :
     VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.VI>,
     VOP3e_vi <op, !cast<VOP3_Pseudo>(NAME#"_e64").Pfl> {
-      // Hack to stop printing _e64
-      VOP3_Pseudo ps = !cast<VOP3_Pseudo>(NAME#"_e64");
-      let OutOperandList = (outs VGPR_32:$vdst);
-      let AsmString = ps.Mnemonic # " " # ps.AsmOperands;
+      let IsSingle = 1;
     }
 }
 
@@ -2030,7 +2032,9 @@ let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A" in {
 
 let SubtargetPredicate = isGFX90APlus in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
-  defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
+  let IsSingle = 1 in {
+    defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
+  }
 } // End SubtargetPredicate = isGFX90APlus
 
 multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {

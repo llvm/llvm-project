@@ -10,23 +10,23 @@
 # RUN: llvm-ar rcsU %t/foo.a %t/foo.o
 
 # RUN: %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; llvm-nm -pa %t/test) | \
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o
 
 ## Check that we emit the right modtime even when the object file is in an
 ## archive.
 # RUN: %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; llvm-nm -pa %t/test) | \
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\)
 
 ## Check that we emit absolute paths to the object files in our OSO entries
 ## even if our inputs are relative paths.
 # RUN: cd %t && %lld -lSystem test.o foo.o no-debug.o -o test
-# RUN: (llvm-objdump --section-headers %t/test; llvm-nm -pa %t/test) | \
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o
 
 # RUN: cd %t && %lld -lSystem test.o foo.a no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; llvm-nm -pa %t/test) | \
+# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
 # RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\)
 
 # CHECK:       Sections:
@@ -37,30 +37,48 @@
 # CHECK-NEXT:  [[#COMM_ID:]]      __common
 # CHECK-NEXT:  [[#MORE_TEXT_ID:]] more_text
 
-# CHECK:       0000000000000000 - 00                     0000    SO /tmp/test.cpp
-# CHECK-NEXT:  0000000000000010 - 03                     0001   OSO [[DIR]]/test.o
-# CHECK-NEXT:  [[#%x, STATIC:]] - 0[[#MORE_DATA_ID + 1]] 0000 STSYM _static_var
-# CHECK-NEXT:  [[#%x, MAIN:]]   - 0[[#TEXT_ID + 1]]      0000   FUN _main
-# CHECK-NEXT:  0000000000000006 - 00                     0000   FUN
-# CHECK-NEXT:  [[#%x, FUN:]]    - 0[[#MORE_TEXT_ID + 1]] 0000   FUN _fun
-# CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
-# CHECK-NEXT:  [[#%x, GLOB:]]   - 0[[#DATA_ID + 1]]      0000  GSYM _global_var
-# CHECK-NEXT:  [[#%x, ZERO:]]   - 0[[#COMM_ID + 1]]      0000  GSYM _zero
-# CHECK-NEXT:  0000000000000000 - 01                     0000    SO
-# CHECK-NEXT:  0000000000000000 - 00                     0000    SO /foo.cpp
-# CHECK-NEXT:  0000000000000020 - 03                     0001   OSO [[FOO_PATH]]
-# CHECK-NEXT:  [[#%x, FOO:]]    - 0[[#TEXT_ID + 1]]      0000   FUN _foo
-# CHECK-NEXT:  0000000000000001 - 00                     0000   FUN
-# CHECK-NEXT:  0000000000000000 - 01                     0000    SO
-# CHECK-NEXT:  [[#STATIC]]      s _static_var
-# CHECK-NEXT:  [[#MAIN]]        T _main
-# CHECK-NEXT:  {{[0-9af]+}}     A _abs
-# CHECK-NEXT:  [[#FUN]]         S _fun
-# CHECK-NEXT:  [[#GLOB]]        D _global_var
-# CHECK-NEXT:  [[#ZERO]]        S _zero
-# CHECK-NEXT:  [[#FOO]]         T _foo
-# CHECK-NEXT:  {{[0-9af]+}}     T _no_debug
-# CHECK-NEXT:  {{0+}}           A __mh_execute_header
+# CHECK:      (N_SO         ) 00                         0000   0000000000000000   '/tmp/test.cpp'
+# CHECK-NEXT: (N_OSO        ) 03                         0001   0000000000000010   '[[DIR]]/test.o'
+# CHECK-NEXT: (N_STSYM      ) [[#%.2d,MORE_DATA_ID + 1]] 0000   [[#%.16x,STATIC:]] '_static_var'
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,MAIN:]]   '_main'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000006{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,BAR:]]    '_bar'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000000{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,BAR2:]]   '_bar2'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000001{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,BAZ:]]    '_baz'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000000{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,BAZ2:]]   '_baz2'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000002{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,QUX:]]    '_qux'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000003{{$}}
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,QUUX:]]   '_quux'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000004{{$}}
+# CHECK-NEXT: (N_GSYM       ) [[#%.2d,DATA_ID + 1]]      0000   [[#%.16x,GLOB:]]   '_global_var'
+# CHECK-NEXT: (N_GSYM       ) [[#%.2d,COMM_ID + 1]]      0000   [[#%.16x,ZERO:]]   '_zero'
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,MORE_TEXT_ID + 1]] 0000   [[#%.16x,FUN:]]    '_fun'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000001{{$}}
+# CHECK-NEXT: (N_SO         ) 01                         0000   0000000000000000{{$}}
+# CHECK-NEXT: (N_SO         ) 00                         0000   0000000000000000   '/foo.cpp'
+# CHECK-NEXT: (N_OSO        ) 03                         0001   0000000000000020   '[[FOO_PATH]]'
+# CHECK-NEXT: (N_FUN        ) [[#%.2d,TEXT_ID + 1]]      0000   [[#%.16x,FOO:]]    '_foo'
+# CHECK-NEXT: (N_FUN        ) 00                         0000   0000000000000001{{$}}
+# CHECK-NEXT: (N_SO         ) 01                         0000   0000000000000000{{$}}
+# CHECK-DAG:  (     SECT    ) [[#%.2d,MORE_DATA_ID + 1]] 0000   [[#STATIC]]        '_static_var'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#MAIN]]          '_main'
+# CHECK-DAG:  (     ABS  EXT) 00                         0000   {{[0-9af]+}}       '_abs'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#FOO]]           '_foo'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#BAR]]           '_bar'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#BAR2]]          '_bar2'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#BAZ]]           '_baz'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#BAZ2]]          '_baz2'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#QUX]]           '_qux'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   [[#QUUX]]          '_quux'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,DATA_ID + 1]]      0000   [[#GLOB]]          '_global_var'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,COMM_ID + 1]]      0000   [[#ZERO]]          '_zero'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,MORE_TEXT_ID + 1]] 0000   [[#FUN]]           '_fun'
+# CHECK-DAG:  (     SECT EXT) [[#%.2d,TEXT_ID + 1]]      0000   {{[0-9a-f]+}}      '_no_debug'
+# CHECK-DAG:  (       {{.*}}) {{[0-9]+}}                 0000   {{[0-9a-f]+}}      '__mh_execute_header'
 # CHECK-EMPTY:
 
 ## Check that we don't attempt to emit rebase opcodes for the debug sections
@@ -90,12 +108,29 @@ _static_var:
 .zerofill __DATA,__common,_zero,4,2
 
 .text
-.globl  _main
+.globl  _main, _bar, _bar2, _baz, _baz2, _qux, _quux
+.alt_entry _baz
+.alt_entry _qux
+
+_bar:
+_bar2:
+  .space 1
+
+_baz:
+_baz2:
+  .space 2
+
 _main:
 Lfunc_begin0:
   callq _foo
   retq
 Lfunc_end0:
+
+_qux:
+  .space 3
+
+_quux:
+  .space 4
 
 .section  __DWARF,__debug_str,regular,debug
   .asciz  "test.cpp"             ## string offset=0

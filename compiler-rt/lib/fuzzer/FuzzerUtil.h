@@ -88,7 +88,7 @@ std::string DisassembleCmd(const std::string &FileName);
 
 std::string SearchRegexCmd(const std::string &Regex);
 
-size_t SimpleFastHash(const uint8_t *Data, size_t Size);
+uint64_t SimpleFastHash(const void *Data, size_t Size, uint64_t Initial = 0);
 
 inline size_t Log(size_t X) {
   return static_cast<size_t>((sizeof(unsigned long long) * 8) - Clzll(X) - 1);

@@ -9,7 +9,7 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(<4 x i32>* %arg) #0 {
 ; GCN-NEXT:  BB0_1: ; %bb0
 ; GCN-NEXT:    ; =>This Loop Header: Depth=1
 ; GCN-NEXT:    ; Child Loop BB0_2 Depth 2
-; GCN-NEXT:    v_add_co_u32_e64 v6, vcc_lo, v0, 8
+; GCN-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 8
 ; GCN-NEXT:    s_mov_b32 s5, exec_lo
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
 ; GCN-NEXT:    s_clause 0x1

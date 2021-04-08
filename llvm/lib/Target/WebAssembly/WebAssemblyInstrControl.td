@@ -30,6 +30,8 @@ def : Pat<(brcond (i32 (setne I32:$cond, 0)), bb:$dst),
           (BR_IF bb_op:$dst, I32:$cond)>;
 def : Pat<(brcond (i32 (seteq I32:$cond, 0)), bb:$dst),
           (BR_UNLESS bb_op:$dst, I32:$cond)>;
+def : Pat<(brcond (i32 (xor bool_node:$cond, (i32 1))), bb:$dst),
+          (BR_UNLESS bb_op:$dst, I32:$cond)>;
 
 // A list of branch targets enclosed in {} and separated by comma.
 // Used by br_table only.

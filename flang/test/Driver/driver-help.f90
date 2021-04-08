@@ -19,6 +19,7 @@
 ! HELP-EMPTY:
 ! HELP-NEXT:OPTIONS:
 ! HELP-NEXT: -###                   Print (but do not run) the commands to run for this compilation
+! HELP-NEXT: -cpp                   Enable predefined and command line preprocessor macros
 ! HELP-NEXT: -c                     Only run preprocess, compile, and assemble steps
 ! HELP-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-NEXT: -E                     Only run the preprocessor
@@ -46,11 +47,13 @@
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
+! HELP-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -pedantic              Warn on language extensions
 ! HELP-NEXT: -std=<value>           Language standard to compile for
 ! HELP-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-NEXT: --version              Print version information
+! HELP-NEXT: -W<warning>            Enable the specified warning
 ! HELP-NEXT: -Xflang <arg>          Pass <arg> to the flang compiler
 
 !-------------------------------------------------------------
@@ -59,6 +62,7 @@
 ! HELP-FC1:USAGE: flang-new
 ! HELP-FC1-EMPTY:
 ! HELP-FC1-NEXT:OPTIONS:
+! HELP-FC1-NEXT: -cpp                   Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
 ! HELP-FC1-NEXT: -emit-obj Emit native object files
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
@@ -97,12 +101,14 @@
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
+! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
 ! HELP-FC1-NEXT: -pedantic              Warn on language extensions
 ! HELP-FC1-NEXT: -std=<value>           Language standard to compile for
 ! HELP-FC1-NEXT: -test-io               Run the InputOuputTest action. Use for development and testing only.
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
 ! HELP-FC1-NEXT: --version              Print version information
+! HELP-FC1-NEXT: -W<warning>            Enable the specified warning
 
 !---------------
 ! EXPECTED ERROR

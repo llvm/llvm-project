@@ -6,6 +6,7 @@ target triple = "nvptx64-nvidia-cuda"
 
 ; // Verify that load with static offset into parameter is done directly.
 ; CHECK-LABEL: .visible .entry static_offset
+; CHECK-NOT:   .local
 ; CHECK: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
 ; CHECK: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
 ; CHECK: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
@@ -30,6 +31,7 @@ bb6:                                              ; preds = %bb3, %bb
 
 ; // Verify that load with dynamic offset into parameter is also done directly.
 ; CHECK-LABEL: .visible .entry dynamic_offset
+; CHECK-NOT:   .local
 ; CHECK: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
 ; CHECK: mov.b64         %[[param_addr:rd[0-9]+]], {{.*}}_param_1
 ; CHECK: mov.u64         %[[param_addr1:rd[0-9]+]], %[[param_addr]]
@@ -47,6 +49,48 @@ bb:
   store i32 %tmp4, i32* %arg, align 4
   ret void
 }
+
+; Same as above, but with a bitcast present in the chain
+; CHECK-LABEL:.visible .entry gep_bitcast
+; CHECK-NOT: .local
+; CHECK-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_param_0]
+; CHECK-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_param_1
+; CHECK-DAG: ld.param.u32    {{%r[0-9]+}}, [gep_bitcast_param_2]
+; CHECK:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
+; CHECK:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+;
+; Function Attrs: nofree norecurse nounwind willreturn mustprogress
+define dso_local void @gep_bitcast(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
+bb:
+  %n64 = sext i32 %n to i64
+  %gep = getelementptr inbounds %struct.ham, %struct.ham* %in, i64 0, i32 0, i64 %n64
+  %bc = bitcast i32* %gep to i8*
+  %load = load i8, i8* %bc, align 4
+  store i8 %load, i8* %out, align 4
+  ret void
+}
+
+; Same as above, but with an ASC(101) present in the chain
+; CHECK-LABEL:.visible .entry gep_bitcast_asc
+; CHECK-NOT: .local
+; CHECK-DAG: ld.param.u64    [[out:%rd[0-9]+]], [gep_bitcast_asc_param_0]
+; CHECK-DAG: mov.b64         {{%rd[0-9]+}}, gep_bitcast_asc_param_1
+; CHECK-DAG: ld.param.u32    {{%r[0-9]+}}, [gep_bitcast_asc_param_2]
+; CHECK:     ld.param.u8     [[value:%rs[0-9]+]], [{{%rd[0-9]+}}]
+; CHECK:     st.global.u8    [{{%rd[0-9]+}}], [[value]];
+;
+; Function Attrs: nofree norecurse nounwind willreturn mustprogress
+define dso_local void @gep_bitcast_asc(i8* nocapture %out,  %struct.ham* nocapture readonly byval(%struct.ham) align 4 %in, i32 %n) local_unnamed_addr #0 {
+bb:
+  %n64 = sext i32 %n to i64
+  %gep = getelementptr inbounds %struct.ham, %struct.ham* %in, i64 0, i32 0, i64 %n64
+  %bc = bitcast i32* %gep to i8*
+  %asc = addrspacecast i8* %bc to i8 addrspace(101)*
+  %load = load i8, i8 addrspace(101)* %asc, align 4
+  store i8 %load, i8* %out, align 4
+  ret void
+}
+
 
 ; Verify that if the pointer escapes, then we do fall back onto using a temp copy.
 ; CHECK-LABEL: .visible .entry pointer_escapes
@@ -82,7 +126,7 @@ declare dso_local i32* @escape(i32*) local_unnamed_addr
 
 
 !llvm.module.flags = !{!0, !1, !2}
-!nvvm.annotations = !{!3, !4, !5}
+!nvvm.annotations = !{!3, !4, !5, !6, !7}
 
 !0 = !{i32 2, !"SDK Version", [2 x i32] [i32 9, i32 1]}
 !1 = !{i32 1, !"wchar_size", i32 4}
@@ -90,3 +134,5 @@ declare dso_local i32* @escape(i32*) local_unnamed_addr
 !3 = !{void (i32*, %struct.ham*, i32)* @static_offset, !"kernel", i32 1}
 !4 = !{void (i32*, %struct.ham*, i32)* @dynamic_offset, !"kernel", i32 1}
 !5 = !{void (i32*, %struct.ham*, i32)* @pointer_escapes, !"kernel", i32 1}
+!6 = !{void (i8*, %struct.ham*, i32)* @gep_bitcast, !"kernel", i32 1}
+!7 = !{void (i8*, %struct.ham*, i32)* @gep_bitcast_asc, !"kernel", i32 1}

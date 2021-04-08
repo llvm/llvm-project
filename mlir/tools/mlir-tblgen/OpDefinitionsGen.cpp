@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpFormatGen.h"
+#include "OpGenHelpers.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -22,8 +23,7 @@
 #include "mlir/TableGen/SideEffects.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Regex.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -34,17 +34,6 @@
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
-
-cl::OptionCategory opDefGenCat("Options for -gen-op-defs and -gen-op-decls");
-
-static cl::opt<std::string> opIncFilter(
-    "op-include-regex",
-    cl::desc("Regex of name of op's to include (no filter if empty)"),
-    cl::cat(opDefGenCat));
-static cl::opt<std::string> opExcFilter(
-    "op-exclude-regex",
-    cl::desc("Regex of name of op's to exclude (no filter if empty)"),
-    cl::cat(opDefGenCat));
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
@@ -2472,44 +2461,10 @@ static void emitOpList(const std::vector<Record *> &defs, raw_ostream &os) {
       [&os]() { os << ",\n"; });
 }
 
-static std::string getOperationName(const Record &def) {
-  auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
-  auto opName = def.getValueAsString("opName");
-  if (prefix.empty())
-    return std::string(opName);
-  return std::string(llvm::formatv("{0}.{1}", prefix, opName));
-}
-
-static std::vector<Record *>
-getAllDerivedDefinitions(const RecordKeeper &recordKeeper,
-                         StringRef className) {
-  Record *classDef = recordKeeper.getClass(className);
-  if (!classDef)
-    PrintFatalError("ERROR: Couldn't find the `" + className + "' class!\n");
-
-  llvm::Regex includeRegex(opIncFilter), excludeRegex(opExcFilter);
-  std::vector<Record *> defs;
-  for (const auto &def : recordKeeper.getDefs()) {
-    if (!def.second->isSubClassOf(classDef))
-      continue;
-    // Include if no include filter or include filter matches.
-    if (!opIncFilter.empty() &&
-        !includeRegex.match(getOperationName(*def.second)))
-      continue;
-    // Unless there is an exclude filter and it matches.
-    if (!opExcFilter.empty() &&
-        excludeRegex.match(getOperationName(*def.second)))
-      continue;
-    defs.push_back(def.second.get());
-  }
-
-  return defs;
-}
-
 static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os);
 
-  const auto &defs = getAllDerivedDefinitions(recordKeeper, "Op");
+  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/true);
 
   return false;
@@ -2518,7 +2473,7 @@ static bool emitOpDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {
 static bool emitOpDefs(const RecordKeeper &recordKeeper, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os);
 
-  const auto &defs = getAllDerivedDefinitions(recordKeeper, "Op");
+  std::vector<Record *> defs = getRequestedOpDefinitions(recordKeeper);
   emitOpList(defs, os);
   emitOpClasses(recordKeeper, defs, os, /*emitDecl=*/false);
 

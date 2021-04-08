@@ -5,10 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Contains matchers for matching SSA Machine Instructions.
-//
+///
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 #define LLVM_CODEGEN_GLOBALISEL_MIPATTERNMATCH_H
 

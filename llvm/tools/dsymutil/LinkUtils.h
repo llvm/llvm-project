@@ -39,9 +39,6 @@ struct LinkOptions {
   /// Update
   bool Update = false;
 
-  /// Minimize
-  bool Minimize = false;
-
   /// Do not check swiftmodule timestamp
   bool NoTimestamp = false;
 

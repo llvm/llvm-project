@@ -440,7 +440,7 @@ static void writeJSON(StringRef OrigDIVerifyBugsReportFilePath,
                       llvm::json::Array &Bugs) {
   std::error_code EC;
   raw_fd_ostream OS_FILE{OrigDIVerifyBugsReportFilePath, EC,
-                         sys::fs::OF_Append | sys::fs::OF_Text};
+                         sys::fs::OF_Append | sys::fs::OF_TextWithCRLF};
   if (EC) {
     errs() << "Could not open file: " << EC.message() << ", "
            << OrigDIVerifyBugsReportFilePath << '\n';

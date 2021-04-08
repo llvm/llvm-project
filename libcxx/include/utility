@@ -201,6 +201,7 @@ template <class T>
 
 #include <__config>
 #include <__tuple>
+#include <compare>
 #include <type_traits>
 #include <initializer_list>
 #include <cstddef>
@@ -941,7 +942,7 @@ template <class _Tp>
 _LIBCPP_INLINE_VAR constexpr in_place_type_t<_Tp> in_place_type{};
 
 template <size_t _Idx>
-struct _LIBCPP_TYPE_VIS in_place_index_t {
+struct _LIBCPP_TEMPLATE_VIS in_place_index_t {
     explicit in_place_index_t() = default;
 };
 template <size_t _Idx>

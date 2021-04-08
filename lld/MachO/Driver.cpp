@@ -43,7 +43,7 @@
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
-#include "llvm/TextAPI/MachO/PackedVersion.h"
+#include "llvm/TextAPI/PackedVersion.h"
 
 #include <algorithm>
 
@@ -356,8 +356,9 @@ static void addFramework(StringRef name, bool isWeak) {
   error("framework not found for -framework " + name);
 }
 
-// Parses LC_LINKER_OPTION contents, which can add additional command line flags.
-void macho::parseLCLinkerOption(InputFile* f, unsigned argc, StringRef data) {
+// Parses LC_LINKER_OPTION contents, which can add additional command line
+// flags.
+void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   SmallVector<const char *, 4> argv;
   size_t offset = 0;
   for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
@@ -531,6 +532,7 @@ static void replaceCommonSymbols() {
     inputSections.push_back(isec);
 
     replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
+                           /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern);
   }
@@ -847,7 +849,6 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   stderrOS.enable_colors(stderrOS.has_colors());
   // TODO: Set up error handler properly, e.g. the errorLimitExceededMsg
 
-
   MachOOptTable parser;
   InputArgList args = parser.parse(argsArr.slice(1));
 
@@ -1021,18 +1022,20 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
     message(StringRef("Library search paths:") +
-            (config->librarySearchPaths.size()
-                 ? "\n\t" + join(config->librarySearchPaths, "\n\t")
-                 : ""));
+            (config->librarySearchPaths.empty()
+                 ? ""
+                 : "\n\t" + join(config->librarySearchPaths, "\n\t")));
     message(StringRef("Framework search paths:") +
-            (config->frameworkSearchPaths.size()
-                 ? "\n\t" + join(config->frameworkSearchPaths, "\n\t")
-                 : ""));
+            (config->frameworkSearchPaths.empty()
+                 ? ""
+                 : "\n\t" + join(config->frameworkSearchPaths, "\n\t")));
   }
 
   config->progName = argsArr[0];
 
-  config->timeTraceEnabled = args.hasArg(OPT_time_trace);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace) ||
+                             args.hasArg(OPT_time_trace_granularity_eq) ||
+                             args.hasArg(OPT_time_trace_file_eq);
   config->timeTraceGranularity =
       args::getInteger(args, OPT_time_trace_granularity_eq, 500);
 
@@ -1051,17 +1054,22 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
-    for (const Arg *arg : args.filtered(OPT_sub_library, OPT_sub_umbrella)) {
-      config->hasReexports = true;
-      StringRef searchName = arg->getValue();
-      std::vector<StringRef> extensions;
-      if (arg->getOption().getID() == OPT_sub_library)
-        extensions = {".dylib", ".tbd"};
-      else
-        extensions = {".tbd"};
-      if (!markReexport(searchName, extensions))
-        error(arg->getSpelling() + " " + searchName +
-              " does not match a supplied dylib");
+    {
+      auto reexportHandler = [](const Arg *arg,
+                                const std::vector<StringRef> &extensions) {
+        config->hasReexports = true;
+        StringRef searchName = arg->getValue();
+        if (!markReexport(searchName, extensions))
+          error(arg->getSpelling() + " " + searchName +
+                " does not match a supplied dylib");
+      };
+      std::vector<StringRef> extensions = {".tbd"};
+      for (const Arg *arg : args.filtered(OPT_sub_umbrella))
+        reexportHandler(arg, extensions);
+
+      extensions.push_back(".dylib");
+      for (const Arg *arg : args.filtered(OPT_sub_library))
+        reexportHandler(arg, extensions);
     }
 
     // Parse LTO options.
@@ -1103,7 +1111,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             "\n>>> referenced from option -exported_symbol(s_list)");
     }
 
-    createSyntheticSections();
+    if (target->wordSize == 8)
+      createSyntheticSections<LP64>();
+    else
+      createSyntheticSections<ILP32>();
+
     createSyntheticSymbols();
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
@@ -1119,14 +1131,17 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       TimeTraceScope timeScope("Gathering input sections");
       // Gather all InputSections into one vector.
       for (const InputFile *file : inputFiles) {
-        for (const SubsectionMapping &map : file->subsections)
+        for (const SubsectionMap &map : file->subsections)
           for (const SubsectionEntry &subsectionEntry : map)
             inputSections.push_back(subsectionEntry.isec);
       }
     }
 
     // Write to an output file.
-    writeResult();
+    if (target->wordSize == 8)
+      writeResult<LP64>();
+    else
+      writeResult<ILP32>();
 
     depTracker->write(getLLDVersion(), inputFiles, config->outputFile);
   }

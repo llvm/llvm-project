@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
+/// \file
 /// Provides implementations for PassManager and AnalysisManager template
 /// methods. These classes should be explicitly instantiated for any IR unit,
 /// and files doing the explicit instantiation should include this header.

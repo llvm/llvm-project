@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+/// \file
 /// Interface for Targets to specify which operations are combined how and when.
 ///
 //===----------------------------------------------------------------------===//

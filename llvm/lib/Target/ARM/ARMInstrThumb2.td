@@ -2849,6 +2849,12 @@ let Constraints = "$src = $Rd" in {
 defm t2ORN  : T2I_bin_irs<0b0011, "orn",
                           IIC_iBITi, IIC_iBITr, IIC_iBITsi,
                           BinOpFrag<(or node:$LHS, (not node:$RHS))>, 0, "">;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $imm",
+   (t2ORNri rGPR:$Rd, rGPR:$Rn, t2_so_imm:$imm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $Rm",
+   (t2ORNrr rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"orn${s}${p}.w $Rd, $Rn, $ShiftedRm",
+   (t2ORNrs rGPR:$Rd, rGPR:$Rn, t2_so_reg:$ShiftedRm, pred:$p, cc_out:$s)>;
 
 /// T2I_un_irs - Defines a set of (op reg, {so_imm|r|so_reg}) patterns for a
 /// unary operation that produces a value. These are predicable and can be
@@ -5058,8 +5064,8 @@ def : t2InstAlias<"rev16${p} $Rd, $Rm", (t2REV16 rGPR:$Rd, rGPR:$Rm, pred:$p)>;
 def : t2InstAlias<"revsh${p} $Rd, $Rm", (t2REVSH rGPR:$Rd, rGPR:$Rm, pred:$p)>;
 
 
-// Alias for RSB without the ".w" optional width specifier, and with optional
-// implied destination register.
+// Alias for RSB with and without the ".w" optional width specifier, with and
+// without explicit destination register.
 def : t2InstAlias<"rsb${s}${p} $Rd, $Rn, $imm",
            (t2RSBri rGPR:$Rd, rGPR:$Rn, t2_so_imm:$imm, pred:$p, cc_out:$s)>;
 def : t2InstAlias<"rsb${s}${p} $Rdn, $imm",
@@ -5068,6 +5074,13 @@ def : t2InstAlias<"rsb${s}${p} $Rdn, $Rm",
            (t2RSBrr rGPR:$Rdn, rGPR:$Rdn, rGPR:$Rm, pred:$p, cc_out:$s)>;
 def : t2InstAlias<"rsb${s}${p} $Rdn, $ShiftedRm",
            (t2RSBrs rGPR:$Rdn, rGPR:$Rdn, t2_so_reg:$ShiftedRm, pred:$p,
+                    cc_out:$s)>;
+def : t2InstAlias<"rsb${s}${p}.w $Rdn, $Rm",
+           (t2RSBrr rGPR:$Rdn, rGPR:$Rdn, rGPR:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"rsb${s}${p}.w $Rd, $Rn, $Rm",
+           (t2RSBrr rGPR:$Rd, rGPR:$Rn, rGPR:$Rm, pred:$p, cc_out:$s)>;
+def : t2InstAlias<"rsb${s}${p}.w $Rd, $Rn, $ShiftedRm",
+           (t2RSBrs rGPR:$Rd, rGPR:$Rn, t2_so_reg:$ShiftedRm, pred:$p,
                     cc_out:$s)>;
 
 // SSAT/USAT optional shift operand.

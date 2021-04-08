@@ -3033,6 +3033,13 @@ If additional functionality is desired for the semantic form of the attribute,
 the ``AdditionalMembers`` field specifies code to be copied verbatim into the
 semantic attribute class object, with ``public`` access.
 
+If two or more attributes cannot be used in combination on the same declaration
+or statement, a ``MutualExclusions`` definition can be supplied to automatically
+generate diagnostic code. This will disallow the attribute combinations
+regardless of spellings used. Additionally, it will diagnose combinations within
+the same attribute list, different attribute list, and redeclarations, as
+appropriate.
+
 Boilerplate
 ^^^^^^^^^^^
 All semantic processing of declaration attributes happens in `lib/Sema/SemaDeclAttr.cpp

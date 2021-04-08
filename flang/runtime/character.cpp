@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "character.h"
+#include "cpp-type.h"
 #include "descriptor.h"
 #include "terminator.h"
+#include "tools.h"
 #include "flang/Common/bit-population-count.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
@@ -30,7 +32,7 @@ inline int CompareToBlankPadding(const CHAR *x, std::size_t chars) {
 }
 
 template <typename CHAR>
-static int Compare(
+int CharacterScalarCompare(
     const CHAR *x, const CHAR *y, std::size_t xChars, std::size_t yChars) {
   auto minChars{std::min(xChars, yChars)};
   if constexpr (sizeof(CHAR) == 1) {
@@ -62,6 +64,13 @@ static int Compare(
   }
   return -CompareToBlankPadding(y, yChars - minChars);
 }
+
+template int CharacterScalarCompare<char>(
+    const char *x, const char *y, std::size_t xChars, std::size_t yChars);
+template int CharacterScalarCompare<char16_t>(const char16_t *x,
+    const char16_t *y, std::size_t xChars, std::size_t yChars);
+template int CharacterScalarCompare<char32_t>(const char32_t *x,
+    const char32_t *y, std::size_t xChars, std::size_t yChars);
 
 // Shift count to use when converting between character lengths
 // and byte counts.
@@ -103,8 +112,8 @@ static void Compare(Descriptor &result, const Descriptor &x,
   std::size_t yChars{y.ElementBytes() >> shift<char>};
   for (SubscriptValue resultAt{0}; elements-- > 0;
        ++resultAt, x.IncrementSubscripts(xAt), y.IncrementSubscripts(yAt)) {
-    *result.OffsetElement<char>(resultAt) =
-        Compare(x.Element<CHAR>(xAt), y.Element<CHAR>(yAt), xChars, yChars);
+    *result.OffsetElement<char>(resultAt) = CharacterScalarCompare<CHAR>(
+        x.Element<CHAR>(xAt), y.Element<CHAR>(yAt), xChars, yChars);
   }
 }
 
@@ -216,36 +225,28 @@ static void LenTrimKind(Descriptor &result, const Descriptor &string, int kind,
     const Terminator &terminator) {
   switch (kind) {
   case 1:
-    LenTrim<std::int8_t, CHAR>(result, string, terminator);
+    LenTrim<CppTypeFor<TypeCategory::Integer, 1>, CHAR>(
+        result, string, terminator);
     break;
   case 2:
-    LenTrim<std::int16_t, CHAR>(result, string, terminator);
+    LenTrim<CppTypeFor<TypeCategory::Integer, 2>, CHAR>(
+        result, string, terminator);
     break;
   case 4:
-    LenTrim<std::int32_t, CHAR>(result, string, terminator);
+    LenTrim<CppTypeFor<TypeCategory::Integer, 4>, CHAR>(
+        result, string, terminator);
     break;
   case 8:
-    LenTrim<std::int64_t, CHAR>(result, string, terminator);
+    LenTrim<CppTypeFor<TypeCategory::Integer, 8>, CHAR>(
+        result, string, terminator);
     break;
   case 16:
-    LenTrim<common::uint128_t, CHAR>(result, string, terminator);
+    LenTrim<CppTypeFor<TypeCategory::Integer, 16>, CHAR>(
+        result, string, terminator);
     break;
   default:
     terminator.Crash("LEN_TRIM: bad KIND=%d", kind);
   }
-}
-
-// Utility for dealing with elemental LOGICAL arguments
-static bool IsLogicalElementTrue(
-    const Descriptor &logical, const SubscriptValue at[]) {
-  // A LOGICAL value is false if and only if all of its bytes are zero.
-  const char *p{logical.Element<char>(at)};
-  for (std::size_t j{logical.ElementBytes()}; j-- > 0; ++p) {
-    if (*p) {
-      return true;
-    }
-  }
-  return false;
 }
 
 // INDEX implementation
@@ -419,23 +420,23 @@ static void GeneralCharFuncKind(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
   switch (kind) {
   case 1:
-    GeneralCharFunc<std::int8_t, CHAR, FUNC>(
+    GeneralCharFunc<CppTypeFor<TypeCategory::Integer, 1>, CHAR, FUNC>(
         result, string, arg, back, terminator);
     break;
   case 2:
-    GeneralCharFunc<std::int16_t, CHAR, FUNC>(
+    GeneralCharFunc<CppTypeFor<TypeCategory::Integer, 2>, CHAR, FUNC>(
         result, string, arg, back, terminator);
     break;
   case 4:
-    GeneralCharFunc<std::int32_t, CHAR, FUNC>(
+    GeneralCharFunc<CppTypeFor<TypeCategory::Integer, 4>, CHAR, FUNC>(
         result, string, arg, back, terminator);
     break;
   case 8:
-    GeneralCharFunc<std::int64_t, CHAR, FUNC>(
+    GeneralCharFunc<CppTypeFor<TypeCategory::Integer, 8>, CHAR, FUNC>(
         result, string, arg, back, terminator);
     break;
   case 16:
-    GeneralCharFunc<common::uint128_t, CHAR, FUNC>(
+    GeneralCharFunc<CppTypeFor<TypeCategory::Integer, 16>, CHAR, FUNC>(
         result, string, arg, back, terminator);
     break;
   default:
@@ -509,7 +510,7 @@ static void MaxMinHelper(Descriptor &accumulator, const Descriptor &x,
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
        accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
     const CHAR *xData{x.Element<CHAR>(xAt)};
-    int cmp{Compare(accumData, xData, accumChars, xChars)};
+    int cmp{CharacterScalarCompare(accumData, xData, accumChars, xChars)};
     if constexpr (ISMIN) {
       cmp = -cmp;
     }
@@ -754,14 +755,16 @@ int RTNAME(CharacterCompareScalar)(const Descriptor &x, const Descriptor &y) {
   RUNTIME_CHECK(terminator, x.raw().type == y.raw().type);
   switch (x.raw().type) {
   case CFI_type_char:
-    return Compare(x.OffsetElement<char>(), y.OffsetElement<char>(),
-        x.ElementBytes(), y.ElementBytes());
+    return CharacterScalarCompare<char>(x.OffsetElement<char>(),
+        y.OffsetElement<char>(), x.ElementBytes(), y.ElementBytes());
   case CFI_type_char16_t:
-    return Compare(x.OffsetElement<char16_t>(), y.OffsetElement<char16_t>(),
-        x.ElementBytes() >> 1, y.ElementBytes() >> 1);
+    return CharacterScalarCompare<char16_t>(x.OffsetElement<char16_t>(),
+        y.OffsetElement<char16_t>(), x.ElementBytes() >> 1,
+        y.ElementBytes() >> 1);
   case CFI_type_char32_t:
-    return Compare(x.OffsetElement<char32_t>(), y.OffsetElement<char32_t>(),
-        x.ElementBytes() >> 2, y.ElementBytes() >> 2);
+    return CharacterScalarCompare<char32_t>(x.OffsetElement<char32_t>(),
+        y.OffsetElement<char32_t>(), x.ElementBytes() >> 2,
+        y.ElementBytes() >> 2);
   default:
     terminator.Crash("CharacterCompareScalar: bad string type code %d",
         static_cast<int>(x.raw().type));
@@ -771,17 +774,17 @@ int RTNAME(CharacterCompareScalar)(const Descriptor &x, const Descriptor &y) {
 
 int RTNAME(CharacterCompareScalar1)(
     const char *x, const char *y, std::size_t xChars, std::size_t yChars) {
-  return Compare(x, y, xChars, yChars);
+  return CharacterScalarCompare(x, y, xChars, yChars);
 }
 
 int RTNAME(CharacterCompareScalar2)(const char16_t *x, const char16_t *y,
     std::size_t xChars, std::size_t yChars) {
-  return Compare(x, y, xChars, yChars);
+  return CharacterScalarCompare(x, y, xChars, yChars);
 }
 
 int RTNAME(CharacterCompareScalar4)(const char32_t *x, const char32_t *y,
     std::size_t xChars, std::size_t yChars) {
-  return Compare(x, y, xChars, yChars);
+  return CharacterScalarCompare(x, y, xChars, yChars);
 }
 
 void RTNAME(CharacterCompare)(

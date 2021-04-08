@@ -210,7 +210,6 @@ int main() {
 // CHECK: [[GTID_REF:%.+]] = load i{{[0-9]+}}*, i{{[0-9]+}}** [[GTID_ADDR_ADDR]]
 // CHECK: [[GTID:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[GTID_REF]]
 
-// CHECK-NOT: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]* [[VAR_PRIV]])
 // CHECK-NOT: call {{.*}} [[S_FLOAT_TY_DESTR]]([[S_FLOAT_TY]]*
 
 // CHECK: call void @__kmpc_for_static_init_4(

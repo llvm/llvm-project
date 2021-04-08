@@ -184,8 +184,8 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
            newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
-    auto newAlloc = rewriter.create<AllocLikeOp>(alloc.getLoc(), newMemRefType,
-                                                 newOperands, IntegerAttr());
+    auto newAlloc = rewriter.create<AllocLikeOp>(
+        alloc.getLoc(), newMemRefType, newOperands, alloc.alignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     auto resultCast =
         rewriter.create<CastOp>(alloc.getLoc(), newAlloc, alloc.getType());

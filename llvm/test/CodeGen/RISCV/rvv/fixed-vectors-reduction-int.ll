@@ -3552,8 +3552,7 @@ define i64 @vreduce_smin_v2i64(<2 x i64>* %x) {
 ; RV64-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; RV64-NEXT:    vle64.v v25, (a0)
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v26, a0
 ; RV64-NEXT:    vsetivli a0, 2, e64,m1,ta,mu
@@ -3596,8 +3595,7 @@ define i64 @vreduce_smin_v4i64(<4 x i64>* %x) {
 ; RV64-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; RV64-NEXT:    vle64.v v26, (a0)
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    vsetivli a0, 4, e64,m2,ta,mu
@@ -3641,8 +3639,7 @@ define i64 @vreduce_smin_v8i64(<8 x i64>* %x) {
 ; RV64-NEXT:    vsetivli a1, 8, e64,m4,ta,mu
 ; RV64-NEXT:    vle64.v v28, (a0)
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    vsetivli a0, 8, e64,m4,ta,mu
@@ -3686,8 +3683,7 @@ define i64 @vreduce_smin_v16i64(<16 x i64>* %x) {
 ; RV64-NEXT:    vsetivli a1, 16, e64,m8,ta,mu
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
@@ -3737,8 +3733,7 @@ define i64 @vreduce_smin_v32i64(<32 x i64>* %x) {
 ; RV64-NEXT:    vle64.v v16, (a0)
 ; RV64-NEXT:    vmin.vv v8, v8, v16
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    vsetivli a0, 16, e64,m8,ta,mu
@@ -3800,8 +3795,7 @@ define i64 @vreduce_smin_v64i64(<64 x i64>* %x) nounwind {
 ; RV64-NEXT:    vmin.vv v8, v8, v0
 ; RV64-NEXT:    vmin.vv v8, v8, v16
 ; RV64-NEXT:    addi a0, zero, -1
-; RV64-NEXT:    slli a0, a0, 63
-; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    srli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    vsetivli a0, 16, e64,m8,ta,mu

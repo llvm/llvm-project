@@ -418,6 +418,8 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <iosfwd> // for forward declarations of vector and string.
 #include <__functional_base>
 #include <type_traits>
+#include <compare>
+#include <concepts>
 #include <cstddef>
 #include <initializer_list>
 #include <__memory/base.h>

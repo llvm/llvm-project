@@ -1268,8 +1268,9 @@ LogicalResult mlir::loopUnrollByFactor(scf::ForOp forOp,
 
   // Create epilogue clean up loop starting at 'upperBoundUnrolled'.
   if (generateEpilogueLoop) {
-    OpBuilder epilogueBuilder(forOp->getBlock(),
-                              std::next(Block::iterator(forOp)));
+    OpBuilder epilogueBuilder(forOp->getContext());
+    epilogueBuilder.setInsertionPoint(forOp->getBlock(),
+                                      std::next(Block::iterator(forOp)));
     auto epilogueForOp = cast<scf::ForOp>(epilogueBuilder.clone(*forOp));
     epilogueForOp.setLowerBound(upperBoundUnrolled);
 

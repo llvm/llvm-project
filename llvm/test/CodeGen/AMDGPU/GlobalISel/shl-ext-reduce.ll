@@ -264,7 +264,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s1
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s0
-; GFX10-NEXT:    v_add_co_u32_e64 v2, vcc_lo, v4, v2
+; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, v4, v2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v5, v3, vcc_lo
 ; GFX10-NEXT:    global_store_dword v[2:3], v1, off
 ; GFX10-NEXT:    s_endpgm
@@ -599,7 +599,7 @@ define i32 @v_shl_i32_zext_i16(i16 %x) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0x3fff, v0
-; GFX10-NEXT:    v_lshlrev_b16_e64 v0, 2, v0
+; GFX10-NEXT:    v_lshlrev_b16 v0, 2, v0
 ; GFX10-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %and = and i16 %x, 16383

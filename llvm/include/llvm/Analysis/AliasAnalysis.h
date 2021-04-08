@@ -335,6 +335,31 @@ createModRefInfo(const FunctionModRefBehavior FMRB) {
   return ModRefInfo(FMRB & static_cast<int>(ModRefInfo::ModRef));
 }
 
+/// Reduced version of MemoryLocation that only stores a pointer and size.
+/// Used for caching AATags independent BasicAA results.
+struct AACacheLoc {
+  const Value *Ptr;
+  LocationSize Size;
+};
+
+template <> struct DenseMapInfo<AACacheLoc> {
+  static inline AACacheLoc getEmptyKey() {
+    return {DenseMapInfo<const Value *>::getEmptyKey(),
+            DenseMapInfo<LocationSize>::getEmptyKey()};
+  }
+  static inline AACacheLoc getTombstoneKey() {
+    return {DenseMapInfo<const Value *>::getTombstoneKey(),
+            DenseMapInfo<LocationSize>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const AACacheLoc &Val) {
+    return DenseMapInfo<const Value *>::getHashValue(Val.Ptr) ^
+           DenseMapInfo<LocationSize>::getHashValue(Val.Size);
+  }
+  static bool isEqual(const AACacheLoc &LHS, const AACacheLoc &RHS) {
+    return LHS.Ptr == RHS.Ptr && LHS.Size == RHS.Size;
+  }
+};
+
 /// This class stores info we want to provide to or retain within an alias
 /// query. By default, the root query is stateless and starts with a freshly
 /// constructed info object. Specific alias analyses can use this query info to
@@ -355,7 +380,7 @@ class AAQueryInfo {
       ClobberOffsets;
 
 public:
-  using LocPair = std::pair<MemoryLocation, MemoryLocation>;
+  using LocPair = std::pair<AACacheLoc, AACacheLoc>;
   struct CacheEntry {
     AliasResult Result;
     /// Number of times a NoAlias assumption has been used.

@@ -26,7 +26,9 @@ class TestFirmwareCorefiles(TestBase):
         self.create_corefile = self.getBuildArtifact("create-empty-corefile")
         self.dsym_for_uuid = self.getBuildArtifact("dsym-for-uuid.sh")
         self.aout_corefile = self.getBuildArtifact("aout.core")
+        self.aout_corefile_addr = self.getBuildArtifact("aout.core_addr")
         self.bout_corefile = self.getBuildArtifact("bout.core")
+        self.bout_corefile_addr = self.getBuildArtifact("bout.core_addr")
 
         ## We can hook in our dsym-for-uuid shell script to lldb with this env
         ## var instead of requiring a defaults write.
@@ -98,9 +100,13 @@ class TestFirmwareCorefiles(TestBase):
 
         os.chmod(self.dsym_for_uuid, 0o755)
 
+        self.slide = 0x70000000000
+
         ### Create our corefile
-        retcode = call(self.create_corefile + " version-string " + self.aout_corefile + " " + self.aout_exe, shell=True)
-        retcode = call(self.create_corefile + " main-bin-spec " + self.bout_corefile + " " + self.bout_exe, shell=True)
+        retcode = call(self.create_corefile + " version-string " + self.aout_corefile + " " + self.aout_exe + " 0xffffffffffffffff", shell=True)
+        retcode = call(self.create_corefile + " main-bin-spec " + self.bout_corefile + " " + self.bout_exe + " 0xffffffffffffffff", shell=True)
+        retcode = call(self.create_corefile + " version-string " + self.aout_corefile_addr + " " + self.aout_exe + (" 0x%x" % self.slide), shell=True)
+        retcode = call(self.create_corefile + " main-bin-spec " + self.bout_corefile_addr + " " + self.bout_exe + (" 0x%x" % self.slide), shell=True)
 
         ### Now run lldb on the corefile
         ### which will give us a UUID
@@ -111,23 +117,61 @@ class TestFirmwareCorefiles(TestBase):
         # First, try the "kern ver str" corefile
         self.target = self.dbg.CreateTarget('')
         err = lldb.SBError()
+        if self.TraceOn():
+            self.runCmd("log enable lldb dyld")
+            self.addTearDownHook(lambda: self.runCmd("log disable lldb dyld"))
+
         self.process = self.target.LoadCore(self.aout_corefile)
         self.assertEqual(self.process.IsValid(), True)
         if self.TraceOn():
             self.runCmd("image list")
+            self.runCmd("target mod dump sections")
         self.assertEqual(self.target.GetNumModules(), 1)
         fspec = self.target.GetModuleAtIndex(0).GetFileSpec()
         filepath = fspec.GetDirectory() + "/" + fspec.GetFilename()
         self.assertEqual(filepath, self.aout_exe)
 
+        # Second, try the "kern ver str" corefile where it loads at an address
+        self.target = self.dbg.CreateTarget('')
+        err = lldb.SBError()
+        self.process = self.target.LoadCore(self.aout_corefile_addr)
+        self.assertEqual(self.process.IsValid(), True)
+        if self.TraceOn():
+            self.runCmd("image list")
+            self.runCmd("target mod dump sections")
+        self.assertEqual(self.target.GetNumModules(), 1)
+        fspec = self.target.GetModuleAtIndex(0).GetFileSpec()
+        filepath = fspec.GetDirectory() + "/" + fspec.GetFilename()
+        self.assertEqual(filepath, self.aout_exe)
+        main_sym = self.target.GetModuleAtIndex(0).FindSymbol("main", lldb.eSymbolTypeAny)
+        main_addr = main_sym.GetStartAddress()
+        self.assertGreater(main_addr.GetLoadAddress(self.target), self.slide)
+        self.assertNotEqual(main_addr.GetLoadAddress(self.target), lldb.LLDB_INVALID_ADDRESS)
 
-        # Second, try the "main bin spec" corefile
+        # Third, try the "main bin spec" corefile
         self.target = self.dbg.CreateTarget('')
         self.process = self.target.LoadCore(self.bout_corefile)
         self.assertEqual(self.process.IsValid(), True)
         if self.TraceOn():
             self.runCmd("image list")
+            self.runCmd("target mod dump sections")
         self.assertEqual(self.target.GetNumModules(), 1)
         fspec = self.target.GetModuleAtIndex(0).GetFileSpec()
         filepath = fspec.GetDirectory() + "/" + fspec.GetFilename()
         self.assertEqual(filepath, self.bout_exe)
+
+        # Fourth, try the "main bin spec" corefile where it loads at an address
+        self.target = self.dbg.CreateTarget('')
+        self.process = self.target.LoadCore(self.bout_corefile_addr)
+        self.assertEqual(self.process.IsValid(), True)
+        if self.TraceOn():
+            self.runCmd("image list")
+            self.runCmd("target mod dump sections")
+        self.assertEqual(self.target.GetNumModules(), 1)
+        fspec = self.target.GetModuleAtIndex(0).GetFileSpec()
+        filepath = fspec.GetDirectory() + "/" + fspec.GetFilename()
+        self.assertEqual(filepath, self.bout_exe)
+        main_sym = self.target.GetModuleAtIndex(0).FindSymbol("main", lldb.eSymbolTypeAny)
+        main_addr = main_sym.GetStartAddress()
+        self.assertGreater(main_addr.GetLoadAddress(self.target), self.slide)
+        self.assertNotEqual(main_addr.GetLoadAddress(self.target), lldb.LLDB_INVALID_ADDRESS)

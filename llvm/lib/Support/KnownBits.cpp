@@ -412,10 +412,11 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   return KnownAbs;
 }
 
-KnownBits KnownBits::computeForMul(const KnownBits &LHS, const KnownBits &RHS) {
+KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS) {
   unsigned BitWidth = LHS.getBitWidth();
+  assert(BitWidth == RHS.getBitWidth() && !LHS.hasConflict() &&
+         !RHS.hasConflict() && "Operand mismatch");
 
-  assert(!LHS.hasConflict() && !RHS.hasConflict());
   // Compute a conservative estimate for high known-0 bits.
   unsigned LeadZ =
       std::max(LHS.countMinLeadingZeros() + RHS.countMinLeadingZeros(),
@@ -497,7 +498,7 @@ KnownBits KnownBits::mulhs(const KnownBits &LHS, const KnownBits &RHS) {
          !RHS.hasConflict() && "Operand mismatch");
   KnownBits WideLHS = LHS.sext(2 * BitWidth);
   KnownBits WideRHS = RHS.sext(2 * BitWidth);
-  return computeForMul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
+  return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
 }
 
 KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
@@ -506,7 +507,7 @@ KnownBits KnownBits::mulhu(const KnownBits &LHS, const KnownBits &RHS) {
          !RHS.hasConflict() && "Operand mismatch");
   KnownBits WideLHS = LHS.zext(2 * BitWidth);
   KnownBits WideRHS = RHS.zext(2 * BitWidth);
-  return computeForMul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
+  return mul(WideLHS, WideRHS).extractBits(BitWidth, BitWidth);
 }
 
 KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS) {

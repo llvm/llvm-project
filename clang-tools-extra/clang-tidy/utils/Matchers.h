@@ -49,11 +49,76 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
   return pointerType(pointee(qualType(isConstQualified())));
 }
 
-AST_MATCHER_P(NamedDecl, matchesAnyListedName, std::vector<std::string>,
-              NameList) {
-  return llvm::any_of(NameList, [&Node](const std::string &Name) {
-      return llvm::Regex(Name).match(Node.getName());
+// A matcher implementation that matches a list of type name regular expressions
+// against a NamedDecl. If a regular expression contains the substring "::"
+// matching will occur against the qualified name, otherwise only the typename.
+class MatchesAnyListedNameMatcher
+    : public ast_matchers::internal::MatcherInterface<NamedDecl> {
+public:
+  explicit MatchesAnyListedNameMatcher(llvm::ArrayRef<std::string> NameList) {
+    std::transform(
+        NameList.begin(), NameList.end(), std::back_inserter(NameMatchers),
+        [](const llvm::StringRef Name) { return NameMatcher(Name); });
+  }
+  bool matches(
+      const NamedDecl &Node, ast_matchers::internal::ASTMatchFinder *Finder,
+      ast_matchers::internal::BoundNodesTreeBuilder *Builder) const override {
+    return llvm::any_of(NameMatchers, [&Node](const NameMatcher &NM) {
+      return NM.match(Node);
     });
+  }
+
+private:
+  class NameMatcher {
+    llvm::Regex Regex;
+    enum class MatchMode {
+      // Match against the unqualified name because the regular expression
+      // does not contain ":".
+      MatchUnqualified,
+      // Match against the qualified name because the regular expression
+      // contains ":" suggesting name and namespace should be matched.
+      MatchQualified,
+      // Match against the fully qualified name because the regular expression
+      // starts with ":".
+      MatchFullyQualified,
+    };
+    MatchMode Mode;
+
+  public:
+    NameMatcher(const llvm::StringRef Regex)
+        : Regex(Regex), Mode(determineMatchMode(Regex)) {}
+
+    bool match(const NamedDecl &ND) const {
+      switch (Mode) {
+      case MatchMode::MatchQualified:
+        return Regex.match(ND.getQualifiedNameAsString());
+      case MatchMode::MatchFullyQualified:
+        return Regex.match("::" + ND.getQualifiedNameAsString());
+      default:
+        return Regex.match(ND.getName());
+      }
+    }
+
+  private:
+    MatchMode determineMatchMode(llvm::StringRef Regex) {
+      if (Regex.startswith(":") || Regex.startswith("^:")) {
+        return MatchMode::MatchFullyQualified;
+      }
+      return Regex.contains(":") ? MatchMode::MatchQualified
+                                 : MatchMode::MatchUnqualified;
+    }
+  };
+
+  std::vector<NameMatcher> NameMatchers;
+};
+
+// Returns a matcher that matches NamedDecl's against a list of provided regular
+// expressions. If a regular expression contains starts ':' the NamedDecl's
+// qualified name will be used for matching, otherwise its name will be used.
+inline ::clang::ast_matchers::internal::Matcher<NamedDecl>
+matchesAnyListedName(llvm::ArrayRef<std::string> NameList) {
+  return ::clang::ast_matchers::internal::makeMatcher(
+      new MatchesAnyListedNameMatcher(NameList));
 }
 
 } // namespace matchers

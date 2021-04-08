@@ -22,11 +22,6 @@
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
-// On Windows libc++ doesn't provide its own definitions for new/delete
-// but instead depends on the ones in VCRuntime. However VCRuntime does not
-// yet provide aligned new/delete definitions so this test fails to compile/link.
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // test operator new
 
 #include <new>

@@ -122,7 +122,7 @@ if(APPLE)
     set(DARWIN_watchos_BUILTIN_MIN_VER 2.0)
     set(DARWIN_watchos_BUILTIN_MIN_VER_FLAG
       ${DARWIN_watchos_MIN_VER_FLAG}=${DARWIN_watchos_BUILTIN_MIN_VER})
-    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k)
+    set(DARWIN_watchos_BUILTIN_ALL_POSSIBLE_ARCHS armv7 armv7k arm64_32)
     set(DARWIN_watchossim_BUILTIN_ALL_POSSIBLE_ARCHS ${X86})
   endif()
   if(COMPILER_RT_ENABLE_TVOS)

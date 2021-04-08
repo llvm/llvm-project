@@ -741,10 +741,12 @@ struct ConversionPatternRewriterImpl {
       Block *block, TypeConverter &converter,
       TypeConverter::SignatureConversion *conversion = nullptr);
 
-  /// Apply a signature conversion on the given region.
+  /// Apply a signature conversion on the given region, using `converter` for
+  /// materializations if not null.
   Block *
   applySignatureConversion(Region *region,
-                           TypeConverter::SignatureConversion &conversion);
+                           TypeConverter::SignatureConversion &conversion,
+                           TypeConverter *converter);
 
   /// Convert the types of block arguments within the given region.
   FailureOr<Block *>
@@ -1145,9 +1147,11 @@ FailureOr<Block *> ConversionPatternRewriterImpl::convertBlockSignature(
 }
 
 Block *ConversionPatternRewriterImpl::applySignatureConversion(
-    Region *region, TypeConverter::SignatureConversion &conversion) {
+    Region *region, TypeConverter::SignatureConversion &conversion,
+    TypeConverter *converter) {
   if (!region->empty()) {
-    return *convertBlockSignature(&region->front(), defaultTypeConverter,
+    return *convertBlockSignature(&region->front(),
+                                  converter ? *converter : defaultTypeConverter,
                                   &conversion);
   }
   return nullptr;
@@ -1335,8 +1339,9 @@ void ConversionPatternRewriter::eraseBlock(Block *block) {
 }
 
 Block *ConversionPatternRewriter::applySignatureConversion(
-    Region *region, TypeConverter::SignatureConversion &conversion) {
-  return impl->applySignatureConversion(region, conversion);
+    Region *region, TypeConverter::SignatureConversion &conversion,
+    TypeConverter *converter) {
+  return impl->applySignatureConversion(region, conversion, converter);
 }
 
 FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(

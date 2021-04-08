@@ -253,7 +253,7 @@ define void @test7(i8 zeroext %c, i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i8 97, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    tail call void @foo1() [[ATTR2:#.*]]
+; CHECK-NEXT:    tail call void @foo1() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -289,7 +289,7 @@ define i32 @test8(i8 zeroext %c, i32 %x, i1 %C) nounwind ssp noredzone {
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 42, [[SWITCH_EARLY_TEST]] ], [ 42, [[N]] ], [ 42, [[SWITCH_EARLY_TEST]] ]
-; CHECK-NEXT:    tail call void @foo1() [[ATTR2]]
+; CHECK-NEXT:    tail call void @foo1() #[[ATTR2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i32 0
@@ -396,10 +396,11 @@ define i32 @test10(i32 %mode, i1 %Cond) {
 ; CHECK-NEXT:    i32 0, label [[F]]
 ; CHECK-NEXT:    ]
 ; CHECK:       T:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 123, [[SWITCH_EARLY_TEST]] ], [ 324, [[F]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK-NEXT:    call void @foo1()
+; CHECK-NEXT:    ret i32 123
 ; CHECK:       F:
-; CHECK-NEXT:    br label [[T]]
+; CHECK-NEXT:    call void @foo2()
+; CHECK-NEXT:    ret i32 324
 ;
   %A = icmp ne i32 %mode, 0
   %B = icmp ne i32 %mode, 51
@@ -407,8 +408,10 @@ define i32 @test10(i32 %mode, i1 %Cond) {
   %D = and i1 %C, %Cond
   br i1 %D, label %T, label %F
 T:
+  call void @foo1()
   ret i32 123
 F:
+  call void @foo2()
   ret i32 324
 
 }
@@ -506,7 +509,7 @@ define void @test13(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() [[ATTR3:#.*]]
+; CHECK-NEXT:    call void @foo1() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -548,7 +551,7 @@ define void @test14(i32 %x) nounwind ssp noredzone {
 ; CHECK-NEXT:    i32 0, label [[IF_THEN]]
 ; CHECK-NEXT:    ]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @foo1() [[ATTR3]]
+; CHECK-NEXT:    call void @foo1() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void

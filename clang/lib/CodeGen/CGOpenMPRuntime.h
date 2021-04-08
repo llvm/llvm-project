@@ -824,7 +824,8 @@ private:
   void emitUDMapperArrayInitOrDel(CodeGenFunction &MapperCGF,
                                   llvm::Value *Handle, llvm::Value *BasePtr,
                                   llvm::Value *Ptr, llvm::Value *Size,
-                                  llvm::Value *MapType, CharUnits ElementSize,
+                                  llvm::Value *MapType, llvm::Value *MapName,
+                                  CharUnits ElementSize,
                                   llvm::BasicBlock *ExitBB, bool IsInit);
 
   struct TaskResultTy {

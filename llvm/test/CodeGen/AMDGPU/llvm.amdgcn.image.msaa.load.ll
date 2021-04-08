@@ -90,7 +90,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}load_2darraymsaa_tfe_d16:
-; GFX11: image_msaa_load v[0:2], [v6, v5, v4, v3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe d16 ;
+; GFX11: image_msaa_load v[0:2], v[0:3], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D_MSAA_ARRAY unorm tfe d16 ;
 define amdgpu_ps <4 x half> @load_2darraymsaa_tfe_d16(<8 x i32> inreg %rsrc, i32 addrspace(1)* inreg %out, i32 %s, i32 %t, i32 %slice, i32 %fragid) {
 main_body:
   %v = call {<4 x half>,i32} @llvm.amdgcn.image.msaa.load.2darraymsaa.v4f16i32.i32(i32 1, i32 %s, i32 %t, i32 %slice, i32 %fragid, <8 x i32> %rsrc, i32 1, i32 0)

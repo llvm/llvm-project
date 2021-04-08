@@ -1097,12 +1097,12 @@ static_assert(
     check_equality_comparable_with<explicit_operators, explicit_operators>());
 static_assert(check_equality_comparable_with<equality_comparable_with_ec1,
                                              equality_comparable_with_ec1>());
-static_assert(check_equality_comparable_with<eq_neq_different_return_types,
-                                             eq_neq_different_return_types>());
+static_assert(check_equality_comparable_with<different_return_types,
+                                             different_return_types>());
 static_assert(check_equality_comparable_with<explicit_operators,
                                              equality_comparable_with_ec1>());
 static_assert(check_equality_comparable_with<explicit_operators,
-                                             eq_neq_different_return_types>());
+                                             different_return_types>());
 
 static_assert(check_equality_comparable_with<one_way_eq, one_way_eq>());
 static_assert(

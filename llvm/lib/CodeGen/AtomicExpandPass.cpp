@@ -97,7 +97,7 @@ namespace {
     AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
     static Value *insertRMWCmpXchgLoop(
         IRBuilder<> &Builder, Type *ResultType, Value *Addr, Align AddrAlign,
-        AtomicOrdering MemOpOrder,
+        AtomicOrdering MemOpOrder, SyncScope::ID SSID,
         function_ref<Value *(IRBuilder<> &, Value *)> PerformOp,
         CreateCmpXchgInstFun CreateCmpXchg);
     bool tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI);
@@ -467,8 +467,8 @@ bool AtomicExpand::expandAtomicStore(StoreInst *SI) {
 
 static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
                                  Value *Loaded, Value *NewVal, Align AddrAlign,
-                                 AtomicOrdering MemOpOrder, Value *&Success,
-                                 Value *&NewLoaded) {
+                                 AtomicOrdering MemOpOrder, SyncScope::ID SSID,
+                                 Value *&Success, Value *&NewLoaded) {
   Type *OrigTy = NewVal->getType();
 
   // This code can go away when cmpxchg supports FP types.
@@ -483,7 +483,7 @@ static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
       Addr, Loaded, NewVal, AddrAlign, MemOpOrder,
-      AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder));
+      AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
   Success = Builder.CreateExtractValue(Pair, 1, "success");
   NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 
@@ -768,6 +768,7 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
 void AtomicExpand::expandPartwordAtomicRMW(
     AtomicRMWInst *AI, TargetLoweringBase::AtomicExpansionKind ExpansionKind) {
   AtomicOrdering MemOpOrder = AI->getOrdering();
+  SyncScope::ID SSID = AI->getSyncScopeID();
 
   IRBuilder<> Builder(AI);
 
@@ -788,7 +789,8 @@ void AtomicExpand::expandPartwordAtomicRMW(
   if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg) {
     OldResult = insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr,
                                      PMV.AlignedAddrAlignment, MemOpOrder,
-                                     PerformPartwordOp, createCmpXchgInstFun);
+                                     SSID, PerformPartwordOp,
+                                     createCmpXchgInstFun);
   } else {
     assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::LLSC);
     OldResult = insertRMWLLSCLoop(Builder, PMV.WordType, PMV.AlignedAddr,
@@ -1392,7 +1394,7 @@ bool AtomicExpand::simplifyIdempotentRMW(AtomicRMWInst* RMWI) {
 
 Value *AtomicExpand::insertRMWCmpXchgLoop(
     IRBuilder<> &Builder, Type *ResultTy, Value *Addr, Align AddrAlign,
-    AtomicOrdering MemOpOrder,
+    AtomicOrdering MemOpOrder, SyncScope::ID SSID,
     function_ref<Value *(IRBuilder<> &, Value *)> PerformOp,
     CreateCmpXchgInstFun CreateCmpXchg) {
   LLVMContext &Ctx = Builder.getContext();
@@ -1440,7 +1442,7 @@ Value *AtomicExpand::insertRMWCmpXchgLoop(
                 MemOpOrder == AtomicOrdering::Unordered
                     ? AtomicOrdering::Monotonic
                     : MemOpOrder,
-                Success, NewLoaded);
+                SSID, Success, NewLoaded);
   assert(Success && NewLoaded);
 
   Loaded->addIncoming(NewLoaded, LoopBB);
@@ -1477,7 +1479,7 @@ bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
   IRBuilder<> Builder(AI);
   Value *Loaded = AtomicExpand::insertRMWCmpXchgLoop(
       Builder, AI->getType(), AI->getPointerOperand(), AI->getAlign(),
-      AI->getOrdering(),
+      AI->getOrdering(), AI->getSyncScopeID(),
       [&](IRBuilder<> &Builder, Value *Loaded) {
         return performAtomicOp(AI->getOperation(), Builder, Loaded,
                                AI->getValOperand());
@@ -1628,11 +1630,11 @@ void AtomicExpand::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
     expandAtomicRMWToCmpXchg(
         I, [this](IRBuilder<> &Builder, Value *Addr, Value *Loaded,
                   Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
-                  Value *&Success, Value *&NewLoaded) {
+                  SyncScope::ID SSID, Value *&Success, Value *&NewLoaded) {
           // Create the CAS instruction normally...
           AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
-              AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder));
+              AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
           Success = Builder.CreateExtractValue(Pair, 1, "success");
           NewLoaded = Builder.CreateExtractValue(Pair, 0, "newloaded");
 

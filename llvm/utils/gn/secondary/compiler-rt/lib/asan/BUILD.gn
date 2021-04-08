@@ -28,7 +28,6 @@ target(asan_target_type, "asan") {
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/lsan:common_sources",
     "//compiler-rt/lib/sanitizer_common:sources",
-    "//compiler-rt/lib/ubsan:cxx_sources",
     "//compiler-rt/lib/ubsan:sources",
   ]
 
@@ -37,7 +36,10 @@ target(asan_target_type, "asan") {
     configs -= [ "//llvm/utils/gn/build:thin_archive" ]
     deps += [ ":asan_cxx" ]
   } else {
-    deps += [ ":cxx_sources" ]
+    deps += [
+      ":cxx_sources",
+      "//compiler-rt/lib/ubsan:cxx_sources",
+    ]
     defines = [ "ASAN_DYNAMIC" ]
   }
 
@@ -183,7 +185,10 @@ if (asan_target_type == "static_library") {
     output_name = "clang_rt.asan_cxx$crt_current_target_suffix"
     complete_static_lib = true
     configs -= [ "//llvm/utils/gn/build:thin_archive" ]
-    deps = [ ":cxx_sources" ]
+    deps = [
+      ":cxx_sources",
+      "//compiler-rt/lib/ubsan:cxx_sources",
+    ]
   }
 }
 

@@ -137,7 +137,7 @@ void ConvertToTargetEnv::runOnFunction() {
     return signalPassFailure();
   }
 
-  auto target = spirv::SPIRVConversionTarget::get(targetEnv);
+  auto target = SPIRVConversionTarget::get(targetEnv);
 
   RewritePatternSet patterns(context);
   patterns.add<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,

@@ -3068,3 +3068,50 @@ func @call_op_does_not_prevent_fusion(%arg0: memref<16xf32>){
 // CHECK-LABEL: func @call_op_does_not_prevent_fusion
 // CHECK:         affine.for
 // CHECK-NOT:     affine.for
+
+// -----
+
+// Fusion is avoided when the slice computed is invalid. Comments below describe
+// incorrect backward slice computation. Similar logic applies for forward slice
+// as well.
+func @no_fusion_cannot_compute_valid_slice() {
+  %A = memref.alloc() : memref<5xf32>
+  %B = memref.alloc() : memref<6xf32>
+  %C = memref.alloc() : memref<5xf32>
+  %cst = constant 0. : f32
+
+  affine.for %arg0 = 0 to 5 {
+    %a = affine.load %A[%arg0] : memref<5xf32>
+    affine.store %a, %B[%arg0 + 1] : memref<6xf32>
+  }
+
+  affine.for %arg0 = 0 to 5 {
+    // Backward slice computed will be:
+    // slice ( src loop: 0, dst loop: 1, depth: 1 : insert point: (1, 0)
+    // loop bounds: [(d0) -> (d0 - 1), (d0) -> (d0)] )
+
+    // Resulting fusion would be as below. It is easy to note the out-of-bounds
+    // access by 'affine.load'.
+
+    // #map0 = affine_map<(d0) -> (d0 - 1)>
+    // #map1 = affine_map<(d0) -> (d0)>
+    // affine.for %arg1 = #map0(%arg0) to #map1(%arg0) {
+    //   %5 = affine.load %1[%arg1] : memref<5xf32>
+    //   ...
+    //   ...
+    // }
+
+    %a = affine.load %B[%arg0] : memref<6xf32>
+    %b = mulf %a, %cst : f32
+    affine.store %b, %C[%arg0] : memref<5xf32>
+  }
+  return
+}
+// CHECK-LABEL: func @no_fusion_cannot_compute_valid_slice
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      affine.store
+// CHECK:         affine.for
+// CHECK-NEXT:      affine.load
+// CHECK-NEXT:      mulf
+// CHECK-NEXT:      affine.store

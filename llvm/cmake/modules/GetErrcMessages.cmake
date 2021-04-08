@@ -4,6 +4,11 @@
 # Messages are semi colon separated.
 # Keep amount, order and tested error codes in sync with llvm/utils/lit/lit/llvm/config.py.
 function(get_errc_messages outvar)
+    if(DEFINED errc_override)
+        set(${outvar} ${errc_override} PARENT_SCOPE)
+        message(STATUS "Override errc messages with ${errc_override}")
+        return()
+    endif()
     if(CMAKE_CROSSCOMPILING AND NOT CMAKE_CROSSCOMPILING_EMULATOR AND NOT DEFINED errc_exit_code)
         set(${outvar} "" PARENT_SCOPE)
         message(STATUS "Can't get errc messages in cross-compilation mode")

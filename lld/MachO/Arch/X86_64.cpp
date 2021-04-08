@@ -25,7 +25,7 @@ namespace {
 struct X86_64 : TargetInfo {
   X86_64();
 
-  int64_t getEmbeddedAddend(MemoryBufferRef, const section_64 &,
+  int64_t getEmbeddedAddend(MemoryBufferRef, uint64_t offset,
                             const relocation_info) const override;
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t relocVA) const override;
@@ -77,10 +77,10 @@ static int pcrelOffset(uint8_t type) {
   }
 }
 
-int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, const section_64 &sec,
+int64_t X86_64::getEmbeddedAddend(MemoryBufferRef mb, uint64_t offset,
                                   relocation_info rel) const {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
-  const uint8_t *loc = buf + sec.offset + rel.r_address;
+  const uint8_t *loc = buf + offset + rel.r_address;
 
   switch (rel.r_length) {
   case 2:
@@ -142,7 +142,7 @@ void X86_64::writeStub(uint8_t *buf, const Symbol &sym) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
   writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub),
-                   in.lazyPointers->addr + sym.stubsIndex * WordSize);
+                   in.lazyPointers->addr + sym.stubsIndex * LP64::wordSize);
 }
 
 static constexpr uint8_t stubHelperHeader[] = {
@@ -159,7 +159,7 @@ void X86_64::writeStubHelperHeader(uint8_t *buf) const {
                    in.imageLoaderCache->getVA());
   writeRipRelative(d, buf, in.stubHelper->addr, 0xf,
                    in.got->addr +
-                       in.stubHelper->stubBinder->gotIndex * WordSize);
+                       in.stubHelper->stubBinder->gotIndex * LP64::wordSize);
 }
 
 static constexpr uint8_t stubHelperEntry[] = {
@@ -182,7 +182,7 @@ void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   loc[-2] = 0x8d;
 }
 
-X86_64::X86_64() {
+X86_64::X86_64() : TargetInfo(LP64()) {
   cpuType = CPU_TYPE_X86_64;
   cpuSubtype = CPU_SUBTYPE_X86_64_ALL;
 

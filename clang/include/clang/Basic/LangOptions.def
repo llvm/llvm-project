@@ -298,6 +298,8 @@ LANGOPT(ObjCSubscriptingLegacyRuntime         , 1, 0, "Subscripting support in l
 BENIGN_LANGOPT(CompatibilityQualifiedIdBlockParamTypeChecking, 1, 0,
                "compatibility mode for type checking block parameters "
                "involving qualified id types")
+LANGOPT(ObjCDisableDirectMethodsForTesting, 1, 0,
+        "Disable recognition of objc_direct methods")
 LANGOPT(CFProtectionBranch , 1, 0, "Control-Flow Branch Protection enabled")
 LANGOPT(FakeAddressSpaceMap , 1, 0, "OpenCL fake address space map")
 ENUM_LANGOPT(AddressSpaceMapMangling , AddrSpaceMapMangling, 2, ASMM_Target, "OpenCL address space map mangling mode")

@@ -1,5 +1,5 @@
-RUN: dsymutil -o - %p/../Inputs/basic.macho.i386 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK32
-RUN: dsymutil -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK64
+RUN: dsymutil -accelerator=Pub -o - %p/../Inputs/basic.macho.i386 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK32
+RUN: dsymutil -accelerator=Pub -o - -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -f | llvm-readobj --file-headers -l -S --symbols - | FileCheck %s -check-prefixes=CHECK,CHECK64
 
 This test checks that the dSYM companion binaries generated in 32 and 64 bits
 are correct. The check are pretty strict (we check even the offsets and sizes

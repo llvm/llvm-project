@@ -998,14 +998,14 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX10-NEXT:    v_lshrrev_b32_sdwa v1, v1, v0 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX10-NEXT:    v_and_b32_e32 v3, 0xffffff00, v0
-; GFX10-NEXT:    v_add_nc_u16_e64 v4, v0, 9
-; GFX10-NEXT:    v_add_nc_u16_e64 v2, v2, 9
+; GFX10-NEXT:    v_add_nc_u16 v4, v0, 9
+; GFX10-NEXT:    v_add_nc_u16 v2, v2, 9
 ; GFX10-NEXT:    v_or_b32_sdwa v1, v1, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_or_b32_sdwa v2, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX10-NEXT:    v_add_nc_u16_e64 v1, v1, s0
-; GFX10-NEXT:    v_add_nc_u16_e64 v5, v2, s0
+; GFX10-NEXT:    v_add_nc_u16 v1, v1, s0
+; GFX10-NEXT:    v_add_nc_u16 v5, v2, s0
 ; GFX10-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 16, v1
 ; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0

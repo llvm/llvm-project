@@ -140,7 +140,13 @@ class VOP3P_Pseudo <string opName, VOPProfile P, list<dag> pattern = []> :
   let VOP3P = 1;
 }
 
+class VOP_Real<VOP_Pseudo ps> {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  bit IsSingle = ps.Pfl.IsSingle;
+}
+
 class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
+  VOP_Real <ps>,
   InstSI <ps.OutOperandList, ps.InOperandList, asm_name # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
@@ -1055,25 +1061,11 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
 
   let HasModifiers = !if(Features.IsMAI, 0, !or(Features.IsPacked, P.HasModifiers));
-  let NeedPatGen = P.NeedPatGen;
+  /*let NeedPatGen = P.NeedPatGen;*/
 }
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
-  // FIXME: Hack to stop printing _e64
-  let Outs64 = (outs DstRC.RegClass:$vdst);
-  let AsmVOP3OpSel = " " # getAsmVOP3OpSel<NumSrcArgs,
-                              HasClamp,
-                              P.HasOMod,
-                              HasSrc0FloatMods,
-                              HasSrc1FloatMods,
-                              HasSrc2FloatMods>.ret;
-  let Asm64 =
-    " " # !if(Features.HasOpSel,
-              AsmVOP3OpSel,
-              !if(Features.HasClamp,
-                  getAsm64<HasDst, NumSrcArgs, HasIntClamp,
-                           HasModifiers, HasOMod, DstVT>.ret,
-                  P.Asm64));
+  let IsSingle = 1;
 
 }
 
@@ -1277,3 +1269,17 @@ include "VOP1Instructions.td"
 include "VOP2Instructions.td"
 include "VOP3Instructions.td"
 include "VOP3PInstructions.td"
+
+
+class VOPInfoTable <string Format> : GenericTable {
+  let FilterClass = Format # "_Real";
+  let CppTypeName = "VOPInfo";
+  let Fields = ["Opcode", "IsSingle"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "get" # Format # "OpcodeHelper";
+}
+
+def VOP1InfoTable : VOPInfoTable<"VOP1">;
+def VOP2InfoTable : VOPInfoTable<"VOP2">;
+def VOP3InfoTable : VOPInfoTable<"VOP3">;

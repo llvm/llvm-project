@@ -6,7 +6,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
 
 ; GCN-LABEL: {{^}}test_mul_legacy_f32:
-; GCN: v_mul_legacy_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)
   store float %result, float addrspace(1)* %out, align 4
@@ -14,7 +14,7 @@ define amdgpu_kernel void @test_mul_legacy_f32(float addrspace(1)* %out, float %
 }
 
 ; GCN-LABEL: {{^}}test_mul_legacy_undef0_f32:
-; GCN: v_mul_legacy_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef0_f32(float addrspace(1)* %out, float %a) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float undef, float %a)
   store float %result, float addrspace(1)* %out, align 4
@@ -22,7 +22,7 @@ define amdgpu_kernel void @test_mul_legacy_undef0_f32(float addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}test_mul_legacy_undef1_f32:
-; GCN: v_mul_legacy_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 define amdgpu_kernel void @test_mul_legacy_undef1_f32(float addrspace(1)* %out, float %a) #0 {
   %result = call float @llvm.amdgcn.fmul.legacy(float %a, float undef)
   store float %result, float addrspace(1)* %out, align 4
@@ -30,7 +30,7 @@ define amdgpu_kernel void @test_mul_legacy_undef1_f32(float addrspace(1)* %out, 
 }
 
 ; GCN-LABEL: {{^}}test_mul_legacy_fabs_f32:
-; GCN: v_mul_legacy_f32_e{{(32|64)}} v{{[0-9]+}}, |s{{[0-9]+}}|, |{{[sv][0-9]+}}|
+; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, |s{{[0-9]+}}|, |{{[sv][0-9]+}}|
 define amdgpu_kernel void @test_mul_legacy_fabs_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %a.fabs = call float @llvm.fabs.f32(float %a)
   %b.fabs = call float @llvm.fabs.f32(float %b)
@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_mul_legacy_fabs_f32(float addrspace(1)* %out, fl
 
 ; Don't form mad/mac instructions because they don't support denormals.
 ; GCN-LABEL: {{^}}test_add_mul_legacy_f32:
-; GCN: v_mul_legacy_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
+; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 ; GCN: v_add_f32_e{{(32|64)}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}
 define amdgpu_kernel void @test_add_mul_legacy_f32(float addrspace(1)* %out, float %a, float %b, float %c) #0 {
   %mul = call float @llvm.amdgcn.fmul.legacy(float %a, float %b)

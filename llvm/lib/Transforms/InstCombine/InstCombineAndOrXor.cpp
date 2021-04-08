@@ -2110,7 +2110,7 @@ static Instruction *matchFunnelShift(Instruction &Or, InstCombinerImpl &IC) {
 
   Intrinsic::ID IID = IsFshl ? Intrinsic::fshl : Intrinsic::fshr;
   Function *F = Intrinsic::getDeclaration(Or.getModule(), IID, Or.getType());
-  return IntrinsicInst::Create(F, {ShVal0, ShVal1, ShAmt});
+  return CallInst::Create(F, {ShVal0, ShVal1, ShAmt});
 }
 
 /// Attempt to combine or(zext(x),shl(zext(y),bw/2) concat packing patterns.
@@ -3075,6 +3075,39 @@ static Instruction *sinkNotIntoXor(BinaryOperator &I,
   return BinaryOperator::CreateXor(NotX, Y, I.getName() + ".demorgan");
 }
 
+/// Canonicalize a shifty way to code absolute value to the more common pattern
+/// that uses negation and select.
+static Instruction *canonicalizeAbs(BinaryOperator &Xor,
+                                    InstCombiner::BuilderTy &Builder) {
+  assert(Xor.getOpcode() == Instruction::Xor && "Expected an xor instruction.");
+
+  // There are 4 potential commuted variants. Move the 'ashr' candidate to Op1.
+  // We're relying on the fact that we only do this transform when the shift has
+  // exactly 2 uses and the add has exactly 1 use (otherwise, we might increase
+  // instructions).
+  Value *Op0 = Xor.getOperand(0), *Op1 = Xor.getOperand(1);
+  if (Op0->hasNUses(2))
+    std::swap(Op0, Op1);
+
+  Type *Ty = Xor.getType();
+  Value *A;
+  const APInt *ShAmt;
+  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
+      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
+      match(Op0, m_OneUse(m_c_Add(m_Specific(A), m_Specific(Op1))))) {
+    // Op1 = ashr i32 A, 31   ; smear the sign bit
+    // xor (add A, Op1), Op1  ; add -1 and flip bits if negative
+    // --> (A < 0) ? -A : A
+    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
+    // Copy the nuw/nsw flags from the add to the negate.
+    auto *Add = cast<BinaryOperator>(Op0);
+    Value *Neg = Builder.CreateNeg(A, "", Add->hasNoUnsignedWrap(),
+                                   Add->hasNoSignedWrap());
+    return SelectInst::Create(Cmp, Neg, A);
+  }
+  return nullptr;
+}
+
 // Transform
 //   z = (~x) &/| y
 // into:
@@ -3203,6 +3236,14 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     if (match(NotVal, m_Sub(m_Value(X), m_Value(Y))))
       if (isa<Constant>(X) || NotVal->hasOneUse())
         return BinaryOperator::CreateAdd(Builder.CreateNot(X), Y);
+
+    // ~((-X) | Y) --> (X - 1) & (~Y)
+    if (match(NotVal,
+              m_OneUse(m_c_Or(m_OneUse(m_Neg(m_Value(X))), m_Value(Y))))) {
+      Value *DecX = Builder.CreateAdd(X, ConstantInt::getAllOnesValue(Ty));
+      Value *NotY = Builder.CreateNot(Y);
+      return BinaryOperator::CreateAnd(DecX, NotY);
+    }
 
     // ~(~X >>s Y) --> (X >>s Y)
     if (match(NotVal, m_AShr(m_Not(m_Value(X)), m_Value(Y))))
@@ -3405,29 +3446,25 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *CastedXor = foldCastedBitwiseLogic(I))
     return CastedXor;
 
-  // Canonicalize a shifty way to code absolute value to the common pattern.
-  // There are 4 potential commuted variants. Move the 'ashr' candidate to Op1.
-  // We're relying on the fact that we only do this transform when the shift has
-  // exactly 2 uses and the add has exactly 1 use (otherwise, we might increase
-  // instructions).
-  if (Op0->hasNUses(2))
-    std::swap(Op0, Op1);
-
-  const APInt *ShAmt;
-  if (match(Op1, m_AShr(m_Value(A), m_APInt(ShAmt))) &&
-      Op1->hasNUses(2) && *ShAmt == Ty->getScalarSizeInBits() - 1 &&
-      match(Op0, m_OneUse(m_c_Add(m_Specific(A), m_Specific(Op1))))) {
-    // B = ashr i32 A, 31 ; smear the sign bit
-    // xor (add A, B), B  ; add -1 and flip bits if negative
-    // --> (A < 0) ? -A : A
-    Value *Cmp = Builder.CreateICmpSLT(A, ConstantInt::getNullValue(Ty));
-    // Copy the nuw/nsw flags from the add to the negate.
-    auto *Add = cast<BinaryOperator>(Op0);
-    Value *Neg = Builder.CreateNeg(A, "", Add->hasNoUnsignedWrap(),
-                                   Add->hasNoSignedWrap());
-    return SelectInst::Create(Cmp, Neg, A);
+  // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
+  // ~min(~X, ~Y) --> max(X, Y)
+  // ~max(~X, Y) --> min(X, ~Y)
+  auto *II = dyn_cast<IntrinsicInst>(Op0);
+  if (II && match(Op1, m_AllOnes())) {
+    if (match(Op0, m_MaxOrMin(m_Not(m_Value(X)), m_Not(m_Value(Y))))) {
+      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+      return replaceInstUsesWith(I, InvMaxMin);
+    }
+    if (match(Op0, m_OneUse(m_c_MaxOrMin(m_Not(m_Value(X)), m_Value(Y))))) {
+      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+      Value *NotY = Builder.CreateNot(Y);
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotY);
+      return replaceInstUsesWith(I, InvMaxMin);
+    }
   }
 
+  // TODO: Remove folds if we canonicalize to intrinsics (see above).
   // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
   //
   //   %notx = xor i32 %x, -1
@@ -3503,6 +3540,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *NewXor = sinkNotIntoXor(I, Builder))
     return NewXor;
+
+  if (Instruction *Abs = canonicalizeAbs(I, Builder))
+    return Abs;
 
   // Otherwise, if all else failed, try to hoist the xor-by-constant:
   //   (X ^ C) ^ Y --> (X ^ Y) ^ C

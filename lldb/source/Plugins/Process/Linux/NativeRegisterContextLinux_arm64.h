@@ -76,8 +76,10 @@ private:
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
   bool m_sve_buffer_is_valid;
+  bool m_mte_ctrl_is_valid;
 
   bool m_sve_header_is_valid;
+  bool m_pac_mask_is_valid;
 
   struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
@@ -89,6 +91,15 @@ private:
   std::vector<uint8_t> m_sve_ptrace_payload;
 
   bool m_refresh_hwdebug_info;
+
+  struct user_pac_mask {
+    uint64_t data_mask;
+    uint64_t insn_mask;
+  };
+
+  struct user_pac_mask m_pac_mask;
+
+  uint64_t m_mte_ctrl_reg;
 
   bool IsGPR(unsigned reg) const;
 
@@ -102,7 +113,15 @@ private:
 
   Status WriteSVEHeader();
 
+  Status ReadPAuthMask();
+
+  Status ReadMTEControl();
+
+  Status WriteMTEControl();
+
   bool IsSVE(unsigned reg) const;
+  bool IsPAuth(unsigned reg) const;
+  bool IsMTE(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -110,11 +129,19 @@ private:
 
   void *GetSVEHeader() { return &m_sve_header; }
 
+  void *GetPACMask() { return &m_pac_mask; }
+
+  void *GetMTEControl() { return &m_mte_ctrl_reg; }
+
   void *GetSVEBuffer();
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
+  size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
+
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
+
+  size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 

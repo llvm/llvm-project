@@ -46,8 +46,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
 
 static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
                          MVT XLenVT) {
-  RISCVMatInt::InstSeq Seq;
-  RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64, Seq);
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64);
 
   SDNode *Result = nullptr;
   SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
@@ -125,33 +124,23 @@ static SDValue createTuple(SelectionDAG &CurDAG, ArrayRef<SDValue> Regs,
   }
 }
 
-void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
-                                    bool IsStrided) {
-  SDLoc DL(Node);
-  unsigned NF = Node->getNumValues() - 1;
-  MVT VT = Node->getSimpleValueType(0);
-  unsigned ScalarSize = VT.getScalarSizeInBits();
-  MVT XLenVT = Subtarget->getXLenVT();
-  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-
+void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
+    SDNode *Node, unsigned SEWImm, const SDLoc &DL, unsigned CurOp,
+    bool IsMasked, bool IsStridedOrIndexed, SmallVectorImpl<SDValue> &Operands,
+    MVT *IndexVT) {
   SDValue Chain = Node->getOperand(0);
   SDValue Glue;
 
-  unsigned CurOp = 2;
-  SmallVector<SDValue, 8> Operands;
-  if (IsMasked) {
-    SmallVector<SDValue, 8> Regs(Node->op_begin() + CurOp,
-                                 Node->op_begin() + CurOp + NF);
-    SDValue MaskedOff = createTuple(*CurDAG, Regs, NF, LMUL);
-    Operands.push_back(MaskedOff);
-    CurOp += NF;
-  }
   SDValue Base;
   SelectBaseAddr(Node->getOperand(CurOp++), Base);
   Operands.push_back(Base); // Base pointer.
-  if (IsStrided)
-    Operands.push_back(Node->getOperand(CurOp++)); // Stride.
+
+  if (IsStridedOrIndexed) {
+    Operands.push_back(Node->getOperand(CurOp++)); // Index.
+    if (IndexVT)
+      *IndexVT = Operands.back()->getSimpleValueType(0);
+  }
+
   if (IsMasked) {
     // Mask needs to be copied to V0.
     SDValue Mask = Node->getOperand(CurOp++);
@@ -162,10 +151,37 @@ void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
   SDValue VL;
   selectVLOp(Node->getOperand(CurOp++), VL);
   Operands.push_back(VL);
+
+  MVT XLenVT = Subtarget->getXLenVT();
+  SDValue SEW = CurDAG->getTargetConstant(SEWImm, DL, XLenVT);
   Operands.push_back(SEW);
+
   Operands.push_back(Chain); // Chain.
   if (Glue)
     Operands.push_back(Glue);
+}
+
+void RISCVDAGToDAGISel::selectVLSEG(SDNode *Node, bool IsMasked,
+                                    bool IsStrided) {
+  SDLoc DL(Node);
+  unsigned NF = Node->getNumValues() - 1;
+  MVT VT = Node->getSimpleValueType(0);
+  unsigned ScalarSize = VT.getScalarSizeInBits();
+  RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
+
+  unsigned CurOp = 2;
+  SmallVector<SDValue, 8> Operands;
+  if (IsMasked) {
+    SmallVector<SDValue, 8> Regs(Node->op_begin() + CurOp,
+                                 Node->op_begin() + CurOp + NF);
+    SDValue MaskedOff = createTuple(*CurDAG, Regs, NF, LMUL);
+    Operands.push_back(MaskedOff);
+    CurOp += NF;
+  }
+
+  addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked, IsStrided,
+                             Operands);
+
   const RISCV::VLSEGPseudo *P =
       RISCV::getVLSEGPseudo(NF, IsMasked, IsStrided, /*FF*/ false, ScalarSize,
                             static_cast<unsigned>(LMUL));
@@ -193,10 +209,6 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
   MVT XLenVT = Subtarget->getXLenVT();
   unsigned ScalarSize = VT.getScalarSizeInBits();
   RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-
-  SDValue Chain = Node->getOperand(0);
-  SDValue Glue;
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 7> Operands;
@@ -207,23 +219,10 @@ void RISCVDAGToDAGISel::selectVLSEGFF(SDNode *Node, bool IsMasked) {
     Operands.push_back(MaskedOff);
     CurOp += NF;
   }
-  SDValue Base;
-  SelectBaseAddr(Node->getOperand(CurOp++), Base);
-  Operands.push_back(Base); // Base pointer.
-  if (IsMasked) {
-    // Mask needs to be copied to V0.
-    SDValue Mask = Node->getOperand(CurOp++);
-    Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-    Glue = Chain.getValue(1);
-    Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-  }
-  SDValue VL;
-  selectVLOp(Node->getOperand(CurOp++), VL);
-  Operands.push_back(VL);
-  Operands.push_back(SEW);
-  Operands.push_back(Chain); // Chain.
-  if (Glue)
-    Operands.push_back(Glue);
+
+  addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                             /*IsStridedOrIndexed*/ false, Operands);
+
   const RISCV::VLSEGPseudo *P =
       RISCV::getVLSEGPseudo(NF, IsMasked, /*Strided*/ false, /*FF*/ true,
                             ScalarSize, static_cast<unsigned>(LMUL));
@@ -253,12 +252,7 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
   unsigned NF = Node->getNumValues() - 1;
   MVT VT = Node->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  MVT XLenVT = Subtarget->getXLenVT();
   RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-
-  SDValue Chain = Node->getOperand(0);
-  SDValue Glue;
 
   unsigned CurOp = 2;
   SmallVector<SDValue, 8> Operands;
@@ -269,25 +263,10 @@ void RISCVDAGToDAGISel::selectVLXSEG(SDNode *Node, bool IsMasked,
     Operands.push_back(MaskedOff);
     CurOp += NF;
   }
-  SDValue Base;
-  SelectBaseAddr(Node->getOperand(CurOp++), Base);
-  Operands.push_back(Base); // Base pointer.
-  Operands.push_back(Node->getOperand(CurOp++)); // Index.
-  MVT IndexVT = Operands.back()->getSimpleValueType(0);
-  if (IsMasked) {
-    // Mask needs to be copied to V0.
-    SDValue Mask = Node->getOperand(CurOp++);
-    Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-    Glue = Chain.getValue(1);
-    Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-  }
-  SDValue VL;
-  selectVLOp(Node->getOperand(CurOp++), VL);
-  Operands.push_back(VL);
-  Operands.push_back(SEW);
-  Operands.push_back(Chain); // Chain.
-  if (Glue)
-    Operands.push_back(Glue);
+
+  MVT IndexVT;
+  addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                             /*IsStridedOrIndexed*/ true, Operands, &IndexVT);
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
@@ -324,37 +303,17 @@ void RISCVDAGToDAGISel::selectVSSEG(SDNode *Node, bool IsMasked,
     NF--;
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  MVT XLenVT = Subtarget->getXLenVT();
   RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
-
-  SDValue Chain = Node->getOperand(0);
-  SDValue Glue;
 
   SmallVector<SDValue, 8> Operands;
   Operands.push_back(StoreVal);
   unsigned CurOp = 2 + NF;
-  SDValue Base;
-  SelectBaseAddr(Node->getOperand(CurOp++), Base);
-  Operands.push_back(Base); // Base pointer.
-  if (IsStrided)
-    Operands.push_back(Node->getOperand(CurOp++)); // Stride.
-  if (IsMasked) {
-    // Mask needs to be copied to V0.
-    SDValue Mask = Node->getOperand(CurOp++);
-    Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-    Glue = Chain.getValue(1);
-    Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-  }
-  SDValue VL;
-  selectVLOp(Node->getOperand(CurOp++), VL);
-  Operands.push_back(VL);
-  Operands.push_back(SEW);
-  Operands.push_back(Chain); // Chain.
-  if (Glue)
-    Operands.push_back(Glue);
+
+  addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked, IsStrided,
+                             Operands);
+
   const RISCV::VSSEGPseudo *P = RISCV::getVSSEGPseudo(
       NF, IsMasked, IsStrided, ScalarSize, static_cast<unsigned>(LMUL));
   MachineSDNode *Store =
@@ -374,37 +333,17 @@ void RISCVDAGToDAGISel::selectVSXSEG(SDNode *Node, bool IsMasked,
     --NF;
   MVT VT = Node->getOperand(2)->getSimpleValueType(0);
   unsigned ScalarSize = VT.getScalarSizeInBits();
-  MVT XLenVT = Subtarget->getXLenVT();
   RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
-  SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
   SmallVector<SDValue, 8> Regs(Node->op_begin() + 2, Node->op_begin() + 2 + NF);
   SDValue StoreVal = createTuple(*CurDAG, Regs, NF, LMUL);
-
-  SDValue Chain = Node->getOperand(0);
-  SDValue Glue;
 
   SmallVector<SDValue, 8> Operands;
   Operands.push_back(StoreVal);
   unsigned CurOp = 2 + NF;
-  SDValue Base;
-  SelectBaseAddr(Node->getOperand(CurOp++), Base);
-  Operands.push_back(Base); // Base pointer.
-  Operands.push_back(Node->getOperand(CurOp++)); // Index.
-  MVT IndexVT = Operands.back()->getSimpleValueType(0);
-  if (IsMasked) {
-    // Mask needs to be copied to V0.
-    SDValue Mask = Node->getOperand(CurOp++);
-    Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-    Glue = Chain.getValue(1);
-    Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-  }
-  SDValue VL;
-  selectVLOp(Node->getOperand(CurOp++), VL);
-  Operands.push_back(VL);
-  Operands.push_back(SEW);
-  Operands.push_back(Chain); // Chain.
-  if (Glue)
-    Operands.push_back(Glue);
+
+  MVT IndexVT;
+  addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                             /*IsStridedOrIndexed*/ true, Operands, &IndexVT);
 
   assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
          "Element count mismatch");
@@ -472,7 +411,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     ReplaceNode(Node, selectImm(CurDAG, DL, ConstNode->getSExtValue(), XLenVT));
     return;
-    break;
   }
   case ISD::FrameIndex: {
     SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
@@ -671,35 +609,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MVT VT = Node->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
-      MVT XLenVT = Subtarget->getXLenVT();
-      SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-
-      SDValue Chain = Node->getOperand(0);
-      SDValue Glue;
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      SDValue Base;
-      SelectBaseAddr(Node->getOperand(CurOp++), Base);
-      Operands.push_back(Base); // Base pointer.
-      Operands.push_back(Node->getOperand(CurOp++)); // Index.
-      MVT IndexVT = Operands.back()->getSimpleValueType(0);
-      if (IsMasked) {
-        // Mask needs to be copied to V0.
-        SDValue Mask = Node->getOperand(CurOp++);
-        Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-        Glue = Chain.getValue(1);
-        Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-      }
-      SDValue VL;
-      selectVLOp(Node->getOperand(CurOp++), VL);
-      Operands.push_back(VL);
-      Operands.push_back(SEW);
-      Operands.push_back(Chain); // Chain.
-      if (Glue)
-        Operands.push_back(Glue);
+
+      MVT IndexVT;
+      addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                                 /*IsStridedOrIndexed*/ true, Operands,
+                                 &IndexVT);
 
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
@@ -731,37 +650,16 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MVT VT = Node->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
-      MVT XLenVT = Subtarget->getXLenVT();
       // VLE1 uses an SEW of 8.
       unsigned SEWImm = (IntNo == Intrinsic::riscv_vle1) ? 8 : ScalarSize;
-      SDValue SEW = CurDAG->getTargetConstant(SEWImm, DL, XLenVT);
-
-      SDValue Chain = Node->getOperand(0);
-      SDValue Glue;
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      SDValue Base;
-      SelectBaseAddr(Node->getOperand(CurOp++), Base);
-      Operands.push_back(Base); // Base pointer.
-      if (IsStrided)
-        Operands.push_back(Node->getOperand(CurOp++)); // Stride.
-      if (IsMasked) {
-        // Mask needs to be copied to V0.
-        SDValue Mask = Node->getOperand(CurOp++);
-        Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-        Glue = Chain.getValue(1);
-        Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-      }
-      SDValue VL;
-      selectVLOp(Node->getOperand(CurOp++), VL);
-      Operands.push_back(VL);
-      Operands.push_back(SEW);
-      Operands.push_back(Chain); // Chain.
-      if (Glue)
-        Operands.push_back(Glue);
+
+      addVectorLoadStoreOperands(Node, SEWImm, DL, CurOp, IsMasked, IsStrided,
+                                 Operands);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
@@ -782,33 +680,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MVT VT = Node->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
-      MVT XLenVT = Subtarget->getXLenVT();
-      SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
-
-      SDValue Chain = Node->getOperand(0);
-      SDValue Glue;
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 7> Operands;
       if (IsMasked)
         Operands.push_back(Node->getOperand(CurOp++));
-      SDValue Base;
-      SelectBaseAddr(Node->getOperand(CurOp++), Base);
-      Operands.push_back(Base); // Base pointer.
-      if (IsMasked) {
-        // Mask needs to be copied to V0.
-        SDValue Mask = Node->getOperand(CurOp++);
-        Chain = CurDAG->getCopyToReg(Chain, DL, RISCV::V0, Mask, SDValue());
-        Glue = Chain.getValue(1);
-        Operands.push_back(CurDAG->getRegister(RISCV::V0, Mask.getValueType()));
-      }
-      SDValue VL;
-      selectVLOp(Node->getOperand(CurOp++), VL);
-      Operands.push_back(VL);
-      Operands.push_back(SEW);
-      Operands.push_back(Chain); // Chain.
-      if (Glue)
-        Operands.push_back(Glue);
+
+      addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                                 /*IsStridedOrIndexed*/ false, Operands);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
@@ -922,24 +801,15 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MVT VT = Node->getOperand(2)->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
-      MVT XLenVT = Subtarget->getXLenVT();
-      SDValue SEW = CurDAG->getTargetConstant(ScalarSize, DL, XLenVT);
 
       unsigned CurOp = 2;
-      SmallVector<SDValue, 7> Operands;
+      SmallVector<SDValue, 8> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
-      SDValue Base;
-      SelectBaseAddr(Node->getOperand(CurOp++), Base);
-      Operands.push_back(Base); // Base pointer.
-      Operands.push_back(Node->getOperand(CurOp++)); // Index.
-      MVT IndexVT = Operands.back()->getSimpleValueType(0);
-      if (IsMasked)
-        Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-      SDValue VL;
-      selectVLOp(Node->getOperand(CurOp++), VL);
-      Operands.push_back(VL);
-      Operands.push_back(SEW);
-      Operands.push_back(Node->getOperand(0)); // Chain.
+
+      MVT IndexVT;
+      addVectorLoadStoreOperands(Node, ScalarSize, DL, CurOp, IsMasked,
+                                 /*IsStridedOrIndexed*/ true, Operands,
+                                 &IndexVT);
 
       assert(VT.getVectorElementCount() == IndexVT.getVectorElementCount() &&
              "Element count mismatch");
@@ -971,33 +841,21 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       MVT VT = Node->getOperand(2)->getSimpleValueType(0);
       unsigned ScalarSize = VT.getScalarSizeInBits();
-      MVT XLenVT = Subtarget->getXLenVT();
       // VSE1 uses an SEW of 8.
       unsigned SEWImm = (IntNo == Intrinsic::riscv_vse1) ? 8 : ScalarSize;
-      SDValue SEW = CurDAG->getTargetConstant(SEWImm, DL, XLenVT);
 
       unsigned CurOp = 2;
-      SmallVector<SDValue, 7> Operands;
+      SmallVector<SDValue, 8> Operands;
       Operands.push_back(Node->getOperand(CurOp++)); // Store value.
-      SDValue Base;
-      SelectBaseAddr(Node->getOperand(CurOp++), Base);
-      Operands.push_back(Base); // Base pointer.
-      if (IsStrided)
-        Operands.push_back(Node->getOperand(CurOp++)); // Stride.
-      if (IsMasked)
-        Operands.push_back(Node->getOperand(CurOp++)); // Mask.
-      SDValue VL;
-      selectVLOp(Node->getOperand(CurOp++), VL);
-      Operands.push_back(VL);
-      Operands.push_back(SEW);
-      Operands.push_back(Node->getOperand(0)); // Chain.
+
+      addVectorLoadStoreOperands(Node, SEWImm, DL, CurOp, IsMasked, IsStrided,
+                                 Operands);
 
       RISCVVLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VSEPseudo *P = RISCV::getVSEPseudo(
           IsMasked, IsStrided, ScalarSize, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
-
       if (auto *MemOp = dyn_cast<MemSDNode>(Node))
         CurDAG->setNodeMemRefs(Store, {MemOp->getMemOperand()});
 
@@ -1066,11 +924,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
       SDNode *NewNode = CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS,
                                                DL, VT, SubV, RC);
-      return ReplaceNode(Node, NewNode);
+      ReplaceNode(Node, NewNode);
+      return;
     }
 
     SDValue Insert = CurDAG->getTargetInsertSubreg(SubRegIdx, DL, VT, V, SubV);
-    return ReplaceNode(Node, Insert.getNode());
+    ReplaceNode(Node, Insert.getNode());
+    return;
   }
   case ISD::EXTRACT_SUBVECTOR: {
     SDValue V = Node->getOperand(0);
@@ -1109,11 +969,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue RC = CurDAG->getTargetConstant(InRegClassID, DL, XLenVT);
       SDNode *NewNode =
           CurDAG->getMachineNode(TargetOpcode::COPY_TO_REGCLASS, DL, VT, V, RC);
-      return ReplaceNode(Node, NewNode);
+      ReplaceNode(Node, NewNode);
+      return;
     }
 
     SDValue Extract = CurDAG->getTargetExtractSubreg(SubRegIdx, DL, VT, V);
-    return ReplaceNode(Node, Extract.getNode());
+    ReplaceNode(Node, Extract.getNode());
+    return;
   }
   }
 

@@ -3,5 +3,6 @@ group("lib") {
     "//compiler-rt/lib/asan",
     "//compiler-rt/lib/builtins",
     "//compiler-rt/lib/profile",
+    "//compiler-rt/lib/tsan" ,
   ]
 }

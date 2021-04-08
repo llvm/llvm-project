@@ -513,3 +513,9 @@ void bad33(void) {
   fake_system_function();
   pthread_mutex_lock(pmtx); // expected-warning{{This lock has already been acquired}}
 }
+
+void nocrash1(pthread_mutex_t *mutex) {
+  int ret = pthread_mutex_destroy(mutex);
+  if (ret == 0) // no crash
+    ;
+}

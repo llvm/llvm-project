@@ -11,10 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
@@ -618,6 +619,36 @@ bool Instruction::hasAtomicStore() const {
   }
 }
 
+bool Instruction::isVolatile() const {
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::AtomicRMW:
+    return cast<AtomicRMWInst>(this)->isVolatile();
+  case Instruction::Store:
+    return cast<StoreInst>(this)->isVolatile();
+  case Instruction::Load:
+    return cast<LoadInst>(this)->isVolatile();
+  case Instruction::AtomicCmpXchg:
+    return cast<AtomicCmpXchgInst>(this)->isVolatile();
+  case Instruction::Call:
+  case Instruction::Invoke:
+    // There are a very limited number of intrinsics with volatile flags.
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      if (auto *MI = dyn_cast<MemIntrinsic>(II))
+        return MI->isVolatile();
+      switch (II->getIntrinsicID()) {
+      default: break;
+      case Intrinsic::matrix_column_major_load:
+        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
+      case Intrinsic::matrix_column_major_store:
+        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
+      }
+    }
+    return false;
+  }
+}
+
 bool Instruction::mayThrow() const {
   if (const CallInst *CI = dyn_cast<CallInst>(this))
     return !CI->doesNotThrow();
@@ -644,11 +675,20 @@ bool Instruction::willReturn() const {
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {
-  auto II = dyn_cast<IntrinsicInst>(this);
+  auto *II = dyn_cast<IntrinsicInst>(this);
   if (!II)
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
+}
+
+bool Instruction::isLaunderOrStripInvariantGroup() const {
+  auto *II = dyn_cast<IntrinsicInst>(this);
+  if (!II)
+    return false;
+  Intrinsic::ID ID = II->getIntrinsicID();
+  return ID == Intrinsic::launder_invariant_group ||
+         ID == Intrinsic::strip_invariant_group;
 }
 
 bool Instruction::isDebugOrPseudoInst() const {

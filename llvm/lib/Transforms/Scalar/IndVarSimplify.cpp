@@ -1605,8 +1605,8 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       return true;
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
-    assert(!isa<SCEVCouldNotCompute>(ExactBTC) && "implied by having exact trip count");
-    if (!SE->isLoopInvariant(ExitCount, L) ||
+    if (isa<SCEVCouldNotCompute>(ExitCount) ||
+        !SE->isLoopInvariant(ExitCount, L) ||
         !isSafeToExpand(ExitCount, *SE))
       return true;
 

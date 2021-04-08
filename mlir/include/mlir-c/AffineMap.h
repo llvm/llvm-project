@@ -169,6 +169,17 @@ mlirAffineMapGetMajorSubMap(MlirAffineMap affineMap, intptr_t numResults);
 MLIR_CAPI_EXPORTED MlirAffineMap
 mlirAffineMapGetMinorSubMap(MlirAffineMap affineMap, intptr_t numResults);
 
+/// Returns the simplified affine map resulting from dropping the symbols that
+/// do not appear in any of the individual maps in `affineMaps`.
+/// Asserts that all maps in `affineMaps` are normalized to the same number of
+/// dims and symbols.
+/// Takes a callback `populateResult` to fill the `res` container with value
+/// `m` at entry `idx`. This allows returning without worrying about ownership
+/// considerations.
+MLIR_CAPI_EXPORTED void mlirAffineMapCompressUnusedSymbols(
+    MlirAffineMap *affineMaps, intptr_t size, void *result,
+    void (*populateResult)(void *res, intptr_t idx, MlirAffineMap m));
+
 #ifdef __cplusplus
 }
 #endif

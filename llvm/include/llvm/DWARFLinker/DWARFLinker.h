@@ -26,6 +26,7 @@ enum class AccelTableKind {
   Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
   Dwarf,   ///< DWARF v5 .debug_names.
   Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
+  Pub,     ///< .debug_pubnames, .debug_pubtypes
 };
 
 /// Partial address range. Besides an offset, only the
@@ -708,6 +709,7 @@ private:
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);
   void emitDwarfAcceleratorEntriesForUnit(CompileUnit &Unit);
   void emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit);
+  void emitPubAcceleratorEntriesForUnit(CompileUnit &Unit);
 
   /// Patch the frame info for an object file and emit it.
   void patchFrameInfoForObject(const DWARFFile &, RangesTy &Ranges,

@@ -182,13 +182,6 @@ Reproducers are tested in the following ways:
    unsupported by adding ``UNSUPPORTED: lldb-repro`` to the top of the shell
    test or adding the ``skipIfReproducer`` decorator for the API tests.
 
-Additional testing is possible:
-
- - It's possible to unconditionally capture reproducers while running the
-   entire test suite by setting the ``LLDB_CAPTURE_REPRODUCER`` environment
-   variable. Assuming no bugs in reproducers, this can also help to reproduce
-   and investigate test failures.
-
 Knows Issues
 ------------
 

@@ -21,6 +21,7 @@ import six
 # LLDB modules
 import lldb
 from . import lldbtest_config
+from . import configuration
 
 # How often failed simulator process launches are retried.
 SIMULATOR_RETRY = 3
@@ -62,6 +63,11 @@ def mkdir_p(path):
 # ============================
 
 def get_xcode_sdk(os, env):
+    # Respect --apple-sdk <path> if it's specified. If the SDK is simply
+    # mounted from some disk image, and not actually installed, this is the
+    # only way to use it.
+    if configuration.apple_sdk:
+        return configuration.apple_sdk
     if os == "ios":
         if env == "simulator":
             return "iphonesimulator"

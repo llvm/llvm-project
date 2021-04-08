@@ -21285,11 +21285,14 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
           SDValue Op1 = LeftOp ? Op10 : Op11;
           if (Commute)
             std::swap(Op0, Op1);
-          return Op0.getOpcode() == ISD::VECTOR_SHUFFLE &&
-                 InnerN->isOnlyUserOf(Op0.getNode()) &&
-                 MergeInnerShuffle(Commute, SVN, cast<ShuffleVectorSDNode>(Op0),
-                                   Op1, TLI, SV0, SV1, Mask) &&
-                 llvm::none_of(Mask, [](int M) { return M < 0; });
+          // Only accept the merged shuffle if we don't introduce undef elements,
+          // or the inner shuffle already contained undef elements.
+          auto *SVN0 = dyn_cast<ShuffleVectorSDNode>(Op0);
+          return SVN0 && InnerN->isOnlyUserOf(SVN0) &&
+                 MergeInnerShuffle(Commute, SVN, SVN0, Op1, TLI, SV0, SV1,
+                                   Mask) &&
+                 (llvm::any_of(SVN0->getMask(), [](int M) { return M < 0; }) ||
+                  llvm::none_of(Mask, [](int M) { return M < 0; }));
         };
 
         // Ensure we don't increase the number of shuffles - we must merge a

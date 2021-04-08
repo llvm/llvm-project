@@ -96,6 +96,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_process_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -109,6 +110,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_process_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -121,6 +123,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -132,6 +135,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_all_threads_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -147,6 +151,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_minus_one_by_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -160,6 +165,7 @@ class TestGdbRemote_vContThreads(gdbremote_testcase.GdbRemoteTestCaseBase):
 
     @skipIfWindows
     @expectedFailureNetBSD
+    @add_test_categories(["llgs"])
     def test_signal_minus_one_by_minus_one(self):
         self.build()
         self.set_inferior_startup_launch()

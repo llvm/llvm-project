@@ -2,6 +2,11 @@
 ; Test for CSSPGO's SampleContextTracker to make sure context profile tree is promoted and merged properly
 ; based on inline decision, so post inline counts are accurate.
 
+;; The order of nodes within Context Profile Tree depends on the implmementation of std::hash<std::string>.
+;; Mark it fail on AIX for now before we figure out a solution.
+; XFAIL: aix
+
+
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-cold-inline-threshold=200 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-ALL
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-prioritized-inline=0 -sample-profile-inline-size=0 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=INLINE-HOT

@@ -523,7 +523,7 @@ static CommandRegistration Unused(&GraphC, []() -> Error {
   auto &GR = *GROrError;
 
   std::error_code EC;
-  raw_fd_ostream OS(GraphOutput, EC, sys::fs::OpenFlags::OF_Text);
+  raw_fd_ostream OS(GraphOutput, EC, sys::fs::OpenFlags::OF_TextWithCRLF);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot open file '") + GraphOutput + "' for writing.", EC);

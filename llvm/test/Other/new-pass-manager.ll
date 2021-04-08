@@ -5,17 +5,17 @@
 ; files, but for now this is just going to step the new process through its
 ; paces.
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes=no-op-module %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
 ; CHECK-MODULE-PASS: Starting llvm::Module pass manager run
 ; CHECK-MODULE-PASS-NEXT: Running pass: NoOpModulePass
 ; CHECK-MODULE-PASS-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes=no-op-cgscc %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='cgscc(no-op-cgscc)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CGSCC-PASS
 ; CHECK-CGSCC-PASS: Starting llvm::Module pass manager run
@@ -30,14 +30,15 @@
 ; CHECK-CGSCC-PASS-NEXT: Finished CGSCC pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes=no-op-function %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-PASS
 ; CHECK-FUNCTION-PASS: Starting llvm::Module pass manager run
 ; CHECK-FUNCTION-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-FUNCTION-PASS-NEXT: Running analysis: PreservedCFGCheckerAnalysis on foo
 ; CHECK-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-FUNCTION-PASS-NEXT: Running pass: NoOpFunctionPass
 ; CHECK-FUNCTION-PASS-NEXT: Finished llvm::Function pass manager run
@@ -53,7 +54,7 @@
 ; CHECK-MODULE-PRINT: Running pass: VerifierPass
 ; CHECK-MODULE-PRINT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -debug-pass-manager -disable-verify -passes='print,verify' %s 2>&1 \
+; RUN: opt -disable-output -debug-pass-manager -disable-verify -verify-cfg-preserved=1 -passes='print,verify' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-VERIFY
 ; CHECK-MODULE-VERIFY: Starting llvm::Module pass manager run
 ; CHECK-MODULE-VERIFY: Running pass: PrintModulePass
@@ -75,7 +76,7 @@
 ; CHECK-FUNCTION-PRINT: Running pass: VerifierPass
 ; CHECK-FUNCTION-PRINT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -debug-pass-manager -disable-verify -passes='function(print,verify)' %s 2>&1 \
+; RUN: opt -disable-output -debug-pass-manager -disable-verify -verify-cfg-preserved=1 -passes='function(print,verify)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-FUNCTION-VERIFY
 ; CHECK-FUNCTION-VERIFY: Starting llvm::Module pass manager run
 ; CHECK-FUNCTION-VERIFY: Starting llvm::Function pass manager run
@@ -104,7 +105,7 @@
 ; RUN:     | llvm-dis \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NOOP
 
-; RUN: opt -disable-output -debug-pass-manager -disable-verify -passes='no-op-module,function(no-op-function)' %s 2>&1 \
+; RUN: opt -disable-output -debug-pass-manager -disable-verify -verify-cfg-preserved=1 -passes='no-op-module,function(no-op-function)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-NO-VERIFY
 ; CHECK-NO-VERIFY: Starting llvm::Module pass manager run
 ; CHECK-NO-VERIFY-NOT: VerifierPass
@@ -188,7 +189,7 @@
 ; CHECK-DO-INVALIDATE-FUNCTION-ANALYSIS-RESULTS: Invalidating analysis: NoOpFunctionAnalysis
 ; CHECK-DO-INVALIDATE-FUNCTION-ANALYSIS-RESULTS: Running analysis: NoOpFunctionAnalysis
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='require<no-op-module>,module(require<no-op-module>,function(require<no-op-function>,invalidate<all>,require<no-op-function>),require<no-op-module>),require<no-op-module>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-INVALIDATE-ALL
 ; CHECK-INVALIDATE-ALL: Starting llvm::Module pass manager run
@@ -212,7 +213,7 @@
 ; CHECK-INVALIDATE-ALL-NOT: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='require<no-op-module>,module(require<no-op-module>,cgscc(require<no-op-cgscc>,function(require<no-op-function>,invalidate<all>,require<no-op-function>),require<no-op-cgscc>),require<no-op-module>),require<no-op-module>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-INVALIDATE-ALL-CG
 ; CHECK-INVALIDATE-ALL-CG: Starting llvm::Module pass manager run
@@ -245,7 +246,7 @@
 ; CHECK-INVALIDATE-ALL-CG-NOT: Running analysis: NoOpModuleAnalysis
 ; CHECK-INVALIDATE-ALL-CG: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<targetlibinfo>,invalidate<all>,require<targetlibinfo>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TLI
 ; CHECK-TLI: Starting llvm::Module pass manager run
@@ -257,7 +258,7 @@
 ; CHECK-TLI-NOT: Running analysis: TargetLibraryAnalysis
 ; CHECK-TLI: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<targetir>,invalidate<all>,require<targetir>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-TIRA
 ; CHECK-TIRA: Starting llvm::Module pass manager run
@@ -269,7 +270,7 @@
 ; CHECK-TIRA-NOT: Running analysis: TargetIRAnalysis
 ; CHECK-TIRA: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<domtree>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-DT
 ; CHECK-DT: Starting llvm::Module pass manager run
@@ -277,7 +278,7 @@
 ; CHECK-DT: Running analysis: DominatorTreeAnalysis
 ; CHECK-DT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<basic-aa>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-BASIC-AA
 ; CHECK-BASIC-AA: Starting llvm::Module pass manager run
@@ -285,7 +286,7 @@
 ; CHECK-BASIC-AA: Running analysis: BasicAA
 ; CHECK-BASIC-AA: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<aa>' -aa-pipeline='basic-aa' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA
 ; CHECK-AA: Starting llvm::Module pass manager run
@@ -294,7 +295,7 @@
 ; CHECK-AA: Running analysis: BasicAA
 ; CHECK-AA: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<aa>' -aa-pipeline='default' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA-DEFAULT
 ; CHECK-AA-DEFAULT: Starting llvm::Module pass manager run
@@ -305,7 +306,7 @@
 ; CHECK-AA-DEFAULT: Running analysis: TypeBasedAA
 ; CHECK-AA-DEFAULT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<aa>,invalidate<domtree>,aa-eval' -aa-pipeline='basic-aa' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA-FUNCTION-INVALIDATE
 ; CHECK-AA-FUNCTION-INVALIDATE: Starting llvm::Function pass manager run
@@ -321,7 +322,7 @@
 ; CHECK-AA-FUNCTION-INVALIDATE: Running analysis: BasicAA
 ; CHECK-AA-FUNCTION-INVALIDATE: Finished llvm::Function pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<globals-aa>,function(require<aa>),invalidate<globals-aa>,require<globals-aa>,function(aa-eval)' -aa-pipeline='globals-aa' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-AA-MODULE-INVALIDATE
 ; CHECK-AA-MODULE-INVALIDATE: Starting llvm::Module pass manager run
@@ -340,7 +341,7 @@
 ; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Function pass manager run
 ; CHECK-AA-MODULE-INVALIDATE: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<memdep>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MEMDEP
 ; CHECK-MEMDEP: Starting llvm::Module pass manager run
@@ -348,7 +349,7 @@
 ; CHECK-MEMDEP: Running analysis: MemoryDependenceAnalysis
 ; CHECK-MEMDEP: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager %s 2>&1 \
 ; RUN:     -passes='require<callgraph>' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-CALLGRAPH
 ; CHECK-CALLGRAPH: Starting llvm::Module pass manager run
@@ -356,7 +357,7 @@
 ; CHECK-CALLGRAPH: Running analysis: CallGraphAnalysis
 ; CHECK-CALLGRAPH: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='default<O0>' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O0 --check-prefix=%llvmcheckext
 ; CHECK-O0: Starting llvm::Module pass manager run
@@ -371,7 +372,7 @@
 ; CHECK-NOEXT: {{.*}}
 ; CHECK-O0-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='repeat<3>(no-op-module)' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-MODULE-PASS
 ; CHECK-REPEAT-MODULE-PASS: Starting llvm::Module pass manager run
@@ -387,7 +388,7 @@
 ; CHECK-REPEAT-MODULE-PASS-NEXT: Finished llvm::Module pass manager run
 ; CHECK-REPEAT-MODULE-PASS-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='cgscc(repeat<3>(no-op-cgscc))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-CGSCC-PASS
 ; CHECK-REPEAT-CGSCC-PASS: Starting llvm::Module pass manager run
@@ -411,11 +412,12 @@
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Finished CGSCC pass manager run
 ; CHECK-REPEAT-CGSCC-PASS-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='function(repeat<3>(no-op-function))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-FUNCTION-PASS
 ; CHECK-REPEAT-FUNCTION-PASS: Starting llvm::Module pass manager run
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running analysis: PreservedCFGCheckerAnalysis on foo
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Running pass: RepeatedPass
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Starting llvm::Function pass manager run
@@ -430,18 +432,21 @@
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-FUNCTION-PASS-NEXT: Finished llvm::Module pass manager run
 
-; RUN: opt -disable-output -disable-verify -debug-pass-manager \
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes='loop(repeat<3>(no-op-loop))' %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-REPEAT-LOOP-PASS
 ; CHECK-REPEAT-LOOP-PASS: Starting llvm::Module pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: PreservedCFGCheckerAnalysis on foo
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Starting llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LoopSimplify
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: LoopAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: DominatorTreeAnalysis
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AssumptionAnalysis
+; CHECK-REPEAT-LOOP-PASS-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on foo
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running pass: LCSSAPass
+; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: PreservedCFGCheckerAnalysis on foo
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Finished llvm::Function pass manager run
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: AAManager
 ; CHECK-REPEAT-LOOP-PASS-NEXT: Running analysis: TargetLibraryAnalysis

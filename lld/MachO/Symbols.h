@@ -95,9 +95,9 @@ protected:
 
 class Defined : public Symbol {
 public:
-  Defined(StringRefZ name, InputFile *file, InputSection *isec, uint32_t value,
-          bool isWeakDef, bool isExternal, bool isPrivateExtern)
-      : Symbol(DefinedKind, name, file), isec(isec), value(value),
+  Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
+          uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern)
+      : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
         includeInSymtab(true), weakDef(isWeakDef), external(isExternal) {}
 
@@ -117,9 +117,12 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 
-  InputFile *file;
   InputSection *isec;
-  uint32_t value;
+  // Contains the offset from the containing subsection. Note that this is
+  // different from nlist::n_value, which is the absolute address of the symbol.
+  uint64_t value;
+  // size is only calculated for regular (non-bitcode) symbols.
+  uint64_t size;
 
   bool overridesWeakDef : 1;
   // Whether this symbol should appear in the output binary's export trie.
@@ -239,7 +242,7 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-T *replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");

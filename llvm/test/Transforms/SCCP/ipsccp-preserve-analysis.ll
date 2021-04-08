@@ -16,7 +16,7 @@
 ; NEW-PM: Running pass: IPSCCPPass
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f1
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f2
-; NEW-PM-NOT: Running analysis:
+; NEW-PM-NOT: Running analysis: AssumptionAnalysis
 
 ; IR-LABEL: @f1
 ; IR-LABEL: entry:

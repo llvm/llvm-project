@@ -163,6 +163,14 @@ bool ParsedAttr::diagnoseAppertainsTo(Sema &S, const Stmt *St) const {
   return getInfo().diagAppertainsToStmt(S, *this, St);
 }
 
+bool ParsedAttr::diagnoseMutualExclusion(Sema &S, const Decl *D) const {
+  return getInfo().diagMutualExclusion(S, *this, D);
+}
+
+bool ParsedAttr::diagnoseMutualExclusion(Sema &S, const Stmt *St) const {
+  return getInfo().diagMutualExclusion(S, *this, St);
+}
+
 bool ParsedAttr::appliesToDecl(const Decl *D,
                                attr::SubjectMatchRule MatchRule) const {
   return checkAttributeMatchRuleAppliesTo(D, MatchRule);

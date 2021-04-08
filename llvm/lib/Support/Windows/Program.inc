@@ -506,7 +506,7 @@ std::error_code
 llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding) {
   std::error_code EC;
-  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::OF_Text);
+  llvm::raw_fd_ostream OS(FileName, EC, llvm::sys::fs::OF_TextWithCRLF);
   if (EC)
     return EC;
 

@@ -983,7 +983,7 @@ private:
     } else {
       FSet.removeLock(FactMan, !Cp);
       FSet.addLock(FactMan,
-                   std::make_unique<LockableFactEntry>(Cp, kind, loc));
+                   std::make_unique<LockableFactEntry>(Cp, kind, loc, true));
     }
   }
 
