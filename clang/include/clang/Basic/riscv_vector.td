@@ -200,6 +200,16 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
 // Basic classes with automatic codegen.
 //===----------------------------------------------------------------------===//
 
+class RVVOutBuiltin<string suffix, string prototype, string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [-1];
+}
+
+class RVVOp0Builtin<string suffix, string prototype, string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IntrinsicTypes = [0];
+}
+
 class RVVOutOp1Builtin<string suffix, string prototype, string type_range>
     : RVVBuiltin<suffix, prototype, type_range> {
   let IntrinsicTypes = [-1, 1];
@@ -360,6 +370,14 @@ multiclass RVVFloatingMaskOutBuiltinSet
 multiclass RVVFloatingMaskOutVFBuiltinSet
     : RVVOp0Op1BuiltinSet<NAME, "fd",
                           [["vf", "vm", "mve"]]>;
+
+class RVVFloatingUnaryBuiltin<string builtin_suffix, string ir_suffix,
+                              string prototype>
+    : RVVOutBuiltin<ir_suffix, prototype, "fd"> {
+  let Name = NAME # "_" # builtin_suffix;
+}
+
+class RVVFloatingUnaryVVBuiltin : RVVFloatingUnaryBuiltin<"v", "v", "vv">;
 
 // For widen operation which has different mangling name.
 multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
@@ -844,13 +862,13 @@ defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
 defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
 
 // 14.8. Vector Floating-Point Square-Root Instruction
-// TODO
+def vfsqrt : RVVFloatingUnaryVVBuiltin;
 
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
-// TODO
+def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
 
 // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
-// TODO
+def vfrec7 : RVVFloatingUnaryVVBuiltin;
 
 // 14.11. Vector Floating-Point MIN/MAX Instructions
 defm vfmin : RVVFloatingBinBuiltinSet;
@@ -870,10 +888,12 @@ defm vmfgt : RVVFloatingMaskOutVFBuiltinSet;
 defm vmfge : RVVFloatingMaskOutVFBuiltinSet;
 
 // 14.14. Vector Floating-Point Classify Instruction
-// TODO
+let Name = "vfclass_v" in
+  def vfclass : RVVOp0Builtin<"Uv", "Uvv", "fd">;
 
 // 14.15. Vector Floating-Point Merge Instructio
-// TODO
+let Name = "vfmerge_vfm", HasMask = false, PermuteOperands = [2, 0, 1] in
+  def vfmerge : RVVOutOp1Builtin<"v", "vvem", "fd">;
 
 // 14.16. Vector Floating-Point Move Instruction
 // TODO
