@@ -7121,6 +7121,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VLE_VL)
   NODE_NAME_CASE(VSE_VL)
+  NODE_NAME_CASE(READ_CSR)
+  NODE_NAME_CASE(WRITE_CSR)
+  NODE_NAME_CASE(SWAP_CSR)
   }
   // clang-format on
   return nullptr;
