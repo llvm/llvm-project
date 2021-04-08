@@ -23,6 +23,9 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
 def threads_eq : Joined<["--"], "threads=">,
     HelpText<"Number of threads. '1' disables multi-threading. By default all available hardware threads are used">,
     Group<grp_lld>;
+def thinlto_jobs_eq : Joined<["--"], "thinlto-jobs=">,
+    HelpText<"Number of ThinLTO jobs. Default to --threads=">,
+    Group<grp_lld>;
 def reproduce: Separate<["--"], "reproduce">,
     Group<grp_lld>;
 def reproduce_eq: Joined<["--"], "reproduce=">,

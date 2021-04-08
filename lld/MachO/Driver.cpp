@@ -893,8 +893,12 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       error(arg->getSpelling() + ": expected a positive integer, but got '" +
             arg->getValue() + "'");
     parallel::strategy = hardware_concurrency(threads);
-    // FIXME: use this to configure ThinLTO concurrency too
+    config->thinLTOJobs = v;
   }
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    config->thinLTOJobs = arg->getValue();
+  if (!get_threadpool_strategy(config->thinLTOJobs))
+    error("--thinlto-jobs: invalid job count: " + config->thinLTOJobs);
 
   config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),
                                        /*file=*/nullptr,
