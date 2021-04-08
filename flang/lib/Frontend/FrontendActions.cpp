@@ -67,6 +67,55 @@ bool PrescanAction::BeginSourceFileAction(CompilerInstance &c1) {
   return true;
 }
 
+bool PrescanAndParseAction::BeginSourceFileAction(CompilerInstance &c1) {
+  CompilerInstance &ci = this->instance();
+
+  std::string currentInputPath{GetCurrentFileOrBufferName()};
+
+  Fortran::parser::Options parserOptions = ci.invocation().fortranOpts();
+
+  if (ci.invocation().frontendOpts().fortranForm_ == FortranForm::Unknown) {
+    // Switch between fixed and free form format based on the input file
+    // extension.
+    //
+    // Ideally we should have all Fortran options set before entering this
+    // method (i.e. before processing any specific input files). However, we
+    // can't decide between fixed and free form based on the file extension
+    // earlier than this.
+    parserOptions.isFixedForm = currentInput().IsFixedForm();
+  }
+
+  // Prescan. In case of failure, report and return.
+  ci.parsing().Prescan(currentInputPath, parserOptions);
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    const unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not scan %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+    ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+    return false;
+  }
+
+  // Parse. In case of failure, report and return.
+  ci.parsing().Parse(llvm::outs());
+
+  if (ci.parsing().messages().AnyFatalError()) {
+    unsigned diagID = ci.diagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Could not parse %0");
+    ci.diagnostics().Report(diagID) << GetCurrentFileOrBufferName();
+
+    ci.parsing().messages().Emit(
+        llvm::errs(), this->instance().allCookedSources());
+    return false;
+  }
+
+  // Report the diagnostics from parsing
+  ci.parsing().messages().Emit(llvm::errs(), ci.allCookedSources());
+
+  return true;
+}
+
 bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   CompilerInstance &ci = this->instance();
   std::string currentInputPath{GetCurrentFileOrBufferName()};
@@ -117,6 +166,7 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
 
   // Report the diagnostics from the semantic checks
   semantics.EmitMessages(ci.semaOutputStream());
+
   return true;
 }
 
@@ -191,6 +241,19 @@ void ParseSyntaxOnlyAction::ExecuteAction() {
       GetCurrentFileOrBufferName());
 }
 
+void DebugUnparseNoSemaAction::ExecuteAction() {
+  auto &parseTree{instance().parsing().parseTree()};
+
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
+
+  // TODO: Options should come from CompilerInvocation
+  Unparse(llvm::outs(), *parseTree,
+      /*encoding=*/Fortran::parser::Encoding::UTF_8,
+      /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
+      /*preStatement=*/nullptr, &asFortran);
+}
+
 void DebugUnparseAction::ExecuteAction() {
   auto &parseTree{instance().parsing().parseTree()};
   Fortran::parser::AnalyzedObjectsAsFortran asFortran =
@@ -226,6 +289,15 @@ void DebugDumpSymbolsAction::ExecuteAction() {
   // Report fatal semantic errors
   reportFatalSemanticErrors(
       semantics, this->instance().diagnostics(), GetCurrentFileOrBufferName());
+}
+
+void DebugDumpParseTreeNoSemaAction::ExecuteAction() {
+  auto &parseTree{instance().parsing().parseTree()};
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
+
+  // Dump parse tree
+  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
 }
 
 void DebugDumpParseTreeAction::ExecuteAction() {

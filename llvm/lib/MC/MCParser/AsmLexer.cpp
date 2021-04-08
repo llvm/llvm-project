@@ -597,6 +597,8 @@ AsmToken AsmLexer::LexSingleQuote() {
       case 't': Value = '\t'; break;
       case 'n': Value = '\n'; break;
       case 'b': Value = '\b'; break;
+      case 'f': Value = '\f'; break;
+      case 'r': Value = '\r'; break;
     }
   } else
     Value = TokStart[1];

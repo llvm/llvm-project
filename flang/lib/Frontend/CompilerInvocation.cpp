@@ -127,6 +127,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
     case clang::driver::options::OPT_fdebug_unparse:
       opts.programAction_ = DebugUnparse;
       break;
+    case clang::driver::options::OPT_fdebug_unparse_no_sema:
+      opts.programAction_ = DebugUnparseNoSema;
+      break;
     case clang::driver::options::OPT_fdebug_unparse_with_symbols:
       opts.programAction_ = DebugUnparseWithSymbols;
       break;
@@ -135,6 +138,9 @@ static InputKind ParseFrontendArgs(FrontendOptions &opts,
       break;
     case clang::driver::options::OPT_fdebug_dump_parse_tree:
       opts.programAction_ = DebugDumpParseTree;
+      break;
+    case clang::driver::options::OPT_fdebug_dump_parse_tree_no_sema:
+      opts.programAction_ = DebugDumpParseTreeNoSema;
       break;
     case clang::driver::options::OPT_fdebug_dump_provenance:
       opts.programAction_ = DebugDumpProvenance;

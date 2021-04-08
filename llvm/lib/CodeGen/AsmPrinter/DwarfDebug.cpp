@@ -366,7 +366,7 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
     DebuggerTuning = DebuggerKind::GDB;
 
   if (DwarfInlinedStrings == Default)
-    UseInlineStrings = TT.isNVPTX();
+    UseInlineStrings = TT.isNVPTX() || tuneForDBX();
   else
     UseInlineStrings = DwarfInlinedStrings == Enable;
 

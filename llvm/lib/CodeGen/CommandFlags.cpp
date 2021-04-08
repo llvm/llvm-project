@@ -414,6 +414,7 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::values(
           clEnumValN(DebuggerKind::GDB, "gdb", "gdb"),
           clEnumValN(DebuggerKind::LLDB, "lldb", "lldb"),
+          clEnumValN(DebuggerKind::DBX, "dbx", "dbx"),
           clEnumValN(DebuggerKind::SCE, "sce", "SCE targets (e.g. PS4)")));
   CGBINDOPT(DebuggerTuningOpt);
 

@@ -226,6 +226,8 @@ enum NodeType : unsigned {
   // Vector sign/zero extend with additional mask & VL operands.
   VSEXT_VL,
   VZEXT_VL,
+  //  vpopc.m with additional mask and VL operands.
+  VPOPC_VL,
 
   // Reads value of CSR.
   // The first operand is a chain pointer. The second specifies address of the
@@ -507,6 +509,7 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFPVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
