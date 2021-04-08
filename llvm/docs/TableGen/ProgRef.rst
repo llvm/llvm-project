@@ -1282,9 +1282,7 @@ placement.
   the subclasses and records that inherit from the class. The assertions are
   then checked when the records are completely built.
 
-* In a multiclass definition, the assertions are saved with the other
-  components of the multiclass and then checked each time the multiclass
-  is instantiated with ``defm``.
+* In a multiclass definition, ... [this placement is not yet available]
 
 Using assertions in TableGen files can simplify record checking in TableGen
 backends. Here is an example of an ``assert`` in two class definitions.
