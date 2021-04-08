@@ -12055,9 +12055,14 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
 
     if ((AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) &&
          Subtarget->hasAtomicFaddInsts()) {
-      if (!fpModeMatchesGlobalFPAtomicMode(RMW) ||
-          RMW->getFunction()->getFnAttribute("amdgpu-unsafe-fp-atomics")
-              .getValueAsString() != "true")
+      // The amdgpu-unsafe-fp-atomics attribute enables generation of unsafe
+      // floating point atomic instructions. May generate more efficient code,
+      // but may not respect rounding and denormal modes, and may give incorrect
+      // results for certain memory destinations.
+      if (!fpModeMatchesGlobalFPAtomicMode(RMW) &&
+          RMW->getFunction()
+                  ->getFnAttribute("amdgpu-unsafe-fp-atomics")
+                  .getValueAsString() != "true")
         return AtomicExpansionKind::CmpXChg;
 
       if (Subtarget->hasGFX90AInsts()) {
