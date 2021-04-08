@@ -123,8 +123,10 @@ unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {
   static const unsigned EhDataReg64[] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64
   };
+  static const unsigned EhDataRegNM[] = {
+    Mips::A3_NM, Mips::A2_NM
+  };
 
-  assert(!IsP32() && "GetEhDataReg NYI for nanoMIPS");
-  return IsN64() ? EhDataReg64[I] : EhDataReg[I];
+  return IsN64() ? EhDataReg64[I] : IsP32() ? EhDataRegNM[I] : EhDataReg[I];
 }
 
