@@ -49,9 +49,13 @@ public:
     /// values will be packed into one 32-bit value to be memory efficient.
     bool emulateNon32BitScalarTypes;
 
+    /// The number of bits to store a boolean value. It is eight bits by
+    /// default.
+    unsigned boolNumBits;
+
     // Note: we need this instead of inline initializers becuase of
     // https://bugs.llvm.org/show_bug.cgi?id=36684
-    Options() : emulateNon32BitScalarTypes(true) {}
+    Options() : emulateNon32BitScalarTypes(true), boolNumBits(8) {}
   };
 
   explicit SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
