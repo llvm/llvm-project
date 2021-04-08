@@ -144,6 +144,9 @@ public:
   explicit DataLayout(DataLayoutOpInterface op);
   explicit DataLayout(ModuleOp op);
 
+  /// Returns the layout of the closest parent operation carrying layout info.
+  static DataLayout closest(Operation *op);
+
   /// Returns the size of the given type in the current scope.
   unsigned getTypeSize(Type t) const;
 

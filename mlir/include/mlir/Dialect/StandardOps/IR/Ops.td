@@ -1738,8 +1738,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
   let summary = "splat or broadcast operation";
   let description = [{
     Broadcast the operand to all elements of the result vector or tensor. The
-    operand has to be of either integer or float type. When the result is a
-    tensor, it has to be statically shaped.
+    operand has to be of integer/index/float type. When the result is a tensor,
+    it has to be statically shaped.
 
     Example:
 
@@ -1761,8 +1761,8 @@ def SplatOp : Std_Op<"splat", [NoSideEffect,
     ```
   }];
 
-  let arguments = (ins AnyTypeOf<[AnySignlessInteger, AnyFloat],
-                                 "integer or float type">:$input);
+  let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
+                                 "integer/index/float type">:$input);
   let results = (outs AnyTypeOf<[AnyVector, AnyStaticShapeTensor]>:$aggregate);
 
   let builders = [

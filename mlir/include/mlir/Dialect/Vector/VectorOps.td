@@ -2307,13 +2307,13 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
       Arguments<(
         // TODO: tighten vector element types that make sense.
         ins VectorOfRankAndType<[1],
-              [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$lhs,
+              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$lhs,
             VectorOfRankAndType<[1],
-              [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$rhs,
+              [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$rhs,
             I32Attr:$lhs_rows, I32Attr:$lhs_columns, I32Attr:$rhs_columns)>,
       Results<(
         outs VectorOfRankAndType<[1],
-               [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$res)>
+               [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)>
 {
   let summary = "Vector matrix multiplication op that operates on flattened 1-D"
     " MLIR vectors";
@@ -2370,11 +2370,11 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
     Arguments<(
       // TODO: tighten vector element types that make sense.
       ins VectorOfRankAndType<[1],
-            [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$matrix,
+            [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$matrix,
           I32Attr:$rows, I32Attr:$columns)>,
     Results<(
       outs VectorOfRankAndType<[1],
-             [AnySignlessInteger, AnySignedInteger, AnyFloat]>:$res)> {
+             [AnySignlessInteger, AnySignedInteger, Index, AnyFloat]>:$res)> {
   let summary = "Vector matrix transposition on flattened 1-D MLIR vectors";
   let description = [{
     This is the counterpart of llvm.matrix.transpose in MLIR. It serves

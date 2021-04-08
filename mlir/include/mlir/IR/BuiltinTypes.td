@@ -874,7 +874,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "ShapedType"> {
 
     ```
     vector-type ::= `vector` `<` static-dimension-list vector-element-type `>`
-    vector-element-type ::= float-type | integer-type
+    vector-element-type ::= float-type | integer-type | index-type
 
     static-dimension-list ::= (decimal-literal `x`)+
     ```
@@ -911,9 +911,10 @@ def Builtin_Vector : Builtin_Type<"Vector", "ShapedType"> {
   ];
   let extraClassDeclaration = [{
     /// Returns true of the given type can be used as an element of a vector
-    /// type. In particular, vectors can consist of integer or float primitives.
+    /// type. In particular, vectors can consist of integer, index, or float
+    /// primitives.
     static bool isValidElementType(Type t) {
-      return t.isa<IntegerType, FloatType>();
+      return t.isa<IntegerType, IndexType, FloatType>();
     }
 
     /// Get or create a new VectorType with the same shape as `this` and an
