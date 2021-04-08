@@ -24,10 +24,6 @@ func @illegalmemrefelementtype(memref<?xtensor<i8>>) -> () // expected-error {{i
 func @illegalunrankedmemrefelementtype(memref<*xtensor<i8>>) -> () // expected-error {{invalid memref element type}}
 
 // -----
-
-func @indexvector(vector<4 x index>) -> () // expected-error {{vector elements must be int or float type}}
-
-// -----
 // Test no map in memref type.
 func @memrefs(memref<2x4xi8, >) // expected-error {{expected list element}}
 
@@ -387,7 +383,7 @@ func @succ_arg_type_mismatch() {
 
 // Test no nested vector.
 func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
-// expected-error@-1 {{vector elements must be int or float type}}
+// expected-error@-1 {{vector elements must be int/index/float type}}
 
 // -----
 
