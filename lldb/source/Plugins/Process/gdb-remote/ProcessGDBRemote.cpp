@@ -1487,22 +1487,22 @@ void ProcessGDBRemote::ClearThreadIDList() {
   m_thread_pcs.clear();
 }
 
-size_t
-ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue(std::string &value) {
+size_t ProcessGDBRemote::UpdateThreadIDsFromStopReplyThreadsValue(
+    llvm::StringRef value) {
   m_thread_ids.clear();
-  size_t comma_pos;
-  lldb::tid_t tid;
-  while ((comma_pos = value.find(',')) != std::string::npos) {
-    value[comma_pos] = '\0';
-    // thread in big endian hex
-    tid = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_THREAD_ID, 16);
-    if (tid != LLDB_INVALID_THREAD_ID)
-      m_thread_ids.push_back(tid);
-    value.erase(0, comma_pos + 1);
-  }
-  tid = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_THREAD_ID, 16);
-  if (tid != LLDB_INVALID_THREAD_ID)
-    m_thread_ids.push_back(tid);
+  lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
+  StringExtractorGDBRemote thread_ids{value};
+
+  do {
+    auto pid_tid = thread_ids.GetPidTid(pid);
+    if (pid_tid && pid_tid->first == pid) {
+      lldb::tid_t tid = pid_tid->second;
+      if (tid != LLDB_INVALID_THREAD_ID &&
+          tid != StringExtractorGDBRemote::AllProcesses)
+        m_thread_ids.push_back(tid);
+    }
+  } while (thread_ids.GetChar() == ',');
+
   return m_thread_ids.size();
 }
 
@@ -1519,7 +1519,7 @@ ProcessGDBRemote::UpdateThreadPCsFromStopReplyThreadsValue(std::string &value) {
     value.erase(0, comma_pos + 1);
   }
   pc = StringConvert::ToUInt64(value.c_str(), LLDB_INVALID_ADDRESS, 16);
-  if (pc != LLDB_INVALID_THREAD_ID)
+  if (pc != LLDB_INVALID_ADDRESS)
     m_thread_pcs.push_back(pc);
   return m_thread_pcs.size();
 }
@@ -2141,6 +2141,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
 }
 
 StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
+  lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
   stop_packet.SetFilePos(0);
   const char stop_type = stop_packet.GetChar();
   switch (stop_type) {
@@ -2155,14 +2156,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     if (stop_id == 0) {
       // Our first stop, make sure we have a process ID, and also make sure we
       // know about our registers
-      if (GetID() == LLDB_INVALID_PROCESS_ID) {
-        lldb::pid_t pid = m_gdb_comm.GetCurrentProcessID();
-        if (pid != LLDB_INVALID_PROCESS_ID)
-          SetID(pid);
-      }
+      if (GetID() == LLDB_INVALID_PROCESS_ID && pid != LLDB_INVALID_PROCESS_ID)
+        SetID(pid);
       BuildDynamicRegisterInfo(true);
     }
     // Stop with signal and thread info
+    lldb::pid_t stop_pid = LLDB_INVALID_PROCESS_ID;
     lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
     const uint8_t signo = stop_packet.GetHexU8();
     llvm::StringRef key;
@@ -2191,24 +2190,18 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         value.getAsInteger(16, x);
         exc_data.push_back(x);
       } else if (key.compare("thread") == 0) {
-        // thread in big endian hex
-        if (value.getAsInteger(16, tid))
+        // thread-id
+        StringExtractorGDBRemote thread_id{value};
+        auto pid_tid = thread_id.GetPidTid(pid);
+        if (pid_tid) {
+          stop_pid = pid_tid->first;
+          tid = pid_tid->second;
+        } else
           tid = LLDB_INVALID_THREAD_ID;
       } else if (key.compare("threads") == 0) {
         std::lock_guard<std::recursive_mutex> guard(
             m_thread_list_real.GetMutex());
-
-        m_thread_ids.clear();
-        // A comma separated list of all threads in the current
-        // process that includes the thread for this stop reply packet
-        lldb::tid_t tid;
-        while (!value.empty()) {
-          llvm::StringRef tid_str;
-          std::tie(tid_str, value) = value.split(',');
-          if (tid_str.getAsInteger(16, tid))
-            tid = LLDB_INVALID_THREAD_ID;
-          m_thread_ids.push_back(tid);
-        }
+        UpdateThreadIDsFromStopReplyThreadsValue(value);
       } else if (key.compare("thread-pcs") == 0) {
         m_thread_pcs.clear();
         // A comma separated list of all threads in the current
@@ -2319,6 +2312,14 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!key.getAsInteger(16, reg))
           expedited_register_map[reg] = std::string(std::move(value));
       }
+    }
+
+    if (stop_pid != LLDB_INVALID_PROCESS_ID && stop_pid != pid) {
+      Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
+      LLDB_LOG(log,
+               "Received stop for incorrect PID = {0} (inferior PID = {1})",
+               stop_pid, pid);
+      return eStateInvalid;
     }
 
     if (tid == LLDB_INVALID_THREAD_ID) {
