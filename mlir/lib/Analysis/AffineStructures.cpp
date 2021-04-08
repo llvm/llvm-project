@@ -1151,14 +1151,14 @@ Matrix FlatAffineConstraints::getBoundedDirections() const {
 
 bool eqInvolvesSuffixDims(const FlatAffineConstraints &fac, unsigned eqIndex,
                           unsigned numDims) {
-  for (unsigned e = fac.getNumDimIds(), j = e - numDims; j < e; ++j)
+  for (unsigned e = fac.getNumIds(), j = e - numDims; j < e; ++j)
     if (fac.atEq(eqIndex, j) != 0)
       return true;
   return false;
 }
 bool ineqInvolvesSuffixDims(const FlatAffineConstraints &fac,
                             unsigned ineqIndex, unsigned numDims) {
-  for (unsigned e = fac.getNumDimIds(), j = e - numDims; j < e; ++j)
+  for (unsigned e = fac.getNumIds(), j = e - numDims; j < e; ++j)
     if (fac.atIneq(ineqIndex, j) != 0)
       return true;
   return false;
