@@ -49,7 +49,7 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry, bool splitInputFile,
                           bool verifyDiagnostics, bool verifyPasses,
                           bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = true);
+                          bool preloadDialectsInContext = false);
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.
@@ -59,7 +59,7 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
 ///   deprecated and will be removed soon.
 LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry,
-                          bool preloadDialectsInContext = true);
+                          bool preloadDialectsInContext = false);
 
 } // end namespace mlir
 
