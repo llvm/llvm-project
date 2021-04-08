@@ -1262,7 +1262,7 @@ static constexpr inline T likelyhasbetween(T x, unsigned char m,
                                            unsigned char n) {
   return ((x - ~static_cast<T>(0) / 255 * (n + 1)) & ~x &
           (x & ~static_cast<T>(0) / 255 * 127) +
-              ~static_cast<T>(0) / 255 * (127 - (m - 1))) &
+              (~static_cast<T>(0) / 255 * (127 - (m - 1)))) &
          ~static_cast<T>(0) / 255 * 128;
 }
 
