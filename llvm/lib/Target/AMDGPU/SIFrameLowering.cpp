@@ -880,8 +880,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   Optional<int> FPSaveIndex = FuncInfo->FramePointerSaveIndex;
   Optional<int> BPSaveIndex = FuncInfo->BasePointerSaveIndex;
 
-  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg
-         : FuncInfo->getSGPRSpillVGPRs()) {
+  for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
+       FuncInfo->getSGPRSpillVGPRs()) {
     if (!Reg.FI.hasValue())
       continue;
 
@@ -1175,7 +1175,7 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  for (const SIMachineFunctionInfo::SGPRSpillVGPRCSR &Reg :
+  for (const SIMachineFunctionInfo::SGPRSpillVGPR &Reg :
        FuncInfo->getSGPRSpillVGPRs()) {
     if (!Reg.FI.hasValue())
       continue;

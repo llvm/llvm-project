@@ -404,10 +404,10 @@ def Shape_JoinOp : Shape_Op<"join", [Commutative]> {
 def Shape_MaxOp : Shape_Op<"max", [Commutative, NoSideEffect]> {
   let summary = "Elementwise maximum";
   let description = [{
-    Computes the elementwise maximum of two shapes with equal ranks. If either
-    operand is an error, then an error will be propagated to the result. If the
-    input types mismatch or the ranks do not match, then the result is an
-    error.
+    Computes the elementwise maximum of two sizes or shapes with equal ranks.
+    If either operand is an error, then an error will be propagated to the
+    result. If the input types mismatch or the ranks do not match, then the
+    result is an error.
   }];
 
   let arguments = (ins Shape_ShapeOrSizeType:$lhs, Shape_ShapeOrSizeType:$rhs);
@@ -423,10 +423,10 @@ def Shape_MaxOp : Shape_Op<"max", [Commutative, NoSideEffect]> {
 def Shape_MinOp : Shape_Op<"min", [Commutative, NoSideEffect]> {
   let summary = "Elementwise minimum";
   let description = [{
-    Computes the elementwise maximum of two shapes with equal ranks. If either
-    operand is an error, then an error will be propagated to the result. If the
-    input types mismatch or the ranks do not match, then the result is an
-    error.
+    Computes the elementwise minimum of two sizes or shapes with equal ranks.
+    If either operand is an error, then an error will be propagated to the
+    result. If the input types mismatch or the ranks do not match, then the
+    result is an error.
   }];
 
   let arguments = (ins Shape_ShapeOrSizeType:$lhs, Shape_ShapeOrSizeType:$rhs);

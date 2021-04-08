@@ -2242,6 +2242,23 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     auto CC = cast<CondCodeSDNode>(CondV.getOperand(2));
     ISD::CondCode CCVal = CC->get();
 
+    // Special case for a select of 2 constants that have a diffence of 1.
+    // Normally this is done by DAGCombine, but if the select is introduced by
+    // type legalization or op legalization, we miss it. Restricting to SETLT
+    // case for now because that is what signed saturating add/sub need.
+    // FIXME: We don't need the condition to be SETLT or even a SETCC,
+    // but we would probably want to swap the true/false values if the condition
+    // is SETGE/SETLE to avoid an XORI.
+    if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
+        CCVal == ISD::SETLT) {
+      const APInt &TrueVal = cast<ConstantSDNode>(TrueV)->getAPIntValue();
+      const APInt &FalseVal = cast<ConstantSDNode>(FalseV)->getAPIntValue();
+      if (TrueVal - 1 == FalseVal)
+        return DAG.getNode(ISD::ADD, DL, Op.getValueType(), CondV, FalseV);
+      if (TrueVal + 1 == FalseVal)
+        return DAG.getNode(ISD::SUB, DL, Op.getValueType(), FalseV, CondV);
+    }
+
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
     SDValue TargetCC = DAG.getConstant(CCVal, DL, XLenVT);
@@ -2951,6 +2968,70 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                     DAG.getCondCode(ISD::SETEQ), Mask, VL);
     return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, SelectCond, SplattedVal,
                        Vec, VL);
+  }
+  case Intrinsic::riscv_vslide1up:
+  case Intrinsic::riscv_vslide1down:
+  case Intrinsic::riscv_vslide1up_mask:
+  case Intrinsic::riscv_vslide1down_mask: {
+    // We need to special case these when the scalar is larger than XLen.
+    unsigned NumOps = Op.getNumOperands();
+    bool IsMasked = NumOps == 6;
+    unsigned OpOffset = IsMasked ? 1 : 0;
+    SDValue Scalar = Op.getOperand(2 + OpOffset);
+    if (Scalar.getValueType().bitsLE(XLenVT))
+      break;
+
+    // Splatting a sign extended constant is fine.
+    if (auto *CVal = dyn_cast<ConstantSDNode>(Scalar))
+      if (isInt<32>(CVal->getSExtValue()))
+        break;
+
+    MVT VT = Op.getSimpleValueType();
+    assert(VT.getVectorElementType() == MVT::i64 &&
+           Scalar.getValueType() == MVT::i64 && "Unexpected VTs");
+
+    // Convert the vector source to the equivalent nxvXi32 vector.
+    MVT I32VT = MVT::getVectorVT(MVT::i32, VT.getVectorElementCount() * 2);
+    SDValue Vec = DAG.getBitcast(I32VT, Op.getOperand(1 + OpOffset));
+
+    SDValue ScalarLo = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                                   DAG.getConstant(0, DL, XLenVT));
+    SDValue ScalarHi = DAG.getNode(ISD::EXTRACT_ELEMENT, DL, MVT::i32, Scalar,
+                                   DAG.getConstant(1, DL, XLenVT));
+
+    // Double the VL since we halved SEW.
+    SDValue VL = Op.getOperand(NumOps - 1);
+    SDValue I32VL =
+        DAG.getNode(ISD::SHL, DL, XLenVT, VL, DAG.getConstant(1, DL, XLenVT));
+
+    MVT I32MaskVT = MVT::getVectorVT(MVT::i1, I32VT.getVectorElementCount());
+    SDValue I32Mask = DAG.getNode(RISCVISD::VMSET_VL, DL, I32MaskVT, VL);
+
+    // Shift the two scalar parts in using SEW=32 slide1up/slide1down
+    // instructions.
+    if (IntNo == Intrinsic::riscv_vslide1up ||
+        IntNo == Intrinsic::riscv_vslide1up_mask) {
+      Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Vec, ScalarHi,
+                        I32Mask, I32VL);
+      Vec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32VT, Vec, ScalarLo,
+                        I32Mask, I32VL);
+    } else {
+      Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Vec, ScalarLo,
+                        I32Mask, I32VL);
+      Vec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32VT, Vec, ScalarHi,
+                        I32Mask, I32VL);
+    }
+
+    // Convert back to nxvXi64.
+    Vec = DAG.getBitcast(VT, Vec);
+
+    if (!IsMasked)
+      return Vec;
+
+    // Apply mask after the operation.
+    SDValue Mask = Op.getOperand(NumOps - 2);
+    SDValue MaskedOff = Op.getOperand(1);
+    return DAG.getNode(RISCVISD::VSELECT_VL, DL, VT, Mask, Vec, MaskedOff, VL);
   }
   }
 
@@ -6979,6 +7060,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VSLIDEUP_VL)
   NODE_NAME_CASE(VSLIDE1UP_VL)
   NODE_NAME_CASE(VSLIDEDOWN_VL)
+  NODE_NAME_CASE(VSLIDE1DOWN_VL)
   NODE_NAME_CASE(VID_VL)
   NODE_NAME_CASE(VFNCVT_ROD_VL)
   NODE_NAME_CASE(VECREDUCE_ADD_VL)
@@ -7039,6 +7121,9 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VZEXT_VL)
   NODE_NAME_CASE(VLE_VL)
   NODE_NAME_CASE(VSE_VL)
+  NODE_NAME_CASE(READ_CSR)
+  NODE_NAME_CASE(WRITE_CSR)
+  NODE_NAME_CASE(SWAP_CSR)
   }
   // clang-format on
   return nullptr;

@@ -46,12 +46,7 @@ ToolOutputFile::ToolOutputFile(StringRef Filename, std::error_code &EC,
     EC = std::error_code();
     return;
   }
-
-  // On Windows, we set the OF_None flag even for text files to avoid
-  // CRLF translation.
-  OSHolder.emplace(
-      Filename, EC,
-      llvm::Triple(LLVM_HOST_TRIPLE).isOSWindows() ? sys::fs::OF_None : Flags);
+  OSHolder.emplace(Filename, EC, Flags);
   OS = OSHolder.getPointer();
   // If open fails, no cleanup is needed.
   if (EC)

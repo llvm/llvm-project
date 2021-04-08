@@ -3447,6 +3447,25 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return CastedXor;
 
   // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
+  // ~min(~X, ~Y) --> max(X, Y)
+  // ~max(~X, Y) --> min(X, ~Y)
+  auto *II = dyn_cast<IntrinsicInst>(Op0);
+  if (II && match(Op1, m_AllOnes())) {
+    if (match(Op0, m_MaxOrMin(m_Not(m_Value(X)), m_Not(m_Value(Y))))) {
+      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, Y);
+      return replaceInstUsesWith(I, InvMaxMin);
+    }
+    if (match(Op0, m_OneUse(m_c_MaxOrMin(m_Not(m_Value(X)), m_Value(Y))))) {
+      Intrinsic::ID InvID = getInverseMinMaxIntrinsic(II->getIntrinsicID());
+      Value *NotY = Builder.CreateNot(Y);
+      Value *InvMaxMin = Builder.CreateBinaryIntrinsic(InvID, X, NotY);
+      return replaceInstUsesWith(I, InvMaxMin);
+    }
+  }
+
+  // TODO: Remove folds if we canonicalize to intrinsics (see above).
+  // Eliminate a bitwise 'not' op of 'not' min/max by inverting the min/max:
   //
   //   %notx = xor i32 %x, -1
   //   %cmp1 = icmp sgt i32 %notx, %y

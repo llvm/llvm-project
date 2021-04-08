@@ -1,12 +1,6 @@
 ; Check getIntrinsicInstrCost in BasicTTIImpl.h with for  masked scatter
 
-; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s 2>%t | FileCheck %s
-
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
-
+; RUN: opt -cost-model -analyze -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
 define void @masked_scatter_nxv4i32(<vscale x 4 x i32> %data, <vscale x 4 x i32*> %ptrs, <vscale x 4 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_nxv4i32'

@@ -762,6 +762,8 @@ defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
+// Prefer ds_read over ds_read2, all other things being equal, because it has
+// a larger immediate offset range.
 let AddedComplexity = 100 in {
 
 foreach vt = VReg_64.RegTypes in {
@@ -774,6 +776,9 @@ foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_align16_local">;
 }
 
+// For performance reasons restrict this to alignment >= 16 even with
+// unaligned-access-mode. At lower alignments ds_read2_b64 is always a better
+// choice.
 foreach vt = VReg_128.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B128, vt, "load_align16_local">;
 }
@@ -782,10 +787,6 @@ let SubtargetPredicate = HasUnalignedAccessMode in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSReadPat_mc <DS_READ_B96, vt, "load_local">;
-}
-
-foreach vt = VReg_128.RegTypes in {
-defm : DSReadPat_mc <DS_READ_B128, vt, "load_local">;
 }
 
 } // End SubtargetPredicate = HasUnalignedAccessMode
@@ -917,6 +918,8 @@ foreach vt = VReg_128.RegTypes in {
 defm : DS128Bit8ByteAlignedPat_mc<vt>;
 }
 
+// Prefer ds_write over ds_write2, all other things being equal, because it has
+// a larger immediate offset range.
 let AddedComplexity = 100 in {
 
 foreach vt = VReg_64.RegTypes in {
@@ -929,6 +932,9 @@ foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_align16_local">;
 }
 
+// For performance reasons restrict this to alignment >= 16 even with
+// unaligned-access-mode. At lower alignments ds_write2_b64 is always a better
+// choice.
 foreach vt = VReg_128.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align16_local">;
 }
@@ -937,10 +943,6 @@ let SubtargetPredicate = HasUnalignedAccessMode in {
 
 foreach vt = VReg_96.RegTypes in {
 defm : DSWritePat_mc <DS_WRITE_B96, vt, "store_local">;
-}
-
-foreach vt = VReg_128.RegTypes in {
-defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_local">;
 }
 
 } // End SubtargetPredicate = HasUnalignedAccessMode
