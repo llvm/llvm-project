@@ -695,7 +695,7 @@ void SIFoldOperands::foldOperand(
     if (!DestReg.isPhysical()) {
       if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
         SmallVector<FoldCandidate, 4> CopyUses;
-        for (auto &Use : make_early_inc_range(MRI->use_nodbg_operands(DestReg))) {
+        for (auto &Use : MRI->use_nodbg_operands(DestReg)) {
           // There's no point trying to fold into an implicit operand.
           if (Use.isImplicit())
             continue;
