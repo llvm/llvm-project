@@ -3196,8 +3196,24 @@ RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
 void RAGreedy::reportNumberOfSplillsReloads() {
   if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
     return;
+  RAGreedyStats Stats;
   for (MachineLoop *L : *Loops)
-    reportNumberOfSplillsReloads(L);
+    Stats.add(reportNumberOfSplillsReloads(L));
+  // Process non-loop blocks.
+  for (MachineBasicBlock &MBB : *MF)
+    if (!Loops->getLoopFor(&MBB))
+      Stats.add(computeNumberOfSplillsReloads(MBB));
+  if (!Stats.isEmpty()) {
+    using namespace ore;
+
+    ORE->emit([&]() {
+      MachineOptimizationRemarkMissed R(DEBUG_TYPE, "SpillReload", DebugLoc(),
+                                        &MF->front());
+      Stats.report(R);
+      R << "generated in function";
+      return R;
+    });
+  }
 }
 
 bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
