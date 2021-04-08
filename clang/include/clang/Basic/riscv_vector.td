@@ -323,6 +323,10 @@ multiclass RVVFloatingBinBuiltinSet
                           [["vv", "v", "vvv"],
                            ["vf", "v", "vve"]]>;
 
+multiclass RVVFloatingBinVFBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "fd",
+                          [["vf", "v", "vve"]]>;
+
 class RVVIntExt<string intrinsic_name, string suffix, string prototype,
                 string type_range>
     : RVVBuiltin<suffix, prototype, type_range> {
@@ -767,3 +771,61 @@ defm vnclip : RVVSignedNShiftBuiltinSet;
 // 14. Vector Floating-Point Instructions
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 defm vfadd : RVVFloatingBinBuiltinSet;
+defm vfsub : RVVFloatingBinBuiltinSet;
+defm vfrsub : RVVFloatingBinVFBuiltinSet;
+
+// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+// TODO
+
+// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+defm vfmul : RVVFloatingBinBuiltinSet;
+defm vfdiv : RVVFloatingBinBuiltinSet;
+defm vfrdiv : RVVFloatingBinVFBuiltinSet;
+
+// 14.5. Vector Widening Floating-Point Multiply
+// TODO
+
+// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+// TODO
+
+// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+// TODO
+
+// 14.8. Vector Floating-Point Square-Root Instruction
+// TODO
+
+// 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
+// TODO
+
+// 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+// TODO
+
+// 14.11. Vector Floating-Point MIN/MAX Instructions
+defm vfmin : RVVFloatingBinBuiltinSet;
+defm vfmax : RVVFloatingBinBuiltinSet;
+
+// 14.12. Vector Floating-Point Sign-Injection Instructions
+defm vfsgnj : RVVFloatingBinBuiltinSet;
+defm vfsgnjn : RVVFloatingBinBuiltinSet;
+defm vfsgnjx : RVVFloatingBinBuiltinSet;
+
+// 14.13. Vector Floating-Point Compare Instructions
+// TODO
+
+// 14.14. Vector Floating-Point Classify Instruction
+// TODO
+
+// 14.15. Vector Floating-Point Merge Instructio
+// TODO
+
+// 14.16. Vector Floating-Point Move Instruction
+// TODO
+
+// 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+// TODO
+
+// 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+// TODO
+
+// 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+// TODO
