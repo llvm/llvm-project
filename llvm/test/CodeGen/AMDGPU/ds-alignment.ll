@@ -698,10 +698,10 @@ define amdgpu_kernel void @ds16align1(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b128 v[0:3], v0
+; UNALIGNED-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v4, s1
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
+; UNALIGNED-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; UNALIGNED-NEXT:    s_endpgm
   %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 1
   store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 1
@@ -772,10 +772,10 @@ define amdgpu_kernel void @ds16align2(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b128 v[0:3], v0
+; UNALIGNED-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v4, s1
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
+; UNALIGNED-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; UNALIGNED-NEXT:    s_endpgm
   %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 2
   store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 2
@@ -815,10 +815,10 @@ define amdgpu_kernel void @ds16align4(<4 x i32> addrspace(3)* %in, <4 x i32> add
 ; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b128 v[0:3], v0
+; UNALIGNED-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; UNALIGNED-NEXT:    v_mov_b32_e32 v4, s1
 ; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
+; UNALIGNED-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; UNALIGNED-NEXT:    s_endpgm
   %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 4
   store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 4
@@ -826,27 +826,16 @@ define amdgpu_kernel void @ds16align4(<4 x i32> addrspace(3)* %in, <4 x i32> add
 }
 
 define amdgpu_kernel void @ds16align8(<4 x i32> addrspace(3)* %in, <4 x i32> addrspace(3)* %out) {
-; ALIGNED-LABEL: ds16align8:
-; ALIGNED:       ; %bb.0:
-; ALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
-; ALIGNED-NEXT:    v_mov_b32_e32 v4, s1
-; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; ALIGNED-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
-; ALIGNED-NEXT:    s_endpgm
-;
-; UNALIGNED-LABEL: ds16align8:
-; UNALIGNED:       ; %bb.0:
-; UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; UNALIGNED-NEXT:    ds_read_b128 v[0:3], v0
-; UNALIGNED-NEXT:    v_mov_b32_e32 v4, s1
-; UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-NEXT:    ds_write_b128 v4, v[0:3]
-; UNALIGNED-NEXT:    s_endpgm
+; GCN-LABEL: ds16align8:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
+; GCN-NEXT:    v_mov_b32_e32 v4, s1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
+; GCN-NEXT:    s_endpgm
   %val = load <4 x i32>, <4 x i32> addrspace(3)* %in, align 8
   store <4 x i32> %val, <4 x i32> addrspace(3)* %out, align 8
   ret void
