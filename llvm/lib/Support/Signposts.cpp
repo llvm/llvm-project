@@ -59,7 +59,7 @@ class SignpostEmitterImpl {
   }
 
 public:
-  SignpostEmitterImpl() : SignpostLog(LogCreator(), LogDeleter), Signposts() {}
+  SignpostEmitterImpl() : SignpostLog(LogCreator(), LogDeleter) {}
 
   bool isEnabled() const {
     if (SIGNPOSTS_AVAILABLE())
