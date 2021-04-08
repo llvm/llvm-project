@@ -339,7 +339,7 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
       return;
   LLVM_DEBUG(dbgs() << "Append " << (Commuted ? "commuted" : "normal")
                     << " operand " << OpNo << "\n  " << *MI);
-  FoldList.push_back(FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
+  FoldList.emplace_back(MI, OpNo, FoldOp, Commuted, ShrinkOp);
 }
 
 static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
@@ -520,7 +520,7 @@ static bool getRegSeqInit(
       Sub = Op;
     }
 
-    Defs.push_back(std::make_pair(Sub, Def->getOperand(I + 1).getImm()));
+    Defs.emplace_back(Sub, Def->getOperand(I + 1).getImm());
   }
 
   return true;
@@ -700,9 +700,9 @@ void SIFoldOperands::foldOperand(
           if (Use.isImplicit())
             continue;
 
-          FoldCandidate FC = FoldCandidate(Use.getParent(), Use.getParent()->getOperandNo(&Use),
-                                           &UseMI->getOperand(1));
-          CopyUses.push_back(FC);
+          CopyUses.emplace_back(Use.getParent(),
+                                Use.getParent()->getOperandNo(&Use),
+                                &UseMI->getOperand(1));
         }
         for (auto &F : CopyUses) {
           foldOperand(*F.OpToFold, F.UseMI, F.UseOpNo, FoldList, CopiesToReplace);
