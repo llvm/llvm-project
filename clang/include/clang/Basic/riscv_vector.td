@@ -273,6 +273,11 @@ multiclass RVVIntBinBuiltinSet
     : RVVSignedBinBuiltinSet,
       RVVUnsignedBinBuiltinSet;
 
+multiclass RVVSlideOneBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vx", "v", "vve"],
+                           ["vx", "Uv", "UvUve"]]>;
+
 multiclass RVVSignedShiftBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vv", "v", "vvUv"],
@@ -396,6 +401,14 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
   let HasMaskedOffOperand = false;
 }
 
+let HasMaskedOffOperand = false in {
+  multiclass RVVSlideBuiltinSet {
+    defm "" : RVVOutBuiltinSet<NAME, "csilfd",
+                               [["vx","v", "vvvz"]]>;
+    defm "" : RVVOutBuiltinSet<NAME, "csil",
+                               [["vx","Uv", "UvUvUvz"]]>;
+  }
+}
 
 class RVVFloatingUnaryBuiltin<string builtin_suffix, string ir_suffix,
                               string prototype>
@@ -1177,4 +1190,51 @@ let HasNoMaskedOverloaded = false in {
   // 16.9. Vector Element Index Instruction
   defm vid : RVVOutBuiltinSet<"vid", "csil", [["v", "v", "v"],
                                               ["v", "Uv", "Uv"]]>;
+}
+
+// 17. Vector Permutation Instructions
+// 17.1. Integer Scalar Move Instructions
+// TODO
+
+// 17.2. Floating-Point Scalar Move Instructions
+// TODO
+
+// 17.3. Vector Slide Instructions
+// 17.3.1. Vector Slideup Instructions
+defm vslideup   : RVVSlideBuiltinSet;
+// 17.3.2. Vector Slidedown Instructions
+defm vslidedown : RVVSlideBuiltinSet;
+
+// 17.3.3. Vector Slide1up Instructions
+defm vslide1up : RVVSlideOneBuiltinSet;
+defm vfslide1up : RVVFloatingBinVFBuiltinSet;
+
+// 17.3.4. Vector Slide1down Instruction
+defm vslide1down : RVVSlideOneBuiltinSet;
+defm vfslide1down : RVVFloatingBinVFBuiltinSet;
+
+// 17.4. Vector Register Gather Instructions
+// signed and floating type
+defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilfd",
+                                 [["vv", "v", "vvUv"]]>;
+defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csilfd",
+                                 [["vx", "v", "vvz"]]>;
+defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilfd",
+                                     [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
+// unsigned type
+defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csil",
+                                 [["vv", "Uv", "UvUvUv"]]>;
+defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csil",
+                                 [["vx", "Uv", "UvUvz"]]>;
+defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
+                                     [["vv", "Uv", "UvUv(Log2EEW:4)Uv"]]>;
+
+// 17.5. Vector Compress Instruction
+let HasMask = false, PermuteOperands = [2, 0, 1] in {
+  // signed and floating type
+  defm vcompress : RVVOutBuiltinSet<"vcompress", "csilfd",
+                                    [["vm", "v", "vvvm"]]>;
+  // unsigned type
+  defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
+                                    [["vm", "Uv", "UvUvUvm"]]>;
 }
