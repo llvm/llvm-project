@@ -148,7 +148,8 @@ void test_s_setreg(int x, int y) {
 void test_atomic_inc32() {
   uint val = 17;
   val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_RELAXED, "workgroup");
+  val = __builtin_amdgcn_atomic_inc32(&val, val, __ATOMIC_CONSUME, "workgroup");
   val = __builtin_amdgcn_atomic_inc32(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc32(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc32(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
@@ -162,7 +163,8 @@ void test_atomic_inc32() {
 void test_atomic_inc64() {
   __UINT64_TYPE__ val = 17;
   val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_RELAXED, "workgroup");
+  val = __builtin_amdgcn_atomic_inc64(&val, val, __ATOMIC_CONSUME, "workgroup");
   val = __builtin_amdgcn_atomic_inc64(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc64(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_inc64(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
@@ -176,7 +178,8 @@ void test_atomic_inc64() {
 void test_atomic_dec32() {
   uint val = 17;
   val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_RELAXED, "workgroup");
+  val = __builtin_amdgcn_atomic_dec32(&val, val, __ATOMIC_CONSUME, "workgroup");
   val = __builtin_amdgcn_atomic_dec32(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec32(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec32(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
@@ -190,7 +193,8 @@ void test_atomic_dec32() {
 void test_atomic_dec64() {
   __UINT64_TYPE__ val = 17;
   val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
+  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_RELAXED, "workgroup");
+  val = __builtin_amdgcn_atomic_dec64(&val, val, __ATOMIC_CONSUME, "workgroup");
   val = __builtin_amdgcn_atomic_dec64(4);                                            // expected-error {{too few arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec64(&val, val, 4, 4, 4, 4);                        // expected-error {{too many arguments to function call, expected 4}}
   val = __builtin_amdgcn_atomic_dec64(&val, val, 3.14, "");                          // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
