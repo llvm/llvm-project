@@ -132,7 +132,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
           << FixItHint::CreateRemoval(InlineLoc);
     Decl *NSAlias = ParseNamespaceAlias(NamespaceLoc, IdentLoc, Ident, DeclEnd);
     return Actions.ConvertDeclToDeclGroup(NSAlias);
-}
+  }
 
   BalancedDelimiterTracker T(*this, tok::l_brace);
   if (T.consumeOpen()) {
