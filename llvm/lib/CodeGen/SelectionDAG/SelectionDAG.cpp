@@ -5056,7 +5056,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // If the opcode is a target-specific ISD node, there's nothing we can
   // do here and the operand rules may not line up with the below, so
   // bail early.
-  if (Opcode >= ISD::BUILTIN_OP_END)
+  // We can't create a scalar CONCAT_VECTORS so skip it. It will break
+  // for concats involving SPLAT_VECTOR. Concats of BUILD_VECTORS are handled by
+  // foldCONCAT_VECTORS in getNode before this is called.
+  if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::CONCAT_VECTORS)
     return SDValue();
 
   // For now, the array Ops should only contain two values.
@@ -5096,26 +5099,19 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(N2))
       return FoldSymbolOffset(Opcode, VT, GA, N1);
 
-  // TODO: All the folds below are performed lane-by-lane and assume a fixed
-  // vector width, however we should be able to do constant folds involving
-  // splat vector nodes too.
-  if (VT.isScalableVector())
-    return SDValue();
-
   // For fixed width vectors, extract each constant element and fold them
   // individually. Either input may be an undef value.
-  auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
-  if (!BV1 && !N1->isUndef())
+  bool IsBVOrSV1 = N1->getOpcode() == ISD::BUILD_VECTOR ||
+                   N1->getOpcode() == ISD::SPLAT_VECTOR;
+  if (!IsBVOrSV1 && !N1->isUndef())
     return SDValue();
-  auto *BV2 = dyn_cast<BuildVectorSDNode>(N2);
-  if (!BV2 && !N2->isUndef())
+  bool IsBVOrSV2 = N2->getOpcode() == ISD::BUILD_VECTOR ||
+                   N2->getOpcode() == ISD::SPLAT_VECTOR;
+  if (!IsBVOrSV2 && !N2->isUndef())
     return SDValue();
   // If both operands are undef, that's handled the same way as scalars.
-  if (!BV1 && !BV2)
+  if (!IsBVOrSV1 && !IsBVOrSV2)
     return SDValue();
-
-  assert((!BV1 || !BV2 || BV1->getNumOperands() == BV2->getNumOperands()) &&
-         "Vector binop with different number of elements in operands?");
 
   EVT SVT = VT.getScalarType();
   EVT LegalSVT = SVT;
@@ -5124,19 +5120,46 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (LegalSVT.bitsLT(SVT))
       return SDValue();
   }
+
   SmallVector<SDValue, 4> Outputs;
-  unsigned NumOps = BV1 ? BV1->getNumOperands() : BV2->getNumOperands();
+  unsigned NumOps = 0;
+  if (IsBVOrSV1)
+    NumOps = std::max(NumOps, N1->getNumOperands());
+  if (IsBVOrSV2)
+    NumOps = std::max(NumOps, N2->getNumOperands());
+  assert(NumOps != 0 && "Expected non-zero operands");
+  // Scalable vectors should only be SPLAT_VECTOR or UNDEF here. We only need
+  // one iteration for that.
+  assert((!VT.isScalableVector() || NumOps == 1) &&
+         "Scalar vector should only have one scalar");
+
   for (unsigned I = 0; I != NumOps; ++I) {
-    SDValue V1 = BV1 ? BV1->getOperand(I) : getUNDEF(SVT);
-    SDValue V2 = BV2 ? BV2->getOperand(I) : getUNDEF(SVT);
+    // We can have a fixed length SPLAT_VECTOR and a BUILD_VECTOR so we need
+    // to use operand 0 of the SPLAT_VECTOR for each fixed element.
+    SDValue V1;
+    if (N1->getOpcode() == ISD::BUILD_VECTOR)
+      V1 = N1->getOperand(I);
+    else if (N1->getOpcode() == ISD::SPLAT_VECTOR)
+      V1 = N1->getOperand(0);
+    else
+      V1 = getUNDEF(SVT);
+
+    SDValue V2;
+    if (N2->getOpcode() == ISD::BUILD_VECTOR)
+      V2 = N2->getOperand(I);
+    else if (N2->getOpcode() == ISD::SPLAT_VECTOR)
+      V2 = N2->getOperand(0);
+    else
+      V2 = getUNDEF(SVT);
+
     if (SVT.isInteger()) {
-      if (V1->getValueType(0).bitsGT(SVT))
+      if (V1.getValueType().bitsGT(SVT))
         V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);
-      if (V2->getValueType(0).bitsGT(SVT))
+      if (V2.getValueType().bitsGT(SVT))
         V2 = getNode(ISD::TRUNCATE, DL, SVT, V2);
     }
 
-    if (V1->getValueType(0) != SVT || V2->getValueType(0) != SVT)
+    if (V1.getValueType() != SVT || V2.getValueType() != SVT)
       return SDValue();
 
     // Fold one vector element.
@@ -5151,11 +5174,21 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     Outputs.push_back(ScalarResult);
   }
 
-  assert(VT.getVectorNumElements() == Outputs.size() &&
-         "Vector size mismatch!");
+  if (N1->getOpcode() == ISD::BUILD_VECTOR ||
+      N2->getOpcode() == ISD::BUILD_VECTOR) {
+    assert(VT.getVectorNumElements() == Outputs.size() &&
+           "Vector size mismatch!");
 
-  // Build a big vector out of the scalar elements we generated.
-  return getBuildVector(VT, SDLoc(), Outputs);
+    // Build a big vector out of the scalar elements we generated.
+    return getBuildVector(VT, SDLoc(), Outputs);
+  }
+
+  assert((N1->getOpcode() == ISD::SPLAT_VECTOR ||
+          N2->getOpcode() == ISD::SPLAT_VECTOR) &&
+         "One operand should be a splat vector");
+
+  assert(Outputs.size() == 1 && "Vector size mismatch!");
+  return getSplatVector(VT, SDLoc(), Outputs[0]);
 }
 
 // TODO: Merge with FoldConstantArithmetic

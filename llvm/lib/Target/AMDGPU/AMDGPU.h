@@ -18,6 +18,7 @@ namespace llvm {
 class FunctionPass;
 class GCNTargetMachine;
 class ImmutablePass;
+class MachineFunctionPass;
 class ModulePass;
 class Pass;
 class Target;
@@ -72,6 +73,16 @@ ModulePass *createAMDGPUPropagateAttributesLatePass(const TargetMachine *);
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
+
+namespace AMDGPU {
+enum RegBankReassignMode {
+  RM_VGPR = 1,
+  RM_SGPR = 2,
+  RM_BOTH = RM_VGPR | RM_SGPR
+};
+}
+MachineFunctionPass *
+createGCNRegBankReassignPass(AMDGPU::RegBankReassignMode Mode);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}

@@ -1,8 +1,4 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -scalarize-masked-mem-intrin -S < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -scalarize-masked-mem-intrin -S < %s | FileCheck %s
 
 ; Testing that masked scatters operating on scalable vectors that are
 ; packed in SVE registers are not scalarized.

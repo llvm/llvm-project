@@ -4092,6 +4092,14 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
     return false;
   }
 
+  if (isGFX90A() && (CPol & CPol::SCC)) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scc")]);
+    Error(S, "scc is not supported on this GPU");
+    return false;
+  }
+
   if (!(TSFlags & (SIInstrFlags::IsAtomicNoRet | SIInstrFlags::IsAtomicRet)))
     return true;
 
@@ -4108,14 +4116,6 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
       Error(S, "instruction must not use glc");
       return false;
     }
-  }
-
-  if (isGFX90A() && (CPol & CPol::SCC) && (TSFlags & SIInstrFlags::FPAtomic)) {
-    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
-    StringRef CStr(S.getPointer());
-    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scc")]);
-    Error(S, "instruction must not use scc");
-    return false;
   }
 
   return true;

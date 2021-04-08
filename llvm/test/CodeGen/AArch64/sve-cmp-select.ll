@@ -1,8 +1,4 @@
-; RUN: llc -mtriple=aarch64-linux-unknown -mattr=+sve -o - < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix="WARN" --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: llc -mtriple=aarch64-linux-unknown -mattr=+sve -o - < %s | FileCheck %s
 
 define <vscale x 16 x i8> @vselect_cmp_ne(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
   ; CHECK-LABEL: vselect_cmp_ne

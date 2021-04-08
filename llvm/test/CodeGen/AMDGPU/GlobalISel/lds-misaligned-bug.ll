@@ -26,8 +26,8 @@ bb:
 ; ALIGNED-DAG: ds_read2_b32
 ; ALIGNED-DAG: ds_write2_b32
 ; ALIGNED-DAG: ds_write2_b32
-; UNALIGNED-DAG: ds_read_b128
-; UNALIGNED-DAG: ds_write_b128
+; UNALIGNED-DAG: ds_read2_b64
+; UNALIGNED-DAG: ds_write2_b64
 define amdgpu_kernel void @test_local_misaligned_v4(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -108,8 +108,8 @@ bb:
 ; GCN-LABEL: test_local_v4_aligned8:
 ; ALIGNED-DAG: ds_read2_b64
 ; ALIGNED-DAG: ds_write2_b64
-; UNALIGNED-DAG: ds_read_b128
-; UNALIGNED-DAG: ds_write_b128
+; UNALIGNED-DAG: ds_read2_b64
+; UNALIGNED-DAG: ds_write2_b64
 define amdgpu_kernel void @test_local_v4_aligned8(i32 addrspace(3)* %arg) {
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
