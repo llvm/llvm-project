@@ -314,3 +314,27 @@ orc2 x5, x6
 # CHECK-S-OBJ-NOALIAS: gorci t0, t1, 63
 # CHECK-S-OBJ: orc t0, t1
 orc x5, x6
+
+# CHECK-S-OBJ-NOALIAS: rori t0, t1, 8
+# CHECK-S-OBJ: rori t0, t1, 8
+ror x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: roriw t0, t1, 8
+# CHECK-S-OBJ: roriw t0, t1, 8
+rorw x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bseti t0, t1, 8
+# CHECK-S-OBJ: bseti t0, t1, 8
+bset x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bclri t0, t1, 8
+# CHECK-S-OBJ: bclri t0, t1, 8
+bclr x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: binvi t0, t1, 8
+# CHECK-S-OBJ: binvi t0, t1, 8
+binv x5, x6, 8
+
+# CHECK-S-OBJ-NOALIAS: bexti t0, t1, 8
+# CHECK-S-OBJ: bexti t0, t1, 8
+bext x5, x6, 8
