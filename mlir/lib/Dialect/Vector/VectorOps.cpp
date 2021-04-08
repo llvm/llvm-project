@@ -2202,12 +2202,15 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
     return op->emitOpError(
         "requires source to be a memref or ranked tensor type");
   auto elementType = shapedType.getElementType();
+  DataLayout dataLayout = DataLayout::closest(op);
   if (auto vectorElementType = elementType.dyn_cast<VectorType>()) {
     // Memref or tensor has vector element type.
-    unsigned sourceVecSize = vectorElementType.getElementTypeBitWidth() *
-                             vectorElementType.getShape().back();
+    unsigned sourceVecSize =
+        dataLayout.getTypeSizeInBits(vectorElementType.getElementType()) *
+        vectorElementType.getShape().back();
     unsigned resultVecSize =
-        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
+        dataLayout.getTypeSizeInBits(vectorType.getElementType()) *
+        vectorType.getShape().back();
     if (resultVecSize % sourceVecSize != 0)
       return op->emitOpError(
           "requires the bitwidth of the minor 1-D vector to be an integral "
@@ -2226,8 +2229,9 @@ static LogicalResult verifyTransferOp(Operation *op, ShapedType shapedType,
   } else {
     // Memref or tensor has scalar element type.
     unsigned resultVecSize =
-        vectorType.getElementTypeBitWidth() * vectorType.getShape().back();
-    if (resultVecSize % elementType.getIntOrFloatBitWidth() != 0)
+        dataLayout.getTypeSizeInBits(vectorType.getElementType()) *
+        vectorType.getShape().back();
+    if (resultVecSize % dataLayout.getTypeSizeInBits(elementType) != 0)
       return op->emitOpError(
           "requires the bitwidth of the minor 1-D vector to be an integral "
           "multiple of the bitwidth of the source element type");
@@ -3233,9 +3237,10 @@ static LogicalResult verify(BitCastOp op) {
       return op.emitOpError("dimension size mismatch at: ") << i;
   }
 
-  if (sourceVectorType.getElementTypeBitWidth() *
+  DataLayout dataLayout = DataLayout::closest(op);
+  if (dataLayout.getTypeSizeInBits(sourceVectorType.getElementType()) *
           sourceVectorType.getShape().back() !=
-      resultVectorType.getElementTypeBitWidth() *
+      dataLayout.getTypeSizeInBits(resultVectorType.getElementType()) *
           resultVectorType.getShape().back())
     return op.emitOpError(
         "source/result bitwidth of the minor 1-D vectors must be equal");

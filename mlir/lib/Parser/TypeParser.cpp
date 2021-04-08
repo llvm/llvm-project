@@ -472,7 +472,7 @@ VectorType Parser::parseVectorType() {
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
   if (!VectorType::isValidElementType(elementType))
-    return emitError(typeLoc, "vector elements must be int or float type"),
+    return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
   return VectorType::get(dimensions, elementType);

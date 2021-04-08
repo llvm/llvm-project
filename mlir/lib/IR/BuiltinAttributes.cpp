@@ -693,7 +693,7 @@ DenseElementsAttr DenseElementsAttr::get(ShapedType type,
            "expected attribute value to have element type");
     if (eltType.isa<FloatType>())
       intVal = values[i].cast<FloatAttr>().getValue().bitcastToAPInt();
-    else if (eltType.isa<IntegerType>())
+    else if (eltType.isa<IntegerType, IndexType>())
       intVal = values[i].cast<IntegerAttr>().getValue();
     else
       llvm_unreachable("unexpected element type");

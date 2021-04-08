@@ -1388,7 +1388,7 @@ public:
     VectorType rhsType = op.getOperandTypeRHS().dyn_cast<VectorType>();
     VectorType resType = op.getVectorType();
     Type eltType = resType.getElementType();
-    bool isInt = eltType.isa<IntegerType>();
+    bool isInt = eltType.isa<IntegerType, IndexType>();
     Value acc = (op.acc().empty()) ? nullptr : op.acc()[0];
     vector::CombiningKind kind = op.kind();
 

@@ -264,6 +264,19 @@ mlir::DataLayout::DataLayout(ModuleOp op)
 #endif
 }
 
+mlir::DataLayout mlir::DataLayout::closest(Operation *op) {
+  // Search the closest parent either being a module operation or implementing
+  // the data layout interface.
+  while (op) {
+    if (auto module = dyn_cast<ModuleOp>(op))
+      return DataLayout(module);
+    if (auto iface = dyn_cast<DataLayoutOpInterface>(op))
+      return DataLayout(iface);
+    op = op->getParentOp();
+  }
+  return DataLayout();
+}
+
 void mlir::DataLayout::checkValid() const {
 #ifndef NDEBUG
   SmallVector<DataLayoutSpecInterface> specs;
