@@ -1081,6 +1081,12 @@ bool LoopReroll::DAGRootTracker::collectUsedInstructions(SmallInstructionSet &Po
   DenseSet<Instruction*> V;
   collectInLoopUserSet(LoopIncs, Exclude, PossibleRedSet, V);
   for (auto *I : V) {
+    if (I->mayHaveSideEffects()) {
+      LLVM_DEBUG(dbgs() << "LRR: Aborting - "
+                        << "An instruction which does not belong to any root "
+                        << "sets must not have side effects: " << *I);
+      return false;
+    }
     Uses[I].set(IL_All);
   }
 
