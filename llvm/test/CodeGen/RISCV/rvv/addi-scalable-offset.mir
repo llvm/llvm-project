@@ -43,6 +43,8 @@ body: |
     ; CHECK: $x10 = LUI 1048575
     ; CHECK: $x10 = ADDIW killed $x10, 1824
     ; CHECK: $x10 = ADD $x8, killed $x10
+    ; CHECK: $x11 = PseudoReadVLENB
+    ; CHECK: $x10 = SUB killed $x10, killed $x11
     ; CHECK: VS1R_V killed renamable $v25, killed renamable $x10
     ; CHECK: $x10 = PseudoReadVLENB
     ; CHECK: $x2 = ADD $x2, killed $x10
