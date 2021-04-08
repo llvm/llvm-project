@@ -6045,8 +6045,7 @@ For GFX90A:
       the cache probe caused by coherent requests. Coherent requests are caused
       by GPU accesses to pages with the PTE C-bit set, by CPU accesses over
       XGMI, and by PCIe requests that are configured to be coherent requests.
-
-      * XGMI accesses from the CPU to local memory may be cached on the CPU.
+    * XGMI accesses from the CPU to local memory may be cached on the CPU.
       Subsequent access from the GPU will automatically invalidate or writeback
       the CPU cache due to the L2 probe filter and and the PTE C-bit being set.
     * Since all work-groups on the same agent share the same L2, no L2
