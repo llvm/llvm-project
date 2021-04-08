@@ -3534,3 +3534,16 @@ GDBRemoteCommunicationServerLLGS::ReadTid(StringExtractorGDBRemote &packet,
 
   return tid;
 }
+
+std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
+    const llvm::ArrayRef<llvm::StringRef> client_features) {
+  auto ret =
+      GDBRemoteCommunicationServerCommon::HandleFeatures(client_features);
+  ret.insert(ret.end(), {
+    "qXfer:features:read+", "multiprocess+",
+#if defined(__linux__) || defined(__NetBSD__) || defined(__FreeBSD__)
+        "QPassSignals+", "qXfer:auxv:read+", "qXfer:libraries-svr4:read+",
+#endif
+  });
+  return ret;
+}
