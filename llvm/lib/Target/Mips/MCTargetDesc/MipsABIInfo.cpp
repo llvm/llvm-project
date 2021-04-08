@@ -113,8 +113,7 @@ unsigned MipsABIInfo::GetPtrAndOp() const {
 }
 
 unsigned MipsABIInfo::GetGPRMoveOp() const {
-  // TODO: Add nanoMIPS MOVE instruction. Avoid assert to keep tests passing.
-  return ArePtrs64bit() ? Mips::OR64 : Mips::OR;
+  return ArePtrs64bit() ? Mips::OR64 : IsP32() ? Mips::OR_NM : Mips::OR;
 }
 
 unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {

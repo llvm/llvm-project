@@ -76,6 +76,7 @@ def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>, ISA_NANOMIPS;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>, ISA_NANOMIPS;
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>, ISA_NANOMIPS;
+def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>, ISA_NANOMIPS;
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
