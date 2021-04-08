@@ -564,6 +564,13 @@ int main(int argc, char *const argv[]) {
       options.instrumentedParse = true;
     } else if (arg == "-fdebug-no-semantics") {
       driver.debugNoSemantics = true;
+    } else if (arg == "-fdebug-unparse-no-sema") {
+      driver.debugNoSemantics = true;
+      driver.dumpUnparse = true;
+    } else if (arg == "-fdebug-dump-parse-tree-no-sema") {
+      driver.debugNoSemantics = true;
+      driver.dumpParseTree = true;
+      driver.syntaxOnly = true;
     } else if (arg == "-funparse" || arg == "-fdebug-unparse") {
       driver.dumpUnparse = true;
     } else if (arg == "-funparse-with-symbols" ||

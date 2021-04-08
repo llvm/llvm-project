@@ -1,4 +1,4 @@
-! RUN: %f18 -fdebug-no-semantics -funparse -fopenmp %s | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse-no-sema -fopenmp %s | FileCheck %s
 ! Check Unparsing of OpenMP Allocate directive
 
 program allocate_unparse

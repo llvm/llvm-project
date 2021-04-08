@@ -37,6 +37,10 @@ enum ActionKind {
   /// Parse, unparse the parse-tree and output a Fortran source file
   DebugUnparse,
 
+  /// Parse, unparse the parse-tree and output a Fortran source file, skip the
+  /// semantic checks
+  DebugUnparseNoSema,
+
   /// Parse, resolve the sybmols, unparse the parse-tree and then output a
   /// Fortran source file
   DebugUnparseWithSymbols,
@@ -46,6 +50,9 @@ enum ActionKind {
 
   /// Parse, run semantics and then output the parse tree
   DebugDumpParseTree,
+
+  /// Parse and then output the parse tree, skip the semantic checks
+  DebugDumpParseTreeNoSema,
 
   /// Dump provenance
   DebugDumpProvenance,
