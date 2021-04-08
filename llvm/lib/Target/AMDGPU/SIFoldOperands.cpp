@@ -90,6 +90,7 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
+  bool tryFoldCndMask(MachineInstr &MI) const;
   void foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
 
   const MachineOperand *isClamp(const MachineInstr &MI) const;
@@ -1146,15 +1147,14 @@ static bool tryConstantFoldOp(MachineRegisterInfo &MRI,
 }
 
 // Try to fold an instruction into a simpler one
-static bool tryFoldCndMask(const SIInstrInfo *TII,
-                           MachineInstr *MI) {
-  unsigned Opc = MI->getOpcode();
+bool SIFoldOperands::tryFoldCndMask(MachineInstr &MI) const {
+  unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64 &&
       Opc != AMDGPU::V_CNDMASK_B64_PSEUDO)
     return false;
 
-  MachineOperand *Src0 = TII->getNamedOperand(*MI, AMDGPU::OpName::src0);
-  MachineOperand *Src1 = TII->getNamedOperand(*MI, AMDGPU::OpName::src1);
+  MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0))
     return false;
 
@@ -1162,23 +1162,23 @@ static bool tryFoldCndMask(const SIInstrInfo *TII,
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1_modifiers);
   int Src0ModIdx =
       AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
-  if ((Src1ModIdx != -1 && MI->getOperand(Src1ModIdx).getImm() != 0) ||
-      (Src0ModIdx != -1 && MI->getOperand(Src0ModIdx).getImm() != 0))
+  if ((Src1ModIdx != -1 && MI.getOperand(Src1ModIdx).getImm() != 0) ||
+      (Src0ModIdx != -1 && MI.getOperand(Src0ModIdx).getImm() != 0))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Folded " << *MI << " into ");
+  LLVM_DEBUG(dbgs() << "Folded " << MI << " into ");
   auto &NewDesc =
       TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY : getMovOpc(false));
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx != -1)
-    MI->RemoveOperand(Src2Idx);
-  MI->RemoveOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1));
+    MI.RemoveOperand(Src2Idx);
+  MI.RemoveOperand(AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1));
   if (Src1ModIdx != -1)
-    MI->RemoveOperand(Src1ModIdx);
+    MI.RemoveOperand(Src1ModIdx);
   if (Src0ModIdx != -1)
-    MI->RemoveOperand(Src0ModIdx);
-  mutateCopyOp(*MI, NewDesc);
-  LLVM_DEBUG(dbgs() << *MI);
+    MI.RemoveOperand(Src0ModIdx);
+  mutateCopyOp(MI, NewDesc);
+  LLVM_DEBUG(dbgs() << MI);
   return true;
 }
 
@@ -1300,7 +1300,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
-      if (tryFoldCndMask(TII, Fold.UseMI))
+      if (tryFoldCndMask(*Fold.UseMI))
         Folded.insert(Fold.UseMI);
     } else if (Fold.isCommuted()) {
       // Restoring instruction's original operand order if fold has failed.
@@ -1723,7 +1723,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
-      tryFoldCndMask(TII, &MI);
+      tryFoldCndMask(MI);
 
       if (MI.isRegSequence() && tryFoldRegSequence(MI))
         continue;
