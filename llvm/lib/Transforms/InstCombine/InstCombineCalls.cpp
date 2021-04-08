@@ -911,6 +911,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // smax(X, -X) --> abs(X)
+    // smin(X, -X) --> -abs(X)
+    // umax(X, -X) --> -abs(X)
+    // umin(X, -X) --> abs(X)
+    if (isKnownNegation(I0, I1)) {
+      // This is some variant of abs(). See if we can propagate 'nsw' to the abs
+      // operation and potentially its negation.
+      bool IntMinIsPoison = isKnownNegation(I0, I1, /* NeedNSW */ true);
+      Value *Abs = Builder.CreateBinaryIntrinsic(
+          Intrinsic::abs, I0,
+          ConstantInt::getBool(II->getContext(), IntMinIsPoison));
+      if (IID == Intrinsic::smin || IID == Intrinsic::umax)
+        Abs = Builder.CreateNeg(Abs, "nabs", /* NUW */ false, IntMinIsPoison);
+      return replaceInstUsesWith(CI, Abs);
+    }
+
     break;
   }
   case Intrinsic::bswap: {
