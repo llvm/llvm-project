@@ -321,8 +321,9 @@ struct FragmentCompiler {
                llvm::SMRange BlockRange) {
 #ifndef CLANGD_ENABLE_REMOTE
     if (External.Server) {
-      diag(Error, "Clangd isn't compiled with remote index support, ignoring "
-                  "Server." External.Server->Range);
+      elog("Clangd isn't compiled with remote index support, ignoring Server: "
+           "{0}",
+           *External.Server);
       External.Server.reset();
     }
 #endif
