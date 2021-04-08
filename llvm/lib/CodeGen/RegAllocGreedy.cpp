@@ -567,7 +567,10 @@ private:
     void report(MachineOptimizationRemarkMissed &R);
   };
 
-  /// Compute and report the number of spills and reloads for a loop.
+  /// Compute the number of spills and reloads for a basic block.
+  RAGreedyStats computeNumberOfSplillsReloads(MachineBasicBlock &MBB);
+
+  /// Compute and report the number of spills through a remark.
   RAGreedyStats reportNumberOfSplillsReloads(MachineLoop *L);
 
   /// Report the number of spills and reloads for each loop.
@@ -3137,6 +3140,33 @@ void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
     R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
 }
 
+RAGreedy::RAGreedyStats
+RAGreedy::computeNumberOfSplillsReloads(MachineBasicBlock &MBB) {
+  RAGreedyStats Stats;
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  int FI;
+
+  for (MachineInstr &MI : MBB) {
+    SmallVector<const MachineMemOperand *, 2> Accesses;
+    auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
+      return MFI.isSpillSlotObjectIndex(cast<FixedStackPseudoSourceValue>(
+          A->getPseudoValue())->getFrameIndex());
+    };
+
+    if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
+      ++Stats.Reloads;
+    else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+             llvm::any_of(Accesses, isSpillSlotAccess))
+      ++Stats.FoldedReloads;
+    else if (TII->isStoreToStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
+      ++Stats.Spills;
+    else if (TII->hasStoreToStackSlot(MI, Accesses) &&
+             llvm::any_of(Accesses, isSpillSlotAccess))
+      ++Stats.FoldedSpills;
+  }
+  return Stats;
+}
+
 RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
   RAGreedyStats Stats;
 
@@ -3144,32 +3174,10 @@ RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
   for (MachineLoop *SubLoop : *L)
     Stats.add(reportNumberOfSplillsReloads(SubLoop));
 
-  const MachineFrameInfo &MFI = MF->getFrameInfo();
-  int FI;
-
   for (MachineBasicBlock *MBB : L->getBlocks())
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
-      for (MachineInstr &MI : *MBB) {
-        SmallVector<const MachineMemOperand *, 2> Accesses;
-        auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
-          return MFI.isSpillSlotObjectIndex(
-              cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
-                  ->getFrameIndex());
-        };
-
-        if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
-          ++Stats.Reloads;
-        else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++Stats.FoldedReloads;
-        else if (TII->isStoreToStackSlot(MI, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
-          ++Stats.Spills;
-        else if (TII->hasStoreToStackSlot(MI, Accesses) &&
-                 llvm::any_of(Accesses, isSpillSlotAccess))
-          ++Stats.FoldedSpills;
-      }
+      Stats.add(computeNumberOfSplillsReloads(*MBB));
 
   if (!Stats.isEmpty()) {
     using namespace ore;
