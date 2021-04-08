@@ -546,10 +546,29 @@ private:
 
   bool isUnusedCalleeSavedReg(MCRegister PhysReg) const;
 
+  /// Greedy RA statistic to remark.
+  struct RAGreedyStats {
+    unsigned Reloads = 0;
+    unsigned FoldedReloads = 0;
+    unsigned Spills = 0;
+    unsigned FoldedSpills = 0;
+
+    bool isEmpty() {
+      return !(Reloads || FoldedReloads || Spills || FoldedSpills);
+    }
+
+    void add(RAGreedyStats other) {
+      Reloads += other.Reloads;
+      FoldedReloads += other.FoldedReloads;
+      Spills += other.Spills;
+      FoldedSpills += other.FoldedSpills;
+    }
+
+    void report(MachineOptimizationRemarkMissed &R);
+  };
+
   /// Compute and report the number of spills and reloads for a loop.
-  void reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                    unsigned &FoldedReloads, unsigned &Spills,
-                                    unsigned &FoldedSpills);
+  RAGreedyStats reportNumberOfSplillsReloads(MachineLoop *L);
 
   /// Report the number of spills and reloads for each loop.
   void reportNumberOfSplillsReloads();
@@ -3106,29 +3125,24 @@ MCRegister RAGreedy::selectOrSplitImpl(LiveInterval &VirtReg,
   return 0;
 }
 
-void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
-                                            unsigned &FoldedReloads,
-                                            unsigned &Spills,
-                                            unsigned &FoldedSpills) {
-  Reloads = 0;
-  FoldedReloads = 0;
-  Spills = 0;
-  FoldedSpills = 0;
+void RAGreedy::RAGreedyStats::report(MachineOptimizationRemarkMissed &R) {
+  using namespace ore;
+  if (Spills)
+    R << NV("NumSpills", Spills) << " spills ";
+  if (FoldedSpills)
+    R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
+  if (Reloads)
+    R << NV("NumReloads", Reloads) << " reloads ";
+  if (FoldedReloads)
+    R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+}
+
+RAGreedy::RAGreedyStats RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L) {
+  RAGreedyStats Stats;
 
   // Sum up the spill and reloads in subloops.
-  for (MachineLoop *SubLoop : *L) {
-    unsigned SubReloads;
-    unsigned SubFoldedReloads;
-    unsigned SubSpills;
-    unsigned SubFoldedSpills;
-
-    reportNumberOfSplillsReloads(SubLoop, SubReloads, SubFoldedReloads,
-                                 SubSpills, SubFoldedSpills);
-    Reloads += SubReloads;
-    FoldedReloads += SubFoldedReloads;
-    Spills += SubSpills;
-    FoldedSpills += SubFoldedSpills;
-  }
+  for (MachineLoop *SubLoop : *L)
+    Stats.add(reportNumberOfSplillsReloads(SubLoop));
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   int FI;
@@ -3145,46 +3159,37 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
         };
 
         if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
-          ++Reloads;
+          ++Stats.Reloads;
         else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
                  llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedReloads;
+          ++Stats.FoldedReloads;
         else if (TII->isStoreToStackSlot(MI, FI) &&
                  MFI.isSpillSlotObjectIndex(FI))
-          ++Spills;
+          ++Stats.Spills;
         else if (TII->hasStoreToStackSlot(MI, Accesses) &&
                  llvm::any_of(Accesses, isSpillSlotAccess))
-          ++FoldedSpills;
+          ++Stats.FoldedSpills;
       }
 
-  if (Reloads || FoldedReloads || Spills || FoldedSpills) {
+  if (!Stats.isEmpty()) {
     using namespace ore;
 
     ORE->emit([&]() {
       MachineOptimizationRemarkMissed R(DEBUG_TYPE, "LoopSpillReload",
                                         L->getStartLoc(), L->getHeader());
-      if (Spills)
-        R << NV("NumSpills", Spills) << " spills ";
-      if (FoldedSpills)
-        R << NV("NumFoldedSpills", FoldedSpills) << " folded spills ";
-      if (Reloads)
-        R << NV("NumReloads", Reloads) << " reloads ";
-      if (FoldedReloads)
-        R << NV("NumFoldedReloads", FoldedReloads) << " folded reloads ";
+      Stats.report(R);
       R << "generated in loop";
       return R;
     });
   }
+  return Stats;
 }
 
 void RAGreedy::reportNumberOfSplillsReloads() {
   if (!ORE->allowExtraAnalysis(DEBUG_TYPE))
     return;
-  for (MachineLoop *L : *Loops) {
-    unsigned Reloads, FoldedReloads, Spills, FoldedSpills;
-    reportNumberOfSplillsReloads(L, Reloads, FoldedReloads, Spills,
-                                 FoldedSpills);
-  }
+  for (MachineLoop *L : *Loops)
+    reportNumberOfSplillsReloads(L);
 }
 
 bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
