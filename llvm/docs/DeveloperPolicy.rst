@@ -298,6 +298,88 @@ For minor violations of these recommendations, the community normally favors
 reminding the contributor of this policy over reverting. Minor corrections and
 omissions can be handled by sending a reply to the commits mailing list.
 
+.. _revert_policy:
+
+Patch reversion policy
+----------------------
+
+As a community, we strongly value having the tip of tree in a good state while
+allowing rapid iterative development.  As such, we tend to make much heavier
+use of reverts to keep the tree healthy than some other open source projects,
+and our norms are a bit different.
+
+How should you respond if someone reverted your change?
+
+* Remember, it is normal and healthy to have patches reverted.  Having a patch
+  reverted does not necessarily mean you did anything wrong.
+* We encourage explicitly thanking the person who reverted the patch for doing
+  the task on your behalf.
+* If you need more information to address the problem, please follow up in the
+  original commit thread with the reverting patch author.
+
+When should you revert your own change?
+
+* Any time you learn of a serious problem with a change, you should revert it.
+  We strongly encourage "revert to green" as opposed to "fixing forward".  We
+  encourage reverting first, investigating offline, and then reapplying the
+  fixed patch - possibly after another round of review if warranted.
+* If you break a buildbot in a way which can't be quickly fixed, please revert.
+* If a test case that demonstrates a problem is reported in the commit thread,
+  please revert and investigate offline.
+* If you receive substantial :ref:`post-commit review <post_commit_review>`
+  feedback, please revert and address said feedback before recommitting.
+  (Possibly after another round of review.)
+* If you are asked to revert by another contributor, please revert and discuss
+  the merits of the request offline (unless doing so would further destabilize
+  tip of tree).
+
+When should you revert someone else's change?
+
+* In general, if the author themselves would revert the change per these
+  guidelines, we encourage other contributors to do so as a courtesy to the
+  author.  This is one of the major cases where our norms differ from others;
+  we generally consider reverting a normal part of development.  We don't
+  expect contributors to be always available, and the assurance that a
+  problematic patch will be reverted and we can return to it at our next
+  opportunity enables this.
+
+What are the expectations around a revert?
+
+* Use your best judgment. If you're uncertain, please start an email on
+  the commit thread asking for assistance.  We aren't trying to enumerate
+  every case, but rather give a set of guidelines.
+* You should be sure that reverting the change improves the stability of tip
+  of tree.  Sometimes reverting one change in a series can worsen things
+  instead of improving them.  We expect reasonable judgment to ensure that
+  the proper patch or set of patches is being reverted.
+* The commit message for the reverting commit should explain why patch
+  is being reverted.
+* It is customary to respond to the original commit email mentioning the
+  revert.  This serves as both a notice to the original author that their
+  patch was reverted, and helps others following llvm-commits track context.
+* Ideally, you should have a publicly reproducible test case ready to share.  
+  Where possible, we encourage sharing of test cases in commit threads, or
+  in PRs.  We encourage the reverter to minimize the test case and to prune
+  dependencies where practical.  This even applies when reverting your own
+  patch; documenting the reasons for others who might be following along
+  is critical.
+* It is not considered reasonable to revert without at least the promise to
+  provide a means for the patch author to debug the root issue.  If a situation
+  arises where a public reproducer can not be shared for some reason (e.g.
+  requires hardware patch author doesn't have access to, sharp regression in
+  compile time of internal workload, etc.), the reverter is expected to be
+  proactive about working with the patch author to debug and test candidate
+  patches.
+* Reverts should be reasonably timely.  A change submitted two hours ago
+  can be reverted without prior discussion.  A change submitted two years ago
+  should not be.  Where exactly the transition point is is hard to say, but
+  it's probably in the handful of days in tree territory.  If you are unsure,
+  we encourage you to reply to the commit thread, give the author a bit to
+  respond, and then proceed with the revert if the author doesn't seem to be
+  actively responding.
+* When re-applying a reverted patch, the commit message should be updated to
+  indicate the problem that was addressed and how it was addressed.
+
 Obtaining Commit Access
 -----------------------
 

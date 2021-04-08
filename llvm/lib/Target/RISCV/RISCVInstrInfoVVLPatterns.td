@@ -1144,6 +1144,7 @@ def SDTRVVSlide1 : SDTypeProfile<1, 4, [
 def riscv_slideup_vl   : SDNode<"RISCVISD::VSLIDEUP_VL", SDTRVVSlide, []>;
 def riscv_slide1up_vl  : SDNode<"RISCVISD::VSLIDE1UP_VL", SDTRVVSlide1, []>;
 def riscv_slidedown_vl : SDNode<"RISCVISD::VSLIDEDOWN_VL", SDTRVVSlide, []>;
+def riscv_slide1down_vl  : SDNode<"RISCVISD::VSLIDE1DOWN_VL", SDTRVVSlide1, []>;
 
 let Predicates = [HasStdExtV] in {
 
@@ -1156,6 +1157,11 @@ foreach vti = AllIntegerVectors in {
                                            GPR:$rs2, (vti.Mask true_mask),
                                            (XLenVT (VLOp GPR:$vl)))),
             (!cast<Instruction>("PseudoVSLIDE1UP_VX_"#vti.LMul.MX)
+                vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.SEW)>;
+  def : Pat<(vti.Vector (riscv_slide1down_vl (vti.Vector vti.RegClass:$rs1),
+                                           GPR:$rs2, (vti.Mask true_mask),
+                                           (XLenVT (VLOp GPR:$vl)))),
+            (!cast<Instruction>("PseudoVSLIDE1DOWN_VX_"#vti.LMul.MX)
                 vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.SEW)>;
 }
 

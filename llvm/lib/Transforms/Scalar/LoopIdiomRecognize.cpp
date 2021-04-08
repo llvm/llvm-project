@@ -1588,9 +1588,8 @@ bool LoopIdiomRecognize::recognizeAndInsertFFS() {
   //  %inc = add nsw %i.0, 1
   //  br i1 %tobool
 
-  const Value *Args[] = {
-      InitX, ZeroCheck ? ConstantInt::getTrue(InitX->getContext())
-                       : ConstantInt::getFalse(InitX->getContext())};
+  const Value *Args[] = {InitX,
+                         ConstantInt::getBool(InitX->getContext(), ZeroCheck)};
 
   // @llvm.dbg doesn't count as they have no semantic effect.
   auto InstWithoutDebugIt = CurLoop->getHeader()->instructionsWithoutDebug();
@@ -1676,7 +1675,7 @@ static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
 static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
                                     const DebugLoc &DL, bool ZeroCheck,
                                     Intrinsic::ID IID) {
-  Value *Ops[] = {Val, ZeroCheck ? IRBuilder.getTrue() : IRBuilder.getFalse()};
+  Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
   Module *M = IRBuilder.GetInsertBlock()->getParent()->getParent();
@@ -1728,6 +1727,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
   IRBuilder<> Builder(PreheaderBr);
   Builder.SetCurrentDebugLocation(DL);
 
+  // If there are no uses of CntPhi crate:
   //   Count = BitWidth - CTLZ(InitX);
   //   NewCount = Count;
   // If there are uses of CntPhi create:
@@ -1736,30 +1736,25 @@ void LoopIdiomRecognize::transformLoopToCountable(
   Value *InitXNext;
   if (IsCntPhiUsedOutsideLoop) {
     if (DefX->getOpcode() == Instruction::AShr)
-      InitXNext =
-          Builder.CreateAShr(InitX, ConstantInt::get(InitX->getType(), 1));
+      InitXNext = Builder.CreateAShr(InitX, 1);
     else if (DefX->getOpcode() == Instruction::LShr)
-      InitXNext =
-          Builder.CreateLShr(InitX, ConstantInt::get(InitX->getType(), 1));
+      InitXNext = Builder.CreateLShr(InitX, 1);
     else if (DefX->getOpcode() == Instruction::Shl) // cttz
-      InitXNext =
-          Builder.CreateShl(InitX, ConstantInt::get(InitX->getType(), 1));
+      InitXNext = Builder.CreateShl(InitX, 1);
     else
       llvm_unreachable("Unexpected opcode!");
   } else
     InitXNext = InitX;
-  Value *FFS = createFFSIntrinsic(Builder, InitXNext, DL, ZeroCheck, IntrinID);
-  Value *Count = Builder.CreateSub(
-      ConstantInt::get(FFS->getType(), FFS->getType()->getIntegerBitWidth()),
-      FFS);
+  Value *Count =
+      createFFSIntrinsic(Builder, InitXNext, DL, ZeroCheck, IntrinID);
+  Type *CountTy = Count->getType();
+  Count = Builder.CreateSub(
+      ConstantInt::get(CountTy, CountTy->getIntegerBitWidth()), Count);
   Value *NewCount = Count;
-  if (IsCntPhiUsedOutsideLoop) {
-    NewCount = Count;
-    Count = Builder.CreateAdd(Count, ConstantInt::get(Count->getType(), 1));
-  }
+  if (IsCntPhiUsedOutsideLoop)
+    Count = Builder.CreateAdd(Count, ConstantInt::get(CountTy, 1));
 
-  NewCount = Builder.CreateZExtOrTrunc(NewCount,
-                                       cast<IntegerType>(CntInst->getType()));
+  NewCount = Builder.CreateZExtOrTrunc(NewCount, CntInst->getType());
 
   Value *CntInitVal = CntPhi->getIncomingValueForBlock(Preheader);
   if (cast<ConstantInt>(CntInst->getOperand(1))->isOne()) {
@@ -1785,14 +1780,12 @@ void LoopIdiomRecognize::transformLoopToCountable(
   BasicBlock *Body = *(CurLoop->block_begin());
   auto *LbBr = cast<BranchInst>(Body->getTerminator());
   ICmpInst *LbCond = cast<ICmpInst>(LbBr->getCondition());
-  Type *Ty = Count->getType();
 
-  PHINode *TcPhi = PHINode::Create(Ty, 2, "tcphi", &Body->front());
+  PHINode *TcPhi = PHINode::Create(CountTy, 2, "tcphi", &Body->front());
 
   Builder.SetInsertPoint(LbCond);
-  Instruction *TcDec = cast<Instruction>(
-      Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                        "tcdec", false, true));
+  Instruction *TcDec = cast<Instruction>(Builder.CreateSub(
+      TcPhi, ConstantInt::get(CountTy, 1), "tcdec", false, true));
 
   TcPhi->addIncoming(Count, Preheader);
   TcPhi->addIncoming(TcDec, Body);
@@ -1801,7 +1794,7 @@ void LoopIdiomRecognize::transformLoopToCountable(
       (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_NE : CmpInst::ICMP_EQ;
   LbCond->setPredicate(Pred);
   LbCond->setOperand(0, TcDec);
-  LbCond->setOperand(1, ConstantInt::get(Ty, 0));
+  LbCond->setOperand(1, ConstantInt::get(CountTy, 0));
 
   // Step 3: All the references to the original counter outside
   //  the loop are replaced with the NewCount

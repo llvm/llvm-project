@@ -42,6 +42,7 @@
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
+using namespace AMDGPU;
 
 static cl::opt<unsigned> VerifyStallCycles("amdgpu-verify-regbanks-reassign",
   cl::desc("Verify stall cycles in the regbanks reassign pass"),
@@ -135,7 +136,8 @@ public:
   static char ID;
 
 public:
-  GCNRegBankReassign() : MachineFunctionPass(ID) {
+  GCNRegBankReassign(RegBankReassignMode Mode = RM_BOTH)
+    : MachineFunctionPass(ID), Mode(Mode) {
     initializeGCNRegBankReassignPass(*PassRegistry::getPassRegistry());
   }
 
@@ -166,6 +168,8 @@ private:
   LiveRegMatrix *LRM;
 
   LiveIntervals *LIS;
+
+  RegBankReassignMode Mode;
 
   unsigned MaxNumVGPRs;
 
@@ -396,6 +400,10 @@ GCNRegBankReassign::analyzeInst(const MachineInstr &MI, Register Reg,
   if (MI.isDebugValue())
     return std::make_pair(StallCycles, UsedBanks);
 
+  if (!(Mode & RM_SGPR) &&
+      MI.getDesc().TSFlags & (SIInstrFlags::SMRD | SIInstrFlags::SALU))
+    return std::make_pair(StallCycles, UsedBanks);
+
   RegsUsed.reset();
   OperandMasks.clear();
   for (const auto& Op : MI.explicit_uses()) {
@@ -409,6 +417,8 @@ GCNRegBankReassign::analyzeInst(const MachineInstr &MI, Register Reg,
 
     // Do not compute stalls for AGPRs
     if (TRI->hasAGPRs(RC))
+      continue;
+    if ((Mode != RM_BOTH) && !(Mode & (TRI->hasVGPRs(RC) ? RM_VGPR : RM_SGPR)))
       continue;
 
     // Do not compute stalls if sub-register covers all banks
@@ -813,8 +823,11 @@ bool GCNRegBankReassign::runOnMachineFunction(MachineFunction &MF) {
 
   MRI = &MF.getRegInfo();
 
-  LLVM_DEBUG(dbgs() << "=== RegBanks reassign analysis on function " << MF.getName()
-                    << "\nNumVirtRegs = " << MRI->getNumVirtRegs() << "\n\n");
+  LLVM_DEBUG(dbgs() << "=== RegBanks reassign analysis on function "
+                    << MF.getName() << '\n'
+                    << ((Mode & RM_VGPR) ? "VGPR " : "")
+                    << ((Mode & RM_SGPR) ? "SGPR " : "") << "mode\n"
+                    << "NumVirtRegs = " << MRI->getNumVirtRegs() << "\n\n");
 
   if (MRI->getNumVirtRegs() > VRegThresh) {
     LLVM_DEBUG(dbgs() << "NumVirtRegs > " << VRegThresh
@@ -879,4 +892,9 @@ bool GCNRegBankReassign::runOnMachineFunction(MachineFunction &MF) {
   RegsUsed.clear();
 
   return CyclesSaved > 0;
+}
+
+MachineFunctionPass *
+llvm::createGCNRegBankReassignPass(RegBankReassignMode Mode) {
+  return new GCNRegBankReassign(Mode);
 }

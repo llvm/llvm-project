@@ -28,6 +28,10 @@ def SDT_RISCVSelectCC : SDTypeProfile<1, 5, [SDTCisSameAs<1, 2>,
 def SDT_RISCVBrCC : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisVT<2, OtherVT>,
                                          SDTCisVT<3, OtherVT>]>;
+def SDT_RISCVReadCSR  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
+def SDT_RISCVWriteCSR : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisInt<1>]>;
+def SDT_RISCVSwapCSR  : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
+                                             SDTCisInt<2>]>;
 def SDT_RISCVReadCycleWide : SDTypeProfile<2, 0, [SDTCisVT<0, i32>,
                                                   SDTCisVT<1, i32>]>;
 def SDT_RISCVIntBinOpW : SDTypeProfile<1, 2, [
@@ -61,6 +65,12 @@ def riscv_tail      : SDNode<"RISCVISD::TAIL", SDT_RISCVCall,
 def riscv_sllw      : SDNode<"RISCVISD::SLLW", SDT_RISCVIntBinOpW>;
 def riscv_sraw      : SDNode<"RISCVISD::SRAW", SDT_RISCVIntBinOpW>;
 def riscv_srlw      : SDNode<"RISCVISD::SRLW", SDT_RISCVIntBinOpW>;
+def riscv_read_csr  : SDNode<"RISCVISD::READ_CSR", SDT_RISCVReadCSR,
+                             [SDNPHasChain]>;
+def riscv_write_csr : SDNode<"RISCVISD::WRITE_CSR", SDT_RISCVWriteCSR,
+                             [SDNPHasChain]>;
+def riscv_swap_csr  : SDNode<"RISCVISD::SWAP_CSR", SDT_RISCVSwapCSR,
+                             [SDNPHasChain]>;
 
 def riscv_read_cycle_wide : SDNode<"RISCVISD::READ_CYCLE_WIDE",
                                    SDT_RISCVReadCycleWide,
@@ -1114,6 +1124,54 @@ def : Pat<(atomic_fence (XLenVT 7), (timm)), (FENCE 0b11, 0b11)>;
 // base RV32I/RV64I ISA, this lowering is only used when the A extension is
 // present. This is necessary as it isn't valid to mix __atomic_* libcalls
 // with inline atomic operations for the same object.
+
+/// Access to system registers
+
+// Helpers for defining specific operations. They are defined for each system
+// register separately. Side effect is not used because dependencies are
+// expressed via use-def properties.
+
+class ReadSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs GPR:$rd), (ins),
+           [(set GPR:$rd, (riscv_read_csr (XLenVT SR.Encoding)))]>,
+    PseudoInstExpansion<(CSRRS GPR:$rd, SR.Encoding, X0)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+}
+
+class WriteSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_write_csr (XLenVT SR.Encoding), GPR:$val)]>,
+    PseudoInstExpansion<(CSRRW X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Defs = Regs;
+}
+
+class WriteSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_write_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRWI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Defs = Regs;
+}
+
+class SwapSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs GPR:$rd), (ins GPR:$val),
+           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), GPR:$val))]>,
+    PseudoInstExpansion<(CSRRW GPR:$rd, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SwapSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs GPR:$rd), (ins uimm5:$val),
+           [(set GPR:$rd, (riscv_swap_csr (XLenVT SR.Encoding), uimm5:$val))]>,
+    PseudoInstExpansion<(CSRRWI GPR:$rd, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
 
 /// Other pseudo-instructions
 

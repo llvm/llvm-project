@@ -1,17 +1,9 @@
-; RUN: opt -instcombine -S < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
+; RUN: opt -instcombine -S < %s | FileCheck %s
 
 ; This test is defending against a TypeSize message raised in the method
 ; `valueCoversEntireFragment` in Local.cpp because of an implicit cast from
 ; `TypeSize` to `uint64_t`. This particular TypeSize message only occurred when
 ; debug info was available.
-
-; If this check fails please read
-; clang/test/CodeGen/aarch64-sve-intrinsics/README for instructions on
-; how to resolve it.
-; This test must not produce any warnings. Prior to this test being introduced,
-; it produced a warning containing the text "TypeSize is not scalable".
-; WARN-NOT: warning:
 
 ; CHECK-LABEL: @debug_local_scalable(
 define <vscale x 2 x double> @debug_local_scalable(<vscale x 2 x double> %tostore) {

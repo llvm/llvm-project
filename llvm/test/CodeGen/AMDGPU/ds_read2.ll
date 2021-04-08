@@ -1035,7 +1035,7 @@ define amdgpu_kernel void @load_misaligned64_constant_offsets(i64 addrspace(1)* 
 ; GFX9-UNALIGNED-LABEL: load_misaligned64_constant_offsets:
 ; GFX9-UNALIGNED:       ; %bb.0:
 ; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-UNALIGNED-NEXT:    ds_read_b128 v[0:3], v4
+; GFX9-UNALIGNED-NEXT:    ds_read2_b64 v[0:3], v4 offset1:1
 ; GFX9-UNALIGNED-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-UNALIGNED-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v2

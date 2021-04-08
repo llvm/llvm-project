@@ -1,8 +1,4 @@
-; RUN: opt -instcombine -S -o - < %s 2>%t | FileCheck %s
-; RUN: FileCheck --check-prefix=WARN --allow-empty %s <%t
-
-; If this check fails please read test/CodeGen/AArch64/README for instructions on how to resolve it.
-; WARN-NOT: warning
+; RUN: opt -instcombine -S -o - < %s | FileCheck %s
 
 define <vscale x 2 x float> @shrink_splat_scalable_extend(<vscale x 2 x float> %a) {
   ; CHECK-LABEL: @shrink_splat_scalable_extend

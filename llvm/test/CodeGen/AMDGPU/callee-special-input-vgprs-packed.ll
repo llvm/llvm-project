@@ -431,7 +431,7 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; GFX7: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
 ; GFX90A: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v32,
 ; GFX7: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
-; GFX90A: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc scc{{$}}
+; GFX90A: buffer_load_dword v0, off, s[0:3], s32 offset:4 glc{{$}}
 ; GCN: s_setpc_b64
 define void @too_many_args_use_workitem_id_x_byval(
   i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7,
@@ -518,7 +518,7 @@ define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x_byval() #1 
 ; GCN: buffer_store_dword v40, off, s[0:3], s32 offset:4
 ; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
 ; GFX7: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
-; GFX90A: buffer_store_dword [[K]], off, s[0:3], s33 scc{{$}}
+; GFX90A: buffer_store_dword [[K]], off, s[0:3], s33{{$}}
 ; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], s33{{$}}
 ; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32 offset:4
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],
@@ -551,9 +551,9 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v12
 ; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v30{{$}}
 ; GFX7:   flat_store_dword v{{\[[0-9]+:[0-9]+]}}, v0{{$}}
-; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v29, off scc{{$}}
-; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v30, off scc{{$}}
-; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v32, off scc{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v29, off{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v30, off{{$}}
+; GFX90A: global_store_dword v{{\[[0-9]+:[0-9]+]}}, v32, off{{$}}
 
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64

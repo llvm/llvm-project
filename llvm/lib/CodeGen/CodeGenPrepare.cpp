@@ -405,6 +405,7 @@ class TypePromotionTransaction;
     bool dupRetToEnableTailCallOpts(BasicBlock *BB, bool &ModifiedDT);
     bool fixupDbgValue(Instruction *I);
     bool placeDbgValues(Function &F);
+    bool placePseudoProbes(Function &F);
     bool canFormExtLd(const SmallVectorImpl<Instruction *> &MovedExts,
                       LoadInst *&LI, Instruction *&Inst, bool HasPromoted);
     bool tryToPromoteExts(TypePromotionTransaction &TPT,
@@ -611,6 +612,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   // Do this last to clean up use-before-def scenarios introduced by other
   // preparatory transforms.
   EverMadeChange |= placeDbgValues(F);
+  EverMadeChange |= placePseudoProbes(F);
 
 #ifndef NDEBUG
   if (VerifyBFIUpdates)
@@ -7983,6 +7985,28 @@ bool CodeGenPrepare::placeDbgValues(Function &F) {
           DVI->insertAfter(VI);
         MadeChange = true;
         ++NumDbgValueMoved;
+      }
+    }
+  }
+  return MadeChange;
+}
+
+// Group scattered pseudo probes in a block to favor SelectionDAG. Scattered
+// probes can be chained dependencies of other regular DAG nodes and block DAG
+// combine optimizations.
+bool CodeGenPrepare::placePseudoProbes(Function &F) {
+  bool MadeChange = false;
+  for (auto &Block : F) {
+    // Move the rest probes to the beginning of the block.
+    auto FirstInst = Block.getFirstInsertionPt();
+    while (FirstInst != Block.end() && FirstInst->isDebugOrPseudoInst())
+      ++FirstInst;
+    BasicBlock::iterator I(FirstInst);
+    I++;
+    while (I != Block.end()) {
+      if (auto *II = dyn_cast<PseudoProbeInst>(I++)) {
+        II->moveBefore(&*FirstInst);
+        MadeChange = true;
       }
     }
   }
