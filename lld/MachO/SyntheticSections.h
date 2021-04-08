@@ -56,6 +56,8 @@ public:
     align = target->wordSize;
   }
 
+  virtual void finalizeContents() {}
+
   // Sections in __LINKEDIT are special: their offsets are recorded in the
   // load commands like LC_DYLD_INFO_ONLY and LC_SYMTAB, instead of in section
   // headers.
@@ -155,7 +157,7 @@ struct Location {
 class RebaseSection : public LinkEditSection {
 public:
   RebaseSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   bool isNeeded() const override { return !locations.empty(); }
   void writeTo(uint8_t *buf) const override;
@@ -182,7 +184,7 @@ struct BindingEntry {
 class BindingSection : public LinkEditSection {
 public:
   BindingSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   bool isNeeded() const override { return !bindings.empty(); }
   void writeTo(uint8_t *buf) const override;
@@ -218,7 +220,7 @@ struct WeakBindingEntry {
 class WeakBindingSection : public LinkEditSection {
 public:
   WeakBindingSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   bool isNeeded() const override {
     return !bindings.empty() || !definitions.empty();
@@ -327,7 +329,7 @@ public:
 class LazyBindingSection : public LinkEditSection {
 public:
   LazyBindingSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   bool isNeeded() const override { return !entries.empty(); }
   void writeTo(uint8_t *buf) const override;
@@ -348,7 +350,7 @@ private:
 class ExportSection : public LinkEditSection {
 public:
   ExportSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return size; }
   void writeTo(uint8_t *buf) const override;
 
@@ -362,7 +364,7 @@ private:
 class FunctionStartsSection : public LinkEditSection {
 public:
   FunctionStartsSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint64_t getRawSize() const override { return contents.size(); }
   void writeTo(uint8_t *buf) const override;
 
@@ -411,7 +413,7 @@ struct StabsEntry {
 // range (start index and total number) of those symbols in the symbol table.
 class SymtabSection : public LinkEditSection {
 public:
-  void finalizeContents();
+  void finalizeContents() override;
   uint32_t getNumSymbols() const;
   uint32_t getNumLocalSymbols() const {
     return stabs.size() + localSymbols.size();
@@ -453,7 +455,7 @@ template <class LP> SymtabSection *makeSymtabSection(StringTableSection &);
 class IndirectSymtabSection : public LinkEditSection {
 public:
   IndirectSymtabSection();
-  void finalizeContents();
+  void finalizeContents() override;
   uint32_t getNumSymbols() const;
   uint64_t getRawSize() const override {
     return getNumSymbols() * sizeof(uint32_t);
