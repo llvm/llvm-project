@@ -544,6 +544,27 @@ func @f() {
 }
 
 // -----
+
+// Remove unused results from assuming ops.
+// CHECK-LABEL: func @unused_assuming_results
+func @unused_assuming_results() {
+  // CHECK: %[[ASSUMING_RESULT:.*]] = shape.assuming %0 -> (f32) {
+  // CHECK:   %{{.*}} = "produce.redundant"
+  // CHECK:   %[[MEANINGFUL:.*]] = "produce.meaningful"
+  // CHECK:   shape.assuming_yield %[[MEANINGFUL]] : f32
+  // CHECK: }
+  // CHECK: "use"(%[[ASSUMING_RESULT]])
+  %0 = "test.source"() : () -> (!shape.witness)
+  %1:2 = shape.assuming %0 -> (f32, f32) {
+    %2 = "produce.redundant"() : () -> (f32)
+    %3 = "produce.meaningful"() : () -> (f32)
+    shape.assuming_yield %2, %3 : f32, f32
+  }
+  "use"(%1#1) : (f32) -> ()
+  return
+}
+
+// -----
 // Broadcastable with broadcastable constant shapes can be removed.
 // CHECK-LABEL: func @f
 func @f() {
