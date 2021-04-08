@@ -5831,12 +5831,13 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
 
 using EqualValues = SmallVector<std::tuple<WeakVH, int64_t>, 4>;
 using EqualValuesMap =
-    DenseMap<std::pair<DbgValueInst *, unsigned>, EqualValues>;
-using ExpressionMap = DenseMap<DbgValueInst *, DIExpression *>;
+    DenseMap<DbgValueInst *, SmallVector<std::pair<unsigned, EqualValues>>>;
+using LocationMap =
+    DenseMap<DbgValueInst *, std::pair<DIExpression *, Metadata *>>;
 
 static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
                                  EqualValuesMap &DbgValueToEqualSet,
-                                 ExpressionMap &DbgValueToExpression) {
+                                 LocationMap &DbgValueToLocation) {
   for (auto &B : L->getBlocks()) {
     for (auto &I : *B) {
       auto DVI = dyn_cast<DbgValueInst>(&I);
@@ -5862,39 +5863,51 @@ static void DbgGatherEqualValues(Loop *L, ScalarEvolution &SE,
             EqSet.emplace_back(
                 std::make_tuple(&Phi, Offset.getValue().getSExtValue()));
         }
-        DbgValueToEqualSet[{DVI, Idx}] = std::move(EqSet);
-        DbgValueToExpression[DVI] = DVI->getExpression();
+        DbgValueToEqualSet[DVI].push_back({Idx, std::move(EqSet)});
+        // If we fall back to using this raw location, at least one location op
+        // must be dead. A DIArgList will automatically undef arguments when
+        // they become unavailable, but a ValueAsMetadata will not; since we
+        // know the value should be undef, we use the undef value directly here.
+        Metadata *RawLocation =
+            DVI->hasArgList() ? DVI->getRawLocation()
+                              : ValueAsMetadata::get(UndefValue::get(
+                                    DVI->getVariableLocationOp(0)->getType()));
+        DbgValueToLocation[DVI] = {DVI->getExpression(), RawLocation};
       }
     }
   }
 }
 
 static void DbgApplyEqualValues(EqualValuesMap &DbgValueToEqualSet,
-                                ExpressionMap &DbgValueToExpression) {
+                                LocationMap &DbgValueToLocation) {
   for (auto A : DbgValueToEqualSet) {
-    auto DVI = A.first.first;
-    auto Idx = A.first.second;
+    auto *DVI = A.first;
     // Only update those that are now undef.
-    if (!isa_and_nonnull<UndefValue>(DVI->getVariableLocationOp(Idx)))
+    if (!DVI->isUndef())
       continue;
-    for (auto EV : A.second) {
-      auto EVHandle = std::get<WeakVH>(EV);
-      if (!EVHandle)
-        continue;
-      // The dbg.value may have had its value changed by LSR; refresh it from
-      // the map, but continue to update the mapped expression as it may be
-      // updated multiple times in this function.
-      auto DbgDIExpr = DbgValueToExpression[DVI];
-      auto Offset = std::get<int64_t>(EV);
-      DVI->replaceVariableLocationOp(Idx, EVHandle);
-      if (Offset) {
-        SmallVector<uint64_t, 8> Ops;
-        DIExpression::appendOffset(Ops, Offset);
-        DbgDIExpr = DIExpression::appendOpsToArg(DbgDIExpr, Ops, Idx, true);
+    // The dbg.value may have had its value or expression changed during LSR by
+    // a failed salvage attempt; refresh them from the map.
+    auto *DbgDIExpr = DbgValueToLocation[DVI].first;
+    DVI->setRawLocation(DbgValueToLocation[DVI].second);
+    DVI->setExpression(DbgDIExpr);
+    assert(DVI->isUndef() && "dbg.value with non-undef location should not "
+                             "have been modified by LSR.");
+    for (auto IdxEV : A.second) {
+      unsigned Idx = IdxEV.first;
+      for (auto EV : IdxEV.second) {
+        auto EVHandle = std::get<WeakVH>(EV);
+        if (!EVHandle)
+          continue;
+        int64_t Offset = std::get<int64_t>(EV);
+        DVI->replaceVariableLocationOp(Idx, EVHandle);
+        if (Offset) {
+          SmallVector<uint64_t, 8> Ops;
+          DIExpression::appendOffset(Ops, Offset);
+          DbgDIExpr = DIExpression::appendOpsToArg(DbgDIExpr, Ops, Idx, true);
+        }
+        DVI->setExpression(DbgDIExpr);
+        break;
       }
-      DVI->setExpression(DbgDIExpr);
-      DbgValueToExpression[DVI] = DbgDIExpr;
-      break;
     }
   }
 }
@@ -5917,8 +5930,8 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // Debug preservation - before we start removing anything create equivalence
   // sets for the llvm.dbg.value intrinsics.
   EqualValuesMap DbgValueToEqualSet;
-  ExpressionMap DbgValueToExpression;
-  DbgGatherEqualValues(L, SE, DbgValueToEqualSet, DbgValueToExpression);
+  LocationMap DbgValueToLocation;
+  DbgGatherEqualValues(L, SE, DbgValueToEqualSet, DbgValueToLocation);
 
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
@@ -5938,7 +5951,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     }
   }
 
-  DbgApplyEqualValues(DbgValueToEqualSet, DbgValueToExpression);
+  DbgApplyEqualValues(DbgValueToEqualSet, DbgValueToLocation);
 
   return Changed;
 }

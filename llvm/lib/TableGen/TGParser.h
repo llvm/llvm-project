@@ -36,10 +36,12 @@ namespace llvm {
     }
   };
 
-  /// RecordsEntry - Can be either a record or a foreach loop.
+  /// RecordsEntry - Holds exactly one of a Record, ForeachLoop, or
+  /// assertion tuple.
   struct RecordsEntry {
     std::unique_ptr<Record> Rec;
     std::unique_ptr<ForeachLoop> Loop;
+    std::unique_ptr<Record::AssertionTuple> Assertion;
 
     void dump() const;
 
@@ -47,6 +49,8 @@ namespace llvm {
     RecordsEntry(std::unique_ptr<Record> Rec) : Rec(std::move(Rec)) {}
     RecordsEntry(std::unique_ptr<ForeachLoop> Loop)
       : Loop(std::move(Loop)) {}
+    RecordsEntry(std::unique_ptr<Record::AssertionTuple> Assertion)
+      : Assertion(std::move(Assertion)) {}
   };
 
   /// ForeachLoop - Record the iteration state associated with a for loop.
@@ -222,7 +226,7 @@ private:  // Parser methods.
   bool ParseForeach(MultiClass *CurMultiClass);
   bool ParseIf(MultiClass *CurMultiClass);
   bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
-  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec);
+  bool ParseAssert(MultiClass *CurMultiClass, Record *CurRec = nullptr);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
