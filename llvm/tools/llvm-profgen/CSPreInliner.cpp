@@ -225,5 +225,8 @@ void CSPreInliner::run() {
     ProfileMap.erase(ContextName);
   }
 
+  // Make sure ProfileMap's key is consistent with FunctionSamples' name.
+  SampleContextTrimmer(ProfileMap).canonicalizeContextProfiles();
+
   LLVM_DEBUG(printProfileNames(ProfileMap, false));
 }

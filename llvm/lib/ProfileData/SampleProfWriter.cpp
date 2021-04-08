@@ -46,9 +46,11 @@ std::error_code SampleProfileWriter::writeFuncProfiles(
   // Sort the ProfileMap by total samples.
   typedef std::pair<StringRef, const FunctionSamples *> NameFunctionSamples;
   std::vector<NameFunctionSamples> V;
-  for (const auto &I : ProfileMap)
-    V.push_back(std::make_pair(I.getKey(), &I.second));
-
+  for (const auto &I : ProfileMap) {
+    assert(I.getKey() == I.second.getNameWithContext() &&
+           "Inconsistent profile map");
+    V.push_back(std::make_pair(I.second.getNameWithContext(), &I.second));
+  }
   llvm::stable_sort(
       V, [](const NameFunctionSamples &A, const NameFunctionSamples &B) {
         if (A.second->getTotalSamples() == B.second->getTotalSamples())
@@ -147,7 +149,7 @@ std::error_code SampleProfileWriterExtBinaryBase::write(
 std::error_code
 SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   uint64_t Offset = OutputStream->tell();
-  StringRef Name = S.getNameWithContext(true);
+  StringRef Name = S.getNameWithContext();
   FuncOffsetTable[Name] = Offset - SecLBRProfileStart;
   encodeULEB128(S.getHeadSamples(), *OutputStream);
   return writeBody(S);
@@ -160,9 +162,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
   encodeULEB128(FuncOffsetTable.size(), OS);
 
   // Write out FuncOffsetTable.
-  for (auto entry : FuncOffsetTable) {
-    writeNameIdx(entry.first);
-    encodeULEB128(entry.second, OS);
+  for (auto Entry : FuncOffsetTable) {
+    if (std::error_code EC =
+            writeNameIdx(Entry.first, FunctionSamples::ProfileIsCS))
+      return EC;
+    encodeULEB128(Entry.second, OS);
   }
   FuncOffsetTable.clear();
   return sampleprof_error::success;
@@ -174,7 +178,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncMetadata(
     return sampleprof_error::success;
   auto &OS = *OutputStream;
   for (const auto &Entry : Profiles) {
-    writeNameIdx(Entry.first());
+    if (std::error_code EC = writeNameIdx(Entry.second.getNameWithContext(),
+                                          FunctionSamples::ProfileIsCS))
+      return EC;
     if (FunctionSamples::ProfileIsProbeBased)
       encodeULEB128(Entry.second.getFunctionHash(), OS);
     if (FunctionSamples::ProfileIsCS)
@@ -204,7 +210,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTable() {
 std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     const StringMap<FunctionSamples> &ProfileMap) {
   for (const auto &I : ProfileMap) {
-    addName(I.first());
+    assert(I.first() == I.second.getNameWithContext() &&
+           "Inconsistent profile map");
+    addName(I.second.getNameWithContext(), FunctionSamples::ProfileIsCS);
     addNames(I.second);
   }
 
@@ -378,7 +386,11 @@ std::error_code SampleProfileWriterCompactBinary::write(
 /// it needs to be parsed by the SampleProfileReaderText class.
 std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   auto &OS = *OutputStream;
-  OS << S.getNameWithContext(true) << ":" << S.getTotalSamples();
+  if (FunctionSamples::ProfileIsCS)
+    OS << "[" << S.getNameWithContext() << "]:" << S.getTotalSamples();
+  else
+    OS << S.getName() << ":" << S.getTotalSamples();
+
   if (Indent == 0)
     OS << ":" << S.getHeadSamples();
   OS << "\n";
@@ -431,15 +443,26 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
   return sampleprof_error::success;
 }
 
-std::error_code SampleProfileWriterBinary::writeNameIdx(StringRef FName) {
-  const auto &ret = NameTable.find(FName);
-  if (ret == NameTable.end())
+std::error_code SampleProfileWriterBinary::writeNameIdx(StringRef FName,
+                                                        bool IsContextName) {
+  std::string BracketedName;
+  if (IsContextName) {
+    BracketedName = "[" + FName.str() + "]";
+    FName = StringRef(BracketedName);
+  }
+
+  const auto &Ret = NameTable.find(FName);
+  if (Ret == NameTable.end())
     return sampleprof_error::truncated_name_table;
-  encodeULEB128(ret->second, *OutputStream);
+  encodeULEB128(Ret->second, *OutputStream);
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterBinary::addName(StringRef FName) {
+void SampleProfileWriterBinary::addName(StringRef FName, bool IsContextName) {
+  if (IsContextName) {
+    auto It = BracketedContextStr.insert("[" + FName.str() + "]");
+    FName = StringRef(*It.first);
+  }
   NameTable.insert(std::make_pair(FName, 0));
 }
 
@@ -500,9 +523,11 @@ std::error_code SampleProfileWriterCompactBinary::writeFuncOffsetTable() {
   encodeULEB128(FuncOffsetTable.size(), OS);
 
   // Write out FuncOffsetTable.
-  for (auto entry : FuncOffsetTable) {
-    writeNameIdx(entry.first);
-    encodeULEB128(entry.second, OS);
+  for (auto Entry : FuncOffsetTable) {
+    if (std::error_code EC =
+            writeNameIdx(Entry.first, FunctionSamples::ProfileIsCS))
+      return EC;
+    encodeULEB128(Entry.second, OS);
   }
   return sampleprof_error::success;
 }
@@ -539,7 +564,9 @@ std::error_code SampleProfileWriterBinary::writeHeader(
 
   // Generate the name table for all the functions referenced in the profile.
   for (const auto &I : ProfileMap) {
-    addName(I.first());
+    assert(I.first() == I.second.getNameWithContext() &&
+           "Inconsistent profile map");
+    addName(I.first(), FunctionSamples::ProfileIsCS);
     addNames(I.second);
   }
 
@@ -654,7 +681,8 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
 std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   auto &OS = *OutputStream;
 
-  if (std::error_code EC = writeNameIdx(S.getNameWithContext(true)))
+  if (std::error_code EC =
+          writeNameIdx(S.getNameWithContext(), FunctionSamples::ProfileIsCS))
     return EC;
 
   encodeULEB128(S.getTotalSamples(), OS);
