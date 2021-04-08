@@ -217,127 +217,109 @@ multiclass RVVBuiltinSet<string intrinsic_name, string type_range,
 
 // IntrinsicTypes is output, op0, op1 [-1, 0, 1]
 multiclass RVVOutOp0Op1BuiltinSet<string intrinsic_name, string type_range,
-                                  list<list<string>> suffixes_prototypes> {
-  defm NAME : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes,
+                                  list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes,
                             [-1, 0, 1]>;
-}
 
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
-                               list<list<string>> suffixes_prototypes> {
-  defm "" : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1]>;
-}
+                               list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1]>;
 
 multiclass RVVOp0Op1BuiltinSet<string intrinsic_name, string type_range,
-                               list<list<string>> suffixes_prototypes> {
-  defm "" : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0, 1]>;
-}
+                               list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0, 1]>;
 
 multiclass RVVOutOp1Op2BuiltinSet<string intrinsic_name, string type_range,
-                                  list<list<string>> suffixes_prototypes> {
-  defm "" : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1, 2]>;
-}
+                                  list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1, 2]>;
 
-multiclass RVVSignedBinBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vv", "v", "vvv"],
-                                 ["vx", "v", "vve"]]>;
-}
+multiclass RVVSignedBinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "v", "vvv"],
+                           ["vx", "v", "vve"]]>;
 
-multiclass RVVUnsignedBinBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vv", "Uv", "UvUvUv"],
-                                 ["vx", "Uv", "UvUvUe"]]>;
-}
+multiclass RVVUnsignedBinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "Uv", "UvUvUv"],
+                           ["vx", "Uv", "UvUvUe"]]>;
 
-multiclass RVVIntBinBuiltinSet {
-  defm "" : RVVSignedBinBuiltinSet;
-  defm "" : RVVUnsignedBinBuiltinSet;
-}
+multiclass RVVIntBinBuiltinSet
+    : RVVSignedBinBuiltinSet,
+      RVVUnsignedBinBuiltinSet;
 
-multiclass RVVSignedShiftBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vv", "v", "vvUv"],
-                                 ["vx", "v", "vvz"]]>;
-}
+multiclass RVVSignedShiftBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "v", "vvUv"],
+                           ["vx", "v", "vvz"]]>;
 
-multiclass RVVUnsignedShiftBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vv", "Uv", "UvUvUv"],
-                                 ["vx", "Uv", "UvUvz"]]>;
-}
+multiclass RVVUnsignedShiftBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "Uv", "UvUvUv"],
+                           ["vx", "Uv", "UvUvz"]]>;
 
-multiclass RVVShiftBuiltinSet {
-  defm "" : RVVSignedShiftBuiltinSet;
-  defm "" : RVVUnsignedShiftBuiltinSet;
-}
+multiclass RVVShiftBuiltinSet
+    : RVVSignedShiftBuiltinSet,
+      RVVUnsignedShiftBuiltinSet;
 
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  multiclass RVVSignedNShiftBuiltinSet {
-    defm "" : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+  multiclass RVVSignedNShiftBuiltinSet
+      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
                                      [["wv", "v", "vwUv"],
                                       ["wx", "v", "vwz"]]>;
-  }
-  multiclass RVVUnsignedNShiftBuiltinSet {
-    defm "" : RVVOutOp0Op1BuiltinSet<NAME, "csil",
+  multiclass RVVUnsignedNShiftBuiltinSet
+      : RVVOutOp0Op1BuiltinSet<NAME, "csil",
                                      [["wv", "Uv", "UvUwUv"],
                                       ["wx", "Uv", "UvUwz"]]>;
-  }
 }
 
-multiclass RVVIntTerBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vv", "v", "vvvv"],
-                                 ["vx", "v", "vvev"],
-                                 ["vv", "Uv", "UvUvUvUv"],
-                                 ["vx", "Uv", "UvUvUeUv"]]>;
-}
+multiclass RVVIntTerBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vv", "v", "vvvv"],
+                           ["vx", "v", "vvev"],
+                           ["vv", "Uv", "UvUvUvUv"],
+                           ["vx", "Uv", "UvUvUeUv"]]>;
 
-multiclass RVVCarryinBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                [["vvm", "v", "vvvm"],
-                                 ["vxm", "v", "vvem"],
-                                 ["vvm", "Uv", "UvUvUvm"],
-                                 ["vxm", "Uv", "UvUvUem"]]>;
-}
+multiclass RVVCarryinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "csil",
+                          [["vvm", "v", "vvvm"],
+                           ["vxm", "v", "vvem"],
+                           ["vvm", "Uv", "UvUvUvm"],
+                           ["vxm", "Uv", "UvUvUem"]]>;
 
-multiclass RVVCarryOutInBuiltinSet<string intrinsic_name> {
-  defm "" : RVVOp0Op1BuiltinSet<intrinsic_name, "csil",
-                                [["vvm", "vm", "mvvm"],
-                                 ["vxm", "vm", "mvem"],
-                                 ["vvm", "Uvm", "mUvUvm"],
-                                 ["vxm", "Uvm", "mUvUem"]]>;
-}
+multiclass RVVCarryOutInBuiltinSet<string intrinsic_name>
+    : RVVOp0Op1BuiltinSet<intrinsic_name, "csil",
+                          [["vvm", "vm", "mvvm"],
+                           ["vxm", "vm", "mvem"],
+                           ["vvm", "Uvm", "mUvUvm"],
+                           ["vxm", "Uvm", "mUvUem"]]>;
 
-multiclass RVVSignedMaskOutBuiltinSet {
-  defm "" : RVVOp0Op1BuiltinSet<NAME, "csil",
-                                [["vv", "vm", "mvv"],
-                                 ["vx", "vm", "mve"]]>;
-}
+multiclass RVVSignedMaskOutBuiltinSet
+    : RVVOp0Op1BuiltinSet<NAME, "csil",
+                          [["vv", "vm", "mvv"],
+                           ["vx", "vm", "mve"]]>;
 
-multiclass RVVUnsignedMaskOutBuiltinSet {
-  defm "" : RVVOp0Op1BuiltinSet<NAME, "csil",
-                                [["vv", "Uvm", "mUvUv"],
-                                 ["vx", "Uvm", "mUvUe"]]>;
-}
+multiclass RVVUnsignedMaskOutBuiltinSet
+    : RVVOp0Op1BuiltinSet<NAME, "csil",
+                          [["vv", "Uvm", "mUvUv"],
+                           ["vx", "Uvm", "mUvUe"]]>;
 
-multiclass RVVIntMaskOutBuiltinSet {
-  defm "" : RVVSignedMaskOutBuiltinSet;
-  defm "" : RVVUnsignedMaskOutBuiltinSet;
-}
+multiclass RVVIntMaskOutBuiltinSet
+    : RVVSignedMaskOutBuiltinSet,
+      RVVUnsignedMaskOutBuiltinSet;
 
-multiclass RVVFloatingBinBuiltinSet {
-  defm "" : RVVOutOp1BuiltinSet<NAME, "fd",
-                                [["vv", "v", "vvv"],
-                                 ["vf", "v", "vve"]]>;
-}
+multiclass RVVFloatingBinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "fd",
+                          [["vv", "v", "vvv"],
+                           ["vf", "v", "vve"]]>;
 
-multiclass RVVIntExt<string intrinsic_name, string suffix, string prototype,
-                     string type_range> {
-  let IRName = intrinsic_name, IRNameMask = intrinsic_name # "_mask",
-      MangledName = NAME, IntrinsicTypes = [-1, 0] in {
-    def "" : RVVBuiltin<suffix, prototype, type_range>;
-  }
+class RVVIntExt<string intrinsic_name, string suffix, string prototype,
+                string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IRName = intrinsic_name;
+  let IRNameMask = intrinsic_name # "_mask";
+  let MangledName = NAME;
+  let IntrinsicTypes = [-1, 0];
 }
 
 defvar TypeList = ["c","s","i","l","f","d"];
@@ -520,16 +502,16 @@ defm vrsub : RVVOutOp1BuiltinSet<"vrsub", "csil",
 
 // 12.3. Vector Integer Extension
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-    defm vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
-    defm vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
+  def vsext_vf2 : RVVIntExt<"vsext", "w", "wv", "csi">;
+  def vzext_vf2 : RVVIntExt<"vzext", "Uw", "UwUv", "csi">;
 }
 let Log2LMUL = [-3, -2, -1, 0, 1] in {
-    defm vsext_vf4 : RVVIntExt<"vsext", "q", "qv", "cs">;
-    defm vzext_vf4 : RVVIntExt<"vzext", "Uq", "UqUv", "cs">;
+  def vsext_vf4 : RVVIntExt<"vsext", "q", "qv", "cs">;
+  def vzext_vf4 : RVVIntExt<"vzext", "Uq", "UqUv", "cs">;
 }
 let Log2LMUL = [-3, -2, -1, 0] in {
-    defm vsext_vf8 : RVVIntExt<"vsext", "o", "ov", "c">;
-    defm vzext_vf8 : RVVIntExt<"vzext", "Uo", "UoUv", "c">;
+  def vsext_vf8 : RVVIntExt<"vsext", "o", "ov", "c">;
+  def vzext_vf8 : RVVIntExt<"vzext", "Uo", "UoUv", "c">;
 }
 
 // 12.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
