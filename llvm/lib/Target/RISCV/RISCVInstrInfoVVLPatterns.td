@@ -565,8 +565,8 @@ foreach mti = AllMasks in {
 }
 
 // 12.1. Vector Single-Width Integer Add and Subtract
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
-defm "" : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
+defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
+defm : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
 // Handle VRSUB specially since it's the only integer binary op with reversed
 // pattern operands
 foreach vti = AllIntegerVectors in {
@@ -583,28 +583,28 @@ foreach vti = AllIntegerVectors in {
 }
 
 // 12.3. Vector Integer Extension
-defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",
-                                AllFractionableVF2IntVectors>;
-defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF2",
-                                AllFractionableVF2IntVectors>;
-defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF4",
-                                AllFractionableVF4IntVectors>;
-defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF4",
-                                AllFractionableVF4IntVectors>;
-defm "" : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF8",
-                                AllFractionableVF8IntVectors>;
-defm "" : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF8",
+defm : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF2",
+                             AllFractionableVF2IntVectors>;
+defm : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF2",
+                             AllFractionableVF2IntVectors>;
+defm : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF4",
+                             AllFractionableVF4IntVectors>;
+defm : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF4",
+                             AllFractionableVF4IntVectors>;
+defm : VPatExtendSDNode_V_VL<riscv_zext_vl, "PseudoVZEXT", "VF8",
+                             AllFractionableVF8IntVectors>;
+defm : VPatExtendSDNode_V_VL<riscv_sext_vl, "PseudoVSEXT", "VF8",
                                 AllFractionableVF8IntVectors>;
 
 // 12.5. Vector Bitwise Logical Instructions
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_or_vl,  "PseudoVOR">;
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
+defm : VPatBinaryVL_VV_VX_VI<riscv_and_vl, "PseudoVAND">;
+defm : VPatBinaryVL_VV_VX_VI<riscv_or_vl,  "PseudoVOR">;
+defm : VPatBinaryVL_VV_VX_VI<riscv_xor_vl, "PseudoVXOR">;
 
 // 12.6. Vector Single-Width Bit Shift Instructions
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
-defm "" : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
+defm : VPatBinaryVL_VV_VX_VI<riscv_shl_vl, "PseudoVSLL", uimm5>;
+defm : VPatBinaryVL_VV_VX_VI<riscv_srl_vl, "PseudoVSRL", uimm5>;
+defm : VPatBinaryVL_VV_VX_VI<riscv_sra_vl, "PseudoVSRA", uimm5>;
 
 // 12.7. Vector Narrowing Integer Right Shift Instructions
 foreach vtiTofti = AllFractionableVF2IntVectors in {
@@ -619,48 +619,48 @@ foreach vtiTofti = AllFractionableVF2IntVectors in {
 
 // 12.8. Vector Integer Comparison Instructions
 foreach vti = AllIntegerVectors in {
-  defm "" : VPatIntegerSetCCVL_VV<vti, "PseudoVMSEQ", SETEQ>;
-  defm "" : VPatIntegerSetCCVL_VV<vti, "PseudoVMSNE", SETNE>;
+  defm : VPatIntegerSetCCVL_VV<vti, "PseudoVMSEQ", SETEQ>;
+  defm : VPatIntegerSetCCVL_VV<vti, "PseudoVMSNE", SETNE>;
 
-  defm "" : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLT",  SETLT,  SETGT>;
-  defm "" : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLTU", SETULT, SETUGT>;
-  defm "" : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
-  defm "" : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
+  defm : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLT",  SETLT,  SETGT>;
+  defm : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLTU", SETULT, SETUGT>;
+  defm : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
+  defm : VPatIntegerSetCCVL_VV_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
 
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSEQ",  SETEQ,  SETEQ>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSNE",  SETNE,  SETNE>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLT",  SETLT,  SETGT>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLTU", SETULT, SETUGT>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSGT",  SETGT,  SETLT>;
-  defm "" : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSGTU", SETUGT, SETULT>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSEQ",  SETEQ,  SETEQ>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSNE",  SETNE,  SETNE>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLT",  SETLT,  SETGT>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLTU", SETULT, SETUGT>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSGT",  SETGT,  SETLT>;
+  defm : VPatIntegerSetCCVL_VX_Swappable<vti, "PseudoVMSGTU", SETUGT, SETULT>;
   // There is no VMSGE(U)_VX instruction
 
   // FIXME: Support immediate forms of these by choosing SGT and decrementing
   // the immediate
-  defm "" : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSEQ",  SETEQ,  SETEQ>;
-  defm "" : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSNE",  SETNE,  SETNE>;
-  defm "" : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
-  defm "" : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
+  defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSEQ",  SETEQ,  SETEQ>;
+  defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSNE",  SETNE,  SETNE>;
+  defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLE",  SETLE,  SETGE>;
+  defm : VPatIntegerSetCCVL_VI_Swappable<vti, "PseudoVMSLEU", SETULE, SETUGE>;
 } // foreach vti = AllIntegerVectors
 
 // 12.9. Vector Integer Min/Max Instructions
-defm "" : VPatBinaryVL_VV_VX<riscv_umin_vl, "PseudoVMINU">;
-defm "" : VPatBinaryVL_VV_VX<riscv_smin_vl, "PseudoVMIN">;
-defm "" : VPatBinaryVL_VV_VX<riscv_umax_vl, "PseudoVMAXU">;
-defm "" : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
+defm : VPatBinaryVL_VV_VX<riscv_umin_vl, "PseudoVMINU">;
+defm : VPatBinaryVL_VV_VX<riscv_smin_vl, "PseudoVMIN">;
+defm : VPatBinaryVL_VV_VX<riscv_umax_vl, "PseudoVMAXU">;
+defm : VPatBinaryVL_VV_VX<riscv_smax_vl, "PseudoVMAX">;
 
 // 12.10. Vector Single-Width Integer Multiply Instructions
-defm "" : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;
-defm "" : VPatBinaryVL_VV_VX<riscv_mulhs_vl, "PseudoVMULH">;
-defm "" : VPatBinaryVL_VV_VX<riscv_mulhu_vl, "PseudoVMULHU">;
+defm : VPatBinaryVL_VV_VX<riscv_mul_vl, "PseudoVMUL">;
+defm : VPatBinaryVL_VV_VX<riscv_mulhs_vl, "PseudoVMULH">;
+defm : VPatBinaryVL_VV_VX<riscv_mulhu_vl, "PseudoVMULHU">;
 
 // 12.11. Vector Integer Divide Instructions
-defm "" : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;
-defm "" : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
-defm "" : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
-defm "" : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
+defm : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU">;
+defm : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV">;
+defm : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU">;
+defm : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM">;
 
 // 12.15. Vector Integer Merge Instructions
 foreach vti = AllIntegerVectors in {
@@ -703,33 +703,33 @@ foreach vti = AllIntegerVectors in {
 
 // 15.1. Vector Single-Width Integer Reduction Instructions
 let Predicates = [HasStdExtV] in {
-defm "" : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
-defm "" : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
 } // Predicates = [HasStdExtV]
 
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 let Predicates = [HasStdExtV, HasStdExtF] in {
-defm "" : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
-defm "" : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
+defm : VPatReductionVL<rvv_vecreduce_FADD_vl,     "PseudoVFREDSUM", /*is_float*/1>;
 } // Predicates = [HasStdExtV, HasStdExtF]
 
 let Predicates = [HasStdExtV, HasStdExtF] in {
 
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm "" : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
-defm "" : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
-defm "" : VPatBinaryFPVL_R_VF<riscv_fsub_vl, "PseudoVFRSUB">;
+defm : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
+defm : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
+defm : VPatBinaryFPVL_R_VF<riscv_fsub_vl, "PseudoVFRSUB">;
 
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm "" : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
-defm "" : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
-defm "" : VPatBinaryFPVL_R_VF<riscv_fdiv_vl, "PseudoVFRDIV">;
+defm : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
+defm : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
+defm : VPatBinaryFPVL_R_VF<riscv_fdiv_vl, "PseudoVFRDIV">;
 
 // 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 foreach vti = AllFloatVectors in {
@@ -840,17 +840,17 @@ foreach vti = AllFloatVectors in {
 }
 
 // 14.13. Vector Floating-Point Compare Instructions
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETEQ,  "PseudoVMFEQ", "PseudoVMFEQ">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETOEQ, "PseudoVMFEQ", "PseudoVMFEQ">;
 
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETNE,  "PseudoVMFNE", "PseudoVMFNE">;
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETUNE, "PseudoVMFNE", "PseudoVMFNE">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETNE,  "PseudoVMFNE", "PseudoVMFNE">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETUNE, "PseudoVMFNE", "PseudoVMFNE">;
 
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETLT,  "PseudoVMFLT", "PseudoVMFGT">;
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETLT,  "PseudoVMFLT", "PseudoVMFGT">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETOLT, "PseudoVMFLT", "PseudoVMFGT">;
 
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
-defm "" : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETLE,  "PseudoVMFLE", "PseudoVMFGE">;
+defm : VPatFPSetCCVL_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 
 foreach vti = AllFloatVectors in {
   // 14.8. Vector Floating-Point Square-Root Instruction
@@ -935,16 +935,16 @@ foreach fvti = AllFloatVectors in {
              GPR:$vl, fvti.SEW)>;
 
   // 14.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
-  defm "" : VPatConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFCVT_RTZ_X_F_V">;
-  defm "" : VPatConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFCVT_RTZ_XU_F_V">;
-  defm "" : VPatConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
-  defm "" : VPatConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
+  defm : VPatConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFCVT_RTZ_X_F_V">;
+  defm : VPatConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFCVT_RTZ_XU_F_V">;
+  defm : VPatConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
+  defm : VPatConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
 
   // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
-  defm "" : VPatWConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFWCVT_RTZ_X_F_V">;
-  defm "" : VPatWConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFWCVT_RTZ_XU_F_V">;
-  defm "" : VPatWConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
-  defm "" : VPatWConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
+  defm : VPatWConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFWCVT_RTZ_X_F_V">;
+  defm : VPatWConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFWCVT_RTZ_XU_F_V">;
+  defm : VPatWConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
+  defm : VPatWConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
@@ -956,10 +956,10 @@ foreach fvti = AllFloatVectors in {
   }
 
   // 14.19 Narrowing Floating-Point/Integer Type-Convert Instructions
-  defm "" : VPatNConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFNCVT_RTZ_X_F_W">;
-  defm "" : VPatNConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
-  defm "" : VPatNConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
-  defm "" : VPatNConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
+  defm : VPatNConvertFP2ISDNode_V_VL<riscv_fp_to_sint_vl, "PseudoVFNCVT_RTZ_X_F_W">;
+  defm : VPatNConvertFP2ISDNode_V_VL<riscv_fp_to_uint_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
+  defm : VPatNConvertI2FPSDNode_V_VL<riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
+  defm : VPatNConvertI2FPSDNode_V_VL<riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
