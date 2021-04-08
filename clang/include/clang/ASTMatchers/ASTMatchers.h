@@ -144,6 +144,7 @@ using TypeMatcher = internal::Matcher<QualType>;
 using TypeLocMatcher = internal::Matcher<TypeLoc>;
 using NestedNameSpecifierMatcher = internal::Matcher<NestedNameSpecifier>;
 using NestedNameSpecifierLocMatcher = internal::Matcher<NestedNameSpecifierLoc>;
+using CXXBaseSpecifierMatcher = internal::Matcher<CXXBaseSpecifier>;
 using CXXCtorInitializerMatcher = internal::Matcher<CXXCtorInitializer>;
 using TemplateArgumentMatcher = internal::Matcher<TemplateArgument>;
 using TemplateArgumentLocMatcher = internal::Matcher<TemplateArgumentLoc>;
@@ -515,6 +516,15 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl>
 ///   matches 'public:'
 extern const internal::VariadicDynCastAllOfMatcher<Decl, AccessSpecDecl>
     accessSpecDecl;
+
+/// Matches class bases.
+///
+/// Examples matches \c public virtual B.
+/// \code
+///   class B {};
+///   class C : public virtual B {};
+/// \endcode
+extern const internal::VariadicAllOfMatcher<CXXBaseSpecifier> cxxBaseSpecifier;
 
 /// Matches constructor initializers.
 ///
@@ -3825,16 +3835,19 @@ AST_MATCHER_P_OVERLOAD(CallExpr, callee, internal::Matcher<Decl>, InnerMatcher,
 ///             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
 ///             and U (matcher = typedefDecl(hasType(asString("int")))
 ///             and friend class X (matcher = friendDecl(hasType("X"))
+///             and public virtual X (matcher = cxxBaseSpecifier(hasType(
+///                                               asString("class X")))
 /// \code
 ///  class X {};
 ///  void y(X &x) { x; X z; }
 ///  typedef int U;
 ///  class Y { friend class X; };
+///  class Z : public virtual X {};
 /// \endcode
 AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
     hasType,
     AST_POLYMORPHIC_SUPPORTED_TYPES(Expr, FriendDecl, TypedefNameDecl,
-                                    ValueDecl),
+                                    ValueDecl, CXXBaseSpecifier),
     internal::Matcher<QualType>, InnerMatcher, 0) {
   QualType QT = internal::getUnderlyingType(Node);
   if (!QT.isNull())
@@ -3854,10 +3867,13 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 /// Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 ///             and z (matcher = varDecl(hasType(cxxRecordDecl(hasName("X")))))
 ///             and friend class X (matcher = friendDecl(hasType("X"))
+///             and public virtual X (matcher = cxxBaseSpecifier(hasType(
+///                                               cxxRecordDecl(hasName("X"))))
 /// \code
 ///  class X {};
 ///  void y(X &x) { x; X z; }
 ///  class Y { friend class X; };
+///  class Z : public virtual X {};
 /// \endcode
 ///
 /// Example matches class Derived
