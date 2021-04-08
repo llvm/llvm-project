@@ -8,6 +8,7 @@ declare i8 @llvm.smax.i8(i8, i8)
 declare <3 x i8> @llvm.umin.v3i8(<3 x i8>, <3 x i8>)
 declare <3 x i8> @llvm.umax.v3i8(<3 x i8>, <3 x i8>)
 declare <3 x i8> @llvm.smin.v3i8(<3 x i8>, <3 x i8>)
+declare <3 x i8> @llvm.smax.v3i8(<3 x i8>, <3 x i8>)
 declare void @use(i8)
 
 define i8 @umin_known_bits(i8 %x, i8 %y) {
@@ -605,4 +606,91 @@ define i8 @not_umin_of_not_constant_op(i8 %x) {
   %m = call i8 @llvm.umin.i8(i8 %notx, i8 42)
   %notm = xor i8 %m, -1
   ret i8 %notm
+}
+
+define i8 @smax_negation(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_negation(
+; CHECK-NEXT:    [[S1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[S1]], i8 [[S2]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s1 = sub i8 %x, %y
+  %s2 = sub i8 %y, %x
+  %r = call i8 @llvm.smax.i8(i8 %s1, i8 %s2)
+  ret i8 %r
+}
+
+define i8 @smax_negation_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_negation_nsw(
+; CHECK-NEXT:    [[S1:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[S1]], i8 [[S2]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s1 = sub nsw i8 %x, %y
+  %s2 = sub nsw i8 %y, %x
+  %r = call i8 @llvm.smax.i8(i8 %s1, i8 %s2)
+  ret i8 %r
+}
+
+define i8 @smax_negation_not_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @smax_negation_not_nsw(
+; CHECK-NEXT:    [[S1:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub nuw i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[S1]], i8 [[S2]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s1 = sub nsw i8 %x, %y
+  %s2 = sub nuw i8 %y, %x
+  %r = call i8 @llvm.smax.i8(i8 %s1, i8 %s2)
+  ret i8 %r
+}
+
+define <3 x i8> @smax_negation_vec(<3 x i8> %x) {
+; CHECK-LABEL: @smax_negation_vec(
+; CHECK-NEXT:    [[S:%.*]] = sub <3 x i8> <i8 0, i8 undef, i8 0>, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X]], <3 x i8> [[S]])
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %s = sub <3 x i8> <i8 0, i8 undef, i8 0>, %x
+  %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %x, <3 x i8> %s)
+  ret <3 x i8> %r
+}
+
+define i8 @smin_negation(i8 %x, i8 %y) {
+; CHECK-LABEL: @smin_negation(
+; CHECK-NEXT:    [[S1:%.*]] = sub i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smin.i8(i8 [[S1]], i8 [[S2]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s1 = sub i8 %x, %y
+  %s2 = sub i8 %y, %x
+  %r = call i8 @llvm.smin.i8(i8 %s1, i8 %s2)
+  ret i8 %r
+}
+
+define i8 @umax_negation(i8 %x, i8 %y) {
+; CHECK-LABEL: @umax_negation(
+; CHECK-NEXT:    [[S1:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umax.i8(i8 [[S1]], i8 [[S2]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s1 = sub nsw i8 %x, %y
+  %s2 = sub nsw i8 %y, %x
+  %r = call i8 @llvm.umax.i8(i8 %s1, i8 %s2)
+  ret i8 %r
+}
+
+define i8 @umin_negation(i8 %x) {
+; CHECK-LABEL: @umin_negation(
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.umin.i8(i8 [[S]], i8 [[X]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %s = sub nsw i8 0, %x
+  %r = call i8 @llvm.umin.i8(i8 %s, i8 %x)
+  ret i8 %r
 }
