@@ -38,25 +38,10 @@ class TestSwiftObjCMainConflictingDylibsFailingImport(TestBase):
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
-
-        # Set the breakpoints
-        bar_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Bar.swift'))
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        # This is failing because the Target-SwiftASTContext uses the
-        # amalgamated target header search options from all dylibs.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, bar_breakpoint)
+        target, process, _, bar_breakpoint = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('Bar.swift'),
+            extra_images=['Foo', 'Bar'])
 
         # This works because the Module-SwiftASTContext uses the dylib flags.
         self.expect("fr var bar", "expected result", substrs=["42"])

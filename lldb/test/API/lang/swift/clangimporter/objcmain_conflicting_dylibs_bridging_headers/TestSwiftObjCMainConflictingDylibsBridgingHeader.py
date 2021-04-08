@@ -31,22 +31,11 @@ class TestSwiftObjCMainConflictingDylibsBridgingHeader(TestBase):
     @swiftTest
     def test(self):
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here",
+            lldb.SBFileSpec("Bar.swift"),
+            extra_images=['Foo', 'Bar'])
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
-
-        # Set the breakpoints
-        bar_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('Bar.swift'))
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, bar_breakpoint)
 
         self.expect("fr var bar", "expected result", substrs=["42"])
         self.expect("p bar", "expected result", substrs=["$R0", "42"])

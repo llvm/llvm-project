@@ -40,17 +40,9 @@ class TestSwiftBridgingHeaderHeadermap(TestBase):
                     % mod_cache)
         self.runCmd('settings set frame-format ""')
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        self.registerSharedLibrariesWithTarget(target, ['dylib'])
-
         lldbutil.run_to_source_breakpoint(self, "break here",
-                                          lldb.SBFileSpec('dylib.swift'))
+                                          lldb.SBFileSpec('dylib.swift'),
+                                          extra_images=['dylib'])
         self.expect("fr v -d run-target -- a",
                     substrs=['(dylib.C<a.Wrapper>.Something)', "hello"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")

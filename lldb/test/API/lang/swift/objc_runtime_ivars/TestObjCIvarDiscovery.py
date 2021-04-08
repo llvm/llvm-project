@@ -48,10 +48,6 @@ class TestObjCIVarDiscovery(TestBase):
 
     def do_test(self, dbg):
         """Test that we can correctly see ivars from the Objective-C runtime"""
-
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target, VALID_TARGET)
-        #self.registerSharedLibrariesWithTarget(target, ['aTestFramework.framework/aTestFramework'])
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()
             directory = 'aTestFramework.framework/Versions/A/'
@@ -69,7 +65,9 @@ class TestObjCIVarDiscovery(TestBase):
 
         # Launch the process, and do not stop at the entry point.
         lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'),
+        #    extra_images=['aTestFramework.framework/aTestFramework']
+        )
 
         if dbg:
             self.expect(

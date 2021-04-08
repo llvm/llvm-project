@@ -101,18 +101,10 @@ class TestResilience(TestBase):
     def doTestWithFlavor(self, exe_flavor, mod_flavor):
         self.createSymlinks(exe_flavor, mod_flavor)
 
-        exe_name = "main"
-        exe_path = self.getBuildArtifact(exe_name)
-
-        source_name = "main.swift"
-        source_spec = lldb.SBFileSpec(source_name)
-
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['mod'])
-
         target, process, _, breakpoint = lldbutil.run_to_source_breakpoint(
-            self, "break here", source_spec, exe_name=exe_path)
+            self, "break here", lldb.SBFileSpec("main.swift"),
+            exe_name=self.getBuildArtifact("main"),
+            extra_images=['mod'])
         dylib_breakpoint = target.BreakpointCreateByName("fA")
 
         # main.swift

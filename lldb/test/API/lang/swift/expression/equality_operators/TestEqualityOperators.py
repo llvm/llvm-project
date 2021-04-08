@@ -72,26 +72,9 @@ class TestUnitTests(TestBase):
 
     def do_test(self, bkpt_name, compare_value, counter_value):
         """Test that we resolve expression operators correctly"""
-        exe_name = "three"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['fooey'])
-
-        # Set the breakpoints
-        bkpt = target.BreakpointCreateByName(bkpt_name)
-        self.assertTrue(bkpt.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        env_arr = self.registerSharedLibrariesWithTarget(target, ["fooey"])
-
-        process = target.LaunchSimple(None, env_arr, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, bkpt)
-
-        self.assertTrue(len(threads) == 1)
+        lldbutil.run_to_name_breakpoint(self, bkpt_name,
+                                        exe_name=self.getBuildArtifact("three"),
+                                        extra_images=["fooey"])
 
         options = lldb.SBExpressionOptions()
 

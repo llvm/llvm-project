@@ -50,15 +50,11 @@ class TestSwiftDifferentClangFlags(TestBase):
     def test_swift_different_clang_flags(self):
         """Test that we use the right compiler flags when debugging"""
         self.build()
-
-        target = self.dbg.CreateTarget(self.getBuildArtifact("main"))
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['moda', 'modb'])
-
         target, process, thread, modb_breakpoint = \
             lldbutil.run_to_source_breakpoint(
                 self, 'break here', lldb.SBFileSpec("modb.swift"),
-                exe_name=self.getBuildArtifact("main"))
+                exe_name=self.getBuildArtifact("main"),
+                extra_images=['moda', 'modb'])
 
         main_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here',lldb.SBFileSpec('main.swift'))

@@ -33,18 +33,9 @@ class TestResilientObjectInOptional(TestBase):
         TestBase.setUp(self)
 
     def doTest(self):
-        exe_name = "a.out"
-        exe_path = self.getBuildArtifact(exe_name)
-        
-        source_name = "main.swift"
-        source_spec = lldb.SBFileSpec(source_name)
-        print("Looking for executable at: %s"%(exe_name))
-        target = self.dbg.CreateTarget(exe_path)
-        self.assertTrue(target, VALID_TARGET)
-        self.registerSharedLibrariesWithTarget(target, ['mod'])
-
         target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
-            self, "break here", source_spec, exe_name=exe_path)
+            self, "break here", lldb.SBFileSpec("main.swift"),
+            extra_images=['mod'])
 
         frame = thread.frames[0]
         

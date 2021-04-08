@@ -40,11 +40,9 @@ class TestSwiftMacroConflict(TestBase):
                     % mod_cache)
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
-
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('Bar.swift'))
+            self, 'break here', lldb.SBFileSpec('Bar.swift'),
+            extra_images=['Foo', 'Bar'])
         bar_value = self.frame().EvaluateExpression("bar")
         self.expect("fr var bar", "correct bar", substrs=["23"])
 
@@ -81,11 +79,9 @@ class TestSwiftMacroConflict(TestBase):
                     % mod_cache)
         self.build()
 
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.registerSharedLibrariesWithTarget(target, ['Foo', 'Bar'])
-
         target, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('Bar.swift'))
+            self, 'break here', lldb.SBFileSpec('Bar.swift'),
+            extra_images=['Foo', 'Bar'])
         self.expect("v bar", substrs=["23"])
         foo_breakpoint = target.BreakpointCreateBySourceRegex(
             'break here', lldb.SBFileSpec('Foo.swift'))
