@@ -89,6 +89,7 @@ GDBRemoteCommunicationClient::GDBRemoteCommunicationClient()
       m_supports_jGetSharedCacheInfo(eLazyBoolCalculate),
       m_supports_QPassSignals(eLazyBoolCalculate),
       m_supports_error_string_reply(eLazyBoolCalculate),
+      m_supports_multiprocess(eLazyBoolCalculate),
       m_supports_qProcessInfoPID(true), m_supports_qfProcessInfo(true),
       m_supports_qUserName(true), m_supports_qGroupName(true),
       m_supports_qThreadStopInfo(true), m_supports_z0(true),
@@ -292,6 +293,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_prepare_for_reg_writing_reply = eLazyBoolCalculate;
     m_attach_or_wait_reply = eLazyBoolCalculate;
     m_avoid_g_packets = eLazyBoolCalculate;
+    m_supports_multiprocess = eLazyBoolCalculate;
     m_supports_qXfer_auxv_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_svr4_read = eLazyBoolCalculate;
@@ -342,11 +344,13 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_supports_augmented_libraries_svr4_read = eLazyBoolNo;
   m_supports_qXfer_features_read = eLazyBoolNo;
   m_supports_qXfer_memory_map_read = eLazyBoolNo;
+  m_supports_multiprocess = eLazyBoolNo;
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
 
   // build the qSupported packet
-  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc"};
+  std::vector<std::string> features = {"xmlRegisters=i386,arm,mips,arc",
+                                       "multiprocess+"};
   StreamString packet;
   packet.PutCString("qSupported");
   for (uint32_t i = 0; i < features.size(); ++i) {
@@ -432,6 +436,11 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
       m_supports_QPassSignals = eLazyBoolYes;
     else
       m_supports_QPassSignals = eLazyBoolNo;
+
+    if (::strstr(response_cstr, "multiprocess+"))
+      m_supports_multiprocess = eLazyBoolYes;
+    else
+      m_supports_multiprocess = eLazyBoolNo;
 
     const char *packet_size_str = ::strstr(response_cstr, "PacketSize=");
     if (packet_size_str) {
@@ -741,12 +750,14 @@ lldb::pid_t GDBRemoteCommunicationClient::GetCurrentProcessID(bool allow_lazy) {
     // If we don't get a response for $qC, check if $qfThreadID gives us a
     // result.
     if (m_curr_pid == LLDB_INVALID_PROCESS_ID) {
-      std::vector<lldb::tid_t> thread_ids;
       bool sequence_mutex_unavailable;
-      size_t size;
-      size = GetCurrentThreadIDs(thread_ids, sequence_mutex_unavailable);
-      if (size && !sequence_mutex_unavailable) {
-        m_curr_pid = thread_ids.front();
+      auto ids = GetCurrentProcessAndThreadIDs(sequence_mutex_unavailable);
+      if (!ids.empty() && !sequence_mutex_unavailable) {
+        // If server returned an explicit PID, use that.
+        m_curr_pid = ids.front().first;
+        // Otherwise, use the TID of the first thread (Linux hack).
+        if (m_curr_pid == LLDB_INVALID_PROCESS_ID)
+          m_curr_pid = ids.front().second;
         m_curr_pid_is_valid = eLazyBoolYes;
         return m_curr_pid;
       }
@@ -1125,8 +1136,23 @@ bool GDBRemoteCommunicationClient::GetDefaultThreadId(lldb::tid_t &tid) {
   if (!response.IsNormalResponse())
     return false;
 
-  if (response.GetChar() == 'Q' && response.GetChar() == 'C')
-    tid = response.GetHexMaxU64(true, -1);
+  if (response.GetChar() == 'Q' && response.GetChar() == 'C') {
+    auto pid_tid = response.GetPidTid(0);
+    if (!pid_tid)
+      return false;
+
+    lldb::pid_t pid = pid_tid->first;
+    // invalid
+    if (pid == StringExtractorGDBRemote::AllProcesses)
+      return false;
+
+    // if we get pid as well, update m_curr_pid
+    if (pid != 0) {
+      m_curr_pid = pid;
+      m_curr_pid_is_valid = eLazyBoolYes;
+    }
+    tid = pid_tid->second;
+  }
 
   return true;
 }
@@ -2766,9 +2792,10 @@ uint8_t GDBRemoteCommunicationClient::SendGDBStoppointTypePacket(
   return UINT8_MAX;
 }
 
-size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
-    std::vector<lldb::tid_t> &thread_ids, bool &sequence_mutex_unavailable) {
-  thread_ids.clear();
+std::vector<std::pair<lldb::pid_t, lldb::tid_t>>
+GDBRemoteCommunicationClient::GetCurrentProcessAndThreadIDs(
+    bool &sequence_mutex_unavailable) {
+  std::vector<std::pair<lldb::pid_t, lldb::tid_t>> ids;
 
   Lock lock(*this, false);
   if (lock) {
@@ -2786,11 +2813,11 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
         break;
       if (ch == 'm') {
         do {
-          tid_t tid = response.GetHexMaxU64(false, LLDB_INVALID_THREAD_ID);
+          auto pid_tid = response.GetPidTid(LLDB_INVALID_PROCESS_ID);
+          if (!pid_tid)
+            return {};
 
-          if (tid != LLDB_INVALID_THREAD_ID) {
-            thread_ids.push_back(tid);
-          }
+          ids.push_back(pid_tid.getValue());
           ch = response.GetChar(); // Skip the command separator
         } while (ch == ',');       // Make sure we got a comma separator
       }
@@ -2803,10 +2830,10 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
      * be as simple as 'S05'. There is no packet which can give us pid and/or
      * tid.
      * Assume pid=tid=1 in such cases.
-    */
+     */
     if ((response.IsUnsupportedResponse() || response.IsNormalResponse()) &&
-        thread_ids.size() == 0 && IsConnected()) {
-      thread_ids.push_back(1);
+        ids.size() == 0 && IsConnected()) {
+      ids.emplace_back(1, 1);
     }
   } else {
     Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_PROCESS |
@@ -2815,6 +2842,28 @@ size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
                   "packet 'qfThreadInfo'");
     sequence_mutex_unavailable = true;
   }
+
+  return ids;
+}
+
+size_t GDBRemoteCommunicationClient::GetCurrentThreadIDs(
+    std::vector<lldb::tid_t> &thread_ids, bool &sequence_mutex_unavailable) {
+  lldb::pid_t pid = GetCurrentProcessID();
+  thread_ids.clear();
+
+  auto ids = GetCurrentProcessAndThreadIDs(sequence_mutex_unavailable);
+  if (ids.empty() || sequence_mutex_unavailable)
+    return 0;
+
+  for (auto id : ids) {
+    // skip threads that do not belong to the current process
+    if (id.first != LLDB_INVALID_PROCESS_ID && id.first != pid)
+      continue;
+    if (id.second != LLDB_INVALID_THREAD_ID &&
+        id.second != StringExtractorGDBRemote::AllThreads)
+      thread_ids.push_back(id.second);
+  }
+
   return thread_ids.size();
 }
 
