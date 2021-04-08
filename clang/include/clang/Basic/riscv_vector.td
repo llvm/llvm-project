@@ -283,13 +283,6 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
                                       ["wx", "Uv", "UvUwz"]]>;
 }
 
-multiclass RVVIntTerBuiltinSet
-    : RVVOutOp1BuiltinSet<NAME, "csil",
-                          [["vv", "v", "vvvv"],
-                           ["vx", "v", "vvev"],
-                           ["vv", "Uv", "UvUvUvUv"],
-                           ["vx", "Uv", "UvUvUeUv"]]>;
-
 multiclass RVVCarryinBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vvm", "v", "vvvm"],
@@ -318,6 +311,38 @@ multiclass RVVIntMaskOutBuiltinSet
     : RVVSignedMaskOutBuiltinSet,
       RVVUnsignedMaskOutBuiltinSet;
 
+class RVVIntExt<string intrinsic_name, string suffix, string prototype,
+                string type_range>
+    : RVVBuiltin<suffix, prototype, type_range> {
+  let IRName = intrinsic_name;
+  let IRNameMask = intrinsic_name # "_mask";
+  let MangledName = NAME;
+  let IntrinsicTypes = [-1, 0];
+}
+
+let HasMaskedOffOperand = false in {
+  multiclass RVVIntTerBuiltinSet {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
+                                  [["vv", "v", "vvvv"],
+                                   ["vx", "v", "vvev"],
+                                   ["vv", "Uv", "UvUvUvUv"],
+                                   ["vx", "Uv", "UvUvUeUv"]]>;
+  }
+  multiclass RVVFloatingTerBuiltinSet {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "fd",
+                                  [["vv", "v", "vvvv"],
+                                   ["vf", "v", "vvev"]]>;
+  }
+}
+
+let HasMaskedOffOperand = false, Log2LMUL = [-1, 0, 1, 2] in {
+  multiclass RVVFloatingWidenTerBuiltinSet {
+    defm ""  : RVVOutOp1Op2BuiltinSet<NAME, "f",
+                                      [["vv", "w", "wwvv"],
+                                       ["vf", "w", "wwev"]]>;
+  }
+}
+
 multiclass RVVFloatingBinBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "fd",
                           [["vv", "v", "vvv"],
@@ -327,14 +352,14 @@ multiclass RVVFloatingBinVFBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "fd",
                           [["vf", "v", "vve"]]>;
 
-class RVVIntExt<string intrinsic_name, string suffix, string prototype,
-                string type_range>
-    : RVVBuiltin<suffix, prototype, type_range> {
-  let IRName = intrinsic_name;
-  let IRNameMask = intrinsic_name # "_mask";
-  let MangledName = NAME;
-  let IntrinsicTypes = [-1, 0];
-}
+multiclass RVVFloatingMaskOutBuiltinSet
+    : RVVOp0Op1BuiltinSet<NAME, "fd",
+                          [["vv", "vm", "mvv"],
+                           ["vf", "vm", "mve"]]>;
+
+multiclass RVVFloatingMaskOutVFBuiltinSet
+    : RVVOp0Op1BuiltinSet<NAME, "fd",
+                          [["vf", "vm", "mve"]]>;
 
 // For widen operation which has different mangling name.
 multiclass RVVWidenBuiltinSet<string intrinsic_name, string type_range,
@@ -387,6 +412,16 @@ multiclass RVVUnsignedWidenOp0BinBuiltinSet
     : RVVWidenWOp0BuiltinSet<NAME # "_w", "csi",
                              [["wv", "Uw", "UwUwUv"],
                               ["wx", "Uw", "UwUwUe"]]>;
+
+multiclass RVVFloatingWidenBinBuiltinSet
+    : RVVWidenBuiltinSet<NAME, "f",
+                         [["vv", "w", "wvv"],
+                          ["vf", "w", "wve"]]>;
+
+multiclass RVVFloatingWidenOp0BinBuiltinSet
+    : RVVWidenWOp0BuiltinSet<NAME # "_w", "f",
+                             [["wv", "w", "wwv"],
+                              ["wf", "w", "wwe"]]>;
 
 defvar TypeList = ["c","s","i","l","f","d"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
@@ -715,12 +750,10 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let HasMaskedOffOperand = false in {
-  defm vmacc : RVVIntTerBuiltinSet;
-  defm vnmsac : RVVIntTerBuiltinSet;
-  defm vmadd : RVVIntTerBuiltinSet;
-  defm vnmsub : RVVIntTerBuiltinSet;
-}
+defm vmacc  : RVVIntTerBuiltinSet;
+defm vnmsac : RVVIntTerBuiltinSet;
+defm vmadd  : RVVIntTerBuiltinSet;
+defm vnmsub : RVVIntTerBuiltinSet;
 
 // 12.14. Vector Widening Integer Multiply-Add Instructions
 let HasMaskedOffOperand = false,
@@ -770,26 +803,45 @@ defm vnclip : RVVSignedNShiftBuiltinSet;
 
 // 14. Vector Floating-Point Instructions
 // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm vfadd : RVVFloatingBinBuiltinSet;
-defm vfsub : RVVFloatingBinBuiltinSet;
+defm vfadd  : RVVFloatingBinBuiltinSet;
+defm vfsub  : RVVFloatingBinBuiltinSet;
 defm vfrsub : RVVFloatingBinVFBuiltinSet;
 
 // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
-// TODO
+// Widening FP add/subtract, 2*SEW = SEW +/- SEW
+defm vfwadd : RVVFloatingWidenBinBuiltinSet;
+defm vfwsub : RVVFloatingWidenBinBuiltinSet;
+// Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
+defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
 
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm vfmul : RVVFloatingBinBuiltinSet;
-defm vfdiv : RVVFloatingBinBuiltinSet;
+defm vfmul  : RVVFloatingBinBuiltinSet;
+defm vfdiv  : RVVFloatingBinBuiltinSet;
 defm vfrdiv : RVVFloatingBinVFBuiltinSet;
 
 // 14.5. Vector Widening Floating-Point Multiply
-// TODO
+let Log2LMUL = [-1, 0, 1, 2] in {
+  defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "f",
+                                       [["vv", "w", "wvv"],
+                                        ["vf", "w", "wve"]]>;
+}
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-// TODO
+defm vfmacc  : RVVFloatingTerBuiltinSet;
+defm vfnmacc : RVVFloatingTerBuiltinSet;
+defm vfmsac  : RVVFloatingTerBuiltinSet;
+defm vfnmsac : RVVFloatingTerBuiltinSet;
+defm vfmadd  : RVVFloatingTerBuiltinSet;
+defm vfnmadd : RVVFloatingTerBuiltinSet;
+defm vfmsub  : RVVFloatingTerBuiltinSet;
+defm vfnmsub : RVVFloatingTerBuiltinSet;
 
 // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-// TODO
+defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
+defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
+defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
+defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
 
 // 14.8. Vector Floating-Point Square-Root Instruction
 // TODO
@@ -805,12 +857,17 @@ defm vfmin : RVVFloatingBinBuiltinSet;
 defm vfmax : RVVFloatingBinBuiltinSet;
 
 // 14.12. Vector Floating-Point Sign-Injection Instructions
-defm vfsgnj : RVVFloatingBinBuiltinSet;
+defm vfsgnj  : RVVFloatingBinBuiltinSet;
 defm vfsgnjn : RVVFloatingBinBuiltinSet;
 defm vfsgnjx : RVVFloatingBinBuiltinSet;
 
 // 14.13. Vector Floating-Point Compare Instructions
-// TODO
+defm vmfeq : RVVFloatingMaskOutBuiltinSet;
+defm vmfne : RVVFloatingMaskOutBuiltinSet;
+defm vmflt : RVVFloatingMaskOutBuiltinSet;
+defm vmfle : RVVFloatingMaskOutBuiltinSet;
+defm vmfgt : RVVFloatingMaskOutVFBuiltinSet;
+defm vmfge : RVVFloatingMaskOutVFBuiltinSet;
 
 // 14.14. Vector Floating-Point Classify Instruction
 // TODO
