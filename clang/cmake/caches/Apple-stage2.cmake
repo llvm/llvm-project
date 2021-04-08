@@ -56,6 +56,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-objdump
   llvm-nm
   llvm-size
+  llvm-config
   CACHE STRING "")
 
 set(LLVM_BUILD_UTILS ON CACHE BOOL "")
@@ -63,6 +64,7 @@ set(LLVM_INSTALL_UTILS ON CACHE BOOL "")
 set(LLVM_TOOLCHAIN_UTILITIES
   FileCheck
   yaml2obj
+  not
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS
