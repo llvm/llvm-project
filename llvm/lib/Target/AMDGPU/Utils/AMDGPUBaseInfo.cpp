@@ -438,6 +438,11 @@ std::string AMDGPUTargetID::toString() const {
       } else if (Processor == "gfx906") {
         if (isXnackOnOrAny())
           Processor = "gfx907";
+      } else if (Processor == "gfx90c") {
+        if (isXnackOnOrAny())
+          report_fatal_error(
+              "AMD GPU code object V2 does not support processor " + Processor +
+              " with XNACK being ON or ANY");
       } else {
         report_fatal_error(
             "AMD GPU code object V2 does not support processor " + Processor);
