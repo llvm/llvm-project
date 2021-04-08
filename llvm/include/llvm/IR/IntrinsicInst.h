@@ -265,6 +265,13 @@ public:
     return cast<MetadataAsValue>(getArgOperand(2))->getMetadata();
   }
 
+  /// Use of this should generally be avoided; instead,
+  /// replaceVariableLocationOp and addVariableLocationOps should be used where
+  /// possible to avoid creating invalid state.
+  void setRawLocation(Metadata *Location) {
+    return setArgOperand(0, MetadataAsValue::get(getContext(), Location));
+  }
+
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
   Optional<uint64_t> getFragmentSizeInBits() const;

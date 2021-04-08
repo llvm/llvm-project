@@ -1180,6 +1180,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
                     MVT::nxv4f32, MVT::nxv2f64}) {
+      for (auto InnerVT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16,
+                           MVT::nxv2f32, MVT::nxv4f32, MVT::nxv2f64}) {
+        // Avoid marking truncating FP stores as legal to prevent the
+        // DAGCombiner from creating unsupported truncating stores.
+        setTruncStoreAction(VT, InnerVT, Expand);
+      }
+
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::MGATHER, VT, Custom);
