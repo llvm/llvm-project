@@ -2751,86 +2751,62 @@ multiclass VPatBinaryM_VI<string intrinsic, string instruction,
 
 multiclass VPatBinaryV_VV_VX_VI<string intrinsic, string instruction,
                                 list<VTypeInfo> vtilist, Operand ImmType = simm5>
-{
-  defm "" : VPatBinaryV_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
-}
+    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
+      VPatBinaryV_VX<intrinsic, instruction, vtilist>,
+      VPatBinaryV_VI<intrinsic, instruction, vtilist, ImmType>;
 
 multiclass VPatBinaryV_VV_VX<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
-{
-  defm "" : VPatBinaryV_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VX<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
+      VPatBinaryV_VX<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VX_VI<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
-{
-  defm "" : VPatBinaryV_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_VI<intrinsic, instruction, vtilist, simm5>;
-}
+    : VPatBinaryV_VX<intrinsic, instruction, vtilist>,
+      VPatBinaryV_VI<intrinsic, instruction, vtilist, simm5>;
 
 multiclass VPatBinaryW_VV_VX<string intrinsic, string instruction,
                              list<VTypeInfoToWide> vtilist>
-{
-  defm "" : VPatBinaryW_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryW_VX<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryW_VV<intrinsic, instruction, vtilist>,
+      VPatBinaryW_VX<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryW_WV_WX<string intrinsic, string instruction,
                              list<VTypeInfoToWide> vtilist>
-{
-  defm "" : VPatBinaryW_WV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryW_WX<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryW_WV<intrinsic, instruction, vtilist>,
+      VPatBinaryW_WX<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_WV_WX_WI<string intrinsic, string instruction,
                                 list<VTypeInfoToWide> vtilist>
-{
-  defm "" : VPatBinaryV_WV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_WX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryV_WI<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryV_WV<intrinsic, instruction, vtilist>,
+      VPatBinaryV_WX<intrinsic, instruction, vtilist>,
+      VPatBinaryV_WI<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VM_XM_IM<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_VM<intrinsic, instruction>;
-  defm "" : VPatBinaryV_XM<intrinsic, instruction>;
-  defm "" : VPatBinaryV_IM<intrinsic, instruction>;
-}
+    : VPatBinaryV_VM<intrinsic, instruction>,
+      VPatBinaryV_XM<intrinsic, instruction>,
+      VPatBinaryV_IM<intrinsic, instruction>;
 
 multiclass VPatBinaryM_VM_XM_IM<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>;
-  defm "" : VPatBinaryV_XM<intrinsic, instruction, /*CarryOut=*/1>;
-  defm "" : VPatBinaryV_IM<intrinsic, instruction, /*CarryOut=*/1>;
-}
+    : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>,
+      VPatBinaryV_XM<intrinsic, instruction, /*CarryOut=*/1>,
+      VPatBinaryV_IM<intrinsic, instruction, /*CarryOut=*/1>;
 
 multiclass VPatBinaryM_V_X_I<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_V<intrinsic, instruction>;
-  defm "" : VPatBinaryV_X<intrinsic, instruction>;
-  defm "" : VPatBinaryV_I<intrinsic, instruction>;
-}
+    : VPatBinaryV_V<intrinsic, instruction>,
+      VPatBinaryV_X<intrinsic, instruction>,
+      VPatBinaryV_I<intrinsic, instruction>;
 
 multiclass VPatBinaryV_VM_XM<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_VM<intrinsic, instruction>;
-  defm "" : VPatBinaryV_XM<intrinsic, instruction>;
-}
+    : VPatBinaryV_VM<intrinsic, instruction>,
+      VPatBinaryV_XM<intrinsic, instruction>;
 
 multiclass VPatBinaryM_VM_XM<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>;
-  defm "" : VPatBinaryV_XM<intrinsic, instruction, /*CarryOut=*/1>;
-}
+    : VPatBinaryV_VM<intrinsic, instruction, /*CarryOut=*/1>,
+      VPatBinaryV_XM<intrinsic, instruction, /*CarryOut=*/1>;
 
 multiclass VPatBinaryM_V_X<string intrinsic, string instruction>
-{
-  defm "" : VPatBinaryV_V<intrinsic, instruction>;
-  defm "" : VPatBinaryV_X<intrinsic, instruction>;
-}
+    : VPatBinaryV_V<intrinsic, instruction>,
+      VPatBinaryV_X<intrinsic, instruction>;
 
 multiclass VPatTernary<string intrinsic,
                        string inst,
@@ -2915,52 +2891,41 @@ multiclass VPatTernaryW_VX<string intrinsic, string instruction,
 }
 
 multiclass VPatTernaryV_VV_VX_AAXA<string intrinsic, string instruction,
-                              list<VTypeInfo> vtilist> {
-  defm "" : VPatTernaryV_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatTernaryV_VX_AAXA<intrinsic, instruction, vtilist>;
-}
+                              list<VTypeInfo> vtilist>
+    : VPatTernaryV_VV<intrinsic, instruction, vtilist>,
+      VPatTernaryV_VX_AAXA<intrinsic, instruction, vtilist>;
 
 multiclass VPatTernaryV_VX_VI<string intrinsic, string instruction,
-                              list<VTypeInfo> vtilist, Operand Imm_type = simm5> {
-  defm "" : VPatTernaryV_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatTernaryV_VI<intrinsic, instruction, vtilist, Imm_type>;
-}
+                              list<VTypeInfo> vtilist, Operand Imm_type = simm5>
+    : VPatTernaryV_VX<intrinsic, instruction, vtilist>,
+      VPatTernaryV_VI<intrinsic, instruction, vtilist, Imm_type>;
 
 multiclass VPatBinaryM_VV_VX_VI<string intrinsic, string instruction,
                                 list<VTypeInfo> vtilist>
-{
-  defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryM_VV<intrinsic, instruction, vtilist>,
+      VPatBinaryM_VX<intrinsic, instruction, vtilist>,
+      VPatBinaryM_VI<intrinsic, instruction, vtilist>;
 
 multiclass VPatTernaryW_VV_VX<string intrinsic, string instruction,
-                              list<VTypeInfoToWide> vtilist> {
-  defm "" : VPatTernaryW_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatTernaryW_VX<intrinsic, instruction, vtilist>;
-}
+                              list<VTypeInfoToWide> vtilist>
+    : VPatTernaryW_VV<intrinsic, instruction, vtilist>,
+      VPatTernaryW_VX<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryM_VV_VX<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
-{
-  defm "" : VPatBinaryM_VV<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryM_VV<intrinsic, instruction, vtilist>,
+      VPatBinaryM_VX<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryM_VX_VI<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist>
-{
-  defm "" : VPatBinaryM_VX<intrinsic, instruction, vtilist>;
-  defm "" : VPatBinaryM_VI<intrinsic, instruction, vtilist>;
-}
+    : VPatBinaryM_VX<intrinsic, instruction, vtilist>,
+      VPatBinaryM_VI<intrinsic, instruction, vtilist>;
 
 multiclass VPatBinaryV_VV_VX_VI_INT<string intrinsic, string instruction,
                                     list<VTypeInfo> vtilist, Operand ImmType = simm5>
-{
-  defm "" : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>;
-  defm "" : VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>;
-  defm "" : VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
-}
+    : VPatBinaryV_VV_INT<intrinsic#"_vv", instruction, vtilist>,
+      VPatBinaryV_VX_INT<intrinsic#"_vx", instruction, vtilist>,
+      VPatBinaryV_VI<intrinsic#"_vx", instruction, vtilist, ImmType>;
 
 multiclass VPatReductionV_VS<string intrinsic, string instruction, bit IsFloat = 0> {
   foreach vti = !if(IsFloat, NoGroupFloatVectors, NoGroupIntegerVectors) in
