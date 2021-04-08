@@ -5,6 +5,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee < %s | FileCheck --check-prefix=NOFUSE %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck --check-prefix=FMA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math-f32=ieee < %s | FileCheck --check-prefix=FMAGFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math-f32=ieee < %s | FileCheck --check-prefix=FMAGFX10 %s
 
 ; RUN: llc -march=amdgcn -mcpu=tahiti -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMAD %s
 ; RUN: llc -march=amdgcn -mcpu=verde -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMAD %s
@@ -12,6 +13,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMAD %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMADGFX10 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -denormal-fp-math-f32=preserve-sign < %s | FileCheck --check-prefix=FMAGFX10 %s
 
 ; Check for incorrect fmad formation when distributing
 

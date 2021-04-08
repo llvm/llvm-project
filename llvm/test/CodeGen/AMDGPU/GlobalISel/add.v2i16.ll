@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=fiji < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 < %s | FileCheck -check-prefix=GFX11 %s
 
 define <2 x i16> @v_add_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX9-LABEL: v_add_v2i16:
@@ -24,6 +25,13 @@ define <2 x i16> @v_add_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, %b
   ret <2 x i16> %add
 }
@@ -50,6 +58,13 @@ define <2 x i16> @v_add_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_fneg_lhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
   %add = add <2 x i16> %cast.neg.a, %b
@@ -78,6 +93,13 @@ define <2 x i16> @v_add_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_fneg_rhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
   %cast.neg.b = bitcast <2 x half> %neg.b to <2 x i16>
   %add = add <2 x i16> %a, %cast.neg.b
@@ -108,6 +130,13 @@ define <2 x i16> @v_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
   %neg.b = fneg <2 x half> %b
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
@@ -140,6 +169,13 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_splat(<2 x i16> %a) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0xffc0, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_neg_inline_imm_splat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, 0xffc0, v0 op_sel_hi:[0,1]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 -64, i16 -64>
   ret <2 x i16> %add
 }
@@ -167,6 +203,13 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_lo(<2 x i16> %a) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0x4ffc0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_neg_inline_imm_lo:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, 0x4ffc0, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 -64, i16 4>
   ret <2 x i16> %add
 }
@@ -194,6 +237,13 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_hi(<2 x i16> %a) {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0xffc00004, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v_add_v2i16_neg_inline_imm_hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    v_pk_add_u16 v0, 0xffc00004, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 4, i16 -64>
   ret <2 x i16> %add
 }
@@ -227,6 +277,14 @@ define amdgpu_ps i32 @s_add_v2i16_neg_inline_imm_splat(<2 x i16> inreg %a) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, 0xffc0
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_neg_inline_imm_splat:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, 0xffc0ffc0
+; GFX11-NEXT:    s_add_i32 s1, s1, 0xffc0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %add = add <2 x i16> %a, <i16 -64, i16 -64>
   %cast = bitcast <2 x i16> %add to i32
   ret i32 %cast
@@ -260,6 +318,14 @@ define amdgpu_ps i32 @s_add_v2i16_neg_inline_imm_lo(<2 x i16> inreg %a) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, 4
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_neg_inline_imm_lo:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, 0x4ffc0
+; GFX11-NEXT:    s_add_i32 s1, s1, 4
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %add = add <2 x i16> %a, <i16 -64, i16 4>
   %cast = bitcast <2 x i16> %add to i32
   ret i32 %cast
@@ -293,6 +359,14 @@ define amdgpu_ps i32 @s_add_v2i16_neg_inline_imm_hi(<2 x i16> inreg %a) {
 ; GFX10-NEXT:    s_add_i32 s1, s1, 0xffc0
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_neg_inline_imm_hi:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, 0xffc00004
+; GFX11-NEXT:    s_add_i32 s1, s1, 0xffc0
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
   %add = add <2 x i16> %a, <i16 4, i16 -64>
   %cast = bitcast <2 x i16> %add to i32
   ret i32 %cast
@@ -330,6 +404,15 @@ define amdgpu_ps i32 @s_add_v2i16(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 ; GFX10-NEXT:    s_add_i32 s2, s2, s3
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_add_i32 s2, s2, s3
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX11-NEXT:    ; return to shader part epilog
   %add = add <2 x i16> %a, %b
   %cast = bitcast <2 x i16> %add to i32
   ret i32 %cast
@@ -370,6 +453,16 @@ define amdgpu_ps i32 @s_add_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 ; GFX10-NEXT:    s_add_i32 s2, s2, s3
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_fneg_lhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_add_i32 s2, s2, s3
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX11-NEXT:    ; return to shader part epilog
   %neg.a = fneg <2 x half> %a
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>
   %add = add <2 x i16> %cast.neg.a, %b
@@ -412,6 +505,16 @@ define amdgpu_ps i32 @s_add_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 ; GFX10-NEXT:    s_add_i32 s2, s2, s3
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_fneg_rhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_xor_b32 s1, s1, 0x80008000
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_add_i32 s2, s2, s3
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX11-NEXT:    ; return to shader part epilog
   %neg.b = fneg <2 x half> %b
   %cast.neg.b = bitcast <2 x half> %neg.b to <2 x i16>
   %add = add <2 x i16> %a, %cast.neg.b
@@ -460,6 +563,18 @@ define amdgpu_ps i32 @s_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x ha
 ; GFX10-NEXT:    s_add_i32 s2, s2, s3
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
 ; GFX10-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_add_v2i16_fneg_lhs_fneg_rhs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_mov_b32 s2, 0x80008000
+; GFX11-NEXT:    s_xor_b32 s1, s1, s2
+; GFX11-NEXT:    s_xor_b32 s0, s0, s2
+; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_add_i32 s2, s2, s3
+; GFX11-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
+; GFX11-NEXT:    ; return to shader part epilog
   %neg.a = fneg <2 x half> %a
   %neg.b = fneg <2 x half> %b
   %cast.neg.a = bitcast <2 x half> %neg.a to <2 x i16>

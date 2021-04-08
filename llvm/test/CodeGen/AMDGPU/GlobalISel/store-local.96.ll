@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefix=GFX7 %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX10 %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1100 -amdgpu-insert-delay-alu=0 -verify-machineinstrs < %s | FileCheck --check-prefix=GFX11 %s
 
 ; FIXME:
 ; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti -verify-machineinstrs < %s | FileCheck --check-prefix=GFX6 %s
@@ -44,6 +45,19 @@ define amdgpu_kernel void @store_lds_v3i32(<3 x i32> addrspace(3)* %out, <3 x i3
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX10-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    v_mov_b32_e32 v1, s13
+; GFX11-NEXT:    v_mov_b32_e32 v2, s14
+; GFX11-NEXT:    v_mov_b32_e32 v3, s0
+; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out
   ret void
 }
@@ -173,6 +187,48 @@ define amdgpu_kernel void @store_lds_v3i32_align1(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write_b8 v1, v0 offset:10
 ; GFX10-NEXT:    ds_write_b8 v1, v2 offset:11
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32_align1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshr_b32 s1, s12, 8
+; GFX11-NEXT:    v_mov_b32_e32 v1, s0
+; GFX11-NEXT:    s_lshr_b32 s5, s13, 24
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    s_lshr_b32 s2, s12, 16
+; GFX11-NEXT:    v_mov_b32_e32 v2, s13
+; GFX11-NEXT:    s_lshr_b32 s3, s12, 24
+; GFX11-NEXT:    s_lshr_b32 s6, s14, 8
+; GFX11-NEXT:    v_mov_b32_e32 v4, s1
+; GFX11-NEXT:    v_mov_b32_e32 v15, s5
+; GFX11-NEXT:    s_lshr_b32 s0, s13, 8
+; GFX11-NEXT:    s_lshr_b32 s4, s13, 16
+; GFX11-NEXT:    s_lshr_b32 s7, s14, 16
+; GFX11-NEXT:    v_mov_b32_e32 v3, s14
+; GFX11-NEXT:    v_mov_b32_e32 v11, s2
+; GFX11-NEXT:    s_lshr_b32 s8, s14, 24
+; GFX11-NEXT:    v_mov_b32_e32 v6, s3
+; GFX11-NEXT:    v_mov_b32_e32 v10, s6
+; GFX11-NEXT:    v_mov_b32_e32 v7, s0
+; GFX11-NEXT:    v_mov_b32_e32 v8, s4
+; GFX11-NEXT:    ds_store_b8 v1, v0
+; GFX11-NEXT:    ds_store_b8 v1, v2 offset:4
+; GFX11-NEXT:    ds_store_b8 v1, v4 offset:1
+; GFX11-NEXT:    ds_store_b8 v1, v11 offset:2
+; GFX11-NEXT:    ds_store_b8 v1, v6 offset:3
+; GFX11-NEXT:    ds_store_b8 v1, v7 offset:5
+; GFX11-NEXT:    ds_store_b8 v1, v8 offset:6
+; GFX11-NEXT:    v_mov_b32_e32 v0, s7
+; GFX11-NEXT:    v_mov_b32_e32 v2, s8
+; GFX11-NEXT:    ds_store_b8 v1, v15 offset:7
+; GFX11-NEXT:    ds_store_b8 v1, v3 offset:8
+; GFX11-NEXT:    ds_store_b8 v1, v10 offset:9
+; GFX11-NEXT:    ds_store_b8 v1, v0 offset:10
+; GFX11-NEXT:    ds_store_b8 v1, v2 offset:11
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 1
   ret void
 }
@@ -248,6 +304,30 @@ define amdgpu_kernel void @store_lds_v3i32_align2(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write_b16 v1, v7 offset:6
 ; GFX10-NEXT:    ds_write_b16 v1, v6 offset:10
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32_align2:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    v_mov_b32_e32 v1, s0
+; GFX11-NEXT:    s_lshr_b32 s1, s12, 16
+; GFX11-NEXT:    v_mov_b32_e32 v2, s13
+; GFX11-NEXT:    s_lshr_b32 s0, s13, 16
+; GFX11-NEXT:    v_mov_b32_e32 v3, s14
+; GFX11-NEXT:    s_lshr_b32 s2, s14, 16
+; GFX11-NEXT:    v_mov_b32_e32 v4, s1
+; GFX11-NEXT:    v_mov_b32_e32 v7, s0
+; GFX11-NEXT:    v_mov_b32_e32 v6, s2
+; GFX11-NEXT:    ds_store_b16 v1, v0
+; GFX11-NEXT:    ds_store_b16 v1, v2 offset:4
+; GFX11-NEXT:    ds_store_b16 v1, v3 offset:8
+; GFX11-NEXT:    ds_store_b16 v1, v4 offset:2
+; GFX11-NEXT:    ds_store_b16 v1, v7 offset:6
+; GFX11-NEXT:    ds_store_b16 v1, v6 offset:10
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 2
   ret void
 }
@@ -293,6 +373,20 @@ define amdgpu_kernel void @store_lds_v3i32_align4(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write2_b32 v2, v0, v1 offset1:1
 ; GFX10-NEXT:    ds_write_b32 v2, v3 offset:8
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32_align4:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    v_mov_b32_e32 v1, s13
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
+; GFX11-NEXT:    v_mov_b32_e32 v3, s14
+; GFX11-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset1:1
+; GFX11-NEXT:    ds_store_b32 v2, v3 offset:8
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 4
   ret void
 }
@@ -338,6 +432,20 @@ define amdgpu_kernel void @store_lds_v3i32_align8(<3 x i32> addrspace(3)* %out, 
 ; GFX10-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX10-NEXT:    ds_write_b32 v2, v3 offset:8
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32_align8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    v_mov_b32_e32 v1, s13
+; GFX11-NEXT:    v_mov_b32_e32 v2, s0
+; GFX11-NEXT:    v_mov_b32_e32 v3, s14
+; GFX11-NEXT:    ds_store_b64 v2, v[0:1]
+; GFX11-NEXT:    ds_store_b32 v2, v3 offset:8
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 8
   ret void
 }
@@ -380,6 +488,19 @@ define amdgpu_kernel void @store_lds_v3i32_align16(<3 x i32> addrspace(3)* %out,
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX10-NEXT:    ds_write_b96 v3, v[0:2]
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: store_lds_v3i32_align16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[12:15], s[0:1], 0x34
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s12
+; GFX11-NEXT:    v_mov_b32_e32 v1, s13
+; GFX11-NEXT:    v_mov_b32_e32 v2, s14
+; GFX11-NEXT:    v_mov_b32_e32 v3, s0
+; GFX11-NEXT:    ds_store_b96 v3, v[0:2]
+; GFX11-NEXT:    s_endpgm
   store <3 x i32> %x, <3 x i32> addrspace(3)* %out, align 16
   ret void
 }

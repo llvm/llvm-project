@@ -6,6 +6,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx700 -amdgcn-skip-cache-invalidations -verify-machineinstrs < %s | FileCheck --check-prefixes=SKIP-CACHE-INV %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A-NOTTGSPLIT %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+tgsplit -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX90A-TGSPLIT %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-WGP %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX11-CU %s
 
 define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX6-LABEL: private_nontemporal_load_0:
@@ -126,7 +128,29 @@ define amdgpu_kernel void @private_nontemporal_load_0(
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
 ;
+; GFX11-WGP-LABEL: private_nontemporal_load_0:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_clause 0x1
+; GFX11-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX11-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    scratch_load_b32 v0, off, s2 slc
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_endpgm
 ;
+; GFX11-CU-LABEL: private_nontemporal_load_0:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_clause 0x1
+; GFX11-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX11-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-CU-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    scratch_load_b32 v0, off, s2 slc
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %val = load i32, i32 addrspace(5)* %in, align 4, !nontemporal !0
@@ -256,7 +280,29 @@ define amdgpu_kernel void @private_nontemporal_load_1(
 ; GFX90A-TGSPLIT-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
 ;
+; GFX11-WGP-LABEL: private_nontemporal_load_1:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    scratch_load_b32 v0, v0, s2 slc
+; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_endpgm
 ;
+; GFX11-CU-LABEL: private_nontemporal_load_1:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
+; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
+; GFX11-CU-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    scratch_load_b32 v0, v0, s2 slc
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -383,7 +429,29 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v0, v1, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
 ;
+; GFX11-WGP-LABEL: private_nontemporal_store_0:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_clause 0x1
+; GFX11-WGP-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-WGP-NEXT:    scratch_store_b32 off, v0, s0 slc
+; GFX11-WGP-NEXT:    s_endpgm
 ;
+; GFX11-CU-LABEL: private_nontemporal_store_0:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_clause 0x1
+; GFX11-CU-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-CU-NEXT:    scratch_store_b32 off, v0, s0 slc
+; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %val = load i32, i32 addrspace(1)* %in, align 4
@@ -511,7 +579,31 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX90A-TGSPLIT-NEXT:    buffer_store_dword v1, v0, s[8:11], 0 offen glc slc
 ; GFX90A-TGSPLIT-NEXT:    s_endpgm
 ;
+; GFX11-WGP-LABEL: private_nontemporal_store_1:
+; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_clause 0x1
+; GFX11-WGP-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-WGP-NEXT:    scratch_store_b32 v0, v1, s0 slc
+; GFX11-WGP-NEXT:    s_endpgm
 ;
+; GFX11-CU-LABEL: private_nontemporal_store_1:
+; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_clause 0x1
+; GFX11-CU-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
+; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
+; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
+; GFX11-CU-NEXT:    scratch_store_b32 v0, v1, s0 slc
+; GFX11-CU-NEXT:    s_endpgm
     i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
