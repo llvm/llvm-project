@@ -138,9 +138,7 @@ public:
 
 private:
   LocOpVector LocationOps;
-  // SDNode dependencies will be calculated as SDNodes that appear in
-  // LocationOps plus these AdditionalDependencies.
-  SDNodeVector AdditionalDependencies;
+  SDNodeVector SDNodes;
   DIVariable *Var;
   DIExpression *Expr;
   DebugLoc DL;
@@ -155,9 +153,8 @@ public:
              ArrayRef<SDNode *> Dependencies, bool IsIndirect, DebugLoc DL,
              unsigned O, bool IsVariadic)
       : LocationOps(L.begin(), L.end()),
-        AdditionalDependencies(Dependencies.begin(), Dependencies.end()),
-        Var(Var), Expr(Expr), DL(DL), Order(O), IsIndirect(IsIndirect),
-        IsVariadic(IsVariadic) {
+        SDNodes(Dependencies.begin(), Dependencies.end()), Var(Var), Expr(Expr),
+        DL(DL), Order(O), IsIndirect(IsIndirect), IsVariadic(IsVariadic) {
     assert(IsVariadic || L.size() == 1);
     assert(!(IsVariadic && IsIndirect));
   }
@@ -173,18 +170,9 @@ public:
   LocOpVector copyLocationOps() const { return LocationOps; }
 
   // Returns the SDNodes which this SDDbgValue depends on.
-  SDNodeVector getSDNodes() const {
-    SDNodeVector Dependencies;
-    for (SDDbgOperand DbgOp : LocationOps)
-      if (DbgOp.getKind() == SDDbgOperand::SDNODE)
-        Dependencies.push_back(DbgOp.getSDNode());
-    Dependencies.append(AdditionalDependencies);
-    return Dependencies;
-  }
+  ArrayRef<SDNode *> getSDNodes() const { return SDNodes; }
 
-  ArrayRef<SDNode *> getAdditionalDependencies() const {
-    return AdditionalDependencies;
-  }
+  SDNodeVector copySDNodes() const { return SDNodes; }
 
   /// Returns whether this is an indirect value.
   bool isIndirect() const { return IsIndirect; }
