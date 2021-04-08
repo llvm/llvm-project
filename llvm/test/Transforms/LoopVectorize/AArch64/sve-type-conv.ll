@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine < %s -S | FileCheck %s
+; RUN: opt -loop-vectorize -scalable-vectorization=on -dce -instcombine < %s -S | FileCheck %s
 
 target triple = "aarch64-unknown-linux-gnu"
 
