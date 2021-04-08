@@ -98,6 +98,7 @@ struct Configuration {
   llvm::StringRef mapFile;
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
+  llvm::StringRef thinLTOJobs;
   bool demangle = false;
   llvm::MachO::Target target;
   PlatformInfo platformInfo;
