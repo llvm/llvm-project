@@ -17,4 +17,4 @@ define void @bar() {
   ret void
 }
 
-; CHECK: attributes #0 = { nofree nounwind }
+; CHECK: attributes #0 = { nofree nosync nounwind }

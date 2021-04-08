@@ -93,7 +93,7 @@ define void @test8(i8* %p) {
 
 ; singlethread fences are okay
 define void @test9(i8* %p) {
-; CHECK: Function Attrs: nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    fence syncscope("singlethread") seq_cst
 ; CHECK-NEXT:    ret void
@@ -137,7 +137,7 @@ define i32 @load_acquire(i32* nocapture readonly %0) norecurse nounwind uwtable 
 }
 
 define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: norecurse nounwind readonly uwtable willreturn
+; CHECK: Function Attrs: norecurse nosync nounwind readonly uwtable willreturn
 ; CHECK-LABEL: @load_unordered(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i32, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -148,7 +148,7 @@ define i32 @load_unordered(i32* nocapture readonly %0) norecurse nounwind uwtabl
 
 ; atomic store with unordered ordering.
 define void @store_unordered(i32* nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind uwtable willreturn writeonly
 ; CHECK-LABEL: @store_unordered(
 ; CHECK-NEXT:    store atomic i32 10, i32* [[TMP0:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret void
@@ -209,9 +209,9 @@ define i32 @volatile_load(i32* %0) norecurse nounwind uwtable {
 declare void @nosync_function() noinline nounwind uwtable nosync
 
 define void @call_nosync_function() nounwind uwtable noinline {
-; CHECK: Function Attrs: noinline nounwind uwtable
+; CHECK: Function Attrs: noinline nosync nounwind uwtable
 ; CHECK-LABEL: @call_nosync_function(
-; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR7:[0-9]+]]
+; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @nosync_function() noinline nounwind uwtable
@@ -225,7 +225,7 @@ declare void @might_sync() noinline nounwind uwtable
 define void @call_might_sync() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: @call_might_sync(
-; CHECK-NEXT:    tail call void @might_sync() #[[ATTR7]]
+; CHECK-NEXT:    tail call void @might_sync() #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @might_sync() noinline nounwind uwtable
@@ -248,7 +248,7 @@ define i32 @memcpy_volatile(i8* %ptr1, i8* %ptr2) {
 
 ; positive, non-volatile intrinsic.
 define i32 @memset_non_volatile(i8* %ptr1, i8 %val) {
-; CHECK: Function Attrs: nofree nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree nosync nounwind willreturn writeonly
 ; CHECK-LABEL: @memset_non_volatile(
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* [[PTR1:%.*]], i8 [[VAL:%.*]], i32 8, i1 false)
 ; CHECK-NEXT:    ret i32 4
