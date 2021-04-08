@@ -286,26 +286,17 @@ func @memref_mem_space(
 
 // -----
 
-// Check that boolean memref is not supported at the moment.
-module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
-} {
-
-// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>)
-func @memref_type(%arg0: memref<3xi1>) {
-  return
-}
-
-} // end module
-
-// -----
-
 // Check that using non-32-bit scalar types in interface storage classes
 // requires special capability and extension: convert them to 32-bit if not
 // satisfied.
 module attributes {
   spv.target_env = #spv.target_env<#spv.vce<v1.0, [], []>, {}>
 } {
+
+// An i1 is store in 8-bit, so 5xi1 has 40 bits, which is stored in 2xi32.
+// CHECK-LABEL: spv.func @memref_1bit_type
+// CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<2 x i32, stride=4> [0])>, StorageBuffer>
+func @memref_1bit_type(%arg0: memref<5xi1>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i32, stride=4> [0])>, StorageBuffer>

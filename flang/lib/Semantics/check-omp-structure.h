@@ -166,7 +166,7 @@ public:
 private:
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
-
+  bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
   // specific clause related
   bool ScheduleModifierHasType(const parser::OmpScheduleClause &,
       const parser::OmpScheduleModifierType::ModType &);

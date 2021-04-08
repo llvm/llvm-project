@@ -1835,7 +1835,7 @@ DefInit *VarDefInit::instantiate() {
     Records.addDef(std::move(NewRecOwner));
 
     // Check the assertions.
-    NewRec->checkRecordAssertions();
+    NewRec->checkAssertions();
 
     Def = DefInit::get(NewRec);
   }
@@ -2618,7 +2618,7 @@ DagInit *Record::getValueAsDag(StringRef FieldName) const {
 // and message, then call CheckAssert().
 // Note: The condition and message are probably already resolved,
 //       but resolving again allows calls before records are resolved.
-void Record::checkRecordAssertions() {
+void Record::checkAssertions() {
   RecordResolver R(*this);
   R.setFinal(true);
 
