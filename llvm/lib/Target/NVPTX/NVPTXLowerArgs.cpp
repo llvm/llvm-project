@@ -251,6 +251,7 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
       if (!IsALoadChainInstr(V)) {
         LLVM_DEBUG(dbgs() << "Need a copy of " << *Arg << " because of " << *V
                           << "\n");
+        (void)Arg;
         return false;
       }
       if (!isa<LoadInst>(V))

@@ -398,7 +398,7 @@ Feel free to contact us on `cfe-dev
 <https://lists.llvm.org/mailman/listinfo/cfe-dev>`_ or via `Bugzilla
 <https://bugs.llvm.org/>`__.
 
-.. _opencl_experimenal_cxxlibs:
+.. _opencl_experimental_cxxlibs:
 
 C++ libraries for OpenCL
 ------------------------

@@ -22,6 +22,8 @@
 ; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1 reloads generated in loop{{$}}
 ; (loop:)
 ; REMARK: remark: /tmp/kk.c:1:20: 2 spills 2 reloads generated in loop{{$}}
+; (func:)
+; REMARK: remark: <unknown>:0:0: 3 spills 3 reloads generated in function{{$}}
 
 ; (loop3:)
 ; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1 reloads generated in loop (hotness: 300)
@@ -73,6 +75,18 @@
 ; YAML:   - NumReloads:      '2'
 ; YAML:   - String:          ' reloads '
 ; YAML:   - String:          generated in loop
+; YAML: ...
+; YAML: --- !Missed
+; YAML: Pass:            regalloc
+; YAML: Name:            SpillReload
+; YAML: Function:        fpr128
+; YAML: Hotness:         3
+; YAML: Args:
+; YAML:   - NumSpills:       '3'
+; YAML:   - String:          ' spills '
+; YAML:   - NumReloads:      '3'
+; YAML:   - String:          ' reloads '
+; YAML:   - String:          generated in function
 ; YAML: ...
 
 ; THRESHOLD_YAML-NOT: Hotness:         300{{$}}
