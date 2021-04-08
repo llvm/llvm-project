@@ -8583,7 +8583,7 @@ SDDbgValue *SelectionDAG::getDbgValue(DIVariable *Var, DIExpression *Expr,
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
   return new (DbgInfo->getAlloc())
-      SDDbgValue(Var, Expr, SDDbgOperand::fromNode(N, R), N, IsIndirect, DL, O,
+      SDDbgValue(Var, Expr, SDDbgOperand::fromNode(N, R), {}, IsIndirect, DL, O,
                  /*IsVariadic=*/false);
 }
 
@@ -8707,12 +8707,10 @@ void SelectionDAG::transferDbgValues(SDValue From, SDValue To,
       Expr = *Fragment;
     }
 
-    auto NewDependencies = Dbg->copySDNodes();
-    std::replace(NewDependencies.begin(), NewDependencies.end(), FromNode,
-                 ToNode);
+    auto AdditionalDependencies = Dbg->getAdditionalDependencies();
     // Clone the SDDbgValue and move it to To.
     SDDbgValue *Clone = getDbgValueList(
-        Var, Expr, NewLocOps, NewDependencies, Dbg->isIndirect(),
+        Var, Expr, NewLocOps, AdditionalDependencies, Dbg->isIndirect(),
         Dbg->getDebugLoc(), std::max(ToNode->getIROrder(), Dbg->getOrder()),
         Dbg->isVariadic());
     ClonedDVs.push_back(Clone);
@@ -8772,11 +8770,9 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
         (void)Changed;
         assert(Changed && "Salvage target doesn't use N");
 
-        auto NewDependencies = DV->copySDNodes();
-        std::replace(NewDependencies.begin(), NewDependencies.end(), &N,
-                     N0.getNode());
+        auto AdditionalDependencies = DV->getAdditionalDependencies();
         SDDbgValue *Clone = getDbgValueList(DV->getVariable(), DIExpr,
-                                            NewLocOps, NewDependencies,
+                                            NewLocOps, AdditionalDependencies,
                                             DV->isIndirect(), DV->getDebugLoc(),
                                             DV->getOrder(), DV->isVariadic());
         ClonedDVs.push_back(Clone);
