@@ -50,6 +50,8 @@ class RVVType {
     Void,
     Size_t,
     Ptrdiff_t,
+    UnsignedLong,
+    SignedLong,
     Boolean,
     SignedInteger,
     UnsignedInteger,
@@ -375,6 +377,12 @@ void RVVType::initBuiltinStr() {
   case ScalarTypeKind::Ptrdiff_t:
     BuiltinStr = "Y";
     return;
+  case ScalarTypeKind::UnsignedLong:
+    BuiltinStr = "ULi";
+    return;
+  case ScalarTypeKind::SignedLong:
+    BuiltinStr = "Li";
+    return;
   case ScalarTypeKind::Boolean:
     assert(ElementBitwidth == 1);
     BuiltinStr += "b";
@@ -480,6 +488,12 @@ void RVVType::initTypeStr() {
     return;
   case ScalarTypeKind::Ptrdiff_t:
     Str = "ptrdiff_t";
+    return;
+  case ScalarTypeKind::UnsignedLong:
+    Str = "unsigned long";
+    return;
+  case ScalarTypeKind::SignedLong:
+    Str = "long";
     return;
   case ScalarTypeKind::Boolean:
     if (isScalar())
@@ -610,10 +624,11 @@ void RVVType::applyModifier(StringRef Transformer) {
   case 't':
     ScalarType = ScalarTypeKind::Ptrdiff_t;
     break;
-  case 'c': // uint8_t
-    ScalarType = ScalarTypeKind::UnsignedInteger;
-    ElementBitwidth = 8;
-    Scale = 0;
+  case 'u':
+    ScalarType = ScalarTypeKind::UnsignedLong;
+    break;
+  case 'l':
+    ScalarType = ScalarTypeKind::SignedLong;
     break;
   default:
     PrintFatalError("Illegal primitive type transformers!");
@@ -1013,7 +1028,7 @@ void RVVEmitter::createCodeGen(raw_ostream &OS) {
 
 void RVVEmitter::parsePrototypes(StringRef Prototypes,
                                  std::function<void(StringRef)> Handler) {
-  const StringRef Primaries("evwqom0ztc");
+  const StringRef Primaries("evwqom0ztul");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type
