@@ -1783,6 +1783,11 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       foldInstOperand(MI, OpToFold);
+
+      // If we managed to fold all uses of this copy then we might as well
+      // delete it now.
+      if (MRI->use_nodbg_empty(MI.getOperand(0).getReg()))
+        MI.eraseFromParentAndMarkDBGValuesForRemoval();
     }
   }
   return true;
