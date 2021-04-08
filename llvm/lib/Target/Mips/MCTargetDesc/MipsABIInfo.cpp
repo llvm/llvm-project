@@ -105,8 +105,7 @@ unsigned MipsABIInfo::GetPtrAddiuOp() const {
 }
 
 unsigned MipsABIInfo::GetPtrSubuOp() const {
-  assert(!IsP32() && "Missing SUBU instruction for nanoMIPS");
-  return ArePtrs64bit() ? Mips::DSUBu : Mips::SUBu;
+  return ArePtrs64bit() ? Mips::DSUBu : IsP32() ? Mips::SUBu_NM : Mips::SUBu;
 }
 
 unsigned MipsABIInfo::GetPtrAndOp() const {
