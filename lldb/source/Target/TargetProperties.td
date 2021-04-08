@@ -224,6 +224,10 @@ let Definition = "process" in {
     Global,
     DefaultFalse,
     Desc<"If true, stop when a shared library is loaded or unloaded.">;
+  def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"If true, LanguageRuntime plugins' UnwindPlans will not be used when backtracing.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
     Global,
     DefaultFalse,
