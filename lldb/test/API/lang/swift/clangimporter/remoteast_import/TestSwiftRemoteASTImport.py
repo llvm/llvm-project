@@ -40,9 +40,6 @@ class TestSwiftRemoteASTImport(TestBase):
         self.assertTrue(target, VALID_TARGET)
         self.registerSharedLibrariesWithTarget(target, ['Library'])
 
-        # The Makefile doesn't build a .dSYM, so we need to help with
-        # finding the .swiftmodules.
-        os.chdir(self.getBuildDir())
         lldbutil.run_to_source_breakpoint(self, "break here",
                                           lldb.SBFileSpec('Library.swift'))
         # FIXME: Reversing the order of these two commands does not work!
