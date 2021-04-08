@@ -511,7 +511,7 @@ def save_temps : Flag<["-"], "save-temps">,
     HelpText<"Save intermediate LTO compilation results">,
     Group<grp_introspect>;
 
-def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE OPTIMIZATIONS">;
+def grp_symtab : OptionGroup<"symtab">, HelpText<"SYMBOL TABLE">;
 
 def S : Flag<["-"], "S">,
     HelpText<"Strip debug information (STABS or DWARF) from the output">,
@@ -535,6 +535,10 @@ def oso_prefix : Separate<["-"], "oso_prefix">,
     MetaVarName<"<path>">,
     HelpText<"Remove the prefix <path> from OSO symbols in the debug map">,
     Flags<[HelpHidden]>,
+    Group<grp_symtab>;
+def add_ast_path : Separate<["-"], "add_ast_path">,
+    MetaVarName<"<path>">,
+    HelpText<"AST paths will be emitted as STABS">,
     Group<grp_symtab>;
 
 def grp_bitcode : OptionGroup<"bitcode">, HelpText<"BITCODE BUILD FLOW">;
@@ -1092,10 +1096,6 @@ def slow_stubs : Flag<["-"], "slow_stubs">,
 
 def grp_undocumented : OptionGroup<"undocumented">, HelpText<"UNDOCUMENTED">;
 
-def add_ast_path : Flag<["-"], "add_ast_path">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
-    Group<grp_undocumented>;
 def add_linker_option : Flag<["-"], "add_linker_option">,
     HelpText<"This option is undocumented in ld64">,
     Flags<[HelpHidden]>,

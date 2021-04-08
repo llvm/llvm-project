@@ -680,6 +680,12 @@ void SymtabSection::emitEndFunStab(Defined *defined) {
 }
 
 void SymtabSection::emitStabs() {
+  for (const std::string &s : config->astPaths) {
+    StabsEntry astStab(N_AST);
+    astStab.strx = stringTableSection.addString(s);
+    stabs.emplace_back(std::move(astStab));
+  }
+
   std::vector<Defined *> symbolsNeedingStabs;
   for (const SymtabEntry &entry :
        concat<SymtabEntry>(localSymbols, externalSymbols)) {
@@ -705,8 +711,7 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (Defined *defined : symbolsNeedingStabs) {
     InputSection *isec = defined->isec;
-    ObjFile *file = dyn_cast<ObjFile>(isec->file);
-    assert(file);
+    ObjFile *file = cast<ObjFile>(isec->file);
 
     if (lastFile == nullptr || lastFile != file) {
       if (lastFile != nullptr)
