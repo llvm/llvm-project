@@ -397,10 +397,8 @@ class LoopInterchangeTransform {
 public:
   LoopInterchangeTransform(Loop *Outer, Loop *Inner, ScalarEvolution *SE,
                            LoopInfo *LI, DominatorTree *DT,
-                           BasicBlock *LoopNestExit,
                            const LoopInterchangeLegality &LIL)
-      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT),
-        LoopExit(LoopNestExit), LIL(LIL) {}
+      : OuterLoop(Outer), InnerLoop(Inner), SE(SE), LI(LI), DT(DT), LIL(LIL) {}
 
   /// Interchange OuterLoop and InnerLoop.
   bool transform();
@@ -421,7 +419,6 @@ private:
 
   LoopInfo *LI;
   DominatorTree *DT;
-  BasicBlock *LoopExit;
 
   const LoopInterchangeLegality &LIL;
 };
@@ -523,7 +520,7 @@ struct LoopInterchange {
     Loop *LoopToBeInterchanged = LoopList[SelecLoopId];
     for (unsigned i = SelecLoopId; i > 0; i--) {
       bool Interchanged = processLoop(LoopToBeInterchanged, LoopList[i - 1], i,
-                                      i - 1, LoopNestExit, DependencyMatrix);
+                                      i - 1, DependencyMatrix);
       if (!Interchanged)
         return Changed;
       // Update the DependencyMatrix
@@ -538,7 +535,7 @@ struct LoopInterchange {
   }
 
   bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
-                   unsigned OuterLoopId, BasicBlock *LoopNestExit,
+                   unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix) {
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
@@ -561,8 +558,7 @@ struct LoopInterchange {
              << "Loop interchanged with enclosing loop.";
     });
 
-    LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LoopNestExit,
-                                 LIL);
+    LoopInterchangeTransform LIT(OuterLoop, InnerLoop, SE, LI, DT, LIL);
     LIT.transform();
     LLVM_DEBUG(dbgs() << "Loops interchanged.\n");
     LoopsInterchanged++;
@@ -1551,9 +1547,12 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
                   InnerLoopPreHeader, DTUpdates, /*MustUpdateOnce=*/false);
   // The outer loop header might or might not branch to the outer latch.
   // We are guaranteed to branch to the inner loop preheader.
-  if (llvm::is_contained(OuterLoopHeaderBI->successors(), OuterLoopLatch))
-    updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, LoopExit, DTUpdates,
+  if (llvm::is_contained(OuterLoopHeaderBI->successors(), OuterLoopLatch)) {
+    // In this case the outerLoopHeader should branch to the InnerLoopLatch.
+    updateSuccessor(OuterLoopHeaderBI, OuterLoopLatch, InnerLoopLatch,
+                    DTUpdates,
                     /*MustUpdateOnce=*/false);
+  }
   updateSuccessor(OuterLoopHeaderBI, InnerLoopPreHeader,
                   InnerLoopHeaderSuccessor, DTUpdates,
                   /*MustUpdateOnce=*/false);
