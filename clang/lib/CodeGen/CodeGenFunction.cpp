@@ -493,8 +493,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  if (LargestVectorWidth)
-    CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
+  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 
   // Add vscale attribute if appropriate.
   if (getLangOpts().ArmSveVectorBits) {
