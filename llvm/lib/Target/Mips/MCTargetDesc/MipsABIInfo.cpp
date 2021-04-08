@@ -109,8 +109,7 @@ unsigned MipsABIInfo::GetPtrSubuOp() const {
 }
 
 unsigned MipsABIInfo::GetPtrAndOp() const {
-  assert(!IsP32() && "Missing AND instruction for nanoMIPS");
-  return ArePtrs64bit() ? Mips::AND64 : Mips::AND;
+  return ArePtrs64bit() ? Mips::AND64 : IsP32() ? Mips::AND_NM : Mips::AND;
 }
 
 unsigned MipsABIInfo::GetGPRMoveOp() const {
