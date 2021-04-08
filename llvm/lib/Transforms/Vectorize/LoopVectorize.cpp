@@ -515,8 +515,7 @@ public:
   /// variable canonicalization. It supports both VF = 1 for unrolled loops and
   /// arbitrary length vectors.
   void widenPHIInstruction(Instruction *PN, RecurrenceDescriptor *RdxDesc,
-                           VPValue *StartV, VPValue *Def,
-                           VPTransformState &State);
+                           VPWidenPHIRecipe *PhiR, VPTransformState &State);
 
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
@@ -4661,7 +4660,7 @@ void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
 
 void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                                               RecurrenceDescriptor *RdxDesc,
-                                              VPValue *StartVPV, VPValue *Def,
+                                              VPWidenPHIRecipe *PhiR,
                                               VPTransformState &State) {
   PHINode *P = cast<PHINode>(PN);
   if (EnableVPlanNativePath) {
@@ -4673,7 +4672,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                       ? PN->getType()
                       : VectorType::get(PN->getType(), State.VF);
     Value *VecPhi = Builder.CreatePHI(VecTy, PN->getNumOperands(), "vec.phi");
-    State.set(Def, VecPhi, 0);
+    State.set(PhiR, VecPhi, 0);
     OrigPHIsToFix.push_back(P);
 
     return;
@@ -4682,6 +4681,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
   assert(PN->getParent() == OrigLoop->getHeader() &&
          "Non-header phis should have been handled elsewhere");
 
+  VPValue *StartVPV = PhiR->getStartValue();
   Value *StartV = StartVPV ? StartVPV->getLiveInIRValue() : nullptr;
   // In order to support recurrences we need to be able to vectorize Phi nodes.
   // Phi nodes have cycles, so we need to vectorize them in two stages. This is
@@ -4728,7 +4728,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
       // This is phase one of vectorizing PHIs.
       Value *EntryPart = PHINode::Create(
           VecTy, 2, "vec.phi", &*LoopVectorBody->getFirstInsertionPt());
-      State.set(Def, EntryPart, Part);
+      State.set(PhiR, EntryPart, Part);
       if (StartV) {
         // Make sure to add the reduction start value only to the
         // first unroll part.
@@ -4782,7 +4782,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
           Value *SclrGep =
               emitTransformedIndex(Builder, GlobalIdx, PSE.getSE(), DL, II);
           SclrGep->setName("next.gep");
-          State.set(Def, SclrGep, VPIteration(Part, Lane));
+          State.set(PhiR, SclrGep, VPIteration(Part, Lane));
         }
       }
       return;
@@ -4830,7 +4830,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
                             Builder.CreateVectorSplat(
                                 State.VF.getKnownMinValue(), ScalarStepValue),
                             "vector.gep"));
-      State.set(Def, GEP, Part);
+      State.set(PhiR, GEP, Part);
     }
   }
   }
@@ -9184,7 +9184,7 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.ILV->widenPHIInstruction(cast<PHINode>(getUnderlyingValue()), RdxDesc,
-                                 getStartValue(), this, State);
+                                 this, State);
 }
 
 void VPBlendRecipe::execute(VPTransformState &State) {
