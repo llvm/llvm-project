@@ -6,7 +6,7 @@
 ; PR48768 - 'or' clears the overflow flag, so we don't need a separate 'test'.
 ;
 
-define i8 @or_i8_ri(i8 %0, i8 %1) {
+define i8 @or_i8_ri(i8 zeroext %0, i8 zeroext %1) {
 ; X86-LABEL: or_i8_ri:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
@@ -32,7 +32,7 @@ define i8 @or_i8_ri(i8 %0, i8 %1) {
   ret i8 %5
 }
 
-define i8 @or_i8_rr(i8 %0, i8 %1) {
+define i8 @or_i8_rr(i8 zeroext %0, i8 zeroext %1) {
 ; X86-LABEL: or_i8_rr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
@@ -58,7 +58,7 @@ define i8 @or_i8_rr(i8 %0, i8 %1) {
   ret i8 %5
 }
 
-define i16 @or_i16_ri(i16 %0, i16 %1) {
+define i16 @or_i16_ri(i16 zeroext %0, i16 zeroext %1) {
 ; X86-LABEL: or_i16_ri:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -86,7 +86,7 @@ define i16 @or_i16_ri(i16 %0, i16 %1) {
   ret i16 %5
 }
 
-define i16 @or_i16_rr(i16 %0, i16 %1) {
+define i16 @or_i16_rr(i16 zeroext %0, i16 zeroext %1) {
 ; X86-LABEL: or_i16_rr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
