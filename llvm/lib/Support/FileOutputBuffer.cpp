@@ -132,17 +132,10 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
     return FileOrErr.takeError();
   fs::TempFile File = std::move(*FileOrErr);
 
-#ifndef _WIN32
-  // On Windows, CreateFileMapping (the mmap function on Windows)
-  // automatically extends the underlying file. We don't need to
-  // extend the file beforehand. _chsize (ftruncate on Windows) is
-  // pretty slow just like it writes specified amount of bytes,
-  // so we should avoid calling that function.
-  if (auto EC = fs::resize_file(File.FD, Size)) {
+  if (auto EC = fs::resize_file_before_mapping_readwrite(File.FD, Size)) {
     consumeError(File.discard());
     return errorCodeToError(EC);
   }
-#endif
 
   // Mmap it.
   std::error_code EC;
