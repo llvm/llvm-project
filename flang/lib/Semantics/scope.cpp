@@ -408,7 +408,7 @@ void Scope::InstantiateDerivedTypes() {
   for (DeclTypeSpec &type : declTypeSpecs_) {
     if (type.category() == DeclTypeSpec::TypeDerived ||
         type.category() == DeclTypeSpec::ClassDerived) {
-      type.derivedTypeSpec().Instantiate(*this, context_);
+      type.derivedTypeSpec().Instantiate(*this);
     }
   }
 }

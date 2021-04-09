@@ -1053,10 +1053,9 @@ SymbolVector OrderParameterDeclarations(const Symbol &typeSymbol) {
   return result;
 }
 
-const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &scope,
-    DerivedTypeSpec &&spec, SemanticsContext &semanticsContext,
-    DeclTypeSpec::Category category) {
-  spec.EvaluateParameters(semanticsContext);
+const DeclTypeSpec &FindOrInstantiateDerivedType(
+    Scope &scope, DerivedTypeSpec &&spec, DeclTypeSpec::Category category) {
+  spec.EvaluateParameters(scope.context());
   if (const DeclTypeSpec *
       type{scope.FindInstantiatedDerivedType(spec, category)}) {
     return *type;
@@ -1064,7 +1063,7 @@ const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &scope,
   // Create a new instantiation of this parameterized derived type
   // for this particular distinct set of actual parameter values.
   DeclTypeSpec &type{scope.MakeDerivedType(category, std::move(spec))};
-  type.derivedTypeSpec().Instantiate(scope, semanticsContext);
+  type.derivedTypeSpec().Instantiate(scope);
   return type;
 }
 
