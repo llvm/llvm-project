@@ -91,7 +91,7 @@ enum : uint64_t {
   D16Buf = UINT64_C(1) << 50,
 
   // FLAT instruction accesses FLAT_GLBL segment.
-  IsFlatGlobal = UINT64_C(1) << 51,
+  FlatGlobal = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
   FPDPRounding = UINT64_C(1) << 52,
@@ -106,7 +106,7 @@ enum : uint64_t {
   IsDOT = UINT64_C(1) << 55,
 
   // FLAT instruction accesses FLAT_SCRATCH segment.
-  IsFlatScratch = UINT64_C(1) << 56,
+  FlatScratch = UINT64_C(1) << 56,
 
   // Atomic without return.
   IsAtomicNoRet = UINT64_C(1) << 57,
