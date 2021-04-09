@@ -770,6 +770,33 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
                               *TM.getMCAsmInfo());
   }
+  case RISCV::PseudoVSPILL2_M1:
+  case RISCV::PseudoVSPILL2_M2:
+  case RISCV::PseudoVSPILL2_M4:
+  case RISCV::PseudoVSPILL3_M1:
+  case RISCV::PseudoVSPILL3_M2:
+  case RISCV::PseudoVSPILL4_M1:
+  case RISCV::PseudoVSPILL4_M2:
+  case RISCV::PseudoVSPILL5_M1:
+  case RISCV::PseudoVSPILL6_M1:
+  case RISCV::PseudoVSPILL7_M1:
+  case RISCV::PseudoVSPILL8_M1:
+  case RISCV::PseudoVRELOAD2_M1:
+  case RISCV::PseudoVRELOAD2_M2:
+  case RISCV::PseudoVRELOAD2_M4:
+  case RISCV::PseudoVRELOAD3_M1:
+  case RISCV::PseudoVRELOAD3_M2:
+  case RISCV::PseudoVRELOAD4_M1:
+  case RISCV::PseudoVRELOAD4_M2:
+  case RISCV::PseudoVRELOAD5_M1:
+  case RISCV::PseudoVRELOAD6_M1:
+  case RISCV::PseudoVRELOAD7_M1:
+  case RISCV::PseudoVRELOAD8_M1: {
+    // The values are determined based on expandVSPILL and expandVRELOAD that
+    // expand the pseudos depending on NF.
+    unsigned NF = isRVVSpillForZvlsseg(Opcode)->first;
+    return 4 * (2 * NF - 1);
+  }
   }
 }
 
