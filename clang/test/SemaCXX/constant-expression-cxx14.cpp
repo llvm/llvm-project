@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -std=c++1y -verify %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14    %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
   // dummy ctor to make this a literal type
@@ -225,6 +227,7 @@ namespace subobject {
     // expected-note@-2 {{assignment to member 'c' of union with active member 'n'}}
   }
   constexpr bool check(D &d) { return d.c.a.y == 3; }
+  // cxx20_2b-note@-1 {{read of member 'y' of union with active member 'x'}}
 
   constexpr bool g() { D d; f(d); return d.c.a.y == 3; }
   static_assert(g(), "");
@@ -236,7 +239,8 @@ namespace subobject {
   constexpr bool i() { D d(0); f(d); return check(d); } // expected-note {{in call}}
   static_assert(i(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 
-  constexpr bool j() { D d; d.c.a.x = 3; return check(d); } // expected-note {{assignment to member 'x' of union with active member 'y'}}
+  constexpr bool j() { D d; d.c.a.x = 3; return check(d); } // cxx14-note {{assignment to member 'x' of union with active member 'y'}}
+  // cxx20_2b-note@-1 {{in call to 'check(d)'}}
   static_assert(j(), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
 
@@ -285,8 +289,12 @@ namespace incdec {
   static_assert(--ref<short>(0x8000) == 0x7fff, "");
 
   // inc on bool sets to true
-  static_assert(++ref(false), ""); // expected-warning {{deprecated}}
-  static_assert(++ref(true), ""); // expected-warning {{deprecated}}
+  static_assert(++ref(false), "");
+  // cxx14-warning@-1  {{incrementing expression of type bool}}
+  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
+  static_assert(++ref(true), "");
+  // cxx14-warning@-1  {{incrementing expression of type bool}}
+  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
 
   int arr[10];
   static_assert(++ref(&arr[0]) == &arr[1], "");
@@ -323,6 +331,7 @@ namespace incdec {
   }
   constexpr int wrong_member = f({0}); // expected-error {{constant}} expected-note {{in call to 'f({.a = 0})'}}
   constexpr int vol = --ref<volatile int>(0); // expected-error {{constant}} expected-note {{decrement of volatile-qualified}}
+  // cxx20_2b-warning@-1 {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
 
   constexpr int incr(int k) {
     int x = k;
@@ -849,7 +858,7 @@ namespace VirtualFromBase {
   // Virtual f(), not OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(X<S2>), ""); // expected-error {{constant expression}} expected-note {{virtual function}}
+  static_assert(q->f() == sizeof(X<S2>), ""); // cxx14-error {{constant expression}} cxx14-note {{virtual function}}
 }
 
 namespace Lifetime {
@@ -1091,12 +1100,12 @@ namespace IndirectFields {
 struct A {
   struct {
     union {
-      int x = x = 3; // expected-note {{outside its lifetime}}
+      int x = x = 3; // cxx14-note {{outside its lifetime}}
     };
   };
   constexpr A() {}
 };
-static_assert(A().x == 3, ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'A()'}}
+static_assert(A().x == 3, ""); // cxx14-error{{not an integral constant expression}} cxx14-note{{in call to 'A()'}}
 
 // Reference another indirect field, with different 'this'.
 struct B {
