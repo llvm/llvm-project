@@ -680,6 +680,7 @@ void* align(size_t alignment, size_t size, void*& ptr, size_t& space);
 #include <stdexcept>
 #include <cstring>
 #include <__memory/allocator_traits.h>
+#include <__memory/auto_ptr.h>
 #include <__memory/base.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/utilities.h>
@@ -1081,65 +1082,6 @@ void return_temporary_buffer(_Tp* __p) _NOEXCEPT
 {
   _VSTD::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
-
-#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
-template <class _Tp>
-struct _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr_ref
-{
-    _Tp* __ptr_;
-};
-
-template<class _Tp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr
-{
-private:
-    _Tp* __ptr_;
-public:
-    typedef _Tp element_type;
-
-    _LIBCPP_INLINE_VISIBILITY explicit auto_ptr(_Tp* __p = 0) _NOEXCEPT : __ptr_(__p) {}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr& __p) _NOEXCEPT : __ptr_(__p.release()) {}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr<_Up>& __p) _NOEXCEPT
-        : __ptr_(__p.release()) {}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr& __p) _NOEXCEPT
-        {reset(__p.release()); return *this;}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr<_Up>& __p) _NOEXCEPT
-        {reset(__p.release()); return *this;}
-    _LIBCPP_INLINE_VISIBILITY auto_ptr& operator=(auto_ptr_ref<_Tp> __p) _NOEXCEPT
-        {reset(__p.__ptr_); return *this;}
-    _LIBCPP_INLINE_VISIBILITY ~auto_ptr() _NOEXCEPT {delete __ptr_;}
-
-    _LIBCPP_INLINE_VISIBILITY _Tp& operator*() const _NOEXCEPT
-        {return *__ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* operator->() const _NOEXCEPT {return __ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* get() const _NOEXCEPT {return __ptr_;}
-    _LIBCPP_INLINE_VISIBILITY _Tp* release() _NOEXCEPT
-    {
-        _Tp* __t = __ptr_;
-        __ptr_ = nullptr;
-        return __t;
-    }
-    _LIBCPP_INLINE_VISIBILITY void reset(_Tp* __p = 0) _NOEXCEPT
-    {
-        if (__ptr_ != __p)
-            delete __ptr_;
-        __ptr_ = __p;
-    }
-
-    _LIBCPP_INLINE_VISIBILITY auto_ptr(auto_ptr_ref<_Tp> __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr_ref<_Up>() _NOEXCEPT
-        {auto_ptr_ref<_Up> __t; __t.__ptr_ = release(); return __t;}
-    template<class _Up> _LIBCPP_INLINE_VISIBILITY operator auto_ptr<_Up>() _NOEXCEPT
-        {return auto_ptr<_Up>(release());}
-};
-
-template <>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX11 auto_ptr<void>
-{
-public:
-    typedef void element_type;
-};
-#endif
 
 // Tag used to default initialize one or both of the pair's elements.
 struct __default_init_tag {};
