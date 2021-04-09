@@ -42,6 +42,19 @@ Fortran::lower::genAllDescriptor(Fortran::lower::FirOpBuilder &builder,
 }
 
 
+/// Generate call to any runtime routine.
+/// This calls the descriptor based runtime call implementation of the scan
+/// intrinsics.
+void
+Fortran::lower::genAnyDescriptor(Fortran::lower::FirOpBuilder &builder, 
+                                 mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value maskBox,
+                                 mlir::Value dim) {
+
+  auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AnyDim)>(loc, builder);
+  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
+}
+
 /// Generate calls to reduction intrinsics such as All and Any.
 /// These are the descriptor based implementations that take two 
 /// arguments (mask, dim).
@@ -69,6 +82,8 @@ genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
 
 }
 
+/// Generate call to All intrinsic runtime routine. This routine is
+/// specialized for mask arguments with rank == 1.
 mlir::Value
 Fortran::lower::genAll(Fortran::lower::FirOpBuilder &builder, 
                        mlir::Location loc, mlir::Value maskBox, 
@@ -87,4 +102,26 @@ Fortran::lower::genAll(Fortran::lower::FirOpBuilder &builder,
   };
    
   return builder.create<fir::CallOp>(loc, allFunc, args).getResult(0);
+}
+
+/// Generate call to Any intrinsic runtime routine. This routine is
+/// specialized for mask arguments with rank == 1.
+mlir::Value
+Fortran::lower::genAny(Fortran::lower::FirOpBuilder &builder, 
+                       mlir::Location loc, mlir::Value maskBox, 
+                       mlir::Value dim) {
+  auto anyFunc = Fortran::lower::getRuntimeFunc<mkRTKey(Any)>(loc, builder);
+  auto fTy = anyFunc.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+       Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
+     
+  llvm::SmallVector<mlir::Value> args = {
+    builder.createConvert(loc, fTy.getInput(0), maskBox),
+    builder.createConvert(loc, fTy.getInput(1), sourceFile),
+    builder.createConvert(loc, fTy.getInput(2), sourceLine), 
+    builder.createConvert(loc, fTy.getInput(3), dim)
+  };
+   
+  return builder.create<fir::CallOp>(loc, anyFunc, args).getResult(0);
 }

@@ -44,6 +44,18 @@ subroutine aint_test(a, b)
   b = aint(a)
 end subroutine
 
+! ALL
+! CHECK-LABEL: all_test
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.logical<4>
+logical function all_test(mask)
+  logical :: mask(:)
+! CHECK: %[[c1:.*]] = constant 1 : index
+! CHECK: %[[a1:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
+  all_test = all(mask)
+! CHECK:  %[[a3:.*]] = fir.call @_FortranAAll(%[[a1]], %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
+end function all_test 
+
 ! ALLOCATED
 ! CHECK-LABEL: allocated_test
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>,
@@ -70,10 +82,23 @@ subroutine anint_test(a, b)
   b = anint(a)
 end subroutine
 
+! ANY
+! CHECK-LABEL: any_test
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.logical<4>
+logical function any_test(mask)
+  logical :: mask(:)
+! CHECK: %[[c1:.*]] = constant 1 : index
+! CHECK: %[[a1:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK: %[[a2:.*]] = fir.convert %[[c1]] : (index) -> i32
+  any_test = any(mask)
+! CHECK:  %[[a3:.*]] = fir.call @_FortranAAny(%[[a1]], %{{.*}}, %[[a2]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i1
+end function any_test 
+
 ! ASSOCIATED
 ! CHECK-LABEL: associated_test
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>>,
 ! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
+
 subroutine associated_test(scalar, array)
   real, pointer  :: scalar, array(:)
   ! CHECK: %[[scalar:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>

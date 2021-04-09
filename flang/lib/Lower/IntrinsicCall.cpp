@@ -147,6 +147,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAllocated(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAny(mlir::Type,
+                            llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -289,6 +291,11 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asInquired}, {"scalar", asInquired}}},
      /*isElemental=*/false},
     {"anint", &I::genAnint},
+    {"any", 
+     &I::genAny,
+     {{{"mask", asAddr},
+       {"dim", asValue}}},
+     /*isElemental=*/false},
     {"associated",
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
@@ -1167,6 +1174,8 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
   auto mask = builder.createBox(loc, args[0]);
 
   fir::BoxValue maskArry = builder.createBox(loc, args[0]);
+  int rank = maskArry.rank();
+  assert(rank >= 1);
 
   // Handle optional dim argument
   bool absentDim = isAbsent(args[1]);
@@ -1174,7 +1183,7 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
              ? builder.createIntegerConstant(loc, builder.getIndexType(), 1)
              : fir::getBase(args[1]);
 
-   if (maskArry.rank() == 1 || absentDim)
+   if (rank == 1 || absentDim)
      return builder.createConvert(
         loc, resultType,
         Fortran::lower::genAll(builder, loc, mask, dim));
@@ -1183,20 +1192,20 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
 
   // Create mutable fir.box to be passed to the runtime for the result.
 
+  auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
   auto resultMutableBox =
-       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+       Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
   auto resultIrBox =
        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
 
   // Call runtime. The runtime is allocating the result.
   Fortran::lower::genAllDescriptor(builder, loc, resultIrBox, mask, dim);
-
   return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
       .match(
-          [&](const fir::AbstractBox &box) -> fir::ExtendedValue {
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
             addCleanUpForTemp(loc, box.getAddr());
             auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
-            return builder.createConvert(loc, resultType, ldVal);
+            return builder.createConvert(loc, resultArrayType, ldVal);
           },
           [&](const auto &) -> fir::ExtendedValue {
             fir::emitFatalError(loc, "Invalid result for ALL");
@@ -1226,6 +1235,54 @@ mlir::Value IntrinsicLibrary::genAnint(mlir::Type resultType,
   // Skip optional kind argument to search the runtime; it is already reflected
   // in result type.
   return genRuntimeCall("anint", resultType, {args[0]});
+}
+
+// ANY
+fir::ExtendedValue
+IntrinsicLibrary::genAny(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+  // Handle required mask argument
+  auto mask = builder.createBox(loc, args[0]);
+
+  fir::BoxValue maskArry = builder.createBox(loc, args[0]);
+  int rank = maskArry.rank();
+  assert(rank >= 1);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  auto dim = absentDim
+             ? builder.createIntegerConstant(loc, builder.getIndexType(), 1)
+             : fir::getBase(args[1]);
+
+   if (rank == 1 || absentDim)
+     return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genAny(builder, loc, mask, dim));
+
+  // else use the result descriptor AnyDim() intrinsic
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+
+  auto resultArrayType = builder.getVarLenSeqTy(resultType, rank - 1);
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultArrayType);
+  auto resultIrBox =
+       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call runtime. The runtime is allocating the result.
+  Fortran::lower::genAnyDescriptor(builder, loc, resultIrBox, mask, dim);
+  return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
+      .match(
+          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
+            return builder.createConvert(loc, resultArrayType, ldVal);
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, "Invalid result for ANY");
+          });
 }
 
 // ASSOCIATED
