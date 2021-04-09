@@ -1791,7 +1791,7 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
     NegOpc = AArch64::NEGv8i16;
   } else if (Ty == LLT::vector(16, 8)) {
     Opc = IsASHR ? AArch64::SSHLv16i8 : AArch64::USHLv16i8;
-    NegOpc = AArch64::NEGv8i16;
+    NegOpc = AArch64::NEGv16i8;
   } else if (Ty == LLT::vector(8, 8)) {
     Opc = IsASHR ? AArch64::SSHLv8i8 : AArch64::USHLv8i8;
     NegOpc = AArch64::NEGv8i8;
