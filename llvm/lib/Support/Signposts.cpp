@@ -100,11 +100,17 @@ public:
 
 SignpostEmitter::SignpostEmitter() {
 #if HAVE_ANY_SIGNPOST_IMPL
-  Impl = std::make_unique<SignpostEmitterImpl>();
+  Impl = new SignpostEmitterImpl();
+#else  // if HAVE_ANY_SIGNPOST_IMPL
+  Impl = nullptr;
 #endif // if !HAVE_ANY_SIGNPOST_IMPL
 }
 
-SignpostEmitter::~SignpostEmitter() = default;
+SignpostEmitter::~SignpostEmitter() {
+#if HAVE_ANY_SIGNPOST_IMPL
+  delete Impl;
+#endif // if HAVE_ANY_SIGNPOST_IMPL
+}
 
 bool SignpostEmitter::isEnabled() const {
 #if HAVE_ANY_SIGNPOST_IMPL
