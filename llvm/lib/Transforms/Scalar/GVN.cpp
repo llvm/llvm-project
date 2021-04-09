@@ -1204,7 +1204,6 @@ void GVN::eliminatePartiallyRedundantLoad(
     return OptimizationRemark(DEBUG_TYPE, "LoadPRE", Load)
            << "load eliminated by PRE";
   });
-  ++NumPRELoad;
 }
 
 bool GVN::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
@@ -1444,6 +1443,7 @@ bool GVN::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   }
 
   eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, PredLoads);
+  ++NumPRELoad;
   return true;
 }
 
