@@ -2539,9 +2539,9 @@ bool TGParser::ParseTemplateArgValueList(SmallVectorImpl<Init *> &Result,
 
     if (consume(tgtok::greater)) // end of argument list?
       return false;
-    if (!consume(tgtok::comma)) // must be comma
-      return true;
-    ++ArgIndex; 
+    if (!consume(tgtok::comma))
+      return TokError("Expected comma before next argument");
+    ++ArgIndex;
   }
 }
 
