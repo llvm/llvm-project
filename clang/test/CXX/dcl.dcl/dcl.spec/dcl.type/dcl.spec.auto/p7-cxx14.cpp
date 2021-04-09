@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -verify -std=c++1y %s
+// RUN: %clang_cc1 -verify -std=c++2b -verify %s
+// RUN: %clang_cc1 -verify -std=c++20 -verify %s
+// RUN: %clang_cc1 -verify -std=c++14 -verify %s
 
 namespace std {
   template<typename T> struct initializer_list {
