@@ -29,15 +29,17 @@ os_log_t *LogCreator() {
   *X = os_log_create("org.llvm.signposts", OS_LOG_CATEGORY_POINTS_OF_INTEREST);
   return X;
 }
-void LogDeleter(os_log_t *X) {
-  os_release(*X);
-  delete X;
-}
+struct LogDeleter {
+  void operator()(os_log_t *X) const {
+    os_release(*X);
+    delete X;
+  }
+};
 } // end anonymous namespace
 
 namespace llvm {
 class SignpostEmitterImpl {
-  using LogPtrTy = std::unique_ptr<os_log_t, std::function<void(os_log_t *)>>;
+  using LogPtrTy = std::unique_ptr<os_log_t, LogDeleter>;
   using LogTy = LogPtrTy::element_type;
 
   LogPtrTy SignpostLog;
@@ -59,7 +61,7 @@ class SignpostEmitterImpl {
   }
 
 public:
-  SignpostEmitterImpl() : SignpostLog(LogCreator(), LogDeleter) {}
+  SignpostEmitterImpl() : SignpostLog(LogCreator()) {}
 
   bool isEnabled() const {
     if (SIGNPOSTS_AVAILABLE())
