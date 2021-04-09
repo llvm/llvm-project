@@ -48165,7 +48165,7 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 
     // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
     // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
-    if (OpVT.isScalarInteger() && Subtarget.hasBMI()) {
+    if (OpVT.isScalarInteger()) {
       auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
         if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
           if (N0.getOperand(0) == N1)
