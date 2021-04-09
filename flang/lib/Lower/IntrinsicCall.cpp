@@ -1661,7 +1661,6 @@ fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
 
-   args[0].dump();
   assert(args.size() == 4);
 
   if (isAbsent(args[3])) {

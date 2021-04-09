@@ -98,7 +98,6 @@ end function any_test
 ! CHECK-LABEL: associated_test
 ! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.ptr<f32>>>,
 ! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
-
 subroutine associated_test(scalar, array)
   real, pointer  :: scalar, array(:)
   ! CHECK: %[[scalar:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
