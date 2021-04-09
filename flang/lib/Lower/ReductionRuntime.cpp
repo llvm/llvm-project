@@ -25,46 +25,7 @@ template <typename FN>
 static void
 genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
             mlir::Location loc, mlir::Value resultBox,
-            mlir::Value maskBox, mlir::Value dim);
-
-
-/// Generate call to all runtime routine.
-/// This calls the descriptor based runtime call implementation of the scan
-/// intrinsics.
-void
-Fortran::lower::genAllDescriptor(Fortran::lower::FirOpBuilder &builder, 
-                                 mlir::Location loc,
-                                 mlir::Value resultBox, mlir::Value maskBox,
-                                 mlir::Value dim) {
-
-  auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AllDim)>(loc, builder);
-  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
-}
-
-
-/// Generate call to any runtime routine.
-/// This calls the descriptor based runtime call implementation of the scan
-/// intrinsics.
-void
-Fortran::lower::genAnyDescriptor(Fortran::lower::FirOpBuilder &builder, 
-                                 mlir::Location loc,
-                                 mlir::Value resultBox, mlir::Value maskBox,
-                                 mlir::Value dim) {
-
-  auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AnyDim)>(loc, builder);
-  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
-}
-
-/// Generate calls to reduction intrinsics such as All and Any.
-/// These are the descriptor based implementations that take two 
-/// arguments (mask, dim).
-template <typename FN>
-static void
-genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
-            mlir::Location loc, mlir::Value resultBox,
             mlir::Value maskBox, mlir::Value dim) {
-
-  
   auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
@@ -80,6 +41,30 @@ genRed2Args(FN func, Fortran::lower::FirOpBuilder &builder,
    
   builder.create<fir::CallOp>(loc, func, args);
 
+}
+/// Generate call to all runtime routine.
+/// This calls the descriptor based runtime call implementation of the scan
+/// intrinsics.
+void
+Fortran::lower::genAllDescriptor(Fortran::lower::FirOpBuilder &builder, 
+                                 mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value maskBox,
+                                 mlir::Value dim) {
+  auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AllDim)>(loc, builder);
+  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
+}
+
+
+/// Generate call to any runtime routine.
+/// This calls the descriptor based runtime call implementation of the scan
+/// intrinsics.
+void
+Fortran::lower::genAnyDescriptor(Fortran::lower::FirOpBuilder &builder, 
+                                 mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value maskBox,
+                                 mlir::Value dim) {
+  auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(AnyDim)>(loc, builder);
+  genRed2Args(allFunc, builder, loc, resultBox, maskBox, dim);
 }
 
 /// Generate call to All intrinsic runtime routine. This routine is

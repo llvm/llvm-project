@@ -15,8 +15,7 @@ namespace fir {
 class ExtendedValue;
 }
 
-namespace Fortran {
-namespace lower {
+namespace Fortran::lower {
 class FirOpBuilder;
 
 /// Generate call to all runtime routine.
@@ -51,7 +50,6 @@ genAny(Fortran::lower::FirOpBuilder &builder,
        mlir::Location loc, mlir::Value maskBox,
        mlir::Value dim);
 
-} // namespace lower
-} // namespace Fortran
+} // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_REDUCTIONRUNTIME_H
