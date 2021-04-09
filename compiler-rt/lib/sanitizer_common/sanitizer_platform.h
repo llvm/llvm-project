@@ -59,6 +59,11 @@
 #if defined(__APPLE__)
 # define SANITIZER_MAC     1
 # include <TargetConditionals.h>
+# if TARGET_OS_OSX
+#  define SANITIZER_OSX    1
+# else
+#  define SANITIZER_OSX    0
+# endif
 # if TARGET_OS_IPHONE
 #  define SANITIZER_IOS    1
 # else
@@ -73,6 +78,7 @@
 # define SANITIZER_MAC     0
 # define SANITIZER_IOS     0
 # define SANITIZER_IOSSIM  0
+# define SANITIZER_OSX     0
 #endif
 
 #if defined(__APPLE__) && TARGET_OS_IPHONE && TARGET_OS_WATCH
