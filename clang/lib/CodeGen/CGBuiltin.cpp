@@ -15541,8 +15541,10 @@ bool CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
 
     // Map C11/C++11 memory ordering to LLVM memory ordering
+    assert(llvm::isValidAtomicOrderingCABI(ord));
     switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
     case llvm::AtomicOrderingCABI::acquire:
+    case llvm::AtomicOrderingCABI::consume:
       AO = llvm::AtomicOrdering::Acquire;
       break;
     case llvm::AtomicOrderingCABI::release:
@@ -15554,8 +15556,8 @@ bool CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     case llvm::AtomicOrderingCABI::seq_cst:
       AO = llvm::AtomicOrdering::SequentiallyConsistent;
       break;
-    case llvm::AtomicOrderingCABI::consume:
     case llvm::AtomicOrderingCABI::relaxed:
+      AO = llvm::AtomicOrdering::Monotonic;
       break;
     }
 
