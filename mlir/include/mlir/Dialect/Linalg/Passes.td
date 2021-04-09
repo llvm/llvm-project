@@ -31,7 +31,9 @@ def LinalgFoldUnitExtentDims : FunctionPass<"linalg-fold-unit-extent-dims"> {
            "Only folds the one-trip loops from Linalg ops on tensors "
            "(for testing purposes only)">
   ];
-  let dependentDialects = ["linalg::LinalgDialect"];
+  let dependentDialects = [
+    "linalg::LinalgDialect", "AffineDialect", "memref::MemRefDialect"
+  ];
 }
 
 def LinalgFusionOfTensorOps : Pass<"linalg-fusion-for-tensor-ops"> {
@@ -43,7 +45,9 @@ def LinalgFusionOfTensorOps : Pass<"linalg-fusion-for-tensor-ops"> {
            "Allow fusing linalg.tensor_reshape ops that performs unit "
            "dimension collapsing">
   ];
-  let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
+  let dependentDialects = [
+    "AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect"
+  ];
 }
 
 def LinalgFoldReshapeOpsByLinearization :
@@ -51,7 +55,7 @@ def LinalgFoldReshapeOpsByLinearization :
   let summary = "Fold TensorReshapeOps with generic/indexed generic ops by "
                 "linearization";
   let constructor = "mlir::createFoldReshapeOpsByLinearizationPass()";
-  let dependentDialects = ["AffineDialect"];
+  let dependentDialects = ["AffineDialect", "memref::MemRefDialect"];
 }
 
 def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
@@ -64,7 +68,8 @@ def LinalgLowerToAffineLoops : FunctionPass<"convert-linalg-to-affine-loops"> {
                "interchange vector",
                "llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated">
   ];
-  let dependentDialects = ["linalg::LinalgDialect", "AffineDialect"];
+  let dependentDialects = [
+    "AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
 def LinalgLowerToLoops : FunctionPass<"convert-linalg-to-loops"> {
