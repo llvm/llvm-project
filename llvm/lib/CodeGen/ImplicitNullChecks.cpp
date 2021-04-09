@@ -353,10 +353,9 @@ ImplicitNullChecks::areMemoryOpsAliased(const MachineInstr &MI,
           return AR_MayAlias;
         continue;
       }
-      llvm::AliasResult AAResult = AA->alias(
-          MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
-          MemoryLocation::getAfter(MMO2->getValue(), MMO2->getAAInfo()));
-      if (AAResult != NoAlias)
+      if (!AA->isNoAlias(
+              MemoryLocation::getAfter(MMO1->getValue(), MMO1->getAAInfo()),
+              MemoryLocation::getAfter(MMO2->getValue(), MMO2->getAAInfo())))
         return AR_MayAlias;
     }
   }

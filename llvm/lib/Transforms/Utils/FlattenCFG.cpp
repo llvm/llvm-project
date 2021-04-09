@@ -360,7 +360,7 @@ bool FlattenCFGOpt::CompareIfRegionBlock(BasicBlock *Block1, BasicBlock *Block2,
       for (BasicBlock::iterator BI(PBI2), BE(PTI2); BI != BE; ++BI) {
         if (BI->mayReadFromMemory() || BI->mayWriteToMemory()) {
           // Check alias with Head2.
-          if (!AA || AA->alias(&*iter1, &*BI))
+          if (!AA || !AA->isNoAlias(&*iter1, &*BI))
             return false;
         }
       }
