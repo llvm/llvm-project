@@ -53,8 +53,9 @@ mlir::Type Fortran::lower::FirOpBuilder::getRefType(mlir::Type eleTy) {
   return fir::ReferenceType::get(eleTy);
 }
 
-mlir::Type Fortran::lower::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy) {
-  fir::SequenceType::Shape shape = {fir::SequenceType::getUnknownExtent()};
+mlir::Type Fortran::lower::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy,
+                                                        unsigned rank) {
+  fir::SequenceType::Shape shape(rank, fir::SequenceType::getUnknownExtent());
   return fir::SequenceType::get(shape, eleTy);
 }
 

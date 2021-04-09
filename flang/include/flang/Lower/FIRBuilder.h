@@ -74,8 +74,8 @@ public:
   /// Safely create a reference type to the type `eleTy`.
   mlir::Type getRefType(mlir::Type eleTy);
 
-  /// Create a 1-dimensional sequence of `eleTy` of unknown size.
-  mlir::Type getVarLenSeqTy(mlir::Type eleTy);
+  /// Create a sequence of `eleTy` with `rank` dimensions of unknown size.
+  mlir::Type getVarLenSeqTy(mlir::Type eleTy, unsigned rank = 1);
 
   /// Get character length type
   mlir::Type getCharacterLengthType() { return getIndexType(); }
