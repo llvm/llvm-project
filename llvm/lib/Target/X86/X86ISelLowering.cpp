@@ -48162,6 +48162,26 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         return DAG.getNode(ISD::TRUNCATE, DL, VT,
                            DAG.getNode(X86ISD::SETCC, DL, MVT::i8, X86CC, V));
     }
+
+    // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
+    // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
+    if (OpVT.isScalarInteger() && Subtarget.hasBMI()) {
+      auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
+        if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
+          if (N0.getOperand(0) == N1)
+            return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
+                               N0.getOperand(1));
+          if (N0.getOperand(1) == N1)
+            return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
+                               N0.getOperand(0));
+        }
+        return SDValue();
+      };
+      if (SDValue AndN = MatchOrCmpEq(LHS, RHS))
+        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
+      if (SDValue AndN = MatchOrCmpEq(RHS, LHS))
+        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
+    }
   }
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
