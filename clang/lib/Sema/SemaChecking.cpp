@@ -3388,18 +3388,17 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
 
   // Check valididty of memory ordering as per C11 / C++11's memody model.
   // Only fence needs check. Atomic dec/inc allow all memory orders.
-  auto DiagInvalidMemOrder = [&](auto *ArgExpr) {
+  if (!llvm::isValidAtomicOrderingCABI(Ord))
     return Diag(ArgExpr->getBeginLoc(),
                 diag::warn_atomic_op_has_invalid_memory_order)
            << ArgExpr->getSourceRange();
-  };
-  if (!llvm::isValidAtomicOrderingCABI(Ord))
-    return DiagInvalidMemOrder(ArgExpr);
   switch (static_cast<llvm::AtomicOrderingCABI>(Ord)) {
   case llvm::AtomicOrderingCABI::relaxed:
   case llvm::AtomicOrderingCABI::consume:
     if (BuiltinID == AMDGPU::BI__builtin_amdgcn_fence)
-      return DiagInvalidMemOrder(ArgExpr);
+      return Diag(ArgExpr->getBeginLoc(),
+                  diag::warn_atomic_op_has_invalid_memory_order)
+             << ArgExpr->getSourceRange();
     break;
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::release:
