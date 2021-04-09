@@ -16,7 +16,7 @@ define void @test_0(i32* %x) {
 define void @test_1(i32* %x) {
 ; FunctionAttrs must not infer readonly / readnone for %x
 
-; CHECK-LABEL: define void @test_1(i32* %x) #2 {
+; CHECK-LABEL: define void @test_1(i32* %x) #3 {
  entry:
  ; CHECK: call void @f_readnone() [ "foo"(i32* %x) ]
   call void @f_readnone() [ "foo"(i32* %x) ]
