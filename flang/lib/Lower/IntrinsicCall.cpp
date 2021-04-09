@@ -25,6 +25,7 @@
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/FIRBuilder.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/ReductionRuntime.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -141,6 +142,8 @@ struct IntrinsicLibrary {
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genAll(mlir::Type,
+                            llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAllocated(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -276,6 +279,11 @@ static constexpr IntrinsicHandler handlers[]{
     {"achar", &I::genChar},
     {"aimag", &I::genAimag},
     {"aint", &I::genAint},
+    {"all", 
+     &I::genAll,
+     {{{"mask", asAddr},
+       {"dim", asValue}}},
+     /*isElemental=*/false},
     {"allocated",
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
@@ -1149,6 +1157,53 @@ mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
       args[0], true /* isImagPart */);
 }
 
+// ALL
+fir::ExtendedValue
+IntrinsicLibrary::genAll(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+  // Handle required mask argument
+  auto mask = builder.createBox(loc, args[0]);
+
+  fir::BoxValue maskArry = builder.createBox(loc, args[0]);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  auto dim = absentDim
+             ? builder.createIntegerConstant(loc, builder.getIndexType(), 1)
+             : fir::getBase(args[1]);
+
+   if (maskArry.rank() == 1 || absentDim)
+     return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genAll(builder, loc, mask, dim));
+
+  // else use the result descriptor AllDim() intrinsic
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+
+  auto resultMutableBox =
+       Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+       Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call runtime. The runtime is allocating the result.
+  Fortran::lower::genAllDescriptor(builder, loc, resultIrBox, mask, dim);
+
+  return Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox)
+      .match(
+          [&](const fir::AbstractBox &box) -> fir::ExtendedValue {
+            addCleanUpForTemp(loc, box.getAddr());
+            auto ldVal = builder.create<fir::LoadOp>(loc, box.getAddr());
+            return builder.createConvert(loc, resultType, ldVal);
+          },
+          [&](const auto &) -> fir::ExtendedValue {
+            fir::emitFatalError(loc, "Invalid result for ALL");
+          });
+}
+
+
 // ALLOCATED
 fir::ExtendedValue
 IntrinsicLibrary::genAllocated(mlir::Type resultType,
@@ -1549,6 +1604,7 @@ fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
 
+   args[0].dump();
   assert(args.size() == 4);
 
   if (isAbsent(args[3])) {
