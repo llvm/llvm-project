@@ -286,7 +286,7 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::invariant_end:
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
-      return {false, AliasResult::NoAlias};
+      return {false, AliasResult(AliasResult::NoAlias)};
     case Intrinsic::dbg_addr:
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_label:
@@ -305,7 +305,8 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
 
   if (auto *DefLoad = dyn_cast<LoadInst>(DefInst))
     if (auto *UseLoad = dyn_cast_or_null<LoadInst>(UseInst))
-      return {!areLoadsReorderable(UseLoad, DefLoad), AliasResult::MayAlias};
+      return {!areLoadsReorderable(UseLoad, DefLoad),
+              AliasResult(AliasResult::MayAlias)};
 
   ModRefInfo I = AA.getModRefInfo(DefInst, UseLoc);
   AR = isMustSet(I) ? AliasResult::MustAlias : AliasResult::MayAlias;
@@ -344,7 +345,7 @@ struct UpwardsMemoryQuery {
   const Instruction *Inst = nullptr;
   // The MemoryAccess we actually got called with, used to test local domination
   const MemoryAccess *OriginalAccess = nullptr;
-  Optional<AliasResult> AR = AliasResult::MayAlias;
+  Optional<AliasResult> AR = AliasResult(AliasResult::MayAlias);
   bool SkipSelfAccess = false;
 
   UpwardsMemoryQuery() = default;
@@ -570,14 +571,14 @@ template <class AliasAnalysisType> class ClobberWalker {
     for (MemoryAccess *Current : def_chain(Desc.Last)) {
       Desc.Last = Current;
       if (Current == StopAt || Current == SkipStopAt)
-        return {Current, false, AliasResult::MayAlias};
+        return {Current, false, AliasResult(AliasResult::MayAlias)};
 
       if (auto *MD = dyn_cast<MemoryDef>(Current)) {
         if (MSSA.isLiveOnEntryDef(MD))
-          return {MD, true, AliasResult::MustAlias};
+          return {MD, true, AliasResult(AliasResult::MustAlias)};
 
         if (!--*UpwardWalkLimit)
-          return {Current, true, AliasResult::MayAlias};
+          return {Current, true, AliasResult(AliasResult::MayAlias)};
 
         ClobberAlias CA =
             instructionClobbersQuery(MD, Desc.Loc, Query->Inst, AA);
@@ -591,7 +592,7 @@ template <class AliasAnalysisType> class ClobberWalker {
 
     assert(isa<MemoryPhi>(Desc.Last) &&
            "Ended at a non-clobber that's not a phi?");
-    return {Desc.Last, false, AliasResult::MayAlias};
+    return {Desc.Last, false, AliasResult(AliasResult::MayAlias)};
   }
 
   void addSearches(MemoryPhi *Phi, SmallVectorImpl<ListIndex> &PausedSearches,
@@ -2490,8 +2491,9 @@ MemorySSA::ClobberWalkerBase<AliasAnalysisType>::getClobberingMemoryAccessBase(
     StartingAccess->setOptimized(OptimizedAccess);
     if (MSSA->isLiveOnEntryDef(OptimizedAccess))
       StartingAccess->setOptimizedAccessType(None);
-    else if (Q.AR == AliasResult::MustAlias)
-      StartingAccess->setOptimizedAccessType(AliasResult::MustAlias);
+    else if (Q.AR && *Q.AR == AliasResult::MustAlias)
+      StartingAccess->setOptimizedAccessType(
+          AliasResult(AliasResult::MustAlias));
   } else
     OptimizedAccess = StartingAccess->getOptimized();
 

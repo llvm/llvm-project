@@ -299,8 +299,9 @@ protected:
     OptimizedAccessAlias = AR;
   }
 
-  void setDefiningAccess(MemoryAccess *DMA, bool Optimized = false,
-                         Optional<AliasResult> AR = AliasResult::MayAlias) {
+  void setDefiningAccess(
+      MemoryAccess *DMA, bool Optimized = false,
+      Optional<AliasResult> AR = AliasResult(AliasResult::MayAlias)) {
     if (!Optimized) {
       setOperand(0, DMA);
       return;
