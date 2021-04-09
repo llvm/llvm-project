@@ -716,6 +716,11 @@ def : InstRW<[GenericWriteLoad], (instrs LLD_R6, LL64_R6)>;
 
 def : InstRW<[GenericWriteStoreSC], (instrs SC64_R6, SCD_R6)>;
 
+// nanoMIPS
+// ========
+
+def : InstRW<[GenericWriteStore], (instrs SW_NM)>;
+
 // MIPSR6 CRC ASE - hasCRC
 // =======================
 

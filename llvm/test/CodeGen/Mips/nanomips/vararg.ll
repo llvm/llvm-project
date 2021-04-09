@@ -6,7 +6,7 @@ define i32 @test_varargs() {
 ; CHECK: addiu $sp, $sp, -16
 ; CHECK: ADDiu_NM
 ; CHECK: sw $ra, 12($sp)
-; CHECK: SW
+; CHECK: SW_NM
 ; CHECK: li $a0, 3
 ; CHECK: Li_NM
 ; CHECK: li $a1, 25

@@ -51,6 +51,14 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
   let EncodingPredicates = [HasNanoMips];
 }
 
+class StoreNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
+              InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr,
+              DAGOperand MO = mem> :
+              StoreMemory<opstr, RO, MO, OpNode, Itin, Addr> {
+  let DecoderNamespace = "NanoMips";
+  let EncodingPredicates = [HasNanoMips];
+}
+
 class BranchNM<string opstr,
                SDPatternOperator OpNode = null_frag,
                SDPatternOperator imm_type = null_frag> :
@@ -78,6 +86,7 @@ def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>, ISA_NANOMIPS;
 def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>, ISA_NANOMIPS;
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>, ISA_NANOMIPS;
+def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;
 
 let hasDelaySlot = 0 in
   def JRC_NM : IndirectBranch<"jrc", GPR32NMOpnd>, ISA_NANOMIPS;

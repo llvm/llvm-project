@@ -9,7 +9,7 @@ define i32 @bar(i32 %a, i32 %b) {
 ; CHECK: addiu $sp, $sp, -16
 ; CHECK: ADDiu_NM
 ; CHECK: sw $ra, 12($sp)
-; CHECK: SW
+; CHECK: SW_NM
 ; CHECK: balc foo
 ; CHECK: BALC_NM
   %1 = call i32 @foo(i32 %a, i32 %b)
