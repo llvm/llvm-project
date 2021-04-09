@@ -35,17 +35,16 @@
 namespace llvm {
 
 class AAResults;
+class AliasResult;
 class AliasSetTracker;
-class BasicBlock;
-class LoadInst;
 class AnyMemSetInst;
 class AnyMemTransferInst;
+class BasicBlock;
+class LoadInst;
 class raw_ostream;
 class StoreInst;
 class VAArgInst;
 class Value;
-
-enum AliasResult : uint8_t;
 
 class AliasSet : public ilist_node<AliasSet> {
   friend class AliasSetTracker;
