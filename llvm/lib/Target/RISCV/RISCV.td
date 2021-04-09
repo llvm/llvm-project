@@ -178,15 +178,16 @@ def FeatureStdExtZvlsseg
                        "'Zvlsseg' (Vector segment load/store instructions)",
                        [FeatureStdExtV]>;
 def HasStdExtZvlsseg : Predicate<"Subtarget->hasStdExtZvlsseg()">,
-                        AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
-                        "'Zvlsseg' (Vector segment load/store instructions)">;
+                                 AssemblerPredicate<(all_of FeatureStdExtZvlsseg),
+                                 "'Zvlsseg' (Vector segment load/store instructions)">;
+
 def FeatureExtZvamo
     : SubtargetFeature<"experimental-zvamo", "HasStdExtZvamo", "true",
-                       "'Zvamo'(Vector AMO Operations)",
+                       "'Zvamo' (Vector AMO Operations)",
                        [FeatureStdExtV]>;
 def HasStdExtZvamo : Predicate<"Subtarget->hasStdExtZvamo()">,
-                              AssemblerPredicate<(all_of FeatureExtZvamo),
-                              "'Zvamo'(Vector AMO Operations)">;
+                               AssemblerPredicate<(all_of FeatureExtZvamo),
+                               "'Zvamo' (Vector AMO Operations)">;
 
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
