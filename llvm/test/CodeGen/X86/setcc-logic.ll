@@ -621,15 +621,15 @@ define i1 @or_cmp_eq_i64(i64 %x, i64 %y) {
   ret i1 %c
 }
 
-define i1 @or_cmp_eq_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: or_cmp_eq_i32:
+define i1 @or_cmp_ne_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: or_cmp_ne_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i32 %x, %y
-  %c = icmp eq i32 %o, %y
+  %c = icmp ne i32 %o, %y
   ret i1 %c
 }
 
@@ -645,15 +645,15 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
   ret i1 %c
 }
 
-define i1 @or_cmp_eq_i8(i8 zeroext %x, i8 zeroext %y) {
-; CHECK-LABEL: or_cmp_eq_i8:
+define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
+; CHECK-LABEL: or_cmp_ne_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl %esi, %edi
 ; CHECK-NEXT:    cmpb %dil, %sil
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %o = or i8 %x, %y
-  %c = icmp eq i8 %y, %o
+  %c = icmp ne i8 %y, %o
   ret i1 %c
 }
 
@@ -668,4 +668,18 @@ define <4 x i32> @or_cmp_eq_v4i32(<4 x i32> %x, <4 x i32> %y) {
   %c = icmp eq <4 x i32> %o, %x
   %s = sext <4 x i1> %c to <4 x i32>
   ret <4 x i32> %s
+}
+
+define <16 x i8> @or_cmp_ne_v4i32(<16 x i8> %x, <16 x i8> %y) {
+; CHECK-LABEL: or_cmp_ne_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqb %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %o = or <16 x i8> %x, %y
+  %c = icmp ne <16 x i8> %o, %x
+  %s = sext <16 x i1> %c to <16 x i8>
+  ret <16 x i8> %s
 }
