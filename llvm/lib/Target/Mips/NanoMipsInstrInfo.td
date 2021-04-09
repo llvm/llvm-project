@@ -51,6 +51,13 @@ class RegImmNM<string opstr, Operand Od, RegisterOperand RO,
   let EncodingPredicates = [HasNanoMips];
 }
 
+class LoadNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
+             InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
+             LoadMemory<opstr, RO, mem, OpNode, Itin, Addr> {
+  let DecoderNamespace = "NanoMips";
+  let EncodingPredicates = [HasNanoMips];
+}
+
 class StoreNM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
               InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr,
               DAGOperand MO = mem> :
@@ -84,6 +91,7 @@ def ADDu_NM : ArithLogicRNM<"addu", GPR32NMOpnd, add>, ISA_NANOMIPS;
 def ADDiu_NM : ArithLogicINM<"addiu", simm16_relaxed, GPR32NMOpnd,
                              imm32SExt16, add>, ISA_NANOMIPS;
 def AND_NM : ArithLogicRNM<"and", GPR32NMOpnd, and>, ISA_NANOMIPS;
+def LW_NM : StdMMR6Rel, LoadNM<"lw", GPR32NMOpnd, load>, ISA_NANOMIPS;
 def OR_NM : ArithLogicRNM<"or", GPR32NMOpnd, or>, ISA_NANOMIPS;
 def SUBu_NM : ArithLogicRNM<"subu", GPR32NMOpnd, sub>, ISA_NANOMIPS;
 def SW_NM : StoreNM<"sw", GPR32NMOpnd, store>, ISA_NANOMIPS;

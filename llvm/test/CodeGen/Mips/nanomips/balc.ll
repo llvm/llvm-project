@@ -14,7 +14,7 @@ define i32 @bar(i32 %a, i32 %b) {
 ; CHECK: BALC_NM
   %1 = call i32 @foo(i32 %a, i32 %b)
 ; CHECK: lw $ra, 12($sp)
-; CHECK: LW
+; CHECK: LW_NM
 ; CHECK: addiu $sp, $sp, 16
 ; CHECK: ADDiu_NM
   ret i32 %1

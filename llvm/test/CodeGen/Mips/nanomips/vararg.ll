@@ -19,7 +19,7 @@ define i32 @test_varargs() {
 ; CHECK: BALC_NM
   %1 = call i32 (i32, ...) @varfunc(i32 3, i32 25, i32 24, i32 23)
 ; CHECK: lw $ra, 12($sp)
-; CHECK: LW
+; CHECK: LW_NM
 ; CHECK: addiu $sp, $sp, 16
 ; CHECK: ADDiu_NM
   ret i32 %1

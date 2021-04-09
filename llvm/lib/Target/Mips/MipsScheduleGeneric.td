@@ -721,6 +721,8 @@ def : InstRW<[GenericWriteStoreSC], (instrs SC64_R6, SCD_R6)>;
 
 def : InstRW<[GenericWriteStore], (instrs SW_NM)>;
 
+def : InstRW<[GenericWriteStore], (instrs LW_NM)>;
+
 // MIPSR6 CRC ASE - hasCRC
 // =======================
 
