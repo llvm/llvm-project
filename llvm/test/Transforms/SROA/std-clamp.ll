@@ -6,18 +6,14 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define float @_Z8stdclampfff(float %x, float %lo, float %hi) {
 ; CHECK-LABEL: @_Z8stdclampfff(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = alloca float, align 4
-; CHECK-NEXT:    [[I3:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    [[I4:%.*]] = alloca float, align 4
-; CHECK-NEXT:    store float [[X:%.*]], float* [[I]], align 4
-; CHECK-NEXT:    store float [[LO:%.*]], float* [[I3]], align 4
 ; CHECK-NEXT:    store float [[HI:%.*]], float* [[I4]], align 4
-; CHECK-NEXT:    [[I5:%.*]] = fcmp fast olt float [[X]], [[LO]]
+; CHECK-NEXT:    [[I5:%.*]] = fcmp fast olt float [[X:%.*]], [[LO:%.*]]
 ; CHECK-NEXT:    [[I6:%.*]] = fcmp fast olt float [[HI]], [[X]]
-; CHECK-NEXT:    [[I7:%.*]] = select i1 [[I6]], float* [[I4]], float* [[I]]
-; CHECK-NEXT:    [[I8:%.*]] = select i1 [[I5]], float* [[I3]], float* [[I7]]
-; CHECK-NEXT:    [[I9:%.*]] = load float, float* [[I8]], align 4
-; CHECK-NEXT:    ret float [[I9]]
+; CHECK-NEXT:    [[I9_SROA_SPECULATE_LOAD_FALSE_SROA_SPECULATE_LOAD_TRUE:%.*]] = load float, float* [[I4]], align 4
+; CHECK-NEXT:    [[I9_SROA_SPECULATE_LOAD_FALSE_SROA_SPECULATED:%.*]] = select i1 [[I6]], float [[I9_SROA_SPECULATE_LOAD_FALSE_SROA_SPECULATE_LOAD_TRUE]], float [[X]]
+; CHECK-NEXT:    [[I9_SROA_SPECULATED:%.*]] = select i1 [[I5]], float [[LO]], float [[I9_SROA_SPECULATE_LOAD_FALSE_SROA_SPECULATED]]
+; CHECK-NEXT:    ret float [[I9_SROA_SPECULATED]]
 ;
 bb:
   %i = alloca float, align 4
