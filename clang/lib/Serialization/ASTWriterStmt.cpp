@@ -2555,6 +2555,12 @@ void ASTStmtWriter::VisitOMPDispatchDirective(OMPDispatchDirective *D) {
   Code = serialization::STMT_OMP_DISPATCH_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPMaskedDirective(OMPMaskedDirective *D) {
+  VisitStmt(D);
+  VisitOMPExecutableDirective(D);
+  Code = serialization::STMT_OMP_MASKED_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//
