@@ -22,3 +22,5 @@ using iterator = std::ostreambuf_iterator<char>;
 static_assert(!std::indirectly_readable<iterator>);
 static_assert(std::indirectly_writable<iterator, char>);
 static_assert(!std::weakly_incrementable<iterator>);
+static_assert(!std::input_or_output_iterator<iterator>);
+static_assert(!std::sentinel_for<iterator, iterator>);

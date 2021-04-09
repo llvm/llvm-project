@@ -84,6 +84,21 @@ concept incrementable =
     { __i++ } -> same_as<_Ip>;
   };
 
+// [iterator.concept.iterator]
+template<class _Ip>
+concept input_or_output_iterator =
+  requires(_Ip __i) {
+    { *__i } -> __referenceable;
+  } &&
+  weakly_incrementable<_Ip>;
+
+// [iterator.concept.sentinel]
+template<class _Sp, class _Ip>
+concept sentinel_for =
+  semiregular<_Sp> &&
+  input_or_output_iterator<_Ip> &&
+  __weakly_equality_comparable_with<_Sp, _Ip>;
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)
