@@ -268,12 +268,57 @@ struct AssumingWithTrue : public OpRewritePattern<AssumingOp> {
     return success();
   }
 };
+
+struct AssumingOpRemoveUnusedResults : public OpRewritePattern<AssumingOp> {
+  using OpRewritePattern<AssumingOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AssumingOp op,
+                                PatternRewriter &rewriter) const override {
+    Block *body = op.getBody();
+    auto yieldOp = llvm::cast<AssumingYieldOp>(body->getTerminator());
+
+    // Find used values.
+    SmallVector<Value, 4> newYieldOperands;
+    Value opResult, yieldOperand;
+    for (auto it : llvm::zip(op.getResults(), yieldOp.operands())) {
+      std::tie(opResult, yieldOperand) = it;
+      if (!opResult.getUses().empty()) {
+        newYieldOperands.push_back(yieldOperand);
+      }
+    }
+
+    // Rewrite only if redundant results exist.
+    if (newYieldOperands.size() == yieldOp->getNumOperands())
+      return failure();
+
+    // Replace yield op in the old assuming op's body and move the entire region
+    // to the new assuming op.
+    rewriter.setInsertionPointToEnd(body);
+    auto newYieldOp =
+        rewriter.replaceOpWithNewOp<AssumingYieldOp>(yieldOp, newYieldOperands);
+    rewriter.setInsertionPoint(op);
+    auto newOp = rewriter.create<AssumingOp>(
+        op.getLoc(), newYieldOp->getOperandTypes(), op.witness());
+    newOp.doRegion().takeBody(op.doRegion());
+
+    // Use the new results to replace the previously used ones.
+    SmallVector<Value, 4> replacementValues;
+    auto src = newOp.getResults().begin();
+    for (auto it : op.getResults()) {
+      if (it.getUses().empty())
+        replacementValues.push_back(nullptr);
+      else
+        replacementValues.push_back(*src++);
+    }
+    rewriter.replaceOp(op, replacementValues);
+    return success();
+  }
+};
 } // namespace
 
 void AssumingOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                              MLIRContext *context) {
-  // If taking a passing witness, inline region.
-  patterns.add<AssumingWithTrue>(context);
+  patterns.add<AssumingOpRemoveUnusedResults, AssumingWithTrue>(context);
 }
 
 // See RegionBranchOpInterface in Interfaces/ControlFlowInterfaces.td
