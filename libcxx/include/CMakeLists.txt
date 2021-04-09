@@ -18,6 +18,7 @@ set(files
   __memory/auto_ptr.h
   __memory/base.h
   __memory/compressed_pair.h
+  __memory/pointer_safety.h
   __memory/pointer_traits.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
